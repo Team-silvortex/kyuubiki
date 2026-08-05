@@ -676,10 +676,13 @@ fn parse_error_payload(body: &str) -> Value {
 }
 
 fn service_error_message(status_code: u16, path: &str, payload: &Value) -> String {
-    if path == "/api/v1/model-artifacts" {
+    if path == "/api/v1/model-artifacts" && matches!(status_code, 413 | 500) {
         return format!(
-            "model artifact upload failed {status_code}: {payload}; connect headless directly to the runtime control-plane endpoint (default http://127.0.0.1:4000), not a frontend proxy with a smaller body limit"
+            "frontend_proxy_artifact_limit: model artifact upload failed {status_code}: {payload}; connect headless directly to the runtime control-plane endpoint (default http://127.0.0.1:4000), not a frontend proxy with a smaller body limit"
         );
+    }
+    if path == "/api/v1/model-artifacts" {
+        return format!("model artifact upload failed {status_code}: {payload}");
     }
     if status_code == 404 {
         return format!("service action endpoint not deployed (404): {path}: {payload}");
@@ -746,8 +749,7 @@ fn parse_http_url(base_url: &str) -> Result<ParsedHttpUrl, HeadlessExecutorError
         .any(|ch| ch.is_ascii_control() || ch.is_whitespace())
     {
         return Err(HeadlessExecutorError {
-            message: "service base URL contains unsupported whitespace or control characters"
-                .to_string(),
+            message: "service base URL contains whitespace or control characters".into(),
         });
     }
     let raw = base_url

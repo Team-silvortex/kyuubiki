@@ -135,6 +135,17 @@ fn classify_failure(step_index: usize, action: &str, message: String) -> Headles
             "none",
             "Repair credentials or policy before retrying.",
         )
+    } else if normalized.contains("frontend_proxy_artifact_limit")
+        || (normalized.contains("model artifact upload failed")
+            && normalized.contains("smaller body limit"))
+    {
+        (
+            "frontend_proxy_artifact_limit",
+            "artifact_upload",
+            false,
+            "none",
+            "Use the runtime control-plane endpoint for Headless execution; keep the GUI frontend out of large artifact transport.",
+        )
     } else if normalized.contains("endpoint not deployed") || normalized.contains("(404)") {
         (
             "endpoint_not_deployed",
@@ -366,6 +377,38 @@ mod tests {
             "kyuubiki.headless.invalid_solver_params"
         );
         assert_eq!(preview["failure_receipt"]["stage"], "agent_decode");
+        assert_eq!(preview["failure_receipt"]["retryable"], false);
+
+        let schema: Value = serde_json::from_str(include_str!(
+            "../../../../../schemas/headless-failure-receipt.schema.json"
+        ))
+        .expect("failure receipt schema");
+        assert!(
+            schema["properties"]["category"]["enum"]
+                .as_array()
+                .is_some_and(|values| values.contains(&preview["failure_receipt"]["category"]))
+        );
+        assert!(
+            schema["properties"]["stage"]["enum"]
+                .as_array()
+                .is_some_and(|values| values.contains(&preview["failure_receipt"]["stage"]))
+        );
+    }
+
+    #[test]
+    fn frontend_proxy_limit_identifies_endpoint_policy_failure() {
+        let preview = failure_preview(
+            1,
+            "solve_heat_plane_quad_2d",
+            "frontend_proxy_artifact_limit: direct FEM model requires artifact transport"
+                .to_string(),
+        );
+
+        assert_eq!(
+            preview["error_code"],
+            "kyuubiki.headless.frontend_proxy_artifact_limit"
+        );
+        assert_eq!(preview["failure_receipt"]["stage"], "artifact_upload");
         assert_eq!(preview["failure_receipt"]["retryable"], false);
 
         let schema: Value = serde_json::from_str(include_str!(

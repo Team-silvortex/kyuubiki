@@ -229,6 +229,13 @@ preserving every non-empty caller-supplied ID. Other missing solver fields fail
 closed as `invalid_solver_params` at the `agent_decode` stage, so automation
 can repair the model instead of retrying an invalid request.
 
+Headless SDKs must use the runtime control-plane endpoint for artifact-backed
+models, not the local GUI frontend. Known local frontend URLs fail fast before
+upload with `frontend_proxy_artifact_limit` at the `artifact_upload` stage;
+small inline requests remain available to GUI development routes. This keeps
+large transport out of Next.js request cloning and preserves frontend/runtime
+separation.
+
 Large solves also use two separate server-side timing contracts. Agent capacity
 waits are governed by `KYUUBIKI_AGENT_QUEUE_TIMEOUT_MS`; artifact-backed execution
 is governed by `KYUUBIKI_ARTIFACT_EXECUTION_TIMEOUT_MS`. Static endpoints pass

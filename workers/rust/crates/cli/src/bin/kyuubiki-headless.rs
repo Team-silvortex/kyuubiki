@@ -359,6 +359,7 @@ fn print_cli_error(error: &str) {
 
 fn cli_error_stage(code: &str) -> &'static str {
     match code {
+        "frontend_proxy_artifact_limit" => "artifact_upload",
         "headless_execution_failed" => "execution",
         "material_report_template_mismatch"
         | "material_report_template_provenance_missing"
@@ -370,6 +371,9 @@ fn cli_error_stage(code: &str) -> &'static str {
 
 fn cli_error_recovery(code: &str) -> &'static str {
     match code {
+        "frontend_proxy_artifact_limit" => {
+            "Use the runtime control-plane endpoint for Headless execution instead of the GUI frontend."
+        }
         "headless_execution_failed" => {
             "Inspect execution_summary.failure in the run report before retrying."
         }
@@ -390,7 +394,9 @@ fn cli_error_recovery(code: &str) -> &'static str {
 }
 
 fn classify_cli_error(error: &str) -> &'static str {
-    if error.contains("not supported by template") {
+    if error.contains("frontend_proxy_artifact_limit") {
+        "frontend_proxy_artifact_limit"
+    } else if error.contains("not supported by template") {
         "material_report_template_mismatch"
     } else if error.contains("requires template provenance") {
         "material_report_template_provenance_missing"
@@ -674,5 +680,20 @@ impl TemplateView {
                 .map(str::to_string)
                 .collect(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{classify_cli_error, cli_error_recovery, cli_error_stage};
+
+    #[test]
+    fn classifies_frontend_proxy_artifact_limit_for_automation() {
+        let code = classify_cli_error(
+            "headless execution failed: frontend_proxy_artifact_limit: use control plane",
+        );
+        assert_eq!(code, "frontend_proxy_artifact_limit");
+        assert_eq!(cli_error_stage(code), "artifact_upload");
+        assert!(cli_error_recovery(code).contains("control-plane endpoint"));
     }
 }

@@ -244,6 +244,7 @@
           "workers/rust/crates/project-automation/src/model.rs",
           "workers/rust/crates/headless-sdk/src/executor.rs",
           "workers/rust/crates/headless-sdk/src/service_executor.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_artifact.rs",
           "workers/rust/crates/script-runner/src/project_cli.rs",
           "workers/rust/crates/script-runner/src/macro_cli.rs"
         ],
@@ -373,6 +374,7 @@
           "kyuubiki.workflow-dataset/v1",
           "fill_model_ids",
           "restores_graph_ids_for_inline_electrostatic_models",
+          "frontend_proxy_artifact_limit",
           "invalid_solver_params",
           "agent_decode"
         ]
