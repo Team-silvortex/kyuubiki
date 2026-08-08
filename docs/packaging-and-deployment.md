@@ -410,6 +410,19 @@ After installing the bundles, run the same probe against the installed copy:
 This prevents a source bundle pass from hiding a stale application under the
 system application directory.
 
+Retained reports must not contain host absolute paths. The native smoke runner
+encodes external locations as `@external` and paths below the selected bundle
+root as `@bundle-root`. Verify retained evidence without launching an app with:
+
+```sh
+./scripts/kyuubiki desktop-packaged-smoke \
+  --verify-report releases/usability-evidence/2.7.0/macos-installed-desktop-smoke.json
+```
+
+This verifier is host-independent. It checks the report schema, packaged
+version, all three desktop surfaces, successful startup receipts, and portable
+paths. It does not turn macOS evidence into Linux or Windows release evidence.
+
 `desktop-status` is intentionally the first stop. It gives operators one place
 to see:
 

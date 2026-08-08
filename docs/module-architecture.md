@@ -202,6 +202,12 @@ of `workbench-shell` coverage. This keeps Pwdt visible in the tensor as
 product-owned programmable UI control rather than misclassifying it as the
 separate headless SDK family.
 
+Installed desktop startup evidence is also tensor-scoped. The macOS retained
+report proves native-to-WebView readiness for Hub, Installer, and Workbench
+without storing host absolute paths. This closes only the macOS installed
+subpackage coordinate; Linux and Windows packaged journeys remain separate
+release work rather than inheriting macOS evidence.
+
 The moxi tensor treats the following coordinates as contract-backed paths only
 for the modules explicitly listed by each evidence bundle:
 

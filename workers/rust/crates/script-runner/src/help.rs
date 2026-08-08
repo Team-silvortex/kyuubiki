@@ -34,7 +34,7 @@ build-hub-gui build-installer-gui build-workbench-gui\n  \
 sync-desktop-shared check-desktop-shared\n  \
 package-desktop desktop-status desktop-stage desktop-build-host\n  \
 desktop-install-host\n  \
-desktop-packaged-smoke [macos] [--bundle-root <dir>] [--out <report>]\n  \
+desktop-packaged-smoke [macos] [--bundle-root <dir>] [--out <report>] [--verify-report <report>]\n  \
 desktop-release desktop-verify desktop-runtime-payload\n  \
 desktop-linux-remote\n  \
 desktop-upload-remote desktop-release-upload-remote\n  \

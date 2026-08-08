@@ -22,6 +22,7 @@ const NATIVE_PROBES: &[&str] = &[
     "check-operator-validation",
     "check-ui-automation-contract",
     "check-workflow-dataset-contract",
+    "desktop-packaged-smoke",
     "validate-language-packs",
 ];
 

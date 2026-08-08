@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
@@ -54,6 +56,7 @@ struct SmokeOptions {
     timeout_secs: u64,
     output_path: PathBuf,
     bundle_root: PathBuf,
+    verify_report: Option<PathBuf>,
 }
 
 struct ChildGuard(Option<Child>);
@@ -80,13 +83,21 @@ impl Drop for ChildGuard {
 }
 
 pub(crate) fn run_packaged_desktop_smoke(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
+    let options = parse_options(root, args)?;
+    if let Some(report_path) = &options.verify_report {
+        verify_retained_report(report_path)?;
+        println!(
+            "packaged desktop smoke report passed: {}",
+            report_path.display()
+        );
+        return Ok(0);
+    }
     if host_platform() != Platform::Macos {
         return Err(
             "desktop-packaged-smoke currently requires a macOS host; Linux and Windows host probes remain release blockers"
                 .to_string(),
         );
     }
-    let options = parse_options(root, args)?;
     let log_root = root.join("tmp/packaged-desktop-smoke");
     fs::create_dir_all(&log_root)
         .map_err(|error| format!("failed to create {}: {error}", log_root.display()))?;
@@ -184,7 +195,7 @@ fn run_surface(
                 receipt.surface, receipt.version
             ),
         ),
-        Err(error) => ("fail", None, portable_detail(root, &error)),
+        Err(error) => ("fail", None, portable_detail(root, bundle_root, &error)),
     };
     println!(
         "{} packaged boot: {} ({})",
@@ -192,8 +203,8 @@ fn run_surface(
     );
     SurfaceResult {
         surface: definition.surface,
-        app_path: portable_path(root, &app_path),
-        executable_path: portable_path(root, &executable_path),
+        app_path: portable_bundle_path(root, bundle_root, &app_path),
+        executable_path: portable_bundle_path(root, bundle_root, &executable_path),
         log_path: portable_path(root, &log_path),
         status,
         elapsed_ms: started.elapsed().as_millis(),
@@ -338,6 +349,7 @@ fn parse_options(root: &Path, args: Vec<OsString>) -> RunnerResult<SmokeOptions>
     let mut timeout_secs = DEFAULT_TIMEOUT_SECS;
     let mut output_path = root.join("tmp/packaged-desktop-smoke.json");
     let mut bundle_root = root.join("target/desktop-cache/macos/release/bundle/macos");
+    let mut verify_report = None;
     let mut index = 0;
     if args.first().is_some_and(|value| value == "macos") {
         index += 1;
@@ -379,6 +391,18 @@ fn parse_options(root: &Path, args: Vec<OsString>) -> RunnerResult<SmokeOptions>
                     root.join(path)
                 };
             }
+            "--verify-report" => {
+                index += 1;
+                let value = args
+                    .get(index)
+                    .ok_or_else(|| "--verify-report requires a path".to_string())?;
+                let path = PathBuf::from(value);
+                verify_report = Some(if path.is_absolute() {
+                    path
+                } else {
+                    root.join(path)
+                });
+            }
             argument => {
                 return Err(format!(
                     "unknown desktop-packaged-smoke argument: {argument}"
@@ -391,7 +415,108 @@ fn parse_options(root: &Path, args: Vec<OsString>) -> RunnerResult<SmokeOptions>
         timeout_secs,
         output_path,
         bundle_root,
+        verify_report,
     })
+}
+
+fn verify_retained_report(path: &Path) -> RunnerResult<()> {
+    let bytes = fs::read(path)
+        .map_err(|error| format!("failed to read retained report {}: {error}", path.display()))?;
+    let report: Value = serde_json::from_slice(&bytes)
+        .map_err(|error| format!("invalid retained report {}: {error}", path.display()))?;
+    validate_retained_report(&report)
+}
+
+fn validate_retained_report(report: &Value) -> RunnerResult<()> {
+    for (pointer, expected) in [
+        ("/schema_version", REPORT_SCHEMA),
+        ("/platform", "macos"),
+        ("/expected_version", VERSION),
+        ("/status", "pass"),
+    ] {
+        if report.pointer(pointer).and_then(Value::as_str) != Some(expected) {
+            return Err(format!(
+                "retained packaged desktop report {pointer} must be {expected}"
+            ));
+        }
+    }
+    if report.get("passed").and_then(Value::as_u64) != Some(3)
+        || report.get("failed").and_then(Value::as_u64) != Some(0)
+    {
+        return Err(
+            "retained packaged desktop report must record 3 passed and 0 failed".to_string(),
+        );
+    }
+    validate_report_path(report, "/bundle_root", "@external/Applications")?;
+    let surfaces = report
+        .get("surfaces")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "retained packaged desktop report must contain surfaces".to_string())?;
+    let mut seen = BTreeSet::new();
+    for surface in surfaces {
+        let id = surface
+            .get("surface")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "retained packaged desktop surface must have an id".to_string())?;
+        if !seen.insert(id.to_string()) {
+            return Err(format!(
+                "retained packaged desktop report repeats surface {id}"
+            ));
+        }
+        if surface.get("status").and_then(Value::as_str) != Some("pass")
+            || surface.get("pid").and_then(Value::as_u64).unwrap_or(0) == 0
+        {
+            return Err(format!(
+                "retained packaged desktop surface {id} did not pass"
+            ));
+        }
+        let definition = surface_definitions()
+            .into_iter()
+            .find(|definition| definition.surface == id)
+            .ok_or_else(|| format!("unexpected retained packaged desktop surface {id}"))?;
+        let app_path = format!("@bundle-root/{}.app", definition.product_name);
+        let executable_path = format!("{app_path}/Contents/MacOS/{}", definition.executable_name);
+        let log_path = format!("tmp/packaged-desktop-smoke/{id}.log");
+        let detail = format!("interactive startup receipt accepted for {id} {VERSION}");
+        validate_report_path(surface, "/app_path", &app_path)?;
+        validate_report_path(surface, "/executable_path", &executable_path)?;
+        validate_report_path(surface, "/log_path", &log_path)?;
+        validate_report_text(surface, "/detail", &detail)?;
+    }
+    let expected = BTreeSet::from([
+        "hub".to_string(),
+        "installer".to_string(),
+        "workbench".to_string(),
+    ]);
+    if seen != expected {
+        return Err(
+            "retained packaged desktop report must cover hub, installer, and workbench".to_string(),
+        );
+    }
+    Ok(())
+}
+
+fn validate_report_path(value: &Value, pointer: &str, expected: &str) -> RunnerResult<()> {
+    let path = value
+        .pointer(pointer)
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("retained packaged desktop report misses {pointer}"))?;
+    let parsed = Path::new(path);
+    if parsed.is_absolute() || parsed.components().any(|part| part.as_os_str() == "..") {
+        return Err(format!(
+            "retained packaged desktop report path must be portable: {path}"
+        ));
+    }
+    validate_report_text(value, pointer, expected)
+}
+
+fn validate_report_text(value: &Value, pointer: &str, expected: &str) -> RunnerResult<()> {
+    if value.pointer(pointer).and_then(Value::as_str) != Some(expected) {
+        return Err(format!(
+            "retained packaged desktop report {pointer} must be {expected}"
+        ));
+    }
+    Ok(())
 }
 
 fn write_report(path: &Path, report: &SmokeReport) -> RunnerResult<()> {
@@ -405,14 +530,35 @@ fn write_report(path: &Path, report: &SmokeReport) -> RunnerResult<()> {
 }
 
 fn portable_path(root: &Path, path: &Path) -> String {
-    path.strip_prefix(root)
-        .unwrap_or(path)
-        .to_string_lossy()
-        .replace('\\', "/")
+    if let Ok(relative) = path.strip_prefix(root) {
+        return relative.to_string_lossy().replace('\\', "/");
+    }
+    format!(
+        "@external/{}",
+        path.file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .replace('\\', "/")
+    )
 }
 
-fn portable_detail(root: &Path, detail: &str) -> String {
-    detail.replace(&root.to_string_lossy().to_string(), ".")
+fn portable_bundle_path(root: &Path, bundle_root: &Path, path: &Path) -> String {
+    if let Ok(relative) = path.strip_prefix(root) {
+        return relative.to_string_lossy().replace('\\', "/");
+    }
+    if let Ok(relative) = path.strip_prefix(bundle_root) {
+        return format!(
+            "@bundle-root/{}",
+            relative.to_string_lossy().replace('\\', "/")
+        );
+    }
+    portable_path(root, path)
+}
+
+fn portable_detail(root: &Path, bundle_root: &Path, detail: &str) -> String {
+    detail
+        .replace(&root.to_string_lossy().to_string(), ".")
+        .replace(&bundle_root.to_string_lossy().to_string(), "@bundle-root")
 }
 
 #[cfg(test)]
@@ -440,6 +586,7 @@ mod tests {
             options.bundle_root,
             root.join("target/desktop-cache/macos/release/bundle/macos")
         );
+        assert!(options.verify_report.is_none());
     }
 
     #[test]
@@ -454,15 +601,78 @@ mod tests {
     }
 
     #[test]
-    fn report_paths_are_repository_relative() {
+    fn report_paths_are_portable() {
         let root = Path::new("/tmp/repo");
         assert_eq!(
             portable_path(root, &root.join("tmp/report.json")),
             "tmp/report.json"
         );
         assert_eq!(
-            portable_detail(root, "failed at /tmp/repo/target/app"),
+            portable_path(root, Path::new("/Applications")),
+            "@external/Applications"
+        );
+        assert_eq!(
+            portable_bundle_path(
+                root,
+                Path::new("/Applications"),
+                Path::new("/Applications/Kyuubiki Hub.app/Contents/MacOS/kyuubiki-hub-gui")
+            ),
+            "@bundle-root/Kyuubiki Hub.app/Contents/MacOS/kyuubiki-hub-gui"
+        );
+        assert_eq!(
+            portable_detail(
+                root,
+                Path::new("/Applications"),
+                "failed at /tmp/repo/target/app"
+            ),
             "failed at ./target/app"
         );
+    }
+
+    #[test]
+    fn validates_portable_retained_report() {
+        let mut report = serde_json::json!({
+            "schema_version": REPORT_SCHEMA,
+            "platform": "macos",
+            "bundle_root": "@external/Applications",
+            "expected_version": VERSION,
+            "status": "pass",
+            "passed": 3,
+            "failed": 0,
+            "surfaces": [
+                retained_surface("hub", 1),
+                retained_surface("installer", 2),
+                retained_surface("workbench", 3)
+            ]
+        });
+        validate_retained_report(&report).expect("portable report should pass");
+        report["surfaces"][0]["detail"] = Value::String("startup assumed".to_string());
+        let error = validate_retained_report(&report).expect_err("invalid receipt should fail");
+        assert!(error.contains("/detail"));
+        report["surfaces"][0] = retained_surface("hub", 1);
+        report["surfaces"][0]["app_path"] = Value::String("/Applications/Hub.app".to_string());
+        let error = validate_retained_report(&report).expect_err("absolute path should fail");
+        assert!(error.contains("must be portable"));
+    }
+
+    fn retained_surface(surface: &str, pid: u64) -> Value {
+        let definition = surface_definitions()
+            .into_iter()
+            .find(|definition| definition.surface == surface)
+            .expect("fixture surface should exist");
+        let app_path = format!("@bundle-root/{}.app", definition.product_name);
+        serde_json::json!({
+            "surface": surface,
+            "app_path": app_path,
+            "executable_path": format!(
+                "@bundle-root/{}.app/Contents/MacOS/{}",
+                definition.product_name,
+                definition.executable_name
+            ),
+            "log_path": format!("tmp/packaged-desktop-smoke/{surface}.log"),
+            "status": "pass",
+            "pid": pid,
+            "detail": format!("interactive startup receipt accepted for {surface} {VERSION}")
+        })
     }
 }

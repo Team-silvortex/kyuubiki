@@ -1,0 +1,60 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
+  "summary": "Retained installed-package usability evidence for the three product-owned macOS desktop surfaces.",
+  "paradigm_contract_evidence": {
+    "product_surface": [
+      {
+        "id": "macos-installed-desktop-startup-contract",
+        "modules": [
+          "hub-shell",
+          "workbench-shell",
+          "installer-shell"
+        ],
+        "files": [
+          "config/architecture/usability-release-gate.json",
+          "workers/rust/crates/script-runner/src/packaged_desktop_smoke.rs",
+          "releases/usability-evidence/2.7.0/macos-installed-desktop-smoke.json"
+        ],
+        "required_text": [
+          "packaged_desktop_round_trip/macos-installed",
+          "--verify-report",
+          "kyuubiki.packaged-desktop-smoke-report/v1",
+          "@external/Applications",
+          "@bundle-root/Kyuubiki Hub.app",
+          "@bundle-root/Kyuubiki Installer.app",
+          "@bundle-root/Kyuubiki Workbench.app",
+          "interactive startup receipt accepted"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "macos-installed-desktop-startup",
+      "status": "proven",
+      "modules": [
+        "hub-shell",
+        "workbench-shell",
+        "installer-shell"
+      ],
+      "paradigms": [
+        "product_surface"
+      ],
+      "dimensions": [
+        "ux_closure"
+      ],
+      "files": [
+        "releases/usability-evidence/2.7.0/macos-installed-desktop-smoke.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"passed\": 3",
+        "\"failed\": 0",
+        "interactive startup receipt accepted for hub 2.7.0",
+        "interactive startup receipt accepted for installer 2.7.0",
+        "interactive startup receipt accepted for workbench 2.7.0"
+      ]
+    }
+  ]
+}

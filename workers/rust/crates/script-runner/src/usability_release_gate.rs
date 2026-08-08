@@ -32,6 +32,7 @@ struct Policy {
     production_runtime_must_be_native: bool,
     gate_scope: String,
     release_claim_allowed: bool,
+    closed_release_subtiers: Vec<String>,
     unclosed_release_tiers: Vec<String>,
 }
 
@@ -78,6 +79,7 @@ struct ReadinessReport {
     target_release: String,
     gate_scope: String,
     release_claim_allowed: bool,
+    closed_release_subtiers: Vec<String>,
     unclosed_release_tiers: Vec<String>,
     executed: bool,
     status: String,
@@ -184,6 +186,15 @@ fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
             "release_claim_allowed must be true only when no release tiers remain unclosed"
                 .to_string(),
         );
+    }
+    if config.policy.closed_release_subtiers.is_empty()
+        || config
+            .policy
+            .closed_release_subtiers
+            .iter()
+            .any(|tier| tier.trim().is_empty())
+    {
+        return Err("closed release subtiers must be explicit".to_string());
     }
 
     let capability_contract: serde_json::Value = read_json(root, &config.capability_contract)?;
@@ -333,6 +344,7 @@ fn build_report(config: &GateConfig, execute: bool) -> RunnerResult<ReadinessRep
         target_release: config.target_release.clone(),
         gate_scope: config.policy.gate_scope.clone(),
         release_claim_allowed: config.policy.release_claim_allowed,
+        closed_release_subtiers: config.policy.closed_release_subtiers.clone(),
         unclosed_release_tiers: config.policy.unclosed_release_tiers.clone(),
         executed: execute,
         status: status.to_string(),

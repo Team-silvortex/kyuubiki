@@ -32,6 +32,9 @@ Instead, each snapshot records:
   the reviewer identity, decision, release version, evidence path, and review
   gate before a release record can move from pending sign-off to another review
   status.
+- `usability-evidence/<version>/<platform>-installed-desktop-smoke.json`
+  Host-installed desktop startup evidence. Retained paths must use portable
+  `@external` or `@bundle-root` aliases and pass the native report verifier.
 - `update-catalog.json`
   Generated channel-to-version registry that gives desktop and installer
   surfaces one unified update view.

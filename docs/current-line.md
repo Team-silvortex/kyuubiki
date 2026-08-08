@@ -72,6 +72,10 @@ closure rather than raw feature sprawl:
   against slipping back to Node integration shims; `make
   build-usability-readiness-report` executes the 8 blocking paths and records
   the current `baseline_pass` evidence
+- the macOS installed-package layer now retains a `3/3` native startup-receipt
+  report for Hub, Installer, and Workbench; the report is path-portable and can
+  be rechecked on any host, while Linux and Windows package journeys remain
+  explicit release blockers
 - `create-open-project` now executes a real native bundle round trip. Hub and
   `kyuubiki project create|inspect|validate|normalize|pack|unpack|diff` share
   `workers/rust/crates/project-bundle` instead of maintaining separate storage

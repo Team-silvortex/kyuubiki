@@ -8,6 +8,9 @@
     "production_runtime_must_be_native": true,
     "gate_scope": "development_contract_and_ui_invocation",
     "release_claim_allowed": false,
+    "closed_release_subtiers": [
+      "packaged_desktop_round_trip/macos-installed"
+    ],
     "unclosed_release_tiers": [
       "packaged_desktop_round_trip",
       "fault_injection_and_recovery",
@@ -75,6 +78,11 @@
           "--journey",
           "create-open-project",
           "--execute"
+        ],
+        [
+          "desktop-packaged-smoke",
+          "--verify-report",
+          "releases/usability-evidence/2.7.0/macos-installed-desktop-smoke.json"
         ],
         ["check-gui-runtime-capability-contract"],
         ["check-ui-automation-contract"]
