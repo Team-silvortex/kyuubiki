@@ -38,6 +38,12 @@ claims: numerical readiness, orchestra distributed recovery, and agent
 watchdog recovery. Structural and maturity coverage stay green while deeper
 external correlation, recovery, fuzz, and user-loop gates keep expanding.
 
+The runtime API client calibration now promotes Hub, Workbench, Installer, and
+the native Installer service to required `runtime_api` coordinates. Declared
+desktop clients must retain UI-to-native execution closure, while the native
+Installer must retain its serializable Rust API manifest and stable exports.
+This closes the former `covered`-but-optional zero-evidence blind spot.
+
 ## 1. Numerical Trust
 
 Current weak point:

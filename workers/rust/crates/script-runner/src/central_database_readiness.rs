@@ -11,6 +11,7 @@ const SCHEMA_VERSION: &str = "kyuubiki.central-database-readiness/v1";
 const DEFAULT_SQLITE_PATH: &str = "./tmp/data/kyuubiki_dev.sqlite3";
 const REQUIRED_FILES: &[&str] = &[
     "apps/web/config/config.exs",
+    "apps/web/config/runtime.exs",
     "apps/web/lib/kyuubiki_web/central_store.ex",
     "apps/web/lib/kyuubiki_web/central_store_router.ex",
     "apps/web/lib/kyuubiki_web/storage/central_database.ex",
@@ -130,9 +131,9 @@ fn validate(
 
 fn required_text_checks() -> Vec<(&'static str, &'static str)> {
     vec![
-        ("apps/web/config/config.exs", "KYUUBIKI_STORAGE_BACKEND"),
-        ("apps/web/config/config.exs", "DATABASE_URL"),
-        ("apps/web/config/config.exs", "SQLITE_DATABASE_PATH"),
+        ("apps/web/config/runtime.exs", "KYUUBIKI_STORAGE_BACKEND"),
+        ("apps/web/config/runtime.exs", "DATABASE_URL"),
+        ("apps/web/config/runtime.exs", "SQLITE_DATABASE_PATH"),
         (
             "apps/web/lib/kyuubiki_web/central_store.ex",
             "kyuubiki.central-database-policy/v1",
@@ -225,6 +226,10 @@ fn self_test_files() -> HashMap<String, String> {
     HashMap::from([
         (
             "apps/web/config/config.exs".to_string(),
+            "import Config".to_string(),
+        ),
+        (
+            "apps/web/config/runtime.exs".to_string(),
             "KYUUBIKI_STORAGE_BACKEND DATABASE_URL SQLITE_DATABASE_PATH".to_string(),
         ),
         (

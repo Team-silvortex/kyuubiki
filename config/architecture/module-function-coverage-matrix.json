@@ -22,6 +22,7 @@
     ],
     "hub-shell": [
       "product_surface",
+      "runtime_api",
       "security",
       "deployment_update"
     ],
@@ -32,12 +33,14 @@
     ],
     "workbench-shell": [
       "product_surface",
+      "runtime_api",
       "workflow_composition",
       "validation",
       "sdk_headless"
     ],
     "installer-shell": [
       "product_surface",
+      "runtime_api",
       "deployment_update",
       "security",
       "persistence_provenance"
@@ -68,6 +71,7 @@
       "deployment_update"
     ],
     "runtime-installer": [
+      "runtime_api",
       "deployment_update",
       "security",
       "validation",

@@ -1,9 +1,11 @@
 use super::includes::load_tensor_with_includes;
 use super::{
     MATRIX_PATH, RunnerResult, SCHEMA_VERSION, TOPOLOGY_PATH, build_tensor_report,
-    derive_evidence_aware_gap, derive_gap, validate_tensor_config,
+    derive_evidence_aware_gap, derive_gap, validate_runtime_api_client_requirements,
+    validate_tensor_config,
 };
 use serde_json::{Value, json};
+use std::collections::BTreeSet;
 use std::{fs, path::Path, path::PathBuf};
 
 pub(super) fn run_self_test() -> RunnerResult<()> {
@@ -27,6 +29,7 @@ pub(super) fn run_self_test() -> RunnerResult<()> {
         return Err("self-test evidence-aware gap derivation failed".to_string());
     }
 
+    self_test_runtime_api_client_requirements()?;
     let topology = fixture_topology();
     let matrix = fixture_matrix();
     let tensor = fixture_tensor();
@@ -46,6 +49,27 @@ pub(super) fn run_self_test() -> RunnerResult<()> {
     }
     self_test_evidence_include_loader()?;
     Ok(())
+}
+
+fn self_test_runtime_api_client_requirements() -> RunnerResult<()> {
+    let surface = json!({
+        "runtime_api": {
+            "contract_families": [{
+                "id": "frontend-runtime-api",
+                "client_surfaces": ["shell"]
+            }]
+        }
+    });
+    let mut matrix = json!({
+        "required_by_module": {"shell": []},
+        "cells": {"shell": {"runtime_api": "covered"}}
+    });
+    let module_ids = BTreeSet::from(["shell".to_string()]);
+    if validate_runtime_api_client_requirements(&surface, &matrix, &module_ids).is_ok() {
+        return Err("runtime API clients must not remain optional".to_string());
+    }
+    matrix["required_by_module"]["shell"] = json!(["runtime_api"]);
+    validate_runtime_api_client_requirements(&surface, &matrix, &module_ids)
 }
 
 fn self_test_evidence_include_loader() -> RunnerResult<()> {

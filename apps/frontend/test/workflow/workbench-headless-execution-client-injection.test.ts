@@ -81,9 +81,9 @@ test("headless execution batch uses injected project and runtime clients", async
     "version:model-a:nodes",
   ]);
   assert.deepEqual(result.steps.map((step) => step.result), [
-    { service: "runtime", status: "ok" },
+    { service: "runtime", status: "ok", solver_endpoints: [] },
     { project_id: "project-a", name: "Headless" },
-    { model_id: "model-a", kind: "truss_2d" },
+    { model_id: "model-a", kind: "truss_2d", latest_version_id: null },
     { model_version_id: "version-a", kind: "truss_3d" },
   ]);
 });

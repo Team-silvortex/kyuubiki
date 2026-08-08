@@ -185,6 +185,14 @@ the central self-host service-surface binding, and the readiness-report service
 surface anchors. This makes `central-web-service` visible in the project tensor
 status instead of only in central-server docs.
 
+The tensor also imports `runtime_api_client_contract` from the shared runtime
+API surface. Every module named by a contract family's `client_surfaces` must
+have a covered, required `runtime_api` coordinate. Hub, Workbench, and Installer
+therefore cannot pass as product-only shells while their native calls remain
+optional or unevidenced. Native Installer exports are retained in a separate
+runtime API evidence shard so the shell/client boundary and the Rust service
+boundary are both reviewed.
+
 Large evidence bundles may live in repository-relative files listed by
 `evidence_includes`. `core-contracts.json` carries the shared contract
 evidence, coordinate requirements, and maturity claims that used to live in the

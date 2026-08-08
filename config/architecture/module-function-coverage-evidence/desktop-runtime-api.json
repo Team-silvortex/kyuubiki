@@ -1,0 +1,97 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
+  "summary": "Exact-coordinate contract and execution evidence for desktop runtime clients and the native installer runtime API.",
+  "paradigm_contract_evidence": {
+    "runtime_api": [
+      {
+        "id": "desktop-runtime-api-client-contract",
+        "modules": [
+          "hub-shell",
+          "workbench-shell",
+          "installer-shell"
+        ],
+        "files": [
+          "config/architecture/contracts-runtime-api-surface.json",
+          "config/architecture/desktop-capability-closure.json",
+          "tests/integration/desktop-gui-capability-closure.test.mjs"
+        ],
+        "required_text": [
+          "frontend-runtime-api",
+          "client_surfaces",
+          "hub.runtime.start-local",
+          "workbench.runtime.start-local",
+          "installer.runtime.start-local",
+          "every required desktop capability closes UI, route, native, and result layers"
+        ]
+      },
+      {
+        "id": "native-installer-runtime-api-contract",
+        "modules": [
+          "runtime-installer"
+        ],
+        "files": [
+          "workers/rust/crates/installer/src/headless_surface.rs",
+          "workers/rust/crates/installer/src/exports.rs"
+        ],
+        "required_text": [
+          "kyuubiki.installer-runtime-api/v1",
+          "api_owner: \"runtime_installer\"",
+          "installer_headless_surface_manifest",
+          "installation_integrity_report",
+          "remote_deployment_dry_run",
+          "unified_update_preview"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "desktop-runtime-api-execution-closure",
+      "status": "proven",
+      "modules": [
+        "hub-shell",
+        "workbench-shell",
+        "installer-shell"
+      ],
+      "paradigms": [
+        "runtime_api"
+      ],
+      "dimensions": [
+        "execution"
+      ],
+      "files": [
+        "config/architecture/desktop-capability-closure.json",
+        "tests/integration/desktop-gui-capability-closure.test.mjs"
+      ],
+      "required_text": [
+        "hub.runtime.start-local",
+        "workbench.runtime.start-local",
+        "installer.runtime.start-local",
+        "native command is absent from the app backend",
+        "guarded native operation is absent"
+      ]
+    },
+    {
+      "id": "native-installer-runtime-api-execution",
+      "status": "proven",
+      "modules": [
+        "runtime-installer"
+      ],
+      "paradigms": [
+        "runtime_api"
+      ],
+      "dimensions": [
+        "execution"
+      ],
+      "files": [
+        "workers/rust/crates/installer/src/headless_surface.rs"
+      ],
+      "required_text": [
+        "installer_headless_surface_manifest_is_serializable",
+        "stable_exports",
+        "serde_json::to_value(manifest)"
+      ]
+    }
+  ]
+}

@@ -131,7 +131,7 @@ async function runExecutionAction(
     return {
       model_id: response.model.model_id,
       kind: response.model.kind,
-      latest_version_id: response.model.latest_version_id,
+      latest_version_id: response.model.latest_version_id ?? null,
     };
   }
   if (action === "model_version_create") {

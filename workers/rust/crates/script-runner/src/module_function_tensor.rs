@@ -14,6 +14,8 @@ type RunnerResult<T> = Result<T, String>;
 pub(super) const TENSOR_PATH: &str = "config/architecture/module-function-coverage-tensor.json";
 pub(super) const TOPOLOGY_PATH: &str = "config/architecture/module-topology.json";
 pub(super) const MATRIX_PATH: &str = "config/architecture/module-function-coverage-matrix.json";
+const RUNTIME_API_CLIENT_CONTRACT_PATH: &str =
+    "config/architecture/contracts-runtime-api-surface.json";
 const DEFAULT_OUT: &str = "tmp/module-function-coverage-tensor.json";
 pub(super) const SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor/v2";
 const EVIDENCE_INCLUDE_SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-evidence/v1";
@@ -155,7 +157,74 @@ fn validate_tensor_config(
         }
         validate_contract_evidence_entries(root, entries, paradigm, &module_ids)?;
     }
+    validate_declared_runtime_api_clients(root, tensor, matrix, &module_ids)?;
     maturity::validate_config(root, tensor, &paradigms, &module_ids)?;
+    Ok(())
+}
+
+fn validate_declared_runtime_api_clients(
+    root: &Path,
+    tensor: &Value,
+    matrix: &Value,
+    module_ids: &BTreeSet<String>,
+) -> RunnerResult<()> {
+    if !object_keys(matrix, "paradigms").contains(&"runtime_api".to_string()) {
+        return Ok(());
+    }
+    let contract_path = string_at(tensor, "/runtime_api_client_contract")
+        .ok_or_else(|| "runtime_api_client_contract must be declared".to_string())?;
+    if contract_path != RUNTIME_API_CLIENT_CONTRACT_PATH {
+        return Err(format!(
+            "runtime_api_client_contract must be {RUNTIME_API_CLIENT_CONTRACT_PATH}"
+        ));
+    }
+    let surface = read_json(root, contract_path)?;
+    validate_runtime_api_client_requirements(&surface, matrix, module_ids)
+}
+
+pub(super) fn validate_runtime_api_client_requirements(
+    surface: &Value,
+    matrix: &Value,
+    module_ids: &BTreeSet<String>,
+) -> RunnerResult<()> {
+    let required_by_module = matrix
+        .get("required_by_module")
+        .and_then(Value::as_object)
+        .ok_or_else(|| "required_by_module must be an object".to_string())?;
+    for family in surface
+        .pointer("/runtime_api/contract_families")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        let family_id = string_field(family, "id").unwrap_or("unknown-runtime-api-family");
+        for client in string_array(family, "client_surfaces") {
+            if !module_ids.contains(&client) {
+                return Err(format!(
+                    "{family_id}: runtime API client surface maps unknown module {client}"
+                ));
+            }
+            let status = matrix
+                .pointer(&format!("/cells/{client}/runtime_api"))
+                .and_then(Value::as_str);
+            if status != Some("covered") {
+                return Err(format!(
+                    "{family_id}: runtime API client {client} must have a covered runtime_api cell"
+                ));
+            }
+            let required = required_by_module
+                .get(&client)
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .any(|paradigm| paradigm.as_str() == Some("runtime_api"));
+            if !required {
+                return Err(format!(
+                    "{family_id}: runtime API client {client} must require runtime_api"
+                ));
+            }
+        }
+    }
     Ok(())
 }
 
