@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/version-line-policy.schema.json",
+  "title": "Kyuubiki Version Line Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "cadence", "active_line", "next_line"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.version-line-policy/v1"
+    },
+    "cadence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minor_range", "patch_range"],
+      "properties": {
+        "minor_range": { "$ref": "#/$defs/range" },
+        "patch_range": { "$ref": "#/$defs/range" }
+      }
+    },
+    "active_line": { "$ref": "#/$defs/line" },
+    "next_line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codename", "first_version", "public_launch_channel"],
+      "properties": {
+        "codename": { "type": "string", "minLength": 1 },
+        "first_version": { "$ref": "#/$defs/semver" },
+        "public_launch_channel": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["first", "last", "count"],
+      "properties": {
+        "first": { "type": "integer", "minimum": 0 },
+        "last": { "type": "integer", "minimum": 0 },
+        "count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codename",
+        "major",
+        "first_version",
+        "final_version"
+      ],
+      "properties": {
+        "codename": { "type": "string", "minLength": 1 },
+        "major": { "type": "integer", "minimum": 0 },
+        "first_version": { "$ref": "#/$defs/semver" },
+        "final_version": { "$ref": "#/$defs/semver" }
+      }
+    }
+  }
+}

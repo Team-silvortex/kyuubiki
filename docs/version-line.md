@@ -9,8 +9,9 @@ For the broader product narrative, release posture, and reading path, use
 
 - codename: `moxi`
 - active line: `2.x`
-- current development point: `moxi 2.9.0`
-- current documentation target: `moxi 2.9.x` line
+- current development point: `moxi 2.11.7`
+- current documentation target: `moxi 2.11.x` line
+- first planned public launch: `daji 3.0.0` on Reddit
 - first 2.x baseline:
   `moxi 2.0.0` is the first formal Kyuubiki 2.x line after the
   `tamamono 1.x` industrialization bridge
@@ -21,6 +22,14 @@ For the broader product narrative, release posture, and reading path, use
 - line policy:
   new work should strengthen the 2.x industrial baseline rather than reopen
   broad pre-release feature sprawl
+- publication policy:
+  `moxi 2.x` remains internal; public debut claims begin only after the
+  `daji 3.0.0` release gate is closed
+- version cadence:
+  each major has 21 minor positions (`0` through `20`), and each minor has 10
+  patch positions (`0` through `9`)
+- moxi terminal version:
+  `moxi 2.20.9`; the next legal line start is `daji 3.0.0`
 - current checkpoint:
   workflow usability, Pwdt-driven frontend automation, coverage-tensor
   planning, and contract modularity are the active hardening focus
@@ -46,6 +55,7 @@ For the broader product narrative, release posture, and reading path, use
 
 ## Related docs
 
+- [version-line-policy.json](../config/version-line-policy.json)
 - [current-line.md](current-line.md)
 - [commercial-readiness-2.0.md](commercial-readiness-2.0.md)
 - [minimal-industrial-closure.md](minimal-industrial-closure.md)

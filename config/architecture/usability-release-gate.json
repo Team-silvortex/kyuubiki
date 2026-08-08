@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.usability-release-gate/v1",
-  "baseline_release": "moxi 2.9.x",
-  "target_release": "moxi 3.0.0",
+  "baseline_release": "moxi 2.11.x",
+  "target_release": "daji 3.0.0",
   "policy": {
     "all_blocking_journeys_must_pass": true,
     "planned_or_static_only_is_not_release_evidence": true,

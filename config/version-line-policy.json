@@ -1,0 +1,27 @@
+{
+  "$schema": "../schemas/version-line-policy.schema.json",
+  "schema_version": "kyuubiki.version-line-policy/v1",
+  "cadence": {
+    "minor_range": {
+      "first": 0,
+      "last": 20,
+      "count": 21
+    },
+    "patch_range": {
+      "first": 0,
+      "last": 9,
+      "count": 10
+    }
+  },
+  "active_line": {
+    "codename": "moxi",
+    "major": 2,
+    "first_version": "2.0.0",
+    "final_version": "2.20.9"
+  },
+  "next_line": {
+    "codename": "daji",
+    "first_version": "3.0.0",
+    "public_launch_channel": "reddit"
+  }
+}

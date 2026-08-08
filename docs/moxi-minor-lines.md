@@ -23,6 +23,10 @@ The line should prioritize:
 - benchmark, fuzz-smoke, and safety gates that can be expanded by module
   topology and coverage tensor
 
+The cadence is fixed: every major contains minor positions `0` through `20`,
+and every minor contains patch positions `0` through `9`. The final moxi
+version is therefore `2.20.9`; the next version is `daji 3.0.0`.
+
 ## Suggested minor grouping
 
 ### `2.0`
@@ -92,6 +96,8 @@ Expected emphasis:
 
 Primary goal: close the daji 3.0 preparation gap.
 
+This window ends at `moxi 2.20.9`, not at an open-ended `2.x` version.
+
 Expected emphasis:
 
 - make the minimum industrial loop repeatable enough for research partners
@@ -108,9 +114,9 @@ When in doubt, new `moxi 2.x` work should answer three questions:
 2. Is the contract visible to headless SDKs and not only to GUI code?
 3. Can the coverage tensor, benchmark lane, or integrity checker observe it?
 
-## Current checkpoint: `2.9.0`
+## Current checkpoint: `2.11.7`
 
-The repository has entered the `2.9` to `2.12` research-workflow maturity
+The repository remains in the `2.9` to `2.12` research-workflow maturity
 window. The previous distributed-reliability and cohesive-interface work stays
 in the baseline, but the current line-level question is whether a user,
 assistant, or SDK can move through an entire study without hidden UI-only

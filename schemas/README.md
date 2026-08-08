@@ -3,6 +3,8 @@
 These schemas capture the first cross-process contracts described in the root
 README.
 
+- `version-line-policy.schema.json` defines the global 21-minor, 10-patch
+  cadence and the active-to-next codename transition contract
 - `job.schema.json` is for durable job state
 - `progress-event.schema.json` is for streamed runtime updates
 - `headless-execution-summary.schema.json` defines the run-level projection

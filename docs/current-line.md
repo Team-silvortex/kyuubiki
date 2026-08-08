@@ -13,7 +13,7 @@ Use it when you want the shortest answer to:
 `moxi 2.x` is the point where Kyuubiki treats its core contracts as product
 baseline rather than loose prototypes.
 
-The current development point in this line is `moxi 2.9.0`.
+The current development point in this line is `moxi 2.11.7`.
 
 The 2.x line optimizes for:
 
@@ -51,9 +51,9 @@ The current rule is:
 - keep GUI convenience separate from runtime authority
 - keep agent/orchestra/mesh behavior protocol-driven
 
-## Current 2.9 Checkpoint
+## Current 2.11 Checkpoint
 
-`moxi 2.9.0` treats the next trust jump as product usability and automation
+`moxi 2.11.7` treats the next trust jump as product usability and automation
 closure rather than raw feature sprawl:
 
 - GUI navigation and backend calls must form complete, testable user journeys
@@ -115,11 +115,15 @@ closure rather than raw feature sprawl:
   contracts can be extended without recreating large-file debt
 
 The 2.7 cohesive-interface coassembly checkpoint is still retained as a
-calculation baseline. The 2.9 boundary is also explicit: Pwdt parity is not yet
+calculation baseline. The 2.11 boundary is also explicit: Pwdt parity is not yet
 complete, app shipping metadata is separate from this development checkpoint,
 and broader industrial solver qualification still needs deeper retained
 fixtures, external correlation, larger-scale evidence, and packaged GUI/Pwdt
 round trips beyond the current native project-bundle and automation probes.
+
+The first planned public Reddit launch is `daji 3.0.0`. Until that boundary is
+closed, `moxi 2.x` remains an internal development and validation line. Its
+final legal version is `moxi 2.20.9`; each minor ends at patch `.9`.
 
 ## Current Reading Path
 

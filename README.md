@@ -4,7 +4,7 @@ Kyuubiki is an engine-first FEM workstation, workflow system, and distributed
 runtime control plane.
 
 The active repository line is `moxi 2.x`. The current development snapshot is
-`moxi 2.9.0`. The line began at `moxi 2.0.0` after the `tamamono 1.x`
+`moxi 2.11.7`. The line began at `moxi 2.0.0` after the `tamamono 1.x`
 industrialization bridge.
 
 ## What This Repo Contains
@@ -58,9 +58,9 @@ Start with:
 - [docs/app-runtime-boundaries.md](docs/app-runtime-boundaries.md)
 - [docs/agent-control-authority.md](docs/agent-control-authority.md)
 
-## Moxi 2.9 Posture
+## Moxi 2.11 Posture
 
-`moxi 2.0.0` established the product baseline. `moxi 2.9.0` keeps those
+`moxi 2.0.0` established the product baseline. `moxi 2.11.7` keeps those
 contracts and advances the calculation and workflow path rather than resetting
 the architecture.
 
@@ -106,9 +106,14 @@ repeatable workflow control:
   line source ceiling remains enforceable
 
 The 2.7 cohesive coassembly checkpoint remains part of the active baseline,
-but 2.9 is mainly a reliability and usability bridge. It does not imply that
+but 2.11 is mainly a reliability and usability bridge. It does not imply that
 every GUI route is fully equivalent to Pwdt yet, nor that every physical solver
 family has independent industrial qualification.
+
+The planned first public Reddit launch is `daji 3.0.0`. The `moxi 2.x` line is
+an internal hardening line and must not be presented as that public debut.
+Moxi ends at `2.20.9`: each major has minor positions `0–20`, and each minor
+has patch positions `0–9`.
 
 Use these gates when deciding whether a new 2.x change is safe to treat as
 part of the industrial baseline:

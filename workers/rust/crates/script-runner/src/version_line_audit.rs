@@ -10,6 +10,8 @@ use inventory::{next_version_candidates, search_inventory};
 use report::print_human_report;
 
 const DEFAULT_CODENAME: &str = "moxi";
+const VERSION_POLICY_PATH: &str = "config/version-line-policy.json";
+const VERSION_POLICY_SCHEMA: &str = "kyuubiki.version-line-policy/v1";
 const EXACT_VERSION_FILES: &[&str] = &[
     "apps/frontend/package.json",
     "apps/frontend/public/brand.json",
@@ -45,12 +47,17 @@ pub(crate) fn run_audit_version_line(root: &Path, args: Vec<OsString>) -> Runner
     }
     let expected = options.expected.unwrap_or(current_release_version(root)?);
     let development = current_development_version(root)?;
+    let exact_checks = exact_checks(root, &expected, &options.codename)?;
+    let failed = exact_checks
+        .iter()
+        .filter(|check| check.get("ok").and_then(Value::as_bool) != Some(true))
+        .count();
     let report = json!({
         "codename": options.codename,
         "expected": expected,
         "current_development_version": development,
         "next_version": options.next,
-        "exact_checks": exact_checks(root, &expected, &options.codename)?,
+        "exact_checks": exact_checks,
         "reference_inventory": search_inventory(root, &expected, &options.codename)?,
         "next_candidates": next_version_candidates(root, &expected, options.next.as_deref(), &options.codename)?,
     });
@@ -63,7 +70,7 @@ pub(crate) fn run_audit_version_line(root: &Path, args: Vec<OsString>) -> Runner
     } else {
         print_human_report(&report);
     }
-    Ok(0)
+    Ok(if failed == 0 { 0 } else { 1 })
 }
 
 fn parse_args(args: Vec<OsString>) -> RunnerResult<Options> {
@@ -221,6 +228,7 @@ fn exact_checks(root: &Path, expected: &str, codename: &str) -> RunnerResult<Vec
     ));
     add_language_pack_checks(root, expected, &mut checks)?;
     checks.extend(markdown_fact_checks(root, &development_version, codename)?);
+    checks.extend(version_policy_checks(root, &development_version, codename)?);
     checks.push(check(
         "release_current_snapshot",
         "releases/index.json",
@@ -263,6 +271,124 @@ fn exact_checks(root: &Path, expected: &str, codename: &str) -> RunnerResult<Vec
         ),
     ));
     Ok(checks)
+}
+
+fn version_policy_checks(
+    root: &Path,
+    development_version: &str,
+    codename: &str,
+) -> RunnerResult<Vec<Value>> {
+    let policy = read_json(root, VERSION_POLICY_PATH)?;
+    let cadence = policy.get("cadence").unwrap_or(&Value::Null);
+    let active = policy.get("active_line").unwrap_or(&Value::Null);
+    let minor = cadence.get("minor_range").unwrap_or(&Value::Null);
+    let patch = cadence.get("patch_range").unwrap_or(&Value::Null);
+    let next = policy.get("next_line").unwrap_or(&Value::Null);
+    let formal_target = json_field(root, "docs/book-manifest.json", "formal_release_target")?;
+    Ok(vec![
+        check(
+            "version_policy",
+            VERSION_POLICY_PATH,
+            "schema_version",
+            VERSION_POLICY_SCHEMA,
+            string_value(&policy, "schema_version"),
+        ),
+        check(
+            "version_policy",
+            VERSION_POLICY_PATH,
+            "active_line.codename",
+            codename,
+            string_value(active, "codename"),
+        ),
+        check_value(
+            "version_policy",
+            VERSION_POLICY_PATH,
+            "active_line.major",
+            json!(2),
+            active.get("major").cloned().unwrap_or(Value::Null),
+        ),
+        range_check("minor_range", minor, 0, 20, 21),
+        range_check("patch_range", patch, 0, 9, 10),
+        check(
+            "version_policy",
+            VERSION_POLICY_PATH,
+            "active_line.first_version",
+            "2.0.0",
+            string_value(active, "first_version"),
+        ),
+        check(
+            "version_policy",
+            VERSION_POLICY_PATH,
+            "active_line.final_version",
+            "2.20.9",
+            string_value(active, "final_version"),
+        ),
+        check_value(
+            "version_policy",
+            "docs/book-manifest.json",
+            "current_development_version within moxi range",
+            json!(true),
+            json!(version_allowed(development_version, 2, 20, 9)),
+        ),
+        check(
+            "version_policy",
+            VERSION_POLICY_PATH,
+            "next_line.codename",
+            "daji",
+            string_value(next, "codename"),
+        ),
+        check(
+            "version_policy",
+            VERSION_POLICY_PATH,
+            "next_line.first_version",
+            "3.0.0",
+            string_value(next, "first_version"),
+        ),
+        check(
+            "version_policy",
+            VERSION_POLICY_PATH,
+            "next_line.public_launch_channel",
+            "reddit",
+            string_value(next, "public_launch_channel"),
+        ),
+        check(
+            "version_policy",
+            "docs/book-manifest.json",
+            "formal_release_target",
+            "daji 3.0.0",
+            formal_target,
+        ),
+    ])
+}
+
+fn range_check(field_name: &str, range: &Value, first: u64, last: u64, count: u64) -> Value {
+    check_value(
+        "version_policy",
+        VERSION_POLICY_PATH,
+        field_name,
+        json!({ "first": first, "last": last, "count": count }),
+        json!({
+            "first": range.get("first").and_then(Value::as_u64),
+            "last": range.get("last").and_then(Value::as_u64),
+            "count": range.get("count").and_then(Value::as_u64),
+        }),
+    )
+}
+
+fn version_allowed(version: &str, major: u64, last_minor: u64, last_patch: u64) -> bool {
+    parse_version(version).is_some_and(|(actual_major, minor, patch)| {
+        actual_major == major && minor <= last_minor && patch <= last_patch
+    })
+}
+
+fn parse_version(version: &str) -> Option<(u64, u64, u64)> {
+    let mut parts = version.split('.');
+    let parsed = (
+        parts.next()?.parse().ok()?,
+        parts.next()?.parse().ok()?,
+        parts.next()?.parse().ok()?,
+    );
+    parts.next().is_none().then_some(parsed)
 }
 
 fn current_development_version(root: &Path) -> RunnerResult<String> {
@@ -542,7 +668,7 @@ fn version_display(codename: &str, version: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{contains_todo, version_minor_line};
+    use super::{contains_todo, version_allowed, version_minor_line};
     use serde_json::json;
 
     #[test]
@@ -555,5 +681,15 @@ mod tests {
     fn todo_scan_recurses() {
         assert!(contains_todo(&json!({"nested": ["TODO: fill"]})));
         assert!(!contains_todo(&json!({"nested": ["done"]})));
+    }
+
+    #[test]
+    fn moxi_version_space_ends_at_2_20_9() {
+        assert!(version_allowed("2.0.0", 2, 20, 9));
+        assert!(version_allowed("2.11.7", 2, 20, 9));
+        assert!(version_allowed("2.20.9", 2, 20, 9));
+        assert!(!version_allowed("2.20.10", 2, 20, 9));
+        assert!(!version_allowed("2.21.0", 2, 20, 9));
+        assert!(!version_allowed("3.0.0", 2, 20, 9));
     }
 }

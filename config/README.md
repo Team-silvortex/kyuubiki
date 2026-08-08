@@ -49,6 +49,10 @@ the profile commands themselves should be executed.
 
 ## Benchmark And Audit Inputs
 
+- `version-line-policy.json`
+  Machine-readable product cadence. It defines the active codename, legal
+  major/minor/patch range, terminal version, and the next public line. The
+  native version audit rejects development versions outside this space.
 - `architecture/module-topology.json`
   Strict module topology used to map product shells, control plane, runtime,
   SDKs, contracts, and verification gates onto benchmark and security lanes.
