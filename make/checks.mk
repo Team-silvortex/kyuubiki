@@ -1,6 +1,6 @@
 .PHONY: check-doc-book check-doc-inventory sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-moxi-handoff check-install-update-disk-hygiene check-component-integrity-protocol
 .PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-test-coverage-posture coverage coverage-rust coverage-frontend check-module-extension-standard check-contracts-runtime-api-surface check-verification-evidence-surface check-central-store-contract check-central-database-readiness build-central-readiness-report check-central-readiness-report build-module-topology-report check-native-script-audit
-.PHONY: check-language-packs report-full-language-pack-coverage plan-language-pack-translations next-language-pack-translation check-full-language-pack-coverage check-language-pack-coverage export-language-pack-translation-batch apply-language-pack-translation-batch check-ui-automation-contract check-gui-runtime-capability-contract check-desktop-usability-journeys check-usability-release-gate build-usability-readiness-report check-runtime-recovery-fault-injection check-orchestra-recovery-fault-injection check-version-line
+.PHONY: check-language-packs report-full-language-pack-coverage plan-language-pack-translations next-language-pack-translation check-full-language-pack-coverage check-language-pack-coverage export-language-pack-translation-batch apply-language-pack-translation-batch check-ui-automation-contract check-gui-runtime-capability-contract check-desktop-usability-journeys check-usability-release-gate build-usability-readiness-report check-runtime-recovery-fault-injection check-orchestra-recovery-fault-injection check-installer-recovery-fault-injection check-version-line
 .PHONY: check-workflow-dataset-contract check-workflow-metric-resolver-contract check-material-card-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
 .PHONY: build-operator-qualification-readiness check-operator-qualification-readiness
 .PHONY: check-operator-qualification-release-records check-operator-qualification-review-decision
@@ -162,6 +162,10 @@ check-runtime-recovery-fault-injection:
 check-orchestra-recovery-fault-injection:
 	@$(ENTRYPOINT) check-orchestra-recovery-fault-injection --self-test
 	@$(ENTRYPOINT) check-orchestra-recovery-fault-injection --out $${OUT:-tmp/orchestra-process-loss-fault-injection.json}
+
+check-installer-recovery-fault-injection:
+	@$(ENTRYPOINT) check-installer-recovery-fault-injection --self-test
+	@$(ENTRYPOINT) check-installer-recovery-fault-injection --out $${OUT:-tmp/installer-journal-replay-fault-injection.json}
 
 check-version-line:
 	@$(ENTRYPOINT) create-release-snapshot --self-test

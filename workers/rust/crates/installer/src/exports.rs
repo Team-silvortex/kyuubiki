@@ -45,11 +45,24 @@ pub use crate::remote_deployment_dry_run::{
     RemoteDeploymentDryRunReport, default_remote_deployment_dry_run, remote_deployment_dry_run,
 };
 pub use crate::remote_deployment_journal::{
-    RemoteDeploymentJournal, RemoteDeploymentJournalRecord, default_remote_deployment_journal,
-    remote_deployment_journal_for_plan,
+    RemoteDeploymentJournal, RemoteDeploymentJournalRecord, complete_remote_deployment_step,
+    default_remote_deployment_journal, interrupt_remote_deployment_step,
+    remote_deployment_journal_digest, remote_deployment_journal_for_plan,
+    remote_deployment_plan_digest, start_remote_deployment_step, verify_remote_deployment_journal,
+};
+pub use crate::remote_deployment_journal_store::{
+    RemoteDeploymentJournalPaths, read_remote_deployment_journal, remote_deployment_journal_paths,
+    write_remote_deployment_journal_atomic,
 };
 pub use crate::remote_deployment_plan::{
     RemoteDeploymentPlan, RemoteDeploymentPlanStep, default_remote_deployment_plan,
+};
+pub use crate::remote_deployment_recovery_probe::{
+    InstallerJournalDigestTamperScenario, InstallerJournalProcessLossScenario,
+    InstallerJournalReplayFaultInjectionReport, run_installer_journal_replay_fault_injection,
+};
+pub use crate::remote_deployment_replay::{
+    RemoteDeploymentResumePlan, prepare_remote_deployment_resume,
 };
 pub use crate::remote_host_trust::{
     RemoteHostTrustOption, RemoteHostTrustPlan, default_remote_host_trust_plan,

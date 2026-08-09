@@ -3,8 +3,9 @@ use crate::{
     commercial_readiness, component_integrity_protocol, contracts_runtime_api_surface,
     dependency_audit, desktop_usability_journeys, doc_inventory, docs_book, frontend_checks,
     gui_runtime_capability_contract, install_update_disk_hygiene, installation_integrity_docs,
-    language_packs, local_path_audit, make_modules, material_exploration_chain_contract,
-    material_score_contract, material_study_execution_plan_contract, materialization_plan_contract,
+    installer_recovery_fault_injection, language_packs, local_path_audit, make_modules,
+    material_exploration_chain_contract, material_score_contract,
+    material_study_execution_plan_contract, materialization_plan_contract,
     minimal_industrial_closure, module_extension_standard, module_function_matrix,
     module_function_tensor, module_topology, module_topology_report, moxi_handoff,
     operator_task_ir_contract, orchestra_recovery_fault_injection, project_organization_audit,
@@ -102,6 +103,11 @@ pub(crate) fn run_governance_command(
         }
         "check-orchestra-recovery-fault-injection" => {
             orchestra_recovery_fault_injection::run_check_orchestra_recovery_fault_injection(
+                root, args,
+            )
+        }
+        "check-installer-recovery-fault-injection" => {
+            installer_recovery_fault_injection::run_check_installer_recovery_fault_injection(
                 root, args,
             )
         }

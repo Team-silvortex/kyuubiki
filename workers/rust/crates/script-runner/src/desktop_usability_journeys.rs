@@ -16,10 +16,12 @@ const NATIVE_PROBES: &[&str] = &[
     "check-desktop-usability-journeys",
     "check-gui-runtime-capability-contract",
     "check-install-update-disk-hygiene",
+    "check-installer-recovery-fault-injection",
     "check-material-exploration-chain-contract",
     "check-material-research-bundle",
     "check-operator-task-ir-contract",
     "check-operator-validation",
+    "check-orchestra-recovery-fault-injection",
     "check-runtime-recovery-fault-injection",
     "check-ui-automation-contract",
     "check-workflow-dataset-contract",
@@ -370,17 +372,20 @@ fn validate_required_chains(config: &GateConfig, selected: Option<&str>, issues:
                     .to_string(),
             );
         }
-        if *journey_id == "diagnose-recover"
-            && !journey.probes.iter().any(|probe| {
-                probe
-                    .first()
-                    .is_some_and(|cmd| cmd == "check-runtime-recovery-fault-injection")
-            })
-        {
-            issues.push(
-                "journey diagnose-recover must execute runtime recovery fault injection"
-                    .to_string(),
-            );
+        if *journey_id == "diagnose-recover" {
+            for probe_id in [
+                "check-runtime-recovery-fault-injection",
+                "check-orchestra-recovery-fault-injection",
+                "check-installer-recovery-fault-injection",
+            ] {
+                if !journey
+                    .probes
+                    .iter()
+                    .any(|probe| probe.first().is_some_and(|cmd| cmd == probe_id))
+                {
+                    issues.push(format!("journey diagnose-recover must execute {probe_id}"));
+                }
+            }
         }
     }
 }

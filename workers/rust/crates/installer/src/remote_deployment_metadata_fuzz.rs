@@ -96,23 +96,30 @@ fn step_fixture(id: &str, phase: &str, idempotency_key: &str) -> Value {
 
 fn journal_fixture(case_index: usize) -> Value {
     json!({
-        "schema_version": "kyuubiki.remote-deployment-journal/v1",
+        "schema_version": "kyuubiki.remote-deployment-journal/v2",
         "plan_id": format!("remote-agent-lab-pilot-{case_index}"),
+        "plan_digest": "0000000000000000000000000000000000000000000000000000000000000000",
         "target_ref": format!("lab-agent-{case_index}"),
+        "revision": 0,
+        "status": "pending",
         "records": [
-            record_fixture("policy-check", "preflight", "pending"),
-            record_fixture("sync-artifacts", "delivery", "pending")
-        ]
+            record_fixture(0, "policy-check", "preflight", "pending"),
+            record_fixture(1, "sync-artifacts", "delivery", "pending")
+        ],
+        "journal_digest": "0000000000000000000000000000000000000000000000000000000000000000"
     })
 }
 
-fn record_fixture(step_id: &str, phase: &str, status: &str) -> Value {
+fn record_fixture(sequence: usize, step_id: &str, phase: &str, status: &str) -> Value {
     json!({
+        "sequence": sequence,
         "step_id": step_id,
         "phase": phase,
         "status": status,
+        "attempt": 0,
         "idempotency_key": format!("lab-agent:{step_id}"),
         "failure_class": phase,
+        "failure_reason": null,
         "local_record_path": format!(".kyuubiki/remote-journal/plan/{step_id}.jsonl"),
         "remote_record_path": format!(".kyuubiki/remote-journal/lab/{step_id}.jsonl")
     })

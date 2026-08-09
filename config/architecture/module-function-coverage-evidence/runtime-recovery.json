@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
-  "summary": "Executed workflow, Agent watchdog, and Orchestra process-loss fault injection proving branch isolation, fail-fast behavior, stale-timeout recovery, and replay-safe failover.",
+  "summary": "Executed workflow, Agent watchdog, Orchestra process-loss, and Installer journal fault injection proving branch isolation, stale-timeout recovery, replay-safe failover, and atomic deployment resume.",
   "paradigm_contract_evidence": {
     "workflow_composition": [
       {
@@ -10,6 +10,7 @@
           "orchestra-control-plane",
           "runtime-engine-solver",
           "runtime-agent-cli",
+          "runtime-installer",
           "verification-evidence"
         ],
         "files": [
@@ -18,8 +19,12 @@
           "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery_probe.ex",
           "workers/rust/crates/script-runner/src/runtime_recovery_fault_injection.rs",
           "workers/rust/crates/script-runner/src/orchestra_recovery_fault_injection.rs",
+          "workers/rust/crates/installer/src/remote_deployment_journal_store.rs",
+          "workers/rust/crates/installer/src/remote_deployment_replay.rs",
+          "workers/rust/crates/script-runner/src/installer_recovery_fault_injection.rs",
           "releases/usability-evidence/2.11.7/workflow-branch-recovery-fault-injection.json",
-          "releases/usability-evidence/2.11.7/orchestra-agent-process-loss-fault-injection.json"
+          "releases/usability-evidence/2.11.7/orchestra-agent-process-loss-fault-injection.json",
+          "releases/usability-evidence/2.11.7/installer-journal-replay-fault-injection.json"
         ],
         "required_text": [
           "fault_injection_and_recovery/workflow-branch-isolation",
@@ -31,7 +36,10 @@
           "agent_watchdog_stale_timeout",
           "fault_injection_and_recovery/orchestra-agent-process-loss",
           "kyuubiki.orchestra-process-loss-fault-injection/v1",
-          "side_effect_replay_blocked_without_checkpoint"
+          "side_effect_replay_blocked_without_checkpoint",
+          "fault_injection_and_recovery/installer-journal-replay",
+          "kyuubiki.installer-journal-replay-fault-injection/v1",
+          "power_loss_sidecar_recovered"
         ]
       }
     ]
@@ -102,6 +110,38 @@
         "\"checkpointed_result_retained\": true",
         "\"checkpoint_digest\":",
         "\"safe_to_continue_other_tasks\": true"
+      ]
+    },
+    {
+      "id": "installer-journal-replay-fault-injection",
+      "status": "proven",
+      "modules": [
+        "runtime-installer",
+        "verification-evidence"
+      ],
+      "paradigms": [
+        "deployment_update",
+        "runtime_api",
+        "validation"
+      ],
+      "dimensions": [
+        "recovery",
+        "security"
+      ],
+      "files": [
+        "releases/usability-evidence/2.11.7/installer-journal-replay-fault-injection.json"
+      ],
+      "required_text": [
+        "\"scenario_count\": 2",
+        "\"interrupted_step_id\": \"sync-artifacts\"",
+        "\"resume_step_id\": \"sync-artifacts\"",
+        "\"completed_step_replayed\": false",
+        "\"interrupted_attempt_before\": 1",
+        "\"interrupted_attempt_after\": 2",
+        "\"power_loss_sidecar_recovered\": true",
+        "\"partial_next_ignored\": true",
+        "\"digest_tamper_rejected\": true",
+        "\"valid_journal_preserved\": true"
       ]
     }
   ]

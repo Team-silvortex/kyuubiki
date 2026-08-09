@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::Path;
 
 use crate::{
     Platform, build_desktop_app_manifest, build_launch_manifest, build_release_manifest,
@@ -65,7 +65,7 @@ pub fn cross_platform_audit_report() -> CrossPlatformAuditReport {
     }
 }
 
-fn audit_platform(root: &PathBuf, platform: Platform, issues: &mut Vec<CrossPlatformAuditIssue>) {
+fn audit_platform(root: &Path, platform: Platform, issues: &mut Vec<CrossPlatformAuditIssue>) {
     let platform_name = platform.as_str().to_string();
     let release_dir = root.join("dist").join(platform.as_str());
 
@@ -139,6 +139,6 @@ fn compare_text_file(
     }
 }
 
-fn load_workspace_env_example(root: &PathBuf) -> String {
+fn load_workspace_env_example(root: &Path) -> String {
     fs::read_to_string(root.join(".env.example")).unwrap_or_default()
 }

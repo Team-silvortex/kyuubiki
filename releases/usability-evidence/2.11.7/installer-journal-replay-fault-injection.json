@@ -1,0 +1,30 @@
+{
+  "schema_version": "kyuubiki.installer-journal-replay-fault-injection/v1",
+  "status": "passed",
+  "scenario_count": 2,
+  "process_loss_replay": {
+    "status": "passed",
+    "interrupted_step_id": "sync-artifacts",
+    "resume_step_id": "sync-artifacts",
+    "completed_before_loss": [
+      "policy-check",
+      "bootstrap-workspace"
+    ],
+    "completed_step_replayed": false,
+    "interrupted_attempt_before": 1,
+    "interrupted_attempt_after": 2,
+    "final_status": "completed",
+    "pending_count": 0,
+    "journal_digest_valid": true,
+    "power_loss_sidecar_recovered": true,
+    "partial_next_ignored": true,
+    "probe_state_cleaned": true
+  },
+  "digest_tamper_recovery": {
+    "status": "passed",
+    "digest_tamper_rejected": true,
+    "error_class": "journal_digest_mismatch",
+    "valid_journal_preserved": true,
+    "probe_state_cleaned": true
+  }
+}

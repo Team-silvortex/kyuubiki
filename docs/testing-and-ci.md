@@ -234,6 +234,15 @@ process-loss reasons, unsafe retries, duplicate side effects, or incomplete
 fallback observations. The checkpointed lane must retain a verified checkpoint
 digest; a caller-provided label without verification remains blocked.
 
+Use `make check-installer-recovery-fault-injection` for deployment-side
+recovery. It writes the native Installer journal through an atomic
+main/next/previous store, injects process loss between commit renames, leaves a
+partial next file, and verifies resume from `sync-artifacts` without replaying
+the completed prefix. A second scenario proves digest tampering is rejected.
+The retained report can be rechecked with
+`check-installer-recovery-fault-injection --verify-report <path>` without
+rerunning the probe.
+
 ### Desktop shell checks
 
 - `make test-hub-gui`

@@ -41,6 +41,7 @@ mod gui_runtime_capability_contract;
 mod help;
 mod install_update_disk_hygiene;
 mod installation_integrity_docs;
+mod installer_recovery_fault_injection;
 mod kcore_cli;
 mod lab;
 mod language_packs;

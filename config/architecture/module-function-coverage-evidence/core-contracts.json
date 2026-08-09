@@ -745,11 +745,18 @@
       ],
       "files": [
         "workers/rust/crates/installer/src/remote_deployment_plan.rs",
-        "workers/rust/crates/installer/src/tests/remote_deployment.rs"
+        "workers/rust/crates/installer/src/remote_deployment_journal.rs",
+        "workers/rust/crates/installer/src/remote_deployment_journal_store.rs",
+        "workers/rust/crates/installer/src/remote_deployment_replay.rs",
+        "workers/rust/crates/installer/src/tests/remote_deployment_replay.rs",
+        "releases/usability-evidence/2.11.7/installer-journal-replay-fault-injection.json"
       ],
       "required_text": [
         "keep journal for retry",
-        "retry_safe_step_contract"
+        "write_remote_deployment_journal_atomic",
+        "prepare_remote_deployment_resume",
+        "completed_step_replayed",
+        "power_loss_sidecar_recovered"
       ]
     },
     {

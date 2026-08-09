@@ -67,8 +67,12 @@ fn remote_deployment_journal_matches_plan_steps() {
     let journal = default_remote_deployment_journal();
     assert_eq!(
         journal.schema_version,
-        "kyuubiki.remote-deployment-journal/v1"
+        "kyuubiki.remote-deployment-journal/v2"
     );
+    assert_eq!(journal.revision, 0);
+    assert_eq!(journal.status, "pending");
+    assert_eq!(journal.plan_digest.len(), 64);
+    assert_eq!(journal.journal_digest.len(), 64);
     assert_eq!(journal.records.len(), plan.steps.len());
     assert!(
         journal
@@ -81,11 +85,7 @@ fn remote_deployment_journal_matches_plan_steps() {
             .local_record_path
             .starts_with(".kyuubiki/remote-journal/")
     }));
-    assert!(
-        journal
-            .render()
-            .contains("remote deployment journal preview")
-    );
+    assert!(journal.render().contains("remote deployment journal"));
 }
 
 #[test]

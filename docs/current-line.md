@@ -83,8 +83,10 @@ closure rather than raw feature sprawl:
   late-result rejection without duplicate failure, and healthy follow-up work.
   Orchestra now retains real TCP process-loss evidence: idempotent work fails
   over, side-effecting work stops before blind replay, and explicitly
-  checkpointed work resumes; remote host kill/rejoin and installer replay tiers
-  remain open
+  checkpointed work resumes. Installer journal replay now survives an injected
+  partial atomic commit, resumes from the first incomplete step without
+  replaying the completed prefix, and rejects digest tampering; only remote host
+  kill/rejoin remains open in this distributed recovery tier
 - `create-open-project` now executes a real native bundle round trip. Hub and
   `kyuubiki project create|inspect|validate|normalize|pack|unpack|diff` share
   `workers/rust/crates/project-bundle` instead of maintaining separate storage

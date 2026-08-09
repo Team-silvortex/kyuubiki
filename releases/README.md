@@ -42,6 +42,9 @@ Instead, each snapshot records:
 - `usability-evidence/<version>/orchestra-agent-process-loss-fault-injection.json`
   Live TCP evidence for idempotent Agent failover, side-effect replay blocking,
   and checkpoint-authorized recovery after a post-dispatch process loss.
+- `usability-evidence/<version>/installer-journal-replay-fault-injection.json`
+  Native disk evidence for atomic journal recovery, first-incomplete-step
+  replay, completed-prefix preservation, and digest-tamper rejection.
 - `update-catalog.json`
   Generated channel-to-version registry that gives desktop and installer
   surfaces one unified update view.

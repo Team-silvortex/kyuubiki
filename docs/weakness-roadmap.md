@@ -475,9 +475,11 @@ execution. Its stale-timeout sub-tier proves heartbeat refresh, timeout reason
 retention, cooperative cancellation, late-result deduplication, and slot reuse.
 Orchestra process-loss injection now proves post-dispatch Agent disconnects,
 idempotent failover, duplicate-export prevention, and checkpoint-authorized
-replay through retained evidence. This still does not close distributed
-recovery: remote host kill/rejoin and installer journal replay need retained
-fault-injection evidence.
+replay through retained evidence. Installer journal replay now has a v2 state
+machine, digest-bound plan identity, atomic main/next/previous storage, and
+retained process-loss evidence proving that completed steps are not replayed.
+This still does not close distributed recovery: remote host kill/rejoin needs
+retained fault-injection evidence on a managed physical deployment.
 
 ## Priority Order
 
