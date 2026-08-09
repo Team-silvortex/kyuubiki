@@ -433,6 +433,7 @@ version = "2.7.0"
 dependencies = [
  "kyuubiki-protocol",
  "libc",
+ "serde_json",
 ]
 
 [[package]]

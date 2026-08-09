@@ -5,6 +5,7 @@ use kyuubiki_protocol::{
 };
 
 use crate::cohesive_interface_1d::validate_id;
+use crate::linear_algebra::{MatrixAssembler, add_at};
 
 const MAX_CONNECTOR_SPRINGS: usize = 4096;
 
@@ -65,11 +66,11 @@ impl<'a> ConnectorSpring<'a> {
             .collect()
     }
 
-    pub(crate) fn assemble(
+    pub(crate) fn assemble<M: MatrixAssembler + ?Sized>(
         &self,
         displacements: &[f64],
         internal_forces: &mut [f64],
-        tangent: &mut [Vec<f64>],
+        tangent: &mut M,
     ) {
         for axis in 0..2 {
             let dof_i = self.dofs[0][axis];
@@ -78,10 +79,10 @@ impl<'a> ConnectorSpring<'a> {
             let force = stiffness * (displacements[dof_j] - displacements[dof_i]);
             internal_forces[dof_i] -= force;
             internal_forces[dof_j] += force;
-            tangent[dof_i][dof_i] += stiffness;
-            tangent[dof_i][dof_j] -= stiffness;
-            tangent[dof_j][dof_i] -= stiffness;
-            tangent[dof_j][dof_j] += stiffness;
+            add_at(tangent, dof_i, dof_i, stiffness);
+            add_at(tangent, dof_i, dof_j, -stiffness);
+            add_at(tangent, dof_j, dof_i, -stiffness);
+            add_at(tangent, dof_j, dof_j, stiffness);
         }
     }
 

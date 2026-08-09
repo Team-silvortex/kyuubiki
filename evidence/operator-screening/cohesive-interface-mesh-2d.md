@@ -9,12 +9,12 @@ Release line: `moxi 2.x`
 The operator assembles multiple four-node zero-thickness cohesive elements into
 one two-dimensional translational equilibrium system. Elements resolve a
 material ID from a request-level catalog and retain two independent Gauss-point
-histories. Nodes expose constraints, optional non-zero target displacements,
-and proportional external loads. The same load factor advances both external
-loads and prescribed displacement targets. As an alternative, an explicit
+histories. Nodes expose translation constraints, optional frame rotation
+constraints, non-zero target values, forces, and moments. The same load factor
+advances external loads and prescribed targets. As an alternative, an explicit
 control history provides an independent load factor and complete constrained
-node displacement vector at every step; the two input modes are mutually
-exclusive. Optional two-node component connector springs use the same global
+translation and optional rotation vectors at every step; the two input modes
+are mutually exclusive. Optional two-node component connector springs use the same global
 translational DOFs and Newton assembly as the cohesive elements. They provide a
 small protocolized host proxy for heterogeneous equilibrium, not a bulk-element
 substitute. Optional small-displacement linear 2D host trusses reuse the public
@@ -26,6 +26,12 @@ their continuum stiffness, internal force, and tangent without an adapter solve.
 Optional bilinear plane-stress quads reuse `PlaneQuadElementInput` and
 `PlaneQuadElementResult`. Their native `2 x 2` Gauss integration and positive
 Jacobian guards participate directly in the same Newton matrix.
+Optional linear Euler-Bernoulli frame hosts reuse `Frame2dElementInput` and
+`Frame2dElementResult`. Their appended rotational DOFs preserve the existing
+translation indexing while retaining the native transformed `6 x 6` frame
+stiffness, axial force, shear, end moments, stress, and strain energy. Rotations
+on nodes outside the frame topology are constrained automatically so they
+cannot create artificial singular modes.
 
 Each load increment uses Newton equilibrium on the reduced free-DOF system:
 
@@ -33,6 +39,15 @@ Each load increment uses Newton equilibrium on the reduced free-DOF system:
 residual = load_factor * external_load - assembled_internal_force
 tangent  = assembled_element_consistent_tangents
 ```
+
+Every cohesive and host kernel writes through the shared `MatrixAssembler`
+contract into a sparse global tangent. Constraint projection retains only the
+free sparse rows and columns. Narrow positive-definite tangents first use a
+reusable symmetric-band Cholesky factor with iterative refinement; invertible
+indefinite or wide tangents within the retained model bound use a pivoted dense
+fallback. Every step reports `tangent_non_zero_count`, `tangent_fill_ratio`,
+and `linear_solver`; the result retains maxima and the distinct solver methods
+used across the accepted path.
 
 Every Newton trial starts from the last committed Gauss-point histories.
 Histories and displacements are committed only after the free-DOF residual
@@ -64,6 +79,13 @@ reason.
 - a rectangular Q4 host-and-cohesive series system independently recovers the
   same opening, extension, common force, stress, and energy through Solver,
   Agent RPC, and Engine Workflow
+- a tip-loaded frame host independently recovers the Euler-Bernoulli relative
+  deflection `P L^3 / (3 E I)`, rotation `P L^2 / (2 E I)`, root moment `P L`,
+  bending stress, and strain energy while its translating root remains in
+  equilibrium with the cohesive interface
+- a 96-element, 384-node, 768-DOF block interface model retains 3,072 tangent
+  nonzeros, a `0.005208` fill ratio, and the reported
+  `symmetric_band_cholesky` solve path
 - every retained load step reports iterations, residual, load factor, and
   convergence, including its maximum connector force
 - an underconstrained rigid mode is detected as a singular reduced tangent
@@ -74,6 +96,8 @@ reason.
 - invalid host-truss IDs, connectivity, area, modulus, and length are rejected
 - invalid host-plane IDs, connectivity, thickness, modulus, Poisson ratio,
   triangle area, and Q4 Gauss-point Jacobians are rejected
+- invalid host-frame IDs, connectivity, section properties, and orphan
+  rotational loads or prescribed rotations are rejected
 - protocol serialization, Agent RPC, engine workflow, result chunking,
   Rust headless discovery, and self-hosted Web submission use one request
 
@@ -81,14 +105,17 @@ reason.
 
 This is a real global cohesive-element equilibrium path, not merely a UI or
 single-element history wrapper. The current screening implementation is bounded
-to 512 nodes and uses a dense reduced solve. Linear component connector springs
+to 512 nodes and uses sparse global assembly and sparse constraint reduction.
+Narrow positive-definite systems remain sparse through the banded solve;
+invertible indefinite or wide systems retain a pivoted dense fallback bounded
+to 1,536 free DOFs. Linear component connector springs
 establish the heterogeneous element contract, and small-displacement linear 2D
 host trusses are the first retained structural host element. Constant-strain
 plane-stress triangles now provide the first retained continuum host. The
 same public host contract now includes fully integrated bilinear plane-stress
-quads. The operator does not yet co-assemble shells, beams, frames, or 3D
-solids. Proportional displacement control can traverse the retained monotonic
+quads and linear Euler-Bernoulli 2D frames. The operator does not yet
+co-assemble shells or 3D solids. Proportional displacement control can traverse the retained monotonic
 softening path, while explicit histories cover cyclic and non-proportional
 prescribed paths. Arc-length and adaptive step control remain open alongside
-coupled mixed-mode damage, friction, sparse assembly, and experimental
-calibration.
+coupled mixed-mode damage, friction, scalable sparse-indefinite factorization,
+fill-reducing reordering, and experimental calibration.

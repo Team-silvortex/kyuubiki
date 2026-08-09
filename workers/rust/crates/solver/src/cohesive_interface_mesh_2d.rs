@@ -14,10 +14,11 @@ use crate::cohesive_interface_mesh_2d_connector::ConnectorSpring;
 use crate::cohesive_interface_mesh_2d_control::{
     ControlStep, build_controls, restricted_norm, vector_norm,
 };
+use crate::cohesive_interface_mesh_2d_frame::HostFrame;
 use crate::cohesive_interface_mesh_2d_newton::solve_load_step;
 use crate::cohesive_interface_mesh_2d_plane::{HostPlaneQuad, HostPlaneTriangle};
 use crate::cohesive_interface_mesh_2d_truss::HostTruss;
-use crate::linear_dense::zero_matrix;
+use crate::linear_algebra::{SparseMatrix, add_at};
 
 const DEFAULT_MAX_ITERATIONS: usize = 30;
 const DEFAULT_TOLERANCE: f64 = 1.0e-9;
@@ -59,6 +60,12 @@ pub fn solve_cohesive_interface_mesh_2d(
             max_host_truss_axial_force: summary.max_host_truss_axial_force,
             max_host_truss_stress: summary.max_host_truss_stress,
             max_host_plane_stress: summary.max_host_plane_stress,
+            max_host_frame_rotation: summary.max_host_frame_rotation,
+            max_host_frame_moment: summary.max_host_frame_moment,
+            max_host_frame_stress: summary.max_host_frame_stress,
+            tangent_non_zero_count: outcome.tangent_non_zero_count,
+            tangent_fill_ratio: outcome.tangent_fill_ratio,
+            linear_solver: outcome.linear_solver,
         });
         if !outcome.converged {
             failure_reason = outcome.failure_reason;
@@ -75,7 +82,7 @@ pub fn solve_cohesive_interface_mesh_2d(
         completed_load_factor,
         &final_assembly.internal_forces,
     );
-    let nodes = node_results(request, &displacements, &reactions);
+    let nodes = node_results(request, &displacements, &reactions, model.rotation_offset);
     let elements = element_results(&model, &final_assembly.evaluations);
     let connector_springs = model
         .connector_springs
@@ -94,6 +101,11 @@ pub fn solve_cohesive_interface_mesh_2d(
         .collect::<Vec<_>>();
     let host_plane_quads = model
         .host_plane_quads
+        .iter()
+        .map(|element| element.result(&displacements))
+        .collect::<Vec<_>>();
+    let host_frames = model
+        .host_frames
         .iter()
         .map(|element| element.result(&displacements))
         .collect::<Vec<_>>();
@@ -130,6 +142,18 @@ pub fn solve_cohesive_interface_mesh_2d(
                 .map(|element| element.von_mises.abs()),
         )
         .fold(0.0_f64, f64::max);
+    let final_max_host_frame_rotation = nodes
+        .iter()
+        .map(|node| node.rotation_z.abs())
+        .fold(0.0_f64, f64::max);
+    let final_max_host_frame_moment = host_frames
+        .iter()
+        .flat_map(|element| [element.moment_i.abs(), element.moment_j.abs()])
+        .fold(0.0_f64, f64::max);
+    let final_max_host_frame_stress = host_frames
+        .iter()
+        .map(|element| element.max_combined_stress)
+        .fold(0.0_f64, f64::max);
     let converged = failure_reason.is_none() && steps.len() == model.controls.len();
     let max_displacement = steps
         .iter()
@@ -159,6 +183,37 @@ pub fn solve_cohesive_interface_mesh_2d(
         .iter()
         .map(|step| step.max_host_plane_stress)
         .fold(final_max_host_plane_stress, f64::max);
+    let max_host_frame_rotation = steps
+        .iter()
+        .map(|step| step.max_host_frame_rotation)
+        .fold(final_max_host_frame_rotation, f64::max);
+    let max_host_frame_moment = steps
+        .iter()
+        .map(|step| step.max_host_frame_moment)
+        .fold(final_max_host_frame_moment, f64::max);
+    let max_host_frame_stress = steps
+        .iter()
+        .map(|step| step.max_host_frame_stress)
+        .fold(final_max_host_frame_stress, f64::max);
+    let max_tangent_non_zero_count = steps
+        .iter()
+        .map(|step| step.tangent_non_zero_count)
+        .max()
+        .unwrap_or(0);
+    let max_tangent_fill_ratio = steps
+        .iter()
+        .map(|step| step.tangent_fill_ratio)
+        .fold(0.0_f64, f64::max);
+    let mut linear_solver_methods = Vec::new();
+    for method in steps
+        .iter()
+        .map(|step| step.linear_solver.as_str())
+        .filter(|method| *method != "none")
+    {
+        if !linear_solver_methods.iter().any(|known| known == method) {
+            linear_solver_methods.push(method.to_string());
+        }
+    }
 
     Ok(SolveCohesiveInterfaceMesh2dResult {
         input: request.clone(),
@@ -168,6 +223,7 @@ pub fn solve_cohesive_interface_mesh_2d(
         host_trusses,
         host_plane_triangles,
         host_plane_quads,
+        host_frames,
         steps,
         converged,
         completed_load_factor,
@@ -179,6 +235,12 @@ pub fn solve_cohesive_interface_mesh_2d(
         max_host_truss_axial_force,
         max_host_truss_stress,
         max_host_plane_stress,
+        max_host_frame_rotation,
+        max_host_frame_moment,
+        max_host_frame_stress,
+        max_tangent_non_zero_count,
+        max_tangent_fill_ratio,
+        linear_solver_methods,
         failure_reason,
     })
 }
@@ -189,10 +251,13 @@ pub(crate) struct ValidatedModel<'a> {
     host_trusses: Vec<HostTruss<'a>>,
     host_plane_triangles: Vec<HostPlaneTriangle<'a>>,
     host_plane_quads: Vec<HostPlaneQuad<'a>>,
+    host_frames: Vec<HostFrame<'a>>,
     pub(crate) free_dofs: Vec<usize>,
     pub(crate) fixed_dofs: Vec<usize>,
     pub(crate) external_loads: Vec<f64>,
     controls: Vec<ControlStep>,
+    node_count: usize,
+    rotation_offset: Option<usize>,
     dof_count: usize,
     pub(crate) max_iterations: usize,
     pub(crate) tolerance: f64,
@@ -242,8 +307,21 @@ impl<'a> ValidatedModel<'a> {
         let host_plane_triangles =
             HostPlaneTriangle::build_all(&request.host_plane_triangles, &request.nodes)?;
         let host_plane_quads = HostPlaneQuad::build_all(&request.host_plane_quads, &request.nodes)?;
+        let rotation_offset = (!request.host_frames.is_empty()).then_some(2 * request.nodes.len());
+        let host_frames = HostFrame::build_all(
+            &request.host_frames,
+            &request.nodes,
+            rotation_offset.unwrap_or(2 * request.nodes.len()),
+        )?;
+        let host_frame_nodes = request
+            .host_frames
+            .iter()
+            .flat_map(|element| [element.node_i, element.node_j])
+            .collect::<HashSet<_>>();
 
-        let dof_count = 2 * request.nodes.len();
+        let dof_count = rotation_offset
+            .map(|offset| offset + request.nodes.len())
+            .unwrap_or(2 * request.nodes.len());
         let mut free_dofs = Vec::new();
         let mut fixed_dofs = Vec::new();
         let mut external_loads = vec![0.0; dof_count];
@@ -251,21 +329,24 @@ impl<'a> ValidatedModel<'a> {
         for (node_index, node) in request.nodes.iter().enumerate() {
             validate_id(&node.id)?;
             let prescribed = node.prescribed_displacement.unwrap_or([0.0; 2]);
+            let prescribed_rotation = node.prescribed_rotation.unwrap_or(0.0);
             if !node.x.is_finite()
                 || !node.y.is_finite()
                 || node.load.iter().any(|value| !value.is_finite())
                 || prescribed.iter().any(|value| !value.is_finite())
+                || !node.moment_z.is_finite()
+                || !prescribed_rotation.is_finite()
             {
                 return Err("cohesive interface mesh 2d node data must be finite".to_string());
             }
-            for axis in 0..2 {
+            for (axis, prescribed_value) in prescribed.iter().copied().enumerate() {
                 let dof = 2 * node_index + axis;
                 external_loads[dof] = node.load[axis];
                 if node.fixed[axis] {
                     fixed_dofs.push(dof);
-                    prescribed_displacements[dof] = prescribed[axis];
+                    prescribed_displacements[dof] = prescribed_value;
                 } else {
-                    if prescribed[axis] != 0.0 {
+                    if prescribed_value != 0.0 {
                         return Err(format!(
                             "node '{}' has a prescribed displacement on free axis {axis}",
                             node.id
@@ -273,6 +354,37 @@ impl<'a> ValidatedModel<'a> {
                     }
                     free_dofs.push(dof);
                 }
+            }
+            let Some(rotation_offset) = rotation_offset else {
+                if node.moment_z != 0.0 || prescribed_rotation != 0.0 {
+                    return Err(format!(
+                        "node '{}' has rotational data but belongs to no host frame",
+                        node.id
+                    ));
+                }
+                continue;
+            };
+            let rotation_dof = rotation_offset + node_index;
+            external_loads[rotation_dof] = node.moment_z;
+            if !host_frame_nodes.contains(&node_index) {
+                if node.moment_z != 0.0 || prescribed_rotation != 0.0 {
+                    return Err(format!(
+                        "node '{}' has rotational data but belongs to no host frame",
+                        node.id
+                    ));
+                }
+                fixed_dofs.push(rotation_dof);
+            } else if node.fixed_rotation {
+                fixed_dofs.push(rotation_dof);
+                prescribed_displacements[rotation_dof] = prescribed_rotation;
+            } else {
+                if prescribed_rotation != 0.0 {
+                    return Err(format!(
+                        "node '{}' has a prescribed rotation on a free rotational dof",
+                        node.id
+                    ));
+                }
+                free_dofs.push(rotation_dof);
             }
         }
         if fixed_dofs.is_empty() {
@@ -306,10 +418,13 @@ impl<'a> ValidatedModel<'a> {
             host_trusses,
             host_plane_triangles,
             host_plane_quads,
+            host_frames,
             free_dofs,
             fixed_dofs,
             external_loads,
             controls,
+            node_count: request.nodes.len(),
+            rotation_offset,
             dof_count,
             max_iterations,
             tolerance,
@@ -405,7 +520,7 @@ fn build_element<'a>(
 
 pub(crate) struct Assembly {
     pub(crate) internal_forces: Vec<f64>,
-    pub(crate) tangent: Vec<Vec<f64>>,
+    pub(crate) tangent: SparseMatrix,
     pub(crate) evaluations: Vec<CohesiveInterface2dEvaluation>,
 }
 
@@ -419,6 +534,9 @@ struct StepSummary {
     max_host_truss_axial_force: f64,
     max_host_truss_stress: f64,
     max_host_plane_stress: f64,
+    max_host_frame_rotation: f64,
+    max_host_frame_moment: f64,
+    max_host_frame_stress: f64,
 }
 
 fn step_summary(
@@ -457,12 +575,16 @@ fn step_summary(
         .iter()
         .map(|truss| truss.result(displacements))
         .collect::<Vec<_>>();
+    let host_frame_results = model
+        .host_frames
+        .iter()
+        .map(|element| element.result(displacements))
+        .collect::<Vec<_>>();
     StepSummary {
-        max_displacement: displacements
-            .chunks_exact(2)
-            .map(|value| value[0].hypot(value[1]))
+        max_displacement: (0..model.node_count)
+            .map(|node| displacements[2 * node].hypot(displacements[2 * node + 1]))
             .fold(0.0_f64, f64::max),
-        reaction_norm: vector_norm(&reactions),
+        reaction_norm: vector_norm(&reactions[..2 * model.node_count]),
         max_resultant_traction,
         max_shear_damage,
         max_normal_damage,
@@ -486,6 +608,22 @@ fn step_summary(
                     .map(|element| element.result(displacements).von_mises.abs()),
             )
             .fold(0.0_f64, f64::max),
+        max_host_frame_rotation: model
+            .rotation_offset
+            .map(|offset| {
+                (0..model.node_count)
+                    .map(|node| displacements[offset + node].abs())
+                    .fold(0.0_f64, f64::max)
+            })
+            .unwrap_or(0.0),
+        max_host_frame_moment: host_frame_results
+            .iter()
+            .flat_map(|element| [element.moment_i.abs(), element.moment_j.abs()])
+            .fold(0.0_f64, f64::max),
+        max_host_frame_stress: host_frame_results
+            .iter()
+            .map(|element| element.max_combined_stress)
+            .fold(0.0_f64, f64::max),
     }
 }
 
@@ -496,7 +634,7 @@ pub(crate) fn assemble(
     committed_states: &[CohesiveInterface2dState],
 ) -> Assembly {
     let mut internal_forces = vec![0.0; model.dof_count];
-    let mut tangent = zero_matrix(model.dof_count);
+    let mut tangent = SparseMatrix::with_uniform_row_capacity(model.dof_count, 24);
     let mut evaluations = Vec::with_capacity(model.elements.len());
     for (element_index, element) in model.elements.iter().enumerate() {
         let local_displacements = element
@@ -513,8 +651,12 @@ pub(crate) fn assemble(
             internal_forces[global_dof] +=
                 evaluation.step.element_nodal_internal_forces[local_node][axis];
             for local_column in 0..8 {
-                tangent[global_dof][element.dofs[local_column]] +=
-                    evaluation.step.element_tangent[local_dof][local_column];
+                add_at(
+                    &mut tangent,
+                    global_dof,
+                    element.dofs[local_column],
+                    evaluation.step.element_tangent[local_dof][local_column],
+                );
             }
         }
         evaluations.push(evaluation);
@@ -529,6 +671,9 @@ pub(crate) fn assemble(
         element.assemble(displacements, &mut internal_forces, &mut tangent);
     }
     for element in &model.host_plane_quads {
+        element.assemble(displacements, &mut internal_forces, &mut tangent);
+    }
+    for element in &model.host_frames {
         element.assemble(displacements, &mut internal_forces, &mut tangent);
     }
     Assembly {
@@ -550,6 +695,7 @@ fn node_results(
     request: &SolveCohesiveInterfaceMesh2dRequest,
     displacements: &[f64],
     reactions: &[f64],
+    rotation_offset: Option<usize>,
 ) -> Vec<CohesiveInterfaceMesh2dNodeResult> {
     request
         .nodes
@@ -559,6 +705,12 @@ fn node_results(
             id: node.id.clone(),
             displacement: [displacements[2 * index], displacements[2 * index + 1]],
             reaction: [reactions[2 * index], reactions[2 * index + 1]],
+            rotation_z: rotation_offset
+                .map(|offset| displacements[offset + index])
+                .unwrap_or(0.0),
+            moment_reaction_z: rotation_offset
+                .map(|offset| reactions[offset + index])
+                .unwrap_or(0.0),
         })
         .collect()
 }

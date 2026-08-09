@@ -6,6 +6,7 @@ use kyuubiki_protocol::{
 };
 
 use crate::cohesive_interface_1d::validate_id;
+use crate::linear_algebra::{MatrixAssembler, add_at};
 use crate::plane_2d_math::{
     PlaneTriangleComputed, plane_triangle_state, precompute_plane_triangle_element_from_nodes,
 };
@@ -101,11 +102,11 @@ impl<'a> HostPlaneQuad<'a> {
             .collect()
     }
 
-    pub(crate) fn assemble(
+    pub(crate) fn assemble<M: MatrixAssembler + ?Sized>(
         &self,
         displacements: &[f64],
         internal_forces: &mut [f64],
-        tangent: &mut [Vec<f64>],
+        tangent: &mut M,
     ) {
         for node in 0..4 {
             for axis in 0..2 {
@@ -117,7 +118,7 @@ impl<'a> HostPlaneQuad<'a> {
                         let global_column = self.dofs[column_node] + column_axis;
                         let stiffness = self.computed.stiffness[local_row][local_column];
                         internal_forces[global_row] += stiffness * displacements[global_column];
-                        tangent[global_row][global_column] += stiffness;
+                        add_at(tangent, global_row, global_column, stiffness);
                     }
                 }
             }
@@ -241,18 +242,18 @@ impl<'a> HostPlaneTriangle<'a> {
             .collect()
     }
 
-    pub(crate) fn assemble(
+    pub(crate) fn assemble<M: MatrixAssembler + ?Sized>(
         &self,
         displacements: &[f64],
         internal_forces: &mut [f64],
-        tangent: &mut [Vec<f64>],
+        tangent: &mut M,
     ) {
         for row in 0..6 {
             let global_row = self.dofs[row];
             for column in 0..6 {
                 let stiffness = self.computed.stiffness[row][column];
                 internal_forces[global_row] += stiffness * displacements[self.dofs[column]];
-                tangent[global_row][self.dofs[column]] += stiffness;
+                add_at(tangent, global_row, self.dofs[column], stiffness);
             }
         }
     }

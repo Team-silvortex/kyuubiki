@@ -39,23 +39,47 @@ pub(crate) fn build_controls(
                 if !input.load_factor.is_finite() {
                     return Err(format!("control_history step {step} load_factor is not finite"));
                 }
-                if input.prescribed_displacements.len() * 2 != dof_count
+                let node_count = request.nodes.len();
+                let has_host_frames = !request.host_frames.is_empty();
+                let host_frame_nodes = request
+                    .host_frames
+                    .iter()
+                    .flat_map(|element| [element.node_i, element.node_j])
+                    .collect::<HashSet<_>>();
+                let rotations_valid = input.prescribed_rotations.is_empty()
+                    || (input.prescribed_rotations.len() == node_count
+                        && input
+                            .prescribed_rotations
+                            .iter()
+                            .enumerate()
+                            .all(|(node, value)| {
+                                value.is_finite()
+                                    && (*value == 0.0 || host_frame_nodes.contains(&node))
+                            })
+                        && (has_host_frames
+                            || input.prescribed_rotations.iter().all(|value| *value == 0.0)));
+                if input.prescribed_displacements.len() != node_count
                     || input
                         .prescribed_displacements
                         .iter()
                         .flatten()
                         .any(|value| !value.is_finite())
+                    || !rotations_valid
                 {
                     return Err(format!(
-                        "control_history step {step} displacement vector must match finite node data"
+                        "control_history step {step} translation and rotation vectors must match finite node data"
                     ));
                 }
-                let values = input
-                    .prescribed_displacements
-                    .iter()
-                    .flatten()
-                    .copied()
-                    .collect::<Vec<_>>();
+                let mut values = vec![0.0; dof_count];
+                for (node, translation) in input.prescribed_displacements.iter().enumerate() {
+                    values[2 * node] = translation[0];
+                    values[2 * node + 1] = translation[1];
+                }
+                if has_host_frames {
+                    for (node, rotation) in input.prescribed_rotations.iter().copied().enumerate() {
+                        values[2 * node_count + node] = rotation;
+                    }
+                }
                 if free.iter().any(|&dof| values[dof] != 0.0) {
                     return Err(format!(
                         "control_history step {step} prescribes a free dof"

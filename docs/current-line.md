@@ -139,6 +139,16 @@ closure rather than raw feature sprawl:
   retained rectangular series case crosses Solver, Agent RPC, and Engine
   Workflow with exact displacement, force, stress, and energy checks; invalid
   Q4 Jacobians fail before iteration
+- the same cohesive mesh now co-assembles native linear Frame2D hosts with
+  appended rotational DOFs and unchanged translation indexing. A retained
+  tip-loaded bending reference crosses Solver, Agent RPC, and Engine Workflow
+  with exact deflection, rotation, root moment, stress, and energy checks;
+  unused rotations are constrained and orphan rotational data is rejected
+- cohesive and host kernels now share sparse global tangent assembly and sparse
+  free-DOF projection. A retained 96-element case reports 3,072 nonzeros across
+  768 DOFs (`0.005208` fill) and exposes its symmetric-band Cholesky path through
+  Solver, Agent RPC, and Engine Workflow results; non-positive-definite or wide
+  tangents retain a bounded pivoted dense fallback
 - remote Rust benchmark/profile sync now carries the root `schemas/` fixtures
   alongside `workers/rust`, making isolated Linux release compilation
   independent of an existing full-repository checkout

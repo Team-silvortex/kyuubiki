@@ -946,14 +946,33 @@ Fully integrated bilinear plane-stress host quads now reuse the public
 rectangular series reference independently recovers interface opening `0.005`,
 host extension `0.01`, common force and stress `5`, and exact strain energy;
 duplicate IDs, invalid connectivity, and non-positive Gauss-point Jacobians are
-rejected before Newton iteration.
+rejected before Newton iteration. Linear Euler-Bernoulli 2D host frames now
+reuse the public `solve.frame_2d` element/result contracts. Rotational DOFs are
+appended after the stable translational layout, and the native transformed
+`6 x 6` stiffness contributes directly to the same Newton matrix. A translating
+root with a tip-loaded cantilever retains the exact relative deflection
+`P L^3 / (3 E I)`, tip rotation `P L^2 / (2 E I)`, root moment `P L`, bending
+stress, and strain energy through Solver, Agent RPC, and Engine Workflow.
+Unused rotations are constrained automatically; orphan rotational loads and
+invalid frame sections fail before iteration.
+All cohesive and host kernels now write through the shared sparse
+`MatrixAssembler` contract. Free-DOF reduction preserves that sparse shape;
+narrow positive-definite tangents use symmetric-band Cholesky with refinement,
+while invertible indefinite or wide tangents within the retained bound use a
+pivoted dense fallback. A 96-element scale regression retains 384 nodes, 768
+DOFs, 3,072 nonzeros, a `0.005208` fill ratio, and an observable
+`symmetric_band_cholesky` method through Solver, Agent RPC, and Engine Workflow
+result contracts.
 Protocol, Agent RPC,
 engine workflow, result chunking, Rust headless discovery, and self-hosted Web
-submission share the same public model. This remains a dense, 512-node screening
-solve under proportional load or displacement control, or explicit prescribed
-control history. Linear 2D trusses are the first real structural host element;
-plane-stress triangles and quads are the retained continuum hosts. Beams,
-frames, shells, 3D solids, arc-length/adaptive continuation, coupled mixed-mode
+submission share the same public model. This remains a 512-node screening solve
+under proportional load or displacement control, or explicit prescribed
+control history. Global assembly and constraint projection are sparse, but
+non-positive-definite or wide reduced tangents still use a dense fallback up to
+1,536 free DOFs. Linear 2D trusses and frames are retained structural hosts;
+plane-stress triangles and quads are the retained continuum hosts. Shells, 3D
+solids, scalable sparse-indefinite solves, fill-reducing ordering,
+arc-length/adaptive continuation, coupled mixed-mode
 interaction, frictional delamination, and experimental calibration remain
 outside the retained claim.
 

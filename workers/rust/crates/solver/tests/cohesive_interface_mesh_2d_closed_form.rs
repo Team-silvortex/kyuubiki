@@ -1,8 +1,9 @@
 use kyuubiki_protocol::{
     CohesiveInterface2dMaterialInput, CohesiveInterfaceMesh2dConnectorSpringInput,
     CohesiveInterfaceMesh2dControlStepInput, CohesiveInterfaceMesh2dElementInput,
-    CohesiveInterfaceMesh2dMaterialInput, CohesiveInterfaceMesh2dNodeInput, PlaneQuadElementInput,
-    PlaneTriangleElementInput, SolveCohesiveInterfaceMesh2dRequest, TrussElementInput,
+    CohesiveInterfaceMesh2dMaterialInput, CohesiveInterfaceMesh2dNodeInput, Frame2dElementInput,
+    PlaneQuadElementInput, PlaneTriangleElementInput, SolveCohesiveInterfaceMesh2dRequest,
+    TrussElementInput,
 };
 use kyuubiki_solver::solve_cohesive_interface_mesh_2d;
 
@@ -405,6 +406,83 @@ fn invalid_host_plane_quad_contracts_are_rejected() {
     assert!(error.contains("positive Jacobian"));
 }
 
+#[test]
+fn host_frame_bending_shares_equilibrium_with_the_cohesive_interface() {
+    let result = solve_cohesive_interface_mesh_2d(&host_frame_request())
+        .expect("host frame and cohesive interface should co-assemble");
+
+    assert!(result.converged);
+    let root = &result.nodes[2];
+    let tip = &result.nodes[4];
+    assert_close(tip.displacement[1] - root.displacement[1], -2.5 / 3000.0);
+    assert_close(tip.rotation_z, -2.5 / 2000.0);
+    assert_close(root.rotation_z, 0.0);
+    assert_close(root.moment_reaction_z, 2.5);
+    assert_close(result.max_host_frame_rotation, 2.5 / 2000.0);
+    assert_close(result.max_host_frame_moment, 2.5);
+    assert_close(result.max_host_frame_stress, 2.5);
+    assert_close(result.max_normal_damage, 0.0);
+    let frame = &result.host_frames[0];
+    assert_close(frame.length, 1.0);
+    assert_close(frame.shear_force_i, 2.5);
+    assert_close(frame.moment_i, 2.5);
+    assert_close(frame.moment_j, 0.0);
+    assert_close(frame.max_bending_stress, 2.5);
+    assert_close(frame.strain_energy, 2.5 * 2.5 / 6000.0);
+}
+
+#[test]
+fn invalid_host_frame_contracts_and_orphan_rotations_are_rejected() {
+    let mut duplicate = host_frame_request();
+    duplicate.host_frames.push(duplicate.host_frames[0].clone());
+    let error = solve_cohesive_interface_mesh_2d(&duplicate)
+        .expect_err("duplicate host frame ids must fail");
+    assert!(error.contains("duplicate host frame id"));
+
+    let mut bounds = host_frame_request();
+    bounds.host_frames[0].node_j = 99;
+    let error = solve_cohesive_interface_mesh_2d(&bounds)
+        .expect_err("out-of-range host frame nodes must fail");
+    assert!(error.contains("node index is out of bounds"));
+
+    let mut section = host_frame_request();
+    section.host_frames[0].section_modulus = 0.0;
+    let error = solve_cohesive_interface_mesh_2d(&section)
+        .expect_err("non-positive host frame section must fail");
+    assert!(error.contains("section_modulus must be positive"));
+
+    let mut orphan = single_element_request();
+    orphan.nodes[2].moment_z = 1.0;
+    let error = solve_cohesive_interface_mesh_2d(&orphan)
+        .expect_err("rotational data without a frame must fail");
+    assert!(error.contains("belongs to no host frame"));
+
+    let mut free_target = host_frame_request();
+    free_target.nodes[4].prescribed_rotation = Some(0.01);
+    let error = solve_cohesive_interface_mesh_2d(&free_target)
+        .expect_err("prescribed rotation on a free frame dof must fail");
+    assert!(error.contains("prescribed rotation on a free rotational dof"));
+}
+
+#[test]
+fn explicit_history_can_drive_a_constrained_host_frame_rotation() {
+    let mut request = host_frame_request();
+    request.nodes[4].load = [0.0, 0.0];
+    request.nodes[4].fixed_rotation = true;
+    request.load_steps = None;
+    request.control_history = Some(vec![CohesiveInterfaceMesh2dControlStepInput {
+        load_factor: 0.0,
+        prescribed_displacements: vec![[0.0, 0.0]; request.nodes.len()],
+        prescribed_rotations: vec![0.0, 0.0, 0.0, 0.0, 0.001],
+    }]);
+
+    let result = solve_cohesive_interface_mesh_2d(&request)
+        .expect("explicit frame rotation history should solve");
+    assert!(result.converged);
+    assert_close(result.nodes[4].rotation_z, 0.001);
+    assert!(result.max_host_frame_moment > 0.0);
+}
+
 fn single_element_request() -> SolveCohesiveInterfaceMesh2dRequest {
     SolveCohesiveInterfaceMesh2dRequest {
         id: "mesh.single".to_string(),
@@ -420,6 +498,7 @@ fn single_element_request() -> SolveCohesiveInterfaceMesh2dRequest {
         host_trusses: vec![],
         host_plane_triangles: vec![],
         host_plane_quads: vec![],
+        host_frames: vec![],
         load_steps: Some(4),
         control_history: None,
         max_iterations: Some(12),
@@ -447,6 +526,7 @@ fn two_element_request() -> SolveCohesiveInterfaceMesh2dRequest {
         host_trusses: vec![],
         host_plane_triangles: vec![],
         host_plane_quads: vec![],
+        host_frames: vec![],
         load_steps: Some(5),
         control_history: None,
         max_iterations: Some(12),
@@ -473,6 +553,7 @@ fn controlled_jump(jump: [f64; 2]) -> CohesiveInterfaceMesh2dControlStepInput {
     CohesiveInterfaceMesh2dControlStepInput {
         load_factor: 0.0,
         prescribed_displacements: vec![[0.0, 0.0], [0.0, 0.0], jump, jump],
+        prescribed_rotations: vec![],
     }
 }
 
@@ -489,6 +570,9 @@ fn node(
         fixed: [true, lower_surface],
         prescribed_displacement: None,
         load: [0.0, vertical_load],
+        fixed_rotation: false,
+        prescribed_rotation: None,
+        moment_z: 0.0,
     }
 }
 
@@ -567,6 +651,9 @@ fn host_plane_request() -> SolveCohesiveInterfaceMesh2dRequest {
         fixed: [true, true],
         prescribed_displacement: Some([0.0, 0.015]),
         load: [0.0, 0.0],
+        fixed_rotation: false,
+        prescribed_rotation: None,
+        moment_z: 0.0,
     });
     request.host_plane_triangles = vec![PlaneTriangleElementInput {
         id: "host-plane-0".to_string(),
@@ -593,6 +680,9 @@ fn host_plane_quad_request() -> SolveCohesiveInterfaceMesh2dRequest {
             fixed: [true, true],
             prescribed_displacement: Some([0.0, 0.015]),
             load: [0.0, 0.0],
+            fixed_rotation: false,
+            prescribed_rotation: None,
+            moment_z: 0.0,
         },
         CohesiveInterfaceMesh2dNodeInput {
             id: "driver-left".to_string(),
@@ -601,6 +691,9 @@ fn host_plane_quad_request() -> SolveCohesiveInterfaceMesh2dRequest {
             fixed: [true, true],
             prescribed_displacement: Some([0.0, 0.015]),
             load: [0.0, 0.0],
+            fixed_rotation: false,
+            prescribed_rotation: None,
+            moment_z: 0.0,
         },
     ]);
     request.host_plane_quads = vec![PlaneQuadElementInput {
@@ -612,6 +705,25 @@ fn host_plane_quad_request() -> SolveCohesiveInterfaceMesh2dRequest {
         thickness: 1.0,
         youngs_modulus: 500.0,
         poisson_ratio: 0.0,
+    }];
+    request
+}
+
+fn host_frame_request() -> SolveCohesiveInterfaceMesh2dRequest {
+    let mut request = single_element_request();
+    for node in &mut request.nodes {
+        node.load = [0.0, 0.0];
+    }
+    request.nodes[2].fixed_rotation = true;
+    request.nodes.push(node("frame-tip", 1.0, false, -2.5));
+    request.host_frames = vec![Frame2dElementInput {
+        id: "host-frame-0".to_string(),
+        node_i: 2,
+        node_j: 4,
+        area: 1.0,
+        youngs_modulus: 1000.0,
+        moment_of_inertia: 1.0,
+        section_modulus: 1.0,
     }];
     request
 }

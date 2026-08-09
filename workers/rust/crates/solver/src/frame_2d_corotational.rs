@@ -6,9 +6,8 @@ use crate::frame_2d_material_p_delta::{
     CompiledFrame2dMaterial, Frame2dMaterialHistory, update_material_histories,
 };
 use crate::frame_2d_stability::Frame2dStabilitySystem;
-use crate::linear_algebra::{SparseMatrix, reduce_sparse_system, sparse_to_dense};
-use crate::linear_banded::SymmetricBandCholesky;
-use crate::linear_dense::solve_linear_system;
+use crate::linear_algebra::{SparseMatrix, reduce_sparse_system};
+use crate::linear_symmetric_tangent::solve_symmetric_tangent;
 use kyuubiki_protocol::{
     Frame2dElementInput, Frame2dPDeltaFailureReason, Frame2dPDeltaStepResult,
     SolveFrame2dPDeltaRequest,
@@ -558,43 +557,8 @@ fn apply_backtracked_increment(
 }
 
 pub(crate) fn solve_tangent(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, String> {
-    if let Ok(Some(factor)) = SymmetricBandCholesky::try_factor(matrix, 8_000_000) {
-        let mut solution = factor.solve(rhs)?;
-        for _ in 0..2 {
-            let residual = linear_residual(matrix, rhs, &solution);
-            if normalized_linear_residual(&residual, rhs) <= 1.0e-12 {
-                break;
-            }
-            let correction = factor.solve(&residual)?;
-            for (value, correction) in solution.iter_mut().zip(correction) {
-                *value += correction;
-            }
-        }
-        return Ok(solution);
-    }
-    if rhs.len() <= MAX_DENSE_FALLBACK_DOFS {
-        return solve_linear_system(sparse_to_dense(matrix), rhs.to_vec());
-    }
-    Err("corotational frame tangent is not positive definite at this load step".into())
-}
-
-fn linear_residual(matrix: &SparseMatrix, rhs: &[f64], solution: &[f64]) -> Vec<f64> {
-    (0..matrix.size())
-        .map(|row| {
-            rhs[row]
-                - matrix
-                    .row_entries(row)
-                    .iter()
-                    .map(|&(column, value)| value * solution[column])
-                    .sum::<f64>()
-        })
-        .collect()
-}
-
-fn normalized_linear_residual(residual: &[f64], rhs: &[f64]) -> f64 {
-    let numerator = residual.iter().map(|value| value.abs()).fold(0.0, f64::max);
-    let denominator = rhs.iter().map(|value| value.abs()).fold(1.0, f64::max);
-    numerator / denominator
+    solve_symmetric_tangent(matrix, rhs, MAX_DENSE_FALLBACK_DOFS, "corotational frame")
+        .map(|profile| profile.solution)
 }
 
 fn residual(external: &[f64], internal: &[f64], load_factor: f64) -> Vec<f64> {

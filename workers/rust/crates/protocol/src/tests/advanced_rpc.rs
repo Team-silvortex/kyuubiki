@@ -58,17 +58,31 @@ fn serializes_nonlinear_and_contact_rpc_round_trips() {
 }
 
 #[test]
-fn cohesive_mesh_payload_without_q4_hosts_defaults_to_empty() {
+fn cohesive_mesh_payload_without_new_host_fields_defaults_cleanly() {
     let mut payload = serde_json::to_value(cohesive_interface_mesh_2d_request())
         .expect("cohesive mesh request should serialize");
-    payload
+    let object = payload
         .as_object_mut()
-        .expect("cohesive mesh request should be an object")
-        .remove("host_plane_quads");
+        .expect("cohesive mesh request should be an object");
+    object.remove("host_plane_quads");
+    object.remove("host_frames");
+    for node in object["nodes"]
+        .as_array_mut()
+        .expect("cohesive mesh nodes should be an array")
+    {
+        let node = node.as_object_mut().expect("node should be an object");
+        node.remove("fixed_rotation");
+        node.remove("prescribed_rotation");
+        node.remove("moment_z");
+    }
 
     let decoded: SolveCohesiveInterfaceMesh2dRequest =
         serde_json::from_value(payload).expect("legacy cohesive mesh payload should decode");
     assert!(decoded.host_plane_quads.is_empty());
+    assert!(decoded.host_frames.is_empty());
+    assert!(decoded.nodes.iter().all(|node| {
+        !node.fixed_rotation && node.prescribed_rotation.is_none() && node.moment_z == 0.0
+    }));
 }
 
 #[test]
@@ -190,6 +204,9 @@ fn cohesive_interface_mesh_2d_request() -> SolveCohesiveInterfaceMesh2dRequest {
             fixed: [true, lower],
             prescribed_displacement: None,
             load: [0.0, load],
+            fixed_rotation: false,
+            prescribed_rotation: None,
+            moment_z: 0.0,
         })
         .collect(),
         materials: vec![CohesiveInterfaceMesh2dMaterialInput {
@@ -209,6 +226,7 @@ fn cohesive_interface_mesh_2d_request() -> SolveCohesiveInterfaceMesh2dRequest {
         host_trusses: vec![],
         host_plane_triangles: vec![],
         host_plane_quads: vec![],
+        host_frames: vec![],
         load_steps: Some(2),
         control_history: None,
         max_iterations: Some(12),

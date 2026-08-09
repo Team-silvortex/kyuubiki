@@ -1,8 +1,8 @@
 use super::*;
 use kyuubiki_protocol::{
     CohesiveInterface2dMaterialInput, CohesiveInterfaceMesh2dElementInput,
-    CohesiveInterfaceMesh2dMaterialInput, CohesiveInterfaceMesh2dNodeInput, PlaneQuadElementInput,
-    PlaneTriangleElementInput, SolveCohesiveInterfaceMesh2dRequest,
+    CohesiveInterfaceMesh2dMaterialInput, CohesiveInterfaceMesh2dNodeInput, Frame2dElementInput,
+    PlaneQuadElementInput, PlaneTriangleElementInput, SolveCohesiveInterfaceMesh2dRequest,
 };
 
 #[test]
@@ -49,6 +49,32 @@ fn handles_cohesive_interface_mesh_2d_host_plane_quad_coassembly_rpc() {
     assert!((result.max_host_plane_stress - 5.0).abs() < 1.0e-10);
 }
 
+#[test]
+fn handles_cohesive_interface_mesh_2d_host_frame_coassembly_rpc() {
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "rpc-cohesive-host-frame".to_string(),
+        method: RpcMethod::SolveCohesiveInterfaceMesh2d,
+        params: serde_json::to_value(host_frame_request()).expect("params should serialize"),
+    };
+    let AgentReply::Stream(progress_frames, final_response) =
+        handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+    assert_eq!(progress_frames.len(), 4);
+    assert!(final_response.ok);
+    let result: kyuubiki_protocol::SolveCohesiveInterfaceMesh2dResult =
+        serde_json::from_value(final_response.result.expect("solver result"))
+            .expect("host frame coassembly result");
+    assert!(result.converged);
+    assert_eq!(result.host_frames.len(), 1);
+    assert!((result.nodes[4].rotation_z + 0.00125).abs() < 1.0e-10);
+    assert!((result.max_host_frame_moment - 2.5).abs() < 1.0e-10);
+    assert!((result.max_host_frame_stress - 2.5).abs() < 1.0e-10);
+    assert!(result.max_tangent_non_zero_count > 0);
+    assert!(result.max_tangent_fill_ratio > 0.0);
+    assert_eq!(result.linear_solver_methods, ["symmetric_band_cholesky"]);
+}
+
 fn host_plane_request() -> SolveCohesiveInterfaceMesh2dRequest {
     SolveCohesiveInterfaceMesh2dRequest {
         id: "mesh.host-plane.rpc".to_string(),
@@ -92,6 +118,7 @@ fn host_plane_request() -> SolveCohesiveInterfaceMesh2dRequest {
             poisson_ratio: 0.0,
         }],
         host_plane_quads: vec![],
+        host_frames: vec![],
         load_steps: Some(3),
         control_history: None,
         max_iterations: Some(12),
@@ -144,11 +171,34 @@ fn host_plane_quad_request() -> SolveCohesiveInterfaceMesh2dRequest {
             youngs_modulus: 500.0,
             poisson_ratio: 0.0,
         }],
+        host_frames: vec![],
         load_steps: Some(3),
         control_history: None,
         max_iterations: Some(12),
         tolerance: Some(1.0e-11),
     }
+}
+
+fn host_frame_request() -> SolveCohesiveInterfaceMesh2dRequest {
+    let mut request = host_plane_request();
+    request.id = "mesh.host-frame.rpc".to_string();
+    request.nodes.truncate(4);
+    request.host_plane_triangles.clear();
+    request.nodes[2].fixed_rotation = true;
+    request
+        .nodes
+        .push(node("frame-tip", 1.0, 0.0, [true, false], None));
+    request.nodes[4].load = [0.0, -2.5];
+    request.host_frames = vec![Frame2dElementInput {
+        id: "host-frame-0".to_string(),
+        node_i: 2,
+        node_j: 4,
+        area: 1.0,
+        youngs_modulus: 1000.0,
+        moment_of_inertia: 1.0,
+        section_modulus: 1.0,
+    }];
+    request
 }
 
 fn node(
@@ -165,5 +215,8 @@ fn node(
         fixed,
         prescribed_displacement,
         load: [0.0, 0.0],
+        fixed_rotation: false,
+        prescribed_rotation: None,
+        moment_z: 0.0,
     }
 }

@@ -692,9 +692,18 @@ and Engine Workflow. Fully integrated bilinear plane-stress quads now add a
 second continuum host using the native Q4 `2 x 2` Gauss kernel. A rectangular
 series reference independently verifies the same interface opening, extension,
 force, stress, and energy through all three execution layers, while positive
-Gauss-point Jacobians are enforced before assembly. The next interface gates
-are beam, frame, shell, or 3D-solid host-element co-assembly, sparse global
-assembly, arc-length and adaptive-step continuation,
+Gauss-point Jacobians are enforced before assembly. Linear Euler-Bernoulli 2D
+frames now add rotational host DOFs without changing existing translation
+indices. A tip-loaded bending reference retains exact relative deflection,
+rotation, root moment, stress, and energy through Solver, Agent RPC, and Engine
+Workflow; invalid sections and orphan rotational data fail before iteration.
+The same solver now performs sparse global tangent assembly and sparse
+free-DOF projection through the shared `MatrixAssembler` contract. A retained
+96-element model reports 3,072 nonzeros across 768 DOFs (`0.005208` fill) and
+uses the observable symmetric-band Cholesky path. Softening or wide tangents
+retain a bounded pivoted dense fallback, so the next interface gates are shell
+or 3D-solid host-element co-assembly, scalable sparse-indefinite factorization,
+fill-reducing ordering, arc-length and adaptive-step continuation,
 coupled mixed-mode/friction laws, experimental references, repeated cross-host
 performance qualification, and larger localization-sensitive meshes. The
 retained five-state independent

@@ -1,7 +1,10 @@
 use crate::cohesive_interface_2d::CohesiveInterface2dState;
 use crate::cohesive_interface_mesh_2d::{ValidatedModel, assemble};
 use crate::cohesive_interface_mesh_2d_control::{ControlStep, restricted_norm, vector_norm};
-use crate::linear_dense::solve_linear_system;
+use crate::linear_algebra::reduce_sparse_system;
+use crate::linear_symmetric_tangent::{DENSE_PIVOTED_FALLBACK, solve_symmetric_tangent};
+
+const MAX_DENSE_FALLBACK_DOFS: usize = 1_536;
 
 pub(crate) struct LoadStepOutcome {
     pub(crate) displacements: Vec<f64>,
@@ -10,6 +13,39 @@ pub(crate) struct LoadStepOutcome {
     pub(crate) residual_norm: f64,
     pub(crate) converged: bool,
     pub(crate) failure_reason: Option<String>,
+    pub(crate) tangent_non_zero_count: usize,
+    pub(crate) tangent_fill_ratio: f64,
+    pub(crate) linear_solver: String,
+}
+
+#[derive(Clone, Copy)]
+struct StepLinearDiagnostics {
+    tangent_non_zero_count: usize,
+    tangent_fill_ratio: f64,
+    linear_solver: &'static str,
+}
+
+impl StepLinearDiagnostics {
+    fn new() -> Self {
+        Self {
+            tangent_non_zero_count: 0,
+            tangent_fill_ratio: 0.0,
+            linear_solver: "none",
+        }
+    }
+
+    fn observe_tangent(&mut self, non_zero_count: usize, size: usize) {
+        self.tangent_non_zero_count = self.tangent_non_zero_count.max(non_zero_count);
+        self.tangent_fill_ratio = self
+            .tangent_fill_ratio
+            .max(fill_ratio(non_zero_count, size));
+    }
+
+    fn observe_solver(&mut self, method: &'static str) {
+        if self.linear_solver == "none" || method == DENSE_PIVOTED_FALLBACK {
+            self.linear_solver = method;
+        }
+    }
 }
 
 pub(crate) fn solve_load_step(
@@ -25,9 +61,11 @@ pub(crate) fn solve_load_step(
     }
     let load_scale = vector_norm(&model.external_loads).max(1.0);
     let mut last_norm = f64::INFINITY;
+    let mut diagnostics = StepLinearDiagnostics::new();
 
     for iteration in 1..=model.max_iterations {
         let assembly = assemble(model, step, &trial_displacements, committed_states);
+        diagnostics.observe_tangent(assembly.tangent.non_zero_count(), assembly.tangent.size());
         let residual = model
             .external_loads
             .iter()
@@ -48,27 +86,21 @@ pub(crate) fn solve_load_step(
                 residual_norm: last_norm,
                 converged: true,
                 failure_reason: None,
+                tangent_non_zero_count: diagnostics.tangent_non_zero_count,
+                tangent_fill_ratio: diagnostics.tangent_fill_ratio,
+                linear_solver: diagnostics.linear_solver.to_string(),
             };
         }
 
-        let reduced_matrix = model
-            .free_dofs
-            .iter()
-            .map(|&row| {
-                model
-                    .free_dofs
-                    .iter()
-                    .map(|&column| assembly.tangent[row][column])
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
-        let reduced_residual = model
-            .free_dofs
-            .iter()
-            .map(|&dof| residual[dof])
-            .collect::<Vec<_>>();
-        let increment = match solve_linear_system(reduced_matrix, reduced_residual) {
-            Ok(increment) => increment,
+        let (reduced_matrix, reduced_residual, reduced_free_dofs) =
+            reduce_sparse_system(&assembly.tangent, &residual, &model.fixed_dofs);
+        let solved = match solve_symmetric_tangent(
+            &reduced_matrix,
+            &reduced_residual,
+            MAX_DENSE_FALLBACK_DOFS,
+            "cohesive interface mesh 2d",
+        ) {
+            Ok(solved) => solved,
             Err(error) => {
                 return failed_step(
                     committed_displacements,
@@ -76,13 +108,15 @@ pub(crate) fn solve_load_step(
                     iteration,
                     last_norm,
                     format!(
-                        "load step {} tangent solve failed: {error}; check constraints and connectivity",
+                        "load step {} {error}; check constraints and connectivity",
                         step + 1
                     ),
+                    diagnostics,
                 );
             }
         };
-        for (&dof, delta) in model.free_dofs.iter().zip(increment) {
+        diagnostics.observe_solver(solved.method);
+        for (&dof, delta) in reduced_free_dofs.iter().zip(solved.solution) {
             trial_displacements[dof] += delta;
         }
         if trial_displacements.iter().any(|value| !value.is_finite()) {
@@ -92,6 +126,7 @@ pub(crate) fn solve_load_step(
                 iteration,
                 last_norm,
                 format!("load step {} produced non-finite displacement", step + 1),
+                diagnostics,
             );
         }
     }
@@ -106,6 +141,7 @@ pub(crate) fn solve_load_step(
             step + 1,
             model.max_iterations
         ),
+        diagnostics,
     )
 }
 
@@ -115,6 +151,7 @@ fn failed_step(
     iterations: usize,
     residual_norm: f64,
     reason: String,
+    diagnostics: StepLinearDiagnostics,
 ) -> LoadStepOutcome {
     LoadStepOutcome {
         displacements: displacements.to_vec(),
@@ -123,5 +160,16 @@ fn failed_step(
         residual_norm,
         converged: false,
         failure_reason: Some(reason),
+        tangent_non_zero_count: diagnostics.tangent_non_zero_count,
+        tangent_fill_ratio: diagnostics.tangent_fill_ratio,
+        linear_solver: diagnostics.linear_solver.to_string(),
+    }
+}
+
+fn fill_ratio(non_zero_count: usize, size: usize) -> f64 {
+    if size == 0 {
+        0.0
+    } else {
+        non_zero_count as f64 / (size * size) as f64
     }
 }

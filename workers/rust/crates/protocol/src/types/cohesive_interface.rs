@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use super::plane_frame::{PlaneQuadElementInput, PlaneTriangleElementInput};
+use super::plane_frame::{
+    Frame2dElementInput, Frame2dElementResult, PlaneQuadElementInput, PlaneTriangleElementInput,
+};
 use super::plane_results::{PlaneQuadElementResult, PlaneTriangleElementResult};
 use super::space_structural::{TrussElementInput, TrussElementResult};
 
@@ -150,6 +152,12 @@ pub struct CohesiveInterfaceMesh2dNodeInput {
     #[serde(default)]
     pub prescribed_displacement: Option<[f64; 2]>,
     pub load: [f64; 2],
+    #[serde(default)]
+    pub fixed_rotation: bool,
+    #[serde(default)]
+    pub prescribed_rotation: Option<f64>,
+    #[serde(default)]
+    pub moment_z: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -191,6 +199,8 @@ pub struct CohesiveInterfaceMesh2dConnectorSpringResult {
 pub struct CohesiveInterfaceMesh2dControlStepInput {
     pub load_factor: f64,
     pub prescribed_displacements: Vec<[f64; 2]>,
+    #[serde(default)]
+    pub prescribed_rotations: Vec<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -208,6 +218,8 @@ pub struct SolveCohesiveInterfaceMesh2dRequest {
     #[serde(default)]
     pub host_plane_quads: Vec<PlaneQuadElementInput>,
     #[serde(default)]
+    pub host_frames: Vec<Frame2dElementInput>,
+    #[serde(default)]
     pub load_steps: Option<usize>,
     #[serde(default)]
     pub control_history: Option<Vec<CohesiveInterfaceMesh2dControlStepInput>>,
@@ -222,6 +234,10 @@ pub struct CohesiveInterfaceMesh2dNodeResult {
     pub id: String,
     pub displacement: [f64; 2],
     pub reaction: [f64; 2],
+    #[serde(default)]
+    pub rotation_z: f64,
+    #[serde(default)]
+    pub moment_reaction_z: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -251,6 +267,18 @@ pub struct CohesiveInterfaceMesh2dLoadStepResult {
     pub max_host_truss_axial_force: f64,
     pub max_host_truss_stress: f64,
     pub max_host_plane_stress: f64,
+    #[serde(default)]
+    pub max_host_frame_rotation: f64,
+    #[serde(default)]
+    pub max_host_frame_moment: f64,
+    #[serde(default)]
+    pub max_host_frame_stress: f64,
+    #[serde(default)]
+    pub tangent_non_zero_count: usize,
+    #[serde(default)]
+    pub tangent_fill_ratio: f64,
+    #[serde(default)]
+    pub linear_solver: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -262,6 +290,8 @@ pub struct SolveCohesiveInterfaceMesh2dResult {
     pub host_trusses: Vec<TrussElementResult>,
     pub host_plane_triangles: Vec<PlaneTriangleElementResult>,
     pub host_plane_quads: Vec<PlaneQuadElementResult>,
+    #[serde(default)]
+    pub host_frames: Vec<Frame2dElementResult>,
     pub steps: Vec<CohesiveInterfaceMesh2dLoadStepResult>,
     pub converged: bool,
     pub completed_load_factor: f64,
@@ -273,6 +303,18 @@ pub struct SolveCohesiveInterfaceMesh2dResult {
     pub max_host_truss_axial_force: f64,
     pub max_host_truss_stress: f64,
     pub max_host_plane_stress: f64,
+    #[serde(default)]
+    pub max_host_frame_rotation: f64,
+    #[serde(default)]
+    pub max_host_frame_moment: f64,
+    #[serde(default)]
+    pub max_host_frame_stress: f64,
+    #[serde(default)]
+    pub max_tangent_non_zero_count: usize,
+    #[serde(default)]
+    pub max_tangent_fill_ratio: f64,
+    #[serde(default)]
+    pub linear_solver_methods: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub failure_reason: Option<String>,
 }

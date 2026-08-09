@@ -147,6 +147,7 @@ fn handles_cohesive_interface_mesh_2d_prescribed_softening_rpc() {
                     [0.0, opening],
                     [0.0, opening],
                 ],
+                prescribed_rotations: vec![],
             })
             .collect(),
     );
@@ -182,6 +183,9 @@ fn handles_cohesive_interface_mesh_2d_connector_coassembly_rpc() {
             fixed: [true, false],
             prescribed_displacement: None,
             load: [0.0, 2.5],
+            fixed_rotation: false,
+            prescribed_rotation: None,
+            moment_z: 0.0,
         },
         CohesiveInterfaceMesh2dNodeInput {
             id: "driver-1".to_string(),
@@ -190,6 +194,9 @@ fn handles_cohesive_interface_mesh_2d_connector_coassembly_rpc() {
             fixed: [true, false],
             prescribed_displacement: None,
             load: [0.0, 2.5],
+            fixed_rotation: false,
+            prescribed_rotation: None,
+            moment_z: 0.0,
         },
     ]);
     request.connector_springs = vec![
@@ -233,6 +240,9 @@ fn handles_cohesive_interface_mesh_2d_host_truss_coassembly_rpc() {
             fixed: [true, false],
             prescribed_displacement: None,
             load: [0.0, 2.5],
+            fixed_rotation: false,
+            prescribed_rotation: None,
+            moment_z: 0.0,
         },
         CohesiveInterfaceMesh2dNodeInput {
             id: "driver-1".to_string(),
@@ -241,6 +251,9 @@ fn handles_cohesive_interface_mesh_2d_host_truss_coassembly_rpc() {
             fixed: [true, false],
             prescribed_displacement: None,
             load: [0.0, 2.5],
+            fixed_rotation: false,
+            prescribed_rotation: None,
+            moment_z: 0.0,
         },
     ]);
     request.host_trusses = vec![
@@ -494,6 +507,9 @@ fn cohesive_interface_mesh_2d_request() -> SolveCohesiveInterfaceMesh2dRequest {
             fixed: [true, lower],
             prescribed_displacement: None,
             load: [0.0, load],
+            fixed_rotation: false,
+            prescribed_rotation: None,
+            moment_z: 0.0,
         })
         .collect(),
         materials: vec![CohesiveInterfaceMesh2dMaterialInput {
@@ -513,6 +529,7 @@ fn cohesive_interface_mesh_2d_request() -> SolveCohesiveInterfaceMesh2dRequest {
         host_trusses: vec![],
         host_plane_triangles: vec![],
         host_plane_quads: vec![],
+        host_frames: vec![],
         load_steps: Some(2),
         control_history: None,
         max_iterations: Some(12),

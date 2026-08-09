@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use kyuubiki_protocol::{CohesiveInterfaceMesh2dNodeInput, TrussElementInput, TrussElementResult};
 
 use crate::cohesive_interface_1d::validate_id;
+use crate::linear_algebra::{MatrixAssembler, add_at};
 
 const MAX_HOST_TRUSSES: usize = 4096;
 const MIN_LENGTH: f64 = 1.0e-12;
@@ -76,11 +77,11 @@ impl<'a> HostTruss<'a> {
             .collect()
     }
 
-    pub(crate) fn assemble(
+    pub(crate) fn assemble<M: MatrixAssembler + ?Sized>(
         &self,
         displacements: &[f64],
         internal_forces: &mut [f64],
-        tangent: &mut [Vec<f64>],
+        tangent: &mut M,
     ) {
         let [c, s] = self.direction;
         let extension = (displacements[self.dofs[2]] - displacements[self.dofs[0]]) * c
@@ -90,8 +91,12 @@ impl<'a> HostTruss<'a> {
         for row in 0..4 {
             internal_forces[self.dofs[row]] += axial_force * direction[row];
             for column in 0..4 {
-                tangent[self.dofs[row]][self.dofs[column]] +=
-                    self.axial_stiffness * direction[row] * direction[column];
+                add_at(
+                    tangent,
+                    self.dofs[row],
+                    self.dofs[column],
+                    self.axial_stiffness * direction[row] * direction[column],
+                );
             }
         }
     }

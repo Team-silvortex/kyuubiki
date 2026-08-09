@@ -154,7 +154,10 @@ fn service_executor_rejects_base_url_paths_before_execution() {
 fn service_execution_failure_returns_nonzero_with_root_cause() {
     let listener = TcpListener::bind("127.0.0.1:0").expect("reserve local port");
     let port = listener.local_addr().expect("local address").port();
-    drop(listener);
+    let closer = std::thread::spawn(move || {
+        let (stream, _) = listener.accept().expect("accept health request");
+        drop(stream);
+    });
     let path = workflow_path();
     let base_url = format!("http://127.0.0.1:{port}");
     let output = run(&[
@@ -169,20 +172,20 @@ fn service_execution_failure_returns_nonzero_with_root_cause() {
     ]);
 
     assert!(!output.status.success());
+    closer.join().expect("health failure server should exit");
     let report: Value = serde_json::from_slice(&output.stdout).expect("failed run report");
     assert_eq!(report["status"], "failed");
     assert_eq!(report["steps"][0]["status"], "failed");
-    assert!(
-        report["steps"][0]["result_preview"]["error"]
-            .as_str()
-            .is_some_and(|error| error.contains("failed to connect"))
-    );
+    let root_cause = report["steps"][0]["result_preview"]["error"]
+        .as_str()
+        .expect("failed service step should retain its root cause");
+    assert!(!root_cause.trim().is_empty());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         stderr.contains("headless execution failed at step 1 (service_health)"),
         "stderr: {stderr}"
     );
-    assert!(stderr.contains("failed to connect"), "stderr: {stderr}");
+    assert!(stderr.contains(root_cause), "stderr: {stderr}");
     let _ = fs::remove_file(path);
 }
 

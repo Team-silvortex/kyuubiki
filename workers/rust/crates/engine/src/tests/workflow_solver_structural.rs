@@ -70,6 +70,76 @@ fn runs_cohesive_interface_mesh_q4_host_graph() {
 }
 
 #[test]
+fn runs_cohesive_interface_mesh_frame_host_graph() {
+    let run = run_solver_summary_json_graph(
+        "workflow.cohesive-interface-mesh-frame-summary-json",
+        "Cohesive interface mesh frame summary json",
+        "cohesive_model",
+        "study_model/cohesive_interface_mesh_2d",
+        "solve_cohesive",
+        "solve.cohesive_interface_mesh_2d",
+        "result/cohesive_interface_mesh_2d",
+        serde_json::json!({
+            "id": "mesh.host-frame.workflow",
+            "nodes": [
+                { "id": "lower-0", "x": 0.0, "y": 0.0, "fixed": [true, true], "load": [0.0, 0.0] },
+                { "id": "lower-1", "x": 1.0, "y": 0.0, "fixed": [true, true], "load": [0.0, 0.0] },
+                { "id": "upper-0", "x": 0.0, "y": 0.0, "fixed": [true, false], "fixed_rotation": true, "load": [0.0, 0.0] },
+                { "id": "upper-1", "x": 1.0, "y": 0.0, "fixed": [true, false], "load": [0.0, 0.0] },
+                { "id": "frame-tip", "x": 1.0, "y": 0.0, "fixed": [true, false], "load": [0.0, -2.5] }
+            ],
+            "materials": [{
+                "id": "adhesive",
+                "properties": {
+                    "normal_initial_stiffness": 1000.0,
+                    "normal_compression_stiffness": 2000.0,
+                    "normal_peak_traction": 10.0,
+                    "normal_failure_separation": 0.05,
+                    "shear_initial_stiffness": 500.0,
+                    "shear_peak_traction": 5.0,
+                    "shear_failure_separation": 0.05
+                }
+            }],
+            "elements": [{
+                "id": "interface-0", "lower_i": 0, "lower_j": 1,
+                "upper_i": 2, "upper_j": 3, "thickness": 1.0,
+                "material_id": "adhesive"
+            }],
+            "host_frames": [{
+                "id": "host-frame-0", "node_i": 2, "node_j": 4,
+                "area": 1.0, "youngs_modulus": 1000.0,
+                "moment_of_inertia": 1.0, "section_modulus": 1.0
+            }],
+            "load_steps": 3,
+            "max_iterations": 12,
+            "tolerance": 1.0e-11
+        }),
+        &[
+            "converged",
+            "max_host_frame_rotation",
+            "max_host_frame_moment",
+            "max_host_frame_stress",
+            "max_tangent_non_zero_count",
+            "max_tangent_fill_ratio",
+            "linear_solver_methods",
+        ],
+    );
+
+    let summary: serde_json::Value = serde_json::from_str(exported_content(&run))
+        .expect("cohesive frame summary should be valid JSON");
+    assert_eq!(summary["converged"], serde_json::json!(true));
+    assert!((summary["max_host_frame_rotation"].as_f64().unwrap() - 0.00125).abs() < 1.0e-10);
+    assert!((summary["max_host_frame_moment"].as_f64().unwrap() - 2.5).abs() < 1.0e-10);
+    assert!((summary["max_host_frame_stress"].as_f64().unwrap() - 2.5).abs() < 1.0e-10);
+    assert!(summary["max_tangent_non_zero_count"].as_u64().unwrap() > 0);
+    assert!(summary["max_tangent_fill_ratio"].as_f64().unwrap() > 0.0);
+    assert_eq!(
+        summary["linear_solver_methods"],
+        serde_json::json!(["symmetric_band_cholesky"])
+    );
+}
+
+#[test]
 fn runs_truss_3d_extract_export_graph() {
     let run = run_solver_summary_json_graph(
         "workflow.truss-3d-summary-json",
