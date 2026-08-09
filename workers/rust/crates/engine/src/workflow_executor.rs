@@ -6,7 +6,6 @@ use crate::{
     workflow_solve_executor::SUPPORTED_SOLVE_OPERATORS,
 };
 use serde_json::Value;
-use std::collections::BTreeMap;
 
 pub use crate::workflow_solve_executor::{run_solve_operator, solve_operator_runtime_manifest};
 
@@ -114,46 +113,10 @@ pub fn supported_workflow_operator_ids() -> Vec<&'static str> {
 }
 
 pub fn is_supported_workflow_operator(operator_id: &str) -> bool {
-    supported_workflow_operator_ids().contains(&operator_id)
-}
-
-pub fn resolve_single_input_payload(
-    node: &kyuubiki_protocol::WorkflowNode,
-    incoming: &[&kyuubiki_protocol::WorkflowEdge],
-    artifacts: &BTreeMap<String, Value>,
-) -> Result<Value, String> {
-    let first = incoming.first().ok_or_else(|| {
-        format!(
-            "workflow node {} requires at least one input artifact in the first executor",
-            node.id
-        )
-    })?;
-    artifacts
-        .get(&artifact_key(&first.from.node, &first.from.port))
-        .cloned()
-        .ok_or_else(|| {
-            format!(
-                "workflow node {} could not resolve input from {}.{}",
-                node.id, first.from.node, first.from.port
-            )
-        })
-}
-
-pub fn resolve_first_available_input_payload(
-    node: &kyuubiki_protocol::WorkflowNode,
-    incoming: &[&kyuubiki_protocol::WorkflowEdge],
-    artifacts: &BTreeMap<String, Value>,
-) -> Result<Value, String> {
-    incoming
-        .iter()
-        .find_map(|edge| artifacts.get(&artifact_key(&edge.from.node, &edge.from.port)))
-        .cloned()
-        .ok_or_else(|| {
-            format!(
-                "workflow node {} requires at least one resolved input artifact",
-                node.id
-            )
-        })
+    SUPPORTED_SOLVE_OPERATORS.contains(&operator_id)
+        || SUPPORTED_TRANSFORM_OPERATORS.contains(&operator_id)
+        || SUPPORTED_EXTRACT_OPERATORS.contains(&operator_id)
+        || SUPPORTED_EXPORT_OPERATORS.contains(&operator_id)
 }
 
 pub fn transform_operator_accepts_partial_inputs(operator_id: &str) -> bool {
@@ -173,33 +136,6 @@ pub fn transform_operator_requires_port_map(operator_id: &str) -> bool {
         || operator_id == "transform.compose_diagnostics_bundle"
         || operator_id == "transform.compose_diagnostics_report_payload"
         || operator_id == "transform.resolve_focus_bridge_execution"
-}
-
-pub fn resolve_named_input_payloads(
-    node: &kyuubiki_protocol::WorkflowNode,
-    incoming: &[&kyuubiki_protocol::WorkflowEdge],
-    artifacts: &BTreeMap<String, Value>,
-) -> Result<Value, String> {
-    let mut payload = serde_json::Map::new();
-    for edge in incoming {
-        let artifact = artifacts
-            .get(&artifact_key(&edge.from.node, &edge.from.port))
-            .cloned()
-            .ok_or_else(|| {
-                format!(
-                    "workflow node {} could not resolve input from {}.{}",
-                    node.id, edge.from.node, edge.from.port
-                )
-            })?;
-        payload.insert(edge.to.port.clone(), artifact);
-    }
-    if payload.is_empty() {
-        return Err(format!(
-            "workflow node {} requires at least one resolved named input artifact",
-            node.id
-        ));
-    }
-    Ok(Value::Object(payload))
 }
 
 pub fn evaluate_condition_operator(payload: &Value, config: &Value) -> Result<bool, String> {

@@ -26,7 +26,29 @@ fn runs_large_heat_to_thermo_workflow_graph_at_1024_nodes() {
     run_large_chain_case(1024);
 }
 
+#[test]
+fn runs_reverse_declared_heat_to_thermo_graph_at_1024_nodes() {
+    run_large_chain_case_with_options(1024, true, false);
+}
+
+#[test]
+fn runs_ephemeral_heat_to_thermo_workflow_graph_at_1024_nodes() {
+    run_large_chain_case_with_options(1024, false, true);
+}
+
 fn run_large_chain_case(pass_through_count: usize) {
+    run_large_chain_case_with_options(pass_through_count, false, false);
+}
+
+fn run_large_chain_case_with_options(
+    pass_through_count: usize,
+    reverse_nodes: bool,
+    ephemeral_passes: bool,
+) {
+    let mut nodes = build_nodes(pass_through_count, ephemeral_passes);
+    if reverse_nodes {
+        nodes.reverse();
+    }
     let graph = WorkflowGraph {
         schema_version: "kyuubiki.workflow-graph/v1".to_string(),
         id: format!("workflow.large-heat-to-thermo-chain-{pass_through_count}"),
@@ -42,7 +64,7 @@ fn run_large_chain_case(pass_through_count: usize) {
             cache_policy: Some(WorkflowCachePolicy::Cached),
             orchestrated: Some(true),
         },
-        nodes: build_nodes(pass_through_count),
+        nodes,
         edges: build_edges(pass_through_count),
     };
 
@@ -54,8 +76,9 @@ fn run_large_chain_case(pass_through_count: usize) {
     .expect("large workflow graph should run");
     let elapsed = started_at.elapsed();
     eprintln!(
-        "workflow_large_graphs[rust]: pass_through_count={pass_through_count} completed_nodes={} elapsed_ms={:.3}",
+        "workflow_large_graphs[rust]: pass_through_count={pass_through_count} reverse_nodes={reverse_nodes} ephemeral_passes={ephemeral_passes} completed_nodes={} retained_artifacts={} elapsed_ms={:.3}",
         run.completed_nodes.len(),
+        run.artifacts.len(),
         elapsed.as_secs_f64() * 1000.0
     );
 
@@ -75,11 +98,15 @@ fn run_large_chain_case(pass_through_count: usize) {
     );
 
     let tail_key = format!("pass_{:03}.result", pass_through_count - 1);
-    let bridge_payload = run
-        .artifacts
-        .get(&tail_key)
-        .expect("tail pass-through artifact should exist");
-    assert_eq!(bridge_payload["max_temperature"].as_f64(), Some(100.0));
+    if ephemeral_passes {
+        assert!(!run.artifacts.contains_key(&tail_key));
+    } else {
+        let bridge_payload = run
+            .artifacts
+            .get(&tail_key)
+            .expect("cached tail pass-through artifact should exist");
+        assert_eq!(bridge_payload["max_temperature"].as_f64(), Some(100.0));
+    }
 
     let thermo_result = run
         .artifacts
@@ -90,7 +117,7 @@ fn run_large_chain_case(pass_through_count: usize) {
     assert!(elapsed.as_secs_f64() < 30.0);
 }
 
-fn build_nodes(pass_through_count: usize) -> Vec<WorkflowNode> {
+fn build_nodes(pass_through_count: usize, ephemeral_passes: bool) -> Vec<WorkflowNode> {
     let mut nodes = vec![
         input_node("heat_model", "model", "study_model/heat_plane_quad_2d"),
         solve_node(
@@ -104,7 +131,10 @@ fn build_nodes(pass_through_count: usize) -> Vec<WorkflowNode> {
     ];
 
     for index in 0..pass_through_count {
-        nodes.push(pass_through_node(&format!("pass_{index:03}")));
+        nodes.push(pass_through_node(
+            &format!("pass_{index:03}"),
+            ephemeral_passes,
+        ));
     }
 
     nodes.push(WorkflowNode {
@@ -232,7 +262,7 @@ fn solve_node(
     }
 }
 
-fn pass_through_node(id: &str) -> WorkflowNode {
+fn pass_through_node(id: &str, ephemeral: bool) -> WorkflowNode {
     WorkflowNode {
         id: id.to_string(),
         kind: WorkflowNodeKind::Transform,
@@ -240,7 +270,7 @@ fn pass_through_node(id: &str) -> WorkflowNode {
         name: None,
         description: None,
         config: Some(serde_json::json!({})),
-        cache_policy: None,
+        cache_policy: ephemeral.then_some(WorkflowCachePolicy::Ephemeral),
         inputs: vec![port("input", "result/heat_plane_quad_2d")],
         outputs: vec![port("result", "result/heat_plane_quad_2d")],
     }

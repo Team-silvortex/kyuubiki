@@ -106,6 +106,17 @@ closure rather than raw feature sprawl:
 - native service execution now covers every action declared with the service
   engine, including direct mesh and saved-model-version solve/wait/result
   chains; the executor matrix is guarded against drifting from that contract
+- the Rust workflow engine now compiles a stable topological execution plan and
+  incoming-edge/source-artifact index once per submitted graph. Execution no
+  longer rescans all edges or rebuilds source keys for every node,
+  reverse-declared 1024-layer chains follow the same logical order, and
+  `first_available` selection is deterministic by edge order. Common-path
+  completion, trace, lineage, progress, and produced-artifact buffers are sized
+  from the compiled graph instead of repeatedly growing during execution
+- workflow artifact retention now enforces `Ephemeral` as an execution policy:
+  the last consumer may take ownership without a deep copy, consumed temporary
+  values are released while lineage remains visible, and strict output-budget
+  validation is propagated without trusting unchecked direct inputs
 - direct mesh execution resolves inline payloads, saved models, and saved model
   versions without a frontend bridge, and stable model-version/endpoint fields
   remain visible in composite solve results

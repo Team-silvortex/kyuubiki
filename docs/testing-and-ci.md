@@ -388,6 +388,18 @@ Use these entrypoints:
   template. This is the quickest product-level check that the main physics
   families still have real solver execution paths while engine and TaskIR
   contracts harden.
+- `cd workers/rust && cargo test -p kyuubiki-engine workflow_large_graphs --release --lib -- --nocapture`
+  Exercise 128/256/512/1024-layer real operator chains through the compiled
+  workflow execution plan. The 1024-layer lanes cover fully reversed node
+  declarations and `Ephemeral` pass-through artifacts. The latter must retain
+  only the five non-temporary chain artifacts while preserving completion and
+  lineage. Timing is host-local diagnostic data; ordering, output-budget checks,
+  retained artifact counts, outputs, and lineage are regression assertions.
+- `cd workers/rust && cargo test -p kyuubiki-engine workflow_scheduler_hot_path --release --lib -- --nocapture --test-threads=1`
+  Isolate 1024-layer scheduler, trace, progress, and artifact-retention overhead
+  without solver work. Cached and ephemeral lanes assert identical output and
+  lineage while retaining 1026 and 2 artifacts respectively. Treat elapsed time
+  as host-local diagnostic evidence rather than a release threshold.
 - `make benchmark-standard-nightly`
   Sync the Rust workspace without `target/` to `kyuubiki-lab`, run the standard regression
   trio there, and pull the resulting reports back under `tmp/standard-benchmark/`.

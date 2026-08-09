@@ -10,7 +10,8 @@
     "config/architecture/module-function-coverage-evidence/pwdt-frontend-control-plane.json",
     "config/architecture/module-function-coverage-evidence/desktop-runtime-api.json",
     "config/architecture/module-function-coverage-evidence/desktop-usability.json",
-    "config/architecture/module-function-coverage-evidence/runtime-recovery.json"
+    "config/architecture/module-function-coverage-evidence/runtime-recovery.json",
+    "config/architecture/module-function-coverage-evidence/workflow-engine.json"
   ],
   "depth_axes": {
     "required": "Whether the module/paradigm pair is required by the module-function matrix.",
