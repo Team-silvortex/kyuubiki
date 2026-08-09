@@ -76,6 +76,12 @@ closure rather than raw feature sprawl:
   report for Hub, Installer, and Workbench; the report is path-portable and can
   be rechecked on any host, while Linux and Windows package journeys remain
   explicit release blockers
+- native workflow fault injection now proves that one failed branch is recorded
+  and isolated while an independent branch completes; the same fault without a
+  recovery policy fails fast. The Rust agent watchdog additionally proves
+  failure-reason retention, slot release, heartbeat-refreshed stale timeout,
+  late-result rejection without duplicate failure, and healthy follow-up work;
+  process loss, orchestra retry, and installer replay tiers remain open
 - `create-open-project` now executes a real native bundle round trip. Hub and
   `kyuubiki project create|inspect|validate|normalize|pack|unpack|diff` share
   `workers/rust/crates/project-bundle` instead of maintaining separate storage

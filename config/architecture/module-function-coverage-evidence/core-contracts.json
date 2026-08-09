@@ -716,12 +716,17 @@
         "recovery"
       ],
       "files": [
+        "workers/rust/crates/cli/src/agent_watchdog.rs",
+        "workers/rust/crates/cli/src/agent_watchdog_runtime.rs",
         "workers/rust/crates/cli/tests/agent_task_ir_qualification.rs",
         "apps/web/test/kyuubiki_web/orchestra/operator_task_executor_test.exs",
-        "docs/weakness-roadmap.md"
+        "docs/weakness-roadmap.md",
+        "releases/usability-evidence/2.11.7/workflow-branch-recovery-fault-injection.json"
       ],
       "required_text": [
         "recent_failure_count",
+        "watchdog_timeout",
+        "late_failure_reused_timeout",
         "scheduler retry",
         "safe_to_continue_other_tasks"
       ]

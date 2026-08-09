@@ -99,6 +99,7 @@ mod remote_material_stage_health;
 mod remote_material_summary;
 mod remote_ssh_fixture;
 mod runtime_commands;
+mod runtime_recovery_fault_injection;
 mod rust_line_counts;
 mod standard_benchmark_index;
 mod standard_benchmark_remote;

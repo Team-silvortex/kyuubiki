@@ -110,6 +110,17 @@ The concrete watchdog variables are `KYUUBIKI_WATCHDOG_SCAN_INTERVAL_MS`,
 heartbeat budget. Active jobs remain live while the Agent sends heartbeats,
 including long result serialization and artifact upload phases.
 
+The Rust Agent also owns a local stale-execution watchdog. Configure it with
+`KYUUBIKI_AGENT_WATCHDOG_SCAN_INTERVAL_MS` and
+`KYUUBIKI_AGENT_WATCHDOG_STALE_EXECUTION_MS`, or the matching
+`--watchdog-scan-interval-ms` and `--watchdog-stale-execution-ms` flags. The
+defaults are 5 seconds and 30 seconds. Setting either value to zero disables
+the local scanner, and the effective policy is visible in the Agent watchdog
+snapshot. Solver heartbeats refresh job-bound executions; an expired execution
+releases its slot, records `watchdog_timeout`, requests cooperative
+cancellation, and rejects a late result without duplicating the failure record.
+This is not a process-level force-kill boundary.
+
 Agent admission is capacity-gated for static, manifest, and registry discovery.
 `KYUUBIKI_AGENT_QUEUE_TIMEOUT_MS` bounds the Orchestra-side capacity queue;
 `KYUUBIKI_ARTIFACT_EXECUTION_TIMEOUT_MS` independently bounds large artifact-backed

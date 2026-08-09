@@ -468,6 +468,14 @@ Primary docs:
 - [automated-material-research-example.md](automated-material-research-example.md)
 - [material-score-contract.md](material-score-contract.md)
 
+The first recovery subtier is now executable: native workflow fault injection
+proves branch isolation and fail-fast behavior. The Rust agent watchdog now also
+proves failure-reason retention, execution-slot release, and a healthy follow-up
+execution. Its stale-timeout sub-tier proves heartbeat refresh, timeout reason
+retention, cooperative cancellation, late-result deduplication, and slot reuse.
+This does not close distributed recovery; process loss, orchestra retry, and
+installer journal replay still need retained fault-injection evidence.
+
 ## Priority Order
 
 The recommended order is:

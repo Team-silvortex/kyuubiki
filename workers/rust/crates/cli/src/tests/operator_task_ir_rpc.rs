@@ -1,4 +1,5 @@
 use super::*;
+use crate::agent_state::register_cancel;
 use crate::operator_task_runtime::{
     OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED, OPERATOR_TASK_BLOCKED_STAGE, OPERATOR_TASK_MODE_EXECUTE,
     OPERATOR_TASK_MODE_PREFLIGHT, OPERATOR_TASK_STATUS_VERIFIED_PENDING,
@@ -363,6 +364,34 @@ fn handles_operator_task_ir_rpc_requests_as_agent_native_preflight() {
     assert_eq!(result["operator_id"], "transform.fixture");
     assert_eq!(result["program_id"], "transform.fixture");
     assert_eq!(result["runtime_protocol"], "kyuubiki.operator-execution/v1");
+}
+
+#[test]
+fn operator_task_rpc_rejects_a_cancelled_late_result() {
+    register_cancel("operator-task-cancelled-job".to_string());
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "rpc-task-ir-cancelled".to_string(),
+        method: RpcMethod::RunOperatorTaskIr,
+        params: serde_json::json!({
+            "job_id": "operator-task-cancelled-job",
+            "task_ir": golden_operator_task_ir()
+        }),
+    };
+
+    let AgentReply::Stream(progress_frames, final_response) =
+        handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+    assert!(progress_frames.is_empty());
+    assert!(!final_response.ok);
+    let error = final_response
+        .error
+        .expect("cancelled task should report an error");
+    assert_eq!(error.code, "cancelled");
+    let details = error.details.expect("cancelled task should retain details");
+    assert_eq!(details["request_id"], "rpc-task-ir-cancelled");
+    assert_eq!(details["job_id"], "operator-task-cancelled-job");
+    assert_eq!(details["reason_code"], "cancelled");
 }
 
 #[test]

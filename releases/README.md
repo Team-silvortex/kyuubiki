@@ -35,6 +35,10 @@ Instead, each snapshot records:
 - `usability-evidence/<version>/<platform>-installed-desktop-smoke.json`
   Host-installed desktop startup evidence. Retained paths must use portable
   `@external` or `@bundle-root` aliases and pass the native report verifier.
+- `usability-evidence/<version>/workflow-branch-recovery-fault-injection.json`
+  Deterministic engine evidence that a recoverable branch failure does not
+  cascade, that the same fault fails fast without a recovery policy, and that
+  Agent watchdog failure and stale-timeout recovery preserve explicit reasons.
 - `update-catalog.json`
   Generated channel-to-version registry that gives desktop and installer
   surfaces one unified update view.

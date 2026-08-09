@@ -1,0 +1,85 @@
+{
+  "schema_version": "kyuubiki.runtime-recovery-fault-injection/v1",
+  "status": "pass",
+  "scenario_count": 4,
+  "scenarios": [
+    {
+      "id": "recoverable_branch_isolation",
+      "status": "pass",
+      "injected_fault": "unsupported_condition_operator",
+      "recovery_policy": "skip",
+      "observations": {
+        "failed_nodes": [
+          "injected_failure"
+        ],
+        "skipped_nodes": [
+          "dependent_output"
+        ],
+        "independent_branch_completed": true,
+        "independent_result": {
+          "value": 7
+        },
+        "failed_trace_status": "failed",
+        "failure_message": "unsupported condition operator in first executor: injected_unsupported",
+        "cascading_failure": false
+      }
+    },
+    {
+      "id": "fail_fast_without_policy",
+      "status": "pass",
+      "injected_fault": "unsupported_condition_operator",
+      "recovery_policy": "none",
+      "observations": {
+        "run_rejected": true,
+        "error": "workflow node injected_failure failed: unsupported condition operator in first executor: injected_unsupported",
+        "silent_recovery": false
+      }
+    },
+    {
+      "id": "agent_watchdog_failure_then_success",
+      "status": "pass",
+      "injected_fault": "invalid_params",
+      "recovery_policy": "release_slot_and_retain_reason",
+      "observations": {
+        "failure_recorded": true,
+        "failure_request_id": "watchdog-injected-failure",
+        "failure_job_id": "watchdog-job-failure",
+        "failure_method": "solve_bar_1d",
+        "failure_reason_code": "invalid_params",
+        "watchdog_state_after_failure": "watch",
+        "slot_released_after_failure": true,
+        "recent_failure_count_after_failure": 1,
+        "healthy_execution_completed": true,
+        "slot_released_after_healthy": true,
+        "recent_failure_retained": true,
+        "new_failure_after_healthy": false,
+        "probe_cleanup_completed": true
+      }
+    },
+    {
+      "id": "agent_watchdog_stale_timeout",
+      "status": "pass",
+      "injected_fault": "stale_execution_heartbeat",
+      "recovery_policy": "cancel_reject_and_retain_reason",
+      "observations": {
+        "policy_enabled": true,
+        "stale_execution_ms": 100,
+        "progress_refreshed": true,
+        "expired_before_budget": false,
+        "timeout_count": 1,
+        "timeout_reason_code": "watchdog_timeout",
+        "timeout_job_id": "watchdog-stale-job",
+        "timeout_method": "solve_heat_bar_1d",
+        "timeout_elapsed_ms": 150,
+        "timeout_message_has_budget": true,
+        "slot_released_after_timeout": true,
+        "timeout_failure_recorded": true,
+        "late_failure_reused_timeout": true,
+        "duplicate_failure_created": false,
+        "healthy_follow_up_completed": true,
+        "timeout_reason_retained": true,
+        "probe_cleanup_completed": true
+      }
+    }
+  ]
+}

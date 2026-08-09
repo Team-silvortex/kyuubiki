@@ -20,6 +20,7 @@ const NATIVE_PROBES: &[&str] = &[
     "check-material-research-bundle",
     "check-operator-task-ir-contract",
     "check-operator-validation",
+    "check-runtime-recovery-fault-injection",
     "check-ui-automation-contract",
     "check-workflow-dataset-contract",
     "desktop-packaged-smoke",
@@ -42,6 +43,15 @@ const REQUIRED_CHAINS: &[(&str, &[&str])] = &[
         &[
             "hub.runtime.start-local",
             "workbench.runtime.start-local",
+            "workbench.runtime.inspect",
+        ],
+    ),
+    (
+        "diagnose-recover",
+        &[
+            "hub.environment.validate",
+            "installer.integrity.inspect",
+            "installer.integrity.repair",
             "workbench.runtime.inspect",
         ],
     ),
@@ -357,6 +367,18 @@ fn validate_required_chains(config: &GateConfig, selected: Option<&str>, issues:
         {
             issues.push(
                 "journey create-open-project must execute its native project round trip"
+                    .to_string(),
+            );
+        }
+        if *journey_id == "diagnose-recover"
+            && !journey.probes.iter().any(|probe| {
+                probe
+                    .first()
+                    .is_some_and(|cmd| cmd == "check-runtime-recovery-fault-injection")
+            })
+        {
+            issues.push(
+                "journey diagnose-recover must execute runtime recovery fault injection"
                     .to_string(),
             );
         }

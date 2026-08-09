@@ -88,6 +88,7 @@ help:
 	@echo "  make check-desktop-usability-journeys Verify native user-journey closure for moxi usability gates"
 	@echo "  make check-usability-release-gate Validate the daji 3.0 blocking user-journey contract"
 	@echo "  make build-usability-readiness-report Execute blocking journeys and write OUT=tmp/usability-readiness-report.json"
+	@echo "  make check-runtime-recovery-fault-injection Inject workflow and Agent watchdog recovery faults and retain the report"
 	@echo "  make check-version-line Verify cadence, release, snapshot, package, docs, and language-pack version contracts"
 	@echo "  make check-workflow-dataset-contract Verify workflow dataset schema, examples, and graph dataset references"
 	@echo "  make check-material-card-contract Verify material-card schema, golden fixture, docs, and workflow preflight anchors"

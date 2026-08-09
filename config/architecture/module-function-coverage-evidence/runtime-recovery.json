@@ -1,0 +1,68 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
+  "summary": "Executed workflow and Agent watchdog fault injection proving branch isolation, fail-fast behavior, and stale-timeout recovery.",
+  "paradigm_contract_evidence": {
+    "workflow_composition": [
+      {
+        "id": "runtime-recovery-fault-injection-contract",
+        "modules": [
+          "runtime-engine-solver",
+          "runtime-agent-cli",
+          "verification-evidence"
+        ],
+        "files": [
+          "config/architecture/usability-release-gate.json",
+          "workers/rust/crates/script-runner/src/runtime_recovery_fault_injection.rs",
+          "releases/usability-evidence/2.11.7/workflow-branch-recovery-fault-injection.json"
+        ],
+        "required_text": [
+          "fault_injection_and_recovery/workflow-branch-isolation",
+          "check-runtime-recovery-fault-injection",
+          "kyuubiki.runtime-recovery-fault-injection/v1",
+          "recoverable_branch_isolation",
+          "fail_fast_without_policy",
+          "agent_watchdog_failure_then_success",
+          "agent_watchdog_stale_timeout"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "workflow-branch-recovery-fault-injection",
+      "status": "proven",
+      "modules": [
+        "runtime-engine-solver",
+        "runtime-agent-cli",
+        "verification-evidence"
+      ],
+      "paradigms": [
+        "workflow_composition",
+        "runtime_api",
+        "validation"
+      ],
+      "dimensions": [
+        "recovery"
+      ],
+      "files": [
+        "releases/usability-evidence/2.11.7/workflow-branch-recovery-fault-injection.json"
+      ],
+      "required_text": [
+        "\"scenario_count\": 4",
+        "\"independent_branch_completed\": true",
+        "\"cascading_failure\": false",
+        "\"run_rejected\": true",
+        "\"silent_recovery\": false",
+        "\"slot_released_after_failure\": true",
+        "\"recent_failure_retained\": true",
+        "\"new_failure_after_healthy\": false",
+        "\"timeout_reason_code\": \"watchdog_timeout\"",
+        "\"slot_released_after_timeout\": true",
+        "\"late_failure_reused_timeout\": true",
+        "\"duplicate_failure_created\": false",
+        "\"probe_cleanup_completed\": true"
+      ]
+    }
+  ]
+}

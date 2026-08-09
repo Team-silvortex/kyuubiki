@@ -13,6 +13,7 @@ mod agent_mesh;
 mod agent_result_artifact;
 mod agent_state;
 mod agent_watchdog;
+mod agent_watchdog_runtime;
 mod config;
 mod operator_task_builtin;
 mod operator_task_receipts;
@@ -33,6 +34,7 @@ use agent_state::{
     build_agent_deployment_readiness_for_config, build_agent_descriptor,
     store_deployment_readiness, store_runtime_descriptor,
 };
+use agent_watchdog_runtime::AgentWatchdogRuntimeHandle;
 use config::{AgentConfig, Command};
 use operator_task_runtime::{
     operator_package_runtime_binding_from_config, store_operator_package_runtime_binding,
@@ -66,10 +68,11 @@ fn run_agent(config: &AgentConfig) -> Result<(), String> {
     store_runtime_descriptor(build_agent_descriptor(config));
     store_deployment_readiness(build_agent_deployment_readiness_for_config(config));
     store_operator_package_runtime_binding(operator_package_runtime_binding_from_config(config));
-    let registration = AgentRegistrationHandle::maybe_spawn(config);
-    let peer_mesh = PeerMeshHandle::maybe_spawn(config);
     let listener = TcpListener::bind((config.host.as_str(), config.port))
         .map_err(|error| format!("failed to bind {}:{}: {error}", config.host, config.port))?;
+    let watchdog = AgentWatchdogRuntimeHandle::maybe_spawn(config)?;
+    let registration = AgentRegistrationHandle::maybe_spawn(config);
+    let peer_mesh = PeerMeshHandle::maybe_spawn(config);
 
     for stream in listener.incoming() {
         let stream = stream.map_err(|error| format!("failed to accept connection: {error}"))?;
@@ -81,6 +84,10 @@ fn run_agent(config: &AgentConfig) -> Result<(), String> {
                 }
             })
             .map_err(|error| format!("failed to spawn agent connection handler: {error}"))?;
+    }
+
+    if let Some(watchdog) = watchdog {
+        watchdog.stop();
     }
 
     if let Some(registration) = registration {

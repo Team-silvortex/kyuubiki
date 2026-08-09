@@ -7,10 +7,10 @@ use crate::{
     material_score_contract, material_study_execution_plan_contract, materialization_plan_contract,
     minimal_industrial_closure, module_extension_standard, module_function_matrix,
     module_function_tensor, module_topology, module_topology_report, moxi_handoff,
-    operator_task_ir_contract, project_organization_audit, test_coverage_posture,
-    toolchain_contract, ui_automation_contract, update_catalog_docs, usability_release_gate,
-    verification_evidence_surface, workbench_language_pack_catalog, workflow_dataset_contract,
-    workflow_metric_resolver_contract,
+    operator_task_ir_contract, project_organization_audit, runtime_recovery_fault_injection,
+    test_coverage_posture, toolchain_contract, ui_automation_contract, update_catalog_docs,
+    usability_release_gate, verification_evidence_surface, workbench_language_pack_catalog,
+    workflow_dataset_contract, workflow_metric_resolver_contract,
 };
 use std::ffi::OsString;
 use std::path::Path;
@@ -95,6 +95,9 @@ pub(crate) fn run_governance_command(
         }
         "check-usability-release-gate" => {
             usability_release_gate::run_check_usability_release_gate(root, args)
+        }
+        "check-runtime-recovery-fault-injection" => {
+            runtime_recovery_fault_injection::run_check_runtime_recovery_fault_injection(root, args)
         }
         "check-workflow-dataset-contract" => {
             workflow_dataset_contract::run_check_workflow_dataset_contract(root, args)

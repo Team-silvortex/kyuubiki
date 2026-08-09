@@ -80,7 +80,7 @@ pub(crate) fn handle_request(
             RpcResponse::success(request.id, agent_descriptor_payload()),
         ),
         RpcMethod::CancelJob => handle_cancel_job(request),
-        RpcMethod::RunOperatorTaskIr => handle_operator_task_ir(request),
+        RpcMethod::RunOperatorTaskIr => handle_operator_task_ir(request, writer),
         RpcMethod::SolveBar1d => run_solver::<SolveBarRequest, _, _, _>(
             request,
             writer,
@@ -536,17 +536,27 @@ pub(crate) fn handle_request(
     }
 }
 
-fn handle_operator_task_ir(request: RpcRequest) -> AgentReply {
+fn handle_operator_task_ir(
+    request: RpcRequest,
+    writer: Option<Arc<Mutex<TcpStream>>>,
+) -> AgentReply {
     let request_id = request.id;
+    let maybe_job_id = extract_job_id(&request.params);
     let guard = agent_watchdog::begin_execution(
         request_id.clone(),
-        extract_job_id(&request.params),
+        maybe_job_id.clone(),
         "run_operator_task_ir".to_string(),
     );
+    let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+        writer.clone().map(|shared_writer| {
+            HeartbeatHandle::spawn(shared_writer, request_id.clone(), job_id.clone())
+        })
+    });
 
     let result = match run_operator_task_ir(&request.params) {
         Ok(result) => result,
         Err(error) => {
+            stop_heartbeat(heartbeat);
             let report = agent_watchdog::fail_execution(guard, error.code, error.message);
             let mut details =
                 serde_json::to_value(report).expect("failure report should serialize");
@@ -559,6 +569,25 @@ fn handle_operator_task_ir(request: RpcRequest) -> AgentReply {
         }
     };
 
+    if let Some(job_id) = maybe_job_id.as_deref()
+        && take_cancelled(job_id)
+    {
+        stop_heartbeat(heartbeat);
+        let report =
+            agent_watchdog::fail_execution(guard, "cancelled", "operator task was cancelled");
+        let reason_code = report.reason_code.clone();
+        return AgentReply::Stream(
+            Vec::new(),
+            RpcResponse::error_with_details(
+                request_id,
+                reason_code,
+                report.message.clone(),
+                serde_json::to_value(report).expect("failure report should serialize"),
+            ),
+        );
+    }
+
+    stop_heartbeat(heartbeat);
     agent_watchdog::complete_execution(guard);
     AgentReply::Stream(Vec::new(), RpcResponse::success(request_id, result))
 }
@@ -632,11 +661,12 @@ where
                     stop_heartbeat(heartbeat);
                     let report =
                         agent_watchdog::fail_execution(guard, "cancelled", "job was cancelled");
+                    let reason_code = report.reason_code.clone();
                     return AgentReply::Stream(
                         Vec::new(),
                         RpcResponse::error_with_details(
                             request_id,
-                            "cancelled",
+                            reason_code,
                             report.message.clone(),
                             serde_json::to_value(report).expect("failure report should serialize"),
                         ),

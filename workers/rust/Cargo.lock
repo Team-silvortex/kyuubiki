@@ -414,11 +414,14 @@ dependencies = [
 name = "kyuubiki-script-runner"
 version = "2.7.0"
 dependencies = [
+ "kyuubiki-cli",
  "kyuubiki-desktop-runtime",
+ "kyuubiki-engine",
  "kyuubiki-installer",
  "kyuubiki-kcore",
  "kyuubiki-project-automation",
  "kyuubiki-project-bundle",
+ "kyuubiki-protocol",
  "serde",
  "serde_json",
  "sha2",

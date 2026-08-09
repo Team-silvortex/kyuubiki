@@ -63,6 +63,8 @@ fn parses_agent_command_defaults() {
             key_path: None,
             ca_cert_path: None,
             register_interval_ms: 5_000,
+            watchdog_scan_interval_ms: 5_000,
+            watchdog_stale_execution_ms: 30_000,
             cluster_id: None,
             peers: vec![],
             operator_package_host_id: None,
@@ -85,6 +87,19 @@ fn parses_peer_mesh_agent_args() {
 
     assert_eq!(config.cluster_id.as_deref(), Some("lan-lab-a"));
     assert_eq!(config.peers.len(), 2);
+}
+
+#[test]
+fn parses_agent_watchdog_policy_args() {
+    let config = AgentConfig::from_args(&[
+        "--watchdog-scan-interval-ms".to_string(),
+        "250".to_string(),
+        "--watchdog-stale-execution-ms".to_string(),
+        "5000".to_string(),
+    ]);
+
+    assert_eq!(config.watchdog_scan_interval_ms, 250);
+    assert_eq!(config.watchdog_stale_execution_ms, 5_000);
 }
 
 #[test]
@@ -124,6 +139,8 @@ fn registration_payload_reports_operator_package_runtime_snapshot() {
         key_path: None,
         ca_cert_path: None,
         register_interval_ms: 5_000,
+        watchdog_scan_interval_ms: 5_000,
+        watchdog_stale_execution_ms: 30_000,
         cluster_id: None,
         peers: vec![],
         operator_package_host_id: Some("solver-with-package-host/operator-host".to_string()),

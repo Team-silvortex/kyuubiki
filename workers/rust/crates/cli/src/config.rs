@@ -20,6 +20,8 @@ pub(crate) struct AgentConfig {
     pub(crate) key_path: Option<String>,
     pub(crate) ca_cert_path: Option<String>,
     pub(crate) register_interval_ms: u64,
+    pub(crate) watchdog_scan_interval_ms: u64,
+    pub(crate) watchdog_stale_execution_ms: u64,
     pub(crate) cluster_id: Option<String>,
     pub(crate) peers: Vec<String>,
     pub(crate) operator_package_host_id: Option<String>,
@@ -88,6 +90,8 @@ impl AgentConfig {
             key_path: None,
             ca_cert_path: None,
             register_interval_ms: 5_000,
+            watchdog_scan_interval_ms: 5_000,
+            watchdog_stale_execution_ms: 30_000,
             cluster_id: None,
             peers: vec![],
             operator_package_host_id: None,
@@ -126,6 +130,18 @@ impl AgentConfig {
                     if let Some(value) = args.next() {
                         self.register_interval_ms =
                             value.parse().unwrap_or(self.register_interval_ms);
+                    }
+                }
+                "--watchdog-scan-interval-ms" => {
+                    if let Some(value) = args.next() {
+                        self.watchdog_scan_interval_ms =
+                            value.parse().unwrap_or(self.watchdog_scan_interval_ms);
+                    }
+                }
+                "--watchdog-stale-execution-ms" => {
+                    if let Some(value) = args.next() {
+                        self.watchdog_stale_execution_ms =
+                            value.parse().unwrap_or(self.watchdog_stale_execution_ms);
                     }
                 }
                 "--cluster-id" => assign_next_option(&mut self.cluster_id, &mut args),
@@ -176,6 +192,14 @@ impl AgentConfig {
         fill_u64_from_env(
             &mut self.register_interval_ms,
             "KYUUBIKI_AGENT_REGISTER_INTERVAL_MS",
+        );
+        fill_u64_from_env(
+            &mut self.watchdog_scan_interval_ms,
+            "KYUUBIKI_AGENT_WATCHDOG_SCAN_INTERVAL_MS",
+        );
+        fill_u64_from_env(
+            &mut self.watchdog_stale_execution_ms,
+            "KYUUBIKI_AGENT_WATCHDOG_STALE_EXECUTION_MS",
         );
 
         if self.operator_activated_package_count == 0 {

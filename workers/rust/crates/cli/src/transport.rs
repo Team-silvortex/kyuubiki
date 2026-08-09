@@ -8,6 +8,7 @@ use std::time::Duration;
 use kyuubiki_protocol::{JobStatus, ProgressEvent, RpcProgress, RpcResponse};
 
 use crate::agent_state::register_cancel;
+use crate::agent_watchdog;
 
 pub(crate) enum FrameReadError {
     ConnectionClosed,
@@ -105,6 +106,8 @@ impl HeartbeatHandle {
                 if !running_clone.load(Ordering::SeqCst) {
                     break;
                 }
+
+                let _ = agent_watchdog::mark_progress(&request_id);
 
                 let heartbeat = RpcProgress::heartbeat(
                     request_id.clone(),

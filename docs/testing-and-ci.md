@@ -218,6 +218,14 @@ and strict coverage. The native script audit also rejects direct
 `node scripts/*.mjs` calls from Make and CI, so release checks cannot silently
 fall back to a second JavaScript implementation.
 
+Use `make check-runtime-recovery-fault-injection` for deterministic workflow
+recovery testing. It injects the same unsupported condition fault once with
+branch-isolation recovery and once without recovery, proving both continued
+independent work and explicit fail-fast behavior without external services. It
+also executes Agent watchdog failure and stale-heartbeat timeout scenarios,
+including progress refresh, slot release, reason retention, late-result
+deduplication, and a healthy follow-up execution.
+
 ### Desktop shell checks
 
 - `make test-hub-gui`
