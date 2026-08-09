@@ -12,7 +12,8 @@
       "packaged_desktop_round_trip/macos-installed",
       "fault_injection_and_recovery/workflow-branch-isolation",
       "fault_injection_and_recovery/agent-watchdog-state-machine",
-      "fault_injection_and_recovery/agent-watchdog-stale-timeout"
+      "fault_injection_and_recovery/agent-watchdog-stale-timeout",
+      "fault_injection_and_recovery/orchestra-agent-process-loss"
     ],
     "unclosed_release_tiers": [
       "packaged_desktop_round_trip",
@@ -142,6 +143,11 @@
           "check-runtime-recovery-fault-injection",
           "--out",
           "tmp/usability-runtime-recovery-fault-injection.json"
+        ],
+        [
+          "check-orchestra-recovery-fault-injection",
+          "--out",
+          "tmp/usability-orchestra-recovery-fault-injection.json"
         ],
         ["check-gui-runtime-capability-contract"],
         ["check-component-integrity-protocol"]

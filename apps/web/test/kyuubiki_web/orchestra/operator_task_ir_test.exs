@@ -293,9 +293,22 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIRTest do
 
     assert OperatorTaskIR.agent_routing_opts(task) == [
              job_id: "operator-task:rank-materials",
+             retry_safety: "idempotent",
              orchestration: %{"orch_id" => "orch-main"},
              placement_tags: ["materials", "ranking"],
              required_capabilities: ["workflow_transform_runtime"]
            ]
+  end
+
+  test "requires a checkpoint before replaying side-effecting operators" do
+    assert {:ok, task} =
+             OperatorTaskIR.build(
+               "export.summary_json",
+               %{"summary" => %{"status" => "ready"}},
+               %{}
+             )
+
+    assert task["operator"]["kind"] == "export"
+    assert OperatorTaskIR.agent_routing_opts(task)[:retry_safety] == "checkpoint_required"
   end
 end

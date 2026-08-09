@@ -4,7 +4,12 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
   alias KyuubikiWeb.Orchestra.OperatorTaskIR
   alias KyuubikiWeb.Playground.AgentClient
   alias KyuubikiWeb.Playground.AgentPool
-  alias KyuubikiWeb.TestSupport.{FakePlaygroundAgent, FakeStallingAgent}
+
+  alias KyuubikiWeb.TestSupport.{
+    FakeDisconnectingAgent,
+    FakePlaygroundAgent,
+    FakeStallingAgent
+  }
 
   setup do
     original_config = Application.get_env(:kyuubiki_web, AgentPool, [])
@@ -465,6 +470,8 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
   end
 
   test "fails over to the next configured agent when the first endpoint is unavailable" do
+    test_process = self()
+
     {:ok, _pid} =
       FakePlaygroundAgent.start_link([
         %{
@@ -491,24 +498,46 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
 
     Application.put_env(:kyuubiki_web, AgentPool,
       endpoints: [
-        %{id: "offline", host: "127.0.0.1", port: 59_999},
-        %{id: "online", host: "127.0.0.1", port: good_port}
+        %{
+          id: "offline",
+          host: "127.0.0.1",
+          port: 59_999,
+          tags: ["primary", "preferred"]
+        },
+        %{id: "online", host: "127.0.0.1", port: good_port, tags: ["primary"]}
       ]
     )
 
     AgentPool.reload()
 
     assert {:ok, result, endpoint} =
-             AgentClient.request_with_agent("solve_bar_1d", %{
-               length: 1.0,
-               area: 1.0,
-               youngs_modulus: 1.0,
-               elements: 1,
-               tip_force: 1.0
-             })
+             AgentClient.request_with_agent(
+               "solve_bar_1d",
+               %{
+                 length: 1.0,
+                 area: 1.0,
+                 youngs_modulus: 1.0,
+                 elements: 1,
+                 tip_force: 1.0
+               },
+               fn progress -> send(test_process, {:failover_progress, progress}) end,
+               job_id: "failover-connect-before-dispatch",
+               placement_tags: ["primary", "preferred"]
+             )
 
     assert endpoint.id == "online"
     assert result["max_stress"] == 1.0
+
+    assert_receive {:failover_progress,
+                    %{
+                      "stage" => "recovering",
+                      "recovery" => %{
+                        reason_code: "agent_process_unavailable",
+                        process_loss: true,
+                        retryable: true,
+                        next_action: "retry_next_agent"
+                      }
+                    }}
   end
 
   test "times out when the agent stops responding" do
@@ -526,8 +555,7 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
 
     AgentPool.reload()
 
-    assert {:error,
-            {:all_agents_failed, [%{agent: "rust-agent-rpc@stalling", reason: ":timeout"}]}} =
+    assert {:error, {:all_agents_failed, [receipt]}} =
              AgentClient.solve_bar_1d(%{
                length: 1.0,
                area: 1.0,
@@ -536,10 +564,69 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
                tip_force: 1.0
              })
 
+    assert receipt.agent == "rust-agent-rpc@stalling"
+    assert receipt.failure_stage == "receive"
+    assert receipt.reason == ":timeout"
+    assert receipt.reason_code == "agent_transport_timeout"
+    assert receipt.retryable
+    assert receipt.next_action == "await_agent_recovery"
+
     endpoint = hd(AgentPool.endpoints())
     assert endpoint.consecutive_failures == 1
     assert endpoint.cooldown_remaining_ms > 0
     assert endpoint.last_failure_reason == ":timeout"
+  end
+
+  test "does not replay an export task when the agent disconnects after dispatch" do
+    assert {:ok, task_ir} =
+             OperatorTaskIR.build(
+               "export.summary_json",
+               %{"summary" => %{"status" => "ready"}},
+               %{}
+             )
+
+    {:ok, _pid} = FakeDisconnectingAgent.start_link(self())
+    disconnecting_port = await_fake_agent_port()
+
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link(
+        {:capture, self(), [%{"ok" => true, "result" => %{"unexpected" => true}}]}
+      )
+
+    fallback_port = await_fake_agent_port()
+    capabilities = task_ir["runtime_hints"]["required_capabilities"]
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "disconnecting-export-agent",
+          host: "127.0.0.1",
+          port: disconnecting_port,
+          methods: ["run_operator_task_ir"],
+          capabilities: capabilities
+        },
+        %{
+          id: "unused-export-agent",
+          host: "127.0.0.1",
+          port: fallback_port,
+          methods: ["run_operator_task_ir"],
+          capabilities: capabilities
+        }
+      ]
+    )
+
+    AgentPool.reload()
+
+    assert {:error, {:agent_retry_blocked, receipt}} =
+             AgentClient.run_operator_task_ir(task_ir, mode: :execute)
+
+    assert_receive {:fake_disconnecting_agent_request, %{"method" => "run_operator_task_ir"}}
+
+    refute_receive {:fake_agent_request, _request}, 100
+    assert receipt.reason_code == "agent_process_lost"
+    assert receipt.retry_safety == "checkpoint_required"
+    refute receipt.retryable
+    assert receipt.next_action == "checkpoint_before_retry"
   end
 
   test "does not put an agent into cooldown when it returns a valid rpc error" do

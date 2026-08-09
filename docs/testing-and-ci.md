@@ -226,6 +226,14 @@ also executes Agent watchdog failure and stale-heartbeat timeout scenarios,
 including progress refresh, slot release, reason retention, late-result
 deduplication, and a healthy follow-up execution.
 
+Use `make check-orchestra-recovery-fault-injection` for the control-plane side
+of recovery. It starts disposable TCP Agents and proves three post-dispatch
+paths: idempotent failover, replay blocking for an unchecked side effect, and
+failover after an explicit checkpoint. The native validator rejects missing
+process-loss reasons, unsafe retries, duplicate side effects, or incomplete
+fallback observations. The checkpointed lane must retain a verified checkpoint
+digest; a caller-provided label without verification remains blocked.
+
 ### Desktop shell checks
 
 - `make test-hub-gui`

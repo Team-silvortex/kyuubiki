@@ -5,6 +5,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
 
   alias KyuubikiWeb.Orchestra.OperatorTaskIR
   alias KyuubikiWeb.Orchestra.OperatorTaskReadiness
+  alias KyuubikiWeb.Orchestra.DistributedRecovery
   alias KyuubikiWeb.Playground.AgentExecutionGate
   alias KyuubikiWeb.Playground.AgentPool
   alias KyuubikiWeb.Playground.AgentRegistry
@@ -238,8 +239,39 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   defp operator_task_routing_opts(task_ir, opts) do
     task_ir
     |> OperatorTaskIR.agent_routing_opts()
+    |> maybe_override_retry_policy(opts)
     |> maybe_require_operator_package_runtime(Keyword.get(opts, :mode))
   end
+
+  defp maybe_override_retry_policy(routing_opts, opts) do
+    retry_safety = Keyword.get(opts, :retry_safety)
+    replay_checkpoint = Keyword.get(opts, :replay_checkpoint)
+
+    cond do
+      retry_safety in [:idempotent, "idempotent"] ->
+        Keyword.put(routing_opts, :retry_safety, retry_safety)
+
+      retry_safety in [:checkpointed, "checkpointed"] and
+          verified_replay_checkpoint?(replay_checkpoint) ->
+        routing_opts
+        |> Keyword.put(:retry_safety, retry_safety)
+        |> Keyword.put(:replay_checkpoint, replay_checkpoint)
+
+      true ->
+        routing_opts
+    end
+  end
+
+  defp verified_replay_checkpoint?(%{
+         "operator_task_batch_checkpoint_verification_contract" =>
+           "kyuubiki.operator_task_batch_checkpoint_verification/v1",
+         "status" => "verified",
+         "checkpoint_digest" => digest
+       })
+       when is_binary(digest),
+       do: Regex.match?(~r/\A[0-9a-f]{64}\z/, digest)
+
+  defp verified_replay_checkpoint?(_checkpoint), do: false
 
   defp maybe_require_operator_package_runtime(routing_opts, mode)
        when mode in [:execute, "execute"] do
@@ -291,7 +323,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
         {:error, reason}
 
       {:error, reason} ->
-        :ok = AgentPool.report_failure(normalized, reason)
+        :ok = AgentPool.report_failure(normalized, DistributedRecovery.health_reason(reason))
         {:error, reason}
     end
   end
@@ -373,11 +405,32 @@ defmodule KyuubikiWeb.Playground.AgentClient do
          opts,
          failures
        ) do
-    :ok = AgentPool.report_failure(endpoint, reason)
+    receipt =
+      DistributedRecovery.failure_receipt(
+        endpoint,
+        request["method"],
+        reason,
+        opts,
+        length(remaining),
+        length(failures) + 1
+      )
 
-    attempt_request(remaining, request_id, request, on_progress, opts, [
-      %{agent: worker_id(endpoint), reason: inspect(reason)} | failures
-    ])
+    if DistributedRecovery.agent_health_failure?(receipt) do
+      :ok = AgentPool.report_failure(endpoint, DistributedRecovery.health_reason(reason))
+    end
+
+    emit_recovery_progress(on_progress, opts, receipt)
+
+    cond do
+      DistributedRecovery.retryable?(receipt) and remaining != [] ->
+        attempt_request(remaining, request_id, request, on_progress, opts, [receipt | failures])
+
+      DistributedRecovery.retryable?(receipt) ->
+        {:error, {:all_agents_failed, Enum.reverse([receipt | failures])}}
+
+      true ->
+        {:error, {:agent_retry_blocked, receipt}}
+    end
   end
 
   defp no_matching_agent_error(method, opts) do
@@ -496,18 +549,40 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   defp put_rpc_job_id(request, _method, _opts), do: request
 
   defp request_once(endpoint, request_id, request, on_progress, opts) do
-    with {:ok, socket} <- connect(endpoint) do
-      try do
-        with :ok <- send_request(socket, request),
-             {:ok, response_payload} <-
-               recv_response(socket, request_id, on_progress, request_deadline_ms(opts)) do
-          decode_response(response_payload, request_id)
+    case connect(endpoint) do
+      {:ok, socket} ->
+        try do
+          request_over_socket(socket, request_id, request, on_progress, opts)
+        after
+          :gen_tcp.close(socket)
         end
-      after
-        :gen_tcp.close(socket)
+
+      {:error, reason} ->
+        {:error, {:agent_transport_failure, :connect, reason}}
+    end
+  end
+
+  defp request_over_socket(socket, request_id, request, on_progress, opts) do
+    with :ok <- tag_transport_error(send_request(socket, request), :send),
+         {:ok, response_payload} <-
+           tag_transport_error(
+             recv_response(socket, request_id, on_progress, request_deadline_ms(opts)),
+             :receive
+           ) do
+      case decode_response(response_payload, request_id) do
+        {:error, {:invalid_response, _reason} = reason} ->
+          {:error, {:agent_transport_failure, :protocol, reason}}
+
+        result ->
+          result
       end
     end
   end
+
+  defp tag_transport_error({:error, reason}, stage),
+    do: {:error, {:agent_transport_failure, stage, reason}}
+
+  defp tag_transport_error(result, _stage), do: result
 
   defp connect(endpoint) do
     :gen_tcp.connect(
@@ -659,6 +734,19 @@ defmodule KyuubikiWeb.Playground.AgentClient do
           "agent capacity acquired; agent_id=#{endpoint.id}; " <>
             "queue_wait_ms=#{queue_metadata.waited_ms}; " <>
             "execution_timeout_ms=#{request_timeout_value(opts)}"
+      })
+    end
+  end
+
+  defp emit_recovery_progress(on_progress, opts, receipt) do
+    if Keyword.get(opts, :job_id) do
+      on_progress.(%{
+        "stage" => "recovering",
+        "progress" => 0.01,
+        "message" =>
+          "agent request failed; reason_code=#{receipt.reason_code}; " <>
+            "next_action=#{receipt.next_action}",
+        "recovery" => receipt
       })
     end
   end

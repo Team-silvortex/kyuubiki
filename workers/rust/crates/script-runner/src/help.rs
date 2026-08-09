@@ -78,6 +78,7 @@ lab remote-ssh-fixture\n  \
   check-desktop-usability-journeys\n  \
   check-usability-release-gate\n  \
   check-runtime-recovery-fault-injection\n  \
+  check-orchestra-recovery-fault-injection\n  \
   check-workflow-dataset-contract\n  \
   check-workflow-metric-resolver-contract\n  \
   check-material-card-contract\n  \

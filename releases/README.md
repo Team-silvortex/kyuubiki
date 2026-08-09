@@ -39,6 +39,9 @@ Instead, each snapshot records:
   Deterministic engine evidence that a recoverable branch failure does not
   cascade, that the same fault fails fast without a recovery policy, and that
   Agent watchdog failure and stale-timeout recovery preserve explicit reasons.
+- `usability-evidence/<version>/orchestra-agent-process-loss-fault-injection.json`
+  Live TCP evidence for idempotent Agent failover, side-effect replay blocking,
+  and checkpoint-authorized recovery after a post-dispatch process loss.
 - `update-catalog.json`
   Generated channel-to-version registry that gives desktop and installer
   surfaces one unified update view.

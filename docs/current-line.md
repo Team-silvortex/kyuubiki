@@ -80,8 +80,11 @@ closure rather than raw feature sprawl:
   and isolated while an independent branch completes; the same fault without a
   recovery policy fails fast. The Rust agent watchdog additionally proves
   failure-reason retention, slot release, heartbeat-refreshed stale timeout,
-  late-result rejection without duplicate failure, and healthy follow-up work;
-  process loss, orchestra retry, and installer replay tiers remain open
+  late-result rejection without duplicate failure, and healthy follow-up work.
+  Orchestra now retains real TCP process-loss evidence: idempotent work fails
+  over, side-effecting work stops before blind replay, and explicitly
+  checkpointed work resumes; remote host kill/rejoin and installer replay tiers
+  remain open
 - `create-open-project` now executes a real native bundle round trip. Hub and
   `kyuubiki project create|inspect|validate|normalize|pack|unpack|diff` share
   `workers/rust/crates/project-bundle` instead of maintaining separate storage

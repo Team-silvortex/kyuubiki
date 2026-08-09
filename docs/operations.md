@@ -121,6 +121,16 @@ releases its slot, records `watchdog_timeout`, requests cooperative
 cancellation, and rejects a late result without duplicating the failure record.
 This is not a process-level force-kill boundary.
 
+Orchestra classifies every Agent failure by dispatch stage. A connection that
+fails before dispatch may move to another Agent. After send, only `solve_*`,
+other idempotent TaskIR kinds (`solver`, `transform`, and `extract`), or work
+carrying a verified operator-batch checkpoint may be replayed automatically.
+Merely labeling a request `checkpointed` is rejected. Side-effecting
+`export` and `workflow_bridge` tasks return `agent_retry_blocked` with
+`checkpoint_before_retry` instead of being duplicated. Recovery progress
+includes a `kyuubiki.orchestra-agent-recovery/v1` receipt with the Agent,
+failure stage, reason code, retry safety, and next action.
+
 Agent admission is capacity-gated for static, manifest, and registry discovery.
 `KYUUBIKI_AGENT_QUEUE_TIMEOUT_MS` bounds the Orchestra-side capacity queue;
 `KYUUBIKI_ARTIFACT_EXECUTION_TIMEOUT_MS` independently bounds large artifact-backed

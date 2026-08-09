@@ -1,20 +1,25 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
-  "summary": "Executed workflow and Agent watchdog fault injection proving branch isolation, fail-fast behavior, and stale-timeout recovery.",
+  "summary": "Executed workflow, Agent watchdog, and Orchestra process-loss fault injection proving branch isolation, fail-fast behavior, stale-timeout recovery, and replay-safe failover.",
   "paradigm_contract_evidence": {
     "workflow_composition": [
       {
         "id": "runtime-recovery-fault-injection-contract",
         "modules": [
+          "orchestra-control-plane",
           "runtime-engine-solver",
           "runtime-agent-cli",
           "verification-evidence"
         ],
         "files": [
           "config/architecture/usability-release-gate.json",
+          "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery_probe.ex",
           "workers/rust/crates/script-runner/src/runtime_recovery_fault_injection.rs",
-          "releases/usability-evidence/2.11.7/workflow-branch-recovery-fault-injection.json"
+          "workers/rust/crates/script-runner/src/orchestra_recovery_fault_injection.rs",
+          "releases/usability-evidence/2.11.7/workflow-branch-recovery-fault-injection.json",
+          "releases/usability-evidence/2.11.7/orchestra-agent-process-loss-fault-injection.json"
         ],
         "required_text": [
           "fault_injection_and_recovery/workflow-branch-isolation",
@@ -23,7 +28,10 @@
           "recoverable_branch_isolation",
           "fail_fast_without_policy",
           "agent_watchdog_failure_then_success",
-          "agent_watchdog_stale_timeout"
+          "agent_watchdog_stale_timeout",
+          "fault_injection_and_recovery/orchestra-agent-process-loss",
+          "kyuubiki.orchestra-process-loss-fault-injection/v1",
+          "side_effect_replay_blocked_without_checkpoint"
         ]
       }
     ]
@@ -62,6 +70,38 @@
         "\"late_failure_reused_timeout\": true",
         "\"duplicate_failure_created\": false",
         "\"probe_cleanup_completed\": true"
+      ]
+    },
+    {
+      "id": "orchestra-agent-process-loss-fault-injection",
+      "status": "proven",
+      "modules": [
+        "orchestra-control-plane",
+        "runtime-agent-cli",
+        "verification-evidence"
+      ],
+      "paradigms": [
+        "workflow_composition",
+        "runtime_api",
+        "validation"
+      ],
+      "dimensions": [
+        "recovery"
+      ],
+      "files": [
+        "releases/usability-evidence/2.11.7/orchestra-agent-process-loss-fault-injection.json"
+      ],
+      "required_text": [
+        "\"scenario_count\": 3",
+        "\"reason_code\": \"agent_process_lost\"",
+        "\"retry_safety\": \"idempotent\"",
+        "\"retry_safety\": \"checkpoint_required\"",
+        "\"retry_safety\": \"checkpointed\"",
+        "\"duplicate_side_effect_prevented\": true",
+        "\"fallback_agent_received_request\": false",
+        "\"checkpointed_result_retained\": true",
+        "\"checkpoint_digest\":",
+        "\"safe_to_continue_other_tasks\": true"
       ]
     }
   ]

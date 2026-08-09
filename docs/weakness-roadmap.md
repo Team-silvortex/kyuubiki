@@ -473,8 +473,11 @@ proves branch isolation and fail-fast behavior. The Rust agent watchdog now also
 proves failure-reason retention, execution-slot release, and a healthy follow-up
 execution. Its stale-timeout sub-tier proves heartbeat refresh, timeout reason
 retention, cooperative cancellation, late-result deduplication, and slot reuse.
-This does not close distributed recovery; process loss, orchestra retry, and
-installer journal replay still need retained fault-injection evidence.
+Orchestra process-loss injection now proves post-dispatch Agent disconnects,
+idempotent failover, duplicate-export prevention, and checkpoint-authorized
+replay through retained evidence. This still does not close distributed
+recovery: remote host kill/rejoin and installer journal replay need retained
+fault-injection evidence.
 
 ## Priority Order
 

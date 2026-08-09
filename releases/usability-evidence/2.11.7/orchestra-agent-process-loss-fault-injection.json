@@ -1,0 +1,92 @@
+{
+  "scenario_count": 3,
+  "scenarios": [
+    {
+      "id": "idempotent_task_process_loss_failover",
+      "injected_fault": "agent_disconnect_after_dispatch",
+      "observations": {
+        "failed_agent_received_request": true,
+        "fallback_agent_id": "idempotent-healthy",
+        "fallback_agent_received_request": true,
+        "recovery": {
+          "reason": ":closed",
+          "method": "solve_bar_1d",
+          "agent_id": "idempotent-failed",
+          "schema_version": "kyuubiki.orchestra-agent-recovery/v1",
+          "retry_safety": "idempotent",
+          "reason_code": "agent_process_lost",
+          "next_action": "retry_next_agent",
+          "failure_stage": "receive",
+          "agent": "rust-agent-rpc@idempotent-failed",
+          "attempt": 1,
+          "checkpoint_digest": null,
+          "process_loss": true,
+          "remaining_agent_count": 1,
+          "retryable": true,
+          "safe_to_continue_other_tasks": true
+        },
+        "result_retained": true
+      },
+      "recovery_policy": "retry_next_agent",
+      "status": "pass"
+    },
+    {
+      "id": "side_effect_replay_blocked_without_checkpoint",
+      "injected_fault": "agent_disconnect_after_export_dispatch",
+      "observations": {
+        "duplicate_side_effect_prevented": true,
+        "failed_agent_received_request": true,
+        "fallback_agent_received_request": false,
+        "recovery": {
+          "reason": ":closed",
+          "method": "run_operator_task_ir",
+          "agent_id": "unsafe-failed",
+          "schema_version": "kyuubiki.orchestra-agent-recovery/v1",
+          "retry_safety": "checkpoint_required",
+          "reason_code": "agent_process_lost",
+          "next_action": "checkpoint_before_retry",
+          "failure_stage": "receive",
+          "agent": "rust-agent-rpc@unsafe-failed",
+          "attempt": 1,
+          "checkpoint_digest": null,
+          "process_loss": true,
+          "remaining_agent_count": 1,
+          "retryable": false,
+          "safe_to_continue_other_tasks": true
+        }
+      },
+      "recovery_policy": "checkpoint_before_retry",
+      "status": "pass"
+    },
+    {
+      "id": "checkpointed_side_effect_process_loss_failover",
+      "injected_fault": "agent_disconnect_after_checkpointed_export_dispatch",
+      "observations": {
+        "checkpointed_result_retained": true,
+        "failed_agent_received_request": true,
+        "fallback_agent_received_request": true,
+        "recovery": {
+          "reason": ":closed",
+          "method": "run_operator_task_ir",
+          "agent_id": "checkpointed-failed",
+          "schema_version": "kyuubiki.orchestra-agent-recovery/v1",
+          "retry_safety": "checkpointed",
+          "reason_code": "agent_process_lost",
+          "next_action": "retry_next_agent",
+          "failure_stage": "receive",
+          "agent": "rust-agent-rpc@checkpointed-failed",
+          "attempt": 1,
+          "checkpoint_digest": "dab520902d67fe0dab2cd99f1f859ac162a2632ce4f552aeff387a26aa754029",
+          "process_loss": true,
+          "remaining_agent_count": 1,
+          "retryable": true,
+          "safe_to_continue_other_tasks": true
+        }
+      },
+      "recovery_policy": "retry_next_agent",
+      "status": "pass"
+    }
+  ],
+  "schema_version": "kyuubiki.orchestra-process-loss-fault-injection/v1",
+  "status": "pass"
+}

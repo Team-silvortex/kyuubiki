@@ -84,3 +84,31 @@ defmodule KyuubikiWeb.TestSupport.FakeStallingAgent do
     end)
   end
 end
+
+defmodule KyuubikiWeb.TestSupport.FakeDisconnectingAgent do
+  @moduledoc false
+
+  def start_link(capture_pid) when is_pid(capture_pid) do
+    parent = self()
+
+    Task.start_link(fn ->
+      {:ok, listen_socket} =
+        :gen_tcp.listen(0, [
+          :binary,
+          packet: 4,
+          active: false,
+          reuseaddr: true,
+          ip: {127, 0, 0, 1}
+        ])
+
+      {:ok, port} = :inet.port(listen_socket)
+      send(parent, {:fake_agent_ready, port})
+
+      {:ok, socket} = :gen_tcp.accept(listen_socket)
+      {:ok, request_payload} = :gen_tcp.recv(socket, 0, 1_000)
+      send(capture_pid, {:fake_disconnecting_agent_request, Jason.decode!(request_payload)})
+      :gen_tcp.close(socket)
+      :gen_tcp.close(listen_socket)
+    end)
+  end
+end

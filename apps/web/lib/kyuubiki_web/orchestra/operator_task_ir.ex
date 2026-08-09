@@ -109,6 +109,12 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
       :orchestration,
       normalize_context(Map.get(task_ir, "orchestration_context"))
     )
+    |> maybe_put_routing_opt(
+      :retry_safety,
+      retry_safety_for_kind(
+        Map.get(runtime_hints, "operator_kind") || get_in(task_ir, ["operator", "kind"])
+      )
+    )
     |> maybe_put_routing_opt(:job_id, Map.get(task_ir, "task_id"))
   end
 
@@ -284,6 +290,11 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
       "operator_kind" => Map.get(operator, "kind")
     }
   end
+
+  defp retry_safety_for_kind(kind) when kind in ["solver", "transform", "extract"],
+    do: "idempotent"
+
+  defp retry_safety_for_kind(_kind), do: "checkpoint_required"
 
   defp maybe_put_routing_opt(opts, _key, []), do: opts
   defp maybe_put_routing_opt(opts, _key, %{} = value) when map_size(value) == 0, do: opts
