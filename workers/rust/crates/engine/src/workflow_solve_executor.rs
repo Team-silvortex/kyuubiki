@@ -38,6 +38,7 @@ pub const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
     "solve.cohesive_interface_1d",
     "solve.cohesive_interface_2d",
     "solve.cohesive_interface_mesh_2d",
+    "solve.cohesive_interface_mesh_3d",
     "solve.spring_2d",
     "solve.spring_3d",
     "solve.truss_2d",
@@ -380,6 +381,16 @@ pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, St
             )?))?,
             |result| match result {
                 AnalysisResult::CohesiveInterfaceMesh2d(result) => Some(result),
+                _ => None,
+            },
+            operator_id,
+        ),
+        "solve.cohesive_interface_mesh_3d" => encode_solve_result(
+            solve(EngineSolveRequest::CohesiveInterfaceMesh3d(decode(
+                payload,
+            )?))?,
+            |result| match result {
+                AnalysisResult::CohesiveInterfaceMesh3d(result) => Some(result),
                 _ => None,
             },
             operator_id,

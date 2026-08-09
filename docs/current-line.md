@@ -149,6 +149,13 @@ closure rather than raw feature sprawl:
   768 DOFs (`0.005208` fill) and exposes its symmetric-band Cholesky path through
   Solver, Agent RPC, and Engine Workflow results; non-positive-definite or wide
   tangents retain a bounded pivoted dense fallback
+- `solve.cohesive_interface_mesh_3d` now adds a true six-node triangular
+  zero-thickness interface with two tangential and one normal history at each
+  of three integration points. Optional tetrahedral solids reuse the native
+  `solve.solid_tetra_3d` element kernel and share the same global DOFs, residual,
+  and sparse Newton tangent. Closed-form, rotated-coordinate, damage-history,
+  Agent RPC, Engine Workflow, Rust headless, self-hosted Web, and 1,440-DOF
+  sparse regressions retain the first complete 3D interface/solid path
 - remote Rust benchmark/profile sync now carries the root `schemas/` fixtures
   alongside `workers/rust`, making isolated Linux release compilation
   independent of an existing full-repository checkout

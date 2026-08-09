@@ -60,6 +60,7 @@ mod workflow_recovery;
 mod workflow_scheduler_hot_path;
 mod workflow_security;
 mod workflow_security_fuzz;
+mod workflow_solver_cohesive_3d;
 mod workflow_solver_extended;
 mod workflow_solver_hot_path;
 mod workflow_solver_structural;

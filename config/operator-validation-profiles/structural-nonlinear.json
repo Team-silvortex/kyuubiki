@@ -249,6 +249,71 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-engine runs_cohesive_interface_mesh_frame_host_graph -- --nocapture"
         }
       ]
+    },
+    {
+      "profile_id": "cohesive-interface-mesh-3d-screening",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "cohesive-interface-mesh-3d",
+      "trust_goal": "screening_validation",
+      "operators": [
+        "solve.cohesive_interface_mesh_3d"
+      ],
+      "validation_methods": [
+        "six_node_triangular_interface_closed_form",
+        "three_point_triangle_integration",
+        "committed_damage_unload_reload_regression",
+        "rigid_coordinate_rotation_invariance",
+        "tetrahedral_host_shared_dof_equilibrium",
+        "sparse_global_assembly_scale_regression",
+        "rpc_headless_web_and_workflow_contract"
+      ],
+      "formal_invariants": [
+        "upper_and_lower_triangular_node_pairs_initially_coincide",
+        "uniform_normal_opening_matches_traction_over_initial_stiffness",
+        "three_direction_history_is_committed_only_after_equilibrium",
+        "local_normal_response_is_invariant_under_rigid_coordinate_rotation",
+        "tetrahedral_host_and_interface_forces_share_one_global_residual",
+        "fixed_dof_reactions_balance_external_load",
+        "global_tangent_non_zero_count_and_fill_ratio_match_sparse_assembly",
+        "positive_definite_narrow_band_tangents_use_reported_sparse_cholesky"
+      ],
+      "evidence_paths": [
+        "docs/operator-reliability.md",
+        "docs/book-ch05-workflow-and-operators.html",
+        "evidence/operator-screening/cohesive-interface-mesh-3d.md",
+        "workers/rust/crates/solver/tests/cohesive_interface_mesh_3d_closed_form.rs",
+        "workers/rust/crates/solver/tests/cohesive_interface_mesh_3d_sparse.rs",
+        "workers/rust/crates/cli/src/tests/cohesive_mesh_3d_rpc.rs",
+        "workers/rust/crates/engine/src/tests/workflow_solver_cohesive_3d.rs",
+        "apps/web/test/kyuubiki_web/api/advanced_solver_api_test.exs"
+      ],
+      "commands": [
+        {
+          "id": "cohesive-interface-mesh-3d-closed-form",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test cohesive_interface_mesh_3d_closed_form -- --nocapture"
+        },
+        {
+          "id": "cohesive-interface-mesh-3d-sparse-assembly",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test cohesive_interface_mesh_3d_sparse -- --nocapture"
+        },
+        {
+          "id": "cohesive-interface-mesh-3d-agent-rpc",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli handles_cohesive_interface_mesh_3d_rpc_requests -- --nocapture"
+        },
+        {
+          "id": "cohesive-interface-mesh-3d-engine-workflow",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine runs_cohesive_interface_mesh_3d_through_the_workflow_executor -- --nocapture"
+        },
+        {
+          "id": "cohesive-interface-mesh-3d-headless",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-headless-sdk direct_fem -- --nocapture"
+        }
+      ]
     }
   ]
 }

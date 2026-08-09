@@ -159,6 +159,12 @@ pub fn chunk_result(
         (AnalysisResult::CohesiveInterfaceMesh2d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
+        (AnalysisResult::CohesiveInterfaceMesh3d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::CohesiveInterfaceMesh3d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
         (AnalysisResult::Spring2d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,
         (AnalysisResult::Spring2d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?

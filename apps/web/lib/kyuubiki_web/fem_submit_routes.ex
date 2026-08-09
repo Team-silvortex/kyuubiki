@@ -37,6 +37,7 @@ defmodule KyuubikiWeb.FemSubmitRoutes do
     {"/api/v1/fem/cohesive-interface-1d/jobs", :submit_cohesive_interface_1d},
     {"/api/v1/fem/cohesive-interface-2d/jobs", :submit_cohesive_interface_2d},
     {"/api/v1/fem/cohesive-interface-mesh-2d/jobs", :submit_cohesive_interface_mesh_2d},
+    {"/api/v1/fem/cohesive-interface-mesh-3d/jobs", :submit_cohesive_interface_mesh_3d},
     {"/api/v1/fem/spring-2d/jobs", :submit_spring_2d},
     {"/api/v1/fem/spring-3d/jobs", :submit_spring_3d},
     {"/api/v1/fem/truss-2d/jobs", :submit_truss_2d},

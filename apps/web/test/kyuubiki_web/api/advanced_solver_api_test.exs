@@ -213,6 +213,88 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
     "tolerance" => 1.0e-11
   }
 
+  @cohesive_interface_mesh_3d_request %{
+    "id" => "mesh.web.3d",
+    "nodes" => [
+      %{
+        "id" => "lower-a",
+        "x" => 0.0,
+        "y" => 0.0,
+        "z" => 0.0,
+        "fixed" => [true, true, true],
+        "load" => [0.0, 0.0, 0.0]
+      },
+      %{
+        "id" => "lower-b",
+        "x" => 1.0,
+        "y" => 0.0,
+        "z" => 0.0,
+        "fixed" => [true, true, true],
+        "load" => [0.0, 0.0, 0.0]
+      },
+      %{
+        "id" => "lower-c",
+        "x" => 0.0,
+        "y" => 1.0,
+        "z" => 0.0,
+        "fixed" => [true, true, true],
+        "load" => [0.0, 0.0, 0.0]
+      },
+      %{
+        "id" => "upper-a",
+        "x" => 0.0,
+        "y" => 0.0,
+        "z" => 0.0,
+        "fixed" => [true, true, false],
+        "load" => [0.0, 0.0, 0.8333333333333334]
+      },
+      %{
+        "id" => "upper-b",
+        "x" => 1.0,
+        "y" => 0.0,
+        "z" => 0.0,
+        "fixed" => [true, true, false],
+        "load" => [0.0, 0.0, 0.8333333333333334]
+      },
+      %{
+        "id" => "upper-c",
+        "x" => 0.0,
+        "y" => 1.0,
+        "z" => 0.0,
+        "fixed" => [true, true, false],
+        "load" => [0.0, 0.0, 0.8333333333333334]
+      }
+    ],
+    "materials" => [
+      %{
+        "id" => "adhesive",
+        "properties" => %{
+          "normal_initial_stiffness" => 1000.0,
+          "normal_compression_stiffness" => 2000.0,
+          "normal_peak_traction" => 100.0,
+          "normal_failure_separation" => 1.0,
+          "shear_initial_stiffness" => 500.0,
+          "shear_peak_traction" => 50.0,
+          "shear_failure_separation" => 1.0
+        }
+      }
+    ],
+    "elements" => [
+      %{
+        "id" => "interface-0",
+        "lower_a" => 0,
+        "lower_b" => 1,
+        "lower_c" => 2,
+        "upper_a" => 3,
+        "upper_b" => 4,
+        "upper_c" => 5,
+        "material_id" => "adhesive"
+      }
+    ],
+    "load_steps" => 1,
+    "tolerance" => 1.0e-11
+  }
+
   @cases [
     {"/api/v1/fem/acoustic-bar-1d/jobs", "max_sound_pressure_level_db", %{}},
     {"/api/v1/fem/stokes-flow-plane-quad-2d/jobs", "max_velocity", %{}},
@@ -224,6 +306,8 @@ defmodule KyuubikiWeb.Api.AdvancedSolverApiTest do
      @cohesive_interface_2d_request},
     {"/api/v1/fem/cohesive-interface-mesh-2d/jobs", "converged",
      @cohesive_interface_mesh_2d_request},
+    {"/api/v1/fem/cohesive-interface-mesh-3d/jobs", "converged",
+     @cohesive_interface_mesh_3d_request},
     {"/api/v1/fem/modal-frame-2d/jobs", "natural_frequencies_hz", %{}},
     {"/api/v1/fem/buckling-beam-1d/jobs", "minimum_load_factor", %{}},
     {"/api/v1/fem/buckling-frame-2d/jobs", "minimum_load_factor", @buckling_frame_request},

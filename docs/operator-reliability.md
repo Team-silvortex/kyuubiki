@@ -963,20 +963,38 @@ pivoted dense fallback. A 96-element scale regression retains 384 nodes, 768
 DOFs, 3,072 nonzeros, a `0.005208` fill ratio, and an observable
 `symmetric_band_cholesky` method through Solver, Agent RPC, and Engine Workflow
 result contracts.
+
+`solve.cohesive_interface_mesh_3d` now provides the corresponding retained
+three-dimensional surface path rather than projecting the 2D line element into
+space. Each six-node triangular interface derives a local orthonormal frame and
+uses three-point area integration with two independent tangential histories and
+one normal opening/compression history. Optional tetrahedral hosts reuse the
+same native element kernel as `solve.solid_tetra_3d` and contribute stiffness,
+internal force, stress recovery, and energy to the same global sparse Newton
+system. Independent references retain uniform opening, path-dependent unload,
+rigid coordinate rotation, and a one-DOF interface/tetra equilibrium split. An
+80-element regression reports 1,440 global DOFs, 8,640 nonzeros, fill ratio
+`1/240`, and the observable symmetric-band Cholesky path. Protocol, Agent RPC,
+Engine Workflow, result chunking, Rust headless discovery, and self-hosted Web
+submission retain one public contract. This remains a small-strain triangular
+surface with uncoupled directional damage and linear tetra hosts; mixed-mode
+coupling, friction, shells, higher-order faces, and scalable sparse-indefinite
+factorization remain open.
 Protocol, Agent RPC,
 engine workflow, result chunking, Rust headless discovery, and self-hosted Web
-submission share the same public model. This remains a 512-node screening solve
+submission share the same public model. The 2D mesh path remains a 512-node screening solve
 under proportional load or displacement control, or explicit prescribed
 control history. Global assembly and constraint projection are sparse, but
 non-positive-definite or wide reduced tangents still use a dense fallback up to
 1,536 free DOFs. Linear 2D trusses and frames are retained structural hosts;
-plane-stress triangles and quads are the retained continuum hosts. Shells, 3D
-solids, scalable sparse-indefinite solves, fill-reducing ordering,
+plane-stress triangles and quads are its retained continuum hosts. Shells and
+3D solids are intentionally not mixed into that 2D operator;
+scalable sparse-indefinite solves, fill-reducing ordering,
 arc-length/adaptive continuation, coupled mixed-mode
 interaction, frictional delamination, and experimental calibration remain
 outside the retained claim.
 
-These three cohesive operators intentionally remain in the component validation
+These four cohesive operators intentionally remain in the component validation
 profile rather than the release-gated reliability manifest. That manifest only
 accepts physics-coverage operators with retained qualification evidence; adding
 a new ad hoc `screening` coverage level would weaken the gate instead of

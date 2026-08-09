@@ -44,6 +44,7 @@ defmodule KyuubikiWeb.Analysis do
   defdelegate submit_cohesive_interface_1d(params), to: AnalysisSolverSubmissions
   defdelegate submit_cohesive_interface_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_cohesive_interface_mesh_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_cohesive_interface_mesh_3d(params), to: AnalysisSolverSubmissions
   defdelegate submit_spring_2d(params), to: AnalysisSolverSubmissions
   defdelegate submit_spring_3d(params), to: AnalysisSolverSubmissions
   defdelegate submit_truss_2d(params), to: AnalysisSolverSubmissions

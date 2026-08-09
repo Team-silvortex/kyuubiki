@@ -10,6 +10,7 @@ mod types {
     pub mod acoustic;
     pub mod acoustic_results;
     pub mod cohesive_interface;
+    pub mod cohesive_interface_3d;
     pub mod composite;
     pub mod dynamic_results;
     pub mod electric_conduction;
@@ -56,6 +57,7 @@ pub use solver_execution_capability::{
 pub use types::acoustic::*;
 pub use types::acoustic_results::*;
 pub use types::cohesive_interface::*;
+pub use types::cohesive_interface_3d::*;
 pub use types::composite::*;
 pub use types::dynamic_results::*;
 pub use types::electric_conduction::*;

@@ -89,11 +89,12 @@ use kyuubiki_protocol::{
     AnalysisResult, SolveAcousticBar1dRequest, SolveAdvectionDiffusionBar1dRequest,
     SolveBarRequest, SolveBeam1dRequest, SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest,
     SolveCohesiveInterface1dRequest, SolveCohesiveInterface2dRequest,
-    SolveCohesiveInterfaceMesh2dRequest, SolveContactGap1dRequest,
-    SolveElectricConductionPlaneQuad2dRequest, SolveElectrostaticBar1dRequest,
-    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
-    SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest,
-    SolveFrame2dRequest, SolveFrame3dRequest, SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest,
+    SolveCohesiveInterfaceMesh2dRequest, SolveCohesiveInterfaceMesh3dRequest,
+    SolveContactGap1dRequest, SolveElectricConductionPlaneQuad2dRequest,
+    SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
+    SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dMaterialPDeltaRequest,
+    SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
+    SolveFrame3dRequest, SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest,
     SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
     SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
     SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
@@ -109,7 +110,8 @@ use kyuubiki_protocol::{
 use kyuubiki_solver::{
     solve_acoustic_bar_1d, solve_advection_diffusion_bar_1d, solve_bar_1d, solve_beam_1d,
     solve_buckling_beam_1d, solve_buckling_frame_2d, solve_cohesive_interface_1d,
-    solve_cohesive_interface_2d, solve_cohesive_interface_mesh_2d, solve_contact_gap_1d,
+    solve_cohesive_interface_2d, solve_cohesive_interface_mesh_2d,
+    solve_cohesive_interface_mesh_3d, solve_contact_gap_1d,
     solve_electric_conduction_plane_quad_2d, solve_electrostatic_bar_1d,
     solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d, solve_frame_2d,
     solve_frame_2d_material_p_delta, solve_frame_2d_p_delta, solve_frame_2d_p_delta_path,
@@ -154,6 +156,7 @@ pub enum EngineSolveRequest {
     CohesiveInterface1d(SolveCohesiveInterface1dRequest),
     CohesiveInterface2d(SolveCohesiveInterface2dRequest),
     CohesiveInterfaceMesh2d(SolveCohesiveInterfaceMesh2dRequest),
+    CohesiveInterfaceMesh3d(SolveCohesiveInterfaceMesh3dRequest),
     Spring2d(SolveSpring2dRequest),
     Spring3d(SolveSpring3dRequest),
     Beam1d(SolveBeam1dRequest),
@@ -265,6 +268,9 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         }
         EngineSolveRequest::CohesiveInterfaceMesh2d(request) => {
             solve_cohesive_interface_mesh_2d(&request).map(AnalysisResult::CohesiveInterfaceMesh2d)
+        }
+        EngineSolveRequest::CohesiveInterfaceMesh3d(request) => {
+            solve_cohesive_interface_mesh_3d(&request).map(AnalysisResult::CohesiveInterfaceMesh3d)
         }
         EngineSolveRequest::Spring2d(request) => {
             solve_spring_2d(&request).map(AnalysisResult::Spring2d)

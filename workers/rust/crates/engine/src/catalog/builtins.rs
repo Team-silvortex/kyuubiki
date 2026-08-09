@@ -512,5 +512,24 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
                 "2d",
             ],
         ),
+        built_in_solver_descriptor(
+            "solve.cohesive_interface_mesh_3d",
+            "mechanical",
+            "cohesive_interface_mesh_3d",
+            "Solve a six-node triangular 3D cohesive interface mesh with three-direction traction-separation history, sparse global Newton assembly, and shared-DOF tetrahedral solid host co-assembly.",
+            &[
+                "screening",
+                "mechanical",
+                "interface",
+                "cohesive-zone",
+                "mesh",
+                "newton",
+                "sparse-assembly",
+                "damage",
+                "host-coassembly",
+                "solid",
+                "3d",
+            ],
+        ),
     ]
 }

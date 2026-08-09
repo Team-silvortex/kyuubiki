@@ -701,8 +701,12 @@ The same solver now performs sparse global tangent assembly and sparse
 free-DOF projection through the shared `MatrixAssembler` contract. A retained
 96-element model reports 3,072 nonzeros across 768 DOFs (`0.005208` fill) and
 uses the observable symmetric-band Cholesky path. Softening or wide tangents
-retain a bounded pivoted dense fallback, so the next interface gates are shell
-or 3D-solid host-element co-assembly, scalable sparse-indefinite factorization,
+retain a bounded pivoted dense fallback. A separate
+`solve.cohesive_interface_mesh_3d` path now closes the first six-node triangular
+surface and tetrahedral solid-host co-assembly gate with a shared global
+residual, three-direction history, rotated-coordinate closed form, and retained
+1,440-DOF sparse regression. The next interface gates are shell-host
+co-assembly, scalable sparse-indefinite factorization,
 fill-reducing ordering, arc-length and adaptive-step continuation,
 coupled mixed-mode/friction laws, experimental references, repeated cross-host
 performance qualification, and larger localization-sensitive meshes. The

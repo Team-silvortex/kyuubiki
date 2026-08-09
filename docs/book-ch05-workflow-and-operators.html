@@ -151,8 +151,18 @@
           add the first continuum host through the public plane-element
           protocol; a prescribed-apex series reference verifies analytic
           stiffness partition, common force, continuum stress, and energy.
-          Plane quads, 3D solids, shells, beams, and frames are not yet
-          co-assembled.
+          Fully integrated plane quads and Euler-Bernoulli frame hosts now use
+          the same sparse Newton assembly. A separate
+          <code>solve.cohesive_interface_mesh_3d</code> operator provides a true
+          six-node triangular surface with two tangential and one normal
+          history at each of three integration points. Optional tetrahedral
+          solids reuse the native <code>solve.solid_tetra_3d</code> element
+          kernel and share the same global DOFs, residual, and tangent. Retained
+          references cover uniform opening, unloading damage, rigid coordinate
+          rotation, interface/solid equilibrium, Agent RPC, Engine Workflow,
+          headless HTTP submission, and a 1,440-DOF sparse model. Shell hosts,
+          higher-order faces, coupled mixed-mode laws, and scalable
+          sparse-indefinite factorization remain open.
           Post-peak continuation, coupled mixed-mode delamination, friction,
           three-dimensional composite constitutive behavior, and arc-length
           continuation remain future capabilities.
