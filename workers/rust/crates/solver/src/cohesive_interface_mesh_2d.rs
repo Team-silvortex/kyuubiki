@@ -15,7 +15,7 @@ use crate::cohesive_interface_mesh_2d_control::{
     ControlStep, build_controls, restricted_norm, vector_norm,
 };
 use crate::cohesive_interface_mesh_2d_newton::solve_load_step;
-use crate::cohesive_interface_mesh_2d_plane::HostPlaneTriangle;
+use crate::cohesive_interface_mesh_2d_plane::{HostPlaneQuad, HostPlaneTriangle};
 use crate::cohesive_interface_mesh_2d_truss::HostTruss;
 use crate::linear_dense::zero_matrix;
 
@@ -92,6 +92,11 @@ pub fn solve_cohesive_interface_mesh_2d(
         .iter()
         .map(|element| element.result(&displacements))
         .collect::<Vec<_>>();
+    let host_plane_quads = model
+        .host_plane_quads
+        .iter()
+        .map(|element| element.result(&displacements))
+        .collect::<Vec<_>>();
     let final_max_displacement = nodes
         .iter()
         .map(|node| node.displacement[0].hypot(node.displacement[1]))
@@ -119,6 +124,11 @@ pub fn solve_cohesive_interface_mesh_2d(
     let final_max_host_plane_stress = host_plane_triangles
         .iter()
         .map(|element| element.von_mises.abs())
+        .chain(
+            host_plane_quads
+                .iter()
+                .map(|element| element.von_mises.abs()),
+        )
         .fold(0.0_f64, f64::max);
     let converged = failure_reason.is_none() && steps.len() == model.controls.len();
     let max_displacement = steps
@@ -157,6 +167,7 @@ pub fn solve_cohesive_interface_mesh_2d(
         connector_springs,
         host_trusses,
         host_plane_triangles,
+        host_plane_quads,
         steps,
         converged,
         completed_load_factor,
@@ -177,6 +188,7 @@ pub(crate) struct ValidatedModel<'a> {
     connector_springs: Vec<ConnectorSpring<'a>>,
     host_trusses: Vec<HostTruss<'a>>,
     host_plane_triangles: Vec<HostPlaneTriangle<'a>>,
+    host_plane_quads: Vec<HostPlaneQuad<'a>>,
     pub(crate) free_dofs: Vec<usize>,
     pub(crate) fixed_dofs: Vec<usize>,
     pub(crate) external_loads: Vec<f64>,
@@ -229,6 +241,7 @@ impl<'a> ValidatedModel<'a> {
         let host_trusses = HostTruss::build_all(&request.host_trusses, &request.nodes)?;
         let host_plane_triangles =
             HostPlaneTriangle::build_all(&request.host_plane_triangles, &request.nodes)?;
+        let host_plane_quads = HostPlaneQuad::build_all(&request.host_plane_quads, &request.nodes)?;
 
         let dof_count = 2 * request.nodes.len();
         let mut free_dofs = Vec::new();
@@ -292,6 +305,7 @@ impl<'a> ValidatedModel<'a> {
             connector_springs,
             host_trusses,
             host_plane_triangles,
+            host_plane_quads,
             free_dofs,
             fixed_dofs,
             external_loads,
@@ -465,6 +479,12 @@ fn step_summary(
             .host_plane_triangles
             .iter()
             .map(|element| element.result(displacements).von_mises.abs())
+            .chain(
+                model
+                    .host_plane_quads
+                    .iter()
+                    .map(|element| element.result(displacements).von_mises.abs()),
+            )
             .fold(0.0_f64, f64::max),
     }
 }
@@ -506,6 +526,9 @@ pub(crate) fn assemble(
         truss.assemble(displacements, &mut internal_forces, &mut tangent);
     }
     for element in &model.host_plane_triangles {
+        element.assemble(displacements, &mut internal_forces, &mut tangent);
+    }
+    for element in &model.host_plane_quads {
         element.assemble(displacements, &mut internal_forces, &mut tangent);
     }
     Assembly {

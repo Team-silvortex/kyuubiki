@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
-  "summary": "Compiled workflow execution, deterministic scheduling, and cache-aware artifact retention evidence for the Rust engine.",
+  "summary": "Compiled workflow execution, deterministic scheduling, cache-aware and projected artifact retention, and solver-pipeline hot-path evidence for the Rust engine.",
   "paradigm_contract_evidence": {
     "benchmark": [
       {
@@ -13,22 +13,33 @@
         "files": [
           "workers/rust/crates/engine/src/workflow_artifact_retention.rs",
           "workers/rust/crates/engine/src/workflow_execution_plan.rs",
+          "workers/rust/crates/engine/src/operator_sdk_runtime.rs",
           "workers/rust/crates/engine/src/workflow.rs",
+          "workers/rust/crates/protocol/src/workflow.rs",
+          "workers/rust/crates/engine/src/tests/workflow_artifact_projection.rs",
           "workers/rust/crates/engine/src/tests/workflow_execution_plan.rs",
           "workers/rust/crates/engine/src/tests/workflow_large_graphs.rs",
-          "workers/rust/crates/engine/src/tests/workflow_scheduler_hot_path.rs"
+          "workers/rust/crates/engine/src/tests/workflow_scheduler_hot_path.rs",
+          "workers/rust/crates/engine/src/tests/workflow_solver_hot_path.rs"
         ],
         "required_text": [
           "WorkflowArtifactRetention",
+          "WorkflowArtifactProjection",
           "WorkflowExecutionPlan",
+          "built_in_operator_registry_ref",
           "first_available_validates_direct_input_before_reusing_it",
           "first_available_waits_for_all_predecessors_then_uses_edge_priority",
           "runs_ephemeral_heat_to_thermo_workflow_graph_at_1024_nodes",
           "runs_ephemeral_scheduler_only_chain_at_1024_nodes",
           "runs_reverse_declared_heat_to_thermo_graph_at_1024_nodes",
+          "profiles_heat_to_thermo_solver_pipeline_segments",
+          "projects_workflow_artifacts_without_changing_execution_evidence",
           "resolve_incoming",
+          "run_workflow_graph_with_options",
+          "runs_output_projected_heat_to_thermo_workflow_graph_at_1024_nodes",
           "source_artifact_key",
-          "take_if_last_ephemeral"
+          "shares_transform_registry_across_concurrent_bridge_runs",
+          "take_if_last_transient"
         ]
       }
     ]

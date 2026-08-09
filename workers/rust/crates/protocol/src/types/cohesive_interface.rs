@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use super::plane_frame::PlaneTriangleElementInput;
-use super::plane_results::PlaneTriangleElementResult;
+use super::plane_frame::{PlaneQuadElementInput, PlaneTriangleElementInput};
+use super::plane_results::{PlaneQuadElementResult, PlaneTriangleElementResult};
 use super::space_structural::{TrussElementInput, TrussElementResult};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -206,6 +206,8 @@ pub struct SolveCohesiveInterfaceMesh2dRequest {
     #[serde(default)]
     pub host_plane_triangles: Vec<PlaneTriangleElementInput>,
     #[serde(default)]
+    pub host_plane_quads: Vec<PlaneQuadElementInput>,
+    #[serde(default)]
     pub load_steps: Option<usize>,
     #[serde(default)]
     pub control_history: Option<Vec<CohesiveInterfaceMesh2dControlStepInput>>,
@@ -259,6 +261,7 @@ pub struct SolveCohesiveInterfaceMesh2dResult {
     pub connector_springs: Vec<CohesiveInterfaceMesh2dConnectorSpringResult>,
     pub host_trusses: Vec<TrussElementResult>,
     pub host_plane_triangles: Vec<PlaneTriangleElementResult>,
+    pub host_plane_quads: Vec<PlaneQuadElementResult>,
     pub steps: Vec<CohesiveInterfaceMesh2dLoadStepResult>,
     pub converged: bool,
     pub completed_load_factor: f64,

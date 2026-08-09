@@ -238,17 +238,26 @@ fn read_progress_tail(path: &Path) -> Vec<String> {
 
 fn sync_benchmark_sources(root: &Path, options: &Options) -> RunnerResult<()> {
     ensure_remote_sync_dirs(root, options)?;
-    let status = rsync_to(
-        root,
-        &["target/"],
-        &[root.join("workers/rust/")],
-        &format!(
-            "{}:{}/workers/rust/",
-            options.remote_host, options.remote_dir
-        ),
-    )?;
-    if status != 0 {
-        return Err(format!("rsync failed with status {status}"));
+    for status in [
+        rsync_to(
+            root,
+            &["target/"],
+            &[root.join("workers/rust/")],
+            &format!(
+                "{}:{}/workers/rust/",
+                options.remote_host, options.remote_dir
+            ),
+        )?,
+        rsync_to(
+            root,
+            &[],
+            &[root.join("schemas/")],
+            &format!("{}:{}/schemas/", options.remote_host, options.remote_dir),
+        )?,
+    ] {
+        if status != 0 {
+            return Err(format!("rsync failed with status {status}"));
+        }
     }
     Ok(())
 }
@@ -258,8 +267,9 @@ fn ensure_remote_sync_dirs(root: &Path, options: &Options) -> RunnerResult<()> {
         root,
         &options.remote_host,
         format!(
-            "mkdir -p {}",
-            shell_escape(&format!("{}/workers", options.remote_dir))
+            "mkdir -p {} {}",
+            shell_escape(&format!("{}/workers", options.remote_dir)),
+            shell_escape(&format!("{}/schemas", options.remote_dir))
         ),
     )?;
     if status != 0 {

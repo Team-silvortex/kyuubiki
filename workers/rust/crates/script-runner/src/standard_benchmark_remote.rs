@@ -192,6 +192,11 @@ fn sync_benchmark_sources(root: &Path, options: &Options) -> RunnerResult<()> {
                 options.remote_host, options.remote_dir
             ),
         )?,
+        rsync(
+            root,
+            &[root.join("schemas/")],
+            &format!("{}:{}/schemas/", options.remote_host, options.remote_dir),
+        )?,
     ] {
         if status != 0 {
             return Err(format!("rsync failed with status {status}"));
@@ -205,9 +210,10 @@ fn ensure_remote_sync_dirs(root: &Path, options: &Options) -> RunnerResult<()> {
         root,
         &options.remote_host,
         format!(
-            "mkdir -p {} {}",
+            "mkdir -p {} {} {}",
             shell_escape(&format!("{}/scripts", options.remote_dir)),
-            shell_escape(&format!("{}/workers", options.remote_dir))
+            shell_escape(&format!("{}/workers", options.remote_dir)),
+            shell_escape(&format!("{}/schemas", options.remote_dir))
         ),
     )?;
     if status != 0 {

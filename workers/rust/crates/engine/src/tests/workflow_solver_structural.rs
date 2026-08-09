@@ -6,6 +6,70 @@ use kyuubiki_protocol::{
 use std::collections::BTreeMap;
 
 #[test]
+fn runs_cohesive_interface_mesh_q4_host_graph() {
+    let run = run_solver_summary_json_graph(
+        "workflow.cohesive-interface-mesh-q4-summary-json",
+        "Cohesive interface mesh Q4 summary json",
+        "cohesive_model",
+        "study_model/cohesive_interface_mesh_2d",
+        "solve_cohesive",
+        "solve.cohesive_interface_mesh_2d",
+        "result/cohesive_interface_mesh_2d",
+        serde_json::json!({
+            "id": "mesh.host-plane-quad.workflow",
+            "nodes": [
+                { "id": "lower-0", "x": 0.0, "y": 0.0, "fixed": [true, true], "load": [0.0, 0.0] },
+                { "id": "lower-1", "x": 1.0, "y": 0.0, "fixed": [true, true], "load": [0.0, 0.0] },
+                { "id": "upper-0", "x": 0.0, "y": 0.0, "fixed": [true, false], "load": [0.0, 0.0] },
+                { "id": "upper-1", "x": 1.0, "y": 0.0, "fixed": [true, false], "load": [0.0, 0.0] },
+                { "id": "driver-right", "x": 1.0, "y": 1.0, "fixed": [true, true], "prescribed_displacement": [0.0, 0.015], "load": [0.0, 0.0] },
+                { "id": "driver-left", "x": 0.0, "y": 1.0, "fixed": [true, true], "prescribed_displacement": [0.0, 0.015], "load": [0.0, 0.0] }
+            ],
+            "materials": [{
+                "id": "adhesive",
+                "properties": {
+                    "normal_initial_stiffness": 1000.0,
+                    "normal_compression_stiffness": 2000.0,
+                    "normal_peak_traction": 10.0,
+                    "normal_failure_separation": 0.05,
+                    "shear_initial_stiffness": 500.0,
+                    "shear_peak_traction": 5.0,
+                    "shear_failure_separation": 0.05
+                }
+            }],
+            "elements": [{
+                "id": "interface-0", "lower_i": 0, "lower_j": 1,
+                "upper_i": 2, "upper_j": 3, "thickness": 1.0,
+                "material_id": "adhesive"
+            }],
+            "host_plane_quads": [{
+                "id": "host-plane-quad-0", "node_i": 2, "node_j": 3,
+                "node_k": 4, "node_l": 5, "thickness": 1.0,
+                "youngs_modulus": 500.0, "poisson_ratio": 0.0
+            }],
+            "load_steps": 3,
+            "max_iterations": 12,
+            "tolerance": 1.0e-11
+        }),
+        &["converged", "max_host_plane_stress", "max_normal_damage"],
+    );
+
+    let content = exported_content(&run);
+    let summary: serde_json::Value =
+        serde_json::from_str(content).expect("cohesive summary should be valid JSON");
+    assert_eq!(summary["converged"], serde_json::json!(true));
+    assert!(
+        (summary["max_host_plane_stress"]
+            .as_f64()
+            .expect("host stress should be numeric")
+            - 5.0)
+            .abs()
+            < 1.0e-10
+    );
+    assert_eq!(summary["max_normal_damage"], serde_json::json!(0.0));
+}
+
+#[test]
 fn runs_truss_3d_extract_export_graph() {
     let run = run_solver_summary_json_graph(
         "workflow.truss-3d-summary-json",

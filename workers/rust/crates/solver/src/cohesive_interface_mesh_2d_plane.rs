@@ -1,22 +1,157 @@
 use std::collections::HashSet;
 
 use kyuubiki_protocol::{
-    CohesiveInterfaceMesh2dNodeInput, PlaneNodeInput, PlaneTriangleElementInput,
-    PlaneTriangleElementResult,
+    CohesiveInterfaceMesh2dNodeInput, PlaneNodeInput, PlaneQuadElementInput,
+    PlaneQuadElementResult, PlaneTriangleElementInput, PlaneTriangleElementResult,
 };
 
 use crate::cohesive_interface_1d::validate_id;
 use crate::plane_2d_math::{
     PlaneTriangleComputed, plane_triangle_state, precompute_plane_triangle_element_from_nodes,
 };
+use crate::plane_2d_quad::{
+    PlaneQuadComputed, plane_quad_state, precompute_plane_quad_element_from_coordinates,
+};
 
 const MAX_HOST_PLANE_TRIANGLES: usize = 4096;
+const MAX_HOST_PLANE_QUADS: usize = 4096;
 
 pub(crate) struct HostPlaneTriangle<'a> {
     input: &'a PlaneTriangleElementInput,
     index: usize,
     dofs: [usize; 6],
     computed: PlaneTriangleComputed,
+}
+
+pub(crate) struct HostPlaneQuad<'a> {
+    input: &'a PlaneQuadElementInput,
+    index: usize,
+    dofs: [usize; 4],
+    computed: PlaneQuadComputed,
+}
+
+impl<'a> HostPlaneQuad<'a> {
+    pub(crate) fn build_all(
+        inputs: &'a [PlaneQuadElementInput],
+        nodes: &[CohesiveInterfaceMesh2dNodeInput],
+    ) -> Result<Vec<Self>, String> {
+        if inputs.len() > MAX_HOST_PLANE_QUADS {
+            return Err(format!(
+                "cohesive interface mesh 2d supports at most {MAX_HOST_PLANE_QUADS} host plane quads"
+            ));
+        }
+        let mut ids = HashSet::new();
+        inputs
+            .iter()
+            .enumerate()
+            .map(|(index, input)| {
+                validate_id(&input.id)?;
+                if !ids.insert(input.id.as_str()) {
+                    return Err(format!("duplicate host plane quad id '{}'", input.id));
+                }
+                let node_indices = [input.node_i, input.node_j, input.node_k, input.node_l];
+                if node_indices.iter().any(|&node| node >= nodes.len()) {
+                    return Err(format!(
+                        "host plane quad '{}' node index is out of bounds",
+                        input.id
+                    ));
+                }
+                if node_indices.into_iter().collect::<HashSet<_>>().len() != 4 {
+                    return Err(format!(
+                        "host plane quad '{}' requires distinct nodes",
+                        input.id
+                    ));
+                }
+                if !input.thickness.is_finite() || input.thickness <= 0.0 {
+                    return Err(format!(
+                        "host plane quad '{}' thickness must be positive",
+                        input.id
+                    ));
+                }
+                if !input.youngs_modulus.is_finite() || input.youngs_modulus <= 0.0 {
+                    return Err(format!(
+                        "host plane quad '{}' youngs_modulus must be positive",
+                        input.id
+                    ));
+                }
+                if !input.poisson_ratio.is_finite()
+                    || input.poisson_ratio <= -1.0
+                    || input.poisson_ratio >= 0.5
+                {
+                    return Err(format!(
+                        "host plane quad '{}' poisson_ratio must be between -1.0 and 0.5",
+                        input.id
+                    ));
+                }
+                let coordinates = node_indices.map(|node| [nodes[node].x, nodes[node].y]);
+                let computed = precompute_plane_quad_element_from_coordinates(
+                    coordinates,
+                    input.thickness,
+                    input.youngs_modulus,
+                    input.poisson_ratio,
+                )
+                .map_err(|error| format!("host plane quad '{}': {error}", input.id))?;
+                Ok(Self {
+                    input,
+                    index,
+                    dofs: node_indices.map(|node| 2 * node),
+                    computed,
+                })
+            })
+            .collect()
+    }
+
+    pub(crate) fn assemble(
+        &self,
+        displacements: &[f64],
+        internal_forces: &mut [f64],
+        tangent: &mut [Vec<f64>],
+    ) {
+        for node in 0..4 {
+            for axis in 0..2 {
+                let local_row = 2 * node + axis;
+                let global_row = self.dofs[node] + axis;
+                for column_node in 0..4 {
+                    for column_axis in 0..2 {
+                        let local_column = 2 * column_node + column_axis;
+                        let global_column = self.dofs[column_node] + column_axis;
+                        let stiffness = self.computed.stiffness[local_row][local_column];
+                        internal_forces[global_row] += stiffness * displacements[global_column];
+                        tangent[global_row][global_column] += stiffness;
+                    }
+                }
+            }
+        }
+    }
+
+    pub(crate) fn result(&self, displacements: &[f64]) -> PlaneQuadElementResult {
+        let element_displacements = std::array::from_fn(|local_dof| {
+            let node = local_dof / 2;
+            let axis = local_dof % 2;
+            displacements[self.dofs[node] + axis]
+        });
+        let state = plane_quad_state(&self.computed, &element_displacements);
+        PlaneQuadElementResult {
+            index: self.index,
+            id: self.input.id.clone(),
+            node_i: self.input.node_i,
+            node_j: self.input.node_j,
+            node_k: self.input.node_k,
+            node_l: self.input.node_l,
+            area: self.computed.area,
+            strain_x: state.strain[0],
+            strain_y: state.strain[1],
+            gamma_xy: state.strain[2],
+            stress_x: state.stress[0],
+            stress_y: state.stress[1],
+            tau_xy: state.stress[2],
+            principal_stress_1: state.principal_stress_1,
+            principal_stress_2: state.principal_stress_2,
+            max_in_plane_shear: state.max_in_plane_shear,
+            von_mises: state.von_mises,
+            strain_energy_density: state.strain_energy_density,
+        }
+    }
 }
 
 impl<'a> HostPlaneTriangle<'a> {

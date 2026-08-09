@@ -23,6 +23,9 @@ They contribute physical `EA/L` axial stiffness, internal force, and tangent to
 the same global system. Optional constant-strain plane-stress triangles likewise
 reuse `PlaneTriangleElementInput` and `PlaneTriangleElementResult`, contributing
 their continuum stiffness, internal force, and tangent without an adapter solve.
+Optional bilinear plane-stress quads reuse `PlaneQuadElementInput` and
+`PlaneQuadElementResult`. Their native `2 x 2` Gauss integration and positive
+Jacobian guards participate directly in the same Newton matrix.
 
 Each load increment uses Newton equilibrium on the reduced free-DOF system:
 
@@ -58,6 +61,9 @@ reason.
 - a prescribed apex host-plane-and-cohesive series system matches the analytic
   stiffness partition and recovers interface opening `0.005`, continuum
   extension `0.01`, common force `5`, and exact plane strain, stress, and energy
+- a rectangular Q4 host-and-cohesive series system independently recovers the
+  same opening, extension, common force, stress, and energy through Solver,
+  Agent RPC, and Engine Workflow
 - every retained load step reports iterations, residual, load factor, and
   convergence, including its maximum connector force
 - an underconstrained rigid mode is detected as a singular reduced tangent
@@ -66,8 +72,8 @@ reason.
   mutually active control modes, free-DOF prescriptions, unbounded controls,
   and invalid connector IDs, nodes, or component stiffness are rejected
 - invalid host-truss IDs, connectivity, area, modulus, and length are rejected
-- invalid host-plane IDs, connectivity, thickness, modulus, Poisson ratio, and
-  area are rejected
+- invalid host-plane IDs, connectivity, thickness, modulus, Poisson ratio,
+  triangle area, and Q4 Gauss-point Jacobians are rejected
 - protocol serialization, Agent RPC, engine workflow, result chunking,
   Rust headless discovery, and self-hosted Web submission use one request
 
@@ -79,7 +85,8 @@ to 512 nodes and uses a dense reduced solve. Linear component connector springs
 establish the heterogeneous element contract, and small-displacement linear 2D
 host trusses are the first retained structural host element. Constant-strain
 plane-stress triangles now provide the first retained continuum host. The
-operator does not yet co-assemble plane quads, shells, beams, frames, or 3D
+same public host contract now includes fully integrated bilinear plane-stress
+quads. The operator does not yet co-assemble shells, beams, frames, or 3D
 solids. Proportional displacement control can traverse the retained monotonic
 softening path, while explicit histories cover cyclic and non-proportional
 prescribed paths. Arc-length and adaptive step control remain open alongside

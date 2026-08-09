@@ -688,9 +688,13 @@ energy density across the same execution layers. Constant-strain plane-stress
 triangles now add the first continuum host using the public plane-element
 contract. A prescribed-apex series reference verifies analytic stiffness
 partition, common force, strain, stress, and energy through Solver, Agent RPC,
-and Engine Workflow. The next interface gates are plane-quad, beam, frame,
-shell, or 3D-solid host-element co-assembly, sparse global assembly, arc-length
-and adaptive-step continuation,
+and Engine Workflow. Fully integrated bilinear plane-stress quads now add a
+second continuum host using the native Q4 `2 x 2` Gauss kernel. A rectangular
+series reference independently verifies the same interface opening, extension,
+force, stress, and energy through all three execution layers, while positive
+Gauss-point Jacobians are enforced before assembly. The next interface gates
+are beam, frame, shell, or 3D-solid host-element co-assembly, sparse global
+assembly, arc-length and adaptive-step continuation,
 coupled mixed-mode/friction laws, experimental references, repeated cross-host
 performance qualification, and larger localization-sensitive meshes. The
 retained five-state independent

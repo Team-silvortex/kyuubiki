@@ -391,18 +391,29 @@ Use these entrypoints:
 - `cd workers/rust && cargo test -p kyuubiki-engine workflow_large_graphs --release --lib -- --nocapture`
   Exercise 128/256/512/1024-layer real operator chains through the compiled
   workflow execution plan. The 1024-layer lanes cover fully reversed node
-  declarations and `Ephemeral` pass-through artifacts. The latter must retain
-  only the five non-temporary chain artifacts while preserving completion and
-  lineage. Timing is host-local diagnostic data; ordering, output-budget checks,
-  retained artifact counts, outputs, and lineage are regression assertions.
+  declarations, `Ephemeral` pass-through artifacts, and output-only result
+  projection. The ephemeral lane must retain only the five non-temporary chain
+  artifacts; the projected lane must retain only `thermo_output.result`. Both
+  preserve completion and lineage. Timing is host-local diagnostic data;
+  ordering, output-budget checks, retained artifact counts, outputs, and lineage
+  are regression assertions.
 - `cd workers/rust && cargo test -p kyuubiki-engine workflow_scheduler_hot_path --release --lib -- --nocapture --test-threads=1`
   Isolate 1024-layer scheduler, trace, progress, and artifact-retention overhead
   without solver work. Cached and ephemeral lanes assert identical output and
   lineage while retaining 1026 and 2 artifacts respectively. Treat elapsed time
   as host-local diagnostic evidence rather than a release threshold.
+- `cd workers/rust && cargo test -p kyuubiki-engine workflow_solver_hot_path --release --lib -- --nocapture --test-threads=1`
+  Split the real heat-to-thermo path into transform-registry lookup, heat solve,
+  bridge API/core, thermo-mechanical solve, and 1024-value materialization.
+  This lane also runs concurrent bridges against the shared immutable built-in
+  registry. Compare segment proportions between revisions; do not promote one
+  host's microsecond values into cross-platform release thresholds.
 - `make benchmark-standard-nightly`
-  Sync the Rust workspace without `target/` to `kyuubiki-lab`, run the standard regression
-  trio there, and pull the resulting reports back under `tmp/standard-benchmark/`.
+  Sync the Rust workspace without `target/` plus its root `schemas/` compile-time
+  fixtures to `kyuubiki-lab`, run the standard regression trio there, and pull
+  the resulting reports back under `tmp/standard-benchmark/`. Remote profile
+  sync follows the same self-contained source contract, so CLI test binaries do
+  not depend on a pre-existing full repository checkout.
 - `make benchmark-profile-remote PROFILE=medium MATRIX=material-integration REPEAT=3`
   Compare fixed two-point and adaptive 2/3/4/8/12-point frame material
   integration on the Linux lab host. The retained summary reports timing and

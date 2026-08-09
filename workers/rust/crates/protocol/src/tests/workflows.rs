@@ -1,6 +1,28 @@
 use super::prelude::*;
 
 #[test]
+fn serializes_workflow_artifact_projection_options() {
+    let default_options: WorkflowGraphRunOptions =
+        serde_json::from_value(serde_json::json!({})).expect("default options should decode");
+    assert_eq!(
+        default_options.artifact_projection,
+        WorkflowArtifactProjection::All
+    );
+
+    let outputs = WorkflowGraphRunOptions {
+        artifact_projection: WorkflowArtifactProjection::Outputs,
+    };
+    let encoded = serde_json::to_value(outputs).expect("projection options should encode");
+    assert_eq!(encoded["artifact_projection"], "outputs");
+
+    let none: WorkflowGraphRunOptions = serde_json::from_value(serde_json::json!({
+        "artifact_projection": "none"
+    }))
+    .expect("none projection should decode");
+    assert_eq!(none.artifact_projection, WorkflowArtifactProjection::None);
+}
+
+#[test]
 fn serializes_coupled_workflow_envelope_with_a_stable_route_tag() {
     let request: CoupledWorkflowRequest = serde_json::from_value(serde_json::json!({
         "kind": "magnetostatic_heat_to_thermo_plane_quad_2d",

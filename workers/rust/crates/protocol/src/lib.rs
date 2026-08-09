@@ -80,10 +80,11 @@ pub use workflow::{
     HeatToThermoPlaneQuad2dWorkflowResult, HeatToThermoPlaneTriangle2dWorkflowRequest,
     HeatToThermoPlaneTriangle2dWorkflowResult, MagnetostaticHeatToThermoPlaneQuad2dWorkflowRequest,
     MagnetostaticHeatToThermoPlaneQuad2dWorkflowResult, WorkflowArtifactLineage,
-    WorkflowBranchDecision, WorkflowCachePolicy, WorkflowDefaults, WorkflowEdge, WorkflowGraph,
-    WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNode, WorkflowNodeKind,
-    WorkflowNodePortRef, WorkflowNodeRunStatus, WorkflowNodeRunTrace, WorkflowPort,
-    WorkflowProgressEvent, coupled_workflow_descriptors, supported_coupled_workflow_kinds,
+    WorkflowArtifactProjection, WorkflowBranchDecision, WorkflowCachePolicy, WorkflowDefaults,
+    WorkflowEdge, WorkflowGraph, WorkflowGraphRunOptions, WorkflowGraphRunRequest,
+    WorkflowGraphRunResult, WorkflowNode, WorkflowNodeKind, WorkflowNodePortRef,
+    WorkflowNodeRunStatus, WorkflowNodeRunTrace, WorkflowPort, WorkflowProgressEvent,
+    coupled_workflow_descriptors, supported_coupled_workflow_kinds,
 };
 
 pub const RPC_VERSION: u8 = 1;

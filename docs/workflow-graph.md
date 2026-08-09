@@ -304,6 +304,22 @@ Each node run may produce:
 - `persisted`
   intentionally saved into project/workflow history
 
+Run-result materialization is separate from node cache policy. Rust callers may
+select `WorkflowArtifactProjection` through `run_workflow_graph_with_options`:
+
+- `all`
+  retain every artifact and preserve the existing `run_workflow_graph` result
+- `outputs`
+  retain only graph-declared output-node artifacts while releasing consumed
+  intermediates after their last reader
+- `none`
+  return execution evidence without materializing artifacts in the final result
+
+All three projections execute the same graph and preserve completed-node order,
+node runs, progress, and artifact lineage. Projection controls the returned
+payload footprint; it does not weaken execution evidence or change cache
+semantics.
+
 Useful first-class artifact metadata:
 
 - `artifact_id`

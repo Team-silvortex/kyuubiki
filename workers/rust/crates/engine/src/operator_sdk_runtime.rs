@@ -24,6 +24,7 @@ use kyuubiki_protocol::{
 };
 use serde::Deserialize;
 use serde_json::Value;
+use std::sync::OnceLock;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BuiltInOperatorRegistryKind {
@@ -31,6 +32,10 @@ pub enum BuiltInOperatorRegistryKind {
     Export,
     Transform,
 }
+
+static EXTRACT_OPERATOR_REGISTRY: OnceLock<OperatorRegistry> = OnceLock::new();
+static EXPORT_OPERATOR_REGISTRY: OnceLock<OperatorRegistry> = OnceLock::new();
+static TRANSFORM_OPERATOR_REGISTRY: OnceLock<OperatorRegistry> = OnceLock::new();
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct WorkflowOperatorEnvelope {
@@ -338,7 +343,7 @@ pub fn run_registered_extract_operator(
     config: Value,
 ) -> Result<Value, String> {
     run_with_registry(
-        built_in_operator_registry(BuiltInOperatorRegistryKind::Extract),
+        built_in_operator_registry_ref(BuiltInOperatorRegistryKind::Extract),
         operator_id,
         payload,
         config,
@@ -351,7 +356,7 @@ pub fn run_registered_export_operator(
     config: Value,
 ) -> Result<Value, String> {
     run_with_registry(
-        built_in_operator_registry(BuiltInOperatorRegistryKind::Export),
+        built_in_operator_registry_ref(BuiltInOperatorRegistryKind::Export),
         operator_id,
         payload,
         config,
@@ -364,7 +369,7 @@ pub fn run_registered_transform_operator(
     config: Value,
 ) -> Result<Value, String> {
     run_with_registry(
-        built_in_operator_registry(BuiltInOperatorRegistryKind::Transform),
+        built_in_operator_registry_ref(BuiltInOperatorRegistryKind::Transform),
         operator_id,
         payload,
         config,
@@ -372,7 +377,7 @@ pub fn run_registered_transform_operator(
 }
 
 fn run_with_registry(
-    registry: OperatorRegistry,
+    registry: &OperatorRegistry,
     operator_id: &str,
     payload: Value,
     config: Value,
@@ -388,6 +393,19 @@ fn run_with_registry(
         })
         .map_err(|error| error.to_string())?;
     Ok(result.summary)
+}
+
+pub(crate) fn built_in_operator_registry_ref(
+    kind: BuiltInOperatorRegistryKind,
+) -> &'static OperatorRegistry {
+    match kind {
+        BuiltInOperatorRegistryKind::Extract => EXTRACT_OPERATOR_REGISTRY
+            .get_or_init(|| built_in_operator_registry(BuiltInOperatorRegistryKind::Extract)),
+        BuiltInOperatorRegistryKind::Export => EXPORT_OPERATOR_REGISTRY
+            .get_or_init(|| built_in_operator_registry(BuiltInOperatorRegistryKind::Export)),
+        BuiltInOperatorRegistryKind::Transform => TRANSFORM_OPERATOR_REGISTRY
+            .get_or_init(|| built_in_operator_registry(BuiltInOperatorRegistryKind::Transform)),
+    }
 }
 
 pub fn built_in_operator_registry(kind: BuiltInOperatorRegistryKind) -> OperatorRegistry {

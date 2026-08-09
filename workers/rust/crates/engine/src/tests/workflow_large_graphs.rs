@@ -1,7 +1,8 @@
-use crate::run_workflow_graph;
+use crate::{run_workflow_graph, run_workflow_graph_with_options};
 use kyuubiki_protocol::{
-    WorkflowCachePolicy, WorkflowDefaults, WorkflowEdge, WorkflowGraph, WorkflowGraphRunRequest,
-    WorkflowNode, WorkflowNodeKind, WorkflowNodePortRef, WorkflowPort,
+    WorkflowArtifactProjection, WorkflowCachePolicy, WorkflowDefaults, WorkflowEdge, WorkflowGraph,
+    WorkflowGraphRunOptions, WorkflowGraphRunRequest, WorkflowNode, WorkflowNodeKind,
+    WorkflowNodePortRef, WorkflowPort,
 };
 use std::collections::BTreeMap;
 use std::time::Instant;
@@ -36,6 +37,11 @@ fn runs_ephemeral_heat_to_thermo_workflow_graph_at_1024_nodes() {
     run_large_chain_case_with_options(1024, false, true);
 }
 
+#[test]
+fn runs_output_projected_heat_to_thermo_workflow_graph_at_1024_nodes() {
+    run_large_chain_case_with_projection(1024, WorkflowArtifactProjection::Outputs);
+}
+
 fn run_large_chain_case(pass_through_count: usize) {
     run_large_chain_case_with_options(pass_through_count, false, false);
 }
@@ -44,6 +50,27 @@ fn run_large_chain_case_with_options(
     pass_through_count: usize,
     reverse_nodes: bool,
     ephemeral_passes: bool,
+) {
+    run_large_chain_case_with_all_options(
+        pass_through_count,
+        reverse_nodes,
+        ephemeral_passes,
+        WorkflowArtifactProjection::All,
+    );
+}
+
+fn run_large_chain_case_with_projection(
+    pass_through_count: usize,
+    artifact_projection: WorkflowArtifactProjection,
+) {
+    run_large_chain_case_with_all_options(pass_through_count, false, false, artifact_projection);
+}
+
+fn run_large_chain_case_with_all_options(
+    pass_through_count: usize,
+    reverse_nodes: bool,
+    ephemeral_passes: bool,
+    artifact_projection: WorkflowArtifactProjection,
 ) {
     let mut nodes = build_nodes(pass_through_count, ephemeral_passes);
     if reverse_nodes {
@@ -69,14 +96,24 @@ fn run_large_chain_case_with_options(
     };
 
     let started_at = Instant::now();
-    let run = run_workflow_graph(WorkflowGraphRunRequest {
+    let request = WorkflowGraphRunRequest {
         graph,
         input_artifacts: BTreeMap::from([("heat_model".to_string(), heat_model_input())]),
-    })
+    };
+    let run = if artifact_projection == WorkflowArtifactProjection::All {
+        run_workflow_graph(request)
+    } else {
+        run_workflow_graph_with_options(
+            request,
+            WorkflowGraphRunOptions {
+                artifact_projection,
+            },
+        )
+    }
     .expect("large workflow graph should run");
     let elapsed = started_at.elapsed();
     eprintln!(
-        "workflow_large_graphs[rust]: pass_through_count={pass_through_count} reverse_nodes={reverse_nodes} ephemeral_passes={ephemeral_passes} completed_nodes={} retained_artifacts={} elapsed_ms={:.3}",
+        "workflow_large_graphs[rust]: pass_through_count={pass_through_count} reverse_nodes={reverse_nodes} ephemeral_passes={ephemeral_passes} artifact_projection={artifact_projection:?} completed_nodes={} retained_artifacts={} elapsed_ms={:.3}",
         run.completed_nodes.len(),
         run.artifacts.len(),
         elapsed.as_secs_f64() * 1000.0
@@ -98,7 +135,7 @@ fn run_large_chain_case_with_options(
     );
 
     let tail_key = format!("pass_{:03}.result", pass_through_count - 1);
-    if ephemeral_passes {
+    if artifact_projection != WorkflowArtifactProjection::All || ephemeral_passes {
         assert!(!run.artifacts.contains_key(&tail_key));
     } else {
         let bridge_payload = run
@@ -113,6 +150,9 @@ fn run_large_chain_case_with_options(
         .get("thermo_output.result")
         .expect("thermo output should exist");
     assert!(thermo_result["max_stress"].as_f64().unwrap_or_default() > 0.0);
+    if artifact_projection == WorkflowArtifactProjection::Outputs {
+        assert_eq!(run.artifacts.len(), 1);
+    }
     assert!(run.progress_events.len() >= run.completed_nodes.len());
     assert!(elapsed.as_secs_f64() < 30.0);
 }
@@ -324,7 +364,7 @@ fn edge(
     }
 }
 
-fn heat_model_input() -> serde_json::Value {
+pub(super) fn heat_model_input() -> serde_json::Value {
     serde_json::json!({
         "nodes": [
             { "id": "h0", "x": 0.0, "y": 0.0, "fix_temperature": true, "temperature": 100.0, "heat_load": 0.0 },
@@ -338,7 +378,7 @@ fn heat_model_input() -> serde_json::Value {
     })
 }
 
-fn thermo_seed_model() -> serde_json::Value {
+pub(super) fn thermo_seed_model() -> serde_json::Value {
     serde_json::json!({
         "nodes": [
             { "id": "t0", "x": 0.0, "y": 0.0, "fix_x": true, "fix_y": true, "load_x": 0.0, "load_y": 0.0, "temperature_delta": 0.0 },

@@ -117,9 +117,31 @@ closure rather than raw feature sprawl:
   the last consumer may take ownership without a deep copy, consumed temporary
   values are released while lineage remains visible, and strict output-budget
   validation is propagated without trusting unchecked direct inputs
+- Rust workflow runs now expose an explicit `all / outputs / none` artifact
+  projection contract through `run_workflow_graph_with_options`. The existing
+  entrypoint remains full-result compatible, while output-only and artifact-free
+  runs release intermediates after their last consumer without dropping node
+  traces or lineage. On the current macOS release lane, the 1024-layer real
+  chain retained `1` instead of `1029` artifacts and fell from about `24.7 ms`
+  to `14.9 ms`; these timings are diagnostic rather than release thresholds
+- built-in extract, export, and transform registries are now immutable
+  process-lifetime instances on normal execution paths; the external Worker SDK
+  host still receives a fresh mutable registry for package activation. A
+  segmented heat-to-thermo benchmark separates registry lookup, both solves,
+  bridge core/API work, and 1024-value artifact materialization. On the current
+  Linux lab debug lane, the warm bridge API dropped from about `45.8 ms` to
+  `0.18 ms`; these timings remain host-local diagnostics rather than gates
 - direct mesh execution resolves inline payloads, saved models, and saved model
   versions without a frontend bridge, and stable model-version/endpoint fields
   remain visible in composite solve results
+- `solve.cohesive_interface_mesh_2d` now co-assembles native fully integrated
+  plane-stress Q4 hosts with cohesive interfaces in one Newton system. The
+  retained rectangular series case crosses Solver, Agent RPC, and Engine
+  Workflow with exact displacement, force, stress, and energy checks; invalid
+  Q4 Jacobians fail before iteration
+- remote Rust benchmark/profile sync now carries the root `schemas/` fixtures
+  alongside `workers/rust`, making isolated Linux release compilation
+  independent of an existing full-repository checkout
 - the former frontend Node project/macro/headless CLI graph has been removed;
   npm compatibility commands and Headless CI names now dispatch to Rust, while
   the native script audit rejects new non-UI Node scripts under the frontend

@@ -512,6 +512,7 @@ fn cohesive_interface_mesh_2d_request() -> SolveCohesiveInterfaceMesh2dRequest {
         connector_springs: vec![],
         host_trusses: vec![],
         host_plane_triangles: vec![],
+        host_plane_quads: vec![],
         load_steps: Some(2),
         control_history: None,
         max_iterations: Some(12),

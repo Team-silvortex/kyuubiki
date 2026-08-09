@@ -218,6 +218,21 @@ pub enum WorkflowCachePolicy {
     Persisted,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkflowArtifactProjection {
+    #[default]
+    All,
+    Outputs,
+    None,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkflowGraphRunOptions {
+    #[serde(default)]
+    pub artifact_projection: WorkflowArtifactProjection,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WorkflowNodeKind {

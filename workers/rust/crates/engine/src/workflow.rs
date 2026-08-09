@@ -8,9 +8,9 @@ use crate::workflow_executor::{
 };
 use crate::workflow_security::{validate_workflow_artifact_budget, validate_workflow_security};
 use kyuubiki_protocol::{
-    JobStatus, WorkflowArtifactLineage, WorkflowBranchDecision, WorkflowGraphRunRequest,
-    WorkflowGraphRunResult, WorkflowNodeKind, WorkflowNodeRunStatus, WorkflowNodeRunTrace,
-    WorkflowProgressEvent,
+    JobStatus, WorkflowArtifactLineage, WorkflowBranchDecision, WorkflowGraphRunOptions,
+    WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNodeKind, WorkflowNodeRunStatus,
+    WorkflowNodeRunTrace, WorkflowProgressEvent,
 };
 use serde_json::Value;
 use std::any::Any;
@@ -81,11 +81,19 @@ fn workflow_progress_event(
 pub fn run_workflow_graph(
     request: WorkflowGraphRunRequest,
 ) -> Result<WorkflowGraphRunResult, String> {
+    run_workflow_graph_with_options(request, WorkflowGraphRunOptions::default())
+}
+
+pub fn run_workflow_graph_with_options(
+    request: WorkflowGraphRunRequest,
+    options: WorkflowGraphRunOptions,
+) -> Result<WorkflowGraphRunResult, String> {
     validate_workflow_security(&request)?;
     let graph = request.graph;
     validate_workflow_dataset_contract(&graph)?;
     let execution_plan = WorkflowExecutionPlan::compile(&graph)?;
-    let mut artifact_retention = WorkflowArtifactRetention::compile(&graph);
+    let mut artifact_retention =
+        WorkflowArtifactRetention::compile(&graph, options.artifact_projection);
     let node_count = graph.nodes.len();
     let mut ordered_completed = Vec::with_capacity(node_count);
     let mut ordered_skipped = Vec::new();
@@ -327,12 +335,15 @@ pub fn run_workflow_graph(
                         let source_key = planned_edge.source_key();
                         let source_is_validated =
                             output_budget_validated_artifacts.contains(source_key);
-                        let value = artifacts.get(source_key).cloned().ok_or_else(|| {
-                            format!(
-                                "workflow output node {} could not read {}.{}",
-                                node.id, edge.from.node, edge.from.port
-                            )
-                        })?;
+                        let value = artifact_retention
+                            .take_if_last_transient(source_key, &mut artifacts)
+                            .or_else(|| artifacts.get(source_key).cloned())
+                            .ok_or_else(|| {
+                                format!(
+                                    "workflow output node {} could not read {}.{}",
+                                    node.id, edge.from.node, edge.from.port
+                                )
+                            })?;
                         let key = artifact_key(&node.id, &edge.to.port);
                         artifacts.insert(key.clone(), value);
                         if source_is_validated {
@@ -517,7 +528,7 @@ fn resolve_single_input_payload_for_execution(
             node.id
         )
     })?;
-    if let Some(value) = retention.take_if_last_ephemeral(planned_edge.source_key(), artifacts) {
+    if let Some(value) = retention.take_if_last_transient(planned_edge.source_key(), artifacts) {
         return Ok(value);
     }
     artifacts
@@ -542,7 +553,7 @@ fn resolve_first_available_input_payload_for_execution(
         if !artifacts.contains_key(edge.source_key()) {
             continue;
         }
-        if let Some(value) = retention.take_if_last_ephemeral(edge.source_key(), artifacts) {
+        if let Some(value) = retention.take_if_last_transient(edge.source_key(), artifacts) {
             return Ok(value);
         }
         return artifacts.get(edge.source_key()).cloned().ok_or_else(|| {
@@ -574,7 +585,7 @@ fn resolve_named_input_payloads_for_execution(
     for planned_edge in incoming {
         let edge = planned_edge.edge();
         let artifact = retention
-            .take_if_last_ephemeral(planned_edge.source_key(), artifacts)
+            .take_if_last_transient(planned_edge.source_key(), artifacts)
             .or_else(|| artifacts.get(planned_edge.source_key()).cloned())
             .ok_or_else(|| {
                 format!(

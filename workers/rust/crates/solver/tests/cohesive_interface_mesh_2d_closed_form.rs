@@ -1,7 +1,7 @@
 use kyuubiki_protocol::{
     CohesiveInterface2dMaterialInput, CohesiveInterfaceMesh2dConnectorSpringInput,
     CohesiveInterfaceMesh2dControlStepInput, CohesiveInterfaceMesh2dElementInput,
-    CohesiveInterfaceMesh2dMaterialInput, CohesiveInterfaceMesh2dNodeInput,
+    CohesiveInterfaceMesh2dMaterialInput, CohesiveInterfaceMesh2dNodeInput, PlaneQuadElementInput,
     PlaneTriangleElementInput, SolveCohesiveInterfaceMesh2dRequest, TrussElementInput,
 };
 use kyuubiki_solver::solve_cohesive_interface_mesh_2d;
@@ -357,6 +357,54 @@ fn invalid_host_plane_triangle_contracts_are_rejected() {
     assert!(error.contains("thickness must be positive"));
 }
 
+#[test]
+fn host_plane_quad_shares_equilibrium_with_the_cohesive_interface() {
+    let result = solve_cohesive_interface_mesh_2d(&host_plane_quad_request())
+        .expect("host plane quad and cohesive interface should co-assemble");
+
+    assert!(result.converged);
+    assert_close(result.nodes[2].displacement[1], 0.005);
+    assert_close(result.nodes[3].displacement[1], 0.005);
+    assert_close(result.nodes[4].displacement[1], 0.015);
+    assert_close(result.nodes[5].displacement[1], 0.015);
+    assert_close(result.nodes[4].reaction[1], 2.5);
+    assert_close(result.nodes[5].reaction[1], 2.5);
+    assert_close(result.elements[0].local_traction[1], 5.0);
+    assert_close(result.max_host_plane_stress, 5.0);
+    let host = &result.host_plane_quads[0];
+    assert_close(host.area, 1.0);
+    assert_close(host.strain_x, 0.0);
+    assert_close(host.strain_y, 0.01);
+    assert_close(host.stress_x, 0.0);
+    assert_close(host.stress_y, 5.0);
+    assert_close(host.von_mises, 5.0);
+    assert_close(host.strain_energy_density, 0.025);
+}
+
+#[test]
+fn invalid_host_plane_quad_contracts_are_rejected() {
+    let mut duplicate = host_plane_quad_request();
+    duplicate
+        .host_plane_quads
+        .push(duplicate.host_plane_quads[0].clone());
+    let error = solve_cohesive_interface_mesh_2d(&duplicate)
+        .expect_err("duplicate host plane quad ids must fail");
+    assert!(error.contains("duplicate host plane quad id"));
+
+    let mut bounds = host_plane_quad_request();
+    bounds.host_plane_quads[0].node_l = 99;
+    let error = solve_cohesive_interface_mesh_2d(&bounds)
+        .expect_err("out-of-range host plane quad nodes must fail");
+    assert!(error.contains("node index is out of bounds"));
+
+    let mut inverted = host_plane_quad_request();
+    inverted.host_plane_quads[0].node_k = 5;
+    inverted.host_plane_quads[0].node_l = 4;
+    let error = solve_cohesive_interface_mesh_2d(&inverted)
+        .expect_err("inverted host plane quad must fail");
+    assert!(error.contains("positive Jacobian"));
+}
+
 fn single_element_request() -> SolveCohesiveInterfaceMesh2dRequest {
     SolveCohesiveInterfaceMesh2dRequest {
         id: "mesh.single".to_string(),
@@ -371,6 +419,7 @@ fn single_element_request() -> SolveCohesiveInterfaceMesh2dRequest {
         connector_springs: vec![],
         host_trusses: vec![],
         host_plane_triangles: vec![],
+        host_plane_quads: vec![],
         load_steps: Some(4),
         control_history: None,
         max_iterations: Some(12),
@@ -397,6 +446,7 @@ fn two_element_request() -> SolveCohesiveInterfaceMesh2dRequest {
         connector_springs: vec![],
         host_trusses: vec![],
         host_plane_triangles: vec![],
+        host_plane_quads: vec![],
         load_steps: Some(5),
         control_history: None,
         max_iterations: Some(12),
@@ -524,6 +574,42 @@ fn host_plane_request() -> SolveCohesiveInterfaceMesh2dRequest {
         node_j: 3,
         node_k: 4,
         thickness: 2.0,
+        youngs_modulus: 500.0,
+        poisson_ratio: 0.0,
+    }];
+    request
+}
+
+fn host_plane_quad_request() -> SolveCohesiveInterfaceMesh2dRequest {
+    let mut request = single_element_request();
+    for node in &mut request.nodes {
+        node.load = [0.0, 0.0];
+    }
+    request.nodes.extend([
+        CohesiveInterfaceMesh2dNodeInput {
+            id: "driver-right".to_string(),
+            x: 1.0,
+            y: 1.0,
+            fixed: [true, true],
+            prescribed_displacement: Some([0.0, 0.015]),
+            load: [0.0, 0.0],
+        },
+        CohesiveInterfaceMesh2dNodeInput {
+            id: "driver-left".to_string(),
+            x: 0.0,
+            y: 1.0,
+            fixed: [true, true],
+            prescribed_displacement: Some([0.0, 0.015]),
+            load: [0.0, 0.0],
+        },
+    ]);
+    request.host_plane_quads = vec![PlaneQuadElementInput {
+        id: "host-plane-quad-0".to_string(),
+        node_i: 2,
+        node_j: 3,
+        node_k: 4,
+        node_l: 5,
+        thickness: 1.0,
         youngs_modulus: 500.0,
         poisson_ratio: 0.0,
     }];

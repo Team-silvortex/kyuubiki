@@ -941,13 +941,19 @@ rollback. Constant-strain plane-stress host triangles now reuse the public
 stiffness directly to the same Newton system. A prescribed-apex series reference
 recovers the analytic interface opening, continuum extension, common force,
 strain, stress, and energy through Solver, Agent RPC, and Engine Workflow.
+Fully integrated bilinear plane-stress host quads now reuse the public
+`solve.plane_quad_2d` element/result contracts in that same assembly. A
+rectangular series reference independently recovers interface opening `0.005`,
+host extension `0.01`, common force and stress `5`, and exact strain energy;
+duplicate IDs, invalid connectivity, and non-positive Gauss-point Jacobians are
+rejected before Newton iteration.
 Protocol, Agent RPC,
 engine workflow, result chunking, Rust headless discovery, and self-hosted Web
 submission share the same public model. This remains a dense, 512-node screening
 solve under proportional load or displacement control, or explicit prescribed
 control history. Linear 2D trusses are the first real structural host element;
-plane-stress triangles are the first continuum host. Plane quads, beams, frames,
-shells, 3D solids, arc-length/adaptive continuation, coupled mixed-mode
+plane-stress triangles and quads are the retained continuum hosts. Beams,
+frames, shells, 3D solids, arc-length/adaptive continuation, coupled mixed-mode
 interaction, frictional delamination, and experimental calibration remain
 outside the retained claim.
 

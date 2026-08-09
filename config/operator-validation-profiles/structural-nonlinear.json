@@ -176,6 +176,7 @@
         "connector_and_cohesive_series_closed_form",
         "host_truss_and_cohesive_series_closed_form",
         "host_plane_triangle_and_cohesive_series_closed_form",
+        "host_plane_quad_and_cohesive_series_closed_form",
         "singular_tangent_rollback",
         "rpc_and_workflow_contract"
       ],
@@ -193,6 +194,7 @@
         "cohesive_opening_plus_host_truss_extension_equals_driver_displacement",
         "host_plane_reaction_balances_the_interface_traction_resultant",
         "cohesive_opening_plus_host_plane_extension_equals_driver_displacement",
+        "host_plane_quad_uses_positive_jacobian_full_integration",
         "uniform_elastic_opening_matches_traction_over_initial_stiffness"
       ],
       "evidence_paths": [
@@ -202,7 +204,9 @@
         "workers/rust/crates/solver/tests/cohesive_interface_mesh_2d_closed_form.rs",
         "workers/rust/crates/protocol/src/tests/advanced_rpc.rs",
         "workers/rust/crates/cli/src/tests/advanced_rpc.rs",
-        "workers/rust/crates/engine/tests/cohesive_interface_mesh_2d_workflow.rs"
+        "workers/rust/crates/cli/src/tests/cohesive_mesh_rpc.rs",
+        "workers/rust/crates/engine/tests/cohesive_interface_mesh_2d_workflow.rs",
+        "workers/rust/crates/engine/src/tests/workflow_solver_structural.rs"
       ],
       "commands": [
         {
@@ -219,6 +223,11 @@
           "id": "cohesive-interface-mesh-2d-workflow",
           "kind": "contract",
           "command": "cd workers/rust && cargo test -p kyuubiki-engine --test cohesive_interface_mesh_2d_workflow -- --nocapture"
+        },
+        {
+          "id": "cohesive-interface-mesh-2d-q4-workflow",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine runs_cohesive_interface_mesh_q4_host_graph -- --nocapture"
         }
       ]
     }

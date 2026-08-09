@@ -58,6 +58,20 @@ fn serializes_nonlinear_and_contact_rpc_round_trips() {
 }
 
 #[test]
+fn cohesive_mesh_payload_without_q4_hosts_defaults_to_empty() {
+    let mut payload = serde_json::to_value(cohesive_interface_mesh_2d_request())
+        .expect("cohesive mesh request should serialize");
+    payload
+        .as_object_mut()
+        .expect("cohesive mesh request should be an object")
+        .remove("host_plane_quads");
+
+    let decoded: SolveCohesiveInterfaceMesh2dRequest =
+        serde_json::from_value(payload).expect("legacy cohesive mesh payload should decode");
+    assert!(decoded.host_plane_quads.is_empty());
+}
+
+#[test]
 fn serializes_modal_frame_rpc_round_trips() {
     let modal_2d = round_trip(RpcMethod::SolveModalFrame2d, modal_frame_2d_request());
     let modal_3d = round_trip(RpcMethod::SolveModalFrame3d, modal_frame_3d_request());
@@ -194,6 +208,7 @@ fn cohesive_interface_mesh_2d_request() -> SolveCohesiveInterfaceMesh2dRequest {
         connector_springs: vec![],
         host_trusses: vec![],
         host_plane_triangles: vec![],
+        host_plane_quads: vec![],
         load_steps: Some(2),
         control_history: None,
         max_iterations: Some(12),
