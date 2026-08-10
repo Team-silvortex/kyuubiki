@@ -124,7 +124,8 @@ Its axes are:
 - `function_paradigm`: the paradigm from
   `config/architecture/module-function-coverage-matrix.json`
 - `evidence_depth`: required state, matrix status, benchmark evidence,
-  security evidence, and derived gap level
+  security evidence, maturity dimensions, calibrated evidence grade, target,
+  and derived gap level
 
 Run `make check-module-function-coverage-tensor` to generate
 `tmp/module-function-coverage-tensor.json` and
@@ -140,6 +141,11 @@ test commands nor contract evidence are reported as `weak_evidence`, so a
 module cannot look healthy only because the two-dimensional matrix says it is
 covered.
 
+Tensor v3 also prevents a mapped smoke command from looking equivalent to
+retained qualification or an installed journey. Structural `ok` remains the
+hard command gate, while evidence-grade gaps form an independent advisory
+hardening queue.
+
 Validation contract evidence includes both readiness reports and release
 review gates. Operator qualification records, retained review decisions, and
 their Node/Rust checkers are part of the validation tensor so a candidate
@@ -148,12 +154,28 @@ cannot appear mature only because release evidence exists. The default
 so approved promotion summaries are verified by the aggregate operator
 reliability gate instead of living only behind a specialist command.
 
-The v2 tensor does not broadcast one paradigm-level contract to every module.
+The v3 tensor does not broadcast one paradigm-level contract to every module.
 Every contract evidence entry declares the modules it actually covers. The
 report then evaluates required evidence dimensions for the exact
 `module/paradigm` coordinate. Built-in dimensions include execution,
 benchmark, security, contract, numerical validation, recovery, SDK parity, and
 product UX closure.
+
+Evidence strength uses one ordered ladder:
+
+- `unassessed`: no machine-readable evidence is attached
+- `declared`: the matrix or contract declares the capability
+- `exercised`: a mapped command executes the path
+- `verified`: assertions, invariants, boundaries, or references verify it
+- `qualified`: repeatable scale, convergence, fault, cross-language, or
+  cross-platform evidence qualifies it
+- `operational`: retained installed, packaged, multi-host, or recovery evidence
+  proves a real operating journey
+
+Mapped benchmark and security lanes can raise a coordinate only to
+`exercised`. Promotion above that level requires a module-scoped `proven`
+claim with an explicit `grade`. Partial and open claims remain visible but do
+not promote the achieved grade.
 
 Specialized evidence claims use one of three states:
 
@@ -176,8 +198,11 @@ coordinate:
 
 This distinction matters for moxi because a `0` gap count only means no
 required coordinate is missing. It does not mean the coordinate is mature
-enough for a stronger public claim. `maturity_gap_count` and `thin_points`
-are the hardening queue; they do not make the structural tensor command fail.
+enough for a stronger public claim. `maturity_gap_count` tracks missing kinds
+of proof; `evidence_grade_gap_count` tracks insufficient proof strength.
+`evidence_grade_calibration.gaps` contains the full queue, while
+`weakest_points` is a priority-weighted review window. Neither changes the
+structural exit status while `gate_mode` is `advisory`.
 
 For contract-heavy paradigms, the tensor also carries `contract_evidence`.
 The `runtime_api` coordinate includes the contracts runtime API surface schema,

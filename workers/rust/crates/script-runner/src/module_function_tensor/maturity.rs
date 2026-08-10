@@ -87,6 +87,7 @@ pub(super) fn evaluate(
             json!({
                 "id": string_field(claim, "id").unwrap_or_default(),
                 "status": string_field(claim, "status").unwrap_or_default(),
+                "grade": string_field(claim, "grade").unwrap_or_default(),
                 "dimensions": string_array(claim, "dimensions"),
                 "files": string_array(claim, "files")
             })

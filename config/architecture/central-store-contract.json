@@ -173,6 +173,7 @@
     { "file": "config/architecture/module-function-coverage-evidence/core-contracts.json", "text": "paradigm_contract_evidence", "label": "tensor contract evidence map" },
     { "file": "config/architecture/module-function-coverage-evidence/core-contracts.json", "text": "contracts-runtime-api-surface", "label": "tensor runtime API contract evidence" },
     { "file": "workers/rust/crates/script-runner/src/module_function_tensor.rs", "text": "maturity_gap_count", "label": "scoped tensor maturity gap count" },
+    { "file": "workers/rust/crates/script-runner/src/module_function_tensor.rs", "text": "evidence_grade_gap_count", "label": "calibrated tensor evidence grade gap count" },
     { "file": "docs/central-server-components.md", "text": "not a separate top-level module", "label": "central docs self-host web boundary" },
     { "file": "apps/web/lib/kyuubiki_web/central_store.ex", "text": "external_identity_provider", "label": "central deployment-owned identity provider policy" },
     { "file": "apps/web/lib/kyuubiki_web/central_store.ex", "text": "issuer_and_subject", "label": "central stable external subject key" },

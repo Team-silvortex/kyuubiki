@@ -1,6 +1,6 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
-  "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
   "summary": "Evidence for provider-neutral model collaboration across the official Rust, Python, and Elixir Headless SDKs plus constrained model-assisted drafts in the Rust Operator SDK.",
   "paradigm_contract_evidence": {
     "sdk_headless": [
@@ -258,6 +258,7 @@
     {
       "id": "rust-model-headless-collaboration",
       "status": "proven",
+      "grade": "verified",
       "modules": [
         "contracts",
         "sdk-headless"
@@ -285,6 +286,7 @@
     {
       "id": "rust-operator-model-draft-validation",
       "status": "proven",
+      "grade": "verified",
       "modules": [
         "contracts",
         "runtime-installer"
@@ -310,6 +312,7 @@
     {
       "id": "model-collaboration-cross-language-parity",
       "status": "proven",
+      "grade": "qualified",
       "modules": [
         "sdk-headless"
       ],
@@ -341,6 +344,7 @@
     {
       "id": "model-document-to-research-plan",
       "status": "proven",
+      "grade": "verified",
       "modules": [
         "contracts",
         "sdk-headless"
@@ -386,6 +390,7 @@
     {
       "id": "model-plan-to-approved-headless-execution",
       "status": "proven",
+      "grade": "verified",
       "modules": [
         "contracts",
         "sdk-headless"
@@ -437,6 +442,7 @@
     {
       "id": "model-research-cross-turn-frontier",
       "status": "proven",
+      "grade": "verified",
       "modules": [
         "contracts",
         "sdk-headless"
@@ -475,6 +481,7 @@
     {
       "id": "model-research-result-to-screening-evidence",
       "status": "proven",
+      "grade": "verified",
       "modules": [
         "contracts",
         "sdk-headless"

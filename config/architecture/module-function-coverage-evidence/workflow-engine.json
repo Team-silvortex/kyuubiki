@@ -1,6 +1,6 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
-  "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
   "summary": "Compiled workflow execution, deterministic scheduling, cache-aware and projected artifact retention, and solver-pipeline hot-path evidence for the Rust engine.",
   "paradigm_contract_evidence": {
     "benchmark": [

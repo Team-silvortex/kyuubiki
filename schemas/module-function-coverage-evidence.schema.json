@@ -13,7 +13,7 @@
       ]
     },
     "schema_version": {
-      "const": "kyuubiki.module-function-coverage-evidence/v1"
+      "const": "kyuubiki.module-function-coverage-evidence/v2"
     },
     "summary": { "type": "string", "minLength": 24 },
     "paradigm_contract_evidence": {
@@ -103,6 +103,7 @@
       "required": [
         "id",
         "status",
+        "grade",
         "modules",
         "paradigms",
         "dimensions",
@@ -113,6 +114,15 @@
       "properties": {
         "id": { "$ref": "#/$defs/id" },
         "status": { "enum": ["proven", "partial", "open"] },
+        "grade": {
+          "enum": [
+            "declared",
+            "exercised",
+            "verified",
+            "qualified",
+            "operational"
+          ]
+        },
         "modules": {
           "type": "array",
           "minItems": 1,

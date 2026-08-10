@@ -1,6 +1,6 @@
 {
-  "schema_version": "kyuubiki.module-function-coverage-tensor/v2",
-  "version_line": "moxi 2.0.x",
+  "schema_version": "kyuubiki.module-function-coverage-tensor/v3",
+  "version_line": "moxi 2.x",
   "topology": "config/architecture/module-topology.json",
   "matrix": "config/architecture/module-function-coverage-matrix.json",
   "runtime_api_client_contract": "config/architecture/contracts-runtime-api-surface.json",
@@ -21,7 +21,110 @@
     "contract_evidence": "Required schemas, config contracts, and text anchors that prove a paradigm has machine-readable release gates.",
     "maturity_requirements": "Evidence dimensions required for this exact module and paradigm coordinate.",
     "maturity_evidence": "Module-scoped proven, partial, and open claims rather than globally broadcast paradigm evidence.",
+    "evidence_grade": "Calibrated proof strength from unassessed through operational, with an explicit target for each required coordinate.",
     "gap": "Derived action level for locating weak, thinly evidenced, or uncovered coordinates."
+  },
+  "evidence_grade_policy": {
+    "gate_mode": "advisory",
+    "weakest_limit": 24,
+    "levels": [
+      {
+        "id": "unassessed",
+        "score": 0,
+        "description": "No machine-readable evidence is attached to the coordinate."
+      },
+      {
+        "id": "declared",
+        "score": 20,
+        "description": "The matrix or a contract declares the capability, without proving a runnable path."
+      },
+      {
+        "id": "exercised",
+        "score": 40,
+        "description": "At least one mapped command exercises the path, but proof depth is not explicitly asserted."
+      },
+      {
+        "id": "verified",
+        "score": 60,
+        "description": "Assertions, boundaries, invariants, or reference outputs verify the claimed behavior."
+      },
+      {
+        "id": "qualified",
+        "score": 80,
+        "description": "Repeatable convergence, fault, scale, cross-language, or cross-platform evidence qualifies the path."
+      },
+      {
+        "id": "operational",
+        "score": 100,
+        "description": "Retained packaged, installed, multi-host, or recovery evidence proves an operational journey."
+      }
+    ],
+    "targets": {
+      "product_surface": "verified",
+      "runtime_api": "verified",
+      "solver_execution": "qualified",
+      "workflow_composition": "qualified",
+      "validation": "qualified",
+      "benchmark": "qualified",
+      "security": "qualified",
+      "persistence_provenance": "verified",
+      "deployment_update": "qualified",
+      "sdk_headless": "qualified"
+    },
+    "priority_weights": {
+      "product_surface": 10,
+      "runtime_api": 40,
+      "solver_execution": 90,
+      "workflow_composition": 70,
+      "validation": 80,
+      "benchmark": 30,
+      "security": 60,
+      "persistence_provenance": 40,
+      "deployment_update": 75,
+      "sdk_headless": 65
+    },
+    "cell_overrides": [
+      {
+        "module_id": "hub-shell",
+        "paradigm": "product_surface",
+        "target": "operational"
+      },
+      {
+        "module_id": "workbench-shell",
+        "paradigm": "product_surface",
+        "target": "operational"
+      },
+      {
+        "module_id": "installer-shell",
+        "paradigm": "product_surface",
+        "target": "operational"
+      },
+      {
+        "module_id": "orchestra-control-plane",
+        "paradigm": "workflow_composition",
+        "target": "operational"
+      },
+      {
+        "module_id": "runtime-engine-solver",
+        "paradigm": "solver_execution",
+        "target": "operational"
+      },
+      {
+        "module_id": "runtime-agent-cli",
+        "paradigm": "deployment_update",
+        "target": "operational"
+      },
+      {
+        "module_id": "runtime-installer",
+        "paradigm": "deployment_update",
+        "target": "operational"
+      },
+      {
+        "module_id": "sdk-headless",
+        "paradigm": "sdk_headless",
+        "target": "operational"
+      }
+    ]
   },
   "maturity_policy": {
     "product_surface": [

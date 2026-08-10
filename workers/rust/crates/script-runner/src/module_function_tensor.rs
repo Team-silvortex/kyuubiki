@@ -4,6 +4,7 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+mod evidence_grade;
 mod includes;
 mod markdown;
 mod maturity;
@@ -17,9 +18,9 @@ pub(super) const MATRIX_PATH: &str = "config/architecture/module-function-covera
 const RUNTIME_API_CLIENT_CONTRACT_PATH: &str =
     "config/architecture/contracts-runtime-api-surface.json";
 const DEFAULT_OUT: &str = "tmp/module-function-coverage-tensor.json";
-pub(super) const SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor/v2";
-const EVIDENCE_INCLUDE_SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-evidence/v1";
-const REPORT_SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor-report/v2";
+pub(super) const SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor/v3";
+const EVIDENCE_INCLUDE_SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-evidence/v2";
+const REPORT_SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor-report/v3";
 const ALLOWED_STATUS: &[&str] = &["covered", "partial", "planned", "not_applicable"];
 const PARADIGM_ORDER: &[&str] = &[
     "product_surface",
@@ -39,6 +40,7 @@ const DEPTH_AXIS_ORDER: &[&str] = &[
     "benchmark_evidence",
     "security_evidence",
     "contract_evidence",
+    "evidence_grade",
     "gap",
 ];
 const GAP_ORDER: &[&str] = &[
@@ -71,8 +73,12 @@ pub(crate) fn run_check_module_function_tensor(
     write_report(root, &report, &options.out)?;
     let ok = report.get("ok").and_then(Value::as_bool).unwrap_or(false);
     println!(
-        "module function coverage tensor {}: {} module(s), {} paradigm(s), {} structural gap(s), {} maturity gap(s)",
-        if ok { "passed" } else { "has gaps" },
+        "module function coverage tensor {}: {} module(s), {} paradigm(s), {} structural gap(s), {} maturity gap(s), {} evidence-grade gap(s)",
+        if ok {
+            "structurally passed"
+        } else {
+            "has structural gaps"
+        },
         report
             .pointer("/axes/modules")
             .and_then(Value::as_array)
@@ -84,6 +90,10 @@ pub(crate) fn run_check_module_function_tensor(
         report.get("gap_count").and_then(Value::as_u64).unwrap_or(0),
         report
             .get("maturity_gap_count")
+            .and_then(Value::as_u64)
+            .unwrap_or(0),
+        report
+            .get("evidence_grade_gap_count")
             .and_then(Value::as_u64)
             .unwrap_or(0)
     );
@@ -159,6 +169,7 @@ fn validate_tensor_config(
     }
     validate_declared_runtime_api_clients(root, tensor, matrix, &module_ids)?;
     maturity::validate_config(root, tensor, &paradigms, &module_ids)?;
+    evidence_grade::validate_config(tensor, &paradigms, &module_ids)?;
     Ok(())
 }
 
@@ -323,6 +334,16 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
                 &security_tests,
                 &contract_evidence,
             );
+            let evidence_grade = evidence_grade::evaluate(
+                tensor,
+                module_id,
+                paradigm,
+                status,
+                required,
+                &benchmark_tests,
+                &security_tests,
+                &contract_evidence,
+            );
             let evidence_depth = json!({
                 "benchmark_lane_count": benchmark_lanes.len(),
                 "security_lane_count": security_lanes.len(),
@@ -372,6 +393,7 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
                     "gap": gap,
                     "maturity": maturity_level,
                     "maturity_evidence": maturity,
+                    "evidence_grade": evidence_grade,
                     "benchmark_lanes": benchmark_lanes,
                     "security_lanes": security_lanes,
                     "benchmark_tests": benchmark_tests,
@@ -397,6 +419,11 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
         .iter()
         .filter(|gap| matches!(string_field(gap, "gap"), Some("required_gap" | "missing")))
         .count();
+    let evidence_grade_calibration = evidence_grade::summarize(tensor, &cells);
+    let evidence_grade_gap_count = evidence_grade_calibration
+        .get("gap_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
     json!({
         "schema_version": REPORT_SCHEMA_VERSION,
         "source": TENSOR_PATH,
@@ -413,6 +440,7 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
         "paradigm_summary": paradigm_summary,
         "paradigm_contract_evidence": tensor.get("paradigm_contract_evidence").cloned().unwrap_or_else(|| json!({})),
         "maturity_policy": tensor.get("maturity_policy").cloned().unwrap_or_else(|| json!({})),
+        "evidence_grade_policy": tensor.get("evidence_grade_policy").cloned().unwrap_or_else(|| json!({})),
         "cell_requirements": tensor.get("cell_requirements").cloned().unwrap_or_else(|| json!([])),
         "evidence_claims": tensor.get("evidence_claims").cloned().unwrap_or_else(|| json!([])),
         "gap_count": gaps.len(),
@@ -422,6 +450,9 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
         "maturity_gap_count": thin_points.len(),
         "thin_evidence_count": thin_points.len(),
         "thin_points": thin_points,
+        "evidence_grade_ok": evidence_grade_gap_count == 0,
+        "evidence_grade_gap_count": evidence_grade_gap_count,
+        "evidence_grade_calibration": evidence_grade_calibration,
         "cells": cells
     })
 }

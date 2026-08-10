@@ -76,6 +76,16 @@ fn validate_standard(root: &Path, standard: &Value) -> RunnerResult<()> {
                 .to_string(),
         );
     }
+    let grade_rule = standard
+        .pointer("/evidence_rules/claim_grade_rule")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    if !grade_rule.contains("exercised") || !grade_rule.contains("scoped proven claims") {
+        return Err(
+            "extension standard must reserve grades above exercised for scoped proven claims"
+                .to_string(),
+        );
+    }
 
     let mut seen_types = BTreeSet::new();
     for entry in value_array(standard, "extension_types")? {
@@ -154,7 +164,10 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
             "tensor": "config/architecture/module-function-coverage-tensor.json",
             "docs": "docs/architecture-extension-standard.md"
         },
-        "evidence_rules": { "required_cell_without_evidence": "weak_evidence" },
+        "evidence_rules": {
+            "required_cell_without_evidence": "weak_evidence",
+            "claim_grade_rule": "Runnable lanes reach exercised; stronger grades require scoped proven claims."
+        },
         "extension_types": REQUIRED_TYPES.iter().map(|id| serde_json::json!({
             "id": id,
             "required_files": ["config/architecture/module-topology.json"],

@@ -29,20 +29,30 @@ Current moxi baseline:
 - `blocking_gap_count`: `0`
 - `maturity_gap_count`: `0`
 - `thin_evidence_count`: `0`
+- `evidence_grade_gap_count`: `34`
+- required cells meeting their grade target: `16 / 50` (`32.0%`)
+- average required-cell evidence score: `56.4 / 100`
 
 This means no required module/function coordinate is structurally missing. It
-does not mean all coordinates are mature. Tensor v2 scopes contract evidence
-to the modules it actually covers and requires exact-coordinate evidence
-dimensions. The former six medium points are now backed by proven evidence
-claims: numerical readiness, orchestra distributed recovery, and agent
-watchdog recovery. Structural and maturity coverage stay green while deeper
-external correlation, recovery, fuzz, and user-loop gates keep expanding.
+does not mean all coordinates are deep enough. Tensor v3 scopes contract
+evidence to the modules it actually covers, requires exact-coordinate evidence
+dimensions, and separately grades proof strength. The former maturity points
+remain dimension-complete, but ordinary lane execution no longer masquerades
+as qualification or operational evidence.
+
+The current highest-priority coordinates are
+`runtime-agent-cli/solver_execution`, `runtime-protocol/solver_execution`,
+`desktop-shared-ui/validation`, `runtime-protocol/validation`, and
+`sdk-headless/validation`. This is the active hardening order unless a newly
+retained result changes the generated ranking.
 
 The runtime API client calibration now promotes Hub, Workbench, Installer, and
 the native Installer service to required `runtime_api` coordinates. Declared
 desktop clients must retain UI-to-native execution closure, while the native
 Installer must retain its serializable Rust API manifest and stable exports.
-This closes the former `covered`-but-optional zero-evidence blind spot.
+This closes the former `covered`-but-optional zero-evidence blind spot, but a
+runtime API lane alone still stops at `exercised` until scoped verification is
+attached.
 
 ## 1. Numerical Trust
 

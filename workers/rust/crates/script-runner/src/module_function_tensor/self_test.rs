@@ -44,6 +44,14 @@ pub(super) fn run_self_test() -> RunnerResult<()> {
             .pointer("/cells/engine/solver_execution/evidence_depth/test_command_count")
             .and_then(Value::as_u64)
             != Some(2)
+        || report
+            .get("evidence_grade_gap_count")
+            .and_then(Value::as_u64)
+            != Some(1)
+        || report
+            .pointer("/cells/engine/solver_execution/evidence_grade/achieved_grade")
+            .and_then(Value::as_str)
+            != Some("exercised")
     {
         return Err("self-test report derivation failed".to_string());
     }
@@ -79,7 +87,7 @@ fn self_test_evidence_include_loader() -> RunnerResult<()> {
     fs::write(
         root.join("include.json"),
         serde_json::to_string_pretty(&json!({
-            "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
+            "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
             "paradigm_contract_evidence": {
                 "solver_execution": [{
                     "id": "included-contract",
@@ -156,6 +164,21 @@ fn fixture_tensor() -> Value {
         "topology": TOPOLOGY_PATH,
         "matrix": MATRIX_PATH,
         "depth_axes": { "required": "r", "status": "s" },
+        "evidence_grade_policy": {
+            "gate_mode": "advisory",
+            "weakest_limit": 10,
+            "levels": [
+                {"id": "unassessed", "score": 0, "description": "none"},
+                {"id": "declared", "score": 20, "description": "declared"},
+                {"id": "exercised", "score": 40, "description": "exercised"},
+                {"id": "verified", "score": 60, "description": "verified"},
+                {"id": "qualified", "score": 80, "description": "qualified"},
+                {"id": "operational", "score": 100, "description": "operational"}
+            ],
+            "targets": {"solver_execution": "qualified"},
+            "priority_weights": {"solver_execution": 90},
+            "cell_overrides": []
+        },
         "maturity_policy": {
             "solver_execution": ["execution", "contract"]
         },

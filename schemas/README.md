@@ -250,8 +250,8 @@ The shared approval-request fixture is the parity vector for all SDKs.
   evidence lanes, and contract families before they enter release gates.
 - `module-function-coverage-evidence.schema.json` is for shard files loaded by
   the module-function coverage tensor through `evidence_includes`; shards keep
-  contract evidence, coordinate requirements, and maturity claims small enough
-  for the project file-size guard.
+  contract evidence, coordinate requirements, and explicitly graded maturity
+  claims small enough for the project file-size guard.
 - `deploy/installation-integrity-contract.json` is the shared installer and
   desktop-facing installation contract source that defines standard layout,
   protected paths, cleanup allowlists, and visible repair rules

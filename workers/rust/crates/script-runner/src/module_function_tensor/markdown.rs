@@ -52,6 +52,34 @@ pub(super) fn render_markdown(report: &Value) -> String {
                 .and_then(Value::as_u64)
                 .unwrap_or(0)
         ),
+        format!(
+            "- Evidence grade mode: `{}`",
+            report
+                .pointer("/evidence_grade_calibration/gate_mode")
+                .and_then(Value::as_str)
+                .unwrap_or("advisory")
+        ),
+        format!(
+            "- Evidence grade gaps: `{}`",
+            report
+                .get("evidence_grade_gap_count")
+                .and_then(Value::as_u64)
+                .unwrap_or(0)
+        ),
+        format!(
+            "- Average required-cell evidence score: `{:.1}`",
+            report
+                .pointer("/evidence_grade_calibration/average_evidence_score")
+                .and_then(Value::as_f64)
+                .unwrap_or(0.0)
+        ),
+        format!(
+            "- Required cells meeting target: `{:.1}%`",
+            report
+                .pointer("/evidence_grade_calibration/target_met_percent")
+                .and_then(Value::as_f64)
+                .unwrap_or(0.0)
+        ),
         String::new(),
         "## Module Summary".to_string(),
         String::new(),
@@ -76,10 +104,81 @@ pub(super) fn render_markdown(report: &Value) -> String {
         }
     }
     render_paradigm_summary(report, &mut lines);
+    render_evidence_grades(report, &mut lines);
     render_contract_evidence(report, &mut lines);
     render_thin_points(report, &mut lines);
     render_gaps(report, &mut lines);
     format!("{}\n", lines.join("\n").trim_end())
+}
+
+fn render_evidence_grades(report: &Value, lines: &mut Vec<String>) {
+    lines.extend([
+        String::new(),
+        "## Evidence Grade Calibration".to_string(),
+        String::new(),
+        "Structural `ok` remains the hard gate. Evidence-grade targets are an independent hardening queue.".to_string(),
+        String::new(),
+        "| Grade | Score | Required Cells Achieved | Required Cell Targets |".to_string(),
+        "| --- | ---: | ---: | ---: |".to_string(),
+    ]);
+    for level in report
+        .pointer("/evidence_grade_policy/levels")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        let id = string_field(level, "id").unwrap_or_default();
+        lines.push(format!(
+            "| `{id}` | {} | {} | {} |",
+            level.get("score").and_then(Value::as_u64).unwrap_or(0),
+            report
+                .pointer(&format!(
+                    "/evidence_grade_calibration/achieved_summary/{id}"
+                ))
+                .and_then(Value::as_u64)
+                .unwrap_or(0),
+            report
+                .pointer(&format!("/evidence_grade_calibration/target_summary/{id}"))
+                .and_then(Value::as_u64)
+                .unwrap_or(0)
+        ));
+    }
+
+    lines.extend([
+        String::new(),
+        "### Weakest Coordinates".to_string(),
+        String::new(),
+    ]);
+    let points = report
+        .pointer("/evidence_grade_calibration/weakest_points")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    if points.is_empty() {
+        lines.push("No evidence-grade gaps.".to_string());
+        return;
+    }
+    lines.push(
+        "| Priority | Module | Paradigm | Achieved | Target | Steps | Next | Recommended Action |"
+            .to_string(),
+    );
+    lines.push("| ---: | --- | --- | --- | --- | ---: | --- | --- |".to_string());
+    for point in points {
+        lines.push(format!(
+            "| {} | `{}` | `{}` | `{}` | `{}` | {} | `{}` | `{}` |",
+            point
+                .get("priority_score")
+                .and_then(Value::as_u64)
+                .unwrap_or(0),
+            string_field(&point, "module_id").unwrap_or_default(),
+            string_field(&point, "paradigm").unwrap_or_default(),
+            string_field(&point, "achieved_grade").unwrap_or_default(),
+            string_field(&point, "target_grade").unwrap_or_default(),
+            point.get("gap_steps").and_then(Value::as_u64).unwrap_or(0),
+            string_field(&point, "next_grade").unwrap_or_default(),
+            string_field(&point, "recommended_action").unwrap_or_default()
+        ));
+    }
 }
 
 fn render_paradigm_summary(report: &Value, lines: &mut Vec<String>) {

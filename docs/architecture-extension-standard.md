@@ -16,11 +16,17 @@ Every extension must have:
 - ownership in `config/architecture/module-topology.json`
 - functional coverage in `config/architecture/module-function-coverage-matrix.json`
 - evidence depth in `config/architecture/module-function-coverage-tensor.json`
+- an evidence grade target and paradigm priority weight
 - a runnable gate or contract evidence
 - documentation of what the extension does not own
 
 If a required cell is marked `covered` but has no runnable test command and no
 contract evidence, the tensor reports `weak_evidence`.
+
+A runnable lane proves only `exercised`. Grades above it require a scoped
+`proven` evidence claim whose `grade` states whether the retained proof is
+`verified`, `qualified`, or `operational`. New modules must review advisory
+grade gaps even when the structural command exits successfully.
 
 ## Adding A Module
 
@@ -31,8 +37,8 @@ contract evidence, the tensor reports `weak_evidence`.
 5. Attach benchmark lanes and security lanes.
 6. Add risk tags that describe how the module can fail.
 7. Add required paradigms and cell statuses in the matrix.
-8. Add tensor lane mappings and contract evidence until required covered cells
-   are not left as unexplained `thin` evidence.
+8. Add tensor lane mappings, target grades, and scoped contract evidence until
+   required covered cells are not left as unexplained `thin` evidence.
 9. Run `make check-module-function-coverage-tensor`.
 10. Add prose ownership and non-ownership notes.
 
@@ -51,11 +57,12 @@ desktop applications, but it owns their common source assets and mirror gate.
    capability.
 3. Add benchmark and security lane mappings in
    `module-function-coverage-tensor.json`.
-4. Ensure every required covered cell has runnable evidence or contract
+4. Declare the paradigm's evidence grade target and priority weight.
+5. Ensure every required covered cell has runnable evidence or contract
    evidence.
-5. Prefer a `strong` maturity coordinate before using the paradigm in release
-   claims. If the coordinate is intentionally `medium` or `thin`, document the
-   next hardening gate.
+6. Prefer a `strong` maturity coordinate whose grade meets its target before
+   using the paradigm in release claims. If either axis is below target,
+   document the next hardening gate.
 
 ## Adding A Service Surface
 
@@ -77,6 +84,9 @@ This is the pattern used by `central-web-service`: it is part of
 Evidence lanes should be concrete. A lane that cannot point to a command is a
 planning note, not evidence.
 
+Lane presence raises a coordinate no higher than `exercised`. Add an explicit
+graded claim only after the stronger evidence is retained and machine-checkable.
+
 ## Adding A Contract Family
 
 1. Add repository-relative source files.
@@ -84,9 +94,11 @@ planning note, not evidence.
 3. Attach client surfaces and service surfaces when the contract crosses
    modules.
 4. Add tensor contract evidence if the contract proves a required paradigm.
-5. Use `evidence_includes` for large scoped evidence bundles so the main tensor
+5. Add an explicit claim grade only when the contract is paired with proof at
+   that strength; a schema alone remains `declared`.
+6. Use `evidence_includes` for large scoped evidence bundles so the main tensor
    stays readable and under the project file-line guard.
-6. Run the family checker and `make architecture-check`.
+7. Run the family checker and `make architecture-check`.
 
 ## Required Gates
 

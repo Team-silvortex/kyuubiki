@@ -1,6 +1,6 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
-  "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
   "summary": "Core scoped contract evidence, maturity claims, and coordinate requirements for the moxi module-function coverage tensor.",
   "paradigm_contract_evidence": {
     "product_surface": [
@@ -607,6 +607,7 @@
     {
       "id": "desktop-product-ux-closure",
       "status": "proven",
+      "grade": "verified",
       "modules": [
         "hub-shell",
         "desktop-shared-ui",
@@ -633,6 +634,7 @@
     {
       "id": "headless-cross-language-parity",
       "status": "proven",
+      "grade": "qualified",
       "modules": [
         "workbench-shell",
         "sdk-headless"
@@ -657,6 +659,7 @@
     {
       "id": "solver-independent-validation-depth",
       "status": "proven",
+      "grade": "qualified",
       "modules": [
         "runtime-engine-solver",
         "verification-evidence"
@@ -682,6 +685,7 @@
     {
       "id": "orchestra-distributed-recovery-depth",
       "status": "proven",
+      "grade": "verified",
       "modules": [
         "orchestra-control-plane"
       ],
@@ -705,6 +709,7 @@
     {
       "id": "agent-watchdog-recovery",
       "status": "proven",
+      "grade": "verified",
       "modules": [
         "runtime-agent-cli"
       ],
@@ -734,6 +739,7 @@
     {
       "id": "installer-retry-safe-recovery",
       "status": "proven",
+      "grade": "verified",
       "modules": [
         "runtime-installer"
       ],
@@ -762,6 +768,7 @@
     {
       "id": "kcore-exchange-integrity",
       "status": "proven",
+      "grade": "verified",
       "modules": [
         "contracts",
         "verification-evidence"

@@ -1,6 +1,6 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
-  "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
   "summary": "Executed workflow, Agent watchdog, Orchestra process-loss, and Installer journal fault injection proving branch isolation, stale-timeout recovery, replay-safe failover, and atomic deployment resume.",
   "paradigm_contract_evidence": {
     "workflow_composition": [
@@ -48,6 +48,7 @@
     {
       "id": "workflow-branch-recovery-fault-injection",
       "status": "proven",
+      "grade": "qualified",
       "modules": [
         "runtime-engine-solver",
         "runtime-agent-cli",
@@ -83,6 +84,7 @@
     {
       "id": "orchestra-agent-process-loss-fault-injection",
       "status": "proven",
+      "grade": "qualified",
       "modules": [
         "orchestra-control-plane",
         "runtime-agent-cli",
@@ -115,6 +117,7 @@
     {
       "id": "installer-journal-replay-fault-injection",
       "status": "proven",
+      "grade": "qualified",
       "modules": [
         "runtime-installer",
         "verification-evidence"

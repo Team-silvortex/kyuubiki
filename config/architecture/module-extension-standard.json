@@ -12,6 +12,8 @@
   "evidence_rules": {
     "required_cell_without_evidence": "weak_evidence",
     "minimum_required_cell_evidence": "At least one runnable test command or one contract evidence bundle.",
+    "required_cell_grade_target": "Every function paradigm must declare an evidence grade target; critical coordinates may raise it with a cell override.",
+    "claim_grade_rule": "Runnable lanes reach exercised only; verified, qualified, and operational grades require scoped proven claims.",
     "service_surface_rule": "A service surface belongs inside an existing module and must not claim owned paths.",
     "path_rule": "All source, evidence, and docs paths must be repository-relative.",
     "file_size_rule": "Source and docs touched by extension work should stay under the project file-line guard."
@@ -29,7 +31,7 @@
       "steps": [
         "Declare the module id, layer, owned paths, dependencies, benchmark lanes, security lanes, and risk tags in module-topology.",
         "Add required function paradigms and cell statuses in module-function-coverage-matrix.",
-        "Ensure the coverage tensor reports no required_gap, missing, or weak_evidence cells.",
+        "Ensure the coverage tensor reports no required_gap, missing, or weak_evidence cells and review every below-target evidence grade.",
         "Document ownership, non-ownership, and handoff boundaries."
       ]
     },
@@ -43,6 +45,7 @@
       "steps": [
         "Add the paradigm description to the matrix.",
         "Map the paradigm to benchmark and security lanes in the tensor.",
+        "Declare its evidence grade target and priority weight in the tensor.",
         "Update required_by_module only for modules that truly own that capability.",
         "Run matrix and tensor checks before claiming coverage."
       ]
@@ -71,7 +74,7 @@
         "Declare the benchmark or security lane centrally.",
         "Attach at least one command to lane_test_plan.",
         "Map the lane from relevant paradigms in the tensor.",
-        "Verify the lane creates evidence_depth for required cells."
+        "Verify the lane creates exercised evidence depth without silently claiming a stronger grade."
       ]
     },
     {
@@ -86,6 +89,7 @@
         "Add repository-relative source files and client surfaces.",
         "Add schema or text anchors to the appropriate release contract.",
         "Attach contract evidence to the tensor when the family proves a required paradigm.",
+        "Add a scoped evidence claim with an explicit grade only when retained proof justifies promotion above exercised.",
         "Use tensor evidence_includes for large scoped evidence bundles that would bloat the main tensor file.",
         "Run the family checker and the full architecture gate."
       ]

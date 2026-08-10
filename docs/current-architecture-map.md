@@ -212,6 +212,11 @@ The tensor is the three-axis review map:
 - function paradigm
 - evidence depth
 
+Tensor v3 splits evidence depth into dimension completeness and calibrated
+proof strength. Its advisory weakest-coordinate queue distinguishes runnable
+smoke coverage from verified, qualified, and operational evidence without
+weakening the structural architecture gate.
+
 ## Repository Ownership Map
 
 - `apps/hub-gui`: Hub desktop shell

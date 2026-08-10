@@ -1,6 +1,6 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
-  "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
   "summary": "Exact-coordinate contract and execution evidence for desktop runtime clients and the native installer runtime API.",
   "paradigm_contract_evidence": {
     "runtime_api": [
@@ -49,6 +49,7 @@
     {
       "id": "desktop-runtime-api-execution-closure",
       "status": "proven",
+      "grade": "verified",
       "modules": [
         "hub-shell",
         "workbench-shell",
@@ -75,6 +76,7 @@
     {
       "id": "native-installer-runtime-api-execution",
       "status": "proven",
+      "grade": "verified",
       "modules": [
         "runtime-installer"
       ],

@@ -34,6 +34,8 @@
       "required": [
         "required_cell_without_evidence",
         "minimum_required_cell_evidence",
+        "required_cell_grade_target",
+        "claim_grade_rule",
         "service_surface_rule",
         "path_rule",
         "file_size_rule"
@@ -42,6 +44,8 @@
       "properties": {
         "required_cell_without_evidence": { "const": "weak_evidence" },
         "minimum_required_cell_evidence": { "type": "string", "minLength": 8 },
+        "required_cell_grade_target": { "type": "string", "minLength": 8 },
+        "claim_grade_rule": { "type": "string", "minLength": 8 },
         "service_surface_rule": { "type": "string", "minLength": 8 },
         "path_rule": { "type": "string", "minLength": 8 },
         "file_size_rule": { "type": "string", "minLength": 8 }

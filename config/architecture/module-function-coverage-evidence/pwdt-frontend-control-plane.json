@@ -1,6 +1,6 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
-  "schema_version": "kyuubiki.module-function-coverage-evidence/v1",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
   "summary": "Scoped evidence that Pwdt is a product-owned programmable Workbench UI control plane, not a headless SDK surface.",
   "paradigm_contract_evidence": {
     "product_surface": [
@@ -94,6 +94,7 @@
     {
       "id": "workbench-pwdt-programmable-ui-closure",
       "status": "proven",
+      "grade": "verified",
       "modules": [
         "workbench-shell"
       ],
