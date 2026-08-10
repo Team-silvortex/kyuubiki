@@ -298,6 +298,7 @@ dependencies = [
 name = "kyuubiki-cli"
 version = "2.7.0"
 dependencies = [
+ "kyuubiki-engine",
  "kyuubiki-headless-sdk",
  "kyuubiki-protocol",
  "kyuubiki-solver",

@@ -1,0 +1,86 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Real Agent TaskIR solver execution through the Rust Engine, with protocol admission, closed-form numerical validation, tamper rejection, watchdog recovery, and retained qualification evidence.",
+  "paradigm_contract_evidence": {
+    "solver_execution": [
+      {
+        "id": "agent-engine-solver-task-ir-contract",
+        "modules": [
+          "runtime-protocol",
+          "runtime-agent-cli"
+        ],
+        "files": [
+          "workers/rust/crates/protocol/src/solver_execution_capability.rs",
+          "workers/rust/crates/protocol/src/agent_solver_qualification.rs",
+          "workers/rust/crates/cli/src/operator_task_runtime/engine_solver.rs",
+          "schemas/agent-solver-qualification.schema.json"
+        ],
+        "required_text": [
+          "AGENT_BUILTIN_SOLVER_OPERATOR_IDS",
+          "check_operator_task_execution_capability",
+          "validate_agent_solver_qualification_report",
+          "agent_engine_solver_executed",
+          "kyuubiki.agent-solver-qualification/v2"
+        ]
+      }
+    ]
+  },
+  "cell_requirements": [
+    {
+      "module_id": "runtime-protocol",
+      "paradigm": "solver_execution",
+      "dimensions": [
+        "numerical_validation",
+        "recovery"
+      ]
+    },
+    {
+      "module_id": "runtime-agent-cli",
+      "paradigm": "solver_execution",
+      "dimensions": [
+        "numerical_validation",
+        "recovery"
+      ]
+    }
+  ],
+  "evidence_claims": [
+    {
+      "id": "agent-engine-solver-task-ir-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "runtime-protocol",
+        "runtime-agent-cli"
+      ],
+      "paradigms": [
+        "solver_execution"
+      ],
+      "dimensions": [
+        "execution",
+        "numerical_validation",
+        "recovery"
+      ],
+      "files": [
+        "workers/rust/crates/protocol/src/solver_execution_capability.rs",
+        "workers/rust/crates/protocol/src/agent_solver_qualification.rs",
+        "workers/rust/crates/protocol/src/tests/solver_execution_capability.rs",
+        "workers/rust/crates/protocol/src/tests/agent_solver_qualification.rs",
+        "workers/rust/crates/cli/src/operator_task_runtime/engine_solver.rs",
+        "workers/rust/crates/cli/tests/agent_task_ir_qualification.rs",
+        "schemas/agent-solver-qualification.schema.json",
+        "releases/usability-evidence/2.12.5/agent-solver-task-ir-qualification.json"
+      ],
+      "required_text": [
+        "solve.bar_1d",
+        "agent_executes_solver_rejects_tampering_and_recovers_over_tcp",
+        "kyuubiki.agent-solver-qualification/v2",
+        "\"accepted\": true",
+        "\"absolute_error\": 0.0",
+        "\"reason_code\": \"operator_task_solver_capability_rejected\"",
+        "\"reason_code\": \"operator_task_digest_mismatch\"",
+        "\"recent_failure_count\": 2"
+      ]
+    }
+  ]
+}

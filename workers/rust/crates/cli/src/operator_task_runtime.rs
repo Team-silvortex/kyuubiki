@@ -16,6 +16,8 @@ use kyuubiki_protocol::{
     summarize_operator_task_execution_checked, verify_operator_task_digest,
 };
 
+mod engine_solver;
+
 pub(crate) const OPERATOR_TASK_STATUS_VERIFIED_PENDING: &str = "verified_pending_engine_execution";
 pub(crate) const OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED: &str =
     "operator_package_runtime_not_yet_attached";
@@ -211,6 +213,17 @@ pub(crate) fn run_operator_task_ir_with_runtime(
     let preview = preview_operator_task_execution(task_ir)
         .map_err(|error| classify_operator_task_error(error, task_ir))?;
 
+    if let Some(execution) = engine_solver::try_execute(mode, &summary, task_ir)? {
+        return Ok(build_agent_native_execution_payload(
+            summary,
+            preview,
+            package_runtime,
+            engine_solver::AGENT_ENGINE_SOLVER_STATUS,
+            execution.capability_report,
+            execution.result,
+        ));
+    }
+
     if mode == OPERATOR_TASK_MODE_EXECUTE && is_agent_native_builtin_operator(&summary.operator_id)
     {
         let result =
@@ -226,6 +239,8 @@ pub(crate) fn run_operator_task_ir_with_runtime(
             summary,
             preview,
             package_runtime,
+            OPERATOR_TASK_AGENT_NATIVE_STATUS,
+            Value::Null,
             result,
         ));
     }
@@ -365,15 +380,17 @@ fn build_agent_native_execution_payload(
     summary: OperatorTaskExecutionSummary,
     preview: OperatorTaskExecutionPreview,
     package_runtime: OperatorPackageRuntimeBinding,
+    execution_runtime_status: &'static str,
+    solver_execution_capability: Value,
     result: Value,
 ) -> Value {
-    let execution_runtime_status = OPERATOR_TASK_AGENT_NATIVE_STATUS;
     let readiness = agent_native_execution_readiness();
     serde_json::json!({
         "requested_mode": OPERATOR_TASK_MODE_EXECUTE,
         "task_execution_preview": operator_task_execution_preview_payload(&preview),
         "operator_task_ir_status": OPERATOR_TASK_STATUS_EXECUTED,
         "execution_runtime_status": execution_runtime_status,
+        "solver_execution_capability": solver_execution_capability,
         "operator_package_runtime": operator_package_runtime_contract(&summary, &package_runtime),
         "validation_receipt": operator_task_validation_receipt(&summary, &preview, &package_runtime),
         "provenance_receipt": operator_task_provenance_receipt(

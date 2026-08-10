@@ -40,10 +40,12 @@ pub fn protocol_benchmark_surface() -> ProtocolBenchmarkSurface {
                     "kyuubiki.operator-task-ir/v1",
                     "kyuubiki.operator-execution/v1",
                     "kyuubiki.solver-execution-capability/v1",
+                    "kyuubiki.agent-solver-qualification/v2",
                 ],
                 regression_commands: &[
                     "cargo test -p kyuubiki-protocol operator_task_ir",
                     "cargo test -p kyuubiki-protocol solver_execution_capability",
+                    "cargo test -p kyuubiki-protocol agent_solver_qualification",
                 ],
             },
             ProtocolBenchmarkLane {
@@ -80,6 +82,13 @@ mod tests {
                 && lane
                     .protocol_contracts
                     .contains(&"kyuubiki.solver-execution-capability/v1")
+                && lane
+                    .protocol_contracts
+                    .contains(&"kyuubiki.agent-solver-qualification/v2")
+                && lane
+                    .regression_commands
+                    .iter()
+                    .any(|command| command.contains("agent_solver_qualification"))
         }));
         assert!(surface.lanes.iter().any(|lane| {
             lane.id == "workflow_contract"

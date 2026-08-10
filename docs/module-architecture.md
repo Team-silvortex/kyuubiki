@@ -398,7 +398,7 @@ Responsibilities:
 - FEM solver kernels
 - workflow execution helpers
 - operator TaskIR digest and execution summaries
-- agent-native builtins
+- capability-admitted agent-native builtins and Engine solver dispatch
 - installer-native runtime checks and package preflight
 - operator SDK template validation
 
@@ -540,7 +540,8 @@ The normal orchestrated path is:
 4. The control plane prepares workflow nodes or operator TaskIR.
 5. TaskIR carries an execution program and digest.
 6. Rust agents verify, preflight, fetch packages, or execute agent-native
-   builtins.
+   builtins. Solver TaskIR additionally passes the protocol capability allowlist
+   before the Agent dispatches it into the Rust Engine.
 7. Results return as contract-shaped summaries and dataset values.
 8. Workbench, SDKs, reports, or experiment planners consume the same result
    contract.

@@ -1,0 +1,199 @@
+{
+  "generated_at_unix_ms": 1786326675731,
+  "operator_id": "solve.bar_1d",
+  "program_kind": "solver",
+  "rpc_version": 1,
+  "runtime_protocol": "kyuubiki.solver-rpc/v1",
+  "schema_version": "kyuubiki.agent-solver-qualification/v2",
+  "stages": {
+    "initial_execution": {
+      "provenance_receipt": {
+        "abi_kind": "solver_rpc",
+        "agent_fetchable": false,
+        "dispatch_route": "solver_rpc",
+        "lineage": {
+          "digest_verified": true,
+          "execution_program_verified": true,
+          "preview_digest": "1dbf35cd7ff402436a61c0ebae784730e2930b49f00603045ab0b810dee6750d"
+        },
+        "offline_runnable": true,
+        "operator_id": "solve.bar_1d",
+        "operator_package_runtime_attached": false,
+        "package_ref": null,
+        "package_version": "library-managed",
+        "program_id": "solve.bar_1d",
+        "provenance_owner": "agent_runtime",
+        "requested_mode": "execute",
+        "retention_scope": "none",
+        "runtime_protocol": "kyuubiki.solver-rpc/v1",
+        "schema_version": "kyuubiki.agent-operator-task-provenance/v1",
+        "task_digest": "1dbf35cd7ff402436a61c0ebae784730e2930b49f00603045ab0b810dee6750d",
+        "task_id": "agent-qualification-bar-1d"
+      },
+      "result_assertion": {
+        "absolute_error": 0.0,
+        "actual": 4.761904761904762e-7,
+        "expected": 4.761904761904762e-7,
+        "metric": "tip_displacement",
+        "passed": true,
+        "tolerance": 1e-12
+      },
+      "solver_execution_capability": {
+        "accepted": true,
+        "capability_id": "agent-builtin-solver-execution",
+        "dispatch_route": "solver_rpc",
+        "operator_id": "solve.bar_1d",
+        "operator_kind": "solver",
+        "program_kind": "solver",
+        "rejection_reasons": [],
+        "runtime_protocol": "kyuubiki.solver-rpc/v1",
+        "task_id": "agent-qualification-bar-1d",
+        "warnings": []
+      },
+      "status": "executed",
+      "validation_receipt": {
+        "abi_kind": "solver_rpc",
+        "blocked_reason": null,
+        "digest_verified": true,
+        "dispatch_route": "solver_rpc",
+        "execution_program_verified": true,
+        "operator_package_runtime_attached": false,
+        "package_fetch_required": false,
+        "runtime_protocol": "kyuubiki.solver-rpc/v1",
+        "schema_version": "kyuubiki.agent-operator-task-validation/v1",
+        "validation_owner": "agent_runtime",
+        "validation_status": "accepted"
+      }
+    },
+    "recovery_execution": {
+      "provenance_receipt": {
+        "abi_kind": "solver_rpc",
+        "agent_fetchable": false,
+        "dispatch_route": "solver_rpc",
+        "lineage": {
+          "digest_verified": true,
+          "execution_program_verified": true,
+          "preview_digest": "1dbf35cd7ff402436a61c0ebae784730e2930b49f00603045ab0b810dee6750d"
+        },
+        "offline_runnable": true,
+        "operator_id": "solve.bar_1d",
+        "operator_package_runtime_attached": false,
+        "package_ref": null,
+        "package_version": "library-managed",
+        "program_id": "solve.bar_1d",
+        "provenance_owner": "agent_runtime",
+        "requested_mode": "execute",
+        "retention_scope": "none",
+        "runtime_protocol": "kyuubiki.solver-rpc/v1",
+        "schema_version": "kyuubiki.agent-operator-task-provenance/v1",
+        "task_digest": "1dbf35cd7ff402436a61c0ebae784730e2930b49f00603045ab0b810dee6750d",
+        "task_id": "agent-qualification-bar-1d"
+      },
+      "result_assertion": {
+        "absolute_error": 0.0,
+        "actual": 4.761904761904762e-7,
+        "expected": 4.761904761904762e-7,
+        "metric": "tip_displacement",
+        "passed": true,
+        "tolerance": 1e-12
+      },
+      "solver_execution_capability": {
+        "accepted": true,
+        "capability_id": "agent-builtin-solver-execution",
+        "dispatch_route": "solver_rpc",
+        "operator_id": "solve.bar_1d",
+        "operator_kind": "solver",
+        "program_kind": "solver",
+        "rejection_reasons": [],
+        "runtime_protocol": "kyuubiki.solver-rpc/v1",
+        "task_id": "agent-qualification-bar-1d",
+        "warnings": []
+      },
+      "status": "executed",
+      "validation_receipt": {
+        "abi_kind": "solver_rpc",
+        "blocked_reason": null,
+        "digest_verified": true,
+        "dispatch_route": "solver_rpc",
+        "execution_program_verified": true,
+        "operator_package_runtime_attached": false,
+        "package_fetch_required": false,
+        "runtime_protocol": "kyuubiki.solver-rpc/v1",
+        "schema_version": "kyuubiki.agent-operator-task-validation/v1",
+        "validation_owner": "agent_runtime",
+        "validation_status": "accepted"
+      }
+    },
+    "tamper_rejection": {
+      "failure_receipt": {
+        "failure_owner": "agent_runtime",
+        "failure_stage": "verify_digest",
+        "message": "operator task digest mismatch: expected 1dbf35cd7ff402436a61c0ebae784730e2930b49f00603045ab0b810dee6750d, actual 105e1d929c0e321141ecaa80e64f2d4aba12c2d7ceb868f779f051e4e4438911",
+        "operator_id": "solve.bar_1d",
+        "reason_code": "operator_task_digest_mismatch",
+        "recovery": {
+          "required_action": "rebuild_task_ir_and_recompute_digest",
+          "retryable": false,
+          "safe_to_continue_other_tasks": true
+        },
+        "schema_version": "kyuubiki.agent-operator-task-failure/v1",
+        "task_digest": "1dbf35cd7ff402436a61c0ebae784730e2930b49f00603045ab0b810dee6750d",
+        "task_id": "agent-qualification-bar-1d"
+      },
+      "reason_code": "operator_task_digest_mismatch"
+    },
+    "unsupported_solver_rejection": {
+      "failure_receipt": {
+        "failure_owner": "agent_runtime",
+        "failure_stage": "check_solver_capability",
+        "message": "operator_id `solve.thermal_bar_1d` is not supported",
+        "operator_id": "solve.thermal_bar_1d",
+        "reason_code": "operator_task_solver_capability_rejected",
+        "recovery": {
+          "required_action": "select_advertised_solver_operator",
+          "retryable": false,
+          "safe_to_continue_other_tasks": true
+        },
+        "schema_version": "kyuubiki.agent-operator-task-failure/v1",
+        "task_digest": "847b50ff40f74b9ba5236c5d068a248742b168b4161baa5cc08b2758294853b0",
+        "task_id": "agent-qualification-bar-1d"
+      },
+      "reason_code": "operator_task_solver_capability_rejected"
+    }
+  },
+  "status": "passed",
+  "task_digest": "1dbf35cd7ff402436a61c0ebae784730e2930b49f00603045ab0b810dee6750d",
+  "transport": "tcp_framed_json",
+  "watchdog": {
+    "active_execution_count": 0,
+    "active_executions": [],
+    "policy": {
+      "enabled": true,
+      "monitored_scope": "job_bound_execution",
+      "scan_interval_ms": 5000,
+      "stale_execution_ms": 30000
+    },
+    "recent_failure_count": 2,
+    "recent_failures": [
+      {
+        "elapsed_ms": 1,
+        "job_id": null,
+        "message": "operator task digest mismatch: expected 1dbf35cd7ff402436a61c0ebae784730e2930b49f00603045ab0b810dee6750d, actual 105e1d929c0e321141ecaa80e64f2d4aba12c2d7ceb868f779f051e4e4438911",
+        "method": "run_operator_task_ir",
+        "occurred_unix_ms": 1786326675713,
+        "reason_code": "operator_task_digest_mismatch",
+        "request_id": "qualification-tampered"
+      },
+      {
+        "elapsed_ms": 7,
+        "job_id": null,
+        "message": "operator_id `solve.thermal_bar_1d` is not supported",
+        "method": "run_operator_task_ir",
+        "occurred_unix_ms": 1786326675705,
+        "reason_code": "operator_task_solver_capability_rejected",
+        "request_id": "qualification-unsupported-solver"
+      }
+    ],
+    "state": "watch"
+  }
+}

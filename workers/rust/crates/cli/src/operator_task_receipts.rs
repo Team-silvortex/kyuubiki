@@ -100,6 +100,11 @@ fn required_failure_action(code: &str) -> &'static str {
         | "operator_task_entrypoint_mismatch" => "fix_task_ir_contract_mirror_fields",
         "invalid_params" => "fix_rpc_request_params",
         "operator_task_execution_failed" => "inspect_operator_runtime_result",
+        "operator_task_solver_capability_invalid" => "fix_solver_task_ir_contract",
+        "operator_task_solver_capability_rejected" => "select_advertised_solver_operator",
+        "operator_task_solver_input_invalid" => "fix_solver_input_artifact",
+        "operator_task_solver_execution_failed" => "inspect_engine_solver_failure",
+        "operator_task_solver_result_invalid" => "inspect_engine_solver_result_contract",
         _ => "inspect_task_ir",
     }
 }

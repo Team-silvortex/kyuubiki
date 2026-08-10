@@ -1,3 +1,4 @@
+mod agent_solver_qualification;
 mod analysis;
 mod benchmark_surface;
 mod job;
@@ -29,6 +30,11 @@ mod types {
     pub mod transport_results;
 }
 
+pub use agent_solver_qualification::{
+    AGENT_SOLVER_QUALIFICATION_EXPECTED_TIP_DISPLACEMENT, AGENT_SOLVER_QUALIFICATION_OPERATOR_ID,
+    AGENT_SOLVER_QUALIFICATION_SCHEMA, AgentSolverQualificationSummary,
+    validate_agent_solver_qualification_report,
+};
 pub use analysis::{AnalysisResult, ResultChunkKind, ResultChunkRequest, ResultChunkResponse};
 pub use benchmark_surface::{
     PROTOCOL_BENCHMARK_SURFACE_SCHEMA_VERSION, ProtocolBenchmarkLane, ProtocolBenchmarkSurface,
@@ -51,7 +57,7 @@ pub use operator_task_ir::{
     verify_operator_task_digest,
 };
 pub use solver_execution_capability::{
-    SolverExecutionCapability, SolverExecutionCapabilityReport,
+    AGENT_BUILTIN_SOLVER_OPERATOR_IDS, SolverExecutionCapability, SolverExecutionCapabilityReport,
     check_operator_task_execution_capability,
 };
 pub use types::acoustic::*;

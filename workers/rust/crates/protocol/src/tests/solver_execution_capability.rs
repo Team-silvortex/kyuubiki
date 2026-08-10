@@ -20,7 +20,7 @@ fn solver_execution_capability_accepts_agent_builtin_solver_task() {
 fn solver_execution_capability_rejects_unsupported_solver_method() {
     let task = solver_task_fixture();
     let mut capability = SolverExecutionCapability::agent_builtin();
-    capability.operator_ids = vec!["solve.thermal.plane_triangle_2d".to_string()];
+    capability.operator_ids = vec!["solve.thermal_bar_1d".to_string()];
 
     let report =
         check_operator_task_execution_capability(&task, &capability).expect("report should build");
@@ -31,6 +31,40 @@ fn solver_execution_capability_rejects_unsupported_solver_method() {
             .rejection_reasons
             .iter()
             .any(|reason| reason.contains("operator_id"))
+    );
+}
+
+#[test]
+fn solver_execution_capability_does_not_admit_operator_task_programs() {
+    let mut task = solver_task_fixture();
+    task["operator"]["kind"] = json!("transform");
+    task["execution_program"]["program_kind"] = json!("transform");
+    task["execution_program"]["runtime_protocol"] = json!("kyuubiki.operator-execution/v1");
+    task["execution_program"]["abi"]["kind"] = json!("operator_task");
+    task["execution_program"]["entrypoint"]["kind"] = json!("operator_id");
+    task["execution_program"]["entrypoint"]["name"] = json!("solve.bar_1d");
+    task["execution_program"]["entrypoint"]["operator_kind"] = json!("transform");
+    task["runtime_hints"]["operator_kind"] = json!("transform");
+
+    let report = check_operator_task_execution_capability(
+        &task,
+        &SolverExecutionCapability::agent_builtin(),
+    )
+    .expect("valid operator TaskIR should still produce a capability report");
+
+    assert!(!report.accepted);
+    assert!(report.rejection_reasons.len() >= 4);
+    assert!(
+        report
+            .rejection_reasons
+            .iter()
+            .any(|reason| reason.contains("runtime_protocol"))
+    );
+    assert!(
+        report
+            .rejection_reasons
+            .iter()
+            .any(|reason| reason.contains("program_kind"))
     );
 }
 
@@ -60,7 +94,7 @@ fn solver_task_fixture() -> Value {
         "schema_version": OPERATOR_TASK_IR_SCHEMA,
         "task_id": "solver-fixture-task",
         "operator": {
-            "id": "solve.thermal.bar_1d",
+            "id": "solve.bar_1d",
             "family": "thermal",
             "kind": "solver"
         },
@@ -85,7 +119,7 @@ fn solver_task_fixture() -> Value {
         "config": {},
         "execution_program": {
             "schema_version": "kyuubiki.operator-execution-program/v1",
-            "program_id": "solve.thermal.bar_1d",
+            "program_id": "solve.bar_1d",
             "program_family": "thermal",
             "program_kind": "solver",
             "runtime_protocol": "kyuubiki.solver-rpc/v1",
@@ -96,7 +130,7 @@ fn solver_task_fixture() -> Value {
             },
             "entrypoint": {
                 "kind": "solver_method",
-                "name": "solve.thermal.bar_1d",
+                "name": "solve_bar_1d",
                 "operator_kind": "solver"
             },
             "bindings": {

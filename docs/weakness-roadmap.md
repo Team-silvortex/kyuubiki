@@ -29,9 +29,9 @@ Current moxi baseline:
 - `blocking_gap_count`: `0`
 - `maturity_gap_count`: `0`
 - `thin_evidence_count`: `0`
-- `evidence_grade_gap_count`: `34`
-- required cells meeting their grade target: `16 / 50` (`32.0%`)
-- average required-cell evidence score: `56.4 / 100`
+- `evidence_grade_gap_count`: `32`
+- required cells meeting their grade target: `18 / 50` (`36.0%`)
+- average required-cell evidence score: `58.0 / 100`
 
 This means no required module/function coordinate is structurally missing. It
 does not mean all coordinates are deep enough. Tensor v3 scopes contract
@@ -41,10 +41,19 @@ remain dimension-complete, but ordinary lane execution no longer masquerades
 as qualification or operational evidence.
 
 The current highest-priority coordinates are
-`runtime-agent-cli/solver_execution`, `runtime-protocol/solver_execution`,
-`desktop-shared-ui/validation`, `runtime-protocol/validation`, and
-`sdk-headless/validation`. This is the active hardening order unless a newly
-retained result changes the generated ranking.
+`desktop-shared-ui/validation`, `runtime-protocol/validation`,
+`sdk-headless/validation`, `hub-shell/deployment_update`, and
+`installer-shell/deployment_update`. This is the active hardening order unless
+a newly retained result changes the generated ranking.
+
+The former top two coordinates, `runtime-agent-cli/solver_execution` and
+`runtime-protocol/solver_execution`, now meet the `qualified` target. Their
+shared v2 qualification sends a `solve.bar_1d` TaskIR through a live TCP Agent
+into the Rust Engine, checks the closed-form displacement, rejects a digest
+tamper, verifies same-process recovery, and retains the machine-validated
+report under `releases/usability-evidence/2.12.5`. The Agent TaskIR allowlist is
+intentionally limited to `solve.bar_1d`; the broader direct solver RPC surface
+is not yet claimed as equivalent TaskIR execution coverage.
 
 The runtime API client calibration now promotes Hub, Workbench, Installer, and
 the native Installer service to required `runtime_api` coordinates. Declared

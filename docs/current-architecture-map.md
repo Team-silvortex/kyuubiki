@@ -85,8 +85,10 @@ solver, installer, and benchmark crates under `workers/rust`.
 
 Main responsibilities:
 
-- `protocol`: language-neutral RPC payloads, TaskIR, digests, and summaries
-- `cli`: agent process, command surfaces, RPC handling, direct mesh entrypoints
+- `protocol`: language-neutral RPC payloads, TaskIR, digests, solver capability
+  admission, and qualification-report validation
+- `cli`: agent process, command surfaces, RPC handling, direct mesh entrypoints,
+  and admitted TaskIR solver dispatch into the Engine
 - `engine`: reusable operator/workflow execution helpers
 - `solver`: FEM kernels, sparse linear algebra, accuracy-sensitive routines
 - `installer`: native install/update/repair/package-preflight logic
@@ -94,6 +96,11 @@ Main responsibilities:
 
 The data plane should execute protocol payloads. It should not know React
 component structure, Hub navigation, or Installer panel hierarchy.
+
+The current Agent-native TaskIR solver surface advertises only
+`solve.bar_1d`. Other solver methods may exist on the direct RPC surface, but
+they are not treated as Agent TaskIR capabilities until an explicit adapter,
+capability entry, and retained qualification prove that path.
 
 ## SDK And Extension Surfaces
 

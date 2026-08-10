@@ -25,13 +25,16 @@
       "workers/rust/crates/engine/src/workflow_solve_executor.rs",
       "workers/rust/crates/engine/src/tests/core.rs",
       "workers/rust/crates/protocol/src/solver_execution_capability.rs",
+      "workers/rust/crates/protocol/src/agent_solver_qualification.rs",
+      "workers/rust/crates/cli/src/operator_task_runtime/engine_solver.rs",
       "workers/rust/crates/cli/tests/agent_task_ir_qualification.rs",
-      "schemas/agent-solver-qualification.schema.json"
+      "schemas/agent-solver-qualification.schema.json",
+      "releases/usability-evidence/2.12.5/agent-solver-task-ir-qualification.json"
     ],
     "required_receipts": [
       "kyuubiki.engine-solver-provenance/v1",
       "kyuubiki.solver-execution-capability/v1",
-      "kyuubiki.agent-solver-qualification/v1",
+      "kyuubiki.agent-solver-qualification/v2",
       "kyuubiki.agent-operator-task-failure/v1"
     ]
   },

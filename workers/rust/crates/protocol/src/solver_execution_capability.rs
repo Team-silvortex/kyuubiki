@@ -5,6 +5,8 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+pub const AGENT_BUILTIN_SOLVER_OPERATOR_IDS: &[&str] = &["solve.bar_1d"];
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SolverExecutionCapability {
     pub capability_id: String,
@@ -24,14 +26,14 @@ impl SolverExecutionCapability {
     pub fn agent_builtin() -> Self {
         Self {
             capability_id: "agent-builtin-solver-execution".to_string(),
-            runtime_protocols: vec![
-                "kyuubiki.solver-rpc/v1".to_string(),
-                "kyuubiki.operator-execution/v1".to_string(),
-            ],
-            program_kinds: vec!["solver".to_string(), "transform".to_string()],
-            abi_kinds: vec!["solver_rpc".to_string(), "operator_task".to_string()],
-            entrypoint_kinds: vec!["solver_method".to_string(), "operator_id".to_string()],
-            operator_ids: Vec::new(),
+            runtime_protocols: vec!["kyuubiki.solver-rpc/v1".to_string()],
+            program_kinds: vec!["solver".to_string()],
+            abi_kinds: vec!["solver_rpc".to_string()],
+            entrypoint_kinds: vec!["solver_method".to_string()],
+            operator_ids: AGENT_BUILTIN_SOLVER_OPERATOR_IDS
+                .iter()
+                .map(|operator_id| (*operator_id).to_string())
+                .collect(),
             execution_modes: vec![
                 "local_builtin".to_string(),
                 "local_bundle".to_string(),

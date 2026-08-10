@@ -11,6 +11,7 @@
     "config/architecture/module-function-coverage-evidence/desktop-runtime-api.json",
     "config/architecture/module-function-coverage-evidence/desktop-usability.json",
     "config/architecture/module-function-coverage-evidence/runtime-recovery.json",
+    "config/architecture/module-function-coverage-evidence/agent-solver-execution.json",
     "config/architecture/module-function-coverage-evidence/workflow-engine.json"
   ],
   "depth_axes": {
