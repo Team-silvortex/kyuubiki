@@ -29,9 +29,9 @@ Current moxi baseline:
 - `blocking_gap_count`: `0`
 - `maturity_gap_count`: `0`
 - `thin_evidence_count`: `0`
-- `evidence_grade_gap_count`: `30`
-- required cells meeting their grade target: `20 / 50` (`40.0%`)
-- average required-cell evidence score: `59.6 / 100`
+- `evidence_grade_gap_count`: `29`
+- required cells meeting their grade target: `21 / 50` (`42.0%`)
+- average required-cell evidence score: `60.4 / 100`
 
 This means no required module/function coordinate is structurally missing. It
 does not mean all coordinates are deep enough. Tensor v3 scopes contract
@@ -40,11 +40,19 @@ dimensions, and separately grades proof strength. The former maturity points
 remain dimension-complete, but ordinary lane execution no longer masquerades
 as qualification or operational evidence.
 
-The current highest-priority coordinates are `sdk-headless/validation`,
-`hub-shell/deployment_update`, `installer-shell/deployment_update`,
-`runtime-agent-cli/deployment_update`, and
-`sdk-headless/workflow_composition`. This is the active hardening order unless
-a newly retained result changes the generated ranking.
+The current highest-priority coordinates are `hub-shell/deployment_update`,
+`installer-shell/deployment_update`, `runtime-agent-cli/deployment_update`,
+`sdk-headless/workflow_composition`, and `contracts/security`. This is the
+active hardening order unless a newly retained result changes the generated
+ranking.
+
+The former leading coordinate, `sdk-headless/validation`, now meets its
+`qualified` target. Its native qualification runner requires all 263 official
+SDK tests across Python, Elixir, and Rust, including live loopback transport
+checks, 14 paired cross-language failure boundaries, and four shared contract
+fixture digests. The machine-validated result is retained under
+`releases/usability-evidence/2.12.6`; package-registry installation and remote
+service execution remain separate operational proof tiers.
 
 The former leading coordinate, `runtime-protocol/validation`, now meets its
 `qualified` target. Its native qualification runner requires all 94 protocol

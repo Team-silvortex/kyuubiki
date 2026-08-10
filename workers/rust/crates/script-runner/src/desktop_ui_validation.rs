@@ -1,10 +1,13 @@
+use crate::qualification_support::{
+    generated_at_unix_ms, parse_options, portable_output, read_json, repo_path, write_json,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::Instant;
 
 type RunnerResult<T> = Result<T, String>;
 
@@ -83,18 +86,11 @@ struct AssertionResult {
     passed: bool,
 }
 
-#[derive(Default)]
-struct Options {
-    out: Option<String>,
-    verify_report: Option<String>,
-    self_test: bool,
-}
-
 pub(crate) fn run_check_desktop_ui_validation(
     root: &Path,
     args: Vec<OsString>,
 ) -> RunnerResult<u8> {
-    let options = parse_options(args)?;
+    let options = parse_options(args, "desktop UI validation")?;
     if options.self_test {
         run_self_test()?;
         println!("desktop UI validation self-test passed");
@@ -126,32 +122,6 @@ pub(crate) fn run_check_desktop_ui_validation(
     );
     println!("desktop UI validation report written: {output_path}");
     Ok(0)
-}
-
-fn parse_options(args: Vec<OsString>) -> RunnerResult<Options> {
-    let mut options = Options::default();
-    let mut iter = args.into_iter();
-    while let Some(arg) = iter.next() {
-        match arg.to_string_lossy().as_ref() {
-            "--out" => options.out = Some(required_path(&mut iter, "--out")?),
-            "--verify-report" => {
-                options.verify_report = Some(required_path(&mut iter, "--verify-report")?)
-            }
-            "--self-test" => options.self_test = true,
-            other => return Err(format!("unknown desktop UI validation argument: {other}")),
-        }
-    }
-    if options.out.is_some() && options.verify_report.is_some() {
-        return Err("--out and --verify-report cannot be combined".to_string());
-    }
-    Ok(options)
-}
-
-fn required_path(iter: &mut impl Iterator<Item = OsString>, flag: &str) -> RunnerResult<String> {
-    iter.next()
-        .map(|value| value.to_string_lossy().to_string())
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| format!("{flag} requires a repository-relative path"))
 }
 
 fn validate_contract(root: &Path, contract: &ValidationContract) -> RunnerResult<()> {
@@ -219,11 +189,7 @@ fn execute_suite(root: &Path, contract: &ValidationContract) -> RunnerResult<Val
         .env("NO_COLOR", "1")
         .output()
         .map_err(|error| format!("failed to execute desktop UI validation: {error}"))?;
-    let rendered = format!(
-        "{}{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
+    let rendered = portable_output(root, &output);
     let summary = parse_summary(&rendered);
     let shells = contract
         .shell_minimum_actions
@@ -247,10 +213,7 @@ fn execute_suite(root: &Path, contract: &ValidationContract) -> RunnerResult<Val
         && assertions.iter().all(|assertion| assertion.passed);
     Ok(ValidationReport {
         schema_version: REPORT_SCHEMA.to_string(),
-        generated_at_unix_ms: SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|error| format!("system clock before epoch: {error}"))?
-            .as_millis(),
+        generated_at_unix_ms: generated_at_unix_ms()?,
         contract_path: CONTRACT_PATH.to_string(),
         status: if passed { "pass" } else { "fail" }.to_string(),
         platform: Platform {
@@ -377,37 +340,6 @@ fn validate_report(contract: &ValidationContract, report: &ValidationReport) -> 
         return Err("desktop UI report contains an unexpected assertion set".to_string());
     }
     Ok(())
-}
-
-fn repo_path(root: &Path, relative: &str) -> RunnerResult<PathBuf> {
-    let path = Path::new(relative);
-    if relative.is_empty()
-        || path.is_absolute()
-        || path
-            .components()
-            .any(|component| component.as_os_str() == "..")
-    {
-        return Err(format!("path escapes repository: {relative}"));
-    }
-    Ok(root.join(path))
-}
-
-fn read_json<T: serde::de::DeserializeOwned>(root: &Path, relative: &str) -> RunnerResult<T> {
-    let text = fs::read_to_string(repo_path(root, relative)?)
-        .map_err(|error| format!("failed to read {relative}: {error}"))?;
-    serde_json::from_str(&text).map_err(|error| format!("invalid JSON {relative}: {error}"))
-}
-
-fn write_json(root: &Path, relative: &str, report: &ValidationReport) -> RunnerResult<()> {
-    let path = repo_path(root, relative)?;
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
-    }
-    let rendered = serde_json::to_string_pretty(report)
-        .map_err(|error| format!("failed to encode desktop UI report: {error}"))?;
-    fs::write(&path, format!("{rendered}\n"))
-        .map_err(|error| format!("failed to write {}: {error}", path.display()))
 }
 
 fn run_self_test() -> RunnerResult<()> {

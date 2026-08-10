@@ -1,3 +1,7 @@
+use crate::qualification_support::{
+    combined_output, generated_at_unix_ms, parse_options, portable_output, read_json, repo_path,
+    write_json,
+};
 use kyuubiki_protocol::{
     JobStatus, OperatorTaskDigestError, OperatorTaskSummaryErrorCode, ProgressEvent, RPC_VERSION,
     RpcEnvelopeErrorCode, RpcError, RpcMethod, RpcProgress, RpcProtocolDescriptor, RpcRequest,
@@ -10,9 +14,9 @@ use serde_json::{Value, json};
 use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::Instant;
 
 type RunnerResult<T> = Result<T, String>;
 
@@ -128,18 +132,11 @@ struct TestSummary {
     filtered_out: usize,
 }
 
-#[derive(Default)]
-struct Options {
-    out: Option<String>,
-    verify_report: Option<String>,
-    self_test: bool,
-}
-
 pub(crate) fn run_check_protocol_validation_qualification(
     root: &Path,
     args: Vec<OsString>,
 ) -> RunnerResult<u8> {
-    let options = parse_options(args)?;
+    let options = parse_options(args, "protocol validation qualification")?;
     if options.self_test {
         run_self_test()?;
         println!("protocol validation qualification self-test passed");
@@ -168,32 +165,6 @@ pub(crate) fn run_check_protocol_validation_qualification(
     );
     println!("protocol validation qualification report written: {out}");
     Ok(0)
-}
-
-fn parse_options(args: Vec<OsString>) -> RunnerResult<Options> {
-    let mut options = Options::default();
-    let mut iter = args.into_iter();
-    while let Some(arg) = iter.next() {
-        match arg.to_string_lossy().as_ref() {
-            "--out" => options.out = Some(required_path(&mut iter, "--out")?),
-            "--verify-report" => {
-                options.verify_report = Some(required_path(&mut iter, "--verify-report")?)
-            }
-            "--self-test" => options.self_test = true,
-            other => return Err(format!("unknown protocol qualification argument: {other}")),
-        }
-    }
-    if options.out.is_some() && options.verify_report.is_some() {
-        return Err("--out and --verify-report cannot be combined".to_string());
-    }
-    Ok(options)
-}
-
-fn required_path(iter: &mut impl Iterator<Item = OsString>, flag: &str) -> RunnerResult<String> {
-    iter.next()
-        .map(|value| value.to_string_lossy().to_string())
-        .filter(|value| !value.is_empty())
-        .ok_or_else(|| format!("{flag} requires a repository-relative path"))
 }
 
 fn validate_contract(root: &Path, contract: &QualificationContract) -> RunnerResult<()> {
@@ -287,10 +258,7 @@ fn execute_qualification(
         && contract_checks.iter().all(|check| check.status == "pass");
     Ok(QualificationReport {
         schema_version: REPORT_SCHEMA.to_string(),
-        generated_at_unix_ms: SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|error| format!("system clock before epoch: {error}"))?
-            .as_millis(),
+        generated_at_unix_ms: generated_at_unix_ms()?,
         contract_path: CONTRACT_PATH.to_string(),
         status: if passed { "pass" } else { "fail" }.to_string(),
         platform: Platform {
@@ -597,27 +565,6 @@ fn run_runner_command(args: &[&str]) -> RunnerResult<CommandReport> {
     })
 }
 
-fn combined_output(output: &std::process::Output) -> String {
-    format!(
-        "{}{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    )
-}
-
-fn portable_output(root: &Path, output: &std::process::Output) -> String {
-    portable_text(root, combined_output(output))
-}
-
-fn portable_text(root: &Path, rendered: String) -> String {
-    let root = root.to_string_lossy();
-    if root.is_empty() {
-        rendered
-    } else {
-        rendered.replace(root.as_ref(), "@repo")
-    }
-}
-
 fn validate_report(
     contract: &QualificationContract,
     report: &QualificationReport,
@@ -720,37 +667,6 @@ fn validate_report(
     Ok(())
 }
 
-fn repo_path(root: &Path, relative: &str) -> RunnerResult<PathBuf> {
-    let path = Path::new(relative);
-    if relative.is_empty()
-        || path.is_absolute()
-        || path
-            .components()
-            .any(|component| component.as_os_str() == "..")
-    {
-        return Err(format!("path escapes repository: {relative}"));
-    }
-    Ok(root.join(path))
-}
-
-fn read_json<T: serde::de::DeserializeOwned>(root: &Path, relative: &str) -> RunnerResult<T> {
-    let text = fs::read_to_string(repo_path(root, relative)?)
-        .map_err(|error| format!("failed to read {relative}: {error}"))?;
-    serde_json::from_str(&text).map_err(|error| format!("invalid JSON {relative}: {error}"))
-}
-
-fn write_json(root: &Path, relative: &str, report: &QualificationReport) -> RunnerResult<()> {
-    let path = repo_path(root, relative)?;
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
-    }
-    let rendered = serde_json::to_string_pretty(report)
-        .map_err(|error| format!("failed to encode protocol report: {error}"))?;
-    fs::write(&path, format!("{rendered}\n"))
-        .map_err(|error| format!("failed to write {}: {error}", path.display()))
-}
-
 fn run_self_test() -> RunnerResult<()> {
     let output = "running 94 tests\n\
 test tests::rpc_fuzz::smoke ... ok\n\
@@ -769,14 +685,5 @@ mod tests {
     #[test]
     fn parses_protocol_test_output() {
         super::run_self_test().unwrap();
-    }
-
-    #[test]
-    fn removes_repository_paths_from_retained_output() {
-        let output = super::portable_text(
-            std::path::Path::new("/private/repo"),
-            "Compiling (/private/repo/workers/rust)".to_string(),
-        );
-        assert_eq!(output, "Compiling (@repo/workers/rust)");
     }
 }

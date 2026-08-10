@@ -1,0 +1,72 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Qualified Rust, Python, and Elixir Headless SDK validation with full language suites, live transport checks, shared fixture digests, and paired failure-boundary parity.",
+  "paradigm_contract_evidence": {
+    "validation": [
+      {
+        "id": "headless-sdk-validation-qualification-contract",
+        "modules": [
+          "sdk-headless"
+        ],
+        "files": [
+          "config/architecture/headless-sdk-validation-qualification.json",
+          "schemas/headless-sdk-validation-qualification-report.schema.json",
+          "workers/rust/crates/script-runner/src/headless_sdk_validation.rs",
+          "workers/rust/crates/script-runner/src/qualification_support.rs",
+          "workers/rust/crates/script-runner/src/governance_commands.rs",
+          "sdks/rust/tests/model_research_execution.rs",
+          "sdks/rust/tests/workflow_contracts.rs",
+          "sdks/python/tests/test_model_research_execution.py",
+          "sdks/python/tests/test_workflow_contracts.py",
+          "sdks/elixir/test/model_research_execution_test.exs",
+          "sdks/elixir/test/workflow_contracts_test.exs"
+        ],
+        "required_text": [
+          "kyuubiki.headless-sdk-validation-qualification-contract/v1",
+          "kyuubiki.headless-sdk-validation-qualification-report/v1",
+          "minimum_total_tests",
+          "invalid-dispatch-policy",
+          "payload-changed-after-approval",
+          "partial-failure-retained",
+          "check-headless-sdk-validation-qualification"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "headless-sdk-cross-language-validation-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "validation"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "recovery",
+        "sdk_parity"
+      ],
+      "files": [
+        "releases/usability-evidence/2.12.6/headless-sdk-validation-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"total_passed\": 263",
+        "\"passed\": 95",
+        "\"passed\": 89",
+        "\"passed\": 79",
+        "\"id\": \"invalid-dispatch-policy\"",
+        "\"id\": \"wrong-job-or-unverified-evidence\"",
+        "\"id\": \"validation-gate-drift\"",
+        "\"id\": \"missing-required-output\"",
+        "schemas/examples.workflow-graph.json",
+        "schemas/examples.material-research-bundle.json"
+      ]
+    }
+  ]
+}

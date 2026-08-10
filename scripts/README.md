@@ -271,6 +271,11 @@ This directory contains host-native operational entry points.
   and rejection probes, advertised RPC method round trips, and cross-authoring
   contract checks into a machine-verifiable JSON report. Use `--out <path>`,
   `--verify-report <path>`, or `--self-test`.
+- `kyuubiki-script-runner check-headless-sdk-validation-qualification`
+  Qualify the complete Rust, Python, and Elixir Headless SDK suites together.
+  The native report preserves test totals, required live transport checks,
+  shared-fixture digests, and paired cross-language validation boundaries. Use
+  `--out <path>`, `--verify-report <path>`, or `--self-test`.
 - `kyuubiki-script-runner check-workflow-dataset-contract`
   Verify the ONNX-like workflow dataset schema, standalone example, workflow
   graph embedded dataset contract, graph port/edge dataset references, and the

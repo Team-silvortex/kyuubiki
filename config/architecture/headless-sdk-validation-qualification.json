@@ -1,0 +1,135 @@
+{
+  "schema_version": "kyuubiki.headless-sdk-validation-qualification-contract/v1",
+  "report_schema": "kyuubiki.headless-sdk-validation-qualification-report/v1",
+  "minimum_total_tests": 263,
+  "shared_fixtures": [
+    "schemas/examples.workflow-dataset.json",
+    "schemas/examples.workflow-graph.json",
+    "schemas/examples.material-research-bundle.json",
+    "schemas/examples.model-research-frontier.json"
+  ],
+  "language_suites": [
+    {
+      "id": "python",
+      "minimum_tests": 95,
+      "source_root": "sdks/python/tests",
+      "source_extension": "py",
+      "required_tests": [
+        "test_agent_client_runs_workflow_jobs",
+        "test_execute_operator_task_batch",
+        "test_extract_operator_task_failure_receipts",
+        "test_validates_retained_screening_bundle"
+      ]
+    },
+    {
+      "id": "elixir",
+      "minimum_tests": 89,
+      "source_root": "sdks/elixir/test",
+      "source_extension": "exs",
+      "required_tests": [
+        "agent client runs workflow jobs",
+        "control plane client executes operator task batch",
+        "extracts nested operator task failure receipts",
+        "validates a retained screening bundle"
+      ]
+    },
+    {
+      "id": "rust",
+      "minimum_tests": 79,
+      "source_root": "sdks/rust/tests",
+      "source_extension": "rs",
+      "required_tests": [
+        "agent_client_runs_workflow_jobs",
+        "control_plane_executes_operator_task_batch",
+        "extracts_operator_task_recovery_summary",
+        "validates_retained_screening_bundle"
+      ]
+    }
+  ],
+  "parity_cases": [
+    {
+      "id": "invalid-dispatch-policy",
+      "python": "test_rejects_invalid_dispatch_policy",
+      "elixir": "rejects invalid dispatch policy",
+      "rust": "rejects_invalid_dispatch_policy"
+    },
+    {
+      "id": "unknown-dataset-reference",
+      "python": "test_rejects_unknown_dataset_value_reference",
+      "elixir": "rejects unknown dataset value reference",
+      "rust": "rejects_unknown_dataset_value_reference"
+    },
+    {
+      "id": "dataset-semantic-mismatch",
+      "python": "test_rejects_dataset_semantic_artifact_mismatch",
+      "elixir": "rejects dataset semantic artifact mismatch",
+      "rust": "rejects_dataset_semantic_artifact_mismatch"
+    },
+    {
+      "id": "oversized-context-fails-closed",
+      "python": "test_oversized_context_fails_closed",
+      "elixir": "oversized context fails closed",
+      "rust": "oversized_context_is_rejected_after_redaction"
+    },
+    {
+      "id": "unapproved-plan-before-dispatch",
+      "python": "test_rejects_unapproved_plan_before_dispatch",
+      "elixir": "rejects unapproved plan before any dispatch",
+      "rust": "rejects_unapproved_plan_before_any_dispatch"
+    },
+    {
+      "id": "payload-changed-after-approval",
+      "python": "test_rejects_payload_changed_after_approval_before_dispatch",
+      "elixir": "rejects payload changed after approval before any dispatch",
+      "rust": "rejects_plan_payload_changed_after_approval_before_any_dispatch"
+    },
+    {
+      "id": "partial-failure-retained",
+      "python": "test_retains_partial_failure",
+      "elixir": "retains partial failure instead of claiming completion",
+      "rust": "retains_partial_failure_instead_of_claiming_completion"
+    },
+    {
+      "id": "mismatched-job-binding",
+      "python": "test_mismatched_job_binding_is_rejected",
+      "elixir": "mismatched job binding is rejected",
+      "rust": "mismatched_job_binding_is_rejected"
+    },
+    {
+      "id": "wrong-job-or-unverified-evidence",
+      "python": "test_rejects_wrong_job_and_unverified_frontier",
+      "elixir": "rejects wrong job and unverified frontier",
+      "rust": "rejects_wrong_job_or_unverified_evidence"
+    },
+    {
+      "id": "validation-gate-drift",
+      "python": "test_rejects_validation_gate_drift",
+      "elixir": "rejects validation gate drift",
+      "rust": "rejects_validation_gate_drift"
+    },
+    {
+      "id": "mock-execution-authority",
+      "python": "test_rejects_mock_execution_authority",
+      "elixir": "rejects mock execution authority",
+      "rust": "rejects_mock_execution_authority"
+    },
+    {
+      "id": "missing-required-output",
+      "python": "test_rejects_missing_required_output_artifact",
+      "elixir": "rejects missing required output artifact",
+      "rust": "rejects_missing_required_output_artifact"
+    },
+    {
+      "id": "inconsistent-frontier-state",
+      "python": "test_inconsistent_frontier_state_is_rejected",
+      "elixir": "inconsistent frontier state is rejected",
+      "rust": "inconsistent_frontier_state_is_rejected"
+    },
+    {
+      "id": "bad-checksum-shape",
+      "python": "test_rejects_bad_checksum_shape",
+      "elixir": "rejects bad checksum shape",
+      "rust": "rejects_bad_checksum_shape"
+    }
+  ]
+}

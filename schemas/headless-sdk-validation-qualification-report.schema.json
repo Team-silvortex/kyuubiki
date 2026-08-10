@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/headless-sdk-validation-qualification-report.schema.json",
+  "title": "Kyuubiki Headless SDK Validation Qualification Report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "contract_path",
+    "status",
+    "platform",
+    "total_passed",
+    "suites",
+    "parity_cases",
+    "shared_fixtures"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.headless-sdk-validation-qualification-report/v1"
+    },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "contract_path": {
+      "const": "config/architecture/headless-sdk-validation-qualification.json"
+    },
+    "status": { "enum": ["pass", "fail"] },
+    "platform": {
+      "type": "object",
+      "required": ["os", "arch"],
+      "additionalProperties": false,
+      "properties": {
+        "os": { "type": "string", "minLength": 1 },
+        "arch": { "type": "string", "minLength": 1 }
+      }
+    },
+    "total_passed": { "type": "integer", "minimum": 0 },
+    "suites": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "$ref": "#/$defs/suite" }
+    },
+    "parity_cases": {
+      "type": "array",
+      "minItems": 10,
+      "items": { "$ref": "#/$defs/parityCase" }
+    },
+    "shared_fixtures": {
+      "type": "array",
+      "minItems": 4,
+      "items": { "$ref": "#/$defs/fixture" }
+    }
+  },
+  "$defs": {
+    "check": {
+      "type": "object",
+      "required": ["id", "passed"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "passed": { "type": "boolean" }
+      }
+    },
+    "suite": {
+      "type": "object",
+      "required": [
+        "id",
+        "command",
+        "working_directory",
+        "exit_code",
+        "elapsed_ms",
+        "passed",
+        "failed",
+        "skipped",
+        "required_tests",
+        "output_excerpt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "enum": ["rust", "python", "elixir"] },
+        "command": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "type": "string" }
+        },
+        "working_directory": { "type": "string", "minLength": 1 },
+        "exit_code": { "type": ["integer", "null"] },
+        "elapsed_ms": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 },
+        "required_tests": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/check" }
+        },
+        "output_excerpt": { "type": "string", "minLength": 1 }
+      }
+    },
+    "parityLanguage": {
+      "type": "object",
+      "required": ["id", "test", "passed"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "enum": ["rust", "python", "elixir"] },
+        "test": { "type": "string", "minLength": 1 },
+        "passed": { "type": "boolean" }
+      }
+    },
+    "parityCase": {
+      "type": "object",
+      "required": ["id", "passed", "languages"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "passed": { "type": "boolean" },
+        "languages": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/parityLanguage" }
+        }
+      }
+    },
+    "fixture": {
+      "type": "object",
+      "required": ["path", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
+}
