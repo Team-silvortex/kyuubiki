@@ -1,0 +1,100 @@
+{
+  "schema_version": "kyuubiki.desktop-deployment-update-qualification-report/v1",
+  "generated_at_unix_ms": 1786334853135,
+  "contract_path": "config/architecture/desktop-deployment-update-qualification.json",
+  "status": "pass",
+  "platform": {
+    "os": "macos",
+    "arch": "aarch64"
+  },
+  "installer_tests": {
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "kyuubiki-installer",
+      "--",
+      "--test-threads=1"
+    ],
+    "exit_code": 0,
+    "elapsed_ms": 20348,
+    "passed": 60,
+    "failed": 0,
+    "ignored": 0,
+    "required_tests": [
+      {
+        "id": "tests::update_delivery::downloads_and_applies_digest_verified_artifacts",
+        "passed": true
+      },
+      {
+        "id": "tests::update_delivery::rejects_download_pointer_directory_rebinding",
+        "passed": true
+      },
+      {
+        "id": "tests::update_delivery::rejects_tampered_download_before_apply",
+        "passed": true
+      },
+      {
+        "id": "tests::update_delivery::rejects_catalog_artifact_path_escape_before_download",
+        "passed": true
+      },
+      {
+        "id": "tests::update_delivery::rejects_unmanaged_download_directory_and_schema",
+        "passed": true
+      },
+      {
+        "id": "tests::update_delivery::rejects_symlinked_managed_download_root",
+        "passed": true
+      }
+    ],
+    "output_excerpt": "\nrunning 60 tests\ntest credential_storage::credential_storage_fuzz::credential_storage_contract_fuzz_smoke_does_not_panic_on_byte_ingress ... ok\ntest credential_storage::credential_storage_fuzz::credential_storage_contract_fuzz_smoke_does_not_panic_on_mutated_json ... ok\ntest headless_surface::tests::installer_headless_surface_manifest_is_serializable ... ok\ntest integrity_contract::tests::replaces_platform_tokens_in_rule_values ... ok\ntest integrity_versions::tests::workspace_version_reader_understands_workspace_package_block ... ok\ntest remote_deployment_artifacts::remote_deployment_artifacts_fuzz::remote_artifact_manifest_fuzz_smoke_does_not_panic_on_byte_ingress ... ok\ntest remote_deployment_artifacts::remote_deployment_artifacts_fuzz::remote_artifact_manifest_fuzz_smoke_does_not_panic_on_mutated_json ... ok\ntest remote_deployment_dry_run::remote_deployment_metadata_fuzz::remote_deployment_metadata_fuzz_smoke_does_not_panic_on_byte_ingress ... ok\ntest remote_deployment_dry_run::remote_deployment_metadata_fuzz::remote_deployment_metadata_fuzz_smoke_does_not_panic_on_mutated_json ... ok\ntest remote_host_trust::remote_host_trust_fuzz::remote_host_trust_fuzz_smoke_does_not_panic_on_byte_ingress ... ok\ntest remote_host_trust::remote_host_trust_fuzz::remote_host_trust_fuzz_smoke_does_not_panic_on_mutated_json ... ok\ntest remote_ssh_fixture::remote_ssh_fixture_fuzz::remote_ssh_fixture_fuzz_smoke_does_not_panic_on_byte_ingress ... ok\ntest remote_ssh_fixture::remote_ssh_fixture_fuzz::remote_ssh_fixture_fuzz_smoke_does_not_panic_on_mutated_json ... ok\ntest tests::control_update::cross_platform_audit_runs ... ok\ntest tests::control_update::parses_agent_endpoint_list ... ok\ntest tests::control_update::parses_manifest_agents ... ok\ntest tests::control_update::parses_unknown_platform_to_current ... ok\ntest tests::control_update::rejects_empty_agent_endpoint_list ... ok\ntest tests::control_update::unified_update_plan_uses_default_channel ... ok\ntest tests::control_update::unified_update_preview_reports_noop_for_current_channel ... ok\ntest tests::operator_package_preflight::operator_package_preflight_json_can_be_written_to_report_file ... ok\ntest tests::operator_package_preflight::operator_package_preflight_json_reports_admission_summary ... ok\ntest tests::operator_package_preflight::operator_package_preflight_outcome_can_gate_readiness_warnings ... ok\ntest tests::operator_package_preflight::operator_package_preflight_outcome_can_gate_rejected_packages ... ok\ntest tests::release_runtime::embedded_runtime_manifest_declares_self_host_payloads ... ok\ntest tests::release_runtime::embedded_runtime_report_renders_contract_summary ... ok\ntest tests::release_runtime::launch_manifest_uses_portable_entrypoints ... ok\ntest tests::release_runtime::linux_desktop_dependency_plan_declares_tauri_ubuntu_prerequisites ... ok\ntest tests::release_runtime::release_manifest_contains_expected_schema ... ok\ntest tests::release_runtime::release_scripts_require_native_runtime_controller ... ok\ntest tests::release_runtime::service_launch_manifest_never_falls_back_to_source_tools ... ok\ntest tests::remote_deployment::remote_artifact_delivery_manifest_uses_remote_pull_contract ... ok\ntest tests::remote_deployment::remote_deployment_dry_run_summarizes_readiness_without_ssh ... ok\ntest tests::remote_deployment::remote_deployment_journal_matches_plan_steps ... ok\ntest tests::remote_deployment::remote_deployment_plan_has_retry_safe_step_contract ... ok\ntest tests::remote_deployment::remote_deployment_roadmap_marks_host_trust_as_started ... ok\ntest tests::remote_deployment::remote_deployment_roadmap_marks_ssh_wrapper_as_pilot ... ok\ntest tests::remote_deployment::remote_host_trust_plan_separates_dev_accept_new_from_pinned_managed_mode ... ok\ntest tests::remote_deployment::remote_ssh_fixture_keeps_command_shape_local_and_secret_free ... ok\ntest tests::remote_deployment::remote_ssh_fixture_plan_points_to_ignored_runtime_state ... ok\ntest tests::remote_deployment_replay::journal_rejects_out_of_order_and_semantically_tampered_steps ... ok\ntest tests::remote_deployment_replay::journal_state_machine_tracks_attempts_and_revision ... ok\ntest tests::remote_deployment_replay::native_fault_injection_recovers_partial_commit_and_rejects_tamper ... ok\ntest tests::remote_deployment_replay::replay_marks_running_step_interrupted_without_replaying_completed_prefix ... ok\ntest tests::runtime_payload::ignores_mutable_runtime_state_when_sealing_and_installing ... ok\ntest tests::runtime_payload::installs_activates_and_rolls_back_versioned_payloads ... ok\ntest tests::runtime_payload::mutable_state_present_before_sealing_is_not_signed ... ok\ntest tests::runtime_payload::rejects_cross_platform_payload_activation ... ok\ntest tests::runtime_payload::rejects_mutable_state_in_an_installed_version ... ok\ntest tests::runtime_payload::rejects_tampered_payload_before_installation ... ok\ntest tests::security_integrity::credential_storage_contract_keeps_credentials_in_kyuubiki_sandbox ... ok\ntest tests::security_integrity::installation_integrity_reports_component_protocol ... ok\ntest tests::update_delivery::downloads_and_applies_digest_verified_artifacts ... ok\ntest tests::update_delivery::rejects_catalog_artifact_path_escape_before_download ... ok\ntest tests::update_delivery::rejects_download_pointer_directory_rebinding ... ok\ntest tests::update_delivery::rejects_symlinked_managed_download_root ... ok\ntest tests::update_delivery::rejects_tampered_download_before_apply ... ok\ntest tests::update_delivery::rejects_unmanaged_download_directory_and_schema ... ok\ntest update_catalog::update_catalog_fuzz::installer_update_catalog_fuzz_smoke_does_not_panic_on_byte_ingress ... ok\ntest update_catalog::update_catalog_fuzz::installer_update_catalog_fuzz_smoke_does_not_panic_on_mutated_json ... ok\n\ntest result: ok. 60 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.29s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s\n     Running unittests src/lib.rs (target/debug/deps/kyuubiki_installer-a8525a3e28562858)\n     Running unittests src/main.rs (target/debug/deps/kyuubiki_installer-27f568061eee592c)\n   Doc-tests kyuubiki_installer\n"
+  },
+  "browser_tests": {
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "tests/integration/desktop-deployment-update-closure.test.mjs",
+      "tests/integration/desktop-gui-call-chain-contract.test.mjs"
+    ],
+    "exit_code": 0,
+    "elapsed_ms": 3855,
+    "tests": 8,
+    "passed": 8,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "assertions": [
+      {
+        "id": "Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers",
+        "passed": true
+      },
+      {
+        "id": "Hub closes every direct UI-to-Tauri IPC chain",
+        "passed": true
+      },
+      {
+        "id": "Installer routes every declarative action and guarded mutation",
+        "passed": true
+      }
+    ],
+    "output_excerpt": "TAP version 13\n# Subtest: Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers\nok 1 - Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers\n  ---\n  duration_ms: 3444.826208\n  type: 'test'\n  ...\n# Subtest: Hub closes every direct UI-to-Tauri IPC chain\nok 2 - Hub closes every direct UI-to-Tauri IPC chain\n  ---\n  duration_ms: 27.652167\n  type: 'test'\n  ...\n# Subtest: Hub routes every declarative action and guarded mutation\nok 3 - Hub routes every declarative action and guarded mutation\n  ---\n  duration_ms: 7.642625\n  type: 'test'\n  ...\n# Subtest: Workbench closes every direct UI-to-Tauri IPC chain\nok 4 - Workbench closes every direct UI-to-Tauri IPC chain\n  ---\n  duration_ms: 4.693917\n  type: 'test'\n  ...\n# Subtest: Workbench routes every declarative action and guarded mutation\nok 5 - Workbench routes every declarative action and guarded mutation\n  ---\n  duration_ms: 2.282084\n  type: 'test'\n  ...\n# Subtest: Installer closes every direct UI-to-Tauri IPC chain\nok 6 - Installer closes every direct UI-to-Tauri IPC chain\n  ---\n  duration_ms: 10.919459\n  type: 'test'\n  ...\n# Subtest: Installer routes every declarative action and guarded mutation\nok 7 - Installer routes every declarative action and guarded mutation\n  ---\n  duration_ms: 2.790708\n  type: 'test'\n  ...\n# Subtest: delegated secondary action families keep an event owner\nok 8 - delegated secondary action families keep an event owner\n  ---\n  duration_ms: 0.894916\n  type: 'test'\n  ...\n1..8\n# tests 8\n# suites 0\n# pass 8\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 3791.707042\n"
+  },
+  "contract_checks": [
+    {
+      "command": "check-install-update-disk-hygiene",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_ms": 10,
+      "output": "install/update disk hygiene ok: 6 removable roots\n"
+    },
+    {
+      "command": "check-gui-runtime-capability-contract",
+      "status": "pass",
+      "exit_code": 0,
+      "elapsed_ms": 16,
+      "output": "GUI runtime capability contract check passed\n"
+    }
+  ]
+}

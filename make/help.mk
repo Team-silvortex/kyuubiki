@@ -63,6 +63,7 @@ help:
 	@echo "  make qualify-desktop-ui-validation Run the cross-shell GUI qualification and write a retained JSON report"
 	@echo "  make qualify-protocol-validation Run protocol, TaskIR, RPC, and fuzz qualification and retain JSON evidence"
 	@echo "  make qualify-headless-sdk-validation Run Rust/Python/Elixir Headless SDK validation qualification"
+	@echo "  make qualify-desktop-deployment-update Qualify Hub-to-Installer update delivery and native digest enforcement"
 	@echo "  make check-test-coverage-posture Verify traditional code-coverage posture and write tmp/test-coverage-posture.{json,md}"
 	@echo "  make coverage Write the current traditional code-coverage posture report without claiming 100% coverage"
 	@echo "  make coverage-rust Generate an LLVM lcov report for the Rust workspace; optional PACKAGE=... TEST_FILTER=..."

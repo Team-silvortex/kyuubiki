@@ -1,0 +1,27 @@
+{
+  "schema_version": "kyuubiki.desktop-deployment-update-qualification-contract/v1",
+  "report_schema": "kyuubiki.desktop-deployment-update-qualification-report/v1",
+  "minimum_installer_tests": 60,
+  "minimum_browser_tests": 8,
+  "browser_test_files": [
+    "tests/integration/desktop-deployment-update-closure.test.mjs",
+    "tests/integration/desktop-gui-call-chain-contract.test.mjs"
+  ],
+  "required_installer_tests": [
+    "tests::update_delivery::downloads_and_applies_digest_verified_artifacts",
+    "tests::update_delivery::rejects_download_pointer_directory_rebinding",
+    "tests::update_delivery::rejects_tampered_download_before_apply",
+    "tests::update_delivery::rejects_catalog_artifact_path_escape_before_download",
+    "tests::update_delivery::rejects_unmanaged_download_directory_and_schema",
+    "tests::update_delivery::rejects_symlinked_managed_download_root"
+  ],
+  "required_browser_assertions": [
+    "Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers",
+    "Hub closes every direct UI-to-Tauri IPC chain",
+    "Installer routes every declarative action and guarded mutation"
+  ],
+  "contract_checks": [
+    "check-install-update-disk-hygiene",
+    "check-gui-runtime-capability-contract"
+  ]
+}

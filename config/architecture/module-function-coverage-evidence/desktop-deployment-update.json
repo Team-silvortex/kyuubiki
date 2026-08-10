@@ -1,0 +1,71 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Qualified Hub-to-Installer deployment/update closure with stateful browser handoff, controlled update paths, download and apply SHA-256 verification, tamper rejection, and native contract checks.",
+  "paradigm_contract_evidence": {
+    "deployment_update": [
+      {
+        "id": "desktop-deployment-update-qualification-contract",
+        "modules": [
+          "hub-shell",
+          "installer-shell"
+        ],
+        "files": [
+          "config/architecture/desktop-deployment-update-qualification.json",
+          "schemas/desktop-deployment-update-qualification-report.schema.json",
+          "workers/rust/crates/script-runner/src/desktop_deployment_update_validation.rs",
+          "workers/rust/crates/script-runner/src/governance_commands.rs",
+          "workers/rust/crates/installer/src/update_source.rs",
+          "workers/rust/crates/installer/src/tests/update_delivery.rs",
+          "tests/integration/desktop-deployment-update-closure.test.mjs",
+          "tests/integration/desktop-gui-call-chain-contract.test.mjs",
+          "tests/integration/desktop-shell-regression.shared.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.desktop-deployment-update-qualification-contract/v1",
+          "kyuubiki.desktop-deployment-update-qualification-report/v1",
+          "check-desktop-deployment-update-qualification",
+          "Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers",
+          "downloaded artifact digest mismatch",
+          "catalog artifact path is not controlled"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "desktop-deployment-update-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "hub-shell",
+        "installer-shell"
+      ],
+      "paradigms": [
+        "deployment_update"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "recovery",
+        "security"
+      ],
+      "files": [
+        "releases/usability-evidence/2.12.6/desktop-deployment-update-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"passed\": 60",
+        "\"tests\": 8",
+        "\"passed\": 8",
+        "tests::update_delivery::downloads_and_applies_digest_verified_artifacts",
+        "tests::update_delivery::rejects_download_pointer_directory_rebinding",
+        "tests::update_delivery::rejects_tampered_download_before_apply",
+        "tests::update_delivery::rejects_catalog_artifact_path_escape_before_download",
+        "Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers",
+        "check-install-update-disk-hygiene",
+        "check-gui-runtime-capability-contract"
+      ]
+    }
+  ]
+}

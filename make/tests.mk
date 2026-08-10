@@ -3,7 +3,7 @@
 .PHONY: test-hub-gui test-installer-gui test-workbench-gui
 .PHONY: test-integration test-integration-api test-integration-cluster
 .PHONY: test-integration-direct-mesh test-integration-desktop-gui qualify-desktop-ui-validation qualify-protocol-validation
-.PHONY: qualify-headless-sdk-validation
+.PHONY: qualify-headless-sdk-validation qualify-desktop-deployment-update
 .PHONY: test-integration-benchmark-profile-index
 .PHONY: test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-central-database-smoke remote-central-database-smoke
 .PHONY: test-integration-direct-mesh-docker-compare
@@ -79,6 +79,9 @@ qualify-protocol-validation:
 
 qualify-headless-sdk-validation:
 	@$(ENTRYPOINT) check-headless-sdk-validation-qualification --out $${OUTPUT:-tmp/headless-sdk-validation-qualification-report.json}
+
+qualify-desktop-deployment-update:
+	@$(ENTRYPOINT) check-desktop-deployment-update-qualification --out $${OUTPUT:-tmp/desktop-deployment-update-qualification-report.json}
 
 test-integration-benchmark-profile-index:
 	@$(ENTRYPOINT) integration-benchmark-profile-index-node-test

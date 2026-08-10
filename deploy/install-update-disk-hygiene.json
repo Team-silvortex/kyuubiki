@@ -4,6 +4,7 @@
   "source_contracts": {
     "installation_integrity": "deploy/installation-integrity-contract.json",
     "update_channels": "deploy/update-channels.json",
+    "update_delivery": "workers/rust/crates/installer/src/update_source.rs",
     "packaging_docs": "docs/packaging-and-deployment.md"
   },
   "remote_artifact_policy": {
@@ -39,12 +40,17 @@
     "required_channel": "stable",
     "required_cleanup_policy": "allowlisted",
     "required_rollback": "same-channel reinstall",
-    "requires_integrity_contract": "deploy/installation-integrity-contract.json"
+    "requires_integrity_contract": "deploy/installation-integrity-contract.json",
+    "required_artifact_digest": "sha256",
+    "required_apply_reverification": "before_apply",
+    "required_managed_path_policy": "workspace_relative"
   },
   "operator_visible_rules": [
     "remote artifacts are the release source of truth",
     "local generated bundles may be purged only after successful remote upload",
     "automatic cleanup is limited to installation-integrity allowlists",
+    "downloaded artifacts are SHA-256 verified after copy and again before apply",
+    "catalog artifact paths and managed download paths cannot traverse outside their roots",
     "rollback stays explicit through same-channel reinstall"
   ]
 }

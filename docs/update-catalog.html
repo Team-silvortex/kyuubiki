@@ -56,16 +56,17 @@
             <li><strong>preflight integrity</strong>: required<br />Run installation integrity before switching or repairing the current release.</li>
 <li><strong>layout repair</strong>: automatic if needed<br />Update handoff may recreate missing standard roots before applying the target release.</li>
 <li><strong>residue cleanup</strong>: allowlisted only<br />Only residue approved by the installation integrity contract may be removed automatically.</li>
+<li><strong>artifact integrity</strong>: SHA-256 download and pre-apply verification<br />Every copied artifact is digest checked after download and revalidated before it enters the managed apply area.</li>
 <li><strong>rollback posture</strong>: same-channel reinstall<br />Rollback stays explicit and visible by reinstalling a concrete shipped version from the same channel.</li>
           </ul>
           <h3>Desktop artifact references</h3>
           <ul class="docs-list">
-            <li><strong>hub</strong> · macos · app · <code>target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app</code> · present</li>
-<li><strong>hub</strong> · macos · dmg · <code>target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_2.7.0_aarch64.dmg</code> · present</li>
-<li><strong>workbench</strong> · macos · app · <code>target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app</code> · present</li>
-<li><strong>workbench</strong> · macos · dmg · <code>target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_2.7.0_aarch64.dmg</code> · present</li>
-<li><strong>installer</strong> · macos · app · <code>target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app</code> · present</li>
-<li><strong>installer</strong> · macos · dmg · <code>target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Installer_2.7.0_aarch64.dmg</code> · present</li>
+            <li><strong>hub</strong> · macos · app · <code>target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app</code> · declared</li>
+<li><strong>hub</strong> · macos · dmg · <code>target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_2.7.0_aarch64.dmg</code> · declared</li>
+<li><strong>workbench</strong> · macos · app · <code>target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app</code> · declared</li>
+<li><strong>workbench</strong> · macos · dmg · <code>target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_2.7.0_aarch64.dmg</code> · declared</li>
+<li><strong>installer</strong> · macos · app · <code>target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app</code> · declared</li>
+<li><strong>installer</strong> · macos · dmg · <code>target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Installer_2.7.0_aarch64.dmg</code> · declared</li>
 <li><strong>hub</strong> · macos · manifest · <code>dist/macos/desktop/hub-gui/manifest.json</code> · present</li>
 <li><strong>hub</strong> · linux · manifest · <code>dist/linux/desktop/hub-gui/manifest.json</code> · present</li>
 <li><strong>hub</strong> · windows · manifest · <code>dist/windows/desktop/hub-gui/manifest.json</code> · present</li>

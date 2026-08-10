@@ -36,6 +36,11 @@
           "description": "Only residue approved by the installation integrity contract may be removed automatically."
         },
         {
+          "label": "artifact integrity",
+          "value": "SHA-256 download and pre-apply verification",
+          "description": "Every copied artifact is digest checked after download and revalidated before it enters the managed apply area."
+        },
+        {
           "label": "rollback posture",
           "value": "same-channel reinstall",
           "description": "Rollback stays explicit and visible by reinstalling a concrete shipped version from the same channel."
@@ -46,6 +51,9 @@
         "installer_surface": "installer_gui",
         "requires_integrity_contract": "deploy/installation-integrity-contract.json",
         "cleanup_policy": "allowlisted",
+        "artifact_digest": "sha256",
+        "apply_reverification": "before_apply",
+        "managed_path_policy": "workspace_relative",
         "rollback": "same-channel reinstall"
       }
     }

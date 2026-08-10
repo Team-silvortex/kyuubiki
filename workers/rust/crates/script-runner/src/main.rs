@@ -20,6 +20,7 @@ mod component_integrity_protocol;
 mod contracts_runtime_api_surface;
 mod dependency_audit;
 mod desktop;
+mod desktop_deployment_update_validation;
 mod desktop_distribution;
 mod desktop_icon_variants;
 mod desktop_install;

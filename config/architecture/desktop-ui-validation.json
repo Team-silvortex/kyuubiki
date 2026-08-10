@@ -2,6 +2,7 @@
   "schema_version": "kyuubiki.desktop-ui-validation-contract/v1",
   "report_schema": "kyuubiki.desktop-ui-validation-report/v1",
   "test_files": [
+    "tests/integration/desktop-deployment-update-closure.test.mjs",
     "tests/integration/desktop-gui-action-sweep.test.mjs",
     "tests/integration/desktop-gui-capability-closure.test.mjs",
     "tests/integration/desktop-gui-call-chain-contract.test.mjs",
@@ -10,13 +11,17 @@
     "tests/integration/desktop-shell-regression.test.mjs",
     "tests/integration/workbench-shell-regression.test.mjs"
   ],
-  "minimum_test_count": 20,
+  "minimum_test_count": 21,
   "shell_minimum_actions": [
     { "id": "hub", "minimum_actions": 40 },
     { "id": "installer", "minimum_actions": 50 },
     { "id": "workbench", "minimum_actions": 7 }
   ],
   "required_assertions": [
+    {
+      "id": "deployment-update-closure",
+      "label": "Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers"
+    },
     {
       "id": "declarative-terminal-state",
       "label": "all desktop declarative actions reach an observable terminal state"

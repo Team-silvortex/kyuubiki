@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/desktop-deployment-update-qualification-report.schema.json",
+  "title": "Kyuubiki Desktop Deployment Update Qualification Report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "contract_path",
+    "status",
+    "platform",
+    "installer_tests",
+    "browser_tests",
+    "contract_checks"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.desktop-deployment-update-qualification-report/v1"
+    },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "contract_path": {
+      "const": "config/architecture/desktop-deployment-update-qualification.json"
+    },
+    "status": { "enum": ["pass", "fail"] },
+    "platform": { "$ref": "#/$defs/platform" },
+    "installer_tests": { "$ref": "#/$defs/installerTests" },
+    "browser_tests": { "$ref": "#/$defs/browserTests" },
+    "contract_checks": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "$ref": "#/$defs/command" }
+    }
+  },
+  "$defs": {
+    "platform": {
+      "type": "object",
+      "required": ["os", "arch"],
+      "additionalProperties": false,
+      "properties": {
+        "os": { "type": "string", "minLength": 1 },
+        "arch": { "type": "string", "minLength": 1 }
+      }
+    },
+    "check": {
+      "type": "object",
+      "required": ["id", "passed"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "passed": { "type": "boolean" }
+      }
+    },
+    "installerTests": {
+      "type": "object",
+      "required": [
+        "command",
+        "exit_code",
+        "elapsed_ms",
+        "passed",
+        "failed",
+        "ignored",
+        "required_tests",
+        "output_excerpt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "command": { "type": "array", "minItems": 4, "items": { "type": "string" } },
+        "exit_code": { "type": ["integer", "null"] },
+        "elapsed_ms": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "ignored": { "type": "integer", "minimum": 0 },
+        "required_tests": { "type": "array", "minItems": 6, "items": { "$ref": "#/$defs/check" } },
+        "output_excerpt": { "type": "string", "minLength": 1 }
+      }
+    },
+    "browserTests": {
+      "type": "object",
+      "required": [
+        "command",
+        "exit_code",
+        "elapsed_ms",
+        "tests",
+        "passed",
+        "failed",
+        "cancelled",
+        "skipped",
+        "todo",
+        "assertions",
+        "output_excerpt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "command": { "type": "array", "minItems": 4, "items": { "type": "string" } },
+        "exit_code": { "type": ["integer", "null"] },
+        "elapsed_ms": { "type": "integer", "minimum": 0 },
+        "tests": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "cancelled": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 },
+        "todo": { "type": "integer", "minimum": 0 },
+        "assertions": { "type": "array", "minItems": 3, "items": { "$ref": "#/$defs/check" } },
+        "output_excerpt": { "type": "string", "minLength": 1 }
+      }
+    },
+    "command": {
+      "type": "object",
+      "required": ["command", "status", "exit_code", "elapsed_ms", "output"],
+      "additionalProperties": false,
+      "properties": {
+        "command": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["pass", "fail"] },
+        "exit_code": { "type": ["integer", "null"] },
+        "elapsed_ms": { "type": "integer", "minimum": 0 },
+        "output": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

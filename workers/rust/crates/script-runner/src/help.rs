@@ -141,6 +141,7 @@ lab remote-ssh-fixture\n  \
   integration-direct-mesh-node-test\n  \
   integration-desktop-gui-node-test\n  \
   check-desktop-ui-validation\n  \
+  check-desktop-deployment-update-qualification\n  \
   integration-benchmark-profile-index-node-test\n  \
   integration-ui-mechanical-node-test\n  \
   integration-ui-thermal-node-test\n  \

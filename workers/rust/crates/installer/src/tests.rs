@@ -5,3 +5,4 @@ mod remote_deployment;
 mod remote_deployment_replay;
 mod runtime_payload;
 mod security_integrity;
+mod update_delivery;

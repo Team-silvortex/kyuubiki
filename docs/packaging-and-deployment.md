@@ -288,6 +288,15 @@ This gives the project a Docker-like update model:
 - visible rollout rules instead of hidden cleanup or migration behavior
 - one shared update description for CLI, installer GUI, and docs surfaces
 
+Every local delivery follows a fail-closed integrity path. Catalog artifact
+paths must remain relative to the configured source root, while download and
+apply paths must remain inside the workspace-managed update directory without
+crossing symlinks. The Installer computes a deterministic SHA-256 digest after
+copying every file or directory tree, records it in the download manifest, and
+revalidates every downloaded artifact before apply. A changed digest, escaped
+path, unsupported file type, or mismatched pointer/manifest identity stops the
+operation before an applied record is written.
+
 ### Generated paths
 
 These are tool outputs and should be treated as disposable:

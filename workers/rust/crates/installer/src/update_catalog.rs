@@ -396,14 +396,14 @@ pub fn latest_staged_update_record() -> Result<Option<StagedUpdateRecord>, Strin
 }
 
 fn load_update_catalog() -> Result<Value, String> {
-    let path = update_catalog_path();
+    let path = update_catalog_path()?;
     let contents = fs::read_to_string(&path)
         .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
     serde_json::from_str(&contents)
         .map_err(|error| format!("failed to parse {}: {error}", path.display()))
 }
 
-pub(crate) fn update_catalog_path() -> PathBuf {
+pub(crate) fn update_catalog_path() -> Result<PathBuf, String> {
     current_update_catalog_path(&workspace_root())
 }
 

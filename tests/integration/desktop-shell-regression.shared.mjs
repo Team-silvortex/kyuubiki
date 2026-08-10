@@ -251,6 +251,8 @@ function installerMockSource() {
   window.__mockErrors = [];
   window.__mockInvocations = [];
   let currentLanguage = "en";
+  let downloadedUpdateRecord = null;
+  let appliedUpdateRecord = null;
   window.addEventListener("error", (event) => {
     window.__mockErrors.push({
       type: "error",
@@ -338,10 +340,39 @@ function installerMockSource() {
           case "runtime_payload_status":
             return ${JSON.stringify(INSTALLER_RUNTIME_PAYLOAD_STATUS)};
           case "latest_downloaded_update_record":
+            return downloadedUpdateRecord;
           case "latest_applied_update_record":
+            return appliedUpdateRecord;
           case "latest_staged_update_record":
           case "read_env_file":
             return null;
+          case "guarded_mutation_action": {
+            const action = payload?.payload?.action;
+            if (action === "download_update") {
+              downloadedUpdateRecord = {
+                channel: "stable",
+                target_version: "2.7.1",
+                download_dir: "dist/downloads/stable-2.7.1",
+                manifest_path: "dist/downloads/stable-2.7.1/manifests/downloaded-update.json",
+                downloaded_paths: ["dist/downloads/stable-2.7.1/installer/app/installer.bin"],
+                rendered: "downloaded and digest verified",
+              };
+              return "downloaded and digest verified";
+            }
+            if (action === "apply_downloaded_update") {
+              if (!downloadedUpdateRecord) throw new Error("download is required before apply");
+              appliedUpdateRecord = {
+                channel: downloadedUpdateRecord.channel,
+                target_version: downloadedUpdateRecord.target_version,
+                apply_dir: "dist/downloads/applied/stable-2.7.1",
+                manifest_path: "dist/downloads/applied/stable-2.7.1/manifests/applied-update.json",
+                source_download_manifest_path: downloadedUpdateRecord.manifest_path,
+                rendered: "applied after digest revalidation",
+              };
+              return "applied after digest revalidation";
+            }
+            return "guarded mutation mock";
+          }
           case "remote_deploy_policy":
             return {
               allowed_hosts: "solver-a",

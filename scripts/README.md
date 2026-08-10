@@ -272,6 +272,7 @@ This directory contains host-native operational entry points.
   contract checks into a machine-verifiable JSON report. Use `--out <path>`,
   `--verify-report <path>`, or `--self-test`.
 - `kyuubiki-script-runner check-headless-sdk-validation-qualification`
+- `kyuubiki-script-runner check-desktop-deployment-update-qualification`
   Qualify the complete Rust, Python, and Elixir Headless SDK suites together.
   The native report preserves test totals, required live transport checks,
   shared-fixture digests, and paired cross-language validation boundaries. Use

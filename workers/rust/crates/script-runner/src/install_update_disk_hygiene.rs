@@ -9,6 +9,7 @@ const CONTRACT_PATH: &str = "deploy/install-update-disk-hygiene.json";
 const INTEGRITY_PATH: &str = "deploy/installation-integrity-contract.json";
 const CHANNELS_PATH: &str = "deploy/update-channels.json";
 const PACKAGING_DOCS_PATH: &str = "docs/packaging-and-deployment.md";
+const UPDATE_DELIVERY_PATH: &str = "workers/rust/crates/installer/src/update_source.rs";
 const UPLOAD_RUNNER_PATH: &str =
     "workers/rust/crates/script-runner/src/desktop_release_upload_remote.rs";
 const EXPECTED_SCHEMA: &str = "kyuubiki.install-update-disk-hygiene/v1";
@@ -35,7 +36,15 @@ pub(crate) fn run_check_install_update_disk_hygiene(
     let channels = read_json(root, CHANNELS_PATH)?;
     let packaging = read_text(root, PACKAGING_DOCS_PATH)?;
     let upload_runner = read_text(root, UPLOAD_RUNNER_PATH)?;
-    let issues = validate_contract(&contract, &integrity, &channels, &packaging, &upload_runner);
+    let update_delivery = read_text(root, UPDATE_DELIVERY_PATH)?;
+    let issues = validate_contract(
+        &contract,
+        &integrity,
+        &channels,
+        &packaging,
+        &upload_runner,
+        &update_delivery,
+    );
 
     if !issues.is_empty() {
         eprintln!("install/update disk hygiene validation failed:");
@@ -58,6 +67,7 @@ fn validate_contract(
     channels: &Value,
     docs: &str,
     runner: &str,
+    update_delivery: &str,
 ) -> Vec<String> {
     let mut issues = Vec::new();
 
@@ -89,13 +99,18 @@ fn validate_contract(
     );
     require_source_contract(
         &mut issues,
+        string_at(contract, "/source_contracts/update_delivery"),
+        UPDATE_DELIVERY_PATH,
+    );
+    require_source_contract(
+        &mut issues,
         string_at(contract, "/source_contracts/packaging_docs"),
         PACKAGING_DOCS_PATH,
     );
 
     validate_remote_policy(&mut issues, contract, docs, runner);
     validate_local_retention(&mut issues, contract, integrity, docs, runner);
-    validate_update_visibility(&mut issues, contract, channels);
+    validate_update_visibility(&mut issues, contract, channels, docs, update_delivery);
 
     if array_len(contract, "/operator_visible_rules") == 0 {
         issues.push("operator_visible_rules: missing non-empty array".to_string());
@@ -197,7 +212,13 @@ fn validate_local_retention(
     }
 }
 
-fn validate_update_visibility(issues: &mut Vec<String>, contract: &Value, channels: &Value) {
+fn validate_update_visibility(
+    issues: &mut Vec<String>,
+    contract: &Value,
+    channels: &Value,
+    docs: &str,
+    update_delivery: &str,
+) {
     let required_channel = string_at(contract, "/update_visibility_policy/required_channel");
     let Some(channel) = find_channel(channels, required_channel) else {
         issues.push(format!(
@@ -229,6 +250,45 @@ fn validate_update_visibility(issues: &mut Vec<String>, contract: &Value, channe
     {
         issues.push(
             "update channel integrity contract link drifted from disk hygiene contract".to_string(),
+        );
+    }
+    for (channel_key, contract_key, expected) in [
+        ("artifact_digest", "required_artifact_digest", "sha256"),
+        (
+            "apply_reverification",
+            "required_apply_reverification",
+            "before_apply",
+        ),
+        (
+            "managed_path_policy",
+            "required_managed_path_policy",
+            "workspace_relative",
+        ),
+    ] {
+        let channel_pointer = format!("/rollout/{channel_key}");
+        let contract_pointer = format!("/update_visibility_policy/{contract_key}");
+        if string_at(channel, &channel_pointer) != Some(expected)
+            || string_at(contract, &contract_pointer) != Some(expected)
+        {
+            issues.push(format!("update delivery policy drifted: {channel_key}"));
+        }
+    }
+    for implementation_token in [
+        "digest_path",
+        "downloaded artifact digest mismatch",
+        "managed update path crosses symlink",
+    ] {
+        if !update_delivery.contains(implementation_token) {
+            issues.push(format!(
+                "update delivery implementation is missing {implementation_token}"
+            ));
+        }
+    }
+    if !docs.contains("SHA-256")
+        || !docs.contains("revalidates every downloaded artifact before apply")
+    {
+        issues.push(
+            "packaging docs must expose update digest and pre-apply verification".to_string(),
         );
     }
 }
@@ -273,6 +333,7 @@ fn run_self_test() -> RunnerResult<()> {
         "source_contracts": {
             "installation_integrity": INTEGRITY_PATH,
             "update_channels": CHANNELS_PATH,
+            "update_delivery": UPDATE_DELIVERY_PATH,
             "packaging_docs": PACKAGING_DOCS_PATH
         },
         "remote_artifact_policy": {
@@ -295,7 +356,10 @@ fn run_self_test() -> RunnerResult<()> {
             "required_channel": "stable",
             "required_cleanup_policy": "allowlisted",
             "required_rollback": "same-channel reinstall",
-            "requires_integrity_contract": INTEGRITY_PATH
+            "requires_integrity_contract": INTEGRITY_PATH,
+            "required_artifact_digest": "sha256",
+            "required_apply_reverification": "before_apply",
+            "required_managed_path_policy": "workspace_relative"
         },
         "operator_visible_rules": ["visible cleanup"]
     });
@@ -310,13 +374,25 @@ fn run_self_test() -> RunnerResult<()> {
             "rollout": {
                 "cleanup_policy": "allowlisted",
                 "rollback": "same-channel reinstall",
-                "requires_integrity_contract": INTEGRITY_PATH
+                "requires_integrity_contract": INTEGRITY_PATH,
+                "artifact_digest": "sha256",
+                "apply_reverification": "before_apply",
+                "managed_path_policy": "workspace_relative"
             }
         }]
     });
-    let docs = "PURGE_LOCAL=1 ./scripts/kyuubiki desktop-upload-remote KYUUBIKI_RELEASE_REMOTE_DIR KYUUBIKI_RELEASE_REMOTE_HOST KYUUBIKI_RELEASE_VERSION KYUUBIKI_RELEASE_REMOTE_PASSWORD";
+    let docs = "PURGE_LOCAL=1 ./scripts/kyuubiki desktop-upload-remote KYUUBIKI_RELEASE_REMOTE_DIR KYUUBIKI_RELEASE_REMOTE_HOST KYUUBIKI_RELEASE_VERSION KYUUBIKI_RELEASE_REMOTE_PASSWORD SHA-256 revalidates every downloaded artifact before apply";
     let runner = "PURGE_LOCAL KYUUBIKI_RELEASE_REMOTE_DIR KYUUBIKI_RELEASE_REMOTE_HOST KYUUBIKI_RELEASE_VERSION KYUUBIKI_RELEASE_REMOTE_PASSWORD";
-    let issues = validate_contract(&sample, &integrity, &channels, docs, runner);
+    let update_delivery =
+        "digest_path downloaded artifact digest mismatch managed update path crosses symlink";
+    let issues = validate_contract(
+        &sample,
+        &integrity,
+        &channels,
+        docs,
+        runner,
+        update_delivery,
+    );
     if !issues.is_empty() {
         return Err(format!(
             "self-test unexpectedly failed: {}",
@@ -329,6 +405,7 @@ fn run_self_test() -> RunnerResult<()> {
         &sample,
         &integrity,
         &json!({ "shipping_version": "1.20.0", "channels": [] }),
+        "",
         "",
         "",
     );

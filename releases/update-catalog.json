@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-07-27T01:54:06Z",
+  "generated_at": "2026-08-10T04:02:01Z",
   "shipping_version": "2.7.0",
   "default_channel": "stable",
   "line": "moxi 2.x",
@@ -45,6 +45,11 @@
           "description": "Only residue approved by the installation integrity contract may be removed automatically."
         },
         {
+          "label": "artifact integrity",
+          "value": "SHA-256 download and pre-apply verification",
+          "description": "Every copied artifact is digest checked after download and revalidated before it enters the managed apply area."
+        },
+        {
           "label": "rollback posture",
           "value": "same-channel reinstall",
           "description": "Rollback stays explicit and visible by reinstalling a concrete shipped version from the same channel."
@@ -55,6 +60,9 @@
         "installer_surface": "installer_gui",
         "requires_integrity_contract": "deploy/installation-integrity-contract.json",
         "cleanup_policy": "allowlisted",
+        "artifact_digest": "sha256",
+        "apply_reverification": "before_apply",
+        "managed_path_policy": "workspace_relative",
         "rollback": "same-channel reinstall"
       },
       "snapshot_path": "releases/snapshots/2.7.0.json",
@@ -110,42 +118,42 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "dmg",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_2.7.0_aarch64.dmg",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "dmg",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_2.7.0_aarch64.dmg",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "dmg",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Installer_2.7.0_aarch64.dmg",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
@@ -274,42 +282,42 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "dmg",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_2.7.0_aarch64.dmg",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "dmg",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_2.7.0_aarch64.dmg",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "dmg",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Installer_2.7.0_aarch64.dmg",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
@@ -423,7 +431,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
@@ -458,7 +466,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -493,7 +501,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",

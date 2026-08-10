@@ -14,6 +14,7 @@
           "schemas/desktop-ui-validation-report.schema.json",
           "workers/rust/crates/script-runner/src/desktop_ui_validation.rs",
           "workers/rust/crates/script-runner/src/governance_commands.rs",
+          "tests/integration/desktop-deployment-update-closure.test.mjs",
           "tests/integration/desktop-gui-action-sweep.test.mjs",
           "tests/integration/desktop-gui-capability-closure.test.mjs",
           "tests/integration/desktop-gui-layout-priority.test.mjs",
@@ -25,6 +26,7 @@
           "kyuubiki.desktop-ui-validation-contract/v1",
           "kyuubiki.desktop-ui-validation-report/v1",
           "check-desktop-ui-validation",
+          "Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers",
           "all desktop declarative actions reach an observable terminal state",
           "every required desktop capability closes UI, route, native, and result layers",
           "capabilities that promise PWDT parity are catalogued and executable",
@@ -55,13 +57,14 @@
       ],
       "required_text": [
         "\"status\": \"pass\"",
-        "\"tests\": 20",
-        "\"passed\": 20",
+        "\"tests\": 21",
+        "\"passed\": 21",
         "\"failed_actions\": 0",
         "\"missing_actions\": 0",
         "\"actions\": 43",
         "\"actions\": 52",
         "\"actions\": 7",
+        "\"id\": \"deployment-update-closure\"",
         "\"id\": \"pwdt-parity\"",
         "\"id\": \"navigation-closure\""
       ]
