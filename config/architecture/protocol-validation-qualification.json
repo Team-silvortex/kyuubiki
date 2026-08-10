@@ -1,0 +1,66 @@
+{
+  "schema_version": "kyuubiki.protocol-validation-qualification-contract/v1",
+  "report_schema": "kyuubiki.protocol-validation-qualification-report/v1",
+  "minimum_protocol_tests": 94,
+  "minimum_rpc_methods": 55,
+  "minimum_task_ir_count": 5,
+  "task_ir_examples": [
+    "schemas/examples.operator-task-ir.json",
+    "schemas/examples.operator-task-ir-float.json",
+    "schemas/examples.operator-task-ir-elixir.json",
+    "schemas/examples.operator-task-batch.json"
+  ],
+  "required_authoring_modes": [
+    "rust_native",
+    "elixir_control_plane"
+  ],
+  "required_tests": [
+    "tests::core::validates_rpc_request_envelope_boundaries",
+    "tests::core::validates_rpc_response_and_progress_envelope_states",
+    "tests::operator_task_ir::operator_task_digest_matches_elixir_golden_fixture",
+    "tests::operator_task_ir::operator_task_digest_matches_elixir_float_golden_fixture",
+    "tests::operator_task_ir::operator_task_digest_verifier_rejects_tampering",
+    "tests::operator_task_ir::checked_operator_task_summary_reports_structured_error_codes",
+    "tests::operator_task_ir_fuzz::operator_task_ir_fuzz_smoke_does_not_panic_on_mutated_json",
+    "tests::operator_task_ir_fuzz::operator_task_ir_fuzz_smoke_does_not_panic_on_json_byte_ingress",
+    "tests::rpc_fuzz::rpc_fuzz_smoke_does_not_panic_on_mutated_json",
+    "tests::rpc_fuzz::rpc_fuzz_smoke_does_not_panic_on_json_byte_ingress",
+    "tests::solver_execution_capability::solver_execution_capability_accepts_agent_builtin_solver_task",
+    "tests::solver_execution_capability::solver_execution_capability_does_not_admit_operator_task_programs",
+    "tests::spring_control_rpc::serializes_agent_descriptor_round_trip",
+    "tests::spring_control_rpc::serializes_progress_frames",
+    "tests::spring_control_rpc::builds_error_responses",
+    "tests::workflow_dataset_contract::workflow_dataset_data_classes_match_schema_enum",
+    "tests::workflows::serializes_workflow_graph_run_request_round_trip"
+  ],
+  "fuzz_profiles": [
+    {
+      "id": "task-ir-json",
+      "source": "workers/rust/crates/protocol/src/tests/operator_task_ir_fuzz.rs",
+      "constant": "TASK_IR_FUZZ_CASES",
+      "cases": 384,
+      "test": "tests::operator_task_ir_fuzz::operator_task_ir_fuzz_smoke_does_not_panic_on_mutated_json"
+    },
+    {
+      "id": "task-ir-bytes",
+      "source": "workers/rust/crates/protocol/src/tests/operator_task_ir_fuzz.rs",
+      "constant": "TASK_IR_BYTE_FUZZ_CASES",
+      "cases": 256,
+      "test": "tests::operator_task_ir_fuzz::operator_task_ir_fuzz_smoke_does_not_panic_on_json_byte_ingress"
+    },
+    {
+      "id": "rpc-json",
+      "source": "workers/rust/crates/protocol/src/tests/rpc_fuzz.rs",
+      "constant": "RPC_JSON_FUZZ_CASES",
+      "cases": 384,
+      "test": "tests::rpc_fuzz::rpc_fuzz_smoke_does_not_panic_on_mutated_json"
+    },
+    {
+      "id": "rpc-bytes",
+      "source": "workers/rust/crates/protocol/src/tests/rpc_fuzz.rs",
+      "constant": "RPC_BYTE_FUZZ_CASES",
+      "cases": 256,
+      "test": "tests::rpc_fuzz::rpc_fuzz_smoke_does_not_panic_on_json_byte_ingress"
+    }
+  ]
+}

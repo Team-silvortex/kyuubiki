@@ -183,10 +183,21 @@ const {
   formatRuntimeReport,
 });
 
-const loadRegressionGateReport = () => loadRegressionGateReportPanel({
-  applyDesktopState, elements, hubCopy, invokeTauri,
-  renderDirectMeshRegressionSnapshot, renderRegressionGateReport, state,
-});
+let regressionGateLoadPromise = null;
+const loadRegressionGateReport = () => {
+  if (state.regressionGateReport) {
+    return Promise.resolve(state.regressionGateReport);
+  }
+  if (!regressionGateLoadPromise) {
+    regressionGateLoadPromise = loadRegressionGateReportPanel({
+      applyDesktopState, elements, hubCopy, invokeTauri,
+      renderDirectMeshRegressionSnapshot, renderRegressionGateReport, state,
+    }).finally(() => {
+      regressionGateLoadPromise = null;
+    });
+  }
+  return regressionGateLoadPromise;
+};
 
 function persistHubDensitySettings() {
   window.localStorage.setItem(HUB_DENSITY_SETTINGS_KEY, JSON.stringify(state.density));
@@ -248,6 +259,7 @@ const {
   elements,
   fetchWorkflowCatalog: (...args) => fetchWorkflowCatalog(...args),
   hubCopy,
+  loadRegressionGateReport,
   persistHubDensitySettings,
   refreshHotRuntimeLog: (...args) => refreshHotRuntimeLog(...args),
   refreshObserveRuntimeLog: (...args) => refreshObserveRuntimeLog(...args),

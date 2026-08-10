@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/desktop-ui-validation-report.schema.json",
+  "title": "Kyuubiki Desktop UI Validation Report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "contract_path",
+    "status",
+    "platform",
+    "command",
+    "exit_code",
+    "elapsed_ms",
+    "summary",
+    "shells",
+    "assertions",
+    "output_excerpt"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "kyuubiki.desktop-ui-validation-report/v1" },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "contract_path": { "const": "config/architecture/desktop-ui-validation.json" },
+    "status": { "enum": ["pass", "fail"] },
+    "platform": {
+      "type": "object",
+      "required": ["os", "arch"],
+      "additionalProperties": false,
+      "properties": {
+        "os": { "type": "string", "minLength": 1 },
+        "arch": { "type": "string", "minLength": 1 }
+      }
+    },
+    "command": {
+      "type": "array",
+      "minItems": 4,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "exit_code": { "type": ["integer", "null"] },
+    "elapsed_ms": { "type": "integer", "minimum": 0 },
+    "summary": {
+      "type": "object",
+      "required": [
+        "tests",
+        "passed",
+        "failed",
+        "cancelled",
+        "skipped",
+        "todo",
+        "failed_actions",
+        "missing_actions"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tests": { "type": "integer", "minimum": 1 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "cancelled": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 },
+        "todo": { "type": "integer", "minimum": 0 },
+        "failed_actions": { "type": "integer", "minimum": 0 },
+        "missing_actions": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "shells": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["id", "actions", "blocked"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "enum": ["hub", "installer", "workbench"] },
+          "actions": { "type": "integer", "minimum": 1 },
+          "blocked": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "assertions": {
+      "type": "array",
+      "minItems": 7,
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "passed"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "label": { "type": "string", "minLength": 1 },
+          "passed": { "type": "boolean" }
+        }
+      }
+    },
+    "output_excerpt": { "type": "string", "minLength": 1 }
+  }
+}

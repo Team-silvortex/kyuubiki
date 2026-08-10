@@ -1,0 +1,49 @@
+{
+  "schema_version": "kyuubiki.desktop-ui-validation-contract/v1",
+  "report_schema": "kyuubiki.desktop-ui-validation-report/v1",
+  "test_files": [
+    "tests/integration/desktop-gui-action-sweep.test.mjs",
+    "tests/integration/desktop-gui-capability-closure.test.mjs",
+    "tests/integration/desktop-gui-call-chain-contract.test.mjs",
+    "tests/integration/desktop-gui-layout-priority.test.mjs",
+    "tests/integration/desktop-gui-navigation-closure.test.mjs",
+    "tests/integration/desktop-shell-regression.test.mjs",
+    "tests/integration/workbench-shell-regression.test.mjs"
+  ],
+  "minimum_test_count": 20,
+  "shell_minimum_actions": [
+    { "id": "hub", "minimum_actions": 40 },
+    { "id": "installer", "minimum_actions": 50 },
+    { "id": "workbench", "minimum_actions": 7 }
+  ],
+  "required_assertions": [
+    {
+      "id": "declarative-terminal-state",
+      "label": "all desktop declarative actions reach an observable terminal state"
+    },
+    {
+      "id": "capability-closure",
+      "label": "every required desktop capability closes UI, route, native, and result layers"
+    },
+    {
+      "id": "pwdt-parity",
+      "label": "capabilities that promise PWDT parity are catalogued and executable"
+    },
+    {
+      "id": "layout-priority",
+      "label": "desktop shell layout keeps operational workspaces dominant"
+    },
+    {
+      "id": "navigation-closure",
+      "label": "desktop primary navigation forms a reversible non-empty loop"
+    },
+    {
+      "id": "hub-installer-regression",
+      "label": "Hub and Installer desktop shells render regression-critical panels in a headless preview"
+    },
+    {
+      "id": "workbench-regression",
+      "label": "Workbench desktop shell mounts runtime, logs, and embedded viewer cleanly in headless preview"
+    }
+  ]
+}

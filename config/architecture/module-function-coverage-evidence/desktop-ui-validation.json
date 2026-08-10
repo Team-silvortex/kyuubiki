@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Cross-shell desktop UI qualification evidence covering observable actions, capability routing, PWDT parity, layout priority, reversible navigation, and regression panels.",
+  "paradigm_contract_evidence": {
+    "validation": [
+      {
+        "id": "desktop-ui-validation-contract",
+        "modules": [
+          "desktop-shared-ui"
+        ],
+        "files": [
+          "config/architecture/desktop-ui-validation.json",
+          "schemas/desktop-ui-validation-report.schema.json",
+          "workers/rust/crates/script-runner/src/desktop_ui_validation.rs",
+          "workers/rust/crates/script-runner/src/governance_commands.rs",
+          "tests/integration/desktop-gui-action-sweep.test.mjs",
+          "tests/integration/desktop-gui-capability-closure.test.mjs",
+          "tests/integration/desktop-gui-layout-priority.test.mjs",
+          "tests/integration/desktop-gui-navigation-closure.test.mjs",
+          "tests/integration/desktop-shell-regression.test.mjs",
+          "tests/integration/workbench-shell-regression.test.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.desktop-ui-validation-contract/v1",
+          "kyuubiki.desktop-ui-validation-report/v1",
+          "check-desktop-ui-validation",
+          "all desktop declarative actions reach an observable terminal state",
+          "every required desktop capability closes UI, route, native, and result layers",
+          "capabilities that promise PWDT parity are catalogued and executable",
+          "desktop shell layout keeps operational workspaces dominant",
+          "desktop primary navigation forms a reversible non-empty loop"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "desktop-ui-cross-shell-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "desktop-shared-ui"
+      ],
+      "paradigms": [
+        "validation"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "ux_closure"
+      ],
+      "files": [
+        "releases/usability-evidence/2.12.6/desktop-ui-validation-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"tests\": 20",
+        "\"passed\": 20",
+        "\"failed_actions\": 0",
+        "\"missing_actions\": 0",
+        "\"actions\": 43",
+        "\"actions\": 52",
+        "\"actions\": 7",
+        "\"id\": \"pwdt-parity\"",
+        "\"id\": \"navigation-closure\""
+      ]
+    }
+  ]
+}

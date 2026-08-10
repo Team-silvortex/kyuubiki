@@ -2,6 +2,8 @@ use crate::{ProgressEvent, RPC_VERSION};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+pub const RPC_REQUEST_ID_MAX_BYTES: usize = 256;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TransportDescriptor {
     pub kind: String,
@@ -228,6 +230,110 @@ pub struct RpcResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CancelJobRequest {
     pub job_id: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RpcEnvelopeErrorCode {
+    InvalidVersion,
+    InvalidRequestId,
+    InvalidResponseState,
+    InvalidProgressEvent,
+}
+
+impl RpcEnvelopeErrorCode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::InvalidVersion => "invalid_version",
+            Self::InvalidRequestId => "invalid_request_id",
+            Self::InvalidResponseState => "invalid_response_state",
+            Self::InvalidProgressEvent => "invalid_progress_event",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RpcEnvelopeValidationError {
+    pub code: RpcEnvelopeErrorCode,
+    pub message: String,
+}
+
+pub fn validate_rpc_request_envelope(
+    request: &RpcRequest,
+) -> Result<(), RpcEnvelopeValidationError> {
+    validate_rpc_version(request.rpc_version)?;
+    validate_rpc_id(&request.id)
+}
+
+pub fn validate_rpc_response_envelope(
+    response: &RpcResponse,
+) -> Result<(), RpcEnvelopeValidationError> {
+    validate_rpc_version(response.rpc_version)?;
+    validate_rpc_id(&response.id)?;
+    let valid_state = if response.ok {
+        response.result.is_some() && response.error.is_none()
+    } else {
+        response.result.is_none()
+            && response.error.as_ref().is_some_and(|error| {
+                !error.code.trim().is_empty() && !error.message.trim().is_empty()
+            })
+    };
+    if !valid_state {
+        return Err(envelope_error(
+            RpcEnvelopeErrorCode::InvalidResponseState,
+            "rpc response must contain exactly one valid result or error state",
+        ));
+    }
+    Ok(())
+}
+
+pub fn validate_rpc_progress_envelope(
+    progress: &RpcProgress,
+) -> Result<(), RpcEnvelopeValidationError> {
+    validate_rpc_version(progress.rpc_version)?;
+    validate_rpc_id(&progress.id)?;
+    if progress.event != "progress" && progress.event != "heartbeat" {
+        return Err(envelope_error(
+            RpcEnvelopeErrorCode::InvalidProgressEvent,
+            "rpc progress event must be progress or heartbeat",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_rpc_version(rpc_version: u8) -> Result<(), RpcEnvelopeValidationError> {
+    if rpc_version != RPC_VERSION {
+        return Err(envelope_error(
+            RpcEnvelopeErrorCode::InvalidVersion,
+            format!("unsupported rpc version: {rpc_version}"),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_rpc_id(id: &str) -> Result<(), RpcEnvelopeValidationError> {
+    if id.trim().is_empty()
+        || id.len() > RPC_REQUEST_ID_MAX_BYTES
+        || id.chars().any(char::is_control)
+    {
+        return Err(envelope_error(
+            RpcEnvelopeErrorCode::InvalidRequestId,
+            format!(
+                "rpc request id must be non-empty, control-free, and at most {RPC_REQUEST_ID_MAX_BYTES} bytes"
+            ),
+        ));
+    }
+    Ok(())
+}
+
+fn envelope_error(
+    code: RpcEnvelopeErrorCode,
+    message: impl Into<String>,
+) -> RpcEnvelopeValidationError {
+    RpcEnvelopeValidationError {
+        code,
+        message: message.into(),
+    }
 }
 
 impl RpcProgress {

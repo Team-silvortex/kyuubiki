@@ -2,7 +2,7 @@
 .PHONY: test-agent-capability-smoke test-playground
 .PHONY: test-hub-gui test-installer-gui test-workbench-gui
 .PHONY: test-integration test-integration-api test-integration-cluster
-.PHONY: test-integration-direct-mesh test-integration-desktop-gui
+.PHONY: test-integration-direct-mesh test-integration-desktop-gui qualify-desktop-ui-validation qualify-protocol-validation
 .PHONY: test-integration-benchmark-profile-index
 .PHONY: test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-central-database-smoke remote-central-database-smoke
 .PHONY: test-integration-direct-mesh-docker-compare
@@ -69,6 +69,12 @@ test-integration-direct-mesh:
 
 test-integration-desktop-gui:
 	@$(ENTRYPOINT) integration-desktop-gui-node-test
+
+qualify-desktop-ui-validation:
+	@$(ENTRYPOINT) check-desktop-ui-validation --out $${OUTPUT:-tmp/desktop-ui-validation-report.json}
+
+qualify-protocol-validation:
+	@$(ENTRYPOINT) check-protocol-validation-qualification --out $${OUTPUT:-tmp/protocol-validation-qualification-report.json}
 
 test-integration-benchmark-profile-index:
 	@$(ENTRYPOINT) integration-benchmark-profile-index-node-test

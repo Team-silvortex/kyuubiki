@@ -60,6 +60,8 @@ help:
 	@echo "  make check-module-topology Verify strict architecture module topology, benchmark lanes, and security lanes"
 	@echo "  make check-module-function-matrix Verify module x function-paradigm coverage matrix"
 	@echo "  make check-module-function-coverage-tensor Build module x function x evidence-depth coverage tensor"
+	@echo "  make qualify-desktop-ui-validation Run the cross-shell GUI qualification and write a retained JSON report"
+	@echo "  make qualify-protocol-validation Run protocol, TaskIR, RPC, and fuzz qualification and retain JSON evidence"
 	@echo "  make check-test-coverage-posture Verify traditional code-coverage posture and write tmp/test-coverage-posture.{json,md}"
 	@echo "  make coverage Write the current traditional code-coverage posture report without claiming 100% coverage"
 	@echo "  make coverage-rust Generate an LLVM lcov report for the Rust workspace; optional PACKAGE=... TEST_FILTER=..."

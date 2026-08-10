@@ -1,0 +1,72 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Qualified runtime protocol validation spanning envelope invariants, TaskIR digest and cross-authoring checks, RPC method round trips, and bounded fuzz campaigns.",
+  "paradigm_contract_evidence": {
+    "validation": [
+      {
+        "id": "runtime-protocol-validation-contract",
+        "modules": [
+          "runtime-protocol"
+        ],
+        "files": [
+          "config/architecture/protocol-validation-qualification.json",
+          "schemas/protocol-validation-qualification-report.schema.json",
+          "workers/rust/crates/protocol/src/types/rpc.rs",
+          "workers/rust/crates/protocol/src/tests/core.rs",
+          "workers/rust/crates/protocol/src/tests/operator_task_ir_fuzz.rs",
+          "workers/rust/crates/protocol/src/tests/rpc_fuzz.rs",
+          "workers/rust/crates/script-runner/src/protocol_validation_qualification.rs",
+          "workers/rust/crates/script-runner/src/governance_commands.rs"
+        ],
+        "required_text": [
+          "kyuubiki.protocol-validation-qualification-contract/v1",
+          "kyuubiki.protocol-validation-qualification-report/v1",
+          "validate_rpc_request_envelope",
+          "validate_rpc_response_envelope",
+          "validate_rpc_progress_envelope",
+          "operator_task_ir_fuzz_smoke_does_not_panic_on_mutated_json",
+          "rpc_fuzz_smoke_does_not_panic_on_mutated_json",
+          "check-protocol-validation-qualification"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "runtime-protocol-validation-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "runtime-protocol"
+      ],
+      "paradigms": [
+        "validation"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "security"
+      ],
+      "files": [
+        "releases/usability-evidence/2.12.6/protocol-validation-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"passed\": 94",
+        "\"cases\": 384",
+        "\"cases\": 256",
+        "\"task_count\": 5",
+        "\"verified_digest_count\": 5",
+        "\"tamper_rejection_count\": 5",
+        "\"elixir_control_plane\"",
+        "\"rust_native\"",
+        "\"advertised_method_count\": 55",
+        "\"round_trip_count\": 55",
+        "\"invalid_request_id\"",
+        "\"invalid_response_state\"",
+        "\"program_mismatch\""
+      ]
+    }
+  ]
+}

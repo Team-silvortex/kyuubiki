@@ -6,16 +6,16 @@ use serde::de::DeserializeOwned;
 
 use kyuubiki_cli::solve_composite_thermo_electric_panel;
 use kyuubiki_protocol::{
-    CancelJobRequest, RPC_VERSION, RpcMethod, RpcRequest, RpcResponse, SolveAcousticBar1dRequest,
-    SolveAdvectionDiffusionBar1dRequest, SolveBarRequest, SolveBeam1dRequest,
-    SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest, SolveCohesiveInterface1dRequest,
-    SolveCohesiveInterface2dRequest, SolveCohesiveInterfaceMesh2dRequest,
-    SolveCohesiveInterfaceMesh3dRequest, SolveCompositeThermoElectricPanelRequest,
-    SolveContactGap1dRequest, SolveElectricConductionPlaneQuad2dRequest,
-    SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
-    SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dMaterialPDeltaRequest,
-    SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
-    SolveFrame3dRequest, SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest,
+    CancelJobRequest, RpcEnvelopeErrorCode, RpcMethod, RpcRequest, RpcResponse,
+    SolveAcousticBar1dRequest, SolveAdvectionDiffusionBar1dRequest, SolveBarRequest,
+    SolveBeam1dRequest, SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest,
+    SolveCohesiveInterface1dRequest, SolveCohesiveInterface2dRequest,
+    SolveCohesiveInterfaceMesh2dRequest, SolveCohesiveInterfaceMesh3dRequest,
+    SolveCompositeThermoElectricPanelRequest, SolveContactGap1dRequest,
+    SolveElectricConductionPlaneQuad2dRequest, SolveElectrostaticBar1dRequest,
+    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
+    SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest,
+    SolveFrame2dRequest, SolveFrame3dRequest, SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest,
     SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
     SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
     SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
@@ -26,7 +26,7 @@ use kyuubiki_protocol::{
     SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
     SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
     SolveTransientHeatBar1dRequest, SolveTransientSpring1dRequest, SolveTruss2dRequest,
-    SolveTruss3dRequest,
+    SolveTruss3dRequest, validate_rpc_request_envelope,
 };
 use kyuubiki_solver::{
     solve_acoustic_bar_1d, solve_advection_diffusion_bar_1d, solve_bar_1d, solve_beam_1d,
@@ -61,14 +61,15 @@ pub(crate) fn handle_request(
     request: RpcRequest,
     writer: Option<Arc<Mutex<TcpStream>>>,
 ) -> AgentReply {
-    if request.rpc_version != RPC_VERSION {
+    if let Err(error) = validate_rpc_request_envelope(&request) {
+        let response_id = if error.code == RpcEnvelopeErrorCode::InvalidRequestId {
+            "unknown".to_string()
+        } else {
+            request.id
+        };
         return AgentReply::Stream(
             Vec::new(),
-            RpcResponse::error(
-                request.id,
-                "invalid_version",
-                format!("unsupported rpc version: {}", request.rpc_version),
-            ),
+            RpcResponse::error(response_id, error.code.as_str(), error.message),
         );
     }
 

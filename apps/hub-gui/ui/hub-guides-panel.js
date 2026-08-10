@@ -257,8 +257,10 @@ export async function loadRegressionGateReportPanel(params) {
       regressionGateReport: state.regressionGateReport,
       applyDesktopState,
     });
+    return state.regressionGateReport;
   } catch {
     state.regressionGateReport = null;
     renderRegressionGateReport({ elements, report: null, applyDesktopState });
+    return null;
   }
 }

@@ -18,6 +18,21 @@ fn decodes_top_level_job_metadata_without_changing_the_public_rpc_shape() {
 }
 
 #[test]
+fn agent_rejects_invalid_rpc_request_ids_before_dispatch() {
+    let AgentReply::Stream(_, response) =
+        handle_request_bytes(br#"{"rpc_version":1,"id":"","method":"ping","params":{}}"#);
+
+    assert_eq!(response.id, "unknown");
+    assert_eq!(
+        response
+            .error
+            .expect("invalid id should return an error")
+            .code,
+        "invalid_request_id"
+    );
+}
+
+#[test]
 fn formats_events_for_machine_consumption() {
     let mut event = ProgressEvent::new("job-1", JobStatus::Solving, 0.5);
     event.iteration = Some(2);

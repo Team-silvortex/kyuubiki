@@ -64,6 +64,64 @@ fn serializes_operator_task_ir_rpc_method() {
 }
 
 #[test]
+fn validates_rpc_request_envelope_boundaries() {
+    let mut request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "rpc-envelope".to_string(),
+        method: RpcMethod::Ping,
+        params: serde_json::json!({}),
+    };
+    validate_rpc_request_envelope(&request).expect("valid request should pass");
+
+    request.rpc_version = RPC_VERSION + 1;
+    assert_eq!(
+        validate_rpc_request_envelope(&request).unwrap_err().code,
+        RpcEnvelopeErrorCode::InvalidVersion
+    );
+    request.rpc_version = RPC_VERSION;
+    for invalid_id in ["", "line\nbreak"] {
+        request.id = invalid_id.to_string();
+        assert_eq!(
+            validate_rpc_request_envelope(&request).unwrap_err().code,
+            RpcEnvelopeErrorCode::InvalidRequestId
+        );
+    }
+    request.id = "x".repeat(RPC_REQUEST_ID_MAX_BYTES + 1);
+    assert_eq!(
+        validate_rpc_request_envelope(&request).unwrap_err().code,
+        RpcEnvelopeErrorCode::InvalidRequestId
+    );
+}
+
+#[test]
+fn validates_rpc_response_and_progress_envelope_states() {
+    let success = RpcResponse::success("rpc-envelope", serde_json::json!({ "ok": true }));
+    validate_rpc_response_envelope(&success).expect("valid success should pass");
+    let failure = RpcResponse::error("rpc-envelope", "invalid_params", "bad input");
+    validate_rpc_response_envelope(&failure).expect("valid error should pass");
+
+    let mut invalid = success;
+    invalid.error = Some(RpcError {
+        code: "unexpected".to_string(),
+        message: "mixed state".to_string(),
+        details: None,
+    });
+    assert_eq!(
+        validate_rpc_response_envelope(&invalid).unwrap_err().code,
+        RpcEnvelopeErrorCode::InvalidResponseState
+    );
+
+    let event = ProgressEvent::new("job-envelope", JobStatus::Solving, 0.5);
+    let mut progress = RpcProgress::new("rpc-envelope", event);
+    validate_rpc_progress_envelope(&progress).expect("valid progress should pass");
+    progress.event = "unknown".to_string();
+    assert_eq!(
+        validate_rpc_progress_envelope(&progress).unwrap_err().code,
+        RpcEnvelopeErrorCode::InvalidProgressEvent
+    );
+}
+
+#[test]
 fn serializes_operator_descriptor_round_trip() {
     let descriptor = OperatorDescriptor {
         id: "solve.frame_3d".to_string(),

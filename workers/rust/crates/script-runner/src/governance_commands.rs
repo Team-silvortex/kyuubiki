@@ -1,16 +1,16 @@
 use crate::{
     central_database_readiness, central_readiness_report, central_store_contract,
     commercial_readiness, component_integrity_protocol, contracts_runtime_api_surface,
-    dependency_audit, desktop_usability_journeys, doc_inventory, docs_book, frontend_checks,
-    gui_runtime_capability_contract, install_update_disk_hygiene, installation_integrity_docs,
-    installer_recovery_fault_injection, language_packs, local_path_audit, make_modules,
-    material_exploration_chain_contract, material_score_contract,
+    dependency_audit, desktop_ui_validation, desktop_usability_journeys, doc_inventory, docs_book,
+    frontend_checks, gui_runtime_capability_contract, install_update_disk_hygiene,
+    installation_integrity_docs, installer_recovery_fault_injection, language_packs,
+    local_path_audit, make_modules, material_exploration_chain_contract, material_score_contract,
     material_study_execution_plan_contract, materialization_plan_contract,
     minimal_industrial_closure, module_extension_standard, module_function_matrix,
     module_function_tensor, module_topology, module_topology_report, moxi_handoff,
     operator_task_ir_contract, orchestra_recovery_fault_injection, project_organization_audit,
-    runtime_recovery_fault_injection, test_coverage_posture, toolchain_contract,
-    ui_automation_contract, update_catalog_docs, usability_release_gate,
+    protocol_validation_qualification, runtime_recovery_fault_injection, test_coverage_posture,
+    toolchain_contract, ui_automation_contract, update_catalog_docs, usability_release_gate,
     verification_evidence_surface, workbench_language_pack_catalog, workflow_dataset_contract,
     workflow_metric_resolver_contract,
 };
@@ -95,6 +95,9 @@ pub(crate) fn run_governance_command(
         "check-desktop-usability-journeys" => {
             desktop_usability_journeys::run_check_desktop_usability_journeys(root, args)
         }
+        "check-desktop-ui-validation" => {
+            desktop_ui_validation::run_check_desktop_ui_validation(root, args)
+        }
         "check-usability-release-gate" => {
             usability_release_gate::run_check_usability_release_gate(root, args)
         }
@@ -134,6 +137,11 @@ pub(crate) fn run_governance_command(
         }
         "check-operator-task-ir-contract" => {
             operator_task_ir_contract::run_check_operator_task_ir_contract(root, args)
+        }
+        "check-protocol-validation-qualification" => {
+            protocol_validation_qualification::run_check_protocol_validation_qualification(
+                root, args,
+            )
         }
         "validate-material-score-contract" => {
             material_score_contract::run_validate_material_score_contract(root, args)

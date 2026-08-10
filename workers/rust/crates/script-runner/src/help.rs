@@ -100,6 +100,7 @@ lab remote-ssh-fixture\n  \
   capture-material-research-example\n  \
   check-material-research-example\n  \
   check-operator-task-ir-contract\n  \
+  check-protocol-validation-qualification\n  \
   validate-material-score-contract\n  \
   audit-local-paths\n  \
   audit-project-organization\n  \
@@ -138,6 +139,7 @@ lab remote-ssh-fixture\n  \
   integration-cluster-node-test\n  \
   integration-direct-mesh-node-test\n  \
   integration-desktop-gui-node-test\n  \
+  check-desktop-ui-validation\n  \
   integration-benchmark-profile-index-node-test\n  \
   integration-ui-mechanical-node-test\n  \
   integration-ui-thermal-node-test\n  \

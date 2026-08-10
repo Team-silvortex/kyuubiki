@@ -29,9 +29,9 @@ Current moxi baseline:
 - `blocking_gap_count`: `0`
 - `maturity_gap_count`: `0`
 - `thin_evidence_count`: `0`
-- `evidence_grade_gap_count`: `32`
-- required cells meeting their grade target: `18 / 50` (`36.0%`)
-- average required-cell evidence score: `58.0 / 100`
+- `evidence_grade_gap_count`: `30`
+- required cells meeting their grade target: `20 / 50` (`40.0%`)
+- average required-cell evidence score: `59.6 / 100`
 
 This means no required module/function coordinate is structurally missing. It
 does not mean all coordinates are deep enough. Tensor v3 scopes contract
@@ -40,11 +40,29 @@ dimensions, and separately grades proof strength. The former maturity points
 remain dimension-complete, but ordinary lane execution no longer masquerades
 as qualification or operational evidence.
 
-The current highest-priority coordinates are
-`desktop-shared-ui/validation`, `runtime-protocol/validation`,
-`sdk-headless/validation`, `hub-shell/deployment_update`, and
-`installer-shell/deployment_update`. This is the active hardening order unless
+The current highest-priority coordinates are `sdk-headless/validation`,
+`hub-shell/deployment_update`, `installer-shell/deployment_update`,
+`runtime-agent-cli/deployment_update`, and
+`sdk-headless/workflow_composition`. This is the active hardening order unless
 a newly retained result changes the generated ranking.
+
+The former leading coordinate, `runtime-protocol/validation`, now meets its
+`qualified` target. Its native qualification runner requires all 94 protocol
+tests, four configured fuzz profiles totaling 1280 cases, five digest-checked
+TaskIR examples spanning Rust and Elixir authoring, all 55 advertised RPC
+method round trips, structured TaskIR rejection codes, and strict request,
+response, and progress envelope boundaries. The machine-validated result is
+retained under `releases/usability-evidence/2.12.6`; installed and multi-host
+protocol proof remains a separate operational tier.
+
+The former leading coordinate, `desktop-shared-ui/validation`, now meets its
+`qualified` target. The native qualification runner executes the cross-shell
+browser suite, requires all 20 tests to pass, preserves Hub, Installer, and
+Workbench action counts, and verifies UI-to-native closure, PWDT parity,
+workspace-dominant layouts, reversible navigation, and regression panels. The
+machine-validated result is retained under
+`releases/usability-evidence/2.12.6`; installed-package and cross-platform proof
+remain separate operational tiers rather than being implied by this result.
 
 The former top two coordinates, `runtime-agent-cli/solver_execution` and
 `runtime-protocol/solver_execution`, now meet the `qualified` target. Their

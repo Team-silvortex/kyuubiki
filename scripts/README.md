@@ -105,6 +105,11 @@ This directory contains host-native operational entry points.
   retained JSON/Markdown tensor report while preserving `--out` and
   `--self-test`. The retained Node script mirrors these fields for compatibility
   while Make uses the native runner.
+- `kyuubiki-script-runner check-desktop-ui-validation`
+  Native desktop UI qualification report owner. It executes the configured
+  Node browser tests with TAP output, validates three-shell action thresholds
+  and required closure assertions, and writes a machine-verifiable JSON report.
+  Use `--out <path>`, `--verify-report <path>`, or `--self-test`.
 - `kyuubiki-script-runner audit-project-organization`
   Enforce the repository-wide source organization guard. New source and docs
   files, including untracked files that are not ignored, stay under the shared
@@ -261,6 +266,11 @@ This directory contains host-native operational entry points.
   to run. It also checks `schemas/operator-task-ir-golden-manifest.json` so the
   release-line example coverage surface cannot drift silently. Make now uses
   the native runner; the retained `.mjs` script is only a parity reference.
+- `kyuubiki-script-runner check-protocol-validation-qualification`
+  Combine the full Rust protocol suite, configured fuzz budgets, TaskIR digest
+  and rejection probes, advertised RPC method round trips, and cross-authoring
+  contract checks into a machine-verifiable JSON report. Use `--out <path>`,
+  `--verify-report <path>`, or `--self-test`.
 - `kyuubiki-script-runner check-workflow-dataset-contract`
   Verify the ONNX-like workflow dataset schema, standalone example, workflow
   graph embedded dataset contract, graph port/edge dataset references, and the

@@ -143,6 +143,9 @@ export function createHubShellPanel(context) {
     ) {
       void context.fetchWorkflowCatalog({ silent: true });
     }
+    if (context.state.projectsPage === "guides" && !context.state.regressionGateReport) {
+      void context.loadRegressionGateReport();
+    }
   }
 
   function renderPanelPages(group) {

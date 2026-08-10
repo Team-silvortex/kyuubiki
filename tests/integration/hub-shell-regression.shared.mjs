@@ -106,6 +106,10 @@ export async function assertHubRegression(page, viewport) {
 
   await page.locator("#projects-tab-guides").click();
   await page.waitForSelector('[data-projects-pane="guides"]:not(.hidden) #guides-gate-status-value');
+  await page.waitForFunction(() => {
+    const status = document.querySelector("#guides-gate-status-value")?.textContent?.trim();
+    return status && status !== "loading";
+  });
 
   assert.equal(await page.locator("#guides-gate-status-value").textContent(), "warn");
   assert.equal(await page.locator("#guides-gate-warning-count").textContent(), "1");
