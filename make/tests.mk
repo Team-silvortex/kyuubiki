@@ -80,6 +80,9 @@ qualify-protocol-validation:
 qualify-headless-sdk-validation:
 	@$(ENTRYPOINT) check-headless-sdk-validation-qualification --out $${OUTPUT:-tmp/headless-sdk-validation-qualification-report.json}
 
+qualify-headless-workflow:
+	@$(ENTRYPOINT) check-headless-workflow-qualification --out $${OUTPUT:-tmp/headless-workflow-qualification-report.json}
+
 qualify-desktop-deployment-update:
 	@$(ENTRYPOINT) check-desktop-deployment-update-qualification --out $${OUTPUT:-tmp/desktop-deployment-update-qualification-report.json}
 

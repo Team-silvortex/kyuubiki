@@ -78,6 +78,22 @@ guarantee. Local material exploration is a separate native reference runner:
 its artifacts carry `kyuubiki.execution-authority/v1` and identify the linked
 Rust solver kernels as the result source.
 
+`headless run --json` also keeps machine output complete on failure. Once run
+options are parsed, document decode, material-report validation, executor
+selection, executor compatibility, and endpoint configuration failures emit a
+`kyuubiki.headless-execution-run/v1` report to stdout and to `--report-out`
+when requested. The process still exits nonzero and writes the compact
+`kyuubiki.headless-cli-error/v1` diagnostic to stderr. The run report uses
+`status: invalid`, retains validation issues, and exposes the stable reason in
+`execution_summary.failure`; automation no longer has to infer failure from an
+empty JSON file. Runtime failures use the same run-report envelope with failed
+step evidence.
+
+Retry safety remains narrower than error reporting. The service `job_wait`
+path can resume polling the same accepted `job_id` under a bounded server
+deadline. The CLI does not replay an entire workflow automatically, because a
+blind replay could duplicate non-idempotent submissions or side effects.
+
 Coupled multiphysics routes are discoverable through the Rust SDK's
 `coupled_workflow_catalog()`, `find_coupled_workflow()`, and
 `search_coupled_workflows()` APIs. The catalog is projected from protocol-owned

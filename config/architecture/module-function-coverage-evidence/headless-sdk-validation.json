@@ -1,8 +1,34 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Qualified Rust, Python, and Elixir Headless SDK validation with full language suites, live transport checks, shared fixture digests, and paired failure-boundary parity.",
+  "summary": "Qualified cross-language Headless SDK validation and Rust workflow composition with full language suites, live transport checks, shared fixture digests, bounded same-job recovery, and standard preflight failure reports.",
   "paradigm_contract_evidence": {
+    "workflow_composition": [
+      {
+        "id": "headless-workflow-qualification-contract",
+        "modules": [
+          "sdk-headless"
+        ],
+        "files": [
+          "config/architecture/headless-workflow-qualification.json",
+          "schemas/headless-workflow-qualification-report.schema.json",
+          "workers/rust/crates/headless-sdk/src/preflight_report.rs",
+          "workers/rust/crates/cli/src/bin/kyuubiki-headless/preflight.rs",
+          "workers/rust/crates/cli/tests/headless_execution_posture.rs",
+          "workers/rust/crates/script-runner/src/headless_workflow_qualification.rs",
+          "workers/rust/crates/script-runner/src/governance_commands.rs"
+        ],
+        "required_text": [
+          "kyuubiki.headless-workflow-qualification-contract/v1",
+          "kyuubiki.headless-workflow-qualification-report/v1",
+          "minimum_total_tests",
+          "build_preflight_failure_report",
+          "executor_compatibility_failure_writes_a_standard_run_report",
+          "malformed_batch_writes_a_standard_document_validation_report",
+          "check-headless-workflow-qualification"
+        ]
+      }
+    ],
     "validation": [
       {
         "id": "headless-sdk-validation-qualification-contract",
@@ -35,6 +61,37 @@
     ]
   },
   "evidence_claims": [
+    {
+      "id": "headless-workflow-composition-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "workflow_composition"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "recovery"
+      ],
+      "files": [
+        "releases/usability-evidence/2.12.6/headless-workflow-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"total_passed\": 234",
+        "\"id\": \"headless-sdk-core\"",
+        "\"passed\": 222",
+        "\"id\": \"headless-cli-boundaries\"",
+        "\"passed\": 12",
+        "preflight_failure_is_a_standard_non_retryable_run_report",
+        "server_deadline_policy_resumes_same_job_until_completion",
+        "executor_compatibility_failure_writes_a_standard_run_report",
+        "malformed_batch_writes_a_standard_document_validation_report"
+      ]
+    },
     {
       "id": "headless-sdk-cross-language-validation-qualification",
       "status": "proven",

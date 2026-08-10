@@ -29,9 +29,9 @@ Current moxi baseline:
 - `blocking_gap_count`: `0`
 - `maturity_gap_count`: `0`
 - `thin_evidence_count`: `0`
-- `evidence_grade_gap_count`: `27`
-- required cells meeting their grade target: `23 / 50` (`46.0%`)
-- average required-cell evidence score: `62.0 / 100`
+- `evidence_grade_gap_count`: `26`
+- required cells meeting their grade target: `24 / 50` (`48.0%`)
+- average required-cell evidence score: `62.8 / 100`
 
 This means no required module/function coordinate is structurally missing. It
 does not mean all coordinates are deep enough. Tensor v3 scopes contract
@@ -40,10 +40,20 @@ dimensions, and separately grades proof strength. The former maturity points
 remain dimension-complete, but ordinary lane execution no longer masquerades
 as qualification or operational evidence.
 
-The current highest-priority coordinates are
-`runtime-agent-cli/deployment_update`, `sdk-headless/workflow_composition`, and
-the tied security coordinates led by `contracts/security`. This is the active
-hardening order unless a newly retained result changes the generated ranking.
+The current highest-priority coordinate is
+`runtime-agent-cli/deployment_update`, followed by the tied security
+coordinates led by `contracts/security`. This is the active hardening order
+unless a newly retained result changes the generated ranking.
+
+The former leading coordinate, `sdk-headless/workflow_composition`, now meets
+its `qualified` target. Its native qualification requires all 222 Rust
+Headless workflow-core tests and all 12 CLI execution-boundary tests. It proves
+template normalization, service-action coverage, bounded same-job wait
+recovery, retained runtime failure causes, and standard non-empty execution
+reports for malformed documents and incompatible executors. The
+machine-validated result is retained under
+`releases/usability-evidence/2.12.6`; installed package and remote multi-host
+operation remain separate evidence tiers.
 
 The former leading coordinates, `hub-shell/deployment_update` and
 `installer-shell/deployment_update`, now meet their `qualified` targets. The
@@ -75,7 +85,7 @@ protocol proof remains a separate operational tier.
 
 The former leading coordinate, `desktop-shared-ui/validation`, now meets its
 `qualified` target. The native qualification runner executes the cross-shell
-browser suite, requires all 20 tests to pass, preserves Hub, Installer, and
+browser suite, requires all 21 tests to pass, preserves Hub, Installer, and
 Workbench action counts, and verifies UI-to-native closure, PWDT parity,
 workspace-dominant layouts, reversible navigation, and regression panels. The
 machine-validated result is retained under

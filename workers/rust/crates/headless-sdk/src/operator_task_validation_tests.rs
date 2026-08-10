@@ -60,7 +60,7 @@ fn solver_task_fixture(tampered: bool) -> Value {
         "schema_version": "kyuubiki.operator-task-ir/v1",
         "task_id": "solver-fixture-task",
         "operator": {
-            "id": "solve.thermal.bar_1d",
+            "id": "solve.bar_1d",
             "family": "thermal",
             "kind": "solver"
         },
@@ -85,7 +85,7 @@ fn solver_task_fixture(tampered: bool) -> Value {
         "config": {},
         "execution_program": {
             "schema_version": "kyuubiki.operator-execution-program/v1",
-            "program_id": "solve.thermal.bar_1d",
+            "program_id": "solve.bar_1d",
             "program_family": "thermal",
             "program_kind": "solver",
             "runtime_protocol": "kyuubiki.solver-rpc/v1",
@@ -96,7 +96,7 @@ fn solver_task_fixture(tampered: bool) -> Value {
             },
             "entrypoint": {
                 "kind": "solver_method",
-                "name": "solve.thermal.bar_1d",
+                "name": "solve_bar_1d",
                 "operator_kind": "solver"
             },
             "bindings": {

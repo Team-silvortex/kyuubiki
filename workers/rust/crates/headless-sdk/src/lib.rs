@@ -80,6 +80,7 @@ mod operator_task_validation;
 #[cfg(test)]
 mod operator_task_validation_tests;
 mod plan;
+mod preflight_report;
 mod run;
 mod service_executor;
 mod service_executor_artifact;
@@ -328,6 +329,7 @@ pub use plan::{
     HeadlessExecutionPlan, HeadlessPlanBinding, HeadlessPlanCompatibility,
     HeadlessPlanConfirmation, HeadlessPlanStep, build_execution_plan,
 };
+pub use preflight_report::build_preflight_failure_report;
 pub use run::{
     HeadlessBlockedConfirmation, HeadlessExecutionStepReport, HeadlessRunReport, run_batch_dry,
 };

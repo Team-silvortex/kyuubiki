@@ -13,14 +13,19 @@ use kyuubiki_headless_sdk::{
 };
 use serde::Serialize;
 use serde_json::Value;
+#[path = "kyuubiki-headless/error.rs"]
+mod kyuubiki_headless_error;
 #[path = "kyuubiki-headless/flags.rs"]
 mod kyuubiki_headless_flags;
 #[path = "kyuubiki-headless/plan.rs"]
 mod kyuubiki_headless_plan;
+#[path = "kyuubiki-headless/preflight.rs"]
+mod kyuubiki_headless_preflight;
 #[path = "kyuubiki-headless/run_report.rs"]
 mod kyuubiki_headless_run_report;
 #[path = "kyuubiki-headless/usage.rs"]
 mod kyuubiki_headless_usage;
+use kyuubiki_headless_error::{classify_cli_error, cli_error_stage, print_cli_error};
 use kyuubiki_headless_flags::Flags;
 
 const DEFAULT_SERVICE_BASE_URL: &str = "http://127.0.0.1:4000";
@@ -209,13 +214,64 @@ fn handle_render(args: &[String]) -> Result<(), String> {
 
 fn handle_run(args: &[String]) -> Result<(), String> {
     let flags = Flags::parse(args)?;
-    validate_material_report_flags(&flags)?;
     let input_path = flags.input_path()?;
-    let batch = load_batch_from_path(&input_path)?;
-    if let Some(study) = flags.material_report.as_deref() {
-        validate_material_report_compatibility(study, &batch)?;
+    let input_value = match load_json_value_from_path(&input_path) {
+        Ok(value) => value,
+        Err(error) => {
+            return kyuubiki_headless_preflight::emit_run_failure(
+                &flags,
+                None,
+                "unresolved",
+                error,
+                &[],
+            );
+        }
+    };
+    let workflow_id = kyuubiki_headless_preflight::workflow_id(&input_value).to_string();
+    let batch = match load_batch_from_value(input_value) {
+        Ok(batch) => batch,
+        Err(error) => {
+            return kyuubiki_headless_preflight::emit_run_failure(
+                &flags,
+                None,
+                &workflow_id,
+                error,
+                &[],
+            );
+        }
+    };
+    if let Err(error) = validate_material_report_flags(&flags) {
+        return kyuubiki_headless_preflight::emit_run_failure(
+            &flags,
+            Some(&batch),
+            &workflow_id,
+            error,
+            &[],
+        );
     }
-    let selected_executor = flags.selected_executor()?;
+    if let Some(study) = flags.material_report.as_deref() {
+        if let Err(error) = validate_material_report_compatibility(study, &batch) {
+            return kyuubiki_headless_preflight::emit_run_failure(
+                &flags,
+                Some(&batch),
+                &workflow_id,
+                error,
+                &[],
+            );
+        }
+    }
+    let selected_executor = match flags.selected_executor() {
+        Ok(executor) => executor,
+        Err(error) => {
+            return kyuubiki_headless_preflight::emit_run_failure(
+                &flags,
+                Some(&batch),
+                &workflow_id,
+                error,
+                &[],
+            );
+        }
+    };
     let report = if flags.execute {
         let executor_name = selected_executor
             .ok_or_else(|| "internal error: execution selected without an executor".to_string())?;
@@ -227,7 +283,7 @@ fn handle_run(args: &[String]) -> Result<(), String> {
                     collect_executor_compatibility_issues(&batch, candidate).is_empty()
                 })
                 .collect::<Vec<_>>();
-            return Err(format!(
+            let error = format!(
                 "executor compatibility check failed:\n{}\ncompatible executors: {}",
                 compatibility_issues.join("\n"),
                 if compatible.is_empty() {
@@ -235,7 +291,14 @@ fn handle_run(args: &[String]) -> Result<(), String> {
                 } else {
                     compatible.join(", ")
                 }
-            ));
+            );
+            return kyuubiki_headless_preflight::emit_run_failure(
+                &flags,
+                Some(&batch),
+                &workflow_id,
+                error,
+                &compatibility_issues,
+            );
         }
         match executor_name {
             "mock" => {
@@ -248,14 +311,24 @@ fn handle_run(args: &[String]) -> Result<(), String> {
                 )
             }
             "service" => {
-                let mut executor = ServiceHeadlessExecutor::try_with_token(
+                let mut executor = match ServiceHeadlessExecutor::try_with_token(
                     flags
                         .api_base_url
                         .as_deref()
                         .unwrap_or(DEFAULT_SERVICE_BASE_URL),
                     flags.api_token.as_deref(),
-                )
-                .map_err(|error| format!("invalid --api-base-url: {}", error.message))?;
+                ) {
+                    Ok(executor) => executor,
+                    Err(error) => {
+                        return kyuubiki_headless_preflight::emit_run_failure(
+                            &flags,
+                            Some(&batch),
+                            &workflow_id,
+                            format!("invalid --api-base-url: {}", error.message),
+                            &[],
+                        );
+                    }
+                };
                 execute_batch_with_executor(
                     &batch,
                     &mut executor,
@@ -264,14 +337,24 @@ fn handle_run(args: &[String]) -> Result<(), String> {
                 )
             }
             "hybrid" => {
-                let mut executor = HybridHeadlessExecutor::try_with_token(
+                let mut executor = match HybridHeadlessExecutor::try_with_token(
                     flags
                         .api_base_url
                         .as_deref()
                         .unwrap_or(DEFAULT_SERVICE_BASE_URL),
                     flags.api_token.as_deref(),
-                )
-                .map_err(|error| format!("invalid --api-base-url: {}", error.message))?;
+                ) {
+                    Ok(executor) => executor,
+                    Err(error) => {
+                        return kyuubiki_headless_preflight::emit_run_failure(
+                            &flags,
+                            Some(&batch),
+                            &workflow_id,
+                            format!("invalid --api-base-url: {}", error.message),
+                            &[],
+                        );
+                    }
+                };
                 execute_batch_with_executor(
                     &batch,
                     &mut executor,
@@ -334,93 +417,6 @@ fn validate_material_report_flags(flags: &Flags) -> Result<(), String> {
     Ok(())
 }
 
-fn print_cli_error(error: &str) {
-    if !env::args().any(|argument| argument == "--json") {
-        eprintln!("{error}");
-        return;
-    }
-    let code = classify_cli_error(error);
-    let output = CliErrorOutput {
-        schema_version: "kyuubiki.headless-cli-error/v1",
-        ok: false,
-        error: CliErrorView {
-            code,
-            message: error,
-            stage: cli_error_stage(code),
-            retryable: cli_error_retryable(code),
-            recommended_action: cli_error_recovery(code),
-        },
-    };
-    match serde_json::to_string(&output) {
-        Ok(payload) => eprintln!("{payload}"),
-        Err(_) => eprintln!("{error}"),
-    }
-}
-
-fn cli_error_stage(code: &str) -> &'static str {
-    match code {
-        "frontend_proxy_artifact_limit" => "artifact_upload",
-        "job_wait_timeout" => "job_wait",
-        "headless_execution_failed" => "execution",
-        "material_report_template_mismatch"
-        | "material_report_template_provenance_missing"
-        | "material_report_study_unsupported"
-        | "material_report_output_required" => "material_report_validation",
-        _ => "command_validation",
-    }
-}
-
-fn cli_error_recovery(code: &str) -> &'static str {
-    match code {
-        "frontend_proxy_artifact_limit" => {
-            "Use the runtime control-plane endpoint for Headless execution instead of the GUI frontend."
-        }
-        "job_wait_timeout" => {
-            "Inspect the job timing receipt, then resume the same job_id while its server deadline remains active."
-        }
-        "headless_execution_failed" => {
-            "Inspect execution_summary.failure in the run report before retrying."
-        }
-        "material_report_template_mismatch" => {
-            "Choose a study listed by the selected template's material_report_studies field."
-        }
-        "material_report_template_provenance_missing" => {
-            "Regenerate the batch through headless init so template provenance is retained."
-        }
-        "material_report_study_unsupported" => {
-            "Use headless templates --json to select a supported material report study."
-        }
-        "material_report_output_required" => {
-            "Provide --material-report-out when requesting a JSON material report."
-        }
-        _ => "Repair the command arguments using kyuubiki headless help before retrying.",
-    }
-}
-
-fn classify_cli_error(error: &str) -> &'static str {
-    if error.contains("frontend_proxy_artifact_limit") {
-        "frontend_proxy_artifact_limit"
-    } else if error.contains("timed out waiting for job") {
-        "job_wait_timeout"
-    } else if error.contains("not supported by template") {
-        "material_report_template_mismatch"
-    } else if error.contains("requires template provenance") {
-        "material_report_template_provenance_missing"
-    } else if error.starts_with("unsupported material report study") {
-        "material_report_study_unsupported"
-    } else if error.contains("--material-report with --json requires --material-report-out") {
-        "material_report_output_required"
-    } else if error.starts_with("headless execution failed") {
-        "headless_execution_failed"
-    } else {
-        "headless_command_failed"
-    }
-}
-
-fn cli_error_retryable(code: &str) -> bool {
-    code == "job_wait_timeout"
-}
-
 fn run_report_failure(report: &HeadlessRunReport) -> Option<String> {
     if !report.validation.ok {
         return Some("run report generated from invalid batch".to_string());
@@ -460,20 +456,28 @@ fn write_json_file<T: Serialize>(path: &str, value: &T) -> Result<PathBuf, Strin
 }
 
 fn load_batch_from_path(path: &str) -> Result<HeadlessExecutionBatch, String> {
+    load_batch_from_value(load_json_value_from_path(path)?)
+}
+
+fn load_json_value_from_path(path: &str) -> Result<Value, String> {
     let payload =
         fs::read_to_string(path).map_err(|error| format!("failed to read {path}: {error}"))?;
-    let value = serde_json::from_str::<Value>(&payload)
-        .map_err(|error| format!("failed to parse {path}: {error}"))?;
+    serde_json::from_str::<Value>(&payload)
+        .map_err(|error| format!("failed to parse {path}: {error}"))
+}
+
+fn load_batch_from_value(value: Value) -> Result<HeadlessExecutionBatch, String> {
     let schema_version = value
         .get("schema_version")
         .and_then(Value::as_str)
         .unwrap_or_default();
     if schema_version == "kyuubiki.headless-execution-batch/v1" {
-        return serde_json::from_value(value).map_err(|error| error.to_string());
+        return serde_json::from_value(value)
+            .map_err(|error| format!("invalid headless execution batch: {error}"));
     }
     if schema_version == "kyuubiki.headless-workflow/v1" {
         let document = serde_json::from_value::<HeadlessWorkflowDocument>(value)
-            .map_err(|error| error.to_string())?;
+            .map_err(|error| format!("invalid headless workflow document: {error}"))?;
         return normalize_workflow_document(&document);
     }
     Err(format!(
@@ -635,22 +639,6 @@ struct TemplateListOutput {
 }
 
 #[derive(Debug, Serialize)]
-struct CliErrorOutput<'a> {
-    schema_version: &'static str,
-    ok: bool,
-    error: CliErrorView<'a>,
-}
-
-#[derive(Debug, Serialize)]
-struct CliErrorView<'a> {
-    code: &'static str,
-    message: &'a str,
-    stage: &'static str,
-    retryable: bool,
-    recommended_action: &'static str,
-}
-
-#[derive(Debug, Serialize)]
 struct TemplateView {
     id: String,
     title: String,
@@ -690,31 +678,5 @@ impl TemplateView {
                 .map(str::to_string)
                 .collect(),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{classify_cli_error, cli_error_recovery, cli_error_retryable, cli_error_stage};
-
-    #[test]
-    fn classifies_frontend_proxy_artifact_limit_for_automation() {
-        let code = classify_cli_error(
-            "headless execution failed: frontend_proxy_artifact_limit: use control plane",
-        );
-        assert_eq!(code, "frontend_proxy_artifact_limit");
-        assert_eq!(cli_error_stage(code), "artifact_upload");
-        assert!(cli_error_recovery(code).contains("control-plane endpoint"));
-    }
-
-    #[test]
-    fn classifies_job_wait_timeout_as_retryable() {
-        let code = classify_cli_error(
-            "headless execution failed at step 2 (job_wait): timed out waiting for job job-long",
-        );
-        assert_eq!(code, "job_wait_timeout");
-        assert_eq!(cli_error_stage(code), "job_wait");
-        assert!(cli_error_retryable(code));
-        assert!(cli_error_recovery(code).contains("same job_id"));
     }
 }

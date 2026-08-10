@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/headless-workflow-qualification-report.schema.json",
+  "title": "Kyuubiki Headless Workflow Qualification Report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "contract_path",
+    "status",
+    "platform",
+    "total_passed",
+    "suites"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.headless-workflow-qualification-report/v1"
+    },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "contract_path": {
+      "const": "config/architecture/headless-workflow-qualification.json"
+    },
+    "status": { "enum": ["pass", "fail"] },
+    "platform": { "$ref": "#/$defs/platform" },
+    "total_passed": { "type": "integer", "minimum": 0 },
+    "suites": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "$ref": "#/$defs/suite" }
+    }
+  },
+  "$defs": {
+    "platform": {
+      "type": "object",
+      "required": ["os", "arch"],
+      "additionalProperties": false,
+      "properties": {
+        "os": { "type": "string", "minLength": 1 },
+        "arch": { "type": "string", "minLength": 1 }
+      }
+    },
+    "check": {
+      "type": "object",
+      "required": ["id", "passed"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "passed": { "type": "boolean" }
+      }
+    },
+    "suite": {
+      "type": "object",
+      "required": [
+        "id",
+        "command",
+        "working_directory",
+        "exit_code",
+        "elapsed_ms",
+        "passed",
+        "failed",
+        "ignored",
+        "required_tests",
+        "output_excerpt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "command": {
+          "type": "array",
+          "minItems": 4,
+          "items": { "type": "string" }
+        },
+        "working_directory": { "const": "workers/rust" },
+        "exit_code": { "type": ["integer", "null"] },
+        "elapsed_ms": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "ignored": { "type": "integer", "minimum": 0 },
+        "required_tests": {
+          "type": "array",
+          "minItems": 5,
+          "items": { "$ref": "#/$defs/check" }
+        },
+        "output_excerpt": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

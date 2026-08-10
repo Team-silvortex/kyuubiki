@@ -1,0 +1,39 @@
+{
+  "schema_version": "kyuubiki.headless-workflow-qualification-contract/v1",
+  "report_schema": "kyuubiki.headless-workflow-qualification-report/v1",
+  "minimum_total_tests": 234,
+  "suites": [
+    {
+      "id": "headless-sdk-core",
+      "minimum_tests": 222,
+      "source_files": [
+        "workers/rust/crates/headless-sdk/src/preflight_report.rs",
+        "workers/rust/crates/headless-sdk/src/executor.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_job_wait.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_tests.rs",
+        "workers/rust/crates/headless-sdk/src/template_tests.rs"
+      ],
+      "required_tests": [
+        "preflight_report::tests::preflight_failure_is_a_standard_non_retryable_run_report",
+        "executor::tests::failed_execution_promotes_failure_receipt_to_run_summary",
+        "service_executor_job_wait::tests::server_deadline_policy_resumes_same_job_until_completion",
+        "service_executor::service_executor_tests::service_executor_covers_every_service_action_contract",
+        "template_tests::every_template_builds_normalizes_and_validates"
+      ]
+    },
+    {
+      "id": "headless-cli-boundaries",
+      "minimum_tests": 12,
+      "source_files": [
+        "workers/rust/crates/cli/tests/headless_execution_posture.rs"
+      ],
+      "required_tests": [
+        "executor_compatibility_failure_writes_a_standard_run_report",
+        "malformed_batch_writes_a_standard_document_validation_report",
+        "service_execution_failure_returns_nonzero_with_root_cause",
+        "service_executor_rejects_base_url_paths_before_execution",
+        "material_report_rejects_incompatible_template_before_execution"
+      ]
+    }
+  ]
+}

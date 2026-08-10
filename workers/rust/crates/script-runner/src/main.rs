@@ -41,6 +41,7 @@ mod frontend_checks;
 mod governance_commands;
 mod gui_runtime_capability_contract;
 mod headless_sdk_validation;
+mod headless_workflow_qualification;
 mod help;
 mod install_update_disk_hygiene;
 mod installation_integrity_docs;

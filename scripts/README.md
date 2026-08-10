@@ -272,11 +272,17 @@ This directory contains host-native operational entry points.
   contract checks into a machine-verifiable JSON report. Use `--out <path>`,
   `--verify-report <path>`, or `--self-test`.
 - `kyuubiki-script-runner check-headless-sdk-validation-qualification`
-- `kyuubiki-script-runner check-desktop-deployment-update-qualification`
   Qualify the complete Rust, Python, and Elixir Headless SDK suites together.
   The native report preserves test totals, required live transport checks,
   shared-fixture digests, and paired cross-language validation boundaries. Use
   `--out <path>`, `--verify-report <path>`, or `--self-test`.
+- `kyuubiki-script-runner check-headless-workflow-qualification`
+  Qualify the Rust Headless workflow core and CLI execution boundaries. The
+  retained report requires all templates to normalize, every service action to
+  stay executable, bounded same-job wait recovery, and non-empty standard run
+  reports for malformed documents and incompatible executors.
+- `kyuubiki-script-runner check-desktop-deployment-update-qualification`
+  Qualify the Hub-to-Installer update journey and native digest enforcement.
 - `kyuubiki-script-runner check-workflow-dataset-contract`
   Verify the ONNX-like workflow dataset schema, standalone example, workflow
   graph embedded dataset contract, graph port/edge dataset references, and the

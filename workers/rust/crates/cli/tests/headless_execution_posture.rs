@@ -146,7 +146,16 @@ fn service_executor_rejects_base_url_paths_before_execution() {
         stderr.contains("paths, queries, and fragments"),
         "stderr: {stderr}"
     );
-    assert!(output.stdout.is_empty());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("preflight run report");
+    assert_eq!(
+        report["schema_version"],
+        "kyuubiki.headless-execution-run/v1"
+    );
+    assert_eq!(report["status"], "invalid");
+    assert_eq!(
+        report["execution_summary"]["failure"]["error_code"],
+        "kyuubiki.headless.endpoint_configuration"
+    );
     let _ = fs::remove_file(path);
 }
 
@@ -261,7 +270,12 @@ fn material_report_rejects_incompatible_template_before_execution() {
     ]);
 
     assert!(!output.status.success());
-    assert!(output.stdout.is_empty());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("preflight run report");
+    assert_eq!(report["status"], "invalid");
+    assert_eq!(
+        report["execution_summary"]["failure"]["error_code"],
+        "kyuubiki.headless.material_report_template_mismatch"
+    );
     let error: Value = serde_json::from_slice(&output.stderr).expect("structured CLI error");
     assert_eq!(error["schema_version"], "kyuubiki.headless-cli-error/v1");
     assert_eq!(error["ok"], false);
@@ -368,6 +382,12 @@ fn material_report_rejects_workflow_without_template_provenance() {
     ]);
 
     assert!(!output.status.success());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("preflight run report");
+    assert_eq!(report["status"], "invalid");
+    assert_eq!(
+        report["execution_summary"]["failure"]["error_code"],
+        "kyuubiki.headless.material_report_template_provenance_missing"
+    );
     let error: Value = serde_json::from_slice(&output.stderr).expect("structured CLI error");
     assert_eq!(
         error["error"]["code"],
@@ -375,4 +395,98 @@ fn material_report_rejects_workflow_without_template_provenance() {
     );
     assert!(!material_path.exists());
     let _ = fs::remove_file(path);
+}
+
+#[test]
+fn executor_compatibility_failure_writes_a_standard_run_report() {
+    let path = init_template("browser_capture_review");
+    let report_path = unique_path("executor-compatibility-report");
+    let output = run(&[
+        "run",
+        path.to_str().expect("path"),
+        "--json",
+        "--report-out",
+        report_path.to_str().expect("report path"),
+        "--execute",
+        "--executor",
+        "service",
+    ]);
+
+    assert!(!output.status.success());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("preflight run report");
+    assert_eq!(
+        report["schema_version"],
+        "kyuubiki.headless-execution-run/v1"
+    );
+    assert_eq!(report["mode"], "execute:service");
+    assert_eq!(report["status"], "invalid");
+    assert_eq!(
+        report["execution_summary"]["failure"]["error_code"],
+        "kyuubiki.headless.executor_compatibility"
+    );
+    assert!(
+        report["validation"]["issues"]
+            .as_array()
+            .is_some_and(|issues| issues.iter().any(|issue| issue
+                .as_str()
+                .is_some_and(|text| text.contains("not compatible with executor service"))))
+    );
+    let persisted: Value =
+        serde_json::from_slice(&fs::read(&report_path).expect("persisted preflight report"))
+            .expect("persisted report json");
+    assert_eq!(persisted, report);
+    let error: Value = serde_json::from_slice(&output.stderr).expect("structured CLI error");
+    assert_eq!(error["error"]["code"], "executor_compatibility");
+    let _ = fs::remove_file(path);
+    let _ = fs::remove_file(report_path);
+}
+
+#[test]
+fn malformed_batch_writes_a_standard_document_validation_report() {
+    let path = unique_path("missing-action-batch");
+    let report_path = unique_path("missing-action-report");
+    let batch = json!({
+        "schema_version": "kyuubiki.headless-execution-batch/v1",
+        "exported_at": "2026-08-10T00:00:00Z",
+        "language": "en",
+        "workflow_id": "workflow.missing-action",
+        "steps": [{"index": 1, "risk": "normal", "payload": {}}]
+    });
+    fs::write(
+        &path,
+        serde_json::to_vec_pretty(&batch).expect("batch json"),
+    )
+    .expect("write malformed batch");
+    let output = run(&[
+        "run",
+        path.to_str().expect("path"),
+        "--json",
+        "--report-out",
+        report_path.to_str().expect("report path"),
+        "--execute",
+        "--executor",
+        "mock",
+    ]);
+
+    assert!(!output.status.success());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("preflight run report");
+    assert_eq!(report["workflow_id"], "workflow.missing-action");
+    assert_eq!(report["status"], "invalid");
+    assert_eq!(
+        report["execution_summary"]["failure"]["error_code"],
+        "kyuubiki.headless.document_validation"
+    );
+    assert!(
+        report["validation"]["issues"][0]
+            .as_str()
+            .is_some_and(|issue| issue.contains("missing field `action`"))
+    );
+    let persisted: Value =
+        serde_json::from_slice(&fs::read(&report_path).expect("persisted preflight report"))
+            .expect("persisted report json");
+    assert_eq!(persisted, report);
+    let error: Value = serde_json::from_slice(&output.stderr).expect("structured CLI error");
+    assert_eq!(error["error"]["code"], "document_validation");
+    let _ = fs::remove_file(path);
+    let _ = fs::remove_file(report_path);
 }
