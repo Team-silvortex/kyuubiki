@@ -70,6 +70,7 @@ uploads/
 /storage/
 artifacts/
 checkpoints/
+/results/
 
 # Integration fixture runtime state
 tests/integration/remote-ssh-fixture/runtime/

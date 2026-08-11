@@ -1,12 +1,13 @@
 {
   "schema_version": "kyuubiki.headless-workflow-qualification-contract/v1",
   "report_schema": "kyuubiki.headless-workflow-qualification-report/v1",
-  "minimum_total_tests": 234,
+  "minimum_total_tests": 235,
   "suites": [
     {
       "id": "headless-sdk-core",
-      "minimum_tests": 222,
+      "minimum_tests": 223,
       "source_files": [
+        "workers/rust/crates/headless-sdk/src/execution_observability.rs",
         "workers/rust/crates/headless-sdk/src/preflight_report.rs",
         "workers/rust/crates/headless-sdk/src/executor.rs",
         "workers/rust/crates/headless-sdk/src/service_executor_job_wait.rs",
@@ -14,6 +15,7 @@
         "workers/rust/crates/headless-sdk/src/template_tests.rs"
       ],
       "required_tests": [
+        "execution_observability::tests::authorization_status_requires_transport_context",
         "preflight_report::tests::preflight_failure_is_a_standard_non_retryable_run_report",
         "executor::tests::failed_execution_promotes_failure_receipt_to_run_summary",
         "service_executor_job_wait::tests::server_deadline_policy_resumes_same_job_until_completion",

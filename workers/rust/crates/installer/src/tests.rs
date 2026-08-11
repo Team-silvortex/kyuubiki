@@ -1,3 +1,4 @@
+mod agent_update_payload;
 mod control_update;
 mod operator_package_preflight;
 mod release_runtime;

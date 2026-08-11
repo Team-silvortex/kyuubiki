@@ -5,6 +5,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod agent_update_payload;
+mod agent_update_qualification;
 mod cli_help;
 mod component_integrity;
 mod credential_storage;

@@ -57,6 +57,19 @@ impl HeadlessWorkflowStep {
             payload,
         }
     }
+
+    pub fn server_deadline_job_wait(job_id: impl Into<String>) -> Self {
+        Self::new(
+            "job_wait",
+            serde_json::json!({
+                "job_id": job_id.into(),
+                "interval_ms": 1_000,
+                "timeout_ms": 60_000,
+                "resume_policy": "server_deadline",
+                "max_total_timeout_ms": 3_600_000,
+            }),
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

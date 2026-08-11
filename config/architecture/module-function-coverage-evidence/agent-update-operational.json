@@ -1,0 +1,76 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Operational Rust Agent update delivery with sealed packages, immutable versions, changed-payload activation, executable probes, atomic rollback, concurrency control, and retained remote Linux evidence.",
+  "paradigm_contract_evidence": {
+    "deployment_update": [
+      {
+        "id": "agent-update-operational-contract",
+        "modules": [
+          "runtime-agent-cli",
+          "runtime-installer"
+        ],
+        "files": [
+          "schemas/agent-update-package.schema.json",
+          "schemas/agent-update-activation.schema.json",
+          "schemas/agent-update-qualification-report.schema.json",
+          "workers/rust/crates/installer/src/agent_update_payload.rs",
+          "workers/rust/crates/installer/src/agent_update_qualification.rs",
+          "workers/rust/crates/installer/src/headless_surface.rs",
+          "workers/rust/crates/installer/src/main.rs",
+          "workers/rust/crates/installer/src/tests/agent_update_payload.rs"
+        ],
+        "required_text": [
+          "kyuubiki.agent-update-package/v1",
+          "kyuubiki.agent-update-activation/v1",
+          "kyuubiki.agent-update-qualification/v1",
+          "prepare_agent_update_package",
+          "active_agent_binary",
+          "launch_managed_agent",
+          "run_agent_update_qualification",
+          "qualify-agent-update",
+          "update_lock_blocks_parallel_agent_activation",
+          "payload_changed"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "agent-update-packaged-linux-operational",
+      "status": "proven",
+      "grade": "operational",
+      "modules": [
+        "runtime-agent-cli",
+        "runtime-installer"
+      ],
+      "paradigms": [
+        "deployment_update"
+      ],
+      "dimensions": [
+        "execution",
+        "security",
+        "contract",
+        "recovery"
+      ],
+      "files": [
+        "releases/usability-evidence/2.12.6/agent-update-operational-qualification.json",
+        "releases/usability-evidence/2.12.6/agent-update-resolver-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"journey\": \"packaged-installed-agent-update-and-rollback\"",
+        "\"execution_host_role\": \"remote-linux-qualification-host\"",
+        "\"execution_host_role\": \"local-macos-qualification-host\"",
+        "\"active_after_upgrade\": \"2.11.8\"",
+        "\"active_after_rollback\": \"2.11.7\"",
+        "\"phase\": \"initial-install\"",
+        "\"phase\": \"upgraded-install\"",
+        "\"phase\": \"rollback\"",
+        "\"id\": \"payload_changed\"",
+        "\"id\": \"update_lock_clean\"",
+        "\"id\": \"staging_clean\""
+      ]
+    }
+  ]
+}

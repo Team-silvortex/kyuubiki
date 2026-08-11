@@ -1,3 +1,15 @@
+pub use crate::agent_update_payload::{
+    AGENT_UPDATE_ACTIVATION_SCHEMA_VERSION, AGENT_UPDATE_PACKAGE_SCHEMA_VERSION,
+    AgentUpdateActivationRecord, AgentUpdatePackageManifest, AgentUpdateStatus,
+    active_agent_binary, agent_update_status, install_agent_update_package, launch_managed_agent,
+    prepare_agent_update_package, rollback_agent_update, seal_agent_update_package,
+    verify_agent_update_package,
+};
+pub use crate::agent_update_qualification::{
+    AGENT_UPDATE_QUALIFICATION_SCHEMA_VERSION, AgentUpdateExecutionProbe,
+    AgentUpdateQualificationCheck, AgentUpdateQualificationReport, run_agent_update_qualification,
+    write_agent_update_qualification_report,
+};
 pub use crate::cli_help::print_help;
 pub(crate) use crate::component_integrity::parse_component_specs;
 pub use crate::component_integrity::{

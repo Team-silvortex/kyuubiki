@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/agent-update-package.schema.json",
+  "title": "Kyuubiki Agent Update Package",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "version",
+    "platform",
+    "entrypoint",
+    "entrypoint_sha256",
+    "entrypoint_size_bytes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.agent-update-package/v1"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "platform": {
+      "enum": ["macos", "linux", "windows"]
+    },
+    "entrypoint": {
+      "enum": ["bin/kyuubiki-agent", "bin/kyuubiki-agent.exe"]
+    },
+    "entrypoint_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "entrypoint_size_bytes": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}

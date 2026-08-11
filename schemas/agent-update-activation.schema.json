@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/agent-update-activation.schema.json",
+  "title": "Kyuubiki Agent Update Activation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generation",
+    "version",
+    "previous_version",
+    "relative_path",
+    "platform",
+    "entrypoint_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.agent-update-activation/v1"
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "previous_version": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9._-]+$"
+        }
+      ]
+    },
+    "relative_path": {
+      "type": "string",
+      "pattern": "^versions/[A-Za-z0-9._-]+$"
+    },
+    "platform": {
+      "enum": ["macos", "linux", "windows"]
+    },
+    "entrypoint_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

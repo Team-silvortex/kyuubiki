@@ -42,10 +42,7 @@ pub(super) fn build_template_workflow(
                     "input_artifacts": crate::material_envelope_workflow::material_study_envelope_input_artifacts()
                 }),
             ),
-            HeadlessWorkflowStep::new(
-                "job_wait",
-                json!({ "job_id": "{{steps.1.result.job_id}}", "interval_ms": 1000, "timeout_ms": 60000 }),
-            ),
+            HeadlessWorkflowStep::server_deadline_job_wait("{{steps.1.result.job_id}}"),
             HeadlessWorkflowStep::new(
                 "result_fetch",
                 json!({ "job_id": "{{steps.1.result.job_id}}" }),
@@ -59,16 +56,7 @@ pub(super) fn build_template_workflow(
                     "input": axial_bar_model_payload()
                 }),
             ),
-            HeadlessWorkflowStep::new(
-                "job_wait",
-                json!({
-                    "job_id": "{{steps.1.result.job_id}}",
-                    "interval_ms": 1000,
-                    "timeout_ms": 60000,
-                    "resume_policy": "server_deadline",
-                    "max_total_timeout_ms": 3600000
-                }),
-            ),
+            HeadlessWorkflowStep::server_deadline_job_wait("{{steps.1.result.job_id}}"),
             HeadlessWorkflowStep::new(
                 "result_fetch",
                 json!({ "job_id": "{{steps.1.result.job_id}}", "prefer_job_result": false }),
@@ -89,10 +77,7 @@ pub(super) fn build_template_workflow(
                     "input_artifacts": crate::material_envelope_workflow::material_study_envelope_input_artifacts()
                 }),
             ),
-            HeadlessWorkflowStep::new(
-                "job_wait",
-                json!({ "job_id": "{{steps.1.result.job_id}}", "interval_ms": 1000, "timeout_ms": 60000 }),
-            ),
+            HeadlessWorkflowStep::server_deadline_job_wait("{{steps.1.result.job_id}}"),
             HeadlessWorkflowStep::new(
                 "result_fetch",
                 json!({ "job_id": "{{steps.1.result.job_id}}" }),
@@ -106,10 +91,7 @@ pub(super) fn build_template_workflow(
                     "input_artifacts": crate::material_envelope_workflow::material_study_envelope_input_artifacts()
                 }),
             ),
-            HeadlessWorkflowStep::new(
-                "job_wait",
-                json!({ "job_id": "{{steps.1.result.job_id}}", "interval_ms": 1000, "timeout_ms": 60000 }),
-            ),
+            HeadlessWorkflowStep::server_deadline_job_wait("{{steps.1.result.job_id}}"),
             HeadlessWorkflowStep::new(
                 "result_fetch",
                 json!({ "job_id": "{{steps.1.result.job_id}}" }),
@@ -512,9 +494,8 @@ fn expand_job_followups(solve_steps: Vec<HeadlessWorkflowStep>) -> Vec<HeadlessW
         let solve_index = expanded.len() + 1;
         let job_id = format!("{{{{steps.{solve_index}.result.job_id}}}}");
         expanded.push(solve_step);
-        expanded.push(HeadlessWorkflowStep::new(
-            "job_wait",
-            json!({ "job_id": job_id.clone(), "interval_ms": 1000, "timeout_ms": 120000 }),
+        expanded.push(HeadlessWorkflowStep::server_deadline_job_wait(
+            job_id.clone(),
         ));
         expanded.push(HeadlessWorkflowStep::new(
             "result_fetch",

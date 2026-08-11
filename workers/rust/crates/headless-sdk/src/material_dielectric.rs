@@ -142,14 +142,9 @@ pub fn build_dielectric_screening_steps() -> Vec<HeadlessWorkflowStep> {
                         "model": dielectric_quad_model(&candidate),
                     }),
                 ),
-                HeadlessWorkflowStep::new(
-                    "job_wait",
-                    json!({
-                        "job_id": format!("{{{{steps.{solve_step}.result.job_id}}}}"),
-                        "interval_ms": 1000,
-                        "timeout_ms": 60000,
-                    }),
-                ),
+                HeadlessWorkflowStep::server_deadline_job_wait(format!(
+                    "{{{{steps.{solve_step}.result.job_id}}}}"
+                )),
                 HeadlessWorkflowStep::new(
                     "result_fetch",
                     json!({ "job_id": format!("{{{{steps.{solve_step}.result.job_id}}}}") }),

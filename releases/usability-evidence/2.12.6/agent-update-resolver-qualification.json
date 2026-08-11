@@ -1,0 +1,104 @@
+{
+  "schema_version": "kyuubiki.agent-update-qualification/v1",
+  "status": "pass",
+  "journey": "packaged-installed-agent-update-and-rollback",
+  "execution_host_role": "local-macos-qualification-host",
+  "platform": "macos",
+  "first_version": "2.11.7",
+  "second_version": "2.11.8",
+  "first_activation": {
+    "schema_version": "kyuubiki.agent-update-activation/v1",
+    "generation": 1,
+    "version": "2.11.7",
+    "previous_version": null,
+    "relative_path": "versions/2.11.7",
+    "platform": "macos",
+    "entrypoint_sha256": "8665dda09ae7d6fd2cb6cc769bcf140fd5950fc2a90f77f2c8ab5bd2662296df"
+  },
+  "second_activation": {
+    "schema_version": "kyuubiki.agent-update-activation/v1",
+    "generation": 2,
+    "version": "2.11.8",
+    "previous_version": "2.11.7",
+    "relative_path": "versions/2.11.8",
+    "platform": "macos",
+    "entrypoint_sha256": "08ee9024f7a04d2198225b03626486f3c21b353a6f81df24b21c5d591025661f"
+  },
+  "rollback_activation": {
+    "schema_version": "kyuubiki.agent-update-activation/v1",
+    "generation": 3,
+    "version": "2.11.7",
+    "previous_version": "2.11.8",
+    "relative_path": "versions/2.11.7",
+    "platform": "macos",
+    "entrypoint_sha256": "8665dda09ae7d6fd2cb6cc769bcf140fd5950fc2a90f77f2c8ab5bd2662296df"
+  },
+  "active_after_upgrade": "2.11.8",
+  "active_after_rollback": "2.11.7",
+  "installed_versions": [
+    "2.11.7",
+    "2.11.8"
+  ],
+  "probes": [
+    {
+      "phase": "initial-install",
+      "version": "2.11.7",
+      "success": true,
+      "job_id_observed": true
+    },
+    {
+      "phase": "upgraded-install",
+      "version": "2.11.8",
+      "success": true,
+      "job_id_observed": true
+    },
+    {
+      "phase": "rollback",
+      "version": "2.11.7",
+      "success": true,
+      "job_id_observed": true
+    }
+  ],
+  "checks": [
+    {
+      "id": "initial_activation",
+      "ok": true
+    },
+    {
+      "id": "upgrade_activation",
+      "ok": true
+    },
+    {
+      "id": "rollback_activation",
+      "ok": true
+    },
+    {
+      "id": "active_after_upgrade",
+      "ok": true
+    },
+    {
+      "id": "active_after_rollback",
+      "ok": true
+    },
+    {
+      "id": "atomic_generations",
+      "ok": true
+    },
+    {
+      "id": "rollback_generation",
+      "ok": true
+    },
+    {
+      "id": "payload_changed",
+      "ok": true
+    },
+    {
+      "id": "update_lock_clean",
+      "ok": true
+    },
+    {
+      "id": "staging_clean",
+      "ok": true
+    }
+  ]
+}

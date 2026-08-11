@@ -2,16 +2,19 @@ use std::env;
 use std::path::PathBuf;
 
 use kyuubiki_installer::{
-    credential_storage_contract, cross_platform_audit_report,
-    default_remote_artifact_delivery_manifest, default_remote_deployment_dry_run,
-    default_remote_deployment_journal, default_remote_deployment_plan,
-    default_remote_host_trust_plan, default_remote_ssh_fixture_plan,
-    default_remote_ssh_fixture_report, embedded_runtime_report, exit_on_err, export_launch_config,
-    init_env, install_runtime_payload, installation_integrity_report,
-    linux_desktop_dependency_plan, operator_package_preflight, parse_platform, prepare_layout,
-    prepare_staged_update, print_help, remote_deployment_roadmap, repair_installation,
-    rollback_runtime_payload, run_doctor, runtime_payload_status, seal_runtime_payload,
-    stage_release, unified_update_plan, unified_update_preview, validate_env_file,
+    active_agent_binary, agent_update_status, credential_storage_contract,
+    cross_platform_audit_report, default_remote_artifact_delivery_manifest,
+    default_remote_deployment_dry_run, default_remote_deployment_journal,
+    default_remote_deployment_plan, default_remote_host_trust_plan,
+    default_remote_ssh_fixture_plan, default_remote_ssh_fixture_report, embedded_runtime_report,
+    exit_on_err, export_launch_config, init_env, install_agent_update_package,
+    install_runtime_payload, installation_integrity_report, launch_managed_agent,
+    linux_desktop_dependency_plan, operator_package_preflight, parse_platform,
+    prepare_agent_update_package, prepare_layout, prepare_staged_update, print_help,
+    remote_deployment_roadmap, repair_installation, rollback_agent_update,
+    rollback_runtime_payload, run_agent_update_qualification, run_doctor, runtime_payload_status,
+    seal_agent_update_package, seal_runtime_payload, stage_release, unified_update_plan,
+    unified_update_preview, validate_env_file, write_agent_update_qualification_report,
     write_operator_package_preflight_outcome,
 };
 
@@ -29,6 +32,112 @@ fn main() {
         "embedded-runtimes" => exit_on_err(embedded_runtime_report().map(|report| report.render())),
         "runtime-payload-status" => {
             exit_on_err(runtime_payload_status().map(|report| report.render()))
+        }
+        "agent-update-status" => exit_on_err(agent_update_status().map(|report| report.render())),
+        "active-agent-binary" => {
+            exit_on_err(active_agent_binary().map(|path| path.display().to_string()))
+        }
+        "launch-managed-agent" => match launch_managed_agent(&args.collect::<Vec<_>>()) {
+            Ok(code) => std::process::exit(code),
+            Err(error) => {
+                eprintln!("{error}");
+                std::process::exit(1);
+            }
+        },
+        "install-agent-update" => {
+            let Some(path) = args.next() else {
+                eprintln!("missing package path for install-agent-update");
+                std::process::exit(1);
+            };
+            exit_on_err(
+                install_agent_update_package(&PathBuf::from(path)).map(|record| record.render()),
+            )
+        }
+        "rollback-agent-update" => {
+            exit_on_err(rollback_agent_update().map(|record| record.render()))
+        }
+        "seal-agent-update" => {
+            let Some(path) = args.next() else {
+                eprintln!("missing package path for seal-agent-update");
+                std::process::exit(1);
+            };
+            let Some(version) = args.next() else {
+                eprintln!("missing version for seal-agent-update");
+                std::process::exit(1);
+            };
+            let platform = parse_platform(args.next());
+            exit_on_err(
+                seal_agent_update_package(&PathBuf::from(path), &version, platform)
+                    .map(|manifest| format!("sealed agent update: {}", manifest.version)),
+            )
+        }
+        "prepare-agent-update" => {
+            let Some(binary) = args.next() else {
+                eprintln!("missing binary path for prepare-agent-update");
+                std::process::exit(1);
+            };
+            let Some(package) = args.next() else {
+                eprintln!("missing package path for prepare-agent-update");
+                std::process::exit(1);
+            };
+            let Some(version) = args.next() else {
+                eprintln!("missing version for prepare-agent-update");
+                std::process::exit(1);
+            };
+            let platform = parse_platform(args.next());
+            exit_on_err(
+                prepare_agent_update_package(
+                    &PathBuf::from(binary),
+                    &PathBuf::from(package),
+                    &version,
+                    platform,
+                )
+                .map(|manifest| format!("prepared agent update: {}", manifest.version)),
+            )
+        }
+        "qualify-agent-update" => {
+            let Some(first_binary) = args.next() else {
+                eprintln!("missing first binary path for qualify-agent-update");
+                std::process::exit(1);
+            };
+            let Some(second_binary) = args.next() else {
+                eprintln!("missing second binary path for qualify-agent-update");
+                std::process::exit(1);
+            };
+            let Some(work_root) = args.next() else {
+                eprintln!("missing work root for qualify-agent-update");
+                std::process::exit(1);
+            };
+            let Some(first_version) = args.next() else {
+                eprintln!("missing first version for qualify-agent-update");
+                std::process::exit(1);
+            };
+            let Some(second_version) = args.next() else {
+                eprintln!("missing second version for qualify-agent-update");
+                std::process::exit(1);
+            };
+            let output = args.next().map(PathBuf::from);
+            exit_on_err(
+                run_agent_update_qualification(
+                    &PathBuf::from(first_binary),
+                    &PathBuf::from(second_binary),
+                    &PathBuf::from(work_root),
+                    &first_version,
+                    &second_version,
+                )
+                .and_then(|report| match output {
+                    Some(path) => {
+                        write_agent_update_qualification_report(&report, &path)?;
+                        Ok(format!(
+                            "agent update qualification passed: {}",
+                            path.display()
+                        ))
+                    }
+                    None => {
+                        serde_json::to_string_pretty(&report).map_err(|error| error.to_string())
+                    }
+                }),
+            )
         }
         "install-runtime-payload" => {
             let Some(path) = args.next() else {

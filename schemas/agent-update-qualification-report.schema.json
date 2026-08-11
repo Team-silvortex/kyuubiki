@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/agent-update-qualification-report.schema.json",
+  "title": "Kyuubiki Agent Update Qualification Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "journey",
+    "execution_host_role",
+    "platform",
+    "first_version",
+    "second_version",
+    "first_activation",
+    "second_activation",
+    "rollback_activation",
+    "active_after_upgrade",
+    "active_after_rollback",
+    "installed_versions",
+    "probes",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.agent-update-qualification/v1"
+    },
+    "status": {
+      "const": "pass"
+    },
+    "journey": {
+      "const": "packaged-installed-agent-update-and-rollback"
+    },
+    "execution_host_role": {
+      "type": "string",
+      "pattern": "^(local|remote)-(macos|linux|windows)-qualification-host$"
+    },
+    "platform": {
+      "enum": ["macos", "linux", "windows"]
+    },
+    "first_version": {
+      "$ref": "#/$defs/version"
+    },
+    "second_version": {
+      "$ref": "#/$defs/version"
+    },
+    "first_activation": {
+      "$ref": "#/$defs/activation"
+    },
+    "second_activation": {
+      "$ref": "#/$defs/activation"
+    },
+    "rollback_activation": {
+      "$ref": "#/$defs/activation"
+    },
+    "active_after_upgrade": {
+      "$ref": "#/$defs/version"
+    },
+    "active_after_rollback": {
+      "$ref": "#/$defs/version"
+    },
+    "installed_versions": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/version"
+      }
+    },
+    "probes": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "$ref": "#/$defs/probe"
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 10,
+      "items": {
+        "$ref": "#/$defs/check"
+      }
+    }
+  },
+  "$defs": {
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "generation",
+        "version",
+        "previous_version",
+        "relative_path",
+        "platform",
+        "entrypoint_sha256"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.agent-update-activation/v1"
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "version": {
+          "$ref": "#/$defs/version"
+        },
+        "previous_version": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/version" }
+          ]
+        },
+        "relative_path": {
+          "type": "string",
+          "pattern": "^versions/[A-Za-z0-9._-]+$"
+        },
+        "platform": {
+          "enum": ["macos", "linux", "windows"]
+        },
+        "entrypoint_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "version", "success", "job_id_observed"],
+      "properties": {
+        "phase": {
+          "enum": ["initial-install", "upgraded-install", "rollback"]
+        },
+        "version": {
+          "$ref": "#/$defs/version"
+        },
+        "success": {
+          "const": true
+        },
+        "job_id_observed": {
+          "const": true
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ok"],
+      "properties": {
+        "id": {
+          "enum": [
+            "initial_activation",
+            "upgrade_activation",
+            "rollback_activation",
+            "active_after_upgrade",
+            "active_after_rollback",
+            "atomic_generations",
+            "rollback_generation",
+            "payload_changed",
+            "update_lock_clean",
+            "staging_clean"
+          ]
+        },
+        "ok": {
+          "const": true
+        }
+      }
+    }
+  }
+}

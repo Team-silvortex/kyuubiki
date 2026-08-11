@@ -78,6 +78,21 @@ pub fn installer_headless_surface_manifest() -> InstallerHeadlessSurfaceManifest
                 ],
             },
             InstallerHeadlessEntrypoint {
+                id: "agent_updates",
+                role: "Sealed Rust agent package verification, atomic activation, and rollback.",
+                exports: &[
+                    "prepare_agent_update_package",
+                    "seal_agent_update_package",
+                    "verify_agent_update_package",
+                    "install_agent_update_package",
+                    "rollback_agent_update",
+                    "agent_update_status",
+                    "active_agent_binary",
+                    "launch_managed_agent",
+                    "run_agent_update_qualification",
+                ],
+            },
+            InstallerHeadlessEntrypoint {
                 id: "credential_storage",
                 role: "Sandbox-first credential storage contract and platform backend policy.",
                 exports: &["credential_storage_contract", "credential_sandbox_root"],
@@ -99,6 +114,11 @@ pub fn installer_headless_surface_manifest() -> InstallerHeadlessSurfaceManifest
                 "installation_integrity_report",
                 "remote_deployment_dry_run",
                 "unified_update_preview",
+                "install_agent_update_package",
+                "rollback_agent_update",
+                "active_agent_binary",
+                "launch_managed_agent",
+                "run_agent_update_qualification",
                 "credential_storage_contract",
                 "embedded_runtime_report",
             ],
@@ -127,6 +147,18 @@ pub fn installer_headless_surface_manifest() -> InstallerHeadlessSurfaceManifest
                 evidence_export: "latest_applied_update_record",
             },
             InstallerWorkflowComposition {
+                id: "standard_agent_update",
+                stages: &[
+                    "seal_agent_package",
+                    "verify_agent_package",
+                    "install_agent_package",
+                    "activate_agent_version",
+                    "verify_agent_status",
+                    "rollback_agent_version",
+                ],
+                evidence_export: "run_agent_update_qualification",
+            },
+            InstallerWorkflowComposition {
                 id: "standard_integrity_repair",
                 stages: &[
                     "scan_integrity",
@@ -138,6 +170,15 @@ pub fn installer_headless_surface_manifest() -> InstallerHeadlessSurfaceManifest
             },
         ],
         benchmark_lanes: vec![
+            InstallerBenchmarkLane {
+                id: "agent_update_operational",
+                target_workflow: "standard_agent_update",
+                measured_stages: &[
+                    "install_agent_package",
+                    "activate_agent_version",
+                    "rollback_agent_version",
+                ],
+            },
             InstallerBenchmarkLane {
                 id: "installer_release",
                 target_workflow: "standard_update_apply",
@@ -190,6 +231,19 @@ mod tests {
         assert!(manifest.workflow_compositions.iter().any(|workflow| {
             workflow.id == "standard_update_apply"
                 && workflow.stages.contains(&"apply_downloaded_update")
+        }));
+        assert!(manifest.entrypoints.iter().any(|entry| {
+            entry.id == "agent_updates"
+                && entry.exports.contains(&"install_agent_update_package")
+                && entry.exports.contains(&"rollback_agent_update")
+                && entry.exports.contains(&"active_agent_binary")
+                && entry.exports.contains(&"launch_managed_agent")
+                && entry.exports.contains(&"run_agent_update_qualification")
+        }));
+        assert!(manifest.workflow_compositions.iter().any(|workflow| {
+            workflow.id == "standard_agent_update"
+                && workflow.stages.contains(&"verify_agent_status")
+                && workflow.evidence_export == "run_agent_update_qualification"
         }));
         assert!(manifest.benchmark_lanes.iter().any(|lane| {
             lane.id == "remote_deploy" && lane.measured_stages.contains(&"dry_run")

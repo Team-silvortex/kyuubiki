@@ -81,12 +81,13 @@
       ],
       "required_text": [
         "\"status\": \"pass\"",
-        "\"total_passed\": 234",
+        "\"total_passed\": 235",
         "\"id\": \"headless-sdk-core\"",
-        "\"passed\": 222",
+        "\"passed\": 223",
         "\"id\": \"headless-cli-boundaries\"",
         "\"passed\": 12",
         "preflight_failure_is_a_standard_non_retryable_run_report",
+        "authorization_status_requires_transport_context",
         "server_deadline_policy_resumes_same_job_until_completion",
         "executor_compatibility_failure_writes_a_standard_run_report",
         "malformed_batch_writes_a_standard_document_validation_report"

@@ -279,6 +279,8 @@ fn material_screening_template_expands_candidate_solve_chains() {
             steps[base + 1].payload["job_id"],
             format!("{{{{steps.{solve_step_number}.result.job_id}}}}")
         );
+        assert_eq!(steps[base + 1].payload["resume_policy"], "server_deadline");
+        assert_eq!(steps[base + 1].payload["max_total_timeout_ms"], 3_600_000);
     }
 
     let batch = normalize_workflow_document(&document).unwrap();
@@ -329,6 +331,9 @@ fn dielectric_material_template_expands_candidate_solve_chains() {
             steps[base + 1].payload["job_id"],
             format!("{{{{steps.{solve_step_number}.result.job_id}}}}")
         );
+        assert_eq!(steps[base + 1].payload["timeout_ms"], 60_000);
+        assert_eq!(steps[base + 1].payload["resume_policy"], "server_deadline");
+        assert_eq!(steps[base + 1].payload["max_total_timeout_ms"], 3_600_000);
     }
 
     let batch = normalize_workflow_document(&document).unwrap();
@@ -415,6 +420,8 @@ fn material_envelope_template_submits_graph_with_default_candidates() {
     assert_eq!(steps[0].action, "workflow_submit_graph");
     assert_eq!(steps[1].action, "job_wait");
     assert_eq!(steps[2].action, "result_fetch");
+    assert_eq!(steps[1].payload["resume_policy"], "server_deadline");
+    assert_eq!(steps[1].payload["max_total_timeout_ms"], 3_600_000);
     assert_eq!(
         steps[0].payload["graph"]["id"].as_str(),
         Some("workflow.material-study-envelope")
@@ -454,6 +461,8 @@ fn material_envelope_catalog_template_submits_orchestra_catalog_workflow() {
     assert_eq!(steps[0].action, "workflow_submit_catalog");
     assert_eq!(steps[1].action, "job_wait");
     assert_eq!(steps[2].action, "result_fetch");
+    assert_eq!(steps[1].payload["resume_policy"], "server_deadline");
+    assert_eq!(steps[1].payload["max_total_timeout_ms"], 3_600_000);
     assert_eq!(
         steps[0].payload["workflow_id"].as_str(),
         Some("workflow.material-study-envelope-ranking-json")

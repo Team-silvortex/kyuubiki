@@ -329,9 +329,9 @@ fn require_unique_nonempty(values: &[String], label: &str) -> RunnerResult<()> {
 
 fn run_self_test() -> RunnerResult<()> {
     let output = "test preflight_report::tests::report ... ok\n\
-test result: ok. 234 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.0s\n";
+test result: ok. 235 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.0s\n";
     let summary = parse_rust_summary(output);
-    if summary.passed != 234
+    if summary.passed != 235
         || summary.failed != 0
         || !rust_test_passed(output, "preflight_report::tests::report")
     {

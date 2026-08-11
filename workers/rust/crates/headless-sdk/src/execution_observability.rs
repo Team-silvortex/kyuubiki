@@ -123,18 +123,6 @@ fn classify_failure(step_index: usize, action: &str, message: String) -> Headles
             "bounded_exponential_backoff",
             "Inspect agent capacity and queue health, then retry without resubmitting an already accepted job.",
         )
-    } else if normalized.contains("401")
-        || normalized.contains("403")
-        || normalized.contains("unauthorized")
-        || normalized.contains("forbidden")
-    {
-        (
-            "authorization_failure",
-            "authorization",
-            false,
-            "none",
-            "Repair credentials or policy before retrying.",
-        )
     } else if normalized.contains("frontend_proxy_artifact_limit")
         || (normalized.contains("model artifact upload failed")
             && normalized.contains("smaller body limit"))
@@ -145,6 +133,14 @@ fn classify_failure(step_index: usize, action: &str, message: String) -> Headles
             false,
             "none",
             "Use the runtime control-plane endpoint for Headless execution; keep the GUI frontend out of large artifact transport.",
+        )
+    } else if contains_authorization_failure(&normalized) {
+        (
+            "authorization_failure",
+            "authorization",
+            false,
+            "none",
+            "Repair credentials or policy before retrying.",
         )
     } else if normalized.contains("endpoint not deployed") || normalized.contains("(404)") {
         (
@@ -228,6 +224,24 @@ fn classify_failure(step_index: usize, action: &str, message: String) -> Headles
         retry_strategy: retry_strategy.to_string(),
         recommended_action: recommended_action.to_string(),
     }
+}
+
+fn contains_authorization_failure(message: &str) -> bool {
+    if message.contains("unauthorized") || message.contains("forbidden") {
+        return true;
+    }
+    ["401", "403"].iter().any(|status| {
+        [
+            format!("service request failed {status}:"),
+            format!("model artifact upload failed {status}:"),
+            format!("http response {status}"),
+            format!("http status {status}"),
+            format!("status={status}"),
+            format!("status: {status}"),
+        ]
+        .iter()
+        .any(|signature| message.contains(signature))
+    })
 }
 
 fn job_timeline(preview: &Value) -> Option<HeadlessJobTimeline> {
@@ -400,7 +414,7 @@ mod tests {
         let preview = failure_preview(
             1,
             "solve_heat_plane_quad_2d",
-            "frontend_proxy_artifact_limit: direct FEM model requires artifact transport"
+            "frontend_proxy_artifact_limit: direct FEM model requires artifact transport: entity_count=981401; connect headless to http://127.0.0.1:4000"
                 .to_string(),
         );
 
@@ -424,6 +438,29 @@ mod tests {
             schema["properties"]["stage"]["enum"]
                 .as_array()
                 .is_some_and(|values| values.contains(&preview["failure_receipt"]["stage"]))
+        );
+    }
+
+    #[test]
+    fn authorization_status_requires_transport_context() {
+        let authorization = failure_preview(
+            1,
+            "solve_heat_plane_quad_2d",
+            "service request failed 403: /api/v1/jobs: access denied".to_string(),
+        );
+        assert_eq!(
+            authorization["error_code"],
+            "kyuubiki.headless.authorization_failure"
+        );
+
+        let numerical_payload = failure_preview(
+            1,
+            "solve_heat_plane_quad_2d",
+            "solver failed while processing entity_count=981401 and material_id=403".to_string(),
+        );
+        assert_eq!(
+            numerical_payload["error_code"],
+            "kyuubiki.headless.runtime_failure"
         );
     }
 }
