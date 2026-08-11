@@ -1,9 +1,21 @@
 {
-  "schema_version": "kyuubiki.protocol-validation-qualification-contract/v1",
-  "report_schema": "kyuubiki.protocol-validation-qualification-report/v1",
+  "schema_version": "kyuubiki.protocol-validation-qualification-contract/v2",
+  "report_schema": "kyuubiki.protocol-validation-qualification-report/v2",
   "minimum_protocol_tests": 94,
   "minimum_rpc_methods": 55,
   "minimum_task_ir_count": 5,
+  "minimum_security_boundaries": 9,
+  "required_security_boundaries": [
+    "rpc-envelope-state",
+    "rpc-unknown-method-admission",
+    "rpc-mutated-json",
+    "rpc-byte-ingress",
+    "task-ir-digest-tamper",
+    "task-ir-structural-admission",
+    "task-ir-mutated-json",
+    "task-ir-byte-ingress",
+    "solver-capability-admission"
+  ],
   "task_ir_examples": [
     "schemas/examples.operator-task-ir.json",
     "schemas/examples.operator-task-ir-float.json",

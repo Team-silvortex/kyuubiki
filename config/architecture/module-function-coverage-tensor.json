@@ -1,6 +1,6 @@
 {
-  "schema_version": "kyuubiki.module-function-coverage-tensor/v3",
-  "version_line": "moxi 2.x",
+  "schema_version": "kyuubiki.module-function-coverage-tensor/v4",
+  "version_line": "moxi 2.13.x -> daji 3.0.0",
   "topology": "config/architecture/module-topology.json",
   "matrix": "config/architecture/module-function-coverage-matrix.json",
   "runtime_api_client_contract": "config/architecture/contracts-runtime-api-surface.json",
@@ -28,7 +28,52 @@
     "maturity_requirements": "Evidence dimensions required for this exact module and paradigm coordinate.",
     "maturity_evidence": "Module-scoped proven, partial, and open claims rather than globally broadcast paradigm evidence.",
     "evidence_grade": "Calibrated proof strength from unassessed through operational, with an explicit target for each required coordinate.",
+    "release_criticality": "Daji release priority for the exact coordinate, independently of its evidence grade.",
     "gap": "Derived action level for locating weak, thinly evidenced, or uncovered coordinates."
+  },
+  "release_profile": {
+    "id": "daji-3-0-0",
+    "current_checkpoint": "moxi 2.13.x",
+    "target_release": "daji 3.0.0",
+    "gate_mode": "advisory",
+    "enforce_from": "moxi 2.17.0",
+    "required_target_met_percent": 100.0,
+    "criticality_order": ["p0", "p1", "p2"],
+    "paradigm_criticality": {
+      "product_surface": "p1",
+      "runtime_api": "p1",
+      "solver_execution": "p0",
+      "workflow_composition": "p1",
+      "validation": "p0",
+      "benchmark": "p1",
+      "security": "p0",
+      "persistence_provenance": "p0",
+      "deployment_update": "p1",
+      "sdk_headless": "p1"
+    },
+    "cell_criticality_overrides": [
+      { "module_id": "hub-shell", "paradigm": "product_surface", "criticality": "p0" },
+      { "module_id": "workbench-shell", "paradigm": "product_surface", "criticality": "p0" },
+      { "module_id": "installer-shell", "paradigm": "product_surface", "criticality": "p0" },
+      { "module_id": "workbench-shell", "paradigm": "workflow_composition", "criticality": "p0" },
+      { "module_id": "orchestra-control-plane", "paradigm": "workflow_composition", "criticality": "p0" },
+      { "module_id": "runtime-protocol", "paradigm": "runtime_api", "criticality": "p0" },
+      { "module_id": "runtime-engine-solver", "paradigm": "solver_execution", "criticality": "p0" },
+      { "module_id": "runtime-agent-cli", "paradigm": "deployment_update", "criticality": "p0" },
+      { "module_id": "runtime-installer", "paradigm": "deployment_update", "criticality": "p0" },
+      { "module_id": "sdk-headless", "paradigm": "runtime_api", "criticality": "p0" },
+      { "module_id": "sdk-headless", "paradigm": "sdk_headless", "criticality": "p0" }
+    ],
+    "external_gates": [
+      {
+        "id": "usability-release-claim",
+        "path": "config/architecture/usability-release-gate.json",
+        "pointer": "/policy/release_claim_allowed",
+        "expected": true,
+        "criticality": "p0",
+        "recommended_action": "close_packaged_remote_recovery_and_upgrade_tiers"
+      }
+    ]
   },
   "evidence_grade_policy": {
     "gate_mode": "advisory",

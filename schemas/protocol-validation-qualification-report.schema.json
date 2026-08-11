@@ -13,11 +13,12 @@
     "fuzz_profiles",
     "task_ir",
     "rpc",
+    "security",
     "contract_checks"
   ],
   "additionalProperties": false,
   "properties": {
-    "schema_version": { "const": "kyuubiki.protocol-validation-qualification-report/v1" },
+    "schema_version": { "const": "kyuubiki.protocol-validation-qualification-report/v2" },
     "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
     "contract_path": { "const": "config/architecture/protocol-validation-qualification.json" },
     "status": { "enum": ["pass", "fail"] },
@@ -90,6 +91,32 @@
         "boundary_rejection_codes": { "type": "array", "items": { "type": "string" } }
       }
     },
+    "security": {
+      "type": "object",
+      "required": [
+        "boundary_count",
+        "passed_boundary_count",
+        "total_fuzz_cases",
+        "digest_tamper_rejections",
+        "structured_rejection_code_count",
+        "fail_closed",
+        "boundaries"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "boundary_count": { "type": "integer", "minimum": 9 },
+        "passed_boundary_count": { "type": "integer", "minimum": 9 },
+        "total_fuzz_cases": { "type": "integer", "minimum": 1000 },
+        "digest_tamper_rejections": { "type": "integer", "minimum": 1 },
+        "structured_rejection_code_count": { "type": "integer", "minimum": 4 },
+        "fail_closed": { "const": true },
+        "boundaries": {
+          "type": "array",
+          "minItems": 9,
+          "items": { "$ref": "#/$defs/securityBoundary" }
+        }
+      }
+    },
     "contract_checks": {
       "type": "array",
       "minItems": 2,
@@ -115,6 +142,20 @@
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "passed": { "type": "boolean" }
+      }
+    },
+    "securityBoundary": {
+      "type": "object",
+      "required": ["id", "passed", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "passed": { "const": true },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
       }
     }
   }

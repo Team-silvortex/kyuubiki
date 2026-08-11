@@ -12,6 +12,31 @@ pub(super) fn render_markdown(report: &Value) -> String {
             "- Evidence includes: `{}`",
             joined_or_dash(&string_array(report, "evidence_includes"))
         ),
+        format!(
+            "- Current checkpoint: `{}`",
+            report
+                .pointer("/release_readiness/current_checkpoint")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown")
+        ),
+        format!(
+            "- Release target: `{}`",
+            report
+                .pointer("/release_readiness/target_release")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown")
+        ),
+        format!(
+            "- Release readiness: `{}` (claim allowed: `{}`)",
+            report
+                .pointer("/release_readiness/status")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown"),
+            report
+                .pointer("/release_readiness/release_claim_allowed")
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+        ),
         "- Axes: `module x function_paradigm x scoped_evidence_depth`".to_string(),
         format!(
             "- Modules: `{}`",
@@ -80,6 +105,13 @@ pub(super) fn render_markdown(report: &Value) -> String {
                 .and_then(Value::as_f64)
                 .unwrap_or(0.0)
         ),
+        format!(
+            "- Evidence progress toward configured targets: `{:.1}%`",
+            report
+                .pointer("/evidence_grade_calibration/proof_completion_percent")
+                .and_then(Value::as_f64)
+                .unwrap_or(0.0)
+        ),
         String::new(),
         "## Module Summary".to_string(),
         String::new(),
@@ -105,10 +137,124 @@ pub(super) fn render_markdown(report: &Value) -> String {
     }
     render_paradigm_summary(report, &mut lines);
     render_evidence_grades(report, &mut lines);
+    render_release_readiness(report, &mut lines);
     render_contract_evidence(report, &mut lines);
     render_thin_points(report, &mut lines);
     render_gaps(report, &mut lines);
     format!("{}\n", lines.join("\n").trim_end())
+}
+
+fn render_release_readiness(report: &Value, lines: &mut Vec<String>) {
+    let readiness = report.get("release_readiness").unwrap_or(&Value::Null);
+    lines.extend([
+        String::new(),
+        "## Daji Release Calibration".to_string(),
+        String::new(),
+        format!(
+            "The `{}` gate remains `{}` until `{}`. Structural success does not grant a release claim.",
+            string_field(readiness, "target_release").unwrap_or("release"),
+            string_field(readiness, "gate_mode").unwrap_or("advisory"),
+            string_field(readiness, "enforce_from").unwrap_or("the configured enforcement point")
+        ),
+        String::new(),
+        "| Criterion | Met | Expected | Actual |".to_string(),
+        "| --- | --- | --- | --- |".to_string(),
+    ]);
+    for criterion in readiness
+        .get("criteria")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        lines.push(format!(
+            "| `{}` | `{}` | `{}` | `{}` |",
+            string_field(criterion, "id").unwrap_or_default(),
+            criterion
+                .get("met")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            json_scalar(criterion.get("expected")),
+            json_scalar(criterion.get("actual"))
+        ));
+    }
+
+    lines.extend([
+        String::new(),
+        "### Release Criticality".to_string(),
+        String::new(),
+        "| Criticality | Required Cells | Target Met | Gaps | Target Met % |".to_string(),
+        "| --- | ---: | ---: | ---: | ---: |".to_string(),
+    ]);
+    for criticality in ["p0", "p1", "p2"] {
+        let summary = readiness
+            .pointer(&format!("/criticality_summary/{criticality}"))
+            .unwrap_or(&Value::Null);
+        lines.push(format!(
+            "| `{criticality}` | {} | {} | {} | {:.1} |",
+            count(summary, "required_cell_count"),
+            count(summary, "target_met_count"),
+            count(summary, "gap_count"),
+            summary
+                .get("target_met_percent")
+                .and_then(Value::as_f64)
+                .unwrap_or(0.0)
+        ));
+    }
+
+    lines.extend([
+        String::new(),
+        "### P0 Blocking Coordinates".to_string(),
+        String::new(),
+    ]);
+    let blockers = readiness
+        .get("blocking_coordinates")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    if blockers.is_empty() {
+        lines.push("No P0 coordinate gaps.".to_string());
+    } else {
+        lines.push("| Module | Paradigm | Achieved | Target | Next Action |".to_string());
+        lines.push("| --- | --- | --- | --- | --- |".to_string());
+        for blocker in blockers {
+            lines.push(format!(
+                "| `{}` | `{}` | `{}` | `{}` | `{}` |",
+                string_field(&blocker, "module_id").unwrap_or_default(),
+                string_field(&blocker, "paradigm").unwrap_or_default(),
+                string_field(&blocker, "achieved_grade").unwrap_or_default(),
+                string_field(&blocker, "target_grade").unwrap_or_default(),
+                string_field(&blocker, "recommended_action").unwrap_or_default()
+            ));
+        }
+    }
+
+    lines.extend([
+        String::new(),
+        "### External Release Gates".to_string(),
+        String::new(),
+    ]);
+    let gates = readiness
+        .get("external_gates")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    if gates.is_empty() {
+        lines.push("No external release gates.".to_string());
+        return;
+    }
+    lines.push("| Gate | Criticality | Met | Expected | Actual | Next Action |".to_string());
+    lines.push("| --- | --- | --- | --- | --- | --- |".to_string());
+    for gate in gates {
+        lines.push(format!(
+            "| `{}` | `{}` | `{}` | `{}` | `{}` | `{}` |",
+            string_field(&gate, "id").unwrap_or_default(),
+            string_field(&gate, "criticality").unwrap_or_default(),
+            gate.get("met").and_then(Value::as_bool).unwrap_or(false),
+            json_scalar(gate.get("expected")),
+            json_scalar(gate.get("actual")),
+            string_field(&gate, "recommended_action").unwrap_or_default()
+        ));
+    }
 }
 
 fn render_evidence_grades(report: &Value, lines: &mut Vec<String>) {
@@ -329,4 +475,10 @@ fn joined_or_dash(values: &[String]) -> String {
     } else {
         values.join(", ")
     }
+}
+
+fn json_scalar(value: Option<&Value>) -> String {
+    value
+        .and_then(|value| serde_json::to_string(value).ok())
+        .unwrap_or_else(|| "null".to_string())
 }

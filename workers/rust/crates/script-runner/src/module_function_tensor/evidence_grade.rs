@@ -205,6 +205,8 @@ pub(super) fn summarize(tensor: &Value, cells: &Map<String, Value>) -> Value {
     let mut weakest = Vec::new();
     let mut required_count = 0_u64;
     let mut score_sum = 0_u64;
+    let mut target_score_sum = 0_u64;
+    let mut achieved_toward_target = 0_u64;
 
     for (module_id, module_cells) in cells {
         for (paradigm, cell) in module_cells.as_object().into_iter().flatten() {
@@ -221,7 +223,13 @@ pub(super) fn summarize(tensor: &Value, cells: &Map<String, Value>) -> Value {
                 .get("evidence_score")
                 .and_then(Value::as_u64)
                 .unwrap_or(0);
+            let target_score = grade
+                .get("target_score")
+                .and_then(Value::as_u64)
+                .unwrap_or(0);
             score_sum += score;
+            target_score_sum += target_score;
+            achieved_toward_target += score.min(target_score);
             let gap_steps = grade.get("gap_steps").and_then(Value::as_u64).unwrap_or(0);
             if gap_steps == 0 {
                 continue;
@@ -230,10 +238,6 @@ pub(super) fn summarize(tensor: &Value, cells: &Map<String, Value>) -> Value {
                 cell.pointer("/maturity_evidence").unwrap_or(&Value::Null),
                 "missing_dimensions",
             );
-            let target_score = grade
-                .get("target_score")
-                .and_then(Value::as_u64)
-                .unwrap_or(0);
             let status_penalty = u64::from(string_field(cell, "status") != Some("covered")) * 1000;
             let priority_score = status_penalty
                 + gap_steps * 100
@@ -275,6 +279,16 @@ pub(super) fn summarize(tensor: &Value, cells: &Map<String, Value>) -> Value {
     } else {
         score_sum as f64 / required_count as f64
     };
+    let average_target_score = if required_count == 0 {
+        0.0
+    } else {
+        target_score_sum as f64 / required_count as f64
+    };
+    let proof_completion_percent = if target_score_sum == 0 {
+        100.0
+    } else {
+        achieved_toward_target as f64 * 100.0 / target_score_sum as f64
+    };
     let target_met_count = required_count.saturating_sub(gap_count as u64);
     let target_met_percent = if required_count == 0 {
         100.0
@@ -289,6 +303,11 @@ pub(super) fn summarize(tensor: &Value, cells: &Map<String, Value>) -> Value {
         "target_met_percent": (target_met_percent * 10.0).round() / 10.0,
         "gap_count": gap_count,
         "average_evidence_score": (average_score * 10.0).round() / 10.0,
+        "average_target_score": (average_target_score * 10.0).round() / 10.0,
+        "achieved_score_toward_target": achieved_toward_target,
+        "target_score_total": target_score_sum,
+        "remaining_target_score": target_score_sum.saturating_sub(achieved_toward_target),
+        "proof_completion_percent": (proof_completion_percent * 10.0).round() / 10.0,
         "achieved_summary": achieved_summary,
         "target_summary": target_summary,
         "gaps": all_gaps,
@@ -586,6 +605,8 @@ mod tests {
         assert_eq!(report["target_met_percent"], 0.0);
         assert_eq!(report["weakest_points"][0]["module_id"], "engine");
         assert_eq!(report["average_evidence_score"], 40.0);
+        assert_eq!(report["average_target_score"], 80.0);
+        assert_eq!(report["proof_completion_percent"], 50.0);
     }
 
     #[test]

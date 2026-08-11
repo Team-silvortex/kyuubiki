@@ -13,6 +13,7 @@ const COVERED_PARADIGMS: &[&str] = &[
     "runtime_api",
     "solver_execution",
     "workflow_composition",
+    "security",
     "deployment_update",
     "sdk_headless",
     "persistence_provenance",
@@ -91,6 +92,11 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
         "stable command",
     )?;
     assert_includes(
+        &string_array_at(surface, "/runtime_api/stable_commands"),
+        "./scripts/kyuubiki check-protocol-validation-qualification",
+        "stable command",
+    )?;
+    assert_includes(
         &string_array_at(surface, "/runtime_api/generated_artifacts"),
         "tmp/central-readiness-report.json",
         "generated artifact",
@@ -98,6 +104,11 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
     assert_includes(
         &string_array_at(surface, "/runtime_api/generated_artifacts"),
         "tmp/central-readiness-report.md",
+        "generated artifact",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/generated_artifacts"),
+        "tmp/protocol-validation-qualification-report.json",
         "generated artifact",
     )?;
 

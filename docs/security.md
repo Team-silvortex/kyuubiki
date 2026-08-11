@@ -173,6 +173,27 @@ or over-budget inputs before execution, native library loading, SSH, secret
 access, known-host mutation, fixture container startup, remote mutation, agent
 startup, central-store readiness promotion, download, or apply.
 
+### Protocol ingress security qualification
+
+The retained protocol qualification turns the Task IR and RPC fuzz-smoke lane
+into a versioned, machine-verifiable release artifact:
+
+```bash
+make qualify-protocol-validation
+```
+
+The v2 qualification contract requires 9 named fail-closed boundaries, 94
+protocol tests, 55 advertised RPC method round trips, 5 Task IR examples, and
+1,280 deterministic JSON and byte-ingress fuzz cases. It also verifies that all
+retained Task IR fixtures reject digest tampering and that structural rejection
+paths retain machine-readable error codes.
+
+This qualification is scoped to the protocol ingress and retained-evidence
+modules. It does not qualify GUI authorization, credential storage, transport
+authentication, Agent isolation, installer remote execution, external
+penetration resistance, or long-running native fuzz campaigns. Those surfaces
+must retain their own contracts and evidence instead of inheriting this result.
+
 ### Control plane
 
 The orchestrator can now enforce an API token for:

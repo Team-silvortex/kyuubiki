@@ -18,11 +18,13 @@ use std::path::Path;
 use std::process::Command;
 use std::time::Instant;
 
+mod security;
+
 type RunnerResult<T> = Result<T, String>;
 
 const CONTRACT_PATH: &str = "config/architecture/protocol-validation-qualification.json";
-const CONTRACT_SCHEMA: &str = "kyuubiki.protocol-validation-qualification-contract/v1";
-const REPORT_SCHEMA: &str = "kyuubiki.protocol-validation-qualification-report/v1";
+const CONTRACT_SCHEMA: &str = "kyuubiki.protocol-validation-qualification-contract/v2";
+const REPORT_SCHEMA: &str = "kyuubiki.protocol-validation-qualification-report/v2";
 const DEFAULT_OUT: &str = "tmp/protocol-validation-qualification-report.json";
 
 #[derive(Deserialize)]
@@ -32,6 +34,8 @@ struct QualificationContract {
     minimum_protocol_tests: usize,
     minimum_rpc_methods: usize,
     minimum_task_ir_count: usize,
+    minimum_security_boundaries: usize,
+    required_security_boundaries: Vec<String>,
     task_ir_examples: Vec<String>,
     required_authoring_modes: Vec<String>,
     required_tests: Vec<String>,
@@ -58,6 +62,7 @@ struct QualificationReport {
     fuzz_profiles: Vec<FuzzProfileReport>,
     task_ir: TaskIrReport,
     rpc: RpcReport,
+    security: security::SecurityQualificationReport,
     contract_checks: Vec<CommandReport>,
 }
 
@@ -174,12 +179,20 @@ fn validate_contract(root: &Path, contract: &QualificationContract) -> RunnerRes
     if contract.minimum_protocol_tests < 50
         || contract.minimum_rpc_methods < 20
         || contract.minimum_task_ir_count < 3
+        || contract.minimum_security_boundaries < 8
     {
         return Err("protocol qualification thresholds are too weak".to_string());
     }
     require_unique_nonempty(&contract.task_ir_examples, "TaskIR example")?;
     require_unique_nonempty(&contract.required_authoring_modes, "authoring mode")?;
     require_unique_nonempty(&contract.required_tests, "required test")?;
+    require_unique_nonempty(
+        &contract.required_security_boundaries,
+        "required security boundary",
+    )?;
+    if contract.required_security_boundaries.len() < contract.minimum_security_boundaries {
+        return Err("protocol qualification security boundary set is too small".to_string());
+    }
     for path in &contract.task_ir_examples {
         let _: Value = read_json(root, path)?;
     }
@@ -244,6 +257,7 @@ fn execute_qualification(
         .collect::<Vec<_>>();
     let task_ir = qualify_task_ir(root, contract)?;
     let rpc = qualify_rpc()?;
+    let security = security::build(contract, &protocol_tests, &fuzz_profiles, &task_ir, &rpc);
     let contract_checks = vec![
         run_runner_command(&["check-operator-task-ir-contract"])?,
         run_runner_command(&["check-operator-task-ir-contract", "--self-test"])?,
@@ -255,6 +269,7 @@ fn execute_qualification(
         && fuzz_profiles.iter().all(|profile| profile.passed)
         && task_ir.task_count >= contract.minimum_task_ir_count
         && rpc.advertised_method_count >= contract.minimum_rpc_methods
+        && security::passed(&security)
         && contract_checks.iter().all(|check| check.status == "pass");
     Ok(QualificationReport {
         schema_version: REPORT_SCHEMA.to_string(),
@@ -269,6 +284,7 @@ fn execute_qualification(
         fuzz_profiles,
         task_ir,
         rpc,
+        security,
         contract_checks,
     })
 }
@@ -648,6 +664,7 @@ fn validate_report(
     {
         return Err("RPC qualification evidence is incomplete".to_string());
     }
+    security::validate(contract, &report.security)?;
     if report.contract_checks.len() != 2
         || report
             .contract_checks
@@ -677,6 +694,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
     {
         return Err("protocol test output parser self-test failed".to_string());
     }
+    security::run_self_test()?;
     Ok(())
 }
 

@@ -2,7 +2,7 @@
   "$schema": "../schemas/model-research-bootstrap.schema.json",
   "schema_version": "kyuubiki.model-research-bootstrap/v1",
   "entrypoint": "llms.txt",
-  "version_line": "moxi 2.11.x",
+  "version_line": "moxi 2.13.x",
   "purpose": "Give a large model one bounded, machine-readable route from documentation ingestion to a reproducible screening research artifact.",
   "required_documents": [
     {

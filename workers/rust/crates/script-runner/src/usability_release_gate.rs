@@ -169,8 +169,8 @@ fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
     if config.schema_version != CONFIG_SCHEMA {
         return Err(format!("schema_version must be {CONFIG_SCHEMA}"));
     }
-    if config.baseline_release != "moxi 2.11.x" || config.target_release != "daji 3.0.0" {
-        return Err("usability gate must describe the moxi 2.11.x to daji 3.0.0 line".to_string());
+    if config.baseline_release != "moxi 2.13.x" || config.target_release != "daji 3.0.0" {
+        return Err("usability gate must describe the moxi 2.13.x to daji 3.0.0 line".to_string());
     }
     if !config.policy.all_blocking_journeys_must_pass
         || !config.policy.planned_or_static_only_is_not_release_evidence

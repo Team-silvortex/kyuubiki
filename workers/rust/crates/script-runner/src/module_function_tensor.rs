@@ -8,6 +8,7 @@ mod evidence_grade;
 mod includes;
 mod markdown;
 mod maturity;
+mod release_readiness;
 mod self_test;
 
 type RunnerResult<T> = Result<T, String>;
@@ -18,9 +19,9 @@ pub(super) const MATRIX_PATH: &str = "config/architecture/module-function-covera
 const RUNTIME_API_CLIENT_CONTRACT_PATH: &str =
     "config/architecture/contracts-runtime-api-surface.json";
 const DEFAULT_OUT: &str = "tmp/module-function-coverage-tensor.json";
-pub(super) const SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor/v3";
+pub(super) const SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor/v4";
 const EVIDENCE_INCLUDE_SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-evidence/v2";
-const REPORT_SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor-report/v3";
+const REPORT_SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor-report/v4";
 const ALLOWED_STATUS: &[&str] = &["covered", "partial", "planned", "not_applicable"];
 const PARADIGM_ORDER: &[&str] = &[
     "product_surface",
@@ -41,6 +42,7 @@ const DEPTH_AXIS_ORDER: &[&str] = &[
     "security_evidence",
     "contract_evidence",
     "evidence_grade",
+    "release_criticality",
     "gap",
 ];
 const GAP_ORDER: &[&str] = &[
@@ -69,16 +71,17 @@ pub(crate) fn run_check_module_function_tensor(
     let topology = read_json(root, TOPOLOGY_PATH)?;
     let matrix = read_json(root, MATRIX_PATH)?;
     validate_tensor_config(root, &tensor, &topology, &matrix)?;
-    let report = build_tensor_report(&tensor, &topology, &matrix);
+    let report = build_tensor_report(root, &tensor, &topology, &matrix)?;
     write_report(root, &report, &options.out)?;
     let ok = report.get("ok").and_then(Value::as_bool).unwrap_or(false);
+    let structural_ok = report
+        .get("structural_ok")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
     println!(
-        "module function coverage tensor {}: {} module(s), {} paradigm(s), {} structural gap(s), {} maturity gap(s), {} evidence-grade gap(s)",
-        if ok {
-            "structurally passed"
-        } else {
-            "has structural gaps"
-        },
+        "module function coverage tensor: structure={}, command={}, {} module(s), {} paradigm(s), {} structural gap(s), {} maturity gap(s), {} evidence-grade gap(s), daji status={}, p0 gap(s)={}",
+        if structural_ok { "passed" } else { "blocked" },
+        if ok { "passed" } else { "blocked" },
         report
             .pointer("/axes/modules")
             .and_then(Value::as_array)
@@ -94,6 +97,14 @@ pub(crate) fn run_check_module_function_tensor(
             .unwrap_or(0),
         report
             .get("evidence_grade_gap_count")
+            .and_then(Value::as_u64)
+            .unwrap_or(0),
+        report
+            .pointer("/release_readiness/status")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown"),
+        report
+            .pointer("/release_readiness/p0_coordinate_gap_count")
             .and_then(Value::as_u64)
             .unwrap_or(0)
     );
@@ -170,6 +181,7 @@ fn validate_tensor_config(
     validate_declared_runtime_api_clients(root, tensor, matrix, &module_ids)?;
     maturity::validate_config(root, tensor, &paradigms, &module_ids)?;
     evidence_grade::validate_config(tensor, &paradigms, &module_ids)?;
+    release_readiness::validate_config(root, tensor, matrix, &paradigms, &module_ids)?;
     Ok(())
 }
 
@@ -280,7 +292,12 @@ fn validate_contract_evidence_entries(
     Ok(())
 }
 
-fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Value {
+fn build_tensor_report(
+    root: &Path,
+    tensor: &Value,
+    topology: &Value,
+    matrix: &Value,
+) -> RunnerResult<Value> {
     let paradigms = ordered_keys(matrix, "paradigms", PARADIGM_ORDER);
     let required_by_module = matrix.get("required_by_module").and_then(Value::as_object);
     let mut module_summary = serde_json::Map::new();
@@ -424,13 +441,30 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
         .get("gap_count")
         .and_then(Value::as_u64)
         .unwrap_or(0);
-    json!({
+    let structural_ok = blocking_gap_count == 0;
+    let maturity_ok = thin_points.is_empty();
+    let release_readiness = release_readiness::evaluate(
+        root,
+        tensor,
+        &cells,
+        structural_ok,
+        maturity_ok,
+        &evidence_grade_calibration,
+    )?;
+    let release_ready = release_readiness
+        .get("release_claim_allowed")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let command_ok =
+        structural_ok && (!release_readiness::gate_is_enforced(tensor) || release_ready);
+    Ok(json!({
         "schema_version": REPORT_SCHEMA_VERSION,
         "source": TENSOR_PATH,
         "topology": TOPOLOGY_PATH,
         "matrix": MATRIX_PATH,
         "evidence_includes": string_array(tensor, "evidence_includes"),
-        "ok": blocking_gap_count == 0,
+        "ok": command_ok,
+        "structural_ok": structural_ok,
         "axes": {
             "modules": modules(topology).into_iter().filter_map(|module| string_field(module, "id")).collect::<Vec<_>>(),
             "paradigms": paradigms,
@@ -441,20 +475,22 @@ fn build_tensor_report(tensor: &Value, topology: &Value, matrix: &Value) -> Valu
         "paradigm_contract_evidence": tensor.get("paradigm_contract_evidence").cloned().unwrap_or_else(|| json!({})),
         "maturity_policy": tensor.get("maturity_policy").cloned().unwrap_or_else(|| json!({})),
         "evidence_grade_policy": tensor.get("evidence_grade_policy").cloned().unwrap_or_else(|| json!({})),
+        "release_profile": tensor.get("release_profile").cloned().unwrap_or_else(|| json!({})),
         "cell_requirements": tensor.get("cell_requirements").cloned().unwrap_or_else(|| json!([])),
         "evidence_claims": tensor.get("evidence_claims").cloned().unwrap_or_else(|| json!([])),
         "gap_count": gaps.len(),
         "blocking_gap_count": blocking_gap_count,
         "gaps": gaps,
-        "maturity_ok": thin_points.is_empty(),
+        "maturity_ok": maturity_ok,
         "maturity_gap_count": thin_points.len(),
         "thin_evidence_count": thin_points.len(),
         "thin_points": thin_points,
         "evidence_grade_ok": evidence_grade_gap_count == 0,
         "evidence_grade_gap_count": evidence_grade_gap_count,
         "evidence_grade_calibration": evidence_grade_calibration,
+        "release_readiness": release_readiness,
         "cells": cells
-    })
+    }))
 }
 
 fn write_report(root: &Path, report: &Value, out_path: &str) -> RunnerResult<()> {

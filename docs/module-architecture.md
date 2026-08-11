@@ -124,8 +124,8 @@ Its axes are:
 - `function_paradigm`: the paradigm from
   `config/architecture/module-function-coverage-matrix.json`
 - `evidence_depth`: required state, matrix status, benchmark evidence,
-  security evidence, maturity dimensions, calibrated evidence grade, target,
-  and derived gap level
+  security evidence, maturity dimensions, calibrated evidence grade, release
+  criticality, target, and derived gap level
 
 Run `make check-module-function-coverage-tensor` to generate
 `tmp/module-function-coverage-tensor.json` and
@@ -141,10 +141,16 @@ test commands nor contract evidence are reported as `weak_evidence`, so a
 module cannot look healthy only because the two-dimensional matrix says it is
 covered.
 
-Tensor v3 also prevents a mapped smoke command from looking equivalent to
-retained qualification or an installed journey. Structural `ok` remains the
-hard command gate, while evidence-grade gaps form an independent advisory
-hardening queue.
+Tensor v4 preserves the v3 rule that a mapped smoke command is not equivalent
+to retained qualification or an installed journey. It also adds a versioned
+release profile for `daji 3.0.0`, classifies exact coordinates as P0, P1, or
+P2, and imports external release decisions such as the usability release
+claim. Structural `ok` and release readiness are deliberately separate.
+
+During the current `moxi 2.13.x` checkpoint the release profile is advisory.
+At the configured `moxi 2.17.0` enforcement point, changing its gate mode to
+`enforced` makes an unready release profile fail the command instead of merely
+producing a hardening queue.
 
 Validation contract evidence includes both readiness reports and release
 review gates. Operator qualification records, retained review decisions, and
@@ -154,7 +160,7 @@ cannot appear mature only because release evidence exists. The default
 so approved promotion summaries are verified by the aggregate operator
 reliability gate instead of living only behind a specialist command.
 
-The v3 tensor does not broadcast one paradigm-level contract to every module.
+The tensor does not broadcast one paradigm-level contract to every module.
 Every contract evidence entry declares the modules it actually covers. The
 report then evaluates required evidence dimensions for the exact
 `module/paradigm` coordinate. Built-in dimensions include execution,
@@ -203,6 +209,18 @@ of proof; `evidence_grade_gap_count` tracks insufficient proof strength.
 `evidence_grade_calibration.gaps` contains the full queue, while
 `weakest_points` is a priority-weighted review window. Neither changes the
 structural exit status while `gate_mode` is `advisory`.
+
+Two percentages must be read together:
+
+- `target_met_percent` counts required coordinates that completely reached
+  their configured grade target.
+- `proof_completion_percent` sums achieved evidence points toward each
+  coordinate target, capped at that target. It measures remaining proof work
+  without allowing over-qualified coordinates to hide untouched ones.
+
+`release_readiness` adds P0/P1/P2 summaries, a P0 blocking queue, external
+gate outcomes, and a derived release claim. A zero structural gap count can
+therefore coexist honestly with a blocked `daji` release.
 
 For contract-heavy paradigms, the tensor also carries `contract_evidence`.
 The `runtime_api` coordinate includes the contracts runtime API surface schema,

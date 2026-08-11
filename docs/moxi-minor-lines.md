@@ -114,13 +114,13 @@ When in doubt, new `moxi 2.x` work should answer three questions:
 2. Is the contract visible to headless SDKs and not only to GUI code?
 3. Can the coverage tensor, benchmark lane, or integrity checker observe it?
 
-## Current checkpoint: `2.11.7`
+## Current checkpoint: `2.13.x`
 
-The repository remains in the `2.9` to `2.12` research-workflow maturity
-window. The previous distributed-reliability and cohesive-interface work stays
-in the baseline, but the current line-level question is whether a user,
-assistant, or SDK can move through an entire study without hidden UI-only
-meaning or dead-end controls.
+The repository has entered the `2.13` to `2.16` ecosystem-surface window. The
+research-workflow and distributed-reliability work stays in the baseline, but
+the current line-level question is whether every supported control surface can
+reach the same contract-governed study without hidden UI-only meaning,
+machine-local tooling, or dead-end controls.
 
 - GUI actions, Hub/Workbench/Installer entrypoints, and backend calls must be
   mapped as complete recoverable journeys
@@ -129,8 +129,9 @@ meaning or dead-end controls.
   legacy Node test shims as release evidence
 - Pwdt becomes the preferred frontend automation control plane for product-owned
   shells, while headless SDKs stay focused on backend/runtime freedom
-- the coverage tensor is the first planning question for weak coordinates,
-  including UI/UX, runtime, SDK, benchmark, security, and persistence evidence
+- tensor v4 separates structural completeness, evidence progress, exact target
+  completion, release criticality, and external release gates; its `daji`
+  profile is advisory now and is scheduled to become enforceable at `2.17.0`
 - component integrity, language packs, update visibility, and documentation
   mirrors must advance with the same current-line language
 - contract checkers and protocol files should continue being split into small

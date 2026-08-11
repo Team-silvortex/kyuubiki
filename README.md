@@ -4,7 +4,7 @@ Kyuubiki is an engine-first FEM workstation, workflow system, and distributed
 runtime control plane.
 
 The active repository line is `moxi 2.x`. The current development snapshot is
-`moxi 2.11.7`. The line began at `moxi 2.0.0` after the `tamamono 1.x`
+`moxi 2.13.1`. The line began at `moxi 2.0.0` after the `tamamono 1.x`
 industrialization bridge.
 
 ## What This Repo Contains
@@ -60,7 +60,7 @@ Start with:
 
 ## Moxi 2.11 Posture
 
-`moxi 2.0.0` established the product baseline. `moxi 2.11.7` keeps those
+`moxi 2.0.0` established the product baseline. `moxi 2.13.1` keeps those
 contracts and advances the calculation and workflow path rather than resetting
 the architecture.
 

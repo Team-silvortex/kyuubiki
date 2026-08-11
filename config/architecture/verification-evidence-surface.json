@@ -9,6 +9,7 @@
       "./scripts/kyuubiki check-module-function-matrix",
       "./scripts/kyuubiki check-module-function-coverage-tensor",
       "./scripts/kyuubiki check-headless-workflow-qualification",
+      "./scripts/kyuubiki check-protocol-validation-qualification",
       "./scripts/kyuubiki build-regression-gate-report",
       "./scripts/kyuubiki build-central-readiness-report",
       "./scripts/kyuubiki check-central-readiness-report"
@@ -17,6 +18,7 @@
       "tmp/module-function-matrix-report.json",
       "tmp/module-function-coverage-tensor.json",
       "tmp/headless-workflow-qualification-report.json",
+      "tmp/protocol-validation-qualification-report.json",
       "tmp/regression-gate-report.json",
       "tmp/central-readiness-report.json",
       "tmp/central-readiness-report.md"
@@ -55,6 +57,20 @@
       "kyuubiki.headless-operator-task-provenance/v1",
       "kyuubiki.headless-execution-run/v1",
       "kyuubiki.headless-workflow-qualification-report/v1"
+    ]
+  },
+  "security": {
+    "evidence_sources": [
+      "config/architecture/protocol-validation-qualification.json",
+      "schemas/protocol-validation-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/protocol_validation_qualification.rs",
+      "workers/rust/crates/script-runner/src/protocol_validation_qualification/security.rs",
+      "releases/usability-evidence/2.13.1/protocol-security-qualification.json"
+    ],
+    "required_surfaces": [
+      "kyuubiki.protocol-validation-qualification-contract/v2",
+      "kyuubiki.protocol-validation-qualification-report/v2",
+      "fail_closed"
     ]
   },
   "deployment_update": {

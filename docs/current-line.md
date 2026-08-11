@@ -13,7 +13,7 @@ Use it when you want the shortest answer to:
 `moxi 2.x` is the point where Kyuubiki treats its core contracts as product
 baseline rather than loose prototypes.
 
-The current development point in this line is `moxi 2.11.7`.
+The current development point in this line is `moxi 2.13.1`.
 
 The 2.x line optimizes for:
 
@@ -51,10 +51,15 @@ The current rule is:
 - keep GUI convenience separate from runtime authority
 - keep agent/orchestra/mesh behavior protocol-driven
 
-## Current 2.11 Checkpoint
+## Current 2.13 Checkpoint
 
-`moxi 2.11.7` treats the next trust jump as product usability and automation
-closure rather than raw feature sprawl:
+`moxi 2.13.x` treats the next trust jump as contract-equivalent ecosystem
+surfaces plus measurable preparation for `daji 3.0.0`, rather than raw feature
+sprawl:
+
+- tensor v4 now separates structural completeness from release readiness,
+  reports both exact target completion and cumulative evidence progress, and
+  orders the remaining work through P0/P1/P2 `daji` criticality
 
 - GUI navigation and backend calls must form complete, testable user journeys
   instead of isolated panels that look finished but do not execute

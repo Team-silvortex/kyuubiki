@@ -34,7 +34,7 @@ pub(super) fn run_self_test() -> RunnerResult<()> {
     let matrix = fixture_matrix();
     let tensor = fixture_tensor();
     validate_tensor_config(Path::new("."), &tensor, &topology, &matrix)?;
-    let report = build_tensor_report(&tensor, &topology, &matrix);
+    let report = build_tensor_report(Path::new("."), &tensor, &topology, &matrix)?;
     if report.get("blocking_gap_count").and_then(Value::as_u64) != Some(0)
         || report
             .pointer("/module_summary/engine/counts/weak")
@@ -164,6 +164,18 @@ fn fixture_tensor() -> Value {
         "topology": TOPOLOGY_PATH,
         "matrix": MATRIX_PATH,
         "depth_axes": { "required": "r", "status": "s" },
+        "release_profile": {
+            "id": "test-release",
+            "current_checkpoint": "test",
+            "target_release": "test",
+            "gate_mode": "advisory",
+            "enforce_from": "later",
+            "required_target_met_percent": 100.0,
+            "criticality_order": ["p0", "p1", "p2"],
+            "paradigm_criticality": {"solver_execution": "p0"},
+            "cell_criticality_overrides": [],
+            "external_gates": []
+        },
         "evidence_grade_policy": {
             "gate_mode": "advisory",
             "weakest_limit": 10,

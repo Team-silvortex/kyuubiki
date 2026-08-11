@@ -219,10 +219,11 @@ The tensor is the three-axis review map:
 - function paradigm
 - evidence depth
 
-Tensor v3 splits evidence depth into dimension completeness and calibrated
-proof strength. Its advisory weakest-coordinate queue distinguishes runnable
-smoke coverage from verified, qualified, and operational evidence without
-weakening the structural architecture gate.
+Tensor v4 splits evidence depth into dimension completeness, calibrated proof
+strength, and release criticality. Its `daji 3.0.0` profile distinguishes
+runnable smoke coverage from verified, qualified, operational, and externally
+release-gated evidence without weakening the structural architecture gate
+during the current advisory phase.
 
 ## Repository Ownership Map
 
