@@ -43,6 +43,11 @@ README.
 - `kcore-headless-research-profile.schema.json` specializes that export
   contract for a self-contained, semantically verified Headless research-round
   series with explicit batch, run, evidence, and parameter-patch roles
+- `kcore-headless-research-series.schema.json` is the compact native packaging
+  input that lists ordered round files while Rust supplies every fixed KCore
+  role, schema reference, contract binding, and latest-round entrypoint
+- `examples.kcore-headless-research-series.json` demonstrates a baseline round
+  followed by one guarded parameter change
 - `examples.kcore-export.json` binds the existing workflow graph, workflow
   dataset, and TaskIR examples into one exchange-format conformance fixture
 - `agent-manifest.schema.json` is for local/distributed solver node manifests

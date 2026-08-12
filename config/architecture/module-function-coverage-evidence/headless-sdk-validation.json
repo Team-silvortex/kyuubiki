@@ -61,9 +61,13 @@
           "schemas/headless-research-round-evidence.schema.json",
           "schemas/examples.headless-research-round-spec.json",
           "workers/rust/crates/headless-sdk/src/research_round.rs",
+          "workers/rust/crates/headless-sdk/src/research_round_tests.rs",
           "workers/rust/crates/cli/src/bin/kyuubiki-headless/research_round.rs",
           "workers/rust/crates/cli/tests/headless_research_round.rs",
           "schemas/kcore-headless-research-profile.schema.json",
+          "schemas/kcore-headless-research-series.schema.json",
+          "schemas/examples.kcore-headless-research-series.json",
+          "workers/rust/crates/kcore/src/research_export.rs",
           "workers/rust/crates/kcore/src/semantic.rs",
           "workers/rust/crates/kcore/tests/research_round_profile.rs",
           "docs/headless-sdks.md"
@@ -75,7 +79,9 @@
           "--research-round-spec",
           "--previous-round-evidence",
           "service_research_runs_emit_a_contiguous_two_round_evidence_chain",
-          "exports_and_reverifies_a_self_contained_two_round_research_series"
+          "exports_and_reverifies_a_self_contained_two_round_research_series",
+          "kyuubiki.kcore-headless-research-series/v1",
+          "native_binary_exports_the_minimal_research_series_spec"
         ]
       }
     ],
@@ -238,8 +244,11 @@
         "schemas/headless-research-round-spec.schema.json",
         "schemas/headless-research-round-evidence.schema.json",
         "workers/rust/crates/headless-sdk/src/research_round.rs",
+        "workers/rust/crates/headless-sdk/src/research_round_tests.rs",
         "workers/rust/crates/cli/tests/headless_research_round.rs",
         "schemas/kcore-headless-research-profile.schema.json",
+        "schemas/kcore-headless-research-series.schema.json",
+        "workers/rust/crates/kcore/src/research_export.rs",
         "workers/rust/crates/kcore/src/semantic.rs",
         "workers/rust/crates/kcore/tests/research_round_profile.rs"
       ],
@@ -249,7 +258,8 @@
         "service_research_runs_emit_a_contiguous_two_round_evidence_chain",
         "later_round_without_previous_evidence_fails_before_service_connection",
         "exports_and_reverifies_a_self_contained_two_round_research_series",
-        "rejects_a_series_that_omits_the_reconstructing_parameter_patch"
+        "rejects_a_series_that_omits_the_reconstructing_parameter_patch",
+        "native_binary_exports_the_minimal_research_series_spec"
       ]
     }
   ]

@@ -17,10 +17,12 @@ pub const RESEARCH_BATCH_ROLE: &str = "workflow.execution-batch";
 pub const RESEARCH_PATCH_ROLE: &str = "workflow.parameter-patch";
 pub const RESEARCH_RUN_ROLE: &str = "evidence.execution-run";
 pub const RESEARCH_ROUND_ROLE: &str = "evidence.research-round";
+pub const RESEARCH_SERIES_KIND: &str = "research-round-series";
 
 const JSON_MEDIA_TYPE: &str = "application/json";
 const MAX_SEMANTIC_ARTIFACT_BYTES: u64 = 16 * 1024 * 1024;
-const RESEARCH_SERIES_KIND: &str = "research-round-series";
+const MAX_SEMANTIC_TOTAL_BYTES: u64 = 256 * 1024 * 1024;
+pub const MAX_RESEARCH_SERIES_ROUNDS: usize = 4_096;
 
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct SemanticVerification {
@@ -73,6 +75,7 @@ where
             binding.artifact_id
         ));
     }
+    validate_semantic_budget(manifest)?;
 
     let artifacts = load_research_artifacts(manifest, &mut read)?;
     let latest = artifacts
@@ -97,6 +100,40 @@ where
         contract_count: 1,
         research_round_count,
     })
+}
+
+fn validate_semantic_budget(manifest: &Manifest) -> Result<(), String> {
+    let mut total = 0_u64;
+    let mut round_count = 0_usize;
+    for artifact in &manifest.artifacts {
+        if !is_research_role(&artifact.role) {
+            continue;
+        }
+        total = total
+            .checked_add(artifact.byte_length)
+            .ok_or_else(|| "headless research semantic byte count overflow".to_string())?;
+        if total > MAX_SEMANTIC_TOTAL_BYTES {
+            return Err(format!(
+                "headless research semantic artifacts exceed {MAX_SEMANTIC_TOTAL_BYTES} bytes"
+            ));
+        }
+        if artifact.role == RESEARCH_ROUND_ROLE {
+            round_count += 1;
+        }
+    }
+    if round_count == 0 || round_count > MAX_RESEARCH_SERIES_ROUNDS {
+        return Err(format!(
+            "headless research KCore must contain 1..={MAX_RESEARCH_SERIES_ROUNDS} rounds"
+        ));
+    }
+    Ok(())
+}
+
+fn is_research_role(role: &str) -> bool {
+    matches!(
+        role,
+        RESEARCH_BATCH_ROLE | RESEARCH_PATCH_ROLE | RESEARCH_RUN_ROLE | RESEARCH_ROUND_ROLE
+    )
 }
 
 fn load_research_artifacts<F>(
@@ -341,4 +378,80 @@ fn insert_unique<T>(
 
 fn canonical_json_sha256(value: &Value) -> String {
     canonical::sha256(canonical::json(value).as_bytes())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::{Integrity, Producer};
+    use std::collections::BTreeMap;
+
+    fn artifact(id: String, byte_length: u64) -> Artifact {
+        let sha256 = "a".repeat(64);
+        Artifact {
+            id,
+            role: RESEARCH_ROUND_ROLE.to_string(),
+            media_type: JSON_MEDIA_TYPE.to_string(),
+            object_path: Manifest::object_path(&sha256),
+            byte_length,
+            sha256,
+            name: None,
+            schema_ref: None,
+            encoding: Some("json".to_string()),
+            shape: vec![],
+            unit: None,
+            metadata: BTreeMap::new(),
+        }
+    }
+
+    fn manifest(artifacts: Vec<Artifact>) -> Manifest {
+        Manifest {
+            schema_version: "kyuubiki.kcore/v1".to_string(),
+            format: "kcore".to_string(),
+            format_version: 1,
+            core_id: "research-budget".to_string(),
+            title: "Research budget".to_string(),
+            kind: RESEARCH_SERIES_KIND.to_string(),
+            producer: Producer {
+                name: "test".to_string(),
+                version: "1".to_string(),
+                runtime: None,
+            },
+            artifacts,
+            contracts: vec![],
+            entrypoints: vec![],
+            integrity: Integrity {
+                algorithm: "sha256".to_string(),
+                core_digest_sha256: "a".repeat(64),
+            },
+            created_at: None,
+            provenance: Value::Null,
+            metadata: BTreeMap::new(),
+        }
+    }
+
+    #[test]
+    fn semantic_budget_rejects_excessive_declared_bytes_without_reading_objects() {
+        let manifest = manifest(vec![artifact(
+            "round-1".to_string(),
+            MAX_SEMANTIC_TOTAL_BYTES + 1,
+        )]);
+        assert!(
+            validate_semantic_budget(&manifest)
+                .expect_err("semantic byte budget")
+                .contains("exceed")
+        );
+    }
+
+    #[test]
+    fn semantic_budget_rejects_excessive_round_count() {
+        let artifacts = (0..=MAX_RESEARCH_SERIES_ROUNDS)
+            .map(|index| artifact(format!("round-{index}"), 0))
+            .collect();
+        assert!(
+            validate_semantic_budget(&manifest(artifacts))
+                .expect_err("semantic round budget")
+                .contains("1..=")
+        );
+    }
 }

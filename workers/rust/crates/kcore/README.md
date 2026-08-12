@@ -17,6 +17,7 @@ store distribution, and third-party tools.
 
 ```text
 kyuubiki-kcore export export.json --out result.kcore
+kyuubiki-kcore research-export research-series.json --out research.kcore
 kyuubiki-kcore inspect result.kcore
 kyuubiki-kcore verify result.kcore
 kyuubiki-kcore extract result.kcore --out restored-core
@@ -25,4 +26,7 @@ kyuubiki-kcore extract result.kcore --out restored-core
 See `docs/kcore-exchange-format.md` and
 `schemas/kcore-manifest.schema.json` for the normative v1 contract. The
 self-contained research-series profile is defined by
-`schemas/kcore-headless-research-profile.schema.json`.
+`schemas/kcore-headless-research-profile.schema.json`. Use
+`schemas/kcore-headless-research-series.schema.json` as the smaller native
+packaging input; Rust assigns all artifact roles, schema references, contract
+bindings, and entrypoints.

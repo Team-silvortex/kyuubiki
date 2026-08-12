@@ -21,6 +21,15 @@ pub(crate) fn run_kcore_command(args: Vec<OsString>) -> RunnerResult<u8> {
             )?;
             print_report(&kyuubiki_kcore::export_path(&values[1], &values[3])?)?;
         }
+        "research-export" => {
+            require_shape(
+                &values,
+                "kcore research-export <research-series.json> --out <result.kcore>",
+            )?;
+            print_report(&kyuubiki_kcore::export_research_series_path(
+                &values[1], &values[3],
+            )?)?;
+        }
         "inspect" if values.len() == 2 => {
             print_report(&kyuubiki_kcore::inspect_path(Path::new(&values[1]))?)?;
         }
@@ -54,5 +63,27 @@ fn print_report(value: &impl Serialize) -> RunnerResult<()> {
 }
 
 fn usage() -> String {
-    "usage: kcore export|inspect|verify|extract (run help for command shapes)".to_string()
+    "usage: kcore export|research-export|inspect|verify|extract (run help for command shapes)"
+        .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn research_export_dispatches_to_native_kcore_builder() {
+        let missing = std::env::temp_dir().join("kyuubiki-missing-research-series.json");
+        let output = std::env::temp_dir().join("kyuubiki-unused-research-series.kcore");
+        let error = run_kcore_command(vec![
+            OsString::from("research-export"),
+            missing.into_os_string(),
+            OsString::from("--out"),
+            output.into_os_string(),
+        ])
+        .expect_err("missing source must reach the native builder");
+
+        assert!(error.contains("failed to inspect research series spec"));
+        assert!(!error.contains("usage:"));
+    }
 }

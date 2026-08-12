@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/kcore-headless-research-series.schema.json",
+  "title": "KCore Headless research series source specification",
+  "description": "Minimal native input for packaging a complete Headless research lineage without manually assigning KCore roles, contracts, schema references, or entrypoints.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "core_id",
+    "title",
+    "producer",
+    "rounds"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.kcore-headless-research-series/v1"
+    },
+    "core_id": {
+      "$ref": "kcore-manifest.schema.json#/$defs/token"
+    },
+    "title": {
+      "$ref": "kcore-manifest.schema.json#/$defs/nonEmptyString"
+    },
+    "producer": {
+      "$ref": "kcore-manifest.schema.json#/$defs/producer"
+    },
+    "rounds": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4096,
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/firstRound"
+        }
+      ],
+      "items": {
+        "$ref": "#/$defs/laterRound"
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "provenance": {},
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "sourcePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "firstRound": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "batch",
+        "run_report",
+        "evidence"
+      ],
+      "properties": {
+        "batch": {
+          "$ref": "#/$defs/sourcePath"
+        },
+        "run_report": {
+          "$ref": "#/$defs/sourcePath"
+        },
+        "evidence": {
+          "$ref": "#/$defs/sourcePath"
+        }
+      }
+    },
+    "laterRound": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "batch",
+        "run_report",
+        "evidence",
+        "parameter_patch"
+      ],
+      "properties": {
+        "batch": {
+          "$ref": "#/$defs/sourcePath"
+        },
+        "run_report": {
+          "$ref": "#/$defs/sourcePath"
+        },
+        "evidence": {
+          "$ref": "#/$defs/sourcePath"
+        },
+        "parameter_patch": {
+          "$ref": "#/$defs/sourcePath"
+        }
+      }
+    }
+  }
+}

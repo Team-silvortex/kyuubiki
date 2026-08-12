@@ -539,6 +539,8 @@ Current progress:
 - KCore now retains a complete generic research series rather than loose JSON
   files: export and verify both recheck every service report, metric digest,
   ancestry link, and replayable parameter patch before accepting the package
+- the native `kcore research-export` path now converts an ordered minimal round
+  list into that profile, removing hand-authored role and entrypoint wiring
 - the composite thermo-electric panel bundle is still correctly classified as
   screening-only until external validation, failed quality gates, and
   low-confidence material cards are addressed

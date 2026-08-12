@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use kyuubiki_headless_sdk::{
@@ -13,9 +14,11 @@ use kyuubiki_headless_sdk::{
     run_batch_dry,
 };
 use kyuubiki_kcore::{
-    ContractBinding, ExportArtifact, ExportSpec, HEADLESS_RESEARCH_CONTRACT_NAME, Manifest,
-    Producer, RESEARCH_BATCH_ROLE, RESEARCH_PATCH_ROLE, RESEARCH_ROUND_ROLE, RESEARCH_RUN_ROLE,
-    SchemaReference, export_spec, verify_path,
+    ContractBinding, ExportArtifact, ExportSpec, HEADLESS_RESEARCH_CONTRACT_NAME,
+    HEADLESS_RESEARCH_SERIES_SCHEMA_VERSION, HeadlessResearchSeriesRound,
+    HeadlessResearchSeriesSpec, Manifest, Producer, RESEARCH_BATCH_ROLE, RESEARCH_PATCH_ROLE,
+    RESEARCH_ROUND_ROLE, RESEARCH_RUN_ROLE, SchemaReference, build_research_export_spec,
+    export_research_series_path, export_research_series_spec, export_spec, verify_path,
 };
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -25,6 +28,7 @@ use zip::{CompressionMethod, ZipArchive, ZipWriter, write::SimpleFileOptions};
 struct Fixture {
     root: PathBuf,
     spec: ExportSpec,
+    series: HeadlessResearchSeriesSpec,
     second_report: PathBuf,
 }
 
@@ -197,16 +201,17 @@ fn build_fixture(label: &str) -> Fixture {
             "kyuubiki.headless-research-round-evidence",
         ),
     ];
+    let producer = Producer {
+        name: "kyuubiki-test".to_string(),
+        version: "1".to_string(),
+        runtime: Some("rust-native".to_string()),
+    };
     let spec = ExportSpec {
         schema_version: "kyuubiki.kcore-export/v1".to_string(),
         core_id: "thermal-research-series".to_string(),
         title: "Thermal research series".to_string(),
         kind: "research-round-series".to_string(),
-        producer: Producer {
-            name: "kyuubiki-test".to_string(),
-            version: "1".to_string(),
-            runtime: Some("rust-native".to_string()),
-        },
+        producer: producer.clone(),
         artifacts,
         contracts: vec![ContractBinding {
             name: HEADLESS_RESEARCH_CONTRACT_NAME.to_string(),
@@ -219,9 +224,33 @@ fn build_fixture(label: &str) -> Fixture {
         provenance: json!({"execution": "service"}),
         metadata: BTreeMap::new(),
     };
+    let series = HeadlessResearchSeriesSpec {
+        schema_version: "kyuubiki.kcore-headless-research-series/v1".to_string(),
+        core_id: "thermal-research-series".to_string(),
+        title: "Thermal research series".to_string(),
+        producer,
+        rounds: vec![
+            HeadlessResearchSeriesRound {
+                batch: "round-1.batch.json".to_string(),
+                run_report: "round-1.run.json".to_string(),
+                evidence: "round-1.evidence.json".to_string(),
+                parameter_patch: None,
+            },
+            HeadlessResearchSeriesRound {
+                batch: "round-2.batch.json".to_string(),
+                run_report: "round-2.run.json".to_string(),
+                evidence: "round-2.evidence.json".to_string(),
+                parameter_patch: Some("round-2.patch.json".to_string()),
+            },
+        ],
+        created_at: None,
+        provenance: json!({"execution": "service"}),
+        metadata: BTreeMap::new(),
+    };
     Fixture {
         root,
         spec,
+        series,
         second_report: second_report_path,
     }
 }
@@ -229,14 +258,98 @@ fn build_fixture(label: &str) -> Fixture {
 #[test]
 fn exports_and_reverifies_a_self_contained_two_round_research_series() {
     let fixture = build_fixture("roundtrip");
+    let source = fixture.root.join("research-series.json");
+    write_json(&source, &fixture.series);
     let output = fixture.root.join("research.kcore");
-    let export = export_spec(fixture.spec, &fixture.root, &output).expect("export research KCore");
+    let export = export_research_series_path(&source, &output).expect("export research KCore");
     assert_eq!(export.semantic.contract_count, 1);
     assert_eq!(export.semantic.research_round_count, 2);
 
     let verification = verify_path(&output).expect("verify research KCore");
     assert_eq!(verification.semantic.contract_count, 1);
     assert_eq!(verification.semantic.research_round_count, 2);
+    fs::remove_dir_all(fixture.root).expect("clean fixture");
+}
+
+#[test]
+fn native_binary_exports_the_minimal_research_series_spec() {
+    let fixture = build_fixture("binary-roundtrip");
+    let source = fixture.root.join("research-series.json");
+    write_json(&source, &fixture.series);
+    let output = fixture.root.join("binary-research.kcore");
+    let command = Command::new(env!("CARGO_BIN_EXE_kyuubiki-kcore"))
+        .args([
+            "research-export",
+            source.to_str().expect("source path"),
+            "--out",
+            output.to_str().expect("output path"),
+        ])
+        .output()
+        .expect("run KCore binary");
+    assert!(
+        command.status.success(),
+        "{}",
+        String::from_utf8_lossy(&command.stderr)
+    );
+    let report: Value = serde_json::from_slice(&command.stdout).expect("decode command report");
+    assert_eq!(report["semantic"]["research_round_count"], 2);
+    assert_eq!(verify_path(&output).expect("verify output").object_count, 7);
+    fs::remove_dir_all(fixture.root).expect("clean fixture");
+}
+
+#[test]
+fn native_builder_assigns_profile_roles_contract_and_latest_entrypoint() {
+    let schema: Value = serde_json::from_str(include_str!(
+        "../../../../../schemas/kcore-headless-research-series.schema.json"
+    ))
+    .expect("series schema");
+    let example: HeadlessResearchSeriesSpec = serde_json::from_str(include_str!(
+        "../../../../../schemas/examples.kcore-headless-research-series.json"
+    ))
+    .expect("series example");
+    assert_eq!(
+        schema["properties"]["schema_version"]["const"],
+        HEADLESS_RESEARCH_SERIES_SCHEMA_VERSION
+    );
+    assert_eq!(
+        schema["properties"]["rounds"]["prefixItems"][0]["$ref"],
+        "#/$defs/firstRound"
+    );
+    assert!(
+        schema["$defs"]["firstRound"]["properties"]
+            .get("parameter_patch")
+            .is_none()
+    );
+    assert!(
+        schema["$defs"]["laterRound"]["required"]
+            .as_array()
+            .is_some_and(|required| required.iter().any(|field| field == "parameter_patch"))
+    );
+    let export = build_research_export_spec(example).expect("build native export spec");
+    assert_eq!(export.kind, "research-round-series");
+    assert_eq!(export.artifacts.len(), 7);
+    assert_eq!(export.contracts[0].name, HEADLESS_RESEARCH_CONTRACT_NAME);
+    assert_eq!(export.entrypoints, ["round-000002-evidence"]);
+}
+
+#[test]
+fn native_builder_rejects_missing_or_initial_parameter_patches() {
+    let mut fixture = build_fixture("native-patch-shape");
+    fixture.series.rounds[1].parameter_patch = None;
+    let output = fixture.root.join("missing-native-patch.kcore");
+    let error = export_research_series_spec(fixture.series, &fixture.root, &output)
+        .expect_err("later round without patch must fail");
+    assert!(error.contains("round 2 requires parameter_patch"));
+    assert!(!output.exists());
+    fs::remove_dir_all(fixture.root).expect("clean fixture");
+
+    let mut fixture = build_fixture("native-initial-patch");
+    fixture.series.rounds[0].parameter_patch = Some("round-2.patch.json".to_string());
+    let output = fixture.root.join("initial-native-patch.kcore");
+    let error = export_research_series_spec(fixture.series, &fixture.root, &output)
+        .expect_err("initial round patch must fail");
+    assert!(error.contains("round 1 cannot declare parameter_patch"));
+    assert!(!output.exists());
     fs::remove_dir_all(fixture.root).expect("clean fixture");
 }
 

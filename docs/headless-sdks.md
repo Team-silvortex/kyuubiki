@@ -180,6 +180,20 @@ each patch against the previous batch. A structurally valid archive with a
 missing or stale research artifact is therefore rejected. See
 [kcore-exchange-format.md](./kcore-exchange-format.md#headless-research-round-profile).
 
+Use the native packaging helper instead of assigning those fixed fields by
+hand:
+
+```bash
+cargo kyuubiki kcore research-export research-series.json \
+  --out thermal-research.kcore
+```
+
+`research-series.json` follows
+`kyuubiki.kcore-headless-research-series/v1`: round one lists its effective
+batch, run report, and evidence; each later round lists the same three files
+plus its guarded parameter patch. The builder fixes all KCore roles, schema
+references, contract bindings, and the latest evidence entrypoint.
+
 A repeated workflow with identical before/after payloads is not a research
 iteration even if every process exits zero. Research-loop qualification should
 require a distinct patch receipt and should read domain-specific result fields

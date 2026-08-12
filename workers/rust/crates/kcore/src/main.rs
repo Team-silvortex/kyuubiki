@@ -16,6 +16,9 @@ fn run(args: Vec<String>) -> Result<(), String> {
         "export" if args.len() == 4 && args[2] == "--out" => serde_json::to_value(
             kyuubiki_kcore::export_path(Path::new(&args[1]), Path::new(&args[3]))?,
         ),
+        "research-export" if args.len() == 4 && args[2] == "--out" => serde_json::to_value(
+            kyuubiki_kcore::export_research_series_path(Path::new(&args[1]), Path::new(&args[3]))?,
+        ),
         "inspect" if args.len() == 2 => {
             serde_json::to_value(kyuubiki_kcore::inspect_path(Path::new(&args[1]))?)
         }
@@ -42,6 +45,7 @@ fn run(args: Vec<String>) -> Result<(), String> {
 
 fn usage() -> String {
     "usage:\n  kyuubiki-kcore export <export-spec.json> --out <result.kcore>\n  \
+     kyuubiki-kcore research-export <research-series.json> --out <result.kcore>\n  \
      kyuubiki-kcore inspect <result.kcore>\n  \
      kyuubiki-kcore verify <result.kcore>\n  \
      kyuubiki-kcore extract <result.kcore> --out <directory>"

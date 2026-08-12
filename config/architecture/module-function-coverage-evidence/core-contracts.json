@@ -432,11 +432,14 @@
           "schemas/kcore-manifest.schema.json",
           "schemas/kcore-export.schema.json",
           "schemas/kcore-headless-research-profile.schema.json",
+          "schemas/kcore-headless-research-series.schema.json",
           "schemas/examples.kcore-export.json",
+          "schemas/examples.kcore-headless-research-series.json",
           "docs/kcore-exchange-format.md",
           "workers/rust/crates/kcore/src/model.rs",
           "workers/rust/crates/kcore/src/archive.rs",
           "workers/rust/crates/kcore/src/export.rs",
+          "workers/rust/crates/kcore/src/research_export.rs",
           "workers/rust/crates/kcore/src/semantic.rs",
           "workers/rust/crates/kcore/tests/exchange_roundtrip.rs",
           "workers/rust/crates/kcore/tests/research_round_profile.rs",
@@ -452,7 +455,9 @@
           "unreferenced kcore entry",
           "headless-research-round",
           "exports_and_reverifies_a_self_contained_two_round_research_series",
-          "kcore export|inspect|verify|extract"
+          "native_binary_exports_the_minimal_research_series_spec",
+          "research_export_dispatches_to_native_kcore_builder",
+          "kcore export|research-export|inspect|verify|extract"
         ]
       }
     ],
@@ -801,8 +806,10 @@
         "schemas/kcore-manifest.schema.json",
         "schemas/kcore-export.schema.json",
         "schemas/kcore-headless-research-profile.schema.json",
+        "schemas/kcore-headless-research-series.schema.json",
         "workers/rust/crates/kcore/src/archive.rs",
         "workers/rust/crates/kcore/src/model.rs",
+        "workers/rust/crates/kcore/src/research_export.rs",
         "workers/rust/crates/kcore/src/semantic.rs",
         "workers/rust/crates/kcore/tests/exchange_roundtrip.rs",
         "workers/rust/crates/kcore/tests/research_round_profile.rs"
@@ -816,7 +823,9 @@
         "rejects_a_series_that_omits_the_reconstructing_parameter_patch",
         "rejects_research_evidence_that_omits_the_semantic_contract",
         "rejects_a_run_report_that_no_longer_matches_retained_evidence",
-        "verifier_rejects_a_resealed_but_semantically_mismatched_report"
+        "verifier_rejects_a_resealed_but_semantically_mismatched_report",
+        "native_binary_exports_the_minimal_research_series_spec",
+        "semantic_budget_rejects_excessive_declared_bytes_without_reading_objects"
       ]
     }
   ]

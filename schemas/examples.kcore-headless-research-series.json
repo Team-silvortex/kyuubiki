@@ -1,0 +1,30 @@
+{
+  "schema_version": "kyuubiki.kcore-headless-research-series/v1",
+  "core_id": "thermal-frame-research-series",
+  "title": "Thermal frame optimization research series",
+  "producer": {
+    "name": "kyuubiki-headless",
+    "version": "2.7.0",
+    "runtime": "rust-native"
+  },
+  "rounds": [
+    {
+      "batch": "rounds/round-1.batch.json",
+      "run_report": "rounds/round-1.run.json",
+      "evidence": "rounds/round-1.evidence.json"
+    },
+    {
+      "batch": "rounds/round-2.batch.json",
+      "run_report": "rounds/round-2.run.json",
+      "evidence": "rounds/round-2.evidence.json",
+      "parameter_patch": "rounds/round-2.patch.json"
+    }
+  ],
+  "provenance": {
+    "execution": "service",
+    "posture": "research"
+  },
+  "metadata": {
+    "domain": "thermo-mechanical"
+  }
+}

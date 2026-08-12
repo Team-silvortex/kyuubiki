@@ -169,6 +169,19 @@ research evidence protect language-neutral JSON meaning and patch lineage.
 Both are checked. A valid research profile is retained proof, not permission to
 execute any embedded task.
 
+Authors do not need to write the generic export specification for this profile.
+`schemas/kcore-headless-research-series.schema.json` accepts only the portable
+core identity, producer, optional metadata, and an ordered `rounds` array. Round
+one declares `batch`, `run_report`, and `evidence`; every later round adds the
+`parameter_patch` that reconstructs it. The native builder assigns stable
+`round-000001-*` artifact ids and all fixed KCore fields. The first round is an
+effective baseline and cannot carry a parameter patch.
+
+Research semantic verification is bounded to 4,096 rounds, 16 MiB per semantic
+artifact, and 256 MiB across all semantic artifacts. These limits apply in
+addition to ordinary KCore archive limits and are checked before semantic
+objects are retained in memory.
+
 ## Integrity
 
 Each payload digest is SHA-256 over its exact uncompressed bytes.
@@ -207,12 +220,16 @@ build inputs and are never serialized into `.kcore`.
 
 ```text
 kyuubiki kcore export schemas/examples.kcore-export.json --out result.kcore
+kyuubiki kcore research-export research-series.json --out research.kcore
 kyuubiki kcore inspect result.kcore
 kyuubiki kcore verify result.kcore
 kyuubiki kcore extract result.kcore --out restored-core
 ```
 
 The standalone Rust binary exposes the same commands as `kyuubiki-kcore`.
+`research-export` consumes the compact
+`kyuubiki.kcore-headless-research-series/v1` source specification and then runs
+the same export-time semantic verification as the generic exporter.
 SDKs and GUI native bridges can call `export_spec` with the public
 `ExportSpec` and `ExportArtifact` types, rather than writing an intermediate
 specification file. They should bind the `kyuubiki-kcore` library rather than
