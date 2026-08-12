@@ -228,7 +228,7 @@ fn handle_run(args: &[String]) -> Result<(), String> {
         }
     };
     let workflow_id = kyuubiki_headless_preflight::workflow_id(&input_value).to_string();
-    let batch = match load_batch_from_value(input_value) {
+    let mut batch = match load_batch_from_value(input_value) {
         Ok(batch) => batch,
         Err(error) => {
             return kyuubiki_headless_preflight::emit_run_failure(
@@ -240,6 +240,18 @@ fn handle_run(args: &[String]) -> Result<(), String> {
             );
         }
     };
+    if let Err(error) = kyuubiki_headless_preflight::apply_job_wait_timeout_override(
+        &mut batch,
+        flags.job_wait_timeout_ms,
+    ) {
+        return kyuubiki_headless_preflight::emit_run_failure(
+            &flags,
+            Some(&batch),
+            &workflow_id,
+            error,
+            &[],
+        );
+    }
     if let Err(error) = validate_material_report_flags(&flags) {
         return kyuubiki_headless_preflight::emit_run_failure(
             &flags,

@@ -3,7 +3,9 @@ use serde_json::Value;
 use crate::operator_task_runtime::{
     OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED, OperatorPackageRuntimeBinding,
 };
-use kyuubiki_protocol::{OperatorTaskExecutionPreview, OperatorTaskExecutionSummary};
+use kyuubiki_protocol::{
+    OperatorTaskAdmissionReport, OperatorTaskExecutionPreview, OperatorTaskExecutionSummary,
+};
 
 const OPERATOR_TASK_VALIDATION_RECEIPT_SCHEMA: &str = "kyuubiki.agent-operator-task-validation/v1";
 const OPERATOR_TASK_PROVENANCE_RECEIPT_SCHEMA: &str = "kyuubiki.agent-operator-task-provenance/v1";
@@ -12,6 +14,7 @@ const OPERATOR_TASK_FAILURE_RECEIPT_SCHEMA: &str = "kyuubiki.agent-operator-task
 pub(crate) fn operator_task_validation_receipt(
     summary: &OperatorTaskExecutionSummary,
     preview: &OperatorTaskExecutionPreview,
+    admission: &OperatorTaskAdmissionReport,
     binding: &OperatorPackageRuntimeBinding,
 ) -> Value {
     let blocked_reason = if preview.package_fetch_required && !binding.is_attached() {
@@ -26,6 +29,8 @@ pub(crate) fn operator_task_validation_receipt(
         "validation_status": if blocked_reason.is_null() { "accepted" } else { "blocked" },
         "digest_verified": true,
         "execution_program_verified": true,
+        "admission_policy_verified": admission.accepted,
+        "admission_schema_version": admission.schema_version,
         "runtime_protocol": summary.runtime_protocol,
         "abi_kind": summary.abi_kind,
         "dispatch_route": preview.dispatch_route,
@@ -98,6 +103,7 @@ fn required_failure_action(code: &str) -> &'static str {
         | "operator_task_execution_abi_mismatch"
         | "operator_task_program_mismatch"
         | "operator_task_entrypoint_mismatch" => "fix_task_ir_contract_mirror_fields",
+        "operator_task_admission_rejected" => "fix_task_ir_authority_and_routing_policy",
         "invalid_params" => "fix_rpc_request_params",
         "operator_task_execution_failed" => "inspect_operator_runtime_result",
         "operator_task_solver_capability_invalid" => "fix_solver_task_ir_contract",

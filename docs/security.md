@@ -194,6 +194,29 @@ authentication, Agent isolation, installer remote execution, external
 penetration resistance, or long-running native fuzz campaigns. Those surfaces
 must retain their own contracts and evidence instead of inheriting this result.
 
+### Operator TaskIR admission
+
+TaskIR digest verification protects the declared fields from accidental or
+in-flight mutation, but it is not an authorization decision. Before package
+fetch or execution, the control plane, Headless SDK, and Agent now apply the
+language-neutral `kyuubiki.operator-task-admission/v1` policy.
+
+The admission report fails closed when:
+
+- authority mode, execution mode, fetchability, and package source disagree
+- a central package reference does not name the declared operator
+- local or offline authority attempts to resolve an `orchestra://` package
+- `local_bundle` does not use a `bundle://` package
+- cache scope is missing or unsupported
+- placement tags or required capabilities are malformed, duplicated, or over
+  their routing budget
+
+Rejected tasks retain `operator_task_admission_rejected`, the exact field and
+violation codes, a non-retryable recovery action, and
+`safe_to_continue_other_tasks = true`. This boundary does not yet prove that a
+network peer is the configured Orchestra; transport authentication and active
+`orch_id` binding remain independent checks.
+
 ### Control plane
 
 The orchestrator can now enforce an API token for:

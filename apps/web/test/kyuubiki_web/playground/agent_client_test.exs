@@ -425,6 +425,34 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
     assert result["execution_readiness"]["required_action"] == "attach_operator_package_runtime"
   end
 
+  test "rejects TaskIR admission failures before selecting or contacting an agent" do
+    assert {:ok, task_ir} =
+             OperatorTaskIR.build(
+               "transform.rank_material_candidates",
+               %{"candidates" => %{}},
+               %{}
+             )
+
+    task_ir = put_in(task_ir, ["runtime_hints", "authority_mode"], "offline_mesh")
+
+    task_ir =
+      put_in(
+        task_ir,
+        ["integrity", "task_digest"],
+        OperatorTaskIR.compute_task_digest(task_ir)
+      )
+
+    assert {:error, {:operator_task_admission_rejected, report}} =
+             AgentClient.run_operator_task_ir(task_ir, mode: :execute)
+
+    assert report["accepted"] == false
+
+    assert Enum.any?(
+             report["violations"],
+             &(&1["code"] == "orchestra_fetch_requires_central_authority")
+           )
+  end
+
   test "routes operator task IR through runtime hint constraints" do
     assert {:ok, task_ir} =
              OperatorTaskIR.build(

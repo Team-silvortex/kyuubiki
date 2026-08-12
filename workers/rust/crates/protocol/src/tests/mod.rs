@@ -63,9 +63,10 @@ mod prelude {
         WorkflowDatasetShape, WorkflowDatasetValueInfo, WorkflowDefaults, WorkflowEdge,
         WorkflowGraph, WorkflowGraphRunOptions, WorkflowGraphRunRequest, WorkflowGraphRunResult,
         WorkflowNode, WorkflowNodeKind, WorkflowNodePortRef, WorkflowPort, canonical_json,
-        check_operator_task_execution_capability, compute_operator_task_digest,
-        preview_operator_task_execution, summarize_operator_task_execution,
-        summarize_operator_task_execution_checked, validate_rpc_progress_envelope,
-        validate_rpc_request_envelope, validate_rpc_response_envelope, verify_operator_task_digest,
+        check_operator_task_admission, check_operator_task_execution_capability,
+        compute_operator_task_digest, preview_operator_task_execution,
+        summarize_operator_task_execution, summarize_operator_task_execution_checked,
+        validate_rpc_progress_envelope, validate_rpc_request_envelope,
+        validate_rpc_response_envelope, verify_operator_task_digest,
     };
 }

@@ -329,6 +329,46 @@ fn material_report_accepts_matching_template() {
 }
 
 #[test]
+fn material_report_rejects_dielectric_unit_drift_before_execution() {
+    let path = init_template("material_dielectric_screening");
+    let material_path = unique_path("drifted-dielectric-material-report");
+    let mut workflow: Value = serde_json::from_slice(&fs::read(&path).expect("template workflow"))
+        .expect("template workflow json");
+    workflow["workflow"]["steps"][0]["payload"]["model"]["elements"][0]["permittivity"] =
+        json!(4.7);
+    fs::write(
+        &path,
+        serde_json::to_vec_pretty(&workflow).expect("drifted workflow json"),
+    )
+    .expect("write drifted workflow");
+
+    let output = run(&[
+        "run",
+        path.to_str().expect("path"),
+        "--json",
+        "--material-report",
+        "dielectric-screening",
+        "--material-report-out",
+        material_path.to_str().expect("material path"),
+        "--execute",
+        "--executor",
+        "mock",
+    ]);
+
+    assert!(!output.status.success());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("preflight report");
+    assert_eq!(report["status"], "invalid");
+    assert_eq!(report["executed_step_count"], 0);
+    let error: Value = serde_json::from_slice(&output.stderr).expect("structured CLI error");
+    assert_eq!(
+        error["error"]["code"],
+        "material_report_input_contract_mismatch"
+    );
+    assert!(!material_path.exists());
+    let _ = fs::remove_file(path);
+}
+
+#[test]
 fn composite_material_report_accepts_matching_template() {
     let path = init_template("material_composite_thermo_electric_panel_screening");
     let material_path = unique_path("matching-composite-material-report");
@@ -439,6 +479,129 @@ fn executor_compatibility_failure_writes_a_standard_run_report() {
     assert_eq!(error["error"]["code"], "executor_compatibility");
     let _ = fs::remove_file(path);
     let _ = fs::remove_file(report_path);
+}
+
+#[test]
+fn contract_invalid_batch_fails_before_mock_execution() {
+    let path = unique_path("contract-invalid-batch");
+    let batch = json!({
+        "schema_version": "kyuubiki.headless-execution-batch/v1",
+        "exported_at": "2026-08-10T00:00:00Z",
+        "language": "en",
+        "workflow_id": "workflow.contract-invalid",
+        "steps": [{
+            "index": 1,
+            "action": "project_create",
+            "risk": "normal",
+            "payload": {}
+        }]
+    });
+    fs::write(
+        &path,
+        serde_json::to_vec_pretty(&batch).expect("batch json"),
+    )
+    .expect("write invalid batch");
+
+    let output = run(&[
+        "run",
+        path.to_str().expect("path"),
+        "--json",
+        "--execute",
+        "--executor",
+        "mock",
+    ]);
+
+    assert!(!output.status.success());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("run report");
+    assert_eq!(report["status"], "invalid");
+    assert_eq!(report["executed_step_count"], 0);
+    assert_eq!(report["steps"], json!([]));
+    assert_eq!(
+        report["execution_summary"]["failure"]["stage"],
+        "batch_validation"
+    );
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn run_applies_auditable_job_wait_timeout_override() {
+    let path = init_template("direct_mesh_pipeline");
+    let original = fs::read(&path).expect("source workflow");
+    let output = run(&[
+        "run",
+        path.to_str().expect("path"),
+        "--json",
+        "--job-wait-timeout-ms",
+        "1200000",
+        "--execute",
+        "--executor",
+        "mock",
+    ]);
+
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: Value = serde_json::from_slice(&output.stdout).expect("run report");
+    let wait = report["steps"]
+        .as_array()
+        .and_then(|steps| steps.iter().find(|step| step["action"] == "job_wait"))
+        .expect("job_wait report");
+    assert_eq!(wait["payload"]["timeout_ms"], 1_200_000);
+    assert_eq!(wait["payload"]["max_total_timeout_ms"], 3_600_000);
+    assert!(
+        report["validation"]["warnings"][0]
+            .as_str()
+            .is_some_and(|warning| warning.contains("overrode 1 job_wait"))
+    );
+    assert_eq!(
+        fs::read(&path).expect("source workflow after run"),
+        original
+    );
+    let _ = fs::remove_file(path);
+}
+
+#[test]
+fn thermal_frame_constraint_conflict_fails_before_service_connection() {
+    let path = init_template("direct_thermal_frame_3d");
+    let mut workflow: Value = serde_json::from_slice(&fs::read(&path).expect("template workflow"))
+        .expect("template workflow json");
+    workflow["workflow"]["steps"][0]["payload"]["model"]["nodes"][1]["fix_y"] = json!(true);
+    fs::write(
+        &path,
+        serde_json::to_vec_pretty(&workflow).expect("conflicted workflow json"),
+    )
+    .expect("write conflicted workflow");
+
+    let output = run(&[
+        "run",
+        path.to_str().expect("path"),
+        "--json",
+        "--execute",
+        "--executor",
+        "service",
+        "--api-base-url",
+        "http://127.0.0.1:19999",
+    ]);
+
+    assert!(!output.status.success());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("validation report");
+    assert_eq!(report["status"], "invalid");
+    assert_eq!(report["executed_step_count"], 0);
+    assert!(
+        report["validation"]["issues"]
+            .as_array()
+            .is_some_and(|issues| {
+                issues.iter().any(|issue| {
+                    issue
+                        .as_str()
+                        .is_some_and(|text| text.contains("non-zero load_y to fixed y degree"))
+                })
+            })
+    );
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("failed to connect"));
+    let _ = fs::remove_file(path);
 }
 
 #[test]

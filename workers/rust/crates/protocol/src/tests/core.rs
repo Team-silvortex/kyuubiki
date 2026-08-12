@@ -64,6 +64,24 @@ fn serializes_operator_task_ir_rpc_method() {
 }
 
 #[test]
+fn agent_descriptor_advertises_task_ir_admission() {
+    let descriptor = AgentDescriptor::solver_agent_default();
+    let control = descriptor
+        .capabilities
+        .iter()
+        .find(|capability| capability.id == "control")
+        .expect("control capability");
+
+    assert!(control.methods.contains(&RpcMethod::RunOperatorTaskIr));
+    assert!(
+        control
+            .tags
+            .iter()
+            .any(|tag| tag == "operator-task-admission-v1")
+    );
+}
+
+#[test]
 fn validates_rpc_request_envelope_boundaries() {
     let mut request = RpcRequest {
         rpc_version: RPC_VERSION,

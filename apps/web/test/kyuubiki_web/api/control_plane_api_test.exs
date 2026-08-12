@@ -50,6 +50,11 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
     assert conn.status == 200
     payload = Jason.decode!(conn.resp_body)
     assert "describe_agent" in payload["methods"]
+    assert "run_operator_task_ir" in payload["methods"]
+
+    assert payload["contracts"]["operator_task_admission"] ==
+             "kyuubiki.operator-task-admission/v1"
+
     assert payload["transport"]["framing"] == "length_prefixed_u32"
   end
 

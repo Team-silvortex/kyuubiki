@@ -186,6 +186,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
       "task_digest" => get_in(task_ir, ["integrity", "task_digest"]),
       "reason_code" => code,
       "message" => inspect(reason),
+      "admission_report" => admission_report(reason),
       "recovery" => %{
         "retryable" => false,
         "required_action" => required_failure_action(code),
@@ -194,12 +195,20 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
     }
   end
 
+  defp admission_report({:operator_task_admission_rejected, report}) when is_map(report),
+    do: report
+
+  defp admission_report(_reason), do: nil
+
   defp failure_stage({:operator_task_batch_entry_mismatch, _field, _actual, _expected}),
     do: "validate_batch_entry"
 
   defp failure_stage(:operator_task_batch_entry_rpc_mirror_mismatch), do: "validate_batch_entry"
   defp failure_stage(:operator_task_batch_entry_rpc_missing_task_ir), do: "validate_batch_entry"
-  defp failure_stage({:operator_task_batch_entry_rpc_method_mismatch, _method}), do: "validate_batch_entry"
+
+  defp failure_stage({:operator_task_batch_entry_rpc_method_mismatch, _method}),
+    do: "validate_batch_entry"
+
   defp failure_stage(:missing_task_ir), do: "validate_batch_entry"
   defp failure_stage(:invalid_task_entry), do: "validate_batch_entry"
   defp failure_stage({:operator_task_digest_mismatch, _mismatch}), do: "verify_digest"
@@ -210,7 +219,13 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
 
   defp failure_stage(:operator_task_program_mismatch), do: "summarize_execution_program"
   defp failure_stage(:operator_task_entrypoint_mismatch), do: "summarize_execution_program"
-  defp failure_stage({:operator_task_mirror_mismatch, _mismatch}), do: "summarize_execution_program"
+
+  defp failure_stage({:operator_task_mirror_mismatch, _mismatch}),
+    do: "summarize_execution_program"
+
+  defp failure_stage({:operator_task_admission_rejected, _report}),
+    do: "validate_admission_policy"
+
   defp failure_stage(_reason), do: "local_execute"
 
   defp required_failure_action(code)
@@ -228,6 +243,9 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
               "operator_task_entrypoint_mismatch"
             ],
        do: "fix_task_ir_contract_mirror_fields"
+
+  defp required_failure_action("operator_task_admission_rejected"),
+    do: "fix_task_ir_authority_and_routing_policy"
 
   defp required_failure_action(code)
        when code in [
@@ -255,6 +273,9 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
 
   defp error_code(:operator_task_program_mismatch), do: "operator_task_program_mismatch"
   defp error_code(:operator_task_entrypoint_mismatch), do: "operator_task_entrypoint_mismatch"
+
+  defp error_code({:operator_task_admission_rejected, _report}),
+    do: "operator_task_admission_rejected"
 
   defp error_code({:operator_task_batch_entry_mismatch, _field, _actual, _expected}),
     do: "operator_task_batch_entry_mismatch"

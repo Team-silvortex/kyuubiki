@@ -54,13 +54,15 @@ P1 benchmark evidence comes after those release blockers unless a newly
 retained result changes the generated ranking.
 
 The former leading coordinate, `sdk-headless/workflow_composition`, now meets
-its `qualified` target. Its native qualification requires all 222 Rust
-Headless workflow-core tests and all 12 CLI execution-boundary tests. It proves
+its `qualified` target. Its native qualification requires all 230 Rust
+Headless workflow-core tests and all 16 CLI execution-boundary tests. It proves
 template normalization, service-action coverage, bounded same-job wait
-recovery, retained runtime failure causes, and standard non-empty execution
-reports for malformed documents and incompatible executors. The
+recovery, explicit per-run wait-budget overrides, zero-execution rejection of
+contract-invalid batches, retained runtime failure causes, and standard
+non-empty execution reports for malformed documents and incompatible
+executors. The
 machine-validated result is retained under
-`releases/usability-evidence/2.12.6`; installed package and remote multi-host
+`releases/usability-evidence/2.13.1`; installed package and remote multi-host
 operation remain separate evidence tiers.
 
 The former leading coordinates, `hub-shell/deployment_update` and

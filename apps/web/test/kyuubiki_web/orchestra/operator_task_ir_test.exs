@@ -2,6 +2,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIRTest do
   use ExUnit.Case, async: true
 
   alias KyuubikiWeb.Orchestra.OperatorTaskIR
+  alias KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary
 
   test "lowers a material transform operator into a stable engine task envelope" do
     assert {:ok, task} =
@@ -45,6 +46,12 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIRTest do
 
     assert task["execution_program"]["entrypoint"]["name"] ==
              "transform.evaluate_material_thermal_shock"
+
+    assert {:ok, summary} = OperatorTaskExecutionSummary.build(task)
+    assert summary["admission_report"]["accepted"] == true
+
+    assert summary["admission_report"]["schema_version"] ==
+             "kyuubiki.operator-task-admission/v1"
   end
 
   test "lowers a workflow node while preserving node identity and ports" do
@@ -261,6 +268,37 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIRTest do
              base_operator
              |> put_in(["execution", "package_ref"], "orchestra://operator-package/other")
              |> OperatorTaskIR.build_from_descriptor(%{}, %{})
+  end
+
+  test "rejects digest-valid authority downgrade before control-plane dispatch" do
+    operator = %{
+      "id" => "transform.fixture",
+      "family" => "fixture",
+      "kind" => "transform",
+      "execution" => %{
+        "package_ref" => "orchestra://operator-package/transform.fixture"
+      }
+    }
+
+    assert {:ok, task} =
+             OperatorTaskIR.build_from_descriptor(operator, %{"x" => 1}, %{},
+               task_id: "admission-fixture"
+             )
+
+    task = put_in(task, ["runtime_hints", "authority_mode"], "offline_mesh")
+    task = put_in(task, ["integrity", "task_digest"], OperatorTaskIR.compute_task_digest(task))
+
+    assert :ok = OperatorTaskExecutionSummary.validate_digest(task)
+
+    assert {:error, {:operator_task_admission_rejected, report}} =
+             OperatorTaskExecutionSummary.build(task)
+
+    assert report["accepted"] == false
+
+    codes = Enum.map(report["violations"], & &1["code"])
+    assert "agent_fetch_requires_central_authority" in codes
+    assert "orchestra_fetch_requires_central_authority" in codes
+    assert "local_authority_forbids_orchestra_package" in codes
   end
 
   test "exposes the future agent RPC method and params shape" do

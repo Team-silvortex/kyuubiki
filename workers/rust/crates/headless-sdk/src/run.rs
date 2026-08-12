@@ -1,5 +1,6 @@
 use crate::execution_observability::summarize_execution;
 use crate::operator_task::operator_task_prepare_preview_or_error;
+use crate::preflight_report::build_batch_validation_failure_report;
 use crate::{
     HeadlessExecutionBatch, HeadlessExecutionSummary, HeadlessRisk, HeadlessValidationReport,
     is_operator_task_execute_action, is_operator_task_prepare_action, operator_task_error_preview,
@@ -51,6 +52,9 @@ pub fn run_batch_dry(
     allow_destructive: bool,
 ) -> HeadlessRunReport {
     let validation = validate_batch(batch);
+    if !validation.ok {
+        return build_batch_validation_failure_report(batch, "dry_run", validation);
+    }
     let mut results = HashMap::<usize, Value>::new();
     let mut steps = Vec::with_capacity(batch.steps.len());
     let mut executed_step_count = 0;
@@ -461,5 +465,32 @@ mod tests {
         assert_eq!(summary["item_count"], 1_000);
         assert_eq!(summary["sample"].as_array().map(Vec::len), Some(3));
         assert!(serde_json::to_vec(&report).unwrap().len() < 20_000);
+    }
+
+    #[test]
+    fn invalid_dry_run_fails_before_previewing_any_step() {
+        let batch = HeadlessExecutionBatch {
+            schema_version: "kyuubiki.headless-execution-batch/v1".to_string(),
+            exported_at: "1970-01-01T00:00:00.000Z".to_string(),
+            language: "en".to_string(),
+            workflow_id: "invalid-dry-run".to_string(),
+            template_id: None,
+            steps: vec![HeadlessExecutionBatchStep {
+                index: 1,
+                action: "project_create".to_string(),
+                risk: HeadlessRisk::Normal,
+                payload: json!({}),
+            }],
+            warnings: vec![],
+        };
+
+        let report = run_batch_dry(&batch, false, false);
+
+        assert_eq!(report.status, "invalid");
+        assert_eq!(report.executed_step_count, 0);
+        assert!(report.steps.is_empty());
+        let failure = report.execution_summary.failure.expect("failure receipt");
+        assert_eq!(failure.error_code, "kyuubiki.headless.document_validation");
+        assert_eq!(failure.stage, "batch_validation");
     }
 }

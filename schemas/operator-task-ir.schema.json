@@ -36,6 +36,11 @@
       "reason": "runtime fetch hints must target the same package version"
     }
   ],
+  "x-kyuubiki-admission_contract": {
+    "schema_version": "kyuubiki.operator-task-admission/v1",
+    "report_schema": "operator-task-admission.schema.json",
+    "policy": "authority, execution mode, package identity, fetchability, cache scope, and routing values must form one fail-closed route"
+  },
   "$defs": {
     "sha256Hex": {
       "type": "string",
@@ -43,7 +48,26 @@
     },
     "stringArray": {
       "type": "array",
-      "items": { "type": "string" }
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      }
+    },
+    "packageRef": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^orchestra://operator-package/.+"
+        },
+        {
+          "type": "string",
+          "pattern": "^bundle://[A-Za-z0-9][A-Za-z0-9._/-]*$"
+        },
+        { "type": "null" }
+      ]
     }
   },
   "required": [
@@ -62,9 +86,12 @@
     "task_id": { "type": "string", "minLength": 1 },
     "operator": {
       "type": "object",
-      "required": ["id", "family", "kind", "execution"],
+      "required": ["id", "family", "kind"],
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        },
         "version": { "type": "string" },
         "domain": { "type": "string" },
         "family": { "type": "string", "minLength": 1 },
@@ -82,8 +109,7 @@
           "required": ["package_ref"],
           "properties": {
             "package_ref": {
-              "type": "string",
-              "pattern": "^orchestra://operator-package/.+"
+              "$ref": "#/$defs/packageRef"
             },
             "package_version": { "type": "string" },
             "integrity": { "type": ["object", "null"] },
@@ -131,10 +157,6 @@
       "required": [
         "authority_mode",
         "execution_mode",
-        "package_ref",
-        "package_version",
-        "placement_tags",
-        "required_capabilities",
         "cache_scope",
         "agent_fetchable",
         "operator_kind"
@@ -142,16 +164,21 @@
       "properties": {
         "authority_mode": {
           "type": "string",
-          "enum": ["central_operator_library", "single_orchestrator", "offline_mesh", "self_directed"]
+          "enum": [
+            "central_operator_library",
+            "single_orchestrator",
+            "agent_local",
+            "offline_mesh",
+            "self_directed"
+          ]
         },
         "execution_mode": {
           "type": "string",
-          "enum": ["orchestra_fetch", "agent_local", "offline_mesh_fetch"]
+          "enum": ["orchestra_fetch", "agent_native", "local_builtin", "local_bundle"]
         },
         "source_ref": { "type": ["string", "null"] },
         "package_ref": {
-          "type": ["string", "null"],
-          "pattern": "^orchestra://operator-package/.+"
+          "$ref": "#/$defs/packageRef"
         },
         "package_version": { "type": "string", "minLength": 1 },
         "placement_tags": { "$ref": "#/$defs/stringArray" },
@@ -169,7 +196,7 @@
     },
     "integrity": {
       "type": "object",
-      "required": ["descriptor_digest", "task_digest", "task_digest_fields", "digest_algorithm"],
+      "required": ["task_digest"],
       "properties": {
         "operator_integrity": { "type": ["object", "null"] },
         "descriptor_digest": { "$ref": "#/$defs/sha256Hex" },

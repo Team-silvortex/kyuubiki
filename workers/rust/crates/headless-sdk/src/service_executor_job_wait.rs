@@ -288,6 +288,9 @@ mod tests {
                     String::from_utf8_lossy(&request[..bytes])
                         .starts_with("GET /api/v1/jobs/job-long/status HTTP/1.1")
                 );
+                if index == 1 {
+                    std::thread::sleep(Duration::from_millis(20));
+                }
                 let body = json!({
                     "job": {
                         "job_id": "job-long",

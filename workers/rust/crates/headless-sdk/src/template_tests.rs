@@ -227,6 +227,21 @@ fn every_template_builds_normalizes_and_validates() {
 }
 
 #[test]
+fn thermal_frame_3d_template_keeps_the_loaded_tip_unconstrained() {
+    let document = build_template_document("direct_thermal_frame_3d", None)
+        .expect("thermal frame template should build");
+    let tip = &document.workflow.steps[0].payload["model"]["nodes"][1];
+
+    assert_eq!(tip["fix_x"], false);
+    assert_eq!(tip["fix_y"], false);
+    assert_eq!(tip["fix_z"], false);
+    assert_eq!(tip["fix_rx"], false);
+    assert_eq!(tip["fix_ry"], false);
+    assert_eq!(tip["fix_rz"], false);
+    assert_eq!(tip["load_y"].as_f64(), Some(-1_000.0));
+}
+
+#[test]
 fn template_category_distribution_matches_current_catalog() {
     let distribution =
         list_templates()

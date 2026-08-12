@@ -130,12 +130,17 @@ pub fn headless_sdk_surface_areas() -> Vec<HeadlessSdkSurfaceArea> {
         HeadlessSdkSurfaceArea {
             id: "operator_task",
             title: "Operator TaskIR",
-            role: "Language-neutral operator task preparation, preview, readiness, and batch execution contracts.",
-            modules: &["operator_task", "operator_task_readiness"],
+            role: "Language-neutral operator task preparation, fail-closed admission, readiness, and batch execution contracts.",
+            modules: &[
+                "operator_task",
+                "operator_task_readiness",
+                "operator_task_security",
+            ],
             anchor_exports: &[
                 "prepare_operator_task_payload",
                 "preview_operator_task_execute_payload",
                 "operator_task_error_preview",
+                "operator_task_security_profile_with_admission",
             ],
         },
         HeadlessSdkSurfaceArea {
@@ -290,6 +295,14 @@ mod tests {
         let area = find_headless_sdk_surface_area("direct_fem").expect("direct FEM area");
         assert_eq!(area.title, "Direct FEM and engine solver bridge");
         assert!(area.anchor_exports.contains(&"direct_fem_submit_route"));
+
+        let operator_task =
+            find_headless_sdk_surface_area("operator_task").expect("operator TaskIR area");
+        assert!(
+            operator_task
+                .anchor_exports
+                .contains(&"operator_task_security_profile_with_admission")
+        );
         assert!(find_headless_sdk_surface_area("missing").is_none());
     }
 }

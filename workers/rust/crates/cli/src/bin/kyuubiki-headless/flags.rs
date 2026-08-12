@@ -1,3 +1,5 @@
+pub(super) const MAX_JOB_WAIT_TIMEOUT_MS: u64 = 86_400_000;
+
 #[derive(Debug, Default)]
 pub(crate) struct Flags {
     pub(crate) positional: Vec<String>,
@@ -19,6 +21,7 @@ pub(crate) struct Flags {
     pub(crate) report_out: Option<String>,
     pub(crate) material_report: Option<String>,
     pub(crate) material_report_out: Option<String>,
+    pub(crate) job_wait_timeout_ms: Option<u64>,
 }
 
 impl Flags {
@@ -76,6 +79,10 @@ impl Flags {
                     flags.material_report_out =
                         Some(take_value(args, &mut index, "--material-report-out")?);
                 }
+                "--job-wait-timeout-ms" => {
+                    let value = take_value(args, &mut index, "--job-wait-timeout-ms")?;
+                    flags.job_wait_timeout_ms = Some(parse_job_wait_timeout_ms(&value)?);
+                }
                 value if value.starts_with("--") => {
                     return Err(format!("unknown option: {value}"));
                 }
@@ -131,6 +138,18 @@ impl Flags {
         }
         Ok(Some(executor))
     }
+}
+
+fn parse_job_wait_timeout_ms(value: &str) -> Result<u64, String> {
+    let timeout = value
+        .parse::<u64>()
+        .map_err(|_| format!("--job-wait-timeout-ms must be a positive integer, got {value}"))?;
+    if timeout == 0 || timeout > MAX_JOB_WAIT_TIMEOUT_MS {
+        return Err(format!(
+            "--job-wait-timeout-ms must be between 1 and {MAX_JOB_WAIT_TIMEOUT_MS}"
+        ));
+    }
+    Ok(timeout)
 }
 
 fn take_value(args: &[String], index: &mut usize, option: &str) -> Result<String, String> {
@@ -220,5 +239,22 @@ mod tests {
             .expect_err("direct-mesh executor alias should fail");
         assert!(error.contains("direct_mesh_solve is a service action"));
         assert!(error.contains("--executor service"));
+    }
+
+    #[test]
+    fn parses_bounded_job_wait_timeout_override() {
+        let parsed = flags(&["workflow.json", "--job-wait-timeout-ms", "1200000"]);
+        assert_eq!(parsed.job_wait_timeout_ms, Some(1_200_000));
+
+        for invalid in ["0", "86400001", "later"] {
+            let error = Flags::parse(
+                &["workflow.json", "--job-wait-timeout-ms", invalid]
+                    .into_iter()
+                    .map(str::to_string)
+                    .collect::<Vec<_>>(),
+            )
+            .expect_err("invalid timeout should fail");
+            assert!(error.contains("--job-wait-timeout-ms"));
+        }
     }
 }

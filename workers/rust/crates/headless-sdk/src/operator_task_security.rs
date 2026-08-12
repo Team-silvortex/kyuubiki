@@ -1,4 +1,6 @@
-use kyuubiki_protocol::{OperatorTaskExecutionPreview, OperatorTaskExecutionSummary};
+use kyuubiki_protocol::{
+    OperatorTaskAdmissionReport, OperatorTaskExecutionPreview, OperatorTaskExecutionSummary,
+};
 use serde_json::{Map, Value};
 
 pub const HEADLESS_OPERATOR_TASK_SECURITY_SCHEMA_VERSION: &str =
@@ -8,7 +10,23 @@ pub fn operator_task_security_profile(
     summary: &OperatorTaskExecutionSummary,
     preview: &OperatorTaskExecutionPreview,
 ) -> Value {
-    Value::Object(Map::from_iter([
+    build_security_profile(summary, preview, None)
+}
+
+pub fn operator_task_security_profile_with_admission(
+    summary: &OperatorTaskExecutionSummary,
+    preview: &OperatorTaskExecutionPreview,
+    admission: &OperatorTaskAdmissionReport,
+) -> Value {
+    build_security_profile(summary, preview, Some(admission))
+}
+
+fn build_security_profile(
+    summary: &OperatorTaskExecutionSummary,
+    preview: &OperatorTaskExecutionPreview,
+    admission: Option<&OperatorTaskAdmissionReport>,
+) -> Value {
+    let mut profile = Map::from_iter([
         (
             "schema_version".to_string(),
             Value::from(HEADLESS_OPERATOR_TASK_SECURITY_SCHEMA_VERSION),
@@ -70,7 +88,18 @@ pub fn operator_task_security_profile(
                     .collect(),
             ),
         ),
-    ]))
+    ]);
+    if let Some(admission) = admission {
+        profile.insert(
+            "admission_schema_version".to_string(),
+            Value::from(admission.schema_version.clone()),
+        );
+        profile.insert(
+            "admission_policy_verified".to_string(),
+            Value::from(admission.accepted),
+        );
+    }
+    Value::Object(profile)
 }
 
 fn optional_string(value: Option<String>) -> Value {

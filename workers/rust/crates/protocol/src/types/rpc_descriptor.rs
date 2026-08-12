@@ -382,7 +382,11 @@ impl AgentDescriptor {
                         RpcMethod::RunOperatorTaskIr,
                         RpcMethod::CancelJob,
                     ],
-                    tags: vec!["control".to_string(), "general".to_string()],
+                    tags: vec![
+                        "control".to_string(),
+                        "general".to_string(),
+                        "operator-task-admission-v1".to_string(),
+                    ],
                 },
             ],
             deployment_modes: vec![

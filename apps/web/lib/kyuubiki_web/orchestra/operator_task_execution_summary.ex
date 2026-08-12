@@ -4,6 +4,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary do
   """
 
   alias KyuubikiWeb.Orchestra.OperatorTaskIR
+  alias KyuubikiWeb.Orchestra.OperatorTaskAdmission
 
   @solver_protocol "kyuubiki.solver-rpc/v1"
   @operator_protocol "kyuubiki.operator-execution/v1"
@@ -43,26 +44,29 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary do
          :ok <- validate_mirror_fields(task, operator_kind),
          :ok <- validate_execution_abi(program_kind, runtime_protocol, abi_kind, entrypoint_kind),
          :ok <- validate_entrypoint(program_kind, operator_id, entrypoint_name) do
-      {:ok,
-       %{
-         "status" => "verified",
-         "task_digest" => OperatorTaskIR.compute_task_digest(task),
-         "task_id" => Map.get(task, "task_id", ""),
-         "operator_id" => operator_id,
-         "operator_kind" => operator_kind,
-         "program_id" => program_id,
-         "program_kind" => program_kind,
-         "runtime_protocol" => runtime_protocol,
-         "abi_kind" => abi_kind,
-         "entrypoint_kind" => entrypoint_kind,
-         "entrypoint_name" => entrypoint_name,
-         "package_ref" => get_in(task, ["execution_program", "package_ref"]),
-         "package_version" => get_in(task, ["execution_program", "package_version"]),
-         "authority_mode" => get_in(task, ["runtime_hints", "authority_mode"]),
-         "execution_mode" => get_in(task, ["runtime_hints", "execution_mode"]),
-         "cache_scope" => get_in(task, ["runtime_hints", "cache_scope"]),
-         "agent_fetchable" => get_in(task, ["runtime_hints", "agent_fetchable"])
-       }}
+      summary = %{
+        "status" => "verified",
+        "task_digest" => OperatorTaskIR.compute_task_digest(task),
+        "task_id" => Map.get(task, "task_id", ""),
+        "operator_id" => operator_id,
+        "operator_kind" => operator_kind,
+        "program_id" => program_id,
+        "program_kind" => program_kind,
+        "runtime_protocol" => runtime_protocol,
+        "abi_kind" => abi_kind,
+        "entrypoint_kind" => entrypoint_kind,
+        "entrypoint_name" => entrypoint_name,
+        "package_ref" => get_in(task, ["execution_program", "package_ref"]),
+        "package_version" => get_in(task, ["execution_program", "package_version"]),
+        "authority_mode" => get_in(task, ["runtime_hints", "authority_mode"]),
+        "execution_mode" => get_in(task, ["runtime_hints", "execution_mode"]),
+        "cache_scope" => get_in(task, ["runtime_hints", "cache_scope"]),
+        "agent_fetchable" => get_in(task, ["runtime_hints", "agent_fetchable"])
+      }
+
+      with {:ok, admission_report} <- OperatorTaskAdmission.check(task, summary) do
+        {:ok, Map.put(summary, "admission_report", admission_report)}
+      end
     end
   end
 

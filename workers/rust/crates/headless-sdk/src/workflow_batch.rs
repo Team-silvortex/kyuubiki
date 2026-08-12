@@ -246,6 +246,7 @@ pub fn validate_batch(batch: &HeadlessExecutionBatch) -> HeadlessValidationRepor
             ));
         }
         collect_workflow_graph_issues(step, step_number, &mut issues);
+        collect_solver_model_issues(step, step_number, &mut issues);
         collect_binding_issues(&step.payload, step_number, &known_outputs, &mut issues);
     }
     HeadlessValidationReport {
@@ -256,6 +257,45 @@ pub fn validate_batch(batch: &HeadlessExecutionBatch) -> HeadlessValidationRepor
         warnings: batch.warnings.clone(),
         summary: Some(summarize_batch(batch)),
         policy: Some(build_policy_summary(batch)),
+    }
+}
+
+fn collect_solver_model_issues(
+    step: &HeadlessExecutionBatchStep,
+    step_number: usize,
+    issues: &mut Vec<String>,
+) {
+    if step.action != "solve_thermal_frame_3d" {
+        return;
+    }
+    let Some(nodes) = step
+        .payload
+        .pointer("/model/nodes")
+        .and_then(Value::as_array)
+    else {
+        return;
+    };
+    for (node_index, node) in nodes.iter().enumerate() {
+        let node_id = node.get("id").and_then(Value::as_str).unwrap_or("unknown");
+        for (fixed, load, degree) in [
+            ("fix_x", "load_x", "x"),
+            ("fix_y", "load_y", "y"),
+            ("fix_z", "load_z", "z"),
+            ("fix_rx", "moment_x", "rx"),
+            ("fix_ry", "moment_y", "ry"),
+            ("fix_rz", "moment_z", "rz"),
+        ] {
+            let constrained = node.get(fixed).and_then(Value::as_bool) == Some(true);
+            let non_zero = node
+                .get(load)
+                .and_then(Value::as_f64)
+                .is_some_and(|value| value != 0.0);
+            if constrained && non_zero {
+                issues.push(format!(
+                    "step {step_number} thermal frame node {node_index} ({node_id}) applies non-zero {load} to fixed {degree} degree of freedom"
+                ));
+            }
+        }
     }
 }
 
@@ -570,6 +610,18 @@ mod tests {
         assert!(!report.ok);
         assert!(report.issues.iter().any(|issue| {
             issue.contains("step 1 workflow graph: dataset_value missing_value is referenced")
+        }));
+    }
+
+    #[test]
+    fn rejects_thermal_frame_load_on_fixed_degree_before_execution() {
+        let mut document = crate::build_template_document("direct_thermal_frame_3d", None).unwrap();
+        document.workflow.steps[0].payload["model"]["nodes"][1]["fix_y"] = Value::Bool(true);
+
+        let report = validate_batch(&normalize_workflow_document(&document).unwrap());
+        assert!(!report.ok);
+        assert!(report.issues.iter().any(|issue| {
+            issue.contains("node 1 (n1) applies non-zero load_y to fixed y degree of freedom")
         }));
     }
 }

@@ -10,9 +10,12 @@ use crate::operator_task_receipts::{
     operator_task_failure_receipt, operator_task_provenance_receipt,
     operator_task_validation_receipt,
 };
+use crate::operator_task_runtime_error::{
+    classify_admission_rejection, classify_digest_error, classify_summary_error,
+};
 use kyuubiki_protocol::{
-    OperatorTaskDigestError, OperatorTaskExecutionPreview, OperatorTaskExecutionSummary,
-    OperatorTaskSummaryError, OperatorTaskSummaryErrorCode, preview_operator_task_execution,
+    OperatorTaskAdmissionReport, OperatorTaskExecutionPreview, OperatorTaskExecutionSummary,
+    build_operator_task_admission_report, preview_operator_task_execution,
     summarize_operator_task_execution_checked, verify_operator_task_digest,
 };
 
@@ -209,14 +212,19 @@ pub(crate) fn run_operator_task_ir_with_runtime(
     verify_operator_task_digest(task_ir).map_err(|error| classify_digest_error(error, task_ir))?;
 
     let summary = summarize_operator_task_execution_checked(task_ir)
-        .map_err(|error| classify_operator_task_error(error, task_ir))?;
+        .map_err(|error| classify_summary_error(error, task_ir))?;
     let preview = preview_operator_task_execution(task_ir)
-        .map_err(|error| classify_operator_task_error(error, task_ir))?;
+        .map_err(|error| classify_summary_error(error, task_ir))?;
+    let admission_report = build_operator_task_admission_report(task_ir, &summary);
+    if !admission_report.accepted {
+        return Err(classify_admission_rejection(admission_report, task_ir));
+    }
 
     if let Some(execution) = engine_solver::try_execute(mode, &summary, task_ir)? {
         return Ok(build_agent_native_execution_payload(
             summary,
             preview,
+            admission_report,
             package_runtime,
             engine_solver::AGENT_ENGINE_SOLVER_STATUS,
             execution.capability_report,
@@ -238,6 +246,7 @@ pub(crate) fn run_operator_task_ir_with_runtime(
         return Ok(build_agent_native_execution_payload(
             summary,
             preview,
+            admission_report,
             package_runtime,
             OPERATOR_TASK_AGENT_NATIVE_STATUS,
             Value::Null,
@@ -248,60 +257,10 @@ pub(crate) fn run_operator_task_ir_with_runtime(
     Ok(build_preflight_payload(
         summary,
         preview,
+        admission_report,
         mode,
         package_runtime,
     ))
-}
-
-fn classify_digest_error(
-    error: OperatorTaskDigestError,
-    task_ir: &Value,
-) -> OperatorTaskRuntimeError {
-    match error {
-        OperatorTaskDigestError::Missing => OperatorTaskRuntimeError::with_task(
-            "operator_task_digest_missing",
-            "missing operator task digest",
-            "verify_digest",
-            Some(task_ir),
-        ),
-        OperatorTaskDigestError::Mismatch { expected, actual } => {
-            OperatorTaskRuntimeError::with_task(
-                "operator_task_digest_mismatch",
-                format!("operator task digest mismatch: expected {expected}, actual {actual}"),
-                "verify_digest",
-                Some(task_ir),
-            )
-        }
-        OperatorTaskDigestError::InvalidTask(message) => OperatorTaskRuntimeError::with_task(
-            "operator_task_digest_invalid",
-            message,
-            "verify_digest",
-            Some(task_ir),
-        ),
-    }
-}
-
-fn classify_operator_task_error(
-    error: OperatorTaskSummaryError,
-    task_ir: &Value,
-) -> OperatorTaskRuntimeError {
-    let code = match error.code {
-        OperatorTaskSummaryErrorCode::MirrorMismatch => "operator_task_mirror_mismatch",
-        OperatorTaskSummaryErrorCode::ExecutionAbiMismatch => {
-            "operator_task_execution_abi_mismatch"
-        }
-        OperatorTaskSummaryErrorCode::ProgramMismatch => "operator_task_program_mismatch",
-        OperatorTaskSummaryErrorCode::EntrypointMismatch => "operator_task_entrypoint_mismatch",
-        OperatorTaskSummaryErrorCode::MissingField | OperatorTaskSummaryErrorCode::Invalid => {
-            "operator_task_invalid"
-        }
-    };
-    OperatorTaskRuntimeError::with_task(
-        code,
-        error.message,
-        "summarize_execution_program",
-        Some(task_ir),
-    )
 }
 
 fn runtime_binding() -> &'static Mutex<OperatorPackageRuntimeBinding> {
@@ -330,6 +289,7 @@ fn parse_mode(params: &Value) -> Result<&'static str, OperatorTaskRuntimeError> 
 fn build_preflight_payload(
     summary: OperatorTaskExecutionSummary,
     preview: OperatorTaskExecutionPreview,
+    admission_report: OperatorTaskAdmissionReport,
     mode: &str,
     package_runtime: OperatorPackageRuntimeBinding,
 ) -> Value {
@@ -341,7 +301,13 @@ fn build_preflight_payload(
         "operator_task_ir_status": OPERATOR_TASK_STATUS_VERIFIED_PENDING,
         "execution_runtime_status": execution_runtime_status,
         "operator_package_runtime": operator_package_runtime_contract(&summary, &package_runtime),
-        "validation_receipt": operator_task_validation_receipt(&summary, &preview, &package_runtime),
+        "validation_receipt": operator_task_validation_receipt(
+            &summary,
+            &preview,
+            &admission_report,
+            &package_runtime
+        ),
+        "admission_report": admission_report,
         "provenance_receipt": operator_task_provenance_receipt(&summary, &preview, mode, &package_runtime),
         "package_fetch_request": package_fetch_request(&summary, &package_runtime),
         "execution_reliability": operator_task_execution_reliability_profile(
@@ -379,6 +345,7 @@ fn build_preflight_payload(
 fn build_agent_native_execution_payload(
     summary: OperatorTaskExecutionSummary,
     preview: OperatorTaskExecutionPreview,
+    admission_report: OperatorTaskAdmissionReport,
     package_runtime: OperatorPackageRuntimeBinding,
     execution_runtime_status: &'static str,
     solver_execution_capability: Value,
@@ -392,7 +359,13 @@ fn build_agent_native_execution_payload(
         "execution_runtime_status": execution_runtime_status,
         "solver_execution_capability": solver_execution_capability,
         "operator_package_runtime": operator_package_runtime_contract(&summary, &package_runtime),
-        "validation_receipt": operator_task_validation_receipt(&summary, &preview, &package_runtime),
+        "validation_receipt": operator_task_validation_receipt(
+            &summary,
+            &preview,
+            &admission_report,
+            &package_runtime
+        ),
+        "admission_report": admission_report,
         "provenance_receipt": operator_task_provenance_receipt(
             &summary,
             &preview,

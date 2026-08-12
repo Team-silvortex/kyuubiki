@@ -1,5 +1,6 @@
 use crate::execution_observability::{failure_preview, summarize_execution};
 use crate::operator_task::operator_task_prepare_preview_or_error;
+use crate::preflight_report::build_batch_validation_failure_report;
 use crate::run::{compact_report_value, resolve_step_payload};
 use crate::{
     HeadlessBlockedConfirmation, HeadlessEngine, HeadlessExecutionBatch,
@@ -109,6 +110,13 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
     allow_destructive: bool,
 ) -> HeadlessRunReport {
     let validation = validate_batch(batch);
+    if !validation.ok {
+        return build_batch_validation_failure_report(
+            batch,
+            &format!("execute:{}", executor.name()),
+            validation,
+        );
+    }
     let mut results = HashMap::<usize, Value>::new();
     let mut steps = Vec::with_capacity(batch.steps.len());
     let mut executed_step_count = 0;
@@ -445,6 +453,30 @@ mod tests {
     }
 
     #[derive(Default)]
+    struct CountingExecutor {
+        calls: usize,
+    }
+
+    impl HeadlessExecutor for CountingExecutor {
+        fn name(&self) -> &'static str {
+            "service"
+        }
+
+        fn execute_step(
+            &mut self,
+            _action: &str,
+            _step_index: usize,
+            _payload: &Value,
+        ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
+            self.calls += 1;
+            Ok(HeadlessExecutorOutcome {
+                status: "executed".to_string(),
+                result: json!({"unexpected": true}),
+            })
+        }
+    }
+
+    #[derive(Default)]
     struct LargeResultExecutor {
         calls: usize,
     }
@@ -571,6 +603,32 @@ mod tests {
         assert_eq!(report.executed_step_count, 0);
         assert_eq!(report.steps.len(), 1);
         assert_eq!(report.steps[0].action, "project_delete");
+    }
+
+    #[test]
+    fn invalid_batch_never_reaches_executor() {
+        let batch = HeadlessExecutionBatch {
+            schema_version: "kyuubiki.headless-execution-batch/v1".to_string(),
+            exported_at: "1970-01-01T00:00:00.000Z".to_string(),
+            language: "en".to_string(),
+            workflow_id: "invalid-execution".to_string(),
+            template_id: None,
+            steps: vec![HeadlessExecutionBatchStep {
+                index: 1,
+                action: "project_create".to_string(),
+                risk: HeadlessRisk::Normal,
+                payload: json!({}),
+            }],
+            warnings: vec![],
+        };
+        let mut executor = CountingExecutor::default();
+
+        let report = execute_batch_with_executor(&batch, &mut executor, false, false);
+
+        assert_eq!(report.status, "invalid");
+        assert_eq!(report.executed_step_count, 0);
+        assert!(report.steps.is_empty());
+        assert_eq!(executor.calls, 0);
     }
 
     #[test]

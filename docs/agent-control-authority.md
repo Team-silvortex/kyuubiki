@@ -107,6 +107,14 @@ That ambiguity is especially dangerous now that:
 
 The agent has to know who its authority is, or that it has no authority at all.
 
+Task dispatch also has a route-level guard. The
+`kyuubiki.operator-task-admission/v1` report rejects contradictory TaskIR
+authority, execution, package, fetch, cache, and routing declarations before
+the Agent fetches a package or enters its embedded engine. This prevents a
+digest-valid task from downgrading a central route into an offline-looking
+route. It complements, rather than replaces, transport authentication and the
+exclusive active `orch_id` binding described above.
+
 For the runtime-facing consequences of this rule in direct solver RPC, control
 plane mediation, and frontend gateway flows, use
 [headless-agent-contract.md](headless-agent-contract.md).

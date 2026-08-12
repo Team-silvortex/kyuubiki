@@ -320,6 +320,7 @@ pub use operator_task_provenance::{
 };
 pub use operator_task_security::{
     HEADLESS_OPERATOR_TASK_SECURITY_SCHEMA_VERSION, operator_task_security_profile,
+    operator_task_security_profile_with_admission,
 };
 pub use operator_task_validation::{
     HeadlessOperatorTaskValidationReport, validate_operator_task_for_agent,

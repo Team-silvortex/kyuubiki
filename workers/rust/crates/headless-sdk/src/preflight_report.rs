@@ -30,6 +30,36 @@ pub fn build_preflight_failure_report(
     validation.ok = false;
     validation.issue_count = validation.issues.len();
 
+    build_failure_report(workflow_id, mode, error_code, stage, message, validation)
+}
+
+pub(crate) fn build_batch_validation_failure_report(
+    batch: &HeadlessExecutionBatch,
+    mode: &str,
+    validation: HeadlessValidationReport,
+) -> HeadlessRunReport {
+    let message = format!(
+        "headless execution batch validation failed with {} issue(s)",
+        validation.issue_count
+    );
+    build_failure_report(
+        &batch.workflow_id,
+        mode,
+        "document_validation",
+        "batch_validation",
+        &message,
+        validation,
+    )
+}
+
+fn build_failure_report(
+    workflow_id: &str,
+    mode: &str,
+    error_code: &str,
+    stage: &str,
+    message: &str,
+    validation: HeadlessValidationReport,
+) -> HeadlessRunReport {
     let canonical_error_code = if error_code.starts_with("kyuubiki.headless.") {
         error_code.to_string()
     } else {

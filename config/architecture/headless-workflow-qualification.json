@@ -1,40 +1,56 @@
 {
   "schema_version": "kyuubiki.headless-workflow-qualification-contract/v1",
   "report_schema": "kyuubiki.headless-workflow-qualification-report/v1",
-  "minimum_total_tests": 235,
+  "minimum_total_tests": 246,
   "suites": [
     {
       "id": "headless-sdk-core",
-      "minimum_tests": 223,
+      "minimum_tests": 230,
       "source_files": [
         "workers/rust/crates/headless-sdk/src/execution_observability.rs",
         "workers/rust/crates/headless-sdk/src/preflight_report.rs",
+        "workers/rust/crates/headless-sdk/src/run.rs",
         "workers/rust/crates/headless-sdk/src/executor.rs",
+        "workers/rust/crates/headless-sdk/src/material_reports.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_http.rs",
         "workers/rust/crates/headless-sdk/src/service_executor_job_wait.rs",
         "workers/rust/crates/headless-sdk/src/service_executor_tests.rs",
-        "workers/rust/crates/headless-sdk/src/template_tests.rs"
+        "workers/rust/crates/headless-sdk/src/templates.rs",
+        "workers/rust/crates/headless-sdk/src/template_workflows.rs",
+        "workers/rust/crates/headless-sdk/src/template_tests.rs",
+        "workers/rust/crates/headless-sdk/src/workflow_batch.rs"
       ],
       "required_tests": [
         "execution_observability::tests::authorization_status_requires_transport_context",
         "preflight_report::tests::preflight_failure_is_a_standard_non_retryable_run_report",
+        "run::tests::invalid_dry_run_fails_before_previewing_any_step",
+        "executor::tests::invalid_batch_never_reaches_executor",
         "executor::tests::failed_execution_promotes_failure_receipt_to_run_summary",
+        "material_reports::tests::dielectric_material_report_rejects_permittivity_unit_drift",
+        "service_executor_http::tests::retries_connection_refusal_until_service_becomes_ready",
         "service_executor_job_wait::tests::server_deadline_policy_resumes_same_job_until_completion",
         "service_executor::service_executor_tests::service_executor_covers_every_service_action_contract",
-        "template_tests::every_template_builds_normalizes_and_validates"
+        "template_tests::every_template_builds_normalizes_and_validates",
+        "template_tests::thermal_frame_3d_template_keeps_the_loaded_tip_unconstrained",
+        "workflow_batch::tests::rejects_thermal_frame_load_on_fixed_degree_before_execution"
       ]
     },
     {
       "id": "headless-cli-boundaries",
-      "minimum_tests": 12,
+      "minimum_tests": 16,
       "source_files": [
         "workers/rust/crates/cli/tests/headless_execution_posture.rs"
       ],
       "required_tests": [
         "executor_compatibility_failure_writes_a_standard_run_report",
+        "contract_invalid_batch_fails_before_mock_execution",
+        "run_applies_auditable_job_wait_timeout_override",
         "malformed_batch_writes_a_standard_document_validation_report",
         "service_execution_failure_returns_nonzero_with_root_cause",
         "service_executor_rejects_base_url_paths_before_execution",
-        "material_report_rejects_incompatible_template_before_execution"
+        "material_report_rejects_incompatible_template_before_execution",
+        "material_report_rejects_dielectric_unit_drift_before_execution",
+        "thermal_frame_constraint_conflict_fails_before_service_connection"
       ]
     }
   ]

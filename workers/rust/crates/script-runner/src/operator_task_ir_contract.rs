@@ -1,3 +1,4 @@
+use kyuubiki_protocol::check_operator_task_admission;
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 use std::ffi::OsString;
@@ -81,6 +82,7 @@ fn check_contracts(root: &Path) -> RunnerResult<CheckOutcome> {
             let context = format!("{example_path}#task-{}", index + 1);
             for validator in [
                 validate_mirror_constraints,
+                validate_admission_policy,
                 validate_digest_field_coverage,
                 validate_descriptor_digest,
                 validate_task_digest,
@@ -130,8 +132,18 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
     if validate_mirror_constraints(&task, &[constraint], "self").is_ok() {
         return Err("self-test did not reject a mirror mismatch".to_string());
     }
+    run_admission_self_test(root)?;
     run_digest_self_test(root)?;
     run_descriptor_digest_self_test(root)
+}
+
+fn run_admission_self_test(root: &Path) -> RunnerResult<()> {
+    let mut task = read_json(root, EXAMPLE_PATHS[0])?;
+    task["runtime_hints"]["authority_mode"] = Value::from("offline_mesh");
+    if validate_admission_policy(&task, &[], "self-admission").is_ok() {
+        return Err("self-test did not reject a TaskIR authority downgrade".to_string());
+    }
+    Ok(())
 }
 
 fn run_digest_self_test(root: &Path) -> RunnerResult<()> {
@@ -243,6 +255,31 @@ fn validate_mirror_constraints(
         }
     }
     Ok(())
+}
+
+fn validate_admission_policy(
+    task: &Value,
+    _constraints: &[MirrorConstraint],
+    context: &str,
+) -> Result<(), String> {
+    let report = check_operator_task_admission(task).map_err(|error| {
+        format!(
+            "{context}: TaskIR admission summary failed: {}",
+            error.message
+        )
+    })?;
+    if report.accepted {
+        return Ok(());
+    }
+    let reason_codes = report
+        .violations
+        .iter()
+        .map(|violation| violation.code.as_str())
+        .collect::<Vec<_>>()
+        .join(", ");
+    Err(format!(
+        "{context}: TaskIR admission rejected: {reason_codes}"
+    ))
 }
 
 fn validate_digest_field_coverage(

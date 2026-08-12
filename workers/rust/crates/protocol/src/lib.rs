@@ -3,6 +3,7 @@ mod analysis;
 mod benchmark_surface;
 mod job;
 mod operator;
+mod operator_task_admission;
 mod operator_task_ir;
 mod solver_execution_capability;
 mod workflow;
@@ -47,6 +48,10 @@ pub use operator::{
     OperatorValidationProfile, OperatorValidationStatus, WORKFLOW_DATASET_DATA_CLASSES,
     WorkflowDatasetAxis, WorkflowDatasetContract, WorkflowDatasetEncoding, WorkflowDatasetShape,
     WorkflowDatasetValueInfo,
+};
+pub use operator_task_admission::{
+    OPERATOR_TASK_ADMISSION_SCHEMA, OperatorTaskAdmissionReport, OperatorTaskAdmissionViolation,
+    build_operator_task_admission_report, check_operator_task_admission,
 };
 pub use operator_task_ir::{
     OPERATOR_TASK_DIGEST_FIELDS, OPERATOR_TASK_IR_SCHEMA, OperatorTaskDigestError,

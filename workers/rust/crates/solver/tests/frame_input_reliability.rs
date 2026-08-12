@@ -102,6 +102,22 @@ fn thermal_frame_3d_rejects_non_finite_node_coordinates_loads_moments_and_temper
 }
 
 #[test]
+fn thermal_frame_3d_rejects_loads_on_fixed_degrees_of_freedom() {
+    let mut request = thermal_frame_3d_request();
+    request.nodes[1].load_y = 1_500.0;
+    let error = solve_thermal_frame_3d(&request)
+        .expect_err("load on a fixed translation should not be silently discarded");
+    assert!(error.contains("non-zero load_y to fixed y degree of freedom"));
+    assert!(error.contains("move the load to an unconstrained degree of freedom"));
+
+    let mut request = thermal_frame_3d_request();
+    request.nodes[1].moment_z = 450.0;
+    let error = solve_thermal_frame_3d(&request)
+        .expect_err("moment on a fixed rotation should not be silently discarded");
+    assert!(error.contains("non-zero moment_z to fixed rz degree of freedom"));
+}
+
+#[test]
 fn thermal_frame_3d_rejects_invalid_element_topology_and_thermal_properties() {
     let mut request = thermal_frame_3d_request();
     request.elements[0].node_j = 9;

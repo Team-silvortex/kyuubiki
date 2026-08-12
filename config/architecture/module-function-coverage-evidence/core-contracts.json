@@ -542,12 +542,23 @@
         ],
         "files": [
           "schemas/agent-solver-qualification.schema.json",
+          "schemas/operator-task-admission.schema.json",
+          "workers/rust/crates/protocol/src/operator_task_admission.rs",
+          "workers/rust/crates/protocol/src/types/rpc_descriptor.rs",
+          "workers/rust/crates/cli/src/operator_task_runtime_error.rs",
+          "apps/web/lib/kyuubiki_web/orchestra/operator_task_admission.ex",
+          "apps/web/lib/kyuubiki_web/playground/agent_client.ex",
+          "apps/web/lib/kyuubiki_web/protocol.ex",
           "workers/rust/crates/engine/src/tests/workflow_security.rs"
         ],
         "required_text": [
           "failure_receipt",
           "safe_to_continue_other_tasks",
-          "unsupported recovery policy"
+          "unsupported recovery policy",
+          "kyuubiki.operator-task-admission/v1",
+          "operator_task_admission_rejected",
+          "central_package_ref_mismatch",
+          "operator-task-admission-v1"
         ]
       }
     ]

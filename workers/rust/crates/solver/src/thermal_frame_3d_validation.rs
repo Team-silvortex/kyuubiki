@@ -1,4 +1,6 @@
-use kyuubiki_protocol::{SolveThermalFrame3dRequest, ThermalFrame3dElementInput};
+use kyuubiki_protocol::{
+    SolveThermalFrame3dRequest, ThermalFrame3dElementInput, ThermalFrame3dNodeInput,
+};
 
 pub(crate) fn validate_request(request: &SolveThermalFrame3dRequest) -> Result<(), String> {
     if request.nodes.len() < 2 {
@@ -26,6 +28,7 @@ pub(crate) fn validate_request(request: &SolveThermalFrame3dRequest) -> Result<(
         if !node.temperature_delta.is_finite() {
             return Err("thermal 3d frame node temperature_delta must be finite".to_string());
         }
+        validate_nodal_constraint_loads(index, node)?;
     }
 
     for element in &request.elements {
@@ -64,6 +67,28 @@ pub(crate) fn validate_request(request: &SolveThermalFrame3dRequest) -> Result<(
             request.nodes.len(),
             "directional rotational constraint",
         )?;
+    }
+    Ok(())
+}
+
+fn validate_nodal_constraint_loads(
+    index: usize,
+    node: &ThermalFrame3dNodeInput,
+) -> Result<(), String> {
+    for (fixed, value, load, degree) in [
+        (node.fix_x, node.load_x, "load_x", "x"),
+        (node.fix_y, node.load_y, "load_y", "y"),
+        (node.fix_z, node.load_z, "load_z", "z"),
+        (node.fix_rx, node.moment_x, "moment_x", "rx"),
+        (node.fix_ry, node.moment_y, "moment_y", "ry"),
+        (node.fix_rz, node.moment_z, "moment_z", "rz"),
+    ] {
+        if fixed && value != 0.0 {
+            return Err(format!(
+                "thermal 3d frame node {index} ({}) applies non-zero {load} to fixed {degree} degree of freedom; move the load to an unconstrained degree of freedom",
+                node.id
+            ));
+        }
     }
     Ok(())
 }

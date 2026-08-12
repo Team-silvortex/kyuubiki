@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/operator-task-admission.schema.json",
+  "title": "Kyuubiki Operator Task Admission Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "accepted",
+    "task_id",
+    "operator_id",
+    "authority_mode",
+    "execution_mode",
+    "cache_scope",
+    "agent_fetchable",
+    "package_ref",
+    "violations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.operator-task-admission/v1"
+    },
+    "accepted": {
+      "type": "boolean"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operator_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority_mode": {
+      "type": ["string", "null"]
+    },
+    "execution_mode": {
+      "type": ["string", "null"]
+    },
+    "cache_scope": {
+      "type": ["string", "null"]
+    },
+    "agent_fetchable": {
+      "type": ["boolean", "null"]
+    },
+    "package_ref": {
+      "type": ["string", "null"]
+    },
+    "violations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/violation"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "accepted": { "const": true }
+        }
+      },
+      "then": {
+        "properties": {
+          "violations": { "maxItems": 0 }
+        }
+      },
+      "else": {
+        "properties": {
+          "violations": { "minItems": 1 }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "violation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "field", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

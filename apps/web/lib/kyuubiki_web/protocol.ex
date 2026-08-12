@@ -89,9 +89,14 @@ defmodule KyuubikiWeb.Protocol do
         "framing" => "length_prefixed_u32",
         "encoding" => "json"
       },
+      "contracts" => %{
+        "operator_task_ir" => "kyuubiki.operator-task-ir/v1",
+        "operator_task_admission" => "kyuubiki.operator-task-admission/v1"
+      },
       "methods" => [
         "ping",
         "describe_agent",
+        "run_operator_task_ir",
         "solve_bar_1d",
         "solve_thermal_bar_1d",
         "solve_heat_bar_1d",

@@ -4,6 +4,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   """
 
   alias KyuubikiWeb.Orchestra.OperatorTaskIR
+  alias KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary
   alias KyuubikiWeb.Orchestra.OperatorTaskReadiness
   alias KyuubikiWeb.Orchestra.DistributedRecovery
   alias KyuubikiWeb.Playground.AgentExecutionGate
@@ -191,7 +192,9 @@ defmodule KyuubikiWeb.Playground.AgentClient do
       when is_map(task_ir) do
     {opts, progress_handler} = normalize_operator_task_rpc_opts(opts_or_progress, on_progress)
 
-    with {:ok, result} <-
+    with :ok <- OperatorTaskExecutionSummary.validate_digest(task_ir),
+         {:ok, _summary} <- OperatorTaskExecutionSummary.build(task_ir),
+         {:ok, result} <-
            request(
              OperatorTaskIR.agent_rpc_method(),
              OperatorTaskIR.agent_rpc_params(task_ir, opts),

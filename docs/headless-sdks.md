@@ -87,12 +87,35 @@ when requested. The process still exits nonzero and writes the compact
 `status: invalid`, retains validation issues, and exposes the stable reason in
 `execution_summary.failure`; automation no longer has to infer failure from an
 empty JSON file. Runtime failures use the same run-report envelope with failed
-step evidence.
+step evidence. A decoded batch that fails contract validation is rejected before
+dry-run preview or any mock, service, or hybrid executor call, with
+`executed_step_count: 0` and an empty `steps` array.
 
 Retry safety remains narrower than error reporting. The service `job_wait`
 path can resume polling the same accepted `job_id` under a bounded server
 deadline. The CLI does not replay an entire workflow automatically, because a
 blind replay could duplicate non-idempotent submissions or side effects.
+Legacy or third-party workflow documents with a fixed polling budget can use
+an explicit per-run override without duplicating a large input artifact:
+
+```bash
+cargo kyuubiki headless run workflow.json --execute --executor service \
+  --api-base-url http://127.0.0.1:4000 --job-wait-timeout-ms 1200000
+```
+
+The override rewrites every `job_wait` in the in-memory execution batch, never
+shrinks an existing `max_total_timeout_ms`, and records the change in run
+warnings. It does not mutate the source document or either server-side timeout.
+
+Material-report workflows also fail closed on duplicated material-property
+drift. For dielectric screening, `research.relative_permittivity` is the
+dimensionless source value while each solver element stores absolute SI
+`permittivity` in F/m; edit both together or regenerate the candidate model.
+
+Service execution retries only transient TCP connection failures that happen
+before any request bytes are written. Interrupted writes and response failures
+are never replayed automatically, so POST-based job submission remains
+at-most-once from the Headless client's perspective.
 
 Coupled multiphysics routes are discoverable through the Rust SDK's
 `coupled_workflow_catalog()`, `find_coupled_workflow()`, and
@@ -131,7 +154,15 @@ Rust SDK dry-run and mock execution previews verify TaskIR before dispatch.
 Failures expose both a human-readable `error` and a stable `error_code`, such
 as `operator_task_digest_mismatch`, `operator_task_mirror_mismatch`, or
 `operator_task_execution_abi_mismatch`, so automation can branch before
-contacting an orchestra or solver agent.
+contacting an orchestra or solver agent. A digest-valid TaskIR can still be
+rejected as `operator_task_admission_rejected`: digest integrity does not make
+an authority downgrade, mismatched central package identity, offline
+Orchestra fetch, unsupported cache scope, or malformed routing list safe.
+Successful previews include a
+`kyuubiki.operator-task-admission/v1` report. The same report shape is produced
+by the Elixir control plane and enforced again by the Rust Agent before package
+resolution or engine execution, so Headless preflight cannot silently weaken
+the runtime boundary.
 The same preview payload now includes a
 `kyuubiki.headless-operator-task-failure/v1` `failure_receipt` with the failed
 stage, task identity when available, and a recovery action. This mirrors the

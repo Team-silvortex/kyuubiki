@@ -35,6 +35,7 @@ pub(super) fn cli_error_stage(code: &str) -> &'static str {
         "material_report_template_mismatch"
         | "material_report_template_provenance_missing"
         | "material_report_study_unsupported"
+        | "material_report_input_contract_mismatch"
         | "material_report_output_required" => "material_report_validation",
         _ => "command_validation",
     }
@@ -51,6 +52,8 @@ pub(super) fn classify_cli_error(error: &str) -> &'static str {
         "material_report_template_provenance_missing"
     } else if error.starts_with("unsupported material report study") {
         "material_report_study_unsupported"
+    } else if error.starts_with("material-report input contract mismatch") {
+        "material_report_input_contract_mismatch"
     } else if error.contains("--material-report with --json requires --material-report-out") {
         "material_report_output_required"
     } else if error.starts_with("headless execution failed") {
@@ -107,6 +110,9 @@ fn cli_error_recovery(code: &str) -> &'static str {
         "material_report_study_unsupported" => {
             "Use headless templates --json to select a supported material report study."
         }
+        "material_report_input_contract_mismatch" => {
+            "Keep material research metadata and solver-model SI properties synchronized before execution."
+        }
         "material_report_output_required" => {
             "Provide --material-report-out when requesting a JSON material report."
         }
@@ -157,5 +163,16 @@ mod tests {
         assert_eq!(cli_error_stage(code), "job_wait");
         assert!(cli_error_retryable(code));
         assert!(cli_error_recovery(code).contains("same job_id"));
+    }
+
+    #[test]
+    fn classifies_material_input_contract_mismatch_as_non_retryable() {
+        let code = classify_cli_error(
+            "material-report input contract mismatch: update both fields together",
+        );
+        assert_eq!(code, "material_report_input_contract_mismatch");
+        assert_eq!(cli_error_stage(code), "material_report_validation");
+        assert!(!cli_error_retryable(code));
+        assert!(cli_error_recovery(code).contains("SI properties"));
     }
 }

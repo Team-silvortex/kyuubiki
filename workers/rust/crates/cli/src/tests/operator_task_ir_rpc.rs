@@ -604,6 +604,58 @@ fn operator_task_runtime_rejects_digest_valid_inconsistent_package_mirrors() {
 }
 
 #[test]
+fn operator_task_runtime_rejects_digest_valid_central_package_identity_swap() {
+    let mut task_ir = golden_operator_task_ir();
+    for pointer in [
+        "/operator/execution/package_ref",
+        "/execution_program/package_ref",
+        "/runtime_hints/package_ref",
+    ] {
+        *task_ir.pointer_mut(pointer).expect("package ref pointer") =
+            serde_json::json!("orchestra://operator-package/transform.other");
+    }
+    let digest = compute_operator_task_digest(&task_ir).expect("changed task should digest");
+    task_ir["integrity"] = serde_json::json!({ "task_digest": digest });
+
+    let error = run_operator_task_ir(&serde_json::json!({ "task_ir": task_ir }))
+        .expect_err("agent must reject a coherent package identity swap");
+
+    assert_eq!(error.code, "operator_task_admission_rejected");
+    assert_eq!(error.details["failure_stage"], "validate_admission_policy");
+    assert_eq!(error.details["admission_report"]["accepted"], false);
+    assert_eq!(
+        error.details["admission_report"]["violations"][0]["code"],
+        "central_package_ref_mismatch"
+    );
+    assert_eq!(
+        error.details["recovery"]["required_action"],
+        "fix_task_ir_authority_and_routing_policy"
+    );
+}
+
+#[test]
+fn operator_task_runtime_rejects_digest_valid_authority_downgrade() {
+    let mut task_ir = golden_operator_task_ir();
+    task_ir["runtime_hints"]["authority_mode"] = serde_json::json!("offline_mesh");
+    let digest = compute_operator_task_digest(&task_ir).expect("changed task should digest");
+    task_ir["integrity"] = serde_json::json!({ "task_digest": digest });
+
+    let error = run_operator_task_ir(&serde_json::json!({ "task_ir": task_ir }))
+        .expect_err("agent must reject authority downgrade before package fetch");
+    let codes = error.details["admission_report"]["violations"]
+        .as_array()
+        .expect("violations array")
+        .iter()
+        .filter_map(|violation| violation["code"].as_str())
+        .collect::<Vec<_>>();
+
+    assert_eq!(error.code, "operator_task_admission_rejected");
+    assert!(codes.contains(&"agent_fetch_requires_central_authority"));
+    assert!(codes.contains(&"orchestra_fetch_requires_central_authority"));
+    assert!(codes.contains(&"local_authority_forbids_orchestra_package"));
+}
+
+#[test]
 fn operator_task_runtime_reports_missing_digest() {
     let mut task_ir = golden_operator_task_ir();
     task_ir["integrity"] = serde_json::json!({});

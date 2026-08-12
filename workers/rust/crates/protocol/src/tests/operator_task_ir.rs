@@ -272,6 +272,103 @@ fn operator_task_execution_summary_rejects_inconsistent_package_version_mirror()
     );
 }
 
+#[test]
+fn operator_task_admission_accepts_coherent_central_and_offline_routes() {
+    let central = golden_task_fixture(None);
+    let central_report =
+        check_operator_task_admission(&central).expect("central task should summarize");
+    assert!(central_report.accepted);
+    assert!(central_report.violations.is_empty());
+
+    let mut offline = central;
+    offline["execution_program"]["package_ref"] = json!("bundle://operators/transform.fixture");
+    offline["operator"]["execution"]["package_ref"] = json!("bundle://operators/transform.fixture");
+    offline["runtime_hints"]["package_ref"] = json!("bundle://operators/transform.fixture");
+    offline["runtime_hints"]["authority_mode"] = json!("offline_mesh");
+    offline["runtime_hints"]["execution_mode"] = json!("local_bundle");
+    offline["runtime_hints"]["cache_scope"] = json!("none");
+    offline["runtime_hints"]["agent_fetchable"] = json!(false);
+
+    let offline_report =
+        check_operator_task_admission(&offline).expect("offline task should summarize");
+    assert!(offline_report.accepted);
+    assert!(offline_report.violations.is_empty());
+}
+
+#[test]
+fn operator_task_admission_rejects_digest_valid_authority_downgrades() {
+    let mut task = golden_task_fixture(None);
+    task["runtime_hints"]["authority_mode"] = json!("offline_mesh");
+
+    let report = check_operator_task_admission(&task).expect("task should summarize");
+    assert!(!report.accepted);
+    let codes = report
+        .violations
+        .iter()
+        .map(|violation| violation.code.as_str())
+        .collect::<Vec<_>>();
+    assert!(codes.contains(&"agent_fetch_requires_central_authority"));
+    assert!(codes.contains(&"orchestra_fetch_requires_central_authority"));
+    assert!(codes.contains(&"local_authority_forbids_orchestra_package"));
+}
+
+#[test]
+fn operator_task_admission_rejects_coherent_but_wrong_central_package_identity() {
+    let mut task = golden_task_fixture(None);
+    for pointer in [
+        "/operator/execution/package_ref",
+        "/execution_program/package_ref",
+        "/runtime_hints/package_ref",
+    ] {
+        *task.pointer_mut(pointer).expect("package ref pointer") =
+            json!("orchestra://operator-package/transform.other");
+    }
+
+    let report = check_operator_task_admission(&task).expect("task should summarize");
+    assert!(!report.accepted);
+    assert_eq!(report.violations.len(), 1);
+    assert_eq!(report.violations[0].code, "central_package_ref_mismatch");
+}
+
+#[test]
+fn operator_task_admission_rejects_unbounded_or_duplicate_routing_values() {
+    let mut task = golden_task_fixture(None);
+    task["runtime_hints"]["required_capabilities"] = json!(["solver", "solver"]);
+    task["runtime_hints"]["placement_tags"] = json!([42]);
+
+    let report = check_operator_task_admission(&task).expect("task should summarize");
+    let codes = report
+        .violations
+        .iter()
+        .map(|violation| violation.code.as_str())
+        .collect::<Vec<_>>();
+    assert!(codes.contains(&"routing_value_duplicate"));
+    assert!(codes.contains(&"routing_value_not_string"));
+}
+
+#[test]
+fn operator_task_admission_rejects_resolution_path_traversal() {
+    let mut task = golden_task_fixture(None);
+    task["operator"]["id"] = json!("../transform.fixture");
+    task["execution_program"]["program_id"] = json!("../transform.fixture");
+    task["execution_program"]["entrypoint"]["name"] = json!("../transform.fixture");
+    task["execution_program"]["package_ref"] =
+        json!("orchestra://operator-package/../transform.fixture");
+    task["operator"]["execution"]["package_ref"] =
+        json!("orchestra://operator-package/../transform.fixture");
+    task["runtime_hints"]["package_ref"] =
+        json!("orchestra://operator-package/../transform.fixture");
+
+    let report = check_operator_task_admission(&task).expect("task should summarize");
+    assert!(!report.accepted);
+    assert!(
+        report
+            .violations
+            .iter()
+            .any(|violation| violation.code == "operator_id_unsafe_for_resolution")
+    );
+}
+
 fn golden_task_fixture(task_digest: Option<&str>) -> Value {
     let mut task = json!({
         "schema_version": OPERATOR_TASK_IR_SCHEMA,

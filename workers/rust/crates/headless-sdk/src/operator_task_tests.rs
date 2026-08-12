@@ -42,6 +42,11 @@ fn prepare_operator_task_payload_returns_execution_summary() {
     assert_eq!(preview["security_profile"]["package_fetch_required"], true);
     assert_eq!(preview["security_profile"]["offline_runnable"], false);
     assert_eq!(
+        preview["security_profile"]["admission_policy_verified"],
+        true
+    );
+    assert_eq!(preview["admission_report"]["accepted"], true);
+    assert_eq!(
         preview["security_profile"]["requires_runtime_attachment"],
         true
     );
@@ -193,23 +198,39 @@ fn operator_task_prepare_dry_run_reports_execution_abi_mismatch() {
 }
 
 #[test]
-fn operator_task_prepare_dry_run_reports_missing_task_failure_receipt() {
-    let report = run_batch_dry(&operator_task_batch_without_task(), false, false);
+fn operator_task_prepare_dry_run_rejects_authority_downgrade_before_dispatch() {
+    let mut task = golden_task_fixture(false);
+    task["runtime_hints"]["authority_mode"] = json!("offline_mesh");
+    task["integrity"]["task_digest"] =
+        json!(compute_operator_task_digest(&task).expect("changed task should digest"));
+
+    let report = run_batch_dry(&operator_task_batch(task), false, false);
 
     assert_eq!(report.status, "failed");
     assert_eq!(
         report.steps[0].result_preview["error_code"],
-        "operator_task_invalid_params"
+        "operator_task_admission_rejected"
     );
+    let failure = &report.steps[0].result_preview["failure_receipt"];
+    assert_eq!(failure["failure_stage"], "validate_admission_policy");
+    assert_eq!(failure["admission_report"]["accepted"], false);
     assert_eq!(
-        report.steps[0].result_preview["failure_receipt"]["failure_stage"],
-        "preview_request"
+        failure["recovery"]["required_action"],
+        "fix_task_ir_authority_and_routing_policy"
     );
-    assert_eq!(
-        report.steps[0].result_preview["failure_receipt"]["recovery"]["required_action"],
-        "fix_headless_step_payload"
-    );
-    assert!(report.steps[0].result_preview["failure_receipt"]["task_id"].is_null());
+}
+
+#[test]
+fn operator_task_prepare_missing_task_fails_closed_before_dry_run() {
+    let report = run_batch_dry(&operator_task_batch_without_task(), false, false);
+
+    assert_eq!(report.status, "invalid");
+    assert_eq!(report.executed_step_count, 0);
+    assert!(report.steps.is_empty());
+    let failure = report.execution_summary.failure.expect("failure receipt");
+    assert_eq!(failure.error_code, "kyuubiki.headless.document_validation");
+    assert_eq!(failure.stage, "batch_validation");
+    assert!(!failure.retryable);
 }
 
 #[test]

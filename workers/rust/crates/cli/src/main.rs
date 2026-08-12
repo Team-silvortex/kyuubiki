@@ -18,6 +18,7 @@ mod config;
 mod operator_task_builtin;
 mod operator_task_receipts;
 mod operator_task_runtime;
+mod operator_task_runtime_error;
 mod rpc;
 mod transport;
 mod worker;

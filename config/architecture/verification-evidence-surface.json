@@ -50,7 +50,7 @@
       "workers/rust/crates/headless-sdk/src/preflight_report.rs",
       "workers/rust/crates/headless-sdk/src/operator_task_provenance.rs",
       "workers/rust/crates/cli/src/agent_headless_bridge.rs",
-      "releases/usability-evidence/2.12.6/headless-workflow-qualification.json"
+      "releases/usability-evidence/2.13.1/headless-workflow-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.agent-headless-bridge/v1",

@@ -1,271 +1,61 @@
-# Kyuubiki
+# kyuubiki-playground 模块化实验室
 
-Kyuubiki is an engine-first FEM workstation, workflow system, and distributed
-runtime control plane.
+本目录用于真实调用 kyuubiki 进行材料研发 / 仿真实验。  
+我把旧脚本按“模块化 + 流程标准化”重构成统一入口 `labctl.sh`，保持旧脚本兼容。
 
-The active repository line is `moxi 2.x`. The current development snapshot is
-`moxi 2.13.1`. The line began at `moxi 2.0.0` after the `tamamono 1.x`
-industrialization bridge.
+## 目录
 
-## What This Repo Contains
+- `scripts/labctl.sh`：实验室主入口
+- `scripts/lib/labctl_common.sh`：通用运行函数（工作区隔离、日志、manifest）
+- `scripts/modules/`：按场景拆分的模块（每个模块调用一条历史脚本）
+- `runs/`：标准化执行结果目录（运行后自动创建）
 
-- `apps/`
-  Browser Workbench, Elixir control plane, and Tauri desktop shells.
-- `workers/`
-  Rust solver/runtime crates, agent binaries, installer logic, and benchmarks.
-- `sdks/`
-  Rust, Python, and Elixir headless SDK surfaces.
-- `schemas/`
-  Shared JSON contracts for workflows, materials, packages, and release assets.
-- `deploy/`
-  Deployment, update, agent, and install/integrity descriptors.
-- `docs/`
-  Source-of-truth architecture, operations, verification, and release docs.
-- `scripts/`
-  Host-facing operational launchers and compatibility wrappers.
+## 快速开始
 
-## System Shape
-
-Kyuubiki is intentionally split into product, control, and data-plane layers:
-
-- `Workbench`
-  Project modeling, workflow authoring, material studies, and result review.
-- `Hub`
-  Desktop entry shell for runtime posture, project launch, docs, and operator
-  guidance.
-- `Installer`
-  Runtime deployment, repair, update, packaging, and remote-node preparation.
-- `Orchestra`
-  Elixir control plane for jobs, persistence, chunked results, and scheduling.
-- `Agent`
-  Rust solver/runtime host with one local engine instance per running agent.
-- `SDKs`
-  Headless automation surfaces for CI, AI agents, and research scripts.
-
-Supported runtime postures are documented rather than implied:
-
-- `local workstation`: frontend, control plane, and local Rust agents
-- `cloud control plane`: frontend/control plane backed by PostgreSQL
-- `distributed control plane`: control plane scheduling remote solver nodes
-- `direct mesh`: offline or LAN peer mode without ambiguous multi-orchestra
-  authority
-
-Start with:
-
-- [docs/current-line.md](docs/current-line.md)
-- [docs/current-architecture-map.md](docs/current-architecture-map.md)
-- [docs/system-overview.md](docs/system-overview.md)
-- [docs/app-runtime-boundaries.md](docs/app-runtime-boundaries.md)
-- [docs/agent-control-authority.md](docs/agent-control-authority.md)
-
-## Moxi 2.11 Posture
-
-`moxi 2.0.0` established the product baseline. `moxi 2.13.1` keeps those
-contracts and advances the calculation and workflow path rather than resetting
-the architecture.
-
-The 2.x rule is:
-
-`preserve the engine contracts, prove the computations, and keep UI/runtime
-authority separated`.
-
-The current checkpoint moves from isolated feature growth toward usable,
-repeatable workflow control:
-
-- GUI call chains are being treated as first-class product contracts rather
-  than incidental button wiring
-- the moxi usability release gate now has native journey probes for the
-  install, project, workflow, execution, recovery, localization, and update
-  paths; `make build-usability-readiness-report` records the executed
-  `baseline_pass` evidence
-- project bundle creation, inspection, validation, normalization, packing,
-  unpacking, and diffing now share one native Rust implementation between Hub
-  and the top-level command surface; the project journey executes a real
-  temporary `.kyuubiki` round trip
-- frozen simulation and research exchange now has the path-independent `.kcore`
-  v1 contract, native streaming export, inspection, SHA-256 verification, and
-  safe extraction surface; `.kyuubiki` remains the editable project format
-- project automation preset listing, template rendering, risk planning, dry
-  runs, and service-backed live execution now use the shared Rust headless SDK;
-  the top-level `project automation-*` path no longer invokes Node
-- standalone macro discovery, inspection, validation, normalization, rendering,
-  and execution now use the same Rust automation protocol through `macro
-  actions|inspect|validate|normalize|render|run`; templates remain unresolved
-  during static validation and bind only when a plan is rendered
-- `headless templates|suggest|init|inspect|validate|render|plan|run` now enters
-  the official Rust `kyuubiki-headless` binary directly. Research execution
-  requires the service executor; mock-capable executors remain explicit preview
-  tools rather than hidden fallbacks
-- Pwdt, the frontend wasm Python DSL, is the target control surface for
-  deterministic UI automation inside product-owned shells
-- the coverage tensor is the planning gate for weak coordinates, not a
-  decorative progress table
-- workflow, material-study, operator-reliability, and component-integrity
-  checks are being kept observable from headless or native tooling
-- contract and checker files are being split into smaller modules so the 800
-  line source ceiling remains enforceable
-
-The 2.7 cohesive coassembly checkpoint remains part of the active baseline,
-but 2.11 is mainly a reliability and usability bridge. It does not imply that
-every GUI route is fully equivalent to Pwdt yet, nor that every physical solver
-family has independent industrial qualification.
-
-The planned first public Reddit launch is `daji 3.0.0`. The `moxi 2.x` line is
-an internal hardening line and must not be presented as that public debut.
-Moxi ends at `2.20.9`: each major has minor positions `0–20`, and each minor
-has patch positions `0–9`.
-
-Use these gates when deciding whether a new 2.x change is safe to treat as
-part of the industrial baseline:
-
-- [docs/commercial-readiness-2.0.md](docs/commercial-readiness-2.0.md)
-- [docs/minimal-industrial-closure.md](docs/minimal-industrial-closure.md)
-- [docs/weakness-roadmap.md](docs/weakness-roadmap.md)
-- [docs/moxi-handoff.md](docs/moxi-handoff.md)
-
-## Documentation Entrypoints
-
-Use the book and manifest when you need the whole picture:
-
-- [docs/book.html](docs/book.html)
-- [docs/book-manifest.json](docs/book-manifest.json)
-- [docs/navigation-matrix.html](docs/navigation-matrix.html)
-- [docs/README.md](docs/README.md)
-- [docs/documentation-system.md](docs/documentation-system.md)
-
-Read by job:
-
-- Architecture: [docs/module-architecture.md](docs/module-architecture.md),
-  [docs/project-architecture-organization.md](docs/project-architecture-organization.md)
-- Runtime authority: [docs/agent-orchestrator-boundary.md](docs/agent-orchestrator-boundary.md),
-  [docs/headless-agent-contract.md](docs/headless-agent-contract.md)
-- Workflows: [docs/workflow-graph.md](docs/workflow-graph.md),
-  [docs/workflow-dataset.md](docs/workflow-dataset.md),
-  [docs/kcore-exchange-format.html](docs/kcore-exchange-format.html)
-- Operators: [docs/operator-sdk.md](docs/operator-sdk.md),
-  [docs/operator-task-ir-digest.md](docs/operator-task-ir-digest.md)
-- Material research:
-  [docs/automated-material-research-example.md](docs/automated-material-research-example.md),
-  [docs/material-research-roadmap.md](docs/material-research-roadmap.md)
-- Verification: [docs/testing-and-ci.md](docs/testing-and-ci.md),
-  [docs/accuracy-baselines.md](docs/accuracy-baselines.md)
-- Security and operations: [docs/security.md](docs/security.md),
-  [docs/operations.md](docs/operations.md)
-- Packaging: [docs/packaging-and-deployment.md](docs/packaging-and-deployment.md),
-  [docs/desktop-release-checklist.md](docs/desktop-release-checklist.md)
-
-## Quick Commands
-
-Local development:
-
-```sh
-make hot-local
-make hot-cloud
-make hot-distributed
+```bash
+cd /Users/Shared/chroot/research/kyuubiki-playground
+./scripts/labctl.sh list
+./scripts/labctl.sh run material-explore
+./scripts/labctl.sh run headless-workflow --run-id smoke-001 --label "headless baseline"
+./scripts/labctl.sh run headless-template-matrix --set HEADLESS_ROUNDS=2 --set HEADLESS_MAX_VOLTAGE=3200
 ```
 
-Focused checks:
+## 运行规范（固定）
 
-```sh
-make check-version-line
-make check-doc-inventory
-make check-doc-book
-make check-commercial-readiness
-make check-module-function-coverage-tensor
-make check-operator-reliability
-```
+1. 每个实验模块一次运行落盘到 `runs/<module>/<run_id>/`。
+2. 每次运行都会有：
+   - `steps/<step>.out`、`steps/<step>.err`、`steps/<step>.status`
+   - `run-manifest.json`
+   - `workspace/`（模块隔离工作区，旧脚本产物默认落在这里）
+3. 模块运行前后不再手工清理历史目录，结果可追溯。
 
-Security and reliability:
+## 已有模块（与 `scripts/labctl.sh run` 对应）
 
-```sh
-make audit-dependencies
-make fuzz-smoke
-make check-install-update-disk-hygiene
-make check-component-integrity-protocol
-```
+- `material-explore`
+- `headless-workflow`
+- `headless-template-matrix`
+- `chain-next-regression`
+- `headless-fault-injection`
+- `boundary-regression`
+- `large-mesh-auto-fallback`
+- `headless-service-rerun`
+- `service-port-matrix`
 
-Broader validation:
+## 参数化建议
 
-```sh
-make test-web
-make test-rust
-make test-frontend
-make test-sdk
-make test-integration
-make verify
-```
+- 常用环境变量：
+  - `HEADLESS_ROUNDS`
+  - `HEADLESS_START_VOLTAGE`
+  - `HEADLESS_MAX_VOLTAGE`
+  - `HEADLESS_MIN_VOLTAGE`
+  - `SYNC_SDK_FROM_DEV`
+- 通过 `--set KEY=VALUE` 传入（示例：`--set HEADLESS_ROUNDS=3`）。
 
-Benchmark and lab evidence:
+## 兼容说明
 
-```sh
-make benchmark-profile-plan PROFILE=500k SHAPES=1
-make benchmark-profile-remote PROFILE=500k MATRIX=thermal-core CASE=heat-plane-quad-500k
-make benchmark-profile-index
-```
+本次模块化不改造业务脚本逻辑；它们仍然是实验基线。  
+新的价值在于：
 
-## Current Capability Posture
-
-Kyuubiki already covers broad FEM and adjacent simulation surfaces at varying
-trust levels:
-
-- structural mechanics, truss/frame/beam/plane studies
-- thermal and thermo-mechanical studies
-- electrostatic and magnetostatic field studies
-- acoustic, modal, transport, simplified Stokes, nonlinear, and contact paths
-- composite workflow and material research prototypes
-- heterogeneous cohesive-interface workflows with connector, truss, and
-  plane-stress host elements
-- headless Rust-led material study workflows with retained evidence bundles
-- 500k/1m exploratory benchmark lanes on the shared lab host
-
-Do not infer equal maturity from equal visibility. The reliability posture is
-tracked in:
-
-- [docs/physics-coverage-map.md](docs/physics-coverage-map.md)
-- [docs/operator-reliability.md](docs/operator-reliability.md)
-- [docs/accuracy-plan.md](docs/accuracy-plan.md)
-- [docs/testing-and-ci.md](docs/testing-and-ci.md)
-
-## Deployment Notes
-
-Local defaults are intentionally lightweight:
-
-```sh
-KYUUBIKI_DEPLOYMENT_MODE=local
-KYUUBIKI_AGENT_DISCOVERY=static
-KYUUBIKI_STORAGE_BACKEND=sqlite
-SQLITE_DATABASE_PATH=./tmp/data/kyuubiki_dev.sqlite3
-```
-
-Cloud and distributed deployments should use explicit runtime configuration
-and untracked secret storage. Do not commit real `DATABASE_URL`, SSH
-credentials, tokens, private keys, or server-local configuration.
-
-Deployment and update details live in:
-
-- [docs/operations.md](docs/operations.md)
-- [docs/installer-remote-control.md](docs/installer-remote-control.md)
-- [docs/packaging-and-deployment.md](docs/packaging-and-deployment.md)
-- [docs/security.md](docs/security.md)
-- [releases/README.md](releases/README.md)
-
-## Repository Rules
-
-- Keep source files under the current `800` line ceiling.
-- Keep docs under the current `2000` line ceiling.
-- Prefer native Rust operational checks over new shell or Node scripts when the
-  work is cross-platform and long-lived.
-- Keep GUI, SDK, and runtime semantics aligned; UI convenience must not become
-  hidden runtime meaning.
-- Keep generated or mirrored docs secondary to source-of-truth documents.
-- Keep real secrets out of tracked files.
-
-Before a handoff or large patch, run:
-
-```sh
-make check-version-line
-make check-doc-inventory
-make audit-project-organization
-make audit-dependencies
-git diff --check
-```
+- 统一了实验入口
+- 统一了每次实验的落盘结构
+- 便于你持续补充新模块，扩展更多研究场景（电磁 / 光声 / 力热 / 热声等）

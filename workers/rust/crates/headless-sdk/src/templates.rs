@@ -272,7 +272,7 @@ const TEMPLATES: &[HeadlessTemplateDescriptor] = &[
     HeadlessTemplateDescriptor {
         id: "direct_thermal_frame_3d",
         title: "Direct Thermo Frame 3D",
-        description: "Submit a thermo-mechanical frame 3D solve directly and fetch the final result.",
+        description: "Submit a tip-loaded thermo-mechanical cantilever frame 3D solve and fetch the final result.",
         runtime_style: crate::HeadlessRuntimeStyle::ServiceOnly,
         category: "thermo_mechanical",
         tags: &["direct", "thermo", "frame", "3d"],

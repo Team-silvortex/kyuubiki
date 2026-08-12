@@ -173,7 +173,7 @@ pub fn validate_material_report_compatibility(
             )
         })?;
     if template_id == descriptor.template_id {
-        return Ok(());
+        return validate_material_report_input_contract(descriptor.id, batch);
     }
     let supported = MATERIAL_STUDIES
         .iter()
@@ -184,6 +184,77 @@ pub fn validate_material_report_compatibility(
         "material-report study {} is not supported by template {}; supported material-report study: {}",
         descriptor.id, template_id, supported
     ))
+}
+
+fn validate_material_report_input_contract(
+    study: &str,
+    batch: &HeadlessExecutionBatch,
+) -> Result<(), String> {
+    if study == "material_dielectric_screening" {
+        validate_dielectric_permittivity_contract(batch)?;
+    }
+    Ok(())
+}
+
+fn validate_dielectric_permittivity_contract(batch: &HeadlessExecutionBatch) -> Result<(), String> {
+    const VACUUM_PERMITTIVITY_F_M: f64 = 8.854_187_812_8e-12;
+    let mut candidate_count = 0;
+    for step in &batch.steps {
+        if step.action != "solve_electrostatic_plane_quad_2d" {
+            continue;
+        }
+        let Some(research) = step.payload.get("research") else {
+            continue;
+        };
+        candidate_count += 1;
+        let candidate = research
+            .get("candidate_id")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown");
+        let relative = research
+            .get("relative_permittivity")
+            .and_then(Value::as_f64)
+            .filter(|value| value.is_finite() && *value > 0.0)
+            .ok_or_else(|| {
+                format!(
+                    "material-report input contract mismatch: dielectric candidate {candidate} requires a finite positive research.relative_permittivity"
+                )
+            })?;
+        let elements = step
+            .payload
+            .pointer("/model/elements")
+            .and_then(Value::as_array)
+            .ok_or_else(|| {
+                format!(
+                    "material-report input contract mismatch: dielectric candidate {candidate} requires model.elements"
+                )
+            })?;
+        let expected = VACUUM_PERMITTIVITY_F_M * relative;
+        for (element_index, element) in elements.iter().enumerate() {
+            let actual = element
+                .get("permittivity")
+                .and_then(Value::as_f64)
+                .filter(|value| value.is_finite() && *value > 0.0)
+                .ok_or_else(|| {
+                    format!(
+                        "material-report input contract mismatch: dielectric candidate {candidate} element {element_index} requires a finite positive SI permittivity"
+                    )
+                })?;
+            let relative_error = (actual - expected).abs() / expected;
+            if relative_error > 1.0e-9 {
+                return Err(format!(
+                    "material-report input contract mismatch: dielectric candidate {candidate} element {element_index} has permittivity={actual:e} F/m, expected {expected:e} F/m from research.relative_permittivity={relative}; update both fields together"
+                ));
+            }
+        }
+    }
+    if candidate_count == 0 {
+        return Err(
+            "material-report input contract mismatch: dielectric screening contains no candidate solve steps with research metadata"
+                .to_string(),
+        );
+    }
+    Ok(())
 }
 
 pub fn build_material_report(study: &str, result_payloads: &[Value]) -> Result<Value, String> {
@@ -498,6 +569,27 @@ mod tests {
 
         validate_material_report_compatibility("dielectric-screening", &batch)
             .expect("legacy template workflow id should remain compatible");
+    }
+
+    #[test]
+    fn dielectric_material_report_rejects_permittivity_unit_drift() {
+        const VACUUM_PERMITTIVITY_F_M: f64 = 8.854_187_812_8e-12;
+        let mut batch = crate::build_template_document("material_dielectric_screening", None)
+            .and_then(|document| crate::normalize_workflow_document(&document).ok())
+            .expect("dielectric batch");
+        batch.steps[0].payload["model"]["elements"][0]["permittivity"] = json!(4.7);
+
+        let error = validate_material_report_compatibility("dielectric-screening", &batch)
+            .expect_err("relative and absolute permittivity must not drift independently");
+        assert!(error.contains("input contract mismatch"));
+        assert!(error.contains("candidate polyimide_film"));
+        assert!(error.contains("update both fields together"));
+
+        batch.steps[0].payload["research"]["relative_permittivity"] = json!(4.7);
+        batch.steps[0].payload["model"]["elements"][0]["permittivity"] =
+            json!(VACUUM_PERMITTIVITY_F_M * 4.7);
+        validate_material_report_compatibility("dielectric-screening", &batch)
+            .expect("coordinated material edits should remain valid");
     }
 
     #[test]

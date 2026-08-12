@@ -1,8 +1,15 @@
 use crate::HeadlessExecutorError;
+use std::io;
 use std::net::{TcpStream, ToSocketAddrs};
+use std::thread;
 use std::time::Duration;
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+const CONNECT_RETRY_DELAYS: [Duration; 3] = [
+    Duration::from_millis(100),
+    Duration::from_millis(400),
+    Duration::from_millis(1_000),
+];
 pub(crate) const REQUEST_IO_TIMEOUT: Duration = Duration::from_secs(30);
 pub(crate) const ARTIFACT_IO_TIMEOUT: Duration = Duration::from_secs(600);
 
@@ -25,30 +32,51 @@ pub(crate) fn connect_service_stream(
     }
 
     let mut last_error = None;
-    for address in addresses {
-        match TcpStream::connect_timeout(&address, CONNECT_TIMEOUT) {
-            Ok(stream) => {
-                stream
-                    .set_read_timeout(Some(io_timeout))
-                    .and_then(|_| stream.set_write_timeout(Some(io_timeout)))
-                    .map_err(|error| HeadlessExecutorError {
-                        message: format!("failed to configure {context} timeout: {error}"),
-                    })?;
-                return Ok(stream);
+    let mut attempt_count = 0;
+    for attempt in 0..=CONNECT_RETRY_DELAYS.len() {
+        attempt_count += 1;
+        for address in &addresses {
+            match TcpStream::connect_timeout(address, CONNECT_TIMEOUT) {
+                Ok(stream) => {
+                    stream
+                        .set_read_timeout(Some(io_timeout))
+                        .and_then(|_| stream.set_write_timeout(Some(io_timeout)))
+                        .map_err(|error| HeadlessExecutorError {
+                            message: format!("failed to configure {context} timeout: {error}"),
+                        })?;
+                    return Ok(stream);
+                }
+                Err(error) => last_error = Some(error),
             }
-            Err(error) => last_error = Some(error),
         }
+        let Some(delay) = CONNECT_RETRY_DELAYS.get(attempt) else {
+            break;
+        };
+        if !last_error.as_ref().is_some_and(retryable_connect_error) {
+            break;
+        }
+        thread::sleep(*delay);
     }
 
     Err(HeadlessExecutorError {
         message: format!(
-            "failed to connect to {host}:{port} for {context} within {} ms: {}",
+            "failed to connect to {host}:{port} for {context} after {attempt_count} bounded attempt(s) with {} ms per-address timeout: {}",
             CONNECT_TIMEOUT.as_millis(),
             last_error
                 .map(|error| error.to_string())
                 .unwrap_or_else(|| "unknown connection error".to_string())
         ),
     })
+}
+
+fn retryable_connect_error(error: &io::Error) -> bool {
+    matches!(
+        error.kind(),
+        io::ErrorKind::ConnectionRefused
+            | io::ErrorKind::ConnectionReset
+            | io::ErrorKind::ConnectionAborted
+            | io::ErrorKind::Interrupted
+    )
 }
 
 pub(crate) fn decode_http_response_body(
@@ -106,7 +134,12 @@ fn response_error(context: &str, detail: &str) -> HeadlessExecutorError {
 
 #[cfg(test)]
 mod tests {
-    use super::decode_http_response_body;
+    use super::{connect_service_stream, decode_http_response_body, retryable_connect_error};
+    use std::io;
+    use std::net::TcpListener;
+    use std::sync::mpsc;
+    use std::thread;
+    use std::time::Duration;
 
     #[test]
     fn decodes_chunked_error_bodies() {
@@ -118,5 +151,46 @@ mod tests {
         .unwrap();
 
         assert_eq!(body, "Internal Server Error");
+    }
+
+    #[test]
+    fn classifies_only_pre_request_transient_connect_errors_as_retryable() {
+        assert!(retryable_connect_error(&io::Error::from(
+            io::ErrorKind::ConnectionRefused
+        )));
+        assert!(retryable_connect_error(&io::Error::from(
+            io::ErrorKind::Interrupted
+        )));
+        assert!(!retryable_connect_error(&io::Error::from(
+            io::ErrorKind::TimedOut
+        )));
+        assert!(!retryable_connect_error(&io::Error::from(
+            io::ErrorKind::PermissionDenied
+        )));
+    }
+
+    #[test]
+    fn retries_connection_refusal_until_service_becomes_ready() {
+        let reservation = TcpListener::bind("127.0.0.1:0").expect("reserve local port");
+        let address = reservation.local_addr().expect("reserved address");
+        drop(reservation);
+        let (delay_started_tx, delay_started_rx) = mpsc::channel();
+        let server = thread::spawn(move || {
+            delay_started_tx.send(()).expect("signal delayed start");
+            thread::sleep(Duration::from_millis(50));
+            let listener = TcpListener::bind(address).expect("bind delayed service");
+            listener.accept().expect("accept retried connection");
+        });
+        delay_started_rx.recv().expect("wait for delayed start");
+
+        let stream = connect_service_stream(
+            "127.0.0.1",
+            address.port(),
+            Duration::from_secs(1),
+            "delayed test service",
+        )
+        .expect("connection refusal should recover before request write");
+        drop(stream);
+        server.join().expect("delayed service should exit");
     }
 }

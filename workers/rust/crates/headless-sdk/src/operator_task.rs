@@ -1,7 +1,8 @@
 use kyuubiki_protocol::{
-    OperatorTaskDigestError, OperatorTaskExecutionPreview, OperatorTaskSummaryError,
-    OperatorTaskSummaryErrorCode, preview_operator_task_execution,
-    summarize_operator_task_execution_checked, verify_operator_task_digest,
+    OperatorTaskAdmissionReport, OperatorTaskDigestError, OperatorTaskExecutionPreview,
+    OperatorTaskSummaryError, OperatorTaskSummaryErrorCode, build_operator_task_admission_report,
+    preview_operator_task_execution, summarize_operator_task_execution_checked,
+    verify_operator_task_digest,
 };
 use serde_json::{Map, Value};
 
@@ -10,7 +11,7 @@ use crate::operator_task_readiness::{
     OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED, OPERATOR_TASK_FETCH_STAGE, detached_execution_plan,
     detached_execution_readiness, package_fetch_request_preview,
 };
-use crate::operator_task_security::operator_task_security_profile;
+use crate::operator_task_security::operator_task_security_profile_with_admission;
 
 pub const OPERATOR_TASK_PREPARE_ACTION: &str = "operator_task_prepare";
 pub const OPERATOR_TASK_EXECUTE_ACTION: &str = "operator_task_execute";
@@ -44,6 +45,10 @@ fn prepare_operator_task_payload_checked(
         .map_err(|error| classify_summary_error(error, task))?;
     let execution_preview = preview_operator_task_execution(task)
         .map_err(|error| classify_summary_error(error, task))?;
+    let admission_report = build_operator_task_admission_report(task, &summary);
+    if !admission_report.accepted {
+        return Err(classify_admission_rejection(admission_report, task));
+    }
 
     Ok(Value::Object(Map::from_iter([
         ("status".to_string(), Value::from("verified")),
@@ -53,7 +58,16 @@ fn prepare_operator_task_payload_checked(
         ),
         (
             "security_profile".to_string(),
-            operator_task_security_profile(&summary, &execution_preview),
+            operator_task_security_profile_with_admission(
+                &summary,
+                &execution_preview,
+                &admission_report,
+            ),
+        ),
+        (
+            "admission_report".to_string(),
+            serde_json::to_value(&admission_report)
+                .expect("operator task admission report should serialize"),
         ),
         (
             "provenance_profile".to_string(),
@@ -237,6 +251,9 @@ fn operator_task_error_code(message: &str) -> &'static str {
     if message.contains("entrypoint does not match operator id") {
         return "operator_task_entrypoint_mismatch";
     }
+    if message.contains("operator task admission rejected") {
+        return "operator_task_admission_rejected";
+    }
     "operator_task_invalid"
 }
 
@@ -315,6 +332,27 @@ fn classify_summary_error(
     )
 }
 
+fn classify_admission_rejection(
+    report: OperatorTaskAdmissionReport,
+    task: &Value,
+) -> OperatorTaskPreviewError {
+    let reason_codes = report
+        .violations
+        .iter()
+        .map(|violation| violation.code.as_str())
+        .collect::<Vec<_>>()
+        .join(", ");
+    let mut error = OperatorTaskPreviewError::with_task(
+        "operator_task_admission_rejected",
+        format!("operator task admission rejected: {reason_codes}"),
+        "validate_admission_policy",
+        Some(task),
+    );
+    error.details["admission_report"] =
+        serde_json::to_value(report).expect("operator task admission report should serialize");
+    error
+}
+
 fn operator_task_error_preview_checked(error: OperatorTaskPreviewError) -> Value {
     Value::Object(Map::from_iter([
         ("error".to_string(), Value::from(error.message)),
@@ -382,6 +420,7 @@ fn required_failure_action(code: &str) -> &'static str {
         | "operator_task_execution_abi_mismatch"
         | "operator_task_program_mismatch"
         | "operator_task_entrypoint_mismatch" => "fix_task_ir_contract_mirror_fields",
+        "operator_task_admission_rejected" => "fix_task_ir_authority_and_routing_policy",
         "operator_task_invalid_params" => "fix_headless_step_payload",
         _ => "inspect_task_ir",
     }

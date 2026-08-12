@@ -148,8 +148,13 @@ The shared approval-request fixture is the parity vector for all SDKs.
   `make check-material-research-bundle-index-contract`.
 - `operator-task-ir.schema.json` is for dual-mode operator task descriptions
   authored by Elixir, Rust-native SDKs, or external SDKs. It now pins runtime
-  hints, package-fetch semantics, and SHA-256 integrity field shape. Digest
-  rules are in [operator-task-ir-digest.md](../docs/operator-task-ir-digest.md)
+  hints, package-fetch semantics, routing budgets, and SHA-256 integrity field
+  shape. Digest rules are in
+  [operator-task-ir-digest.md](../docs/operator-task-ir-digest.md).
+- `operator-task-admission.schema.json` is the shared fail-closed report emitted
+  by Orchestra, Headless SDK, and Agent validation before package resolution or
+  engine execution. It retains stable violation codes for authority, execution,
+  package identity, fetchability, cache, and routing-policy failures.
 - `operator-task-batch.schema.json` is for `quality_execution_batch` payloads
   that group language-neutral Operator TaskIR envelopes for control-plane,
   SDK, orchestra, or agent execution.
