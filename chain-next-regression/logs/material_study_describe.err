@@ -1,0 +1,2 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.28s
+     Running `target/debug/kyuubiki-material-explore --describe-study dielectric-screening --json --out /Users/Shared/chroot/dev/kyuubiki/chain-next-regression/study-description.json`

@@ -1,0 +1,115 @@
+{
+  "domain": "electromagnetic",
+  "id": "material_dielectric_screening",
+  "metric_count": 5,
+  "metric_specs": [
+    {
+      "id": "max_electric_field_v_m",
+      "label": "Max electric field",
+      "objective": "minimize",
+      "source": "solver.result.max_electric_field",
+      "unit": "V/m",
+      "weight": 0.25
+    },
+    {
+      "id": "breakdown_safety_factor",
+      "label": "Breakdown safety factor",
+      "objective": "maximize",
+      "source": "candidate.breakdown_field_v_m / solver.result.max_electric_field",
+      "unit": "ratio",
+      "weight": 0.4
+    },
+    {
+      "id": "dielectric_loss_proxy",
+      "label": "Dielectric loss proxy",
+      "objective": "minimize",
+      "source": "candidate.relative_permittivity * candidate.dissipation_factor",
+      "unit": "relative",
+      "weight": 0.2
+    },
+    {
+      "id": "areal_mass_kg_m2",
+      "label": "Areal mass",
+      "objective": "minimize",
+      "source": "candidate.density_kg_m3 * model.thickness",
+      "unit": "kg/m^2",
+      "weight": 0.15
+    },
+    {
+      "id": "max_flux_density_c_m2",
+      "label": "Max electric flux density",
+      "objective": "observe",
+      "source": "solver.result.max_flux_density",
+      "unit": "C/m^2",
+      "weight": 0.0
+    }
+  ],
+  "recommended_flow": [
+    "run the study with local solver kernels",
+    "review report.winner_candidate_id and report.reliability.summary",
+    "plan the next round with --plan-next",
+    "materialize reviewed candidates only after review approval",
+    "rerun materialized candidates with --run-materialized"
+  ],
+  "report_schema_version": "kyuubiki.dielectric-material-report/v1",
+  "schema_version": "kyuubiki.material-study-description/v1",
+  "study": {
+    "aliases": [
+      "dielectric-screening",
+      "dielectric_screening",
+      "material.dielectric_screening.v1"
+    ],
+    "domain": "electromagnetic",
+    "id": "material_dielectric_screening",
+    "material_card_contract_required": true,
+    "material_card_ref_count": 3,
+    "material_card_schema_version": "kyuubiki.material-card/v1",
+    "metric_specs": [
+      {
+        "id": "max_electric_field_v_m",
+        "label": "Max electric field",
+        "objective": "minimize",
+        "source": "solver.result.max_electric_field",
+        "unit": "V/m",
+        "weight": 0.25
+      },
+      {
+        "id": "breakdown_safety_factor",
+        "label": "Breakdown safety factor",
+        "objective": "maximize",
+        "source": "candidate.breakdown_field_v_m / solver.result.max_electric_field",
+        "unit": "ratio",
+        "weight": 0.4
+      },
+      {
+        "id": "dielectric_loss_proxy",
+        "label": "Dielectric loss proxy",
+        "objective": "minimize",
+        "source": "candidate.relative_permittivity * candidate.dissipation_factor",
+        "unit": "relative",
+        "weight": 0.2
+      },
+      {
+        "id": "areal_mass_kg_m2",
+        "label": "Areal mass",
+        "objective": "minimize",
+        "source": "candidate.density_kg_m3 * model.thickness",
+        "unit": "kg/m^2",
+        "weight": 0.15
+      },
+      {
+        "id": "max_flux_density_c_m2",
+        "label": "Max electric flux density",
+        "objective": "observe",
+        "source": "solver.result.max_flux_density",
+        "unit": "C/m^2",
+        "weight": 0.0
+      }
+    ],
+    "objective": "rank dielectric candidates by electric-field margin, low loss, and low mass",
+    "schema_version": "kyuubiki.dielectric-material-report/v1",
+    "template_id": "material_dielectric_screening",
+    "title": "Dielectric Material Screening"
+  },
+  "template_id": "material_dielectric_screening"
+}

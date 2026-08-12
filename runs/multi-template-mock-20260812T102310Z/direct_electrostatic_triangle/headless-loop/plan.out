@@ -1,0 +1,199 @@
+{
+  "schema_version": "kyuubiki.headless-plan/v1",
+  "workflow_id": "template.direct_electrostatic_triangle",
+  "ok": true,
+  "validation": {
+    "ok": true,
+    "issue_count": 0,
+    "issues": [],
+    "warning_count": 0,
+    "warnings": [],
+    "summary": {
+      "schema_version": "kyuubiki.headless-execution-batch/v1",
+      "workflow_id": "template.direct_electrostatic_triangle",
+      "template_id": "direct_electrostatic_triangle",
+      "exported_at": "1970-01-01T00:00:00.000Z",
+      "language": "en",
+      "step_count": 3,
+      "warning_count": 0,
+      "actions": [
+        "solve_electrostatic_plane_triangle_2d",
+        "job_wait",
+        "result_fetch"
+      ]
+    },
+    "policy": {
+      "required_engines": [
+        "service"
+      ],
+      "engine_counts": {
+        "service": 3,
+        "browser": 0
+      },
+      "risk_counts": {
+        "normal": 3,
+        "sensitive": 0,
+        "destructive": 0
+      },
+      "recommended_runtime": "service_only",
+      "needs_desktop_browser": false,
+      "safe_for_service_only": true,
+      "notes": []
+    }
+  },
+  "policy": {
+    "required_engines": [
+      "service"
+    ],
+    "engine_counts": {
+      "service": 3,
+      "browser": 0
+    },
+    "risk_counts": {
+      "normal": 3,
+      "sensitive": 0,
+      "destructive": 0
+    },
+    "recommended_runtime": "service_only",
+    "needs_desktop_browser": false,
+    "safe_for_service_only": true,
+    "notes": []
+  },
+  "compatibility": {
+    "service_only_ok": true,
+    "service_only_reason": "all steps are service-backed",
+    "browser_session_required": false,
+    "hybrid_required": false
+  },
+  "executor_matrix": [
+    {
+      "executor": "mock",
+      "compatible": true,
+      "issue_count": 0,
+      "issues": []
+    },
+    {
+      "executor": "service",
+      "compatible": true,
+      "issue_count": 0,
+      "issues": []
+    },
+    {
+      "executor": "hybrid",
+      "compatible": true,
+      "issue_count": 0,
+      "issues": []
+    }
+  ],
+  "confirmation_count": 0,
+  "confirmations": [],
+  "steps": [
+    {
+      "index": 1,
+      "action": "solve_electrostatic_plane_triangle_2d",
+      "engine": "service",
+      "category": "solve",
+      "risk": "normal",
+      "requires_confirmation": false,
+      "confirmation_flag": null,
+      "confirmation_reason": "normal-risk step",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "id": "et0",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "permittivity": 2.5,
+              "thickness": 0.01
+            }
+          ],
+          "nodes": [
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "n0",
+              "potential": 10.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "n1",
+              "potential": 0.0,
+              "x": 1.0,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "n2",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 1.0
+            }
+          ]
+        }
+      },
+      "bindings": [],
+      "output_keys": [
+        "job_id",
+        "status",
+        "progress",
+        "job"
+      ]
+    },
+    {
+      "index": 2,
+      "action": "job_wait",
+      "engine": "service",
+      "category": "job",
+      "risk": "normal",
+      "requires_confirmation": false,
+      "confirmation_flag": null,
+      "confirmation_reason": "normal-risk step",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "{{steps.1.result.job_id}}",
+        "timeout_ms": 60000
+      },
+      "bindings": [
+        {
+          "source_step": 1,
+          "output": "job_id"
+        }
+      ],
+      "output_keys": [
+        "job_id",
+        "status",
+        "progress",
+        "wait"
+      ]
+    },
+    {
+      "index": 3,
+      "action": "result_fetch",
+      "engine": "service",
+      "category": "result",
+      "risk": "normal",
+      "requires_confirmation": false,
+      "confirmation_flag": null,
+      "confirmation_reason": "normal-risk step",
+      "payload": {
+        "job_id": "{{steps.1.result.job_id}}"
+      },
+      "bindings": [
+        {
+          "source_step": 1,
+          "output": "job_id"
+        }
+      ],
+      "output_keys": [
+        "job_id",
+        "result"
+      ]
+    }
+  ]
+}

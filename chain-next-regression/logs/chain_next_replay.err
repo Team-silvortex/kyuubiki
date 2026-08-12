@@ -1,0 +1,2 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.04s
+     Running `target/debug/kyuubiki-material-explore --chain-next /Users/Shared/chroot/dev/kyuubiki/chain-next-regression/initial.json --rounds 3 --json --out /Users/Shared/chroot/dev/kyuubiki/chain-next-regression/chain-replay.json`

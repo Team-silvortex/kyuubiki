@@ -1,0 +1,45 @@
+{
+  "ok": true,
+  "issue_count": 0,
+  "issues": [],
+  "warning_count": 0,
+  "warnings": [],
+  "summary": {
+    "schema_version": "kyuubiki.headless-execution-batch/v1",
+    "workflow_id": "template.material_structural_panel_screening",
+    "template_id": "material_structural_panel_screening",
+    "exported_at": "1970-01-01T00:00:00.000Z",
+    "language": "en",
+    "step_count": 9,
+    "warning_count": 0,
+    "actions": [
+      "solve_plane_quad_2d",
+      "job_wait",
+      "result_fetch",
+      "solve_plane_quad_2d",
+      "job_wait",
+      "result_fetch",
+      "solve_plane_quad_2d",
+      "job_wait",
+      "result_fetch"
+    ]
+  },
+  "policy": {
+    "required_engines": [
+      "service"
+    ],
+    "engine_counts": {
+      "service": 9,
+      "browser": 0
+    },
+    "risk_counts": {
+      "sensitive": 0,
+      "normal": 9,
+      "destructive": 0
+    },
+    "recommended_runtime": "service_only",
+    "needs_desktop_browser": false,
+    "safe_for_service_only": true,
+    "notes": []
+  }
+}

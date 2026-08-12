@@ -32,6 +32,7 @@ pub(super) fn cli_error_stage(code: &str) -> &'static str {
         "document_validation" => "document_decode",
         "executor_compatibility" | "executor_selection" => "executor_preflight",
         "endpoint_configuration" => "endpoint_configuration",
+        "parameter_patch_validation" => "parameter_patch",
         "material_report_template_mismatch"
         | "material_report_template_provenance_missing"
         | "material_report_study_unsupported"
@@ -67,6 +68,8 @@ pub(super) fn classify_cli_error(error: &str) -> &'static str {
         "executor_selection"
     } else if error.starts_with("invalid --api-base-url") {
         "endpoint_configuration"
+    } else if error.contains("parameter patch") {
+        "parameter_patch_validation"
     } else if error.contains("missing field")
         || error.starts_with("invalid headless")
         || error.starts_with("unsupported headless document schema")
@@ -100,6 +103,9 @@ fn cli_error_recovery(code: &str) -> &'static str {
         }
         "endpoint_configuration" => {
             "Use a supported control-plane HTTP authority without paths, queries, or credentials."
+        }
+        "parameter_patch_validation" => {
+            "Regenerate the patch from the current rendered batch and keep expected baseline values synchronized."
         }
         "material_report_template_mismatch" => {
             "Choose a study listed by the selected template's material_report_studies field."
@@ -174,5 +180,16 @@ mod tests {
         assert_eq!(cli_error_stage(code), "material_report_validation");
         assert!(!cli_error_retryable(code));
         assert!(cli_error_recovery(code).contains("SI properties"));
+    }
+
+    #[test]
+    fn classifies_parameter_patch_drift_as_non_retryable() {
+        let code = classify_cli_error(
+            "parameter patch round-2 change 1 baseline mismatch at /steps/0/payload/load",
+        );
+        assert_eq!(code, "parameter_patch_validation");
+        assert_eq!(cli_error_stage(code), "parameter_patch");
+        assert!(!cli_error_retryable(code));
+        assert!(cli_error_recovery(code).contains("rendered batch"));
     }
 }

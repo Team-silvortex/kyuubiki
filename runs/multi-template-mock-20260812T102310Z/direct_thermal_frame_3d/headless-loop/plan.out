@@ -1,0 +1,232 @@
+{
+  "schema_version": "kyuubiki.headless-plan/v1",
+  "workflow_id": "template.direct_thermal_frame_3d",
+  "ok": true,
+  "validation": {
+    "ok": true,
+    "issue_count": 0,
+    "issues": [],
+    "warning_count": 0,
+    "warnings": [],
+    "summary": {
+      "schema_version": "kyuubiki.headless-execution-batch/v1",
+      "workflow_id": "template.direct_thermal_frame_3d",
+      "template_id": "direct_thermal_frame_3d",
+      "exported_at": "1970-01-01T00:00:00.000Z",
+      "language": "en",
+      "step_count": 3,
+      "warning_count": 0,
+      "actions": [
+        "solve_thermal_frame_3d",
+        "job_wait",
+        "result_fetch"
+      ]
+    },
+    "policy": {
+      "required_engines": [
+        "service"
+      ],
+      "engine_counts": {
+        "service": 3,
+        "browser": 0
+      },
+      "risk_counts": {
+        "normal": 3,
+        "sensitive": 0,
+        "destructive": 0
+      },
+      "recommended_runtime": "service_only",
+      "needs_desktop_browser": false,
+      "safe_for_service_only": true,
+      "notes": []
+    }
+  },
+  "policy": {
+    "required_engines": [
+      "service"
+    ],
+    "engine_counts": {
+      "service": 3,
+      "browser": 0
+    },
+    "risk_counts": {
+      "normal": 3,
+      "sensitive": 0,
+      "destructive": 0
+    },
+    "recommended_runtime": "service_only",
+    "needs_desktop_browser": false,
+    "safe_for_service_only": true,
+    "notes": []
+  },
+  "compatibility": {
+    "service_only_ok": true,
+    "service_only_reason": "all steps are service-backed",
+    "browser_session_required": false,
+    "hybrid_required": false
+  },
+  "executor_matrix": [
+    {
+      "executor": "mock",
+      "compatible": true,
+      "issue_count": 0,
+      "issues": []
+    },
+    {
+      "executor": "service",
+      "compatible": true,
+      "issue_count": 0,
+      "issues": []
+    },
+    {
+      "executor": "hybrid",
+      "compatible": true,
+      "issue_count": 0,
+      "issues": []
+    }
+  ],
+  "confirmation_count": 0,
+  "confirmations": [],
+  "steps": [
+    {
+      "index": 1,
+      "action": "solve_thermal_frame_3d",
+      "engine": "service",
+      "category": "solve",
+      "risk": "normal",
+      "requires_confirmation": false,
+      "confirmation_flag": null,
+      "confirmation_reason": "normal-risk step",
+      "payload": {
+        "model": {
+          "directional_constraints": [],
+          "directional_rotational_constraints": [],
+          "directional_rotational_springs": [],
+          "directional_springs": [],
+          "elements": [
+            {
+              "area": 0.02,
+              "id": "tf3-0",
+              "local_y_axis": [
+                0.0,
+                1.0,
+                0.0
+              ],
+              "moment_of_inertia_y": 8e-6,
+              "moment_of_inertia_z": 6e-6,
+              "node_i": 0,
+              "node_j": 1,
+              "section_depth_y": 0.2,
+              "section_depth_z": 0.15,
+              "section_modulus_y": 0.00016,
+              "section_modulus_z": 0.00012,
+              "shear_modulus": 80000000000.0,
+              "temperature_gradient_y": 30.0,
+              "temperature_gradient_z": 20.0,
+              "thermal_expansion": 0.000012,
+              "torsion_constant": 5e-6,
+              "youngs_modulus": 210000000000.0
+            }
+          ],
+          "nodes": [
+            {
+              "fix_rx": true,
+              "fix_ry": true,
+              "fix_rz": true,
+              "fix_x": true,
+              "fix_y": true,
+              "fix_z": true,
+              "id": "n0",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "load_z": 0.0,
+              "moment_x": 0.0,
+              "moment_y": 0.0,
+              "moment_z": 0.0,
+              "temperature_delta": 35.0,
+              "x": 0.0,
+              "y": 0.0,
+              "z": 0.0
+            },
+            {
+              "fix_rx": false,
+              "fix_ry": false,
+              "fix_rz": false,
+              "fix_x": false,
+              "fix_y": false,
+              "fix_z": false,
+              "id": "n1",
+              "load_x": 0.0,
+              "load_y": -1000.0,
+              "load_z": 0.0,
+              "moment_x": 0.0,
+              "moment_y": 0.0,
+              "moment_z": 0.0,
+              "temperature_delta": 35.0,
+              "x": 2.0,
+              "y": 0.0,
+              "z": 0.0
+            }
+          ]
+        }
+      },
+      "bindings": [],
+      "output_keys": [
+        "job_id",
+        "status",
+        "progress",
+        "job"
+      ]
+    },
+    {
+      "index": 2,
+      "action": "job_wait",
+      "engine": "service",
+      "category": "job",
+      "risk": "normal",
+      "requires_confirmation": false,
+      "confirmation_flag": null,
+      "confirmation_reason": "normal-risk step",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "{{steps.1.result.job_id}}",
+        "timeout_ms": 60000
+      },
+      "bindings": [
+        {
+          "source_step": 1,
+          "output": "job_id"
+        }
+      ],
+      "output_keys": [
+        "job_id",
+        "status",
+        "progress",
+        "wait"
+      ]
+    },
+    {
+      "index": 3,
+      "action": "result_fetch",
+      "engine": "service",
+      "category": "result",
+      "risk": "normal",
+      "requires_confirmation": false,
+      "confirmation_flag": null,
+      "confirmation_reason": "normal-risk step",
+      "payload": {
+        "job_id": "{{steps.1.result.job_id}}"
+      },
+      "bindings": [
+        {
+          "source_step": 1,
+          "output": "job_id"
+        }
+      ],
+      "output_keys": [
+        "job_id",
+        "result"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "kyuubiki.headless-parameter-patch/v1",
+  "patch_id": "thermal-load-round-2",
+  "workflow_id": "template.direct_thermal_frame_3d",
+  "template_id": "direct_thermal_frame_3d",
+  "changes": [
+    {
+      "path": "/steps/0/payload/model/nodes/1/load_y",
+      "expected": -1000.0,
+      "value": -1250.0
+    }
+  ]
+}

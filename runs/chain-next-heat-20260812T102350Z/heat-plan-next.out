@@ -1,0 +1,475 @@
+{
+  "actions": [
+    "inspect_violated_quality_gates",
+    "generate_lower_risk_neighbor_candidates",
+    "rerun_focused_quality_batch",
+    "compare_against_incumbent_winner"
+  ],
+  "candidate_draft_summary": {
+    "draft_count": 2,
+    "generation_reason": "candidate drafts are available for review before materialization",
+    "generation_state": "generated",
+    "required_result_schemas": [
+      "kyuubiki.material-result-payload/v1"
+    ],
+    "schema_version": "kyuubiki.material-candidate-draft-summary/v1",
+    "source_candidate_ids": [
+      "pyrolytic_graphite_in_plane",
+      "aluminum_6061"
+    ],
+    "source_decision": "mitigate_design_risk",
+    "strategy_counts": {
+      "generate_conservative_neighbor": 2
+    }
+  },
+  "candidate_drafts": [
+    {
+      "changes": [
+        "perturb only one risk-driving parameter at a time",
+        "preserve incumbent objective and quality gates"
+      ],
+      "constraints": [
+        "keep all units in SI",
+        "rerun the full focused quality batch"
+      ],
+      "draft_id": "pyrolytic_graphite_in_plane.generate_conservative_neighbor.draft",
+      "expected_effects": [
+        "isolate quality gate sensitivity",
+        "avoid expanding around an unsafe incumbent blindly"
+      ],
+      "lineage": {
+        "generation": "risk_mitigation_neighbor",
+        "parent_decision": "mitigate_design_risk",
+        "source_candidate_id": "pyrolytic_graphite_in_plane"
+      },
+      "required_result_schema": "kyuubiki.material-result-payload/v1",
+      "schema_version": "kyuubiki.material-candidate-draft/v1",
+      "source_candidate_id": "pyrolytic_graphite_in_plane",
+      "status": "draft_requires_solver_rerun",
+      "strategy": "generate_conservative_neighbor",
+      "study": "material_heat_spreader_screening"
+    },
+    {
+      "changes": [
+        "perturb only one risk-driving parameter at a time",
+        "preserve incumbent objective and quality gates"
+      ],
+      "constraints": [
+        "keep all units in SI",
+        "rerun the full focused quality batch"
+      ],
+      "draft_id": "aluminum_6061.generate_conservative_neighbor.draft",
+      "expected_effects": [
+        "isolate quality gate sensitivity",
+        "avoid expanding around an unsafe incumbent blindly"
+      ],
+      "lineage": {
+        "generation": "risk_mitigation_neighbor",
+        "parent_decision": "mitigate_design_risk",
+        "source_candidate_id": "aluminum_6061"
+      },
+      "required_result_schema": "kyuubiki.material-result-payload/v1",
+      "schema_version": "kyuubiki.material-candidate-draft/v1",
+      "source_candidate_id": "aluminum_6061",
+      "status": "draft_requires_solver_rerun",
+      "strategy": "generate_conservative_neighbor",
+      "study": "material_heat_spreader_screening"
+    }
+  ],
+  "decision": "mitigate_design_risk",
+  "draft_execution_batches": [
+    {
+      "allowed_review_actions": [
+        {
+          "id": "approve_for_materialization",
+          "label": "Approve draft batch for materialization",
+          "requirement": "all required review checklist items completed",
+          "requires_reason": true,
+          "requires_reviewer_identity": true
+        },
+        {
+          "id": "request_changes",
+          "label": "Request draft changes before solver rerun",
+          "requirement": "reviewer identifies missing material, geometry, unit, or gate evidence",
+          "requires_reason": true,
+          "requires_reviewer_identity": true
+        },
+        {
+          "id": "reject_draft_batch",
+          "label": "Reject draft batch",
+          "requirement": "draft strategy is unsafe, irrelevant, or outside the study scope",
+          "requires_reason": true,
+          "requires_reviewer_identity": true
+        }
+      ],
+      "dispatch_action": "materialize_candidate_drafts_and_rerun_solver",
+      "draft_count": 2,
+      "draft_ids": [
+        "pyrolytic_graphite_in_plane.generate_conservative_neighbor.draft",
+        "aluminum_6061.generate_conservative_neighbor.draft"
+      ],
+      "execution_policy": {
+        "auto_materialize_allowed": false,
+        "qualification_claim_allowed": false,
+        "reasons": [
+          "candidate drafts are generated from screening heuristics",
+          "material cards and geometry edits must be reviewed before solver rerun",
+          "draft outputs are not qualification evidence until quality gates pass"
+        ],
+        "requires_human_review": true
+      },
+      "required_result_schema": "kyuubiki.material-result-payload/v1",
+      "review_checklist": [
+        {
+          "evidence": "approved material-card references for every edited material",
+          "id": "review.material_cards",
+          "label": "Review material cards and source provenance",
+          "required": true
+        },
+        {
+          "evidence": "documented layer, interface, or fixture delta before materialization",
+          "id": "review.geometry_delta",
+          "label": "Review geometry and stack edits",
+          "required": true
+        },
+        {
+          "evidence": "all draft parameters normalized to SI before solver dispatch",
+          "id": "review.units",
+          "label": "Confirm SI units",
+          "required": true
+        },
+        {
+          "evidence": "kyuubiki.material-result-payload/v1",
+          "id": "review.result_schema",
+          "label": "Confirm solver result contract",
+          "required": true
+        },
+        {
+          "evidence": "electrostatic, heat, thermal, interface, and completeness gates enabled",
+          "id": "review.quality_gates",
+          "label": "Confirm rerun quality gates",
+          "required": true
+        }
+      ],
+      "review_decision_contract": {
+        "allowed_actions": [
+          "approve_for_materialization",
+          "request_changes",
+          "reject_draft_batch"
+        ],
+        "approve_requires_completed_item_ids": [
+          "review.material_cards",
+          "review.geometry_delta",
+          "review.units",
+          "review.result_schema",
+          "review.quality_gates"
+        ],
+        "reject_requires": [
+          "reason"
+        ],
+        "request_changes_requires": [
+          "requested_changes"
+        ],
+        "required_fields": [
+          "schema_version",
+          "batch_draft_ids",
+          "action",
+          "reviewer.id",
+          "reason",
+          "decided_at"
+        ],
+        "schema_version": "kyuubiki.material-candidate-review-decision-contract/v1",
+        "timestamp_format": "RFC3339"
+      },
+      "review_decision_template": {
+        "action": "approve_for_materialization | request_changes | reject_draft_batch",
+        "batch_draft_ids": [
+          "pyrolytic_graphite_in_plane.generate_conservative_neighbor.draft",
+          "aluminum_6061.generate_conservative_neighbor.draft"
+        ],
+        "completed_item_ids": [],
+        "decided_at": "RFC3339 timestamp",
+        "reason": "",
+        "requested_changes": [],
+        "reviewer": {
+          "display_name": "",
+          "id": ""
+        },
+        "schema_version": "kyuubiki.material-candidate-review-decision/v1"
+      },
+      "review_status": {
+        "blocked_reason": "required review checklist items are incomplete",
+        "blocking": true,
+        "completed_item_ids": [],
+        "missing_item_ids": [
+          "review.material_cards",
+          "review.geometry_delta",
+          "review.units",
+          "review.result_schema",
+          "review.quality_gates"
+        ],
+        "schema_version": "kyuubiki.material-candidate-review-status/v1",
+        "state": "pending_review"
+      },
+      "schema_version": "kyuubiki.material-candidate-draft-batch/v1",
+      "status": "pending_agent_materialization"
+    }
+  ],
+  "focus_candidate_ids": [
+    "pyrolytic_graphite_in_plane",
+    "aluminum_6061"
+  ],
+  "iteration": 2,
+  "material_card_refs": [
+    {
+      "candidate_id": "aluminum_6061",
+      "confidence": "medium",
+      "material_card_id": "kyuubiki.material_card.aluminum_6061.v1",
+      "parameter_scope": "room-temperature scalar screening values",
+      "schema_version": "kyuubiki.material-card/v1",
+      "source": "kyuubiki built-in heat-spreader screening fixture",
+      "unit_system": "si"
+    },
+    {
+      "candidate_id": "copper_c110",
+      "confidence": "medium",
+      "material_card_id": "kyuubiki.material_card.copper_c110.v1",
+      "parameter_scope": "room-temperature scalar screening values",
+      "schema_version": "kyuubiki.material-card/v1",
+      "source": "kyuubiki built-in heat-spreader screening fixture",
+      "unit_system": "si"
+    },
+    {
+      "candidate_id": "pyrolytic_graphite_in_plane",
+      "confidence": "low",
+      "material_card_id": "kyuubiki.material_card.pyrolytic_graphite_in_plane.v1",
+      "parameter_scope": "room-temperature scalar screening values",
+      "schema_version": "kyuubiki.material-card/v1",
+      "source": "kyuubiki built-in heat-spreader screening fixture",
+      "unit_system": "si"
+    }
+  ],
+  "notes": [
+    "current implementation reruns focused candidate solve steps while preserving the risk signal",
+    "future iterations should replace this with DOE or Bayesian lower-risk neighbor generation"
+  ],
+  "optimization_objectives": {
+    "decision": "mitigate_design_risk",
+    "focus_candidate_ids": [
+      "pyrolytic_graphite_in_plane",
+      "aluminum_6061"
+    ],
+    "guidance": "generate conservative neighbors that preserve score while reducing quality-gate risk: gate.peak_temperature.warning, gate.areal_mass.warning",
+    "metric_objectives": [
+      {
+        "label": "Peak temperature",
+        "metric_id": "peak_temperature_c",
+        "objective": "minimize",
+        "unit": "degC",
+        "weight": 0.55
+      },
+      {
+        "label": "Areal mass",
+        "metric_id": "areal_mass_kg_m2",
+        "objective": "minimize",
+        "unit": "kg/m^2",
+        "weight": 0.3
+      },
+      {
+        "label": "Conductivity-to-density ratio",
+        "metric_id": "conductivity_density_ratio",
+        "objective": "maximize",
+        "unit": "W*m^2/(m*K*kg)",
+        "weight": 0.15
+      }
+    ],
+    "mode": "risk_constrained_search",
+    "primary_metric_ids": [
+      "peak_temperature_c",
+      "areal_mass_kg_m2",
+      "conductivity_density_ratio"
+    ],
+    "schema_version": "kyuubiki.material-next-round-optimization-objectives/v1",
+    "violated_quality_gate_ids": [
+      "gate.peak_temperature.warning",
+      "gate.areal_mass.warning"
+    ],
+    "winner_candidate_id": "pyrolytic_graphite_in_plane"
+  },
+  "review_policy": {
+    "reason": "candidate drafts must be reviewed before materialization",
+    "required": true,
+    "schema_version": "kyuubiki.material-review-policy/v1",
+    "state": "required_before_materialization"
+  },
+  "risk_mitigation_hints": [
+    {
+      "candidate_id": "pyrolytic_graphite_in_plane",
+      "driver": "thermal_load",
+      "gate_id": "gate.peak_temperature.warning",
+      "recommendation": "increase thermal conductivity or reduce heat load; no report warning text"
+    },
+    {
+      "candidate_id": "pyrolytic_graphite_in_plane",
+      "driver": "quality_gate_violation",
+      "gate_id": "gate.areal_mass.warning",
+      "recommendation": "generate conservative neighbors around focused candidates; no report warning text"
+    },
+    {
+      "candidate_id": "aluminum_6061",
+      "driver": "thermal_load",
+      "gate_id": "gate.peak_temperature.warning",
+      "recommendation": "increase thermal conductivity or reduce heat load; no report warning text"
+    },
+    {
+      "candidate_id": "aluminum_6061",
+      "driver": "quality_gate_violation",
+      "gate_id": "gate.areal_mass.warning",
+      "recommendation": "generate conservative neighbors around focused candidates; no report warning text"
+    }
+  ],
+  "runnable_step_count": 2,
+  "schema_version": "kyuubiki.material-exploration-next-round-execution/v1",
+  "search_space_progress": {
+    "candidate_inputs_changed": false,
+    "convergence_eligible": false,
+    "planned_candidate_input_fingerprint": "d08c6022373be3691cc9d7cc113ed8dd9cfeabca79347f321ba498bc80e47bb6",
+    "schema_version": "kyuubiki.material-search-space-progress/v1",
+    "source_candidate_input_fingerprint": "d08c6022373be3691cc9d7cc113ed8dd9cfeabca79347f321ba498bc80e47bb6",
+    "state": "candidate_drafts_pending_review"
+  },
+  "source_schema_version": "kyuubiki.material-exploration-run/v1",
+  "steps": [
+    {
+      "action": "solve_heat_plane_quad_2d",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "conductivity": 167.0,
+              "id": "spread_aluminum_6061",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "thickness": 0.0015
+            }
+          ],
+          "nodes": [
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "hot_left_bottom",
+              "temperature": 95.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 5.0,
+              "id": "mid_bottom",
+              "temperature": 0.0,
+              "x": 0.05,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "cold_right_top",
+              "temperature": 35.0,
+              "x": 0.05,
+              "y": 0.03
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "cold_left_top",
+              "temperature": 35.0,
+              "x": 0.0,
+              "y": 0.03
+            }
+          ]
+        },
+        "research": {
+          "candidate_id": "aluminum_6061",
+          "candidate_label": "Aluminum 6061",
+          "density_kg_m3": 2700.0,
+          "family": "metal",
+          "material_card_id": "kyuubiki.material_card.aluminum_6061.v1",
+          "note": "balanced lightweight baseline",
+          "objective": "minimize peak temperature and mass pressure for a thin heat spreader patch",
+          "parameter_scope": "room-temperature scalar conductivity and density screening values",
+          "study": "material.heat_spreader_screening.v1",
+          "thermal_conductivity_w_mk": 167.0,
+          "unit_system": "SI"
+        }
+      }
+    },
+    {
+      "action": "solve_heat_plane_quad_2d",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "conductivity": 1500.0,
+              "id": "spread_pyrolytic_graphite_in_plane",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "thickness": 0.0015
+            }
+          ],
+          "nodes": [
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "hot_left_bottom",
+              "temperature": 95.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 5.0,
+              "id": "mid_bottom",
+              "temperature": 0.0,
+              "x": 0.05,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "cold_right_top",
+              "temperature": 35.0,
+              "x": 0.05,
+              "y": 0.03
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "cold_left_top",
+              "temperature": 35.0,
+              "x": 0.0,
+              "y": 0.03
+            }
+          ]
+        },
+        "research": {
+          "candidate_id": "pyrolytic_graphite_in_plane",
+          "candidate_label": "Pyrolytic graphite, in-plane",
+          "density_kg_m3": 2200.0,
+          "family": "carbon",
+          "material_card_id": "kyuubiki.material_card.pyrolytic_graphite_in_plane.v1",
+          "note": "anisotropic high-spreading candidate",
+          "objective": "minimize peak temperature and mass pressure for a thin heat spreader patch",
+          "parameter_scope": "room-temperature scalar conductivity and density screening values",
+          "study": "material.heat_spreader_screening.v1",
+          "thermal_conductivity_w_mk": 1500.0,
+          "unit_system": "SI"
+        }
+      }
+    }
+  ],
+  "study": "material_heat_spreader_screening"
+}

@@ -21,6 +21,7 @@ pub(crate) struct Flags {
     pub(crate) report_out: Option<String>,
     pub(crate) material_report: Option<String>,
     pub(crate) material_report_out: Option<String>,
+    pub(crate) parameter_patch: Option<String>,
     pub(crate) job_wait_timeout_ms: Option<u64>,
 }
 
@@ -78,6 +79,10 @@ impl Flags {
                 "--material-report-out" => {
                     flags.material_report_out =
                         Some(take_value(args, &mut index, "--material-report-out")?);
+                }
+                "--parameter-patch" => {
+                    flags.parameter_patch =
+                        Some(take_value(args, &mut index, "--parameter-patch")?);
                 }
                 "--job-wait-timeout-ms" => {
                     let value = take_value(args, &mut index, "--job-wait-timeout-ms")?;
@@ -256,5 +261,11 @@ mod tests {
             .expect_err("invalid timeout should fail");
             assert!(error.contains("--job-wait-timeout-ms"));
         }
+    }
+
+    #[test]
+    fn parses_parameter_patch_path() {
+        let parsed = flags(&["workflow.json", "--parameter-patch", "round-2.json"]);
+        assert_eq!(parsed.parameter_patch.as_deref(), Some("round-2.json"));
     }
 }

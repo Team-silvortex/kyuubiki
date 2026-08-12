@@ -1,0 +1,135 @@
+{
+  "schema_version": "kyuubiki.headless-execution-run/v1",
+  "workflow_id": "template.workflow_submit_monitor",
+  "mode": "execute:service",
+  "status": "failed",
+  "executed_step_count": 0,
+  "warning_count": 0,
+  "blocked_by_confirmation": null,
+  "validation": {
+    "ok": true,
+    "issue_count": 0,
+    "issues": [],
+    "warning_count": 0,
+    "warnings": [],
+    "summary": {
+      "schema_version": "kyuubiki.headless-execution-batch/v1",
+      "workflow_id": "template.workflow_submit_monitor",
+      "template_id": "workflow_submit_monitor",
+      "exported_at": "1970-01-01T00:00:00.000Z",
+      "language": "en",
+      "step_count": 3,
+      "warning_count": 0,
+      "actions": [
+        "workflow_submit_catalog",
+        "job_wait",
+        "result_fetch"
+      ]
+    },
+    "policy": {
+      "required_engines": [
+        "service"
+      ],
+      "engine_counts": {
+        "browser": 0,
+        "service": 3
+      },
+      "risk_counts": {
+        "destructive": 0,
+        "normal": 2,
+        "sensitive": 1
+      },
+      "recommended_runtime": "service_only",
+      "needs_desktop_browser": false,
+      "safe_for_service_only": true,
+      "notes": [
+        "Includes sensitive steps; live execution should pass --allow-sensitive after review."
+      ]
+    }
+  },
+  "execution_summary": {
+    "schema_version": "kyuubiki.headless-execution-summary/v1",
+    "job_count": 0,
+    "job_ids": [],
+    "jobs": [],
+    "failure": {
+      "schema_version": "kyuubiki.headless-failure-receipt/v1",
+      "error_code": "kyuubiki.headless.transport_failure",
+      "category": "transport_failure",
+      "stage": "transport",
+      "step_index": 1,
+      "action": "workflow_submit_catalog",
+      "message": "failed to connect to 127.0.0.1:3000 for service request after 1 bounded attempt(s) with 10000 ms per-address timeout: Operation not permitted (os error 1)",
+      "retryable": true,
+      "retry_strategy": "bounded_exponential_backoff",
+      "recommended_action": "Check control-plane health and network reachability before retrying."
+    }
+  },
+  "steps": [
+    {
+      "index": 1,
+      "action": "workflow_submit_catalog",
+      "risk": "sensitive",
+      "status": "failed",
+      "payload": {
+        "input_artifacts": {
+          "material_rows": {
+            "rows": [
+              {
+                "case_id": "cool_stiff",
+                "summaries": {
+                  "structural": {
+                    "max_stress": 100.0
+                  },
+                  "thermal": {
+                    "max_temperature": 82.0
+                  }
+                }
+              },
+              {
+                "case_id": "warm_safe",
+                "summaries": {
+                  "structural": {
+                    "max_stress": 120.0
+                  },
+                  "thermal": {
+                    "max_temperature": 90.0
+                  }
+                }
+              },
+              {
+                "case_id": "hot_light",
+                "summaries": {
+                  "structural": {
+                    "max_stress": 110.0
+                  },
+                  "thermal": {
+                    "max_temperature": 140.0
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "workflow_id": "workflow.material-study-envelope-ranking-json"
+      },
+      "result_preview": {
+        "error": "failed to connect to 127.0.0.1:3000 for service request after 1 bounded attempt(s) with 10000 ms per-address timeout: Operation not permitted (os error 1)",
+        "error_code": "kyuubiki.headless.transport_failure",
+        "failure_receipt": {
+          "action": "workflow_submit_catalog",
+          "category": "transport_failure",
+          "error_code": "kyuubiki.headless.transport_failure",
+          "message": "failed to connect to 127.0.0.1:3000 for service request after 1 bounded attempt(s) with 10000 ms per-address timeout: Operation not permitted (os error 1)",
+          "recommended_action": "Check control-plane health and network reachability before retrying.",
+          "retry_strategy": "bounded_exponential_backoff",
+          "retryable": true,
+          "schema_version": "kyuubiki.headless-failure-receipt/v1",
+          "stage": "transport",
+          "step_index": 1
+        }
+      },
+      "requires_confirmation": true
+    }
+  ]
+}

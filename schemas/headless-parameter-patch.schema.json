@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.kyuubiki.dev/headless-parameter-patch.schema.json",
+  "title": "Kyuubiki Headless Parameter Patch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "patch_id", "workflow_id", "changes"],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.headless-parameter-patch/v1"
+    },
+    "patch_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "workflow_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "template_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "changes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "$ref": "#/$defs/change"
+      }
+    }
+  },
+  "$defs": {
+    "change": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "expected", "value"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^/steps/(0|[1-9][0-9]*)/payload/.+"
+        },
+        "expected": {},
+        "value": {}
+      }
+    }
+  }
+}

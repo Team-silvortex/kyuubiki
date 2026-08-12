@@ -1,0 +1,727 @@
+{
+  "candidate_count": 3,
+  "candidate_input_fingerprint": "d08c6022373be3691cc9d7cc113ed8dd9cfeabca79347f321ba498bc80e47bb6",
+  "candidate_input_manifest": {
+    "entries": [
+      {
+        "candidate_id": "aluminum_6061",
+        "model_fingerprint": "0a795d6cc4a3f6e8ad823c1c9d7998f7d9eca228f9ec7017807367a593be60a9"
+      },
+      {
+        "candidate_id": "copper_c110",
+        "model_fingerprint": "16d06a33e8678d47120e81ae68582859f8eb6b5274a432ffd3c3cdeb3e53b45c"
+      },
+      {
+        "candidate_id": "pyrolytic_graphite_in_plane",
+        "model_fingerprint": "09321f7047c3ca68a4784308bf535c10e84f4547521fb09b03acdf93e8ce982e"
+      }
+    ],
+    "schema_version": "kyuubiki.material-candidate-input-manifest/v1",
+    "study": "material_heat_spreader_screening"
+  },
+  "execution_authority": {
+    "evidence_statement": "result payloads were computed by linked Rust solver kernels without mock fallback",
+    "execution_class": "real_solver",
+    "executor_id": "kyuubiki.rust.local-solver",
+    "fallback_used": false,
+    "mock_execution": false,
+    "production_eligible": true,
+    "result_origin": "computed_in_process",
+    "runtime": "rust_native",
+    "schema_version": "kyuubiki.execution-authority/v1"
+  },
+  "iteration": 1,
+  "material_card_refs": [
+    {
+      "candidate_id": "aluminum_6061",
+      "confidence": "medium",
+      "material_card_id": "kyuubiki.material_card.aluminum_6061.v1",
+      "parameter_scope": "room-temperature scalar screening values",
+      "schema_version": "kyuubiki.material-card/v1",
+      "source": "kyuubiki built-in heat-spreader screening fixture",
+      "unit_system": "si"
+    },
+    {
+      "candidate_id": "copper_c110",
+      "confidence": "medium",
+      "material_card_id": "kyuubiki.material_card.copper_c110.v1",
+      "parameter_scope": "room-temperature scalar screening values",
+      "schema_version": "kyuubiki.material-card/v1",
+      "source": "kyuubiki built-in heat-spreader screening fixture",
+      "unit_system": "si"
+    },
+    {
+      "candidate_id": "pyrolytic_graphite_in_plane",
+      "confidence": "low",
+      "material_card_id": "kyuubiki.material_card.pyrolytic_graphite_in_plane.v1",
+      "parameter_scope": "room-temperature scalar screening values",
+      "schema_version": "kyuubiki.material-card/v1",
+      "source": "kyuubiki built-in heat-spreader screening fixture",
+      "unit_system": "si"
+    }
+  ],
+  "mode": "local_solver",
+  "next_round": {
+    "actions": [
+      "inspect_violated_quality_gates",
+      "generate_lower_risk_neighbor_candidates",
+      "rerun_focused_quality_batch",
+      "compare_against_incumbent_winner"
+    ],
+    "decision": "mitigate_design_risk",
+    "focus_candidate_ids": [
+      "pyrolytic_graphite_in_plane",
+      "aluminum_6061"
+    ],
+    "iteration": 2,
+    "rationale": [
+      "quality gates expose design risk: gate.peak_temperature.warning, gate.areal_mass.warning"
+    ],
+    "schema_version": "kyuubiki.material-exploration-next-round/v1"
+  },
+  "report": {
+    "candidates": [
+      {
+        "areal_mass_kg_m2": 3.3000000000000003,
+        "candidate_id": "pyrolytic_graphite_in_plane",
+        "candidate_label": "Pyrolytic graphite, in-plane",
+        "conductivity_density_ratio": 0.6818181818181818,
+        "material_card_confidence": "low",
+        "material_card_id": "kyuubiki.material_card.pyrolytic_graphite_in_plane.v1",
+        "missing_metrics": [],
+        "optimization_terms": [
+          {
+            "constraint_status": "violate",
+            "direction": "minimize",
+            "metric_id": "peak_temperature_c",
+            "normalized_score": 1.0,
+            "raw_value": 95.0,
+            "weighted_score": 0.55
+          },
+          {
+            "constraint_status": "pass",
+            "direction": "minimize",
+            "metric_id": "areal_mass_kg_m2",
+            "normalized_score": 1.0,
+            "raw_value": 3.3000000000000003,
+            "weighted_score": 0.3
+          },
+          {
+            "constraint_status": "observe",
+            "direction": "maximize",
+            "metric_id": "conductivity_density_ratio",
+            "normalized_score": 1.0,
+            "raw_value": 0.6818181818181818,
+            "weighted_score": 0.15
+          }
+        ],
+        "peak_heat_flux_w_m2": 2046238.3788962555,
+        "peak_temperature_c": 95.0,
+        "rank": 1,
+        "score": 1.0
+      },
+      {
+        "areal_mass_kg_m2": 4.05,
+        "candidate_id": "aluminum_6061",
+        "candidate_label": "Aluminum 6061",
+        "conductivity_density_ratio": 0.06185185185185185,
+        "material_card_confidence": "medium",
+        "material_card_id": "kyuubiki.material_card.aluminum_6061.v1",
+        "missing_metrics": [],
+        "optimization_terms": [
+          {
+            "constraint_status": "violate",
+            "direction": "minimize",
+            "metric_id": "peak_temperature_c",
+            "normalized_score": 1.0,
+            "raw_value": 95.0,
+            "weighted_score": 0.55
+          },
+          {
+            "constraint_status": "pass",
+            "direction": "minimize",
+            "metric_id": "areal_mass_kg_m2",
+            "normalized_score": 0.926,
+            "raw_value": 4.05,
+            "weighted_score": 0.278
+          },
+          {
+            "constraint_status": "observe",
+            "direction": "maximize",
+            "metric_id": "conductivity_density_ratio",
+            "normalized_score": 0.03,
+            "raw_value": 0.06185185185185185,
+            "weighted_score": 0.004
+          }
+        ],
+        "peak_heat_flux_w_m2": 263963.38748894806,
+        "peak_temperature_c": 95.0,
+        "rank": 2,
+        "score": 0.832
+      },
+      {
+        "areal_mass_kg_m2": 13.44,
+        "candidate_id": "copper_c110",
+        "candidate_label": "Copper C110",
+        "conductivity_density_ratio": 0.04296875,
+        "material_card_confidence": "medium",
+        "material_card_id": "kyuubiki.material_card.copper_c110.v1",
+        "missing_metrics": [],
+        "optimization_terms": [
+          {
+            "constraint_status": "violate",
+            "direction": "minimize",
+            "metric_id": "peak_temperature_c",
+            "normalized_score": 1.0,
+            "raw_value": 95.0,
+            "weighted_score": 0.55
+          },
+          {
+            "constraint_status": "violate",
+            "direction": "minimize",
+            "metric_id": "areal_mass_kg_m2",
+            "normalized_score": 0.0,
+            "raw_value": 13.44,
+            "weighted_score": 0.0
+          },
+          {
+            "constraint_status": "observe",
+            "direction": "maximize",
+            "metric_id": "conductivity_density_ratio",
+            "normalized_score": 0.0,
+            "raw_value": 0.04296875,
+            "weighted_score": 0.0
+          }
+        ],
+        "peak_heat_flux_w_m2": 554027.2196658925,
+        "peak_temperature_c": 95.0,
+        "rank": 3,
+        "score": 0.55
+      }
+    ],
+    "material_card_refs": [
+      {
+        "candidate_id": "aluminum_6061",
+        "confidence": "medium",
+        "material_card_id": "kyuubiki.material_card.aluminum_6061.v1",
+        "parameter_scope": "room-temperature scalar screening values",
+        "schema_version": "kyuubiki.material-card/v1",
+        "source": "kyuubiki built-in heat-spreader screening fixture",
+        "unit_system": "si"
+      },
+      {
+        "candidate_id": "copper_c110",
+        "confidence": "medium",
+        "material_card_id": "kyuubiki.material_card.copper_c110.v1",
+        "parameter_scope": "room-temperature scalar screening values",
+        "schema_version": "kyuubiki.material-card/v1",
+        "source": "kyuubiki built-in heat-spreader screening fixture",
+        "unit_system": "si"
+      },
+      {
+        "candidate_id": "pyrolytic_graphite_in_plane",
+        "confidence": "low",
+        "material_card_id": "kyuubiki.material_card.pyrolytic_graphite_in_plane.v1",
+        "parameter_scope": "room-temperature scalar screening values",
+        "schema_version": "kyuubiki.material-card/v1",
+        "source": "kyuubiki built-in heat-spreader screening fixture",
+        "unit_system": "si"
+      }
+    ],
+    "metric_specs": [
+      {
+        "id": "peak_temperature_c",
+        "label": "Peak temperature",
+        "objective": "minimize",
+        "source": "solver.result.max_temperature",
+        "unit": "degC",
+        "weight": 0.55
+      },
+      {
+        "id": "peak_heat_flux_w_m2",
+        "label": "Peak heat flux",
+        "objective": "observe",
+        "source": "solver.result.max_heat_flux",
+        "unit": "W/m^2",
+        "weight": 0.0
+      },
+      {
+        "id": "areal_mass_kg_m2",
+        "label": "Areal mass",
+        "objective": "minimize",
+        "source": "candidate.density_kg_m3 * model.thickness",
+        "unit": "kg/m^2",
+        "weight": 0.3
+      },
+      {
+        "id": "conductivity_density_ratio",
+        "label": "Conductivity-to-density ratio",
+        "objective": "maximize",
+        "source": "candidate.thermal_conductivity_w_mk / candidate.density_kg_m3",
+        "unit": "W*m^2/(m*K*kg)",
+        "weight": 0.15
+      }
+    ],
+    "objective": "rank thin heat-spreader candidates by lower peak temperature and lower areal mass",
+    "optimization": {
+      "constraints": [
+        {
+          "limit": 70.0,
+          "metric_id": "peak_temperature_c",
+          "operator": "<=",
+          "severity": "warning"
+        },
+        {
+          "limit": 8.0,
+          "metric_id": "areal_mass_kg_m2",
+          "operator": "<=",
+          "severity": "warning"
+        }
+      ],
+      "goal": "Minimize peak temperature and areal mass while preserving high conductivity-density efficiency.",
+      "id": "material.heat_spreader_screening.optimization.v1",
+      "score_formula": "0.55*peak_temperature_c:min + 0.30*areal_mass_kg_m2:min + 0.15*conductivity_density_ratio:max",
+      "score_range": "0.0..1.0 higher_is_better",
+      "weights": [
+        {
+          "direction": "minimize",
+          "metric_id": "peak_temperature_c",
+          "weight": 0.55
+        },
+        {
+          "direction": "minimize",
+          "metric_id": "areal_mass_kg_m2",
+          "weight": 0.3
+        },
+        {
+          "direction": "maximize",
+          "metric_id": "conductivity_density_ratio",
+          "weight": 0.15
+        }
+      ]
+    },
+    "reliability": {
+      "evidence_refs": [
+        {
+          "citation": "Kyuubiki built-in screening value set",
+          "confidence": "medium",
+          "id": "mat.aluminum_6061.screening",
+          "kind": "material_card",
+          "label": "Aluminum 6061 screening card",
+          "notes": "Representative conductivity and density values for early ranking."
+        },
+        {
+          "citation": "Kyuubiki built-in screening value set",
+          "confidence": "medium",
+          "id": "mat.copper_c110.screening",
+          "kind": "material_card",
+          "label": "Copper C110 screening card",
+          "notes": "Representative high-conductivity metal baseline."
+        },
+        {
+          "citation": "Kyuubiki built-in screening value set",
+          "confidence": "low",
+          "id": "mat.pyrolytic_graphite.in_plane.screening",
+          "kind": "material_card",
+          "label": "Pyrolytic graphite in-plane screening card",
+          "notes": "Anisotropic material simplified to an in-plane scalar value."
+        }
+      ],
+      "limitations": [
+        "Current material cards use scalar room-temperature screening values, not temperature-dependent material curves.",
+        "Pyrolytic graphite is represented by its in-plane conductivity only; through-plane anisotropy is not resolved in this first-pass model.",
+        "The quad model is a deterministic ranking fixture, not a CAD-derived production mesh or validated package geometry.",
+        "Use this report to shortlist candidates, then rerun with richer geometry, boundary conditions, and external benchmark comparison."
+      ],
+      "material_card_version": "kyuubiki.material-cards.heat-spreader.v1",
+      "model_assumptions": [
+        {
+          "id": "model.geometry",
+          "impact": "Keeps candidates comparable but does not represent a finished product geometry.",
+          "label": "Thin rectangular heat spreader",
+          "value": "50 mm x 30 mm x 1.5 mm quad fixture"
+        },
+        {
+          "id": "model.boundary",
+          "impact": "Ranks spreading behavior under a stable thermal contrast.",
+          "label": "Fixed hot/cold boundary temperatures",
+          "value": "95 C hot-side anchor and 35 C cold-side anchors"
+        },
+        {
+          "id": "model.material",
+          "impact": "Fast for screening, insufficient for final material qualification.",
+          "label": "Linear scalar conductivity",
+          "value": "conductivity is constant over the solve"
+        }
+      ],
+      "posture": "screening_only",
+      "quality_gates": [
+        {
+          "actual_value": 95.0,
+          "description": "At least one candidate should keep the screening peak at or below the warning limit.",
+          "id": "gate.peak_temperature.warning",
+          "label": "Peak temperature warning gate",
+          "limit": 70.0,
+          "metric_id": "peak_temperature_c",
+          "operator": "<=",
+          "status": "violate"
+        },
+        {
+          "actual_value": 13.44,
+          "description": "Screening candidates should remain light enough for thin spreader use.",
+          "id": "gate.areal_mass.warning",
+          "label": "Areal mass warning gate",
+          "limit": 8.0,
+          "metric_id": "areal_mass_kg_m2",
+          "operator": "<=",
+          "status": "violate"
+        },
+        {
+          "actual_value": 3.0,
+          "description": "Every candidate should expose a peak-temperature result before ranking is trusted.",
+          "id": "gate.result_completeness",
+          "label": "Result payload completeness",
+          "limit": 3.0,
+          "metric_id": "peak_temperature_c",
+          "operator": ">=",
+          "status": "pass"
+        }
+      ],
+      "schema_version": "kyuubiki.material-reliability-envelope/v1",
+      "summary": {
+        "blocking_gate_ids": [
+          "gate.peak_temperature.warning",
+          "gate.areal_mass.warning"
+        ],
+        "decision": "blocked_by_quality_gates",
+        "observe_count": 0,
+        "pass_count": 1,
+        "total_gate_count": 3,
+        "unknown_count": 0,
+        "violation_count": 2
+      },
+      "unit_system": "SI"
+    },
+    "schema_version": "kyuubiki.material-research-report/v1",
+    "study": "material.heat_spreader_screening.v1",
+    "warnings": [],
+    "winner_candidate_id": "pyrolytic_graphite_in_plane"
+  },
+  "result_payloads": [
+    {
+      "elements": [
+        {
+          "area": 0.0015,
+          "average_temperature": 58.373547023599855,
+          "heat_flow_rate": 0.5939176218501332,
+          "heat_flux_magnitude": 263963.38748894806,
+          "heat_flux_x": 44264.70588235295,
+          "heat_flux_y": 260225.49019607843,
+          "id": "spread_aluminum_6061",
+          "index": 0,
+          "node_i": 0,
+          "node_j": 1,
+          "node_k": 2,
+          "node_l": 3,
+          "temperature_gradient_x": -265.0581190560057,
+          "temperature_gradient_y": -1558.2364682399907
+        }
+      ],
+      "input": {
+        "elements": [
+          {
+            "conductivity": 167.0,
+            "id": "spread_aluminum_6061",
+            "node_i": 0,
+            "node_j": 1,
+            "node_k": 2,
+            "node_l": 3,
+            "thickness": 0.0015
+          }
+        ],
+        "nodes": [
+          {
+            "fix_temperature": true,
+            "heat_load": 0.0,
+            "id": "hot_left_bottom",
+            "temperature": 95.0,
+            "x": 0.0,
+            "y": 0.0
+          },
+          {
+            "fix_temperature": false,
+            "heat_load": 5.0,
+            "id": "mid_bottom",
+            "temperature": 0.0,
+            "x": 0.05,
+            "y": 0.0
+          },
+          {
+            "fix_temperature": true,
+            "heat_load": 0.0,
+            "id": "cold_right_top",
+            "temperature": 35.0,
+            "x": 0.05,
+            "y": 0.03
+          },
+          {
+            "fix_temperature": true,
+            "heat_load": 0.0,
+            "id": "cold_left_top",
+            "temperature": 35.0,
+            "x": 0.0,
+            "y": 0.03
+          }
+        ]
+      },
+      "max_heat_flux": 263963.38748894806,
+      "max_temperature": 95.0,
+      "nodes": [
+        {
+          "heat_load": 0.0,
+          "id": "hot_left_bottom",
+          "index": 0,
+          "temperature": 95.0,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "heat_load": 5.0,
+          "id": "mid_bottom",
+          "index": 1,
+          "temperature": 68.49418809439943,
+          "x": 0.05,
+          "y": 0.0
+        },
+        {
+          "heat_load": 0.0,
+          "id": "cold_right_top",
+          "index": 2,
+          "temperature": 35.0,
+          "x": 0.05,
+          "y": 0.03
+        },
+        {
+          "heat_load": 0.0,
+          "id": "cold_left_top",
+          "index": 3,
+          "temperature": 35.0,
+          "x": 0.0,
+          "y": 0.03
+        }
+      ],
+      "total_abs_heat_flow_rate": 0.5939176218501332
+    },
+    {
+      "elements": [
+        {
+          "area": 0.0015,
+          "average_temperature": 55.88044308632544,
+          "heat_flow_rate": 1.246561244248258,
+          "heat_flux_magnitude": 554027.2196658925,
+          "heat_flux_x": 140441.17647058822,
+          "heat_flux_y": 535931.3725490198,
+          "id": "spread_copper_c110",
+          "index": 0,
+          "node_i": 0,
+          "node_j": 1,
+          "node_k": 2,
+          "node_l": 3,
+          "temperature_gradient_x": -364.7822765469824,
+          "temperature_gradient_y": -1392.029539088363
+        }
+      ],
+      "input": {
+        "elements": [
+          {
+            "conductivity": 385.0,
+            "id": "spread_copper_c110",
+            "node_i": 0,
+            "node_j": 1,
+            "node_k": 2,
+            "node_l": 3,
+            "thickness": 0.0015
+          }
+        ],
+        "nodes": [
+          {
+            "fix_temperature": true,
+            "heat_load": 0.0,
+            "id": "hot_left_bottom",
+            "temperature": 95.0,
+            "x": 0.0,
+            "y": 0.0
+          },
+          {
+            "fix_temperature": false,
+            "heat_load": 5.0,
+            "id": "mid_bottom",
+            "temperature": 0.0,
+            "x": 0.05,
+            "y": 0.0
+          },
+          {
+            "fix_temperature": true,
+            "heat_load": 0.0,
+            "id": "cold_right_top",
+            "temperature": 35.0,
+            "x": 0.05,
+            "y": 0.03
+          },
+          {
+            "fix_temperature": true,
+            "heat_load": 0.0,
+            "id": "cold_left_top",
+            "temperature": 35.0,
+            "x": 0.0,
+            "y": 0.03
+          }
+        ]
+      },
+      "max_heat_flux": 554027.2196658925,
+      "max_temperature": 95.0,
+      "nodes": [
+        {
+          "heat_load": 0.0,
+          "id": "hot_left_bottom",
+          "index": 0,
+          "temperature": 95.0,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "heat_load": 5.0,
+          "id": "mid_bottom",
+          "index": 1,
+          "temperature": 58.52177234530176,
+          "x": 0.05,
+          "y": 0.0
+        },
+        {
+          "heat_load": 0.0,
+          "id": "cold_right_top",
+          "index": 2,
+          "temperature": 35.0,
+          "x": 0.05,
+          "y": 0.03
+        },
+        {
+          "heat_load": 0.0,
+          "id": "cold_left_top",
+          "index": 3,
+          "temperature": 35.0,
+          "x": 0.0,
+          "y": 0.03
+        }
+      ],
+      "total_abs_heat_flow_rate": 1.246561244248258
+    },
+    {
+      "elements": [
+        {
+          "area": 0.0015,
+          "average_temperature": 54.46078431372549,
+          "heat_flow_rate": 4.604036352516575,
+          "heat_flux_magnitude": 2046238.3788962555,
+          "heat_flux_x": 632352.9411764707,
+          "heat_flux_y": 1946078.4313725494,
+          "id": "spread_pyrolytic_graphite_in_plane",
+          "index": 0,
+          "node_i": 0,
+          "node_j": 1,
+          "node_k": 2,
+          "node_l": 3,
+          "temperature_gradient_x": -421.56862745098044,
+          "temperature_gradient_y": -1297.3856209150329
+        }
+      ],
+      "input": {
+        "elements": [
+          {
+            "conductivity": 1500.0,
+            "id": "spread_pyrolytic_graphite_in_plane",
+            "node_i": 0,
+            "node_j": 1,
+            "node_k": 2,
+            "node_l": 3,
+            "thickness": 0.0015
+          }
+        ],
+        "nodes": [
+          {
+            "fix_temperature": true,
+            "heat_load": 0.0,
+            "id": "hot_left_bottom",
+            "temperature": 95.0,
+            "x": 0.0,
+            "y": 0.0
+          },
+          {
+            "fix_temperature": false,
+            "heat_load": 5.0,
+            "id": "mid_bottom",
+            "temperature": 0.0,
+            "x": 0.05,
+            "y": 0.0
+          },
+          {
+            "fix_temperature": true,
+            "heat_load": 0.0,
+            "id": "cold_right_top",
+            "temperature": 35.0,
+            "x": 0.05,
+            "y": 0.03
+          },
+          {
+            "fix_temperature": true,
+            "heat_load": 0.0,
+            "id": "cold_left_top",
+            "temperature": 35.0,
+            "x": 0.0,
+            "y": 0.03
+          }
+        ]
+      },
+      "max_heat_flux": 2046238.3788962555,
+      "max_temperature": 95.0,
+      "nodes": [
+        {
+          "heat_load": 0.0,
+          "id": "hot_left_bottom",
+          "index": 0,
+          "temperature": 95.0,
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "heat_load": 5.0,
+          "id": "mid_bottom",
+          "index": 1,
+          "temperature": 52.843137254901954,
+          "x": 0.05,
+          "y": 0.0
+        },
+        {
+          "heat_load": 0.0,
+          "id": "cold_right_top",
+          "index": 2,
+          "temperature": 35.0,
+          "x": 0.05,
+          "y": 0.03
+        },
+        {
+          "heat_load": 0.0,
+          "id": "cold_left_top",
+          "index": 3,
+          "temperature": 35.0,
+          "x": 0.0,
+          "y": 0.03
+        }
+      ],
+      "total_abs_heat_flow_rate": 4.604036352516575
+    }
+  ],
+  "schema_version": "kyuubiki.material-exploration-run/v1",
+  "study": "material_heat_spreader_screening",
+  "template_id": "material_heat_spreader_screening"
+}

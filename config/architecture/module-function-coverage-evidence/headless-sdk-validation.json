@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Qualified cross-language Headless SDK validation and Rust workflow composition with full language suites, material-unit integrity, pre-request transport recovery, shared fixture digests, bounded same-job recovery, and standard preflight failure reports.",
+  "summary": "Qualified cross-language Headless SDK validation and Rust workflow composition with full language suites, guarded research-round parameter patches, material-unit integrity, pre-request transport recovery, shared fixture digests, bounded same-job recovery, and standard preflight failure reports.",
   "paradigm_contract_evidence": {
     "workflow_composition": [
       {
@@ -26,6 +26,29 @@
           "executor_compatibility_failure_writes_a_standard_run_report",
           "malformed_batch_writes_a_standard_document_validation_report",
           "check-headless-workflow-qualification"
+        ]
+      },
+      {
+        "id": "headless-parameter-patch-contract",
+        "modules": [
+          "sdk-headless"
+        ],
+        "files": [
+          "schemas/headless-parameter-patch.schema.json",
+          "schemas/headless-parameter-patch-receipt.schema.json",
+          "schemas/examples.headless-parameter-patch.json",
+          "workers/rust/crates/headless-sdk/src/parameter_patch.rs",
+          "workers/rust/crates/cli/src/bin/kyuubiki-headless.rs",
+          "workers/rust/crates/cli/tests/headless_parameter_patch.rs",
+          "docs/headless-sdks.md"
+        ],
+        "required_text": [
+          "kyuubiki.headless-parameter-patch/v1",
+          "kyuubiki.headless-parameter-patch-receipt/v1",
+          "apply_parameter_patch",
+          "--parameter-patch",
+          "baseline mismatch",
+          "guarded_patch_is_shared_by_inspect_validate_render_plan_and_run"
         ]
       }
     ],
@@ -133,6 +156,38 @@
         "\"id\": \"missing-required-output\"",
         "schemas/examples.workflow-graph.json",
         "schemas/examples.material-research-bundle.json"
+      ]
+    },
+    {
+      "id": "headless-parameter-patch-closure",
+      "status": "proven",
+      "grade": "verified",
+      "modules": [
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "workflow_composition",
+        "validation",
+        "sdk_headless"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "recovery"
+      ],
+      "files": [
+        "schemas/headless-parameter-patch.schema.json",
+        "schemas/headless-parameter-patch-receipt.schema.json",
+        "schemas/examples.headless-parameter-patch.json",
+        "workers/rust/crates/headless-sdk/src/parameter_patch.rs",
+        "workers/rust/crates/cli/tests/headless_parameter_patch.rs"
+      ],
+      "required_text": [
+        "kyuubiki.headless-parameter-patch/v1",
+        "kyuubiki.headless-parameter-patch-receipt/v1",
+        "applies_guarded_payload_change_and_records_distinct_fingerprints",
+        "rejects_baseline_drift_no_op_and_non_payload_paths",
+        "stale_patch_fails_closed_with_a_machine_actionable_run_report"
       ]
     }
   ]

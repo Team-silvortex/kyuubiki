@@ -107,6 +107,39 @@ The override rewrites every `job_wait` in the in-memory execution batch, never
 shrinks an existing `max_total_timeout_ms`, and records the change in run
 warnings. It does not mutate the source document or either server-side timeout.
 
+Iterative research must also prove that each round changed the intended
+physical input. Use a guarded `kyuubiki.headless-parameter-patch/v1` document
+instead of ad-hoc text replacement or rebuilding a large workflow in a shell
+script:
+
+```bash
+cargo kyuubiki headless validate workflow.json \
+  --parameter-patch schemas/examples.headless-parameter-patch.json --json
+cargo kyuubiki headless run workflow.json \
+  --parameter-patch schemas/examples.headless-parameter-patch.json \
+  --execute --executor service --execution-posture research --json \
+  --report-out round-2-run.json
+```
+
+Every change targets an existing zero-based JSON Pointer below
+`/steps/<index>/payload/...` and includes both `expected` and `value`. The SDK
+rejects missing paths, duplicate paths, workflow or template mismatches,
+baseline drift, no-op replacements, and attempts to alter actions, risk, or
+document identity. Patch documents are bounded to 8 MiB, and mismatch errors
+fingerprint rather than echo compound or string values. Application is atomic.
+A successful call returns a
+`kyuubiki.headless-parameter-patch-receipt/v1` record with canonical before and
+after SHA-256 fingerprints; CLI runs retain the same receipt fields in a batch
+warning. `inspect`, `validate`, `render`, `plan`, and `run` all apply the same
+patch path, so preflight and execution cannot silently observe different
+rounds.
+
+A repeated workflow with identical before/after payloads is not a research
+iteration even if every process exits zero. Research-loop qualification should
+require a distinct patch receipt and should read domain-specific result fields
+such as `max_temperature`, `max_stress`, or ranked workflow artifacts instead
+of filling unrelated material or electrostatic columns with `n/a`.
+
 Material-report workflows also fail closed on duplicated material-property
 drift. For dielectric screening, `research.relative_permittivity` is the
 dimensionless source value while each solver element stores absolute SI

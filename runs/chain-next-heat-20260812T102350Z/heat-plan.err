@@ -1,0 +1,3 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.04s
+     Running `target/debug/kyuubiki-material-explore --plan-study /Users/Shared/chroot/dev/kyuubiki/runs/chain-next-heat-20260812T102350Z/heat-initial.json --json --out /Users/Shared/chroot/dev/kyuubiki/runs/chain-next-heat-20260812T102350Z/heat-plan.json`
+unsupported material study: /Users/Shared/chroot/dev/kyuubiki/runs/chain-next-heat-20260812T102350Z/heat-initial.json

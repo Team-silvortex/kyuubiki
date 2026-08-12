@@ -12,6 +12,12 @@ README.
   timeline per job without copying full solver payloads
 - `headless-failure-receipt.schema.json` defines stable Headless failure codes,
   stages, retry posture, and recovery guidance shared by all language SDKs
+- `headless-parameter-patch.schema.json` defines atomic, baseline-guarded
+  replacements below execution-step payloads for real multi-round research
+- `headless-parameter-patch-receipt.schema.json` records the canonical before
+  and after batch fingerprints for an applied parameter round
+- `examples.headless-parameter-patch.json` is the direct thermal-frame fixture
+  used to prove CLI and Rust SDK patch semantics remain aligned
 - `model.schema.json` is for versioned browser model import/export payloads
 - `material-library.schema.json` is for reusable material library import/export payloads
 - `material-card.schema.json` is for first-class material cards with

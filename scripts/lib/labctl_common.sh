@@ -68,7 +68,7 @@ labctl_write_manifest() {
   local started_at="$7"
   local finished_at="$8"
   local label="$9"
-  local cmd="$10"
+  local cmd="${10}"
   local env_overrides="${11:-}"
 
   cat > "$manifest_path" <<EOF
@@ -87,4 +87,3 @@ labctl_write_manifest() {
 }
 EOF
 }
-

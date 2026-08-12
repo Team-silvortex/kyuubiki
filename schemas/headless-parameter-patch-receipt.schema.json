@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.kyuubiki.dev/headless-parameter-patch-receipt.schema.json",
+  "title": "Kyuubiki Headless Parameter Patch Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "patch_id",
+    "workflow_id",
+    "change_count",
+    "before_sha256",
+    "after_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.headless-parameter-patch-receipt/v1"
+    },
+    "patch_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "workflow_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "change_count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 256
+    },
+    "before_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "after_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

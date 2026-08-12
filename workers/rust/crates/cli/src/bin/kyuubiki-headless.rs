@@ -3,12 +3,12 @@ use std::fs;
 use std::path::PathBuf;
 
 use kyuubiki_headless_sdk::{
-    HeadlessExecutionBatch, HeadlessRunReport, HeadlessRuntimeStyle, HeadlessTemplateDescriptor,
-    HeadlessValidationReport, HeadlessWorkflowDocument, HybridHeadlessExecutor,
-    MockHeadlessExecutor, ServiceHeadlessExecutor, build_material_report_from_run,
-    build_template_document, collect_executor_compatibility_issues, describe_material_study,
-    execute_batch_with_executor, normalize_workflow_document, run_batch_dry, search_templates,
-    suggest_template_details, suggest_templates, summarize_batch,
+    HeadlessExecutionBatch, HeadlessParameterPatch, HeadlessRunReport, HeadlessRuntimeStyle,
+    HeadlessTemplateDescriptor, HeadlessValidationReport, HeadlessWorkflowDocument,
+    HybridHeadlessExecutor, MockHeadlessExecutor, ServiceHeadlessExecutor, apply_parameter_patch,
+    build_material_report_from_run, build_template_document, collect_executor_compatibility_issues,
+    describe_material_study, execute_batch_with_executor, normalize_workflow_document,
+    run_batch_dry, search_templates, suggest_template_details, suggest_templates, summarize_batch,
     supported_material_report_study_ids, validate_batch, validate_material_report_compatibility,
 };
 use serde::Serialize;
@@ -152,8 +152,7 @@ fn handle_init(args: &[String]) -> Result<(), String> {
 
 fn handle_inspect(args: &[String]) -> Result<(), String> {
     let flags = Flags::parse(args)?;
-    let input_path = flags.input_path()?;
-    let batch = load_batch_from_path(&input_path)?;
+    let batch = load_batch_for_flags(&flags)?;
     let summary = summarize_batch(&batch);
     if flags.json {
         print_json(&summary)?;
@@ -170,8 +169,7 @@ fn handle_inspect(args: &[String]) -> Result<(), String> {
 
 fn handle_validate(args: &[String]) -> Result<(), String> {
     let flags = Flags::parse(args)?;
-    let input_path = flags.input_path()?;
-    let batch = load_batch_from_path(&input_path)?;
+    let batch = load_batch_for_flags(&flags)?;
     let report = validate_batch(&batch);
     if flags.json {
         print_json(&report)?;
@@ -191,8 +189,7 @@ fn handle_validate(args: &[String]) -> Result<(), String> {
 
 fn handle_render(args: &[String]) -> Result<(), String> {
     let flags = Flags::parse(args)?;
-    let input_path = flags.input_path()?;
-    let batch = load_batch_from_path(&input_path)?;
+    let batch = load_batch_for_flags(&flags)?;
     let output_path = flags
         .out
         .as_deref()
@@ -240,6 +237,15 @@ fn handle_run(args: &[String]) -> Result<(), String> {
             );
         }
     };
+    if let Err(error) = apply_parameter_patch_from_flags(&mut batch, &flags) {
+        return kyuubiki_headless_preflight::emit_run_failure(
+            &flags,
+            Some(&batch),
+            &workflow_id,
+            error,
+            &[],
+        );
+    }
     if let Err(error) = kyuubiki_headless_preflight::apply_job_wait_timeout_override(
         &mut batch,
         flags.job_wait_timeout_ms,
@@ -469,6 +475,27 @@ fn write_json_file<T: Serialize>(path: &str, value: &T) -> Result<PathBuf, Strin
 
 fn load_batch_from_path(path: &str) -> Result<HeadlessExecutionBatch, String> {
     load_batch_from_value(load_json_value_from_path(path)?)
+}
+
+fn load_batch_for_flags(flags: &Flags) -> Result<HeadlessExecutionBatch, String> {
+    let input_path = flags.input_path()?;
+    let mut batch = load_batch_from_path(&input_path)?;
+    apply_parameter_patch_from_flags(&mut batch, flags)?;
+    Ok(batch)
+}
+
+fn apply_parameter_patch_from_flags(
+    batch: &mut HeadlessExecutionBatch,
+    flags: &Flags,
+) -> Result<(), String> {
+    let Some(path) = flags.parameter_patch.as_deref() else {
+        return Ok(());
+    };
+    let payload = load_json_value_from_path(path)
+        .map_err(|error| format!("headless parameter patch {path}: {error}"))?;
+    let patch = serde_json::from_value::<HeadlessParameterPatch>(payload)
+        .map_err(|error| format!("invalid headless parameter patch: {error}"))?;
+    apply_parameter_patch(batch, &patch).map(|_| ())
 }
 
 fn load_json_value_from_path(path: &str) -> Result<Value, String> {

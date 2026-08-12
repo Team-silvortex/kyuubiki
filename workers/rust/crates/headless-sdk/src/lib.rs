@@ -79,6 +79,7 @@ mod operator_task_tests;
 mod operator_task_validation;
 #[cfg(test)]
 mod operator_task_validation_tests;
+mod parameter_patch;
 mod plan;
 mod preflight_report;
 mod run;
@@ -325,6 +326,11 @@ pub use operator_task_security::{
 pub use operator_task_validation::{
     HeadlessOperatorTaskValidationReport, validate_operator_task_for_agent,
     validate_operator_task_for_builtin_agent,
+};
+pub use parameter_patch::{
+    HEADLESS_PARAMETER_PATCH_RECEIPT_SCHEMA_VERSION, HEADLESS_PARAMETER_PATCH_SCHEMA_VERSION,
+    HeadlessParameterChange, HeadlessParameterPatch, HeadlessParameterPatchReceipt,
+    apply_parameter_patch,
 };
 pub use plan::{
     HeadlessExecutionPlan, HeadlessPlanBinding, HeadlessPlanCompatibility,

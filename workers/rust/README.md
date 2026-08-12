@@ -26,7 +26,9 @@ It currently contains:
   behavior. The `kyuubiki-headless` binary also exposes workflow
   template/init/inspect/validate/plan/run flows for service-only, browser-only,
   and hybrid headless automation. `plan` emits executor compatibility for
-  `mock`, `service`, and `hybrid` before a live run is attempted. The
+  `mock`, `service`, and `hybrid` before a live run is attempted. Guarded
+  `--parameter-patch` inputs let every command observe the same atomic,
+  baseline-checked research-round changes without shell rewriting. The
   `kyuubiki-material-report` binary turns material screening result payloads
   into ranked research reports.
 - `crates/headless-sdk`
