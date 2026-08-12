@@ -1,6 +1,7 @@
 use crate::{
-    HEADLESS_PARAMETER_PATCH_RECEIPT_SCHEMA_VERSION, HeadlessExecutionBatch,
-    HeadlessParameterPatchReceipt, HeadlessRunReport, headless_batch_content_sha256,
+    HEADLESS_EXECUTION_RUN_SCHEMA_VERSION, HEADLESS_PARAMETER_PATCH_RECEIPT_SCHEMA_VERSION,
+    HeadlessExecutionBatch, HeadlessParameterPatchReceipt, HeadlessRisk, HeadlessRunReport,
+    headless_batch_content_sha256, validate_batch,
 };
 use kyuubiki_protocol::canonical_json_sha256;
 use serde::{Deserialize, Serialize};
@@ -185,10 +186,103 @@ pub fn build_headless_research_round_evidence(
     })
 }
 
+pub fn validate_headless_research_round_evidence(
+    evidence: &HeadlessResearchRoundEvidence,
+) -> Result<(), String> {
+    if evidence.schema_version != HEADLESS_RESEARCH_ROUND_EVIDENCE_SCHEMA_VERSION
+        || !evidence.qualified
+        || evidence.run_mode != "execute:service"
+        || !is_sha256(&evidence.batch_content_sha256)
+        || !is_sha256(&evidence.run_report_sha256)
+    {
+        return Err("headless research round evidence is not qualified".to_string());
+    }
+    let spec = evidence_spec(evidence);
+    validate_headless_research_round_spec(&spec)?;
+    if evidence
+        .metrics
+        .iter()
+        .any(|metric| !metric.value.is_finite())
+    {
+        return Err("headless research round evidence has a non-finite metric".to_string());
+    }
+    match evidence.iteration {
+        1 if evidence.previous_round.is_some() => {
+            return Err("headless research round evidence has invalid lineage".to_string());
+        }
+        2.. if evidence.previous_round.is_none() || evidence.patch_receipt.is_none() => {
+            return Err("headless research round evidence has incomplete lineage".to_string());
+        }
+        _ => {}
+    }
+    if let Some(link) = &evidence.previous_round {
+        validate_identifier("previous round_id", &link.round_id)?;
+        if link.round_id == evidence.round_id
+            || link.iteration.checked_add(1) != Some(evidence.iteration)
+            || !is_sha256(&link.evidence_sha256)
+            || !is_sha256(&link.batch_content_sha256)
+        {
+            return Err("headless research round evidence has invalid lineage".to_string());
+        }
+    }
+    if let Some(receipt) = &evidence.patch_receipt {
+        validate_identifier("patch_id", &receipt.patch_id)?;
+        if receipt.schema_version != HEADLESS_PARAMETER_PATCH_RECEIPT_SCHEMA_VERSION
+            || receipt.change_count == 0
+            || receipt.change_count > 256
+            || receipt.workflow_id != evidence.workflow_id
+            || receipt.after_sha256 != evidence.batch_content_sha256
+            || receipt.before_sha256 == receipt.after_sha256
+            || !is_sha256(&receipt.before_sha256)
+        {
+            return Err("headless research round evidence has invalid patch lineage".to_string());
+        }
+        if evidence
+            .previous_round
+            .as_ref()
+            .is_some_and(|link| receipt.before_sha256 != link.batch_content_sha256)
+        {
+            return Err(
+                "headless research round evidence patch does not continue its lineage".to_string(),
+            );
+        }
+    }
+    Ok(())
+}
+
+pub fn verify_headless_research_round_evidence(
+    batch: &HeadlessExecutionBatch,
+    report: &HeadlessRunReport,
+    evidence: &HeadlessResearchRoundEvidence,
+    previous: Option<&HeadlessResearchRoundEvidence>,
+) -> Result<(), String> {
+    validate_headless_research_round_evidence(evidence)?;
+    let rebuilt = build_headless_research_round_evidence(
+        batch,
+        report,
+        &evidence_spec(evidence),
+        evidence.patch_receipt.as_ref(),
+        previous,
+    )?;
+    if rebuilt != *evidence {
+        return Err(
+            "headless research round evidence does not match its batch, report, or lineage"
+                .to_string(),
+        );
+    }
+    Ok(())
+}
+
 fn validate_execution(
     batch: &HeadlessExecutionBatch,
     report: &HeadlessRunReport,
 ) -> Result<(), String> {
+    if report.schema_version != HEADLESS_EXECUTION_RUN_SCHEMA_VERSION {
+        return Err(format!(
+            "headless research round requires {HEADLESS_EXECUTION_RUN_SCHEMA_VERSION}, got {}",
+            report.schema_version
+        ));
+    }
     if report.workflow_id != batch.workflow_id {
         return Err(format!(
             "headless research round workflow mismatch: batch={}, report={}",
@@ -207,6 +301,19 @@ fn validate_execution(
             report.status
         ));
     }
+    let expected_validation = validate_batch(batch);
+    if !expected_validation.ok {
+        return Err(format!(
+            "headless research round batch is invalid: {}",
+            expected_validation.issues.join("; ")
+        ));
+    }
+    if report.validation != expected_validation || report.warning_count != batch.warnings.len() {
+        return Err(
+            "headless research round run report validation does not match the effective batch"
+                .to_string(),
+        );
+    }
     if report.blocked_by_confirmation.is_some()
         || report.executed_step_count != batch.steps.len()
         || report.steps.len() != batch.steps.len()
@@ -215,6 +322,23 @@ fn validate_execution(
             "headless research round requires every batch step to complete without blocking"
                 .to_string(),
         );
+    }
+    for (batch_step, report_step) in batch.steps.iter().zip(&report.steps) {
+        let requires_confirmation = matches!(
+            batch_step.risk,
+            HeadlessRisk::Sensitive | HeadlessRisk::Destructive
+        );
+        if report_step.index != batch_step.index
+            || report_step.action != batch_step.action
+            || report_step.risk != batch_step.risk
+            || report_step.status != "executed"
+            || report_step.requires_confirmation != requires_confirmation
+        {
+            return Err(
+                "headless research round run report steps do not match the effective batch"
+                    .to_string(),
+            );
+        }
     }
     Ok(())
 }
@@ -299,15 +423,17 @@ fn validate_receipt_target(
 }
 
 fn validate_previous_evidence(evidence: &HeadlessResearchRoundEvidence) -> Result<(), String> {
-    if evidence.schema_version != HEADLESS_RESEARCH_ROUND_EVIDENCE_SCHEMA_VERSION
-        || !evidence.qualified
-        || evidence.run_mode != "execute:service"
-        || !is_sha256(&evidence.batch_content_sha256)
-        || !is_sha256(&evidence.run_report_sha256)
-    {
-        return Err("headless research round previous evidence is not qualified".to_string());
-    }
-    let spec = HeadlessResearchRoundSpec {
+    validate_headless_research_round_evidence(evidence).map_err(|error| {
+        error.replacen(
+            "headless research round evidence",
+            "headless research round previous evidence",
+            1,
+        )
+    })
+}
+
+fn evidence_spec(evidence: &HeadlessResearchRoundEvidence) -> HeadlessResearchRoundSpec {
+    HeadlessResearchRoundSpec {
         schema_version: HEADLESS_RESEARCH_ROUND_SPEC_SCHEMA_VERSION.to_string(),
         round_id: evidence.round_id.clone(),
         workflow_id: evidence.workflow_id.clone(),
@@ -323,68 +449,7 @@ fn validate_previous_evidence(evidence: &HeadlessResearchRoundEvidence) -> Resul
                 objective: metric.objective,
             })
             .collect(),
-    };
-    validate_headless_research_round_spec(&spec)?;
-    if evidence
-        .metrics
-        .iter()
-        .any(|metric| !metric.value.is_finite())
-    {
-        return Err(
-            "headless research round previous evidence has a non-finite metric".to_string(),
-        );
     }
-    match evidence.iteration {
-        1 if evidence.previous_round.is_some() => {
-            return Err(
-                "headless research round previous evidence has invalid lineage".to_string(),
-            );
-        }
-        2.. if evidence.previous_round.is_none() || evidence.patch_receipt.is_none() => {
-            return Err(
-                "headless research round previous evidence has incomplete lineage".to_string(),
-            );
-        }
-        _ => {}
-    }
-    if let Some(link) = &evidence.previous_round {
-        validate_identifier("previous round_id", &link.round_id)?;
-        if link.round_id == evidence.round_id
-            || link.iteration.checked_add(1) != Some(evidence.iteration)
-            || !is_sha256(&link.evidence_sha256)
-            || !is_sha256(&link.batch_content_sha256)
-        {
-            return Err(
-                "headless research round previous evidence has invalid lineage".to_string(),
-            );
-        }
-    }
-    if let Some(receipt) = &evidence.patch_receipt {
-        validate_identifier("patch_id", &receipt.patch_id)?;
-        if receipt.schema_version != HEADLESS_PARAMETER_PATCH_RECEIPT_SCHEMA_VERSION
-            || receipt.change_count == 0
-            || receipt.change_count > 256
-            || receipt.workflow_id != evidence.workflow_id
-            || receipt.after_sha256 != evidence.batch_content_sha256
-            || receipt.before_sha256 == receipt.after_sha256
-            || !is_sha256(&receipt.before_sha256)
-        {
-            return Err(
-                "headless research round previous evidence has invalid patch lineage".to_string(),
-            );
-        }
-        if evidence
-            .previous_round
-            .as_ref()
-            .is_some_and(|link| receipt.before_sha256 != link.batch_content_sha256)
-        {
-            return Err(
-                "headless research round previous evidence patch does not continue its lineage"
-                    .to_string(),
-            );
-        }
-    }
-    Ok(())
 }
 
 fn is_sha256(value: &str) -> bool {
@@ -646,6 +711,20 @@ mod tests {
         )
         .expect_err("repeat round");
         assert!(missing_patch.contains("requires a parameter patch receipt"));
+
+        let mut wrong_report = report(&first_batch, json!(48.0));
+        wrong_report.schema_version = "kyuubiki.headless-execution-run/v2".to_string();
+        assert!(
+            build_headless_research_round_evidence(
+                &first_batch,
+                &wrong_report,
+                &spec("thermal-round-1", 1),
+                None,
+                None,
+            )
+            .expect_err("wrong report schema")
+            .contains(HEADLESS_EXECUTION_RUN_SCHEMA_VERSION)
+        );
 
         let dry = run_batch_dry(&first_batch, false, false);
         assert!(

@@ -9,6 +9,7 @@ use zip::{CompressionMethod, ZipArchive, ZipWriter, write::SimpleFileOptions};
 
 use crate::export::render_issues;
 use crate::model::{MEDIA_TYPE, Manifest};
+use crate::semantic::{self, SemanticVerification};
 
 pub const MIMETYPE_ENTRY: &str = "mimetype";
 pub const MANIFEST_ENTRY: &str = "manifest.json";
@@ -52,6 +53,7 @@ pub struct VerificationReport {
     pub inspection: InspectionReport,
     pub object_count: usize,
     pub verified_payload_bytes: u64,
+    pub semantic: SemanticVerification,
 }
 
 #[derive(Debug, Serialize)]
@@ -155,10 +157,14 @@ pub fn verify_with_limits(path: &Path, limits: ReaderLimits) -> Result<Verificat
             return Err(format!("kcore object digest mismatch: {object_path}"));
         }
     }
+    let semantic = semantic::verify(&manifest, |artifact, limit| {
+        read_limited(&mut archive, &artifact.object_path, limit)
+    })?;
     Ok(VerificationReport {
         inspection: inspection(&manifest),
         object_count: expected.len(),
         verified_payload_bytes: total,
+        semantic,
     })
 }
 

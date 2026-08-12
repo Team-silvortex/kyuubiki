@@ -15,6 +15,8 @@ const MAX_REPORT_ARRAY_ITEMS: usize = 128;
 const REPORT_ARRAY_SAMPLE_ITEMS: usize = 3;
 const MAX_REPORT_STRING_BYTES: usize = 4_096;
 
+pub const HEADLESS_EXECUTION_RUN_SCHEMA_VERSION: &str = "kyuubiki.headless-execution-run/v1";
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HeadlessBlockedConfirmation {
     pub index: usize,
@@ -138,7 +140,7 @@ pub fn run_batch_dry(
     let execution_summary = summarize_execution(&steps);
 
     HeadlessRunReport {
-        schema_version: "kyuubiki.headless-execution-run/v1".to_string(),
+        schema_version: HEADLESS_EXECUTION_RUN_SCHEMA_VERSION.to_string(),
         workflow_id: batch.workflow_id.clone(),
         mode: "dry_run".to_string(),
         status,

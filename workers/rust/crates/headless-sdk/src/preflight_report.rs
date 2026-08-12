@@ -1,6 +1,7 @@
 use crate::{
-    HEADLESS_FAILURE_RECEIPT_SCHEMA_VERSION, HeadlessExecutionBatch, HeadlessExecutionSummary,
-    HeadlessFailureReceipt, HeadlessRunReport, HeadlessValidationReport, validate_batch,
+    HEADLESS_EXECUTION_RUN_SCHEMA_VERSION, HEADLESS_FAILURE_RECEIPT_SCHEMA_VERSION,
+    HeadlessExecutionBatch, HeadlessExecutionSummary, HeadlessFailureReceipt, HeadlessRunReport,
+    HeadlessValidationReport, validate_batch,
 };
 
 pub fn build_preflight_failure_report(
@@ -82,7 +83,7 @@ fn build_failure_report(
     });
 
     HeadlessRunReport {
-        schema_version: "kyuubiki.headless-execution-run/v1".to_string(),
+        schema_version: HEADLESS_EXECUTION_RUN_SCHEMA_VERSION.to_string(),
         workflow_id: if workflow_id.trim().is_empty() {
             "unresolved".to_string()
         } else {

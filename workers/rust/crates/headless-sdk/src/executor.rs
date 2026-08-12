@@ -3,11 +3,11 @@ use crate::operator_task::operator_task_prepare_preview_or_error;
 use crate::preflight_report::build_batch_validation_failure_report;
 use crate::run::{compact_report_value, resolve_step_payload};
 use crate::{
-    HeadlessBlockedConfirmation, HeadlessEngine, HeadlessExecutionBatch,
-    HeadlessExecutionStepReport, HeadlessRisk, HeadlessRunReport, find_action_contract,
-    is_operator_task_execute_action, is_operator_task_prepare_action, operator_task_error_preview,
-    prepare_operator_task_payload, preview_operator_task_execute_payload,
-    service_executor_supports_action, validate_batch,
+    HEADLESS_EXECUTION_RUN_SCHEMA_VERSION, HeadlessBlockedConfirmation, HeadlessEngine,
+    HeadlessExecutionBatch, HeadlessExecutionStepReport, HeadlessRisk, HeadlessRunReport,
+    find_action_contract, is_operator_task_execute_action, is_operator_task_prepare_action,
+    operator_task_error_preview, prepare_operator_task_payload,
+    preview_operator_task_execute_payload, service_executor_supports_action, validate_batch,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -218,7 +218,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
     let execution_summary = summarize_execution(&steps);
 
     HeadlessRunReport {
-        schema_version: "kyuubiki.headless-execution-run/v1".to_string(),
+        schema_version: HEADLESS_EXECUTION_RUN_SCHEMA_VERSION.to_string(),
         workflow_id: batch.workflow_id.clone(),
         mode: format!("execute:{}", executor.name()),
         status,

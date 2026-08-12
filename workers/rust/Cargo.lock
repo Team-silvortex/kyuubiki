@@ -361,6 +361,7 @@ dependencies = [
 name = "kyuubiki-kcore"
 version = "2.7.0"
 dependencies = [
+ "kyuubiki-headless-sdk",
  "serde",
  "serde_json",
  "sha2",

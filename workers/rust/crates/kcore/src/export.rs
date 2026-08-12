@@ -11,6 +11,7 @@ use crate::model::{
     Artifact, ExportSpec, FORMAT_SCHEMA_VERSION, FORMAT_VERSION, Integrity, Manifest,
     validate_export_spec,
 };
+use crate::semantic::{self, SemanticVerification};
 
 const MAX_EXPORT_SPEC_BYTES: u64 = 16 * 1024 * 1024;
 
@@ -23,6 +24,7 @@ pub struct ExportReport {
     pub artifact_count: usize,
     pub object_count: usize,
     pub payload_bytes: u64,
+    pub semantic: SemanticVerification,
 }
 
 pub fn export(spec_path: &Path, output: &Path) -> Result<ExportReport, String> {
@@ -106,6 +108,15 @@ pub fn export_spec(
     manifest.entrypoints.sort();
     manifest.seal()?;
     manifest.validate().map_err(render_issues)?;
+    let semantic = semantic::verify(&manifest, |artifact, limit| {
+        let source = object_sources.get(&artifact.sha256).ok_or_else(|| {
+            format!(
+                "missing source object for semantic artifact {}",
+                artifact.id
+            )
+        })?;
+        read_limited_artifact(source, artifact.byte_length, limit)
+    })?;
     archive::write(output, &manifest, &object_sources)?;
 
     Ok(ExportReport {
@@ -116,6 +127,7 @@ pub fn export_spec(
         artifact_count: manifest.artifacts.len(),
         object_count: object_sources.len(),
         payload_bytes,
+        semantic,
     })
 }
 
@@ -175,6 +187,31 @@ pub(crate) fn hash_file(path: &Path) -> Result<(u64, String), String> {
             .ok_or_else(|| format!("file size overflow: {}", path.display()))?;
     }
     Ok((length, format!("{:x}", digest.finalize())))
+}
+
+fn read_limited_artifact(path: &Path, declared: u64, limit: u64) -> Result<Vec<u8>, String> {
+    if declared > limit {
+        return Err(format!(
+            "semantic artifact exceeds {limit} bytes: {}",
+            path.display()
+        ));
+    }
+    let capacity = usize::try_from(declared)
+        .map_err(|_| format!("semantic artifact is too large: {}", path.display()))?;
+    let input =
+        File::open(path).map_err(|error| format!("failed to open {}: {error}", path.display()))?;
+    let mut bytes = Vec::with_capacity(capacity);
+    input
+        .take(limit.saturating_add(1))
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+    if bytes.len() as u64 != declared {
+        return Err(format!(
+            "semantic artifact changed while exporting: {}",
+            path.display()
+        ));
+    }
+    Ok(bytes)
 }
 
 fn require_extension(path: &Path) -> Result<(), String> {

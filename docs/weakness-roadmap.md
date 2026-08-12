@@ -536,6 +536,9 @@ Current progress:
 - generic non-material workflows now have a first-class round evidence contract;
   repeated batches and unrelated `n/a` report columns no longer qualify as
   research progress
+- KCore now retains a complete generic research series rather than loose JSON
+  files: export and verify both recheck every service report, metric digest,
+  ancestry link, and replayable parameter patch before accepting the package
 - the composite thermo-electric panel bundle is still correctly classified as
   screening-only until external validation, failed quality gates, and
   low-confidence material cards are addressed

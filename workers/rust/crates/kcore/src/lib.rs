@@ -2,6 +2,7 @@ mod archive;
 mod canonical;
 mod export;
 mod model;
+mod semantic;
 
 use std::path::Path;
 
@@ -13,6 +14,10 @@ pub use export::{ExportReport, export, export_spec};
 pub use model::{
     Artifact, ContractBinding, ExportArtifact, ExportSpec, FORMAT_SCHEMA_VERSION, FORMAT_VERSION,
     Integrity, MEDIA_TYPE, Manifest, Producer, SchemaReference,
+};
+pub use semantic::{
+    HEADLESS_RESEARCH_CONTRACT_NAME, RESEARCH_BATCH_ROLE, RESEARCH_PATCH_ROLE, RESEARCH_ROUND_ROLE,
+    RESEARCH_RUN_ROLE, SemanticVerification,
 };
 
 pub fn export_path(

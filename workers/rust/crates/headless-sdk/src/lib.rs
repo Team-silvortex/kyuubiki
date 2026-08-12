@@ -342,10 +342,12 @@ pub use research_round::{
     HEADLESS_RESEARCH_ROUND_EVIDENCE_SCHEMA_VERSION, HEADLESS_RESEARCH_ROUND_SPEC_SCHEMA_VERSION,
     HeadlessResearchMetricObjective, HeadlessResearchMetricObservation, HeadlessResearchMetricSpec,
     HeadlessResearchRoundEvidence, HeadlessResearchRoundLink, HeadlessResearchRoundSpec,
-    build_headless_research_round_evidence, validate_headless_research_round_spec,
+    build_headless_research_round_evidence, validate_headless_research_round_evidence,
+    validate_headless_research_round_spec, verify_headless_research_round_evidence,
 };
 pub use run::{
-    HeadlessBlockedConfirmation, HeadlessExecutionStepReport, HeadlessRunReport, run_batch_dry,
+    HEADLESS_EXECUTION_RUN_SCHEMA_VERSION, HeadlessBlockedConfirmation,
+    HeadlessExecutionStepReport, HeadlessRunReport, run_batch_dry,
 };
 pub use service_executor::{ServiceHeadlessExecutor, service_executor_supports_action};
 pub use surface::{

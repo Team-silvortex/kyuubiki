@@ -170,6 +170,16 @@ the previous/current batch. A repeated batch, skipped round, mock result, stale
 patch, missing metric, or literal `n/a` therefore fails qualification instead
 of becoming a misleading success table.
 
+Qualified rounds can be exchanged as a self-contained `.kcore` research
+series. Bind the latest `evidence.research-round` entrypoint with the
+`headless-research-round` KCore contract, and include each round's
+`workflow.execution-batch` and `evidence.execution-run` plus every later
+round's `workflow.parameter-patch`. The native KCore exporter and verifier
+recompute report and batch identities, walk the complete ancestry, and replay
+each patch against the previous batch. A structurally valid archive with a
+missing or stale research artifact is therefore rejected. See
+[kcore-exchange-format.md](./kcore-exchange-format.md#headless-research-round-profile).
+
 A repeated workflow with identical before/after payloads is not a research
 iteration even if every process exits zero. Research-loop qualification should
 require a distinct patch receipt and should read domain-specific result fields

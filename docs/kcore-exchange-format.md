@@ -103,9 +103,13 @@ Recommended standard roles are:
 | `operator.task-ir` | Language-neutral executable task description |
 | `workflow.graph` | Multi-operator execution topology |
 | `workflow.dataset-contract` | Cross-operator value contract |
+| `workflow.execution-batch` | Effective Headless batch for one research round |
+| `workflow.parameter-patch` | Guarded change that reconstructs the next batch |
 | `result.field` | Nodal, elemental, voxel, or sampled field |
 | `result.table` | Structured scalar or tabular result |
 | `result.report` | Human-readable or machine-readable conclusion |
+| `evidence.execution-run` | Complete Headless service execution report |
+| `evidence.research-round` | Qualified metrics and contiguous round lineage |
 | `evidence.validation` | Accuracy, convergence, or qualification evidence |
 | `evidence.provenance` | Producing runtime and lineage evidence |
 | `preview.image` | Portable visual preview |
@@ -129,6 +133,41 @@ re-runnable workflow result includes at least:
 A result-only export may omit executable TaskIR. Presence of TaskIR never grants
 execution authority. Runtimes must still apply package, capability, signature,
 resource, and placement policy before execution.
+
+## Headless Research Round Profile
+
+`schemas/kcore-headless-research-profile.schema.json` defines the structural
+profile for a self-contained Headless research series. The export declares one
+contract binding with:
+
+- `name`: `headless-research-round`
+- `schema_version`: `kyuubiki.headless-research-round-evidence/v1`
+- `artifact_id`: the latest `evidence.research-round` artifact, which must also
+  be a KCore entrypoint
+
+The package carries one `workflow.execution-batch`, one
+`evidence.execution-run`, and one `evidence.research-round` artifact per
+iteration. Every iteration after the first also carries the exact
+`workflow.parameter-patch` that transforms the previous batch into the current
+batch. These JSON artifacts require explicit `schema_ref` and `encoding: json`.
+
+The native exporter and verifier do more than validate the structural schema.
+They walk from the latest evidence to iteration one and require:
+
+1. a contiguous, acyclic, single-workflow ancestry with no orphaned round
+   artifacts;
+2. canonical batch and run-report hashes that match each evidence record;
+3. a complete successful `execute:service` report with finite declared result
+   metrics;
+4. a baseline-guarded parameter patch that exactly reconstructs every later
+   batch and reproduces its embedded receipt;
+5. strict JSON projections without ignored fields, with each semantic artifact
+   bounded to 16 MiB.
+
+Raw KCore object SHA-256 still protects exact bytes. The canonical hashes in
+research evidence protect language-neutral JSON meaning and patch lineage.
+Both are checked. A valid research profile is retained proof, not permission to
+execute any embedded task.
 
 ## Integrity
 

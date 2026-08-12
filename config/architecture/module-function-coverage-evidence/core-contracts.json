@@ -431,12 +431,15 @@
         "files": [
           "schemas/kcore-manifest.schema.json",
           "schemas/kcore-export.schema.json",
+          "schemas/kcore-headless-research-profile.schema.json",
           "schemas/examples.kcore-export.json",
           "docs/kcore-exchange-format.md",
           "workers/rust/crates/kcore/src/model.rs",
           "workers/rust/crates/kcore/src/archive.rs",
           "workers/rust/crates/kcore/src/export.rs",
+          "workers/rust/crates/kcore/src/semantic.rs",
           "workers/rust/crates/kcore/tests/exchange_roundtrip.rs",
+          "workers/rust/crates/kcore/tests/research_round_profile.rs",
           "workers/rust/crates/script-runner/src/kcore_cli.rs"
         ],
         "required_text": [
@@ -447,6 +450,8 @@
           "content-addressed",
           "host-absolute",
           "unreferenced kcore entry",
+          "headless-research-round",
+          "exports_and_reverifies_a_self_contained_two_round_research_series",
           "kcore export|inspect|verify|extract"
         ]
       }
@@ -795,15 +800,23 @@
       "files": [
         "schemas/kcore-manifest.schema.json",
         "schemas/kcore-export.schema.json",
+        "schemas/kcore-headless-research-profile.schema.json",
         "workers/rust/crates/kcore/src/archive.rs",
         "workers/rust/crates/kcore/src/model.rs",
-        "workers/rust/crates/kcore/tests/exchange_roundtrip.rs"
+        "workers/rust/crates/kcore/src/semantic.rs",
+        "workers/rust/crates/kcore/tests/exchange_roundtrip.rs",
+        "workers/rust/crates/kcore/tests/research_round_profile.rs"
       ],
       "required_text": [
         "kyuubiki.kcore/v1",
         "verify_with_limits",
         "rejects_tampered_and_unreferenced_objects",
-        "rejects_host_absolute_paths_before_writing_output"
+        "rejects_host_absolute_paths_before_writing_output",
+        "exports_and_reverifies_a_self_contained_two_round_research_series",
+        "rejects_a_series_that_omits_the_reconstructing_parameter_patch",
+        "rejects_research_evidence_that_omits_the_semantic_contract",
+        "rejects_a_run_report_that_no_longer_matches_retained_evidence",
+        "verifier_rejects_a_resealed_but_semantically_mismatched_report"
       ]
     }
   ]

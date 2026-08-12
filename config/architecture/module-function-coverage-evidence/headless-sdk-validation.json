@@ -63,6 +63,9 @@
           "workers/rust/crates/headless-sdk/src/research_round.rs",
           "workers/rust/crates/cli/src/bin/kyuubiki-headless/research_round.rs",
           "workers/rust/crates/cli/tests/headless_research_round.rs",
+          "schemas/kcore-headless-research-profile.schema.json",
+          "workers/rust/crates/kcore/src/semantic.rs",
+          "workers/rust/crates/kcore/tests/research_round_profile.rs",
           "docs/headless-sdks.md"
         ],
         "required_text": [
@@ -71,7 +74,8 @@
           "build_headless_research_round_evidence",
           "--research-round-spec",
           "--previous-round-evidence",
-          "service_research_runs_emit_a_contiguous_two_round_evidence_chain"
+          "service_research_runs_emit_a_contiguous_two_round_evidence_chain",
+          "exports_and_reverifies_a_self_contained_two_round_research_series"
         ]
       }
     ],
@@ -234,13 +238,18 @@
         "schemas/headless-research-round-spec.schema.json",
         "schemas/headless-research-round-evidence.schema.json",
         "workers/rust/crates/headless-sdk/src/research_round.rs",
-        "workers/rust/crates/cli/tests/headless_research_round.rs"
+        "workers/rust/crates/cli/tests/headless_research_round.rs",
+        "schemas/kcore-headless-research-profile.schema.json",
+        "workers/rust/crates/kcore/src/semantic.rs",
+        "workers/rust/crates/kcore/tests/research_round_profile.rs"
       ],
       "required_text": [
         "qualifies_contiguous_rounds_with_changed_input_and_numeric_metrics",
         "rejects_repeat_rounds_dry_runs_and_non_numeric_metrics",
         "service_research_runs_emit_a_contiguous_two_round_evidence_chain",
-        "later_round_without_previous_evidence_fails_before_service_connection"
+        "later_round_without_previous_evidence_fails_before_service_connection",
+        "exports_and_reverifies_a_self_contained_two_round_research_series",
+        "rejects_a_series_that_omits_the_reconstructing_parameter_patch"
       ]
     }
   ]

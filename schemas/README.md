@@ -40,6 +40,9 @@ README.
   artifacts with content-addressed payloads and a canonical core digest
 - `kcore-export.schema.json` defines the build-time source mapping consumed by
   the native streaming exporter; source paths are discarded from the result
+- `kcore-headless-research-profile.schema.json` specializes that export
+  contract for a self-contained, semantically verified Headless research-round
+  series with explicit batch, run, evidence, and parameter-patch roles
 - `examples.kcore-export.json` binds the existing workflow graph, workflow
   dataset, and TaskIR examples into one exchange-format conformance fixture
 - `agent-manifest.schema.json` is for local/distributed solver node manifests

@@ -106,6 +106,7 @@ pub fn headless_sdk_surface_areas() -> Vec<HeadlessSdkSurfaceArea> {
                 "execute_batch_with_executor",
                 "apply_parameter_patch",
                 "build_headless_research_round_evidence",
+                "verify_headless_research_round_evidence",
             ],
         },
         HeadlessSdkSurfaceArea {

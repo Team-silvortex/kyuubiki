@@ -1,8 +1,8 @@
 use crate::{
-    HeadlessExecutionBatch, HeadlessRunReport, MaterialOptimizationProfile,
-    MaterialResearchMetricSpec, build_composite_panel_report, build_dielectric_screening_report,
-    build_dielectric_screening_report_with_optimization, build_heat_spreader_screening_report,
-    build_heat_spreader_screening_report_with_optimization,
+    HEADLESS_EXECUTION_RUN_SCHEMA_VERSION, HeadlessExecutionBatch, HeadlessRunReport,
+    MaterialOptimizationProfile, MaterialResearchMetricSpec, build_composite_panel_report,
+    build_dielectric_screening_report, build_dielectric_screening_report_with_optimization,
+    build_heat_spreader_screening_report, build_heat_spreader_screening_report_with_optimization,
     build_structural_panel_screening_report,
     build_structural_panel_screening_report_with_optimization,
     build_thermo_shield_screening_report, build_thermo_shield_screening_report_with_optimization,
@@ -319,7 +319,7 @@ pub fn extract_material_result_payloads(payload: &Value) -> Result<Vec<Value>, S
         return Ok(array.clone());
     }
     if payload.get("schema_version").and_then(Value::as_str)
-        == Some("kyuubiki.headless-execution-run/v1")
+        == Some(HEADLESS_EXECUTION_RUN_SCHEMA_VERSION)
     {
         return extract_result_payloads_from_run_value(payload);
     }
@@ -624,7 +624,7 @@ mod tests {
     #[test]
     fn material_report_extracts_successful_result_fetch_steps() {
         let run = HeadlessRunReport {
-            schema_version: "kyuubiki.headless-execution-run/v1".to_string(),
+            schema_version: HEADLESS_EXECUTION_RUN_SCHEMA_VERSION.to_string(),
             workflow_id: "template.material_dielectric_screening".to_string(),
             mode: "execute:mock".to_string(),
             status: "ok".to_string(),
@@ -660,7 +660,7 @@ mod tests {
     #[test]
     fn material_report_preserves_failed_execution_context() {
         let run = HeadlessRunReport {
-            schema_version: "kyuubiki.headless-execution-run/v1".to_string(),
+            schema_version: HEADLESS_EXECUTION_RUN_SCHEMA_VERSION.to_string(),
             workflow_id: "workflow.failed-service".to_string(),
             mode: "execute:service".to_string(),
             status: "failed".to_string(),

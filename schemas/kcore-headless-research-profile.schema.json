@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/kcore-headless-research-profile.schema.json",
+  "title": "KCore Headless research round series export profile",
+  "description": "Structural export profile for a self-contained Headless research lineage. The native KCore verifier additionally validates cross-artifact digests, metrics, patch reconstruction, and contiguous ancestry.",
+  "allOf": [
+    {
+      "$ref": "kcore-export.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "research-round-series"
+        },
+        "contracts": {
+          "contains": {
+            "type": "object",
+            "required": [
+              "name",
+              "schema_version",
+              "artifact_id"
+            ],
+            "properties": {
+              "name": {
+                "const": "headless-research-round"
+              },
+              "schema_version": {
+                "const": "kyuubiki.headless-research-round-evidence/v1"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      }
+    },
+    {
+      "properties": {
+        "artifacts": {
+          "contains": {
+            "$ref": "#/$defs/executionBatch"
+          },
+          "minContains": 1
+        }
+      }
+    },
+    {
+      "properties": {
+        "artifacts": {
+          "contains": {
+            "$ref": "#/$defs/executionRun"
+          },
+          "minContains": 1
+        }
+      }
+    },
+    {
+      "properties": {
+        "artifacts": {
+          "contains": {
+            "$ref": "#/$defs/researchRound"
+          },
+          "minContains": 1
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "executionBatch": {
+      "$ref": "#/$defs/profileArtifact",
+      "properties": {
+        "role": {
+          "const": "workflow.execution-batch"
+        },
+        "schema_ref": {
+          "$ref": "#/$defs/executionBatchSchema"
+        }
+      }
+    },
+    "executionRun": {
+      "$ref": "#/$defs/profileArtifact",
+      "properties": {
+        "role": {
+          "const": "evidence.execution-run"
+        },
+        "schema_ref": {
+          "$ref": "#/$defs/executionRunSchema"
+        }
+      }
+    },
+    "researchRound": {
+      "$ref": "#/$defs/profileArtifact",
+      "properties": {
+        "role": {
+          "const": "evidence.research-round"
+        },
+        "schema_ref": {
+          "$ref": "#/$defs/researchRoundSchema"
+        }
+      }
+    },
+    "profileArtifact": {
+      "type": "object",
+      "required": [
+        "role",
+        "media_type",
+        "schema_ref",
+        "encoding"
+      ],
+      "properties": {
+        "media_type": {
+          "const": "application/json"
+        },
+        "encoding": {
+          "const": "json"
+        }
+      }
+    },
+    "executionBatchSchema": {
+      "type": "object",
+      "required": [
+        "schema",
+        "version"
+      ],
+      "properties": {
+        "schema": {
+          "const": "kyuubiki.headless-execution-batch"
+        },
+        "version": {
+          "const": "v1"
+        }
+      }
+    },
+    "executionRunSchema": {
+      "type": "object",
+      "required": [
+        "schema",
+        "version"
+      ],
+      "properties": {
+        "schema": {
+          "const": "kyuubiki.headless-execution-run"
+        },
+        "version": {
+          "const": "v1"
+        }
+      }
+    },
+    "researchRoundSchema": {
+      "type": "object",
+      "required": [
+        "schema",
+        "version"
+      ],
+      "properties": {
+        "schema": {
+          "const": "kyuubiki.headless-research-round-evidence"
+        },
+        "version": {
+          "const": "v1"
+        }
+      }
+    }
+  }
+}
