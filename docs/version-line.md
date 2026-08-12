@@ -9,7 +9,7 @@ For the broader product narrative, release posture, and reading path, use
 
 - codename: `moxi`
 - active line: `2.x`
-- current development point: `moxi 2.13.1`
+- current development point: `moxi 2.13.6`
 - current documentation target: `moxi 2.13.x` line
 - first planned public launch: `daji 3.0.0` on Reddit
 - first 2.x baseline:

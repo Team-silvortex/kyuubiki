@@ -1,6 +1,6 @@
 # Kcore Exchange Format
 
-Status: normative v1 baseline for moxi 2.13.1.
+Status: normative v1 baseline for moxi 2.13.6.
 
 ## Purpose
 
