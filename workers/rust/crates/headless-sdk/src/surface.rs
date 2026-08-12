@@ -98,12 +98,14 @@ pub fn headless_sdk_surface_areas() -> Vec<HeadlessSdkSurfaceArea> {
                 "hybrid_executor",
                 "service_executor",
                 "parameter_patch",
+                "research_round",
             ],
             anchor_exports: &[
                 "build_execution_plan",
                 "run_batch_dry",
                 "execute_batch_with_executor",
                 "apply_parameter_patch",
+                "build_headless_research_round_evidence",
             ],
         },
         HeadlessSdkSurfaceArea {

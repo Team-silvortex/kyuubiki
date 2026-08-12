@@ -28,7 +28,10 @@ It currently contains:
   and hybrid headless automation. `plan` emits executor compatibility for
   `mock`, `service`, and `hybrid` before a live run is attempted. Guarded
   `--parameter-patch` inputs let every command observe the same atomic,
-  baseline-checked research-round changes without shell rewriting. The
+  baseline-checked research-round changes without shell rewriting. Research
+  runs can also emit a contiguous `--research-round-out` evidence chain that
+  rejects repeated inputs, missing prior rounds, mock execution, and `n/a`
+  metrics. The
   `kyuubiki-material-report` binary turns material screening result payloads
   into ranked research reports.
 - `crates/headless-sdk`

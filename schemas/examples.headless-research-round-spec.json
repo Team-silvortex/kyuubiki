@@ -1,0 +1,30 @@
+{
+  "schema_version": "kyuubiki.headless-research-round-spec/v1",
+  "round_id": "thermal-frame-round-2",
+  "workflow_id": "template.direct_thermal_frame_3d",
+  "iteration": 2,
+  "primary_metric_ids": [
+    "max_stress_pa",
+    "max_displacement_m"
+  ],
+  "metrics": [
+    {
+      "metric_id": "max_stress_pa",
+      "pointer": "/steps/2/result_preview/result/max_stress",
+      "unit": "Pa",
+      "objective": "minimize"
+    },
+    {
+      "metric_id": "max_displacement_m",
+      "pointer": "/steps/2/result_preview/result/max_displacement",
+      "unit": "m",
+      "objective": "minimize"
+    },
+    {
+      "metric_id": "max_temperature_delta_k",
+      "pointer": "/steps/2/result_preview/result/max_temperature_delta",
+      "unit": "K",
+      "objective": "observe"
+    }
+  ]
+}

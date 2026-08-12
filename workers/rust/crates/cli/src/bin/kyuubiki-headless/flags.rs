@@ -22,6 +22,10 @@ pub(crate) struct Flags {
     pub(crate) material_report: Option<String>,
     pub(crate) material_report_out: Option<String>,
     pub(crate) parameter_patch: Option<String>,
+    pub(crate) parameter_patch_receipt_out: Option<String>,
+    pub(crate) research_round_spec: Option<String>,
+    pub(crate) previous_round_evidence: Option<String>,
+    pub(crate) research_round_out: Option<String>,
     pub(crate) job_wait_timeout_ms: Option<u64>,
 }
 
@@ -83,6 +87,25 @@ impl Flags {
                 "--parameter-patch" => {
                     flags.parameter_patch =
                         Some(take_value(args, &mut index, "--parameter-patch")?);
+                }
+                "--parameter-patch-receipt-out" => {
+                    flags.parameter_patch_receipt_out = Some(take_value(
+                        args,
+                        &mut index,
+                        "--parameter-patch-receipt-out",
+                    )?);
+                }
+                "--research-round-spec" => {
+                    flags.research_round_spec =
+                        Some(take_value(args, &mut index, "--research-round-spec")?);
+                }
+                "--previous-round-evidence" => {
+                    flags.previous_round_evidence =
+                        Some(take_value(args, &mut index, "--previous-round-evidence")?);
+                }
+                "--research-round-out" => {
+                    flags.research_round_out =
+                        Some(take_value(args, &mut index, "--research-round-out")?);
                 }
                 "--job-wait-timeout-ms" => {
                     let value = take_value(args, &mut index, "--job-wait-timeout-ms")?;
@@ -265,7 +288,42 @@ mod tests {
 
     #[test]
     fn parses_parameter_patch_path() {
-        let parsed = flags(&["workflow.json", "--parameter-patch", "round-2.json"]);
+        let parsed = flags(&[
+            "workflow.json",
+            "--parameter-patch",
+            "round-2.json",
+            "--parameter-patch-receipt-out",
+            "round-2.receipt.json",
+        ]);
         assert_eq!(parsed.parameter_patch.as_deref(), Some("round-2.json"));
+        assert_eq!(
+            parsed.parameter_patch_receipt_out.as_deref(),
+            Some("round-2.receipt.json")
+        );
+    }
+
+    #[test]
+    fn parses_research_round_artifact_paths() {
+        let parsed = flags(&[
+            "workflow.json",
+            "--research-round-spec",
+            "round-2.spec.json",
+            "--previous-round-evidence",
+            "round-1.evidence.json",
+            "--research-round-out",
+            "round-2.evidence.json",
+        ]);
+        assert_eq!(
+            parsed.research_round_spec.as_deref(),
+            Some("round-2.spec.json")
+        );
+        assert_eq!(
+            parsed.previous_round_evidence.as_deref(),
+            Some("round-1.evidence.json")
+        );
+        assert_eq!(
+            parsed.research_round_out.as_deref(),
+            Some("round-2.evidence.json")
+        );
     }
 }

@@ -3,12 +3,12 @@ use std::fs;
 use std::path::PathBuf;
 
 use kyuubiki_headless_sdk::{
-    HeadlessExecutionBatch, HeadlessParameterPatch, HeadlessRunReport, HeadlessRuntimeStyle,
-    HeadlessTemplateDescriptor, HeadlessValidationReport, HeadlessWorkflowDocument,
-    HybridHeadlessExecutor, MockHeadlessExecutor, ServiceHeadlessExecutor, apply_parameter_patch,
-    build_material_report_from_run, build_template_document, collect_executor_compatibility_issues,
-    describe_material_study, execute_batch_with_executor, normalize_workflow_document,
-    run_batch_dry, search_templates, suggest_template_details, suggest_templates, summarize_batch,
+    HeadlessExecutionBatch, HeadlessRunReport, HeadlessRuntimeStyle, HeadlessTemplateDescriptor,
+    HeadlessValidationReport, HeadlessWorkflowDocument, HybridHeadlessExecutor,
+    MockHeadlessExecutor, ServiceHeadlessExecutor, build_material_report_from_run,
+    build_template_document, collect_executor_compatibility_issues, describe_material_study,
+    execute_batch_with_executor, normalize_workflow_document, run_batch_dry, search_templates,
+    suggest_template_details, suggest_templates, summarize_batch,
     supported_material_report_study_ids, validate_batch, validate_material_report_compatibility,
 };
 use serde::Serialize;
@@ -21,6 +21,8 @@ mod kyuubiki_headless_flags;
 mod kyuubiki_headless_plan;
 #[path = "kyuubiki-headless/preflight.rs"]
 mod kyuubiki_headless_preflight;
+#[path = "kyuubiki-headless/research_round.rs"]
+mod kyuubiki_headless_research_round;
 #[path = "kyuubiki-headless/run_report.rs"]
 mod kyuubiki_headless_run_report;
 #[path = "kyuubiki-headless/usage.rs"]
@@ -237,15 +239,20 @@ fn handle_run(args: &[String]) -> Result<(), String> {
             );
         }
     };
-    if let Err(error) = apply_parameter_patch_from_flags(&mut batch, &flags) {
-        return kyuubiki_headless_preflight::emit_run_failure(
-            &flags,
-            Some(&batch),
-            &workflow_id,
-            error,
-            &[],
-        );
-    }
+    let patch_receipt = match kyuubiki_headless_research_round::apply_parameter_patch_from_flags(
+        &mut batch, &flags,
+    ) {
+        Ok(receipt) => receipt,
+        Err(error) => {
+            return kyuubiki_headless_preflight::emit_run_failure(
+                &flags,
+                Some(&batch),
+                &workflow_id,
+                error,
+                &[],
+            );
+        }
+    };
     if let Err(error) = kyuubiki_headless_preflight::apply_job_wait_timeout_override(
         &mut batch,
         flags.job_wait_timeout_ms,
@@ -280,6 +287,22 @@ fn handle_run(args: &[String]) -> Result<(), String> {
     }
     let selected_executor = match flags.selected_executor() {
         Ok(executor) => executor,
+        Err(error) => {
+            return kyuubiki_headless_preflight::emit_run_failure(
+                &flags,
+                Some(&batch),
+                &workflow_id,
+                error,
+                &[],
+            );
+        }
+    };
+    let prepared_research_round = match kyuubiki_headless_research_round::prepare_research_round(
+        &flags,
+        selected_executor,
+        &batch,
+    ) {
+        Ok(prepared) => prepared,
         Err(error) => {
             return kyuubiki_headless_preflight::emit_run_failure(
                 &flags,
@@ -411,6 +434,14 @@ fn handle_run(args: &[String]) -> Result<(), String> {
             write_json_file(output_path, material_report)?;
         }
     }
+    if let Some(prepared) = prepared_research_round.as_ref() {
+        kyuubiki_headless_research_round::write_research_round_evidence(
+            prepared,
+            &batch,
+            &report,
+            patch_receipt.as_ref(),
+        )?;
+    }
     if flags.json {
         print_json(&report)?;
         return Ok(());
@@ -480,22 +511,8 @@ fn load_batch_from_path(path: &str) -> Result<HeadlessExecutionBatch, String> {
 fn load_batch_for_flags(flags: &Flags) -> Result<HeadlessExecutionBatch, String> {
     let input_path = flags.input_path()?;
     let mut batch = load_batch_from_path(&input_path)?;
-    apply_parameter_patch_from_flags(&mut batch, flags)?;
+    kyuubiki_headless_research_round::apply_parameter_patch_from_flags(&mut batch, flags)?;
     Ok(batch)
-}
-
-fn apply_parameter_patch_from_flags(
-    batch: &mut HeadlessExecutionBatch,
-    flags: &Flags,
-) -> Result<(), String> {
-    let Some(path) = flags.parameter_patch.as_deref() else {
-        return Ok(());
-    };
-    let payload = load_json_value_from_path(path)
-        .map_err(|error| format!("headless parameter patch {path}: {error}"))?;
-    let patch = serde_json::from_value::<HeadlessParameterPatch>(payload)
-        .map_err(|error| format!("invalid headless parameter patch: {error}"))?;
-    apply_parameter_patch(batch, &patch).map(|_| ())
 }
 
 fn load_json_value_from_path(path: &str) -> Result<Value, String> {

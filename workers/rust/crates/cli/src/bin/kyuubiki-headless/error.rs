@@ -33,6 +33,7 @@ pub(super) fn cli_error_stage(code: &str) -> &'static str {
         "executor_compatibility" | "executor_selection" => "executor_preflight",
         "endpoint_configuration" => "endpoint_configuration",
         "parameter_patch_validation" => "parameter_patch",
+        "research_round_validation" => "research_round",
         "material_report_template_mismatch"
         | "material_report_template_provenance_missing"
         | "material_report_study_unsupported"
@@ -68,6 +69,8 @@ pub(super) fn classify_cli_error(error: &str) -> &'static str {
         "executor_selection"
     } else if error.starts_with("invalid --api-base-url") {
         "endpoint_configuration"
+    } else if error.contains("research round") || error.contains("--research-round") {
+        "research_round_validation"
     } else if error.contains("parameter patch") {
         "parameter_patch_validation"
     } else if error.contains("missing field")
@@ -106,6 +109,9 @@ fn cli_error_recovery(code: &str) -> &'static str {
         }
         "parameter_patch_validation" => {
             "Regenerate the patch from the current rendered batch and keep expected baseline values synchronized."
+        }
+        "research_round_validation" => {
+            "Use a service research run, retain numeric result metrics, and link iteration 2+ to the previous qualified evidence with a guarded parameter patch."
         }
         "material_report_template_mismatch" => {
             "Choose a study listed by the selected template's material_report_studies field."
@@ -191,5 +197,16 @@ mod tests {
         assert_eq!(cli_error_stage(code), "parameter_patch");
         assert!(!cli_error_retryable(code));
         assert!(cli_error_recovery(code).contains("rendered batch"));
+    }
+
+    #[test]
+    fn classifies_research_round_failure_as_non_retryable() {
+        let code = classify_cli_error(
+            "headless research round iteration 2 or later requires previous-round evidence",
+        );
+        assert_eq!(code, "research_round_validation");
+        assert_eq!(cli_error_stage(code), "research_round");
+        assert!(!cli_error_retryable(code));
+        assert!(cli_error_recovery(code).contains("numeric result metrics"));
     }
 }

@@ -82,6 +82,7 @@ mod operator_task_validation_tests;
 mod parameter_patch;
 mod plan;
 mod preflight_report;
+mod research_round;
 mod run;
 mod service_executor;
 mod service_executor_artifact;
@@ -330,13 +331,19 @@ pub use operator_task_validation::{
 pub use parameter_patch::{
     HEADLESS_PARAMETER_PATCH_RECEIPT_SCHEMA_VERSION, HEADLESS_PARAMETER_PATCH_SCHEMA_VERSION,
     HeadlessParameterChange, HeadlessParameterPatch, HeadlessParameterPatchReceipt,
-    apply_parameter_patch,
+    apply_parameter_patch, headless_batch_content_sha256,
 };
 pub use plan::{
     HeadlessExecutionPlan, HeadlessPlanBinding, HeadlessPlanCompatibility,
     HeadlessPlanConfirmation, HeadlessPlanStep, build_execution_plan,
 };
 pub use preflight_report::build_preflight_failure_report;
+pub use research_round::{
+    HEADLESS_RESEARCH_ROUND_EVIDENCE_SCHEMA_VERSION, HEADLESS_RESEARCH_ROUND_SPEC_SCHEMA_VERSION,
+    HeadlessResearchMetricObjective, HeadlessResearchMetricObservation, HeadlessResearchMetricSpec,
+    HeadlessResearchRoundEvidence, HeadlessResearchRoundLink, HeadlessResearchRoundSpec,
+    build_headless_research_round_evidence, validate_headless_research_round_spec,
+};
 pub use run::{
     HeadlessBlockedConfirmation, HeadlessExecutionStepReport, HeadlessRunReport, run_batch_dry,
 };

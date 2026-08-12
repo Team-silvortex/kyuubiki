@@ -18,6 +18,13 @@ README.
   and after batch fingerprints for an applied parameter round
 - `examples.headless-parameter-patch.json` is the direct thermal-frame fixture
   used to prove CLI and Rust SDK patch semantics remain aligned
+- `headless-research-round-spec.schema.json` defines explicit round identity,
+  ordered iteration, primary metrics, units, objectives, and result pointers
+- `headless-research-round-evidence.schema.json` binds a complete service run
+  to its effective batch, patch lineage, previous qualified round, and numeric
+  domain observations
+- `examples.headless-research-round-spec.json` shows a thermal-frame round that
+  reads stress, displacement, and temperature directly from solver results
 - `model.schema.json` is for versioned browser model import/export payloads
 - `material-library.schema.json` is for reusable material library import/export payloads
 - `material-card.schema.json` is for first-class material cards with

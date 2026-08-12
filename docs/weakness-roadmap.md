@@ -519,6 +519,8 @@ Current moxi hardening focus:
   no-mock service path
 - retain execution-authority evidence proving that local material exploration
   used real Rust solver kernels without fallback
+- qualify generic Headless research rounds with contiguous input fingerprints,
+  guarded patch lineage, complete service execution, and numeric domain metrics
 
 Qualification focus:
 
@@ -531,6 +533,9 @@ Current progress:
 
 - retained material research bundles now reject missing, mock, or fallback
   execution authority across the initial run, next run, and every chained run
+- generic non-material workflows now have a first-class round evidence contract;
+  repeated batches and unrelated `n/a` report columns no longer qualify as
+  research progress
 - the composite thermo-electric panel bundle is still correctly classified as
   screening-only until external validation, failed quality gates, and
   low-confidence material cards are addressed

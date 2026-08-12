@@ -129,10 +129,46 @@ document identity. Patch documents are bounded to 8 MiB, and mismatch errors
 fingerprint rather than echo compound or string values. Application is atomic.
 A successful call returns a
 `kyuubiki.headless-parameter-patch-receipt/v1` record with canonical before and
-after SHA-256 fingerprints; CLI runs retain the same receipt fields in a batch
-warning. `inspect`, `validate`, `render`, `plan`, and `run` all apply the same
-patch path, so preflight and execution cannot silently observe different
-rounds.
+after SHA-256 fingerprints over execution content; diagnostic warnings are
+excluded so provenance text cannot change physical-input identity. CLI runs
+retain the same receipt fields in a batch warning and can write the structured
+receipt with `--parameter-patch-receipt-out`. `inspect`, `validate`, `render`,
+`plan`, and `run` all apply the same patch path, so preflight and execution
+cannot silently observe different rounds.
+
+For a retained research loop, add a
+`kyuubiki.headless-research-round-spec/v1` document. It names the round and
+iteration, binds the intended workflow, and selects numeric domain results
+through canonical JSON Pointers. Research support artifacts are bounded to
+16 MiB before decoding:
+
+```bash
+cargo kyuubiki headless run round-1.batch.json \
+  --execute --executor service --execution-posture research \
+  --research-round-spec round-1.spec.json \
+  --research-round-out round-1.evidence.json \
+  --report-out round-1.run.json
+
+cargo kyuubiki headless run round-1.batch.json \
+  --parameter-patch round-2.patch.json \
+  --parameter-patch-receipt-out round-2.receipt.json \
+  --execute --executor service --execution-posture research \
+  --research-round-spec round-2.spec.json \
+  --previous-round-evidence round-1.evidence.json \
+  --research-round-out round-2.evidence.json \
+  --report-out round-2.run.json
+```
+
+The resulting `kyuubiki.headless-research-round-evidence/v1` artifact is
+emitted only when every batch step completed through the service executor and
+every declared metric resolved to a finite number below
+`/steps/<index>/result_preview/result/...` or `/metrics/...`; job progress,
+status, and echoed inputs cannot qualify as domain measurements. Iteration 2
+and later additionally require
+contiguous previous evidence and a patch whose before/after fingerprints match
+the previous/current batch. A repeated batch, skipped round, mock result, stale
+patch, missing metric, or literal `n/a` therefore fails qualification instead
+of becoming a misleading success table.
 
 A repeated workflow with identical before/after payloads is not a research
 iteration even if every process exits zero. Research-loop qualification should

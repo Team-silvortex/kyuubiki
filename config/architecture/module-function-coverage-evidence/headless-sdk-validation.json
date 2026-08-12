@@ -50,6 +50,29 @@
           "baseline mismatch",
           "guarded_patch_is_shared_by_inspect_validate_render_plan_and_run"
         ]
+      },
+      {
+        "id": "headless-research-round-contract",
+        "modules": [
+          "sdk-headless"
+        ],
+        "files": [
+          "schemas/headless-research-round-spec.schema.json",
+          "schemas/headless-research-round-evidence.schema.json",
+          "schemas/examples.headless-research-round-spec.json",
+          "workers/rust/crates/headless-sdk/src/research_round.rs",
+          "workers/rust/crates/cli/src/bin/kyuubiki-headless/research_round.rs",
+          "workers/rust/crates/cli/tests/headless_research_round.rs",
+          "docs/headless-sdks.md"
+        ],
+        "required_text": [
+          "kyuubiki.headless-research-round-spec/v1",
+          "kyuubiki.headless-research-round-evidence/v1",
+          "build_headless_research_round_evidence",
+          "--research-round-spec",
+          "--previous-round-evidence",
+          "service_research_runs_emit_a_contiguous_two_round_evidence_chain"
+        ]
       }
     ],
     "validation": [
@@ -188,6 +211,36 @@
         "applies_guarded_payload_change_and_records_distinct_fingerprints",
         "rejects_baseline_drift_no_op_and_non_payload_paths",
         "stale_patch_fails_closed_with_a_machine_actionable_run_report"
+      ]
+    },
+    {
+      "id": "headless-research-round-closure",
+      "status": "proven",
+      "grade": "verified",
+      "modules": [
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "workflow_composition",
+        "validation",
+        "sdk_headless"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "recovery"
+      ],
+      "files": [
+        "schemas/headless-research-round-spec.schema.json",
+        "schemas/headless-research-round-evidence.schema.json",
+        "workers/rust/crates/headless-sdk/src/research_round.rs",
+        "workers/rust/crates/cli/tests/headless_research_round.rs"
+      ],
+      "required_text": [
+        "qualifies_contiguous_rounds_with_changed_input_and_numeric_metrics",
+        "rejects_repeat_rounds_dry_runs_and_non_numeric_metrics",
+        "service_research_runs_emit_a_contiguous_two_round_evidence_chain",
+        "later_round_without_previous_evidence_fails_before_service_connection"
       ]
     }
   ]

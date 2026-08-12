@@ -47,7 +47,7 @@ pub fn apply_parameter_patch(
     let mut paths = BTreeSet::new();
     let before = serde_json::to_value(&*batch)
         .map_err(|error| format!("failed to encode headless batch before patch: {error}"))?;
-    let before_sha256 = canonical_json_sha256(&before);
+    let before_sha256 = headless_batch_content_sha256(batch)?;
     let mut candidate = before.clone();
 
     for (index, change) in patch.changes.iter().enumerate() {
@@ -94,9 +94,9 @@ pub fn apply_parameter_patch(
         })? = change.value.clone();
     }
 
-    let after_sha256 = canonical_json_sha256(&candidate);
     let mut patched = serde_json::from_value::<HeadlessExecutionBatch>(candidate)
         .map_err(|error| format!("parameter patch produced an invalid headless batch: {error}"))?;
+    let after_sha256 = headless_batch_content_sha256(&patched)?;
     let receipt = HeadlessParameterPatchReceipt {
         schema_version: HEADLESS_PARAMETER_PATCH_RECEIPT_SCHEMA_VERSION.to_string(),
         patch_id: patch.patch_id.clone(),
@@ -111,6 +111,15 @@ pub fn apply_parameter_patch(
     ));
     *batch = patched;
     Ok(receipt)
+}
+
+pub fn headless_batch_content_sha256(batch: &HeadlessExecutionBatch) -> Result<String, String> {
+    let mut value = serde_json::to_value(batch)
+        .map_err(|error| format!("failed to encode headless batch for fingerprinting: {error}"))?;
+    if let Some(object) = value.as_object_mut() {
+        object.insert("warnings".to_string(), Value::Array(Vec::new()));
+    }
+    Ok(canonical_json_sha256(&value))
 }
 
 fn validate_patch_header(
@@ -298,6 +307,10 @@ mod tests {
             -1250.0
         );
         assert_ne!(receipt.before_sha256, receipt.after_sha256);
+        assert_eq!(
+            receipt.after_sha256,
+            headless_batch_content_sha256(&batch).expect("content fingerprint")
+        );
         assert_eq!(receipt.change_count, 1);
         assert!(batch.warnings[0].contains("thermal-load-round-2"));
     }
