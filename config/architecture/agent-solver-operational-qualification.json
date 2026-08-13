@@ -1,0 +1,60 @@
+{
+  "$schema": "../../schemas/agent-solver-operational-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.agent-solver-operational-qualification-contract/v1",
+  "qualification_id": "installer-managed-agent-solver-linux-operational",
+  "target_coordinate": {
+    "module_id": "runtime-engine-solver",
+    "paradigm": "solver_execution",
+    "target_grade": "operational"
+  },
+  "ownership": {
+    "deployment_owner": "kyuubiki-installer",
+    "execution_owner": "kyuubiki-agent-engine",
+    "evidence_owner": "verification-evidence"
+  },
+  "capture": {
+    "execution_host_role": "remote-linux-qualification-host",
+    "build_profile": "release",
+    "network_bind_scope": "loopback",
+    "package_contract": "kyuubiki.agent-update-package/v1",
+    "activation_contract": "kyuubiki.agent-update-activation/v1",
+    "solver_contract": "kyuubiki.agent-solver-qualification/v2",
+    "solver_runs_minimum": 2,
+    "process_restarts_minimum": 1,
+    "failures_per_run_minimum": 2,
+    "maximum_absolute_error": 1e-12,
+    "cleanup_required": true
+  },
+  "retention": {
+    "report_schema": "kyuubiki.agent-solver-operational-qualification/v1",
+    "report_schema_path": "schemas/agent-solver-operational-qualification-report.schema.json",
+    "report_path": "releases/usability-evidence/2.13.8/agent-solver-operational-qualification.json",
+    "forbidden_content": [
+      "host_address",
+      "hostname",
+      "username",
+      "credential",
+      "absolute_host_path"
+    ]
+  },
+  "required_checks": [
+    "package_sealed",
+    "package_digest_verified",
+    "installer_activation",
+    "active_binary_verified",
+    "first_solver_execution",
+    "first_tamper_rejection",
+    "first_recovery",
+    "process_restart",
+    "restarted_solver_execution",
+    "restarted_tamper_rejection",
+    "restarted_recovery",
+    "watchdog_quiescent",
+    "managed_store_isolated",
+    "cleanup_complete"
+  ],
+  "commands": {
+    "capture": "make qualify-agent-solver-operational-remote REMOTE=kyuubiki-lab",
+    "verify": "make check-agent-solver-operational-qualification"
+  }
+}

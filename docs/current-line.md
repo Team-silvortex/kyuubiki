@@ -13,7 +13,7 @@ Use it when you want the shortest answer to:
 `moxi 2.x` is the point where Kyuubiki treats its core contracts as product
 baseline rather than loose prototypes.
 
-The current development point in this line is `moxi 2.13.6`.
+The current development point in this line is `moxi 2.13.8`.
 
 The 2.x line optimizes for:
 
@@ -63,6 +63,13 @@ sprawl:
 - system security qualification now repeats 14 asserted checks across 22 exact
   module/lane coordinates; the retained 28/28 report closes the former tied P0
   security cluster without claiming installed or multi-host adversarial proof
+- Installer-managed Agent solver qualification now builds a sealed Linux
+  release package on the lab host, activates it through the native Installer,
+  runs two independent Agent processes through closed-form solve, unsupported
+  solver rejection, TaskIR tamper rejection, and recovery, then proves the
+  isolated work root is residue-free. The retained report promotes only
+  `runtime-engine-solver / solver_execution` to `operational`; it does not
+  imply fleet-wide Orchestra or Headless SDK operation
 
 - GUI navigation and backend calls must form complete, testable user journeys
   instead of isolated panels that look finished but do not execute

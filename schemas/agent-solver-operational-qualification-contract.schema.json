@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/agent-solver-operational-qualification-contract.schema.json",
+  "title": "Kyuubiki Agent Solver Operational Qualification Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "qualification_id",
+    "target_coordinate",
+    "ownership",
+    "capture",
+    "retention",
+    "required_checks",
+    "commands"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "../../schemas/agent-solver-operational-qualification-contract.schema.json"
+    },
+    "schema_version": {
+      "const": "kyuubiki.agent-solver-operational-qualification-contract/v1"
+    },
+    "qualification_id": {
+      "const": "installer-managed-agent-solver-linux-operational"
+    },
+    "target_coordinate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module_id", "paradigm", "target_grade"],
+      "properties": {
+        "module_id": { "const": "runtime-engine-solver" },
+        "paradigm": { "const": "solver_execution" },
+        "target_grade": { "const": "operational" }
+      }
+    },
+    "ownership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deployment_owner", "execution_owner", "evidence_owner"],
+      "properties": {
+        "deployment_owner": { "const": "kyuubiki-installer" },
+        "execution_owner": { "const": "kyuubiki-agent-engine" },
+        "evidence_owner": { "const": "verification-evidence" }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execution_host_role",
+        "build_profile",
+        "network_bind_scope",
+        "package_contract",
+        "activation_contract",
+        "solver_contract",
+        "solver_runs_minimum",
+        "process_restarts_minimum",
+        "failures_per_run_minimum",
+        "maximum_absolute_error",
+        "cleanup_required"
+      ],
+      "properties": {
+        "execution_host_role": { "const": "remote-linux-qualification-host" },
+        "build_profile": { "const": "release" },
+        "network_bind_scope": { "const": "loopback" },
+        "package_contract": { "const": "kyuubiki.agent-update-package/v1" },
+        "activation_contract": { "const": "kyuubiki.agent-update-activation/v1" },
+        "solver_contract": { "const": "kyuubiki.agent-solver-qualification/v2" },
+        "solver_runs_minimum": { "type": "integer", "minimum": 2 },
+        "process_restarts_minimum": { "type": "integer", "minimum": 1 },
+        "failures_per_run_minimum": { "type": "integer", "minimum": 2 },
+        "maximum_absolute_error": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1e-12
+        },
+        "cleanup_required": { "const": true }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "report_schema",
+        "report_schema_path",
+        "report_path",
+        "forbidden_content"
+      ],
+      "properties": {
+        "report_schema": {
+          "const": "kyuubiki.agent-solver-operational-qualification/v1"
+        },
+        "report_schema_path": {
+          "const": "schemas/agent-solver-operational-qualification-report.schema.json"
+        },
+        "report_path": {
+          "const": "releases/usability-evidence/2.13.8/agent-solver-operational-qualification.json"
+        },
+        "forbidden_content": {
+          "type": "array",
+          "minItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "host_address",
+              "hostname",
+              "username",
+              "credential",
+              "absolute_host_path"
+            ]
+          }
+        }
+      }
+    },
+    "required_checks": {
+      "type": "array",
+      "minItems": 14,
+      "maxItems": 14,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capture", "verify"],
+      "properties": {
+        "capture": {
+          "const": "make qualify-agent-solver-operational-remote REMOTE=kyuubiki-lab"
+        },
+        "verify": {
+          "const": "make check-agent-solver-operational-qualification"
+        }
+      }
+    }
+  }
+}

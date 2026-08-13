@@ -352,6 +352,7 @@ version = "2.7.0"
 dependencies = [
  "kyuubiki-engine",
  "kyuubiki-platform",
+ "kyuubiki-protocol",
  "serde",
  "serde_json",
  "sha2",

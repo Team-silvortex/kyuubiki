@@ -6,6 +6,7 @@ use std::process::{Command, ExitCode};
 use std::time::SystemTime;
 
 mod agent_registry_sync;
+mod agent_solver_operational_qualification;
 mod beam_frame_release_evidence;
 mod benchmark_profile_index;
 mod benchmark_profile_plan;
@@ -353,6 +354,12 @@ fn run() -> RunnerResult<u8> {
             desktop_icon_variants::run_generate_desktop_icon_variants(&paths.root, rest)
         }
         "agent-registry-sync" => agent_registry_sync::run_agent_registry_sync(&paths.root, rest),
+        "qualify-agent-solver-operational-remote" => {
+            agent_solver_operational_qualification::run_qualify_agent_solver_operational_remote(
+                &paths.root,
+                rest,
+            )
+        }
         "lab" => lab::run_lab(&paths.root, rest),
         "remote-ssh-fixture" => remote_ssh_fixture::run_remote_ssh_fixture(&paths.root, rest),
         "web-test" => run_command(&paths.web, "mix", prepend("test", rest)),

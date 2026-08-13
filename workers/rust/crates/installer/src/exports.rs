@@ -1,3 +1,12 @@
+pub use crate::agent_solver_operational::{
+    AGENT_SOLVER_OPERATIONAL_QUALIFICATION_SCHEMA_VERSION,
+    AgentSolverOperationalQualificationReport, run_agent_solver_operational_qualification,
+    write_agent_solver_operational_qualification_report,
+};
+pub use crate::agent_solver_operational_validation::{
+    AgentSolverOperationalQualificationSummary,
+    validate_agent_solver_operational_qualification_report,
+};
 pub use crate::agent_update_payload::{
     AGENT_UPDATE_ACTIVATION_SCHEMA_VERSION, AGENT_UPDATE_PACKAGE_SCHEMA_VERSION,
     AgentUpdateActivationRecord, AgentUpdatePackageManifest, AgentUpdateStatus,

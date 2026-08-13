@@ -90,6 +90,8 @@ pub fn installer_headless_surface_manifest() -> InstallerHeadlessSurfaceManifest
                     "active_agent_binary",
                     "launch_managed_agent",
                     "run_agent_update_qualification",
+                    "run_agent_solver_operational_qualification",
+                    "validate_agent_solver_operational_qualification_report",
                 ],
             },
             InstallerHeadlessEntrypoint {
@@ -119,6 +121,8 @@ pub fn installer_headless_surface_manifest() -> InstallerHeadlessSurfaceManifest
                 "active_agent_binary",
                 "launch_managed_agent",
                 "run_agent_update_qualification",
+                "run_agent_solver_operational_qualification",
+                "validate_agent_solver_operational_qualification_report",
                 "credential_storage_contract",
                 "embedded_runtime_report",
             ],
@@ -159,6 +163,19 @@ pub fn installer_headless_surface_manifest() -> InstallerHeadlessSurfaceManifest
                 evidence_export: "run_agent_update_qualification",
             },
             InstallerWorkflowComposition {
+                id: "standard_agent_solver_operational",
+                stages: &[
+                    "seal_agent_package",
+                    "activate_agent_version",
+                    "execute_solver_task_ir",
+                    "reject_tampered_task_ir",
+                    "recover_solver_execution",
+                    "restart_agent_process",
+                    "verify_cleanup",
+                ],
+                evidence_export: "run_agent_solver_operational_qualification",
+            },
+            InstallerWorkflowComposition {
                 id: "standard_integrity_repair",
                 stages: &[
                     "scan_integrity",
@@ -177,6 +194,15 @@ pub fn installer_headless_surface_manifest() -> InstallerHeadlessSurfaceManifest
                     "install_agent_package",
                     "activate_agent_version",
                     "rollback_agent_version",
+                ],
+            },
+            InstallerBenchmarkLane {
+                id: "agent_solver_operational",
+                target_workflow: "standard_agent_solver_operational",
+                measured_stages: &[
+                    "execute_solver_task_ir",
+                    "recover_solver_execution",
+                    "restart_agent_process",
                 ],
             },
             InstallerBenchmarkLane {
@@ -239,11 +265,19 @@ mod tests {
                 && entry.exports.contains(&"active_agent_binary")
                 && entry.exports.contains(&"launch_managed_agent")
                 && entry.exports.contains(&"run_agent_update_qualification")
+                && entry
+                    .exports
+                    .contains(&"run_agent_solver_operational_qualification")
         }));
         assert!(manifest.workflow_compositions.iter().any(|workflow| {
             workflow.id == "standard_agent_update"
                 && workflow.stages.contains(&"verify_agent_status")
                 && workflow.evidence_export == "run_agent_update_qualification"
+        }));
+        assert!(manifest.workflow_compositions.iter().any(|workflow| {
+            workflow.id == "standard_agent_solver_operational"
+                && workflow.stages.contains(&"restart_agent_process")
+                && workflow.evidence_export == "run_agent_solver_operational_qualification"
         }));
         assert!(manifest.benchmark_lanes.iter().any(|lane| {
             lane.id == "remote_deploy" && lane.measured_stages.contains(&"dry_run")

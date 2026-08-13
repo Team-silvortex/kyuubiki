@@ -62,6 +62,8 @@ help:
 	@echo "  make check-module-function-coverage-tensor Build module x function x evidence-depth coverage tensor"
 	@echo "  make qualify-system-security Run repeatable module x security-lane qualification"
 	@echo "  make check-system-security-qualification Recheck retained system-security qualification evidence"
+	@echo "  make qualify-agent-solver-operational-remote Build, Installer-deploy, solve, restart, recover, and clean on the Linux lab host"
+	@echo "  make check-agent-solver-operational-qualification Recheck retained remote Linux Agent solver operational evidence"
 	@echo "  make qualify-desktop-ui-validation Run the cross-shell GUI qualification and write a retained JSON report"
 	@echo "  make qualify-protocol-validation Run protocol, TaskIR, RPC, and fuzz qualification and retain JSON evidence"
 	@echo "  make qualify-headless-sdk-validation Run Rust/Python/Elixir Headless SDK validation qualification"

@@ -696,6 +696,38 @@ Current behavior notes:
   validated node scale. Checked-baseline promotion should still wait for repeat
   runs.
 
+## Operational Agent Solver Qualification
+
+The operational solver lane closes the gap between a source-level TaskIR test
+and an Installer-managed release binary on a separate Linux host:
+
+```sh
+make qualify-agent-solver-operational-remote REMOTE=kyuubiki-lab
+make check-agent-solver-operational-qualification
+```
+
+The capture command syncs only the Rust workspace into an isolated lab-run
+root, reuses a server-side Cargo target cache, builds release Agent and
+Installer binaries, and delegates package sealing, activation, execution, and
+qualification cleanup to the native Installer. SSH remains transport only; it
+does not replace Installer deployment semantics.
+
+Each accepted report must prove:
+
+- a digest-verified `kyuubiki.agent-update-package/v1` activation
+- two distinct Agent process instances executing the same TaskIR digest
+- zero-error closed-form axial-bar results before and after each failure set
+- unsupported-solver and TaskIR-digest rejection in both process instances
+- watchdog quiescence and successful recovery in both process instances
+- removal of the isolated qualification root with zero retained residue
+- absence of host addresses, account names, credentials, and absolute host paths
+
+The small JSON report is retained locally and under the server's managed lab
+evidence root. Every successfully prepared run root is removed after the
+attempt, including failed qualification or report-transfer attempts; large
+release artifacts stay in the server-side Cargo cache instead of the MacBook
+workspace.
+
 ## Nightly lane map
 
 Current self-hosted nightly flows have distinct jobs:

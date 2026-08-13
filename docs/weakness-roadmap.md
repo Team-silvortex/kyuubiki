@@ -29,10 +29,10 @@ Current moxi baseline:
 - `blocking_gap_count`: `0`
 - `maturity_gap_count`: `0`
 - `thin_evidence_count`: `0`
-- `evidence_grade_gap_count`: `14`
-- required cells meeting their grade target: `36 / 50` (`72.0%`)
-- release-critical P0 cells meeting target: `25 / 36` (`69.4%`)
-- `daji 3.0.0` release state: `blocked` with `11` P0 coordinate gaps and one
+- `evidence_grade_gap_count`: `13`
+- required cells meeting their grade target: `37 / 50` (`74.0%`)
+- release-critical P0 cells meeting target: `26 / 36` (`72.2%`)
+- `daji 3.0.0` release state: `blocked` with `10` P0 coordinate gaps and one
   unclosed external usability release gate
 
 This means no required module/function coordinate is structurally missing. It
@@ -43,11 +43,24 @@ the `daji 3.0.0` P0/P1/P2 release profile. The former maturity points remain
 dimension-complete, but ordinary lane execution no longer masquerades as
 qualification, operational, or release evidence.
 
-The current first hardening coordinate is operational solver execution. It is
-followed by contract and Workbench validation, Orchestra/Workbench workflow
-composition, installed Headless SDK operation, provenance, and protocol/SDK
-runtime API verification. P1 benchmark evidence comes after those release
-blockers unless a newly retained result changes the generated ranking.
+The current first hardening coordinates are contract validation and Workbench
+validation, both moving from `verified` to `qualified`. They are followed by
+Orchestra/Workbench workflow composition, installed Headless SDK operation,
+provenance, and protocol/SDK runtime API verification. P1 benchmark evidence
+comes after those release blockers unless a newly retained result changes the
+generated ranking.
+
+The former first coordinate, `runtime-engine-solver / solver_execution`, now
+meets its `operational` target. The retained remote Linux journey builds the
+release Agent and Installer in an isolated lab run, seals and atomically
+activates the Agent package through Installer-owned storage, and executes the
+same closed-form TaskIR through two distinct Agent processes. Both processes
+prove numerical equality, capability rejection, digest-tamper rejection,
+watchdog quiescence, and recovery; the qualification work root is removed with
+zero residue. The machine-validated report is retained under
+`releases/usability-evidence/2.13.8/agent-solver-operational-qualification.json`.
+This evidence does not promote Orchestra fleet scheduling or installed
+Headless SDK operation.
 
 The former tied P0 security cluster now meets its `qualified` target for
 contracts, shared desktop UI, Hub, Installer shell, Orchestra, Agent, Engine,

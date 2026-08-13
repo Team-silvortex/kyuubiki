@@ -102,6 +102,8 @@ lab remote-ssh-fixture\n  \
   check-operator-task-ir-contract\n  \
   check-protocol-validation-qualification\n  \
   check-system-security-qualification\n  \
+  check-agent-solver-operational-qualification\n  \
+  qualify-agent-solver-operational-remote\n  \
   check-headless-sdk-validation-qualification\n  \
   check-headless-workflow-qualification\n  \
   validate-material-score-contract\n  \

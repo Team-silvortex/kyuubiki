@@ -11,6 +11,7 @@
       "./scripts/kyuubiki check-headless-workflow-qualification",
       "./scripts/kyuubiki check-protocol-validation-qualification",
       "./scripts/kyuubiki check-system-security-qualification",
+      "./scripts/kyuubiki check-agent-solver-operational-qualification",
       "./scripts/kyuubiki build-regression-gate-report",
       "./scripts/kyuubiki build-central-readiness-report",
       "./scripts/kyuubiki check-central-readiness-report"
@@ -21,6 +22,7 @@
       "tmp/headless-workflow-qualification-report.json",
       "tmp/protocol-validation-qualification-report.json",
       "tmp/system-security-qualification-report.json",
+      "tmp/agent-solver-operational-remote.json",
       "tmp/regression-gate-report.json",
       "tmp/central-readiness-report.json",
       "tmp/central-readiness-report.md"
@@ -34,14 +36,24 @@
       "workers/rust/crates/protocol/src/agent_solver_qualification.rs",
       "workers/rust/crates/cli/src/operator_task_runtime/engine_solver.rs",
       "workers/rust/crates/cli/tests/agent_task_ir_qualification.rs",
+      "config/architecture/agent-solver-operational-qualification.json",
+      "workers/rust/crates/installer/src/agent_solver_operational.rs",
+      "workers/rust/crates/installer/src/agent_solver_operational_validation.rs",
+      "workers/rust/crates/script-runner/src/agent_solver_operational_qualification.rs",
       "schemas/agent-solver-qualification.schema.json",
-      "releases/usability-evidence/2.12.5/agent-solver-task-ir-qualification.json"
+      "schemas/agent-solver-operational-qualification-contract.schema.json",
+      "schemas/agent-solver-operational-qualification-report.schema.json",
+      "releases/usability-evidence/2.12.5/agent-solver-task-ir-qualification.json",
+      "releases/usability-evidence/2.13.8/agent-solver-operational-qualification.json"
     ],
     "required_receipts": [
       "kyuubiki.engine-solver-provenance/v1",
       "kyuubiki.solver-execution-capability/v1",
       "kyuubiki.agent-solver-qualification/v2",
-      "kyuubiki.agent-operator-task-failure/v1"
+      "kyuubiki.agent-operator-task-failure/v1",
+      "kyuubiki.agent-update-package/v1",
+      "kyuubiki.agent-update-activation/v1",
+      "kyuubiki.agent-solver-operational-qualification/v1"
     ]
   },
   "workflow_composition": {

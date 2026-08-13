@@ -3,7 +3,7 @@
 .PHONY: test-hub-gui test-installer-gui test-workbench-gui
 .PHONY: test-integration test-integration-api test-integration-cluster
 .PHONY: test-integration-direct-mesh test-integration-desktop-gui qualify-desktop-ui-validation qualify-protocol-validation
-.PHONY: qualify-headless-sdk-validation qualify-desktop-deployment-update qualify-system-security
+.PHONY: qualify-headless-sdk-validation qualify-desktop-deployment-update qualify-system-security qualify-agent-solver-operational-remote
 .PHONY: test-integration-benchmark-profile-index
 .PHONY: test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-central-database-smoke remote-central-database-smoke
 .PHONY: test-integration-direct-mesh-docker-compare
@@ -80,6 +80,9 @@ qualify-protocol-validation:
 qualify-system-security:
 	@$(ENTRYPOINT) check-system-security-qualification --self-test
 	@$(ENTRYPOINT) check-system-security-qualification --out $${OUTPUT:-tmp/system-security-qualification-report.json}
+
+qualify-agent-solver-operational-remote:
+	@$(ENTRYPOINT) qualify-agent-solver-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/agent-solver-operational-remote.json}
 
 qualify-headless-sdk-validation:
 	@$(ENTRYPOINT) check-headless-sdk-validation-qualification --out $${OUTPUT:-tmp/headless-sdk-validation-qualification-report.json}

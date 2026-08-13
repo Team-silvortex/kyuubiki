@@ -1,8 +1,8 @@
 use crate::{
-    central_database_readiness, central_readiness_report, central_store_contract,
-    commercial_readiness, component_integrity_protocol, contracts_runtime_api_surface,
-    dependency_audit, desktop_deployment_update_validation, desktop_ui_validation,
-    desktop_usability_journeys, doc_inventory, docs_book, frontend_checks,
+    agent_solver_operational_qualification, central_database_readiness, central_readiness_report,
+    central_store_contract, commercial_readiness, component_integrity_protocol,
+    contracts_runtime_api_surface, dependency_audit, desktop_deployment_update_validation,
+    desktop_ui_validation, desktop_usability_journeys, doc_inventory, docs_book, frontend_checks,
     gui_runtime_capability_contract, headless_sdk_validation, headless_workflow_qualification,
     install_update_disk_hygiene, installation_integrity_docs, installer_recovery_fault_injection,
     language_packs, local_path_audit, make_modules, material_exploration_chain_contract,
@@ -152,6 +152,11 @@ pub(crate) fn run_governance_command(
         }
         "check-system-security-qualification" => {
             system_security_qualification::run_check_system_security_qualification(root, args)
+        }
+        "check-agent-solver-operational-qualification" => {
+            agent_solver_operational_qualification::run_check_agent_solver_operational_qualification(
+                root, args,
+            )
         }
         "check-headless-sdk-validation-qualification" => {
             headless_sdk_validation::run_check_headless_sdk_validation(root, args)

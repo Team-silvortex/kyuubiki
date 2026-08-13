@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Real Agent TaskIR solver execution through the Rust Engine, with protocol admission, closed-form numerical validation, tamper rejection, watchdog recovery, and retained qualification evidence.",
+  "summary": "Real Agent TaskIR solver execution through the Rust Engine, extending protocol qualification into Installer-managed release packaging, remote Linux execution, process restart, recovery, and residue-free operational evidence.",
   "paradigm_contract_evidence": {
     "solver_execution": [
       {
@@ -22,6 +22,26 @@
           "validate_agent_solver_qualification_report",
           "agent_engine_solver_executed",
           "kyuubiki.agent-solver-qualification/v2"
+        ]
+      },
+      {
+        "id": "installer-managed-agent-solver-operational-contract",
+        "modules": [
+          "runtime-engine-solver"
+        ],
+        "files": [
+          "config/architecture/agent-solver-operational-qualification.json",
+          "schemas/agent-solver-operational-qualification-contract.schema.json",
+          "schemas/agent-solver-operational-qualification-report.schema.json",
+          "workers/rust/crates/installer/src/agent_solver_operational.rs",
+          "workers/rust/crates/installer/src/agent_solver_operational_validation.rs"
+        ],
+        "required_text": [
+          "installer-managed-agent-solver-linux-operational",
+          "runtime-engine-solver",
+          "solver_execution",
+          "run_agent_solver_operational_qualification",
+          "validate_agent_solver_operational_qualification_report"
         ]
       }
     ]
@@ -80,6 +100,46 @@
         "\"reason_code\": \"operator_task_solver_capability_rejected\"",
         "\"reason_code\": \"operator_task_digest_mismatch\"",
         "\"recent_failure_count\": 2"
+      ]
+    },
+    {
+      "id": "installer-managed-agent-solver-linux-operational",
+      "status": "proven",
+      "grade": "operational",
+      "modules": [
+        "runtime-engine-solver"
+      ],
+      "paradigms": [
+        "solver_execution"
+      ],
+      "dimensions": [
+        "execution",
+        "security",
+        "contract",
+        "numerical_validation",
+        "recovery"
+      ],
+      "files": [
+        "config/architecture/agent-solver-operational-qualification.json",
+        "schemas/agent-solver-operational-qualification-contract.schema.json",
+        "schemas/agent-solver-operational-qualification-report.schema.json",
+        "workers/rust/crates/installer/src/agent_solver_operational.rs",
+        "workers/rust/crates/installer/src/agent_solver_operational_validation.rs",
+        "workers/rust/crates/script-runner/src/agent_solver_operational_qualification.rs",
+        "releases/usability-evidence/2.13.8/agent-solver-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"journey\": \"installer-managed-packaged-agent-solver-recovery\"",
+        "\"execution_host_role\": \"remote-linux-qualification-host\"",
+        "\"deployment_owner\": \"kyuubiki-installer\"",
+        "\"execution_owner\": \"kyuubiki-agent-engine\"",
+        "\"phase\": \"initial-process\"",
+        "\"phase\": \"restarted-process\"",
+        "\"absolute_error\": 0.0",
+        "\"reason_code\": \"operator_task_digest_mismatch\"",
+        "\"work_root_removed\": true",
+        "\"residue_count\": 0"
       ]
     }
   ]

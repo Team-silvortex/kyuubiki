@@ -21,6 +21,7 @@ pub fn print_help() {
         "  seal-agent-update <path> <version> [platform]  Seal a single-agent update package\n",
         "  prepare-agent-update <binary> <package> <version> [platform]  Build and seal an agent package\n",
         "  qualify-agent-update <first-binary> <second-binary> <work-root> <first-version> <second-version> [out]  Exercise a changed-payload install, upgrade, execution, and rollback\n",
+        "  qualify-agent-solver-operational <agent-binary> <work-root> <version> [out]  Install a sealed Agent, execute/reject/recover/restart a real solver task, and clean the isolated store\n",
         "  operator-package-preflight <packages-root> [--out path] [--fail-on-rejected] [--fail-on-readiness-warnings]  Validate external operator packages as JSON\n",
         "  update-plan      Show the unified channel-based update target\n",
         "  update-preview   Show pre-apply checks and blockers for a channel update\n",

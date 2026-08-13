@@ -12,10 +12,11 @@ use kyuubiki_installer::{
     linux_desktop_dependency_plan, operator_package_preflight, parse_platform,
     prepare_agent_update_package, prepare_layout, prepare_staged_update, print_help,
     remote_deployment_roadmap, repair_installation, rollback_agent_update,
-    rollback_runtime_payload, run_agent_update_qualification, run_doctor, runtime_payload_status,
-    seal_agent_update_package, seal_runtime_payload, stage_release, unified_update_plan,
-    unified_update_preview, validate_env_file, write_agent_update_qualification_report,
-    write_operator_package_preflight_outcome,
+    rollback_runtime_payload, run_agent_solver_operational_qualification,
+    run_agent_update_qualification, run_doctor, runtime_payload_status, seal_agent_update_package,
+    seal_runtime_payload, stage_release, unified_update_plan, unified_update_preview,
+    validate_env_file, write_agent_solver_operational_qualification_report,
+    write_agent_update_qualification_report, write_operator_package_preflight_outcome,
 };
 
 fn main() {
@@ -130,6 +131,40 @@ fn main() {
                         write_agent_update_qualification_report(&report, &path)?;
                         Ok(format!(
                             "agent update qualification passed: {}",
+                            path.display()
+                        ))
+                    }
+                    None => {
+                        serde_json::to_string_pretty(&report).map_err(|error| error.to_string())
+                    }
+                }),
+            )
+        }
+        "qualify-agent-solver-operational" => {
+            let Some(agent_binary) = args.next() else {
+                eprintln!("missing agent binary path for qualify-agent-solver-operational");
+                std::process::exit(1);
+            };
+            let Some(work_root) = args.next() else {
+                eprintln!("missing work root for qualify-agent-solver-operational");
+                std::process::exit(1);
+            };
+            let Some(package_version) = args.next() else {
+                eprintln!("missing package version for qualify-agent-solver-operational");
+                std::process::exit(1);
+            };
+            let output = args.next().map(PathBuf::from);
+            exit_on_err(
+                run_agent_solver_operational_qualification(
+                    &PathBuf::from(agent_binary),
+                    &PathBuf::from(work_root),
+                    &package_version,
+                )
+                .and_then(|report| match output {
+                    Some(path) => {
+                        write_agent_solver_operational_qualification_report(&report, &path)?;
+                        Ok(format!(
+                            "agent solver operational qualification passed: {}",
                             path.display()
                         ))
                     }

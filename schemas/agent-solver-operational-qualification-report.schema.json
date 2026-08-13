@@ -1,0 +1,274 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/agent-solver-operational-qualification-report.schema.json",
+  "title": "Kyuubiki Installer-managed Agent Solver Operational Qualification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "status",
+    "journey",
+    "execution_host_role",
+    "platform",
+    "architecture",
+    "control_boundary",
+    "package",
+    "activation",
+    "installed_state",
+    "transport",
+    "solver_runs",
+    "cleanup",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.agent-solver-operational-qualification/v1"
+    },
+    "generated_at_unix_ms": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "const": "pass"
+    },
+    "journey": {
+      "const": "installer-managed-packaged-agent-solver-recovery"
+    },
+    "execution_host_role": {
+      "type": "string",
+      "pattern": "^(local|remote)-(macos|linux|windows)-qualification-host$"
+    },
+    "platform": {
+      "enum": ["macos", "linux", "windows"]
+    },
+    "architecture": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "control_boundary": {
+      "$ref": "#/$defs/controlBoundary"
+    },
+    "package": {
+      "$ref": "#/$defs/package"
+    },
+    "activation": {
+      "$ref": "#/$defs/activation"
+    },
+    "installed_state": {
+      "$ref": "#/$defs/installedState"
+    },
+    "transport": {
+      "$ref": "#/$defs/transport"
+    },
+    "solver_runs": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "allOf": [
+            { "$ref": "#/$defs/solverRun" },
+            {
+              "properties": {
+                "phase": { "const": "initial-process" }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/solverRun" },
+            {
+              "properties": {
+                "phase": { "const": "restarted-process" }
+              }
+            }
+          ]
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "cleanup": {
+      "$ref": "#/$defs/cleanup"
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 14,
+      "maxItems": 14,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/check"
+      },
+      "allOf": [
+        { "contains": { "properties": { "id": { "const": "package_sealed" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "package_digest_verified" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "installer_activation" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "active_binary_verified" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "first_solver_execution" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "first_tamper_rejection" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "first_recovery" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "process_restart" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "restarted_solver_execution" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "restarted_tamper_rejection" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "restarted_recovery" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "watchdog_quiescent" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "managed_store_isolated" } }, "required": ["id"] } },
+        { "contains": { "properties": { "id": { "const": "cleanup_complete" } }, "required": ["id"] } }
+      ]
+    }
+  },
+  "$defs": {
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "controlBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deployment_owner", "execution_owner", "capture_transport"],
+      "properties": {
+        "deployment_owner": { "const": "kyuubiki-installer" },
+        "execution_owner": { "const": "kyuubiki-agent-engine" },
+        "capture_transport": {
+          "enum": ["managed-local-session", "managed-remote-session"]
+        }
+      }
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "version",
+        "platform",
+        "entrypoint",
+        "entrypoint_sha256",
+        "entrypoint_size_bytes"
+      ],
+      "properties": {
+        "schema_version": { "const": "kyuubiki.agent-update-package/v1" },
+        "version": { "$ref": "#/$defs/version" },
+        "platform": { "enum": ["macos", "linux", "windows"] },
+        "entrypoint": {
+          "enum": ["bin/kyuubiki-agent", "bin/kyuubiki-agent.exe"]
+        },
+        "entrypoint_sha256": { "$ref": "#/$defs/digest" },
+        "entrypoint_size_bytes": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "generation",
+        "version",
+        "previous_version",
+        "relative_path",
+        "platform",
+        "entrypoint_sha256"
+      ],
+      "properties": {
+        "schema_version": { "const": "kyuubiki.agent-update-activation/v1" },
+        "generation": { "type": "integer", "minimum": 1 },
+        "version": { "$ref": "#/$defs/version" },
+        "previous_version": { "type": "null" },
+        "relative_path": {
+          "type": "string",
+          "pattern": "^versions/[A-Za-z0-9._-]+$"
+        },
+        "platform": { "enum": ["macos", "linux", "windows"] },
+        "entrypoint_sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "installedState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "active_version",
+        "installed_versions",
+        "active_entrypoint_sha256",
+        "package_relative_path",
+        "store_relative_path"
+      ],
+      "properties": {
+        "active_version": { "$ref": "#/$defs/version" },
+        "installed_versions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": { "$ref": "#/$defs/version" }
+        },
+        "active_entrypoint_sha256": { "$ref": "#/$defs/digest" },
+        "package_relative_path": { "const": "packages/agent" },
+        "store_relative_path": { "const": "managed-store" }
+      }
+    },
+    "transport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["protocol", "rpc_version", "bind_scope"],
+      "properties": {
+        "protocol": { "const": "tcp_framed_json" },
+        "rpc_version": { "const": 1 },
+        "bind_scope": { "const": "loopback" }
+      }
+    },
+    "solverRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "process_id", "qualification"],
+      "properties": {
+        "phase": { "enum": ["initial-process", "restarted-process"] },
+        "process_id": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+        "qualification": {
+          "$ref": "agent-solver-qualification.schema.json"
+        }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "work_root_removed", "residue_count"],
+      "properties": {
+        "scope": { "const": "qualification-work-root" },
+        "work_root_removed": { "const": true },
+        "residue_count": { "const": 0 }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ok"],
+      "properties": {
+        "id": {
+          "enum": [
+            "package_sealed",
+            "package_digest_verified",
+            "installer_activation",
+            "active_binary_verified",
+            "first_solver_execution",
+            "first_tamper_rejection",
+            "first_recovery",
+            "process_restart",
+            "restarted_solver_execution",
+            "restarted_tamper_rejection",
+            "restarted_recovery",
+            "watchdog_quiescent",
+            "managed_store_isolated",
+            "cleanup_complete"
+          ]
+        },
+        "ok": { "const": true }
+      }
+    }
+  }
+}
