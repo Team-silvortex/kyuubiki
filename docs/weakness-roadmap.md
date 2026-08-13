@@ -29,10 +29,10 @@ Current moxi baseline:
 - `blocking_gap_count`: `0`
 - `maturity_gap_count`: `0`
 - `thin_evidence_count`: `0`
-- `evidence_grade_gap_count`: `13`
-- required cells meeting their grade target: `37 / 50` (`74.0%`)
-- release-critical P0 cells meeting target: `26 / 36` (`72.2%`)
-- `daji 3.0.0` release state: `blocked` with `10` P0 coordinate gaps and one
+- `evidence_grade_gap_count`: `12`
+- required cells meeting their grade target: `38 / 50` (`76.0%`)
+- release-critical P0 cells meeting target: `27 / 36` (`75.0%`)
+- `daji 3.0.0` release state: `blocked` with `9` P0 coordinate gaps and one
   unclosed external usability release gate
 
 This means no required module/function coordinate is structurally missing. It
@@ -43,12 +43,21 @@ the `daji 3.0.0` P0/P1/P2 release profile. The former maturity points remain
 dimension-complete, but ordinary lane execution no longer masquerades as
 qualification, operational, or release evidence.
 
-The current first hardening coordinates are contract validation and Workbench
-validation, both moving from `verified` to `qualified`. They are followed by
-Orchestra/Workbench workflow composition, installed Headless SDK operation,
-provenance, and protocol/SDK runtime API verification. P1 benchmark evidence
-comes after those release blockers unless a newly retained result changes the
-generated ranking.
+The current first P0 hardening coordinate is Workbench validation, moving from
+`verified` to `qualified`. It is followed by Orchestra/Workbench workflow
+composition, installed Headless SDK operation, provenance, and protocol/SDK
+runtime API verification. The generated evidence-strength ranking also exposes
+three P1 benchmark coordinates with a two-grade gap; the release planning queue
+keeps the P0 blockers ahead of them.
+
+The former first coordinate, `contracts / validation`, now meets its
+`qualified` target. Its native qualification repeats 14 checks twice across
+seven contract families. All 28 rounds pass with stable output digests, covering
+eight acceptance paths and six explicit rejection boundaries: duplicate
+workflow values, TaskIR integrity tampering, material-chain round drift,
+operator-model schema and side-effect violations, and repository path
+traversal. The machine-validated report is retained under
+`releases/usability-evidence/2.13.9/contracts-validation-qualification.json`.
 
 The former first coordinate, `runtime-engine-solver / solver_execution`, now
 meets its `operational` target. The retained remote Linux journey builds the

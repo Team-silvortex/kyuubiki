@@ -13,7 +13,12 @@ Use it when you want the shortest answer to:
 `moxi 2.x` is the point where Kyuubiki treats its core contracts as product
 baseline rather than loose prototypes.
 
-The current development point in this line is `moxi 2.13.8`.
+The current development point in this line is `moxi 2.13.9`.
+
+At this checkpoint, the cross-operator contract layer has repeatable positive
+and fault-boundary qualification across workflow datasets, TaskIR, runtime API
+surfaces, central-store contracts, material exploration chains, operator model
+drafts, and repository path containment.
 
 The 2.x line optimizes for:
 

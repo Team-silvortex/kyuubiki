@@ -1,0 +1,85 @@
+{
+  "schema_version": "kyuubiki.headless-workflow/v1",
+  "exported_at": "1970-01-01T00:00:00.000Z",
+  "language": "en",
+  "workflow": {
+    "id": "template.material_study_envelope_catalog",
+    "steps": [
+      {
+        "action": "workflow_submit_catalog",
+        "payload": {
+          "input_artifacts": {
+            "material_rows": {
+              "rows": [
+                {
+                  "case_id": "cool_stiff",
+                  "summaries": {
+                    "structural": {
+                      "max_stress": 100.0
+                    },
+                    "thermal": {
+                      "max_temperature": 82.0
+                    }
+                  }
+                },
+                {
+                  "case_id": "warm_safe",
+                  "summaries": {
+                    "structural": {
+                      "max_stress": 120.0
+                    },
+                    "thermal": {
+                      "max_temperature": 90.0
+                    }
+                  }
+                },
+                {
+                  "case_id": "hot_light",
+                  "summaries": {
+                    "structural": {
+                      "max_stress": 110.0
+                    },
+                    "thermal": {
+                      "max_temperature": 140.0
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "workflow_id": "workflow.material-study-envelope-ranking-json"
+        }
+      },
+      {
+        "action": "job_wait",
+        "payload": {
+          "interval_ms": 1000,
+          "job_id": "{{steps.1.result.job_id}}",
+          "max_total_timeout_ms": 3600000,
+          "resume_policy": "server_deadline",
+          "timeout_ms": 60000
+        }
+      },
+      {
+        "action": "result_fetch",
+        "payload": {
+          "job_id": "{{steps.1.result.job_id}}"
+        }
+      }
+    ]
+  },
+  "template": {
+    "id": "material_study_envelope_catalog",
+    "title": "Material Envelope Catalog Job",
+    "description": "Submit the built-in material-study envelope workflow from the Orchestra workflow catalog.",
+    "runtime_style": "service_only",
+    "category": "materials",
+    "tags": [
+      "material",
+      "workflow",
+      "catalog",
+      "ranking",
+      "pareto"
+    ]
+  }
+}

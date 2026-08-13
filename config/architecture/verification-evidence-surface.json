@@ -10,6 +10,7 @@
       "./scripts/kyuubiki check-module-function-coverage-tensor",
       "./scripts/kyuubiki check-headless-workflow-qualification",
       "./scripts/kyuubiki check-protocol-validation-qualification",
+      "./scripts/kyuubiki check-contracts-validation-qualification",
       "./scripts/kyuubiki check-system-security-qualification",
       "./scripts/kyuubiki check-agent-solver-operational-qualification",
       "./scripts/kyuubiki build-regression-gate-report",
@@ -21,6 +22,7 @@
       "tmp/module-function-coverage-tensor.json",
       "tmp/headless-workflow-qualification-report.json",
       "tmp/protocol-validation-qualification-report.json",
+      "tmp/contracts-validation-qualification-report.json",
       "tmp/system-security-qualification-report.json",
       "tmp/agent-solver-operational-remote.json",
       "tmp/regression-gate-report.json",
@@ -91,6 +93,20 @@
       "kyuubiki.system-security-qualification-contract/v1",
       "kyuubiki.system-security-qualification-report/v1",
       "fail_closed"
+    ]
+  },
+  "validation": {
+    "evidence_sources": [
+      "config/architecture/contracts-validation-qualification.json",
+      "schemas/contracts-validation-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/contracts_validation_qualification.rs",
+      "releases/usability-evidence/2.13.9/contracts-validation-qualification.json"
+    ],
+    "required_surfaces": [
+      "kyuubiki.contracts-validation-qualification-contract/v1",
+      "kyuubiki.contracts-validation-qualification-report/v1",
+      "acceptance",
+      "rejection"
     ]
   },
   "deployment_update": {

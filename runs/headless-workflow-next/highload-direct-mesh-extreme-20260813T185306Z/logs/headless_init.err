@@ -1,0 +1,2 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.21s
+     Running `target/debug/kyuubiki-headless init --template direct_mesh_pipeline --out /Users/Shared/chroot/dev/kyuubiki/headless-loop/loop-input.json --json`

@@ -1,0 +1,79 @@
+{
+  "schema_version": "kyuubiki.headless-workflow/v1",
+  "exported_at": "1970-01-01T00:00:00.000Z",
+  "language": "en",
+  "workflow": {
+    "id": "template.direct_heat_triangle",
+    "steps": [
+      {
+        "action": "solve_heat_plane_triangle_2d",
+        "payload": {
+          "model": {
+            "elements": [
+              {
+                "conductivity": 45.0,
+                "id": "ht0",
+                "node_i": 0,
+                "node_j": 1,
+                "node_k": 2,
+                "thickness": 0.02
+              }
+            ],
+            "nodes": [
+              {
+                "fix_temperature": true,
+                "heat_load": 0.0,
+                "id": "h0",
+                "temperature": 100.0,
+                "x": 0.0,
+                "y": 0.0
+              },
+              {
+                "fix_temperature": true,
+                "heat_load": 0.0,
+                "id": "h1",
+                "temperature": 20.0,
+                "x": 1.0,
+                "y": 0.0
+              },
+              {
+                "fix_temperature": false,
+                "heat_load": 0.0,
+                "id": "h2",
+                "temperature": 0.0,
+                "x": 0.0,
+                "y": 1.0
+              }
+            ]
+          }
+        }
+      },
+      {
+        "action": "job_wait",
+        "payload": {
+          "interval_ms": 1000,
+          "job_id": "{{steps.1.result.job_id}}",
+          "timeout_ms": 60000
+        }
+      },
+      {
+        "action": "result_fetch",
+        "payload": {
+          "job_id": "{{steps.1.result.job_id}}"
+        }
+      }
+    ]
+  },
+  "template": {
+    "id": "direct_heat_triangle",
+    "title": "Direct Heat Triangle",
+    "description": "Submit a heat plane triangle solve directly and fetch the final result.",
+    "runtime_style": "service_only",
+    "category": "thermal",
+    "tags": [
+      "direct",
+      "heat",
+      "triangle"
+    ]
+  }
+}

@@ -10,6 +10,7 @@ kyuubiki-cli = { path = "../cli" }
 kyuubiki-engine = { path = "../engine" }
 kyuubiki-installer = { path = "../installer" }
 kyuubiki-kcore = { path = "../kcore" }
+kyuubiki-operator-sdk = { path = "../operator-sdk" }
 kyuubiki-project-automation = { path = "../project-automation" }
 kyuubiki-project-bundle = { path = "../project-bundle" }
 kyuubiki-protocol = { path = "../protocol" }

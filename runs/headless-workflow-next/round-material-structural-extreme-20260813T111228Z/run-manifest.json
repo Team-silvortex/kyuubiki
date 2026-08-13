@@ -1,0 +1,13 @@
+{
+  "run_id": "round-material-structural-extreme-20260813T111228Z",
+  "template": "material_structural_panel_screening",
+  "rounds": 8,
+  "start_voltage": 900,
+  "max_voltage": 12000,
+  "min_voltage": 800,
+  "executor": "service",
+  "material_report_alias": "structural-panel",
+  "api_base_url": "http://127.0.0.1:3000",
+  "source_script": "scripts/run_headless_workflow_regression.sh",
+  "timestamp_utc": "2026-08-13T11:12:28Z"
+}

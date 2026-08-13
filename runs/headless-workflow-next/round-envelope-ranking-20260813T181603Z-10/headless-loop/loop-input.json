@@ -1,0 +1,304 @@
+{
+  "schema_version": "kyuubiki.headless-workflow/v1",
+  "exported_at": "1970-01-01T00:00:00.000Z",
+  "language": "en",
+  "workflow": {
+    "id": "template.material_study_envelope_ranking",
+    "steps": [
+      {
+        "action": "workflow_submit_graph",
+        "payload": {
+          "graph": {
+            "dataset_contract": {
+              "id": "dataset.material_study_envelope/v1",
+              "schema_version": "kyuubiki.workflow-dataset/v1",
+              "values": [
+                {
+                  "data_class": "table",
+                  "element_type": "json_object",
+                  "encoding": "json",
+                  "id": "material_study",
+                  "schema_ref": {
+                    "schema": "kyuubiki.material.study.envelope.row",
+                    "version": "1"
+                  },
+                  "semantic_type": "artifact/result_summary",
+                  "shape": {
+                    "axes": [
+                      {
+                        "id": "candidate",
+                        "semantic": "material_candidate"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "version": "1.0.0"
+            },
+            "defaults": {},
+            "description": "Compose material study envelopes, rank candidates, and extract Pareto frontier.",
+            "edges": [
+              {
+                "artifact_type": "artifact/result_summary",
+                "dataset_value": "material_study",
+                "from": {
+                  "node": "material_rows",
+                  "port": "rows"
+                },
+                "id": "edge-rows-envelope",
+                "to": {
+                  "node": "compose_envelopes",
+                  "port": "rows"
+                }
+              },
+              {
+                "artifact_type": "artifact/result_summary",
+                "dataset_value": "material_study",
+                "from": {
+                  "node": "compose_envelopes",
+                  "port": "envelopes"
+                },
+                "id": "edge-envelope-rank",
+                "to": {
+                  "node": "rank_envelopes",
+                  "port": "envelopes"
+                }
+              },
+              {
+                "artifact_type": "artifact/result_summary",
+                "dataset_value": "material_study",
+                "from": {
+                  "node": "compose_envelopes",
+                  "port": "envelopes"
+                },
+                "id": "edge-envelope-pareto",
+                "to": {
+                  "node": "pareto_envelopes",
+                  "port": "envelopes"
+                }
+              },
+              {
+                "artifact_type": "artifact/result_summary",
+                "dataset_value": "material_study",
+                "from": {
+                  "node": "rank_envelopes",
+                  "port": "ranking"
+                },
+                "id": "edge-rank-output",
+                "to": {
+                  "node": "ranking_output",
+                  "port": "ranking"
+                }
+              },
+              {
+                "artifact_type": "artifact/result_summary",
+                "dataset_value": "material_study",
+                "from": {
+                  "node": "pareto_envelopes",
+                  "port": "pareto"
+                },
+                "id": "edge-pareto-output",
+                "to": {
+                  "node": "pareto_output",
+                  "port": "pareto"
+                }
+              }
+            ],
+            "entry_nodes": [
+              "material_rows"
+            ],
+            "id": "workflow.material-study-envelope",
+            "name": "Material study envelope ranking",
+            "nodes": [
+              {
+                "id": "material_rows",
+                "inputs": [],
+                "kind": "input",
+                "outputs": [
+                  {
+                    "artifact_type": "artifact/result_summary",
+                    "dataset_value": "material_study",
+                    "id": "rows"
+                  }
+                ]
+              },
+              {
+                "config": {},
+                "id": "compose_envelopes",
+                "inputs": [
+                  {
+                    "artifact_type": "artifact/result_summary",
+                    "dataset_value": "material_study",
+                    "id": "rows"
+                  }
+                ],
+                "kind": "transform",
+                "operator_id": "transform.compose_material_study_envelope",
+                "outputs": [
+                  {
+                    "artifact_type": "artifact/result_summary",
+                    "dataset_value": "material_study",
+                    "id": "envelopes"
+                  }
+                ]
+              },
+              {
+                "config": {
+                  "include_best_summary": false,
+                  "margin_prefix": "material_envelope"
+                },
+                "id": "rank_envelopes",
+                "inputs": [
+                  {
+                    "artifact_type": "artifact/result_summary",
+                    "dataset_value": "material_study",
+                    "id": "envelopes"
+                  }
+                ],
+                "kind": "transform",
+                "operator_id": "transform.rank_material_candidates",
+                "outputs": [
+                  {
+                    "artifact_type": "artifact/result_summary",
+                    "dataset_value": "material_study",
+                    "id": "ranking"
+                  }
+                ]
+              },
+              {
+                "config": {
+                  "feasible_field": "material_envelope_status",
+                  "objectives": [
+                    {
+                      "field": "material_envelope_score",
+                      "goal": "min"
+                    },
+                    {
+                      "field": "material_envelope_safety_factor",
+                      "goal": "max"
+                    }
+                  ]
+                },
+                "id": "pareto_envelopes",
+                "inputs": [
+                  {
+                    "artifact_type": "artifact/result_summary",
+                    "dataset_value": "material_study",
+                    "id": "envelopes"
+                  }
+                ],
+                "kind": "transform",
+                "operator_id": "transform.extract_material_pareto_frontier",
+                "outputs": [
+                  {
+                    "artifact_type": "artifact/result_summary",
+                    "dataset_value": "material_study",
+                    "id": "pareto"
+                  }
+                ]
+              },
+              {
+                "id": "ranking_output",
+                "inputs": [
+                  {
+                    "artifact_type": "artifact/result_summary",
+                    "dataset_value": "material_study",
+                    "id": "ranking"
+                  }
+                ],
+                "kind": "output",
+                "outputs": []
+              },
+              {
+                "id": "pareto_output",
+                "inputs": [
+                  {
+                    "artifact_type": "artifact/result_summary",
+                    "dataset_value": "material_study",
+                    "id": "pareto"
+                  }
+                ],
+                "kind": "output",
+                "outputs": []
+              }
+            ],
+            "output_nodes": [
+              "ranking_output",
+              "pareto_output"
+            ],
+            "schema_version": "kyuubiki.workflow-graph/v1",
+            "version": "1.0.0"
+          },
+          "input_artifacts": {
+            "material_rows": {
+              "rows": [
+                {
+                  "case_id": "cool_stiff",
+                  "summaries": {
+                    "structural": {
+                      "max_stress": 100.0
+                    },
+                    "thermal": {
+                      "max_temperature": 82.0
+                    }
+                  }
+                },
+                {
+                  "case_id": "warm_safe",
+                  "summaries": {
+                    "structural": {
+                      "max_stress": 120.0
+                    },
+                    "thermal": {
+                      "max_temperature": 90.0
+                    }
+                  }
+                },
+                {
+                  "case_id": "hot_light",
+                  "summaries": {
+                    "structural": {
+                      "max_stress": 110.0
+                    },
+                    "thermal": {
+                      "max_temperature": 140.0
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "action": "job_wait",
+        "payload": {
+          "interval_ms": 1000,
+          "job_id": "{{steps.1.result.job_id}}",
+          "max_total_timeout_ms": 3600000,
+          "resume_policy": "server_deadline",
+          "timeout_ms": 60000
+        }
+      },
+      {
+        "action": "result_fetch",
+        "payload": {
+          "job_id": "{{steps.1.result.job_id}}"
+        }
+      }
+    ]
+  },
+  "template": {
+    "id": "material_study_envelope_ranking",
+    "title": "Material Envelope Ranking",
+    "description": "Submit a material-study envelope workflow graph that ranks candidates and extracts a Pareto frontier.",
+    "runtime_style": "service_only",
+    "category": "materials",
+    "tags": [
+      "material",
+      "workflow",
+      "ranking",
+      "pareto"
+    ]
+  }
+}

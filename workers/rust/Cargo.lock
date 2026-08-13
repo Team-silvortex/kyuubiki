@@ -422,6 +422,7 @@ dependencies = [
  "kyuubiki-engine",
  "kyuubiki-installer",
  "kyuubiki-kcore",
+ "kyuubiki-operator-sdk",
  "kyuubiki-project-automation",
  "kyuubiki-project-bundle",
  "kyuubiki-protocol",

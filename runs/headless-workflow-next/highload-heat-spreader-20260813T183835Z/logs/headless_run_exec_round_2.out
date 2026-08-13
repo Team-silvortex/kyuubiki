@@ -1,0 +1,1325 @@
+{
+  "schema_version": "kyuubiki.headless-execution-run/v1",
+  "workflow_id": "template.material_heat_spreader_screening",
+  "mode": "execute:service",
+  "status": "ok",
+  "executed_step_count": 9,
+  "warning_count": 0,
+  "blocked_by_confirmation": null,
+  "validation": {
+    "ok": true,
+    "issue_count": 0,
+    "issues": [],
+    "warning_count": 0,
+    "warnings": [],
+    "summary": {
+      "schema_version": "kyuubiki.headless-execution-batch/v1",
+      "workflow_id": "template.material_heat_spreader_screening",
+      "template_id": "material_heat_spreader_screening",
+      "exported_at": "1970-01-01T00:00:00.000Z",
+      "language": "en",
+      "step_count": 9,
+      "warning_count": 0,
+      "actions": [
+        "solve_heat_plane_quad_2d",
+        "job_wait",
+        "result_fetch",
+        "solve_heat_plane_quad_2d",
+        "job_wait",
+        "result_fetch",
+        "solve_heat_plane_quad_2d",
+        "job_wait",
+        "result_fetch"
+      ]
+    },
+    "policy": {
+      "required_engines": [
+        "service"
+      ],
+      "engine_counts": {
+        "browser": 0,
+        "service": 9
+      },
+      "risk_counts": {
+        "normal": 9,
+        "destructive": 0,
+        "sensitive": 0
+      },
+      "recommended_runtime": "service_only",
+      "needs_desktop_browser": false,
+      "safe_for_service_only": true,
+      "notes": []
+    }
+  },
+  "execution_summary": {
+    "schema_version": "kyuubiki.headless-execution-summary/v1",
+    "job_count": 3,
+    "job_ids": [
+      "ae584ca3a1c3770a",
+      "a06c1fc3c19e5417",
+      "2e4ebfc397710584"
+    ],
+    "jobs": [
+      {
+        "job_id": "ae584ca3a1c3770a",
+        "status": "completed",
+        "worker_id": "rust-agent-rpc@127.0.0.1:5002",
+        "phase": "execution",
+        "created_at": "2026-08-13T10:37:35.326102Z",
+        "execution_started_at": "2026-08-13T10:37:35.370317Z",
+        "updated_at": "2026-08-13T10:37:36.582606Z",
+        "queue_wait_ms": 44,
+        "execution_elapsed_ms": 1212,
+        "total_elapsed_ms": 1256,
+        "effective_timeout_ms": 120000,
+        "effective_deadline": "2026-08-13T10:39:35.370317Z"
+      },
+      {
+        "job_id": "a06c1fc3c19e5417",
+        "status": "completed",
+        "worker_id": "rust-agent-rpc@127.0.0.1:5001",
+        "phase": "execution",
+        "created_at": "2026-08-13T10:37:37.448710Z",
+        "execution_started_at": "2026-08-13T10:37:37.453509Z",
+        "updated_at": "2026-08-13T10:37:38.786284Z",
+        "queue_wait_ms": 4,
+        "execution_elapsed_ms": 1332,
+        "total_elapsed_ms": 1337,
+        "effective_timeout_ms": 120000,
+        "effective_deadline": "2026-08-13T10:39:37.453509Z"
+      },
+      {
+        "job_id": "2e4ebfc397710584",
+        "status": "completed",
+        "worker_id": "rust-agent-rpc@127.0.0.1:5002",
+        "phase": "execution",
+        "created_at": "2026-08-13T10:37:39.537906Z",
+        "execution_started_at": "2026-08-13T10:37:39.544642Z",
+        "updated_at": "2026-08-13T10:37:40.595778Z",
+        "queue_wait_ms": 6,
+        "execution_elapsed_ms": 1051,
+        "total_elapsed_ms": 1057,
+        "effective_timeout_ms": 120000,
+        "effective_deadline": "2026-08-13T10:39:39.544642Z"
+      }
+    ],
+    "failure": null
+  },
+  "steps": [
+    {
+      "index": 1,
+      "action": "solve_heat_plane_quad_2d",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "conductivity": 167.0,
+              "id": "spread_aluminum_6061",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "thickness": 0.0015
+            }
+          ],
+          "nodes": [
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "hot_left_bottom",
+              "temperature": 95.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 5.0,
+              "id": "mid_bottom",
+              "temperature": 0.0,
+              "x": 0.05,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "cold_right_top",
+              "temperature": 35.0,
+              "x": 0.05,
+              "y": 0.03
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "cold_left_top",
+              "temperature": 35.0,
+              "x": 0.0,
+              "y": 0.03
+            }
+          ]
+        },
+        "research": {
+          "candidate_id": "aluminum_6061",
+          "candidate_label": "Aluminum 6061",
+          "density_kg_m3": 2700.0,
+          "family": "metal",
+          "material_card_id": "kyuubiki.material_card.aluminum_6061.v1",
+          "note": "balanced lightweight baseline",
+          "objective": "minimize peak temperature and mass pressure for a thin heat spreader patch",
+          "parameter_scope": "room-temperature scalar conductivity and density screening values",
+          "study": "material.heat_spreader_screening.v1",
+          "thermal_conductivity_w_mk": 167.0,
+          "unit_system": "SI"
+        }
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:37:35.326102Z",
+          "execution_started_at": null,
+          "execution_timeout_ms": 120000,
+          "has_result": false,
+          "iteration": null,
+          "job_id": "ae584ca3a1c3770a",
+          "message": null,
+          "model_version_id": null,
+          "progress": 0.0,
+          "project_id": "67dfed26b435791b",
+          "queue_timeout_ms": 1800000,
+          "residual": null,
+          "simulation_case_id": "ec77834db80024ff",
+          "status": "queued",
+          "status_detail": {
+            "active": true,
+            "failure_class": null,
+            "lifecycle": "active",
+            "recoverable": false,
+            "terminal": false,
+            "timing": {
+              "effective_deadline": "2026-08-13T11:07:35.326102Z",
+              "effective_timeout_ms": 1800000,
+              "execution_elapsed_ms": null,
+              "execution_started_at": null,
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:07:35.326102Z",
+              "phase": "queue",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 0,
+              "total_elapsed_ms": 0
+            }
+          },
+          "updated_at": "2026-08-13T10:37:35.326102Z",
+          "worker_id": null
+        },
+        "job_id": "ae584ca3a1c3770a",
+        "progress": 0.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-13T10:37:35.326102Z",
+            "execution_started_at": null,
+            "execution_timeout_ms": 120000,
+            "has_result": false,
+            "iteration": null,
+            "job_id": "ae584ca3a1c3770a",
+            "message": null,
+            "model_version_id": null,
+            "progress": 0.0,
+            "project_id": "67dfed26b435791b",
+            "queue_timeout_ms": 1800000,
+            "residual": null,
+            "simulation_case_id": "ec77834db80024ff",
+            "status": "queued",
+            "status_detail": {
+              "active": true,
+              "failure_class": null,
+              "lifecycle": "active",
+              "recoverable": false,
+              "terminal": false,
+              "timing": {
+                "effective_deadline": "2026-08-13T11:07:35.326102Z",
+                "effective_timeout_ms": 1800000,
+                "execution_elapsed_ms": null,
+                "execution_started_at": null,
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-13T11:07:35.326102Z",
+                "phase": "queue",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 0,
+                "total_elapsed_ms": 0
+              }
+            },
+            "updated_at": "2026-08-13T10:37:35.326102Z",
+            "worker_id": null
+          }
+        },
+        "status": "queued"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 2,
+      "action": "job_wait",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "ae584ca3a1c3770a",
+        "max_total_timeout_ms": 3600000,
+        "resume_policy": "server_deadline",
+        "timeout_ms": 60000
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:37:35.326102Z",
+          "execution_started_at": "2026-08-13T10:37:35.370317Z",
+          "execution_timeout_ms": 120000,
+          "iteration": 4,
+          "job_id": "ae584ca3a1c3770a",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "67dfed26b435791b",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "ec77834db80024ff",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-13T10:39:35.370317Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1212,
+              "execution_started_at": "2026-08-13T10:37:35.370317Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:07:35.326102Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 44,
+              "total_elapsed_ms": 1256
+            }
+          },
+          "updated_at": "2026-08-13T10:37:36.582606Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+        },
+        "job_id": "ae584ca3a1c3770a",
+        "progress": 1.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-13T10:37:35.326102Z",
+            "execution_started_at": "2026-08-13T10:37:35.370317Z",
+            "execution_timeout_ms": 120000,
+            "iteration": 4,
+            "job_id": "ae584ca3a1c3770a",
+            "message": "collecting nodal and elemental responses",
+            "model_version_id": null,
+            "progress": 1.0,
+            "project_id": "67dfed26b435791b",
+            "queue_timeout_ms": 1800000,
+            "residual": 0.2,
+            "simulation_case_id": "ec77834db80024ff",
+            "status": "completed",
+            "status_detail": {
+              "active": false,
+              "failure_class": null,
+              "lifecycle": "terminal",
+              "recoverable": false,
+              "terminal": true,
+              "timing": {
+                "effective_deadline": "2026-08-13T10:39:35.370317Z",
+                "effective_timeout_ms": 120000,
+                "execution_elapsed_ms": 1212,
+                "execution_started_at": "2026-08-13T10:37:35.370317Z",
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-13T11:07:35.326102Z",
+                "phase": "execution",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 44,
+                "total_elapsed_ms": 1256
+              }
+            },
+            "updated_at": "2026-08-13T10:37:36.582606Z",
+            "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+          }
+        },
+        "result": null,
+        "status": "completed",
+        "wait": {
+          "elapsed_ms": 2073,
+          "policy": "server_deadline",
+          "poll_attempts": 3,
+          "resume_count": 0
+        }
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 3,
+      "action": "result_fetch",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "job_id": "ae584ca3a1c3770a"
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:37:35.326102Z",
+          "execution_started_at": "2026-08-13T10:37:35.370317Z",
+          "execution_timeout_ms": 120000,
+          "has_result": true,
+          "iteration": 4,
+          "job_id": "ae584ca3a1c3770a",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "67dfed26b435791b",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "ec77834db80024ff",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-13T10:39:35.370317Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1212,
+              "execution_started_at": "2026-08-13T10:37:35.370317Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:07:35.326102Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 44,
+              "total_elapsed_ms": 1256
+            }
+          },
+          "updated_at": "2026-08-13T10:37:36.582606Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+        },
+        "job_id": "ae584ca3a1c3770a",
+        "result": {
+          "elements": [
+            {
+              "area": 0.0015,
+              "average_temperature": 58.373547023599855,
+              "heat_flow_rate": 0.5939176218501332,
+              "heat_flux_magnitude": 263963.38748894806,
+              "heat_flux_x": 44264.70588235295,
+              "heat_flux_y": 260225.49019607843,
+              "id": "spread_aluminum_6061",
+              "index": 0,
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "temperature_gradient_x": -265.0581190560057,
+              "temperature_gradient_y": -1558.2364682399907
+            }
+          ],
+          "input": {
+            "elements": [
+              {
+                "conductivity": 167.0,
+                "id": "spread_aluminum_6061",
+                "node_i": 0,
+                "node_j": 1,
+                "node_k": 2,
+                "node_l": 3,
+                "thickness": 0.0015
+              }
+            ],
+            "nodes": [
+              {
+                "fix_temperature": true,
+                "heat_load": 0.0,
+                "id": "hot_left_bottom",
+                "temperature": 95.0,
+                "x": 0.0,
+                "y": 0.0
+              },
+              {
+                "fix_temperature": false,
+                "heat_load": 5.0,
+                "id": "mid_bottom",
+                "temperature": 0.0,
+                "x": 0.05,
+                "y": 0.0
+              },
+              {
+                "fix_temperature": true,
+                "heat_load": 0.0,
+                "id": "cold_right_top",
+                "temperature": 35.0,
+                "x": 0.05,
+                "y": 0.03
+              },
+              {
+                "fix_temperature": true,
+                "heat_load": 0.0,
+                "id": "cold_left_top",
+                "temperature": 35.0,
+                "x": 0.0,
+                "y": 0.03
+              }
+            ]
+          },
+          "max_heat_flux": 263963.38748894806,
+          "max_temperature": 95.0,
+          "nodes": [
+            {
+              "heat_load": 0.0,
+              "id": "hot_left_bottom",
+              "index": 0,
+              "temperature": 95.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "heat_load": 5.0,
+              "id": "mid_bottom",
+              "index": 1,
+              "temperature": 68.49418809439943,
+              "x": 0.05,
+              "y": 0.0
+            },
+            {
+              "heat_load": 0.0,
+              "id": "cold_right_top",
+              "index": 2,
+              "temperature": 35.0,
+              "x": 0.05,
+              "y": 0.03
+            },
+            {
+              "heat_load": 0.0,
+              "id": "cold_left_top",
+              "index": 3,
+              "temperature": 35.0,
+              "x": 0.0,
+              "y": 0.03
+            }
+          ],
+          "total_abs_heat_flow_rate": 0.5939176218501332
+        },
+        "status": "completed"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 4,
+      "action": "solve_heat_plane_quad_2d",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "conductivity": 385.0,
+              "id": "spread_copper_c110",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "thickness": 0.0015
+            }
+          ],
+          "nodes": [
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "hot_left_bottom",
+              "temperature": 95.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 5.0,
+              "id": "mid_bottom",
+              "temperature": 0.0,
+              "x": 0.05,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "cold_right_top",
+              "temperature": 35.0,
+              "x": 0.05,
+              "y": 0.03
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "cold_left_top",
+              "temperature": 35.0,
+              "x": 0.0,
+              "y": 0.03
+            }
+          ]
+        },
+        "research": {
+          "candidate_id": "copper_c110",
+          "candidate_label": "Copper C110",
+          "density_kg_m3": 8960.0,
+          "family": "metal",
+          "material_card_id": "kyuubiki.material_card.copper_c110.v1",
+          "note": "high-conductivity heavy baseline",
+          "objective": "minimize peak temperature and mass pressure for a thin heat spreader patch",
+          "parameter_scope": "room-temperature scalar conductivity and density screening values",
+          "study": "material.heat_spreader_screening.v1",
+          "thermal_conductivity_w_mk": 385.0,
+          "unit_system": "SI"
+        }
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:37:37.448710Z",
+          "execution_started_at": null,
+          "execution_timeout_ms": 120000,
+          "has_result": false,
+          "iteration": null,
+          "job_id": "a06c1fc3c19e5417",
+          "message": null,
+          "model_version_id": null,
+          "progress": 0.0,
+          "project_id": "67f1d818a647e109",
+          "queue_timeout_ms": 1800000,
+          "residual": null,
+          "simulation_case_id": "d1da718d21be7d79",
+          "status": "queued",
+          "status_detail": {
+            "active": true,
+            "failure_class": null,
+            "lifecycle": "active",
+            "recoverable": false,
+            "terminal": false,
+            "timing": {
+              "effective_deadline": "2026-08-13T11:07:37.448710Z",
+              "effective_timeout_ms": 1800000,
+              "execution_elapsed_ms": null,
+              "execution_started_at": null,
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:07:37.448710Z",
+              "phase": "queue",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 0,
+              "total_elapsed_ms": 0
+            }
+          },
+          "updated_at": "2026-08-13T10:37:37.448710Z",
+          "worker_id": null
+        },
+        "job_id": "a06c1fc3c19e5417",
+        "progress": 0.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-13T10:37:37.448710Z",
+            "execution_started_at": null,
+            "execution_timeout_ms": 120000,
+            "has_result": false,
+            "iteration": null,
+            "job_id": "a06c1fc3c19e5417",
+            "message": null,
+            "model_version_id": null,
+            "progress": 0.0,
+            "project_id": "67f1d818a647e109",
+            "queue_timeout_ms": 1800000,
+            "residual": null,
+            "simulation_case_id": "d1da718d21be7d79",
+            "status": "queued",
+            "status_detail": {
+              "active": true,
+              "failure_class": null,
+              "lifecycle": "active",
+              "recoverable": false,
+              "terminal": false,
+              "timing": {
+                "effective_deadline": "2026-08-13T11:07:37.448710Z",
+                "effective_timeout_ms": 1800000,
+                "execution_elapsed_ms": null,
+                "execution_started_at": null,
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-13T11:07:37.448710Z",
+                "phase": "queue",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 0,
+                "total_elapsed_ms": 0
+              }
+            },
+            "updated_at": "2026-08-13T10:37:37.448710Z",
+            "worker_id": null
+          }
+        },
+        "status": "queued"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 5,
+      "action": "job_wait",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "a06c1fc3c19e5417",
+        "max_total_timeout_ms": 3600000,
+        "resume_policy": "server_deadline",
+        "timeout_ms": 60000
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:37:37.448710Z",
+          "execution_started_at": "2026-08-13T10:37:37.453509Z",
+          "execution_timeout_ms": 120000,
+          "iteration": 4,
+          "job_id": "a06c1fc3c19e5417",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "67f1d818a647e109",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "d1da718d21be7d79",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-13T10:39:37.453509Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1332,
+              "execution_started_at": "2026-08-13T10:37:37.453509Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:07:37.448710Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 4,
+              "total_elapsed_ms": 1337
+            }
+          },
+          "updated_at": "2026-08-13T10:37:38.786284Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5001"
+        },
+        "job_id": "a06c1fc3c19e5417",
+        "progress": 1.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-13T10:37:37.448710Z",
+            "execution_started_at": "2026-08-13T10:37:37.453509Z",
+            "execution_timeout_ms": 120000,
+            "iteration": 4,
+            "job_id": "a06c1fc3c19e5417",
+            "message": "collecting nodal and elemental responses",
+            "model_version_id": null,
+            "progress": 1.0,
+            "project_id": "67f1d818a647e109",
+            "queue_timeout_ms": 1800000,
+            "residual": 0.2,
+            "simulation_case_id": "d1da718d21be7d79",
+            "status": "completed",
+            "status_detail": {
+              "active": false,
+              "failure_class": null,
+              "lifecycle": "terminal",
+              "recoverable": false,
+              "terminal": true,
+              "timing": {
+                "effective_deadline": "2026-08-13T10:39:37.453509Z",
+                "effective_timeout_ms": 120000,
+                "execution_elapsed_ms": 1332,
+                "execution_started_at": "2026-08-13T10:37:37.453509Z",
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-13T11:07:37.448710Z",
+                "phase": "execution",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 4,
+                "total_elapsed_ms": 1337
+              }
+            },
+            "updated_at": "2026-08-13T10:37:38.786284Z",
+            "worker_id": "rust-agent-rpc@127.0.0.1:5001"
+          }
+        },
+        "result": null,
+        "status": "completed",
+        "wait": {
+          "elapsed_ms": 2075,
+          "policy": "server_deadline",
+          "poll_attempts": 3,
+          "resume_count": 0
+        }
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 6,
+      "action": "result_fetch",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "job_id": "a06c1fc3c19e5417"
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:37:37.448710Z",
+          "execution_started_at": "2026-08-13T10:37:37.453509Z",
+          "execution_timeout_ms": 120000,
+          "has_result": true,
+          "iteration": 4,
+          "job_id": "a06c1fc3c19e5417",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "67f1d818a647e109",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "d1da718d21be7d79",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-13T10:39:37.453509Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1332,
+              "execution_started_at": "2026-08-13T10:37:37.453509Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:07:37.448710Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 4,
+              "total_elapsed_ms": 1337
+            }
+          },
+          "updated_at": "2026-08-13T10:37:38.786284Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5001"
+        },
+        "job_id": "a06c1fc3c19e5417",
+        "result": {
+          "elements": [
+            {
+              "area": 0.0015,
+              "average_temperature": 55.88044308632544,
+              "heat_flow_rate": 1.246561244248258,
+              "heat_flux_magnitude": 554027.2196658925,
+              "heat_flux_x": 140441.17647058822,
+              "heat_flux_y": 535931.3725490198,
+              "id": "spread_copper_c110",
+              "index": 0,
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "temperature_gradient_x": -364.7822765469824,
+              "temperature_gradient_y": -1392.029539088363
+            }
+          ],
+          "input": {
+            "elements": [
+              {
+                "conductivity": 385.0,
+                "id": "spread_copper_c110",
+                "node_i": 0,
+                "node_j": 1,
+                "node_k": 2,
+                "node_l": 3,
+                "thickness": 0.0015
+              }
+            ],
+            "nodes": [
+              {
+                "fix_temperature": true,
+                "heat_load": 0.0,
+                "id": "hot_left_bottom",
+                "temperature": 95.0,
+                "x": 0.0,
+                "y": 0.0
+              },
+              {
+                "fix_temperature": false,
+                "heat_load": 5.0,
+                "id": "mid_bottom",
+                "temperature": 0.0,
+                "x": 0.05,
+                "y": 0.0
+              },
+              {
+                "fix_temperature": true,
+                "heat_load": 0.0,
+                "id": "cold_right_top",
+                "temperature": 35.0,
+                "x": 0.05,
+                "y": 0.03
+              },
+              {
+                "fix_temperature": true,
+                "heat_load": 0.0,
+                "id": "cold_left_top",
+                "temperature": 35.0,
+                "x": 0.0,
+                "y": 0.03
+              }
+            ]
+          },
+          "max_heat_flux": 554027.2196658925,
+          "max_temperature": 95.0,
+          "nodes": [
+            {
+              "heat_load": 0.0,
+              "id": "hot_left_bottom",
+              "index": 0,
+              "temperature": 95.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "heat_load": 5.0,
+              "id": "mid_bottom",
+              "index": 1,
+              "temperature": 58.52177234530176,
+              "x": 0.05,
+              "y": 0.0
+            },
+            {
+              "heat_load": 0.0,
+              "id": "cold_right_top",
+              "index": 2,
+              "temperature": 35.0,
+              "x": 0.05,
+              "y": 0.03
+            },
+            {
+              "heat_load": 0.0,
+              "id": "cold_left_top",
+              "index": 3,
+              "temperature": 35.0,
+              "x": 0.0,
+              "y": 0.03
+            }
+          ],
+          "total_abs_heat_flow_rate": 1.246561244248258
+        },
+        "status": "completed"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 7,
+      "action": "solve_heat_plane_quad_2d",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "conductivity": 1500.0,
+              "id": "spread_pyrolytic_graphite_in_plane",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "thickness": 0.0015
+            }
+          ],
+          "nodes": [
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "hot_left_bottom",
+              "temperature": 95.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 5.0,
+              "id": "mid_bottom",
+              "temperature": 0.0,
+              "x": 0.05,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "cold_right_top",
+              "temperature": 35.0,
+              "x": 0.05,
+              "y": 0.03
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "cold_left_top",
+              "temperature": 35.0,
+              "x": 0.0,
+              "y": 0.03
+            }
+          ]
+        },
+        "research": {
+          "candidate_id": "pyrolytic_graphite_in_plane",
+          "candidate_label": "Pyrolytic graphite, in-plane",
+          "density_kg_m3": 2200.0,
+          "family": "carbon",
+          "material_card_id": "kyuubiki.material_card.pyrolytic_graphite_in_plane.v1",
+          "note": "anisotropic high-spreading candidate",
+          "objective": "minimize peak temperature and mass pressure for a thin heat spreader patch",
+          "parameter_scope": "room-temperature scalar conductivity and density screening values",
+          "study": "material.heat_spreader_screening.v1",
+          "thermal_conductivity_w_mk": 1500.0,
+          "unit_system": "SI"
+        }
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:37:39.537906Z",
+          "execution_started_at": null,
+          "execution_timeout_ms": 120000,
+          "has_result": false,
+          "iteration": null,
+          "job_id": "2e4ebfc397710584",
+          "message": null,
+          "model_version_id": null,
+          "progress": 0.0,
+          "project_id": "d7975dd48cce2cb9",
+          "queue_timeout_ms": 1800000,
+          "residual": null,
+          "simulation_case_id": "e0a9b2d93fdf3cea",
+          "status": "queued",
+          "status_detail": {
+            "active": true,
+            "failure_class": null,
+            "lifecycle": "active",
+            "recoverable": false,
+            "terminal": false,
+            "timing": {
+              "effective_deadline": "2026-08-13T11:07:39.537906Z",
+              "effective_timeout_ms": 1800000,
+              "execution_elapsed_ms": null,
+              "execution_started_at": null,
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:07:39.537906Z",
+              "phase": "queue",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 0,
+              "total_elapsed_ms": 0
+            }
+          },
+          "updated_at": "2026-08-13T10:37:39.537906Z",
+          "worker_id": null
+        },
+        "job_id": "2e4ebfc397710584",
+        "progress": 0.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-13T10:37:39.537906Z",
+            "execution_started_at": null,
+            "execution_timeout_ms": 120000,
+            "has_result": false,
+            "iteration": null,
+            "job_id": "2e4ebfc397710584",
+            "message": null,
+            "model_version_id": null,
+            "progress": 0.0,
+            "project_id": "d7975dd48cce2cb9",
+            "queue_timeout_ms": 1800000,
+            "residual": null,
+            "simulation_case_id": "e0a9b2d93fdf3cea",
+            "status": "queued",
+            "status_detail": {
+              "active": true,
+              "failure_class": null,
+              "lifecycle": "active",
+              "recoverable": false,
+              "terminal": false,
+              "timing": {
+                "effective_deadline": "2026-08-13T11:07:39.537906Z",
+                "effective_timeout_ms": 1800000,
+                "execution_elapsed_ms": null,
+                "execution_started_at": null,
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-13T11:07:39.537906Z",
+                "phase": "queue",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 0,
+                "total_elapsed_ms": 0
+              }
+            },
+            "updated_at": "2026-08-13T10:37:39.537906Z",
+            "worker_id": null
+          }
+        },
+        "status": "queued"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 8,
+      "action": "job_wait",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "2e4ebfc397710584",
+        "max_total_timeout_ms": 3600000,
+        "resume_policy": "server_deadline",
+        "timeout_ms": 60000
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:37:39.537906Z",
+          "execution_started_at": "2026-08-13T10:37:39.544642Z",
+          "execution_timeout_ms": 120000,
+          "iteration": 4,
+          "job_id": "2e4ebfc397710584",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "d7975dd48cce2cb9",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "e0a9b2d93fdf3cea",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-13T10:39:39.544642Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1051,
+              "execution_started_at": "2026-08-13T10:37:39.544642Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:07:39.537906Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 6,
+              "total_elapsed_ms": 1057
+            }
+          },
+          "updated_at": "2026-08-13T10:37:40.595778Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+        },
+        "job_id": "2e4ebfc397710584",
+        "progress": 1.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-13T10:37:39.537906Z",
+            "execution_started_at": "2026-08-13T10:37:39.544642Z",
+            "execution_timeout_ms": 120000,
+            "iteration": 4,
+            "job_id": "2e4ebfc397710584",
+            "message": "collecting nodal and elemental responses",
+            "model_version_id": null,
+            "progress": 1.0,
+            "project_id": "d7975dd48cce2cb9",
+            "queue_timeout_ms": 1800000,
+            "residual": 0.2,
+            "simulation_case_id": "e0a9b2d93fdf3cea",
+            "status": "completed",
+            "status_detail": {
+              "active": false,
+              "failure_class": null,
+              "lifecycle": "terminal",
+              "recoverable": false,
+              "terminal": true,
+              "timing": {
+                "effective_deadline": "2026-08-13T10:39:39.544642Z",
+                "effective_timeout_ms": 120000,
+                "execution_elapsed_ms": 1051,
+                "execution_started_at": "2026-08-13T10:37:39.544642Z",
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-13T11:07:39.537906Z",
+                "phase": "execution",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 6,
+                "total_elapsed_ms": 1057
+              }
+            },
+            "updated_at": "2026-08-13T10:37:40.595778Z",
+            "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+          }
+        },
+        "result": null,
+        "status": "completed",
+        "wait": {
+          "elapsed_ms": 2040,
+          "policy": "server_deadline",
+          "poll_attempts": 3,
+          "resume_count": 0
+        }
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 9,
+      "action": "result_fetch",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "job_id": "2e4ebfc397710584"
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:37:39.537906Z",
+          "execution_started_at": "2026-08-13T10:37:39.544642Z",
+          "execution_timeout_ms": 120000,
+          "has_result": true,
+          "iteration": 4,
+          "job_id": "2e4ebfc397710584",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "d7975dd48cce2cb9",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "e0a9b2d93fdf3cea",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-13T10:39:39.544642Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1051,
+              "execution_started_at": "2026-08-13T10:37:39.544642Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:07:39.537906Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 6,
+              "total_elapsed_ms": 1057
+            }
+          },
+          "updated_at": "2026-08-13T10:37:40.595778Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+        },
+        "job_id": "2e4ebfc397710584",
+        "result": {
+          "elements": [
+            {
+              "area": 0.0015,
+              "average_temperature": 54.46078431372549,
+              "heat_flow_rate": 4.604036352516575,
+              "heat_flux_magnitude": 2046238.3788962555,
+              "heat_flux_x": 632352.9411764707,
+              "heat_flux_y": 1946078.4313725496,
+              "id": "spread_pyrolytic_graphite_in_plane",
+              "index": 0,
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "temperature_gradient_x": -421.5686274509805,
+              "temperature_gradient_y": -1297.3856209150329
+            }
+          ],
+          "input": {
+            "elements": [
+              {
+                "conductivity": 1500.0,
+                "id": "spread_pyrolytic_graphite_in_plane",
+                "node_i": 0,
+                "node_j": 1,
+                "node_k": 2,
+                "node_l": 3,
+                "thickness": 0.0015
+              }
+            ],
+            "nodes": [
+              {
+                "fix_temperature": true,
+                "heat_load": 0.0,
+                "id": "hot_left_bottom",
+                "temperature": 95.0,
+                "x": 0.0,
+                "y": 0.0
+              },
+              {
+                "fix_temperature": false,
+                "heat_load": 5.0,
+                "id": "mid_bottom",
+                "temperature": 0.0,
+                "x": 0.05,
+                "y": 0.0
+              },
+              {
+                "fix_temperature": true,
+                "heat_load": 0.0,
+                "id": "cold_right_top",
+                "temperature": 35.0,
+                "x": 0.05,
+                "y": 0.03
+              },
+              {
+                "fix_temperature": true,
+                "heat_load": 0.0,
+                "id": "cold_left_top",
+                "temperature": 35.0,
+                "x": 0.0,
+                "y": 0.03
+              }
+            ]
+          },
+          "max_heat_flux": 2046238.3788962555,
+          "max_temperature": 95.0,
+          "nodes": [
+            {
+              "heat_load": 0.0,
+              "id": "hot_left_bottom",
+              "index": 0,
+              "temperature": 95.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "heat_load": 5.0,
+              "id": "mid_bottom",
+              "index": 1,
+              "temperature": 52.843137254901954,
+              "x": 0.05,
+              "y": 0.0
+            },
+            {
+              "heat_load": 0.0,
+              "id": "cold_right_top",
+              "index": 2,
+              "temperature": 35.0,
+              "x": 0.05,
+              "y": 0.03
+            },
+            {
+              "heat_load": 0.0,
+              "id": "cold_left_top",
+              "index": 3,
+              "temperature": 35.0,
+              "x": 0.0,
+              "y": 0.03
+            }
+          ],
+          "total_abs_heat_flow_rate": 4.604036352516575
+        },
+        "status": "completed"
+      },
+      "requires_confirmation": false
+    }
+  ]
+}

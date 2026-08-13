@@ -2,7 +2,7 @@
 .PHONY: test-agent-capability-smoke test-playground
 .PHONY: test-hub-gui test-installer-gui test-workbench-gui
 .PHONY: test-integration test-integration-api test-integration-cluster
-.PHONY: test-integration-direct-mesh test-integration-desktop-gui qualify-desktop-ui-validation qualify-protocol-validation
+.PHONY: test-integration-direct-mesh test-integration-desktop-gui qualify-desktop-ui-validation qualify-protocol-validation qualify-contracts-validation
 .PHONY: qualify-headless-sdk-validation qualify-desktop-deployment-update qualify-system-security qualify-agent-solver-operational-remote
 .PHONY: test-integration-benchmark-profile-index
 .PHONY: test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-central-database-smoke remote-central-database-smoke
@@ -76,6 +76,9 @@ qualify-desktop-ui-validation:
 
 qualify-protocol-validation:
 	@$(ENTRYPOINT) check-protocol-validation-qualification --out $${OUTPUT:-tmp/protocol-validation-qualification-report.json}
+
+qualify-contracts-validation:
+	@$(ENTRYPOINT) check-contracts-validation-qualification --out $${OUTPUT:-tmp/contracts-validation-qualification-report.json}
 
 qualify-system-security:
 	@$(ENTRYPOINT) check-system-security-qualification --self-test

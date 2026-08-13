@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/contracts-validation-qualification-report.schema.json",
+  "title": "Kyuubiki Contracts Validation Qualification Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "contract_path",
+    "status",
+    "platform",
+    "rounds",
+    "families",
+    "checks",
+    "summary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.contracts-validation-qualification-report/v1"
+    },
+    "generated_at_unix_ms": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "contract_path": {
+      "const": "config/architecture/contracts-validation-qualification.json"
+    },
+    "status": {
+      "const": "pass"
+    },
+    "platform": {
+      "$ref": "#/$defs/platform"
+    },
+    "rounds": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 3
+    },
+    "families": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "$ref": "#/$defs/family"
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 12,
+      "items": {
+        "$ref": "#/$defs/check"
+      }
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "arch"],
+      "properties": {
+        "os": { "$ref": "#/$defs/nonEmptyString" },
+        "arch": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "passed"],
+      "properties": {
+        "text": { "$ref": "#/$defs/nonEmptyString" },
+        "passed": { "const": true }
+      }
+    },
+    "round": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "round",
+        "status",
+        "exit_code",
+        "elapsed_ms",
+        "output_sha256",
+        "assertions",
+        "output_excerpt"
+      ],
+      "properties": {
+        "round": { "type": "integer", "minimum": 1 },
+        "status": { "const": "pass" },
+        "exit_code": { "const": 0 },
+        "elapsed_ms": { "type": "integer", "minimum": 0 },
+        "output_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "assertions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/assertion" }
+        },
+        "output_excerpt": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "family",
+        "expected_outcome",
+        "fault_boundary",
+        "program",
+        "cwd",
+        "args",
+        "rounds",
+        "repeatable",
+        "stable_output"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "family": { "$ref": "#/$defs/identifier" },
+        "expected_outcome": {
+          "enum": ["acceptance", "rejection"]
+        },
+        "fault_boundary": { "$ref": "#/$defs/identifier" },
+        "program": {
+          "enum": ["self", "internal"]
+        },
+        "cwd": { "$ref": "#/$defs/nonEmptyString" },
+        "args": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "rounds": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/round" }
+        },
+        "repeatable": { "const": true },
+        "stable_output": { "const": true }
+      }
+    },
+    "family": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status",
+        "check_ids",
+        "acceptance_count",
+        "rejection_count"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "status": { "const": "pass" },
+        "check_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/identifier" }
+        },
+        "acceptance_count": { "type": "integer", "minimum": 0 },
+        "rejection_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family_count",
+        "check_count",
+        "round_count",
+        "passed_round_count",
+        "acceptance_check_count",
+        "rejection_check_count",
+        "stable_check_count",
+        "failed_check_ids"
+      ],
+      "properties": {
+        "family_count": { "type": "integer", "minimum": 6 },
+        "check_count": { "type": "integer", "minimum": 12 },
+        "round_count": { "type": "integer", "minimum": 24 },
+        "passed_round_count": { "type": "integer", "minimum": 24 },
+        "acceptance_check_count": { "type": "integer", "minimum": 6 },
+        "rejection_check_count": { "type": "integer", "minimum": 5 },
+        "stable_check_count": { "type": "integer", "minimum": 12 },
+        "failed_check_ids": {
+          "type": "array",
+          "maxItems": 0
+        }
+      }
+    }
+  }
+}

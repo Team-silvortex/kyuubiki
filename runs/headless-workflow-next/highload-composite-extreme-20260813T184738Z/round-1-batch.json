@@ -1,0 +1,1405 @@
+{
+  "schema_version": "kyuubiki.headless-execution-batch/v1",
+  "exported_at": "1970-01-01T00:00:00.000Z",
+  "language": "en",
+  "workflow_id": "template.material_composite_thermo_electric_panel_screening",
+  "template_id": "material_composite_thermo_electric_panel_screening",
+  "steps": [
+    {
+      "index": 1,
+      "action": "solve_composite_thermo_electric_panel",
+      "risk": "normal",
+      "payload": {
+        "electric_conduction_feedback": {
+          "parameter_source": "screening_reference_not_material_card",
+          "regions": [
+            {
+              "element_id": "conductor_left",
+              "reference_resistivity_ohm_m": 1.68E-8,
+              "reference_temperature_c": 35.0,
+              "resistivity_temperature_coefficient_1_k": 0.00393
+            }
+          ]
+        },
+        "electric_conduction_model": {
+          "contact_interfaces": [],
+          "elements": [
+            {
+              "electrical_conductivity_s_m": 59523809.523809515,
+              "id": "conductor_left",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "thickness": 0.001
+            }
+          ],
+          "nodes": [
+            {
+              "current_source_a": 0.0,
+              "electric_potential_v": 0.0,
+              "fix_electric_potential": true,
+              "id": "n0",
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "current_source_a": 0.0,
+              "electric_potential_v": 0.000033600000000000004,
+              "fix_electric_potential": true,
+              "id": "n1",
+              "x": 0.03,
+              "y": 0.0
+            },
+            {
+              "current_source_a": 0.0,
+              "electric_potential_v": 0.000033600000000000004,
+              "fix_electric_potential": true,
+              "id": "n5",
+              "x": 0.03,
+              "y": 0.03
+            },
+            {
+              "current_source_a": 0.0,
+              "electric_potential_v": 0.0,
+              "fix_electric_potential": true,
+              "id": "n4",
+              "x": 0.0,
+              "y": 0.03
+            }
+          ],
+          "terminals": []
+        },
+        "electrostatic_model": {
+          "elements": [
+            {
+              "id": "conductor_left",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 5,
+              "node_l": 4,
+              "permittivity": 1.0,
+              "thickness": 0.001
+            },
+            {
+              "id": "dielectric_core",
+              "node_i": 1,
+              "node_j": 2,
+              "node_k": 6,
+              "node_l": 5,
+              "permittivity": 3.4,
+              "thickness": 0.001
+            },
+            {
+              "id": "substrate_right",
+              "node_i": 2,
+              "node_j": 3,
+              "node_k": 7,
+              "node_l": 6,
+              "permittivity": 4.2,
+              "thickness": 0.001
+            }
+          ],
+          "nodes": [
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "n0",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": false,
+              "id": "n1",
+              "potential": 0.0,
+              "x": 0.03,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": false,
+              "id": "n2",
+              "potential": 0.0,
+              "x": 0.06,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "n3",
+              "potential": 1600,
+              "x": 0.09,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "n4",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.03
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": false,
+              "id": "n5",
+              "potential": 0.0,
+              "x": 0.03,
+              "y": 0.03
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": false,
+              "id": "n6",
+              "potential": 0.0,
+              "x": 0.06,
+              "y": 0.03
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "n7",
+              "potential": 1600,
+              "x": 0.09,
+              "y": 0.03
+            }
+          ]
+        },
+        "electrothermal_feedback": {
+          "conductivity_relative_change_tolerance": 1E-9,
+          "loss_relative_change_tolerance": 1E-9,
+          "loss_tangent_temperature_coefficient_1_k": 0.001,
+          "max_iterations": 12,
+          "parameter_source": "screening_sensitivity_not_material_card",
+          "relative_permittivity_temperature_coefficient_1_k": 0.0001,
+          "relaxation_factor": 0.8,
+          "temperature_residual_tolerance_c": 1E-7,
+          "thermal_conductivity_models": [
+            {
+              "element_id": "conductor_left",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": -0.001
+            },
+            {
+              "element_id": "dielectric_core",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": -0.002
+            },
+            {
+              "element_id": "substrate_right",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": -0.0012
+            }
+          ]
+        },
+        "electrothermal_loss": {
+          "frequency_hz": 10000000.0,
+          "loss_tangent": 0.008,
+          "reference_temperature_c": 35.0,
+          "relative_permittivity": 3.4,
+          "source_element_id": "dielectric_core"
+        },
+        "heat_model": {
+          "elements": [
+            {
+              "conductivity": 390.0,
+              "id": "conductor_left",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 5,
+              "node_l": 4,
+              "thickness": 0.001
+            },
+            {
+              "conductivity": 0.25,
+              "id": "dielectric_core",
+              "node_i": 1,
+              "node_j": 2,
+              "node_k": 6,
+              "node_l": 5,
+              "thickness": 0.001
+            },
+            {
+              "conductivity": 160.0,
+              "id": "substrate_right",
+              "node_i": 2,
+              "node_j": 3,
+              "node_k": 7,
+              "node_l": 6,
+              "thickness": 0.001
+            }
+          ],
+          "nodes": [
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n0",
+              "temperature": 35.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n1",
+              "temperature": 35.0,
+              "x": 0.03,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n2",
+              "temperature": 35.0,
+              "x": 0.06,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "n3",
+              "temperature": 35.0,
+              "x": 0.09,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n4",
+              "temperature": 35.0,
+              "x": 0.0,
+              "y": 0.03
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n5",
+              "temperature": 35.0,
+              "x": 0.03,
+              "y": 0.03
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n6",
+              "temperature": 35.0,
+              "x": 0.06,
+              "y": 0.03
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "n7",
+              "temperature": 35.0,
+              "x": 0.09,
+              "y": 0.03
+            }
+          ]
+        },
+        "research": {
+          "candidate_id": "copper_polyimide_aluminum",
+          "candidate_label": "Copper / Polyimide / Aluminum",
+          "coupling": "iterative_dielectric_and_conductor_joule_heating_with_temperature_dependent_electrical_thermal_feedback_and_expansion_projection",
+          "materials": {
+            "conductor": "copper",
+            "dielectric": "polyimide",
+            "substrate": "aluminum_6061"
+          },
+          "study": "material.composite_thermo_electric_panel.v1"
+        },
+        "thermal_expansion_feedback": {
+          "parameter_source": "screening_sensitivity_not_material_card",
+          "regions": [
+            {
+              "element_id": "conductor_left",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": 0.0002
+            },
+            {
+              "element_id": "dielectric_core",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": 0.0008
+            },
+            {
+              "element_id": "substrate_right",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": 0.0003
+            }
+          ]
+        },
+        "thermal_model": {
+          "elements": [
+            {
+              "id": "conductor_left",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 5,
+              "node_l": 4,
+              "poisson_ratio": 0.32,
+              "thermal_expansion": 0.000017,
+              "thickness": 0.001,
+              "youngs_modulus": 110000000000.0
+            },
+            {
+              "id": "dielectric_core",
+              "node_i": 1,
+              "node_j": 2,
+              "node_k": 6,
+              "node_l": 5,
+              "poisson_ratio": 0.32,
+              "thermal_expansion": 0.000045,
+              "thickness": 0.001,
+              "youngs_modulus": 2500000000.0
+            },
+            {
+              "id": "substrate_right",
+              "node_i": 2,
+              "node_j": 3,
+              "node_k": 7,
+              "node_l": 6,
+              "poisson_ratio": 0.32,
+              "thermal_expansion": 0.0000236,
+              "thickness": 0.001,
+              "youngs_modulus": 68900000000.0
+            }
+          ],
+          "nodes": [
+            {
+              "fix_x": true,
+              "fix_y": true,
+              "id": "n0",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n1",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.03,
+              "y": 0.0
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n2",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.06,
+              "y": 0.0
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n3",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.09,
+              "y": 0.0
+            },
+            {
+              "fix_x": true,
+              "fix_y": true,
+              "id": "n4",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.0,
+              "y": 0.03
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n5",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.03,
+              "y": 0.03
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n6",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.06,
+              "y": 0.03
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n7",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.09,
+              "y": 0.03
+            }
+          ]
+        }
+      }
+    },
+    {
+      "index": 2,
+      "action": "job_wait",
+      "risk": "normal",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "{{steps.1.result.job_id}}",
+        "max_total_timeout_ms": 3600000,
+        "resume_policy": "server_deadline",
+        "timeout_ms": 60000
+      }
+    },
+    {
+      "index": 3,
+      "action": "result_fetch",
+      "risk": "normal",
+      "payload": {
+        "job_id": "{{steps.1.result.job_id}}"
+      }
+    },
+    {
+      "index": 4,
+      "action": "solve_composite_thermo_electric_panel",
+      "risk": "normal",
+      "payload": {
+        "electric_conduction_feedback": {
+          "parameter_source": "screening_reference_not_material_card",
+          "regions": [
+            {
+              "element_id": "conductor_left",
+              "reference_resistivity_ohm_m": 2.82E-8,
+              "reference_temperature_c": 35.0,
+              "resistivity_temperature_coefficient_1_k": 0.00403
+            }
+          ]
+        },
+        "electric_conduction_model": {
+          "contact_interfaces": [],
+          "elements": [
+            {
+              "electrical_conductivity_s_m": 35460992.90780142,
+              "id": "conductor_left",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "thickness": 0.001
+            }
+          ],
+          "nodes": [
+            {
+              "current_source_a": 0.0,
+              "electric_potential_v": 0.0,
+              "fix_electric_potential": true,
+              "id": "n0",
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "current_source_a": 0.0,
+              "electric_potential_v": 0.000056399999999999995,
+              "fix_electric_potential": true,
+              "id": "n1",
+              "x": 0.03,
+              "y": 0.0
+            },
+            {
+              "current_source_a": 0.0,
+              "electric_potential_v": 0.000056399999999999995,
+              "fix_electric_potential": true,
+              "id": "n5",
+              "x": 0.03,
+              "y": 0.03
+            },
+            {
+              "current_source_a": 0.0,
+              "electric_potential_v": 0.0,
+              "fix_electric_potential": true,
+              "id": "n4",
+              "x": 0.0,
+              "y": 0.03
+            }
+          ],
+          "terminals": []
+        },
+        "electrostatic_model": {
+          "elements": [
+            {
+              "id": "conductor_left",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 5,
+              "node_l": 4,
+              "permittivity": 1.0,
+              "thickness": 0.001
+            },
+            {
+              "id": "dielectric_core",
+              "node_i": 1,
+              "node_j": 2,
+              "node_k": 6,
+              "node_l": 5,
+              "permittivity": 9.8,
+              "thickness": 0.001
+            },
+            {
+              "id": "substrate_right",
+              "node_i": 2,
+              "node_j": 3,
+              "node_k": 7,
+              "node_l": 6,
+              "permittivity": 4.2,
+              "thickness": 0.001
+            }
+          ],
+          "nodes": [
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "n0",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": false,
+              "id": "n1",
+              "potential": 0.0,
+              "x": 0.03,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": false,
+              "id": "n2",
+              "potential": 0.0,
+              "x": 0.06,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "n3",
+              "potential": 1600,
+              "x": 0.09,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "n4",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.03
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": false,
+              "id": "n5",
+              "potential": 0.0,
+              "x": 0.03,
+              "y": 0.03
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": false,
+              "id": "n6",
+              "potential": 0.0,
+              "x": 0.06,
+              "y": 0.03
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "n7",
+              "potential": 1600,
+              "x": 0.09,
+              "y": 0.03
+            }
+          ]
+        },
+        "electrothermal_feedback": {
+          "conductivity_relative_change_tolerance": 1E-9,
+          "loss_relative_change_tolerance": 1E-9,
+          "loss_tangent_temperature_coefficient_1_k": 0.001,
+          "max_iterations": 12,
+          "parameter_source": "screening_sensitivity_not_material_card",
+          "relative_permittivity_temperature_coefficient_1_k": 0.0001,
+          "relaxation_factor": 0.8,
+          "temperature_residual_tolerance_c": 1E-7,
+          "thermal_conductivity_models": [
+            {
+              "element_id": "conductor_left",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": -0.001
+            },
+            {
+              "element_id": "dielectric_core",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": -0.002
+            },
+            {
+              "element_id": "substrate_right",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": -0.0012
+            }
+          ]
+        },
+        "electrothermal_loss": {
+          "frequency_hz": 10000000.0,
+          "loss_tangent": 0.0002,
+          "reference_temperature_c": 35.0,
+          "relative_permittivity": 9.8,
+          "source_element_id": "dielectric_core"
+        },
+        "heat_model": {
+          "elements": [
+            {
+              "conductivity": 167.0,
+              "id": "conductor_left",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 5,
+              "node_l": 4,
+              "thickness": 0.001
+            },
+            {
+              "conductivity": 0.25,
+              "id": "dielectric_core",
+              "node_i": 1,
+              "node_j": 2,
+              "node_k": 6,
+              "node_l": 5,
+              "thickness": 0.001
+            },
+            {
+              "conductivity": 160.0,
+              "id": "substrate_right",
+              "node_i": 2,
+              "node_j": 3,
+              "node_k": 7,
+              "node_l": 6,
+              "thickness": 0.001
+            }
+          ],
+          "nodes": [
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n0",
+              "temperature": 35.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n1",
+              "temperature": 35.0,
+              "x": 0.03,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n2",
+              "temperature": 35.0,
+              "x": 0.06,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "n3",
+              "temperature": 35.0,
+              "x": 0.09,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n4",
+              "temperature": 35.0,
+              "x": 0.0,
+              "y": 0.03
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n5",
+              "temperature": 35.0,
+              "x": 0.03,
+              "y": 0.03
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n6",
+              "temperature": 35.0,
+              "x": 0.06,
+              "y": 0.03
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "n7",
+              "temperature": 35.0,
+              "x": 0.09,
+              "y": 0.03
+            }
+          ]
+        },
+        "research": {
+          "candidate_id": "aluminum_alumina_aluminum",
+          "candidate_label": "Aluminum / Alumina / Aluminum",
+          "coupling": "iterative_dielectric_and_conductor_joule_heating_with_temperature_dependent_electrical_thermal_feedback_and_expansion_projection",
+          "materials": {
+            "conductor": "aluminum",
+            "dielectric": "alumina_96",
+            "substrate": "aluminum_6061"
+          },
+          "study": "material.composite_thermo_electric_panel.v1"
+        },
+        "thermal_expansion_feedback": {
+          "parameter_source": "screening_sensitivity_not_material_card",
+          "regions": [
+            {
+              "element_id": "conductor_left",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": 0.0002
+            },
+            {
+              "element_id": "dielectric_core",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": 0.0008
+            },
+            {
+              "element_id": "substrate_right",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": 0.0003
+            }
+          ]
+        },
+        "thermal_model": {
+          "elements": [
+            {
+              "id": "conductor_left",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 5,
+              "node_l": 4,
+              "poisson_ratio": 0.32,
+              "thermal_expansion": 0.000017,
+              "thickness": 0.001,
+              "youngs_modulus": 110000000000.0
+            },
+            {
+              "id": "dielectric_core",
+              "node_i": 1,
+              "node_j": 2,
+              "node_k": 6,
+              "node_l": 5,
+              "poisson_ratio": 0.32,
+              "thermal_expansion": 0.000045,
+              "thickness": 0.001,
+              "youngs_modulus": 2500000000.0
+            },
+            {
+              "id": "substrate_right",
+              "node_i": 2,
+              "node_j": 3,
+              "node_k": 7,
+              "node_l": 6,
+              "poisson_ratio": 0.32,
+              "thermal_expansion": 0.0000236,
+              "thickness": 0.001,
+              "youngs_modulus": 68900000000.0
+            }
+          ],
+          "nodes": [
+            {
+              "fix_x": true,
+              "fix_y": true,
+              "id": "n0",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n1",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.03,
+              "y": 0.0
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n2",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.06,
+              "y": 0.0
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n3",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.09,
+              "y": 0.0
+            },
+            {
+              "fix_x": true,
+              "fix_y": true,
+              "id": "n4",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.0,
+              "y": 0.03
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n5",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.03,
+              "y": 0.03
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n6",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.06,
+              "y": 0.03
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n7",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.09,
+              "y": 0.03
+            }
+          ]
+        }
+      }
+    },
+    {
+      "index": 5,
+      "action": "job_wait",
+      "risk": "normal",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "{{steps.4.result.job_id}}",
+        "max_total_timeout_ms": 3600000,
+        "resume_policy": "server_deadline",
+        "timeout_ms": 60000
+      }
+    },
+    {
+      "index": 6,
+      "action": "result_fetch",
+      "risk": "normal",
+      "payload": {
+        "job_id": "{{steps.4.result.job_id}}"
+      }
+    },
+    {
+      "index": 7,
+      "action": "solve_composite_thermo_electric_panel",
+      "risk": "normal",
+      "payload": {
+        "electric_conduction_feedback": {
+          "parameter_source": "screening_reference_not_material_card",
+          "regions": [
+            {
+              "element_id": "conductor_left",
+              "reference_resistivity_ohm_m": 1.68E-8,
+              "reference_temperature_c": 35.0,
+              "resistivity_temperature_coefficient_1_k": 0.00393
+            }
+          ]
+        },
+        "electric_conduction_model": {
+          "contact_interfaces": [],
+          "elements": [
+            {
+              "electrical_conductivity_s_m": 59523809.523809515,
+              "id": "conductor_left",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "thickness": 0.001
+            }
+          ],
+          "nodes": [
+            {
+              "current_source_a": 0.0,
+              "electric_potential_v": 0.0,
+              "fix_electric_potential": true,
+              "id": "n0",
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "current_source_a": 0.0,
+              "electric_potential_v": 0.000033600000000000004,
+              "fix_electric_potential": true,
+              "id": "n1",
+              "x": 0.03,
+              "y": 0.0
+            },
+            {
+              "current_source_a": 0.0,
+              "electric_potential_v": 0.000033600000000000004,
+              "fix_electric_potential": true,
+              "id": "n5",
+              "x": 0.03,
+              "y": 0.03
+            },
+            {
+              "current_source_a": 0.0,
+              "electric_potential_v": 0.0,
+              "fix_electric_potential": true,
+              "id": "n4",
+              "x": 0.0,
+              "y": 0.03
+            }
+          ],
+          "terminals": []
+        },
+        "electrostatic_model": {
+          "elements": [
+            {
+              "id": "conductor_left",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 5,
+              "node_l": 4,
+              "permittivity": 1.0,
+              "thickness": 0.001
+            },
+            {
+              "id": "dielectric_core",
+              "node_i": 1,
+              "node_j": 2,
+              "node_k": 6,
+              "node_l": 5,
+              "permittivity": 2.1,
+              "thickness": 0.001
+            },
+            {
+              "id": "substrate_right",
+              "node_i": 2,
+              "node_j": 3,
+              "node_k": 7,
+              "node_l": 6,
+              "permittivity": 4.2,
+              "thickness": 0.001
+            }
+          ],
+          "nodes": [
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "n0",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": false,
+              "id": "n1",
+              "potential": 0.0,
+              "x": 0.03,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": false,
+              "id": "n2",
+              "potential": 0.0,
+              "x": 0.06,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "n3",
+              "potential": 1600,
+              "x": 0.09,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "n4",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.03
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": false,
+              "id": "n5",
+              "potential": 0.0,
+              "x": 0.03,
+              "y": 0.03
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": false,
+              "id": "n6",
+              "potential": 0.0,
+              "x": 0.06,
+              "y": 0.03
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "n7",
+              "potential": 1600,
+              "x": 0.09,
+              "y": 0.03
+            }
+          ]
+        },
+        "electrothermal_feedback": {
+          "conductivity_relative_change_tolerance": 1E-9,
+          "loss_relative_change_tolerance": 1E-9,
+          "loss_tangent_temperature_coefficient_1_k": 0.001,
+          "max_iterations": 12,
+          "parameter_source": "screening_sensitivity_not_material_card",
+          "relative_permittivity_temperature_coefficient_1_k": 0.0001,
+          "relaxation_factor": 0.8,
+          "temperature_residual_tolerance_c": 1E-7,
+          "thermal_conductivity_models": [
+            {
+              "element_id": "conductor_left",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": -0.001
+            },
+            {
+              "element_id": "dielectric_core",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": -0.002
+            },
+            {
+              "element_id": "substrate_right",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": -0.0012
+            }
+          ]
+        },
+        "electrothermal_loss": {
+          "frequency_hz": 10000000.0,
+          "loss_tangent": 0.0002,
+          "reference_temperature_c": 35.0,
+          "relative_permittivity": 2.1,
+          "source_element_id": "dielectric_core"
+        },
+        "heat_model": {
+          "elements": [
+            {
+              "conductivity": 390.0,
+              "id": "conductor_left",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 5,
+              "node_l": 4,
+              "thickness": 0.001
+            },
+            {
+              "conductivity": 0.25,
+              "id": "dielectric_core",
+              "node_i": 1,
+              "node_j": 2,
+              "node_k": 6,
+              "node_l": 5,
+              "thickness": 0.001
+            },
+            {
+              "conductivity": 160.0,
+              "id": "substrate_right",
+              "node_i": 2,
+              "node_j": 3,
+              "node_k": 7,
+              "node_l": 6,
+              "thickness": 0.001
+            }
+          ],
+          "nodes": [
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n0",
+              "temperature": 35.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n1",
+              "temperature": 35.0,
+              "x": 0.03,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n2",
+              "temperature": 35.0,
+              "x": 0.06,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "n3",
+              "temperature": 35.0,
+              "x": 0.09,
+              "y": 0.0
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n4",
+              "temperature": 35.0,
+              "x": 0.0,
+              "y": 0.03
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n5",
+              "temperature": 35.0,
+              "x": 0.03,
+              "y": 0.03
+            },
+            {
+              "fix_temperature": false,
+              "heat_load": 0.0,
+              "id": "n6",
+              "temperature": 35.0,
+              "x": 0.06,
+              "y": 0.03
+            },
+            {
+              "fix_temperature": true,
+              "heat_load": 0.0,
+              "id": "n7",
+              "temperature": 35.0,
+              "x": 0.09,
+              "y": 0.03
+            }
+          ]
+        },
+        "research": {
+          "candidate_id": "copper_ptfe_glass_epoxy",
+          "candidate_label": "Copper / PTFE / Glass epoxy",
+          "coupling": "iterative_dielectric_and_conductor_joule_heating_with_temperature_dependent_electrical_thermal_feedback_and_expansion_projection",
+          "materials": {
+            "conductor": "copper",
+            "dielectric": "ptfe",
+            "substrate": "glass_epoxy"
+          },
+          "study": "material.composite_thermo_electric_panel.v1"
+        },
+        "thermal_expansion_feedback": {
+          "parameter_source": "screening_sensitivity_not_material_card",
+          "regions": [
+            {
+              "element_id": "conductor_left",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": 0.0002
+            },
+            {
+              "element_id": "dielectric_core",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": 0.0008
+            },
+            {
+              "element_id": "substrate_right",
+              "reference_temperature_c": 35.0,
+              "temperature_coefficient_1_k": 0.0003
+            }
+          ]
+        },
+        "thermal_model": {
+          "elements": [
+            {
+              "id": "conductor_left",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 5,
+              "node_l": 4,
+              "poisson_ratio": 0.32,
+              "thermal_expansion": 0.000017,
+              "thickness": 0.001,
+              "youngs_modulus": 110000000000.0
+            },
+            {
+              "id": "dielectric_core",
+              "node_i": 1,
+              "node_j": 2,
+              "node_k": 6,
+              "node_l": 5,
+              "poisson_ratio": 0.32,
+              "thermal_expansion": 0.000045,
+              "thickness": 0.001,
+              "youngs_modulus": 2500000000.0
+            },
+            {
+              "id": "substrate_right",
+              "node_i": 2,
+              "node_j": 3,
+              "node_k": 7,
+              "node_l": 6,
+              "poisson_ratio": 0.32,
+              "thermal_expansion": 0.000014,
+              "thickness": 0.001,
+              "youngs_modulus": 22000000000.0
+            }
+          ],
+          "nodes": [
+            {
+              "fix_x": true,
+              "fix_y": true,
+              "id": "n0",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n1",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.03,
+              "y": 0.0
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n2",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.06,
+              "y": 0.0
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n3",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.09,
+              "y": 0.0
+            },
+            {
+              "fix_x": true,
+              "fix_y": true,
+              "id": "n4",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.0,
+              "y": 0.03
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n5",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.03,
+              "y": 0.03
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n6",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.06,
+              "y": 0.03
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "n7",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "temperature_delta": 0.0,
+              "x": 0.09,
+              "y": 0.03
+            }
+          ]
+        }
+      }
+    },
+    {
+      "index": 8,
+      "action": "job_wait",
+      "risk": "normal",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "{{steps.7.result.job_id}}",
+        "max_total_timeout_ms": 3600000,
+        "resume_policy": "server_deadline",
+        "timeout_ms": 60000
+      }
+    },
+    {
+      "index": 9,
+      "action": "result_fetch",
+      "risk": "normal",
+      "payload": {
+        "job_id": "{{steps.7.result.job_id}}"
+      }
+    }
+  ],
+  "warnings": []
+}

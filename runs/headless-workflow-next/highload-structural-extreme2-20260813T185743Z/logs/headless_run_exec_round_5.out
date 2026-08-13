@@ -1,0 +1,1376 @@
+{
+  "schema_version": "kyuubiki.headless-execution-run/v1",
+  "workflow_id": "template.material_structural_panel_screening",
+  "mode": "execute:service",
+  "status": "ok",
+  "executed_step_count": 9,
+  "warning_count": 0,
+  "blocked_by_confirmation": null,
+  "validation": {
+    "ok": true,
+    "issue_count": 0,
+    "issues": [],
+    "warning_count": 0,
+    "warnings": [],
+    "summary": {
+      "schema_version": "kyuubiki.headless-execution-batch/v1",
+      "workflow_id": "template.material_structural_panel_screening",
+      "template_id": "material_structural_panel_screening",
+      "exported_at": "1970-01-01T00:00:00.000Z",
+      "language": "en",
+      "step_count": 9,
+      "warning_count": 0,
+      "actions": [
+        "solve_plane_quad_2d",
+        "job_wait",
+        "result_fetch",
+        "solve_plane_quad_2d",
+        "job_wait",
+        "result_fetch",
+        "solve_plane_quad_2d",
+        "job_wait",
+        "result_fetch"
+      ]
+    },
+    "policy": {
+      "required_engines": [
+        "service"
+      ],
+      "engine_counts": {
+        "service": 9,
+        "browser": 0
+      },
+      "risk_counts": {
+        "sensitive": 0,
+        "normal": 9,
+        "destructive": 0
+      },
+      "recommended_runtime": "service_only",
+      "needs_desktop_browser": false,
+      "safe_for_service_only": true,
+      "notes": []
+    }
+  },
+  "execution_summary": {
+    "schema_version": "kyuubiki.headless-execution-summary/v1",
+    "job_count": 3,
+    "job_ids": [
+      "46cdf2ef380b880e",
+      "6668b3119b26c913",
+      "a02588005b08d46d"
+    ],
+    "jobs": [
+      {
+        "job_id": "46cdf2ef380b880e",
+        "status": "completed",
+        "worker_id": "rust-agent-rpc@127.0.0.1:5002",
+        "phase": "execution",
+        "created_at": "2026-08-13T10:56:33.838741Z",
+        "execution_started_at": "2026-08-13T10:56:33.845512Z",
+        "updated_at": "2026-08-13T10:56:34.867940Z",
+        "queue_wait_ms": 6,
+        "execution_elapsed_ms": 1022,
+        "total_elapsed_ms": 1029,
+        "effective_timeout_ms": 120000,
+        "effective_deadline": "2026-08-13T10:58:33.845512Z"
+      },
+      {
+        "job_id": "6668b3119b26c913",
+        "status": "completed",
+        "worker_id": "rust-agent-rpc@127.0.0.1:5001",
+        "phase": "execution",
+        "created_at": "2026-08-13T10:56:35.882319Z",
+        "execution_started_at": "2026-08-13T10:56:35.887053Z",
+        "updated_at": "2026-08-13T10:56:36.907460Z",
+        "queue_wait_ms": 4,
+        "execution_elapsed_ms": 1020,
+        "total_elapsed_ms": 1025,
+        "effective_timeout_ms": 120000,
+        "effective_deadline": "2026-08-13T10:58:35.887053Z"
+      },
+      {
+        "job_id": "a02588005b08d46d",
+        "status": "completed",
+        "worker_id": "rust-agent-rpc@127.0.0.1:5002",
+        "phase": "execution",
+        "created_at": "2026-08-13T10:56:37.921895Z",
+        "execution_started_at": "2026-08-13T10:56:37.927020Z",
+        "updated_at": "2026-08-13T10:56:38.947328Z",
+        "queue_wait_ms": 5,
+        "execution_elapsed_ms": 1020,
+        "total_elapsed_ms": 1025,
+        "effective_timeout_ms": 120000,
+        "effective_deadline": "2026-08-13T10:58:37.927020Z"
+      }
+    ],
+    "failure": null
+  },
+  "steps": [
+    {
+      "index": 1,
+      "action": "solve_plane_quad_2d",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "id": "panel_aluminum_7075_t6",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "poisson_ratio": 0.33,
+              "thickness": 0.002,
+              "youngs_modulus": 71700000000.0
+            }
+          ],
+          "nodes": [
+            {
+              "fix_x": true,
+              "fix_y": true,
+              "id": "fixed_left_bottom",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "free_right_bottom",
+              "load_x": 0.0,
+              "load_y": -450.0,
+              "x": 0.12,
+              "y": 0.0
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "free_right_top",
+              "load_x": 0.0,
+              "load_y": -450.0,
+              "x": 0.12,
+              "y": 0.05
+            },
+            {
+              "fix_x": true,
+              "fix_y": true,
+              "id": "fixed_left_top",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "x": 0.0,
+              "y": 0.05
+            }
+          ]
+        },
+        "research": {
+          "candidate_id": "aluminum_7075_t6",
+          "candidate_label": "Aluminum 7075-T6",
+          "density_kg_m3": 2810.0,
+          "family": "metal",
+          "note": "light aerospace baseline with strong yield margin",
+          "objective": "minimize panel stress, deflection, and mass while retaining yield margin",
+          "study": "material.structural_panel_screening.v1",
+          "yield_strength_pa": 503000000.0,
+          "youngs_modulus_pa": 71700000000.0
+        }
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:56:33.838741Z",
+          "execution_started_at": null,
+          "execution_timeout_ms": 120000,
+          "has_result": false,
+          "iteration": null,
+          "job_id": "46cdf2ef380b880e",
+          "message": null,
+          "model_version_id": null,
+          "progress": 0.0,
+          "project_id": "59af4024ad60cb9c",
+          "queue_timeout_ms": 1800000,
+          "residual": null,
+          "simulation_case_id": "a111d0971e17405f",
+          "status": "queued",
+          "status_detail": {
+            "active": true,
+            "failure_class": null,
+            "lifecycle": "active",
+            "recoverable": false,
+            "terminal": false,
+            "timing": {
+              "effective_deadline": "2026-08-13T11:26:33.838741Z",
+              "effective_timeout_ms": 1800000,
+              "execution_elapsed_ms": null,
+              "execution_started_at": null,
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:26:33.838741Z",
+              "phase": "queue",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 0,
+              "total_elapsed_ms": 0
+            }
+          },
+          "updated_at": "2026-08-13T10:56:33.838741Z",
+          "worker_id": null
+        },
+        "job_id": "46cdf2ef380b880e",
+        "progress": 0.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-13T10:56:33.838741Z",
+            "execution_started_at": null,
+            "execution_timeout_ms": 120000,
+            "has_result": false,
+            "iteration": null,
+            "job_id": "46cdf2ef380b880e",
+            "message": null,
+            "model_version_id": null,
+            "progress": 0.0,
+            "project_id": "59af4024ad60cb9c",
+            "queue_timeout_ms": 1800000,
+            "residual": null,
+            "simulation_case_id": "a111d0971e17405f",
+            "status": "queued",
+            "status_detail": {
+              "active": true,
+              "failure_class": null,
+              "lifecycle": "active",
+              "recoverable": false,
+              "terminal": false,
+              "timing": {
+                "effective_deadline": "2026-08-13T11:26:33.838741Z",
+                "effective_timeout_ms": 1800000,
+                "execution_elapsed_ms": null,
+                "execution_started_at": null,
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-13T11:26:33.838741Z",
+                "phase": "queue",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 0,
+                "total_elapsed_ms": 0
+              }
+            },
+            "updated_at": "2026-08-13T10:56:33.838741Z",
+            "worker_id": null
+          }
+        },
+        "status": "queued"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 2,
+      "action": "job_wait",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "46cdf2ef380b880e",
+        "max_total_timeout_ms": 3600000,
+        "resume_policy": "server_deadline",
+        "timeout_ms": 60000
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:56:33.838741Z",
+          "execution_started_at": "2026-08-13T10:56:33.845512Z",
+          "execution_timeout_ms": 120000,
+          "iteration": 4,
+          "job_id": "46cdf2ef380b880e",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "59af4024ad60cb9c",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "a111d0971e17405f",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-13T10:58:33.845512Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1022,
+              "execution_started_at": "2026-08-13T10:56:33.845512Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:26:33.838741Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 6,
+              "total_elapsed_ms": 1029
+            }
+          },
+          "updated_at": "2026-08-13T10:56:34.867940Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+        },
+        "job_id": "46cdf2ef380b880e",
+        "progress": 1.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-13T10:56:33.838741Z",
+            "execution_started_at": "2026-08-13T10:56:33.845512Z",
+            "execution_timeout_ms": 120000,
+            "iteration": 4,
+            "job_id": "46cdf2ef380b880e",
+            "message": "collecting nodal and elemental responses",
+            "model_version_id": null,
+            "progress": 1.0,
+            "project_id": "59af4024ad60cb9c",
+            "queue_timeout_ms": 1800000,
+            "residual": 0.2,
+            "simulation_case_id": "a111d0971e17405f",
+            "status": "completed",
+            "status_detail": {
+              "active": false,
+              "failure_class": null,
+              "lifecycle": "terminal",
+              "recoverable": false,
+              "terminal": true,
+              "timing": {
+                "effective_deadline": "2026-08-13T10:58:33.845512Z",
+                "effective_timeout_ms": 120000,
+                "execution_elapsed_ms": 1022,
+                "execution_started_at": "2026-08-13T10:56:33.845512Z",
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-13T11:26:33.838741Z",
+                "phase": "execution",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 6,
+                "total_elapsed_ms": 1029
+              }
+            },
+            "updated_at": "2026-08-13T10:56:34.867940Z",
+            "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+          }
+        },
+        "result": null,
+        "status": "completed",
+        "wait": {
+          "elapsed_ms": 2026,
+          "policy": "server_deadline",
+          "poll_attempts": 3,
+          "resume_count": 0
+        }
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 3,
+      "action": "result_fetch",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "job_id": "46cdf2ef380b880e"
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:56:33.838741Z",
+          "execution_started_at": "2026-08-13T10:56:33.845512Z",
+          "execution_timeout_ms": 120000,
+          "has_result": true,
+          "iteration": 4,
+          "job_id": "46cdf2ef380b880e",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "59af4024ad60cb9c",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "a111d0971e17405f",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-13T10:58:33.845512Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1022,
+              "execution_started_at": "2026-08-13T10:56:33.845512Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:26:33.838741Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 6,
+              "total_elapsed_ms": 1029
+            }
+          },
+          "updated_at": "2026-08-13T10:56:34.867940Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+        },
+        "job_id": "46cdf2ef380b880e",
+        "result": {
+          "elements": [
+            {
+              "area": 0.005999999999999999,
+              "gamma_xy": -0.0003338912133891224,
+              "id": "panel_aluminum_7075_t6",
+              "index": 0,
+              "max_in_plane_shear": 9000000.000000028,
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "principal_stress_1": 9000000.000000034,
+              "principal_stress_2": -9000000.000000022,
+              "strain_energy_density": 4471.4251763560915,
+              "strain_x": -5.2939559203393783e-20,
+              "strain_y": 1.626303258728257e-19,
+              "stress_x": 6.063298011819521e-10,
+              "stress_y": 1.1520266222457092e-8,
+              "tau_xy": -9000000.000000028,
+              "von_mises": 15588457.268119944
+            }
+          ],
+          "input": {
+            "elements": [
+              {
+                "id": "panel_aluminum_7075_t6",
+                "node_i": 0,
+                "node_j": 1,
+                "node_k": 2,
+                "node_l": 3,
+                "poisson_ratio": 0.33,
+                "thickness": 0.002,
+                "youngs_modulus": 71700000000.0
+              }
+            ],
+            "nodes": [
+              {
+                "fix_x": true,
+                "fix_y": true,
+                "id": "fixed_left_bottom",
+                "load_x": 0.0,
+                "load_y": 0.0,
+                "x": 0.0,
+                "y": 0.0
+              },
+              {
+                "fix_x": false,
+                "fix_y": false,
+                "id": "free_right_bottom",
+                "load_x": 0.0,
+                "load_y": -450.0,
+                "x": 0.12,
+                "y": 0.0
+              },
+              {
+                "fix_x": false,
+                "fix_y": false,
+                "id": "free_right_top",
+                "load_x": 0.0,
+                "load_y": -450.0,
+                "x": 0.12,
+                "y": 0.05
+              },
+              {
+                "fix_x": true,
+                "fix_y": true,
+                "id": "fixed_left_top",
+                "load_x": 0.0,
+                "load_y": 0.0,
+                "x": 0.0,
+                "y": 0.05
+              }
+            ]
+          },
+          "max_displacement": 0.00012371704020088737,
+          "max_strain_energy_density": 4471.4251763560915,
+          "max_stress": 15588457.268119944,
+          "nodes": [
+            {
+              "displacement_magnitude": 0.0,
+              "id": "fixed_left_bottom",
+              "index": 0,
+              "ux": 0.0,
+              "uy": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "displacement_magnitude": 0.00012371704020088737,
+              "id": "free_right_bottom",
+              "index": 1,
+              "ux": -0.000032987941290055843,
+              "uy": -0.00011923800470282872,
+              "x": 0.12,
+              "y": 0.0
+            },
+            {
+              "displacement_magnitude": 0.00012371704020088732,
+              "id": "free_right_top",
+              "index": 2,
+              "ux": 0.00003298794129005583,
+              "uy": -0.0001192380047028287,
+              "x": 0.12,
+              "y": 0.05
+            },
+            {
+              "displacement_magnitude": 0.0,
+              "id": "fixed_left_top",
+              "index": 3,
+              "ux": 0.0,
+              "uy": 0.0,
+              "x": 0.0,
+              "y": 0.05
+            }
+          ],
+          "total_strain_energy": 0.053657102116273094
+        },
+        "status": "completed"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 4,
+      "action": "solve_plane_quad_2d",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "id": "panel_steel_4130_normalized",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "poisson_ratio": 0.29,
+              "thickness": 0.002,
+              "youngs_modulus": 205000000000.0
+            }
+          ],
+          "nodes": [
+            {
+              "fix_x": true,
+              "fix_y": true,
+              "id": "fixed_left_bottom",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "free_right_bottom",
+              "load_x": 0.0,
+              "load_y": -450.0,
+              "x": 0.12,
+              "y": 0.0
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "free_right_top",
+              "load_x": 0.0,
+              "load_y": -450.0,
+              "x": 0.12,
+              "y": 0.05
+            },
+            {
+              "fix_x": true,
+              "fix_y": true,
+              "id": "fixed_left_top",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "x": 0.0,
+              "y": 0.05
+            }
+          ]
+        },
+        "research": {
+          "candidate_id": "steel_4130_normalized",
+          "candidate_label": "Steel 4130 normalized",
+          "density_kg_m3": 7850.0,
+          "family": "steel",
+          "note": "stiff durable baseline with mass penalty",
+          "objective": "minimize panel stress, deflection, and mass while retaining yield margin",
+          "study": "material.structural_panel_screening.v1",
+          "yield_strength_pa": 435000000.0,
+          "youngs_modulus_pa": 205000000000.0
+        }
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:56:35.882319Z",
+          "execution_started_at": null,
+          "execution_timeout_ms": 120000,
+          "has_result": false,
+          "iteration": null,
+          "job_id": "6668b3119b26c913",
+          "message": null,
+          "model_version_id": null,
+          "progress": 0.0,
+          "project_id": "6cb8e8fb8dcf47ed",
+          "queue_timeout_ms": 1800000,
+          "residual": null,
+          "simulation_case_id": "2d4bab1b3fb2fdc3",
+          "status": "queued",
+          "status_detail": {
+            "active": true,
+            "failure_class": null,
+            "lifecycle": "active",
+            "recoverable": false,
+            "terminal": false,
+            "timing": {
+              "effective_deadline": "2026-08-13T11:26:35.882319Z",
+              "effective_timeout_ms": 1800000,
+              "execution_elapsed_ms": null,
+              "execution_started_at": null,
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:26:35.882319Z",
+              "phase": "queue",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 0,
+              "total_elapsed_ms": 0
+            }
+          },
+          "updated_at": "2026-08-13T10:56:35.882319Z",
+          "worker_id": null
+        },
+        "job_id": "6668b3119b26c913",
+        "progress": 0.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-13T10:56:35.882319Z",
+            "execution_started_at": null,
+            "execution_timeout_ms": 120000,
+            "has_result": false,
+            "iteration": null,
+            "job_id": "6668b3119b26c913",
+            "message": null,
+            "model_version_id": null,
+            "progress": 0.0,
+            "project_id": "6cb8e8fb8dcf47ed",
+            "queue_timeout_ms": 1800000,
+            "residual": null,
+            "simulation_case_id": "2d4bab1b3fb2fdc3",
+            "status": "queued",
+            "status_detail": {
+              "active": true,
+              "failure_class": null,
+              "lifecycle": "active",
+              "recoverable": false,
+              "terminal": false,
+              "timing": {
+                "effective_deadline": "2026-08-13T11:26:35.882319Z",
+                "effective_timeout_ms": 1800000,
+                "execution_elapsed_ms": null,
+                "execution_started_at": null,
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-13T11:26:35.882319Z",
+                "phase": "queue",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 0,
+                "total_elapsed_ms": 0
+              }
+            },
+            "updated_at": "2026-08-13T10:56:35.882319Z",
+            "worker_id": null
+          }
+        },
+        "status": "queued"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 5,
+      "action": "job_wait",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "6668b3119b26c913",
+        "max_total_timeout_ms": 3600000,
+        "resume_policy": "server_deadline",
+        "timeout_ms": 60000
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:56:35.882319Z",
+          "execution_started_at": "2026-08-13T10:56:35.887053Z",
+          "execution_timeout_ms": 120000,
+          "iteration": 4,
+          "job_id": "6668b3119b26c913",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "6cb8e8fb8dcf47ed",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "2d4bab1b3fb2fdc3",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-13T10:58:35.887053Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1020,
+              "execution_started_at": "2026-08-13T10:56:35.887053Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:26:35.882319Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 4,
+              "total_elapsed_ms": 1025
+            }
+          },
+          "updated_at": "2026-08-13T10:56:36.907460Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5001"
+        },
+        "job_id": "6668b3119b26c913",
+        "progress": 1.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-13T10:56:35.882319Z",
+            "execution_started_at": "2026-08-13T10:56:35.887053Z",
+            "execution_timeout_ms": 120000,
+            "iteration": 4,
+            "job_id": "6668b3119b26c913",
+            "message": "collecting nodal and elemental responses",
+            "model_version_id": null,
+            "progress": 1.0,
+            "project_id": "6cb8e8fb8dcf47ed",
+            "queue_timeout_ms": 1800000,
+            "residual": 0.2,
+            "simulation_case_id": "2d4bab1b3fb2fdc3",
+            "status": "completed",
+            "status_detail": {
+              "active": false,
+              "failure_class": null,
+              "lifecycle": "terminal",
+              "recoverable": false,
+              "terminal": true,
+              "timing": {
+                "effective_deadline": "2026-08-13T10:58:35.887053Z",
+                "effective_timeout_ms": 120000,
+                "execution_elapsed_ms": 1020,
+                "execution_started_at": "2026-08-13T10:56:35.887053Z",
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-13T11:26:35.882319Z",
+                "phase": "execution",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 4,
+                "total_elapsed_ms": 1025
+              }
+            },
+            "updated_at": "2026-08-13T10:56:36.907460Z",
+            "worker_id": "rust-agent-rpc@127.0.0.1:5001"
+          }
+        },
+        "result": null,
+        "status": "completed",
+        "wait": {
+          "elapsed_ms": 2028,
+          "policy": "server_deadline",
+          "poll_attempts": 3,
+          "resume_count": 0
+        }
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 6,
+      "action": "result_fetch",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "job_id": "6668b3119b26c913"
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:56:35.882319Z",
+          "execution_started_at": "2026-08-13T10:56:35.887053Z",
+          "execution_timeout_ms": 120000,
+          "has_result": true,
+          "iteration": 4,
+          "job_id": "6668b3119b26c913",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "6cb8e8fb8dcf47ed",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "2d4bab1b3fb2fdc3",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-13T10:58:35.887053Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1020,
+              "execution_started_at": "2026-08-13T10:56:35.887053Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:26:35.882319Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 4,
+              "total_elapsed_ms": 1025
+            }
+          },
+          "updated_at": "2026-08-13T10:56:36.907460Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5001"
+        },
+        "job_id": "6668b3119b26c913",
+        "result": {
+          "elements": [
+            {
+              "area": 0.005999999999999999,
+              "gamma_xy": -0.0001132682926829261,
+              "id": "panel_steel_4130_normalized",
+              "index": 0,
+              "max_in_plane_shear": 8999999.99999994,
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "principal_stress_1": 8999999.999999937,
+              "principal_stress_2": -8999999.999999944,
+              "strain_energy_density": 1536.6215859425868,
+              "strain_x": 4.4116299336161484e-20,
+              "strain_y": -6.776263578034403e-20,
+              "stress_x": 4.850638409455618e-9,
+              "stress_y": -1.2126596023639044e-8,
+              "tau_xy": -8999999.99999994,
+              "von_mises": 15588457.268119792
+            }
+          ],
+          "input": {
+            "elements": [
+              {
+                "id": "panel_steel_4130_normalized",
+                "node_i": 0,
+                "node_j": 1,
+                "node_k": 2,
+                "node_l": 3,
+                "poisson_ratio": 0.29,
+                "thickness": 0.002,
+                "youngs_modulus": 205000000000.0
+              }
+            ],
+            "nodes": [
+              {
+                "fix_x": true,
+                "fix_y": true,
+                "id": "fixed_left_bottom",
+                "load_x": 0.0,
+                "load_y": 0.0,
+                "x": 0.0,
+                "y": 0.0
+              },
+              {
+                "fix_x": false,
+                "fix_y": false,
+                "id": "free_right_bottom",
+                "load_x": 0.0,
+                "load_y": -450.0,
+                "x": 0.12,
+                "y": 0.0
+              },
+              {
+                "fix_x": false,
+                "fix_y": false,
+                "id": "free_right_top",
+                "load_x": 0.0,
+                "load_y": -450.0,
+                "x": 0.12,
+                "y": 0.05
+              },
+              {
+                "fix_x": true,
+                "fix_y": true,
+                "id": "fixed_left_top",
+                "load_x": 0.0,
+                "load_y": 0.0,
+                "x": 0.0,
+                "y": 0.05
+              }
+            ]
+          },
+          "max_displacement": 0.00004253553182856345,
+          "max_strain_energy_density": 1536.6215859425868,
+          "max_stress": 15588457.268119792,
+          "nodes": [
+            {
+              "displacement_magnitude": 0.0,
+              "id": "fixed_left_bottom",
+              "index": 0,
+              "ux": 0.0,
+              "uy": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "displacement_magnitude": 0.00004253553182856344,
+              "id": "free_right_bottom",
+              "index": 1,
+              "ux": -0.000011410158542993652,
+              "uy": -0.00004097657562513591,
+              "x": 0.12,
+              "y": 0.0
+            },
+            {
+              "displacement_magnitude": 0.00004253553182856345,
+              "id": "free_right_top",
+              "index": 2,
+              "ux": 0.000011410158542993664,
+              "uy": -0.00004097657562513592,
+              "x": 0.12,
+              "y": 0.05
+            },
+            {
+              "displacement_magnitude": 0.0,
+              "id": "fixed_left_top",
+              "index": 3,
+              "ux": 0.0,
+              "uy": 0.0,
+              "x": 0.0,
+              "y": 0.05
+            }
+          ],
+          "total_strain_energy": 0.01843945903131104
+        },
+        "status": "completed"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 7,
+      "action": "solve_plane_quad_2d",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "id": "panel_carbon_fiber_quasi_iso",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "poisson_ratio": 0.28,
+              "thickness": 0.002,
+              "youngs_modulus": 70000000000.0
+            }
+          ],
+          "nodes": [
+            {
+              "fix_x": true,
+              "fix_y": true,
+              "id": "fixed_left_bottom",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "free_right_bottom",
+              "load_x": 0.0,
+              "load_y": -450.0,
+              "x": 0.12,
+              "y": 0.0
+            },
+            {
+              "fix_x": false,
+              "fix_y": false,
+              "id": "free_right_top",
+              "load_x": 0.0,
+              "load_y": -450.0,
+              "x": 0.12,
+              "y": 0.05
+            },
+            {
+              "fix_x": true,
+              "fix_y": true,
+              "id": "fixed_left_top",
+              "load_x": 0.0,
+              "load_y": 0.0,
+              "x": 0.0,
+              "y": 0.05
+            }
+          ]
+        },
+        "research": {
+          "candidate_id": "carbon_fiber_quasi_iso",
+          "candidate_label": "Carbon fiber quasi-isotropic",
+          "density_kg_m3": 1600.0,
+          "family": "composite",
+          "note": "low-mass composite candidate for stiffness-per-mass studies",
+          "objective": "minimize panel stress, deflection, and mass while retaining yield margin",
+          "study": "material.structural_panel_screening.v1",
+          "yield_strength_pa": 600000000.0,
+          "youngs_modulus_pa": 70000000000.0
+        }
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:56:37.921895Z",
+          "execution_started_at": null,
+          "execution_timeout_ms": 120000,
+          "has_result": false,
+          "iteration": null,
+          "job_id": "a02588005b08d46d",
+          "message": null,
+          "model_version_id": null,
+          "progress": 0.0,
+          "project_id": "fddfee779f3b8987",
+          "queue_timeout_ms": 1800000,
+          "residual": null,
+          "simulation_case_id": "76bc4505e56abb39",
+          "status": "queued",
+          "status_detail": {
+            "active": true,
+            "failure_class": null,
+            "lifecycle": "active",
+            "recoverable": false,
+            "terminal": false,
+            "timing": {
+              "effective_deadline": "2026-08-13T11:26:37.921895Z",
+              "effective_timeout_ms": 1800000,
+              "execution_elapsed_ms": null,
+              "execution_started_at": null,
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:26:37.921895Z",
+              "phase": "queue",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 0,
+              "total_elapsed_ms": 0
+            }
+          },
+          "updated_at": "2026-08-13T10:56:37.921895Z",
+          "worker_id": null
+        },
+        "job_id": "a02588005b08d46d",
+        "progress": 0.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-13T10:56:37.921895Z",
+            "execution_started_at": null,
+            "execution_timeout_ms": 120000,
+            "has_result": false,
+            "iteration": null,
+            "job_id": "a02588005b08d46d",
+            "message": null,
+            "model_version_id": null,
+            "progress": 0.0,
+            "project_id": "fddfee779f3b8987",
+            "queue_timeout_ms": 1800000,
+            "residual": null,
+            "simulation_case_id": "76bc4505e56abb39",
+            "status": "queued",
+            "status_detail": {
+              "active": true,
+              "failure_class": null,
+              "lifecycle": "active",
+              "recoverable": false,
+              "terminal": false,
+              "timing": {
+                "effective_deadline": "2026-08-13T11:26:37.921895Z",
+                "effective_timeout_ms": 1800000,
+                "execution_elapsed_ms": null,
+                "execution_started_at": null,
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-13T11:26:37.921895Z",
+                "phase": "queue",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 0,
+                "total_elapsed_ms": 0
+              }
+            },
+            "updated_at": "2026-08-13T10:56:37.921895Z",
+            "worker_id": null
+          }
+        },
+        "status": "queued"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 8,
+      "action": "job_wait",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "a02588005b08d46d",
+        "max_total_timeout_ms": 3600000,
+        "resume_policy": "server_deadline",
+        "timeout_ms": 60000
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:56:37.921895Z",
+          "execution_started_at": "2026-08-13T10:56:37.927020Z",
+          "execution_timeout_ms": 120000,
+          "iteration": 4,
+          "job_id": "a02588005b08d46d",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "fddfee779f3b8987",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "76bc4505e56abb39",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-13T10:58:37.927020Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1020,
+              "execution_started_at": "2026-08-13T10:56:37.927020Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:26:37.921895Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 5,
+              "total_elapsed_ms": 1025
+            }
+          },
+          "updated_at": "2026-08-13T10:56:38.947328Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+        },
+        "job_id": "a02588005b08d46d",
+        "progress": 1.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-13T10:56:37.921895Z",
+            "execution_started_at": "2026-08-13T10:56:37.927020Z",
+            "execution_timeout_ms": 120000,
+            "iteration": 4,
+            "job_id": "a02588005b08d46d",
+            "message": "collecting nodal and elemental responses",
+            "model_version_id": null,
+            "progress": 1.0,
+            "project_id": "fddfee779f3b8987",
+            "queue_timeout_ms": 1800000,
+            "residual": 0.2,
+            "simulation_case_id": "76bc4505e56abb39",
+            "status": "completed",
+            "status_detail": {
+              "active": false,
+              "failure_class": null,
+              "lifecycle": "terminal",
+              "recoverable": false,
+              "terminal": true,
+              "timing": {
+                "effective_deadline": "2026-08-13T10:58:37.927020Z",
+                "effective_timeout_ms": 120000,
+                "execution_elapsed_ms": 1020,
+                "execution_started_at": "2026-08-13T10:56:37.927020Z",
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-13T11:26:37.921895Z",
+                "phase": "execution",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 5,
+                "total_elapsed_ms": 1025
+              }
+            },
+            "updated_at": "2026-08-13T10:56:38.947328Z",
+            "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+          }
+        },
+        "result": null,
+        "status": "completed",
+        "wait": {
+          "elapsed_ms": 2029,
+          "policy": "server_deadline",
+          "poll_attempts": 3,
+          "resume_count": 0
+        }
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 9,
+      "action": "result_fetch",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "job_id": "a02588005b08d46d"
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T10:56:37.921895Z",
+          "execution_started_at": "2026-08-13T10:56:37.927020Z",
+          "execution_timeout_ms": 120000,
+          "has_result": true,
+          "iteration": 4,
+          "job_id": "a02588005b08d46d",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "fddfee779f3b8987",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "76bc4505e56abb39",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-13T10:58:37.927020Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1020,
+              "execution_started_at": "2026-08-13T10:56:37.927020Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:26:37.921895Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 5,
+              "total_elapsed_ms": 1025
+            }
+          },
+          "updated_at": "2026-08-13T10:56:38.947328Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+        },
+        "job_id": "a02588005b08d46d",
+        "result": {
+          "elements": [
+            {
+              "area": 0.005999999999999999,
+              "gamma_xy": -0.0003291428571428551,
+              "id": "panel_carbon_fiber_quasi_iso",
+              "index": 0,
+              "max_in_plane_shear": 8999999.999999944,
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "principal_stress_1": 8999999.99999994,
+              "principal_stress_2": -8999999.999999948,
+              "strain_energy_density": 4478.89581319247,
+              "strain_x": -8.823259867232297e-20,
+              "strain_y": 0.0,
+              "stress_x": -7.275957614183427e-9,
+              "stress_y": -1.8189894035458567e-9,
+              "tau_xy": -8999999.999999944,
+              "von_mises": 15588457.2681198
+            }
+          ],
+          "input": {
+            "elements": [
+              {
+                "id": "panel_carbon_fiber_quasi_iso",
+                "node_i": 0,
+                "node_j": 1,
+                "node_k": 2,
+                "node_l": 3,
+                "poisson_ratio": 0.28,
+                "thickness": 0.002,
+                "youngs_modulus": 70000000000.0
+              }
+            ],
+            "nodes": [
+              {
+                "fix_x": true,
+                "fix_y": true,
+                "id": "fixed_left_bottom",
+                "load_x": 0.0,
+                "load_y": 0.0,
+                "x": 0.0,
+                "y": 0.0
+              },
+              {
+                "fix_x": false,
+                "fix_y": false,
+                "id": "free_right_bottom",
+                "load_x": 0.0,
+                "load_y": -450.0,
+                "x": 0.12,
+                "y": 0.0
+              },
+              {
+                "fix_x": false,
+                "fix_y": false,
+                "id": "free_right_top",
+                "load_x": 0.0,
+                "load_y": -450.0,
+                "x": 0.12,
+                "y": 0.05
+              },
+              {
+                "fix_x": true,
+                "fix_y": true,
+                "id": "fixed_left_top",
+                "load_x": 0.0,
+                "load_y": 0.0,
+                "x": 0.0,
+                "y": 0.05
+              }
+            ]
+          },
+          "max_displacement": 0.00012399474658764126,
+          "max_strain_energy_density": 4478.89581319247,
+          "max_stress": 15588457.2681198,
+          "nodes": [
+            {
+              "displacement_magnitude": 0.0,
+              "id": "fixed_left_bottom",
+              "index": 0,
+              "ux": 0.0,
+              "uy": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "displacement_magnitude": 0.00012399474658764126,
+              "id": "free_right_bottom",
+              "index": 1,
+              "ux": -0.00003330836617832949,
+              "uy": -0.00011943722168513336,
+              "x": 0.12,
+              "y": 0.0
+            },
+            {
+              "displacement_magnitude": 0.00012399474658764126,
+              "id": "free_right_top",
+              "index": 2,
+              "ux": 0.000033308366178329466,
+              "uy": -0.00011943722168513336,
+              "x": 0.12,
+              "y": 0.05
+            },
+            {
+              "displacement_magnitude": 0.0,
+              "id": "fixed_left_top",
+              "index": 3,
+              "ux": 0.0,
+              "uy": 0.0,
+              "x": 0.0,
+              "y": 0.05
+            }
+          ],
+          "total_strain_energy": 0.053746749758309634
+        },
+        "status": "completed"
+      },
+      "requires_confirmation": false
+    }
+  ]
+}

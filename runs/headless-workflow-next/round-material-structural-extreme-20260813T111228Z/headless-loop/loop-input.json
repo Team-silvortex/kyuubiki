@@ -1,0 +1,275 @@
+{
+  "schema_version": "kyuubiki.headless-workflow/v1",
+  "exported_at": "1970-01-01T00:00:00.000Z",
+  "language": "en",
+  "workflow": {
+    "id": "template.material_structural_panel_screening",
+    "steps": [
+      {
+        "action": "solve_plane_quad_2d",
+        "payload": {
+          "model": {
+            "elements": [
+              {
+                "id": "panel_aluminum_7075_t6",
+                "node_i": 0,
+                "node_j": 1,
+                "node_k": 2,
+                "node_l": 3,
+                "poisson_ratio": 0.33,
+                "thickness": 0.002,
+                "youngs_modulus": 71700000000.0
+              }
+            ],
+            "nodes": [
+              {
+                "fix_x": true,
+                "fix_y": true,
+                "id": "fixed_left_bottom",
+                "load_x": 0.0,
+                "load_y": 0.0,
+                "x": 0.0,
+                "y": 0.0
+              },
+              {
+                "fix_x": false,
+                "fix_y": false,
+                "id": "free_right_bottom",
+                "load_x": 0.0,
+                "load_y": -450.0,
+                "x": 0.12,
+                "y": 0.0
+              },
+              {
+                "fix_x": false,
+                "fix_y": false,
+                "id": "free_right_top",
+                "load_x": 0.0,
+                "load_y": -450.0,
+                "x": 0.12,
+                "y": 0.05
+              },
+              {
+                "fix_x": true,
+                "fix_y": true,
+                "id": "fixed_left_top",
+                "load_x": 0.0,
+                "load_y": 0.0,
+                "x": 0.0,
+                "y": 0.05
+              }
+            ]
+          },
+          "research": {
+            "candidate_id": "aluminum_7075_t6",
+            "candidate_label": "Aluminum 7075-T6",
+            "density_kg_m3": 2810.0,
+            "family": "metal",
+            "note": "light aerospace baseline with strong yield margin",
+            "objective": "minimize panel stress, deflection, and mass while retaining yield margin",
+            "study": "material.structural_panel_screening.v1",
+            "yield_strength_pa": 503000000.0,
+            "youngs_modulus_pa": 71700000000.0
+          }
+        }
+      },
+      {
+        "action": "job_wait",
+        "payload": {
+          "interval_ms": 1000,
+          "job_id": "{{steps.1.result.job_id}}",
+          "max_total_timeout_ms": 3600000,
+          "resume_policy": "server_deadline",
+          "timeout_ms": 60000
+        }
+      },
+      {
+        "action": "result_fetch",
+        "payload": {
+          "job_id": "{{steps.1.result.job_id}}"
+        }
+      },
+      {
+        "action": "solve_plane_quad_2d",
+        "payload": {
+          "model": {
+            "elements": [
+              {
+                "id": "panel_steel_4130_normalized",
+                "node_i": 0,
+                "node_j": 1,
+                "node_k": 2,
+                "node_l": 3,
+                "poisson_ratio": 0.29,
+                "thickness": 0.002,
+                "youngs_modulus": 205000000000.0
+              }
+            ],
+            "nodes": [
+              {
+                "fix_x": true,
+                "fix_y": true,
+                "id": "fixed_left_bottom",
+                "load_x": 0.0,
+                "load_y": 0.0,
+                "x": 0.0,
+                "y": 0.0
+              },
+              {
+                "fix_x": false,
+                "fix_y": false,
+                "id": "free_right_bottom",
+                "load_x": 0.0,
+                "load_y": -450.0,
+                "x": 0.12,
+                "y": 0.0
+              },
+              {
+                "fix_x": false,
+                "fix_y": false,
+                "id": "free_right_top",
+                "load_x": 0.0,
+                "load_y": -450.0,
+                "x": 0.12,
+                "y": 0.05
+              },
+              {
+                "fix_x": true,
+                "fix_y": true,
+                "id": "fixed_left_top",
+                "load_x": 0.0,
+                "load_y": 0.0,
+                "x": 0.0,
+                "y": 0.05
+              }
+            ]
+          },
+          "research": {
+            "candidate_id": "steel_4130_normalized",
+            "candidate_label": "Steel 4130 normalized",
+            "density_kg_m3": 7850.0,
+            "family": "steel",
+            "note": "stiff durable baseline with mass penalty",
+            "objective": "minimize panel stress, deflection, and mass while retaining yield margin",
+            "study": "material.structural_panel_screening.v1",
+            "yield_strength_pa": 435000000.0,
+            "youngs_modulus_pa": 205000000000.0
+          }
+        }
+      },
+      {
+        "action": "job_wait",
+        "payload": {
+          "interval_ms": 1000,
+          "job_id": "{{steps.4.result.job_id}}",
+          "max_total_timeout_ms": 3600000,
+          "resume_policy": "server_deadline",
+          "timeout_ms": 60000
+        }
+      },
+      {
+        "action": "result_fetch",
+        "payload": {
+          "job_id": "{{steps.4.result.job_id}}"
+        }
+      },
+      {
+        "action": "solve_plane_quad_2d",
+        "payload": {
+          "model": {
+            "elements": [
+              {
+                "id": "panel_carbon_fiber_quasi_iso",
+                "node_i": 0,
+                "node_j": 1,
+                "node_k": 2,
+                "node_l": 3,
+                "poisson_ratio": 0.28,
+                "thickness": 0.002,
+                "youngs_modulus": 70000000000.0
+              }
+            ],
+            "nodes": [
+              {
+                "fix_x": true,
+                "fix_y": true,
+                "id": "fixed_left_bottom",
+                "load_x": 0.0,
+                "load_y": 0.0,
+                "x": 0.0,
+                "y": 0.0
+              },
+              {
+                "fix_x": false,
+                "fix_y": false,
+                "id": "free_right_bottom",
+                "load_x": 0.0,
+                "load_y": -450.0,
+                "x": 0.12,
+                "y": 0.0
+              },
+              {
+                "fix_x": false,
+                "fix_y": false,
+                "id": "free_right_top",
+                "load_x": 0.0,
+                "load_y": -450.0,
+                "x": 0.12,
+                "y": 0.05
+              },
+              {
+                "fix_x": true,
+                "fix_y": true,
+                "id": "fixed_left_top",
+                "load_x": 0.0,
+                "load_y": 0.0,
+                "x": 0.0,
+                "y": 0.05
+              }
+            ]
+          },
+          "research": {
+            "candidate_id": "carbon_fiber_quasi_iso",
+            "candidate_label": "Carbon fiber quasi-isotropic",
+            "density_kg_m3": 1600.0,
+            "family": "composite",
+            "note": "low-mass composite candidate for stiffness-per-mass studies",
+            "objective": "minimize panel stress, deflection, and mass while retaining yield margin",
+            "study": "material.structural_panel_screening.v1",
+            "yield_strength_pa": 600000000.0,
+            "youngs_modulus_pa": 70000000000.0
+          }
+        }
+      },
+      {
+        "action": "job_wait",
+        "payload": {
+          "interval_ms": 1000,
+          "job_id": "{{steps.7.result.job_id}}",
+          "max_total_timeout_ms": 3600000,
+          "resume_policy": "server_deadline",
+          "timeout_ms": 60000
+        }
+      },
+      {
+        "action": "result_fetch",
+        "payload": {
+          "job_id": "{{steps.7.result.job_id}}"
+        }
+      }
+    ]
+  },
+  "template": {
+    "id": "material_structural_panel_screening",
+    "title": "Material Structural Panel Screening",
+    "description": "Compare aluminum, steel, and carbon fiber candidates in a lightweight structural panel study.",
+    "runtime_style": "service_only",
+    "category": "materials",
+    "tags": [
+      "material",
+      "mechanical",
+      "screening",
+      "stiffness"
+    ]
+  }
+}

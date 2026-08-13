@@ -1,0 +1,263 @@
+{
+  "candidates": [
+    {
+      "areal_mass_kg_m2": 16.1,
+      "candidate_id": "invar_36",
+      "candidate_label": "Invar 36",
+      "max_displacement_m": 7.009706443832132e-6,
+      "max_stress_pa": 6286433.03597345,
+      "max_temperature_delta_k": 110.0,
+      "missing_metrics": [],
+      "optimization_terms": [
+        {
+          "constraint_status": "pass",
+          "direction": "minimize",
+          "metric_id": "max_stress_pa",
+          "normalized_score": 1.0,
+          "raw_value": 6286433.03597345,
+          "weighted_score": 0.45
+        },
+        {
+          "constraint_status": "pass",
+          "direction": "minimize",
+          "metric_id": "max_displacement_m",
+          "normalized_score": 1.0,
+          "raw_value": 7.009706443832132e-6,
+          "weighted_score": 0.25
+        },
+        {
+          "constraint_status": "violate",
+          "direction": "minimize",
+          "metric_id": "areal_mass_kg_m2",
+          "normalized_score": 0.0,
+          "raw_value": 16.1,
+          "weighted_score": 0.0
+        },
+        {
+          "constraint_status": "observe",
+          "direction": "minimize",
+          "metric_id": "thermal_expansion_1_k",
+          "normalized_score": 1.0,
+          "raw_value": 1.2e-6,
+          "weighted_score": 0.05
+        }
+      ],
+      "rank": 1,
+      "score": 0.75
+    },
+    {
+      "areal_mass_kg_m2": 8.86,
+      "candidate_id": "titanium_grade_5",
+      "candidate_label": "Titanium Grade 5",
+      "max_displacement_m": 0.000050936238421026874,
+      "max_stress_pa": 35795452.58632844,
+      "max_temperature_delta_k": 110.0,
+      "missing_metrics": [],
+      "optimization_terms": [
+        {
+          "constraint_status": "pass",
+          "direction": "minimize",
+          "metric_id": "max_stress_pa",
+          "normalized_score": 0.447,
+          "raw_value": 35795452.58632844,
+          "weighted_score": 0.201
+        },
+        {
+          "constraint_status": "pass",
+          "direction": "minimize",
+          "metric_id": "max_displacement_m",
+          "normalized_score": 0.668,
+          "raw_value": 0.000050936238421026874,
+          "weighted_score": 0.167
+        },
+        {
+          "constraint_status": "pass",
+          "direction": "minimize",
+          "metric_id": "areal_mass_kg_m2",
+          "normalized_score": 0.677,
+          "raw_value": 8.86,
+          "weighted_score": 0.169
+        },
+        {
+          "constraint_status": "observe",
+          "direction": "minimize",
+          "metric_id": "thermal_expansion_1_k",
+          "normalized_score": 0.67,
+          "raw_value": 8.6e-6,
+          "weighted_score": 0.033
+        }
+      ],
+      "rank": 2,
+      "score": 0.571
+    },
+    {
+      "areal_mass_kg_m2": 5.4,
+      "candidate_id": "aluminum_6061_t6",
+      "candidate_label": "Aluminum 6061-T6",
+      "max_displacement_m": 0.00013934592735871952,
+      "max_stress_pa": 59679524.46492329,
+      "max_temperature_delta_k": 110.0,
+      "missing_metrics": [],
+      "optimization_terms": [
+        {
+          "constraint_status": "pass",
+          "direction": "minimize",
+          "metric_id": "max_stress_pa",
+          "normalized_score": 0.0,
+          "raw_value": 59679524.46492329,
+          "weighted_score": 0.0
+        },
+        {
+          "constraint_status": "pass",
+          "direction": "minimize",
+          "metric_id": "max_displacement_m",
+          "normalized_score": 0.0,
+          "raw_value": 0.00013934592735871952,
+          "weighted_score": 0.0
+        },
+        {
+          "constraint_status": "pass",
+          "direction": "minimize",
+          "metric_id": "areal_mass_kg_m2",
+          "normalized_score": 1.0,
+          "raw_value": 5.4,
+          "weighted_score": 0.25
+        },
+        {
+          "constraint_status": "observe",
+          "direction": "minimize",
+          "metric_id": "thermal_expansion_1_k",
+          "normalized_score": 0.0,
+          "raw_value": 0.0000236,
+          "weighted_score": 0.0
+        }
+      ],
+      "rank": 3,
+      "score": 0.25
+    }
+  ],
+  "material_card_refs": [
+    {
+      "candidate_id": "aluminum_6061_t6",
+      "confidence": "medium",
+      "material_card_id": "kyuubiki.material_card.aluminum_6061_t6.v1",
+      "parameter_scope": "room-temperature scalar thermo-mechanical screening values",
+      "schema_version": "kyuubiki.material-card/v1",
+      "source": "kyuubiki built-in thermo-shield screening fixture",
+      "unit_system": "si"
+    },
+    {
+      "candidate_id": "titanium_grade_5",
+      "confidence": "medium",
+      "material_card_id": "kyuubiki.material_card.titanium_grade_5.v1",
+      "parameter_scope": "room-temperature scalar thermo-mechanical screening values",
+      "schema_version": "kyuubiki.material-card/v1",
+      "source": "kyuubiki built-in thermo-shield screening fixture",
+      "unit_system": "si"
+    },
+    {
+      "candidate_id": "invar_36",
+      "confidence": "low",
+      "material_card_id": "kyuubiki.material_card.invar_36.v1",
+      "parameter_scope": "room-temperature scalar thermo-mechanical screening values",
+      "schema_version": "kyuubiki.material-card/v1",
+      "source": "kyuubiki built-in thermo-shield screening fixture",
+      "unit_system": "si"
+    }
+  ],
+  "metric_specs": [
+    {
+      "id": "max_stress_pa",
+      "label": "Max von Mises stress",
+      "objective": "minimize",
+      "source": "solver.result.max_stress",
+      "unit": "Pa",
+      "weight": 0.45
+    },
+    {
+      "id": "max_displacement_m",
+      "label": "Max displacement",
+      "objective": "minimize",
+      "source": "solver.result.max_displacement",
+      "unit": "m",
+      "weight": 0.25
+    },
+    {
+      "id": "areal_mass_kg_m2",
+      "label": "Areal mass",
+      "objective": "minimize",
+      "source": "candidate.density_kg_m3 * model.thickness",
+      "unit": "kg/m^2",
+      "weight": 0.25
+    },
+    {
+      "id": "max_temperature_delta_k",
+      "label": "Max temperature delta",
+      "objective": "observe",
+      "source": "solver.result.max_temperature_delta",
+      "unit": "K",
+      "weight": 0.0
+    },
+    {
+      "id": "thermal_expansion_1_k",
+      "label": "Thermal expansion",
+      "objective": "minimize",
+      "source": "candidate.thermal_expansion_1_k",
+      "unit": "1/K",
+      "weight": 0.05
+    }
+  ],
+  "objective": "rank constrained thermo-mechanical shield candidates by stress, displacement, and mass",
+  "optimization": {
+    "constraints": [
+      {
+        "limit": 120000000.0,
+        "metric_id": "max_stress_pa",
+        "operator": "<=",
+        "severity": "warning"
+      },
+      {
+        "limit": 0.00025,
+        "metric_id": "max_displacement_m",
+        "operator": "<=",
+        "severity": "warning"
+      },
+      {
+        "limit": 10.0,
+        "metric_id": "areal_mass_kg_m2",
+        "operator": "<=",
+        "severity": "warning"
+      }
+    ],
+    "goal": "Minimize thermal stress, displacement, and areal mass under constrained heating.",
+    "id": "material.thermo_shield_screening.optimization.v1",
+    "score_formula": "0.45*max_stress_pa:min + 0.25*max_displacement_m:min + 0.25*areal_mass_kg_m2:min + 0.05*thermal_expansion_1_k:min",
+    "score_range": "0.0..1.0 higher_is_better",
+    "weights": [
+      {
+        "direction": "minimize",
+        "metric_id": "max_stress_pa",
+        "weight": 0.45
+      },
+      {
+        "direction": "minimize",
+        "metric_id": "max_displacement_m",
+        "weight": 0.25
+      },
+      {
+        "direction": "minimize",
+        "metric_id": "areal_mass_kg_m2",
+        "weight": 0.25
+      },
+      {
+        "direction": "minimize",
+        "metric_id": "thermal_expansion_1_k",
+        "weight": 0.05
+      }
+    ]
+  },
+  "schema_version": "kyuubiki.thermo-material-report/v1",
+  "study": "material.thermo_shield_screening.v1",
+  "warnings": [],
+  "winner_candidate_id": "invar_36"
+}

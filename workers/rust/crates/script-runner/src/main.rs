@@ -19,6 +19,7 @@ mod central_store_contract;
 mod commercial_readiness;
 mod component_integrity_protocol;
 mod contracts_runtime_api_surface;
+mod contracts_validation_qualification;
 mod dependency_audit;
 mod desktop;
 mod desktop_deployment_update_validation;

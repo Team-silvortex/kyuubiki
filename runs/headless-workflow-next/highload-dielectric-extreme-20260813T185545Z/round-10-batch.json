@@ -1,0 +1,265 @@
+{
+  "schema_version": "kyuubiki.headless-execution-batch/v1",
+  "exported_at": "1970-01-01T00:00:00.000Z",
+  "language": "en",
+  "workflow_id": "template.material_dielectric_screening",
+  "template_id": "material_dielectric_screening",
+  "steps": [
+    {
+      "index": 1,
+      "action": "solve_electrostatic_plane_quad_2d",
+      "risk": "normal",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "id": "dielectric_polyimide_film",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "permittivity": 3.010423856352E-11,
+              "thickness": 0.001
+            }
+          ],
+          "nodes": [
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "ground_left_bottom",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "drive_right_bottom",
+              "potential": 7893,
+              "x": 0.04,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "drive_right_top",
+              "potential": 7893,
+              "x": 0.04,
+              "y": 0.02
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "ground_left_top",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.02
+            }
+          ]
+        },
+        "research": {
+          "breakdown_field_v_m": 300000000.0,
+          "candidate_id": "polyimide_film",
+          "candidate_label": "Polyimide film",
+          "dissipation_factor": 0.002,
+          "family": "polymer",
+          "note": "flexible high-breakdown film baseline",
+          "objective": "maximize electric breakdown margin with low loss and low mass",
+          "relative_permittivity": 3.4,
+          "study": "material.dielectric_screening.v1"
+        }
+      }
+    },
+    {
+      "index": 2,
+      "action": "job_wait",
+      "risk": "normal",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "{{steps.1.result.job_id}}",
+        "max_total_timeout_ms": 3600000,
+        "resume_policy": "server_deadline",
+        "timeout_ms": 60000
+      }
+    },
+    {
+      "index": 3,
+      "action": "result_fetch",
+      "risk": "normal",
+      "payload": {
+        "job_id": "{{steps.1.result.job_id}}"
+      }
+    },
+    {
+      "index": 4,
+      "action": "solve_electrostatic_plane_quad_2d",
+      "risk": "normal",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "id": "dielectric_alumina_96",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "permittivity": 8.677104056544001E-11,
+              "thickness": 0.001
+            }
+          ],
+          "nodes": [
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "ground_left_bottom",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "drive_right_bottom",
+              "potential": 7893,
+              "x": 0.04,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "drive_right_top",
+              "potential": 7893,
+              "x": 0.04,
+              "y": 0.02
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "ground_left_top",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.02
+            }
+          ]
+        },
+        "research": {
+          "breakdown_field_v_m": 130000000.0,
+          "candidate_id": "alumina_96",
+          "candidate_label": "Alumina 96%",
+          "dissipation_factor": 0.0002,
+          "family": "ceramic",
+          "note": "ceramic substrate candidate with low loss but high mass",
+          "objective": "maximize electric breakdown margin with low loss and low mass",
+          "relative_permittivity": 9.8,
+          "study": "material.dielectric_screening.v1"
+        }
+      }
+    },
+    {
+      "index": 5,
+      "action": "job_wait",
+      "risk": "normal",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "{{steps.4.result.job_id}}",
+        "max_total_timeout_ms": 3600000,
+        "resume_policy": "server_deadline",
+        "timeout_ms": 60000
+      }
+    },
+    {
+      "index": 6,
+      "action": "result_fetch",
+      "risk": "normal",
+      "payload": {
+        "job_id": "{{steps.4.result.job_id}}"
+      }
+    },
+    {
+      "index": 7,
+      "action": "solve_electrostatic_plane_quad_2d",
+      "risk": "normal",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "id": "dielectric_ptfe",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "permittivity": 1.859379440688E-11,
+              "thickness": 0.001
+            }
+          ],
+          "nodes": [
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "ground_left_bottom",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "drive_right_bottom",
+              "potential": 7893,
+              "x": 0.04,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "drive_right_top",
+              "potential": 7893,
+              "x": 0.04,
+              "y": 0.02
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "ground_left_top",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.02
+            }
+          ]
+        },
+        "research": {
+          "breakdown_field_v_m": 60000000.0,
+          "candidate_id": "ptfe",
+          "candidate_label": "PTFE",
+          "dissipation_factor": 0.0002,
+          "family": "polymer",
+          "note": "low-loss polymer candidate with weaker breakdown margin",
+          "objective": "maximize electric breakdown margin with low loss and low mass",
+          "relative_permittivity": 2.1,
+          "study": "material.dielectric_screening.v1"
+        }
+      }
+    },
+    {
+      "index": 8,
+      "action": "job_wait",
+      "risk": "normal",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "{{steps.7.result.job_id}}",
+        "max_total_timeout_ms": 3600000,
+        "resume_policy": "server_deadline",
+        "timeout_ms": 60000
+      }
+    },
+    {
+      "index": 9,
+      "action": "result_fetch",
+      "risk": "normal",
+      "payload": {
+        "job_id": "{{steps.7.result.job_id}}"
+      }
+    }
+  ],
+  "warnings": []
+}

@@ -1,12 +1,13 @@
 use crate::{
     agent_solver_operational_qualification, central_database_readiness, central_readiness_report,
     central_store_contract, commercial_readiness, component_integrity_protocol,
-    contracts_runtime_api_surface, dependency_audit, desktop_deployment_update_validation,
-    desktop_ui_validation, desktop_usability_journeys, doc_inventory, docs_book, frontend_checks,
-    gui_runtime_capability_contract, headless_sdk_validation, headless_workflow_qualification,
-    install_update_disk_hygiene, installation_integrity_docs, installer_recovery_fault_injection,
-    language_packs, local_path_audit, make_modules, material_exploration_chain_contract,
-    material_score_contract, material_study_execution_plan_contract, materialization_plan_contract,
+    contracts_runtime_api_surface, contracts_validation_qualification, dependency_audit,
+    desktop_deployment_update_validation, desktop_ui_validation, desktop_usability_journeys,
+    doc_inventory, docs_book, frontend_checks, gui_runtime_capability_contract,
+    headless_sdk_validation, headless_workflow_qualification, install_update_disk_hygiene,
+    installation_integrity_docs, installer_recovery_fault_injection, language_packs,
+    local_path_audit, make_modules, material_exploration_chain_contract, material_score_contract,
+    material_study_execution_plan_contract, materialization_plan_contract,
     minimal_industrial_closure, module_extension_standard, module_function_matrix,
     module_function_tensor, module_topology, module_topology_report, moxi_handoff,
     operator_task_ir_contract, orchestra_recovery_fault_injection, project_organization_audit,
@@ -77,6 +78,11 @@ pub(crate) fn run_governance_command(
         }
         "check-contracts-runtime-api-surface" => {
             contracts_runtime_api_surface::run_check_contracts_runtime_api_surface(root, args)
+        }
+        "check-contracts-validation-qualification" => {
+            contracts_validation_qualification::run_check_contracts_validation_qualification(
+                root, args,
+            )
         }
         "validate-language-packs" => language_packs::run_validate_language_packs(root, args),
         "build-workbench-language-pack-catalog" => {

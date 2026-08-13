@@ -6,6 +6,7 @@
   "runtime_api_client_contract": "config/architecture/contracts-runtime-api-surface.json",
   "evidence_includes": [
     "config/architecture/module-function-coverage-evidence/core-contracts.json",
+    "config/architecture/module-function-coverage-evidence/contracts-validation.json",
     "config/architecture/module-function-coverage-evidence/product-surface-contracts.json",
     "config/architecture/module-function-coverage-evidence/model-collaboration-sdks.json",
     "config/architecture/module-function-coverage-evidence/headless-sdk-validation.json",

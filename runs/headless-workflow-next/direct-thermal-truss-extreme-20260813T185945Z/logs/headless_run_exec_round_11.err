@@ -1,0 +1,2 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running `target/debug/kyuubiki-headless run /Users/Shared/chroot/dev/kyuubiki/headless-loop/round-11-batch.json --json --report-out /Users/Shared/chroot/dev/kyuubiki/headless-loop/round-11-run-exec.json --execute --executor service --api-base-url 'http://127.0.0.1:3000'`

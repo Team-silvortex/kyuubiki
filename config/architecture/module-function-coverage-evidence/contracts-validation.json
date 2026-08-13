@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Repeatable positive and fault-boundary qualification for the cross-operator contract layer.",
+  "paradigm_contract_evidence": {
+    "validation": [
+      {
+        "id": "contracts-validation-qualification-contract",
+        "modules": [
+          "contracts"
+        ],
+        "files": [
+          "config/architecture/contracts-validation-qualification.json",
+          "schemas/contracts-validation-qualification-report.schema.json",
+          "workers/rust/crates/script-runner/src/contracts_validation_qualification.rs"
+        ],
+        "required_text": [
+          "kyuubiki.contracts-validation-qualification-contract/v1",
+          "kyuubiki.contracts-validation-qualification-report/v1",
+          "expected_outcome",
+          "stable_output",
+          "repository-path-escape"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "contracts-validation-repeatable-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "contracts"
+      ],
+      "paradigms": [
+        "validation"
+      ],
+      "dimensions": [
+        "execution",
+        "contract"
+      ],
+      "files": [
+        "config/architecture/contracts-validation-qualification.json",
+        "schemas/contracts-validation-qualification-report.schema.json",
+        "workers/rust/crates/script-runner/src/contracts_validation_qualification.rs",
+        "releases/usability-evidence/2.13.9/contracts-validation-qualification.json"
+      ],
+      "required_text": [
+        "kyuubiki.contracts-validation-qualification-contract/v1",
+        "kyuubiki.contracts-validation-qualification-report/v1",
+        "contracts validation qualified",
+        "operator-model-side-effects",
+        "repository path traversal rejected",
+        "\"rejection_check_count\":6"
+      ]
+    }
+  ]
+}

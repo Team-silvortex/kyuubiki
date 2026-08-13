@@ -1,0 +1,2 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.30s
+     Running `target/debug/kyuubiki-headless init --template material_structural_panel_screening --out /Users/Shared/chroot/dev/kyuubiki/headless-loop/loop-input.json --json`

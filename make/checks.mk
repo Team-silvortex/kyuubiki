@@ -1,5 +1,5 @@
 .PHONY: check-doc-book check-doc-inventory sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-moxi-handoff check-install-update-disk-hygiene check-component-integrity-protocol
-.PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-test-coverage-posture coverage coverage-rust coverage-frontend check-module-extension-standard check-contracts-runtime-api-surface check-verification-evidence-surface check-central-store-contract check-central-database-readiness build-central-readiness-report check-central-readiness-report build-module-topology-report check-native-script-audit
+.PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-test-coverage-posture coverage coverage-rust coverage-frontend check-module-extension-standard check-contracts-runtime-api-surface check-contracts-validation-qualification check-verification-evidence-surface check-central-store-contract check-central-database-readiness build-central-readiness-report check-central-readiness-report build-module-topology-report check-native-script-audit
 .PHONY: check-language-packs report-full-language-pack-coverage plan-language-pack-translations next-language-pack-translation check-full-language-pack-coverage check-language-pack-coverage export-language-pack-translation-batch apply-language-pack-translation-batch check-ui-automation-contract check-gui-runtime-capability-contract check-desktop-usability-journeys check-usability-release-gate build-usability-readiness-report check-runtime-recovery-fault-injection check-orchestra-recovery-fault-injection check-installer-recovery-fault-injection check-version-line
 .PHONY: check-workflow-dataset-contract check-workflow-metric-resolver-contract check-material-card-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
 .PHONY: build-operator-qualification-readiness check-operator-qualification-readiness
@@ -476,6 +476,10 @@ check-system-security-qualification:
 	@$(ENTRYPOINT) check-system-security-qualification --self-test
 	@$(ENTRYPOINT) check-system-security-qualification --verify-report releases/usability-evidence/2.13.6/system-security-qualification.json
 
+check-contracts-validation-qualification:
+	@$(ENTRYPOINT) check-contracts-validation-qualification --self-test
+	@$(ENTRYPOINT) check-contracts-validation-qualification --verify-report releases/usability-evidence/2.13.9/contracts-validation-qualification.json
+
 check-agent-solver-operational-qualification:
 	@$(ENTRYPOINT) check-agent-solver-operational-qualification --self-test
 	@$(ENTRYPOINT) check-agent-solver-operational-qualification --verify-report releases/usability-evidence/2.13.8/agent-solver-operational-qualification.json
@@ -531,6 +535,7 @@ architecture-check:
 	@$(MAKE) check-component-integrity-protocol
 	@$(MAKE) check-ui-automation-contract
 	@$(MAKE) check-gui-runtime-capability-contract
+	@$(MAKE) check-contracts-validation-qualification
 	@$(MAKE) check-system-security-qualification
 	@$(MAKE) check-agent-solver-operational-qualification
 	@$(MAKE) check-usability-release-gate

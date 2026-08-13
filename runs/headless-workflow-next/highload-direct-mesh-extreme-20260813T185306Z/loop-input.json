@@ -1,0 +1,54 @@
+{
+  "schema_version": "kyuubiki.headless-workflow/v1",
+  "exported_at": "1970-01-01T00:00:00.000Z",
+  "language": "en",
+  "workflow": {
+    "id": "template.direct_mesh_pipeline",
+    "steps": [
+      {
+        "action": "direct_mesh_solve",
+        "payload": {
+          "input": {
+            "area": 0.01,
+            "elements": 4,
+            "kind": "axial_bar_1d",
+            "length": 1.0,
+            "model_schema_version": "kyuubiki.model/v1",
+            "tip_force": 1200.0,
+            "youngs_modulus_gpa": 210.0
+          },
+          "study_kind": "axial_bar_1d"
+        }
+      },
+      {
+        "action": "job_wait",
+        "payload": {
+          "interval_ms": 1000,
+          "job_id": "{{steps.1.result.job_id}}",
+          "max_total_timeout_ms": 3600000,
+          "resume_policy": "server_deadline",
+          "timeout_ms": 60000
+        }
+      },
+      {
+        "action": "result_fetch",
+        "payload": {
+          "job_id": "{{steps.1.result.job_id}}",
+          "prefer_job_result": false
+        }
+      }
+    ]
+  },
+  "template": {
+    "id": "direct_mesh_pipeline",
+    "title": "Direct Mesh Solve",
+    "description": "Resolve from a raw mesh payload and keep the job follow-up explicit.",
+    "runtime_style": "service_only",
+    "category": "mesh",
+    "tags": [
+      "mesh",
+      "direct",
+      "solve"
+    ]
+  }
+}

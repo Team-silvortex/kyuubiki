@@ -1,0 +1,2 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.08s
+     Running `target/debug/kyuubiki-headless init --template direct_thermal_truss_3d --out /Users/Shared/chroot/dev/kyuubiki/headless-loop/loop-input.json --json`

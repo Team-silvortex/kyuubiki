@@ -1,0 +1,418 @@
+{
+  "schema_version": "kyuubiki.headless-execution-run/v1",
+  "workflow_id": "template.direct_acoustic_bar_1d",
+  "mode": "execute:service",
+  "status": "ok",
+  "executed_step_count": 3,
+  "warning_count": 0,
+  "blocked_by_confirmation": null,
+  "validation": {
+    "ok": true,
+    "issue_count": 0,
+    "issues": [],
+    "warning_count": 0,
+    "warnings": [],
+    "summary": {
+      "schema_version": "kyuubiki.headless-execution-batch/v1",
+      "workflow_id": "template.direct_acoustic_bar_1d",
+      "template_id": "direct_acoustic_bar_1d",
+      "exported_at": "1970-01-01T00:00:00.000Z",
+      "language": "en",
+      "step_count": 3,
+      "warning_count": 0,
+      "actions": [
+        "solve_acoustic_bar_1d",
+        "job_wait",
+        "result_fetch"
+      ]
+    },
+    "policy": {
+      "required_engines": [
+        "service"
+      ],
+      "engine_counts": {
+        "browser": 0,
+        "service": 3
+      },
+      "risk_counts": {
+        "normal": 3,
+        "destructive": 0,
+        "sensitive": 0
+      },
+      "recommended_runtime": "service_only",
+      "needs_desktop_browser": false,
+      "safe_for_service_only": true,
+      "notes": []
+    }
+  },
+  "execution_summary": {
+    "schema_version": "kyuubiki.headless-execution-summary/v1",
+    "job_count": 1,
+    "job_ids": [
+      "a5ca480e1911dd8b"
+    ],
+    "jobs": [
+      {
+        "job_id": "a5ca480e1911dd8b",
+        "status": "completed",
+        "worker_id": "rust-agent-rpc@127.0.0.1:5001",
+        "phase": "execution",
+        "created_at": "2026-08-13T11:05:53.817898Z",
+        "execution_started_at": "2026-08-13T11:05:53.982335Z",
+        "updated_at": "2026-08-13T11:05:55.044455Z",
+        "queue_wait_ms": 164,
+        "execution_elapsed_ms": 1062,
+        "total_elapsed_ms": 1226,
+        "effective_timeout_ms": 120000,
+        "effective_deadline": "2026-08-13T11:07:53.982335Z"
+      }
+    ],
+    "failure": null
+  },
+  "steps": [
+    {
+      "index": 1,
+      "action": "solve_acoustic_bar_1d",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "area": 0.08,
+              "bulk_modulus": 142000.0,
+              "damping_ratio": 0.02,
+              "density": 1.225,
+              "id": "ae0",
+              "node_i": 0,
+              "node_j": 1
+            }
+          ],
+          "frequency_hz": 440.0,
+          "nodes": [
+            {
+              "fix_pressure": true,
+              "id": "a0",
+              "pressure": 1.0,
+              "volume_velocity_source": 0.0,
+              "x": 0.0
+            },
+            {
+              "fix_pressure": false,
+              "id": "a1",
+              "pressure": 0.0,
+              "volume_velocity_source": 0.003,
+              "x": 1.0
+            }
+          ]
+        }
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T11:05:53.817898Z",
+          "execution_started_at": null,
+          "execution_timeout_ms": 120000,
+          "has_result": false,
+          "iteration": null,
+          "job_id": "a5ca480e1911dd8b",
+          "message": null,
+          "model_version_id": null,
+          "progress": 0.0,
+          "project_id": "28b53b332bb66fcc",
+          "queue_timeout_ms": 1800000,
+          "residual": null,
+          "simulation_case_id": "18430a4ca0ecb4df",
+          "status": "queued",
+          "status_detail": {
+            "active": true,
+            "failure_class": null,
+            "lifecycle": "active",
+            "recoverable": false,
+            "terminal": false,
+            "timing": {
+              "effective_deadline": "2026-08-13T11:35:53.817898Z",
+              "effective_timeout_ms": 1800000,
+              "execution_elapsed_ms": null,
+              "execution_started_at": null,
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:35:53.817898Z",
+              "phase": "queue",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 0,
+              "total_elapsed_ms": 0
+            }
+          },
+          "updated_at": "2026-08-13T11:05:53.817898Z",
+          "worker_id": null
+        },
+        "job_id": "a5ca480e1911dd8b",
+        "progress": 0.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-13T11:05:53.817898Z",
+            "execution_started_at": null,
+            "execution_timeout_ms": 120000,
+            "has_result": false,
+            "iteration": null,
+            "job_id": "a5ca480e1911dd8b",
+            "message": null,
+            "model_version_id": null,
+            "progress": 0.0,
+            "project_id": "28b53b332bb66fcc",
+            "queue_timeout_ms": 1800000,
+            "residual": null,
+            "simulation_case_id": "18430a4ca0ecb4df",
+            "status": "queued",
+            "status_detail": {
+              "active": true,
+              "failure_class": null,
+              "lifecycle": "active",
+              "recoverable": false,
+              "terminal": false,
+              "timing": {
+                "effective_deadline": "2026-08-13T11:35:53.817898Z",
+                "effective_timeout_ms": 1800000,
+                "execution_elapsed_ms": null,
+                "execution_started_at": null,
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-13T11:35:53.817898Z",
+                "phase": "queue",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 0,
+                "total_elapsed_ms": 0
+              }
+            },
+            "updated_at": "2026-08-13T11:05:53.817898Z",
+            "worker_id": null
+          }
+        },
+        "status": "queued"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 2,
+      "action": "job_wait",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "a5ca480e1911dd8b",
+        "timeout_ms": 60000
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T11:05:53.817898Z",
+          "execution_started_at": "2026-08-13T11:05:53.982335Z",
+          "execution_timeout_ms": 120000,
+          "iteration": 4,
+          "job_id": "a5ca480e1911dd8b",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "28b53b332bb66fcc",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "18430a4ca0ecb4df",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-13T11:07:53.982335Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1062,
+              "execution_started_at": "2026-08-13T11:05:53.982335Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:35:53.817898Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 164,
+              "total_elapsed_ms": 1226
+            }
+          },
+          "updated_at": "2026-08-13T11:05:55.044455Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5001"
+        },
+        "job_id": "a5ca480e1911dd8b",
+        "progress": 1.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-13T11:05:53.817898Z",
+            "execution_started_at": "2026-08-13T11:05:53.982335Z",
+            "execution_timeout_ms": 120000,
+            "iteration": 4,
+            "job_id": "a5ca480e1911dd8b",
+            "message": "collecting nodal and elemental responses",
+            "model_version_id": null,
+            "progress": 1.0,
+            "project_id": "28b53b332bb66fcc",
+            "queue_timeout_ms": 1800000,
+            "residual": 0.2,
+            "simulation_case_id": "18430a4ca0ecb4df",
+            "status": "completed",
+            "status_detail": {
+              "active": false,
+              "failure_class": null,
+              "lifecycle": "terminal",
+              "recoverable": false,
+              "terminal": true,
+              "timing": {
+                "effective_deadline": "2026-08-13T11:07:53.982335Z",
+                "effective_timeout_ms": 120000,
+                "execution_elapsed_ms": 1062,
+                "execution_started_at": "2026-08-13T11:05:53.982335Z",
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-13T11:35:53.817898Z",
+                "phase": "execution",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 164,
+                "total_elapsed_ms": 1226
+              }
+            },
+            "updated_at": "2026-08-13T11:05:55.044455Z",
+            "worker_id": "rust-agent-rpc@127.0.0.1:5001"
+          }
+        },
+        "result": null,
+        "status": "completed",
+        "wait": {
+          "elapsed_ms": 2092,
+          "policy": "fixed",
+          "poll_attempts": 3,
+          "resume_count": 0
+        }
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 3,
+      "action": "result_fetch",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "job_id": "a5ca480e1911dd8b"
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-13T11:05:53.817898Z",
+          "execution_started_at": "2026-08-13T11:05:53.982335Z",
+          "execution_timeout_ms": 120000,
+          "has_result": true,
+          "iteration": 4,
+          "job_id": "a5ca480e1911dd8b",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "28b53b332bb66fcc",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "18430a4ca0ecb4df",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-13T11:07:53.982335Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1062,
+              "execution_started_at": "2026-08-13T11:05:53.982335Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-13T11:35:53.817898Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 164,
+              "total_elapsed_ms": 1226
+            }
+          },
+          "updated_at": "2026-08-13T11:05:55.044455Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5001"
+        },
+        "job_id": "a5ca480e1911dd8b",
+        "result": {
+          "angular_frequency": 2764.601535159018,
+          "elements": [
+            {
+              "acoustic_intensity": 0.0017622663344498749,
+              "area": 0.08,
+              "bulk_modulus": 142000.0,
+              "damping_loss": 2.8196261351198e-6,
+              "density": 1.225,
+              "id": "ae0",
+              "index": 0,
+              "length": 1.0,
+              "node_i": 0,
+              "node_j": 1,
+              "particle_velocity": 0.001177346830888528,
+              "pressure_gradient": 3.9872461987090615,
+              "speed_of_sound": 340.4678653660853,
+              "wave_number": 8.120007249983498
+            }
+          ],
+          "frequency_hz": 440.0,
+          "input": {
+            "elements": [
+              {
+                "area": 0.08,
+                "bulk_modulus": 142000.0,
+                "damping_ratio": 0.02,
+                "density": 1.225,
+                "id": "ae0",
+                "node_i": 0,
+                "node_j": 1
+              }
+            ],
+            "frequency_hz": 440.0,
+            "nodes": [
+              {
+                "fix_pressure": true,
+                "id": "a0",
+                "pressure": 1.0,
+                "volume_velocity_source": 0.0,
+                "x": 0.0
+              },
+              {
+                "fix_pressure": false,
+                "id": "a1",
+                "pressure": 0.0,
+                "volume_velocity_source": 0.003,
+                "x": 1.0
+              }
+            ]
+          },
+          "max_acoustic_intensity": 0.0017622663344498749,
+          "max_particle_velocity": 0.001177346830888528,
+          "max_pressure": 4.9872461987090615,
+          "max_sound_pressure_level_db": 107.93661624636174,
+          "nodes": [
+            {
+              "id": "a0",
+              "index": 0,
+              "pressure": 1.0,
+              "sound_pressure_level_db": 93.97940008672036,
+              "volume_velocity_source": 0.0,
+              "x": 0.0
+            },
+            {
+              "id": "a1",
+              "index": 1,
+              "pressure": 4.9872461987090615,
+              "sound_pressure_level_db": 107.93661624636174,
+              "volume_velocity_source": 0.003,
+              "x": 1.0
+            }
+          ],
+          "total_damping_loss": 2.8196261351198e-6
+        },
+        "status": "completed"
+      },
+      "requires_confirmation": false
+    }
+  ]
+}

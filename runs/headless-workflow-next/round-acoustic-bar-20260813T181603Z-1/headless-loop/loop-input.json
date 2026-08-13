@@ -1,0 +1,73 @@
+{
+  "schema_version": "kyuubiki.headless-workflow/v1",
+  "exported_at": "1970-01-01T00:00:00.000Z",
+  "language": "en",
+  "workflow": {
+    "id": "template.direct_acoustic_bar_1d",
+    "steps": [
+      {
+        "action": "solve_acoustic_bar_1d",
+        "payload": {
+          "model": {
+            "elements": [
+              {
+                "area": 0.08,
+                "bulk_modulus": 142000.0,
+                "damping_ratio": 0.02,
+                "density": 1.225,
+                "id": "ae0",
+                "node_i": 0,
+                "node_j": 1
+              }
+            ],
+            "frequency_hz": 440.0,
+            "nodes": [
+              {
+                "fix_pressure": true,
+                "id": "a0",
+                "pressure": 1.0,
+                "volume_velocity_source": 0.0,
+                "x": 0.0
+              },
+              {
+                "fix_pressure": false,
+                "id": "a1",
+                "pressure": 0.0,
+                "volume_velocity_source": 0.003,
+                "x": 1.0
+              }
+            ]
+          }
+        }
+      },
+      {
+        "action": "job_wait",
+        "payload": {
+          "interval_ms": 1000,
+          "job_id": "{{steps.1.result.job_id}}",
+          "timeout_ms": 60000
+        }
+      },
+      {
+        "action": "result_fetch",
+        "payload": {
+          "job_id": "{{steps.1.result.job_id}}"
+        }
+      }
+    ]
+  },
+  "template": {
+    "id": "direct_acoustic_bar_1d",
+    "title": "Direct Acoustic Bar 1D",
+    "description": "Submit an acoustic duct frequency-response solve and fetch pressure and intensity results.",
+    "runtime_style": "service_only",
+    "category": "acoustic",
+    "tags": [
+      "direct",
+      "acoustic",
+      "sound",
+      "duct",
+      "1d"
+    ]
+  }
+}

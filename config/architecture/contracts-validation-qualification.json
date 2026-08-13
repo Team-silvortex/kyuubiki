@@ -1,0 +1,156 @@
+{
+  "schema_version": "kyuubiki.contracts-validation-qualification-contract/v1",
+  "report_schema": "kyuubiki.contracts-validation-qualification-report/v1",
+  "rounds": 2,
+  "required_families": [
+    "workflow-dataset",
+    "operator-task-ir",
+    "runtime-api-surface",
+    "central-store",
+    "material-exploration",
+    "operator-model",
+    "repository-boundary"
+  ],
+  "checks": [
+    {
+      "id": "workflow-dataset-valid",
+      "family": "workflow-dataset",
+      "expected_outcome": "acceptance",
+      "fault_boundary": "valid-repository-fixture",
+      "program": "self",
+      "cwd": ".",
+      "args": ["check-workflow-dataset-contract"],
+      "required_output": ["workflow dataset contract check passed"]
+    },
+    {
+      "id": "workflow-dataset-duplicate-rejected",
+      "family": "workflow-dataset",
+      "expected_outcome": "rejection",
+      "fault_boundary": "duplicate-dataset-value-id",
+      "program": "self",
+      "cwd": ".",
+      "args": ["check-workflow-dataset-contract", "--self-test"],
+      "required_output": ["workflow dataset contract check self-test passed"]
+    },
+    {
+      "id": "operator-task-ir-valid",
+      "family": "operator-task-ir",
+      "expected_outcome": "acceptance",
+      "fault_boundary": "valid-golden-task-ir",
+      "program": "self",
+      "cwd": ".",
+      "args": ["check-operator-task-ir-contract"],
+      "required_output": ["Validated 5 operator task IR example contracts."]
+    },
+    {
+      "id": "operator-task-ir-integrity-rejected",
+      "family": "operator-task-ir",
+      "expected_outcome": "rejection",
+      "fault_boundary": "mirror-authority-task-and-descriptor-digest-tamper",
+      "program": "self",
+      "cwd": ".",
+      "args": ["check-operator-task-ir-contract", "--self-test"],
+      "required_output": ["operator task IR contract check self-test passed"]
+    },
+    {
+      "id": "runtime-api-surface-valid",
+      "family": "runtime-api-surface",
+      "expected_outcome": "acceptance",
+      "fault_boundary": "repository-runtime-api-surface",
+      "program": "self",
+      "cwd": ".",
+      "args": ["check-contracts-runtime-api-surface"],
+      "required_output": ["contracts runtime API surface passed: 4 contract family(s)"]
+    },
+    {
+      "id": "runtime-api-surface-portable",
+      "family": "runtime-api-surface",
+      "expected_outcome": "acceptance",
+      "fault_boundary": "synthetic-portable-runtime-api-surface",
+      "program": "self",
+      "cwd": ".",
+      "args": ["check-contracts-runtime-api-surface", "--self-test"],
+      "required_output": ["contracts runtime API surface self-test passed"]
+    },
+    {
+      "id": "central-store-valid",
+      "family": "central-store",
+      "expected_outcome": "acceptance",
+      "fault_boundary": "repository-central-store-contract",
+      "program": "self",
+      "cwd": ".",
+      "args": ["check-central-store-contract"],
+      "required_output": ["central store contract passed:"]
+    },
+    {
+      "id": "central-store-portable",
+      "family": "central-store",
+      "expected_outcome": "acceptance",
+      "fault_boundary": "synthetic-portable-central-store-contract",
+      "program": "self",
+      "cwd": ".",
+      "args": ["check-central-store-contract", "--self-test"],
+      "required_output": ["central store contract self-test passed"]
+    },
+    {
+      "id": "material-exploration-valid",
+      "family": "material-exploration",
+      "expected_outcome": "acceptance",
+      "fault_boundary": "valid-material-exploration-chain",
+      "program": "self",
+      "cwd": ".",
+      "args": ["check-material-exploration-chain-contract"],
+      "required_output": ["material exploration chain contract check passed"]
+    },
+    {
+      "id": "material-exploration-round-mismatch-rejected",
+      "family": "material-exploration",
+      "expected_outcome": "rejection",
+      "fault_boundary": "round-count-mismatch",
+      "program": "self",
+      "cwd": ".",
+      "args": ["check-material-exploration-chain-contract", "--self-test"],
+      "required_output": ["material exploration chain contract check self-test passed"]
+    },
+    {
+      "id": "operator-model-valid",
+      "family": "operator-model",
+      "expected_outcome": "acceptance",
+      "fault_boundary": "valid-operator-model-draft",
+      "program": "internal",
+      "cwd": ".",
+      "args": ["operator-model-valid"],
+      "required_output": ["operator model draft accepted"]
+    },
+    {
+      "id": "operator-model-schema-rejected",
+      "family": "operator-model",
+      "expected_outcome": "rejection",
+      "fault_boundary": "operator-model-schema-version-mismatch",
+      "program": "internal",
+      "cwd": ".",
+      "args": ["operator-model-schema-mismatch"],
+      "required_output": ["operator model schema mismatch rejected"]
+    },
+    {
+      "id": "operator-model-side-effects-rejected",
+      "family": "operator-model",
+      "expected_outcome": "rejection",
+      "fault_boundary": "operator-model-side-effects-and-open-root",
+      "program": "internal",
+      "cwd": ".",
+      "args": ["operator-model-side-effects"],
+      "required_output": ["operator model side effects and open schema root rejected"]
+    },
+    {
+      "id": "repository-path-traversal-rejected",
+      "family": "repository-boundary",
+      "expected_outcome": "rejection",
+      "fault_boundary": "parent-directory-traversal",
+      "program": "internal",
+      "cwd": ".",
+      "args": ["repository-path-escape"],
+      "required_output": ["repository path traversal rejected"]
+    }
+  ]
+}

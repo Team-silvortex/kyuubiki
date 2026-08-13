@@ -1,0 +1,13 @@
+{
+  "run_id": "round-material-composite-thermo-extreme-knee-20260813T112434Z",
+  "template": "material_composite_thermo_electric_panel_screening",
+  "rounds": 12,
+  "start_voltage": 1800,
+  "max_voltage": 9000,
+  "min_voltage": 900,
+  "executor": "service",
+  "material_report_alias": "composite-thermo-electric-panel",
+  "api_base_url": "http://127.0.0.1:3000",
+  "source_script": "scripts/run_headless_workflow_regression.sh",
+  "timestamp_utc": "2026-08-13T11:24:34Z"
+}
