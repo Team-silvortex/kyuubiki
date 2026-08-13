@@ -52,6 +52,21 @@ test("Pwdt browser bridge invokes registered Workbench actions without DOM click
   assert.ok(filterWorkbenchScriptRecipes({ risk: "normal" }).some((recipe) => recipe.id === ELECTROSTATIC_HEAT_THERMO_TRIANGLE_RECIPE_ID));
 });
 
+test("Pwdt browser bridge rejects unknown actions and recipes without side effects", async () => {
+  const calls: string[] = [];
+  const bridge = makeBridge(calls);
+
+  await assert.rejects(
+    () => bridge.invoke("missing/action"),
+    /Unknown Workbench frontend action/,
+  );
+  await assert.rejects(
+    () => bridge.runRecipe("recipe/missing"),
+    /Unknown Pwdt recipe/,
+  );
+  assert.deepEqual(calls, []);
+});
+
 test("Pwdt browser bridge runs macros and action steps through the same action bridge", async () => {
   const calls: string[] = [];
   const bridge = makeBridge(calls);
@@ -84,6 +99,32 @@ test("Pwdt browser bridge resolves UI contract selectors for stable automation",
     assert.equal(bridge.querySelector("workflowBuilder")?.getAttribute?.("missing") ?? null, null);
     assert.equal(bridge.querySelectorAll("workflowBuilderAction", "validate").length, 2);
     assert.equal(bridge.selectorExists("workflowSurface"), true);
+  } finally {
+    (globalThis as any).document = previousDocument;
+  }
+});
+
+test("Pwdt browser bridge rejects unknown selectors without DOM fallback", () => {
+  const previousDocument = (globalThis as any).document;
+  let queryCount = 0;
+  (globalThis as any).document = {
+    querySelector: () => {
+      queryCount += 1;
+      return null;
+    },
+    querySelectorAll: () => {
+      queryCount += 1;
+      return [];
+    },
+  };
+
+  try {
+    const bridge = makeBridge();
+    assert.throws(
+      () => bridge.querySelector("missingSelector"),
+      /Unknown Workbench UI selector key/,
+    );
+    assert.equal(queryCount, 0);
   } finally {
     (globalThis as any).document = previousDocument;
   }
@@ -540,4 +581,16 @@ test("Pwdt browser bridge wait helpers observe state and messages", async () => 
 
   assert.equal((await bridge.waitForMessage("completed", { timeoutMs: 100, intervalMs: 5 })).message, "solve completed");
   assert.equal((await bridge.waitForJobDone({ timeoutMs: 100, intervalMs: 5 })).jobStatus, "completed");
+});
+
+test("Pwdt browser bridge wait helpers reject bounded timeouts", async () => {
+  const bridge = createWorkbenchPwdtBrowserBridge({
+    getSnapshot: () => ({ jobStatus: "running", message: "dispatching" }),
+    invokeAction: async () => ({ ok: true }),
+  });
+
+  await assert.rejects(
+    () => bridge.waitForState({ jobStatus: "completed" }, { timeoutMs: 5, intervalMs: 1 }),
+    /Pwdt wait timed out after 5ms/,
+  );
 });

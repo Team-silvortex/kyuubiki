@@ -70,6 +70,7 @@ lab remote-ssh-fixture\n  \
   validate-minimal-industrial-closure\n  \
   check-contracts-runtime-api-surface\n  \
   check-contracts-validation-qualification\n  \
+  check-workbench-validation-qualification\n  \
   validate-language-packs\n  \
   report-full-language-pack-coverage\n  \
   plan-workbench-language-translations\n  \

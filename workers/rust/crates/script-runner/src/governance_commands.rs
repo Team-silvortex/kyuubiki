@@ -14,7 +14,8 @@ use crate::{
     protocol_validation_qualification, runtime_recovery_fault_injection,
     system_security_qualification, test_coverage_posture, toolchain_contract,
     ui_automation_contract, update_catalog_docs, usability_release_gate,
-    verification_evidence_surface, workbench_language_pack_catalog, workflow_dataset_contract,
+    verification_evidence_surface, workbench_language_pack_catalog,
+    workbench_validation_qualification, workflow_dataset_contract,
     workflow_metric_resolver_contract,
 };
 use std::ffi::OsString;
@@ -81,6 +82,11 @@ pub(crate) fn run_governance_command(
         }
         "check-contracts-validation-qualification" => {
             contracts_validation_qualification::run_check_contracts_validation_qualification(
+                root, args,
+            )
+        }
+        "check-workbench-validation-qualification" => {
+            workbench_validation_qualification::run_check_workbench_validation_qualification(
                 root, args,
             )
         }

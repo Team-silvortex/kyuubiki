@@ -29,10 +29,10 @@ Current moxi baseline:
 - `blocking_gap_count`: `0`
 - `maturity_gap_count`: `0`
 - `thin_evidence_count`: `0`
-- `evidence_grade_gap_count`: `12`
-- required cells meeting their grade target: `38 / 50` (`76.0%`)
-- release-critical P0 cells meeting target: `27 / 36` (`75.0%`)
-- `daji 3.0.0` release state: `blocked` with `9` P0 coordinate gaps and one
+- `evidence_grade_gap_count`: `11`
+- required cells meeting their grade target: `39 / 50` (`78.0%`)
+- release-critical P0 cells meeting target: `28 / 36` (`77.8%`)
+- `daji 3.0.0` release state: `blocked` with `8` P0 coordinate gaps and one
   unclosed external usability release gate
 
 This means no required module/function coordinate is structurally missing. It
@@ -43,12 +43,24 @@ the `daji 3.0.0` P0/P1/P2 release profile. The former maturity points remain
 dimension-complete, but ordinary lane execution no longer masquerades as
 qualification, operational, or release evidence.
 
-The current first P0 hardening coordinate is Workbench validation, moving from
-`verified` to `qualified`. It is followed by Orchestra/Workbench workflow
-composition, installed Headless SDK operation, provenance, and protocol/SDK
+The current first P0 hardening coordinates are tied: Orchestra workflow
+composition must move from `qualified` to `operational`, while Workbench
+workflow composition must move from `verified` to `qualified`. They are
+followed by installed Headless SDK operation, provenance, and protocol/SDK
 runtime API verification. The generated evidence-strength ranking also exposes
 three P1 benchmark coordinates with a two-grade gap; the release planning queue
 keeps the P0 blockers ahead of them.
+
+The former first coordinate, `workbench-shell / validation`, now meets its
+`qualified` target. Its native qualification repeats 38 PWDT control-plane
+tests and one real browser layout regression twice. All 78 test executions pass
+with stable semantic digests across rounds, including three desktop viewports,
+17 acceptance assertions, and explicit rejection of unknown actions, recipes,
+selectors, bounded waits, and unknown DSL operations. The machine-validated
+report is retained under
+`releases/usability-evidence/2.13.9/workbench-validation-qualification.json`.
+This local qualification does not imply installed-package or cross-platform
+operational proof.
 
 The former first coordinate, `contracts / validation`, now meets its
 `qualified` target. Its native qualification repeats 14 checks twice across

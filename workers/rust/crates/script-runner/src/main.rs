@@ -124,6 +124,7 @@ mod verification_evidence_surface;
 mod version_line_audit;
 mod workbench_language_coverage;
 mod workbench_language_pack_catalog;
+mod workbench_validation_qualification;
 mod workflow_catalog_benchmark_compare;
 mod workflow_catalog_remote;
 mod workflow_dataset_contract;

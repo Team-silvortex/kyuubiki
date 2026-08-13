@@ -1,0 +1,188 @@
+{
+  "schema_version": "kyuubiki.workbench-validation-qualification-contract/v1",
+  "report_schema": "kyuubiki.workbench-validation-qualification-report/v1",
+  "rounds": 2,
+  "required_boundaries": [
+    "dsl-preflight-unknown-operation",
+    "pwdt-bounded-timeout",
+    "pwdt-unknown-action-recipe",
+    "pwdt-unknown-selector"
+  ],
+  "suites": [
+    {
+      "id": "pwdt-control-plane",
+      "program": "self",
+      "cwd": ".",
+      "args": [
+        "frontend-unit-test",
+        "workbench-pwdt-browser-bridge",
+        "workbench-script-dsl-parity",
+        "workbench-script-snippets",
+        "workbench-electrostatic-heat-projection"
+      ],
+      "source_files": [
+        "apps/frontend/test/workflow/workbench-pwdt-browser-bridge.test.ts",
+        "apps/frontend/test/workflow/workbench-script-dsl-parity.test.ts",
+        "apps/frontend/test/workflow/workbench-script-snippets.test.ts",
+        "apps/frontend/test/workflow/workbench-electrostatic-heat-projection.test.ts"
+      ],
+      "required_source_text": [
+        "installWorkbenchPwdtBrowserBridge",
+        "assert.rejects",
+        "waitForState"
+      ],
+      "minimum_test_count": 38,
+      "required_assertions": [
+        {
+          "id": "action-without-dom-click",
+          "label": "Pwdt browser bridge invokes registered Workbench actions without DOM clicks",
+          "outcome": "acceptance",
+          "boundary": "registered-action-routing"
+        },
+        {
+          "id": "unknown-action-recipe",
+          "label": "Pwdt browser bridge rejects unknown actions and recipes without side effects",
+          "outcome": "rejection",
+          "boundary": "pwdt-unknown-action-recipe"
+        },
+        {
+          "id": "stable-ui-selectors",
+          "label": "Pwdt browser bridge resolves UI contract selectors for stable automation",
+          "outcome": "acceptance",
+          "boundary": "product-owned-selector-resolution"
+        },
+        {
+          "id": "unknown-selector",
+          "label": "Pwdt browser bridge rejects unknown selectors without DOM fallback",
+          "outcome": "rejection",
+          "boundary": "pwdt-unknown-selector"
+        },
+        {
+          "id": "window-control-surface",
+          "label": "Pwdt browser bridge installs a window-level control surface and Pyodide bridge",
+          "outcome": "acceptance",
+          "boundary": "pyodide-browser-bridge"
+        },
+        {
+          "id": "closed-loop-truss",
+          "label": "Pwdt browser bridge runs a closed-loop truss study recipe through action calls",
+          "outcome": "acceptance",
+          "boundary": "closed-loop-truss-recipe"
+        },
+        {
+          "id": "heat-thermo-quad",
+          "label": "Pwdt browser bridge runs a heat-to-thermo quad composite recipe through action calls",
+          "outcome": "acceptance",
+          "boundary": "heat-thermo-quad-recipe"
+        },
+        {
+          "id": "heat-thermo-triangle",
+          "label": "Pwdt browser bridge runs a heat-to-thermo triangle composite recipe through action calls",
+          "outcome": "acceptance",
+          "boundary": "heat-thermo-triangle-recipe"
+        },
+        {
+          "id": "electro-heat-thermo-quad",
+          "label": "Pwdt browser bridge runs an electrostatic-to-heat-to-thermo quad recipe through action calls",
+          "outcome": "acceptance",
+          "boundary": "electro-heat-thermo-quad-recipe"
+        },
+        {
+          "id": "electro-heat-thermo-triangle",
+          "label": "Pwdt browser bridge runs an electrostatic-to-heat-to-thermo triangle recipe through action calls",
+          "outcome": "acceptance",
+          "boundary": "electro-heat-thermo-triangle-recipe"
+        },
+        {
+          "id": "wait-observation",
+          "label": "Pwdt browser bridge wait helpers observe state and messages",
+          "outcome": "acceptance",
+          "boundary": "observable-wait-completion"
+        },
+        {
+          "id": "bounded-timeout",
+          "label": "Pwdt browser bridge wait helpers reject bounded timeouts",
+          "outcome": "rejection",
+          "boundary": "pwdt-bounded-timeout"
+        },
+        {
+          "id": "gui-action-catalog",
+          "label": "workbench Pwdt action catalog covers every implemented GUI script action",
+          "outcome": "acceptance",
+          "boundary": "gui-action-catalog-parity"
+        },
+        {
+          "id": "recipe-action-catalog",
+          "label": "workbench Pwdt recipe catalog references only registered GUI script actions",
+          "outcome": "acceptance",
+          "boundary": "recipe-action-catalog-parity"
+        },
+        {
+          "id": "dsl-unknown-operation",
+          "label": "workbench frontend DSL rejects unknown actions and macros before Pyodide execution",
+          "outcome": "rejection",
+          "boundary": "dsl-preflight-unknown-operation"
+        },
+        {
+          "id": "dsl-capability-compile",
+          "label": "workbench frontend DSL compiles capability checks into the wasm Python facade",
+          "outcome": "acceptance",
+          "boundary": "dsl-capability-compilation"
+        },
+        {
+          "id": "snippet-selector-contract",
+          "label": "workbench Pwdt snippets only use selector keys from the UI automation contract",
+          "outcome": "acceptance",
+          "boundary": "snippet-selector-parity"
+        },
+        {
+          "id": "wasm-python-facade",
+          "label": "wasm Python facade includes GUI-equivalent workflow helpers",
+          "outcome": "acceptance",
+          "boundary": "wasm-python-gui-parity"
+        },
+        {
+          "id": "electro-heat-quad-projection",
+          "label": "electrostatic quad results project into heat quad models with thermal loads",
+          "outcome": "acceptance",
+          "boundary": "electro-heat-quad-projection"
+        },
+        {
+          "id": "electro-heat-triangle-projection",
+          "label": "electrostatic triangle results project into heat triangle models with inherited topology",
+          "outcome": "acceptance",
+          "boundary": "electro-heat-triangle-projection"
+        }
+      ]
+    },
+    {
+      "id": "workbench-browser-layout",
+      "program": "node",
+      "cwd": ".",
+      "args": [
+        "--test",
+        "--test-reporter=tap",
+        "tests/integration/workbench-shell-regression.test.mjs"
+      ],
+      "source_files": [
+        "tests/integration/workbench-shell-regression.test.mjs",
+        "tests/integration/workbench-shell-regression.shared.mjs"
+      ],
+      "required_source_text": [
+        "{ width: 1440, height: 1100 }",
+        "{ width: 1180, height: 920 }",
+        "{ width: 1080, height: 760 }",
+        "assertWorkbenchShellRegression"
+      ],
+      "minimum_test_count": 1,
+      "required_assertions": [
+        {
+          "id": "three-viewport-shell-regression",
+          "label": "Workbench desktop shell mounts runtime, logs, and embedded viewer cleanly in headless preview",
+          "outcome": "acceptance",
+          "boundary": "three-viewport-shell-regression"
+        }
+      ]
+    }
+  ]
+}

@@ -11,6 +11,7 @@
     "config/architecture/module-function-coverage-evidence/model-collaboration-sdks.json",
     "config/architecture/module-function-coverage-evidence/headless-sdk-validation.json",
     "config/architecture/module-function-coverage-evidence/pwdt-frontend-control-plane.json",
+    "config/architecture/module-function-coverage-evidence/workbench-validation.json",
     "config/architecture/module-function-coverage-evidence/desktop-runtime-api.json",
     "config/architecture/module-function-coverage-evidence/desktop-usability.json",
     "config/architecture/module-function-coverage-evidence/desktop-ui-validation.json",
