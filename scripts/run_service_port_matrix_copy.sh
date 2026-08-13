@@ -73,7 +73,7 @@ def is_artifact_limit_failure(report_json: Path, err_log: Path) -> bool:
             or (data.get("error", {}) or {}).get("code")
             or ""
         )
-        if err_code == "frontend_proxy_artifact_limit":
+        if err_code in {"frontend_proxy_artifact_limit", "kyuubiki.headless.transport_failure"}:
             return True
 
         candidates = [
@@ -85,7 +85,7 @@ def is_artifact_limit_failure(report_json: Path, err_log: Path) -> bool:
         if message:
             candidates.append(message)
         if status == "failed" and any(
-            re.search(r"frontend_proxy_artifact_limit|artifact transport|smaller body limit|not a frontend proxy|model artifact upload failed 500|body limit|413|Payload Too Large", m or "", re.IGNORECASE)
+            re.search(r"frontend_proxy_artifact_limit|transport failure|artifact transport|smaller body limit|not a frontend proxy|model artifact upload failed 500|body limit|413|Payload Too Large", m or "", re.IGNORECASE)
             for m in candidates
         ):
             return True
@@ -93,12 +93,53 @@ def is_artifact_limit_failure(report_json: Path, err_log: Path) -> bool:
     if err_log.is_file():
         raw = err_log.read_text()
         if re.search(
-            r"frontend_proxy_artifact_limit|artifact transport|smaller body limit|not a frontend proxy|model artifact upload failed 500|body limit|413|Payload Too Large",
+            r"frontend_proxy_artifact_limit|transport failure|artifact transport|smaller body limit|not a frontend proxy|model artifact upload failed 500|body limit|413|Payload Too Large",
             raw,
             re.IGNORECASE,
         ):
             return True
     return False
+
+
+def read_error_code(report_json: Path) -> str:
+    data = read_json(report_json)
+    if not isinstance(data, dict):
+        return "n/a"
+    err_code = (
+        (data.get("execution_summary", {}).get("failure", {}) or {}).get("error_code")
+        or (data.get("error", {}) or {}).get("code")
+        or ""
+    )
+    return err_code if err_code else "n/a"
+
+
+def parse_transport_limit(report_json: Path) -> tuple[str, str]:
+    data = read_json(report_json)
+    message = ""
+    if isinstance(data, dict):
+        msg_candidates = [
+            (data.get("execution_summary", {}).get("failure", {}) or {}).get("message", ""),
+            (data.get("error", {}) or {}).get("message", ""),
+            data.get("message", ""),
+        ]
+        message = "\n".join([m for m in msg_candidates if m])
+
+    if not message and report_json.with_suffix(".err").is_file():
+        try:
+            message = report_json.with_suffix(".err").read_text()
+        except Exception:
+            message = ""
+
+    size_bytes = ""
+    limit_bytes = ""
+    if message:
+        size_match = re.search(r"size_bytes=([0-9]+)", message)
+        limit_match = re.search(r"limit_bytes=([0-9]+)", message)
+        if size_match:
+            size_bytes = size_match.group(1)
+        if limit_match:
+            limit_bytes = limit_match.group(1)
+    return size_bytes, limit_bytes
 
 
 def main():
@@ -132,9 +173,37 @@ def main():
         "- 说明: 对同一批输入分别执行 3000 与 4000，检查 3000 的 payload 限制退化是否可被 4000 回放。\n"
     )
 
+    primary_api = os.environ.get("SERVICE_PRIMARY_API_BASE_URL", "http://127.0.0.1:3000")
+    fallback_api_default = os.environ.get("SERVICE_FALLBACK_API_BASE_URL", "http://127.0.0.1:4000")
+    control_plane_api = os.environ.get("SERVICE_CONTROL_PLANE_API_BASE_URL", "http://127.0.0.1:4000")
+
     test_cases = [
         ("large_700x700", workspace_dir / "results/sdk-large-mesh-1m/input_700x700.json"),
         ("large_1000x1000_noids", workspace_dir / "results/sdk-large-mesh-1m/input_1000x1000_noids.json"),
+        (
+            "large_3000x1000_noids",
+            workspace_dir / "results/sdk-large-mesh-1m/input_3000x1000_noids_jobwait_1200000.json",
+        ),
+        (
+            "large_2000x1000_noids",
+            workspace_dir / "results/sdk-large-mesh-1m/input_2000x1000_noids_jobwait_1200000.json",
+        ),
+        (
+            "large_2000x2000_noids",
+            workspace_dir / "results/sdk-large-mesh-1m/input_2000x2000_noids_jobwait_1200000.json",
+        ),
+        (
+            "large_2500x1600_noids",
+            workspace_dir / "results/sdk-large-mesh-1m/input_2500x1600_noids_jobwait_1200000.json",
+        ),
+        (
+            "large_1800x2200_noids",
+            workspace_dir / "results/sdk-large-mesh-1m/input_1800x2200_noids_jobwait_1200000.json",
+        ),
+        (
+            "large_3000x900_noids",
+            workspace_dir / "results/sdk-large-mesh-1m/input_3000x900_noids_jobwait_1200000.json",
+        ),
         ("small_direct_heat_triangle", workspace_dir / "results/headless-all-dryrun-20260804-123750/direct_heat_triangle/input.json"),
     ]
 
@@ -159,7 +228,7 @@ def main():
         )
         _ = validate_status  # keep behavior parity; status is always logged in file
 
-        run_cmd(
+        primary_rc = run_cmd(
             cli_dir,
             cli,
             f"{name}-run-3000",
@@ -175,14 +244,29 @@ def main():
                 "--executor",
                 "service",
                 "--api-base-url",
-                "http://127.0.0.1:3000",
+                primary_api,
             ],
         )
 
-        fallback_triggered = is_artifact_limit_failure(
+        transport_signature = is_artifact_limit_failure(
             case_dir / "service_3000.json", case_dir / "service_3000.err"
         )
-        if fallback_triggered or force_fallback:
+        service_3000_error_code = read_error_code(case_dir / "service_3000.json")
+        fallback_api = fallback_api_default
+        if transport_signature:
+            fallback_api = control_plane_api
+
+        fallback_triggered = force_fallback or primary_rc != 0 or transport_signature
+        fallback_reason = (
+            "force_fallback"
+            if force_fallback
+            else "transport_or_artifact_signature"
+            if transport_signature
+            else "primary_exit_nonzero"
+            if primary_rc != 0
+            else "-"
+        )
+        if fallback_triggered:
             run_cmd(
                 cli_dir,
                 cli,
@@ -200,11 +284,13 @@ def main():
                     "service",
                     "--allow-sensitive",
                     "--api-base-url",
-                    "http://127.0.0.1:4000",
+                    fallback_api,
                 ],
             )
+            (case_dir / "service_4000.url").write_text(fallback_api)
         else:
             (case_dir / "service_4000.status").write_text(f"fallback skipped: case={name}")
+            (case_dir / "service_4000.url").write_text(fallback_api)
 
         s3000_status = (case_dir / "service_3000.status").read_text().strip()
         s4000_status = (case_dir / "service_4000.status").read_text().strip()
@@ -212,7 +298,11 @@ def main():
         s3000_mode = status_cell(case_dir / "service_3000.json", ".mode")
         s4000_run_status = status_cell(case_dir / "service_4000.json", ".status")
         s4000_mode = status_cell(case_dir / "service_4000.json", ".mode")
-        err_body_limit = "1" if is_artifact_limit_failure(case_dir / "service_3000.json", case_dir / "service_3000.err") else "0"
+        err_body_limit = "1" if transport_signature else "0"
+        service_3000_error_code = service_3000_error_code
+        service_4000_error_code = read_error_code(case_dir / "service_4000.json")
+        (size_bytes, limit_bytes) = parse_transport_limit(case_dir / "service_4000.json")
+        fallback_url = (case_dir / "service_4000.url").read_text().strip()
 
         lines.extend(
             [
@@ -222,10 +312,16 @@ def main():
                 f"- service_3000.shell-status: {s3000_status}\n",
                 f"- service_3000.report.status: {s3000_run_status}\n",
                 f"- service_3000.mode: {s3000_mode}\n",
+                f"- service_3000.error_code: {service_3000_error_code}\n",
                 f"- service_3000.body-limit-signature: {err_body_limit}\n",
                 f"- service_4000.fallback-triggered: {1 if fallback_triggered else 0}\n",
+                f"- service_4000.fallback-reason: {fallback_reason}\n",
+                f"- service_4000.fallback-url: {fallback_url}\n",
                 f"- service_4000.shell-status: {s4000_status}\n",
                 f"- service_4000.report.status: {s4000_run_status}\n",
+                f"- service_4000.error_code: {service_4000_error_code}\n",
+                f"- service_4000.size_bytes: {size_bytes if size_bytes else 'n/a'}\n",
+                f"- service_4000.limit_bytes: {limit_bytes if limit_bytes else 'n/a'}\n",
                 f"- service_4000.mode: {s4000_mode}\n",
                 "\n",
             ]

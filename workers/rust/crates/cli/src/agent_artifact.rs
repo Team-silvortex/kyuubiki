@@ -11,13 +11,11 @@ use sha2::{Digest, Sha256};
 
 use kyuubiki_protocol::{
     SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
-    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest,
+    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, model_artifact_max_bytes,
 };
 
 use crate::agent_http::{cluster_auth_headers, get_to_writer, normalize_base_url};
 use crate::config::AgentConfig;
-
-const MAX_ARTIFACT_BYTES: usize = 536_870_912;
 
 #[derive(Clone)]
 pub(crate) struct ArtifactTransportConfig {
@@ -83,9 +81,10 @@ fn decode_artifact_reference<T: DeserializeOwned + 'static>(
         .and_then(Value::as_u64)
         .and_then(|size| usize::try_from(size).ok())
         .ok_or_else(|| "model artifact reference requires size_bytes".to_string())?;
-    if declared_size == 0 || declared_size > MAX_ARTIFACT_BYTES {
+    let max_artifact_bytes = model_artifact_max_bytes();
+    if declared_size == 0 || declared_size > max_artifact_bytes {
         return Err(format!(
-            "model artifact size is outside the supported range: {declared_size}"
+            "model artifact size is outside the supported range: size_bytes={declared_size} limit_bytes={max_artifact_bytes}"
         ));
     }
 
@@ -96,6 +95,7 @@ fn decode_artifact_reference<T: DeserializeOwned + 'static>(
         &artifact_id,
         &expected_digest,
         declared_size,
+        max_artifact_bytes,
         &temporary_path,
     );
     let _ = fs::remove_file(&temporary_path);
@@ -108,6 +108,7 @@ fn fetch_verify_and_decode<T: DeserializeOwned + 'static>(
     artifact_id: &str,
     expected_digest: &str,
     declared_size: usize,
+    max_artifact_bytes: usize,
     temporary_path: &PathBuf,
 ) -> Result<T, String> {
     let file = OpenOptions::new()
@@ -128,7 +129,7 @@ fn fetch_verify_and_decode<T: DeserializeOwned + 'static>(
             config.cluster_id.as_deref(),
             config.agent_fingerprint.as_deref(),
         ),
-        MAX_ARTIFACT_BYTES,
+        max_artifact_bytes,
         &mut writer,
     )?;
     let digest = writer.finish()?;

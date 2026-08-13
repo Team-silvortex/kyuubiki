@@ -112,6 +112,7 @@ mod rust_line_counts;
 mod standard_benchmark_index;
 mod standard_benchmark_remote;
 mod standard_benchmark_report;
+mod system_security_qualification;
 mod test_coverage_posture;
 mod toolchain_contract;
 mod ui_automation_contract;

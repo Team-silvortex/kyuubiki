@@ -1,0 +1,13 @@
+{
+  "module": "headless-research-matrix",
+  "run_id": "continue-service-test-20260812-2",
+  "label": "manual",
+  "status": "ok",
+  "started_at_utc": "2026-08-12T05:14:08Z",
+  "finished_at_utc": "2026-08-12T05:14:09Z",
+  "run_dir": "/Users/Shared/chroot/dev/kyuubiki/runs/headless-research-matrix/continue-service-test-20260812-2",
+  "workspace_dir": "/Users/Shared/chroot/dev/kyuubiki/runs/headless-research-matrix/continue-service-test-20260812-2/workspace",
+  "command": "./labctl.sh run headless-research-matrix",
+  "environment_overrides": "PIPELINE=service TEMPLATES=direct_plane_triangle SERVICE_FALLBACK=1 WORKDIR=/Users/Shared/chroot/dev/kyuubiki/results/headless-research-matrix-labctl-service-20260812 REPORT_DIR=/Users/Shared/chroot/dev/kyuubiki/reports REPORT_BASENAME=headless-research-matrix-labctl-service-20260812 MAX_ATTEMPTS=1",
+  "repo_dir": "/Users/Shared/chroot/dev/kyuubiki"
+}

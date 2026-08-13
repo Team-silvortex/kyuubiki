@@ -60,6 +60,9 @@ sprawl:
 - tensor v4 now separates structural completeness from release readiness,
   reports both exact target completion and cumulative evidence progress, and
   orders the remaining work through P0/P1/P2 `daji` criticality
+- system security qualification now repeats 14 asserted checks across 22 exact
+  module/lane coordinates; the retained 28/28 report closes the former tied P0
+  security cluster without claiming installed or multi-host adversarial proof
 
 - GUI navigation and backend calls must form complete, testable user journeys
   instead of isolated panels that look finished but do not execute

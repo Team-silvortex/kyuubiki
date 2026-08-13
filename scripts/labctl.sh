@@ -50,8 +50,8 @@ execute_module() {
   local run_id="run-$(date -u +%Y%m%dT%H%M%SZ)"
   local run_label="manual"
   local run_workspace=""
-  local env_overrides=()
-  local module_args=()
+  local -a env_overrides=()
+  local -a module_args=()
 
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -141,7 +141,7 @@ execute_module() {
   mkdir -p "$run_root"
 
   local -a env_pairs=()
-  for kv in "${env_overrides[@]}"; do
+  for kv in ${env_overrides[@]+"${env_overrides[@]}"}; do
     if [[ "$kv" != *"="* ]]; then
       echo "invalid --set value, expected KEY=VALUE: $kv"
       exit 1
@@ -163,11 +163,11 @@ execute_module() {
   fi
 
   labctl_prepare_workspace "$workspace_dir"
-  for kv in "${env_pairs[@]}"; do
+  for kv in ${env_pairs[@]+"${env_pairs[@]}"}; do
     export "$kv"
   done
 
-  run_module "$run_root" "$run_id" "$workspace_dir" "${module_args[@]}" || status=$?
+  run_module "$run_root" "$run_id" "$workspace_dir" "${module_args[@]+${module_args[@]}}" || status=$?
 
   finished_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   if [ "$status" -eq 0 ]; then

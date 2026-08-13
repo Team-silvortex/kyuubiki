@@ -13,7 +13,7 @@
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index check-material-research-bundle-index check-material-research-bundle-index-contract
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
-.PHONY: audit-dependencies fuzz-smoke check-minimal-industrial-closure architecture-check verify
+.PHONY: audit-dependencies check-system-security-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
 
 check-doc-book:
 	@$(ENTRYPOINT) check-doc-book
@@ -472,6 +472,10 @@ audit-dependencies:
 	@$(ENTRYPOINT) audit-dependencies --self-test
 	@$(ENTRYPOINT) audit-dependencies
 
+check-system-security-qualification:
+	@$(ENTRYPOINT) check-system-security-qualification --self-test
+	@$(ENTRYPOINT) check-system-security-qualification --verify-report releases/usability-evidence/2.13.6/system-security-qualification.json
+
 check-minimal-industrial-closure:
 	@$(ENTRYPOINT) validate-minimal-industrial-closure
 
@@ -523,6 +527,7 @@ architecture-check:
 	@$(MAKE) check-component-integrity-protocol
 	@$(MAKE) check-ui-automation-contract
 	@$(MAKE) check-gui-runtime-capability-contract
+	@$(MAKE) check-system-security-qualification
 	@$(MAKE) check-usability-release-gate
 	@$(MAKE) audit-dependencies
 	@$(MAKE) operator-package-preflight

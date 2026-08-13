@@ -7,7 +7,7 @@ use std::io::{Read, Write};
 use crate::service_executor_artifact::prepare_direct_fem_request_body;
 use crate::service_executor_health::with_discovered_solver_endpoints;
 use crate::service_executor_http::{
-    ARTIFACT_IO_TIMEOUT, REQUEST_IO_TIMEOUT, connect_service_stream, decode_http_response_body,
+    REQUEST_IO_TIMEOUT, connect_service_stream, decode_http_response_body,
 };
 use crate::service_executor_job_wait::execute_job_wait;
 #[cfg(test)]
@@ -444,49 +444,6 @@ pub(crate) fn request_json(
     parse_json_response(&response, path)
 }
 
-pub(crate) fn request_bytes(
-    base_url: &str,
-    api_token: Option<&str>,
-    method: &str,
-    path: &str,
-    content_type: &str,
-    body: &[u8],
-) -> Result<Value, HeadlessExecutorError> {
-    let endpoint = parse_http_url(base_url)?;
-    let request_path = sanitize_request_path(path)?;
-    let api_token = sanitize_header_value(api_token, "api token")?;
-    let content_type = sanitize_header_value(Some(content_type), "content type")?
-        .expect("content type is present");
-    let mut stream = connect_service_stream(
-        &endpoint.host,
-        endpoint.port,
-        ARTIFACT_IO_TIMEOUT,
-        "model artifact upload",
-    )?;
-    let mut head = format!(
-        "{method} {request_path} HTTP/1.1\r\nHost: {}\r\nAccept: application/json\r\nConnection: close\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\n",
-        endpoint.host,
-        body.len()
-    );
-    if let Some(token) = api_token {
-        head.push_str(&format!("Authorization: Bearer {token}\r\n"));
-    }
-    head.push_str("\r\n");
-    stream
-        .write_all(head.as_bytes())
-        .and_then(|_| stream.write_all(body))
-        .map_err(|error| HeadlessExecutorError {
-            message: format!("failed to upload model artifact: {error}"),
-        })?;
-    let mut response = String::new();
-    stream
-        .read_to_string(&mut response)
-        .map_err(|error| HeadlessExecutorError {
-            message: format!("failed to read model artifact response: {error}"),
-        })?;
-    parse_json_response(&response, path)
-}
-
 fn validate_inline_json_size(path: &str, size_bytes: usize) -> Result<(), HeadlessExecutorError> {
     if size_bytes <= MAX_INLINE_JSON_BYTES {
         return Ok(());
@@ -545,7 +502,7 @@ fn validate_path_segment(value: &str, label: &str) -> Result<(), HeadlessExecuto
     Ok(())
 }
 
-fn sanitize_request_path<P>(path: P) -> Result<String, HeadlessExecutorError>
+pub(crate) fn sanitize_request_path<P>(path: P) -> Result<String, HeadlessExecutorError>
 where
     P: AsRef<str>,
 {
@@ -574,7 +531,7 @@ where
     Ok(path.to_string())
 }
 
-fn sanitize_header_value(
+pub(crate) fn sanitize_header_value(
     value: Option<&str>,
     label: &str,
 ) -> Result<Option<String>, HeadlessExecutorError> {
@@ -592,7 +549,10 @@ fn sanitize_header_value(
     Ok(Some(value.to_string()))
 }
 
-fn parse_json_response(response: &str, path: &str) -> Result<Value, HeadlessExecutorError> {
+pub(crate) fn parse_json_response(
+    response: &str,
+    path: &str,
+) -> Result<Value, HeadlessExecutorError> {
     let (head, body) = response
         .split_once("\r\n\r\n")
         .ok_or_else(|| HeadlessExecutorError {
@@ -686,12 +646,12 @@ pub(crate) fn pick_u64(payload: &Value, keys: &[&str]) -> Option<u64> {
 }
 
 #[derive(Debug)]
-struct ParsedHttpUrl {
-    host: String,
-    port: u16,
+pub(crate) struct ParsedHttpUrl {
+    pub(crate) host: String,
+    pub(crate) port: u16,
 }
 
-fn parse_http_url(base_url: &str) -> Result<ParsedHttpUrl, HeadlessExecutorError> {
+pub(crate) fn parse_http_url(base_url: &str) -> Result<ParsedHttpUrl, HeadlessExecutorError> {
     if base_url.is_empty() {
         return Err(HeadlessExecutorError {
             message: "service base URL must not be empty".to_string(),

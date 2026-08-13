@@ -6,6 +6,7 @@ use crate::remote_certificates::prepare_remote_certificate_material;
 use crate::remote_exec::{run_remote_ssh_command, shell_escape};
 use crate::remote_nodes::{normalize_peer_endpoints, validate_cluster_id, validate_control_mode};
 use kyuubiki_installer::workspace_root;
+use kyuubiki_protocol::{DEFAULT_MODEL_ARTIFACT_MAX_BYTES, MODEL_ARTIFACT_MAX_BYTES_ENV};
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -34,6 +35,7 @@ pub struct RemoteAgentPayload {
     pub agent_id: String,
     pub advertise_host: String,
     pub agent_port: u16,
+    pub model_artifact_max_bytes: Option<u64>,
     pub cluster_id: Option<String>,
     pub peer_endpoints: Option<Vec<String>>,
     pub certificate_id: Option<String>,
@@ -128,6 +130,8 @@ pub fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String>
     let control_mode = validate_control_mode(payload.control_mode.as_deref())?;
     let agent_id = validate_agent_id(&payload.agent_id)?;
     let advertise_host = validate_advertise_host(&payload.advertise_host)?;
+    let model_artifact_max_bytes =
+        validate_model_artifact_max_bytes(payload.model_artifact_max_bytes)?;
     let cluster_id = validate_cluster_id(payload.cluster_id.as_deref())?;
     let peer_endpoints = normalize_peer_endpoints(payload.peer_endpoints.unwrap_or_default())?;
     let target = format!("{ssh_user}@{target_host}");
@@ -153,6 +157,7 @@ pub fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String>
             &agent_id,
             &advertise_host,
             payload.agent_port,
+            model_artifact_max_bytes,
             cluster_id.as_deref(),
             &peer_endpoints,
             certificate_env,
@@ -164,6 +169,7 @@ pub fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String>
             &agent_id,
             &advertise_host,
             payload.agent_port,
+            model_artifact_max_bytes,
             certificate_env,
         ),
     };
@@ -187,6 +193,7 @@ fn build_remote_orchestrated_agent_command(
     agent_id: &str,
     advertise_host: &str,
     agent_port: u16,
+    model_artifact_max_bytes: u64,
     certificate_env: Vec<(String, String)>,
 ) -> String {
     let env_args = remote_env_args(certificate_env.into_iter().chain([
@@ -198,6 +205,10 @@ fn build_remote_orchestrated_agent_command(
         (
             "KYUUBIKI_AGENT_ADVERTISE_HOST".to_string(),
             advertise_host.to_string(),
+        ),
+        (
+            MODEL_ARTIFACT_MAX_BYTES_ENV.to_string(),
+            model_artifact_max_bytes.to_string(),
         ),
     ]));
     format!(
@@ -217,6 +228,7 @@ fn build_remote_mesh_agent_command(
     agent_id: &str,
     advertise_host: &str,
     agent_port: u16,
+    model_artifact_max_bytes: u64,
     cluster_id: Option<&str>,
     peer_endpoints: &[String],
     certificate_env: Vec<(String, String)>,
@@ -237,6 +249,10 @@ fn build_remote_mesh_agent_command(
         (
             "KYUUBIKI_AGENT_ADVERTISE_HOST".to_string(),
             advertise_host.to_string(),
+        ),
+        (
+            MODEL_ARTIFACT_MAX_BYTES_ENV.to_string(),
+            model_artifact_max_bytes.to_string(),
         ),
     ]);
     let env_args = remote_env_args(env_pairs);
@@ -381,6 +397,16 @@ pub(crate) fn validate_agent_id(value: &str) -> Result<String, String> {
         return Err("agent id contains unsupported characters".to_string());
     }
     Ok(trimmed.to_string())
+}
+pub(crate) fn validate_model_artifact_max_bytes(value: Option<u64>) -> Result<u64, String> {
+    let bytes = value.unwrap_or(DEFAULT_MODEL_ARTIFACT_MAX_BYTES as u64);
+    if bytes == 0 {
+        return Err("model artifact max bytes must be greater than zero".to_string());
+    }
+    usize::try_from(bytes).map_err(|_| {
+        "model artifact max bytes exceeds this platform's address space".to_string()
+    })?;
+    Ok(bytes)
 }
 fn env_csv(key: &str) -> Vec<String> {
     env::var(key)
@@ -556,6 +582,7 @@ mod tests {
             "solver-a",
             "solver-a.local",
             5001,
+            1_200_000_000,
             vec![(
                 "KYUUBIKI_AGENT_CERT_PATH".to_string(),
                 "/opt/kyuubiki/.kyuubiki/certs/solver-a.crt".to_string(),
@@ -565,6 +592,7 @@ mod tests {
         assert!(!command.contains("sh -lc"));
         assert!(command.contains("screen -dmS 'kyuubiki_remote_agent_5001' env "));
         assert!(command.contains("KYUUBIKI_AGENT_CERT_PATH="));
+        assert!(command.contains("KYUUBIKI_MODEL_ARTIFACT_MAX_BYTES='1200000000'"));
         assert!(command.contains("cargo run -p kyuubiki-cli -- agent"));
     }
 
@@ -576,6 +604,7 @@ mod tests {
             "mesh-a",
             "mesh-a.local",
             5002,
+            1_200_000_000,
             Some("lan-a"),
             &["10.0.0.12:5001".to_string()],
             Vec::new(),
@@ -584,7 +613,17 @@ mod tests {
         assert!(!command.contains("sh -lc"));
         assert!(command.contains("screen -dmS 'kyuubiki_remote_agent_5002' env "));
         assert!(command.contains("KYUUBIKI_AGENT_CLUSTER_ID='lan-a'"));
+        assert!(command.contains("KYUUBIKI_MODEL_ARTIFACT_MAX_BYTES='1200000000'"));
         assert!(command.contains("--cluster-id 'lan-a'"));
         assert!(command.contains("--peer '10.0.0.12:5001'"));
+    }
+
+    #[test]
+    fn model_artifact_limit_defaults_explicitly_and_rejects_zero() {
+        assert_eq!(
+            validate_model_artifact_max_bytes(None).unwrap(),
+            DEFAULT_MODEL_ARTIFACT_MAX_BYTES as u64
+        );
+        assert!(validate_model_artifact_max_bytes(Some(0)).is_err());
     }
 }

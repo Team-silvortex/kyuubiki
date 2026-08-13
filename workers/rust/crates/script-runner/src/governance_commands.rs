@@ -10,8 +10,9 @@ use crate::{
     minimal_industrial_closure, module_extension_standard, module_function_matrix,
     module_function_tensor, module_topology, module_topology_report, moxi_handoff,
     operator_task_ir_contract, orchestra_recovery_fault_injection, project_organization_audit,
-    protocol_validation_qualification, runtime_recovery_fault_injection, test_coverage_posture,
-    toolchain_contract, ui_automation_contract, update_catalog_docs, usability_release_gate,
+    protocol_validation_qualification, runtime_recovery_fault_injection,
+    system_security_qualification, test_coverage_posture, toolchain_contract,
+    ui_automation_contract, update_catalog_docs, usability_release_gate,
     verification_evidence_surface, workbench_language_pack_catalog, workflow_dataset_contract,
     workflow_metric_resolver_contract,
 };
@@ -148,6 +149,9 @@ pub(crate) fn run_governance_command(
             protocol_validation_qualification::run_check_protocol_validation_qualification(
                 root, args,
             )
+        }
+        "check-system-security-qualification" => {
+            system_security_qualification::run_check_system_security_qualification(root, args)
         }
         "check-headless-sdk-validation-qualification" => {
             headless_sdk_validation::run_check_headless_sdk_validation(root, args)

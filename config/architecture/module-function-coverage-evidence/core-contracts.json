@@ -3,66 +3,6 @@
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
   "summary": "Core scoped contract evidence, maturity claims, and coordinate requirements for the moxi module-function coverage tensor.",
   "paradigm_contract_evidence": {
-    "product_surface": [
-      {
-        "id": "gui-product-surface-automation-contract",
-        "modules": [
-          "hub-shell",
-          "desktop-shared-ui",
-          "workbench-shell",
-          "installer-shell"
-        ],
-        "files": [
-          "docs/ui-automation-contract.json",
-          "schemas/gui-runtime-capability-manifest.schema.json",
-          "schemas/examples.gui-runtime-capability-manifest.json",
-          "workers/rust/crates/script-runner/src/ui_automation_contract.rs",
-          "workers/rust/crates/script-runner/src/gui_runtime_capability_contract.rs",
-          "workers/rust/crates/script-runner/src/desktop_usability_journeys.rs"
-        ],
-        "required_text": [
-          "productOwned",
-          "userExtensible",
-          "product_owned_static_ui",
-          "wasm_python_stability_required",
-          "user_extensible_ui_allowed",
-          "headless_sdk_parity_required",
-          "check-desktop-usability-journeys",
-          "WORKBENCH_UI_AUTOMATION_CONTRACT_VERSION = 1"
-        ]
-      },
-      {
-        "id": "desktop-capability-closure-contract",
-        "modules": [
-          "hub-shell",
-          "workbench-shell",
-          "installer-shell"
-        ],
-        "files": [
-          "config/architecture/desktop-capability-closure.json",
-          "tests/integration/desktop-gui-capability-closure.test.mjs",
-          "tests/integration/desktop-gui-call-chain-contract.test.mjs",
-          "tests/integration/desktop-shell-regression.test.mjs",
-          "tests/integration/hub-shell-regression.shared.mjs",
-          "workers/rust/crates/project-bundle/src/lib.rs",
-          "workers/rust/crates/script-runner/src/desktop_usability_journeys.rs",
-          "workers/rust/crates/script-runner/src/project_cli.rs"
-        ],
-        "required_text": [
-          "kyuubiki.desktop-capability-closure/v1",
-          "hub.project.create",
-          "installer.environment.init",
-          "workbench.analysis.open-local",
-          "check-desktop-usability-journeys",
-          "create_project_bundle",
-          "inspect_project_bundle",
-          "validate_project_bundle",
-          "--execute",
-          "every required desktop capability closes UI, route, native, and result layers",
-          "created bundle must become the active path for the next operation"
-        ]
-      }
-    ],
     "validation": [
       {
         "id": "desktop-shared-asset-mirror-contract",
@@ -340,11 +280,14 @@
           "workers/rust/crates/headless-sdk/src/plan.rs",
           "workers/rust/crates/headless-sdk/src/executor.rs",
           "workers/rust/crates/headless-sdk/src/service_executor.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_artifact.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_artifact_http.rs",
           "workers/rust/crates/headless-sdk/src/service_executor_job_wait.rs",
           "workers/rust/crates/headless-sdk/src/service_executor_solve.rs",
           "workers/rust/crates/headless-sdk/src/service_executor_tests.rs",
           "workers/rust/crates/headless-sdk/src/execution_observability.rs",
           "schemas/headless-failure-receipt.schema.json",
+          "workers/rust/crates/protocol/src/artifact_transport.rs",
           "workers/rust/crates/protocol/src/types/field.rs",
           "workers/rust/crates/cli/src/agent_artifact.rs",
           "workers/rust/crates/cli/src/bin/kyuubiki-headless.rs",
@@ -378,10 +321,50 @@
           "fill_model_ids",
           "restores_graph_ids_for_inline_electrostatic_models",
           "frontend_proxy_artifact_limit",
+          "KYUUBIKI_MODEL_ARTIFACT_MAX_BYTES",
+          "streaming_size_matches_canonical_json_serialization",
+          "large_direct_fem_submit_uploads_a_model_artifact_then_sends_its_reference",
           "server_deadline_policy_resumes_same_job_until_completion",
           "fetch_job_status",
           "invalid_solver_params",
           "agent_decode"
+        ]
+      },
+      {
+        "id": "large-artifact-cross-process-transport-closure",
+        "modules": [
+          "installer-shell",
+          "orchestra-control-plane",
+          "runtime-protocol",
+          "runtime-agent-cli",
+          "sdk-headless",
+          "verification-evidence"
+        ],
+        "files": [
+          "reports/remote-large-artifact-transport-20260813.md",
+          "docs/headless-sdks.md",
+          "apps/installer-gui/src-tauri/src/remote.rs",
+          "apps/installer-gui/src-tauri/src/remote_nodes.rs",
+          "apps/installer-gui/ui/installer-workflows.js",
+          "apps/installer-gui/ui/remote-panel.js",
+          "workers/rust/crates/protocol/src/artifact_transport.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_artifact.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_artifact_http.rs",
+          "workers/rust/crates/headless-sdk/src/execution_observability.rs",
+          "workers/rust/crates/cli/src/agent_artifact.rs",
+          "workers/rust/crates/cli/src/bin/kyuubiki-headless/error.rs",
+          "schemas/headless-failure-receipt.schema.json"
+        ],
+        "required_text": [
+          "cross-process transport contract",
+          "KYUUBIKI_MODEL_ARTIFACT_MAX_BYTES",
+          "remote-model-artifact-max-bytes",
+          "model_artifact_max_bytes",
+          "600000389",
+          "700000000",
+          "536870912",
+          "model_artifact_limit_exceeded",
+          "479 tests, 0 failures"
         ]
       }
     ],
@@ -625,33 +608,6 @@
     }
   ],
   "evidence_claims": [
-    {
-      "id": "desktop-product-ux-closure",
-      "status": "proven",
-      "grade": "verified",
-      "modules": [
-        "hub-shell",
-        "desktop-shared-ui",
-        "workbench-shell",
-        "installer-shell"
-      ],
-      "paradigms": [
-        "product_surface"
-      ],
-      "dimensions": [
-        "ux_closure"
-      ],
-      "files": [
-        "config/architecture/desktop-capability-closure.json",
-        "tests/integration/desktop-gui-capability-closure.test.mjs",
-        "workers/rust/crates/script-runner/src/desktop_usability_journeys.rs"
-      ],
-      "required_text": [
-        "kyuubiki.desktop-capability-closure/v1",
-        "check-desktop-usability-journeys",
-        "every required desktop capability closes UI, route, native, and result layers"
-      ]
-    },
     {
       "id": "headless-cross-language-parity",
       "status": "proven",

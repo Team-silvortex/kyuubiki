@@ -4,7 +4,7 @@
   "selected_sdk": "rust",
   "ready_for_planning": true,
   "execution_authority": "none_preflight_only",
-  "version_line": "moxi 2.11.x",
+  "version_line": "moxi 2.13.x",
   "entrypoint": "llms.txt",
   "workflow_id": "workflow.material-study-envelope-ranking-json",
   "selected_surface": {

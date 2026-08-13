@@ -1,0 +1,17 @@
+   Compiling kyuubiki-headless-sdk v0.1.0 (/Users/Shared/chroot/dev/kyuubiki/sdks/rust)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.16s
+     Running `target/debug/examples/run_workflow_catalog_plane_quad`
+[workflow-catalog] id=workflow.plane-quad-2d-summary-json, terminal_job_id=4ea054a80c008530, terminal=completed
+[workflow-catalog] history events=2
+[workflow-catalog] include_result=false
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running `target/debug/examples/run_workflow_catalog_plane_quad`
+Error: Validation { errors: ["workflow runtime current_node must be a string"] }
+   Compiling kyuubiki-headless-sdk v0.1.0 (/Users/Shared/chroot/dev/kyuubiki/sdks/rust)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.24s
+     Running `target/debug/examples/run_workflow_graph_coupled`
+[workflow] id: workflow.heat-to-thermo-quad-2d-coupled
+[run] include_result=true poll_interval=500ms timeout=300s
+[error] run_workflow_graph failed: workflow contract validation failed:
+- workflow runtime current_node must be a string
+Error: Validation { errors: ["workflow runtime current_node must be a string"] }

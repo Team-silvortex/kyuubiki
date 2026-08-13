@@ -107,6 +107,17 @@ The repository now keeps validation split by responsibility.
   the Rust workspace, Rust SDK, and every Tauri desktop shell. The Make target
   runs the audit lane self-test before invoking external tools. The checked
   `Cargo.lock` files under those roots are part of this contract.
+- `make check-system-security-qualification`
+  Fast, offline revalidation of the retained Daji P0 system-security report.
+  It validates all 14 check identities, 28 successful round receipts, 22 exact
+  module/security-lane coordinates, assertions, digests, and summary counts
+  without rerunning external audit tools.
+- `make qualify-system-security`
+  Executes the full qualification twice and writes a fresh report. It combines
+  desktop least-privilege and secret-storage assertions, control-plane auth and
+  replay tests, Engine and Installer fuzz boundaries, Agent TaskIR/artifact
+  admission, component integrity, and npm/Cargo/Hex dependency audits. Use this
+  heavier lane for security changes and release candidates.
 - `./scripts/kyuubiki rust-line-audit`
   Same guard through the unified launcher, useful on remote hosts and CI jobs
   that do not enter through Make

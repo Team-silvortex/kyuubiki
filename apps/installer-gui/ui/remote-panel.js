@@ -105,7 +105,7 @@ export function mountRemotePanel() {
 
     <div class="form-shell">
       <div class="panel-header"><h2>Remote nodes</h2></div>
-      <label class="field"><span>Node registry JSON</span><textarea id="remote-node-registry" rows="8" placeholder='[{"label":"lab-a","target_host":"192.0.2.12","ssh_user":"example-user","remote_workspace":"/opt/kyuubiki","ssh_port":22,"control_mode":"orchestrated","orchestrator_url":"http://192.0.2.10:4000","agent_id":"solver-lab-a","advertise_host":"192.0.2.12","agent_port":5001,"certificate_id":"lab-a-1720000000000"},{"label":"mesh-b","target_host":"192.0.2.22","ssh_user":"example-user","remote_workspace":"/opt/kyuubiki","ssh_port":22,"control_mode":"offline_mesh","cluster_id":"lan-a","peer_endpoints":["192.0.2.23:5001"],"agent_id":"solver-mesh-b","advertise_host":"192.0.2.22","agent_port":5001,"certificate_id":"mesh-b-1720000000001"}]'></textarea></label>
+      <label class="field"><span>Node registry JSON</span><textarea id="remote-node-registry" rows="8" placeholder='[{"label":"lab-a","target_host":"192.0.2.12","ssh_user":"example-user","remote_workspace":"/opt/kyuubiki","ssh_port":22,"control_mode":"orchestrated","orchestrator_url":"http://192.0.2.10:4000","agent_id":"solver-lab-a","advertise_host":"192.0.2.12","agent_port":5001,"model_artifact_max_bytes":536870912,"certificate_id":"lab-a-1720000000000"},{"label":"mesh-b","target_host":"192.0.2.22","ssh_user":"example-user","remote_workspace":"/opt/kyuubiki","ssh_port":22,"control_mode":"offline_mesh","cluster_id":"lan-a","peer_endpoints":["192.0.2.23:5001"],"agent_id":"solver-mesh-b","advertise_host":"192.0.2.22","agent_port":5001,"model_artifact_max_bytes":536870912,"certificate_id":"mesh-b-1720000000001"}]'></textarea></label>
       <pre id="remote-node-summary"></pre>
       <div class="field-grid">
         <label class="field"><span>Search nodes</span><input id="remote-node-search" type="text" placeholder="label, host, agent, cluster" /></label>
@@ -146,6 +146,7 @@ export function mountRemotePanel() {
         <label class="field"><span>Agent id</span><input id="remote-agent-id" type="text" placeholder="solver-shanghai-a" /></label>
         <label class="field"><span>Advertise host</span><input id="remote-advertise-host" type="text" placeholder="10.20.0.11" /></label>
         <label class="field"><span>Agent port</span><input id="remote-agent-port" type="number" placeholder="5001" /></label>
+        <label class="field field-span-2"><span>Model artifact limit (bytes)</span><input id="remote-model-artifact-max-bytes" type="number" min="1" step="1" value="536870912" title="Use the same value for Headless, Orchestra, and Agent. Default: 512 MiB." /></label>
         <label class="field field-span-2">
           <span>Certificate id</span>
           <select id="remote-certificate-id">

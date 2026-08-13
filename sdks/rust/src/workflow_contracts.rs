@@ -96,7 +96,9 @@ pub struct WorkflowGraphNode {
     pub placement_tags: Vec<String>,
     #[serde(default)]
     pub required_capabilities: Vec<String>,
+    #[serde(default)]
     pub inputs: Vec<WorkflowGraphPort>,
+    #[serde(default)]
     pub outputs: Vec<WorkflowGraphPort>,
 }
 

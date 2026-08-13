@@ -6,47 +6,66 @@ use serde_json::{Value, json};
 
 use crate::remote::{
     REMOTE_POLICY_SCHEMA_VERSION, validate_advertise_host, validate_agent_id,
-    validate_orchestrator_url, validate_remote_workspace, validate_ssh_identity,
-    validate_target_host,
+    validate_model_artifact_max_bytes, validate_orchestrator_url, validate_remote_workspace,
+    validate_ssh_identity, validate_target_host,
 };
 
 #[derive(Clone, Debug, Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct RemoteNodeWorkflowSnapshot {
+    #[serde(alias = "workflowKind")]
     pub workflow_kind: String,
     pub stage: String,
     pub status: String,
     pub summary: Option<String>,
+    #[serde(alias = "recordedAtUnixMs")]
     pub recorded_at_unix_ms: Option<u64>,
     pub details: Option<Value>,
 }
 
 #[derive(Clone, Debug, Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct RemoteNodeRecord {
     pub label: String,
+    #[serde(alias = "targetHost")]
     pub target_host: String,
+    #[serde(alias = "sshUser")]
     pub ssh_user: String,
+    #[serde(alias = "remoteWorkspace")]
     pub remote_workspace: String,
+    #[serde(alias = "sshPort")]
     pub ssh_port: Option<u16>,
+    #[serde(alias = "controlMode")]
     pub control_mode: Option<String>,
+    #[serde(alias = "orchestratorUrl")]
     pub orchestrator_url: String,
+    #[serde(alias = "agentId")]
     pub agent_id: String,
+    #[serde(alias = "advertiseHost")]
     pub advertise_host: String,
+    #[serde(alias = "agentPort")]
     pub agent_port: u16,
+    #[serde(default, alias = "modelArtifactMaxBytes")]
+    pub model_artifact_max_bytes: Option<u64>,
+    #[serde(alias = "clusterId")]
     pub cluster_id: Option<String>,
+    #[serde(alias = "peerEndpoints")]
     pub peer_endpoints: Option<Vec<String>>,
+    #[serde(alias = "certificateId")]
     pub certificate_id: Option<String>,
+    #[serde(alias = "lastProbeStatus")]
     pub last_probe_status: Option<String>,
+    #[serde(alias = "lastProbeSummary")]
     pub last_probe_summary: Option<String>,
+    #[serde(alias = "lastProbeUnixMs")]
     pub last_probe_unix_ms: Option<u64>,
+    #[serde(alias = "lastAction")]
     pub last_action: Option<String>,
+    #[serde(alias = "lastActionUnixMs")]
     pub last_action_unix_ms: Option<u64>,
+    #[serde(alias = "workflowSnapshots")]
     pub workflow_snapshots: Option<Vec<RemoteNodeWorkflowSnapshot>>,
 }
 
 #[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct RemoteNodeRegistryPayload {
     pub config_path: String,
     pub nodes: Vec<RemoteNodeRecord>,
@@ -178,6 +197,8 @@ fn validate_remote_node_record(node: RemoteNodeRecord) -> Result<RemoteNodeRecor
     let control_mode = validate_control_mode(node.control_mode.as_deref())?;
     let cluster_id = validate_cluster_id(node.cluster_id.as_deref())?;
     let peer_endpoints = normalize_peer_endpoints(node.peer_endpoints.unwrap_or_default())?;
+    let model_artifact_max_bytes =
+        validate_model_artifact_max_bytes(node.model_artifact_max_bytes)?;
     let workflow_snapshots = node
         .workflow_snapshots
         .unwrap_or_default()
@@ -203,6 +224,7 @@ fn validate_remote_node_record(node: RemoteNodeRecord) -> Result<RemoteNodeRecor
         agent_id: validate_agent_id(&node.agent_id)?,
         advertise_host: validate_advertise_host(&node.advertise_host)?,
         agent_port: node.agent_port,
+        model_artifact_max_bytes: Some(model_artifact_max_bytes),
         cluster_id,
         peer_endpoints: if peer_endpoints.is_empty() {
             None
@@ -252,7 +274,7 @@ fn render_remote_nodes(nodes: &[RemoteNodeRecord]) -> String {
     }
     for node in nodes {
         lines.push(format!(
-            "[node] {} mode={} ssh={}@{}:{} workspace={} agent={} advertise={} route={}",
+            "[node] {} mode={} ssh={}@{}:{} workspace={} agent={} advertise={} artifact_limit={} route={}",
             node.label,
             node.control_mode.as_deref().unwrap_or("orchestrated"),
             node.ssh_user,
@@ -261,6 +283,7 @@ fn render_remote_nodes(nodes: &[RemoteNodeRecord]) -> String {
             node.remote_workspace,
             node.agent_id,
             node.advertise_host,
+            node.model_artifact_max_bytes.unwrap_or_default(),
             if node.control_mode.as_deref() == Some("offline_mesh") {
                 node.cluster_id.as_deref().unwrap_or("(mesh)")
             } else {
@@ -354,6 +377,39 @@ mod tests {
     use super::*;
 
     #[test]
+    fn remote_node_record_reads_legacy_camel_case_and_writes_ui_contract() {
+        let node: RemoteNodeRecord = serde_json::from_value(json!({
+            "label": "legacy-a",
+            "targetHost": "10.0.0.10",
+            "sshUser": "ubuntu",
+            "remoteWorkspace": "/opt/kyuubiki",
+            "sshPort": 22,
+            "controlMode": "orchestrated",
+            "orchestratorUrl": "http://10.0.0.9:4000",
+            "agentId": "legacy-a",
+            "advertiseHost": "10.0.0.10",
+            "agentPort": 5001,
+            "modelArtifactMaxBytes": 1_200_000_000,
+            "workflowSnapshots": [{
+                "workflowKind": "remote_node_action",
+                "stage": "start_agent",
+                "status": "succeeded",
+                "recordedAtUnixMs": 1
+            }]
+        }))
+        .unwrap();
+
+        let serialized = serde_json::to_value(node).unwrap();
+        assert_eq!(serialized["target_host"], "10.0.0.10");
+        assert_eq!(serialized["model_artifact_max_bytes"], 1_200_000_000_u64);
+        assert_eq!(
+            serialized["workflow_snapshots"][0]["workflow_kind"],
+            "remote_node_action"
+        );
+        assert!(serialized.get("targetHost").is_none());
+    }
+
+    #[test]
     fn accepts_offline_mesh_node_without_orchestrator() {
         let _guard = crate::remote::TEST_ENV_LOCK.lock().unwrap();
         unsafe {
@@ -371,6 +427,7 @@ mod tests {
             agent_id: "mesh-a".to_string(),
             advertise_host: "10.0.0.10".to_string(),
             agent_port: 5001,
+            model_artifact_max_bytes: Some(1_200_000_000),
             cluster_id: Some("lan-a".to_string()),
             peer_endpoints: Some(vec!["10.0.0.11:5001".to_string()]),
             certificate_id: Some("mesh-a-cert".to_string()),
@@ -391,6 +448,7 @@ mod tests {
         .unwrap();
         assert_eq!(node.control_mode.as_deref(), Some("offline_mesh"));
         assert_eq!(node.cluster_id.as_deref(), Some("lan-a"));
+        assert_eq!(node.model_artifact_max_bytes, Some(1_200_000_000));
         assert_eq!(
             node.workflow_snapshots
                 .as_ref()

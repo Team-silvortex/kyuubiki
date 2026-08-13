@@ -29,6 +29,7 @@
         "job_wait_timeout",
         "agent_queue_timeout",
         "authorization_failure",
+        "model_artifact_limit_exceeded",
         "frontend_proxy_artifact_limit",
         "endpoint_not_deployed",
         "transport_failure",

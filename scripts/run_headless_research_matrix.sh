@@ -12,7 +12,8 @@ DEFAULT_REPORT_DIR="${WORK_ROOT}/reports"
 DEFAULT_REPORT_BASENAME="headless-research-matrix"
 DEFAULT_PRIMARY_API_URL="${SERVICE_PRIMARY_API_BASE_URL:-http://127.0.0.1:3000}"
 DEFAULT_FALLBACK_API_URL="${SERVICE_FALLBACK_API_BASE_URL:-http://127.0.0.1:4000}"
-DEFAULT_RUN_PIPELINE="all"
+DEFAULT_CONTROL_PLANE_API_URL="${SERVICE_CONTROL_PLANE_API_BASE_URL:-http://127.0.0.1:4000}"
+DEFAULT_RUN_PIPELINE="${PIPELINE:-all}"
 
 MAX_ATTEMPTS="${MAX_ATTEMPTS:-2}"
 RETRY_DELAY_SECONDS=1
@@ -44,14 +45,20 @@ TEMPLATES_MATERIAL=(
   material_thermo_shield_screening
 )
 
-WORKDIR="${DEFAULT_WORKDIR}"
-REPORT_DIR="${DEFAULT_REPORT_DIR}"
-REPORT_BASENAME="${DEFAULT_REPORT_BASENAME}"
+WORKDIR="${WORKDIR:-$DEFAULT_WORKDIR}"
+REPORT_DIR="${REPORT_DIR:-$DEFAULT_REPORT_DIR}"
+REPORT_BASENAME="${REPORT_BASENAME:-$DEFAULT_REPORT_BASENAME}"
 PRIMARY_API_URL="${DEFAULT_PRIMARY_API_URL}"
 FALLBACK_API_URL="${DEFAULT_FALLBACK_API_URL}"
+CONTROL_PLANE_API_URL="${DEFAULT_CONTROL_PLANE_API_URL}"
 CUSTOM_TEMPLATES=()
 TEMPLATE_SOURCE="default"
 RUN_ID="$(date '+%Y%m%d-%H%M%S')"
+
+if [ -n "${TEMPLATES:-${TEMPLATES_CSV:-}}" ]; then
+  IFS=',' read -r -a CUSTOM_TEMPLATES <<< "${TEMPLATES:-${TEMPLATES_CSV:-}}"
+  TEMPLATE_SOURCE="custom"
+fi
 
 resolve_template_alias() {
   case "$1" in
@@ -87,6 +94,7 @@ Options:
   --report-basename <name>        Report basename (without suffix). default: $DEFAULT_REPORT_BASENAME
   --service-primary-url <url>     Service executor primary API URL. default: $DEFAULT_PRIMARY_API_URL
   --service-fallback-url <url>    Service executor fallback API URL. default: $DEFAULT_FALLBACK_API_URL
+  --service-control-plane-url <url> Service executor control-plane API URL for artifact/transport fallback. default: $DEFAULT_CONTROL_PLANE_API_URL
   --service-fallback <0|1>       Enable fallback execution (default: $SERVICE_FALLBACK)
   --retries <n>                  Retry count for each command (default: ${MAX_ATTEMPTS})
   --help
@@ -139,13 +147,16 @@ is_artifact_limit_failure() {
   if [ "$err_code" = "frontend_proxy_artifact_limit" ]; then
     return 0
   fi
+  if [ "$err_code" = "kyuubiki.headless.transport_failure" ]; then
+    return 0
+  fi
 
   message="$(read_json_field "$report_path" '.message // ""')"
   if [ "$err_log" != "" ] && [ -f "$err_log" ]; then
     message="$message\n$(cat "$err_log")"
   fi
 
-  if printf '%s' "$message" | grep -Eqi "frontend_proxy_artifact_limit|artifact transport|body limit|413|Payload Too Large|artifacts upload failed"; then
+  if printf '%s' "$message" | grep -Eqi "frontend_proxy_artifact_limit|artifact transport|body limit|413|Payload Too Large|artifacts upload failed|transport failure|connection refused|econnrefused|failed to connect"; then
     return 0
   fi
   return 1
@@ -273,6 +284,7 @@ run_case() {
   local service_fallback_error="n/a"
   local service_fallback_validation_ok="false"
   local service_fallback_validation_issue_count=0
+  local service_fallback_api="$FALLBACK_API_URL"
 
   local material_alias
   local material_report_name="service-material-report"
@@ -342,14 +354,14 @@ run_case() {
   fi
 
   if [ "$RUN_SERVICE" = "true" ] && [ "$dry_status" != "blocked" ]; then
-    local material_args=()
+    local -a material_args=()
     if [ -n "$material_alias" ]; then
       local alias_report="$out/${material_report_name}-primary.json"
       material_args=(--material-report "$material_alias" --material-report-out "$alias_report")
     fi
 
     local primary_report="$out/service-primary-report.json"
-    if run_pipeline "run_service_primary" "$out" "$CLI_SCRIPT" headless run "$out/batch.json" --json --report-out "$primary_report" --execute --executor service ${ALLOW_SENSITIVE_FLAG:+$ALLOW_SENSITIVE_FLAG} "${material_args[@]}" --api-base-url "$PRIMARY_API_URL"; then
+    if run_pipeline "run_service_primary" "$out" "$CLI_SCRIPT" headless run "$out/batch.json" --json --report-out "$primary_report" --execute --executor service ${ALLOW_SENSITIVE_FLAG:+$ALLOW_SENSITIVE_FLAG} "${material_args[@]+"${material_args[@]}"}" --api-base-url "$PRIMARY_API_URL"; then
       service_primary_s="$(cat "$out/run_service_primary.out.status")"
       service_primary_status="$(read_json_field "$primary_report" '.status // "n/a"')"
       service_primary_mode="$(read_json_field "$primary_report" '.mode // "n/a"')"
@@ -367,7 +379,11 @@ run_case() {
       service_primary_error="$(read_error_code "$primary_report")"
     fi
 
-    if [ "$SERVICE_FALLBACK" = "1" ] && [ "$PRIMARY_API_URL" != "$FALLBACK_API_URL" ] && is_artifact_limit_failure "$primary_report" "$out/run_service_primary.err"; then
+  if [ "$SERVICE_FALLBACK" = "1" ] && [ "$PRIMARY_API_URL" != "$FALLBACK_API_URL" ] && \
+      { [ "$service_primary_s" -ne 0 ] || is_artifact_limit_failure "$primary_report" "$out/run_service_primary.err"; }; then
+      if is_artifact_limit_failure "$primary_report" "$out/run_service_primary.err"; then
+        service_fallback_api="$CONTROL_PLANE_API_URL"
+      fi
       local fb_alias_report="$out/${material_report_name}-fallback.json"
       material_args=()
       if [ -n "$material_alias" ]; then
@@ -375,7 +391,7 @@ run_case() {
       fi
 
       local fallback_report="$out/service-fallback-report.json"
-      if run_pipeline "run_service_fallback" "$out" "$CLI_SCRIPT" headless run "$out/batch.json" --json --report-out "$fallback_report" --execute --executor service ${ALLOW_SENSITIVE_FLAG:+$ALLOW_SENSITIVE_FLAG} "${material_args[@]}" --api-base-url "$FALLBACK_API_URL"; then
+      if run_pipeline "run_service_fallback" "$out" "$CLI_SCRIPT" headless run "$out/batch.json" --json --report-out "$fallback_report" --execute --executor service ${ALLOW_SENSITIVE_FLAG:+$ALLOW_SENSITIVE_FLAG} "${material_args[@]+"${material_args[@]}"}" --api-base-url "$service_fallback_api"; then
         service_fallback_s="$(cat "$out/run_service_fallback.out.status")"
         service_fallback_status="$(read_json_field "$fallback_report" '.status // "n/a"')"
         service_fallback_mode="$(read_json_field "$fallback_report" '.mode // "n/a"')"
@@ -391,6 +407,9 @@ run_case() {
         service_fallback_validation_ok="$(read_json_field "$fallback_report" '.validation.ok // false')"
         service_fallback_validation_issue_count="$(read_json_field "$fallback_report" '.validation.issue_count // 0')"
         service_fallback_error="$(read_error_code "$fallback_report")"
+      fi
+      if [ "$service_fallback_s" -ne 0 ] && [ "$service_fallback_api" != "$FALLBACK_API_URL" ]; then
+        service_fallback_status="${service_fallback_status}(fallback-control-plane-attempted)"
       fi
     fi
   fi
@@ -433,7 +452,8 @@ run_case() {
     --arg service_fallback_status "$service_fallback_status" \
     --arg service_fallback_mode "$service_fallback_mode" \
     --arg service_primary_api "$PRIMARY_API_URL" \
-    --arg service_fallback_api "$FALLBACK_API_URL" \
+    --arg service_fallback_api "$service_fallback_api" \
+    --arg service_control_plane_api "$CONTROL_PLANE_API_URL" \
     --arg service_fallback_error "$service_fallback_error" \
     --argjson service_fallback_steps "$(printf '%s' "$service_fallback_steps" | jq -R 'if . == "n/a" then "n/a" else tonumber end')" \
     --argjson service_fallback_validation_ok "$service_fallback_validation_ok" \
@@ -476,6 +496,7 @@ run_case() {
       service_fallback_status: $service_fallback_status,
       service_fallback_mode: $service_fallback_mode,
       service_fallback_api: $service_fallback_api,
+      service_fallback_control_plane_api: $service_control_plane_api,
       service_fallback_error_code: $service_fallback_error,
       service_fallback_steps: $service_fallback_steps,
       service_fallback_validation_ok: $service_fallback_validation_ok,
@@ -555,6 +576,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --service-fallback-url)
       FALLBACK_API_URL="$2"
+      shift 2
+      ;;
+    --service-control-plane-url)
+      CONTROL_PLANE_API_URL="$2"
       shift 2
       ;;
     --service-fallback)

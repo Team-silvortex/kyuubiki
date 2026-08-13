@@ -383,6 +383,15 @@ fn run_self_test(contract: &AuditContract) -> RunnerResult<()> {
         "Hex mitigated advisories",
     )?;
     expect_eq(
+        &contract
+            .hex_advisory_mitigations
+            .iter()
+            .map(|mitigation| mitigation.locked_version.as_str())
+            .collect::<Vec<_>>(),
+        &["2.19.0", "2.19.0"],
+        "Hex mitigation lock versions",
+    )?;
+    expect_eq(
         &lockfiles(&contract.npm, "package-lock.json"),
         &[
             "apps/frontend/package-lock.json",
@@ -424,7 +433,7 @@ fn run_self_test(contract: &AuditContract) -> RunnerResult<()> {
         return Err("self-test expected bad npm JSON summary".to_string());
     }
     let parsed = parse_hex_advisory_ids(
-        "cowlib 2.18.0 - EEF-CVE-2026-43969\naka: CVE-2026-43969\ncowlib 2.18.0 - EEF-CVE-2026-43966",
+        "cowlib 2.19.0 - EEF-CVE-2026-43969\naka: CVE-2026-43969\ncowlib 2.19.0 - EEF-CVE-2026-43966",
     );
     if parsed.into_iter().collect::<Vec<_>>()
         != ["CVE-2026-43966".to_string(), "CVE-2026-43969".to_string()]
@@ -496,7 +505,7 @@ mod tests {
         HexAdvisoryMitigation {
             id: id.to_string(),
             package: "cowlib".to_string(),
-            locked_version: "2.18.0".to_string(),
+            locked_version: "2.19.0".to_string(),
             status: "mitigated".to_string(),
             evidence: vec!["evidence".to_string()],
         }

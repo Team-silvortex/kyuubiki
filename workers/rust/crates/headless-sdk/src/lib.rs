@@ -86,6 +86,7 @@ mod research_round;
 mod run;
 mod service_executor;
 mod service_executor_artifact;
+mod service_executor_artifact_http;
 mod service_executor_health;
 mod service_executor_http;
 mod service_executor_job_wait;

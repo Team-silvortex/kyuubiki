@@ -248,6 +248,8 @@ fn is_document_path(relative_path: &str) -> bool {
 fn is_ignored_path(relative_path: &str) -> bool {
     relative_path.contains("/gen/schemas/")
         || relative_path.starts_with("gen/schemas/")
+        || relative_path.starts_with("runs/")
+        || relative_path.starts_with("chain-next-regression/")
         || relative_path.ends_with("/package-lock.json")
         || relative_path == "package-lock.json"
         || relative_path.starts_with("assets/icons/")
@@ -462,8 +464,8 @@ fn assert_limit(violations: Vec<Violation>, expected: &str) -> RunnerResult<()> 
 #[cfg(test)]
 mod tests {
     use super::{
-        installer_test_index_violations, line_count_like_node, line_limit_for_path,
-        module_declaration,
+        installer_test_index_violations, is_ignored_path, line_count_like_node,
+        line_limit_for_path, module_declaration,
     };
 
     #[test]
@@ -487,6 +489,13 @@ mod tests {
         assert_eq!(line_limit_for_path("docs/guide.md", 800, 2000), 2000);
         assert_eq!(line_limit_for_path("docs/guide.html", 800, 2000), 2000);
         assert_eq!(line_limit_for_path("scripts/tool.mjs", 800, 2000), 800);
+    }
+
+    #[test]
+    fn generated_research_artifacts_are_not_treated_as_source_files() {
+        assert!(is_ignored_path("runs/study/round-1-run-exec.json"));
+        assert!(is_ignored_path("chain-next-regression/chain-baseline.json"));
+        assert!(!is_ignored_path("config/architecture/contracts.json"));
     }
 
     #[test]

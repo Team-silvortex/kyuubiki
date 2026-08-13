@@ -1,0 +1,13 @@
+repo fallback: /Users/Shared/chroot/research/kyuubiki missing headless entrypoint, switching to dev repo /Users/Shared/chroot/dev/kyuubiki
+synced sdks from /Users/Shared/chroot/dev/kyuubiki -> /Users/Shared/chroot/dev/kyuubiki
+[1/8] init workflow input from template
+[2/8] validate workflow
+[3/8] build explicit execution plan
+[4/8] render execution batch
+[5/8] run closed-loop rounds (HEADLESS_ROUNDS=1, START=1200)
+[round-1] dry-run with drive voltage 1200V
+[round-1] execute run -> material report (service executor)
+[6/8] copy round-1 artifacts to legacy paths
+[7/8] boundary: alias rejection should fail
+[8/8] boundary: missing material report out should fail
+Headless workflow regression completed. Artifacts in /Users/Shared/chroot/dev/kyuubiki/runs/headless-workflow/run-20260812T094327Z/workspace/headless-loop

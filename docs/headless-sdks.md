@@ -361,6 +361,28 @@ download immutable content through:
 The active limits and storage namespaces are published by `GET /api/health`.
 `KYUUBIKI_MODEL_ARTIFACT_MAX_BYTES`, `KYUUBIKI_RESULT_ARTIFACT_MAX_BYTES`, and
 `KYUUBIKI_ARTIFACT_TEMP_RETENTION_SECONDS` keep the disk policy explicit.
+`KYUUBIKI_MODEL_ARTIFACT_MAX_BYTES` is one cross-process transport contract and
+must resolve to the same value in Orchestra, the Headless caller, and the Rust
+Agent. The fail-closed default is 512 MiB. Raising it therefore requires an
+explicit capacity decision for all three processes rather than a server-only
+override. Headless callers count JSON bytes without allocating a second
+in-memory serialized copy and stream large models through a temporary file;
+Agents likewise stream downloads to disk before digest verification and
+decoding.
+
+Installer exposes this contract as **Model artifact limit (bytes)** on every
+remote Agent launch profile and persists it in the remote node registry as
+`model_artifact_max_bytes`. Both orchestrated and offline Mesh launches export
+the value to the Agent process. A large-artifact deployment is aligned only
+when the same byte value is also configured for Orchestra and the Headless
+caller; leaving the Installer field empty resolves to the explicit 512 MiB
+default, while zero is rejected.
+
+If the serialized model exceeds the active client limit, Headless fails before
+upload with `kyuubiki.headless.model_artifact_limit_exceeded` at the
+`artifact_upload` stage. The failure is non-retryable until all three process
+limits are aligned or the model is reduced; automation never needs to parse
+the byte-count prose to distinguish this contract failure.
 
 Large heat and electrostatic plane models may omit node and element `id`
 fields. The Agent assigns stable index-derived IDs (`n0`, `n1`, `e0`, `e1`,

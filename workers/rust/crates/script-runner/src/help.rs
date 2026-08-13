@@ -101,6 +101,7 @@ lab remote-ssh-fixture\n  \
   check-material-research-example\n  \
   check-operator-task-ir-contract\n  \
   check-protocol-validation-qualification\n  \
+  check-system-security-qualification\n  \
   check-headless-sdk-validation-qualification\n  \
   check-headless-workflow-qualification\n  \
   validate-material-score-contract\n  \

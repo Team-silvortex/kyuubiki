@@ -1,11 +1,17 @@
 use crate::HeadlessExecutorError;
-use crate::service_executor::{MAX_INLINE_JSON_BYTES, request_bytes};
+use crate::service_executor::MAX_INLINE_JSON_BYTES;
+use crate::service_executor_artifact_http::request_file;
+use kyuubiki_protocol::model_artifact_max_bytes;
 use serde_json::{Value, json};
+use std::fs::{self, File, OpenOptions};
+use std::io::{BufWriter, Write};
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 const MODEL_ARTIFACT_ROUTE: &str = "/api/v1/model-artifacts";
 const MODEL_ARTIFACT_MEDIA_TYPE: &str = "application/vnd.kyuubiki.model+json";
-const MAX_MODEL_ARTIFACT_BYTES: usize = 536_870_912;
 const LARGE_MODEL_ENTITY_PREFLIGHT: usize = 250_000;
+static NEXT_TEMPORARY_ARTIFACT: AtomicU64 = AtomicU64::new(1);
 
 pub(crate) fn prepare_direct_fem_request_body(
     base_url: &str,
@@ -16,28 +22,32 @@ pub(crate) fn prepare_direct_fem_request_body(
     if entity_count >= LARGE_MODEL_ENTITY_PREFLIGHT {
         reject_known_frontend_proxy(base_url, format!("entity_count={entity_count}"))?;
     }
-    let bytes = serde_json::to_vec(model).map_err(|error| HeadlessExecutorError {
-        message: format!("failed to serialize direct FEM model: {error}"),
-    })?;
-    if bytes.len() <= MAX_INLINE_JSON_BYTES {
+    let size_bytes = serialized_json_size(model)?;
+    if size_bytes <= MAX_INLINE_JSON_BYTES {
         return Ok(model.clone());
     }
-    if bytes.len() > MAX_MODEL_ARTIFACT_BYTES {
+    let limit_bytes = model_artifact_max_bytes();
+    if size_bytes > limit_bytes {
         return Err(HeadlessExecutorError {
             message: format!(
-                "direct FEM model exceeds artifact transport limit: size_bytes={} limit_bytes={MAX_MODEL_ARTIFACT_BYTES}",
-                bytes.len()
+                "model_artifact_limit_exceeded: direct FEM model exceeds artifact transport limit: size_bytes={size_bytes} limit_bytes={limit_bytes}"
             ),
         });
     }
-    reject_known_frontend_proxy(base_url, format!("size_bytes={}", bytes.len()))?;
-    let envelope = request_bytes(
+    reject_known_frontend_proxy(base_url, format!("size_bytes={size_bytes}"))?;
+    let artifact = TemporaryModelArtifact::serialize(model)?;
+    if artifact.size_bytes != size_bytes {
+        return Err(HeadlessExecutorError {
+            message: "direct FEM model changed while preparing artifact transport".to_string(),
+        });
+    }
+    let envelope = request_file(
         base_url,
         api_token,
         "POST",
         MODEL_ARTIFACT_ROUTE,
         MODEL_ARTIFACT_MEDIA_TYPE,
-        &bytes,
+        &artifact.path,
     )?;
     let reference = envelope
         .get("artifact")
@@ -47,6 +57,100 @@ pub(crate) fn prepare_direct_fem_request_body(
             message: "model artifact upload returned an invalid reference".to_string(),
         })?;
     Ok(json!({ "model_artifact_ref": reference }))
+}
+
+fn serialized_json_size(value: &Value) -> Result<usize, HeadlessExecutorError> {
+    let mut counter = ByteCounter::default();
+    serde_json::to_writer(&mut counter, value).map_err(|error| HeadlessExecutorError {
+        message: format!("failed to measure direct FEM model: {error}"),
+    })?;
+    Ok(counter.size_bytes)
+}
+
+#[derive(Default)]
+struct ByteCounter {
+    size_bytes: usize,
+}
+
+impl Write for ByteCounter {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.size_bytes = self
+            .size_bytes
+            .checked_add(bytes.len())
+            .ok_or_else(|| std::io::Error::other("serialized model size overflow"))?;
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+struct TemporaryModelArtifact {
+    path: PathBuf,
+    size_bytes: usize,
+}
+
+impl TemporaryModelArtifact {
+    fn serialize(value: &Value) -> Result<Self, HeadlessExecutorError> {
+        let (path, file) = create_temporary_artifact()?;
+        let result = (|| {
+            let mut writer = BufWriter::new(file);
+            serde_json::to_writer(&mut writer, value).map_err(|error| HeadlessExecutorError {
+                message: format!("failed to serialize direct FEM model artifact: {error}"),
+            })?;
+            writer.flush().map_err(|error| HeadlessExecutorError {
+                message: format!("failed to flush direct FEM model artifact: {error}"),
+            })?;
+            let size_bytes = usize::try_from(
+                fs::metadata(&path)
+                    .map_err(|error| HeadlessExecutorError {
+                        message: format!("failed to inspect direct FEM model artifact: {error}"),
+                    })?
+                    .len(),
+            )
+            .map_err(|_| HeadlessExecutorError {
+                message: "direct FEM model artifact size exceeds this platform".to_string(),
+            })?;
+            Ok(Self {
+                path: path.clone(),
+                size_bytes,
+            })
+        })();
+        if result.is_err() {
+            let _ = fs::remove_file(path);
+        }
+        result
+    }
+}
+
+impl Drop for TemporaryModelArtifact {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
+}
+
+fn create_temporary_artifact() -> Result<(PathBuf, File), HeadlessExecutorError> {
+    let directory = std::env::temp_dir().join("kyuubiki-headless-model-artifacts");
+    fs::create_dir_all(&directory).map_err(|error| HeadlessExecutorError {
+        message: format!("failed to create model artifact temporary directory: {error}"),
+    })?;
+    for _ in 0..16 {
+        let id = NEXT_TEMPORARY_ARTIFACT.fetch_add(1, Ordering::Relaxed);
+        let path = directory.join(format!("{}-{id}.json", std::process::id()));
+        match OpenOptions::new().write(true).create_new(true).open(&path) {
+            Ok(file) => return Ok((path, file)),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => {
+                return Err(HeadlessExecutorError {
+                    message: format!("failed to create model artifact temporary file: {error}"),
+                });
+            }
+        }
+    }
+    Err(HeadlessExecutorError {
+        message: "failed to allocate a unique model artifact temporary file".to_string(),
+    })
 }
 
 fn reject_known_frontend_proxy(
@@ -110,5 +214,21 @@ mod tests {
     fn counts_large_model_entities_without_serializing_the_model() {
         let model = json!({"nodes": [1, 2, 3], "elements": [4, 5]});
         assert_eq!(model_entity_count(&model), 5);
+    }
+
+    #[test]
+    fn streaming_size_matches_canonical_json_serialization() {
+        let model = json!({"nodes": [{"x": 1.0}], "elements": [], "label": "test"});
+        assert_eq!(
+            serialized_json_size(&model).expect("measure model"),
+            serde_json::to_vec(&model).expect("serialize model").len()
+        );
+
+        let artifact = TemporaryModelArtifact::serialize(&model).expect("temporary artifact");
+        let path = artifact.path.clone();
+        assert_eq!(artifact.size_bytes, serialized_json_size(&model).unwrap());
+        assert!(path.is_file());
+        drop(artifact);
+        assert!(!path.exists());
     }
 }

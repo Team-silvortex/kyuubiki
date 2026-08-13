@@ -145,7 +145,7 @@ pub fn normalize_workflow_runtime(payload: &Value) -> SdkResult<WorkflowRuntimeS
         "status",
         "workflow runtime status must be a string",
     )?;
-    let current_node = read_optional_string(
+    let current_node = read_optional_nullable_string(
         runtime,
         "current_node",
         "workflow runtime current_node must be a string",
@@ -189,7 +189,7 @@ pub fn normalize_workflow_progression(
         let Some(job) = payload.get("job").and_then(Value::as_object) else {
             continue;
         };
-        let current_node = read_optional_string(
+        let current_node = read_optional_nullable_string(
             job,
             "current_node",
             "workflow progression current_node must be a string",
@@ -310,6 +310,18 @@ fn read_optional_string(
                 errors: vec![error.into()],
             }),
         },
+        None => Ok(None),
+    }
+}
+
+fn read_optional_nullable_string(
+    runtime: &serde_json::Map<String, Value>,
+    key: &str,
+    error: &str,
+) -> SdkResult<Option<String>> {
+    match runtime.get(key) {
+        Some(value) if value.is_null() => Ok(None),
+        Some(_value) => read_optional_string(runtime, key, error),
         None => Ok(None),
     }
 }

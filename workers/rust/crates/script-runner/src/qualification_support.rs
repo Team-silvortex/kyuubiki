@@ -81,6 +81,22 @@ pub(crate) fn write_json<T: Serialize>(root: &Path, relative: &str, value: &T) -
         .map_err(|error| format!("failed to write {}: {error}", path.display()))
 }
 
+pub(crate) fn write_json_compact<T: Serialize>(
+    root: &Path,
+    relative: &str,
+    value: &T,
+) -> RunnerResult<()> {
+    let path = repo_path(root, relative)?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+    }
+    let rendered = serde_json::to_string(value)
+        .map_err(|error| format!("failed to encode qualification report: {error}"))?;
+    fs::write(&path, format!("{rendered}\n"))
+        .map_err(|error| format!("failed to write {}: {error}", path.display()))
+}
+
 pub(crate) fn combined_output(output: &Output) -> String {
     format!(
         "{}{}",

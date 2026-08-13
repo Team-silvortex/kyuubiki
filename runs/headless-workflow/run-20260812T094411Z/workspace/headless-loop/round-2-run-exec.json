@@ -1,0 +1,1337 @@
+{
+  "schema_version": "kyuubiki.headless-execution-run/v1",
+  "workflow_id": "template.material_dielectric_screening",
+  "mode": "execute:service",
+  "status": "ok",
+  "executed_step_count": 9,
+  "warning_count": 0,
+  "blocked_by_confirmation": null,
+  "validation": {
+    "ok": true,
+    "issue_count": 0,
+    "issues": [],
+    "warning_count": 0,
+    "warnings": [],
+    "summary": {
+      "schema_version": "kyuubiki.headless-execution-batch/v1",
+      "workflow_id": "template.material_dielectric_screening",
+      "template_id": "material_dielectric_screening",
+      "exported_at": "1970-01-01T00:00:00.000Z",
+      "language": "en",
+      "step_count": 9,
+      "warning_count": 0,
+      "actions": [
+        "solve_electrostatic_plane_quad_2d",
+        "job_wait",
+        "result_fetch",
+        "solve_electrostatic_plane_quad_2d",
+        "job_wait",
+        "result_fetch",
+        "solve_electrostatic_plane_quad_2d",
+        "job_wait",
+        "result_fetch"
+      ]
+    },
+    "policy": {
+      "required_engines": [
+        "service"
+      ],
+      "engine_counts": {
+        "service": 9,
+        "browser": 0
+      },
+      "risk_counts": {
+        "destructive": 0,
+        "normal": 9,
+        "sensitive": 0
+      },
+      "recommended_runtime": "service_only",
+      "needs_desktop_browser": false,
+      "safe_for_service_only": true,
+      "notes": []
+    }
+  },
+  "execution_summary": {
+    "schema_version": "kyuubiki.headless-execution-summary/v1",
+    "job_count": 3,
+    "job_ids": [
+      "5aed39b086333a36",
+      "87602f33250cf6eb",
+      "b860842e264dcad5"
+    ],
+    "jobs": [
+      {
+        "job_id": "5aed39b086333a36",
+        "status": "completed",
+        "worker_id": "rust-agent-rpc@127.0.0.1:5002",
+        "phase": "execution",
+        "created_at": "2026-08-12T09:44:15.503480Z",
+        "execution_started_at": "2026-08-12T09:44:15.504628Z",
+        "updated_at": "2026-08-12T09:44:16.513507Z",
+        "queue_wait_ms": 1,
+        "execution_elapsed_ms": 1008,
+        "total_elapsed_ms": 1010,
+        "effective_timeout_ms": 120000,
+        "effective_deadline": "2026-08-12T09:46:15.504628Z"
+      },
+      {
+        "job_id": "87602f33250cf6eb",
+        "status": "completed",
+        "worker_id": "rust-agent-rpc@127.0.0.1:5001",
+        "phase": "execution",
+        "created_at": "2026-08-12T09:44:16.528751Z",
+        "execution_started_at": "2026-08-12T09:44:16.529976Z",
+        "updated_at": "2026-08-12T09:44:17.542731Z",
+        "queue_wait_ms": 1,
+        "execution_elapsed_ms": 1012,
+        "total_elapsed_ms": 1013,
+        "effective_timeout_ms": 120000,
+        "effective_deadline": "2026-08-12T09:46:16.529976Z"
+      },
+      {
+        "job_id": "b860842e264dcad5",
+        "status": "completed",
+        "worker_id": "rust-agent-rpc@127.0.0.1:5002",
+        "phase": "execution",
+        "created_at": "2026-08-12T09:44:17.556026Z",
+        "execution_started_at": "2026-08-12T09:44:17.556995Z",
+        "updated_at": "2026-08-12T09:44:18.573379Z",
+        "queue_wait_ms": 0,
+        "execution_elapsed_ms": 1016,
+        "total_elapsed_ms": 1017,
+        "effective_timeout_ms": 120000,
+        "effective_deadline": "2026-08-12T09:46:17.556995Z"
+      }
+    ],
+    "failure": null
+  },
+  "steps": [
+    {
+      "index": 1,
+      "action": "solve_electrostatic_plane_quad_2d",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "id": "dielectric_polyimide_film",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "permittivity": 3.010423856352e-11,
+              "thickness": 0.001
+            }
+          ],
+          "nodes": [
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "ground_left_bottom",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "drive_right_bottom",
+              "potential": 1380,
+              "x": 0.04,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "drive_right_top",
+              "potential": 1380,
+              "x": 0.04,
+              "y": 0.02
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "ground_left_top",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.02
+            }
+          ]
+        },
+        "research": {
+          "breakdown_field_v_m": 300000000.0,
+          "candidate_id": "polyimide_film",
+          "candidate_label": "Polyimide film",
+          "dissipation_factor": 0.002,
+          "family": "polymer",
+          "note": "flexible high-breakdown film baseline",
+          "objective": "maximize electric breakdown margin with low loss and low mass",
+          "relative_permittivity": 3.4,
+          "study": "material.dielectric_screening.v1"
+        }
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-12T09:44:15.503480Z",
+          "execution_started_at": null,
+          "execution_timeout_ms": 120000,
+          "has_result": false,
+          "iteration": null,
+          "job_id": "5aed39b086333a36",
+          "message": null,
+          "model_version_id": null,
+          "progress": 0.0,
+          "project_id": "6d1729e1c13ef4b7",
+          "queue_timeout_ms": 1800000,
+          "residual": null,
+          "simulation_case_id": "b60b6fc297d89c3c",
+          "status": "queued",
+          "status_detail": {
+            "active": true,
+            "failure_class": null,
+            "lifecycle": "active",
+            "recoverable": false,
+            "terminal": false,
+            "timing": {
+              "effective_deadline": "2026-08-12T10:14:15.503480Z",
+              "effective_timeout_ms": 1800000,
+              "execution_elapsed_ms": null,
+              "execution_started_at": null,
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-12T10:14:15.503480Z",
+              "phase": "queue",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 0,
+              "total_elapsed_ms": 0
+            }
+          },
+          "updated_at": "2026-08-12T09:44:15.503480Z",
+          "worker_id": null
+        },
+        "job_id": "5aed39b086333a36",
+        "progress": 0.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-12T09:44:15.503480Z",
+            "execution_started_at": null,
+            "execution_timeout_ms": 120000,
+            "has_result": false,
+            "iteration": null,
+            "job_id": "5aed39b086333a36",
+            "message": null,
+            "model_version_id": null,
+            "progress": 0.0,
+            "project_id": "6d1729e1c13ef4b7",
+            "queue_timeout_ms": 1800000,
+            "residual": null,
+            "simulation_case_id": "b60b6fc297d89c3c",
+            "status": "queued",
+            "status_detail": {
+              "active": true,
+              "failure_class": null,
+              "lifecycle": "active",
+              "recoverable": false,
+              "terminal": false,
+              "timing": {
+                "effective_deadline": "2026-08-12T10:14:15.503480Z",
+                "effective_timeout_ms": 1800000,
+                "execution_elapsed_ms": null,
+                "execution_started_at": null,
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-12T10:14:15.503480Z",
+                "phase": "queue",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 0,
+                "total_elapsed_ms": 0
+              }
+            },
+            "updated_at": "2026-08-12T09:44:15.503480Z",
+            "worker_id": null
+          }
+        },
+        "status": "queued"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 2,
+      "action": "job_wait",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "5aed39b086333a36",
+        "max_total_timeout_ms": 3600000,
+        "resume_policy": "server_deadline",
+        "timeout_ms": 60000
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-12T09:44:15.503480Z",
+          "execution_started_at": "2026-08-12T09:44:15.504628Z",
+          "execution_timeout_ms": 120000,
+          "iteration": 4,
+          "job_id": "5aed39b086333a36",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "6d1729e1c13ef4b7",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "b60b6fc297d89c3c",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-12T09:46:15.504628Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1008,
+              "execution_started_at": "2026-08-12T09:44:15.504628Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-12T10:14:15.503480Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 1,
+              "total_elapsed_ms": 1010
+            }
+          },
+          "updated_at": "2026-08-12T09:44:16.513507Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+        },
+        "job_id": "5aed39b086333a36",
+        "progress": 1.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-12T09:44:15.503480Z",
+            "execution_started_at": "2026-08-12T09:44:15.504628Z",
+            "execution_timeout_ms": 120000,
+            "iteration": 4,
+            "job_id": "5aed39b086333a36",
+            "message": "collecting nodal and elemental responses",
+            "model_version_id": null,
+            "progress": 1.0,
+            "project_id": "6d1729e1c13ef4b7",
+            "queue_timeout_ms": 1800000,
+            "residual": 0.2,
+            "simulation_case_id": "b60b6fc297d89c3c",
+            "status": "completed",
+            "status_detail": {
+              "active": false,
+              "failure_class": null,
+              "lifecycle": "terminal",
+              "recoverable": false,
+              "terminal": true,
+              "timing": {
+                "effective_deadline": "2026-08-12T09:46:15.504628Z",
+                "effective_timeout_ms": 120000,
+                "execution_elapsed_ms": 1008,
+                "execution_started_at": "2026-08-12T09:44:15.504628Z",
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-12T10:14:15.503480Z",
+                "phase": "execution",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 1,
+                "total_elapsed_ms": 1010
+              }
+            },
+            "updated_at": "2026-08-12T09:44:16.513507Z",
+            "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+          }
+        },
+        "result": null,
+        "status": "completed",
+        "wait": {
+          "elapsed_ms": 1013,
+          "policy": "server_deadline",
+          "poll_attempts": 2,
+          "resume_count": 0
+        }
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 3,
+      "action": "result_fetch",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "job_id": "5aed39b086333a36"
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-12T09:44:15.503480Z",
+          "execution_started_at": "2026-08-12T09:44:15.504628Z",
+          "execution_timeout_ms": 120000,
+          "has_result": true,
+          "iteration": 4,
+          "job_id": "5aed39b086333a36",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "6d1729e1c13ef4b7",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "b60b6fc297d89c3c",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-12T09:46:15.504628Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1008,
+              "execution_started_at": "2026-08-12T09:44:15.504628Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-12T10:14:15.503480Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 1,
+              "total_elapsed_ms": 1010
+            }
+          },
+          "updated_at": "2026-08-12T09:44:16.513507Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+        },
+        "job_id": "5aed39b086333a36",
+        "result": {
+          "elements": [
+            {
+              "area": 0.0008,
+              "average_potential": 690.0,
+              "electric_energy_density": 0.017915784975114837,
+              "electric_field_magnitude": 34500.0,
+              "electric_field_x": -34500.0,
+              "electric_field_y": -0.0,
+              "electric_flux_density_magnitude": 1.03859623044144e-6,
+              "electric_flux_density_x": -1.03859623044144e-6,
+              "electric_flux_density_y": -0.0,
+              "id": "dielectric_polyimide_film",
+              "index": 0,
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "potential_gradient_x": 34500.0,
+              "potential_gradient_y": 0.0,
+              "stored_energy": 1.4332627980091873e-8
+            }
+          ],
+          "input": {
+            "elements": [
+              {
+                "id": "dielectric_polyimide_film",
+                "node_i": 0,
+                "node_j": 1,
+                "node_k": 2,
+                "node_l": 3,
+                "permittivity": 3.010423856352e-11,
+                "thickness": 0.001
+              }
+            ],
+            "nodes": [
+              {
+                "charge_density": 0.0,
+                "fix_potential": true,
+                "id": "ground_left_bottom",
+                "potential": 0.0,
+                "x": 0.0,
+                "y": 0.0
+              },
+              {
+                "charge_density": 0.0,
+                "fix_potential": true,
+                "id": "drive_right_bottom",
+                "potential": 1380.0,
+                "x": 0.04,
+                "y": 0.0
+              },
+              {
+                "charge_density": 0.0,
+                "fix_potential": true,
+                "id": "drive_right_top",
+                "potential": 1380.0,
+                "x": 0.04,
+                "y": 0.02
+              },
+              {
+                "charge_density": 0.0,
+                "fix_potential": true,
+                "id": "ground_left_top",
+                "potential": 0.0,
+                "x": 0.0,
+                "y": 0.02
+              }
+            ]
+          },
+          "max_electric_energy_density": 0.017915784975114837,
+          "max_electric_field": 34500.0,
+          "max_flux_density": 1.03859623044144e-6,
+          "max_potential": 1380.0,
+          "nodes": [
+            {
+              "charge_density": 0.0,
+              "id": "ground_left_bottom",
+              "index": 0,
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "id": "drive_right_bottom",
+              "index": 1,
+              "potential": 1380.0,
+              "x": 0.04,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "id": "drive_right_top",
+              "index": 2,
+              "potential": 1380.0,
+              "x": 0.04,
+              "y": 0.02
+            },
+            {
+              "charge_density": 0.0,
+              "id": "ground_left_top",
+              "index": 3,
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.02
+            }
+          ],
+          "total_stored_energy": 1.4332627980091873e-8
+        },
+        "status": "completed"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 4,
+      "action": "solve_electrostatic_plane_quad_2d",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "id": "dielectric_alumina_96",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "permittivity": 8.677104056544001e-11,
+              "thickness": 0.001
+            }
+          ],
+          "nodes": [
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "ground_left_bottom",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "drive_right_bottom",
+              "potential": 1380,
+              "x": 0.04,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "drive_right_top",
+              "potential": 1380,
+              "x": 0.04,
+              "y": 0.02
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "ground_left_top",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.02
+            }
+          ]
+        },
+        "research": {
+          "breakdown_field_v_m": 130000000.0,
+          "candidate_id": "alumina_96",
+          "candidate_label": "Alumina 96%",
+          "dissipation_factor": 0.0002,
+          "family": "ceramic",
+          "note": "ceramic substrate candidate with low loss but high mass",
+          "objective": "maximize electric breakdown margin with low loss and low mass",
+          "relative_permittivity": 9.8,
+          "study": "material.dielectric_screening.v1"
+        }
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-12T09:44:16.528751Z",
+          "execution_started_at": null,
+          "execution_timeout_ms": 120000,
+          "has_result": false,
+          "iteration": null,
+          "job_id": "87602f33250cf6eb",
+          "message": null,
+          "model_version_id": null,
+          "progress": 0.0,
+          "project_id": "b03a507305ba1a3e",
+          "queue_timeout_ms": 1800000,
+          "residual": null,
+          "simulation_case_id": "1c2962846ac010ea",
+          "status": "queued",
+          "status_detail": {
+            "active": true,
+            "failure_class": null,
+            "lifecycle": "active",
+            "recoverable": false,
+            "terminal": false,
+            "timing": {
+              "effective_deadline": "2026-08-12T10:14:16.528751Z",
+              "effective_timeout_ms": 1800000,
+              "execution_elapsed_ms": null,
+              "execution_started_at": null,
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-12T10:14:16.528751Z",
+              "phase": "queue",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 0,
+              "total_elapsed_ms": 0
+            }
+          },
+          "updated_at": "2026-08-12T09:44:16.528751Z",
+          "worker_id": null
+        },
+        "job_id": "87602f33250cf6eb",
+        "progress": 0.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-12T09:44:16.528751Z",
+            "execution_started_at": null,
+            "execution_timeout_ms": 120000,
+            "has_result": false,
+            "iteration": null,
+            "job_id": "87602f33250cf6eb",
+            "message": null,
+            "model_version_id": null,
+            "progress": 0.0,
+            "project_id": "b03a507305ba1a3e",
+            "queue_timeout_ms": 1800000,
+            "residual": null,
+            "simulation_case_id": "1c2962846ac010ea",
+            "status": "queued",
+            "status_detail": {
+              "active": true,
+              "failure_class": null,
+              "lifecycle": "active",
+              "recoverable": false,
+              "terminal": false,
+              "timing": {
+                "effective_deadline": "2026-08-12T10:14:16.528751Z",
+                "effective_timeout_ms": 1800000,
+                "execution_elapsed_ms": null,
+                "execution_started_at": null,
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-12T10:14:16.528751Z",
+                "phase": "queue",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 0,
+                "total_elapsed_ms": 0
+              }
+            },
+            "updated_at": "2026-08-12T09:44:16.528751Z",
+            "worker_id": null
+          }
+        },
+        "status": "queued"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 5,
+      "action": "job_wait",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "87602f33250cf6eb",
+        "max_total_timeout_ms": 3600000,
+        "resume_policy": "server_deadline",
+        "timeout_ms": 60000
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-12T09:44:16.528751Z",
+          "execution_started_at": "2026-08-12T09:44:16.529976Z",
+          "execution_timeout_ms": 120000,
+          "iteration": 4,
+          "job_id": "87602f33250cf6eb",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "b03a507305ba1a3e",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "1c2962846ac010ea",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-12T09:46:16.529976Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1012,
+              "execution_started_at": "2026-08-12T09:44:16.529976Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-12T10:14:16.528751Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 1,
+              "total_elapsed_ms": 1013
+            }
+          },
+          "updated_at": "2026-08-12T09:44:17.542731Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5001"
+        },
+        "job_id": "87602f33250cf6eb",
+        "progress": 1.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-12T09:44:16.528751Z",
+            "execution_started_at": "2026-08-12T09:44:16.529976Z",
+            "execution_timeout_ms": 120000,
+            "iteration": 4,
+            "job_id": "87602f33250cf6eb",
+            "message": "collecting nodal and elemental responses",
+            "model_version_id": null,
+            "progress": 1.0,
+            "project_id": "b03a507305ba1a3e",
+            "queue_timeout_ms": 1800000,
+            "residual": 0.2,
+            "simulation_case_id": "1c2962846ac010ea",
+            "status": "completed",
+            "status_detail": {
+              "active": false,
+              "failure_class": null,
+              "lifecycle": "terminal",
+              "recoverable": false,
+              "terminal": true,
+              "timing": {
+                "effective_deadline": "2026-08-12T09:46:16.529976Z",
+                "effective_timeout_ms": 120000,
+                "execution_elapsed_ms": 1012,
+                "execution_started_at": "2026-08-12T09:44:16.529976Z",
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-12T10:14:16.528751Z",
+                "phase": "execution",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 1,
+                "total_elapsed_ms": 1013
+              }
+            },
+            "updated_at": "2026-08-12T09:44:17.542731Z",
+            "worker_id": "rust-agent-rpc@127.0.0.1:5001"
+          }
+        },
+        "result": null,
+        "status": "completed",
+        "wait": {
+          "elapsed_ms": 1017,
+          "policy": "server_deadline",
+          "poll_attempts": 2,
+          "resume_count": 0
+        }
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 6,
+      "action": "result_fetch",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "job_id": "87602f33250cf6eb"
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-12T09:44:16.528751Z",
+          "execution_started_at": "2026-08-12T09:44:16.529976Z",
+          "execution_timeout_ms": 120000,
+          "has_result": true,
+          "iteration": 4,
+          "job_id": "87602f33250cf6eb",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "b03a507305ba1a3e",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "1c2962846ac010ea",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-12T09:46:16.529976Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1012,
+              "execution_started_at": "2026-08-12T09:44:16.529976Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-12T10:14:16.528751Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 1,
+              "total_elapsed_ms": 1013
+            }
+          },
+          "updated_at": "2026-08-12T09:44:17.542731Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5001"
+        },
+        "job_id": "87602f33250cf6eb",
+        "result": {
+          "elements": [
+            {
+              "area": 0.0008,
+              "average_potential": 690.0,
+              "electric_energy_density": 0.05163961551650748,
+              "electric_field_magnitude": 34500.0,
+              "electric_field_x": -34500.0,
+              "electric_field_y": -0.0,
+              "electric_flux_density_magnitude": 2.99360089950768e-6,
+              "electric_flux_density_x": -2.99360089950768e-6,
+              "electric_flux_density_y": -0.0,
+              "id": "dielectric_alumina_96",
+              "index": 0,
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "potential_gradient_x": 34500.0,
+              "potential_gradient_y": 0.0,
+              "stored_energy": 4.1311692413205986e-8
+            }
+          ],
+          "input": {
+            "elements": [
+              {
+                "id": "dielectric_alumina_96",
+                "node_i": 0,
+                "node_j": 1,
+                "node_k": 2,
+                "node_l": 3,
+                "permittivity": 8.677104056544001e-11,
+                "thickness": 0.001
+              }
+            ],
+            "nodes": [
+              {
+                "charge_density": 0.0,
+                "fix_potential": true,
+                "id": "ground_left_bottom",
+                "potential": 0.0,
+                "x": 0.0,
+                "y": 0.0
+              },
+              {
+                "charge_density": 0.0,
+                "fix_potential": true,
+                "id": "drive_right_bottom",
+                "potential": 1380.0,
+                "x": 0.04,
+                "y": 0.0
+              },
+              {
+                "charge_density": 0.0,
+                "fix_potential": true,
+                "id": "drive_right_top",
+                "potential": 1380.0,
+                "x": 0.04,
+                "y": 0.02
+              },
+              {
+                "charge_density": 0.0,
+                "fix_potential": true,
+                "id": "ground_left_top",
+                "potential": 0.0,
+                "x": 0.0,
+                "y": 0.02
+              }
+            ]
+          },
+          "max_electric_energy_density": 0.05163961551650748,
+          "max_electric_field": 34500.0,
+          "max_flux_density": 2.99360089950768e-6,
+          "max_potential": 1380.0,
+          "nodes": [
+            {
+              "charge_density": 0.0,
+              "id": "ground_left_bottom",
+              "index": 0,
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "id": "drive_right_bottom",
+              "index": 1,
+              "potential": 1380.0,
+              "x": 0.04,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "id": "drive_right_top",
+              "index": 2,
+              "potential": 1380.0,
+              "x": 0.04,
+              "y": 0.02
+            },
+            {
+              "charge_density": 0.0,
+              "id": "ground_left_top",
+              "index": 3,
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.02
+            }
+          ],
+          "total_stored_energy": 4.1311692413205986e-8
+        },
+        "status": "completed"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 7,
+      "action": "solve_electrostatic_plane_quad_2d",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "model": {
+          "elements": [
+            {
+              "id": "dielectric_ptfe",
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "permittivity": 1.859379440688e-11,
+              "thickness": 0.001
+            }
+          ],
+          "nodes": [
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "ground_left_bottom",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "drive_right_bottom",
+              "potential": 1380,
+              "x": 0.04,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "drive_right_top",
+              "potential": 1380,
+              "x": 0.04,
+              "y": 0.02
+            },
+            {
+              "charge_density": 0.0,
+              "fix_potential": true,
+              "id": "ground_left_top",
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.02
+            }
+          ]
+        },
+        "research": {
+          "breakdown_field_v_m": 60000000.0,
+          "candidate_id": "ptfe",
+          "candidate_label": "PTFE",
+          "dissipation_factor": 0.0002,
+          "family": "polymer",
+          "note": "low-loss polymer candidate with weaker breakdown margin",
+          "objective": "maximize electric breakdown margin with low loss and low mass",
+          "relative_permittivity": 2.1,
+          "study": "material.dielectric_screening.v1"
+        }
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-12T09:44:17.556026Z",
+          "execution_started_at": null,
+          "execution_timeout_ms": 120000,
+          "has_result": false,
+          "iteration": null,
+          "job_id": "b860842e264dcad5",
+          "message": null,
+          "model_version_id": null,
+          "progress": 0.0,
+          "project_id": "d60a3a5b684a2ad9",
+          "queue_timeout_ms": 1800000,
+          "residual": null,
+          "simulation_case_id": "346218a5d58ca805",
+          "status": "queued",
+          "status_detail": {
+            "active": true,
+            "failure_class": null,
+            "lifecycle": "active",
+            "recoverable": false,
+            "terminal": false,
+            "timing": {
+              "effective_deadline": "2026-08-12T10:14:17.556026Z",
+              "effective_timeout_ms": 1800000,
+              "execution_elapsed_ms": null,
+              "execution_started_at": null,
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-12T10:14:17.556026Z",
+              "phase": "queue",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 0,
+              "total_elapsed_ms": 0
+            }
+          },
+          "updated_at": "2026-08-12T09:44:17.556026Z",
+          "worker_id": null
+        },
+        "job_id": "b860842e264dcad5",
+        "progress": 0.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-12T09:44:17.556026Z",
+            "execution_started_at": null,
+            "execution_timeout_ms": 120000,
+            "has_result": false,
+            "iteration": null,
+            "job_id": "b860842e264dcad5",
+            "message": null,
+            "model_version_id": null,
+            "progress": 0.0,
+            "project_id": "d60a3a5b684a2ad9",
+            "queue_timeout_ms": 1800000,
+            "residual": null,
+            "simulation_case_id": "346218a5d58ca805",
+            "status": "queued",
+            "status_detail": {
+              "active": true,
+              "failure_class": null,
+              "lifecycle": "active",
+              "recoverable": false,
+              "terminal": false,
+              "timing": {
+                "effective_deadline": "2026-08-12T10:14:17.556026Z",
+                "effective_timeout_ms": 1800000,
+                "execution_elapsed_ms": null,
+                "execution_started_at": null,
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-12T10:14:17.556026Z",
+                "phase": "queue",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 0,
+                "total_elapsed_ms": 0
+              }
+            },
+            "updated_at": "2026-08-12T09:44:17.556026Z",
+            "worker_id": null
+          }
+        },
+        "status": "queued"
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 8,
+      "action": "job_wait",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "interval_ms": 1000,
+        "job_id": "b860842e264dcad5",
+        "max_total_timeout_ms": 3600000,
+        "resume_policy": "server_deadline",
+        "timeout_ms": 60000
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-12T09:44:17.556026Z",
+          "execution_started_at": "2026-08-12T09:44:17.556995Z",
+          "execution_timeout_ms": 120000,
+          "iteration": 4,
+          "job_id": "b860842e264dcad5",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "d60a3a5b684a2ad9",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "346218a5d58ca805",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-12T09:46:17.556995Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1016,
+              "execution_started_at": "2026-08-12T09:44:17.556995Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-12T10:14:17.556026Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 0,
+              "total_elapsed_ms": 1017
+            }
+          },
+          "updated_at": "2026-08-12T09:44:18.573379Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+        },
+        "job_id": "b860842e264dcad5",
+        "progress": 1.0,
+        "raw": {
+          "job": {
+            "created_at": "2026-08-12T09:44:17.556026Z",
+            "execution_started_at": "2026-08-12T09:44:17.556995Z",
+            "execution_timeout_ms": 120000,
+            "iteration": 4,
+            "job_id": "b860842e264dcad5",
+            "message": "collecting nodal and elemental responses",
+            "model_version_id": null,
+            "progress": 1.0,
+            "project_id": "d60a3a5b684a2ad9",
+            "queue_timeout_ms": 1800000,
+            "residual": 0.2,
+            "simulation_case_id": "346218a5d58ca805",
+            "status": "completed",
+            "status_detail": {
+              "active": false,
+              "failure_class": null,
+              "lifecycle": "terminal",
+              "recoverable": false,
+              "terminal": true,
+              "timing": {
+                "effective_deadline": "2026-08-12T09:46:17.556995Z",
+                "effective_timeout_ms": 120000,
+                "execution_elapsed_ms": 1016,
+                "execution_started_at": "2026-08-12T09:44:17.556995Z",
+                "execution_timeout_ms": 120000,
+                "job_submission_deadline": "2026-08-12T10:14:17.556026Z",
+                "phase": "execution",
+                "queue_timeout_ms": 1800000,
+                "queue_wait_ms": 0,
+                "total_elapsed_ms": 1017
+              }
+            },
+            "updated_at": "2026-08-12T09:44:18.573379Z",
+            "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+          }
+        },
+        "result": null,
+        "status": "completed",
+        "wait": {
+          "elapsed_ms": 2028,
+          "policy": "server_deadline",
+          "poll_attempts": 3,
+          "resume_count": 0
+        }
+      },
+      "requires_confirmation": false
+    },
+    {
+      "index": 9,
+      "action": "result_fetch",
+      "risk": "normal",
+      "status": "executed",
+      "payload": {
+        "job_id": "b860842e264dcad5"
+      },
+      "result_preview": {
+        "job": {
+          "created_at": "2026-08-12T09:44:17.556026Z",
+          "execution_started_at": "2026-08-12T09:44:17.556995Z",
+          "execution_timeout_ms": 120000,
+          "has_result": true,
+          "iteration": 4,
+          "job_id": "b860842e264dcad5",
+          "message": "collecting nodal and elemental responses",
+          "model_version_id": null,
+          "progress": 1.0,
+          "project_id": "d60a3a5b684a2ad9",
+          "queue_timeout_ms": 1800000,
+          "residual": 0.2,
+          "simulation_case_id": "346218a5d58ca805",
+          "status": "completed",
+          "status_detail": {
+            "active": false,
+            "failure_class": null,
+            "lifecycle": "terminal",
+            "recoverable": false,
+            "terminal": true,
+            "timing": {
+              "effective_deadline": "2026-08-12T09:46:17.556995Z",
+              "effective_timeout_ms": 120000,
+              "execution_elapsed_ms": 1016,
+              "execution_started_at": "2026-08-12T09:44:17.556995Z",
+              "execution_timeout_ms": 120000,
+              "job_submission_deadline": "2026-08-12T10:14:17.556026Z",
+              "phase": "execution",
+              "queue_timeout_ms": 1800000,
+              "queue_wait_ms": 0,
+              "total_elapsed_ms": 1017
+            }
+          },
+          "updated_at": "2026-08-12T09:44:18.573379Z",
+          "worker_id": "rust-agent-rpc@127.0.0.1:5002"
+        },
+        "job_id": "b860842e264dcad5",
+        "result": {
+          "elements": [
+            {
+              "area": 0.0008,
+              "average_potential": 690.0,
+              "electric_energy_density": 0.01106563189639446,
+              "electric_field_magnitude": 34500.0,
+              "electric_field_x": -34500.0,
+              "electric_field_y": -0.0,
+              "electric_flux_density_magnitude": 6.4148590703736e-7,
+              "electric_flux_density_x": -6.4148590703736e-7,
+              "electric_flux_density_y": -0.0,
+              "id": "dielectric_ptfe",
+              "index": 0,
+              "node_i": 0,
+              "node_j": 1,
+              "node_k": 2,
+              "node_l": 3,
+              "potential_gradient_x": 34500.0,
+              "potential_gradient_y": 0.0,
+              "stored_energy": 8.852505517115569e-9
+            }
+          ],
+          "input": {
+            "elements": [
+              {
+                "id": "dielectric_ptfe",
+                "node_i": 0,
+                "node_j": 1,
+                "node_k": 2,
+                "node_l": 3,
+                "permittivity": 1.859379440688e-11,
+                "thickness": 0.001
+              }
+            ],
+            "nodes": [
+              {
+                "charge_density": 0.0,
+                "fix_potential": true,
+                "id": "ground_left_bottom",
+                "potential": 0.0,
+                "x": 0.0,
+                "y": 0.0
+              },
+              {
+                "charge_density": 0.0,
+                "fix_potential": true,
+                "id": "drive_right_bottom",
+                "potential": 1380.0,
+                "x": 0.04,
+                "y": 0.0
+              },
+              {
+                "charge_density": 0.0,
+                "fix_potential": true,
+                "id": "drive_right_top",
+                "potential": 1380.0,
+                "x": 0.04,
+                "y": 0.02
+              },
+              {
+                "charge_density": 0.0,
+                "fix_potential": true,
+                "id": "ground_left_top",
+                "potential": 0.0,
+                "x": 0.0,
+                "y": 0.02
+              }
+            ]
+          },
+          "max_electric_energy_density": 0.01106563189639446,
+          "max_electric_field": 34500.0,
+          "max_flux_density": 6.4148590703736e-7,
+          "max_potential": 1380.0,
+          "nodes": [
+            {
+              "charge_density": 0.0,
+              "id": "ground_left_bottom",
+              "index": 0,
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "id": "drive_right_bottom",
+              "index": 1,
+              "potential": 1380.0,
+              "x": 0.04,
+              "y": 0.0
+            },
+            {
+              "charge_density": 0.0,
+              "id": "drive_right_top",
+              "index": 2,
+              "potential": 1380.0,
+              "x": 0.04,
+              "y": 0.02
+            },
+            {
+              "charge_density": 0.0,
+              "id": "ground_left_top",
+              "index": 3,
+              "potential": 0.0,
+              "x": 0.0,
+              "y": 0.02
+            }
+          ],
+          "total_stored_energy": 8.852505517115569e-9
+        },
+        "status": "completed"
+      },
+      "requires_confirmation": false
+    }
+  ]
+}

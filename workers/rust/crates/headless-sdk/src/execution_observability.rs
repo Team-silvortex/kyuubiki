@@ -123,6 +123,17 @@ fn classify_failure(step_index: usize, action: &str, message: String) -> Headles
             "bounded_exponential_backoff",
             "Inspect agent capacity and queue health, then retry without resubmitting an already accepted job.",
         )
+    } else if normalized.contains("model_artifact_limit_exceeded")
+        || (normalized.contains("direct fem model exceeds artifact transport limit")
+            && normalized.contains("limit_bytes="))
+    {
+        (
+            "model_artifact_limit_exceeded",
+            "artifact_upload",
+            false,
+            "none",
+            "Align KYUUBIKI_MODEL_ARTIFACT_MAX_BYTES across Headless, Orchestra, and Agent, or reduce the serialized model before retrying.",
+        )
     } else if normalized.contains("frontend_proxy_artifact_limit")
         || (normalized.contains("model artifact upload failed")
             && normalized.contains("smaller body limit"))
@@ -438,6 +449,38 @@ mod tests {
             schema["properties"]["stage"]["enum"]
                 .as_array()
                 .is_some_and(|values| values.contains(&preview["failure_receipt"]["stage"]))
+        );
+    }
+
+    #[test]
+    fn model_artifact_limit_identifies_cross_process_contract_failure() {
+        let preview = failure_preview(
+            1,
+            "solve_heat_plane_triangle_2d",
+            "model_artifact_limit_exceeded: direct FEM model exceeds artifact transport limit: size_bytes=600000389 limit_bytes=536870912"
+                .to_string(),
+        );
+
+        assert_eq!(
+            preview["error_code"],
+            "kyuubiki.headless.model_artifact_limit_exceeded"
+        );
+        assert_eq!(preview["failure_receipt"]["stage"], "artifact_upload");
+        assert_eq!(preview["failure_receipt"]["retryable"], false);
+        assert!(
+            preview["failure_receipt"]["recommended_action"]
+                .as_str()
+                .is_some_and(|action| action.contains("Headless, Orchestra, and Agent"))
+        );
+
+        let schema: Value = serde_json::from_str(include_str!(
+            "../../../../../schemas/headless-failure-receipt.schema.json"
+        ))
+        .expect("failure receipt schema");
+        assert!(
+            schema["properties"]["category"]["enum"]
+                .as_array()
+                .is_some_and(|values| values.contains(&preview["failure_receipt"]["category"]))
         );
     }
 

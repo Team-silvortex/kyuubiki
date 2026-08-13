@@ -157,7 +157,7 @@ fn executable_operator_task_ir() -> Value {
             "program_family": "material_margin",
             "program_kind": "transform",
             "operator_category_id": null,
-            "package_ref": null,
+            "package_ref": "orchestra://operator-package/transform.evaluate_material_thermal_shock",
             "package_version": "library-managed",
             "package_integrity": null,
             "runtime_protocol": "kyuubiki.operator-execution/v1",

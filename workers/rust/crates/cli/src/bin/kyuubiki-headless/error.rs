@@ -26,7 +26,7 @@ pub(super) fn print_cli_error(error: &str) {
 
 pub(super) fn cli_error_stage(code: &str) -> &'static str {
     match code {
-        "frontend_proxy_artifact_limit" => "artifact_upload",
+        "frontend_proxy_artifact_limit" | "model_artifact_limit_exceeded" => "artifact_upload",
         "job_wait_timeout" => "job_wait",
         "headless_execution_failed" => "execution",
         "document_validation" => "document_decode",
@@ -44,7 +44,12 @@ pub(super) fn cli_error_stage(code: &str) -> &'static str {
 }
 
 pub(super) fn classify_cli_error(error: &str) -> &'static str {
-    if error.contains("frontend_proxy_artifact_limit") {
+    if error.contains("model_artifact_limit_exceeded")
+        || (error.contains("direct FEM model exceeds artifact transport limit")
+            && error.contains("limit_bytes="))
+    {
+        "model_artifact_limit_exceeded"
+    } else if error.contains("frontend_proxy_artifact_limit") {
         "frontend_proxy_artifact_limit"
     } else if error.contains("timed out waiting for job") {
         "job_wait_timeout"
@@ -88,6 +93,9 @@ fn cli_error_recovery(code: &str) -> &'static str {
     match code {
         "frontend_proxy_artifact_limit" => {
             "Use the runtime control-plane endpoint for Headless execution instead of the GUI frontend."
+        }
+        "model_artifact_limit_exceeded" => {
+            "Align KYUUBIKI_MODEL_ARTIFACT_MAX_BYTES across Headless, Orchestra, and Agent, or reduce the serialized model before retrying."
         }
         "job_wait_timeout" => {
             "Inspect the job timing receipt, then resume the same job_id while its server deadline remains active."
@@ -164,6 +172,17 @@ mod tests {
         assert_eq!(code, "frontend_proxy_artifact_limit");
         assert_eq!(cli_error_stage(code), "artifact_upload");
         assert!(cli_error_recovery(code).contains("control-plane endpoint"));
+    }
+
+    #[test]
+    fn classifies_model_artifact_limit_for_automation() {
+        let code = classify_cli_error(
+            "headless execution failed: model_artifact_limit_exceeded: direct FEM model exceeds artifact transport limit: size_bytes=600000389 limit_bytes=536870912",
+        );
+        assert_eq!(code, "model_artifact_limit_exceeded");
+        assert_eq!(cli_error_stage(code), "artifact_upload");
+        assert!(!cli_error_retryable(code));
+        assert!(cli_error_recovery(code).contains("Headless, Orchestra, and Agent"));
     }
 
     #[test]

@@ -59,6 +59,15 @@ test("hub shell normalizes host platform through shared desktop helpers", () => 
   assert.doesNotMatch(platform, /desktop-shared\/ui\/platform\.js/);
 });
 
+test("hub assistant secret storage is cleanup-only", () => {
+  const storage = read("ui/hub-storage.js");
+
+  assert.match(storage, /sessionStorage\.removeItem\(HUB_ASSISTANT_LEGACY_SECRETS_KEY\)/);
+  assert.doesNotMatch(storage, /sessionStorage\.getItem\(HUB_ASSISTANT_LEGACY_SECRETS_KEY\)/);
+  assert.doesNotMatch(storage, /sessionStorage\.setItem\(HUB_ASSISTANT_LEGACY_SECRETS_KEY/);
+  assert.doesNotMatch(storage, /localStorage\.(?:getItem|setItem)\(HUB_ASSISTANT_LEGACY_SECRETS_KEY/);
+});
+
 test("hub workflow catalog suggestions rank the closest workflow first", () => {
   const entries = [
     {

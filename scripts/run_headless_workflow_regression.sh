@@ -127,11 +127,24 @@ clone_batch_with_voltage() {
 
   jq --argjson voltage "$voltage" '
     .steps |= map(
-      if .action == "solve_electrostatic_plane_quad_2d" then
-        .payload.model.nodes = (
-          .payload.model.nodes
-          | map(if .id == "drive_right_bottom" or .id == "drive_right_top" then .potential = $voltage else . end)
-        )
+      if .action == "solve_electrostatic_plane_quad_2d" or .action == "solve_electrostatic_plane_triangle_2d" then
+        if (.payload.model.nodes // null) != null then
+          .payload.model.nodes = (
+            .payload.model.nodes
+            | map(if (.potential // 0) != 0 then .potential = $voltage else . end)
+          )
+        else
+          .
+        end
+      elif .action == "solve_composite_thermo_electric_panel" then
+        if (.payload.electrostatic_model.nodes // null) != null then
+          .payload.electrostatic_model.nodes = (
+            .payload.electrostatic_model.nodes
+            | map(if .id == "n3" or .id == "n7" then .potential = $voltage else . end)
+          )
+        else
+          .
+        end
       else
         .
       end

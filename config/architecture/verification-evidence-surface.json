@@ -10,6 +10,7 @@
       "./scripts/kyuubiki check-module-function-coverage-tensor",
       "./scripts/kyuubiki check-headless-workflow-qualification",
       "./scripts/kyuubiki check-protocol-validation-qualification",
+      "./scripts/kyuubiki check-system-security-qualification",
       "./scripts/kyuubiki build-regression-gate-report",
       "./scripts/kyuubiki build-central-readiness-report",
       "./scripts/kyuubiki check-central-readiness-report"
@@ -19,6 +20,7 @@
       "tmp/module-function-coverage-tensor.json",
       "tmp/headless-workflow-qualification-report.json",
       "tmp/protocol-validation-qualification-report.json",
+      "tmp/system-security-qualification-report.json",
       "tmp/regression-gate-report.json",
       "tmp/central-readiness-report.json",
       "tmp/central-readiness-report.md"
@@ -65,11 +67,17 @@
       "schemas/protocol-validation-qualification-report.schema.json",
       "workers/rust/crates/script-runner/src/protocol_validation_qualification.rs",
       "workers/rust/crates/script-runner/src/protocol_validation_qualification/security.rs",
-      "releases/usability-evidence/2.13.1/protocol-security-qualification.json"
+      "releases/usability-evidence/2.13.1/protocol-security-qualification.json",
+      "config/architecture/system-security-qualification.json",
+      "schemas/system-security-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/system_security_qualification.rs",
+      "releases/usability-evidence/2.13.6/system-security-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.protocol-validation-qualification-contract/v2",
       "kyuubiki.protocol-validation-qualification-report/v2",
+      "kyuubiki.system-security-qualification-contract/v1",
+      "kyuubiki.system-security-qualification-report/v1",
       "fail_closed"
     ]
   },

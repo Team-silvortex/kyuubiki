@@ -1,0 +1,13 @@
+{
+  "module": "headless-workflow",
+  "run_id": "run-20260812T094411Z",
+  "label": "manual",
+  "status": "ok",
+  "started_at_utc": "2026-08-12T09:44:11Z",
+  "finished_at_utc": "2026-08-12T09:44:24Z",
+  "run_dir": "/Users/Shared/chroot/dev/kyuubiki/runs/headless-workflow/run-20260812T094411Z",
+  "workspace_dir": "/Users/Shared/chroot/dev/kyuubiki/runs/headless-workflow/run-20260812T094411Z/workspace",
+  "command": "./labctl.sh run headless-workflow direct_mesh_pipeline-1 ",
+  "environment_overrides": "",
+  "repo_dir": "/Users/Shared/chroot/dev/kyuubiki"
+}

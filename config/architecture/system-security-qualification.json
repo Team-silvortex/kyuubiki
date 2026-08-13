@@ -1,0 +1,276 @@
+{
+  "schema_version": "kyuubiki.system-security-qualification-contract/v1",
+  "report_schema": "kyuubiki.system-security-qualification-report/v1",
+  "rounds": 2,
+  "required_modules": [
+    "contracts",
+    "hub-shell",
+    "desktop-shared-ui",
+    "installer-shell",
+    "orchestra-control-plane",
+    "runtime-engine-solver",
+    "runtime-agent-cli",
+    "runtime-installer"
+  ],
+  "required_lanes": [
+    "ui_boundary",
+    "api_auth",
+    "runtime_sandbox",
+    "supply_chain",
+    "credential_storage",
+    "remote_deploy",
+    "data_contract"
+  ],
+  "checks": [
+    {
+      "id": "ui-automation-contract",
+      "program": "self",
+      "cwd": ".",
+      "args": ["check-ui-automation-contract"],
+      "coordinates": [
+        { "module_id": "hub-shell", "lane": "ui_boundary" },
+        { "module_id": "desktop-shared-ui", "lane": "ui_boundary" },
+        { "module_id": "installer-shell", "lane": "ui_boundary" }
+      ],
+      "required_output": ["UI automation contract ok"]
+    },
+    {
+      "id": "gui-runtime-capability-contract",
+      "program": "self",
+      "cwd": ".",
+      "args": ["check-gui-runtime-capability-contract"],
+      "coordinates": [
+        { "module_id": "hub-shell", "lane": "ui_boundary" },
+        { "module_id": "desktop-shared-ui", "lane": "ui_boundary" },
+        { "module_id": "desktop-shared-ui", "lane": "data_contract" },
+        { "module_id": "installer-shell", "lane": "ui_boundary" }
+      ],
+      "required_output": ["GUI runtime capability contract check passed"]
+    },
+    {
+      "id": "hub-shell-security-smoke",
+      "program": "self",
+      "cwd": ".",
+      "args": ["hub-gui-smoke-node-test"],
+      "coordinates": [
+        { "module_id": "hub-shell", "lane": "ui_boundary" },
+        { "module_id": "hub-shell", "lane": "credential_storage" }
+      ],
+      "required_output": [
+        "hub shell defines a least-privilege main-window capability",
+        "hub assistant secret storage is cleanup-only"
+      ]
+    },
+    {
+      "id": "installer-shell-security-smoke",
+      "program": "self",
+      "cwd": ".",
+      "args": ["installer-gui-smoke-node-test"],
+      "coordinates": [
+        { "module_id": "installer-shell", "lane": "ui_boundary" }
+      ],
+      "required_output": [
+        "installer shell defines a least-privilege main-window capability",
+        "tauri backend exposes installer command surface"
+      ]
+    },
+    {
+      "id": "control-plane-security-tests",
+      "program": "mix",
+      "cwd": "apps/web",
+      "args": [
+        "test",
+        "test/kyuubiki_web/api/router_access_and_bar_test.exs",
+        "test/kyuubiki_web/api/cluster_security_api_test.exs",
+        "test/kyuubiki_web/api/central_store_api_test.exs",
+        "test/kyuubiki_web/storage/central_database_test.exs",
+        "test/kyuubiki_web/http_transport_security_test.exs"
+      ],
+      "coordinates": [
+        { "module_id": "orchestra-control-plane", "lane": "api_auth" },
+        { "module_id": "orchestra-control-plane", "lane": "credential_storage" },
+        { "module_id": "runtime-agent-cli", "lane": "api_auth" }
+      ],
+      "required_output": ["43 tests, 0 failures"]
+    },
+    {
+      "id": "workflow-dataset-contract",
+      "program": "self",
+      "cwd": ".",
+      "args": ["check-workflow-dataset-contract"],
+      "coordinates": [
+        { "module_id": "contracts", "lane": "data_contract" },
+        { "module_id": "orchestra-control-plane", "lane": "data_contract" },
+        { "module_id": "runtime-engine-solver", "lane": "data_contract" }
+      ],
+      "required_output": ["workflow dataset contract check passed"]
+    },
+    {
+      "id": "engine-workflow-security-fuzz",
+      "program": "cargo",
+      "cwd": "workers/rust",
+      "args": [
+        "test",
+        "-p",
+        "kyuubiki-engine",
+        "--lib",
+        "workflow_security_fuzz_smoke",
+        "--",
+        "--nocapture"
+      ],
+      "coordinates": [
+        { "module_id": "runtime-engine-solver", "lane": "runtime_sandbox" },
+        { "module_id": "runtime-agent-cli", "lane": "runtime_sandbox" }
+      ],
+      "required_output": [
+        "workflow_security_fuzz_smoke_does_not_panic_on_mutated_graphs ... ok",
+        "workflow_security_fuzz_smoke_does_not_panic_on_json_byte_decode_boundary ... ok"
+      ]
+    },
+    {
+      "id": "agent-runtime-security-tests",
+      "program": "cargo",
+      "cwd": "workers/rust",
+      "args": [
+        "test",
+        "-p",
+        "kyuubiki-cli",
+        "--bin",
+        "kyuubiki-cli",
+        "--",
+        "--test-threads=1",
+        "--nocapture"
+      ],
+      "coordinates": [
+        { "module_id": "runtime-agent-cli", "lane": "api_auth" },
+        { "module_id": "runtime-agent-cli", "lane": "runtime_sandbox" },
+        { "module_id": "runtime-agent-cli", "lane": "remote_deploy" }
+      ],
+      "required_output": [
+        "agent_deployment_readiness_reports_orchestrated_setup_gaps ... ok",
+        "rejects_operator_task_ir_rpc_requests_with_tampered_digest ... ok",
+        "validates_content_addressed_artifact_ids ... ok"
+      ]
+    },
+    {
+      "id": "installer-credential-storage-fuzz",
+      "program": "cargo",
+      "cwd": "workers/rust",
+      "args": [
+        "test",
+        "-p",
+        "kyuubiki-installer",
+        "--lib",
+        "credential_storage_contract_fuzz_smoke",
+        "--",
+        "--nocapture"
+      ],
+      "coordinates": [
+        { "module_id": "installer-shell", "lane": "credential_storage" },
+        { "module_id": "runtime-installer", "lane": "credential_storage" }
+      ],
+      "required_output": [
+        "credential_storage_contract_fuzz_smoke_does_not_panic_on_mutated_json ... ok",
+        "credential_storage_contract_fuzz_smoke_does_not_panic_on_byte_ingress ... ok"
+      ]
+    },
+    {
+      "id": "installer-remote-deployment-fuzz",
+      "program": "cargo",
+      "cwd": "workers/rust",
+      "args": [
+        "test",
+        "-p",
+        "kyuubiki-installer",
+        "--lib",
+        "remote_deployment_metadata_fuzz_smoke",
+        "--",
+        "--nocapture"
+      ],
+      "coordinates": [
+        { "module_id": "installer-shell", "lane": "remote_deploy" },
+        { "module_id": "runtime-agent-cli", "lane": "remote_deploy" },
+        { "module_id": "runtime-installer", "lane": "remote_deploy" }
+      ],
+      "required_output": [
+        "remote_deployment_metadata_fuzz_smoke_does_not_panic_on_mutated_json ... ok",
+        "remote_deployment_metadata_fuzz_smoke_does_not_panic_on_byte_ingress ... ok"
+      ]
+    },
+    {
+      "id": "installer-update-catalog-fuzz",
+      "program": "cargo",
+      "cwd": "workers/rust",
+      "args": [
+        "test",
+        "-p",
+        "kyuubiki-installer",
+        "--lib",
+        "installer_update_catalog_fuzz_smoke",
+        "--",
+        "--nocapture"
+      ],
+      "coordinates": [
+        { "module_id": "installer-shell", "lane": "supply_chain" },
+        { "module_id": "runtime-installer", "lane": "supply_chain" }
+      ],
+      "required_output": [
+        "installer_update_catalog_fuzz_smoke_does_not_panic_on_mutated_json ... ok",
+        "installer_update_catalog_fuzz_smoke_does_not_panic_on_byte_ingress ... ok"
+      ]
+    },
+    {
+      "id": "installer-runtime-sandbox-tests",
+      "program": "cargo",
+      "cwd": "workers/rust",
+      "args": [
+        "test",
+        "-p",
+        "kyuubiki-installer",
+        "--lib",
+        "rejects_",
+        "--",
+        "--nocapture"
+      ],
+      "coordinates": [
+        { "module_id": "runtime-installer", "lane": "runtime_sandbox" }
+      ],
+      "required_output": [
+        "rejects_tampered_payload_before_installation ... ok",
+        "rejects_catalog_artifact_path_escape_before_download ... ok",
+        "rejects_symlinked_managed_download_root ... ok"
+      ]
+    },
+    {
+      "id": "component-integrity-protocol",
+      "program": "self",
+      "cwd": ".",
+      "args": ["check-component-integrity-protocol"],
+      "coordinates": [
+        { "module_id": "contracts", "lane": "supply_chain" },
+        { "module_id": "installer-shell", "lane": "supply_chain" },
+        { "module_id": "runtime-installer", "lane": "supply_chain" }
+      ],
+      "required_output": [
+        "component integrity protocol passed: 11 component(s), 16 required layout rule(s)"
+      ]
+    },
+    {
+      "id": "dependency-audit",
+      "program": "self",
+      "cwd": ".",
+      "args": ["audit-dependencies"],
+      "coordinates": [
+        { "module_id": "contracts", "lane": "supply_chain" },
+        { "module_id": "installer-shell", "lane": "supply_chain" },
+        { "module_id": "runtime-installer", "lane": "supply_chain" }
+      ],
+      "required_output": [
+        "apps/frontend: npm audit",
+        "workers/rust: cargo audit",
+        "apps/web: mix hex.audit",
+        "dependency audit passed"
+      ]
+    }
+  ]
+}

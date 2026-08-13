@@ -1713,6 +1713,7 @@ version = "2.7.0"
 dependencies = [
  "kyuubiki-desktop-runtime",
  "kyuubiki-installer",
+ "kyuubiki-protocol",
  "serde",
  "serde_json",
  "tauri",

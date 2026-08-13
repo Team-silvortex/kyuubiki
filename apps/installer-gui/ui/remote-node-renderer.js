@@ -80,6 +80,8 @@ export function renderRemoteNodeGroups({
       meta.className = "remote-node-card__meta";
       appendText(meta, "span", node.remote_workspace);
       appendText(meta, "span", `${node.control_mode || "orchestrated"} · ${node.agent_id} · ${node.advertise_host}:${node.agent_port}`);
+      const artifactLimit = node.model_artifact_max_bytes ?? node.modelArtifactMaxBytes ?? 536870912;
+      appendText(meta, "span", `model artifact limit ${Number(artifactLimit).toLocaleString()} bytes`);
       const certificate = document.createElement("span");
       certificate.className = "remote-node-card__certificate";
       const certificatePill = appendText(certificate, "span", certificateStatus.tone, "remote-node-card__certificate-pill");

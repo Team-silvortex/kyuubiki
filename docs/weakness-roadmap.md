@@ -29,12 +29,10 @@ Current moxi baseline:
 - `blocking_gap_count`: `0`
 - `maturity_gap_count`: `0`
 - `thin_evidence_count`: `0`
-- `evidence_grade_gap_count`: `22`
-- required cells meeting their grade target: `28 / 50` (`56.0%`)
-- average required-cell evidence score: `65.6 / 100`
-- evidence progress toward configured targets: `83.0%`
-- release-critical P0 cells meeting target: `17 / 36` (`47.2%`)
-- `daji 3.0.0` release state: `blocked` with `19` P0 coordinate gaps and one
+- `evidence_grade_gap_count`: `14`
+- required cells meeting their grade target: `36 / 50` (`72.0%`)
+- release-critical P0 cells meeting target: `25 / 36` (`69.4%`)
+- `daji 3.0.0` release state: `blocked` with `11` P0 coordinate gaps and one
   unclosed external usability release gate
 
 This means no required module/function coordinate is structurally missing. It
@@ -45,13 +43,24 @@ the `daji 3.0.0` P0/P1/P2 release profile. The former maturity points remain
 dimension-complete, but ordinary lane execution no longer masquerades as
 qualification, operational, or release evidence.
 
-The current first hardening cluster is the remaining tied P0 security surface:
+The current first hardening coordinate is operational solver execution. It is
+followed by contract and Workbench validation, Orchestra/Workbench workflow
+composition, installed Headless SDK operation, provenance, and protocol/SDK
+runtime API verification. P1 benchmark evidence comes after those release
+blockers unless a newly retained result changes the generated ranking.
+
+The former tied P0 security cluster now meets its `qualified` target for
 contracts, shared desktop UI, Hub, Installer shell, Orchestra, Agent, Engine,
-and native Installer. It is followed by operational solver execution, contract
-and Workbench validation, Orchestra/Workbench workflow composition, installed
-Headless SDK operation, provenance, and protocol/SDK runtime API verification.
-P1 benchmark evidence comes after those release blockers unless a newly
-retained result changes the generated ranking.
+and native Installer. The native qualification maps 14 asserted checks onto 22
+exact module/security-lane coordinates and repeats every check twice. Its
+28/28 retained rounds cover UI capability boundaries, API authorization and
+replay rejection, runtime fuzz boundaries, dependency and component integrity,
+credential storage, remote deployment metadata, and data contracts. The
+machine-validated report is retained under
+`releases/usability-evidence/2.13.6/system-security-qualification.json`.
+Installed cross-platform penetration testing and multi-host adversarial testing
+remain separate operational tiers and are not implied by this local
+qualification.
 
 The former leading coordinate, `sdk-headless/workflow_composition`, now meets
 its `qualified` target. Its native qualification requires all 230 Rust

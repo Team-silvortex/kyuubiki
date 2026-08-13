@@ -709,12 +709,20 @@ export async function assertInstallerRegression(page, viewport) {
     "probe_remote_node",
   );
   await page.locator('[data-panel="remote"] [data-installer-section-target="agent"]').click();
+  await page.locator("#remote-model-artifact-max-bytes").fill("1200000000");
   await assertActionInvokes(
     page,
     "remote-start-agent",
     "guarded_mutation_action",
     "remote_start_agent",
   );
+  const remoteAgentLimit = await page.evaluate(() => {
+    const invocation = [...(window.__mockInvocations || [])]
+      .reverse()
+      .find((entry) => entry.payload?.payload?.action === "remote_start_agent");
+    return invocation?.payload?.payload?.remoteAgent?.modelArtifactMaxBytes;
+  });
+  assert.equal(remoteAgentLimit, 1_200_000_000);
 
   await page.locator('button.sidebar-tab[data-tab="release"]').click();
   await page.waitForSelector('[data-panel="release"].panel-visible #release-platform');

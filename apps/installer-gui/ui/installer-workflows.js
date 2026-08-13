@@ -53,6 +53,7 @@ export function currentRemoteBootstrapPayload() {
 }
 
 export function currentRemoteAgentPayload() {
+  const artifactLimit = document.getElementById("remote-model-artifact-max-bytes").value.trim();
   return {
     ...currentRemoteBootstrapPayload(),
     controlMode: document.getElementById("remote-control-mode").value || "orchestrated",
@@ -60,6 +61,7 @@ export function currentRemoteAgentPayload() {
     agentId: document.getElementById("remote-agent-id").value.trim(),
     advertiseHost: document.getElementById("remote-advertise-host").value.trim(),
     agentPort: Number(document.getElementById("remote-agent-port").value || "5001"),
+    modelArtifactMaxBytes: artifactLimit ? Number(artifactLimit) : null,
     clusterId: document.getElementById("remote-cluster-id").value.trim(),
     certificateId: document.getElementById("remote-certificate-id").value.trim(),
     peerEndpoints: document.getElementById("remote-peer-endpoints").value
@@ -110,6 +112,8 @@ export function applyRemoteNodeToForm(node) {
   document.getElementById("remote-agent-id").value = node.agent_id || "";
   document.getElementById("remote-advertise-host").value = node.advertise_host || "";
   document.getElementById("remote-agent-port").value = node.agent_port ?? 5001;
+  document.getElementById("remote-model-artifact-max-bytes").value =
+    node.model_artifact_max_bytes ?? node.modelArtifactMaxBytes ?? 536870912;
   document.getElementById("remote-orchestrator-url").value = node.orchestrator_url || "";
   document.getElementById("remote-cluster-id").value = node.cluster_id || "";
   document.getElementById("remote-certificate-id").value = node.certificate_id || "";

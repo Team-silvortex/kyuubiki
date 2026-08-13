@@ -1,5 +1,6 @@
 mod agent_solver_qualification;
 mod analysis;
+mod artifact_transport;
 mod benchmark_surface;
 mod job;
 mod operator;
@@ -37,6 +38,10 @@ pub use agent_solver_qualification::{
     validate_agent_solver_qualification_report,
 };
 pub use analysis::{AnalysisResult, ResultChunkKind, ResultChunkRequest, ResultChunkResponse};
+pub use artifact_transport::{
+    DEFAULT_MODEL_ARTIFACT_MAX_BYTES, MODEL_ARTIFACT_MAX_BYTES_ENV,
+    configured_model_artifact_max_bytes, model_artifact_max_bytes,
+};
 pub use benchmark_surface::{
     PROTOCOL_BENCHMARK_SURFACE_SCHEMA_VERSION, ProtocolBenchmarkLane, ProtocolBenchmarkSurface,
     protocol_benchmark_surface,

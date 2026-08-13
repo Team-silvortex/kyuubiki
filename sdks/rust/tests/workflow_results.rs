@@ -83,6 +83,54 @@ fn normalizes_workflow_runtime() {
 }
 
 #[test]
+fn allows_null_current_node_in_workflow_runtime() {
+    let payload = serde_json::json!({
+        "result": {
+            "workflow_id": "workflow.demo",
+            "run_id": "run-null-current-node",
+            "status": "completed",
+            "current_node": null,
+            "completed_nodes": ["input", "solve"],
+            "progress_events": [{"node_id": "solve", "status": "completed"}]
+        }
+    });
+    let runtime = normalize_workflow_runtime(&payload).expect("runtime");
+    assert_eq!(runtime.current_node, None);
+}
+
+#[test]
+fn allows_omitted_graph_ports_and_null_progress_current_node() {
+    let graph: WorkflowGraphDefinition = serde_json::from_value(serde_json::json!({
+        "schema_version": "kyuubiki.workflow-graph/v1",
+        "id": "workflow.optional-ports",
+        "name": "Optional ports",
+        "version": "1.0.0",
+        "entry_nodes": ["solve"],
+        "output_nodes": ["solve"],
+        "nodes": [{"id": "solve", "kind": "solve"}],
+        "edges": []
+    }))
+    .expect("ports default to empty lists");
+    assert!(graph.nodes[0].inputs.is_empty());
+    assert!(graph.nodes[0].outputs.is_empty());
+
+    let progression = normalize_workflow_progression(
+        &[serde_json::json!({
+            "job": {
+                "job_id": "job-complete",
+                "status": "completed",
+                "current_node": null,
+                "completed_nodes": ["solve"],
+                "progress_events": []
+            }
+        })],
+        None,
+    )
+    .expect("completed history accepts a null current node");
+    assert_eq!(progression.snapshots[0].current_node, None);
+}
+
+#[test]
 fn normalizes_workflow_progression() {
     let history = vec![serde_json::json!({
         "job": {
