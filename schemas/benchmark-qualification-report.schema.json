@@ -1,0 +1,257 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/benchmark-qualification-report.schema.json",
+  "title": "Kyuubiki Benchmark Qualification Report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "contract_path",
+    "status",
+    "platform",
+    "source_tree_sha256",
+    "current_runs",
+    "scale_archive",
+    "direct_mesh",
+    "summary",
+    "limitations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.benchmark-qualification-report/v1"
+    },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "contract_path": {
+      "const": "config/architecture/benchmark-qualification.json"
+    },
+    "status": { "const": "passed" },
+    "platform": {
+      "type": "object",
+      "required": ["os", "arch"],
+      "additionalProperties": false,
+      "properties": {
+        "os": { "type": "string", "minLength": 1 },
+        "arch": { "type": "string", "minLength": 1 }
+      }
+    },
+    "source_tree_sha256": { "$ref": "#/$defs/digest" },
+    "current_runs": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/currentRun" }
+    },
+    "scale_archive": { "$ref": "#/$defs/scaleArchive" },
+    "direct_mesh": { "$ref": "#/$defs/directMesh" },
+    "summary": { "$ref": "#/$defs/summary" },
+    "limitations": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "type": "string", "minLength": 24 }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "currentRun": {
+      "type": "object",
+      "required": [
+        "id",
+        "route",
+        "args",
+        "status",
+        "launch_elapsed_ms",
+        "stdout_sha256",
+        "repeat",
+        "profile",
+        "matrix",
+        "case"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "route": { "const": "kyuubiki-script-runner benchmark-release" },
+        "args": {
+          "type": "array",
+          "minItems": 10,
+          "items": { "type": "string" }
+        },
+        "status": { "const": "passed" },
+        "launch_elapsed_ms": { "type": "integer", "minimum": 1 },
+        "stdout_sha256": { "$ref": "#/$defs/digest" },
+        "repeat": { "type": "integer", "minimum": 3 },
+        "profile": { "type": "string", "minLength": 1 },
+        "matrix": { "type": "string", "minLength": 1 },
+        "case": { "$ref": "#/$defs/currentCase" }
+      }
+    },
+    "currentCase": {
+      "type": "object",
+      "required": [
+        "id",
+        "family",
+        "ok",
+        "repeat",
+        "min_ms",
+        "median_ms",
+        "mean_ms",
+        "p95_ms",
+        "max_ms",
+        "dof_count",
+        "node_count",
+        "element_count",
+        "peak_rss_kib"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "family": { "type": "string", "minLength": 1 },
+        "ok": { "const": true },
+        "repeat": { "type": "integer", "minimum": 3 },
+        "min_ms": { "type": "number", "minimum": 0 },
+        "median_ms": { "type": "number", "minimum": 0 },
+        "mean_ms": { "type": "number", "minimum": 0 },
+        "p95_ms": { "type": "number", "minimum": 0 },
+        "max_ms": { "type": "number", "minimum": 0 },
+        "dof_count": { "type": "integer", "minimum": 0 },
+        "node_count": { "type": "integer", "minimum": 1 },
+        "element_count": { "type": "integer", "minimum": 0 },
+        "peak_rss_kib": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "required": [
+        "profile",
+        "expected_case_count",
+        "covered_case_count",
+        "missing_case_count",
+        "scale_qualified_covered_case_count",
+        "below_scale_threshold_case_count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "profile": { "type": "string", "minLength": 1 },
+        "expected_case_count": { "type": "integer", "minimum": 1 },
+        "covered_case_count": { "type": "integer", "minimum": 1 },
+        "missing_case_count": { "const": 0 },
+        "scale_qualified_covered_case_count": { "type": "integer", "minimum": 0 },
+        "below_scale_threshold_case_count": { "const": 0 }
+      }
+    },
+    "scaleCase": {
+      "type": "object",
+      "required": [
+        "matrix",
+        "case_id",
+        "node_count",
+        "element_count",
+        "dof_count",
+        "source_slug",
+        "run_case_count",
+        "run_repeat",
+        "run_total_median_ms",
+        "run_peak_rss_mib"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "matrix": { "type": "string", "minLength": 1 },
+        "case_id": { "type": "string", "minLength": 1 },
+        "node_count": { "type": "integer", "minimum": 1000000 },
+        "element_count": { "type": "integer", "minimum": 1 },
+        "dof_count": { "type": "integer", "minimum": 1 },
+        "source_slug": { "type": "string", "minLength": 1 },
+        "run_case_count": { "type": "integer", "minimum": 1 },
+        "run_repeat": { "type": "integer", "minimum": 1 },
+        "run_total_median_ms": { "type": "number", "exclusiveMinimum": 0 },
+        "run_peak_rss_mib": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "scaleArchive": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "source_index_sha256",
+        "gate_status",
+        "retained_run_count",
+        "failed_run_count",
+        "resolved_failure_count",
+        "unresolved_failure_count",
+        "profiles",
+        "one_million_cases"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": { "const": "kyuubiki.benchmark-profile-index/v1" },
+        "source_index_sha256": { "$ref": "#/$defs/digest" },
+        "gate_status": { "const": "pass" },
+        "retained_run_count": { "type": "integer", "minimum": 50 },
+        "failed_run_count": { "type": "integer", "minimum": 1 },
+        "resolved_failure_count": { "type": "integer", "minimum": 1 },
+        "unresolved_failure_count": { "const": 0 },
+        "profiles": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/profile" }
+        },
+        "one_million_cases": {
+          "type": "array",
+          "minItems": 39,
+          "items": { "$ref": "#/$defs/scaleCase" }
+        }
+      }
+    },
+    "directMesh": {
+      "type": "object",
+      "required": [
+        "baseline_path",
+        "baseline_sha256",
+        "repeat",
+        "run_count",
+        "subtest_sample_count",
+        "elapsed_mean_s",
+        "peak_rss_mean_kib",
+        "comparator_status",
+        "comparison_sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "baseline_path": { "type": "string", "minLength": 1 },
+        "baseline_sha256": { "$ref": "#/$defs/digest" },
+        "repeat": { "type": "integer", "minimum": 3 },
+        "run_count": { "type": "integer", "minimum": 3 },
+        "subtest_sample_count": { "type": "integer", "minimum": 6 },
+        "elapsed_mean_s": { "type": "number", "exclusiveMinimum": 0 },
+        "peak_rss_mean_kib": { "type": "number", "exclusiveMinimum": 0 },
+        "comparator_status": { "const": "passed" },
+        "comparison_sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "module_count",
+        "current_run_count",
+        "current_repeat_count",
+        "five_hundred_k_case_count",
+        "one_million_case_count",
+        "one_million_matrix_count",
+        "resolved_failure_count",
+        "direct_mesh_repeat_count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "module_count": { "const": 3 },
+        "current_run_count": { "type": "integer", "minimum": 2 },
+        "current_repeat_count": { "type": "integer", "minimum": 6 },
+        "five_hundred_k_case_count": { "const": 19 },
+        "one_million_case_count": { "const": 39 },
+        "one_million_matrix_count": { "const": 6 },
+        "resolved_failure_count": { "type": "integer", "minimum": 1 },
+        "direct_mesh_repeat_count": { "type": "integer", "minimum": 3 }
+      }
+    }
+  }
+}

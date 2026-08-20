@@ -14,6 +14,7 @@ const COVERED_PARADIGMS: &[&str] = &[
     "solver_execution",
     "workflow_composition",
     "validation",
+    "benchmark",
     "security",
     "deployment_update",
     "sdk_headless",
@@ -99,6 +100,11 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
     )?;
     assert_includes(
         &string_array_at(surface, "/runtime_api/stable_commands"),
+        "./scripts/kyuubiki check-headless-sdk-validation-qualification",
+        "stable command",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/stable_commands"),
         "./scripts/kyuubiki check-contracts-validation-qualification",
         "stable command",
     )?;
@@ -118,6 +124,11 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
         "stable command",
     )?;
     assert_includes(
+        &string_array_at(surface, "/runtime_api/stable_commands"),
+        "./scripts/kyuubiki check-benchmark-qualification",
+        "stable command",
+    )?;
+    assert_includes(
         &string_array_at(surface, "/runtime_api/generated_artifacts"),
         "tmp/central-readiness-report.json",
         "generated artifact",
@@ -130,6 +141,11 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
     assert_includes(
         &string_array_at(surface, "/runtime_api/generated_artifacts"),
         "tmp/protocol-validation-qualification-report.json",
+        "generated artifact",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/generated_artifacts"),
+        "tmp/headless-sdk-validation-qualification-report.json",
         "generated artifact",
     )?;
     assert_includes(
@@ -150,6 +166,11 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
     assert_includes(
         &string_array_at(surface, "/runtime_api/generated_artifacts"),
         "tmp/agent-solver-operational-remote.json",
+        "generated artifact",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/generated_artifacts"),
+        "tmp/benchmark-qualification-report.json",
         "generated artifact",
     )?;
 

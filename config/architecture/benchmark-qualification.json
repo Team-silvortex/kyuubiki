@@ -1,0 +1,74 @@
+{
+  "$schema": "../../schemas/benchmark-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.benchmark-qualification-contract/v1",
+  "report_schema": "kyuubiki.benchmark-qualification-report/v1",
+  "required_modules": [
+    "runtime-agent-cli",
+    "runtime-engine-solver",
+    "verification-evidence"
+  ],
+  "source_index": "tmp/benchmark-profile/index.json",
+  "coverage_manifest": "config/benchmark-profile-coverage.json",
+  "direct_mesh_baseline": "tests/integration/benchmarks/direct-mesh-docker-baseline.json",
+  "source_files": [
+    "workers/rust/Cargo.toml",
+    "workers/rust/Cargo.lock",
+    "workers/rust/crates/script-runner/Cargo.toml",
+    "workers/rust/crates/script-runner/src/main.rs",
+    "workers/rust/crates/script-runner/src/benchmark_qualification.rs",
+    "workers/rust/crates/script-runner/src/benchmark_qualification/validation.rs",
+    "workers/rust/crates/script-runner/src/benchmark_profile_index.rs",
+    "workers/rust/crates/script-runner/src/direct_mesh_benchmark_compare.rs",
+    "workers/rust/crates/benchmark/Cargo.toml",
+    "workers/rust/crates/benchmark/src/main.rs",
+    "workers/rust/crates/benchmark/src/catalog.rs",
+    "workers/rust/crates/benchmark/src/catalog_defaults.rs",
+    "workers/rust/crates/benchmark/src/config.rs",
+    "workers/rust/crates/benchmark/src/generators.rs",
+    "workers/rust/crates/benchmark/src/headless_cases.rs",
+    "workers/rust/crates/benchmark/src/runner.rs",
+    "workers/rust/crates/engine/src/lib.rs",
+    "workers/rust/crates/solver/src/lib.rs",
+    "workers/rust/crates/solver/src/bar_1d.rs",
+    "workers/rust/crates/solver/src/bar_1d_validation.rs",
+    "workers/rust/crates/protocol/src/types/field.rs",
+    "workers/rust/crates/headless-sdk/src/lib.rs",
+    "workers/rust/crates/headless-sdk/src/direct_fem.rs"
+  ],
+  "current_runs": [
+    {
+      "id": "current-release-engine-axial",
+      "profile": "10k",
+      "report_profile": "ten_k",
+      "matrix": "mechanical-core",
+      "case_id": "axial-bar-10k",
+      "repeat": 3,
+      "min_node_count": 10000
+    },
+    {
+      "id": "current-release-headless-manifest",
+      "profile": "10k",
+      "report_profile": "ten_k",
+      "matrix": "headless-sdk",
+      "case_id": "direct-fem-manifest",
+      "repeat": 1000,
+      "min_node_count": 1
+    }
+  ],
+  "profile_requirements": [
+    {
+      "profile": "five_hundred_k",
+      "expected_case_count": 19,
+      "require_scale_qualified": false
+    },
+    {
+      "profile": "one_million",
+      "expected_case_count": 39,
+      "require_scale_qualified": true
+    }
+  ],
+  "one_million_node_threshold": 1000000,
+  "min_retained_runs": 100,
+  "min_resolved_failures": 1,
+  "min_direct_mesh_repeats": 3
+}

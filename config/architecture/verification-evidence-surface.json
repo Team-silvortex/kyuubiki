@@ -9,11 +9,13 @@
       "./scripts/kyuubiki check-module-function-matrix",
       "./scripts/kyuubiki check-module-function-coverage-tensor",
       "./scripts/kyuubiki check-headless-workflow-qualification",
+      "./scripts/kyuubiki check-headless-sdk-validation-qualification",
       "./scripts/kyuubiki check-protocol-validation-qualification",
       "./scripts/kyuubiki check-contracts-validation-qualification",
       "./scripts/kyuubiki check-workbench-validation-qualification",
       "./scripts/kyuubiki check-system-security-qualification",
       "./scripts/kyuubiki check-agent-solver-operational-qualification",
+      "./scripts/kyuubiki check-benchmark-qualification",
       "./scripts/kyuubiki build-regression-gate-report",
       "./scripts/kyuubiki build-central-readiness-report",
       "./scripts/kyuubiki check-central-readiness-report"
@@ -22,11 +24,13 @@
       "tmp/module-function-matrix-report.json",
       "tmp/module-function-coverage-tensor.json",
       "tmp/headless-workflow-qualification-report.json",
+      "tmp/headless-sdk-validation-qualification-report.json",
       "tmp/protocol-validation-qualification-report.json",
       "tmp/contracts-validation-qualification-report.json",
       "tmp/workbench-validation-qualification-report.json",
       "tmp/system-security-qualification-report.json",
       "tmp/agent-solver-operational-remote.json",
+      "tmp/benchmark-qualification-report.json",
       "tmp/regression-gate-report.json",
       "tmp/central-readiness-report.json",
       "tmp/central-readiness-report.md"
@@ -127,6 +131,24 @@
       "kyuubiki.workbench-validation-qualification-report/v1",
       "acceptance",
       "rejection"
+    ]
+  },
+  "benchmark": {
+    "evidence_sources": [
+      "config/architecture/benchmark-qualification.json",
+      "schemas/benchmark-qualification-contract.schema.json",
+      "schemas/benchmark-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/benchmark_qualification.rs",
+      "workers/rust/crates/script-runner/src/benchmark_qualification/validation.rs",
+      "releases/usability-evidence/2.14.3/benchmark-qualification.json"
+    ],
+    "required_surfaces": [
+      "kyuubiki.benchmark-qualification-contract/v1",
+      "kyuubiki.benchmark-qualification-report/v1",
+      "benchmark-release",
+      "five_hundred_k",
+      "one_million",
+      "resolved_failure_count"
     ]
   },
   "deployment_update": {

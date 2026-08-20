@@ -3,7 +3,7 @@
 .PHONY: test-hub-gui test-installer-gui test-workbench-gui
 .PHONY: test-integration test-integration-api test-integration-cluster
 .PHONY: test-integration-direct-mesh test-integration-desktop-gui qualify-desktop-ui-validation qualify-protocol-validation qualify-contracts-validation qualify-workbench-validation
-.PHONY: qualify-headless-sdk-validation qualify-headless-sdk-operational-remote check-headless-sdk-operational-qualification qualify-desktop-deployment-update qualify-system-security qualify-agent-solver-operational-remote qualify-orchestra-workflow-operational-remote qualify-persistence-provenance
+.PHONY: qualify-headless-sdk-validation qualify-runtime-api-verification qualify-benchmark qualify-headless-sdk-operational-remote check-headless-sdk-operational-qualification qualify-desktop-deployment-update qualify-system-security qualify-agent-solver-operational-remote qualify-orchestra-workflow-operational-remote qualify-persistence-provenance
 .PHONY: test-integration-benchmark-profile-index
 .PHONY: test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-central-database-smoke remote-central-database-smoke
 .PHONY: test-integration-direct-mesh-docker-compare
@@ -100,6 +100,13 @@ qualify-persistence-provenance:
 
 qualify-headless-sdk-validation:
 	@$(ENTRYPOINT) check-headless-sdk-validation-qualification --out $${OUTPUT:-tmp/headless-sdk-validation-qualification-report.json}
+
+qualify-runtime-api-verification:
+	@$(ENTRYPOINT) check-protocol-validation-qualification --out $${PROTOCOL_OUTPUT:-releases/usability-evidence/2.14.3/protocol-runtime-api-verification.json}
+	@$(ENTRYPOINT) check-headless-sdk-validation-qualification --out $${HEADLESS_OUTPUT:-releases/usability-evidence/2.14.3/headless-runtime-api-verification.json}
+
+qualify-benchmark:
+	@$(ENTRYPOINT) check-benchmark-qualification --out $${OUTPUT:-releases/usability-evidence/2.14.3/benchmark-qualification.json}
 
 qualify-headless-sdk-operational-remote:
 	@$(ENTRYPOINT) qualify-headless-sdk-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-releases/usability-evidence/2.14.1/headless-sdk-operational-qualification.json}

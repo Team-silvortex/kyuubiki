@@ -12,6 +12,7 @@ mod benchmark_profile_index;
 mod benchmark_profile_plan;
 mod benchmark_profile_remote;
 mod benchmark_profile_remote_summary;
+mod benchmark_qualification;
 mod central_database_readiness;
 mod central_database_smoke;
 mod central_readiness_report;
@@ -472,6 +473,11 @@ fn run() -> RunnerResult<u8> {
         }
         "worker" => run_command(&paths.rust, "cargo", cargo_run("kyuubiki-cli", rest)),
         "benchmark" => run_command(&paths.rust, "cargo", cargo_run("kyuubiki-benchmark", rest)),
+        "benchmark-release" => run_command(
+            &paths.rust,
+            "cargo",
+            cargo_run_release("kyuubiki-benchmark", rest),
+        ),
         "agent" => {
             let agent_args = if rest.is_empty() {
                 vec![
@@ -663,6 +669,13 @@ where
 
 fn cargo_run(package: &str, rest: Vec<OsString>) -> impl Iterator<Item = OsString> {
     ["run", "-p", package, "--"]
+        .into_iter()
+        .map(OsString::from)
+        .chain(rest)
+}
+
+fn cargo_run_release(package: &str, rest: Vec<OsString>) -> impl Iterator<Item = OsString> {
+    ["run", "--release", "-p", package, "--"]
         .into_iter()
         .map(OsString::from)
         .chain(rest)

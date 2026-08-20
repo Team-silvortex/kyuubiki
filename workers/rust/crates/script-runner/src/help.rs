@@ -60,6 +60,7 @@ lab remote-ssh-fixture\n  \
   check-test-coverage-posture\n  \
   check-module-extension-standard\n  \
   check-verification-evidence-surface\n  \
+  check-benchmark-qualification\n  \
   check-central-store-contract\n  \
   check-central-database-readiness\n  \
   central-database-smoke\n  \
@@ -156,7 +157,7 @@ lab remote-ssh-fixture\n  \
   integration-ui-mechanical-node-test\n  \
   integration-ui-thermal-node-test\n  \
   agent-capability-smoke\n  \
-worker benchmark agent frontend format\n  \
+worker benchmark benchmark-release agent frontend format\n  \
 hub-gui-dev installer-gui-dev workbench-gui-dev\n  \
 native-script-audit\n"
     );

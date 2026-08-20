@@ -13,7 +13,7 @@
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index check-material-research-bundle-index check-material-research-bundle-index-contract
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
-.PHONY: audit-dependencies check-system-security-qualification check-agent-solver-operational-qualification check-orchestra-workflow-operational-qualification check-persistence-provenance-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
+.PHONY: audit-dependencies check-system-security-qualification check-agent-solver-operational-qualification check-orchestra-workflow-operational-qualification check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
 
 check-doc-book:
 	@$(ENTRYPOINT) check-doc-book
@@ -496,6 +496,16 @@ check-persistence-provenance-qualification:
 	@$(ENTRYPOINT) check-persistence-provenance-qualification --self-test
 	@$(ENTRYPOINT) check-persistence-provenance-qualification --verify-report releases/usability-evidence/2.14.2/persistence-provenance-qualification.json
 
+check-runtime-api-verification:
+	@$(ENTRYPOINT) check-protocol-validation-qualification --self-test
+	@$(ENTRYPOINT) check-protocol-validation-qualification --verify-report releases/usability-evidence/2.14.3/protocol-runtime-api-verification.json
+	@$(ENTRYPOINT) check-headless-sdk-validation-qualification --self-test
+	@$(ENTRYPOINT) check-headless-sdk-validation-qualification --verify-report releases/usability-evidence/2.14.3/headless-runtime-api-verification.json
+
+check-benchmark-qualification:
+	@$(ENTRYPOINT) check-benchmark-qualification --self-test
+	@$(ENTRYPOINT) check-benchmark-qualification --verify-report releases/usability-evidence/2.14.3/benchmark-qualification.json
+
 check-minimal-industrial-closure:
 	@$(ENTRYPOINT) validate-minimal-industrial-closure
 
@@ -523,6 +533,8 @@ architecture-check:
 	@$(MAKE) check-test-coverage-posture
 	@$(MAKE) check-module-extension-standard
 	@$(MAKE) check-contracts-runtime-api-surface
+	@$(MAKE) check-runtime-api-verification
+	@$(MAKE) check-benchmark-qualification
 	@$(MAKE) check-verification-evidence-surface
 	@$(MAKE) check-central-store-contract
 	@$(MAKE) check-central-database-readiness

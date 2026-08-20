@@ -1,0 +1,117 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Current release execution, retained remote 500k and 1M scale coverage, direct-mesh repetition, and resolved benchmark failures qualify the native Agent, solver engine, and verification evidence benchmark surfaces.",
+  "paradigm_contract_evidence": {
+    "benchmark": [
+      {
+        "id": "benchmark-qualification-contract",
+        "modules": [
+          "runtime-agent-cli",
+          "runtime-engine-solver",
+          "verification-evidence"
+        ],
+        "files": [
+          "config/architecture/benchmark-qualification.json",
+          "schemas/benchmark-qualification-contract.schema.json",
+          "schemas/benchmark-qualification-report.schema.json",
+          "workers/rust/crates/script-runner/src/benchmark_qualification.rs",
+          "workers/rust/crates/script-runner/src/benchmark_qualification/validation.rs"
+        ],
+        "required_text": [
+          "kyuubiki.benchmark-qualification-contract/v1",
+          "kyuubiki.benchmark-qualification-report/v1",
+          "benchmark-release",
+          "one_million_node_threshold",
+          "min_resolved_failures",
+          "validate_scale_archive",
+          "direct mesh comparator self-check"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "native-agent-benchmark-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "runtime-agent-cli"
+      ],
+      "paradigms": [
+        "benchmark"
+      ],
+      "dimensions": [
+        "execution",
+        "benchmark",
+        "recovery",
+        "contract"
+      ],
+      "files": [
+        "releases/usability-evidence/2.14.3/benchmark-qualification.json"
+      ],
+      "required_text": [
+        "kyuubiki-script-runner benchmark-release",
+        "direct_mesh",
+        "direct-mesh-docker-baseline.json",
+        "\"repeat\":3",
+        "\"comparator_status\":\"passed\""
+      ]
+    },
+    {
+      "id": "solver-scale-benchmark-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "runtime-engine-solver"
+      ],
+      "paradigms": [
+        "benchmark"
+      ],
+      "dimensions": [
+        "execution",
+        "benchmark"
+      ],
+      "files": [
+        "releases/usability-evidence/2.14.3/benchmark-qualification.json"
+      ],
+      "required_text": [
+        "current-release-engine-axial",
+        "\"profile\":\"five_hundred_k\"",
+        "\"covered_case_count\":19",
+        "\"profile\":\"one_million\"",
+        "\"covered_case_count\":39",
+        "\"one_million_case_count\":39",
+        "\"one_million_matrix_count\":6"
+      ]
+    },
+    {
+      "id": "benchmark-evidence-pipeline-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "verification-evidence"
+      ],
+      "paradigms": [
+        "benchmark"
+      ],
+      "dimensions": [
+        "benchmark",
+        "recovery",
+        "contract"
+      ],
+      "files": [
+        "releases/usability-evidence/2.14.3/benchmark-qualification.json"
+      ],
+      "required_text": [
+        "kyuubiki.benchmark-profile-index/v1",
+        "source_index_sha256",
+        "\"retained_run_count\":117",
+        "\"failed_run_count\":10",
+        "\"resolved_failure_count\":10",
+        "\"unresolved_failure_count\":0",
+        "hardware-independent performance guarantee"
+      ]
+    }
+  ]
+}

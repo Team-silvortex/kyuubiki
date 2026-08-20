@@ -29,11 +29,12 @@ Current moxi baseline:
 - `blocking_gap_count`: `0`
 - `maturity_gap_count`: `0`
 - `thin_evidence_count`: `0`
-- `evidence_grade_gap_count`: `5`
-- required cells meeting their grade target: `45 / 50` (`90.0%`)
-- release-critical P0 cells meeting target: `34 / 36` (`94.4%`)
-- `daji 3.0.0` release state: `blocked` with `2` P0 coordinate gaps and one
-  unclosed external usability release gate
+- `evidence_grade_gap_count`: `0`
+- required cells meeting their grade target: `50 / 50` (`100.0%`)
+- release-critical P0 cells meeting target: `36 / 36` (`100.0%`)
+- release-profile P1 cells meeting target: `14 / 14` (`100.0%`)
+- `daji 3.0.0` release state: `blocked` only by the independently controlled
+  external usability release gate
 
 This means no required module/function coordinate is structurally missing. It
 does not mean all coordinates are deep enough. Tensor v4 scopes contract
@@ -43,10 +44,35 @@ the `daji 3.0.0` P0/P1/P2 release profile. The former maturity points remain
 dimension-complete, but ordinary lane execution no longer masquerades as
 qualification, operational, or release evidence.
 
-The current P0 hardening front is a two-coordinate tie. Protocol and Headless
-SDK runtime API evidence must move from `exercised` to `verified`. The generated
-evidence-strength ranking also exposes three P1 benchmark coordinates with a
-two-grade gap; the release planning queue keeps the P0 blockers ahead of them.
+All release-profile P0 and P1 coordinates now meet their configured evidence
+targets, so the tensor coordinate queue is empty. The external usability release
+gate remains independently closed, so coordinate completion is not a public
+release claim and does not replace packaged, remote-recovery, upgrade, or user
+journey evidence.
+
+The former P1 benchmark tie now meets its `qualified` target across Agent,
+Engine, and verification evidence. The native current-line route executes a
+10k Engine solve three times under a release build and serializes the 49-route
+direct-FEM manifest 1000 times. The retained remote archive covers all 19
+expected 500k cases and all 39 expected 1M cases across six matrices, with every
+1M case meeting the one-million-node threshold. It also records 117 retained
+runs and classifies all 10 historical failures as resolved by later success.
+The direct-mesh baseline contributes three repeated Agent journeys and six
+subtest samples through the current native comparator. Evidence lives at
+`releases/usability-evidence/2.14.3/benchmark-qualification.json` and is checked
+by `make check-benchmark-qualification`. Historical scale numbers remain tied
+to their prior Linux hosts; the report explicitly does not make a
+hardware-independent performance guarantee.
+
+The former P0 runtime API tie now meets its `verified` target. The current-line
+protocol report executes 101 tests, proves 55 advertised methods have 55 unique
+wire round trips, rejects unknown methods and malformed envelope states, and
+retains TaskIR tamper rejection. The Headless report executes 265 tests across
+Python, Elixir, and Rust, including real loopback workflow and operator-task
+routes plus 14 cross-language failure-parity cases. Both reports are retained
+under `releases/usability-evidence/2.14.3/` and are revalidated together by
+`make check-runtime-api-verification`. This is local current-line verification,
+not installed-package, remote-host, or cross-platform operational proof.
 
 The former three-coordinate persistence/provenance tie now meets its `verified`
 target and carries `qualified` local evidence. The Installer shell appends
@@ -205,13 +231,13 @@ report under `releases/usability-evidence/2.12.5`. The Agent TaskIR allowlist is
 intentionally limited to `solve.bar_1d`; the broader direct solver RPC surface
 is not yet claimed as equivalent TaskIR execution coverage.
 
-The runtime API client calibration now promotes Hub, Workbench, Installer, and
-the native Installer service to required `runtime_api` coordinates. Declared
-desktop clients must retain UI-to-native execution closure, while the native
-Installer must retain its serializable Rust API manifest and stable exports.
-This closes the former `covered`-but-optional zero-evidence blind spot, but a
-runtime API lane alone still stops at `exercised` until scoped verification is
-attached.
+The runtime API client calibration promotes Hub, Workbench, Installer, the
+native Installer service, Protocol, and Headless SDK to required `runtime_api`
+coordinates. Desktop clients retain UI-to-native execution closure, the native
+Installer retains its serializable Rust API manifest and stable exports, and
+Protocol plus Headless now carry scoped current-line verification. Ordinary
+runnable lanes still stop at `exercised`; only exact-coordinate retained claims
+can promote a runtime API coordinate further.
 
 ## 1. Numerical Trust
 

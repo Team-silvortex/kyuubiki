@@ -14,6 +14,8 @@
     "config/architecture/module-function-coverage-evidence/pwdt-frontend-control-plane.json",
     "config/architecture/module-function-coverage-evidence/workbench-validation.json",
     "config/architecture/module-function-coverage-evidence/desktop-runtime-api.json",
+    "config/architecture/module-function-coverage-evidence/runtime-api-verification.json",
+    "config/architecture/module-function-coverage-evidence/benchmark-qualification.json",
     "config/architecture/module-function-coverage-evidence/desktop-usability.json",
     "config/architecture/module-function-coverage-evidence/desktop-ui-validation.json",
     "config/architecture/module-function-coverage-evidence/desktop-deployment-update.json",

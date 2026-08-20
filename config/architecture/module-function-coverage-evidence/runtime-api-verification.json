@@ -1,0 +1,124 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Current-line runtime API verification binds the Rust protocol and all three official Headless SDKs to retained acceptance, rejection, parity, and loopback execution evidence.",
+  "paradigm_contract_evidence": {
+    "runtime_api": [
+      {
+        "id": "runtime-protocol-api-verification-contract",
+        "modules": [
+          "runtime-protocol"
+        ],
+        "files": [
+          "config/architecture/contracts-runtime-api-surface.json",
+          "config/architecture/protocol-validation-qualification.json",
+          "schemas/protocol-validation-qualification-report.schema.json",
+          "workers/rust/crates/protocol/src/tests/core.rs",
+          "releases/usability-evidence/2.14.3/protocol-runtime-api-verification.json"
+        ],
+        "required_text": [
+          "protocol-runtime-api",
+          "sdk-headless",
+          "kyuubiki.protocol-validation-qualification-report/v2",
+          "validates_rpc_request_envelope_boundaries",
+          "validates_rpc_response_and_progress_envelope_states",
+          "\"advertised_method_count\": 55",
+          "\"round_trip_count\": 55",
+          "\"unknown_method_rejected\": true"
+        ]
+      },
+      {
+        "id": "headless-sdk-runtime-api-verification-contract",
+        "modules": [
+          "sdk-headless"
+        ],
+        "files": [
+          "config/architecture/contracts-runtime-api-surface.json",
+          "config/architecture/headless-sdk-validation-qualification.json",
+          "schemas/headless-sdk-validation-qualification-report.schema.json",
+          "sdks/python/tests/test_smoke.py",
+          "sdks/elixir/test/smoke_test.exs",
+          "sdks/rust/tests/smoke.rs",
+          "releases/usability-evidence/2.14.3/headless-runtime-api-verification.json"
+        ],
+        "required_text": [
+          "protocol-runtime-api",
+          "kyuubiki.headless-sdk-validation-qualification-report/v1",
+          "test_agent_client_runs_workflow_jobs",
+          "agent client runs workflow jobs",
+          "agent_client_runs_workflow_jobs",
+          "test_execute_operator_task_batch",
+          "control plane client executes operator task batch",
+          "control_plane_executes_operator_task_batch",
+          "\"total_passed\": 265"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "runtime-protocol-api-current-line-verification",
+      "status": "proven",
+      "grade": "verified",
+      "modules": [
+        "runtime-protocol"
+      ],
+      "paradigms": [
+        "runtime_api"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "security"
+      ],
+      "files": [
+        "releases/usability-evidence/2.14.3/protocol-runtime-api-verification.json"
+      ],
+      "required_text": [
+        "\"schema_version\": \"kyuubiki.protocol-validation-qualification-report/v2\"",
+        "\"status\": \"pass\"",
+        "\"passed\": 101",
+        "\"advertised_method_count\": 55",
+        "\"round_trip_count\": 55",
+        "\"unique_wire_method_count\": 55",
+        "\"unknown_method_rejected\": true",
+        "\"invalid_request_id\"",
+        "\"invalid_response_state\"",
+        "\"tamper_rejection_count\": 5",
+        "\"fail_closed\": true"
+      ]
+    },
+    {
+      "id": "headless-sdk-runtime-api-current-line-verification",
+      "status": "proven",
+      "grade": "verified",
+      "modules": [
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "runtime_api"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "sdk_parity"
+      ],
+      "files": [
+        "releases/usability-evidence/2.14.3/headless-runtime-api-verification.json"
+      ],
+      "required_text": [
+        "\"schema_version\": \"kyuubiki.headless-sdk-validation-qualification-report/v1\"",
+        "\"status\": \"pass\"",
+        "\"total_passed\": 265",
+        "\"passed\": 95",
+        "\"passed\": 89",
+        "\"passed\": 81",
+        "test_agent_client_runs_workflow_jobs",
+        "agent client runs workflow jobs",
+        "agent_client_runs_workflow_jobs",
+        "\"id\": \"invalid-dispatch-policy\"",
+        "\"id\": \"partial-failure-retained\""
+      ]
+    }
+  ]
+}

@@ -74,6 +74,17 @@ sprawl:
   digest-verified state recovery, quarantine, and deployment-journal resume;
   this is local qualification rather than remote storage or packaged-platform
   operational proof
+- runtime API verification now binds the Protocol and all three official
+  Headless SDKs to exact tensor coordinates. Current retained reports cover 101
+  Protocol tests with 55/55 unique RPC round trips and 265 SDK tests with 14
+  cross-language failure-parity cases; all 36 P0 coordinates now meet target,
+  while the external usability gate remains closed
+- benchmark qualification now binds the native Agent command route, release
+  solver execution, retained direct-mesh repetition, and the remote scale
+  archive. It covers 19/19 expected 500k cases and 39/39 expected 1M cases
+  across six matrices, with all 10 archived failures resolved by later success;
+  all 14 P1 coordinates and all 50 required tensor coordinates now meet target
+  without turning historical host measurements into a portable speed claim
 - Installer-managed Agent solver qualification now builds a sealed Linux
   release package on the lab host, activates it through the native Installer,
   runs two independent Agent processes through closed-form solve, unsupported
@@ -205,8 +216,9 @@ The 2.7 cohesive-interface coassembly checkpoint is still retained as a
 calculation baseline. The 2.11 boundary is also explicit: Pwdt parity is not yet
 complete, app shipping metadata is separate from this development checkpoint,
 and broader industrial solver qualification still needs deeper retained
-fixtures, external correlation, larger-scale evidence, and packaged GUI/Pwdt
-round trips beyond the current native project-bundle and automation probes.
+fixtures, independent external correlation, current-host scale reruns, and
+packaged GUI/Pwdt round trips beyond the current native project-bundle and
+automation probes.
 
 The first planned public Reddit launch is `daji 3.0.0`. Until that boundary is
 closed, `moxi 2.x` remains an internal development and validation line. Its

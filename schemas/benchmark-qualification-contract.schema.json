@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/benchmark-qualification-contract.schema.json",
+  "title": "Kyuubiki Benchmark Qualification Contract",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "report_schema",
+    "required_modules",
+    "source_index",
+    "coverage_manifest",
+    "direct_mesh_baseline",
+    "source_files",
+    "current_runs",
+    "profile_requirements",
+    "one_million_node_threshold",
+    "min_retained_runs",
+    "min_resolved_failures",
+    "min_direct_mesh_repeats"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.benchmark-qualification-contract/v1"
+    },
+    "report_schema": {
+      "const": "kyuubiki.benchmark-qualification-report/v1"
+    },
+    "required_modules": {
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "source_index": { "$ref": "#/$defs/repoPath" },
+    "coverage_manifest": { "$ref": "#/$defs/repoPath" },
+    "direct_mesh_baseline": { "$ref": "#/$defs/repoPath" },
+    "source_files": {
+      "type": "array",
+      "minItems": 6,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/repoPath" }
+    },
+    "current_runs": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/currentRun" }
+    },
+    "profile_requirements": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/profileRequirement" }
+    },
+    "one_million_node_threshold": { "type": "integer", "minimum": 1000000 },
+    "min_retained_runs": { "type": "integer", "minimum": 50 },
+    "min_resolved_failures": { "type": "integer", "minimum": 1 },
+    "min_direct_mesh_repeats": { "type": "integer", "minimum": 3 }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "repoPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "currentRun": {
+      "type": "object",
+      "required": [
+        "id",
+        "profile",
+        "report_profile",
+        "matrix",
+        "case_id",
+        "repeat",
+        "min_node_count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "profile": { "type": "string", "minLength": 1 },
+        "report_profile": { "type": "string", "minLength": 1 },
+        "matrix": { "type": "string", "minLength": 1 },
+        "case_id": { "type": "string", "minLength": 1 },
+        "repeat": { "type": "integer", "minimum": 3 },
+        "min_node_count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "profileRequirement": {
+      "type": "object",
+      "required": [
+        "profile",
+        "expected_case_count",
+        "require_scale_qualified"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "profile": { "enum": ["five_hundred_k", "one_million"] },
+        "expected_case_count": { "type": "integer", "minimum": 1 },
+        "require_scale_qualified": { "type": "boolean" }
+      }
+    }
+  }
+}
