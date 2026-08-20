@@ -1,3 +1,0 @@
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.08s
-     Running `target/debug/kyuubiki-headless run /Users/Shared/chroot/dev/kyuubiki/headless-loop/loop-batch.json --json --material-report study --material-report-out /Users/Shared/chroot/dev/kyuubiki/headless-loop/loop-bad-alias.json --execute --executor service --api-base-url 'http://127.0.0.1:3000'`
-{"schema_version":"kyuubiki.headless-cli-error/v1","ok":false,"error":{"code":"material_report_study_unsupported","message":"unsupported material report study: study","stage":"material_report_validation","retryable":false,"recommended_action":"Use headless templates --json to select a supported material report study."}}

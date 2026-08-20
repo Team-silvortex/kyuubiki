@@ -1,2 +1,0 @@
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.02s
-     Running `target/debug/kyuubiki-headless validate /Users/Shared/chroot/dev/kyuubiki/headless-loop/loop-input.json --json`

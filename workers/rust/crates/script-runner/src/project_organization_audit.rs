@@ -9,6 +9,42 @@ const DEFAULT_SOURCE_MAX_LINES: usize = 800;
 const DEFAULT_DOC_MAX_LINES: usize = 2000;
 const LOCKFILE_CONTRACT: &str = "config/dependency-audit-lockfiles.json";
 const INSTALLER_TEST_INDEX: &str = "workers/rust/crates/installer/src/tests.rs";
+const ALLOWED_ROOT_FILES: &[&str] = &[
+    ".dockerignore",
+    ".env.example",
+    ".gitignore",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "Makefile",
+    "README.md",
+    "llms.txt",
+    "rust-toolchain.toml",
+];
+const ALLOWED_ROOT_DIRS: &[&str] = &[
+    ".cargo",
+    ".github",
+    "apps",
+    "assets",
+    "config",
+    "deploy",
+    "docs",
+    "evidence",
+    "language-packs",
+    "make",
+    "releases",
+    "reports",
+    "schemas",
+    "scripts",
+    "sdks",
+    "tests",
+    "workers",
+];
+const README_REQUIRED_MARKERS: &[&str] = &[
+    "# Kyuubiki\n",
+    "[Current architecture map](docs/current-architecture-map.md)",
+    "[Current moxi line](docs/current-line.md)",
+];
 const CHECKED_EXTENSIONS: &[&str] = &[
     "css", "ex", "exs", "html", "js", "json", "jsx", "md", "mk", "mjs", "py", "rs", "sh", "swift",
     "ts", "tsx", "zsh",
@@ -71,7 +107,9 @@ fn audit(
     doc_max_lines: usize,
 ) -> RunnerResult<Vec<Violation>> {
     let mut violations = Vec::new();
-    for relative_path in project_files(root)? {
+    let project_files = project_files(root)?;
+    violations.extend(root_hygiene_violations(&project_files));
+    for relative_path in project_files {
         if !should_check(&relative_path) {
             continue;
         }
@@ -99,7 +137,61 @@ fn audit(
         &|relative_path| root.join(relative_path).exists(),
         &|relative_path| git_check_ignored(root, relative_path),
     )?);
+    violations.extend(readme_identity_violations(
+        &read_text_optional(root, "README.md")?.unwrap_or_default(),
+    ));
     Ok(violations)
+}
+
+fn root_hygiene_violations(paths: &[String]) -> Vec<Violation> {
+    paths
+        .iter()
+        .filter(|path| !is_allowed_repository_path(path))
+        .map(|path| {
+            custom_violation(
+                path,
+                "repository-root-allowlist",
+                "path is outside the repository root ownership map; move it into an owned module or an ignored runtime directory",
+            )
+        })
+        .collect()
+}
+
+fn is_allowed_repository_path(relative_path: &str) -> bool {
+    let mut parts = relative_path.split('/');
+    let root = parts.next().unwrap_or_default();
+    if parts.next().is_none() {
+        ALLOWED_ROOT_FILES.contains(&root)
+    } else {
+        ALLOWED_ROOT_DIRS.contains(&root)
+    }
+}
+
+fn readme_identity_violations(contents: &str) -> Vec<Violation> {
+    if contents.is_empty() {
+        return vec![custom_violation(
+            "README.md",
+            "readme-identity",
+            "repository README is missing",
+        )];
+    }
+    let missing = README_REQUIRED_MARKERS
+        .iter()
+        .filter(|marker| !contents.contains(**marker))
+        .copied()
+        .collect::<Vec<_>>();
+    if missing.is_empty() {
+        Vec::new()
+    } else {
+        vec![custom_violation(
+            "README.md",
+            "readme-identity",
+            &format!(
+                "repository README lost required Kyuubiki anchors: {}",
+                missing.join(", ")
+            ),
+        )]
+    }
 }
 
 fn project_files(root: &Path) -> RunnerResult<Vec<String>> {
@@ -451,6 +543,26 @@ fn run_self_test() -> RunnerResult<()> {
     if expected_lockfiles.len() != 9 {
         return Err("self-test lockfile fixture drifted".to_string());
     }
+    let clean_paths = vec![
+        "README.md".to_string(),
+        "apps/frontend/package.json".to_string(),
+        "workers/rust/Cargo.toml".to_string(),
+    ];
+    if !root_hygiene_violations(&clean_paths).is_empty() {
+        return Err("self-test expected owned root paths to pass".to_string());
+    }
+    assert_limit(
+        root_hygiene_violations(&["PLACEHOLDER".to_string()]),
+        "repository-root-allowlist",
+    )?;
+    let valid_readme = README_REQUIRED_MARKERS.join("\n");
+    if !readme_identity_violations(&valid_readme).is_empty() {
+        return Err("self-test expected Kyuubiki README anchors to pass".to_string());
+    }
+    assert_limit(
+        readme_identity_violations("# unrelated project\n"),
+        "readme-identity",
+    )?;
     Ok(())
 }
 
@@ -465,8 +577,8 @@ fn assert_limit(violations: Vec<Violation>, expected: &str) -> RunnerResult<()> 
 #[cfg(test)]
 mod tests {
     use super::{
-        installer_test_index_violations, is_ignored_path, line_count_like_node,
-        line_limit_for_path, module_declaration,
+        installer_test_index_violations, is_allowed_repository_path, is_ignored_path,
+        line_count_like_node, line_limit_for_path, module_declaration,
     };
 
     #[test]
@@ -498,6 +610,14 @@ mod tests {
         assert!(is_ignored_path("headless-loop/round-1-run-exec.json"));
         assert!(is_ignored_path("chain-next-regression/chain-baseline.json"));
         assert!(!is_ignored_path("config/architecture/contracts.json"));
+    }
+
+    #[test]
+    fn repository_root_only_accepts_owned_paths() {
+        assert!(is_allowed_repository_path("README.md"));
+        assert!(is_allowed_repository_path("apps/frontend/package.json"));
+        assert!(!is_allowed_repository_path("PLACEHOLDER"));
+        assert!(!is_allowed_repository_path("research-scripts/run.sh"));
     }
 
     #[test]

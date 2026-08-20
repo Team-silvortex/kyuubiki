@@ -1,3 +1,0 @@
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.04s
-     Running `target/debug/kyuubiki-material-explore --chain-next /Users/Shared/chroot/dev/kyuubiki/chain-next-regression/initial.json --rounds 0 --json --out /Users/Shared/chroot/dev/kyuubiki/chain-next-regression/chain-fault-round0.json`
---rounds must be at least 1

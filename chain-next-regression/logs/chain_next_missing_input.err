@@ -1,3 +1,0 @@
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.04s
-     Running `target/debug/kyuubiki-material-explore --chain-next /tmp/does-not-exist-for-chain-next.json --rounds 3 --json --out /Users/Shared/chroot/dev/kyuubiki/chain-next-regression/chain-fault-missing-input.json`
-failed to read /tmp/does-not-exist-for-chain-next.json: No such file or directory (os error 2)

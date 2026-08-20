@@ -1,2 +1,0 @@
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.04s
-     Running `target/debug/kyuubiki-headless run /Users/Shared/chroot/dev/kyuubiki/headless-loop/round-6-batch.json --json --material-report thermo-shield --material-report-out /Users/Shared/chroot/dev/kyuubiki/headless-loop/round-6-material-report.json --report-out /Users/Shared/chroot/dev/kyuubiki/headless-loop/round-6-run-exec.json --execute --executor service --api-base-url 'http://127.0.0.1:3000'`

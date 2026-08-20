@@ -1,2 +1,0 @@
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.13s
-     Running `target/debug/kyuubiki-headless run /Users/Shared/chroot/dev/kyuubiki/headless-loop/round-3-batch.json --json --allow-sensitive --report-out /Users/Shared/chroot/dev/kyuubiki/headless-loop/round-3-run-dry.json`

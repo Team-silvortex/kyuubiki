@@ -60,6 +60,11 @@ venv/
 
 # Runtime state
 tmp/
+/runs/
+/runtimes/
+/.codex-docx-qa/
+/headless-loop/
+/chain-next-regression/
 .kyuubiki/credentials/
 config/installer-certificates.json
 *.log

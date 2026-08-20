@@ -1,2 +1,0 @@
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.17s
-     Running `target/debug/kyuubiki-headless init --template material_thermo_shield_screening --out /Users/Shared/chroot/dev/kyuubiki/headless-loop/loop-input.json --json`

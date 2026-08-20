@@ -1,2 +1,0 @@
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.04s
-     Running `target/debug/kyuubiki-material-explore --chain-next /Users/Shared/chroot/dev/kyuubiki/runs/chain-next-heat-20260812T102350Z/heat-initial.json --rounds 2 --json --out /Users/Shared/chroot/dev/kyuubiki/runs/chain-next-heat-20260812T102350Z/chain-baseline.json`

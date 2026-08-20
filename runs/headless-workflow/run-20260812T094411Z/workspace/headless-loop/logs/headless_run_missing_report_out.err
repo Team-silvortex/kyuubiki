@@ -1,1 +1,0 @@
-{"schema_version":"kyuubiki.headless-cli-error/v1","ok":false,"error":{"code":"material_report_output_required","message":"--material-report with --json requires --material-report-out","stage":"material_report_validation","retryable":false,"recommended_action":"Provide --material-report-out when requesting a JSON material report."}}
