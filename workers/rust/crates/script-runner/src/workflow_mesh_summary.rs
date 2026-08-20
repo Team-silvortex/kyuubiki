@@ -26,6 +26,10 @@ pub(crate) fn run_build_workflow_mesh_regression_summary(
     let qualification_label = qualification_path
         .is_file()
         .then(|| display_path(repo_root, &qualification_path));
+    let operational_path = output_dir.join("orchestra-workflow-operational-probe.json");
+    let operational_label = operational_path
+        .is_file()
+        .then(|| display_path(repo_root, &operational_path));
     let status = if parsed.completed && parsed.total_fail == 0 {
         "passed"
     } else {
@@ -34,6 +38,12 @@ pub(crate) fn run_build_workflow_mesh_regression_summary(
     let payload = json!({
         "schema_version": "kyuubiki.workflow-mesh-regression-summary/v1",
         "generated_at_unix_s": unix_now(),
+        "execution_host_role": std::env::var("KYUUBIKI_WORKFLOW_MESH_HOST_ROLE")
+            .unwrap_or_else(|_| "local-development-host".to_string()),
+        "platform": {
+            "os": std::env::consts::OS,
+            "architecture": std::env::consts::ARCH
+        },
         "log_path": log_path_label,
         "completed": parsed.completed,
         "status": status,
@@ -44,7 +54,8 @@ pub(crate) fn run_build_workflow_mesh_regression_summary(
         "log_mtime_unix_s": log_mtime_unix_s,
         "tests": parsed.tests.iter().map(TestCase::to_json).collect::<Vec<_>>(),
         "artifacts": {
-            "agent_solver_qualification": qualification_label
+            "agent_solver_qualification": qualification_label,
+            "orchestra_workflow_operational_probe": operational_label
         }
     });
     write_text(
@@ -58,6 +69,7 @@ pub(crate) fn run_build_workflow_mesh_regression_summary(
             status,
             &log_path_label,
             qualification_label.as_deref(),
+            operational_label.as_deref(),
         ),
     )?;
     println!("{}", display_path(repo_root, &output_dir));
@@ -240,6 +252,7 @@ fn render_readme(
     status: &str,
     log_path: &str,
     qualification_path: Option<&str>,
+    operational_path: Option<&str>,
 ) -> String {
     let mut lines = vec![
         "# Workflow Mesh Regression".to_string(),
@@ -254,6 +267,12 @@ fn render_readme(
         format!(
             "- Agent solver qualification: {}",
             qualification_path
+                .map(|path| format!("`{path}`"))
+                .unwrap_or_else(|| "`not generated`".to_string())
+        ),
+        format!(
+            "- Orchestra workflow operational probe: {}",
+            operational_path
                 .map(|path| format!("`{path}`"))
                 .unwrap_or_else(|| "`not generated`".to_string())
         ),

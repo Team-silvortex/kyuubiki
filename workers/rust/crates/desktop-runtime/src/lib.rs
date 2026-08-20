@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 mod runtime_control;
 mod runtime_layout;
+mod runtime_options;
 
 const GLOBAL_LANGUAGE_FILE: &str = "desktop-language.txt";
 const PACKAGED_BOOT_RECEIPT_ENV: &str = "KYUUBIKI_PACKAGED_BOOT_RECEIPT";

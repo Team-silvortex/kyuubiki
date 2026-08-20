@@ -1,7 +1,7 @@
 {
   "name": "Kyuubiki Workbench UI Automation Contract",
   "product": "moxi",
-  "version": "2.13.x",
+  "version": "2.14.x",
   "contractVersion": 1,
   "productOwned": true,
   "userExtensible": false,

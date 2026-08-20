@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/orchestra-workflow-operational-qualification-report.schema.json",
+  "title": "Kyuubiki Orchestra Workflow Operational Qualification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "status",
+    "qualification_id",
+    "journey",
+    "execution_host_role",
+    "platform",
+    "workflow_mesh",
+    "workflow",
+    "restart_recovery",
+    "boundaries",
+    "agent_task_ir",
+    "process_loss_recovery",
+    "cleanup",
+    "source_digests",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.orchestra-workflow-operational-qualification/v1"
+    },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "status": { "const": "pass" },
+    "qualification_id": { "const": "remote-linux-orchestra-workflow-operational" },
+    "journey": { "const": "remote-distributed-workflow-restart-recovery" },
+    "execution_host_role": { "const": "remote-linux-qualification-host" },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "architecture"],
+      "properties": {
+        "os": { "const": "linux" },
+        "architecture": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      }
+    },
+    "workflow_mesh": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total_tests",
+        "total_pass",
+        "total_fail",
+        "case_ids",
+        "orchestrated_mode",
+        "offline_mesh_mode",
+        "branch_diagnostics"
+      ],
+      "properties": {
+        "total_tests": { "type": "integer", "minimum": 4 },
+        "total_pass": { "type": "integer", "minimum": 4 },
+        "total_fail": { "const": 0 },
+        "case_ids": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "orchestrated_mode": { "const": true },
+        "offline_mesh_mode": { "const": true },
+        "branch_diagnostics": { "const": true }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workflow_id",
+        "completed_node_count",
+        "solve_node_count",
+        "transform_node_count",
+        "result_sha256",
+        "max_temperature_delta",
+        "max_stress",
+        "max_displacement"
+      ],
+      "properties": {
+        "workflow_id": { "const": "workflow.distributed-heat-to-thermo-chain-16" },
+        "completed_node_count": { "const": 23 },
+        "solve_node_count": { "const": 2 },
+        "transform_node_count": { "const": 17 },
+        "result_sha256": { "$ref": "#/$defs/digest" },
+        "max_temperature_delta": { "type": "number", "minimum": 100, "maximum": 100 },
+        "max_stress": { "const": 57462686.567164175 },
+        "max_displacement": { "type": "number", "minimum": 0, "maximum": 0 }
+      }
+    },
+    "restart_recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "control_mode",
+        "registered_agent_count",
+        "orchestra_restart_count",
+        "result_retained_after_restart"
+      ],
+      "properties": {
+        "control_mode": { "const": "orch_managed" },
+        "registered_agent_count": { "const": 2 },
+        "orchestra_restart_count": { "const": 1 },
+        "result_retained_after_restart": { "const": true }
+      }
+    },
+    "boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unauthorized_submission_rejected",
+        "malformed_submission_rejected",
+        "rejected_submission_created_job"
+      ],
+      "properties": {
+        "unauthorized_submission_rejected": { "const": true },
+        "malformed_submission_rejected": { "const": true },
+        "rejected_submission_created_job": { "const": false }
+      }
+    },
+    "agent_task_ir": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "transport",
+        "initial_execution",
+        "tamper_rejected",
+        "recovery_execution",
+        "watchdog_quiescent"
+      ],
+      "properties": {
+        "schema_version": { "const": "kyuubiki.agent-solver-qualification/v2" },
+        "transport": { "const": "tcp_framed_json" },
+        "initial_execution": { "const": true },
+        "tamper_rejected": { "const": true },
+        "recovery_execution": { "const": true },
+        "watchdog_quiescent": { "const": true }
+      }
+    },
+    "process_loss_recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "scenario_count",
+        "idempotent_retry",
+        "unsafe_replay_blocked",
+        "checkpointed_retry"
+      ],
+      "properties": {
+        "schema_version": { "const": "kyuubiki.orchestra-process-loss-fault-injection/v1" },
+        "scenario_count": { "const": 3 },
+        "idempotent_retry": { "const": true },
+        "unsafe_replay_blocked": { "const": true },
+        "checkpointed_retry": { "const": true }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["orchestrator_port_closed", "agent_ports_closed", "residue_free"],
+      "properties": {
+        "orchestrator_port_closed": { "const": true },
+        "agent_ports_closed": { "const": true },
+        "residue_free": { "const": true }
+      }
+    },
+    "source_digests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workflow_mesh_summary_sha256",
+        "operational_probe_sha256",
+        "agent_task_ir_sha256",
+        "process_loss_sha256"
+      ],
+      "properties": {
+        "workflow_mesh_summary_sha256": { "$ref": "#/$defs/digest" },
+        "operational_probe_sha256": { "$ref": "#/$defs/digest" },
+        "agent_task_ir_sha256": { "$ref": "#/$defs/digest" },
+        "process_loss_sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 14,
+      "maxItems": 14,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/check" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "status": { "const": "pass" }
+      }
+    }
+  }
+}

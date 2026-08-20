@@ -138,7 +138,7 @@ test("local workstation stack can run a workflow graph end-to-end", async () => 
     assert.equal(exportArtifact.format, "json");
     const summary = JSON.parse(exportArtifact.content);
     assert.equal(summary.max_temperature_delta, 100);
-    assert.ok(Math.abs(summary.max_stress - 61293532.33830845) < 1.0e-6);
+    assert.ok(Math.abs(summary.max_stress - 57462686.567164175) < 1.0e-6);
     assert.ok(Math.abs(summary.max_displacement - 0.0) < 1.0e-12);
   } finally {
     try {

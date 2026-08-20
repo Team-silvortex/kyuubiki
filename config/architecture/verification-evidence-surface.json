@@ -65,16 +65,23 @@
       "config/architecture/module-function-coverage-tensor.json",
       "config/architecture/headless-workflow-qualification.json",
       "schemas/headless-workflow-qualification-report.schema.json",
+      "config/architecture/workbench-validation-qualification.json",
+      "schemas/workbench-validation-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/workbench_validation_qualification.rs",
+      "tests/integration/workbench-ui-workflow-invocation.test.mjs",
+      "tests/integration/workbench-ui-isolated.shared.mjs",
       "workers/rust/crates/headless-sdk/src/preflight_report.rs",
       "workers/rust/crates/headless-sdk/src/operator_task_provenance.rs",
       "workers/rust/crates/cli/src/agent_headless_bridge.rs",
-      "releases/usability-evidence/2.13.1/headless-workflow-qualification.json"
+      "releases/usability-evidence/2.13.1/headless-workflow-qualification.json",
+      "releases/usability-evidence/2.14.0/workbench-validation-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.agent-headless-bridge/v1",
       "kyuubiki.headless-operator-task-provenance/v1",
       "kyuubiki.headless-execution-run/v1",
-      "kyuubiki.headless-workflow-qualification-report/v1"
+      "kyuubiki.headless-workflow-qualification-report/v1",
+      "kyuubiki.workbench-validation-qualification-report/v1"
     ]
   },
   "security": {
@@ -106,7 +113,7 @@
       "config/architecture/workbench-validation-qualification.json",
       "schemas/workbench-validation-qualification-report.schema.json",
       "workers/rust/crates/script-runner/src/workbench_validation_qualification.rs",
-      "releases/usability-evidence/2.13.9/workbench-validation-qualification.json"
+      "releases/usability-evidence/2.14.0/workbench-validation-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.contracts-validation-qualification-contract/v1",

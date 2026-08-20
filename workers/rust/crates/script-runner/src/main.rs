@@ -93,6 +93,7 @@ mod operator_reliability_schemas;
 mod operator_task_ir_contract;
 mod operator_validation;
 mod orchestra_recovery_fault_injection;
+mod orchestra_workflow_operational_qualification;
 mod packaged_desktop_smoke;
 mod project_cli;
 mod project_organization_audit;

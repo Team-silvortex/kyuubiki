@@ -38,6 +38,7 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
       workflowCatalogSearch: workbenchAutomationSelectors.workflowCatalogSearch,
       workflowBuilder: workbenchAutomationSelectors.workflowBuilder,
       workflowOperatorSearch: workbenchAutomationSelectors.workflowOperatorSearch,
+      workflowTopologyKind: workbenchAutomationSelectors.workflowTopologyKind,
       runtimePanel: workbenchAutomationSelectors.runtimePanel,
       runtimeTabs: workbenchAutomationSelectors.runtimeTabs,
       controlWindow: workbenchAutomationSelectors.controlWindow,
@@ -66,6 +67,11 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
         template: workbenchAutomationSelectors.workflowSurfaceTab(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${tab}"),
       },
       {
+        key: "workflowCatalogEntry",
+        parameter: "workflowId",
+        template: workbenchAutomationSelectors.workflowCatalogEntry(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${workflowId}"),
+      },
+      {
         key: "workflowCatalogAction",
         parameter: "action",
         template: workbenchAutomationSelectors.workflowCatalogAction(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${action}"),
@@ -79,6 +85,26 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
         key: "workflowBuilderAction",
         parameter: "action",
         template: workbenchAutomationSelectors.workflowBuilderAction(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${action}"),
+      },
+      {
+        key: "workflowInputArtifact",
+        parameter: "nodeId",
+        template: workbenchAutomationSelectors.workflowInputArtifact(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${nodeId}"),
+      },
+      {
+        key: "workflowRun",
+        parameter: "jobId",
+        template: workbenchAutomationSelectors.workflowRun(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${jobId}"),
+      },
+      {
+        key: "workflowRunStatus",
+        parameter: "status",
+        template: workbenchAutomationSelectors.workflowRunStatus(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${status}"),
+      },
+      {
+        key: "workflowRunWorkflow",
+        parameter: "workflowId",
+        template: workbenchAutomationSelectors.workflowRunWorkflow(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${workflowId}"),
       },
       {
         key: "controlWindowTab",

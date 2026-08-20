@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/orchestra-workflow-operational-qualification-contract.schema.json",
+  "title": "Kyuubiki Orchestra Workflow Operational Qualification Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "qualification_id",
+    "target_coordinate",
+    "capture",
+    "source_guard",
+    "retention",
+    "required_checks",
+    "commands"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "../../schemas/orchestra-workflow-operational-qualification-contract.schema.json"
+    },
+    "schema_version": {
+      "const": "kyuubiki.orchestra-workflow-operational-qualification-contract/v1"
+    },
+    "qualification_id": { "const": "remote-linux-orchestra-workflow-operational" },
+    "target_coordinate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module_id", "paradigm", "target_grade"],
+      "properties": {
+        "module_id": { "const": "orchestra-control-plane" },
+        "paradigm": { "const": "workflow_composition" },
+        "target_grade": { "const": "operational" }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workflow_mesh_summary",
+        "operational_probe",
+        "agent_task_ir_report",
+        "process_loss_report",
+        "execution_host_role",
+        "platform",
+        "minimum_test_count",
+        "minimum_pass_count",
+        "required_cases"
+      ],
+      "properties": {
+        "workflow_mesh_summary": { "$ref": "#/$defs/repoPath" },
+        "operational_probe": { "$ref": "#/$defs/repoPath" },
+        "agent_task_ir_report": { "$ref": "#/$defs/repoPath" },
+        "process_loss_report": { "$ref": "#/$defs/repoPath" },
+        "execution_host_role": { "const": "remote-linux-qualification-host" },
+        "platform": { "const": "linux" },
+        "minimum_test_count": { "type": "integer", "minimum": 4 },
+        "minimum_pass_count": { "type": "integer", "minimum": 4 },
+        "required_cases": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "test_file", "subtest"],
+            "properties": {
+              "id": { "$ref": "#/$defs/id" },
+              "test_file": { "$ref": "#/$defs/repoPath" },
+              "subtest": { "type": "string", "minLength": 1, "maxLength": 240 }
+            }
+          }
+        }
+      }
+    },
+    "source_guard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files", "required_text"],
+      "properties": {
+        "files": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/repoPath" }
+        },
+        "required_text": {
+          "type": "array",
+          "minItems": 5,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 160 }
+        }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["report_schema", "report_schema_path", "report_path", "forbidden_content"],
+      "properties": {
+        "report_schema": { "const": "kyuubiki.orchestra-workflow-operational-qualification/v1" },
+        "report_schema_path": {
+          "const": "schemas/orchestra-workflow-operational-qualification-report.schema.json"
+        },
+        "report_path": { "$ref": "#/$defs/repoPath" },
+        "forbidden_content": {
+          "type": "array",
+          "minItems": 5,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    },
+    "required_checks": {
+      "type": "array",
+      "minItems": 14,
+      "maxItems": 14,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capture", "verify"],
+      "properties": {
+        "capture": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "verify": { "type": "string", "minLength": 1, "maxLength": 160 }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 320,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$"
+    }
+  }
+}

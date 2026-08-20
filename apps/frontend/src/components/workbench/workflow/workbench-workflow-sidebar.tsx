@@ -514,7 +514,13 @@ export function WorkbenchWorkflowSidebar({
           {filteredWorkflowRuns.length === 0 ? <p className="card-copy">{labels.emptyRunsLabel}</p> : null}
           <div className="runtime-overview-grid">
             {renderedWorkflowRuns.map((run) => (
-              <section className="sidebar-card sidebar-card--compact runtime-overview-card" key={run.jobId}>
+              <section
+                className="sidebar-card sidebar-card--compact runtime-overview-card"
+                data-workflow-run-id={run.jobId}
+                data-workflow-run-status={run.status}
+                data-workflow-run-workflow-id={run.workflowId}
+                key={run.jobId}
+              >
                 <div className="card-head">
                   <h2>{run.workflowId}</h2>
                   <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", justifyContent: "flex-end" }}>

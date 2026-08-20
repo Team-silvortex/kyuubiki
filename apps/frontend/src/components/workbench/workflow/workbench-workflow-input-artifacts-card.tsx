@@ -359,6 +359,7 @@ export function WorkbenchWorkflowInputArtifactsCard({
               ) : null}
               <textarea
                 className="shell-textarea"
+                data-workflow-input-artifact={artifact.node_id}
                 onChange={(event) => onChangeInputText(artifact.node_id, event.target.value)}
                 ref={(element) => {
                   textareaRefs.current[artifact.node_id] = element;

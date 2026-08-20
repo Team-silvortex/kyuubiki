@@ -4,6 +4,7 @@
   "rounds": 2,
   "required_boundaries": [
     "dsl-preflight-unknown-operation",
+    "invalid-workflow-draft-input",
     "pwdt-bounded-timeout",
     "pwdt-unknown-action-recipe",
     "pwdt-unknown-selector"
@@ -181,6 +182,40 @@
           "label": "Workbench desktop shell mounts runtime, logs, and embedded viewer cleanly in headless preview",
           "outcome": "acceptance",
           "boundary": "three-viewport-shell-regression"
+        }
+      ]
+    },
+    {
+      "id": "workbench-browser-workflow",
+      "program": "node",
+      "cwd": ".",
+      "args": [
+        "--test",
+        "--test-reporter=tap",
+        "tests/integration/workbench-ui-workflow-invocation.test.mjs"
+      ],
+      "source_files": [
+        "tests/integration/workbench-ui-workflow-invocation.test.mjs",
+        "tests/integration/workbench-ui-isolated.shared.mjs"
+      ],
+      "required_source_text": [
+        "startIsolatedWorkbenchUiRuntime",
+        "data-workflow-run-status",
+        "catalogSubmissions + runtime.state.graphSubmissions"
+      ],
+      "minimum_test_count": 2,
+      "required_assertions": [
+        {
+          "id": "isolated-workflow-completion",
+          "label": "Workbench isolated workflow UI completes catalog, builder, draft, submit, poll, and result rendering",
+          "outcome": "acceptance",
+          "boundary": "isolated-browser-workflow-completion"
+        },
+        {
+          "id": "invalid-draft-zero-submit",
+          "label": "Workbench isolated workflow UI blocks invalid draft input without backend submission",
+          "outcome": "rejection",
+          "boundary": "invalid-workflow-draft-input"
         }
       ]
     }

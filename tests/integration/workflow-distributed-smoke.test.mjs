@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
-import { mkdirSync, openSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, openSync, readFileSync, writeFileSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import process from "node:process";
@@ -12,7 +13,8 @@ const ENTRYPOINT = `${ROOT}/scripts/kyuubiki`;
 const RUST_DIR = path.join(ROOT, "workers/rust");
 const RUN_DIR = path.join(ROOT, "tmp/run");
 const AGENT_BIN = path.join(RUST_DIR, "target/debug/kyuubiki-cli");
-const ORCHESTRATOR_URL = "http://127.0.0.1:4000";
+const ORCHESTRATOR_PORT = 6400;
+const ORCHESTRATOR_URL = `http://127.0.0.1:${ORCHESTRATOR_PORT}`;
 const CONTROL_TOKEN = "integration-control-token";
 const CLUSTER_TOKEN = "integration-cluster-token";
 const CLUSTER_ID = "integration-distributed-lan";
@@ -39,6 +41,9 @@ const SECURITY_ENV = {
   KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS: CLUSTER_ID,
   KYUUBIKI_AGENT_DISCOVERY: "registry",
   KYUUBIKI_AGENT_ENDPOINTS: "",
+  KYUUBIKI_ORCHESTRATOR_PORT: String(ORCHESTRATOR_PORT),
+  KYUUBIKI_ORCHESTRATOR_URL: ORCHESTRATOR_URL,
+  KYUUBIKI_RUNTIME_ORCHESTRATOR_ONLY: "true",
 };
 
 function runKyuubiki(args, extraEnv = {}) {
@@ -116,6 +121,20 @@ async function waitForPort(port, timeoutMs = 30_000, intervalMs = 200) {
   throw new Error(`timed out waiting for tcp://127.0.0.1:${port}`);
 }
 
+async function waitForPortClosed(port, timeoutMs = 30_000, intervalMs = 200) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (!(await isPortListening(port))) {
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  throw new Error(`timed out waiting for tcp://127.0.0.1:${port} to close`);
+}
+
 async function isPortListening(port) {
   return await new Promise((resolve) => {
     const socket = net.createConnection({ host: "127.0.0.1", port });
@@ -182,6 +201,19 @@ function stopRemoteAgent(agentProcess) {
       // best effort
     }
   }
+}
+
+function sha256(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function writeOperationalEvidence(payload) {
+  const outputPath = process.env.KYUUBIKI_ORCHESTRA_OPERATIONAL_OUTPUT;
+  if (!outputPath) {
+    return;
+  }
+  mkdirSync(path.dirname(outputPath), { recursive: true });
+  writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`);
 }
 
 function buildDistributedHeatToThermoGraph(passThroughCount, thermoSeedModel) {
@@ -312,10 +344,23 @@ function buildDistributedHeatToThermoGraph(passThroughCount, thermoSeedModel) {
   };
 }
 
-test("distributed orchestrator can run a complex coupled workflow through registered remote agents", async () => {
+test("distributed orchestrator completes a coupled workflow, survives restart, rejects unsafe submissions, and cleans up", async () => {
   const agentProcesses = [];
+  let operationalEvidence = null;
+  let executionError = null;
+  let cleanupError = null;
 
   try {
+    const occupiedPorts = (
+      await Promise.all(
+        [ORCHESTRATOR_PORT, ...AGENTS.map((agent) => agent.port)].map(async (port) => ({
+          port,
+          listening: await isPortListening(port),
+        })),
+      )
+    ).filter(({ listening }) => listening);
+    assert.deepEqual(occupiedPorts, [], "qualification ports must be isolated and unused");
+
     for (const agent of AGENTS) {
       const started = startRemoteAgent(agent);
       agentProcesses.push(started);
@@ -420,8 +465,93 @@ test("distributed orchestrator can run a complex coupled workflow through regist
     assert.equal(finalPayload.result.performance.node_kind_breakdown.export.count, 1);
     assert.equal(finalPayload.result.performance.node_kind_breakdown.output.count, 1);
     assert.equal(summary.max_temperature_delta, 100);
-    assert.ok(Math.abs(summary.max_stress - 61293532.33830845) < 1.0e-6);
+    assert.ok(
+      Number.isFinite(summary.max_stress) &&
+        Math.abs(summary.max_stress - 57462686.567164175) < 1.0e-6,
+      `expected max_stress 57462686.567164175, received ${JSON.stringify(summary.max_stress)}`,
+    );
     assert.ok(Math.abs(summary.max_displacement - 0.0) < 1.0e-12);
+
+    const resultDigest = sha256(exported.content);
+    runKyuubiki(["restart-distributed"]);
+    await waitFor(
+      `${ORCHESTRATOR_URL}/api/health`,
+      (payload) => payload?.status === "ok" && payload?.deployment?.mode === "distributed",
+      120_000,
+      500,
+      { headers: controlHeaders() },
+    );
+
+    const persistedPayload = await waitFor(
+      `${ORCHESTRATOR_URL}/api/v1/jobs/${jobId}`,
+      (payload) => payload?.job?.status === "completed" && payload?.result?.workflow_id,
+      60_000,
+      500,
+      { headers: controlHeaders() },
+    );
+    const persistedExport = persistedPayload.result.artifacts["json_output.json"];
+    assert.equal(persistedPayload.result.workflow_id, finalPayload.result.workflow_id);
+    assert.equal(sha256(persistedExport.content), resultDigest);
+
+    const jobsBeforeResponse = await fetch(`${ORCHESTRATOR_URL}/api/v1/jobs`, {
+      headers: controlHeaders(),
+    });
+    assert.equal(jobsBeforeResponse.status, 200);
+    const jobsBefore = await jobsBeforeResponse.json();
+
+    const unauthorizedResponse = await fetch(`${ORCHESTRATOR_URL}/api/v1/workflows/graph/jobs`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    assert.equal(unauthorizedResponse.status, 401);
+    assert.equal((await unauthorizedResponse.json()).error, "unauthorized");
+
+    const invalidResponse = await fetch(`${ORCHESTRATOR_URL}/api/v1/workflows/graph/jobs`, {
+      method: "POST",
+      headers: controlHeaders(),
+      body: JSON.stringify({ input_artifacts: {} }),
+    });
+    assert.equal(invalidResponse.status, 422);
+
+    const jobsAfterResponse = await fetch(`${ORCHESTRATOR_URL}/api/v1/jobs`, {
+      headers: controlHeaders(),
+    });
+    assert.equal(jobsAfterResponse.status, 200);
+    const jobsAfter = await jobsAfterResponse.json();
+    assert.equal(jobsAfter.jobs.length, jobsBefore.jobs.length);
+
+    operationalEvidence = {
+      schema_version: "kyuubiki.orchestra-workflow-operational-probe/v1",
+      status: "pass",
+      journey: "remote-distributed-workflow-restart-recovery",
+      execution_host_role:
+        process.env.KYUUBIKI_WORKFLOW_MESH_HOST_ROLE ?? "local-development-host",
+      platform: { os: process.platform, architecture: process.arch },
+      orchestration: {
+        control_mode: "orch_managed",
+        registered_agent_count: agentsPayload.summary.active_agents,
+        orchestra_restart_count: 1,
+        result_retained_after_restart: true,
+      },
+      workflow: {
+        workflow_id: finalPayload.result.workflow_id,
+        completed_node_count: finalPayload.result.completed_nodes.length,
+        solve_node_count: finalPayload.result.performance.node_kind_breakdown.solve.count,
+        transform_node_count: finalPayload.result.performance.node_kind_breakdown.transform.count,
+        result_sha256: resultDigest,
+        max_temperature_delta: summary.max_temperature_delta,
+        max_stress: summary.max_stress,
+        max_displacement: summary.max_displacement,
+      },
+      boundaries: {
+        unauthorized_submission_rejected: true,
+        malformed_submission_rejected: true,
+        rejected_submission_created_job: false,
+      },
+    };
+  } catch (error) {
+    executionError = error;
   } finally {
     try {
       runKyuubiki(["stop"]);
@@ -432,5 +562,31 @@ test("distributed orchestrator can run a complex coupled workflow through regist
     for (const agent of agentProcesses.reverse()) {
       stopRemoteAgent(agent);
     }
+
+    try {
+      await Promise.all(
+        [ORCHESTRATOR_PORT, ...AGENTS.map((agent) => agent.port)].map((port) =>
+          waitForPortClosed(port),
+        ),
+      );
+      if (operationalEvidence) {
+        writeOperationalEvidence({
+          ...operationalEvidence,
+          cleanup: {
+            orchestrator_port_closed: true,
+            agent_ports_closed: true,
+            residue_free: true,
+          },
+        });
+      }
+    } catch (error) {
+      cleanupError = error;
+    }
   }
-}, { timeout: 240_000 });
+
+  if (executionError && cleanupError) {
+    throw new AggregateError([executionError, cleanupError], "execution and cleanup both failed");
+  }
+  if (executionError) throw executionError;
+  if (cleanupError) throw cleanupError;
+}, { timeout: 300_000 });

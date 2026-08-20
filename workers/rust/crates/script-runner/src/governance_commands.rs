@@ -10,7 +10,8 @@ use crate::{
     material_study_execution_plan_contract, materialization_plan_contract,
     minimal_industrial_closure, module_extension_standard, module_function_matrix,
     module_function_tensor, module_topology, module_topology_report, moxi_handoff,
-    operator_task_ir_contract, orchestra_recovery_fault_injection, project_organization_audit,
+    operator_task_ir_contract, orchestra_recovery_fault_injection,
+    orchestra_workflow_operational_qualification, project_organization_audit,
     protocol_validation_qualification, runtime_recovery_fault_injection,
     system_security_qualification, test_coverage_posture, toolchain_contract,
     ui_automation_contract, update_catalog_docs, usability_release_gate,
@@ -125,6 +126,11 @@ pub(crate) fn run_governance_command(
         }
         "check-orchestra-recovery-fault-injection" => {
             orchestra_recovery_fault_injection::run_check_orchestra_recovery_fault_injection(
+                root, args,
+            )
+        }
+        "check-orchestra-workflow-operational-qualification" => {
+            orchestra_workflow_operational_qualification::run_check_orchestra_workflow_operational_qualification(
                 root, args,
             )
         }

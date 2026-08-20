@@ -12,7 +12,8 @@ const ENTRYPOINT = `${ROOT}/scripts/kyuubiki`;
 const RUST_DIR = path.join(ROOT, "workers/rust");
 const RUN_DIR = path.join(ROOT, "tmp/run");
 const AGENT_BIN = path.join(RUST_DIR, "target/debug/kyuubiki-cli");
-const ORCHESTRATOR_URL = "http://127.0.0.1:4000";
+const ORCHESTRATOR_PORT = 6421;
+const ORCHESTRATOR_URL = `http://127.0.0.1:${ORCHESTRATOR_PORT}`;
 const CONTROL_TOKEN = "integration-control-token";
 const CLUSTER_TOKEN = "integration-cluster-token";
 const CLUSTER_ID = "integration-offline-mesh-diagnostics";
@@ -37,6 +38,9 @@ const SECURITY_ENV = {
   KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS: CLUSTER_ID,
   KYUUBIKI_AGENT_DISCOVERY: "registry",
   KYUUBIKI_AGENT_ENDPOINTS: "",
+  KYUUBIKI_ORCHESTRATOR_PORT: String(ORCHESTRATOR_PORT),
+  KYUUBIKI_ORCHESTRATOR_URL: ORCHESTRATOR_URL,
+  KYUUBIKI_RUNTIME_ORCHESTRATOR_ONLY: "true",
 };
 
 function runKyuubiki(args, extraEnv = {}) {

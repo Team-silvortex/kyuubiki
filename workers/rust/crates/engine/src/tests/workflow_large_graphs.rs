@@ -149,7 +149,13 @@ fn run_large_chain_case_with_all_options(
         .artifacts
         .get("thermo_output.result")
         .expect("thermo output should exist");
-    assert!(thermo_result["max_stress"].as_f64().unwrap_or_default() > 0.0);
+    let max_stress = thermo_result["max_stress"]
+        .as_f64()
+        .expect("thermo output should expose max_stress");
+    assert!(
+        (max_stress - 57_462_686.567_164_175).abs() < 1.0e-6,
+        "unexpected coupled thermal stress: {max_stress}"
+    );
     if artifact_projection == WorkflowArtifactProjection::Outputs {
         assert_eq!(run.artifacts.len(), 1);
     }

@@ -95,6 +95,17 @@ pub(crate) fn run_workflow_mesh_remote(root: &Path, args: Vec<OsString>) -> Runn
                 .join("agent-task-ir-qualification.json"),
             root,
         )?,
+        copy_remote(
+            &options,
+            &format!(
+                "{}/{}/orchestra-workflow-operational-probe.json",
+                options.remote_dir, options.remote_output_dir
+            ),
+            &options
+                .local_output_dir
+                .join("orchestra-workflow-operational-probe.json"),
+            root,
+        )?,
         crate::workflow_mesh_index::run_build_workflow_mesh_regression_index(
             root,
             vec![
@@ -305,6 +316,7 @@ fi; \
 trap '{pg_bin}/pg_ctl -D \"$remote_pg_data\" stop -m fast >/dev/null 2>&1 || true' EXIT; \
 {pg_bin}/createdb -h 127.0.0.1 -p {} -U {} {} >/dev/null 2>&1 || true; \
 export DATABASE_URL=\"ecto://{url_user}@127.0.0.1:{url_port}/{url_db}\"; \
+export KYUUBIKI_WORKFLOW_MESH_HOST_ROLE=\"remote-linux-qualification-host\"; \
 cd \"$remote_workspace_root/apps/web\"; \
 mix deps.get >/dev/null; \
 mix compile >/dev/null; \

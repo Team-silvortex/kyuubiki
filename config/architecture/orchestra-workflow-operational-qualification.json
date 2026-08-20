@@ -1,0 +1,101 @@
+{
+  "$schema": "../../schemas/orchestra-workflow-operational-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.orchestra-workflow-operational-qualification-contract/v1",
+  "qualification_id": "remote-linux-orchestra-workflow-operational",
+  "target_coordinate": {
+    "module_id": "orchestra-control-plane",
+    "paradigm": "workflow_composition",
+    "target_grade": "operational"
+  },
+  "capture": {
+    "workflow_mesh_summary": "tmp/orchestra-workflow-operational/summary.json",
+    "operational_probe": "tmp/orchestra-workflow-operational/orchestra-workflow-operational-probe.json",
+    "agent_task_ir_report": "tmp/orchestra-workflow-operational/agent-task-ir-qualification.json",
+    "process_loss_report": "tmp/orchestra-workflow-operational/orchestra-process-loss-fault-injection.json",
+    "execution_host_role": "remote-linux-qualification-host",
+    "platform": "linux",
+    "minimum_test_count": 4,
+    "minimum_pass_count": 4,
+    "required_cases": [
+      {
+        "id": "distributed-orchestrated-workflow",
+        "test_file": "tests/integration/workflow-distributed-smoke.test.mjs",
+        "subtest": "distributed orchestrator completes a coupled workflow, survives restart, rejects unsafe submissions, and cleans up"
+      },
+      {
+        "id": "offline-mesh-workflow",
+        "test_file": "tests/integration/workflow-offline-mesh-smoke.test.mjs",
+        "subtest": "distributed orchestrator can run a complex coupled workflow through offline mesh agents"
+      },
+      {
+        "id": "offline-mesh-branch-diagnostics",
+        "test_file": "tests/integration/workflow-offline-mesh-branch-diagnostics-smoke.test.mjs",
+        "subtest": "distributed orchestrator can route a coupled diagnostics workflow through offline mesh blocked markdown branch"
+      },
+      {
+        "id": "agent-task-ir-recovery",
+        "test_file": "workers/rust/crates/cli/tests/agent_task_ir_qualification.rs",
+        "subtest": "agent executes rejects tampering and recovers over TCP"
+      }
+    ]
+  },
+  "source_guard": {
+    "files": [
+      "tests/integration/workflow-distributed-smoke.test.mjs",
+      "tests/integration/workflow-offline-mesh-smoke.test.mjs",
+      "tests/integration/workflow-offline-mesh-branch-diagnostics-smoke.test.mjs",
+      "workers/rust/crates/desktop-runtime/src/runtime_options.rs",
+      "workers/rust/crates/engine/src/tests/workflow_large_graphs.rs",
+      "workers/rust/crates/script-runner/src/workflow_mesh.rs",
+      "workers/rust/crates/script-runner/src/workflow_mesh_remote.rs",
+      "workers/rust/crates/script-runner/src/orchestra_recovery_fault_injection.rs",
+      "workers/rust/crates/cli/tests/agent_task_ir_qualification.rs"
+    ],
+    "required_text": [
+      "KYUUBIKI_ORCHESTRA_OPERATIONAL_OUTPUT",
+      "KYUUBIKI_RUNTIME_ORCHESTRATOR_ONLY",
+      "KYUUBIKI_ORCHESTRATOR_PORT",
+      "57_462_686.567_164_175",
+      "result_retained_after_restart",
+      "unauthorized_submission_rejected",
+      "malformed_submission_rejected",
+      "rejected_submission_created_job",
+      "orchestrator_port_closed",
+      "remote-linux-qualification-host",
+      "operator_task_digest_mismatch",
+      "side_effect_replay_blocked_without_checkpoint"
+    ]
+  },
+  "retention": {
+    "report_schema": "kyuubiki.orchestra-workflow-operational-qualification/v1",
+    "report_schema_path": "schemas/orchestra-workflow-operational-qualification-report.schema.json",
+    "report_path": "releases/usability-evidence/2.14.1/orchestra-workflow-operational-qualification.json",
+    "forbidden_content": [
+      "host_address",
+      "hostname",
+      "username",
+      "credential",
+      "absolute_host_path"
+    ]
+  },
+  "required_checks": [
+    "remote_linux_capture",
+    "workflow_mesh_modes_covered",
+    "secure_agent_registration",
+    "async_workflow_completed",
+    "numerical_result_verified",
+    "orchestra_process_restart",
+    "result_retained_after_restart",
+    "unauthorized_submission_rejected",
+    "malformed_submission_rejected",
+    "rejected_submission_no_job",
+    "agent_task_tamper_rejected",
+    "agent_task_recovered",
+    "process_loss_policy_verified",
+    "cleanup_complete"
+  ],
+  "commands": {
+    "capture": "make qualify-orchestra-workflow-operational-remote REMOTE=kyuubiki-lab",
+    "verify": "make check-orchestra-workflow-operational-qualification"
+  }
+}

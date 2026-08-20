@@ -1,8 +1,26 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Repeatable Workbench validation qualification across the PWDT programmable control plane and three-viewport browser layout regression.",
+  "summary": "Repeatable Workbench qualification across the PWDT control plane, responsive browser shell, and isolated end-to-end workflow composition.",
   "paradigm_contract_evidence": {
+    "workflow_composition": [
+      {
+        "id": "workbench-workflow-qualification-contract",
+        "modules": [
+          "workbench-shell"
+        ],
+        "files": [
+          "config/architecture/workbench-validation-qualification.json",
+          "schemas/workbench-validation-qualification-report.schema.json",
+          "workers/rust/crates/script-runner/src/workbench_validation_qualification.rs"
+        ],
+        "required_text": [
+          "workbench-browser-workflow",
+          "invalid-workflow-draft-input",
+          "stable_semantics"
+        ]
+      }
+    ],
     "validation": [
       {
         "id": "workbench-validation-qualification-contract",
@@ -46,7 +64,9 @@
         "workers/rust/crates/script-runner/src/workbench_validation_qualification.rs",
         "apps/frontend/test/workflow/workbench-pwdt-browser-bridge.test.ts",
         "tests/integration/workbench-shell-regression.test.mjs",
-        "releases/usability-evidence/2.13.9/workbench-validation-qualification.json"
+        "tests/integration/workbench-ui-workflow-invocation.test.mjs",
+        "tests/integration/workbench-ui-isolated.shared.mjs",
+        "releases/usability-evidence/2.14.0/workbench-validation-qualification.json"
       ],
       "required_text": [
         "kyuubiki.workbench-validation-qualification-contract/v1",
@@ -54,8 +74,39 @@
         "workbench validation qualified",
         "pwdt-unknown-action-recipe",
         "{ width: 1080, height: 760 }",
-        "\"executed_test_count\":78",
-        "\"rejection_boundary_count\":4"
+        "\"executed_test_count\":82",
+        "\"rejection_boundary_count\":5"
+      ]
+    },
+    {
+      "id": "workbench-workflow-repeatable-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "workbench-shell"
+      ],
+      "paradigms": [
+        "workflow_composition"
+      ],
+      "dimensions": [
+        "execution",
+        "contract"
+      ],
+      "files": [
+        "config/architecture/workbench-validation-qualification.json",
+        "schemas/workbench-validation-qualification-report.schema.json",
+        "workers/rust/crates/script-runner/src/workbench_validation_qualification.rs",
+        "tests/integration/workbench-ui-workflow-invocation.test.mjs",
+        "tests/integration/workbench-ui-isolated.shared.mjs",
+        "releases/usability-evidence/2.14.0/workbench-validation-qualification.json"
+      ],
+      "required_text": [
+        "workbench-browser-workflow",
+        "Workbench isolated workflow UI completes catalog, builder, draft, submit, poll, and result rendering",
+        "Workbench isolated workflow UI blocks invalid draft input without backend submission",
+        "invalid-workflow-draft-input",
+        "\"executed_test_count\":82",
+        "\"rejection_boundary_count\":5"
       ]
     }
   ]

@@ -65,7 +65,10 @@ export function WorkbenchWorkflowCatalogCard(props: {
   const intentNote = deriveWorkflowIntentNote(workflow);
 
   return (
-    <section className="sidebar-card sidebar-card--compact runtime-overview-card">
+    <section
+      className="sidebar-card sidebar-card--compact runtime-overview-card"
+      data-workflow-catalog-id={workflow.id}
+    >
       <div className="card-head">
         <h2>{workflow.name}</h2>
         <span className={`status-pill status-pill--${isSelected ? "good" : "watch"}`}>

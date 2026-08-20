@@ -186,14 +186,14 @@ fn validate_contract(root: &Path, contract: &QualificationContract) -> RunnerRes
     {
         return Err("Workbench validation report schema const drifted".to_string());
     }
-    if !(2..=3).contains(&contract.rounds) || contract.suites.len() < 2 {
+    if !(2..=3).contains(&contract.rounds) || contract.suites.len() < 3 {
         return Err(
-            "Workbench qualification requires at least two suites over 2 or 3 rounds".into(),
+            "Workbench qualification requires at least three suites over 2 or 3 rounds".into(),
         );
     }
     require_unique_nonempty(&contract.required_boundaries, "required boundary")?;
-    if contract.required_boundaries.len() < 4 {
-        return Err("Workbench qualification requires at least four rejection boundaries".into());
+    if contract.required_boundaries.len() < 5 {
+        return Err("Workbench qualification requires at least five rejection boundaries".into());
     }
 
     let required_boundaries = contract
@@ -253,7 +253,7 @@ fn validate_contract(root: &Path, contract: &QualificationContract) -> RunnerRes
         }
         minimum_test_count += suite.minimum_test_count;
     }
-    if minimum_test_count < 39 || acceptance_count < 17 {
+    if minimum_test_count < 41 || acceptance_count < 18 {
         return Err("Workbench qualification scope is below the release threshold".into());
     }
     if rejection_boundaries != required_boundaries {
@@ -713,13 +713,13 @@ fn validate_summary(
         || summary.round_count != expected_round_count
         || summary.passed_round_count != expected_round_count
         || summary.tests_per_round != tests_per_round
-        || summary.tests_per_round < 39
+        || summary.tests_per_round < 41
         || summary.executed_test_count != executed_test_count
-        || summary.executed_test_count < 78
+        || summary.executed_test_count < 82
         || summary.assertion_count != assertion_count
-        || summary.assertion_count < 21
+        || summary.assertion_count < 23
         || summary.acceptance_assertion_count != acceptance_count
-        || summary.acceptance_assertion_count < 17
+        || summary.acceptance_assertion_count < 18
         || summary.rejection_boundary_count != contract.required_boundaries.len()
         || summary.stable_suite_count != contract.suites.len()
         || !summary.failed_suite_ids.is_empty()

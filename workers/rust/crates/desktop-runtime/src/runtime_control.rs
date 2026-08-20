@@ -18,9 +18,9 @@ use serde_json::Value;
 use crate::runtime_layout::{
     RuntimePaths, resolve_development_command, runtime_bin_dirs, runtime_paths,
 };
+use crate::runtime_options::{DEFAULT_ORCHESTRATOR_PORT, RuntimeOptions};
 use crate::{HotServiceMode, ServiceMode};
 
-const ORCHESTRATOR_PORT: u16 = 4000;
 const FRONTEND_PORT: u16 = 3000;
 const DEFAULT_AGENT_ENDPOINTS: &str = "127.0.0.1:5001,127.0.0.1:5002";
 
@@ -38,7 +38,8 @@ struct ManagedProcess {
 pub(super) fn service_status() -> Result<String, String> {
     let paths = runtime_paths()?;
     let env = runtime_env(&paths.root);
-    let mode = read_runtime_mode(&paths, &env);
+    let options = RuntimeOptions::from_env(&env)?;
+    let mode = read_runtime_mode(&paths, &env, options);
     let mut lines = vec![
         format!("deployment-mode: {mode}"),
         format!(
@@ -86,8 +87,8 @@ pub(super) fn service_status() -> Result<String, String> {
     }
     lines.push(service_line(
         "orchestrator",
-        &paths.run.join("orchestrator.pid"),
-        ORCHESTRATOR_PORT,
+        &options.orchestrator_pid(&paths.run),
+        options.orchestrator_port,
         "http",
     ));
     lines.push(service_line(
@@ -122,28 +123,33 @@ pub(super) fn service_restart(mode: ServiceMode) -> Result<String, String> {
 pub(super) fn service_stop() -> Result<String, String> {
     let paths = runtime_paths()?;
     let env = runtime_env(&paths.root);
+    let options = RuntimeOptions::from_env(&env)?;
     let mut lines = Vec::new();
-    let mut ports = agent_ports(&paths.root, &env);
-    ports.reverse();
-    for port in ports {
+    if !options.orchestrator_only {
+        let mut ports = agent_ports(&paths.root, &env);
+        ports.reverse();
+        for port in ports {
+            lines.push(stop_managed(
+                &paths.run.join(format!("agent-{port}.pid")),
+                &format!("agent[{port}]"),
+                Some(port),
+            )?);
+        }
         lines.push(stop_managed(
-            &paths.run.join(format!("agent-{port}.pid")),
-            &format!("agent[{port}]"),
-            Some(port),
+            &paths.run.join("frontend.pid"),
+            "frontend",
+            Some(FRONTEND_PORT),
         )?);
     }
     lines.push(stop_managed(
-        &paths.run.join("frontend.pid"),
-        "frontend",
-        Some(FRONTEND_PORT),
-    )?);
-    lines.push(stop_managed(
-        &paths.run.join("orchestrator.pid"),
+        &options.orchestrator_pid(&paths.run),
         "orchestrator",
-        Some(ORCHESTRATOR_PORT),
+        Some(options.orchestrator_port),
     )?);
-    remove_file_if_present(&paths.run.join("runtime-mode.txt"))?;
-    remove_file_if_present(&paths.hot.join("native-mode.txt"))?;
+    remove_file_if_present(&options.runtime_mode(&paths.run))?;
+    if !options.orchestrator_only {
+        remove_file_if_present(&paths.hot.join("native-mode.txt"))?;
+    }
     Ok(lines.join("\n"))
 }
 
@@ -161,7 +167,7 @@ pub(super) fn hot_service_status() -> Result<String, String> {
     lines.push(listening_line(
         "hot-web",
         "http://127.0.0.1:4000",
-        ORCHESTRATOR_PORT,
+        DEFAULT_ORCHESTRATOR_PORT,
     ));
     lines.push(listening_line(
         "hot-frontend",
@@ -279,8 +285,9 @@ fn start_services(requested_mode: &str) -> Result<String, String> {
             });
     }
     apply_mode_env(&mut env, &mode)?;
+    let options = RuntimeOptions::from_env(&env)?;
     env.entry("KYUUBIKI_ORCHESTRATOR_URL".to_string())
-        .or_insert_with(|| "http://127.0.0.1:4000".to_string());
+        .or_insert_with(|| options.orchestrator_url());
     let endpoints = agent_endpoints(&env);
     env.insert("KYUUBIKI_AGENT_ENDPOINTS".to_string(), endpoints.clone());
     env.entry("KYUUBIKI_AGENT_DISCOVERY".to_string())
@@ -288,14 +295,16 @@ fn start_services(requested_mode: &str) -> Result<String, String> {
     augment_path(&paths, &mut env);
 
     let mut lines = Vec::new();
-    if mode != "distributed" {
+    if mode != "distributed" && !options.orchestrator_only {
         for port in agent_ports(&paths.root, &env) {
             lines.push(start_agent(&paths, port, &env)?);
         }
     }
-    lines.push(start_orchestrator(&paths, &env, &mode)?);
-    lines.push(start_frontend(&paths, &env)?);
-    fs::write(paths.run.join("runtime-mode.txt"), format!("{mode}\n"))
+    lines.push(start_orchestrator(&paths, &env, &mode, options)?);
+    if !options.orchestrator_only {
+        lines.push(start_frontend(&paths, &env)?);
+    }
+    fs::write(options.runtime_mode(&paths.run), format!("{mode}\n"))
         .map_err(|error| format!("failed to persist runtime mode: {error}"))?;
     Ok(lines.join("\n"))
 }
@@ -358,12 +367,14 @@ fn start_orchestrator(
     paths: &RuntimePaths,
     env: &HashMap<String, String>,
     mode: &str,
+    options: RuntimeOptions,
 ) -> Result<String, String> {
-    if is_port_listening(ORCHESTRATOR_PORT) {
-        return Ok("orchestrator already running at http://127.0.0.1:4000".to_string());
+    let url = options.orchestrator_url();
+    if is_port_listening(options.orchestrator_port) {
+        return Ok(format!("orchestrator already running at {url}"));
     }
     let mut process_env = env.clone();
-    process_env.insert("PORT".to_string(), ORCHESTRATOR_PORT.to_string());
+    process_env.insert("PORT".to_string(), options.orchestrator_port.to_string());
     process_env.insert("RELEASE_DISTRIBUTION".to_string(), "none".to_string());
     let (command, args, cwd) = if paths.is_development() {
         (
@@ -380,17 +391,13 @@ fn start_orchestrator(
         command,
         args,
         cwd,
-        pid: paths.run.join("orchestrator.pid"),
-        log: paths.run.join("orchestrator.log"),
-        port: Some(ORCHESTRATOR_PORT),
+        pid: options.orchestrator_pid(&paths.run),
+        log: options.orchestrator_log(&paths.run),
+        port: Some(options.orchestrator_port),
         env: process_env,
     };
-    // A self-hosted Elixir runtime may need to compile OTP dependencies on its
-    // first launch, especially after installer or cache maintenance.
     spawn_managed(process, Duration::from_secs(120))?;
-    Ok(format!(
-        "started orchestrator API at http://127.0.0.1:4000 ({mode})"
-    ))
+    Ok(format!("started orchestrator API at {url} ({mode})"))
 }
 
 fn start_frontend(paths: &RuntimePaths, env: &HashMap<String, String>) -> Result<String, String> {
@@ -681,8 +688,12 @@ fn apply_mode_env(env: &mut HashMap<String, String>, mode: &str) -> Result<(), S
     Ok(())
 }
 
-fn read_runtime_mode(paths: &RuntimePaths, env: &HashMap<String, String>) -> String {
-    fs::read_to_string(paths.run.join("runtime-mode.txt"))
+fn read_runtime_mode(
+    paths: &RuntimePaths,
+    env: &HashMap<String, String>,
+    options: RuntimeOptions,
+) -> String {
+    fs::read_to_string(options.runtime_mode(&paths.run))
         .ok()
         .map(|value| value.trim().to_string())
         .filter(|value| matches!(value.as_str(), "local" | "cloud" | "distributed"))

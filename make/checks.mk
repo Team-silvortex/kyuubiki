@@ -13,7 +13,7 @@
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index check-material-research-bundle-index check-material-research-bundle-index-contract
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
-.PHONY: audit-dependencies check-system-security-qualification check-agent-solver-operational-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
+.PHONY: audit-dependencies check-system-security-qualification check-agent-solver-operational-qualification check-orchestra-workflow-operational-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
 
 check-doc-book:
 	@$(ENTRYPOINT) check-doc-book
@@ -482,11 +482,15 @@ check-contracts-validation-qualification:
 
 check-workbench-validation-qualification:
 	@$(ENTRYPOINT) check-workbench-validation-qualification --self-test
-	@$(ENTRYPOINT) check-workbench-validation-qualification --verify-report releases/usability-evidence/2.13.9/workbench-validation-qualification.json
+	@$(ENTRYPOINT) check-workbench-validation-qualification --verify-report releases/usability-evidence/2.14.0/workbench-validation-qualification.json
 
 check-agent-solver-operational-qualification:
 	@$(ENTRYPOINT) check-agent-solver-operational-qualification --self-test
 	@$(ENTRYPOINT) check-agent-solver-operational-qualification --verify-report releases/usability-evidence/2.13.8/agent-solver-operational-qualification.json
+
+check-orchestra-workflow-operational-qualification:
+	@$(ENTRYPOINT) check-orchestra-workflow-operational-qualification --self-test
+	@$(ENTRYPOINT) check-orchestra-workflow-operational-qualification --verify-report releases/usability-evidence/2.14.1/orchestra-workflow-operational-qualification.json
 
 check-minimal-industrial-closure:
 	@$(ENTRYPOINT) validate-minimal-industrial-closure

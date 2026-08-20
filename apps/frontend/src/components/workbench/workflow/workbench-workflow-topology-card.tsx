@@ -174,7 +174,11 @@ export function WorkbenchWorkflowTopologyCard({
       <div className="form-grid compact workflow-topology-toolbar" data-workflow-topology-toolbar="controls">
         <label>
           <span>{labels.kindLabel}</span>
-          <select onChange={(event) => setNextNodeKind(event.target.value)} value={nextNodeKind}>
+          <select
+            data-workflow-topology-kind="select"
+            onChange={(event) => setNextNodeKind(event.target.value)}
+            value={nextNodeKind}
+          >
             {NODE_KIND_OPTIONS.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
           </select>
         </label>

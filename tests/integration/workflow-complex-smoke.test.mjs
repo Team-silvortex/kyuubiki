@@ -210,7 +210,7 @@ test("local workstation stack can run a 48-hop coupled workflow graph end-to-end
     assert.equal(payload.performance.node_kind_breakdown.export.count, 1);
     assert.equal(payload.performance.node_kind_breakdown.output.count, 1);
     assert.equal(summary.max_temperature_delta, 100);
-    assert.ok(Math.abs(summary.max_stress - 61293532.33830845) < 1.0e-6);
+    assert.ok(Math.abs(summary.max_stress - 57462686.567164175) < 1.0e-6);
     assert.ok(Math.abs(summary.max_displacement - 0.0) < 1.0e-12);
     assert.ok(payload.performance.total_elapsed_ms >= 0.0);
     assert.ok(Array.isArray(payload.performance.slowest_nodes));

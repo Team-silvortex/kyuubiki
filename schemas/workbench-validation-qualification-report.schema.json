@@ -28,12 +28,12 @@
     "rounds": { "type": "integer", "minimum": 2, "maximum": 3 },
     "suites": {
       "type": "array",
-      "minItems": 2,
+      "minItems": 3,
       "items": { "$ref": "#/$defs/suite" }
     },
     "boundaries": {
       "type": "array",
-      "minItems": 4,
+      "minItems": 5,
       "items": { "$ref": "#/$defs/boundary" }
     },
     "summary": { "$ref": "#/$defs/summary" }
@@ -166,15 +166,15 @@
         "failed_suite_ids"
       ],
       "properties": {
-        "suite_count": { "type": "integer", "minimum": 2 },
-        "round_count": { "type": "integer", "minimum": 4 },
-        "passed_round_count": { "type": "integer", "minimum": 4 },
-        "tests_per_round": { "type": "integer", "minimum": 39 },
-        "executed_test_count": { "type": "integer", "minimum": 78 },
-        "assertion_count": { "type": "integer", "minimum": 21 },
-        "acceptance_assertion_count": { "type": "integer", "minimum": 17 },
-        "rejection_boundary_count": { "type": "integer", "minimum": 4 },
-        "stable_suite_count": { "type": "integer", "minimum": 2 },
+        "suite_count": { "type": "integer", "minimum": 3 },
+        "round_count": { "type": "integer", "minimum": 6 },
+        "passed_round_count": { "type": "integer", "minimum": 6 },
+        "tests_per_round": { "type": "integer", "minimum": 41 },
+        "executed_test_count": { "type": "integer", "minimum": 82 },
+        "assertion_count": { "type": "integer", "minimum": 23 },
+        "acceptance_assertion_count": { "type": "integer", "minimum": 18 },
+        "rejection_boundary_count": { "type": "integer", "minimum": 5 },
+        "stable_suite_count": { "type": "integer", "minimum": 3 },
         "failed_suite_ids": { "type": "array", "maxItems": 0 }
       }
     }

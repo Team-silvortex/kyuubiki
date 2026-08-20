@@ -66,6 +66,8 @@ help:
 	@echo "  make check-workbench-validation-qualification Recheck retained Workbench validation qualification evidence"
 	@echo "  make qualify-agent-solver-operational-remote Build, Installer-deploy, solve, restart, recover, and clean on the Linux lab host"
 	@echo "  make check-agent-solver-operational-qualification Recheck retained remote Linux Agent solver operational evidence"
+	@echo "  make qualify-orchestra-workflow-operational-remote Run and retain the remote distributed Orchestra workflow restart journey"
+	@echo "  make check-orchestra-workflow-operational-qualification Recheck retained remote Orchestra workflow operational evidence"
 	@echo "  make qualify-desktop-ui-validation Run the cross-shell GUI qualification and write a retained JSON report"
 	@echo "  make qualify-protocol-validation Run protocol, TaskIR, RPC, and fuzz qualification and retain JSON evidence"
 	@echo "  make qualify-contracts-validation Run repeatable positive and fault-boundary contract qualification"

@@ -96,7 +96,17 @@ test("Pwdt browser bridge resolves UI contract selectors for stable automation",
     const bridge = makeBridge();
 
     assert.equal(bridge.uiSelector("runtimeTab", "control"), '[data-workbench-runtime-tab="control"]');
+    assert.equal(bridge.uiSelector("workflowCatalogEntry", "solve.bar_1d"), '[data-workflow-catalog-id="solve.bar_1d"]');
+    assert.equal(bridge.uiSelector("workflowTopologyKind"), '[data-workflow-topology-kind="select"]');
+    assert.equal(bridge.uiSelector("workflowInputArtifact", "load-input"), '[data-workflow-input-artifact="load-input"]');
+    assert.equal(bridge.uiSelector("workflowRun", "job-42"), '[data-workflow-run-id="job-42"]');
+    assert.equal(bridge.uiSelector("workflowRunStatus", "completed"), '[data-workflow-run-status="completed"]');
+    assert.equal(bridge.uiSelector("workflowRunWorkflow", "solve.bar_1d"), '[data-workflow-run-workflow-id="solve.bar_1d"]');
     assert.equal(bridge.querySelector("workflowBuilder")?.getAttribute?.("missing") ?? null, null);
+    assert.equal(
+      (bridge.querySelector("workflowCatalogEntry", "solve.bar_1d") as any)?.selector,
+      '[data-workflow-catalog-id="solve.bar_1d"]',
+    );
     assert.equal(bridge.querySelectorAll("workflowBuilderAction", "validate").length, 2);
     assert.equal(bridge.selectorExists("workflowSurface"), true);
   } finally {
