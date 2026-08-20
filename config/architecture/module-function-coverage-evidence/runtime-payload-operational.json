@@ -1,0 +1,77 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Operational Installer-managed Runtime payload delivery with immutable content digests, executable service probes, monotonic activation, concurrency control, rollback restoration, and retained remote Linux evidence.",
+  "paradigm_contract_evidence": {
+    "deployment_update": [
+      {
+        "id": "runtime-payload-operational-contract",
+        "modules": [
+          "runtime-agent-cli",
+          "runtime-installer"
+        ],
+        "files": [
+          "schemas/runtime-payload-qualification-report.schema.json",
+          "workers/rust/crates/installer/src/runtime_payload.rs",
+          "workers/rust/crates/installer/src/runtime_payload_qualification.rs",
+          "workers/rust/crates/installer/src/runtime_payload_qualification_validation.rs",
+          "workers/rust/crates/script-runner/src/runtime_payload_operational_qualification.rs",
+          "workers/rust/crates/installer/src/main.rs",
+          "workers/rust/crates/installer/src/tests/runtime_payload.rs"
+        ],
+        "required_text": [
+          "kyuubiki.runtime-payload/v1",
+          "kyuubiki.runtime-activation/v1",
+          "kyuubiki.runtime-payload-qualification/v1",
+          "run_runtime_payload_qualification",
+          "validate_runtime_payload_qualification_report",
+          "qualify-runtime-payload",
+          "qualify-runtime-payload-operational-remote",
+          "update_lock_blocks_parallel_runtime_activation",
+          "all_service_entries_executed",
+          "rollback_payload_restored"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "runtime-payload-packaged-linux-operational",
+      "status": "proven",
+      "grade": "operational",
+      "modules": [
+        "runtime-agent-cli",
+        "runtime-installer"
+      ],
+      "paradigms": [
+        "deployment_update"
+      ],
+      "dimensions": [
+        "execution",
+        "security",
+        "contract",
+        "recovery"
+      ],
+      "files": [
+        "releases/usability-evidence/2.14.3/runtime-payload-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"journey\": \"sealed-installed-runtime-payload-upgrade-and-rollback\"",
+        "\"execution_host_role\": \"remote-linux-qualification-host\"",
+        "\"active_after_upgrade\": \"2.14.3\"",
+        "\"active_after_rollback\": \"2.14.2\"",
+        "\"phase\": \"initial-install\"",
+        "\"phase\": \"upgraded-install\"",
+        "\"phase\": \"rollback\"",
+        "\"service_id\": \"agent\"",
+        "\"service_id\": \"orchestrator\"",
+        "\"service_id\": \"frontend\"",
+        "\"id\": \"rollback_payload_restored\"",
+        "\"id\": \"immutable_versions_verified\"",
+        "\"id\": \"update_lock_clean\"",
+        "\"id\": \"staging_clean\""
+      ]
+    }
+  ]
+}

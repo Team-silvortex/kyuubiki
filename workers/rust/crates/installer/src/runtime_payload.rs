@@ -1,19 +1,18 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs::{self, File};
+use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use kyuubiki_platform::{Platform, desktop_preferences_dir};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const PAYLOAD_SCHEMA: &str = "kyuubiki.runtime-payload/v1";
-const ACTIVATION_SCHEMA: &str = "kyuubiki.runtime-activation/v1";
+pub const RUNTIME_ACTIVATION_SCHEMA_VERSION: &str = "kyuubiki.runtime-activation/v1";
 const PAYLOAD_MANIFEST: &str = "manifests/runtime-payload.json";
 const MUTABLE_ROOTS: &[&str] = &["data", "exports", "logs", "run"];
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 struct RuntimePayloadManifest {
     schema_version: String,
     version: String,
@@ -43,6 +42,7 @@ struct ServiceLaunchEntry {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct RuntimeActivationRecord {
     pub schema_version: String,
     pub generation: u64,
@@ -58,6 +58,13 @@ pub struct RuntimePayloadStatus {
     pub active_version: Option<String>,
     pub previous_version: Option<String>,
     pub installed_versions: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct RuntimeServiceLaunch {
+    pub id: String,
+    pub command: PathBuf,
+    pub cwd: PathBuf,
 }
 
 impl RuntimeActivationRecord {
@@ -158,13 +165,15 @@ pub(crate) fn install_runtime_payload_into(
     store: &Path,
     platform: Platform,
 ) -> Result<RuntimeActivationRecord, String> {
+    ensure_store(store)?;
+    let _lock = RuntimeUpdateLock::acquire(store)?;
+    reject_symlink(source, "runtime payload source")?;
     let manifest = verify_payload(source, Some(platform))?;
-    fs::create_dir_all(store.join("versions"))
-        .map_err(|error| format!("failed to create runtime version store: {error}"))?;
     let target = store.join("versions").join(&manifest.version);
+    reject_symlink(&target, "runtime payload version target")?;
     if target.exists() {
         let installed = verify_installed_payload(&target, platform)?;
-        if installed.files != manifest.files {
+        if installed != manifest {
             return Err(format!(
                 "runtime version {} already exists with different content; repair or remove it explicitly",
                 manifest.version
@@ -174,7 +183,8 @@ pub(crate) fn install_runtime_payload_into(
         let staging =
             store
                 .join("staging")
-                .join(format!("{}-{}", manifest.version, next_generation()));
+                .join(format!("{}-{}", manifest.version, next_generation(store)?));
+        reject_symlink(&staging, "runtime payload staging target")?;
         if staging.exists() {
             fs::remove_dir_all(&staging)
                 .map_err(|error| format!("failed to clear {}: {error}", staging.display()))?;
@@ -200,6 +210,8 @@ pub(crate) fn rollback_runtime_payload_in(
     store: &Path,
     platform: Platform,
 ) -> Result<RuntimeActivationRecord, String> {
+    ensure_store(store)?;
+    let _lock = RuntimeUpdateLock::acquire(store)?;
     let active = latest_activation(store)?
         .ok_or_else(|| "no active installer-managed runtime is available".to_string())?;
     let previous = active
@@ -211,7 +223,9 @@ pub(crate) fn rollback_runtime_payload_in(
                 .flatten()
         })
         .ok_or_else(|| "no previous runtime version is available for rollback".to_string())?;
-    verify_installed_payload(&store.join("versions").join(&previous), platform)?;
+    let previous_root = store.join("versions").join(&previous);
+    reject_symlink(&previous_root, "runtime payload rollback target")?;
+    verify_installed_payload(&previous_root, platform)?;
     activate_version(store, &previous, platform)
 }
 
@@ -245,7 +259,14 @@ fn activate_version(
 ) -> Result<RuntimeActivationRecord, String> {
     validate_version(version)?;
     let version_root = store.join("versions").join(version);
-    verify_installed_payload(&version_root, platform)?;
+    reject_symlink(&version_root, "runtime payload activation target")?;
+    let manifest = verify_installed_payload(&version_root, platform)?;
+    if manifest.version != version {
+        return Err(format!(
+            "runtime payload activation identity mismatch: expected {version}, found {}",
+            manifest.version
+        ));
+    }
     let previous_version = latest_activation(store)?.and_then(|active| {
         if active.version == version {
             active.previous_version
@@ -253,9 +274,9 @@ fn activate_version(
             Some(active.version)
         }
     });
-    let generation = next_generation();
+    let generation = next_generation(store)?;
     let record = RuntimeActivationRecord {
-        schema_version: ACTIVATION_SCHEMA.to_string(),
+        schema_version: RUNTIME_ACTIVATION_SCHEMA_VERSION.to_string(),
         generation,
         version: version.to_string(),
         previous_version,
@@ -314,7 +335,7 @@ fn activation_records(store: &Path) -> Result<Vec<RuntimeActivationRecord>, Stri
 
 fn read_activation(path: &Path) -> Result<RuntimeActivationRecord, String> {
     let record: RuntimeActivationRecord = read_json(path)?;
-    if record.schema_version != ACTIVATION_SCHEMA {
+    if record.schema_version != RUNTIME_ACTIVATION_SCHEMA_VERSION {
         return Err(format!(
             "unsupported runtime activation schema in {}",
             path.display()
@@ -335,6 +356,7 @@ fn verify_payload(
     root: &Path,
     expected_platform: Option<Platform>,
 ) -> Result<RuntimePayloadManifest, String> {
+    reject_symlink(root, "runtime payload root")?;
     let path = root.join(PAYLOAD_MANIFEST);
     let manifest: RuntimePayloadManifest = read_json(&path)?;
     if manifest.schema_version != PAYLOAD_SCHEMA {
@@ -405,6 +427,49 @@ fn verify_installed_payload(
         }
     }
     Ok(manifest)
+}
+
+pub(crate) fn runtime_payload_content_digest_in(
+    root: &Path,
+    platform: Platform,
+) -> Result<String, String> {
+    let manifest = verify_installed_payload(root, platform)?;
+    let mut files = manifest.files;
+    files.sort_by(|left, right| left.path.cmp(&right.path));
+    let mut digest = Sha256::new();
+    digest.update(PAYLOAD_SCHEMA.as_bytes());
+    digest.update([0]);
+    digest.update(platform.as_str().as_bytes());
+    digest.update([0]);
+    digest.update(manifest.service_manifest.as_bytes());
+    digest.update([0]);
+    for file in files {
+        digest.update(file.path.as_bytes());
+        digest.update([0]);
+        digest.update(file.sha256.as_bytes());
+        digest.update([u8::from(file.executable)]);
+    }
+    Ok(format!("{:x}", digest.finalize()))
+}
+
+pub(crate) fn verified_runtime_service_launches_in(
+    root: &Path,
+    platform: Platform,
+) -> Result<Vec<RuntimeServiceLaunch>, String> {
+    let manifest = verify_installed_payload(root, platform)?;
+    let service_path = root.join(checked_relative(&manifest.service_manifest)?);
+    let services: ServiceLaunchManifest = read_json(&service_path)?;
+    services
+        .services
+        .into_iter()
+        .map(|entry| {
+            Ok(RuntimeServiceLaunch {
+                id: entry.id,
+                command: root.join(checked_relative(&entry.command.replace("{port}", "5001"))?),
+                cwd: root.join(checked_relative(&entry.cwd.replace("{port}", "5001"))?),
+            })
+        })
+        .collect()
 }
 
 fn validate_service_manifest(root: &Path, path: &Path) -> Result<(), String> {
@@ -620,9 +685,59 @@ fn write_json(path: &Path, value: &impl Serialize) -> Result<(), String> {
         .map_err(|error| format!("failed to sync {}: {error}", path.display()))
 }
 
-fn next_generation() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_nanos().min(u64::MAX as u128) as u64)
+fn next_generation(store: &Path) -> Result<u64, String> {
+    activation_records(store)?
+        .iter()
+        .map(|record| record.generation)
+        .max()
         .unwrap_or(0)
+        .checked_add(1)
+        .ok_or_else(|| "runtime activation generation overflowed".to_string())
+}
+
+fn ensure_store(store: &Path) -> Result<(), String> {
+    reject_symlink(store, "runtime payload store")?;
+    fs::create_dir_all(store)
+        .map_err(|error| format!("failed to create {}: {error}", store.display()))?;
+    for child in ["versions", "staging", "activations"] {
+        let path = store.join(child);
+        reject_symlink(&path, "runtime payload managed directory")?;
+        fs::create_dir_all(&path)
+            .map_err(|error| format!("failed to create {}: {error}", path.display()))?;
+    }
+    Ok(())
+}
+
+fn reject_symlink(path: &Path, label: &str) -> Result<(), String> {
+    if path
+        .symlink_metadata()
+        .is_ok_and(|metadata| metadata.file_type().is_symlink())
+    {
+        return Err(format!("{label} must not be a symlink: {}", path.display()));
+    }
+    Ok(())
+}
+
+struct RuntimeUpdateLock {
+    path: PathBuf,
+}
+
+impl RuntimeUpdateLock {
+    fn acquire(store: &Path) -> Result<Self, String> {
+        let path = store.join(".update.lock");
+        let mut file = OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&path)
+            .map_err(|error| format!("runtime payload update lock is unavailable: {error}"))?;
+        writeln!(file, "pid={}", std::process::id())
+            .map_err(|error| format!("failed to write runtime payload update lock: {error}"))?;
+        Ok(Self { path })
+    }
+}
+
+impl Drop for RuntimeUpdateLock {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
 }

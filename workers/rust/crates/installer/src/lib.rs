@@ -34,6 +34,8 @@ mod remote_deployment_replay;
 mod remote_host_trust;
 mod remote_ssh_fixture;
 mod runtime_payload;
+mod runtime_payload_qualification;
+mod runtime_payload_qualification_validation;
 #[cfg(test)]
 mod tests;
 mod update_catalog;

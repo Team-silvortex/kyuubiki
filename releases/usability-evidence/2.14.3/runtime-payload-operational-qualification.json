@@ -1,0 +1,157 @@
+{
+  "schema_version": "kyuubiki.runtime-payload-qualification/v1",
+  "status": "pass",
+  "journey": "sealed-installed-runtime-payload-upgrade-and-rollback",
+  "execution_host_role": "remote-linux-qualification-host",
+  "platform": "linux",
+  "first_version": "2.14.2",
+  "second_version": "2.14.3",
+  "first_activation": {
+    "schema_version": "kyuubiki.runtime-activation/v1",
+    "generation": 1,
+    "version": "2.14.2",
+    "previous_version": null,
+    "relative_path": "versions/2.14.2",
+    "platform": "linux"
+  },
+  "second_activation": {
+    "schema_version": "kyuubiki.runtime-activation/v1",
+    "generation": 2,
+    "version": "2.14.3",
+    "previous_version": "2.14.2",
+    "relative_path": "versions/2.14.3",
+    "platform": "linux"
+  },
+  "rollback_activation": {
+    "schema_version": "kyuubiki.runtime-activation/v1",
+    "generation": 3,
+    "version": "2.14.2",
+    "previous_version": "2.14.3",
+    "relative_path": "versions/2.14.2",
+    "platform": "linux"
+  },
+  "active_after_upgrade": "2.14.3",
+  "active_after_rollback": "2.14.2",
+  "installed_versions": [
+    "2.14.2",
+    "2.14.3"
+  ],
+  "first_payload_sha256": "4678dffcc2f4327d270cd7295c7a98b5345ed935bbfbd849934610924869aba5",
+  "second_payload_sha256": "9317ee26a3facc99d0f6499c2a4501aad6a8dc343e0c428d4a5d56fa61781dee",
+  "rollback_payload_sha256": "4678dffcc2f4327d270cd7295c7a98b5345ed935bbfbd849934610924869aba5",
+  "probes": [
+    {
+      "phase": "initial-install",
+      "version": "2.14.2",
+      "service_id": "agent",
+      "success": true,
+      "job_id_observed": true
+    },
+    {
+      "phase": "initial-install",
+      "version": "2.14.2",
+      "service_id": "orchestrator",
+      "success": true,
+      "job_id_observed": true
+    },
+    {
+      "phase": "initial-install",
+      "version": "2.14.2",
+      "service_id": "frontend",
+      "success": true,
+      "job_id_observed": true
+    },
+    {
+      "phase": "upgraded-install",
+      "version": "2.14.3",
+      "service_id": "agent",
+      "success": true,
+      "job_id_observed": true
+    },
+    {
+      "phase": "upgraded-install",
+      "version": "2.14.3",
+      "service_id": "orchestrator",
+      "success": true,
+      "job_id_observed": true
+    },
+    {
+      "phase": "upgraded-install",
+      "version": "2.14.3",
+      "service_id": "frontend",
+      "success": true,
+      "job_id_observed": true
+    },
+    {
+      "phase": "rollback",
+      "version": "2.14.2",
+      "service_id": "agent",
+      "success": true,
+      "job_id_observed": true
+    },
+    {
+      "phase": "rollback",
+      "version": "2.14.2",
+      "service_id": "orchestrator",
+      "success": true,
+      "job_id_observed": true
+    },
+    {
+      "phase": "rollback",
+      "version": "2.14.2",
+      "service_id": "frontend",
+      "success": true,
+      "job_id_observed": true
+    }
+  ],
+  "checks": [
+    {
+      "id": "initial_activation",
+      "ok": true
+    },
+    {
+      "id": "upgrade_activation",
+      "ok": true
+    },
+    {
+      "id": "rollback_activation",
+      "ok": true
+    },
+    {
+      "id": "active_after_upgrade",
+      "ok": true
+    },
+    {
+      "id": "active_after_rollback",
+      "ok": true
+    },
+    {
+      "id": "monotonic_generations",
+      "ok": true
+    },
+    {
+      "id": "payload_changed",
+      "ok": true
+    },
+    {
+      "id": "rollback_payload_restored",
+      "ok": true
+    },
+    {
+      "id": "all_service_entries_executed",
+      "ok": true
+    },
+    {
+      "id": "immutable_versions_verified",
+      "ok": true
+    },
+    {
+      "id": "update_lock_clean",
+      "ok": true
+    },
+    {
+      "id": "staging_clean",
+      "ok": true
+    }
+  ]
+}

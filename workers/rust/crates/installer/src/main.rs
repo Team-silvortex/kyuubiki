@@ -13,10 +13,11 @@ use kyuubiki_installer::{
     prepare_agent_update_package, prepare_layout, prepare_staged_update, print_help,
     remote_deployment_roadmap, repair_installation, rollback_agent_update,
     rollback_runtime_payload, run_agent_solver_operational_qualification,
-    run_agent_update_qualification, run_doctor, runtime_payload_status, seal_agent_update_package,
-    seal_runtime_payload, stage_release, unified_update_plan, unified_update_preview,
-    validate_env_file, write_agent_solver_operational_qualification_report,
-    write_agent_update_qualification_report, write_operator_package_preflight_outcome,
+    run_agent_update_qualification, run_doctor, run_runtime_payload_qualification,
+    runtime_payload_status, seal_agent_update_package, seal_runtime_payload, stage_release,
+    unified_update_plan, unified_update_preview, validate_env_file,
+    write_agent_solver_operational_qualification_report, write_agent_update_qualification_report,
+    write_operator_package_preflight_outcome, write_runtime_payload_qualification_report,
 };
 
 fn main() {
@@ -165,6 +166,50 @@ fn main() {
                         write_agent_solver_operational_qualification_report(&report, &path)?;
                         Ok(format!(
                             "agent solver operational qualification passed: {}",
+                            path.display()
+                        ))
+                    }
+                    None => {
+                        serde_json::to_string_pretty(&report).map_err(|error| error.to_string())
+                    }
+                }),
+            )
+        }
+        "qualify-runtime-payload" => {
+            let Some(first_binary) = args.next() else {
+                eprintln!("missing first binary path for qualify-runtime-payload");
+                std::process::exit(1);
+            };
+            let Some(second_binary) = args.next() else {
+                eprintln!("missing second binary path for qualify-runtime-payload");
+                std::process::exit(1);
+            };
+            let Some(work_root) = args.next() else {
+                eprintln!("missing work root for qualify-runtime-payload");
+                std::process::exit(1);
+            };
+            let Some(first_version) = args.next() else {
+                eprintln!("missing first version for qualify-runtime-payload");
+                std::process::exit(1);
+            };
+            let Some(second_version) = args.next() else {
+                eprintln!("missing second version for qualify-runtime-payload");
+                std::process::exit(1);
+            };
+            let output = args.next().map(PathBuf::from);
+            exit_on_err(
+                run_runtime_payload_qualification(
+                    &PathBuf::from(first_binary),
+                    &PathBuf::from(second_binary),
+                    &PathBuf::from(work_root),
+                    &first_version,
+                    &second_version,
+                )
+                .and_then(|report| match output {
+                    Some(path) => {
+                        write_runtime_payload_qualification_report(&report, &path)?;
+                        Ok(format!(
+                            "runtime payload qualification passed: {}",
                             path.display()
                         ))
                     }

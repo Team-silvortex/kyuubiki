@@ -130,7 +130,14 @@ sprawl:
   digest to equal the original payload digest, so a historical report that only
   restored the old version label is no longer accepted. The refreshed
   `2.14.2 -> 2.14.3 -> 2.14.2` report closes the remote Linux Agent sub-tier;
-  full desktop/runtime cross-platform upgrade and rollback remains open
+  full desktop cross-platform upgrade and rollback remains open
+- Installer-managed Runtime payload qualification now seals two distinct native
+  payloads, installs and activates both through the immutable version store,
+  executes the declared Agent, Orchestra, and frontend service entries before
+  and after upgrade and again after rollback, and requires the aggregate
+  content digest to return exactly to the initial value. The retained remote
+  Linux report closes only the Runtime payload Linux sub-tier; packaged macOS,
+  Linux, and Windows desktop update journeys remain open
 - `create-open-project` now executes a real native bundle round trip. Hub and
   `kyuubiki project create|inspect|validate|normalize|pack|unpack|diff` share
   `workers/rust/crates/project-bundle` instead of maintaining separate storage

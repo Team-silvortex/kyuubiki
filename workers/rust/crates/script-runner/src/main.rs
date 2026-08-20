@@ -115,6 +115,7 @@ mod remote_material_stage_health;
 mod remote_material_summary;
 mod remote_ssh_fixture;
 mod runtime_commands;
+mod runtime_payload_operational_qualification;
 mod runtime_recovery_fault_injection;
 mod rust_line_counts;
 mod standard_benchmark_index;
@@ -370,6 +371,12 @@ fn run() -> RunnerResult<u8> {
         }
         "qualify-agent-update-operational-remote" => {
             agent_update_operational_qualification::run_qualify_agent_update_operational_remote(
+                &paths.root,
+                rest,
+            )
+        }
+        "qualify-runtime-payload-operational-remote" => {
+            runtime_payload_operational_qualification::run_qualify_runtime_payload_operational_remote(
                 &paths.root,
                 rest,
             )

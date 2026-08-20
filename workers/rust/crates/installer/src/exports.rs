@@ -97,8 +97,17 @@ pub use crate::remote_ssh_fixture::{
     remote_ssh_fixture_report,
 };
 pub use crate::runtime_payload::{
-    RuntimeActivationRecord, RuntimePayloadStatus, install_runtime_payload,
-    rollback_runtime_payload, runtime_payload_status, seal_runtime_payload,
+    RUNTIME_ACTIVATION_SCHEMA_VERSION, RuntimeActivationRecord, RuntimePayloadStatus,
+    install_runtime_payload, rollback_runtime_payload, runtime_payload_status,
+    seal_runtime_payload,
+};
+pub use crate::runtime_payload_qualification::{
+    RUNTIME_PAYLOAD_QUALIFICATION_SCHEMA_VERSION, RuntimePayloadExecutionProbe,
+    RuntimePayloadQualificationCheck, RuntimePayloadQualificationReport,
+    run_runtime_payload_qualification, write_runtime_payload_qualification_report,
+};
+pub use crate::runtime_payload_qualification_validation::{
+    RuntimePayloadQualificationSummary, validate_runtime_payload_qualification_report,
 };
 pub use crate::update_catalog::{
     StagedUpdateRecord, UnifiedUpdatePlan, UnifiedUpdatePreview, UnifiedUpdatePreviewStep,

@@ -68,6 +68,8 @@ help:
 	@echo "  make check-agent-solver-operational-qualification Recheck retained remote Linux Agent solver operational evidence"
 	@echo "  make qualify-agent-update-operational-remote Exercise Installer-managed Agent upgrade and payload rollback on remote Linux"
 	@echo "  make check-agent-update-operational-qualification Recheck retained remote Linux Agent update and rollback evidence"
+	@echo "  make qualify-runtime-payload-operational-remote Exercise sealed Runtime payload upgrade, service probes, and rollback on remote Linux"
+	@echo "  make check-runtime-payload-operational-qualification Recheck retained remote Linux Runtime payload evidence"
 	@echo "  make qualify-orchestra-workflow-operational-remote Run and retain the remote distributed Orchestra workflow restart journey"
 	@echo "  make check-orchestra-workflow-operational-qualification Recheck retained remote Orchestra workflow operational evidence"
 	@echo "  make qualify-persistence-provenance Qualify Installer, Orchestra, and deployment persistence provenance"

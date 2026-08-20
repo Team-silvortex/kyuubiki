@@ -77,6 +77,18 @@ and is rechecked by `make check-agent-update-operational-qualification`. The
 parent release tier remains open until desktop/runtime update rollback is
 proven across the required packaged platforms.
 
+The Runtime payload portion now also has remote Linux operational evidence.
+Installer seals distinct Debug and Release native payloads, installs them into
+an isolated immutable store, executes all three declared service entries during
+initial install, upgrade, and rollback, and verifies that the rollback content
+digest exactly restores the first payload. Runtime activation now uses a
+managed update lock and monotonic history-derived generations rather than wall
+clock values. The accepted report is
+`releases/usability-evidence/2.14.3/runtime-payload-operational-qualification.json`
+and is rechecked by `make check-runtime-payload-operational-qualification`.
+This closes only `upgrade_and_rollback/runtime-payload-remote-linux`; packaged
+desktop update and rollback on macOS, Linux, and Windows remain open.
+
 The former P0 runtime API tie now meets its `verified` target. The current-line
 protocol report executes 101 tests, proves 55 advertised methods have 55 unique
 wire round trips, rejects unknown methods and malformed envelope states, and

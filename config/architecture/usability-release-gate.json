@@ -15,7 +15,8 @@
       "fault_injection_and_recovery/agent-watchdog-stale-timeout",
       "fault_injection_and_recovery/orchestra-agent-process-loss",
       "fault_injection_and_recovery/installer-journal-replay",
-      "upgrade_and_rollback/agent-remote-linux"
+      "upgrade_and_rollback/agent-remote-linux",
+      "upgrade_and_rollback/runtime-payload-remote-linux"
     ],
     "unclosed_release_tiers": [
       "packaged_desktop_round_trip",

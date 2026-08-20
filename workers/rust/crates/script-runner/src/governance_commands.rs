@@ -14,8 +14,9 @@ use crate::{
     operator_task_ir_contract, orchestra_recovery_fault_injection,
     orchestra_workflow_operational_qualification, persistence_provenance_qualification,
     project_organization_audit, protocol_validation_qualification,
-    runtime_recovery_fault_injection, system_security_qualification, test_coverage_posture,
-    toolchain_contract, ui_automation_contract, update_catalog_docs, usability_release_gate,
+    runtime_payload_operational_qualification, runtime_recovery_fault_injection,
+    system_security_qualification, test_coverage_posture, toolchain_contract,
+    ui_automation_contract, update_catalog_docs, usability_release_gate,
     verification_evidence_surface, workbench_language_pack_catalog,
     workbench_validation_qualification, workflow_dataset_contract,
     workflow_metric_resolver_contract,
@@ -187,6 +188,11 @@ pub(crate) fn run_governance_command(
         }
         "check-agent-update-operational-qualification" => {
             agent_update_operational_qualification::run_check_agent_update_operational_qualification(
+                root, args,
+            )
+        }
+        "check-runtime-payload-operational-qualification" => {
+            runtime_payload_operational_qualification::run_check_runtime_payload_operational_qualification(
                 root, args,
             )
         }

@@ -3,7 +3,7 @@
 .PHONY: test-hub-gui test-installer-gui test-workbench-gui
 .PHONY: test-integration test-integration-api test-integration-cluster
 .PHONY: test-integration-direct-mesh test-integration-desktop-gui qualify-desktop-ui-validation qualify-protocol-validation qualify-contracts-validation qualify-workbench-validation
-.PHONY: qualify-headless-sdk-validation qualify-runtime-api-verification qualify-benchmark qualify-headless-sdk-operational-remote check-headless-sdk-operational-qualification qualify-desktop-deployment-update qualify-system-security qualify-agent-solver-operational-remote qualify-agent-update-operational-remote check-agent-update-operational-qualification qualify-orchestra-workflow-operational-remote qualify-persistence-provenance
+.PHONY: qualify-headless-sdk-validation qualify-runtime-api-verification qualify-benchmark qualify-headless-sdk-operational-remote check-headless-sdk-operational-qualification qualify-desktop-deployment-update qualify-system-security qualify-agent-solver-operational-remote qualify-agent-update-operational-remote check-agent-update-operational-qualification qualify-runtime-payload-operational-remote check-runtime-payload-operational-qualification qualify-orchestra-workflow-operational-remote qualify-persistence-provenance
 .PHONY: test-integration-benchmark-profile-index
 .PHONY: test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-central-database-smoke remote-central-database-smoke
 .PHONY: test-integration-direct-mesh-docker-compare
@@ -95,6 +95,12 @@ qualify-agent-update-operational-remote:
 
 check-agent-update-operational-qualification:
 	@$(ENTRYPOINT) check-agent-update-operational-qualification $${REPORT:+--verify-report $${REPORT}} --require-remote-linux
+
+qualify-runtime-payload-operational-remote:
+	@$(ENTRYPOINT) qualify-runtime-payload-operational-remote --host $${REMOTE:-kyuubiki-lab} $${OUTPUT:+--out $${OUTPUT}}
+
+check-runtime-payload-operational-qualification:
+	@$(ENTRYPOINT) check-runtime-payload-operational-qualification $${REPORT:+--verify-report $${REPORT}} --require-remote-linux
 
 qualify-orchestra-workflow-operational-remote:
 	@KYUUBIKI_LAB_HOST=$${REMOTE:-kyuubiki-lab} OUTPUT_SLUG=orchestra-workflow-operational LOCAL_OUTPUT_DIR=tmp/orchestra-workflow-operational REMOTE_OUTPUT_DIR=tmp/orchestra-workflow-operational $(ENTRYPOINT) workflow-mesh-regression-remote

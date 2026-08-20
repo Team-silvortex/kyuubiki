@@ -3,7 +3,8 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::runtime_payload::{
-    install_runtime_payload_into, rollback_runtime_payload_in, runtime_payload_status_in,
+    install_runtime_payload_into, rollback_runtime_payload_in, runtime_payload_content_digest_in,
+    runtime_payload_status_in,
 };
 use crate::{Platform, seal_runtime_payload};
 
@@ -33,7 +34,7 @@ fn write_payload(root: &Path, version: &str) {
         "services/frontend/server.js",
         "runtimes/macos/node/bin/node",
     ] {
-        fs::write(root.join(relative), relative).unwrap();
+        fs::write(root.join(relative), format!("{relative}:{version}")).unwrap();
     }
     fs::write(
         root.join("manifests/service-launch.json"),
@@ -61,15 +62,108 @@ fn installs_activates_and_rolls_back_versioned_payloads() {
 
     let active = install_runtime_payload_into(&first, &store, Platform::Macos).unwrap();
     assert_eq!(active.version, "2.7.0");
+    assert_eq!(active.generation, 1);
     let active = install_runtime_payload_into(&second, &store, Platform::Macos).unwrap();
     assert_eq!(active.previous_version.as_deref(), Some("2.7.0"));
+    assert_eq!(active.generation, 2);
+
+    let first_digest =
+        runtime_payload_content_digest_in(&store.join("versions/2.7.0"), Platform::Macos).unwrap();
+    let second_digest =
+        runtime_payload_content_digest_in(&store.join("versions/2.7.1"), Platform::Macos).unwrap();
+    assert_ne!(first_digest, second_digest);
 
     let rolled_back = rollback_runtime_payload_in(&store, Platform::Macos).unwrap();
     assert_eq!(rolled_back.version, "2.7.0");
     assert_eq!(rolled_back.previous_version.as_deref(), Some("2.7.1"));
+    assert_eq!(rolled_back.generation, 3);
     let status = runtime_payload_status_in(&store).unwrap();
     assert_eq!(status.active_version.as_deref(), Some("2.7.0"));
     assert_eq!(status.installed_versions, ["2.7.0", "2.7.1"]);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn update_lock_blocks_parallel_runtime_activation() {
+    let root = fixture_root("update-lock");
+    let payload = root.join("payload");
+    let store = root.join("store");
+    write_payload(&payload, "2.7.0");
+    fs::create_dir_all(&store).unwrap();
+    fs::write(store.join(".update.lock"), "pid=other").unwrap();
+
+    let error = install_runtime_payload_into(&payload, &store, Platform::Macos).unwrap_err();
+    assert!(error.contains("update lock is unavailable"), "{error}");
+    assert!(!store.join("versions/2.7.0").exists());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn rejects_an_existing_version_with_rewritten_manifest_identity() {
+    let root = fixture_root("manifest-identity");
+    let payload = root.join("payload");
+    let store = root.join("store");
+    write_payload(&payload, "2.7.0");
+    install_runtime_payload_into(&payload, &store, Platform::Macos).unwrap();
+    let installed_manifest = store.join("versions/2.7.0/manifests/runtime-payload.json");
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&fs::read(&installed_manifest).unwrap()).unwrap();
+    value["version"] = serde_json::Value::String("2.7.9".to_string());
+    fs::write(
+        &installed_manifest,
+        serde_json::to_vec_pretty(&value).unwrap(),
+    )
+    .unwrap();
+
+    let error = install_runtime_payload_into(&payload, &store, Platform::Macos).unwrap_err();
+    assert!(error.contains("different content"), "{error}");
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn rollback_rejects_a_rewritten_runtime_identity() {
+    let root = fixture_root("rollback-identity");
+    let first = root.join("first");
+    let second = root.join("second");
+    let store = root.join("store");
+    write_payload(&first, "2.7.0");
+    write_payload(&second, "2.7.1");
+    install_runtime_payload_into(&first, &store, Platform::Macos).unwrap();
+    install_runtime_payload_into(&second, &store, Platform::Macos).unwrap();
+    let installed_manifest = store.join("versions/2.7.0/manifests/runtime-payload.json");
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&fs::read(&installed_manifest).unwrap()).unwrap();
+    value["version"] = serde_json::Value::String("2.7.9".to_string());
+    fs::write(
+        &installed_manifest,
+        serde_json::to_vec_pretty(&value).unwrap(),
+    )
+    .unwrap();
+
+    let error = rollback_runtime_payload_in(&store, Platform::Macos).unwrap_err();
+    assert!(error.contains("activation identity mismatch"), "{error}");
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn rejects_a_symlinked_runtime_version_target() {
+    use std::os::unix::fs::symlink;
+
+    let root = fixture_root("symlink-target");
+    let payload = root.join("payload");
+    let store = root.join("store");
+    let outside = root.join("outside");
+    write_payload(&payload, "2.7.0");
+    fs::create_dir_all(store.join("versions")).unwrap();
+    fs::create_dir_all(&outside).unwrap();
+    symlink(&outside, store.join("versions/2.7.0")).unwrap();
+
+    let error = install_runtime_payload_into(&payload, &store, Platform::Macos).unwrap_err();
+    assert!(
+        error.contains("version target must not be a symlink"),
+        "{error}"
+    );
     fs::remove_dir_all(root).unwrap();
 }
 

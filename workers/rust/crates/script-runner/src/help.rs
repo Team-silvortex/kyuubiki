@@ -111,6 +111,8 @@ lab remote-ssh-fixture\n  \
   qualify-agent-solver-operational-remote\n  \
   check-agent-update-operational-qualification\n  \
   qualify-agent-update-operational-remote\n  \
+  check-runtime-payload-operational-qualification\n  \
+  qualify-runtime-payload-operational-remote\n  \
   qualify-headless-sdk-operational-remote\n  \
   check-headless-sdk-validation-qualification\n  \
   check-headless-sdk-operational-qualification\n  \
