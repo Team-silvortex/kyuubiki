@@ -3,7 +3,7 @@ use crate::agent_update_payload::{
     AgentUpdateActivationRecord, active_agent_binary_in, agent_update_status_in,
     install_agent_update_package_into, prepare_agent_update_package, rollback_agent_update_in,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -11,7 +11,8 @@ use std::process::Command;
 pub const AGENT_UPDATE_QUALIFICATION_SCHEMA_VERSION: &str =
     "kyuubiki.agent-update-qualification/v1";
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct AgentUpdateQualificationReport {
     pub schema_version: String,
     pub status: String,
@@ -30,7 +31,8 @@ pub struct AgentUpdateQualificationReport {
     pub checks: Vec<AgentUpdateQualificationCheck>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct AgentUpdateExecutionProbe {
     pub phase: String,
     pub version: String,
@@ -38,7 +40,8 @@ pub struct AgentUpdateExecutionProbe {
     pub job_id_observed: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct AgentUpdateQualificationCheck {
     pub id: String,
     pub ok: bool,
@@ -119,6 +122,15 @@ pub fn write_agent_update_qualification_report(
     report: &AgentUpdateQualificationReport,
     path: &Path,
 ) -> Result<(), String> {
+    crate::agent_update_qualification_validation::validate_agent_update_qualification_report(
+        report,
+    )
+    .map_err(|errors| {
+        format!(
+            "agent update qualification report is invalid: {}",
+            errors.join("; ")
+        )
+    })?;
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
             .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
@@ -222,9 +234,21 @@ fn qualification_checks(
             "payload_changed",
             first.entrypoint_sha256 != second.entrypoint_sha256,
         ),
+        check(
+            "rollback_payload_restored",
+            rollback_payload_restored(
+                &first.entrypoint_sha256,
+                &second.entrypoint_sha256,
+                &rollback.entrypoint_sha256,
+            ),
+        ),
         check("update_lock_clean", !store.join(".update.lock").exists()),
         check("staging_clean", directory_is_empty(&store.join("staging"))),
     ]
+}
+
+fn rollback_payload_restored(first: &str, second: &str, rollback: &str) -> bool {
+    first != second && rollback == first
 }
 
 fn directory_is_empty(path: &Path) -> bool {
@@ -237,5 +261,17 @@ fn check(id: &str, ok: bool) -> AgentUpdateQualificationCheck {
     AgentUpdateQualificationCheck {
         id: id.to_string(),
         ok,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::rollback_payload_restored;
+
+    #[test]
+    fn rollback_must_restore_the_original_payload_digest() {
+        assert!(rollback_payload_restored("first", "second", "first"));
+        assert!(!rollback_payload_restored("first", "second", "second"));
+        assert!(!rollback_payload_restored("same", "same", "same"));
     }
 }

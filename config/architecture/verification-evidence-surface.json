@@ -15,6 +15,7 @@
       "./scripts/kyuubiki check-workbench-validation-qualification",
       "./scripts/kyuubiki check-system-security-qualification",
       "./scripts/kyuubiki check-agent-solver-operational-qualification",
+      "./scripts/kyuubiki check-agent-update-operational-qualification",
       "./scripts/kyuubiki check-benchmark-qualification",
       "./scripts/kyuubiki build-regression-gate-report",
       "./scripts/kyuubiki build-central-readiness-report",
@@ -155,11 +156,18 @@
     "evidence_sources": [
       "workers/rust/crates/installer/src/headless_surface.rs",
       "workers/rust/crates/installer/src/update_catalog.rs",
-      "workers/rust/crates/installer/src/remote_deployment_plan.rs"
+      "workers/rust/crates/installer/src/remote_deployment_plan.rs",
+      "schemas/agent-update-qualification-report.schema.json",
+      "workers/rust/crates/installer/src/agent_update_qualification.rs",
+      "workers/rust/crates/installer/src/agent_update_qualification_validation.rs",
+      "workers/rust/crates/script-runner/src/agent_update_operational_qualification.rs",
+      "releases/usability-evidence/2.14.3/agent-update-operational-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.installer-headless-surface/v1",
-      "kyuubiki.installer-runtime-api/v1"
+      "kyuubiki.installer-runtime-api/v1",
+      "kyuubiki.agent-update-qualification/v1",
+      "rollback_payload_restored"
     ]
   },
   "sdk_headless": {

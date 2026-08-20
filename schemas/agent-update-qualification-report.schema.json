@@ -76,7 +76,21 @@
     },
     "checks": {
       "type": "array",
-      "minItems": 10,
+      "minItems": 11,
+      "maxItems": 11,
+      "allOf": [
+        { "contains": { "properties": { "id": { "const": "initial_activation" } } } },
+        { "contains": { "properties": { "id": { "const": "upgrade_activation" } } } },
+        { "contains": { "properties": { "id": { "const": "rollback_activation" } } } },
+        { "contains": { "properties": { "id": { "const": "active_after_upgrade" } } } },
+        { "contains": { "properties": { "id": { "const": "active_after_rollback" } } } },
+        { "contains": { "properties": { "id": { "const": "atomic_generations" } } } },
+        { "contains": { "properties": { "id": { "const": "rollback_generation" } } } },
+        { "contains": { "properties": { "id": { "const": "payload_changed" } } } },
+        { "contains": { "properties": { "id": { "const": "rollback_payload_restored" } } } },
+        { "contains": { "properties": { "id": { "const": "update_lock_clean" } } } },
+        { "contains": { "properties": { "id": { "const": "staging_clean" } } } }
+      ],
       "items": {
         "$ref": "#/$defs/check"
       }
@@ -165,6 +179,7 @@
             "atomic_generations",
             "rollback_generation",
             "payload_changed",
+            "rollback_payload_restored",
             "update_lock_clean",
             "staging_clean"
           ]

@@ -563,6 +563,7 @@ architecture-check:
 	@$(MAKE) check-workbench-validation-qualification
 	@$(MAKE) check-system-security-qualification
 	@$(MAKE) check-agent-solver-operational-qualification
+	@$(MAKE) check-agent-update-operational-qualification
 	@$(MAKE) check-persistence-provenance-qualification
 	@$(MAKE) check-usability-release-gate
 	@$(MAKE) audit-dependencies

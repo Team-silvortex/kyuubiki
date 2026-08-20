@@ -1,0 +1,108 @@
+{
+  "schema_version": "kyuubiki.agent-update-qualification/v1",
+  "status": "pass",
+  "journey": "packaged-installed-agent-update-and-rollback",
+  "execution_host_role": "remote-linux-qualification-host",
+  "platform": "linux",
+  "first_version": "2.14.2",
+  "second_version": "2.14.3",
+  "first_activation": {
+    "schema_version": "kyuubiki.agent-update-activation/v1",
+    "generation": 1,
+    "version": "2.14.2",
+    "previous_version": null,
+    "relative_path": "versions/2.14.2",
+    "platform": "linux",
+    "entrypoint_sha256": "febec6907b2082be179cdeb1551be2d8d826b89dd58fde6822929ab58e33a4e3"
+  },
+  "second_activation": {
+    "schema_version": "kyuubiki.agent-update-activation/v1",
+    "generation": 2,
+    "version": "2.14.3",
+    "previous_version": "2.14.2",
+    "relative_path": "versions/2.14.3",
+    "platform": "linux",
+    "entrypoint_sha256": "cde9d7d12c036ccf882c494b2bff2041d7b6aea0e631bfad61c41e48c52ea42e"
+  },
+  "rollback_activation": {
+    "schema_version": "kyuubiki.agent-update-activation/v1",
+    "generation": 3,
+    "version": "2.14.2",
+    "previous_version": "2.14.3",
+    "relative_path": "versions/2.14.2",
+    "platform": "linux",
+    "entrypoint_sha256": "febec6907b2082be179cdeb1551be2d8d826b89dd58fde6822929ab58e33a4e3"
+  },
+  "active_after_upgrade": "2.14.3",
+  "active_after_rollback": "2.14.2",
+  "installed_versions": [
+    "2.14.2",
+    "2.14.3"
+  ],
+  "probes": [
+    {
+      "phase": "initial-install",
+      "version": "2.14.2",
+      "success": true,
+      "job_id_observed": true
+    },
+    {
+      "phase": "upgraded-install",
+      "version": "2.14.3",
+      "success": true,
+      "job_id_observed": true
+    },
+    {
+      "phase": "rollback",
+      "version": "2.14.2",
+      "success": true,
+      "job_id_observed": true
+    }
+  ],
+  "checks": [
+    {
+      "id": "initial_activation",
+      "ok": true
+    },
+    {
+      "id": "upgrade_activation",
+      "ok": true
+    },
+    {
+      "id": "rollback_activation",
+      "ok": true
+    },
+    {
+      "id": "active_after_upgrade",
+      "ok": true
+    },
+    {
+      "id": "active_after_rollback",
+      "ok": true
+    },
+    {
+      "id": "atomic_generations",
+      "ok": true
+    },
+    {
+      "id": "rollback_generation",
+      "ok": true
+    },
+    {
+      "id": "payload_changed",
+      "ok": true
+    },
+    {
+      "id": "rollback_payload_restored",
+      "ok": true
+    },
+    {
+      "id": "update_lock_clean",
+      "ok": true
+    },
+    {
+      "id": "staging_clean",
+      "ok": true
+    }
+  ]
+}

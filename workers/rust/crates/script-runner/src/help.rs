@@ -109,6 +109,8 @@ lab remote-ssh-fixture\n  \
   check-system-security-qualification\n  \
   check-agent-solver-operational-qualification\n  \
   qualify-agent-solver-operational-remote\n  \
+  check-agent-update-operational-qualification\n  \
+  qualify-agent-update-operational-remote\n  \
   qualify-headless-sdk-operational-remote\n  \
   check-headless-sdk-validation-qualification\n  \
   check-headless-sdk-operational-qualification\n  \

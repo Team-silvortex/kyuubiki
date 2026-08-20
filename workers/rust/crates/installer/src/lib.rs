@@ -9,6 +9,7 @@ mod agent_solver_operational;
 mod agent_solver_operational_validation;
 mod agent_update_payload;
 mod agent_update_qualification;
+mod agent_update_qualification_validation;
 mod cli_help;
 mod component_integrity;
 mod credential_storage;

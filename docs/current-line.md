@@ -124,6 +124,13 @@ sprawl:
   partial atomic commit, resumes from the first incomplete step without
   replaying the completed prefix, and rejects digest tampering; only remote host
   kill/rejoin remains open in this distributed recovery tier
+- Installer-managed Agent update qualification now runs an isolated remote
+  Linux install, changed-payload upgrade, executable probe, rollback, and second
+  executable probe. Its semantic validator requires the rollback activation
+  digest to equal the original payload digest, so a historical report that only
+  restored the old version label is no longer accepted. The refreshed
+  `2.14.2 -> 2.14.3 -> 2.14.2` report closes the remote Linux Agent sub-tier;
+  full desktop/runtime cross-platform upgrade and rollback remains open
 - `create-open-project` now executes a real native bundle round trip. Hub and
   `kyuubiki project create|inspect|validate|normalize|pack|unpack|diff` share
   `workers/rust/crates/project-bundle` instead of maintaining separate storage

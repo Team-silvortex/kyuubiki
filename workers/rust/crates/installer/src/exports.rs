@@ -19,6 +19,9 @@ pub use crate::agent_update_qualification::{
     AgentUpdateQualificationCheck, AgentUpdateQualificationReport, run_agent_update_qualification,
     write_agent_update_qualification_report,
 };
+pub use crate::agent_update_qualification_validation::{
+    AgentUpdateQualificationSummary, validate_agent_update_qualification_report,
+};
 pub use crate::cli_help::print_help;
 pub(crate) use crate::component_integrity::parse_component_specs;
 pub use crate::component_integrity::{

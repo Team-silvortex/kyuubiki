@@ -64,6 +64,19 @@ by `make check-benchmark-qualification`. Historical scale numbers remain tied
 to their prior Linux hosts; the report explicitly does not make a
 hardware-independent performance guarantee.
 
+The Agent portion of `upgrade_and_rollback` now has fresh operational evidence.
+The native controller builds distinct debug and release payloads on the remote
+Linux qualification host, delegates installation and activation to Installer,
+runs the Agent before and after the update, rolls back, runs it again, verifies
+the original SHA-256 payload was restored, retains the report, and removes the
+managed run root. The semantic validator intentionally rejects the older
+`2.12.6` remote report because its rollback version and payload digest disagree.
+The accepted evidence is
+`releases/usability-evidence/2.14.3/agent-update-operational-qualification.json`
+and is rechecked by `make check-agent-update-operational-qualification`. The
+parent release tier remains open until desktop/runtime update rollback is
+proven across the required packaged platforms.
+
 The former P0 runtime API tie now meets its `verified` target. The current-line
 protocol report executes 101 tests, proves 55 advertised methods have 55 unique
 wire round trips, rejects unknown methods and malformed envelope states, and

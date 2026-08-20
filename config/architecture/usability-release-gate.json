@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.usability-release-gate/v1",
-  "baseline_release": "moxi 2.13.x",
+  "baseline_release": "moxi 2.14.x",
   "target_release": "daji 3.0.0",
   "policy": {
     "all_blocking_journeys_must_pass": true,
@@ -14,7 +14,8 @@
       "fault_injection_and_recovery/agent-watchdog-state-machine",
       "fault_injection_and_recovery/agent-watchdog-stale-timeout",
       "fault_injection_and_recovery/orchestra-agent-process-loss",
-      "fault_injection_and_recovery/installer-journal-replay"
+      "fault_injection_and_recovery/installer-journal-replay",
+      "upgrade_and_rollback/agent-remote-linux"
     ],
     "unclosed_release_tiers": [
       "packaged_desktop_round_trip",
