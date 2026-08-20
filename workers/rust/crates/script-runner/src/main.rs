@@ -97,6 +97,7 @@ mod operator_validation;
 mod orchestra_recovery_fault_injection;
 mod orchestra_workflow_operational_qualification;
 mod packaged_desktop_smoke;
+mod persistence_provenance_qualification;
 mod project_cli;
 mod project_organization_audit;
 mod protocol_validation_qualification;

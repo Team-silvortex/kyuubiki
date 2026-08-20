@@ -84,6 +84,11 @@ description = "Enables the runtime_payload_status command."
 commands.allow = ["runtime_payload_status"]
 
 [[permission]]
+identifier = "allow-installer-provenance-status"
+description = "Enables the read-only installer_provenance_status command."
+commands.allow = ["installer_provenance_status"]
+
+[[permission]]
 identifier = "allow-get-global-language-preference"
 description = "Enables the get_global_language_preference command."
 commands.allow = ["get_global_language_preference"]

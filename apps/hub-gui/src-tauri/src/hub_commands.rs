@@ -50,6 +50,9 @@ fn doctor_report() -> Result<TextReportPayload, String> {
 
 #[tauri::command]
 fn guarded_mutation_action(payload: GuardedMutationPayload) -> Result<String, String> {
+    prepare_desktop_provenance_ledger(HUB_GUARDED_MUTATION_AUDIT_FILE).map_err(|error| {
+        format!("guarded Hub action blocked by invalid provenance ledger: {error}")
+    })?;
     let result = match payload.action.as_str() {
         "service_start" => desktop_service_start(resolve_service_mode(payload.mode.as_deref())),
         "service_restart" => desktop_service_restart(resolve_service_mode(payload.mode.as_deref())),
@@ -76,16 +79,20 @@ fn guarded_mutation_action(payload: GuardedMutationPayload) -> Result<String, St
         _ => Err(format!("unsupported guarded mutation action: {}", payload.action)),
     };
 
-    match &result {
-        Ok(message) => {
-            let _ = append_guarded_mutation_audit(&payload, "ok", message);
-        }
-        Err(error) => {
-            let _ = append_guarded_mutation_audit(&payload, "failed", error);
-        }
+    let audit_result = match &result {
+        Ok(message) => append_guarded_mutation_audit(&payload, "ok", message),
+        Err(error) => append_guarded_mutation_audit(&payload, "failed", error),
+    };
+    match (result, audit_result) {
+        (Ok(detail), Ok(())) => Ok(detail),
+        (Err(detail), Ok(())) => Err(detail),
+        (Ok(detail), Err(audit_error)) => Err(format!(
+            "Hub action completed but provenance persistence failed; inspect state before retry: {audit_error}; action detail: {detail}"
+        )),
+        (Err(detail), Err(audit_error)) => Err(format!(
+            "{detail}; failed action provenance could not be persisted: {audit_error}"
+        )),
     }
-
-    result
 }
 
 #[tauri::command]

@@ -1,0 +1,209 @@
+{
+  "$schema": "../../schemas/persistence-provenance-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.persistence-provenance-qualification-contract/v1",
+  "report_schema": "kyuubiki.persistence-provenance-qualification-report/v1",
+  "rounds": 2,
+  "required_modules": [
+    "installer-shell",
+    "orchestra-control-plane",
+    "runtime-installer"
+  ],
+  "suites": [
+    {
+      "id": "installer-shell-audit-chain",
+      "modules": ["installer-shell"],
+      "program": "cargo",
+      "cwd": "workers/rust",
+      "args": [
+        "test",
+        "-p",
+        "kyuubiki-desktop-runtime",
+        "audit_log::tests::",
+        "--no-fail-fast",
+        "--",
+        "--nocapture"
+      ],
+      "source_files": [
+        "workers/rust/crates/desktop-runtime/src/audit_log.rs",
+        "apps/installer-gui/src-tauri/src/main.rs"
+      ],
+      "required_source_text": [
+        "kyuubiki.desktop-audit-record/v1",
+        "desktop audit ledger digest mismatch",
+        "legacy desktop audit migration rejected",
+        "guarded installer action blocked by invalid provenance ledger",
+        "installer action completed but provenance persistence failed"
+      ],
+      "assertions": [
+        {
+          "id": "audit-chain-reloads",
+          "label": "append_and_reload_preserve_hash_chain",
+          "outcome": "acceptance",
+          "boundary": "hash-chain append and reload"
+        },
+        {
+          "id": "audit-chain-rejects-tamper",
+          "label": "tampered_record_is_rejected_before_append",
+          "outcome": "rejection",
+          "boundary": "tampered desktop audit record"
+        },
+        {
+          "id": "audit-path-rejects-escape",
+          "label": "ledger_file_names_cannot_escape_the_preferences_sandbox",
+          "outcome": "rejection",
+          "boundary": "desktop audit path escape"
+        },
+        {
+          "id": "audit-legacy-migrates-cleanly",
+          "label": "legacy_json_lines_migrate_without_residue",
+          "outcome": "acceptance",
+          "boundary": "legacy plain JSON audit migration"
+        }
+      ]
+    },
+    {
+      "id": "installer-shell-ui-closure",
+      "modules": ["installer-shell"],
+      "program": "node",
+      "cwd": ".",
+      "args": [
+        "--test",
+        "tests/integration/desktop-gui-call-chain-contract.test.mjs"
+      ],
+      "source_files": [
+        "apps/installer-gui/ui/app.js",
+        "apps/installer-gui/ui/update-panel.js",
+        "apps/installer-gui/src-tauri/capabilities/main.json",
+        "apps/installer-gui/src-tauri/permissions/installer.toml"
+      ],
+      "required_source_text": [
+        "refresh-installer-provenance",
+        "installer_provenance_status",
+        "allow-installer-provenance-status",
+        "Mutation provenance ledger"
+      ],
+      "assertions": [
+        {
+          "id": "installer-provenance-ipc-closure",
+          "label": "Installer closes every direct UI-to-Tauri IPC chain",
+          "outcome": "acceptance",
+          "boundary": "read-only provenance UI to native command"
+        },
+        {
+          "id": "installer-provenance-action-owner",
+          "label": "Installer routes every declarative action and guarded mutation",
+          "outcome": "acceptance",
+          "boundary": "declarative provenance action ownership"
+        }
+      ]
+    },
+    {
+      "id": "orchestra-persistence-recovery",
+      "modules": ["orchestra-control-plane"],
+      "program": "mix",
+      "cwd": "apps/web",
+      "args": [
+        "test",
+        "--trace",
+        "test/kyuubiki_web/storage/persistence_test.exs",
+        "test/kyuubiki_web/jobs/store_test.exs"
+      ],
+      "source_files": [
+        "apps/web/lib/kyuubiki_web/storage/persistence.ex",
+        "apps/web/test/kyuubiki_web/storage/persistence_test.exs",
+        "apps/web/test/kyuubiki_web/jobs/store_test.exs"
+      ],
+      "required_source_text": [
+        "kyuubiki.persistence-envelope/v1",
+        "kyuubiki.persistence-recovery-receipt/v1",
+        "recovered_previous_generation",
+        "quarantined_and_defaulted"
+      ],
+      "assertions": [
+        {
+          "id": "orchestra-envelope-reloads",
+          "label": "writes and reloads a digest-verified persistence envelope",
+          "outcome": "acceptance",
+          "boundary": "verified local persistence envelope"
+        },
+        {
+          "id": "orchestra-restart-retains-state",
+          "label": "reloads persisted jobs and results after store restart",
+          "outcome": "acceptance",
+          "boundary": "Orchestra process restart"
+        },
+        {
+          "id": "orchestra-recovers-previous",
+          "label": "recovers the previous verified generation after tamper",
+          "outcome": "rejection",
+          "boundary": "tampered primary persistence generation"
+        },
+        {
+          "id": "orchestra-recovers-missing-primary",
+          "label": "recovers when a commit loses the primary generation",
+          "outcome": "rejection",
+          "boundary": "power loss between persistence generation renames"
+        },
+        {
+          "id": "orchestra-quarantines-unrecoverable",
+          "label": "quarantines an unrecoverable tampered generation without cascading failure",
+          "outcome": "rejection",
+          "boundary": "tampered persistence without valid backup"
+        }
+      ]
+    },
+    {
+      "id": "runtime-installer-journal-recovery",
+      "modules": ["runtime-installer"],
+      "program": "cargo",
+      "cwd": "workers/rust",
+      "args": [
+        "test",
+        "-p",
+        "kyuubiki-installer",
+        "remote_deployment_replay",
+        "--no-fail-fast",
+        "--",
+        "--nocapture"
+      ],
+      "source_files": [
+        "workers/rust/crates/installer/src/remote_deployment_journal.rs",
+        "workers/rust/crates/installer/src/remote_deployment_journal_store.rs",
+        "workers/rust/crates/installer/src/remote_deployment_replay.rs",
+        "workers/rust/crates/installer/src/tests/remote_deployment_replay.rs"
+      ],
+      "required_source_text": [
+        "kyuubiki.remote-deployment-journal/v2",
+        "write_remote_deployment_journal_atomic",
+        "prepare_remote_deployment_resume",
+        "power_loss_sidecar_recovered"
+      ],
+      "assertions": [
+        {
+          "id": "installer-journal-reloads",
+          "label": "journal_state_machine_tracks_attempts_and_revision",
+          "outcome": "acceptance",
+          "boundary": "deployment journal state transition"
+        },
+        {
+          "id": "installer-journal-resumes",
+          "label": "replay_marks_running_step_interrupted_without_replaying_completed_prefix",
+          "outcome": "acceptance",
+          "boundary": "interrupted deployment resume"
+        },
+        {
+          "id": "installer-journal-rejects-tamper",
+          "label": "journal_rejects_out_of_order_and_semantically_tampered_steps",
+          "outcome": "rejection",
+          "boundary": "re-signed deployment path mutation"
+        },
+        {
+          "id": "installer-journal-recovers-atomic-commit",
+          "label": "native_fault_injection_recovers_partial_commit_and_rejects_tamper",
+          "outcome": "rejection",
+          "boundary": "partial commit and digest tamper"
+        }
+      ]
+    }
+  ]
+}

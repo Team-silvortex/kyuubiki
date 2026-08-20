@@ -129,7 +129,8 @@ fn append_guarded_mutation_audit(
     status: &str,
     detail: &str,
 ) -> Result<(), String> {
-    let line = json!({
+    let record = json!({
+        "schema_version": "kyuubiki.hub-guarded-mutation-provenance/v1",
         "timestamp": audit_timestamp(),
         "action": payload.action,
         "status": status,
@@ -139,9 +140,8 @@ fn append_guarded_mutation_audit(
         "out": payload.out,
         "left_path": payload.left_path,
         "right_path": payload.right_path,
-    })
-    .to_string();
-    desktop_append_audit_line(HUB_GUARDED_MUTATION_AUDIT_FILE, &line)
+    });
+    append_desktop_provenance_record(HUB_GUARDED_MUTATION_AUDIT_FILE, &record).map(|_| ())
 }
 
 fn resolve_service_mode(mode: Option<&str>) -> ServiceMode {

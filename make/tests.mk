@@ -3,7 +3,7 @@
 .PHONY: test-hub-gui test-installer-gui test-workbench-gui
 .PHONY: test-integration test-integration-api test-integration-cluster
 .PHONY: test-integration-direct-mesh test-integration-desktop-gui qualify-desktop-ui-validation qualify-protocol-validation qualify-contracts-validation qualify-workbench-validation
-.PHONY: qualify-headless-sdk-validation qualify-headless-sdk-operational-remote check-headless-sdk-operational-qualification qualify-desktop-deployment-update qualify-system-security qualify-agent-solver-operational-remote qualify-orchestra-workflow-operational-remote
+.PHONY: qualify-headless-sdk-validation qualify-headless-sdk-operational-remote check-headless-sdk-operational-qualification qualify-desktop-deployment-update qualify-system-security qualify-agent-solver-operational-remote qualify-orchestra-workflow-operational-remote qualify-persistence-provenance
 .PHONY: test-integration-benchmark-profile-index
 .PHONY: test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-central-database-smoke remote-central-database-smoke
 .PHONY: test-integration-direct-mesh-docker-compare
@@ -94,6 +94,9 @@ qualify-orchestra-workflow-operational-remote:
 	@KYUUBIKI_LAB_HOST=$${REMOTE:-kyuubiki-lab} OUTPUT_SLUG=orchestra-workflow-operational LOCAL_OUTPUT_DIR=tmp/orchestra-workflow-operational REMOTE_OUTPUT_DIR=tmp/orchestra-workflow-operational $(ENTRYPOINT) workflow-mesh-regression-remote
 	@$(ENTRYPOINT) check-orchestra-recovery-fault-injection --out tmp/orchestra-workflow-operational/orchestra-process-loss-fault-injection.json
 	@$(ENTRYPOINT) check-orchestra-workflow-operational-qualification --out $${OUTPUT:-releases/usability-evidence/2.14.1/orchestra-workflow-operational-qualification.json}
+
+qualify-persistence-provenance:
+	@$(ENTRYPOINT) check-persistence-provenance-qualification --out $${OUTPUT:-tmp/persistence-provenance-qualification-report.json}
 
 qualify-headless-sdk-validation:
 	@$(ENTRYPOINT) check-headless-sdk-validation-qualification --out $${OUTPUT:-tmp/headless-sdk-validation-qualification-report.json}

@@ -1,5 +1,6 @@
 use kyuubiki_desktop_runtime::{
-    append_desktop_audit_line as desktop_append_audit_line,
+    append_desktop_provenance_record,
+    prepare_desktop_provenance_ledger,
     read_global_language_preference as desktop_read_global_language_preference,
     report_packaged_boot_ready as desktop_report_packaged_boot_ready,
     read_runtime_log as read_shared_runtime_log, service_restart as desktop_service_restart,
@@ -79,19 +80,23 @@ fn append_workbench_guarded_mutation_audit(
     payload: &WorkbenchGuardedMutationPayload,
     status: &str,
     detail: &str,
-) {
+) -> Result<(), String> {
     let record = json!({
+        "schema_version": "kyuubiki.workbench-guarded-mutation-provenance/v1",
         "ts": audit_timestamp(),
         "action": payload.action,
         "mode": payload.mode,
         "status": status,
         "detail": detail,
     });
-    let _ = desktop_append_audit_line(WORKBENCH_GUARDED_MUTATION_AUDIT_FILE, &record.to_string());
+    append_desktop_provenance_record(WORKBENCH_GUARDED_MUTATION_AUDIT_FILE, &record).map(|_| ())
 }
 
 #[tauri::command]
 fn guarded_mutation_action(payload: WorkbenchGuardedMutationPayload) -> Result<String, String> {
+    prepare_desktop_provenance_ledger(WORKBENCH_GUARDED_MUTATION_AUDIT_FILE).map_err(|error| {
+        format!("guarded Workbench action blocked by invalid provenance ledger: {error}")
+    })?;
     let result = match payload.action.as_str() {
         "service_start" => desktop_service_start(parse_service_mode(payload.mode.as_deref())),
         "service_restart" => desktop_service_restart(parse_service_mode(payload.mode.as_deref())),
@@ -99,12 +104,20 @@ fn guarded_mutation_action(payload: WorkbenchGuardedMutationPayload) -> Result<S
         other => Err(format!("unsupported guarded workbench action: {other}")),
     };
 
-    match &result {
+    let audit_result = match &result {
         Ok(detail) => append_workbench_guarded_mutation_audit(&payload, "ok", detail),
         Err(detail) => append_workbench_guarded_mutation_audit(&payload, "failed", detail),
+    };
+    match (result, audit_result) {
+        (Ok(detail), Ok(())) => Ok(detail),
+        (Err(detail), Ok(())) => Err(detail),
+        (Ok(detail), Err(audit_error)) => Err(format!(
+            "Workbench action completed but provenance persistence failed; inspect state before retry: {audit_error}; action detail: {detail}"
+        )),
+        (Err(detail), Err(audit_error)) => Err(format!(
+            "{detail}; failed action provenance could not be persisted: {audit_error}"
+        )),
     }
-
-    result
 }
 
 #[derive(serde::Deserialize)]

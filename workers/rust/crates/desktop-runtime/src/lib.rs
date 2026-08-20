@@ -6,9 +6,15 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+mod audit_log;
 mod runtime_control;
 mod runtime_layout;
 mod runtime_options;
+
+pub use audit_log::{
+    DesktopAuditLedgerStatus, append_desktop_provenance_record, desktop_provenance_status,
+    prepare_desktop_provenance_ledger,
+};
 
 const GLOBAL_LANGUAGE_FILE: &str = "desktop-language.txt";
 const PACKAGED_BOOT_RECEIPT_ENV: &str = "KYUUBIKI_PACKAGED_BOOT_RECEIPT";
@@ -127,22 +133,6 @@ pub fn write_global_language_preference(language: &str) -> Result<String, String
     fs::write(&path, normalized.as_bytes())
         .map_err(|error| format!("failed to write {}: {error}", path.display()))?;
     Ok(normalized.to_string())
-}
-
-pub fn append_desktop_audit_line(file_name: &str, line: &str) -> Result<(), String> {
-    let directory = desktop_preferences_dir()?;
-    fs::create_dir_all(&directory)
-        .map_err(|error| format!("failed to create {}: {error}", directory.display()))?;
-
-    let path = desktop_audit_path(file_name)?;
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&path)
-        .map_err(|error| format!("failed to open {}: {error}", path.display()))?;
-    writeln!(file, "{line}")
-        .map_err(|error| format!("failed to append {}: {error}", path.display()))?;
-    Ok(())
 }
 
 pub fn report_packaged_boot_ready(surface: &str) -> Result<String, String> {

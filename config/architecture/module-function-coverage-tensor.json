@@ -23,7 +23,8 @@
     "config/architecture/module-function-coverage-evidence/runtime-recovery.json",
     "config/architecture/module-function-coverage-evidence/agent-solver-execution.json",
     "config/architecture/module-function-coverage-evidence/workflow-engine.json",
-    "config/architecture/module-function-coverage-evidence/orchestra-workflow-operational.json"
+    "config/architecture/module-function-coverage-evidence/orchestra-workflow-operational.json",
+    "config/architecture/module-function-coverage-evidence/persistence-provenance-verification.json"
   ],
   "depth_axes": {
     "required": "Whether the module/paradigm pair is required by the module-function matrix.",

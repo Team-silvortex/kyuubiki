@@ -28,8 +28,11 @@ use diagnostics::{
 };
 use env_panel::{WriteEnvPayload, read_env_file, write_env_file};
 use kyuubiki_desktop_runtime::{
-    ServiceMode, ServiceStatusSummary, append_desktop_audit_line as desktop_append_audit_line,
+    DesktopAuditLedgerStatus, ServiceMode, ServiceStatusSummary,
+    append_desktop_provenance_record,
     read_global_language_preference as desktop_read_global_language_preference,
+    desktop_provenance_status,
+    prepare_desktop_provenance_ledger,
     report_packaged_boot_ready as desktop_report_packaged_boot_ready,
     service_restart as desktop_service_restart, service_start as desktop_service_start,
     service_status as desktop_service_status, service_stop as desktop_service_stop,
@@ -135,8 +138,9 @@ fn append_installer_guarded_mutation_audit(
     payload: &InstallerGuardedMutationPayload,
     status: &str,
     detail: &str,
-) {
+) -> Result<DesktopAuditLedgerStatus, String> {
     let record = json!({
+        "schema_version": "kyuubiki.installer-guarded-mutation-provenance/v1",
         "ts": audit_timestamp(),
         "action": payload.action,
         "mode": payload.mode,
@@ -147,7 +151,12 @@ fn append_installer_guarded_mutation_audit(
         "status": status,
         "detail": detail,
     });
-    let _ = desktop_append_audit_line(INSTALLER_GUARDED_MUTATION_AUDIT_FILE, &record.to_string());
+    append_desktop_provenance_record(INSTALLER_GUARDED_MUTATION_AUDIT_FILE, &record)
+}
+
+#[tauri::command]
+fn installer_provenance_status() -> Result<DesktopAuditLedgerStatus, String> {
+    desktop_provenance_status(INSTALLER_GUARDED_MUTATION_AUDIT_FILE)
 }
 
 fn high_impact_guarded_action(action: &str) -> bool {
@@ -271,6 +280,9 @@ fn build_installer_bundle(payload: BuildPayload) -> Result<String, String> {
 #[tauri::command]
 fn guarded_mutation_action(payload: InstallerGuardedMutationPayload) -> Result<String, String> {
     require_guarded_action_confirmation(&payload)?;
+    prepare_desktop_provenance_ledger(INSTALLER_GUARDED_MUTATION_AUDIT_FILE).map_err(|error| {
+        format!("guarded installer action blocked by invalid provenance ledger: {error}")
+    })?;
     let result = match payload.action.as_str() {
         "validate_env" => validate_env_file(),
         "init_env" => installer_init_env(payload.force.unwrap_or(false)),
@@ -403,12 +415,20 @@ fn guarded_mutation_action(payload: InstallerGuardedMutationPayload) -> Result<S
         other => Err(format!("unsupported guarded installer action: {other}")),
     };
 
-    match &result {
+    let audit_result = match &result {
         Ok(detail) => append_installer_guarded_mutation_audit(&payload, "ok", detail),
         Err(detail) => append_installer_guarded_mutation_audit(&payload, "failed", detail),
+    };
+    match (result, audit_result) {
+        (Ok(detail), Ok(_)) => Ok(detail),
+        (Err(detail), Ok(_)) => Err(detail),
+        (Ok(detail), Err(audit_error)) => Err(format!(
+            "installer action completed but provenance persistence failed; inspect state before retry: {audit_error}; action detail: {detail}"
+        )),
+        (Err(detail), Err(audit_error)) => Err(format!(
+            "{detail}; failed action provenance could not be persisted: {audit_error}"
+        )),
     }
-
-    result
 }
 fn main() {
     tauri::Builder::default()
@@ -427,6 +447,7 @@ fn main() {
             service_status,
             packaged_boot_ready,
             runtime_payload_status,
+            installer_provenance_status,
             get_global_language_preference,
             set_global_language_preference,
             read_runtime_log,

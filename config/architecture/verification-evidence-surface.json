@@ -164,12 +164,24 @@
       "scripts/build-central-readiness-report.mjs",
       "scripts/check-central-readiness-report.mjs",
       "schemas/central-readiness-report.schema.json",
-      "config/architecture/module-topology.json"
+      "config/architecture/module-topology.json",
+      "config/architecture/persistence-provenance-qualification.json",
+      "schemas/persistence-provenance-qualification-contract.schema.json",
+      "schemas/persistence-provenance-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/persistence_provenance_qualification.rs",
+      "workers/rust/crates/desktop-runtime/src/audit_log.rs",
+      "apps/web/lib/kyuubiki_web/storage/persistence.ex",
+      "workers/rust/crates/installer/src/remote_deployment_journal_store.rs",
+      "releases/usability-evidence/2.14.2/persistence-provenance-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.central-readiness-report/v1",
       "kyuubiki.central-database-readiness/v1",
-      "kyuubiki.central-database-contract/v1"
+      "kyuubiki.central-database-contract/v1",
+      "kyuubiki.persistence-provenance-qualification-contract/v1",
+      "kyuubiki.persistence-provenance-qualification-report/v1",
+      "kyuubiki.desktop-audit-record/v1",
+      "kyuubiki.persistence-envelope/v1"
     ],
     "generated_artifacts": [
       "tmp/central-readiness-report.json",

@@ -29,10 +29,10 @@ Current moxi baseline:
 - `blocking_gap_count`: `0`
 - `maturity_gap_count`: `0`
 - `thin_evidence_count`: `0`
-- `evidence_grade_gap_count`: `8`
-- required cells meeting their grade target: `42 / 50` (`84.0%`)
-- release-critical P0 cells meeting target: `31 / 36` (`86.1%`)
-- `daji 3.0.0` release state: `blocked` with `5` P0 coordinate gaps and one
+- `evidence_grade_gap_count`: `5`
+- required cells meeting their grade target: `45 / 50` (`90.0%`)
+- release-critical P0 cells meeting target: `34 / 36` (`94.4%`)
+- `daji 3.0.0` release state: `blocked` with `2` P0 coordinate gaps and one
   unclosed external usability release gate
 
 This means no required module/function coordinate is structurally missing. It
@@ -43,12 +43,26 @@ the `daji 3.0.0` P0/P1/P2 release profile. The former maturity points remain
 dimension-complete, but ordinary lane execution no longer masquerades as
 qualification, operational, or release evidence.
 
-The current P0 hardening front is a five-coordinate tie. Installer shell,
-Orchestra control plane, and native Installer persistence/provenance must move
-from `exercised` to `verified`; protocol and Headless SDK runtime API evidence
-must make the same one-grade move. The generated evidence-strength ranking also
-exposes three P1 benchmark coordinates with a two-grade gap; the release
-planning queue keeps the P0 blockers ahead of them.
+The current P0 hardening front is a two-coordinate tie. Protocol and Headless
+SDK runtime API evidence must move from `exercised` to `verified`. The generated
+evidence-strength ranking also exposes three P1 benchmark coordinates with a
+two-grade gap; the release planning queue keeps the P0 blockers ahead of them.
+
+The former three-coordinate persistence/provenance tie now meets its `verified`
+target and carries `qualified` local evidence. The Installer shell appends
+guarded mutations to a SHA-256 chained ledger and exposes read-only integrity,
+head digest, count, schema, and storage path. Orchestra writes digest-verified
+persistence envelopes, recovers the previous valid generation after tamper or
+an interrupted generation rename, and quarantines unrecoverable state without
+cascading failure. The native
+Installer retains its atomic deployment journal, interrupted-step resume, and
+tamper rejection. Legacy plain JSON shell ledgers migrate atomically into the
+same chain without leaving migration sidecars. Four suites repeat twice with
+all 8 suite rounds and 15
+acceptance/rejection assertions passing in
+`releases/usability-evidence/2.14.2/persistence-provenance-qualification.json`.
+This local qualification does not claim remote database durability,
+cross-platform installed-package operation, or multi-host recovery.
 
 The former first coordinate, `sdk-headless / sdk_headless`, now meets its
 `operational` target. Its remote Linux qualification installs the release Rust

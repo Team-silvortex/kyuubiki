@@ -13,7 +13,7 @@ Use it when you want the shortest answer to:
 `moxi 2.x` is the point where Kyuubiki treats its core contracts as product
 baseline rather than loose prototypes.
 
-The current development point in this line is `moxi 2.14.2`.
+The current development point in this line is `moxi 2.14.3`.
 
 At this checkpoint, the cross-operator contract layer has repeatable positive
 and fault-boundary qualification across workflow datasets, TaskIR, runtime API
@@ -68,6 +68,12 @@ sprawl:
 - system security qualification now repeats 14 asserted checks across 22 exact
   module/lane coordinates; the retained 28/28 report closes the former tied P0
   security cluster without claiming installed or multi-host adversarial proof
+- persistence/provenance qualification now repeats four suites across the
+  Installer shell, Orchestra, and native Installer. Its 8/8 suite rounds retain
+  15 positive and fault-boundary assertions for chained mutation audit,
+  digest-verified state recovery, quarantine, and deployment-journal resume;
+  this is local qualification rather than remote storage or packaged-platform
+  operational proof
 - Installer-managed Agent solver qualification now builds a sealed Linux
   release package on the lab host, activates it through the native Installer,
   runs two independent Agent processes through closed-form solve, unsupported

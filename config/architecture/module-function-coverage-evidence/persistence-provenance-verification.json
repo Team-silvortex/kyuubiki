@@ -1,0 +1,79 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Repeatable local qualification of Installer mutation audit provenance, Orchestra persistence-envelope recovery, and native deployment-journal recovery.",
+  "paradigm_contract_evidence": {
+    "persistence_provenance": [
+      {
+        "id": "persistence-provenance-qualification-contract",
+        "modules": [
+          "installer-shell",
+          "orchestra-control-plane",
+          "runtime-installer"
+        ],
+        "files": [
+          "config/architecture/persistence-provenance-qualification.json",
+          "schemas/persistence-provenance-qualification-contract.schema.json",
+          "schemas/persistence-provenance-qualification-report.schema.json",
+          "workers/rust/crates/script-runner/src/persistence_provenance_qualification.rs"
+        ],
+        "required_text": [
+          "kyuubiki.persistence-provenance-qualification-contract/v1",
+          "kyuubiki.persistence-provenance-qualification-report/v1",
+          "installer-shell-audit-chain",
+          "orchestra-persistence-recovery",
+          "runtime-installer-journal-recovery"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "persistence-provenance-repeatable-local-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "installer-shell",
+        "orchestra-control-plane",
+        "runtime-installer"
+      ],
+      "paradigms": [
+        "persistence_provenance"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "security",
+        "recovery"
+      ],
+      "files": [
+        "config/architecture/persistence-provenance-qualification.json",
+        "schemas/persistence-provenance-qualification-contract.schema.json",
+        "schemas/persistence-provenance-qualification-report.schema.json",
+        "workers/rust/crates/script-runner/src/persistence_provenance_qualification.rs",
+        "workers/rust/crates/desktop-runtime/src/audit_log.rs",
+        "apps/installer-gui/src-tauri/src/main.rs",
+        "apps/installer-gui/ui/update-panel.js",
+        "apps/web/lib/kyuubiki_web/storage/persistence.ex",
+        "apps/web/test/kyuubiki_web/storage/persistence_test.exs",
+        "workers/rust/crates/installer/src/remote_deployment_journal_store.rs",
+        "workers/rust/crates/installer/src/remote_deployment_replay.rs",
+        "releases/usability-evidence/2.14.2/persistence-provenance-qualification.json"
+      ],
+      "required_text": [
+        "kyuubiki.desktop-audit-record/v1",
+        "kyuubiki.persistence-envelope/v1",
+        "power_loss_sidecar_recovered",
+        "\"status\":\"passed\"",
+        "\"module_count\":3",
+        "\"suite_count\":4",
+        "\"round_count\":8",
+        "\"passed_round_count\":8",
+        "\"assertion_count\":15",
+        "\"acceptance_assertion_count\":8",
+        "\"rejection_assertion_count\":7",
+        "\"failed_suite_ids\":[]"
+      ]
+    }
+  ]
+}

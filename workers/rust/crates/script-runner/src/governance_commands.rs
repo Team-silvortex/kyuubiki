@@ -11,10 +11,10 @@ use crate::{
     minimal_industrial_closure, module_extension_standard, module_function_matrix,
     module_function_tensor, module_topology, module_topology_report, moxi_handoff,
     operator_task_ir_contract, orchestra_recovery_fault_injection,
-    orchestra_workflow_operational_qualification, project_organization_audit,
-    protocol_validation_qualification, runtime_recovery_fault_injection,
-    system_security_qualification, test_coverage_posture, toolchain_contract,
-    ui_automation_contract, update_catalog_docs, usability_release_gate,
+    orchestra_workflow_operational_qualification, persistence_provenance_qualification,
+    project_organization_audit, protocol_validation_qualification,
+    runtime_recovery_fault_injection, system_security_qualification, test_coverage_posture,
+    toolchain_contract, ui_automation_contract, update_catalog_docs, usability_release_gate,
     verification_evidence_surface, workbench_language_pack_catalog,
     workbench_validation_qualification, workflow_dataset_contract,
     workflow_metric_resolver_contract,
@@ -131,6 +131,11 @@ pub(crate) fn run_governance_command(
         }
         "check-orchestra-workflow-operational-qualification" => {
             orchestra_workflow_operational_qualification::run_check_orchestra_workflow_operational_qualification(
+                root, args,
+            )
+        }
+        "check-persistence-provenance-qualification" => {
+            persistence_provenance_qualification::run_check_persistence_provenance_qualification(
                 root, args,
             )
         }

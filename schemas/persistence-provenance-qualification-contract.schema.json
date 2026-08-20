@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/persistence-provenance-qualification-contract.schema.json",
+  "title": "Kyuubiki Persistence Provenance Qualification Contract",
+  "type": "object",
+  "required": ["schema_version", "report_schema", "rounds", "required_modules", "suites"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": "kyuubiki.persistence-provenance-qualification-contract/v1" },
+    "report_schema": { "const": "kyuubiki.persistence-provenance-qualification-report/v1" },
+    "rounds": { "type": "integer", "minimum": 2, "maximum": 3 },
+    "required_modules": {
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "items": { "enum": ["installer-shell", "orchestra-control-plane", "runtime-installer"] }
+    },
+    "suites": {
+      "type": "array",
+      "minItems": 4,
+      "items": { "$ref": "#/$defs/suite" }
+    }
+  },
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "assertion": {
+      "type": "object",
+      "required": ["id", "label", "outcome", "boundary"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "label": { "type": "string", "minLength": 8 },
+        "outcome": { "enum": ["acceptance", "rejection"] },
+        "boundary": { "type": "string", "minLength": 8 }
+      }
+    },
+    "suite": {
+      "type": "object",
+      "required": [
+        "id",
+        "modules",
+        "program",
+        "cwd",
+        "args",
+        "source_files",
+        "required_source_text",
+        "assertions"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "modules": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["installer-shell", "orchestra-control-plane", "runtime-installer"] }
+        },
+        "program": { "enum": ["cargo", "mix", "node"] },
+        "cwd": { "$ref": "#/$defs/repoPath" },
+        "args": { "type": "array", "minItems": 2, "items": { "type": "string", "minLength": 1 } },
+        "source_files": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/repoPath" }
+        },
+        "required_source_text": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 4 }
+        },
+        "assertions": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/assertion" }
+        }
+      }
+    }
+  }
+}

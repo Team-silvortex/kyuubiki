@@ -59,6 +59,20 @@ export function mountUpdatePanel() {
         </div>
         <pre id="runtime-payload-output">Runtime payload status has not been loaded.</pre>
       </article>
+      <article class="integrity-policy-card desktop-shell-surface-card">
+        <div class="panel-header desktop-shell-section-header"><h3>Mutation provenance ledger</h3><span class="integrity-pill" data-desktop-state="health" id="installer-provenance-pill">unknown</span></div>
+        <p>Read-only SHA-256 chain for Installer mutations. A broken chain blocks further guarded actions instead of silently accepting new records.</p>
+        <div class="action-row desktop-shell-action-row">
+          <button data-action="refresh-installer-provenance">Verify provenance</button>
+        </div>
+        <div class="sidebar-list sidebar-list--metrics">
+          <div class="sidebar-list__row"><span>records</span><strong id="installer-provenance-records">0</strong></div>
+          <div class="sidebar-list__row"><span>head digest</span><strong id="installer-provenance-digest">--</strong></div>
+          <div class="sidebar-list__row"><span>ledger schema</span><strong id="installer-provenance-schema">--</strong></div>
+          <div class="sidebar-list__row"><span>storage path</span><strong id="installer-provenance-path">--</strong></div>
+        </div>
+        <pre id="installer-provenance-output">Installer provenance has not been verified.</pre>
+      </article>
     </div>
     <div class="integrity-policy-grid">
       <article class="integrity-policy-card desktop-shell-surface-card">
@@ -155,7 +169,7 @@ export function mountUpdatePanel() {
       {
         name: "runtime",
         label: "Managed runtime",
-        anchors: ["#runtime-payload-pill"],
+        anchors: ["#runtime-payload-pill", "#installer-provenance-pill"],
       },
       {
         name: "source",
@@ -322,6 +336,21 @@ export function renderRuntimePayloadStatus(status) {
   document.getElementById("runtime-payload-pill").textContent = state;
   document.getElementById("rollback-runtime-payload-button").disabled = !status?.previous_version;
   applyDesktopState(document.getElementById("runtime-payload-pill"), state, { kind: "health" });
+}
+
+export function renderInstallerProvenanceStatus(status) {
+  const state = status?.status === "verified" ? "ready" : "blocked";
+  const digest = status?.head_digest || "genesis";
+  document.getElementById("installer-provenance-records").textContent = String(status?.record_count ?? 0);
+  document.getElementById("installer-provenance-digest").textContent = digest;
+  document.getElementById("installer-provenance-schema").textContent = status?.ledger_schema || "--";
+  document.getElementById("installer-provenance-path").textContent = status?.ledger_path || "--";
+  document.getElementById("installer-provenance-pill").textContent = status?.status || "blocked";
+  document.getElementById("installer-provenance-output").textContent =
+    status?.status === "verified"
+      ? `${status.digest_algorithm || "sha256"} chain verified across ${status.record_count ?? 0} record(s).`
+      : "Installer provenance ledger failed verification. Guarded mutations remain blocked.";
+  applyDesktopState(document.getElementById("installer-provenance-pill"), state, { kind: "health" });
 }
 
 export function hydrateUpdateSourceConfig(config) {

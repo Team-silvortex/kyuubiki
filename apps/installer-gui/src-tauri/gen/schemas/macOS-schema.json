@@ -213,6 +213,12 @@
           "markdownDescription": "Enables the installation_integrity_report command."
         },
         {
+          "description": "Enables the read-only installer_provenance_status command.",
+          "type": "string",
+          "const": "allow-installer-provenance-status",
+          "markdownDescription": "Enables the read-only installer_provenance_status command."
+        },
+        {
           "description": "Enables the latest_applied_update_record command.",
           "type": "string",
           "const": "allow-latest-applied-update-record",

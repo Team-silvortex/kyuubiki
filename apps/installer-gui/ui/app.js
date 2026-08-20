@@ -58,6 +58,7 @@ import {
   renderLatestAppliedUpdate,
   renderLatestDownloadedUpdate,
   renderLatestStagedUpdate,
+  renderInstallerProvenanceStatus,
   renderRuntimePayloadStatus,
   renderUpdatePlan,
   renderUpdatePreview,
@@ -289,6 +290,11 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     renderRuntimePayloadStatus(status);
     return status.rendered;
   };
+  const refreshInstallerProvenance = async () => {
+    const status = await invoke("installer_provenance_status");
+    renderInstallerProvenanceStatus(status);
+    return `${status.status}: ${status.record_count} provenance record(s)`;
+  };
   const refreshUpdateState = async () => {
     const values = await Promise.all([
       refreshUpdatePlan(),
@@ -297,6 +303,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
       refreshLatestDownloadedUpdate(),
       refreshLatestAppliedUpdate(),
       refreshRuntimePayloadStatus(),
+      refreshInstallerProvenance(),
     ]);
     return values.filter(Boolean).join("\n\n");
   };
@@ -416,6 +423,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     }),
     "refresh-applied-update": () => runAction("refresh-applied-update", refreshLatestAppliedUpdate),
     "refresh-runtime-payload": () => runAction("refresh-runtime-payload", refreshRuntimePayloadStatus),
+    "refresh-installer-provenance": () => runAction("refresh-installer-provenance", refreshInstallerProvenance),
     "install-runtime-payload": () => runAction("install-runtime-payload", async () => {
       const result = await invokeGuardedMutation("install_runtime_payload", {
         targetDir: currentRuntimePayloadSource(),
@@ -586,6 +594,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     renderLatestDownloadedUpdate,
     renderLatestAppliedUpdate,
     renderLatestStagedUpdate,
+    renderInstallerProvenanceStatus,
     renderRuntimePayloadStatus,
     hydrateEnv,
     applyPreset,

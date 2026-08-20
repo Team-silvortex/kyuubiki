@@ -13,7 +13,7 @@
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index check-material-research-bundle-index check-material-research-bundle-index-contract
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
-.PHONY: audit-dependencies check-system-security-qualification check-agent-solver-operational-qualification check-orchestra-workflow-operational-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
+.PHONY: audit-dependencies check-system-security-qualification check-agent-solver-operational-qualification check-orchestra-workflow-operational-qualification check-persistence-provenance-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
 
 check-doc-book:
 	@$(ENTRYPOINT) check-doc-book
@@ -492,6 +492,10 @@ check-orchestra-workflow-operational-qualification:
 	@$(ENTRYPOINT) check-orchestra-workflow-operational-qualification --self-test
 	@$(ENTRYPOINT) check-orchestra-workflow-operational-qualification --verify-report releases/usability-evidence/2.14.1/orchestra-workflow-operational-qualification.json
 
+check-persistence-provenance-qualification:
+	@$(ENTRYPOINT) check-persistence-provenance-qualification --self-test
+	@$(ENTRYPOINT) check-persistence-provenance-qualification --verify-report releases/usability-evidence/2.14.2/persistence-provenance-qualification.json
+
 check-minimal-industrial-closure:
 	@$(ENTRYPOINT) validate-minimal-industrial-closure
 
@@ -547,6 +551,7 @@ architecture-check:
 	@$(MAKE) check-workbench-validation-qualification
 	@$(MAKE) check-system-security-qualification
 	@$(MAKE) check-agent-solver-operational-qualification
+	@$(MAKE) check-persistence-provenance-qualification
 	@$(MAKE) check-usability-release-gate
 	@$(MAKE) audit-dependencies
 	@$(MAKE) operator-package-preflight

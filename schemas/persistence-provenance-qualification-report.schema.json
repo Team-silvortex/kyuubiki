@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/persistence-provenance-qualification-report.schema.json",
+  "title": "Kyuubiki Persistence Provenance Qualification Report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "contract_path",
+    "status",
+    "platform",
+    "rounds",
+    "suites",
+    "summary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "kyuubiki.persistence-provenance-qualification-report/v1" },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "contract_path": { "const": "config/architecture/persistence-provenance-qualification.json" },
+    "status": { "const": "passed" },
+    "platform": {
+      "type": "object",
+      "required": ["os", "arch"],
+      "additionalProperties": false,
+      "properties": {
+        "os": { "type": "string", "minLength": 1 },
+        "arch": { "type": "string", "minLength": 1 }
+      }
+    },
+    "rounds": { "type": "integer", "minimum": 2, "maximum": 3 },
+    "suites": {
+      "type": "array",
+      "minItems": 4,
+      "items": { "$ref": "#/$defs/suiteReport" }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "module_count",
+        "suite_count",
+        "round_count",
+        "passed_round_count",
+        "assertion_count",
+        "acceptance_assertion_count",
+        "rejection_assertion_count",
+        "failed_suite_ids"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "module_count": { "const": 3 },
+        "suite_count": { "minimum": 4, "type": "integer" },
+        "round_count": { "minimum": 8, "type": "integer" },
+        "passed_round_count": { "minimum": 8, "type": "integer" },
+        "assertion_count": { "minimum": 13, "type": "integer" },
+        "acceptance_assertion_count": { "minimum": 7, "type": "integer" },
+        "rejection_assertion_count": { "minimum": 6, "type": "integer" },
+        "failed_suite_ids": { "type": "array", "maxItems": 0 }
+      }
+    }
+  },
+  "$defs": {
+    "assertionReport": {
+      "type": "object",
+      "required": ["id", "label", "outcome", "boundary", "passed"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "outcome": { "enum": ["acceptance", "rejection"] },
+        "boundary": { "type": "string" },
+        "passed": { "const": true }
+      }
+    },
+    "roundReport": {
+      "type": "object",
+      "required": ["round", "status", "exit_code", "elapsed_ms", "output_sha256", "assertions", "output_excerpt"],
+      "additionalProperties": false,
+      "properties": {
+        "round": { "type": "integer", "minimum": 1 },
+        "status": { "const": "passed" },
+        "exit_code": { "const": 0 },
+        "elapsed_ms": { "type": "integer", "minimum": 0 },
+        "output_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "assertions": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/assertionReport" } },
+        "output_excerpt": { "type": "string", "minLength": 1, "maxLength": 12000 }
+      }
+    },
+    "suiteReport": {
+      "type": "object",
+      "required": ["id", "modules", "program", "cwd", "args", "status", "repeatable", "rounds"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "modules": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "program": { "enum": ["cargo", "mix", "node"] },
+        "cwd": { "type": "string" },
+        "args": { "type": "array", "minItems": 2, "items": { "type": "string" } },
+        "status": { "const": "passed" },
+        "repeatable": { "const": true },
+        "rounds": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/roundReport" } }
+      }
+    }
+  }
+}

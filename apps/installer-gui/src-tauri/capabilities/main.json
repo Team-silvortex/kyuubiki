@@ -22,6 +22,7 @@
     "allow-remote-node-registry",
     "allow-service-status",
     "allow-runtime-payload-status",
+    "allow-installer-provenance-status",
     "allow-get-global-language-preference",
     "allow-set-global-language-preference",
     "allow-read-runtime-log",
