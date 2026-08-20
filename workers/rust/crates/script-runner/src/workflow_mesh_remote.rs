@@ -1,20 +1,24 @@
 use crate::native_time::utc_timestamp_slug;
 use crate::remote_host::{remote_shell_path, rsync_to, scp_from, shell_escape, ssh_status};
+use serde_json::Value;
 use std::env;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 type RunnerResult<T> = Result<T, String>;
 
-const WORKFLOW_MESH_SCRIPT_SOURCES: &[&str] = &[
-    "scripts/kyuubiki",
-    "scripts/build-workflow-mesh-regression-index.mjs",
-    "scripts/build-workflow-mesh-regression-summary.mjs",
-    "scripts/build-nightly-artifact-overview.mjs",
-    "scripts/run-workflow-mesh-regression.sh",
-    "scripts/run-workflow-mesh-regression-remote.sh",
+const WORKFLOW_MESH_SCRIPT_SOURCES: &[&str] = &["scripts/kyuubiki"];
+const TOOLCHAINS_PATH: &str = "config/toolchains.json";
+const WEB_SYNC_EXCLUDES: &[&str] = &[
+    "_build/",
+    "cover/",
+    "deps/",
+    ".elixir_ls/",
+    ".mix/",
+    "tmp/",
+    "erl_crash.dump",
 ];
+const RUST_SYNC_EXCLUDES: &[&str] = &["target/", "tmp/"];
 
 struct Options {
     local_log_path: PathBuf,
@@ -150,11 +154,12 @@ impl Options {
         let remote_output_dir = env::var("REMOTE_OUTPUT_DIR")
             .unwrap_or_else(|_| format!("tmp/workflow-mesh-regression/{output_slug}"));
         let local_output_dir = env_path_or(
+            root,
             "LOCAL_OUTPUT_DIR",
             root.join("tmp/workflow-mesh-regression").join(&output_slug),
         );
         Ok(Self {
-            local_log_path: env_path_or("LOCAL_LOG_PATH", local_output_dir.join("run.log")),
+            local_log_path: env_path_or(root, "LOCAL_LOG_PATH", local_output_dir.join("run.log")),
             local_output_dir,
             output_slug,
             remote_elixir_version: env::var("REMOTE_ELIXIR_VERSION")
@@ -187,21 +192,35 @@ struct ToolchainEnv {
 }
 
 fn toolchain_env(root: &Path) -> RunnerResult<ToolchainEnv> {
-    let output = Command::new("node")
-        .args([root.join("scripts/toolchain-env.mjs"), "--json".into()])
-        .current_dir(root)
-        .output()
-        .map_err(|error| format!("failed to run scripts/toolchain-env.mjs: {error}"))?;
-    if !output.status.success() {
-        return Err("scripts/toolchain-env.mjs --json failed".to_string());
-    }
-    let json = String::from_utf8_lossy(&output.stdout);
+    let path = root.join(TOOLCHAINS_PATH);
+    let text = std::fs::read_to_string(&path)
+        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+    let contract: Value = serde_json::from_str(&text)
+        .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
+    toolchain_env_from_contract(&contract)
+}
+
+fn toolchain_env_from_contract(contract: &Value) -> RunnerResult<ToolchainEnv> {
+    let elixir = contract
+        .get("elixir")
+        .and_then(Value::as_object)
+        .ok_or_else(|| format!("{TOOLCHAINS_PATH} must define an elixir object"))?;
     Ok(ToolchainEnv {
-        remote_elixir_version: json_string_value(&json, "KYUUBIKI_REMOTE_ELIXIR_VERSION")
-            .unwrap_or_else(|| "1.20.1-otp-28".to_string()),
-        remote_otp_version: json_string_value(&json, "KYUUBIKI_REMOTE_OTP_VERSION")
-            .unwrap_or_else(|| "28.4".to_string()),
+        remote_elixir_version: required_toolchain_value(elixir, "lab_elixir")?,
+        remote_otp_version: required_toolchain_value(elixir, "lab_otp")?,
     })
+}
+
+fn required_toolchain_value(
+    section: &serde_json::Map<String, Value>,
+    key: &str,
+) -> RunnerResult<String> {
+    section
+        .get(key)
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| format!("{TOOLCHAINS_PATH}#/elixir/{key} must be a non-empty string"))
 }
 
 fn sync_workflow_mesh_sources(root: &Path, options: &Options) -> RunnerResult<()> {
@@ -235,13 +254,13 @@ fn sync_workflow_mesh_sources(root: &Path, options: &Options) -> RunnerResult<()
         )?,
         rsync(
             root,
-            &["_build/", "deps/"],
+            WEB_SYNC_EXCLUDES,
             &[root.join("apps/web/")],
             &format!("{}:{}/apps/web/", options.remote_host, options.remote_dir),
         )?,
         rsync(
             root,
-            &["target/"],
+            RUST_SYNC_EXCLUDES,
             &[root.join("workers/rust/")],
             &format!(
                 "{}:{}/workers/rust/",
@@ -359,16 +378,19 @@ fn copy_remote(
     scp_from(root, &options.remote_host, remote_path, local_path)
 }
 
-fn env_path_or(name: &str, fallback: PathBuf) -> PathBuf {
-    env::var_os(name).map(PathBuf::from).unwrap_or(fallback)
+fn env_path_or(root: &Path, name: &str, fallback: PathBuf) -> PathBuf {
+    env::var_os(name)
+        .map(PathBuf::from)
+        .map(|path| resolve_local_path(root, path))
+        .unwrap_or(fallback)
 }
 
-fn json_string_value(json: &str, key: &str) -> Option<String> {
-    let (_, rest) = json.split_once(&format!("\"{key}\""))?;
-    let (_, rest) = rest.split_once(':')?;
-    let rest = rest.trim_start();
-    let value = rest.strip_prefix('"')?.split('"').next()?;
-    Some(value.to_string())
+fn resolve_local_path(root: &Path, path: PathBuf) -> PathBuf {
+    if path.is_absolute() {
+        path
+    } else {
+        root.join(path)
+    }
 }
 
 fn shell_double_fragment(value: &str) -> String {
@@ -401,14 +423,43 @@ mod tests {
 
     #[test]
     fn script_source_closure_uses_native_runtime_entrypoint() {
-        for required in ["scripts/kyuubiki"] {
-            assert!(WORKFLOW_MESH_SCRIPT_SOURCES.contains(&required));
+        assert_eq!(WORKFLOW_MESH_SCRIPT_SOURCES, &["scripts/kyuubiki"]);
+    }
+
+    #[test]
+    fn source_sync_excludes_generated_workspaces() {
+        for excluded in ["_build/", "deps/", "tmp/", "erl_crash.dump"] {
+            assert!(WEB_SYNC_EXCLUDES.contains(&excluded));
         }
-        assert!(
-            WORKFLOW_MESH_SCRIPT_SOURCES
-                .iter()
-                .all(|source| !source.contains("kyuubiki-runtime"))
+        for excluded in ["target/", "tmp/"] {
+            assert!(RUST_SYNC_EXCLUDES.contains(&excluded));
+        }
+    }
+
+    #[test]
+    fn local_artifact_paths_are_root_relative() {
+        let root = Path::new("/workspace/kyuubiki");
+        assert_eq!(
+            resolve_local_path(root, PathBuf::from("tmp/qualification/report.json")),
+            root.join("tmp/qualification/report.json")
         );
+        assert_eq!(
+            resolve_local_path(root, PathBuf::from("/tmp/report.json")),
+            PathBuf::from("/tmp/report.json")
+        );
+    }
+
+    #[test]
+    fn toolchain_versions_are_read_from_the_native_contract() {
+        let contract = serde_json::json!({
+            "elixir": {
+                "lab_elixir": "1.20.1-otp-28",
+                "lab_otp": "28.4"
+            }
+        });
+        let env = toolchain_env_from_contract(&contract).expect("toolchain contract");
+        assert_eq!(env.remote_elixir_version, "1.20.1-otp-28");
+        assert_eq!(env.remote_otp_version, "28.4");
     }
 
     #[test]

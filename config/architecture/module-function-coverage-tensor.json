@@ -10,6 +10,7 @@
     "config/architecture/module-function-coverage-evidence/product-surface-contracts.json",
     "config/architecture/module-function-coverage-evidence/model-collaboration-sdks.json",
     "config/architecture/module-function-coverage-evidence/headless-sdk-validation.json",
+    "config/architecture/module-function-coverage-evidence/headless-sdk-operational.json",
     "config/architecture/module-function-coverage-evidence/pwdt-frontend-control-plane.json",
     "config/architecture/module-function-coverage-evidence/workbench-validation.json",
     "config/architecture/module-function-coverage-evidence/desktop-runtime-api.json",
@@ -21,7 +22,8 @@
     "config/architecture/module-function-coverage-evidence/protocol-validation.json",
     "config/architecture/module-function-coverage-evidence/runtime-recovery.json",
     "config/architecture/module-function-coverage-evidence/agent-solver-execution.json",
-    "config/architecture/module-function-coverage-evidence/workflow-engine.json"
+    "config/architecture/module-function-coverage-evidence/workflow-engine.json",
+    "config/architecture/module-function-coverage-evidence/orchestra-workflow-operational.json"
   ],
   "depth_axes": {
     "required": "Whether the module/paradigm pair is required by the module-function matrix.",

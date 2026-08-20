@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::env;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
@@ -103,20 +104,11 @@ pub(crate) fn runtime_bin_dirs(root: &Path) -> Vec<PathBuf> {
 
 pub(crate) fn resolve_development_command(root: &Path, name: &str) -> Result<PathBuf, String> {
     let candidates = command_names(name);
-    let mut dirs = runtime_bin_dirs(root);
-    if let Some(home) = env::var_os("HOME") {
-        dirs.push(PathBuf::from(home).join(".cargo/bin"));
-    }
-    #[cfg(unix)]
-    dirs.extend([
-        unix_rooted_path(&["opt", "homebrew", "bin"]),
-        unix_rooted_path(&["usr", "local", "bin"]),
-        unix_rooted_path(&["usr", "bin"]),
-        unix_rooted_path(&["bin"]),
-    ]);
-    if let Some(path) = env::var_os("PATH") {
-        dirs.extend(env::split_paths(&path));
-    }
+    let dirs = development_command_dirs(
+        root,
+        env::var_os("PATH").as_deref(),
+        env::var_os("HOME").as_deref(),
+    );
     for dir in dirs {
         for candidate in &candidates {
             let path = dir.join(candidate);
@@ -128,6 +120,28 @@ pub(crate) fn resolve_development_command(root: &Path, name: &str) -> Result<Pat
     Err(format!(
         "development runtime command `{name}` was not found"
     ))
+}
+
+fn development_command_dirs(
+    root: &Path,
+    current_path: Option<&OsStr>,
+    home: Option<&OsStr>,
+) -> Vec<PathBuf> {
+    let mut dirs = runtime_bin_dirs(root);
+    if let Some(path) = current_path {
+        dirs.extend(env::split_paths(path));
+    }
+    if let Some(home) = home {
+        dirs.push(PathBuf::from(home).join(".cargo/bin"));
+    }
+    #[cfg(unix)]
+    dirs.extend([
+        unix_rooted_path(&["opt", "homebrew", "bin"]),
+        unix_rooted_path(&["usr", "local", "bin"]),
+        unix_rooted_path(&["usr", "bin"]),
+        unix_rooted_path(&["bin"]),
+    ]);
+    dirs
 }
 
 impl RuntimePaths {
@@ -400,9 +414,10 @@ fn command_names(name: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        Platform, checked_relative_path, installed_paths, resolve_active_runtime_root,
-        runtime_bin_dirs,
+        Platform, checked_relative_path, development_command_dirs, installed_paths,
+        resolve_active_runtime_root, runtime_bin_dirs,
     };
+    use std::ffi::OsStr;
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -447,6 +462,22 @@ mod tests {
         .unwrap();
         assert_eq!(runtime_bin_dirs(&root), [root.join("runtimes/node/bin")]);
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn explicit_development_path_precedes_system_fallbacks() {
+        let root = fixture_root("development-command-path");
+        let selected = root.join("selected/bin");
+        let path = std::env::join_paths([&selected]).unwrap();
+        let dirs = development_command_dirs(&root, Some(&path), Some(OsStr::new("/home/dev")));
+        assert_eq!(dirs.first(), Some(&selected));
+        #[cfg(unix)]
+        assert!(
+            dirs.iter().position(|entry| entry == &selected)
+                < dirs
+                    .iter()
+                    .position(|entry| entry == std::path::Path::new("/usr/bin"))
+        );
     }
 
     #[test]

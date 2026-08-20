@@ -73,6 +73,8 @@ help:
 	@echo "  make qualify-contracts-validation Run repeatable positive and fault-boundary contract qualification"
 	@echo "  make qualify-workbench-validation Run repeatable PWDT and three-viewport Workbench qualification"
 	@echo "  make qualify-headless-sdk-validation Run Rust/Python/Elixir Headless SDK validation qualification"
+	@echo "  make qualify-headless-sdk-operational-remote Qualify installed Rust Headless SDK on remote Linux"
+	@echo "  make check-headless-sdk-operational-qualification Verify retained installed Headless SDK evidence"
 	@echo "  make qualify-headless-workflow Qualify Rust Headless workflow execution and preflight failure contracts"
 	@echo "  make qualify-desktop-deployment-update Qualify Hub-to-Installer update delivery and native digest enforcement"
 	@echo "  make check-test-coverage-posture Verify traditional code-coverage posture and write tmp/test-coverage-posture.{json,md}"

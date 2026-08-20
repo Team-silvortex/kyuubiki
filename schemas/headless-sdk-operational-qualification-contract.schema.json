@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/headless-sdk-operational-qualification-contract.schema.json",
+  "title": "Kyuubiki Headless SDK Operational Qualification Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "qualification_id",
+    "target_coordinate",
+    "ownership",
+    "capture",
+    "retention",
+    "required_checks",
+    "commands"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "../../schemas/headless-sdk-operational-qualification-contract.schema.json"
+    },
+    "schema_version": {
+      "const": "kyuubiki.headless-sdk-operational-qualification-contract/v1"
+    },
+    "qualification_id": {
+      "const": "rust-headless-sdk-installed-linux-operational"
+    },
+    "target_coordinate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module_id", "paradigm", "target_grade"],
+      "properties": {
+        "module_id": { "const": "sdk-headless" },
+        "paradigm": { "const": "sdk_headless" },
+        "target_grade": { "const": "operational" }
+      }
+    },
+    "ownership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["installation_owner", "execution_owner", "evidence_owner"],
+      "properties": {
+        "installation_owner": { "const": "cargo" },
+        "execution_owner": { "const": "kyuubiki-headless-sdk" },
+        "evidence_owner": { "const": "verification-evidence" }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execution_host_role",
+        "installation_method",
+        "build_profile",
+        "source_removed_before_execution",
+        "minimal_runtime_path",
+        "real_solver_required",
+        "expected_failure_required",
+        "recovery_required",
+        "cleanup_required"
+      ],
+      "properties": {
+        "execution_host_role": { "const": "remote-linux-qualification-host" },
+        "installation_method": { "const": "cargo-install-path" },
+        "build_profile": { "const": "release" },
+        "source_removed_before_execution": { "const": true },
+        "minimal_runtime_path": { "const": true },
+        "real_solver_required": { "const": true },
+        "expected_failure_required": { "const": true },
+        "recovery_required": { "const": true },
+        "cleanup_required": { "const": true }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_schema_path",
+        "report_schema",
+        "report_schema_path",
+        "report_path",
+        "forbidden_content"
+      ],
+      "properties": {
+        "contract_schema_path": {
+          "const": "schemas/headless-sdk-operational-qualification-contract.schema.json"
+        },
+        "report_schema": {
+          "const": "kyuubiki.headless-sdk-operational-qualification/v1"
+        },
+        "report_schema_path": {
+          "const": "schemas/headless-sdk-operational-qualification-report.schema.json"
+        },
+        "report_path": {
+          "const": "releases/usability-evidence/2.14.1/headless-sdk-operational-qualification.json"
+        },
+        "forbidden_content": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "host_address",
+              "hostname",
+              "username",
+              "credential",
+              "absolute_host_path"
+            ]
+          }
+        }
+      }
+    },
+    "required_checks": {
+      "type": "array",
+      "minItems": 14,
+      "maxItems": 14,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capture", "verify"],
+      "properties": {
+        "capture": {
+          "const": "make qualify-headless-sdk-operational-remote REMOTE=kyuubiki-lab"
+        },
+        "verify": {
+          "const": "make check-headless-sdk-operational-qualification"
+        }
+      }
+    }
+  }
+}

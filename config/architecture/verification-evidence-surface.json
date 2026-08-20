@@ -74,14 +74,19 @@
       "workers/rust/crates/headless-sdk/src/operator_task_provenance.rs",
       "workers/rust/crates/cli/src/agent_headless_bridge.rs",
       "releases/usability-evidence/2.13.1/headless-workflow-qualification.json",
-      "releases/usability-evidence/2.14.0/workbench-validation-qualification.json"
+      "releases/usability-evidence/2.14.0/workbench-validation-qualification.json",
+      "config/architecture/orchestra-workflow-operational-qualification.json",
+      "schemas/orchestra-workflow-operational-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/orchestra_workflow_operational_qualification.rs",
+      "releases/usability-evidence/2.14.1/orchestra-workflow-operational-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.agent-headless-bridge/v1",
       "kyuubiki.headless-operator-task-provenance/v1",
       "kyuubiki.headless-execution-run/v1",
       "kyuubiki.headless-workflow-qualification-report/v1",
-      "kyuubiki.workbench-validation-qualification-report/v1"
+      "kyuubiki.workbench-validation-qualification-report/v1",
+      "kyuubiki.orchestra-workflow-operational-qualification/v1"
     ]
   },
   "security": {
@@ -139,12 +144,19 @@
     "evidence_sources": [
       "workers/rust/crates/headless-sdk/src/surface.rs",
       "workers/rust/crates/headless-sdk/src/engine_solver_bridge.rs",
-      "workers/rust/crates/installer/src/headless_surface.rs"
+      "workers/rust/crates/installer/src/headless_surface.rs",
+      "config/architecture/headless-sdk-operational-qualification.json",
+      "schemas/headless-sdk-operational-qualification-contract.schema.json",
+      "schemas/headless-sdk-operational-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/headless_sdk_operational.rs",
+      "workers/rust/crates/script-runner/src/headless_sdk_operational_validation.rs",
+      "releases/usability-evidence/2.14.1/headless-sdk-operational-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.headless-sdk-surface/v1",
       "kyuubiki.headless-engine-solver-bridge/v1",
-      "kyuubiki.installer-headless-surface/v1"
+      "kyuubiki.installer-headless-surface/v1",
+      "kyuubiki.headless-sdk-operational-qualification/v1"
     ]
   },
   "persistence_provenance": {

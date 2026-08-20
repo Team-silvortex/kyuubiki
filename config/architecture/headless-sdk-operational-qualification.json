@@ -1,0 +1,59 @@
+{
+  "$schema": "../../schemas/headless-sdk-operational-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.headless-sdk-operational-qualification-contract/v1",
+  "qualification_id": "rust-headless-sdk-installed-linux-operational",
+  "target_coordinate": {
+    "module_id": "sdk-headless",
+    "paradigm": "sdk_headless",
+    "target_grade": "operational"
+  },
+  "ownership": {
+    "installation_owner": "cargo",
+    "execution_owner": "kyuubiki-headless-sdk",
+    "evidence_owner": "verification-evidence"
+  },
+  "capture": {
+    "execution_host_role": "remote-linux-qualification-host",
+    "installation_method": "cargo-install-path",
+    "build_profile": "release",
+    "source_removed_before_execution": true,
+    "minimal_runtime_path": true,
+    "real_solver_required": true,
+    "expected_failure_required": true,
+    "recovery_required": true,
+    "cleanup_required": true
+  },
+  "retention": {
+    "contract_schema_path": "schemas/headless-sdk-operational-qualification-contract.schema.json",
+    "report_schema": "kyuubiki.headless-sdk-operational-qualification/v1",
+    "report_schema_path": "schemas/headless-sdk-operational-qualification-report.schema.json",
+    "report_path": "releases/usability-evidence/2.14.1/headless-sdk-operational-qualification.json",
+    "forbidden_content": [
+      "host_address",
+      "hostname",
+      "username",
+      "credential",
+      "absolute_host_path"
+    ]
+  },
+  "required_checks": [
+    "remote_linux_capture",
+    "cargo_install_completed",
+    "installed_binary_digests",
+    "source_removed_before_execution",
+    "minimal_runtime_path",
+    "template_discovery",
+    "workflow_initialized",
+    "workflow_validated",
+    "workflow_rendered",
+    "headless_execution_report",
+    "real_solver_execution",
+    "expected_failure_closed",
+    "recovery_after_failure",
+    "cleanup_complete"
+  ],
+  "commands": {
+    "capture": "make qualify-headless-sdk-operational-remote REMOTE=kyuubiki-lab",
+    "verify": "make check-headless-sdk-operational-qualification"
+  }
+}

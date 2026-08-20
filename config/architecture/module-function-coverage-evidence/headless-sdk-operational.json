@@ -1,0 +1,72 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Installed Rust Headless SDK operation on remote Linux with Cargo installation, source-detached execution, an isolated empty runtime PATH, workflow lifecycle coverage, a native real-solver material study, fail-closed input handling, post-failure recovery, binary digests, and residue-free cleanup. Cross-language SDK parity remains qualified by the separate official SDK validation evidence.",
+  "paradigm_contract_evidence": {
+    "sdk_headless": [
+      {
+        "id": "headless-sdk-operational-contract",
+        "modules": [
+          "sdk-headless"
+        ],
+        "files": [
+          "config/architecture/headless-sdk-operational-qualification.json",
+          "schemas/headless-sdk-operational-qualification-contract.schema.json",
+          "schemas/headless-sdk-operational-qualification-report.schema.json",
+          "workers/rust/crates/script-runner/src/headless_sdk_operational.rs",
+          "workers/rust/crates/script-runner/src/headless_sdk_operational_validation.rs"
+        ],
+        "required_text": [
+          "rust-headless-sdk-installed-linux-operational",
+          "sdk-headless",
+          "sdk_headless",
+          "qualify-headless-sdk-operational-remote",
+          "check-headless-sdk-operational-qualification",
+          "source_removed_before_execution",
+          "real_solver_required"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "rust-headless-sdk-remote-linux-operational",
+      "status": "proven",
+      "grade": "operational",
+      "modules": [
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "sdk_headless"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "recovery"
+      ],
+      "files": [
+        "config/architecture/headless-sdk-operational-qualification.json",
+        "schemas/headless-sdk-operational-qualification-contract.schema.json",
+        "schemas/headless-sdk-operational-qualification-report.schema.json",
+        "workers/rust/crates/script-runner/src/headless_sdk_operational.rs",
+        "workers/rust/crates/script-runner/src/headless_sdk_operational_validation.rs",
+        "releases/usability-evidence/2.14.1/headless-sdk-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"execution_host_role\": \"remote-linux-qualification-host\"",
+        "\"method\": \"cargo-install-path\"",
+        "\"source_removed_before_execution\": true",
+        "\"runtime_path_mode\": \"isolated-empty\"",
+        "\"template_count\": 35",
+        "\"execution_class\": \"real_solver\"",
+        "\"mock_execution\": false",
+        "\"fallback_used\": false",
+        "\"failure_status\": \"invalid\"",
+        "\"recovery_validation_ok\": true",
+        "\"work_root_removed\": true",
+        "\"residue_count\": 0"
+      ]
+    }
+  ]
+}

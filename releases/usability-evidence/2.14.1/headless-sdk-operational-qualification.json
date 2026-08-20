@@ -1,0 +1,127 @@
+{
+  "schema_version": "kyuubiki.headless-sdk-operational-qualification/v1",
+  "generated_at_unix_ms": 1787217709125,
+  "status": "pass",
+  "qualification_id": "rust-headless-sdk-installed-linux-operational",
+  "execution_host_role": "remote-linux-qualification-host",
+  "platform": "linux",
+  "architecture": "x86_64",
+  "installation": {
+    "package_id": "kyuubiki-cli",
+    "package_version": "2.7.0",
+    "method": "cargo-install-path",
+    "build_profile": "release",
+    "isolated_prefix": true,
+    "source_removed_before_execution": true,
+    "runtime_path_mode": "isolated-empty",
+    "binaries": [
+      {
+        "id": "kyuubiki-headless",
+        "sha256": "9b0a575608ab0cfa341125283741abe1243617856f48f3cd61742b46d735675d"
+      },
+      {
+        "id": "kyuubiki-material-explore",
+        "sha256": "ace95f09ad86549e6da36c91cf1f069ba7985ed940af803dbae6fa65752395e7"
+      }
+    ]
+  },
+  "workflow": {
+    "template_count": 35,
+    "workflow_schema": "kyuubiki.headless-workflow/v1",
+    "workflow_id": "qualification.headless.operational",
+    "template_id": "direct_bar_1d",
+    "step_count": 3,
+    "validation_ok": true,
+    "rendered_schema": "kyuubiki.headless-execution-batch/v1",
+    "execution_report_schema": "kyuubiki.headless-execution-run/v1",
+    "execution_mode": "execute:mock",
+    "execution_status": "ok",
+    "executed_step_count": 3
+  },
+  "real_solver": {
+    "schema_version": "kyuubiki.material-exploration-run/v1",
+    "study": "material_heat_spreader_screening",
+    "candidate_count": 3,
+    "winner_candidate_id": "pyrolytic_graphite_in_plane",
+    "execution_class": "real_solver",
+    "executor_id": "kyuubiki.rust.local-solver",
+    "runtime": "rust_native",
+    "result_origin": "computed_in_process",
+    "mock_execution": false,
+    "fallback_used": false,
+    "production_eligible": true
+  },
+  "failure_recovery": {
+    "expected_failure_exit_code": 1,
+    "failure_report_schema": "kyuubiki.headless-execution-run/v1",
+    "failure_status": "invalid",
+    "executed_step_count": 0,
+    "failure_category": "contract_failure",
+    "failure_stage": "command_validation",
+    "retryable": false,
+    "recovery_validation_ok": true
+  },
+  "cleanup": {
+    "scope": "managed-remote-run-root",
+    "work_root_removed": true,
+    "residue_count": 0
+  },
+  "checks": [
+    {
+      "id": "remote_linux_capture",
+      "ok": true
+    },
+    {
+      "id": "cargo_install_completed",
+      "ok": true
+    },
+    {
+      "id": "installed_binary_digests",
+      "ok": true
+    },
+    {
+      "id": "source_removed_before_execution",
+      "ok": true
+    },
+    {
+      "id": "minimal_runtime_path",
+      "ok": true
+    },
+    {
+      "id": "template_discovery",
+      "ok": true
+    },
+    {
+      "id": "workflow_initialized",
+      "ok": true
+    },
+    {
+      "id": "workflow_validated",
+      "ok": true
+    },
+    {
+      "id": "workflow_rendered",
+      "ok": true
+    },
+    {
+      "id": "headless_execution_report",
+      "ok": true
+    },
+    {
+      "id": "real_solver_execution",
+      "ok": true
+    },
+    {
+      "id": "expected_failure_closed",
+      "ok": true
+    },
+    {
+      "id": "recovery_after_failure",
+      "ok": true
+    },
+    {
+      "id": "cleanup_complete",
+      "ok": true
+    }
+  ]
+}

@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/headless-sdk-operational-qualification-report.schema.json",
+  "title": "Kyuubiki Installed Headless SDK Operational Qualification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "status",
+    "qualification_id",
+    "execution_host_role",
+    "platform",
+    "architecture",
+    "installation",
+    "workflow",
+    "real_solver",
+    "failure_recovery",
+    "cleanup",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.headless-sdk-operational-qualification/v1"
+    },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "status": { "const": "pass" },
+    "qualification_id": {
+      "const": "rust-headless-sdk-installed-linux-operational"
+    },
+    "execution_host_role": { "const": "remote-linux-qualification-host" },
+    "platform": { "const": "linux" },
+    "architecture": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "installation": { "$ref": "#/$defs/installation" },
+    "workflow": { "$ref": "#/$defs/workflow" },
+    "real_solver": { "$ref": "#/$defs/realSolver" },
+    "failure_recovery": { "$ref": "#/$defs/failureRecovery" },
+    "cleanup": { "$ref": "#/$defs/cleanup" },
+    "checks": {
+      "type": "array",
+      "minItems": 14,
+      "maxItems": 14,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/check" }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "binary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sha256"],
+      "properties": {
+        "id": {
+          "enum": ["kyuubiki-headless", "kyuubiki-material-explore"]
+        },
+        "sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "installation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package_id",
+        "package_version",
+        "method",
+        "build_profile",
+        "isolated_prefix",
+        "source_removed_before_execution",
+        "runtime_path_mode",
+        "binaries"
+      ],
+      "properties": {
+        "package_id": { "const": "kyuubiki-cli" },
+        "package_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9._-]+$"
+        },
+        "method": { "const": "cargo-install-path" },
+        "build_profile": { "const": "release" },
+        "isolated_prefix": { "const": true },
+        "source_removed_before_execution": { "const": true },
+        "runtime_path_mode": { "const": "isolated-empty" },
+        "binaries": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/binary" }
+        }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "template_count",
+        "workflow_schema",
+        "workflow_id",
+        "template_id",
+        "step_count",
+        "validation_ok",
+        "rendered_schema",
+        "execution_report_schema",
+        "execution_mode",
+        "execution_status",
+        "executed_step_count"
+      ],
+      "properties": {
+        "template_count": { "type": "integer", "minimum": 30 },
+        "workflow_schema": { "const": "kyuubiki.headless-workflow/v1" },
+        "workflow_id": { "const": "qualification.headless.operational" },
+        "template_id": { "const": "direct_bar_1d" },
+        "step_count": { "const": 3 },
+        "validation_ok": { "const": true },
+        "rendered_schema": { "const": "kyuubiki.headless-execution-batch/v1" },
+        "execution_report_schema": { "const": "kyuubiki.headless-execution-run/v1" },
+        "execution_mode": { "const": "execute:mock" },
+        "execution_status": { "const": "ok" },
+        "executed_step_count": { "const": 3 }
+      }
+    },
+    "realSolver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "study",
+        "candidate_count",
+        "winner_candidate_id",
+        "execution_class",
+        "executor_id",
+        "runtime",
+        "result_origin",
+        "mock_execution",
+        "fallback_used",
+        "production_eligible"
+      ],
+      "properties": {
+        "schema_version": { "const": "kyuubiki.material-exploration-run/v1" },
+        "study": { "const": "material_heat_spreader_screening" },
+        "candidate_count": { "type": "integer", "minimum": 3 },
+        "winner_candidate_id": { "type": "string", "minLength": 1 },
+        "execution_class": { "const": "real_solver" },
+        "executor_id": { "const": "kyuubiki.rust.local-solver" },
+        "runtime": { "const": "rust_native" },
+        "result_origin": { "const": "computed_in_process" },
+        "mock_execution": { "const": false },
+        "fallback_used": { "const": false },
+        "production_eligible": { "const": true }
+      }
+    },
+    "failureRecovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expected_failure_exit_code",
+        "failure_report_schema",
+        "failure_status",
+        "executed_step_count",
+        "failure_category",
+        "failure_stage",
+        "retryable",
+        "recovery_validation_ok"
+      ],
+      "properties": {
+        "expected_failure_exit_code": { "const": 1 },
+        "failure_report_schema": { "const": "kyuubiki.headless-execution-run/v1" },
+        "failure_status": { "const": "invalid" },
+        "executed_step_count": { "const": 0 },
+        "failure_category": { "const": "contract_failure" },
+        "failure_stage": { "const": "command_validation" },
+        "retryable": { "const": false },
+        "recovery_validation_ok": { "const": true }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "work_root_removed", "residue_count"],
+      "properties": {
+        "scope": { "const": "managed-remote-run-root" },
+        "work_root_removed": { "const": true },
+        "residue_count": { "const": 0 }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ok"],
+      "properties": {
+        "id": {
+          "enum": [
+            "remote_linux_capture",
+            "cargo_install_completed",
+            "installed_binary_digests",
+            "source_removed_before_execution",
+            "minimal_runtime_path",
+            "template_discovery",
+            "workflow_initialized",
+            "workflow_validated",
+            "workflow_rendered",
+            "headless_execution_report",
+            "real_solver_execution",
+            "expected_failure_closed",
+            "recovery_after_failure",
+            "cleanup_complete"
+          ]
+        },
+        "ok": { "const": true }
+      }
+    }
+  }
+}

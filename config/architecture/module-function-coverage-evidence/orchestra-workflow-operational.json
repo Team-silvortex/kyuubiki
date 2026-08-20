@@ -1,0 +1,80 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Remote Linux Orchestra workflow execution across orchestrated and offline-mesh modes, including restart retention, admission boundaries, numerical assertions, Agent TaskIR recovery, process-loss policy, and residue-free cleanup.",
+  "paradigm_contract_evidence": {
+    "workflow_composition": [
+      {
+        "id": "orchestra-workflow-operational-contract",
+        "modules": [
+          "orchestra-control-plane"
+        ],
+        "files": [
+          "config/architecture/orchestra-workflow-operational-qualification.json",
+          "schemas/orchestra-workflow-operational-qualification-contract.schema.json",
+          "schemas/orchestra-workflow-operational-qualification-report.schema.json",
+          "workers/rust/crates/script-runner/src/orchestra_workflow_operational_qualification.rs",
+          "workers/rust/crates/script-runner/src/workflow_mesh_remote.rs"
+        ],
+        "required_text": [
+          "remote-linux-orchestra-workflow-operational",
+          "orchestra-control-plane",
+          "workflow_composition",
+          "check-orchestra-workflow-operational-qualification",
+          "remote-linux-qualification-host"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "orchestra-workflow-remote-linux-operational",
+      "status": "proven",
+      "grade": "operational",
+      "modules": [
+        "orchestra-control-plane"
+      ],
+      "paradigms": [
+        "workflow_composition"
+      ],
+      "dimensions": [
+        "execution",
+        "security",
+        "contract",
+        "numerical_validation",
+        "recovery"
+      ],
+      "files": [
+        "config/architecture/orchestra-workflow-operational-qualification.json",
+        "schemas/orchestra-workflow-operational-qualification-contract.schema.json",
+        "schemas/orchestra-workflow-operational-qualification-report.schema.json",
+        "workers/rust/crates/desktop-runtime/src/runtime_layout.rs",
+        "workers/rust/crates/script-runner/src/orchestra_workflow_operational_qualification.rs",
+        "workers/rust/crates/script-runner/src/workflow_mesh.rs",
+        "workers/rust/crates/script-runner/src/workflow_mesh_remote.rs",
+        "tests/integration/workflow-distributed-smoke.test.mjs",
+        "tests/integration/workflow-offline-mesh-smoke.test.mjs",
+        "tests/integration/workflow-offline-mesh-branch-diagnostics-smoke.test.mjs",
+        "workers/rust/crates/cli/tests/agent_task_ir_qualification.rs",
+        "releases/usability-evidence/2.14.1/orchestra-workflow-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"execution_host_role\": \"remote-linux-qualification-host\"",
+        "\"total_tests\": 4",
+        "\"orchestrated_mode\": true",
+        "\"offline_mesh_mode\": true",
+        "\"registered_agent_count\": 2",
+        "\"orchestra_restart_count\": 1",
+        "\"result_retained_after_restart\": true",
+        "\"unauthorized_submission_rejected\": true",
+        "\"malformed_submission_rejected\": true",
+        "\"rejected_submission_created_job\": false",
+        "\"tamper_rejected\": true",
+        "\"recovery_execution\": true",
+        "\"unsafe_replay_blocked\": true",
+        "\"residue_free\": true"
+      ]
+    }
+  ]
+}

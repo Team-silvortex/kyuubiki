@@ -29,10 +29,10 @@ Current moxi baseline:
 - `blocking_gap_count`: `0`
 - `maturity_gap_count`: `0`
 - `thin_evidence_count`: `0`
-- `evidence_grade_gap_count`: `10`
-- required cells meeting their grade target: `40 / 50` (`80.0%`)
-- release-critical P0 cells meeting target: `29 / 36` (`80.6%`)
-- `daji 3.0.0` release state: `blocked` with `7` P0 coordinate gaps and one
+- `evidence_grade_gap_count`: `8`
+- required cells meeting their grade target: `42 / 50` (`84.0%`)
+- release-critical P0 cells meeting target: `31 / 36` (`86.1%`)
+- `daji 3.0.0` release state: `blocked` with `5` P0 coordinate gaps and one
   unclosed external usability release gate
 
 This means no required module/function coordinate is structurally missing. It
@@ -43,12 +43,40 @@ the `daji 3.0.0` P0/P1/P2 release profile. The former maturity points remain
 dimension-complete, but ordinary lane execution no longer masquerades as
 qualification, operational, or release evidence.
 
-The current first P0 hardening coordinate is Orchestra workflow composition,
-which must move from `qualified` to `operational`. It is followed by installed
-Headless SDK operation, then Installer/Orchestra provenance and protocol/SDK
-runtime API verification. The generated evidence-strength ranking also exposes
-three P1 benchmark coordinates with a two-grade gap; the release planning queue
-keeps the P0 blockers ahead of them.
+The current P0 hardening front is a five-coordinate tie. Installer shell,
+Orchestra control plane, and native Installer persistence/provenance must move
+from `exercised` to `verified`; protocol and Headless SDK runtime API evidence
+must make the same one-grade move. The generated evidence-strength ranking also
+exposes three P1 benchmark coordinates with a two-grade gap; the release
+planning queue keeps the P0 blockers ahead of them.
+
+The former first coordinate, `sdk-headless / sdk_headless`, now meets its
+`operational` target. Its remote Linux qualification installs the release Rust
+Headless tools with Cargo into an isolated prefix, records both binary digests,
+deletes the synchronized source tree, and executes with an empty isolated
+runtime `PATH`. The installed tools discover 35 templates; initialize,
+validate, render, and execute a three-step Headless workflow; run a three-
+candidate heat-spreader study through native real solver kernels without mock
+or fallback; reject a missing workflow before execution; and validate the
+original workflow again after failure. The managed remote root is removed with
+zero residue, and the retained report contains no host identity or absolute
+path. The installed package identifies itself as shipping version `2.7.0`; the
+qualification belongs to the current `2.14.1` development evidence line and is
+retained at
+`releases/usability-evidence/2.14.1/headless-sdk-operational-qualification.json`.
+Python and Elixir parity remain supported by the separate 263-test qualified
+suite; this Rust installation evidence does not claim registry-installed
+operation for those languages.
+
+The former first coordinate, `orchestra-control-plane / workflow_composition`,
+now meets its `operational` target. Its remote Linux qualification executes the
+orchestrated and offline-mesh paths, proves a 23-node heat-to-thermo workflow
+across two registered Agents, retains the completed result across an Orchestra
+restart, rejects unauthorized and malformed submissions without creating jobs,
+rejects tampered Agent TaskIR, recovers execution, verifies process-loss replay
+policy, and closes all qualification ports without residue. The retained report
+contains no host identity or absolute path and lives at
+`releases/usability-evidence/2.14.1/orchestra-workflow-operational-qualification.json`.
 
 The former tied coordinate, `workbench-shell / workflow_composition`, now meets
 its `qualified` target alongside `workbench-shell / validation`. Its native

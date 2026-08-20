@@ -1,5 +1,7 @@
 use crate::native_time::utc_timestamp_slug;
-use crate::remote_host::{remote_shell_path, rsync_to, scp_from, shell_escape, ssh_status};
+use crate::remote_host::{
+    remote_shell_path, rsync_to, scp_from, shell_escape, ssh_status, valid_ssh_alias,
+};
 use kyuubiki_installer::validate_agent_solver_operational_qualification_report;
 use serde_json::Value;
 use std::env;
@@ -199,18 +201,6 @@ impl RemoteOptions {
         }
         Ok(options)
     }
-}
-
-fn valid_ssh_alias(value: &str) -> bool {
-    !value.is_empty()
-        && value.len() <= 253
-        && value
-            .bytes()
-            .next()
-            .is_some_and(|byte| byte.is_ascii_alphanumeric())
-        && value
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
 }
 
 fn prepare_remote_run(root: &Path, options: &RemoteOptions) -> RunnerResult<()> {

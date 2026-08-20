@@ -86,6 +86,18 @@ pub(crate) fn remote_shell_path(value: &str) -> String {
         .unwrap_or_else(|| shell_escape(value))
 }
 
+pub(crate) fn valid_ssh_alias(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 253
+        && value
+            .bytes()
+            .next()
+            .is_some_and(|byte| byte.is_ascii_alphanumeric())
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
+}
+
 fn run_status<I>(program: &str, args: I, cwd: &Path) -> RunnerResult<u8>
 where
     I: IntoIterator<Item = OsString>,
@@ -108,5 +120,14 @@ mod tests {
         assert_eq!(shell_escape("a'b"), "'a'\\''b'");
         assert_eq!(remote_shell_path("~/kyuubiki lab"), "$HOME/'kyuubiki lab'");
         assert_eq!(remote_shell_path("/tmp/kyuubiki"), "'/tmp/kyuubiki'");
+    }
+
+    #[test]
+    fn ssh_aliases_cannot_be_reinterpreted_as_options() {
+        assert!(valid_ssh_alias("kyuubiki-lab"));
+        assert!(valid_ssh_alias("lab.internal_1"));
+        assert!(!valid_ssh_alias("-oProxyCommand=bad"));
+        assert!(!valid_ssh_alias("user@host"));
+        assert!(!valid_ssh_alias("host name"));
     }
 }

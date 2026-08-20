@@ -42,6 +42,8 @@ mod elixir_self_host;
 mod frontend_checks;
 mod governance_commands;
 mod gui_runtime_capability_contract;
+mod headless_sdk_operational;
+mod headless_sdk_operational_validation;
 mod headless_sdk_validation;
 mod headless_workflow_qualification;
 mod help;
@@ -362,6 +364,9 @@ fn run() -> RunnerResult<u8> {
                 &paths.root,
                 rest,
             )
+        }
+        "qualify-headless-sdk-operational-remote" => {
+            headless_sdk_operational::run_qualify_headless_sdk_operational_remote(&paths.root, rest)
         }
         "lab" => lab::run_lab(&paths.root, rest),
         "remote-ssh-fixture" => remote_ssh_fixture::run_remote_ssh_fixture(&paths.root, rest),

@@ -740,16 +740,10 @@ fn manifest_agent_ports(root: &Path, env: &HashMap<String, String>) -> Vec<u16> 
 
 fn augment_path(paths: &RuntimePaths, env: &mut HashMap<String, String>) {
     let mut entries = runtime_bin_dirs(&paths.root);
-    if cfg!(windows) {
-        if let Some(system_root) = env.get("SystemRoot").or_else(|| env.get("SYSTEMROOT")) {
-            entries.push(PathBuf::from(system_root).join("System32"));
-        }
-    } else {
-        // Self-contained releases still use the OS command baseline from their
-        // generated launchers. Package-manager and language-tool paths stay out.
-        entries.extend([PathBuf::from("/usr/bin"), PathBuf::from("/bin")]);
-    }
     if paths.is_development() {
+        if let Some(current) = env.get("PATH") {
+            entries.extend(env::split_paths(current));
+        }
         if let Some(home) = env.get("HOME") {
             entries.push(PathBuf::from(home).join(".cargo/bin"));
         }
@@ -760,9 +754,13 @@ fn augment_path(paths: &RuntimePaths, env: &mut HashMap<String, String>) {
             unix_rooted_path(&["usr", "bin"]),
             unix_rooted_path(&["bin"]),
         ]);
-        if let Some(current) = env.get("PATH") {
-            entries.extend(env::split_paths(current));
+    } else if cfg!(windows) {
+        if let Some(system_root) = env.get("SystemRoot").or_else(|| env.get("SYSTEMROOT")) {
+            entries.push(PathBuf::from(system_root).join("System32"));
         }
+    } else {
+        // Installed releases use only manifest runtimes plus the OS baseline.
+        entries.extend([PathBuf::from("/usr/bin"), PathBuf::from("/bin")]);
     }
     let joined = env::join_paths(entries.iter().filter(|path| path.is_dir()))
         .unwrap_or_default()

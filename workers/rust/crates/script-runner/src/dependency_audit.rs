@@ -1,15 +1,19 @@
 use serde_json::Value;
 use std::collections::BTreeSet;
+use std::env;
 use std::ffi::OsString;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{Duration, SystemTime};
 
 const CONTRACT_PATH: &str = "config/dependency-audit-lockfiles.json";
 const SCHEMA: &str = "kyuubiki.dependency-audit-lockfiles/v1";
 const NPM_ARGS: &[&str] = &["audit", "--omit=dev", "--package-lock-only", "--json"];
 const CARGO_ARGS: &[&str] = &["audit"];
+const CARGO_NO_FETCH_ARGS: &[&str] = &["audit", "--no-fetch"];
 const HEX_ARGS: &[&str] = &["hex.audit"];
+const CARGO_ADVISORY_CACHE_MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
 
 type RunnerResult<T> = Result<T, String>;
 
@@ -76,17 +80,7 @@ fn audit_all(root: &Path, contract: &AuditContract) -> Vec<AuditResult> {
             ..result
         }
     }));
-    results.extend(contract.cargo.iter().map(|cwd| {
-        let result = run(root, "cargo", CARGO_ARGS, cwd);
-        let summary = result
-            .stdout
-            .lines()
-            .find(|line| line.contains("allowed warnings found"))
-            .map(str::trim)
-            .unwrap_or("0 vulnerability(s)")
-            .to_string();
-        AuditResult { summary, ..result }
-    }));
+    results.extend(audit_cargo_lanes(root, &contract.cargo));
     results.extend(contract.hex.iter().map(|cwd| {
         let mut result = run(root, "mix", HEX_ARGS, cwd);
         let output = format!("{}\n{}", result.stdout, result.stderr);
@@ -96,6 +90,82 @@ fn audit_all(root: &Path, contract: &AuditContract) -> Vec<AuditResult> {
         AuditResult { summary, ..result }
     }));
     results
+}
+
+fn audit_cargo_lanes(root: &Path, dirs: &[String]) -> Vec<AuditResult> {
+    let Some((first, rest)) = dirs.split_first() else {
+        return Vec::new();
+    };
+    let refreshed = run(root, "cargo", CARGO_ARGS, first);
+    let first_result = if is_cargo_fetch_failure(&refreshed) && cargo_cache_is_fresh(root) {
+        let mut cached = run(root, "cargo", CARGO_NO_FETCH_ARGS, first);
+        cached.summary = cargo_audit_summary(&cached, true);
+        cached
+    } else {
+        AuditResult {
+            summary: cargo_audit_summary(&refreshed, false),
+            ..refreshed
+        }
+    };
+    let mut results = vec![first_result];
+    results.extend(rest.iter().map(|cwd| {
+        let result = run(root, "cargo", CARGO_NO_FETCH_ARGS, cwd);
+        AuditResult {
+            summary: cargo_audit_summary(&result, true),
+            ..result
+        }
+    }));
+    results
+}
+
+fn cargo_audit_summary(result: &AuditResult, cached: bool) -> String {
+    let allowed = result
+        .stdout
+        .lines()
+        .find(|line| line.contains("allowed warnings found"))
+        .map(str::trim);
+    let summary = allowed.unwrap_or(if result.status == 0 {
+        "0 vulnerability(s)"
+    } else {
+        "audit incomplete or vulnerabilities reported"
+    });
+    if cached {
+        format!("{summary}; advisory DB cache <= 24h")
+    } else {
+        summary.to_string()
+    }
+}
+
+fn is_cargo_fetch_failure(result: &AuditResult) -> bool {
+    let output = format!("{}\n{}", result.stdout, result.stderr);
+    output.contains("couldn't fetch advisory database")
+        || output.contains("failed to prepare fetch")
+}
+
+fn cargo_cache_is_fresh(root: &Path) -> bool {
+    cargo_advisory_db(root)
+        .map(|path| path.join(".git/FETCH_HEAD"))
+        .and_then(|path| fs::metadata(path).ok())
+        .and_then(|metadata| metadata.modified().ok())
+        .is_some_and(|modified| cache_timestamp_is_fresh(modified, SystemTime::now()))
+}
+
+fn cargo_advisory_db(root: &Path) -> Option<PathBuf> {
+    let cargo_home = env::var_os("CARGO_HOME")
+        .map(PathBuf::from)
+        .or_else(|| env::var_os("HOME").map(|home| PathBuf::from(home).join(".cargo")))
+        .or_else(|| env::var_os("USERPROFILE").map(|home| PathBuf::from(home).join(".cargo")))?;
+    let cargo_home = if cargo_home.is_absolute() {
+        cargo_home
+    } else {
+        root.join(cargo_home)
+    };
+    Some(cargo_home.join("advisory-db"))
+}
+
+fn cache_timestamp_is_fresh(modified: SystemTime, now: SystemTime) -> bool {
+    now.duration_since(modified)
+        .is_ok_and(|age| age <= CARGO_ADVISORY_CACHE_MAX_AGE)
 }
 
 fn run(root: &Path, command: &str, args: &[&str], cwd: &str) -> AuditResult {
@@ -423,6 +493,11 @@ fn run_self_test(contract: &AuditContract) -> RunnerResult<()> {
         "npm audit args",
     )?;
     expect_eq(&CARGO_ARGS.to_vec(), &["audit"], "cargo audit args")?;
+    expect_eq(
+        &CARGO_NO_FETCH_ARGS.to_vec(),
+        &["audit", "--no-fetch"],
+        "cached cargo audit args",
+    )?;
     expect_eq(&HEX_ARGS.to_vec(), &["hex.audit"], "hex audit args")?;
     if summarize_npm_audit(r#"{"metadata":{"vulnerabilities":{"total":0}}}"#)
         != "0 vulnerability(s)"
@@ -497,9 +572,11 @@ fn field<'a>(value: &'a Value, key: &str) -> &'a str {
 #[cfg(test)]
 mod tests {
     use super::{
-        HexAdvisoryMitigation, classify_hex_audit, format_npm_audit_failure,
-        parse_hex_advisory_ids, summarize_npm_audit,
+        AuditResult, HexAdvisoryMitigation, cache_timestamp_is_fresh, classify_hex_audit,
+        format_npm_audit_failure, is_cargo_fetch_failure, parse_hex_advisory_ids,
+        summarize_npm_audit,
     };
+    use std::time::{Duration, SystemTime};
 
     fn mitigation(id: &str) -> HexAdvisoryMitigation {
         HexAdvisoryMitigation {
@@ -570,5 +647,37 @@ mod tests {
         let (status, summary) = classify_hex_audit(7, "network unavailable", &[]);
         assert_eq!(status, 7);
         assert_eq!(summary, "Hex audit command failed");
+    }
+
+    #[test]
+    fn cargo_fetch_failures_are_distinct_from_vulnerability_results() {
+        let fetch_failure = AuditResult {
+            command: "cargo audit".to_string(),
+            cwd: "workers/rust".to_string(),
+            status: 1,
+            stdout: String::new(),
+            stderr: "error: couldn't fetch advisory database: failed to prepare fetch".to_string(),
+            summary: String::new(),
+        };
+        assert!(is_cargo_fetch_failure(&fetch_failure));
+        let vulnerability = AuditResult {
+            stderr: "1 vulnerability found".to_string(),
+            ..fetch_failure
+        };
+        assert!(!is_cargo_fetch_failure(&vulnerability));
+    }
+
+    #[test]
+    fn cargo_advisory_cache_must_be_recent_and_not_future_dated() {
+        let now = SystemTime::UNIX_EPOCH + Duration::from_secs(100_000);
+        assert!(cache_timestamp_is_fresh(
+            now - Duration::from_secs(23 * 60 * 60),
+            now
+        ));
+        assert!(!cache_timestamp_is_fresh(
+            now - Duration::from_secs(25 * 60 * 60),
+            now
+        ));
+        assert!(!cache_timestamp_is_fresh(now + Duration::from_secs(1), now));
     }
 }

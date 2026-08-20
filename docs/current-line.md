@@ -13,7 +13,7 @@ Use it when you want the shortest answer to:
 `moxi 2.x` is the point where Kyuubiki treats its core contracts as product
 baseline rather than loose prototypes.
 
-The current development point in this line is `moxi 2.14.1`.
+The current development point in this line is `moxi 2.14.2`.
 
 At this checkpoint, the cross-operator contract layer has repeatable positive
 and fault-boundary qualification across workflow datasets, TaskIR, runtime API
@@ -56,9 +56,9 @@ The current rule is:
 - keep GUI convenience separate from runtime authority
 - keep agent/orchestra/mesh behavior protocol-driven
 
-## Current 2.13 Checkpoint
+## Current 2.14 Checkpoint
 
-`moxi 2.13.x` treats the next trust jump as contract-equivalent ecosystem
+`moxi 2.14.x` treats the next trust jump as contract-equivalent ecosystem
 surfaces plus measurable preparation for `daji 3.0.0`, rather than raw feature
 sprawl:
 
