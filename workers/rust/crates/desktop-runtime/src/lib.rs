@@ -8,8 +8,10 @@ use std::path::{Path, PathBuf};
 
 mod audit_log;
 mod runtime_control;
+mod runtime_export;
 mod runtime_layout;
 mod runtime_options;
+mod runtime_support;
 
 pub use audit_log::{
     DesktopAuditLedgerStatus, append_desktop_provenance_record, desktop_provenance_status,
@@ -225,7 +227,7 @@ pub fn hot_service_stop() -> Result<String, String> {
 }
 
 pub fn export_database(url: Option<&str>) -> Result<String, String> {
-    runtime_control::export_database(url)
+    runtime_export::export_database(url)
 }
 
 pub fn log_path_for(service: &str) -> Result<PathBuf, String> {

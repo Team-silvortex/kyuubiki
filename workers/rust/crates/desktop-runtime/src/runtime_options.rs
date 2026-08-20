@@ -7,6 +7,7 @@ pub(crate) const DEFAULT_ORCHESTRATOR_PORT: u16 = 4000;
 pub(crate) struct RuntimeOptions {
     pub(crate) orchestrator_port: u16,
     pub(crate) orchestrator_only: bool,
+    pub(crate) frontend_disabled: bool,
 }
 
 impl RuntimeOptions {
@@ -19,22 +20,12 @@ impl RuntimeOptions {
             .ok()
             .filter(|port| *port > 0)
             .ok_or_else(|| "KYUUBIKI_ORCHESTRATOR_PORT must be a valid TCP port".to_string())?;
-        let orchestrator_only = match env
-            .get("KYUUBIKI_RUNTIME_ORCHESTRATOR_ONLY")
-            .map(|value| value.trim().to_ascii_lowercase())
-            .as_deref()
-        {
-            None | Some("") | Some("0") | Some("false") => false,
-            Some("1") | Some("true") => true,
-            Some(_) => {
-                return Err(
-                    "KYUUBIKI_RUNTIME_ORCHESTRATOR_ONLY must be true, false, 1, or 0".into(),
-                );
-            }
-        };
+        let orchestrator_only = bool_from_env(env, "KYUUBIKI_RUNTIME_ORCHESTRATOR_ONLY")?;
+        let frontend_disabled = bool_from_env(env, "KYUUBIKI_RUNTIME_FRONTEND_DISABLED")?;
         Ok(Self {
             orchestrator_port,
             orchestrator_only,
+            frontend_disabled,
         })
     }
 
@@ -63,6 +54,18 @@ impl RuntimeOptions {
     }
 }
 
+fn bool_from_env(env: &HashMap<String, String>, key: &str) -> Result<bool, String> {
+    match env
+        .get(key)
+        .map(|value| value.trim().to_ascii_lowercase())
+        .as_deref()
+    {
+        None | Some("") | Some("0") | Some("false") => Ok(false),
+        Some("1") | Some("true") => Ok(true),
+        Some(_) => Err(format!("{key} must be true, false, 1, or 0")),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::RuntimeOptions;
@@ -72,11 +75,13 @@ mod tests {
         let env = [
             ("KYUUBIKI_ORCHESTRATOR_PORT".into(), "6400".into()),
             ("KYUUBIKI_RUNTIME_ORCHESTRATOR_ONLY".into(), "true".into()),
+            ("KYUUBIKI_RUNTIME_FRONTEND_DISABLED".into(), "1".into()),
         ]
         .into();
         let options = RuntimeOptions::from_env(&env).expect("runtime options");
         assert_eq!(options.orchestrator_port, 6400);
         assert!(options.orchestrator_only);
+        assert!(options.frontend_disabled);
         assert!(
             options
                 .orchestrator_pid("run".as_ref())
@@ -87,5 +92,18 @@ mod tests {
                 .runtime_mode("run".as_ref())
                 .ends_with("runtime-mode-6400.txt")
         );
+    }
+
+    #[test]
+    fn rejects_invalid_boolean_runtime_option() {
+        let env = [(
+            "KYUUBIKI_RUNTIME_FRONTEND_DISABLED".into(),
+            "sometimes".into(),
+        )]
+        .into();
+        let error = RuntimeOptions::from_env(&env)
+            .err()
+            .expect("invalid option");
+        assert!(error.contains("KYUUBIKI_RUNTIME_FRONTEND_DISABLED"));
     }
 }

@@ -1,9 +1,11 @@
+use std::fs;
 use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::{
     Platform, build_embedded_runtime_manifest, build_launch_manifest, build_release_manifest,
     build_service_launch_manifest, embedded_runtime_report, expected_release_script_contents,
-    linux_desktop_dependency_plan, workspace_root,
+    linux_desktop_dependency_plan, release_env_path, workspace_root,
 };
 
 #[test]
@@ -81,6 +83,12 @@ fn service_launch_manifest_never_falls_back_to_source_tools() {
         let services = manifest["services"].as_array().unwrap();
         assert_eq!(services.len(), 3);
         assert!(services.iter().any(|service| service["id"] == "agent"));
+        let orchestrator = services
+            .iter()
+            .find(|service| service["id"] == "orchestrator")
+            .unwrap();
+        assert_eq!(orchestrator["args"], serde_json::json!(["start"]));
+        assert_ne!(orchestrator["args"], serde_json::json!(["daemon"]));
         assert!(
             rendered.contains("services/frontend/server.js"),
             "{platform:?}"
@@ -124,4 +132,26 @@ fn linux_desktop_dependency_plan_declares_tauri_ubuntu_prerequisites() {
         "make desktop-linux-remote-preflight"
     );
     assert!(plan.render().contains("installer-managed remote execution"));
+}
+
+#[test]
+fn release_staging_uses_example_when_local_override_is_absent() {
+    let root = std::env::temp_dir().join(format!(
+        "kyuubiki-release-env-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos()
+    ));
+    fs::create_dir_all(&root).expect("fixture root");
+    fs::write(
+        root.join(".env.example"),
+        "KYUUBIKI_STORAGE_BACKEND=sqlite\n",
+    )
+    .expect("example env");
+    assert_eq!(release_env_path(&root), root.join(".env.example"));
+
+    fs::write(root.join(".env.local"), "KYUUBIKI_STORAGE_BACKEND=sqlite\n").expect("local env");
+    assert_eq!(release_env_path(&root), root.join(".env.local"));
+    fs::remove_dir_all(root).expect("remove fixture");
 }

@@ -6,7 +6,8 @@ use crate::{
     desktop_deployment_update_validation, desktop_ui_validation, desktop_usability_journeys,
     doc_inventory, docs_book, frontend_checks, gui_runtime_capability_contract,
     headless_sdk_operational, headless_sdk_validation, headless_workflow_qualification,
-    install_update_disk_hygiene, installation_integrity_docs, installer_recovery_fault_injection,
+    install_update_disk_hygiene, installation_integrity_docs,
+    installed_runtime_operational_qualification, installer_recovery_fault_injection,
     language_packs, local_path_audit, make_modules, material_exploration_chain_contract,
     material_score_contract, material_study_execution_plan_contract, materialization_plan_contract,
     minimal_industrial_closure, module_extension_standard, module_function_matrix,
@@ -136,6 +137,11 @@ pub(crate) fn run_governance_command(
         }
         "check-orchestra-workflow-operational-qualification" => {
             orchestra_workflow_operational_qualification::run_check_orchestra_workflow_operational_qualification(
+                root, args,
+            )
+        }
+        "check-installed-runtime-operational-qualification" => {
+            installed_runtime_operational_qualification::run_check_installed_runtime_operational_qualification(
                 root, args,
             )
         }

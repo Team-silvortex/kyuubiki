@@ -51,6 +51,7 @@ mod headless_workflow_qualification;
 mod help;
 mod install_update_disk_hygiene;
 mod installation_integrity_docs;
+mod installed_runtime_operational_qualification;
 mod installer_recovery_fault_injection;
 mod kcore_cli;
 mod lab;
@@ -525,35 +526,44 @@ fn run() -> RunnerResult<u8> {
 
 impl RepoPaths {
     fn discover() -> RunnerResult<Self> {
+        if let Some(root) = env::var_os("KYUUBIKI_REPO_ROOT").map(PathBuf::from) {
+            return Self::from_root(root).ok_or_else(|| {
+                "KYUUBIKI_REPO_ROOT does not point to a Kyuubiki repository".to_string()
+            });
+        }
         let exe =
             env::current_exe().map_err(|error| format!("failed to resolve executable: {error}"))?;
-        let mut current = exe.parent().unwrap_or_else(|| Path::new(".")).to_path_buf();
-        loop {
-            if current.join("workers/rust/Cargo.toml").is_file() && current.join("scripts").is_dir()
-            {
-                return Ok(Self {
-                    frontend: current.join("apps/frontend"),
-                    rust: current.join("workers/rust"),
-                    web: current.join("apps/web"),
-                    hub_gui: current.join("apps/hub-gui"),
-                    installer_gui: current.join("apps/installer-gui"),
-                    workbench_gui: current.join("apps/workbench-gui"),
-                    root: current,
-                });
-            }
-            if !current.pop() {
-                break;
-            }
+        if let Some(paths) = exe.parent().and_then(Self::from_ancestor) {
+            return Ok(paths);
         }
         let cwd = env::current_dir().map_err(|error| format!("failed to resolve cwd: {error}"))?;
-        Ok(Self {
-            frontend: cwd.join("apps/frontend"),
-            rust: cwd.join("workers/rust"),
-            web: cwd.join("apps/web"),
-            hub_gui: cwd.join("apps/hub-gui"),
-            installer_gui: cwd.join("apps/installer-gui"),
-            workbench_gui: cwd.join("apps/workbench-gui"),
-            root: cwd,
+        Self::from_ancestor(&cwd).ok_or_else(|| {
+            format!(
+                "failed to locate Kyuubiki repository from executable {} or cwd {}",
+                exe.display(),
+                cwd.display()
+            )
+        })
+    }
+
+    fn from_ancestor(start: &Path) -> Option<Self> {
+        start
+            .ancestors()
+            .find_map(|root| Self::from_root(root.to_path_buf()))
+    }
+
+    fn from_root(root: PathBuf) -> Option<Self> {
+        if !root.join("workers/rust/Cargo.toml").is_file() || !root.join("scripts").is_dir() {
+            return None;
+        }
+        Some(Self {
+            frontend: root.join("apps/frontend"),
+            rust: root.join("workers/rust"),
+            web: root.join("apps/web"),
+            hub_gui: root.join("apps/hub-gui"),
+            installer_gui: root.join("apps/installer-gui"),
+            workbench_gui: root.join("apps/workbench-gui"),
+            root,
         })
     }
 }

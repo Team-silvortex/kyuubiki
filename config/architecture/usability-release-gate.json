@@ -15,6 +15,7 @@
       "fault_injection_and_recovery/agent-watchdog-stale-timeout",
       "fault_injection_and_recovery/orchestra-agent-process-loss",
       "fault_injection_and_recovery/installer-journal-replay",
+      "remote_agent_orchestra_round_trip/installer-managed-linux",
       "upgrade_and_rollback/agent-remote-linux",
       "upgrade_and_rollback/runtime-payload-remote-linux"
     ],
@@ -120,6 +121,11 @@
       "probes": [
         ["check-desktop-usability-journeys", "--journey", "execute-observe"],
         ["check-operator-task-ir-contract"],
+        [
+          "check-installed-runtime-operational-qualification",
+          "--verify-report",
+          "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
+        ],
         [
           "check-operator-validation",
           "--execute",

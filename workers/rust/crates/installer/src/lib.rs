@@ -190,7 +190,7 @@ pub fn export_launch_config(platform: Platform) -> String {
 
 pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<String, String> {
     let root = workspace_root();
-    validate_env_file()?;
+    validate_env_path(&release_env_path(&root))?;
     let release_dir = target_dir.unwrap_or_else(|| root.join("dist").join(platform.as_str()));
     let desktop_apps = ["hub-gui", "installer-gui", "workbench-gui"];
 
@@ -273,8 +273,20 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
 
 pub fn validate_env_file() -> Result<String, String> {
     let root = workspace_root();
-    let env_file = root.join(".env.local");
-    let env_map = parse_env_file(&env_file)?;
+    validate_env_path(&root.join(".env.local"))
+}
+
+fn release_env_path(root: &Path) -> PathBuf {
+    let local = root.join(".env.local");
+    if local.is_file() {
+        local
+    } else {
+        root.join(".env.example")
+    }
+}
+
+fn validate_env_path(env_file: &Path) -> Result<String, String> {
+    let env_map = parse_env_file(env_file)?;
     let deployment_mode = env_map
         .get("KYUUBIKI_DEPLOYMENT_MODE")
         .map(String::as_str)
@@ -355,7 +367,11 @@ pub fn validate_env_file() -> Result<String, String> {
     };
 
     Ok(format!(
-        "validated .env.local (deployment={}, storage={}, discovery={}, agents={})",
+        "validated {} (deployment={}, storage={}, discovery={}, agents={})",
+        env_file
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("environment file"),
         deployment_mode,
         storage_backend,
         agent_discovery,

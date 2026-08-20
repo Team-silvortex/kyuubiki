@@ -17,6 +17,7 @@
       "./scripts/kyuubiki check-agent-solver-operational-qualification",
       "./scripts/kyuubiki check-agent-update-operational-qualification",
       "./scripts/kyuubiki check-runtime-payload-operational-qualification",
+      "./scripts/kyuubiki check-installed-runtime-operational-qualification",
       "./scripts/kyuubiki check-benchmark-qualification",
       "./scripts/kyuubiki build-regression-gate-report",
       "./scripts/kyuubiki build-central-readiness-report",
@@ -32,6 +33,7 @@
       "tmp/workbench-validation-qualification-report.json",
       "tmp/system-security-qualification-report.json",
       "tmp/agent-solver-operational-remote.json",
+      "tmp/installed-runtime-operational-qualification.json",
       "tmp/benchmark-qualification-report.json",
       "tmp/regression-gate-report.json",
       "tmp/central-readiness-report.json",
@@ -54,7 +56,12 @@
       "schemas/agent-solver-operational-qualification-contract.schema.json",
       "schemas/agent-solver-operational-qualification-report.schema.json",
       "releases/usability-evidence/2.12.5/agent-solver-task-ir-qualification.json",
-      "releases/usability-evidence/2.13.8/agent-solver-operational-qualification.json"
+      "releases/usability-evidence/2.13.8/agent-solver-operational-qualification.json",
+      "config/architecture/installed-runtime-operational-qualification.json",
+      "schemas/installed-runtime-operational-qualification-contract.schema.json",
+      "schemas/installed-runtime-operational-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification.rs",
+      "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
     ],
     "required_receipts": [
       "kyuubiki.engine-solver-provenance/v1",
@@ -63,7 +70,8 @@
       "kyuubiki.agent-operator-task-failure/v1",
       "kyuubiki.agent-update-package/v1",
       "kyuubiki.agent-update-activation/v1",
-      "kyuubiki.agent-solver-operational-qualification/v1"
+      "kyuubiki.agent-solver-operational-qualification/v1",
+      "kyuubiki.installed-runtime-operational-qualification/v1"
     ]
   },
   "workflow_composition": {
@@ -84,7 +92,11 @@
       "config/architecture/orchestra-workflow-operational-qualification.json",
       "schemas/orchestra-workflow-operational-qualification-report.schema.json",
       "workers/rust/crates/script-runner/src/orchestra_workflow_operational_qualification.rs",
-      "releases/usability-evidence/2.14.1/orchestra-workflow-operational-qualification.json"
+      "releases/usability-evidence/2.14.1/orchestra-workflow-operational-qualification.json",
+      "config/architecture/installed-runtime-operational-qualification.json",
+      "schemas/installed-runtime-operational-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification.rs",
+      "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.agent-headless-bridge/v1",
@@ -92,7 +104,8 @@
       "kyuubiki.headless-execution-run/v1",
       "kyuubiki.headless-workflow-qualification-report/v1",
       "kyuubiki.workbench-validation-qualification-report/v1",
-      "kyuubiki.orchestra-workflow-operational-qualification/v1"
+      "kyuubiki.orchestra-workflow-operational-qualification/v1",
+      "kyuubiki.installed-runtime-operational-qualification/v1"
     ]
   },
   "security": {
@@ -168,7 +181,13 @@
       "workers/rust/crates/installer/src/runtime_payload_qualification.rs",
       "workers/rust/crates/installer/src/runtime_payload_qualification_validation.rs",
       "workers/rust/crates/script-runner/src/runtime_payload_operational_qualification.rs",
-      "releases/usability-evidence/2.14.3/runtime-payload-operational-qualification.json"
+      "releases/usability-evidence/2.14.3/runtime-payload-operational-qualification.json",
+      "config/architecture/installed-runtime-operational-qualification.json",
+      "schemas/installed-runtime-operational-qualification-contract.schema.json",
+      "schemas/installed-runtime-operational-qualification-report.schema.json",
+      "workers/rust/crates/desktop-runtime/src/runtime_control.rs",
+      "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification.rs",
+      "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.installer-headless-surface/v1",
@@ -176,7 +195,8 @@
       "kyuubiki.agent-update-qualification/v1",
       "kyuubiki.runtime-payload-qualification/v1",
       "all_service_entries_executed",
-      "rollback_payload_restored"
+      "rollback_payload_restored",
+      "kyuubiki.installed-runtime-operational-qualification/v1"
     ]
   },
   "sdk_headless": {
@@ -189,13 +209,18 @@
       "schemas/headless-sdk-operational-qualification-report.schema.json",
       "workers/rust/crates/script-runner/src/headless_sdk_operational.rs",
       "workers/rust/crates/script-runner/src/headless_sdk_operational_validation.rs",
-      "releases/usability-evidence/2.14.1/headless-sdk-operational-qualification.json"
+      "releases/usability-evidence/2.14.1/headless-sdk-operational-qualification.json",
+      "config/architecture/installed-runtime-operational-qualification.json",
+      "schemas/installed-runtime-operational-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification.rs",
+      "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.headless-sdk-surface/v1",
       "kyuubiki.headless-engine-solver-bridge/v1",
       "kyuubiki.installer-headless-surface/v1",
-      "kyuubiki.headless-sdk-operational-qualification/v1"
+      "kyuubiki.headless-sdk-operational-qualification/v1",
+      "kyuubiki.installed-runtime-operational-qualification/v1"
     ]
   },
   "persistence_provenance": {

@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/installed-runtime-operational-qualification-contract.schema.json",
+  "title": "Kyuubiki Installed Runtime Operational Qualification Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "qualification_id",
+    "capture",
+    "source_guard",
+    "retention",
+    "required_checks"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "../../schemas/installed-runtime-operational-qualification-contract.schema.json"
+    },
+    "schema_version": {
+      "const": "kyuubiki.installed-runtime-operational-qualification-contract/v1"
+    },
+    "qualification_id": {
+      "const": "remote-linux-installer-managed-runtime-operational"
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "solve_report",
+        "restart_fetch_report",
+        "detached_fetch_report",
+        "detached_status",
+        "cleanup_report",
+        "installed_digests",
+        "execution_host_role",
+        "platform",
+        "architecture",
+        "package_version",
+        "workflow_id",
+        "minimum_agent_count",
+        "restart_count"
+      ],
+      "properties": {
+        "solve_report": { "$ref": "#/$defs/repoPath" },
+        "restart_fetch_report": { "$ref": "#/$defs/repoPath" },
+        "detached_fetch_report": { "$ref": "#/$defs/repoPath" },
+        "detached_status": { "$ref": "#/$defs/repoPath" },
+        "cleanup_report": { "$ref": "#/$defs/repoPath" },
+        "installed_digests": { "$ref": "#/$defs/repoPath" },
+        "execution_host_role": { "const": "remote-linux-qualification-host" },
+        "platform": { "const": "linux" },
+        "architecture": { "const": "x86_64" },
+        "package_version": { "const": "2.7.0" },
+        "workflow_id": { "const": "qualification.installed-runtime.bar" },
+        "minimum_agent_count": { "type": "integer", "minimum": 2 },
+        "restart_count": { "type": "integer", "minimum": 2 }
+      }
+    },
+    "source_guard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files", "required_text"],
+      "properties": {
+        "files": {
+          "type": "array",
+          "minItems": 5,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/repoPath" }
+        },
+        "required_text": {
+          "type": "array",
+          "minItems": 5,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 160 }
+        }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["report_schema", "report_schema_path", "report_path", "forbidden_content"],
+      "properties": {
+        "report_schema": {
+          "const": "kyuubiki.installed-runtime-operational-qualification/v1"
+        },
+        "report_schema_path": {
+          "const": "schemas/installed-runtime-operational-qualification-report.schema.json"
+        },
+        "report_path": { "$ref": "#/$defs/repoPath" },
+        "forbidden_content": {
+          "type": "array",
+          "minItems": 7,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 96 }
+        }
+      }
+    },
+    "required_checks": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 320,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$"
+    }
+  }
+}

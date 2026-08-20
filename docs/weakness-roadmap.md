@@ -89,6 +89,22 @@ and is rechecked by `make check-runtime-payload-operational-qualification`.
 This closes only `upgrade_and_rollback/runtime-payload-remote-linux`; packaged
 desktop update and rollback on macOS, Linux, and Windows remain open.
 
+The first Installer-managed end-to-end runtime subtier is now operational on
+remote Linux. A sealed installed payload starts Orchestra and two Rust Agents
+without loading the frontend; an installed Rust Headless client submits a real
+bar solve, observes `rust-agent-rpc` dispatch, and verifies displacement and
+stress. The completed result survives two managed restarts, including one after
+the synchronized source tree is removed. Shutdown closes every qualification
+port, removes managed PID files and the remote experiment root, and leaves zero
+residue. The sanitized evidence is retained at
+`releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json`
+and is rechecked by
+`make check-installed-runtime-operational-qualification`. This closes only
+`remote_agent_orchestra_round_trip/installer-managed-linux`; the parent tier
+still requires multi-host package acquisition, network-loss/rejoin behavior,
+fleet scheduling, and installed operation on the remaining supported
+platforms.
+
 The former P0 runtime API tie now meets its `verified` target. The current-line
 protocol report executes 101 tests, proves 55 advertised methods have 55 unique
 wire round trips, rejects unknown methods and malformed envelope states, and

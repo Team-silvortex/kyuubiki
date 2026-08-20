@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::env;
 use std::fs::{self, OpenOptions};
-use std::io::{ErrorKind, Read, Write};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -19,6 +18,7 @@ use crate::runtime_layout::{
     RuntimePaths, resolve_development_command, runtime_bin_dirs, runtime_paths,
 };
 use crate::runtime_options::{DEFAULT_ORCHESTRATOR_PORT, RuntimeOptions};
+use crate::runtime_support::{remove_file_if_present, service_mode_name};
 use crate::{HotServiceMode, ServiceMode};
 
 const FRONTEND_PORT: u16 = 3000;
@@ -33,6 +33,12 @@ struct ManagedProcess {
     log: PathBuf,
     port: Option<u16>,
     env: HashMap<String, String>,
+}
+
+struct StartedProcess {
+    label: String,
+    pid: PathBuf,
+    port: u16,
 }
 
 pub(super) fn service_status() -> Result<String, String> {
@@ -91,12 +97,16 @@ pub(super) fn service_status() -> Result<String, String> {
         options.orchestrator_port,
         "http",
     ));
-    lines.push(service_line(
-        "frontend",
-        &paths.run.join("frontend.pid"),
-        FRONTEND_PORT,
-        "http",
-    ));
+    lines.push(if options.frontend_disabled {
+        "frontend: disabled by runtime configuration".to_string()
+    } else {
+        service_line(
+            "frontend",
+            &paths.run.join("frontend.pid"),
+            FRONTEND_PORT,
+            "http",
+        )
+    });
     for port in agent_ports(&paths.root, &env) {
         lines.push(service_line(
             &format!("agent[{port}]"),
@@ -125,31 +135,27 @@ pub(super) fn service_stop() -> Result<String, String> {
     let env = runtime_env(&paths.root);
     let options = RuntimeOptions::from_env(&env)?;
     let mut lines = Vec::new();
-    if !options.orchestrator_only {
-        let mut ports = agent_ports(&paths.root, &env);
-        ports.reverse();
-        for port in ports {
-            lines.push(stop_managed(
-                &paths.run.join(format!("agent-{port}.pid")),
-                &format!("agent[{port}]"),
-                Some(port),
-            )?);
-        }
+    let mut ports = agent_ports(&paths.root, &env);
+    ports.reverse();
+    for port in ports {
         lines.push(stop_managed(
-            &paths.run.join("frontend.pid"),
-            "frontend",
-            Some(FRONTEND_PORT),
+            &paths.run.join(format!("agent-{port}.pid")),
+            &format!("agent[{port}]"),
+            Some(port),
         )?);
     }
+    lines.push(stop_managed(
+        &paths.run.join("frontend.pid"),
+        "frontend",
+        Some(FRONTEND_PORT),
+    )?);
     lines.push(stop_managed(
         &options.orchestrator_pid(&paths.run),
         "orchestrator",
         Some(options.orchestrator_port),
     )?);
     remove_file_if_present(&options.runtime_mode(&paths.run))?;
-    if !options.orchestrator_only {
-        remove_file_if_present(&paths.hot.join("native-mode.txt"))?;
-    }
+    remove_file_if_present(&paths.hot.join("native-mode.txt"))?;
     Ok(lines.join("\n"))
 }
 
@@ -211,60 +217,6 @@ pub(super) fn hot_service_stop() -> Result<String, String> {
     service_stop()
 }
 
-pub(super) fn export_database(url: Option<&str>) -> Result<String, String> {
-    let url = url.unwrap_or("http://127.0.0.1:4000/api/v1/export/database");
-    let target = url
-        .strip_prefix("http://")
-        .ok_or_else(|| "native database export currently requires an HTTP URL".to_string())?;
-    let (authority, path) = target
-        .split_once('/')
-        .map(|(authority, path)| (authority, format!("/{path}")))
-        .unwrap_or((target, "/".to_string()));
-    let (host, port) = authority
-        .rsplit_once(':')
-        .map(|(host, port)| {
-            port.parse::<u16>()
-                .map(|port| (host, port))
-                .map_err(|error| format!("invalid export URL port: {error}"))
-        })
-        .transpose()?
-        .unwrap_or((authority, 80));
-    if !matches!(host, "127.0.0.1" | "localhost" | "::1") {
-        return Err("native database export only permits loopback endpoints".to_string());
-    }
-
-    let mut stream = TcpStream::connect((host, port))
-        .map_err(|error| format!("failed to connect to database export endpoint: {error}"))?;
-    stream
-        .set_read_timeout(Some(Duration::from_secs(30)))
-        .map_err(|error| format!("failed to configure export timeout: {error}"))?;
-    write!(
-        stream,
-        "GET {path} HTTP/1.1\r\nHost: {authority}\r\nConnection: close\r\nAccept: application/json\r\n\r\n"
-    )
-    .map_err(|error| format!("failed to request database export: {error}"))?;
-    let mut response = Vec::new();
-    stream
-        .read_to_end(&mut response)
-        .map_err(|error| format!("failed to read database export: {error}"))?;
-    let rendered = String::from_utf8(response)
-        .map_err(|error| format!("database export was not UTF-8: {error}"))?;
-    let (headers, body) = rendered
-        .split_once("\r\n\r\n")
-        .ok_or_else(|| "database export returned an invalid HTTP response".to_string())?;
-    if !headers
-        .lines()
-        .next()
-        .is_some_and(|line| line.contains(" 200 "))
-    {
-        return Err(format!(
-            "database export failed: {}",
-            headers.lines().next().unwrap_or("unknown HTTP status")
-        ));
-    }
-    Ok(body.to_string())
-}
-
 fn start_services(requested_mode: &str) -> Result<String, String> {
     let paths = runtime_paths()?;
     ensure_runtime_dirs(&paths)?;
@@ -295,18 +247,78 @@ fn start_services(requested_mode: &str) -> Result<String, String> {
     augment_path(&paths, &mut env);
 
     let mut lines = Vec::new();
+    let mut started = Vec::new();
     if mode != "distributed" && !options.orchestrator_only {
         for port in agent_ports(&paths.root, &env) {
-            lines.push(start_agent(&paths, port, &env)?);
+            let pid = paths.run.join(format!("agent-{port}.pid"));
+            let previous_pid = read_pid(&pid);
+            let result = start_agent(&paths, port, &env);
+            record_started(
+                &mut started,
+                &pid,
+                &format!("agent[{port}]"),
+                port,
+                previous_pid,
+            );
+            lines.push(rollback_on_error(result, &mut started)?);
         }
     }
-    lines.push(start_orchestrator(&paths, &env, &mode, options)?);
-    if !options.orchestrator_only {
-        lines.push(start_frontend(&paths, &env)?);
+    let orchestrator_pid = options.orchestrator_pid(&paths.run);
+    let previous_pid = read_pid(&orchestrator_pid);
+    let result = start_orchestrator(&paths, &env, &mode, options);
+    record_started(
+        &mut started,
+        &orchestrator_pid,
+        "orchestrator",
+        options.orchestrator_port,
+        previous_pid,
+    );
+    lines.push(rollback_on_error(result, &mut started)?);
+    if !options.orchestrator_only && !options.frontend_disabled {
+        let pid = paths.run.join("frontend.pid");
+        let previous_pid = read_pid(&pid);
+        let result = start_frontend(&paths, &env);
+        record_started(&mut started, &pid, "frontend", FRONTEND_PORT, previous_pid);
+        lines.push(rollback_on_error(result, &mut started)?);
     }
-    fs::write(options.runtime_mode(&paths.run), format!("{mode}\n"))
-        .map_err(|error| format!("failed to persist runtime mode: {error}"))?;
+    let persisted = fs::write(options.runtime_mode(&paths.run), format!("{mode}\n"))
+        .map_err(|error| format!("failed to persist runtime mode: {error}"));
+    rollback_on_error(persisted, &mut started)?;
     Ok(lines.join("\n"))
+}
+
+fn record_started(
+    started: &mut Vec<StartedProcess>,
+    pid: &Path,
+    label: &str,
+    port: u16,
+    previous_pid: Option<u32>,
+) {
+    if read_pid(pid).is_some_and(|current| Some(current) != previous_pid) {
+        started.push(StartedProcess {
+            label: label.to_string(),
+            pid: pid.to_path_buf(),
+            port,
+        });
+    }
+}
+
+fn rollback_on_error<T>(
+    result: Result<T, String>,
+    started: &mut Vec<StartedProcess>,
+) -> Result<T, String> {
+    result.map_err(|error| {
+        let cleanup = started
+            .drain(..)
+            .rev()
+            .map(|process| {
+                stop_managed(&process.pid, &process.label, Some(process.port))
+                    .unwrap_or_else(|rollback_error| format!("{}: {rollback_error}", process.label))
+            })
+            .collect::<Vec<_>>()
+            .join("; ");
+        format!("{error}; startup rollback: {cleanup}")
+    })
 }
 
 fn start_agent(
@@ -774,23 +786,6 @@ fn unix_rooted_path(parts: &[&str]) -> PathBuf {
     let mut path = PathBuf::from(std::path::MAIN_SEPARATOR.to_string());
     path.extend(parts);
     path
-}
-
-fn service_mode_name(mode: ServiceMode) -> &'static str {
-    match mode {
-        ServiceMode::Default => "default",
-        ServiceMode::Local => "local",
-        ServiceMode::Cloud => "cloud",
-        ServiceMode::Distributed => "distributed",
-    }
-}
-
-fn remove_file_if_present(path: &Path) -> Result<(), String> {
-    match fs::remove_file(path) {
-        Ok(()) => Ok(()),
-        Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(format!("failed to remove {}: {error}", path.display())),
-    }
 }
 
 #[cfg(test)]

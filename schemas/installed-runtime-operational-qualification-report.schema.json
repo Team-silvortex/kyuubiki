@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/installed-runtime-operational-qualification-report.schema.json",
+  "title": "Kyuubiki Installed Runtime Operational Qualification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "status",
+    "qualification_id",
+    "journey",
+    "execution_host_role",
+    "platform",
+    "installation",
+    "runtime",
+    "execution",
+    "restart_recovery",
+    "cleanup",
+    "capture_digests",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.installed-runtime-operational-qualification/v1"
+    },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "status": { "const": "pass" },
+    "qualification_id": {
+      "const": "remote-linux-installer-managed-runtime-operational"
+    },
+    "journey": { "const": "installed-headless-orchestra-agent-restart" },
+    "execution_host_role": { "const": "remote-linux-qualification-host" },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "architecture"],
+      "properties": {
+        "os": { "const": "linux" },
+        "architecture": { "const": "x86_64" }
+      }
+    },
+    "installation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package_version",
+        "activation_generation",
+        "runtime_policy",
+        "source_tree_detached",
+        "source_fallback",
+        "payload_manifest_sha256",
+        "service_manifest_sha256",
+        "runtime_binary_sha256",
+        "headless_binary_sha256",
+        "agent_binary_sha256"
+      ],
+      "properties": {
+        "package_version": { "const": "2.7.0" },
+        "activation_generation": { "const": 1 },
+        "runtime_policy": { "const": "installer-managed" },
+        "source_tree_detached": { "const": true },
+        "source_fallback": { "const": false },
+        "payload_manifest_sha256": { "$ref": "#/$defs/digest" },
+        "service_manifest_sha256": { "$ref": "#/$defs/digest" },
+        "runtime_binary_sha256": { "$ref": "#/$defs/digest" },
+        "headless_binary_sha256": { "$ref": "#/$defs/digest" },
+        "agent_binary_sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["control_mode", "agent_count", "orchestrator_managed", "frontend_loaded"],
+      "properties": {
+        "control_mode": { "const": "standalone" },
+        "agent_count": { "const": 2 },
+        "orchestrator_managed": { "const": true },
+        "frontend_loaded": { "const": false }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workflow_id",
+        "mode",
+        "status",
+        "job_id_sha256",
+        "worker_transport",
+        "agent_dispatched",
+        "tip_displacement",
+        "max_stress"
+      ],
+      "properties": {
+        "workflow_id": { "const": "qualification.installed-runtime.bar" },
+        "mode": { "const": "execute:service" },
+        "status": { "const": "completed" },
+        "job_id_sha256": { "$ref": "#/$defs/digest" },
+        "worker_transport": { "const": "rust-agent-rpc" },
+        "agent_dispatched": { "const": true },
+        "tip_displacement": { "type": "number", "exclusiveMinimum": 0 },
+        "max_stress": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "restart_recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "restart_count",
+        "result_retained_after_restart",
+        "result_retained_after_source_detach",
+        "numerical_result_unchanged"
+      ],
+      "properties": {
+        "restart_count": { "const": 2 },
+        "result_retained_after_restart": { "const": true },
+        "result_retained_after_source_detach": { "const": true },
+        "numerical_result_unchanged": { "const": true }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime_ports_closed",
+        "managed_pid_files_removed",
+        "managed_remote_root_removed",
+        "residue_count"
+      ],
+      "properties": {
+        "runtime_ports_closed": { "const": true },
+        "managed_pid_files_removed": { "const": true },
+        "managed_remote_root_removed": { "const": true },
+        "residue_count": { "const": 0 }
+      }
+    },
+    "capture_digests": {
+      "type": "object",
+      "minProperties": 6,
+      "additionalProperties": { "$ref": "#/$defs/digest" }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/check" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "status": { "const": "pass" }
+      }
+    }
+  }
+}

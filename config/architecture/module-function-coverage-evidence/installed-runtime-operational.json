@@ -1,0 +1,150 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Installer-managed remote Linux operation from an installed Rust Headless client through Orchestra and two Rust Agents into the real Engine, with source-detached restart retention, numerical assertions, frontend omission, and residue-free cleanup.",
+  "paradigm_contract_evidence": {
+    "deployment_update": [
+      {
+        "id": "installed-runtime-deployment-contract",
+        "modules": ["runtime-installer"],
+        "files": [
+          "config/architecture/installed-runtime-operational-qualification.json",
+          "schemas/installed-runtime-operational-qualification-contract.schema.json",
+          "schemas/installed-runtime-operational-qualification-report.schema.json",
+          "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification.rs",
+          "workers/rust/crates/script-runner/src/governance_commands.rs"
+        ],
+        "required_text": [
+          "remote-linux-installer-managed-runtime-operational",
+          "check-installed-runtime-operational-qualification",
+          "source_tree_detached"
+        ]
+      }
+    ],
+    "solver_execution": [
+      {
+        "id": "installed-runtime-solver-contract",
+        "modules": ["runtime-agent-cli", "runtime-engine-solver"],
+        "files": [
+          "schemas/installed-runtime-operational-qualification-report.schema.json",
+          "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification.rs",
+          "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
+        ],
+        "required_text": ["rust-agent-rpc", "numerical_result_verified"]
+      }
+    ],
+    "workflow_composition": [
+      {
+        "id": "installed-runtime-orchestra-contract",
+        "modules": ["orchestra-control-plane"],
+        "files": [
+          "config/architecture/installed-runtime-operational-qualification.json",
+          "schemas/installed-runtime-operational-qualification-report.schema.json",
+          "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
+        ],
+        "required_text": [
+          "installed-headless-orchestra-agent-restart",
+          "result_retained_after_restart"
+        ]
+      }
+    ],
+    "sdk_headless": [
+      {
+        "id": "installed-runtime-headless-contract",
+        "modules": ["sdk-headless"],
+        "files": [
+          "config/architecture/installed-runtime-operational-qualification.json",
+          "schemas/installed-runtime-operational-qualification-report.schema.json",
+          "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
+        ],
+        "required_text": ["headless_service_execution", "source_fallback"]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "installed-runtime-installer-deployment",
+      "status": "proven",
+      "grade": "operational",
+      "modules": ["runtime-installer"],
+      "paradigms": ["deployment_update"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/installer/src/lib.rs",
+        "workers/rust/crates/installer/src/release.rs",
+        "workers/rust/crates/desktop-runtime/src/runtime_control.rs",
+        "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"runtime_policy\": \"installer-managed\"",
+        "\"source_tree_detached\": true",
+        "\"managed_remote_root_removed\": true"
+      ]
+    },
+    {
+      "id": "installed-runtime-orchestra-workflow",
+      "status": "proven",
+      "grade": "operational",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"orchestrator_managed\": true",
+        "\"restart_count\": 2",
+        "\"result_retained_after_restart\": true"
+      ]
+    },
+    {
+      "id": "installed-runtime-rust-agent-solver",
+      "status": "proven",
+      "grade": "operational",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["solver_execution"],
+      "dimensions": ["execution", "contract", "numerical_validation", "recovery"],
+      "files": [
+        "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"agent_count\": 2",
+        "\"worker_transport\": \"rust-agent-rpc\"",
+        "\"agent_dispatched\": true"
+      ]
+    },
+    {
+      "id": "installed-runtime-engine-solver",
+      "status": "proven",
+      "grade": "operational",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution"],
+      "dimensions": ["execution", "contract", "numerical_validation", "recovery"],
+      "files": [
+        "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"mode\": \"execute:service\"",
+        "\"tip_displacement\": 5.714285714285714e-7",
+        "\"max_stress\": 120000.0",
+        "\"numerical_result_unchanged\": true"
+      ]
+    },
+    {
+      "id": "installed-runtime-headless-sdk",
+      "status": "proven",
+      "grade": "operational",
+      "modules": ["sdk-headless"],
+      "paradigms": ["sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"source_fallback\": false",
+        "\"status\": \"completed\"",
+        "\"result_retained_after_source_detach\": true"
+      ]
+    }
+  ]
+}

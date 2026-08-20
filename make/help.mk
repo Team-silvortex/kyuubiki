@@ -72,6 +72,7 @@ help:
 	@echo "  make check-runtime-payload-operational-qualification Recheck retained remote Linux Runtime payload evidence"
 	@echo "  make qualify-orchestra-workflow-operational-remote Run and retain the remote distributed Orchestra workflow restart journey"
 	@echo "  make check-orchestra-workflow-operational-qualification Recheck retained remote Orchestra workflow operational evidence"
+	@echo "  make check-installed-runtime-operational-qualification Recheck the retained Installer-managed Headless-Orchestra-Agent-Engine journey"
 	@echo "  make qualify-persistence-provenance Qualify Installer, Orchestra, and deployment persistence provenance"
 	@echo "  make check-persistence-provenance-qualification Recheck retained persistence provenance evidence"
 	@echo "  make qualify-desktop-ui-validation Run the cross-shell GUI qualification and write a retained JSON report"

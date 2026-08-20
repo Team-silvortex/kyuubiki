@@ -2,6 +2,7 @@
 setlocal
 
 set "ROOT=%~dp0.."
+set "KYUUBIKI_REPO_ROOT=%ROOT%"
 set "COMMAND=%~1"
 if "%COMMAND%"=="" set "COMMAND=help"
 

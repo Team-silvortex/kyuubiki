@@ -2,6 +2,7 @@
 set -eu
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+export KYUUBIKI_REPO_ROOT="$ROOT_DIR"
 RUNNER="$ROOT_DIR/workers/rust/target/debug/kyuubiki-script-runner"
 RUST_ROOT="$ROOT_DIR/workers/rust"
 

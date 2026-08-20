@@ -13,7 +13,7 @@
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index check-material-research-bundle-index check-material-research-bundle-index-contract
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
-.PHONY: audit-dependencies check-system-security-qualification check-agent-solver-operational-qualification check-orchestra-workflow-operational-qualification check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
+.PHONY: audit-dependencies check-system-security-qualification check-agent-solver-operational-qualification check-orchestra-workflow-operational-qualification check-installed-runtime-operational-qualification check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
 
 check-doc-book:
 	@$(ENTRYPOINT) check-doc-book
@@ -492,6 +492,10 @@ check-orchestra-workflow-operational-qualification:
 	@$(ENTRYPOINT) check-orchestra-workflow-operational-qualification --self-test
 	@$(ENTRYPOINT) check-orchestra-workflow-operational-qualification --verify-report releases/usability-evidence/2.14.1/orchestra-workflow-operational-qualification.json
 
+check-installed-runtime-operational-qualification:
+	@$(ENTRYPOINT) check-installed-runtime-operational-qualification --self-test
+	@$(ENTRYPOINT) check-installed-runtime-operational-qualification --verify-report releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json
+
 check-persistence-provenance-qualification:
 	@$(ENTRYPOINT) check-persistence-provenance-qualification --self-test
 	@$(ENTRYPOINT) check-persistence-provenance-qualification --verify-report releases/usability-evidence/2.14.2/persistence-provenance-qualification.json
@@ -565,6 +569,7 @@ architecture-check:
 	@$(MAKE) check-agent-solver-operational-qualification
 	@$(MAKE) check-agent-update-operational-qualification
 	@$(MAKE) check-runtime-payload-operational-qualification
+	@$(MAKE) check-installed-runtime-operational-qualification
 	@$(MAKE) check-persistence-provenance-qualification
 	@$(MAKE) check-usability-release-gate
 	@$(MAKE) audit-dependencies
@@ -588,6 +593,7 @@ verify:
 	@$(MAKE) check-commercial-readiness
 	@$(MAKE) check-install-update-disk-hygiene
 	@$(MAKE) check-component-integrity-protocol
+	@$(MAKE) check-installed-runtime-operational-qualification
 	@$(MAKE) check-ui-automation-contract
 	@cd apps/web && mix format --check-formatted && mix test
 	@cd workers/rust && cargo fmt --check && cargo test

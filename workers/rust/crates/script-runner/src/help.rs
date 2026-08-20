@@ -83,6 +83,7 @@ lab remote-ssh-fixture\n  \
   check-runtime-recovery-fault-injection\n  \
   check-orchestra-recovery-fault-injection\n  \
   check-orchestra-workflow-operational-qualification\n  \
+  check-installed-runtime-operational-qualification\n  \
   check-persistence-provenance-qualification\n  \
   check-installer-recovery-fault-injection\n  \
   check-workflow-dataset-contract\n  \
