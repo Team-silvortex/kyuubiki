@@ -1,0 +1,74 @@
+{
+  "$schema": "../../schemas/agent-control-link-operational-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.agent-control-link-operational-qualification-contract/v1",
+  "qualification_id": "two-host-agent-control-link-rejoin-operational",
+  "target_coordinate": {
+    "module_id": "runtime-agent-cli",
+    "paradigm": "runtime_api",
+    "target_grade": "operational"
+  },
+  "ownership": {
+    "control_plane_owner": "orchestra-control-plane",
+    "execution_owner": "runtime-agent-cli",
+    "evidence_owner": "verification-evidence"
+  },
+  "capture": {
+    "orchestrator_host_role": "local-macos-qualification-host",
+    "agent_host_role": "remote-linux-qualification-host",
+    "orchestrator_platform": "macos",
+    "agent_platform": "linux",
+    "build_profile": "release",
+    "transport": "lan-http-plus-agent-rpc",
+    "orchestra_restarts_minimum": 1,
+    "successful_registrations_minimum": 2,
+    "cleanup_required": true
+  },
+  "retention": {
+    "report_schema": "kyuubiki.agent-control-link-operational-qualification/v1",
+    "report_schema_path": "schemas/agent-control-link-operational-qualification-report.schema.json",
+    "report_path": "releases/usability-evidence/2.14.7/agent-control-link-operational-qualification.json",
+    "forbidden_content": [
+      "hostname",
+      "host_address",
+      "username",
+      "credential",
+      "absolute_host_path",
+      "cluster_api_token",
+      "192.168."
+    ]
+  },
+  "source_guard": {
+    "files": [
+      "workers/rust/crates/script-runner/src/agent_control_link_operational_qualification/mod.rs",
+      "workers/rust/crates/script-runner/src/agent_control_link_operational_qualification/runtime.rs",
+      "workers/rust/crates/script-runner/src/agent_control_link_operational_qualification/report.rs",
+      "workers/rust/crates/cli/src/agent_control_link.rs",
+      "workers/rust/crates/cli/src/agent_mesh.rs",
+      "apps/web/lib/kyuubiki_web/playground/agent_registry.ex"
+    ],
+    "required_text": [
+      "qualify-agent-control-link-operational-remote",
+      "endpoint_unreachable",
+      "successful_registration_count",
+      "same_agent_process",
+      "managed_remote_root_removed"
+    ]
+  },
+  "required_checks": [
+    "initial_registration",
+    "initial_heartbeat",
+    "orchestra_process_loss",
+    "agent_process_survived",
+    "degraded_state_observed",
+    "orchestra_restart",
+    "full_reregistration",
+    "heartbeat_recovered",
+    "registry_rehydrated",
+    "cleanup_complete",
+    "retention_sanitized"
+  ],
+  "commands": {
+    "capture": "make qualify-agent-control-link-operational-remote REMOTE=kyuubiki-lab",
+    "verify": "make check-agent-control-link-operational-qualification"
+  }
+}

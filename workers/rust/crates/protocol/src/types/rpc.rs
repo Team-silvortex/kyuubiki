@@ -37,6 +37,45 @@ pub struct AgentClusterDescriptor {
     pub peers: Vec<ClusterPeerDescriptor>,
 }
 
+pub const AGENT_CONTROL_LINK_SCHEMA: &str = "kyuubiki.agent-control-link/v1";
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AgentControlLinkDescriptor {
+    pub schema_version: String,
+    pub state: String,
+    pub operation: String,
+    pub orchestrator_bound: bool,
+    pub attempt_count: u64,
+    pub consecutive_failure_count: u32,
+    pub successful_registration_count: u64,
+    pub successful_heartbeat_count: u64,
+    pub last_success_unix_ms: Option<u64>,
+    pub last_failure_unix_ms: Option<u64>,
+    pub last_failure_code: Option<String>,
+    pub last_failure_message: Option<String>,
+    pub next_retry_delay_ms: u64,
+}
+
+impl Default for AgentControlLinkDescriptor {
+    fn default() -> Self {
+        Self {
+            schema_version: AGENT_CONTROL_LINK_SCHEMA.to_string(),
+            state: "disabled".to_string(),
+            operation: "none".to_string(),
+            orchestrator_bound: false,
+            attempt_count: 0,
+            consecutive_failure_count: 0,
+            successful_registration_count: 0,
+            successful_heartbeat_count: 0,
+            last_success_unix_ms: None,
+            last_failure_unix_ms: None,
+            last_failure_code: None,
+            last_failure_message: None,
+            next_retry_delay_ms: 0,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RuntimeAuthorityDescriptor {
     pub control_mode: String,
@@ -73,6 +112,8 @@ pub struct AgentDescriptor {
     pub capabilities: Vec<CapabilityDescriptor>,
     pub deployment_modes: Vec<String>,
     pub runtime: AgentClusterDescriptor,
+    #[serde(default)]
+    pub control_plane_link: AgentControlLinkDescriptor,
     pub authority: RuntimeAuthorityDescriptor,
     pub engine: RuntimeEngineDescriptor,
 }

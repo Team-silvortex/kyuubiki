@@ -71,7 +71,12 @@ defmodule KyuubikiWeb.Playground.AgentRegistryTest do
                "host" => "10.20.0.12",
                "port" => 6102,
                "orch_id" => "orch-alpha",
-               "orch_session_id" => "session-1"
+               "orch_session_id" => "session-1",
+               "control_plane_link" => %{
+                 "schema_version" => "kyuubiki.agent-control-link/v1",
+                 "state" => "degraded",
+                 "last_failure_code" => "endpoint_unreachable"
+               }
              })
 
     assert {:ok, heartbeat_agent} =
@@ -79,15 +84,48 @@ defmodule KyuubikiWeb.Playground.AgentRegistryTest do
                "host" => "10.20.0.12",
                "port" => 6102,
                "orch_id" => "orch-alpha",
-               "zone" => "rack-b"
+               "zone" => "rack-b",
+               "control_plane_link" => %{
+                 "schema_version" => "kyuubiki.agent-control-link/v1",
+                 "state" => "registered",
+                 "consecutive_failure_count" => 0
+               }
              })
 
     assert heartbeat_agent.zone == "rack-b"
     assert heartbeat_agent.orch_session_id == "session-1"
     public_agent = AgentRegistry.public_agent(heartbeat_agent)
     assert public_agent["session_state"] == "orch_session_bound"
+    assert public_agent["control_plane_link"]["state"] == "registered"
+    assert AgentRegistry.status_snapshot().control_plane_link_states == %{"registered" => 1}
     assert public_agent["last_session_transition"]["source"] == "register"
     assert public_agent["last_session_transition"]["reason"] == "registered"
+  end
+
+  test "recreates a lost registration from a complete heartbeat" do
+    attrs = %{
+      "id" => "solver-rejoin-a",
+      "host" => "10.20.0.30",
+      "port" => 6130,
+      "orch_id" => "orch-alpha",
+      "cluster_id" => "cluster-a",
+      "control_plane_link" => %{
+        "schema_version" => "kyuubiki.agent-control-link/v1",
+        "state" => "registered",
+        "successful_registration_count" => 2
+      }
+    }
+
+    assert {:ok, _agent} = AgentRegistry.register(attrs)
+    assert :ok = AgentRegistry.unregister("solver-rejoin-a")
+    assert AgentRegistry.agents() == []
+
+    assert {:ok, recovered} = AgentRegistry.heartbeat("solver-rejoin-a", attrs)
+    assert recovered.id == "solver-rejoin-a"
+    assert recovered.control_mode == "orch_managed"
+    assert recovered.orch_id == "orch-alpha"
+    assert recovered.control_plane_link["state"] == "registered"
+    assert AgentRegistry.status_snapshot().active_agents == 1
   end
 
   test "keeps capability and health metadata for managed remote agents" do

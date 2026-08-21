@@ -1,0 +1,133 @@
+{
+  "schema_version": "kyuubiki.agent-control-link-operational-qualification/v1",
+  "generated_at_unix_ms": 1787280441011,
+  "status": "pass",
+  "journey": "remote-agent-survives-orchestra-process-loss",
+  "topology": {
+    "orchestrator_host_role": "local-macos-qualification-host",
+    "agent_host_role": "remote-linux-qualification-host",
+    "orchestrator_platform": "macos",
+    "agent_platform": "linux",
+    "agent_architecture": "x86_64",
+    "transport": "lan-http-plus-agent-rpc",
+    "orchestra_restart_count": 1,
+    "same_agent_process": true
+  },
+  "phases": {
+    "initial": {
+      "orchestrator_available": true,
+      "registry_visible": true,
+      "agent_process_alive": true,
+      "control_link": {
+        "schema_version": "kyuubiki.agent-control-link/v1",
+        "state": "registered",
+        "operation": "heartbeat",
+        "orchestrator_bound": true,
+        "attempt_count": 6,
+        "consecutive_failure_count": 0,
+        "successful_registration_count": 1,
+        "successful_heartbeat_count": 5,
+        "last_success_unix_ms": 1787280436877,
+        "last_failure_unix_ms": null,
+        "last_failure_code": null,
+        "last_failure_message": null,
+        "next_retry_delay_ms": 250
+      }
+    },
+    "outage": {
+      "orchestrator_available": false,
+      "registry_visible": false,
+      "agent_process_alive": true,
+      "control_link": {
+        "schema_version": "kyuubiki.agent-control-link/v1",
+        "state": "degraded",
+        "operation": "heartbeat",
+        "orchestrator_bound": true,
+        "attempt_count": 9,
+        "consecutive_failure_count": 1,
+        "successful_registration_count": 1,
+        "successful_heartbeat_count": 7,
+        "last_success_unix_ms": 1787280437411,
+        "last_failure_unix_ms": 1787280437664,
+        "last_failure_code": "endpoint_unreachable",
+        "last_failure_message": "orchestrator endpoint is unreachable",
+        "next_retry_delay_ms": 250
+      }
+    },
+    "recovered": {
+      "orchestrator_available": true,
+      "registry_visible": true,
+      "agent_process_alive": true,
+      "control_link": {
+        "schema_version": "kyuubiki.agent-control-link/v1",
+        "state": "registered",
+        "operation": "heartbeat",
+        "orchestrator_bound": true,
+        "attempt_count": 13,
+        "consecutive_failure_count": 0,
+        "successful_registration_count": 2,
+        "successful_heartbeat_count": 8,
+        "last_success_unix_ms": 1787280439459,
+        "last_failure_unix_ms": 1787280438421,
+        "last_failure_code": null,
+        "last_failure_message": null,
+        "next_retry_delay_ms": 250
+      }
+    }
+  },
+  "cleanup": {
+    "local_orchestra_stopped": true,
+    "remote_agent_stopped": true,
+    "local_port_closed": true,
+    "remote_port_closed": true,
+    "managed_remote_root_removed": true,
+    "secret_files_removed": true,
+    "local_work_root_removed": true
+  },
+  "checks": [
+    {
+      "id": "initial_registration",
+      "status": "pass"
+    },
+    {
+      "id": "initial_heartbeat",
+      "status": "pass"
+    },
+    {
+      "id": "orchestra_process_loss",
+      "status": "pass"
+    },
+    {
+      "id": "agent_process_survived",
+      "status": "pass"
+    },
+    {
+      "id": "degraded_state_observed",
+      "status": "pass"
+    },
+    {
+      "id": "orchestra_restart",
+      "status": "pass"
+    },
+    {
+      "id": "full_reregistration",
+      "status": "pass"
+    },
+    {
+      "id": "heartbeat_recovered",
+      "status": "pass"
+    },
+    {
+      "id": "registry_rehydrated",
+      "status": "pass"
+    },
+    {
+      "id": "cleanup_complete",
+      "status": "pass"
+    },
+    {
+      "id": "retention_sanitized",
+      "status": "pass"
+    }
+  ]
+}

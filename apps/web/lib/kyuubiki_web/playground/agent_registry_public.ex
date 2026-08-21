@@ -33,6 +33,8 @@ defmodule KyuubikiWeb.Playground.AgentRegistryPublic do
       "capabilities" => Map.get(agent, :capabilities) || Map.get(agent, "capabilities") || [],
       "health_score" => Map.get(agent, :health_score) || Map.get(agent, "health_score"),
       "watchdog" => Map.get(agent, :watchdog) || Map.get(agent, "watchdog"),
+      "control_plane_link" =>
+        Map.get(agent, :control_plane_link) || Map.get(agent, "control_plane_link"),
       "execution_state" => execution_state_for(public_lease),
       "active_lease" => public_lease,
       "last_session_transition" =>
@@ -63,6 +65,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistryPublic do
       methods: agent.methods,
       capabilities: agent.capabilities,
       health_score: agent.health_score,
+      control_plane_link: agent[:control_plane_link],
       active_lease: public_execution_lease(Map.get(leases, agent.id), agent),
       last_session_transition: agent[:last_session_transition],
       last_seen_at: DateTime.to_iso8601(agent.last_seen_at)

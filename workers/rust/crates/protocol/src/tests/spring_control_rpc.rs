@@ -1,4 +1,5 @@
 use super::prelude::*;
+use crate::AGENT_CONTROL_LINK_SCHEMA;
 
 #[test]
 fn serializes_torsion_1d_rpc_round_trip() {
@@ -308,6 +309,11 @@ fn serializes_agent_descriptor_round_trip() {
 
     assert_eq!(decoded.program, "kyuubiki-rust-agent");
     assert_eq!(decoded.protocol.rpc_version, RPC_VERSION);
+    assert_eq!(
+        decoded.control_plane_link.schema_version,
+        AGENT_CONTROL_LINK_SCHEMA
+    );
+    assert_eq!(decoded.control_plane_link.state, "disabled");
     assert!(decoded.protocol.methods.contains(&RpcMethod::DescribeAgent));
     assert_eq!(decoded.authority.control_mode, "standalone");
     assert_eq!(decoded.authority.authority_mode, "self_directed");

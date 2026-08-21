@@ -1,0 +1,96 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Shared Agent control-link diagnostics and failover behavior for registration, heartbeat failure, bounded retry, full re-registration, Orchestra visibility, and sanitized failure reporting.",
+  "paradigm_contract_evidence": {
+    "runtime_api": [
+      {
+        "id": "agent-control-link-runtime-contract",
+        "modules": ["runtime-agent-cli", "orchestra-control-plane"],
+        "files": [
+          "schemas/agent-control-link.schema.json",
+          "schemas/agent-control-link-operational-qualification-report.schema.json",
+          "config/architecture/agent-control-link-operational-qualification.json",
+          "workers/rust/crates/protocol/src/types/rpc.rs",
+          "workers/rust/crates/cli/src/agent_control_link.rs",
+          "workers/rust/crates/cli/src/agent_http.rs",
+          "workers/rust/crates/cli/src/agent_mesh.rs",
+          "apps/web/lib/kyuubiki_web/playground/agent_registry.ex",
+          "apps/web/lib/kyuubiki_web/playground/agent_registry_public.ex"
+        ],
+        "required_text": [
+          "kyuubiki.agent-control-link/v1",
+          "kyuubiki.agent-control-link-operational-qualification/v1",
+          "endpoint_unreachable",
+          "post_json_keeps_the_request_connection_open_until_response",
+          "successful_registration_count",
+          "control_plane_link_states"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "rust-agent-control-link-rejoin",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["runtime_api"],
+      "dimensions": ["execution", "contract", "recovery", "security"],
+      "files": [
+        "workers/rust/crates/cli/src/agent_control_link.rs",
+        "workers/rust/crates/cli/src/agent_http.rs",
+        "workers/rust/crates/cli/src/agent_mesh.rs"
+      ],
+      "required_text": [
+        "heartbeat_failure_falls_back_to_registration_and_recovers",
+        "request_rejected",
+        "MAX_RETRY_DELAY_MS",
+        "post_json_keeps_the_request_connection_open_until_response",
+        "agent control link recovered"
+      ]
+    },
+    {
+      "id": "orchestra-agent-control-link-diagnostics",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/playground/agent_registry.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_registry_public.ex",
+        "apps/web/test/kyuubiki_web/playground/agent_registry_test.exs"
+      ],
+      "required_text": [
+        "control_plane_link",
+        "control_plane_link_states",
+        "endpoint_unreachable",
+        "registered"
+      ]
+    },
+    {
+      "id": "two-host-agent-control-link-operational",
+      "status": "proven",
+      "grade": "operational",
+      "modules": ["runtime-agent-cli", "orchestra-control-plane"],
+      "paradigms": ["runtime_api"],
+      "dimensions": ["execution", "contract", "recovery", "security"],
+      "files": [
+        "config/architecture/agent-control-link-operational-qualification.json",
+        "schemas/agent-control-link-operational-qualification-report.schema.json",
+        "workers/rust/crates/script-runner/src/agent_control_link_operational_qualification/mod.rs",
+        "workers/rust/crates/script-runner/src/agent_control_link_operational_qualification/runtime.rs",
+        "workers/rust/crates/script-runner/src/agent_control_link_operational_qualification/report.rs",
+        "releases/usability-evidence/2.14.7/agent-control-link-operational-qualification.json"
+      ],
+      "required_text": [
+        "two-host-agent-control-link-rejoin-operational",
+        "remote-agent-survives-orchestra-process-loss",
+        "same_agent_process",
+        "full_reregistration",
+        "managed_remote_root_removed"
+      ]
+    }
+  ]
+}

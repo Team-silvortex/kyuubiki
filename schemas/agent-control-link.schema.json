@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/agent-control-link.schema.json",
+  "title": "Kyuubiki Agent Control Link",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "state",
+    "operation",
+    "orchestrator_bound",
+    "attempt_count",
+    "consecutive_failure_count",
+    "successful_registration_count",
+    "successful_heartbeat_count",
+    "last_success_unix_ms",
+    "last_failure_unix_ms",
+    "last_failure_code",
+    "last_failure_message",
+    "next_retry_delay_ms"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.agent-control-link/v1"
+    },
+    "state": {
+      "enum": ["disabled", "connecting", "registered", "rejoining", "degraded", "stopped"]
+    },
+    "operation": {
+      "enum": ["none", "register", "heartbeat", "unregister"]
+    },
+    "orchestrator_bound": {
+      "type": "boolean"
+    },
+    "attempt_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "consecutive_failure_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "successful_registration_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "successful_heartbeat_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "last_success_unix_ms": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "last_failure_unix_ms": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "last_failure_code": {
+      "type": ["string", "null"],
+      "maxLength": 64
+    },
+    "last_failure_message": {
+      "type": ["string", "null"],
+      "maxLength": 256
+    },
+    "next_retry_delay_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 300000
+    }
+  }
+}

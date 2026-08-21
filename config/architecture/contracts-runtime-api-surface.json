@@ -23,14 +23,25 @@
         "id": "protocol-runtime-api",
         "sources": [
           "workers/rust/crates/protocol/src/lib.rs",
+          "workers/rust/crates/protocol/src/types/rpc.rs",
           "workers/rust/crates/protocol/src/operator_task_ir.rs",
-          "workers/rust/crates/protocol/src/solver_execution_capability.rs"
+          "workers/rust/crates/protocol/src/solver_execution_capability.rs",
+          "workers/rust/crates/cli/src/agent_control_link.rs",
+          "workers/rust/crates/cli/src/agent_http.rs",
+          "workers/rust/crates/script-runner/src/agent_control_link_operational_qualification/mod.rs",
+          "apps/web/lib/kyuubiki_web/playground/agent_registry.ex",
+          "apps/web/lib/kyuubiki_web/playground/agent_registry_public.ex",
+          "schemas/agent-control-link.schema.json",
+          "schemas/agent-control-link-operational-qualification-report.schema.json",
+          "config/architecture/agent-control-link-operational-qualification.json"
         ],
         "client_surfaces": ["runtime-agent-cli", "sdk-headless", "orchestra-control-plane"],
         "stability_contracts": [
           "TaskIR",
           "solver RPC descriptor",
-          "execution capability report"
+          "execution capability report",
+          "Agent control-link diagnostics",
+          "two-host control-link recovery qualification"
         ]
       },
       {

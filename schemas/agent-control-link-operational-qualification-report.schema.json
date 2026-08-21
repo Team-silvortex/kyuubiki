@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/agent-control-link-operational-qualification-report.schema.json",
+  "title": "Kyuubiki Two-host Agent Control-link Operational Qualification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "status",
+    "journey",
+    "topology",
+    "phases",
+    "cleanup",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.agent-control-link-operational-qualification/v1"
+    },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "status": { "const": "pass" },
+    "journey": { "const": "remote-agent-survives-orchestra-process-loss" },
+    "topology": { "$ref": "#/$defs/topology" },
+    "phases": { "$ref": "#/$defs/phases" },
+    "cleanup": { "$ref": "#/$defs/cleanup" },
+    "checks": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/check" }
+    }
+  },
+  "$defs": {
+    "topology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "orchestrator_host_role",
+        "agent_host_role",
+        "orchestrator_platform",
+        "agent_platform",
+        "agent_architecture",
+        "transport",
+        "orchestra_restart_count",
+        "same_agent_process"
+      ],
+      "properties": {
+        "orchestrator_host_role": { "const": "local-macos-qualification-host" },
+        "agent_host_role": { "const": "remote-linux-qualification-host" },
+        "orchestrator_platform": { "const": "macos" },
+        "agent_platform": { "const": "linux" },
+        "agent_architecture": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "transport": { "const": "lan-http-plus-agent-rpc" },
+        "orchestra_restart_count": { "type": "integer", "minimum": 1 },
+        "same_agent_process": { "const": true }
+      }
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "orchestrator_available",
+        "registry_visible",
+        "agent_process_alive",
+        "control_link"
+      ],
+      "properties": {
+        "orchestrator_available": { "type": "boolean" },
+        "registry_visible": { "type": "boolean" },
+        "agent_process_alive": { "const": true },
+        "control_link": { "$ref": "agent-control-link.schema.json" }
+      }
+    },
+    "phases": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["initial", "outage", "recovered"],
+      "properties": {
+        "initial": { "$ref": "#/$defs/phase" },
+        "outage": { "$ref": "#/$defs/phase" },
+        "recovered": { "$ref": "#/$defs/phase" }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "local_orchestra_stopped",
+        "remote_agent_stopped",
+        "local_port_closed",
+        "remote_port_closed",
+        "managed_remote_root_removed",
+        "secret_files_removed",
+        "local_work_root_removed"
+      ],
+      "properties": {
+        "local_orchestra_stopped": { "const": true },
+        "remote_agent_stopped": { "const": true },
+        "local_port_closed": { "const": true },
+        "remote_port_closed": { "const": true },
+        "managed_remote_root_removed": { "const": true },
+        "secret_files_removed": { "const": true },
+        "local_work_root_removed": { "const": true }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": { "const": "pass" }
+      }
+    }
+  }
+}

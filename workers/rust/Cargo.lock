@@ -418,6 +418,7 @@ dependencies = [
 name = "kyuubiki-script-runner"
 version = "2.7.0"
 dependencies = [
+ "getrandom",
  "kyuubiki-cli",
  "kyuubiki-desktop-runtime",
  "kyuubiki-engine",

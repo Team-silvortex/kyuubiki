@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
-use std::net::{Shutdown, TcpStream, ToSocketAddrs};
+use std::net::{TcpStream, ToSocketAddrs};
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -243,7 +243,6 @@ fn send_http_request(
             .map_err(|error| format!("failed to write HTTP request body: {error}"))?;
     }
     let _ = stream.flush();
-    let _ = stream.shutdown(Shutdown::Write);
 
     let mut response = String::new();
     stream
@@ -333,4 +332,80 @@ pub(crate) fn parse_http_url(url: &str) -> Result<ParsedHttpUrl, String> {
     }
 
     Ok(ParsedHttpUrl { host, port, path })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::ErrorKind;
+    use std::net::TcpListener;
+    use std::thread;
+
+    #[test]
+    fn post_json_keeps_the_request_connection_open_until_response() {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("HTTP listener");
+        let address = listener.local_addr().expect("listener address");
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("HTTP request");
+            stream
+                .set_read_timeout(Some(Duration::from_secs(1)))
+                .expect("request timeout");
+            let mut request = Vec::new();
+            while !complete_http_request(&request) {
+                let mut chunk = [0_u8; 4096];
+                let count = stream.read(&mut chunk).expect("request bytes");
+                assert!(count > 0, "client closed before sending the request body");
+                request.extend_from_slice(&chunk[..count]);
+            }
+
+            stream
+                .set_read_timeout(Some(Duration::from_millis(100)))
+                .expect("half-close probe timeout");
+            let mut probe = [0_u8; 1];
+            let closed_before_response = match stream.read(&mut probe) {
+                Ok(0) => true,
+                Err(error)
+                    if matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) =>
+                {
+                    false
+                }
+                Ok(_) => panic!("unexpected trailing request bytes"),
+                Err(error) => panic!("request connection probe failed: {error}"),
+            };
+            stream
+                .write_all(
+                    b"HTTP/1.1 201 Created\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                )
+                .expect("HTTP response");
+            closed_before_response
+        });
+
+        post_json(
+            &format!("http://{address}/api/v1/agents/register"),
+            &serde_json::json!({"id": "connection-probe"}),
+            Vec::new(),
+        )
+        .expect("POST response");
+        assert!(
+            !server.join().expect("HTTP server thread"),
+            "HTTP client must not half-close before the server responds"
+        );
+    }
+
+    fn complete_http_request(request: &[u8]) -> bool {
+        let Some(header_end) = request.windows(4).position(|window| window == b"\r\n\r\n") else {
+            return false;
+        };
+        let headers = String::from_utf8_lossy(&request[..header_end]);
+        let content_length = headers
+            .lines()
+            .find_map(|line| {
+                let (name, value) = line.split_once(':')?;
+                name.eq_ignore_ascii_case("content-length")
+                    .then(|| value.trim().parse::<usize>().ok())
+                    .flatten()
+            })
+            .unwrap_or(0);
+        request.len() >= header_end + 4 + content_length
+    }
 }

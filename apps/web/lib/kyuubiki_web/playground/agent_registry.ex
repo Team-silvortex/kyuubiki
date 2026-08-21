@@ -39,6 +39,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
           optional(:capabilities) => [map()],
           optional(:health_score) => non_neg_integer(),
           optional(:watchdog) => map(),
+          optional(:control_plane_link) => map(),
           optional(:last_session_transition) => map(),
           required(:last_seen_at) => DateTime.t()
         }
@@ -201,6 +202,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
        active_execution_lease_count: map_size(state.leases),
        stale_execution_lease_count:
          AgentRegistryPublic.stale_execution_lease_count(state.leases, state.agents),
+       control_plane_link_states: summarize_control_plane_link_states(agents),
        control_modes: summarize_control_modes(agents),
        session_states: summarize_session_states(agents),
        active_execution_leases:
@@ -237,6 +239,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
          capabilities: optional_capabilities(attrs, "capabilities"),
          health_score: optional_health_score(attrs, "health_score"),
          watchdog: optional_map(attrs, "watchdog"),
+         control_plane_link: optional_map(attrs, "control_plane_link"),
          last_seen_at: now
        }}
     end
@@ -545,6 +548,16 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
       case agent.control_mode do
         "offline_mesh" -> Map.update!(acc, :offline_mesh, &(&1 + 1))
         _ -> Map.update!(acc, :orch_managed, &(&1 + 1))
+      end
+    end)
+  end
+
+  defp summarize_control_plane_link_states(agents) do
+    Enum.frequencies_by(agents, fn agent ->
+      case agent[:control_plane_link] do
+        %{"state" => state} when is_binary(state) -> state
+        %{state: state} when is_binary(state) -> state
+        _ -> "unreported"
       end
     end)
   end

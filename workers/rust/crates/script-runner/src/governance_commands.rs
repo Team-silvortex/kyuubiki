@@ -1,12 +1,12 @@
 use crate::{
-    agent_solver_operational_qualification, agent_update_operational_qualification,
-    benchmark_qualification, central_database_readiness, central_readiness_report,
-    central_store_contract, commercial_readiness, component_integrity_protocol,
-    contracts_runtime_api_surface, contracts_validation_qualification, dependency_audit,
-    desktop_deployment_update_validation, desktop_ui_validation, desktop_usability_journeys,
-    doc_inventory, docs_book, frontend_checks, gui_runtime_capability_contract,
-    headless_sdk_operational, headless_sdk_validation, headless_workflow_qualification,
-    install_update_disk_hygiene, installation_integrity_docs,
+    agent_control_link_operational_qualification, agent_solver_operational_qualification,
+    agent_update_operational_qualification, benchmark_qualification, central_database_readiness,
+    central_readiness_report, central_store_contract, commercial_readiness,
+    component_integrity_protocol, contracts_runtime_api_surface,
+    contracts_validation_qualification, dependency_audit, desktop_deployment_update_validation,
+    desktop_ui_validation, desktop_usability_journeys, doc_inventory, docs_book, frontend_checks,
+    gui_runtime_capability_contract, headless_sdk_operational, headless_sdk_validation,
+    headless_workflow_qualification, install_update_disk_hygiene, installation_integrity_docs,
     installed_runtime_operational_qualification, installer_recovery_fault_injection,
     language_packs, local_path_audit, make_modules, material_exploration_chain_contract,
     material_score_contract, material_study_execution_plan_contract, materialization_plan_contract,
@@ -191,6 +191,9 @@ pub(crate) fn run_governance_command(
             agent_solver_operational_qualification::run_check_agent_solver_operational_qualification(
                 root, args,
             )
+        }
+        "check-agent-control-link-operational-qualification" => {
+            agent_control_link_operational_qualification::run_check(root, args)
         }
         "check-agent-update-operational-qualification" => {
             agent_update_operational_qualification::run_check_agent_update_operational_qualification(

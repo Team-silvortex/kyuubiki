@@ -44,6 +44,10 @@ fn handles_describe_agent_rpc_requests() {
     assert!(final_response.ok);
 
     let descriptor_payload = final_response.result.expect("descriptor result");
+    assert_eq!(
+        descriptor_payload["control_plane_link"]["schema_version"],
+        "kyuubiki.agent-control-link/v1"
+    );
     assert!(descriptor_payload["watchdog"]["state"].is_string());
     assert!(descriptor_payload["watchdog"]["active_execution_count"].is_number());
     assert_eq!(
@@ -216,6 +220,10 @@ fn registration_payload_includes_agent_deployment_readiness() {
 
     let payload = registration_payload(&config);
 
+    assert_eq!(
+        payload["control_plane_link"]["schema_version"],
+        "kyuubiki.agent-control-link/v1"
+    );
     assert_eq!(payload["deployment_readiness"]["ready"], true);
     assert_eq!(
         payload["deployment_readiness"]["operator_package_runtime_ready"],

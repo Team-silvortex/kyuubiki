@@ -16,6 +16,7 @@ const NATIVE_PROBES: &[&str] = &[
     "check-desktop-usability-journeys",
     "check-gui-runtime-capability-contract",
     "check-install-update-disk-hygiene",
+    "check-installed-runtime-operational-qualification",
     "check-installer-recovery-fault-injection",
     "check-material-exploration-chain-contract",
     "check-material-research-bundle",
@@ -387,6 +388,18 @@ fn validate_required_chains(config: &GateConfig, selected: Option<&str>, issues:
                 }
             }
         }
+        if *journey_id == "execute-observe"
+            && !journey.probes.iter().any(|probe| {
+                probe
+                    .first()
+                    .is_some_and(|cmd| cmd == "check-installed-runtime-operational-qualification")
+            })
+        {
+            issues.push(
+                "journey execute-observe must verify installed Runtime operational evidence"
+                    .to_string(),
+            );
+        }
     }
 }
 
@@ -532,6 +545,26 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
         .any(|issue| issue.contains("must execute its native project round trip"))
     {
         return Err("self-test expected static-only project journey rejection".to_string());
+    }
+
+    let mut missing_runtime: GateConfig = read_json(root, GATE_PATH)?;
+    let journey = missing_runtime
+        .journeys
+        .iter_mut()
+        .find(|journey| journey.id == "execute-observe")
+        .ok_or_else(|| "self-test missing execute-observe journey".to_string())?;
+    journey.probes.retain(|probe| {
+        probe
+            .first()
+            .is_none_or(|command| command != "check-installed-runtime-operational-qualification")
+    });
+    let mut issues = Vec::new();
+    validate_required_chains(&missing_runtime, Some("execute-observe"), &mut issues);
+    if !issues
+        .iter()
+        .any(|issue| issue.contains("installed Runtime operational evidence"))
+    {
+        return Err("self-test expected installed Runtime probe rejection".to_string());
     }
     Ok(())
 }

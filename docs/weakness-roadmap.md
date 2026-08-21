@@ -105,6 +105,34 @@ still requires multi-host package acquisition, network-loss/rejoin behavior,
 fleet scheduling, and installed operation on the remaining supported
 platforms.
 
+Agent control-link recovery is now explicit rather than silent. The Rust Agent
+records registration and heartbeat attempts through the shared
+`kyuubiki.agent-control-link/v1` contract, reports only sanitized failure codes,
+falls back from a failed heartbeat to full registration, and uses bounded
+exponential retry without delaying shutdown for an entire backoff window.
+Orchestra retains the latest link snapshot and summarizes link states in its
+registry diagnostics. A native TCP fault-injection test proves
+register -> rejected heartbeat -> re-register -> clean unregister, while the
+Orchestra registry test proves the degraded-to-registered diagnostic
+transition. This is local verified recovery evidence; the parent remote tier
+now also has native two-physical-host operational evidence. The qualification
+builds an isolated Release Agent on remote Linux, starts a protected in-memory
+Orchestra on macOS, observes registered and heartbeat state, kills Orchestra,
+proves that the same Agent process reports a sanitized degraded state, recreates
+Orchestra on the same endpoint, and requires registration count growth before
+accepting recovery. The retained run moved from registration count 1 to 2,
+continued heartbeat progress, closed every qualification port, removed both
+secret files and the managed remote root, and retained no host identity or
+address. Evidence lives at
+`releases/usability-evidence/2.14.7/agent-control-link-operational-qualification.json`
+and is rechecked by `make check-agent-control-link-operational-qualification`.
+This closes control-link network-loss/rejoin, not Installer-managed package
+acquisition, fleet scheduling, in-flight task replay after remote host loss, or
+installed operation on every supported platform. The earlier probe also exposed
+and fixed an HTTP write-half-close incompatibility with Cowboy; a native
+regression requires the Agent to keep the request connection open until the
+response arrives.
+
 The former P0 runtime API tie now meets its `verified` target. The current-line
 protocol report executes 101 tests, proves 55 advertised methods have 55 unique
 wire round trips, rejects unknown methods and malformed envelope states, and

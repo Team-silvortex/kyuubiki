@@ -108,6 +108,8 @@ lab remote-ssh-fixture\n  \
   check-operator-task-ir-contract\n  \
   check-protocol-validation-qualification\n  \
   check-system-security-qualification\n  \
+  check-agent-control-link-operational-qualification\n  \
+  qualify-agent-control-link-operational-remote\n  \
   check-agent-solver-operational-qualification\n  \
   qualify-agent-solver-operational-remote\n  \
   check-agent-update-operational-qualification\n  \

@@ -120,6 +120,11 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
     )?;
     assert_includes(
         &string_array_at(surface, "/runtime_api/stable_commands"),
+        "./scripts/kyuubiki check-agent-control-link-operational-qualification",
+        "stable command",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/stable_commands"),
         "./scripts/kyuubiki check-agent-solver-operational-qualification",
         "stable command",
     )?;
@@ -166,6 +171,11 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
     assert_includes(
         &string_array_at(surface, "/runtime_api/generated_artifacts"),
         "tmp/system-security-qualification-report.json",
+        "generated artifact",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/generated_artifacts"),
+        "tmp/agent-control-link-operational-qualification.json",
         "generated artifact",
     )?;
     assert_includes(

@@ -123,7 +123,14 @@ sprawl:
   checkpointed work resumes. Installer journal replay now survives an injected
   partial atomic commit, resumes from the first incomplete step without
   replaying the completed prefix, and rejects digest tampering; only remote host
-  kill/rejoin remains open in this distributed recovery tier
+  kill/rejoin with in-flight task state remains open in this distributed
+  recovery tier
+- native two-host control-link qualification now keeps one remote Linux Agent
+  process alive while the macOS Orchestra is killed and recreated, observes the
+  sanitized degraded state, requires full re-registration plus resumed
+  heartbeats, and proves zero qualification residue. This closes Agent
+  control-link network-loss/rejoin without claiming in-flight task replay or
+  cross-platform installed-package recovery
 - Installer-managed Agent update qualification now runs an isolated remote
   Linux install, changed-payload upgrade, executable probe, rollback, and second
   executable probe. Its semantic validator requires the rollback activation

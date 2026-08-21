@@ -1,8 +1,8 @@
 use crate::{RPC_VERSION, SOLVER_RPC_PROTOCOL};
 
 use super::rpc::{
-    AgentClusterDescriptor, AgentDescriptor, CapabilityDescriptor, RpcMethod,
-    RpcProtocolDescriptor, RuntimeAuthorityDescriptor, RuntimeEngineDescriptor,
+    AgentClusterDescriptor, AgentControlLinkDescriptor, AgentDescriptor, CapabilityDescriptor,
+    RpcMethod, RpcProtocolDescriptor, RuntimeAuthorityDescriptor, RuntimeEngineDescriptor,
     TransportDescriptor,
 };
 
@@ -402,6 +402,7 @@ impl AgentDescriptor {
                 health_score: 100,
                 peers: vec![],
             },
+            control_plane_link: AgentControlLinkDescriptor::default(),
             authority: RuntimeAuthorityDescriptor {
                 control_mode: "standalone".to_string(),
                 authority_mode: "self_directed".to_string(),

@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 use std::time::SystemTime;
 
+mod agent_control_link_operational_qualification;
 mod agent_registry_sync;
 mod agent_solver_operational_qualification;
 mod agent_update_operational_qualification;
@@ -364,6 +365,9 @@ fn run() -> RunnerResult<u8> {
             desktop_icon_variants::run_generate_desktop_icon_variants(&paths.root, rest)
         }
         "agent-registry-sync" => agent_registry_sync::run_agent_registry_sync(&paths.root, rest),
+        "qualify-agent-control-link-operational-remote" => {
+            agent_control_link_operational_qualification::run_qualify_remote(&paths.root, rest)
+        }
         "qualify-agent-solver-operational-remote" => {
             agent_solver_operational_qualification::run_qualify_agent_solver_operational_remote(
                 &paths.root,

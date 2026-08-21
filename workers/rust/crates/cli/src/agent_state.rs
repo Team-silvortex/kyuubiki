@@ -6,6 +6,7 @@ use kyuubiki_protocol::{
     RpcProgress, RuntimeAuthorityDescriptor, RuntimeEngineDescriptor,
 };
 
+use crate::agent_control_link;
 use crate::agent_deployment::{
     AgentDeploymentReadiness, build_agent_deployment_readiness, default_agent_deployment_readiness,
 };
@@ -151,7 +152,8 @@ pub(crate) fn registration_payload(config: &AgentConfig) -> serde_json::Value {
         "operator_package_runtime": operator_package_runtime_snapshot_for_config(config),
         "deployment_readiness": build_agent_deployment_readiness_for_config(config),
         "health_score": descriptor.runtime.health_score,
-        "watchdog": agent_watchdog::snapshot()
+        "watchdog": agent_watchdog::snapshot(),
+        "control_plane_link": agent_control_link::snapshot()
     })
 }
 
@@ -164,6 +166,11 @@ pub(crate) fn agent_descriptor_payload() -> serde_json::Value {
             "watchdog".to_string(),
             serde_json::to_value(agent_watchdog::snapshot())
                 .expect("agent watchdog snapshot should serialize"),
+        );
+        object.insert(
+            "control_plane_link".to_string(),
+            serde_json::to_value(agent_control_link::snapshot())
+                .expect("Agent control-plane link snapshot should serialize"),
         );
         object.insert(
             "operator_package_runtime".to_string(),

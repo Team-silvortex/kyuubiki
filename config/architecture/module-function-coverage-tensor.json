@@ -23,6 +23,7 @@
     "config/architecture/module-function-coverage-evidence/system-security.json",
     "config/architecture/module-function-coverage-evidence/protocol-validation.json",
     "config/architecture/module-function-coverage-evidence/runtime-recovery.json",
+    "config/architecture/module-function-coverage-evidence/agent-control-link.json",
     "config/architecture/module-function-coverage-evidence/agent-solver-execution.json",
     "config/architecture/module-function-coverage-evidence/workflow-engine.json",
     "config/architecture/module-function-coverage-evidence/orchestra-workflow-operational.json",

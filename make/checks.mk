@@ -13,7 +13,7 @@
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index check-material-research-bundle-index check-material-research-bundle-index-contract
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
-.PHONY: audit-dependencies check-system-security-qualification check-agent-solver-operational-qualification check-orchestra-workflow-operational-qualification check-installed-runtime-operational-qualification check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
+.PHONY: audit-dependencies check-system-security-qualification check-agent-control-link-operational-qualification check-agent-solver-operational-qualification check-orchestra-workflow-operational-qualification check-installed-runtime-operational-qualification check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
 
 check-doc-book:
 	@$(ENTRYPOINT) check-doc-book
@@ -488,6 +488,10 @@ check-agent-solver-operational-qualification:
 	@$(ENTRYPOINT) check-agent-solver-operational-qualification --self-test
 	@$(ENTRYPOINT) check-agent-solver-operational-qualification --verify-report releases/usability-evidence/2.13.8/agent-solver-operational-qualification.json
 
+check-agent-control-link-operational-qualification:
+	@$(ENTRYPOINT) check-agent-control-link-operational-qualification --self-test
+	@$(ENTRYPOINT) check-agent-control-link-operational-qualification --verify-report releases/usability-evidence/2.14.7/agent-control-link-operational-qualification.json
+
 check-orchestra-workflow-operational-qualification:
 	@$(ENTRYPOINT) check-orchestra-workflow-operational-qualification --self-test
 	@$(ENTRYPOINT) check-orchestra-workflow-operational-qualification --verify-report releases/usability-evidence/2.14.1/orchestra-workflow-operational-qualification.json
@@ -566,6 +570,7 @@ architecture-check:
 	@$(MAKE) check-contracts-validation-qualification
 	@$(MAKE) check-workbench-validation-qualification
 	@$(MAKE) check-system-security-qualification
+	@$(MAKE) check-agent-control-link-operational-qualification
 	@$(MAKE) check-agent-solver-operational-qualification
 	@$(MAKE) check-agent-update-operational-qualification
 	@$(MAKE) check-runtime-payload-operational-qualification
