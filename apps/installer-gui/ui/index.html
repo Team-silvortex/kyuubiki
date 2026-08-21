@@ -376,6 +376,36 @@
                   <span>Direct mesh token</span>
                   <input id="direct-mesh-token" type="password" placeholder="optional direct-mesh token" />
                 </label>
+                <details class="field-span-2 desktop-shell-surface-card">
+                  <summary>Advanced Orchestra ownership</summary>
+                  <p>Visible single-owner lease policy for shared PostgreSQL control planes.</p>
+                  <div class="field-grid">
+                    <label class="field">
+                      <span>Lease name</span>
+                      <input id="orchestra-lease-name" type="text" value="workflow-recovery" />
+                    </label>
+                    <label class="field">
+                      <span>Instance ID</span>
+                      <input id="orchestra-instance-id" type="text" placeholder="generated for this runtime when blank" />
+                    </label>
+                    <label class="field">
+                      <span>Lease TTL (ms)</span>
+                      <input id="orchestra-lease-ttl" type="number" min="1" value="15000" />
+                    </label>
+                    <label class="field">
+                      <span>Heartbeat (ms)</span>
+                      <input id="orchestra-lease-heartbeat" type="number" min="1" value="5000" />
+                    </label>
+                    <label class="field">
+                      <span>Standby retry (ms)</span>
+                      <input id="orchestra-lease-retry" type="number" min="1" value="1000" />
+                    </label>
+                    <label class="field">
+                      <span>Storage timeout (ms)</span>
+                      <input id="orchestra-lease-query-timeout" type="number" min="1" value="2000" />
+                    </label>
+                  </div>
+                </details>
               </div>
 
               <div class="action-row desktop-shell-action-row">

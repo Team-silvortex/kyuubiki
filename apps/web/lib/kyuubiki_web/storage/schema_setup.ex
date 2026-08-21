@@ -65,6 +65,12 @@ defmodule KyuubikiWeb.Storage.SchemaSetup do
 
     SQL.query!(
       repo,
+      create_orchestra_leases_sql(),
+      []
+    )
+
+    SQL.query!(
+      repo,
       create_security_events_sql(),
       []
     )
@@ -149,6 +155,19 @@ defmodule KyuubikiWeb.Storage.SchemaSetup do
       CREATE TABLE IF NOT EXISTS kyuubiki_analysis_results (
         job_id TEXT PRIMARY KEY REFERENCES kyuubiki_jobs(job_id) ON DELETE CASCADE,
         payload #{json_type()} NOT NULL,
+        inserted_at #{timestamp_type()} NOT NULL DEFAULT #{timestamp_default()},
+        updated_at #{timestamp_type()} NOT NULL DEFAULT #{timestamp_default()}
+      )
+    """
+  end
+
+  defp create_orchestra_leases_sql do
+    """
+      CREATE TABLE IF NOT EXISTS kyuubiki_orchestra_leases (
+        lease_name TEXT PRIMARY KEY,
+        owner_instance_id TEXT NOT NULL,
+        fencing_token #{integer_type()} NOT NULL,
+        expires_at_ms #{integer_type()} NOT NULL,
         inserted_at #{timestamp_type()} NOT NULL DEFAULT #{timestamp_default()},
         updated_at #{timestamp_type()} NOT NULL DEFAULT #{timestamp_default()}
       )

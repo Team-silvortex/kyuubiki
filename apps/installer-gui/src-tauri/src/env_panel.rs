@@ -13,6 +13,12 @@ pub struct EnvFormPayload {
     pub sqlite_database_path: String,
     pub database_url: String,
     pub database_url_configured: bool,
+    pub orchestra_lease_name: String,
+    pub orchestra_instance_id: String,
+    pub orchestra_lease_ttl_ms: String,
+    pub orchestra_lease_heartbeat_ms: String,
+    pub orchestra_lease_retry_ms: String,
+    pub orchestra_lease_query_timeout_ms: String,
     pub agent_endpoints: String,
     pub kyuubiki_api_token: String,
     pub kyuubiki_api_token_configured: bool,
@@ -38,6 +44,12 @@ pub struct WriteEnvPayload {
     pub sqlite_database_path: String,
     pub database_url: String,
     pub database_url_configured: bool,
+    pub orchestra_lease_name: String,
+    pub orchestra_instance_id: String,
+    pub orchestra_lease_ttl_ms: String,
+    pub orchestra_lease_heartbeat_ms: String,
+    pub orchestra_lease_retry_ms: String,
+    pub orchestra_lease_query_timeout_ms: String,
     pub agent_endpoints: String,
     pub kyuubiki_api_token: String,
     pub kyuubiki_api_token_configured: bool,
@@ -97,6 +109,14 @@ fn env_line_value(label: &str, value: &str) -> Result<String, String> {
     Ok(trimmed.to_string())
 }
 
+fn positive_millisecond_value(label: &str, value: &str) -> Result<String, String> {
+    let normalized = env_line_value(label, value)?;
+    match normalized.parse::<u64>() {
+        Ok(value) if value > 0 => Ok(value.to_string()),
+        _ => Err(format!("{label} must be a positive integer")),
+    }
+}
+
 #[tauri::command]
 pub fn read_env_file() -> Result<EnvFormPayload, String> {
     let path = workspace_root().join(".env.local");
@@ -111,6 +131,12 @@ pub fn read_env_file() -> Result<EnvFormPayload, String> {
         sqlite_database_path: String::new(),
         database_url: String::new(),
         database_url_configured: false,
+        orchestra_lease_name: "workflow-recovery".to_string(),
+        orchestra_instance_id: String::new(),
+        orchestra_lease_ttl_ms: "15000".to_string(),
+        orchestra_lease_heartbeat_ms: "5000".to_string(),
+        orchestra_lease_retry_ms: "1000".to_string(),
+        orchestra_lease_query_timeout_ms: "2000".to_string(),
         agent_endpoints: "127.0.0.1:5001,127.0.0.1:5002".to_string(),
         kyuubiki_api_token: String::new(),
         kyuubiki_api_token_configured: false,
@@ -134,6 +160,14 @@ pub fn read_env_file() -> Result<EnvFormPayload, String> {
             "KYUUBIKI_STORAGE_BACKEND" => form.storage_backend = value,
             "SQLITE_DATABASE_PATH" => form.sqlite_database_path = value,
             "DATABASE_URL" => form.database_url_configured = !value.is_empty(),
+            "KYUUBIKI_ORCHESTRA_LEASE_NAME" => form.orchestra_lease_name = value,
+            "KYUUBIKI_ORCHESTRA_INSTANCE_ID" => form.orchestra_instance_id = value,
+            "KYUUBIKI_ORCHESTRA_LEASE_TTL_MS" => form.orchestra_lease_ttl_ms = value,
+            "KYUUBIKI_ORCHESTRA_LEASE_HEARTBEAT_MS" => form.orchestra_lease_heartbeat_ms = value,
+            "KYUUBIKI_ORCHESTRA_LEASE_RETRY_MS" => form.orchestra_lease_retry_ms = value,
+            "KYUUBIKI_ORCHESTRA_LEASE_QUERY_TIMEOUT_MS" => {
+                form.orchestra_lease_query_timeout_ms = value
+            }
             "KYUUBIKI_AGENT_ENDPOINTS" => form.agent_endpoints = value,
             "KYUUBIKI_API_TOKEN" => form.kyuubiki_api_token_configured = !value.is_empty(),
             "KYUUBIKI_CLUSTER_API_TOKEN" => {
@@ -206,6 +240,38 @@ pub fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
             env_line_value("database url", &database_url)?
         ));
     }
+    lines.push(format!(
+        "KYUUBIKI_ORCHESTRA_LEASE_NAME={}",
+        env_line_value("Orchestra lease name", &payload.orchestra_lease_name)?
+    ));
+    if !payload.orchestra_instance_id.trim().is_empty() {
+        lines.push(format!(
+            "KYUUBIKI_ORCHESTRA_INSTANCE_ID={}",
+            env_line_value("Orchestra instance ID", &payload.orchestra_instance_id)?
+        ));
+    }
+    lines.push(format!(
+        "KYUUBIKI_ORCHESTRA_LEASE_TTL_MS={}",
+        positive_millisecond_value("Orchestra lease TTL", &payload.orchestra_lease_ttl_ms)?
+    ));
+    lines.push(format!(
+        "KYUUBIKI_ORCHESTRA_LEASE_HEARTBEAT_MS={}",
+        positive_millisecond_value(
+            "Orchestra lease heartbeat",
+            &payload.orchestra_lease_heartbeat_ms
+        )?
+    ));
+    lines.push(format!(
+        "KYUUBIKI_ORCHESTRA_LEASE_RETRY_MS={}",
+        positive_millisecond_value("Orchestra lease retry", &payload.orchestra_lease_retry_ms)?
+    ));
+    lines.push(format!(
+        "KYUUBIKI_ORCHESTRA_LEASE_QUERY_TIMEOUT_MS={}",
+        positive_millisecond_value(
+            "Orchestra lease query timeout",
+            &payload.orchestra_lease_query_timeout_ms
+        )?
+    ));
     if !payload.agent_endpoints.trim().is_empty() {
         lines.push(format!(
             "KYUUBIKI_AGENT_ENDPOINTS={}",
@@ -313,7 +379,7 @@ pub fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::env_line_value;
+    use super::{env_line_value, positive_millisecond_value};
 
     #[test]
     fn env_line_value_rejects_newline_injection() {
@@ -324,5 +390,15 @@ mod tests {
     #[test]
     fn env_line_value_trims_safe_values() {
         assert_eq!(env_line_value("api token", " token ").unwrap(), "token");
+    }
+
+    #[test]
+    fn positive_millisecond_value_rejects_zero_and_non_numeric_values() {
+        assert!(positive_millisecond_value("lease TTL", "0").is_err());
+        assert!(positive_millisecond_value("lease TTL", "later").is_err());
+        assert_eq!(
+            positive_millisecond_value("lease TTL", " 15000 ").unwrap(),
+            "15000"
+        );
     }
 }

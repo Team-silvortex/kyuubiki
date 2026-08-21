@@ -44,6 +44,12 @@ export function createInstallerEnvState({ ids, ui, applyPreset }) {
       sqliteDatabasePath: ids("sqlite-path").value.trim(),
       databaseUrl: databaseUrlInput.value.trim(),
       databaseUrlConfigured: databaseUrlInput.dataset.configured === "true",
+      orchestraLeaseName: ids("orchestra-lease-name").value.trim() || "workflow-recovery",
+      orchestraInstanceId: ids("orchestra-instance-id").value.trim(),
+      orchestraLeaseTtlMs: ids("orchestra-lease-ttl").value.trim() || "15000",
+      orchestraLeaseHeartbeatMs: ids("orchestra-lease-heartbeat").value.trim() || "5000",
+      orchestraLeaseRetryMs: ids("orchestra-lease-retry").value.trim() || "1000",
+      orchestraLeaseQueryTimeoutMs: ids("orchestra-lease-query-timeout").value.trim() || "2000",
       agentEndpoints: ids("agent-endpoints").value.trim(),
       kyuubikiApiToken: apiTokenInput.value.trim(),
       kyuubikiApiTokenConfigured: apiTokenInput.dataset.configured === "true",
@@ -71,6 +77,13 @@ export function createInstallerEnvState({ ids, ui, applyPreset }) {
       configured: "configured; leave blank to keep current value",
       empty: "ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev",
     });
+    ids("orchestra-lease-name").value = form.orchestra_lease_name || "workflow-recovery";
+    ids("orchestra-instance-id").value = form.orchestra_instance_id || "";
+    ids("orchestra-lease-ttl").value = form.orchestra_lease_ttl_ms || "15000";
+    ids("orchestra-lease-heartbeat").value = form.orchestra_lease_heartbeat_ms || "5000";
+    ids("orchestra-lease-retry").value = form.orchestra_lease_retry_ms || "1000";
+    ids("orchestra-lease-query-timeout").value =
+      form.orchestra_lease_query_timeout_ms || "2000";
     ids("agent-endpoints").value = form.agent_endpoints || "127.0.0.1:5001,127.0.0.1:5002";
     setSensitiveFieldState(ids("api-token"), form.kyuubiki_api_token_configured === true, {
       configured: "configured; leave blank to keep current token",

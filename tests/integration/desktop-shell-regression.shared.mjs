@@ -339,6 +339,15 @@ function installerMockSource() {
             };
           case "runtime_payload_status":
             return ${JSON.stringify(INSTALLER_RUNTIME_PAYLOAD_STATUS)};
+          case "installer_provenance_status":
+            return {
+              status: "verified",
+              record_count: 1,
+              head_digest: "d".repeat(64),
+              ledger_schema: "kyuubiki.desktop-audit-ledger/v1",
+              ledger_path: ".kyuubiki/installer/provenance.jsonl",
+              rendered: "installer provenance verified",
+            };
           case "latest_downloaded_update_record":
             return downloadedUpdateRecord;
           case "latest_applied_update_record":

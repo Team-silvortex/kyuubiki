@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Executed workflow, Agent watchdog, persisted Orchestra application restart, atomic shared-store generation fencing, two-host in-flight task recovery, and Installer journal fault injection proving branch isolation, stale-write rejection, replay-safe failover, and atomic deployment resume.",
+  "summary": "Executed workflow, Agent watchdog, persisted Orchestra restart, atomic generation fencing, compact active-owner leases, standby admission rollback, two-host in-flight task recovery, and Installer journal fault injection proving branch isolation, stale-write rejection, single-owner failover, replay safety, and atomic deployment resume.",
   "paradigm_contract_evidence": {
     "workflow_composition": [
       {
@@ -15,16 +15,24 @@
         ],
         "files": [
           "config/architecture/usability-release-gate.json",
+          "apps/web/lib/kyuubiki_web/analysis.ex",
           "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery.ex",
           "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery_probe.ex",
           "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
           "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
           "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_ownership.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/lease_store.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/lease_memory_backend.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/lease_sql_backend.ex",
+          "apps/web/lib/kyuubiki_web/router.ex",
           "apps/web/lib/kyuubiki_web/results/memory_backend.ex",
           "apps/web/lib/kyuubiki_web/results/postgres_backend.ex",
           "apps/web/lib/kyuubiki_web/results/store.ex",
           "apps/web/test/kyuubiki_web/jobs/store_test.exs",
           "apps/web/test/kyuubiki_web/orchestra/workflow_recovery_envelope_test.exs",
+          "apps/web/test/kyuubiki_web/orchestra/lease_store_test.exs",
+          "apps/web/test/kyuubiki_web/api/control_plane_api_test.exs",
           "apps/web/test/kyuubiki_web/orchestra/workflow_restart_recovery_test.exs",
           "schemas/workflow-recovery.schema.json",
           "releases/usability-evidence/2.14.3/persistence-provenance-qualification.json",
@@ -64,6 +72,10 @@
           "fails submission when the workflow runner supervisor is unavailable",
           "compare-and-swap permits only one concurrent writer",
           "stale_analysis_result",
+          "SQL lease permits exactly one concurrent expired-lease takeover",
+          "workflow coordinator demotes immediately when its persisted lease is lost",
+          "standby workflow submission rolls back its newly created queue record",
+          "orchestra_lease_lost",
           "kyuubiki.distributed-task-recovery-operational-qualification/v1",
           "remote-agent-inflight-loss-policy-and-rejoin",
           "job-scoped-explicit-agent-hold",
@@ -185,6 +197,57 @@
         "record.payload == ^expected",
         "compare-and-swap permits only one concurrent writer",
         "length(stale) == 7"
+      ]
+    },
+    {
+      "id": "orchestra-active-owner-lease-fencing",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "orchestra-control-plane",
+        "verification-evidence"
+      ],
+      "paradigms": [
+        "workflow_composition",
+        "runtime_api",
+        "validation",
+        "persistence_provenance",
+        "security"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "recovery",
+        "security"
+      ],
+      "files": [
+        "apps/installer-gui/src-tauri/src/env_panel.rs",
+        "apps/installer-gui/ui/index.html",
+        "apps/installer-gui/ui/installer-env-state.js",
+        "apps/installer-gui/test/smoke.test.mjs",
+        "apps/web/config/runtime.exs",
+        "apps/web/lib/kyuubiki_web/analysis.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/lease_store.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/lease_memory_backend.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/lease_sql_backend.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_ownership.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/router.ex",
+        "apps/web/lib/kyuubiki_web/storage/schema_setup.ex",
+        "apps/web/test/kyuubiki_web/orchestra/lease_store_test.exs",
+        "apps/web/test/kyuubiki_web/api/control_plane_api_test.exs"
+      ],
+      "required_text": [
+        "kyuubiki_orchestra_leases",
+        "orchestra_lease_lost",
+        "lease_query_timeout_ms",
+        "Advanced Orchestra ownership",
+        "installer round-trips visible Orchestra ownership lease settings",
+        "SQL lease rejects a second owner and fences the old token after expiry",
+        "SQL lease permits exactly one concurrent expired-lease takeover",
+        "workflow coordinator demotes immediately when its persisted lease is lost",
+        "standby workflow submission rolls back its newly created queue record",
+        "workflow_recovery"
       ]
     },
     {

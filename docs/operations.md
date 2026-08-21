@@ -59,6 +59,35 @@ It now reflects the `moxi 2.x` product shape:
 - `KYUUBIKI_AGENT_DISCOVERY=manifest|registry`
 - remote solver agents register or are discovered from manifests
 
+## Orchestra ownership lease
+
+Every Orchestra process participates in one compact ownership lease. Only the
+owner may initialize, dispatch, recover, or persist workflow state. A standby
+keeps serving its process lifecycle but rejects control writes until the shared
+lease expires and it acquires a higher fencing token. Heartbeats update one
+small row regardless of active workflow count.
+
+The controls are:
+
+- `KYUUBIKI_ORCHESTRA_LEASE_NAME=workflow-recovery` scopes independent control
+  planes that intentionally share one PostgreSQL database
+- `KYUUBIKI_ORCHESTRA_INSTANCE_ID` optionally supplies a deployment-managed,
+  unique instance identity; otherwise one is generated for the BEAM lifetime
+- `KYUUBIKI_ORCHESTRA_LEASE_TTL_MS=15000` bounds owner liveness
+- `KYUUBIKI_ORCHESTRA_LEASE_HEARTBEAT_MS=5000` renews ownership and is clamped
+  to at most half the TTL
+- `KYUUBIKI_ORCHESTRA_LEASE_RETRY_MS=1000` bounds standby election polling
+- `KYUUBIKI_ORCHESTRA_LEASE_QUERY_TIMEOUT_MS=2000` prevents a stalled storage
+  link from blocking the recovery coordinator indefinitely
+
+Use PostgreSQL for multi-instance Orchestra deployment. SQLite uses the same
+contract for local restart and race regression, but a shared SQLite file is not
+a substitute for a distributed database. Lease-store failure is fail-closed:
+the coordinator drops to standby, stops locally tracked runners, and retries.
+`GET /api/health` exposes the `workflow_recovery.lease` role, owner identity,
+expiry, fencing token, and last lease error. Graceful release expires rather
+than deletes the row, preserving monotonically increasing fencing history.
+
 ## Agent discovery modes
 
 ### Static

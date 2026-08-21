@@ -81,6 +81,38 @@ test("installer shell exposes setup, services, remote, and release surfaces", ()
   ]);
 });
 
+test("installer round-trips visible Orchestra ownership lease settings", () => {
+  const html = read("ui/index.html");
+  const state = read("ui/installer-env-state.js");
+  const native = read("src-tauri/src/env_panel.rs");
+
+  assertMatches(html, [
+    /Advanced Orchestra ownership/,
+    /id="orchestra-lease-name"/,
+    /id="orchestra-instance-id"/,
+    /id="orchestra-lease-ttl"/,
+    /id="orchestra-lease-heartbeat"/,
+    /id="orchestra-lease-retry"/,
+    /id="orchestra-lease-query-timeout"/,
+  ]);
+  assertMatches(state, [
+    /orchestraLeaseName/,
+    /orchestraLeaseTtlMs/,
+    /orchestraLeaseQueryTimeoutMs/,
+    /form\.orchestra_lease_name/,
+    /form\.orchestra_lease_query_timeout_ms/,
+  ]);
+  assertMatches(native, [
+    /KYUUBIKI_ORCHESTRA_LEASE_NAME/,
+    /KYUUBIKI_ORCHESTRA_INSTANCE_ID/,
+    /KYUUBIKI_ORCHESTRA_LEASE_TTL_MS/,
+    /KYUUBIKI_ORCHESTRA_LEASE_HEARTBEAT_MS/,
+    /KYUUBIKI_ORCHESTRA_LEASE_RETRY_MS/,
+    /KYUUBIKI_ORCHESTRA_LEASE_QUERY_TIMEOUT_MS/,
+    /positive_millisecond_value/,
+  ]);
+});
+
 test("installer shell wires core install and runtime actions", () => {
   const js = read("ui/app.js");
   const certificatePanel = read("ui/certificate-panel.js");

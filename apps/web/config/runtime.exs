@@ -53,6 +53,18 @@ sqlite_database_path =
     Path.expand("../../../tmp/data/kyuubiki_dev.sqlite3", __DIR__)
   )
 
+orchestra_lease_name =
+  case System.get_env("KYUUBIKI_ORCHESTRA_LEASE_NAME") do
+    value when is_binary(value) and value != "" ->
+      value
+
+    _ ->
+      if(config_env() == :test,
+        do: "workflow-recovery-test-#{System.pid()}",
+        else: "workflow-recovery"
+      )
+  end
+
 agent_endpoints =
   System.get_env("KYUUBIKI_AGENT_ENDPOINTS", "127.0.0.1:5001")
   |> String.split(",", trim: true)
@@ -138,7 +150,15 @@ config :kyuubiki_web, KyuubikiWeb.Jobs.Watchdog,
   job_timeout_ms: String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_JOB_TIMEOUT_MS", "1800000"))
 
 config :kyuubiki_web, KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator,
-  max_attempts: String.to_integer(System.get_env("KYUUBIKI_WORKFLOW_RECOVERY_MAX_ATTEMPTS", "3"))
+  max_attempts: String.to_integer(System.get_env("KYUUBIKI_WORKFLOW_RECOVERY_MAX_ATTEMPTS", "3")),
+  lease_name: orchestra_lease_name,
+  instance_id: System.get_env("KYUUBIKI_ORCHESTRA_INSTANCE_ID"),
+  lease_ttl_ms: String.to_integer(System.get_env("KYUUBIKI_ORCHESTRA_LEASE_TTL_MS", "15000")),
+  lease_heartbeat_ms:
+    String.to_integer(System.get_env("KYUUBIKI_ORCHESTRA_LEASE_HEARTBEAT_MS", "5000")),
+  lease_retry_ms: String.to_integer(System.get_env("KYUUBIKI_ORCHESTRA_LEASE_RETRY_MS", "1000")),
+  lease_query_timeout_ms:
+    String.to_integer(System.get_env("KYUUBIKI_ORCHESTRA_LEASE_QUERY_TIMEOUT_MS", "2000"))
 
 config :kyuubiki_web, KyuubikiWeb.PostgresRepo,
   url: database_url,

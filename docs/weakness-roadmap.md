@@ -584,8 +584,12 @@ Current weak point:
 - persisted workflow transitions now use backend-atomic compare-and-swap; an
   eight-writer SQL regression admits one generation owner and rejects seven
   stale snapshots, and the local memory backend follows the same contract
-- this closes concurrent stale-write overwrite, but not active-owner lease
-  expiry or a retained two-Orchestra PostgreSQL takeover journey
+- active-owner lease expiry is now implemented across memory, SQLite, and
+  PostgreSQL; a second Orchestra remains standby, expired ownership increments
+  a fencing token, and a stale owner cannot enter protected persistence writes
+- the remaining gap is operational depth: automate and retain the two-Orchestra
+  PostgreSQL crash-takeover journey from installed packages, then repeat it with
+  long-running workflows and database-network disruption
 
 Current moxi hardening focus:
 

@@ -277,6 +277,22 @@ Protected read routes now include:
 - `/api/v1/models*`
 - `/api/v1/model-versions*`
 
+### Orchestra ownership fencing
+
+Multi-instance control planes use the `kyuubiki_orchestra_leases` table as a
+compact active-owner boundary. Acquisition and renewal are database-atomic,
+every takeover increments a fencing token, and protected workflow writes lock
+and recheck the unexpired lease before mutating job or result state. A second
+live instance remains standby; a stale token returns `orchestra_lease_lost`.
+Release preserves the row as expired rather than resetting its fencing history,
+and rejected standby submissions remove their newly allocated queue record.
+
+Lease-store timeout or connection loss fails closed. The coordinator stops its
+tracked runners and retries election instead of continuing with cached owner
+state. `KYUUBIKI_ORCHESTRA_INSTANCE_ID` is an identity, not a credential; it
+must be unique per concurrently running Orchestra but does not replace API,
+cluster, database, or transport authentication.
+
 ### Direct mesh GUI
 
 Direct mesh routes can now be disabled or token-protected:
@@ -530,6 +546,7 @@ Sensitivity levels:
 | `apps/web/lib/kyuubiki_web/playground/agent_client.ex` | Orchestrator TCP client to Rust solver agents. | Timeouts, frame parsing, error propagation, and network boundary assumptions. |
 | `apps/web/lib/kyuubiki_web/storage/**` | SQLite/Postgres repos, schema setup, and persistence records for jobs, results, projects, and model versions. | Migration safety, data export scope, result payload size, and accidental sensitive-data logging. |
 | `apps/web/lib/kyuubiki_web/jobs/**` and `apps/web/lib/kyuubiki_web/results/**` | Job/result persistence and watchdog-driven lifecycle state. | Cancellation semantics, stale job handling, result chunk boundaries, and operator edits. |
+| `apps/web/lib/kyuubiki_web/orchestra/lease_*.ex` and `workflow_recovery_ownership.ex` | Elects one active Orchestra and fences shared-store recovery writes. | Atomic takeover, database-time expiry, instance-ID uniqueness, query timeouts, stale-token rejection, and fail-closed runner shutdown. |
 | `apps/frontend/src/lib/workbench/workbench-secrets.ts` | Per-page in-memory operator secrets for control-plane, cluster, direct-mesh, and assistant tokens. | In-memory secret lifetime, legacy storage scrubbing, token redaction, export boundaries, and accidental serialization of secrets. |
 | `apps/frontend/src/lib/workbench/helpers.ts` | Workbench settings bridge for non-sensitive UI preferences and one-time migration from legacy persisted secret fields. | Do not reintroduce token persistence; keep settings serialization scrubbed and compatible with `workbench-secrets.ts`. |
 | `apps/frontend/src/components/workbench/system/workbench-system-config-card.tsx` | UI surface for entering operator tokens and exporting database snapshots. | Password field behavior, copy/export affordances, and avoiding accidental display of token values. |

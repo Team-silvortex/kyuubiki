@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.Router do
   alias KyuubikiWeb.AssetStore
   alias KyuubikiWeb.Library
   alias KyuubikiWeb.ModelArtifactStore
+  alias KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator
   alias KyuubikiWeb.Protocol
   alias KyuubikiWeb.ResultArtifactStore
   alias KyuubikiWeb.Security
@@ -52,6 +53,7 @@ defmodule KyuubikiWeb.Router do
         "remote_solver_registry" => KyuubikiWeb.Playground.AgentRegistry.status_snapshot(),
         "agent_execution_gate" =>
           KyuubikiWeb.Playground.AgentExecutionGate.snapshot(agent_endpoints),
+        "workflow_recovery" => WorkflowRecoveryCoordinator.snapshot(),
         "watchdog" => KyuubikiWeb.Jobs.Watchdog.status_snapshot(),
         "transport" => %{
           "http" => 4000,

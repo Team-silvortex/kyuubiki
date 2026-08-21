@@ -150,9 +150,17 @@ sprawl:
   cancellation, and block transition now conditionally swaps the exact prior
   runtime record; an eight-writer SQLite regression permits one winner and
   rejects seven stale writers, while the memory backend retains the same
-  fail-closed contract. This closes the shared-store TOCTOU write race, not
-  active-owner lease detection: full host power loss, live PostgreSQL takeover,
-  fleet package acquisition, and the installed cross-platform matrix remain open
+  fail-closed contract. A compact global lease now elects one active Orchestra
+  independently of workflow count: PostgreSQL and SQLite use an atomic expiring
+  row plus fencing token, memory follows the same contract, standby instances
+  reject writes without leaving orphan queue records, and lease loss stops tracked
+  runners before retrying ownership. Health responses expose the current role,
+  owner identity, expiry, and fencing token. The 503-test Web suite, real
+  PostgreSQL regression, and a two-BEAM crash probe
+  exercised token-1 standby exclusion and token-2 takeover. This closes active
+  owner detection at `qualified`, not installed operational scope: an automated
+  retained package-level takeover journey, long-running workload takeover,
+  fleet package acquisition, and the cross-platform matrix remain open
 - Installer-managed Agent update qualification now runs an isolated remote
   Linux install, changed-payload upgrade, executable probe, rollback, and second
   executable probe. Its semantic validator requires the rollback activation

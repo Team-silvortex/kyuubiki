@@ -11,7 +11,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   alias KyuubikiWeb.AnalysisResultStore
   alias KyuubikiWeb.Jobs.Store
+  alias KyuubikiWeb.Orchestra.LeaseStore
   alias KyuubikiWeb.Orchestra.WorkflowJobRunner
+  alias KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership, as: Ownership
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope
 
   @active_job_statuses [:queued, :preprocessing, :partitioning, :solving, :postprocessing]
@@ -72,19 +74,33 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   @impl true
   def init(:ok) do
-    send(self(), :recover)
+    Process.flag(:trap_exit, true)
+    config = Ownership.config()
+    lease_ttl_ms = Ownership.positive_interval(config, :lease_ttl_ms, 15_000)
+    lease_heartbeat_ms = Ownership.positive_interval(config, :lease_heartbeat_ms, 5_000)
 
-    {:ok,
-     %{
-       session_id: session_id(),
-       max_attempts: max_attempts(),
-       refs: %{},
-       jobs: %{},
-       progress: %{},
-       recovery_runs: 0,
-       recovered_jobs: 0,
-       blocked_jobs: 0
-     }}
+    state = %{
+      session_id: session_id(),
+      instance_id: LeaseStore.instance_id(),
+      max_attempts: Keyword.get(config, :max_attempts, 3),
+      lease_name: Keyword.get(config, :lease_name, "workflow-recovery"),
+      lease_ttl_ms: lease_ttl_ms,
+      lease_heartbeat_ms: min(lease_heartbeat_ms, max(div(lease_ttl_ms, 2), 1)),
+      lease_retry_ms: Ownership.positive_interval(config, :lease_retry_ms, 1_000),
+      lease: nil,
+      lease_status: :acquiring,
+      lease_holder: nil,
+      lease_timer_ref: nil,
+      last_lease_error: nil,
+      refs: %{},
+      jobs: %{},
+      progress: %{},
+      recovery_runs: 0,
+      recovered_jobs: 0,
+      blocked_jobs: 0
+    }
+
+    {:ok, Ownership.acquire(state)}
   end
 
   @impl true
@@ -94,60 +110,84 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
         state
       ) do
     result =
-      with {:ok, recovery} <-
-             WorkflowRecoveryEnvelope.new(
-               graph,
-               input_artifacts,
-               Map.put(orchestration_context, "job_id", job_id),
-               response_options
-             ) do
-        AnalysisResultStore.put(job_id, %{
-          "workflow_id" => Map.get(graph, "id"),
-          "current_node" => nil,
-          "progress_events" => [],
-          "completed_nodes" => [],
-          "artifacts" => %{},
-          "response_options" => response_options,
-          "orchestration_context" => orchestration_context,
-          WorkflowRecoveryEnvelope.internal_key() => recovery
-        })
-      end
+      Ownership.guarded_write(state, fn ->
+        with {:ok, recovery} <-
+               WorkflowRecoveryEnvelope.new(
+                 graph,
+                 input_artifacts,
+                 Map.put(orchestration_context, "job_id", job_id),
+                 response_options
+               ) do
+          AnalysisResultStore.put(job_id, %{
+            "workflow_id" => Map.get(graph, "id"),
+            "current_node" => nil,
+            "progress_events" => [],
+            "completed_nodes" => [],
+            "artifacts" => %{},
+            "response_options" => response_options,
+            "orchestration_context" => orchestration_context,
+            WorkflowRecoveryEnvelope.internal_key() => recovery
+          })
+        end
+      end)
 
-    {:reply, result, state}
+    {:reply, result, Ownership.after_write(state, result)}
   end
 
   def handle_call({:dispatch, job_id}, _from, state) do
-    {reply, next_state} = dispatch_job(job_id, :initial, state)
-    {:reply, reply, next_state}
+    {reply, next_state} =
+      if Ownership.owner?(state),
+        do: dispatch_job(job_id, :initial, state),
+        else: {{:error, :orchestra_standby}, state}
+
+    {:reply, reply, Ownership.after_write(next_state, reply)}
   end
 
   def handle_call({:record_progress, job_id, claim, progress}, _from, state) do
-    if persist_progress?(progress, Map.get(state.progress, job_id)) do
-      result = record_progress_if_owned(job_id, claim, progress)
+    if Ownership.owner?(state) and persist_progress?(progress, Map.get(state.progress, job_id)) do
+      result = record_progress_if_owned(job_id, claim, progress, state.lease)
       next_state = if result == :ok, do: remember_progress(state, job_id, progress), else: state
-      {:reply, result, next_state}
+
+      {:reply, result, Ownership.after_write(next_state, result)}
     else
-      {:reply, :ok, state}
+      if Ownership.owner?(state),
+        do: {:reply, :ok, state},
+        else: {:reply, {:error, :orchestra_standby}, state}
     end
   end
 
   def handle_call({:commit_result, job_id, claim, result}, _from, state) do
-    reply = commit_result_if_owned(job_id, claim, result)
-    {:reply, reply, forget_progress(state, job_id)}
+    if Ownership.owner?(state) do
+      reply = commit_result_if_owned(job_id, claim, result, state.lease)
+      next_state = state |> forget_progress(job_id) |> Ownership.after_write(reply)
+      {:reply, reply, next_state}
+    else
+      {:reply, {:error, :orchestra_standby}, state}
+    end
   end
 
   def handle_call({:fail, job_id, claim, message}, _from, state) do
-    reply = fail_if_owned(job_id, claim, message)
-    {:reply, reply, forget_progress(state, job_id)}
+    if Ownership.owner?(state) do
+      reply = fail_if_owned(job_id, claim, message, state.lease)
+      next_state = state |> forget_progress(job_id) |> Ownership.after_write(reply)
+      {:reply, reply, next_state}
+    else
+      {:reply, {:error, :orchestra_standby}, state}
+    end
   end
 
   def handle_call({:cancel, job_id}, _from, state) do
-    {:reply, cancel_recovery(job_id), state}
+    reply = Ownership.guarded_write(state, fn -> cancel_recovery(job_id) end)
+    {:reply, reply, Ownership.after_write(state, reply)}
   end
 
   def handle_call(:recover_now, _from, state) do
-    {summary, next_state} = recover_active_jobs(state)
-    {:reply, summary, next_state}
+    if Ownership.owner?(state) do
+      {summary, next_state} = recover_active_jobs(state)
+      {:reply, summary, next_state}
+    else
+      {:reply, Ownership.standby_summary(state), state}
+    end
   end
 
   def handle_call(:snapshot, _from, state) do
@@ -155,6 +195,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
      %{
        "session_id" => state.session_id,
        "max_attempts" => state.max_attempts,
+       "lease" => Ownership.snapshot(state),
        "tracked_jobs" => state.jobs |> Map.keys() |> Enum.sort(),
        "recovery_runs" => state.recovery_runs,
        "recovered_jobs" => state.recovered_jobs,
@@ -164,13 +205,52 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   @impl true
   def handle_info(:recover, state) do
-    {_summary, next_state} = recover_active_jobs(state)
-    {:noreply, next_state}
+    if Ownership.owner?(state) do
+      {_summary, next_state} = recover_active_jobs(state)
+      {:noreply, next_state}
+    else
+      {:noreply, state}
+    end
+  end
+
+  def handle_info(:acquire_lease, state) do
+    state = %{state | lease_timer_ref: nil}
+    {:noreply, if(Ownership.owner?(state), do: state, else: Ownership.acquire(state))}
+  end
+
+  def handle_info({:renew_lease, fencing_token, expires_at_ms}, state) do
+    state = %{state | lease_timer_ref: nil}
+
+    case state.lease do
+      %{fencing_token: ^fencing_token, expires_at_ms: ^expires_at_ms} = lease ->
+        case LeaseStore.renew(lease, state.lease_ttl_ms) do
+          {:ok, renewed} ->
+            next_state = %{
+              state
+              | lease: renewed,
+                lease_status: :owner,
+                lease_holder: nil,
+                last_lease_error: nil
+            }
+
+            {:noreply, Ownership.schedule(next_state)}
+
+          {:error, reason} ->
+            {:noreply, Ownership.lose(state, reason)}
+        end
+
+      _ ->
+        {:noreply, state}
+    end
   end
 
   def handle_info({:recover_job, job_id, reason}, state) do
-    {_outcome, next_state} = recover_job(job_id, reason, state)
-    {:noreply, next_state}
+    if Ownership.owner?(state) do
+      {_outcome, next_state} = recover_job(job_id, reason, state)
+      {:noreply, next_state}
+    else
+      {:noreply, state}
+    end
   end
 
   def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
@@ -186,9 +266,20 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
             progress: Map.delete(state.progress, job_id)
         }
 
-        Process.send_after(self(), {:recover_job, job_id, :runner_loss}, 10)
+        if Ownership.owner?(next_state) do
+          Process.send_after(self(), {:recover_job, job_id, :runner_loss}, 10)
+        end
+
         {:noreply, next_state}
     end
+  end
+
+  @impl true
+  def terminate(reason, state) do
+    if Ownership.graceful_shutdown?(reason) and Ownership.owner?(state),
+      do: LeaseStore.release(state.lease)
+
+    :ok
   end
 
   defp recover_active_jobs(state) do
@@ -219,6 +310,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
      }, next_state}
   end
 
+  defp recover_job(_job_id, _reason, %{lease_status: status} = state) when status != :owner,
+    do: {:skipped, state}
+
   defp recover_job(job_id, reason, state) do
     case WorkflowJobRunner.running(job_id) do
       {:ok, pid} ->
@@ -228,22 +322,37 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
         case fetch_runtime(job_id) do
           {:ok, _runtime, %{"state" => terminal} = recovery}
           when terminal in ["completed", "failed", "cancelled", "recovery_blocked"] ->
-            reconcile_terminal_job(job_id, terminal, recovery)
-            {:skipped, state}
+            result =
+              Ownership.guarded_write(state, fn ->
+                reconcile_terminal_job(job_id, terminal, recovery)
+              end)
+
+            {:skipped, Ownership.after_write(state, result)}
 
           {:ok, _runtime, _recovery} ->
             case dispatch_job(job_id, reason, state) do
-              {{:ok, _pid}, updated} -> {:recovered, updated}
-              {{:error, {:workflow_replay_blocked, _}}, updated} -> {:blocked, updated}
-              {{:error, _reason}, updated} -> {:blocked, updated}
+              {{:ok, _pid}, updated} ->
+                {:recovered, updated}
+
+              {{:error, {:workflow_replay_blocked, _}}, updated} ->
+                {:blocked, updated}
+
+              {{:error, lease_error} = error, updated}
+              when lease_error in [:orchestra_lease_lost, :orchestra_lease_store_unavailable] ->
+                {:skipped, Ownership.after_write(updated, error)}
+
+              {{:error, _reason}, updated} ->
+                {:blocked, updated}
             end
 
           {:legacy_workflow, runtime} ->
             message =
               "workflow recovery blocked: legacy active job has no durable execution envelope"
 
-            _ = mark_job_failed(job_id, runtime, message)
-            {:blocked, state}
+            result =
+              Ownership.guarded_write(state, fn -> mark_job_failed(job_id, runtime, message) end)
+
+            {:blocked, Ownership.after_write(state, result)}
 
           :error ->
             {:skipped, state}
@@ -267,22 +376,24 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
          :ok <- ensure_attempt_available(recovery, state.max_attempts),
          {:ok, claimed, claim} <-
            WorkflowRecoveryEnvelope.claim(recovery, state.session_id, reason),
-         :ok <- put_runtime_recovery(job_id, runtime, claimed) do
+         :ok <- put_runtime_recovery(job_id, runtime, claimed, state.lease) do
       case WorkflowJobRunner.start_claimed(job_id, claim, Map.fetch!(claimed, "envelope")) do
         {:ok, pid} ->
           {{:ok, pid}, track_runner(job_id, pid, state)}
 
         {:error, reason} ->
           message = "workflow runner start failed: #{format_reason(reason)}"
-          _ = fail_if_owned(job_id, claim, message)
-          {{:error, {:workflow_runner_start_failed, reason}}, state}
+          failure_result = fail_if_owned(job_id, claim, message, state.lease)
+
+          {{:error, {:workflow_runner_start_failed, reason}},
+           Ownership.after_write(state, failure_result)}
       end
     else
       {:error, {:workflow_replay_blocked, _safety} = reason} ->
-        {block_recovery(job_id, reason), state}
+        {block_recovery(job_id, reason, state.lease), state}
 
       {:error, :workflow_recovery_attempts_exhausted = reason} ->
-        {block_recovery(job_id, reason), state}
+        {block_recovery(job_id, reason, state.lease), state}
 
       {:error, integrity_reason}
       when integrity_reason in [
@@ -295,7 +406,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
              :workflow_recovery_checkpoint_missing_or_invalid,
              :invalid_workflow_recovery_record
            ] ->
-        {block_recovery(job_id, integrity_reason), state}
+        {block_recovery(job_id, integrity_reason, state.lease), state}
 
       {:error, _reason} = error ->
         {error, state}
@@ -308,102 +419,119 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     end
   end
 
-  defp record_progress_if_owned(job_id, claim, %{
-         "node_id" => node_id,
-         "completed_nodes" => completed_nodes,
-         "total_nodes" => total_nodes
-       })
+  defp record_progress_if_owned(
+         job_id,
+         claim,
+         %{
+           "node_id" => node_id,
+           "completed_nodes" => completed_nodes,
+           "total_nodes" => total_nodes
+         },
+         lease
+       )
        when is_binary(node_id) and is_integer(completed_nodes) and is_integer(total_nodes) and
               total_nodes > 0 do
-    with {:ok, job} <- active_job(job_id),
-         {:ok, runtime, recovery} <- fetch_runtime(job_id),
-         true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim),
-         progress <- min(completed_nodes / total_nodes, 0.98),
-         progress_event <- progress_event(node_id, completed_nodes, total_nodes, progress),
-         updated_runtime <-
-           runtime
-           |> Map.put("current_node", node_id)
-           |> Map.update("progress_events", [progress_event], fn events ->
-             (List.wrap(events) ++ [progress_event]) |> Enum.take(-25)
-           end),
-         :ok <- AnalysisResultStore.compare_and_swap(job_id, runtime, updated_runtime),
-         {:ok, _updated_job} <-
-           Store.apply_progress(%{
-             job_id: job_id,
-             stage: "solving",
-             progress: progress,
-             iteration: completed_nodes,
-             message: "completed workflow node #{node_id}"
-           }) do
-      _ = job
-      :ok
-    else
-      false -> {:error, :stale_workflow_execution_claim}
-      {:error, _reason} = error -> error
-      :error -> {:error, {:workflow_recovery_not_found, job_id}}
-      {:legacy_workflow, _runtime} -> {:error, :legacy_workflow_recovery_unavailable}
-    end
+    LeaseStore.with_lease(lease, fn ->
+      with {:ok, job} <- active_job(job_id),
+           {:ok, runtime, recovery} <- fetch_runtime(job_id),
+           true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim),
+           progress <- min(completed_nodes / total_nodes, 0.98),
+           progress_event <- progress_event(node_id, completed_nodes, total_nodes, progress),
+           updated_runtime <-
+             runtime
+             |> Map.put("current_node", node_id)
+             |> Map.update("progress_events", [progress_event], fn events ->
+               (List.wrap(events) ++ [progress_event]) |> Enum.take(-25)
+             end),
+           :ok <- AnalysisResultStore.compare_and_swap(job_id, runtime, updated_runtime),
+           {:ok, _updated_job} <-
+             Store.apply_progress(%{
+               job_id: job_id,
+               stage: "solving",
+               progress: progress,
+               iteration: completed_nodes,
+               message: "completed workflow node #{node_id}"
+             }) do
+        _ = job
+        :ok
+      else
+        false -> {:error, :stale_workflow_execution_claim}
+        {:error, _reason} = error -> error
+        :error -> {:error, {:workflow_recovery_not_found, job_id}}
+        {:legacy_workflow, _runtime} -> {:error, :legacy_workflow_recovery_unavailable}
+      end
+    end)
   end
 
-  defp record_progress_if_owned(_job_id, _claim, _progress),
+  defp record_progress_if_owned(_job_id, _claim, _progress, _lease),
     do: {:error, :invalid_workflow_progress}
 
-  defp commit_result_if_owned(job_id, claim, result) do
-    with {:ok, _job} <- active_job(job_id),
-         {:ok, runtime, recovery} <- fetch_runtime(job_id),
-         true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim),
-         completed <-
-           WorkflowRecoveryEnvelope.transition(recovery, "completed", %{
-             "committed_generation" => claim["generation"]
-           }),
-         final <-
-           result
-           |> Map.put("workflow_id", Map.get(runtime, "workflow_id"))
-           |> Map.put("current_node", nil)
-           |> Map.put("progress_events", Map.get(runtime, "progress_events", []))
-           |> Map.put("response_options", Map.get(runtime, "response_options", %{}))
-           |> Map.put(WorkflowRecoveryEnvelope.internal_key(), completed),
-         :ok <- AnalysisResultStore.compare_and_swap(job_id, runtime, final),
-         {:ok, _job} <- Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0}) do
-      :ok
-    else
-      false -> {:error, :stale_workflow_execution_claim}
-      {:error, _reason} = error -> error
-      :error -> {:error, {:workflow_recovery_not_found, job_id}}
-      {:legacy_workflow, _runtime} -> {:error, :legacy_workflow_recovery_unavailable}
-    end
+  defp commit_result_if_owned(job_id, claim, result, lease) do
+    LeaseStore.with_lease(lease, fn ->
+      with {:ok, _job} <- active_job(job_id),
+           {:ok, runtime, recovery} <- fetch_runtime(job_id),
+           true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim),
+           completed <-
+             WorkflowRecoveryEnvelope.transition(recovery, "completed", %{
+               "committed_generation" => claim["generation"]
+             }),
+           final <-
+             result
+             |> Map.put("workflow_id", Map.get(runtime, "workflow_id"))
+             |> Map.put("current_node", nil)
+             |> Map.put("progress_events", Map.get(runtime, "progress_events", []))
+             |> Map.put("response_options", Map.get(runtime, "response_options", %{}))
+             |> Map.put(WorkflowRecoveryEnvelope.internal_key(), completed),
+           :ok <- AnalysisResultStore.compare_and_swap(job_id, runtime, final),
+           {:ok, _job} <-
+             Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0}) do
+        :ok
+      else
+        false -> {:error, :stale_workflow_execution_claim}
+        {:error, _reason} = error -> error
+        :error -> {:error, {:workflow_recovery_not_found, job_id}}
+        {:legacy_workflow, _runtime} -> {:error, :legacy_workflow_recovery_unavailable}
+      end
+    end)
   end
 
-  defp fail_if_owned(job_id, claim, message) do
-    with {:ok, runtime, recovery} <- fetch_runtime(job_id),
-         true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim),
-         failed <-
-           WorkflowRecoveryEnvelope.transition(recovery, "failed", %{"message" => message}),
-         :ok <- put_runtime_recovery(job_id, runtime, failed) do
-      _ =
-        Store.apply_progress(%{job_id: job_id, stage: "failed", progress: 1.0, message: message})
+  defp fail_if_owned(job_id, claim, message, lease) do
+    LeaseStore.with_lease(lease, fn ->
+      with {:ok, runtime, recovery} <- fetch_runtime(job_id),
+           true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim),
+           failed <-
+             WorkflowRecoveryEnvelope.transition(recovery, "failed", %{"message" => message}),
+           :ok <- put_runtime_recovery_unfenced(job_id, runtime, failed) do
+        _ =
+          Store.apply_progress(%{
+            job_id: job_id,
+            stage: "failed",
+            progress: 1.0,
+            message: message
+          })
 
-      :ok
-    else
-      false -> {:error, :stale_workflow_execution_claim}
-      {:error, _reason} = error -> error
-      :error -> {:error, {:workflow_recovery_not_found, job_id}}
-      {:legacy_workflow, _runtime} -> {:error, :legacy_workflow_recovery_unavailable}
-    end
+        :ok
+      else
+        false -> {:error, :stale_workflow_execution_claim}
+        {:error, _reason} = error -> error
+        :error -> {:error, {:workflow_recovery_not_found, job_id}}
+        {:legacy_workflow, _runtime} -> {:error, :legacy_workflow_recovery_unavailable}
+      end
+    end)
   end
 
   defp cancel_recovery(job_id) do
     case fetch_runtime(job_id) do
       {:ok, runtime, recovery} ->
         cancelled = WorkflowRecoveryEnvelope.transition(recovery, "cancelled")
-        put_runtime_recovery(job_id, runtime, cancelled)
+        put_runtime_recovery_unfenced(job_id, runtime, cancelled)
 
       _ ->
         :ok
     end
   end
 
-  defp block_recovery(job_id, reason) do
+  defp block_recovery(job_id, reason, lease) do
     message = "workflow recovery blocked: #{format_reason(reason)}"
 
     case fetch_runtime(job_id) do
@@ -414,10 +542,12 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
             "next_action" => "supply_verified_checkpoint_or_resubmit"
           })
 
-        with :ok <- put_runtime_recovery(job_id, runtime, blocked) do
-          _ = mark_job_failed(job_id, runtime, message)
-          {:error, normalize_block_reason(reason)}
-        end
+        LeaseStore.with_lease(lease, fn ->
+          with :ok <- put_runtime_recovery_unfenced(job_id, runtime, blocked) do
+            _ = mark_job_failed(job_id, runtime, message)
+            {:error, normalize_block_reason(reason)}
+          end
+        end)
 
       _ ->
         {:error, reason}
@@ -442,7 +572,13 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     end
   end
 
-  defp put_runtime_recovery(job_id, runtime, recovery),
+  defp put_runtime_recovery(job_id, runtime, recovery, lease) do
+    LeaseStore.with_lease(lease, fn ->
+      put_runtime_recovery_unfenced(job_id, runtime, recovery)
+    end)
+  end
+
+  defp put_runtime_recovery_unfenced(job_id, runtime, recovery),
     do:
       AnalysisResultStore.compare_and_swap(
         job_id,
@@ -500,12 +636,19 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   defp track_runner(job_id, pid, state) when is_pid(pid) do
     case Map.get(state.jobs, job_id) do
-      ref when is_reference(ref) ->
+      %{ref: ref} when is_reference(ref) ->
         state
 
       nil ->
         ref = Process.monitor(pid)
-        %{state | refs: Map.put(state.refs, ref, job_id), jobs: Map.put(state.jobs, job_id, ref)}
+
+        runner = %{pid: pid, ref: ref}
+
+        %{
+          state
+          | refs: Map.put(state.refs, ref, job_id),
+            jobs: Map.put(state.jobs, job_id, runner)
+        }
     end
   end
 
@@ -546,11 +689,6 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   defp normalize_block_reason(reason), do: {:workflow_recovery_blocked, reason}
   defp format_reason(reason) when is_atom(reason), do: Atom.to_string(reason)
   defp format_reason(reason), do: inspect(reason)
-
-  defp max_attempts do
-    Application.get_env(:kyuubiki_web, __MODULE__, [])
-    |> Keyword.get(:max_attempts, 3)
-  end
 
   defp session_id do
     "orch-session:" <> (:crypto.strong_rand_bytes(16) |> Base.url_encode64(padding: false))

@@ -32,6 +32,7 @@ defmodule KyuubikiWeb.Application do
       [
         {KyuubikiWeb.Jobs.MemoryBackend, []},
         {KyuubikiWeb.AnalysisResultMemoryBackend, []},
+        {KyuubikiWeb.Orchestra.LeaseMemoryBackend, []},
         {KyuubikiWeb.Library.MemoryBackend, []},
         {KyuubikiWeb.SecurityEvents.MemoryBackend, []}
       ]
