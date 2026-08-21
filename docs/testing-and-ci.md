@@ -696,6 +696,29 @@ Current behavior notes:
   validated node scale. Checked-baseline promotion should still wait for repeat
   runs.
 
+## Operational Orchestra Takeover Qualification
+
+The active-owner lane runs two independent local Orchestra BEAM processes
+against one ephemeral PostgreSQL instance on the remote Linux qualification
+host:
+
+```sh
+make qualify-orchestra-takeover-operational-remote REMOTE=kyuubiki-lab
+make check-orchestra-takeover-operational-qualification
+```
+
+The capture keeps PostgreSQL on the remote loopback interface and reaches it
+through a temporary SSH loopback tunnel. It proves owner election, standby
+exclusion, forced owner process loss, fencing-token increment, standby
+promotion, and former-owner rejoin fencing. Success additionally requires
+removal of both BEAM processes, all local ports and logs, the tunnel, and the
+remote container. The retained report contains roles and timings only, never a
+host address, account, database URL, or credential.
+
+This is source-runtime operational evidence. Installer-managed package
+takeover, long-running workflow takeover, and database-network disruption
+remain separate open qualifications.
+
 ## Operational Agent Solver Qualification
 
 The operational solver lane closes the gap between a source-level TaskIR test

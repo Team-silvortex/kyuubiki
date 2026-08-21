@@ -15,6 +15,7 @@
       "./scripts/kyuubiki check-workbench-validation-qualification",
       "./scripts/kyuubiki check-system-security-qualification",
       "./scripts/kyuubiki check-agent-control-link-operational-qualification",
+      "./scripts/kyuubiki check-orchestra-takeover-operational-qualification",
       "./scripts/kyuubiki check-distributed-task-recovery-operational-qualification",
       "./scripts/kyuubiki check-agent-solver-operational-qualification",
       "./scripts/kyuubiki check-agent-update-operational-qualification",
@@ -35,6 +36,7 @@
       "tmp/workbench-validation-qualification-report.json",
       "tmp/system-security-qualification-report.json",
       "tmp/agent-control-link-operational-qualification.json",
+      "tmp/orchestra-takeover-operational-qualification.json",
       "tmp/distributed-task-recovery-operational-qualification.json",
       "tmp/agent-solver-operational-remote.json",
       "tmp/installed-runtime-operational-qualification.json",
@@ -106,7 +108,13 @@
       "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
       "apps/web/test/kyuubiki_web/orchestra/workflow_recovery_envelope_test.exs",
       "apps/web/test/kyuubiki_web/orchestra/workflow_restart_recovery_test.exs",
-      "schemas/workflow-recovery.schema.json"
+      "schemas/workflow-recovery.schema.json",
+      "config/architecture/orchestra-takeover-operational-qualification.json",
+      "schemas/orchestra-takeover-operational-qualification-contract.schema.json",
+      "schemas/orchestra-takeover-operational-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/runtime.rs",
+      "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/report.rs",
+      "releases/usability-evidence/2.15.0/orchestra-takeover-operational-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.agent-headless-bridge/v1",
@@ -117,7 +125,8 @@
       "kyuubiki.orchestra-workflow-operational-qualification/v1",
       "kyuubiki.installed-runtime-operational-qualification/v1",
       "kyuubiki.workflow-recovery/v1",
-      "kyuubiki.workflow-execution-envelope/v1"
+      "kyuubiki.workflow-execution-envelope/v1",
+      "kyuubiki.orchestra-takeover-operational-qualification/v1"
     ]
   },
   "security": {
@@ -254,6 +263,10 @@
       "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_ownership.ex",
       "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
       "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+      "config/architecture/orchestra-takeover-operational-qualification.json",
+      "schemas/orchestra-takeover-operational-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/runtime.rs",
+      "releases/usability-evidence/2.15.0/orchestra-takeover-operational-qualification.json",
       "schemas/workflow-recovery.schema.json",
       "workers/rust/crates/installer/src/remote_deployment_journal_store.rs",
       "releases/usability-evidence/2.14.3/persistence-provenance-qualification.json"
@@ -269,7 +282,8 @@
       "kyuubiki_orchestra_leases",
       "orchestra_lease_lost",
       "kyuubiki.workflow-recovery/v1",
-      "kyuubiki.workflow-execution-envelope/v1"
+      "kyuubiki.workflow-execution-envelope/v1",
+      "kyuubiki.orchestra-takeover-operational-qualification/v1"
     ],
     "generated_artifacts": [
       "tmp/central-readiness-report.json",

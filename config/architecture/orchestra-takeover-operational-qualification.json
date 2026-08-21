@@ -1,0 +1,73 @@
+{
+  "$schema": "../../schemas/orchestra-takeover-operational-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.orchestra-takeover-operational-qualification-contract/v1",
+  "qualification_id": "two-orchestra-postgresql-crash-takeover-operational",
+  "target_coordinate": {
+    "module_id": "orchestra-control-plane",
+    "paradigm": "runtime_api",
+    "target_grade": "operational"
+  },
+  "capture": {
+    "orchestra_host_role": "local-orchestra-qualification-host",
+    "database_host_role": "remote-linux-qualification-host",
+    "database_platform": "linux",
+    "database": "postgresql",
+    "transport": "ssh-loopback-tunnel",
+    "failure_mode": "sigkill",
+    "orchestra_processes_minimum": 2,
+    "lease_ttl_ms_maximum": 2000,
+    "fencing_increment_minimum": 1,
+    "cleanup_required": true
+  },
+  "retention": {
+    "report_schema": "kyuubiki.orchestra-takeover-operational-qualification/v1",
+    "report_schema_path": "schemas/orchestra-takeover-operational-qualification-report.schema.json",
+    "report_path": "releases/usability-evidence/2.15.0/orchestra-takeover-operational-qualification.json",
+    "forbidden_content": [
+      "192.168.",
+      "database_url",
+      "ecto://",
+      "postgres://",
+      "authorization: bearer",
+      "kyuubiki-dev",
+      "/users/",
+      "ssh-rsa"
+    ]
+  },
+  "source_guard": {
+    "files": [
+      "apps/web/config/runtime.exs",
+      "apps/web/lib/kyuubiki_web/orchestra/lease_sql_backend.ex",
+      "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+      "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_ownership.ex",
+      "apps/web/lib/kyuubiki_web/router.ex",
+      "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/runtime.rs",
+      "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/report.rs"
+    ],
+    "required_text": [
+      "KYUUBIKI_ORCHESTRA_LEASE_NAME",
+      "KYUUBIKI_ORCHESTRA_INSTANCE_ID",
+      "KYUUBIKI_STORAGE_BACKEND",
+      "orchestra_lease_lost",
+      "lease_held",
+      "fencing_token",
+      "workflow_recovery",
+      "ssh-loopback-tunnel",
+      "docker rm -f",
+      ".kill()"
+    ]
+  },
+  "required_checks": [
+    "remote_postgresql_ready",
+    "primary_owner_elected",
+    "second_orchestra_standby",
+    "owner_sigkill_injected",
+    "owner_endpoint_closed",
+    "standby_promoted",
+    "fencing_token_incremented",
+    "former_owner_identity_fenced",
+    "ephemeral_database_isolated",
+    "cleanup_complete",
+    "retention_sanitized"
+  ]
+}

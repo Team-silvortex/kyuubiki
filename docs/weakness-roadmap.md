@@ -587,9 +587,13 @@ Current weak point:
 - active-owner lease expiry is now implemented across memory, SQLite, and
   PostgreSQL; a second Orchestra remains standby, expired ownership increments
   a fencing token, and a stale owner cannot enter protected persistence writes
-- the remaining gap is operational depth: automate and retain the two-Orchestra
-  PostgreSQL crash-takeover journey from installed packages, then repeat it with
-  long-running workflows and database-network disruption
+- the native operational lane now retains a two-Orchestra PostgreSQL journey:
+  the owner is killed without graceful release, standby takes token 2, the
+  former owner identity is fenced back to standby, and all temporary database,
+  tunnel, process, port, and log state is removed
+- the remaining gap is package and duration depth: repeat the journey from
+  Installer-managed packages, then add long-running workflows and explicit
+  database-network disruption
 
 Current moxi hardening focus:
 

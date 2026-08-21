@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Executed workflow, Agent watchdog, persisted Orchestra restart, atomic generation fencing, compact active-owner leases, standby admission rollback, two-host in-flight task recovery, and Installer journal fault injection proving branch isolation, stale-write rejection, single-owner failover, replay safety, and atomic deployment resume.",
+  "summary": "Executed workflow, Agent watchdog, persisted Orchestra restart, atomic generation fencing, operational two-Orchestra PostgreSQL crash takeover, standby admission rollback, two-host in-flight task recovery, and Installer journal fault injection proving branch isolation, stale-write rejection, single-owner failover, replay safety, and atomic deployment resume.",
   "paradigm_contract_evidence": {
     "workflow_composition": [
       {
@@ -38,6 +38,11 @@
           "releases/usability-evidence/2.14.3/persistence-provenance-qualification.json",
           "workers/rust/crates/script-runner/src/runtime_recovery_fault_injection.rs",
           "workers/rust/crates/script-runner/src/orchestra_recovery_fault_injection.rs",
+          "config/architecture/orchestra-takeover-operational-qualification.json",
+          "schemas/orchestra-takeover-operational-qualification-contract.schema.json",
+          "schemas/orchestra-takeover-operational-qualification-report.schema.json",
+          "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/runtime.rs",
+          "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/report.rs",
           "config/architecture/distributed-task-recovery-operational-qualification.json",
           "schemas/distributed-task-recovery-operational-qualification-report.schema.json",
           "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery_operational_probe.ex",
@@ -49,6 +54,7 @@
           "workers/rust/crates/script-runner/src/installer_recovery_fault_injection.rs",
           "releases/usability-evidence/2.11.7/workflow-branch-recovery-fault-injection.json",
           "releases/usability-evidence/2.11.7/orchestra-agent-process-loss-fault-injection.json",
+          "releases/usability-evidence/2.15.0/orchestra-takeover-operational-qualification.json",
           "releases/usability-evidence/2.14.8/distributed-task-recovery-operational-qualification.json",
           "releases/usability-evidence/2.11.7/installer-journal-replay-fault-injection.json"
         ],
@@ -76,6 +82,8 @@
           "workflow coordinator demotes immediately when its persisted lease is lost",
           "standby workflow submission rolls back its newly created queue record",
           "orchestra_lease_lost",
+          "kyuubiki.orchestra-takeover-operational-qualification/v1",
+          "two-orchestra-postgresql-sigkill-takeover",
           "kyuubiki.distributed-task-recovery-operational-qualification/v1",
           "remote-agent-inflight-loss-policy-and-rejoin",
           "job-scoped-explicit-agent-hold",
@@ -202,7 +210,7 @@
     {
       "id": "orchestra-active-owner-lease-fencing",
       "status": "proven",
-      "grade": "qualified",
+      "grade": "operational",
       "modules": [
         "orchestra-control-plane",
         "verification-evidence"
@@ -235,7 +243,13 @@
         "apps/web/lib/kyuubiki_web/router.ex",
         "apps/web/lib/kyuubiki_web/storage/schema_setup.ex",
         "apps/web/test/kyuubiki_web/orchestra/lease_store_test.exs",
-        "apps/web/test/kyuubiki_web/api/control_plane_api_test.exs"
+        "apps/web/test/kyuubiki_web/api/control_plane_api_test.exs",
+        "config/architecture/orchestra-takeover-operational-qualification.json",
+        "schemas/orchestra-takeover-operational-qualification-contract.schema.json",
+        "schemas/orchestra-takeover-operational-qualification-report.schema.json",
+        "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/runtime.rs",
+        "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/report.rs",
+        "releases/usability-evidence/2.15.0/orchestra-takeover-operational-qualification.json"
       ],
       "required_text": [
         "kyuubiki_orchestra_leases",
@@ -247,7 +261,12 @@
         "SQL lease permits exactly one concurrent expired-lease takeover",
         "workflow coordinator demotes immediately when its persisted lease is lost",
         "standby workflow submission rolls back its newly created queue record",
-        "workflow_recovery"
+        "workflow_recovery",
+        "kyuubiki.orchestra-takeover-operational-qualification/v1",
+        "two-orchestra-postgresql-sigkill-takeover",
+        "\"fencing_token\": 2",
+        "\"former_owner_rejoin\"",
+        "\"remote_database_removed\": true"
       ]
     },
     {

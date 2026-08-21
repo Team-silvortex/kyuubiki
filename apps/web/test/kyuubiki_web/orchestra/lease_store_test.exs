@@ -10,25 +10,26 @@ defmodule KyuubikiWeb.Orchestra.LeaseStoreTest do
   test "SQL lease rejects a second owner and fences the old token after expiry" do
     lease_name = unique_lease_name("sql-lifecycle")
 
-    assert {:ok, first} = LeaseStore.acquire(lease_name, "orchestra-a", 100)
+    assert {:ok, first} = LeaseStore.acquire(lease_name, "orchestra-a", 5_000)
     assert first.fencing_token == 1
     assert :protected == LeaseStore.with_lease(first, fn -> :protected end)
+    assert {:ok, exclusive} = LeaseStore.renew(first, 5_000)
 
     assert {:error, {:lease_held, held}} =
-             LeaseStore.acquire(lease_name, "orchestra-b", 100)
+             LeaseStore.acquire(lease_name, "orchestra-b", 5_000)
 
     assert held.owner_instance_id == "orchestra-a"
-    assert {:ok, renewed} = LeaseStore.renew(first, 100)
-    assert renewed.fencing_token == first.fencing_token
+    assert {:ok, expiring} = LeaseStore.renew(exclusive, 500)
+    assert expiring.fencing_token == first.fencing_token
 
-    Process.sleep(140)
+    Process.sleep(700)
 
     assert {:ok, takeover} = LeaseStore.acquire(lease_name, "orchestra-b", 500)
     assert takeover.fencing_token == first.fencing_token + 1
-    assert {:error, :orchestra_lease_lost} = LeaseStore.renew(renewed, 100)
+    assert {:error, :orchestra_lease_lost} = LeaseStore.renew(expiring, 100)
 
     assert {:error, :orchestra_lease_lost} =
-             LeaseStore.with_lease(renewed, fn -> flunk("stale lease callback executed") end)
+             LeaseStore.with_lease(expiring, fn -> flunk("stale lease callback executed") end)
 
     assert :ok = LeaseStore.release(takeover)
     assert {:ok, reacquired} = LeaseStore.acquire(lease_name, "orchestra-b", 500)

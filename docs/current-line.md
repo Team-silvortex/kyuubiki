@@ -156,11 +156,13 @@ sprawl:
   reject writes without leaving orphan queue records, and lease loss stops tracked
   runners before retrying ownership. Health responses expose the current role,
   owner identity, expiry, and fencing token. The 503-test Web suite, real
-  PostgreSQL regression, and a two-BEAM crash probe
-  exercised token-1 standby exclusion and token-2 takeover. This closes active
-  owner detection at `qualified`, not installed operational scope: an automated
-  retained package-level takeover journey, long-running workload takeover,
-  fleet package acquisition, and the cross-platform matrix remain open
+  PostgreSQL regression, and a retained native two-BEAM crash qualification
+  exercise token-1 standby exclusion, forced owner process loss, token-2
+  takeover, former-owner rejoin fencing, and complete temporary-resource
+  cleanup. This closes the source runtime path at `operational`, not installed
+  package scope: an Installer-managed takeover journey, long-running workload
+  takeover, database-network disruption, fleet package acquisition, and the
+  cross-platform matrix remain open
 - Installer-managed Agent update qualification now runs an isolated remote
   Linux install, changed-payload upgrade, executable probe, rollback, and second
   executable probe. Its semantic validator requires the rollback activation

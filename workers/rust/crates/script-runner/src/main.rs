@@ -101,6 +101,7 @@ mod operator_reliability_schemas;
 mod operator_task_ir_contract;
 mod operator_validation;
 mod orchestra_recovery_fault_injection;
+mod orchestra_takeover_operational_qualification;
 mod orchestra_workflow_operational_qualification;
 mod packaged_desktop_smoke;
 mod persistence_provenance_qualification;
@@ -375,6 +376,9 @@ fn run() -> RunnerResult<u8> {
                 &paths.root,
                 rest,
             )
+        }
+        "qualify-orchestra-takeover-operational-remote" => {
+            orchestra_takeover_operational_qualification::run_qualify_remote(&paths.root, rest)
         }
         "qualify-agent-solver-operational-remote" => {
             agent_solver_operational_qualification::run_qualify_agent_solver_operational_remote(
