@@ -449,6 +449,8 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
   end
 
   defp solve_routing_opts(node) do
+    context = Map.get(node, "orchestration_context", %{})
+
     [
       required_capabilities:
         node
@@ -458,11 +460,9 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
         node
         |> Map.get("placement_tags", [])
         |> normalize_routing_values(),
-      orchestration:
-        node
-        |> Map.get("orchestration_context", %{})
-        |> normalize_orchestration_context()
+      orchestration: normalize_orchestration_context(context)
     ]
+    |> maybe_put_job_id(context)
   end
 
   defp normalize_routing_values(values) when is_list(values) do
@@ -490,6 +490,12 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
     do: Map.put(context, key, value)
 
   defp put_orchestration_value(context, _key, _value), do: context
+
+  defp maybe_put_job_id(opts, %{"job_id" => job_id})
+       when is_binary(job_id) and job_id != "",
+       do: Keyword.put(opts, :job_id, job_id)
+
+  defp maybe_put_job_id(opts, _context), do: opts
 
   defp resolve_electrostatic_to_heat_bridge_contract(config),
     do: WorkflowOperatorBridgeRuntime.resolve_electrostatic_to_heat_bridge_contract(config)

@@ -106,18 +106,33 @@
         "test",
         "--trace",
         "test/kyuubiki_web/storage/persistence_test.exs",
-        "test/kyuubiki_web/jobs/store_test.exs"
+        "test/kyuubiki_web/jobs/store_test.exs",
+        "test/kyuubiki_web/orchestra/workflow_recovery_envelope_test.exs",
+        "test/kyuubiki_web/orchestra/workflow_restart_recovery_test.exs"
       ],
       "source_files": [
         "apps/web/lib/kyuubiki_web/storage/persistence.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
         "apps/web/test/kyuubiki_web/storage/persistence_test.exs",
-        "apps/web/test/kyuubiki_web/jobs/store_test.exs"
+        "apps/web/test/kyuubiki_web/jobs/store_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_recovery_envelope_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_restart_recovery_test.exs",
+        "schemas/workflow-recovery.schema.json"
       ],
       "required_source_text": [
         "kyuubiki.persistence-envelope/v1",
         "kyuubiki.persistence-recovery-receipt/v1",
         "recovered_previous_generation",
-        "quarantined_and_defaulted"
+        "quarantined_and_defaulted",
+        "kyuubiki.workflow-recovery/v1",
+        "kyuubiki.workflow-execution-envelope/v1",
+        "replays an idempotent in-flight workflow after the Orchestra application restarts",
+        "blocks an in-flight side-effect workflow after restart without a checkpoint",
+        "blocks a digest-tampered execution envelope before restart replay",
+        "reclaims an idempotent workflow after its supervised runner is lost",
+        "fails submission when the workflow runner supervisor is unavailable"
       ],
       "assertions": [
         {
@@ -149,6 +164,36 @@
           "label": "quarantines an unrecoverable tampered generation without cascading failure",
           "outcome": "rejection",
           "boundary": "tampered persistence without valid backup"
+        },
+        {
+          "id": "orchestra-workflow-replays-after-restart",
+          "label": "replays an idempotent in-flight workflow after the Orchestra application restarts",
+          "outcome": "acceptance",
+          "boundary": "persisted in-flight workflow application restart"
+        },
+        {
+          "id": "orchestra-workflow-blocks-side-effect-replay",
+          "label": "blocks an in-flight side-effect workflow after restart without a checkpoint",
+          "outcome": "rejection",
+          "boundary": "uncheckpointed side-effect workflow restart"
+        },
+        {
+          "id": "orchestra-workflow-rejects-envelope-tamper",
+          "label": "blocks a digest-tampered execution envelope before restart replay",
+          "outcome": "rejection",
+          "boundary": "tampered workflow execution envelope"
+        },
+        {
+          "id": "orchestra-workflow-reclaims-runner-loss",
+          "label": "reclaims an idempotent workflow after its supervised runner is lost",
+          "outcome": "acceptance",
+          "boundary": "supervised workflow runner loss"
+        },
+        {
+          "id": "orchestra-workflow-rejects-missing-supervisor",
+          "label": "fails submission when the workflow runner supervisor is unavailable",
+          "outcome": "rejection",
+          "boundary": "workflow runner supervisor unavailable"
         }
       ]
     },

@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/workflow-recovery.schema.json",
+  "title": "Durable Workflow Recovery Record",
+  "description": "Digest-bound Orchestra execution context with replay policy and generation fencing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "digest_algorithm",
+    "envelope_sha256",
+    "workflow_id",
+    "retry_safety",
+    "checkpoint",
+    "checkpoint_digest",
+    "state",
+    "generation",
+    "attempt",
+    "owner_session_id",
+    "created_at",
+    "updated_at",
+    "history"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.workflow-recovery/v1"
+    },
+    "digest_algorithm": {
+      "const": "sha256"
+    },
+    "envelope_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "envelope": {
+      "$ref": "#/$defs/envelope"
+    },
+    "workflow_id": {
+      "type": ["string", "null"]
+    },
+    "retry_safety": {
+      "enum": ["idempotent", "checkpointed", "checkpoint_required"]
+    },
+    "checkpoint": {
+      "type": ["object", "null"]
+    },
+    "checkpoint_digest": {
+      "oneOf": [
+        { "$ref": "#/$defs/sha256" },
+        { "type": "null" }
+      ]
+    },
+    "state": {
+      "enum": ["pending", "running", "recovery_blocked", "completed", "failed", "cancelled"]
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "owner_session_id": {
+      "type": ["string", "null"]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "history": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "$ref": "#/$defs/historyEvent"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "enum": ["pending", "running", "recovery_blocked"]
+          }
+        },
+        "required": ["state"]
+      },
+      "then": {
+        "required": ["envelope"]
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "graph",
+        "input_artifacts",
+        "orchestration_context",
+        "response_options"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.workflow-execution-envelope/v1"
+        },
+        "graph": {
+          "type": "object"
+        },
+        "input_artifacts": {
+          "type": "object"
+        },
+        "orchestration_context": {
+          "type": "object"
+        },
+        "response_options": {
+          "type": "object"
+        }
+      }
+    },
+    "historyEvent": {
+      "type": "object",
+      "required": ["event", "generation", "attempt", "at"],
+      "properties": {
+        "event": {
+          "type": "string"
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

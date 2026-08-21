@@ -6,6 +6,8 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
   alias KyuubikiWeb.AnalysisResultStore
   alias KyuubikiWeb.Jobs.Job
   alias KyuubikiWeb.Jobs.Store
+  alias KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator
+  alias KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope
   alias KyuubikiWeb.Playground.AgentClient
 
   @spec fetch_job(String.t()) :: {:ok, map()} | {:error, term()}
@@ -16,7 +18,10 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
 
         case AnalysisResultStore.get(job_id) do
           {:ok, result} ->
-            {:ok, payload |> put_has_result(true) |> Map.put("result", result)}
+            {:ok,
+             payload
+             |> put_has_result(true)
+             |> Map.put("result", WorkflowRecoveryEnvelope.public_result(result))}
 
           :error ->
             {:ok, payload}
@@ -69,6 +74,8 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
         if job.status in [:completed, :failed, :cancelled] do
           {:ok, serialize_payload(job)}
         else
+          _ = WorkflowRecoveryCoordinator.cancel(job_id)
+
           _ =
             Store.apply_progress(%{
               job_id: job_id,
@@ -88,6 +95,7 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
 
   @spec delete_job(String.t()) :: {:ok, map()} | {:error, term()}
   def delete_job(job_id) when is_binary(job_id) do
+    _ = WorkflowRecoveryCoordinator.cancel(job_id)
     _ = AnalysisResultStore.delete(job_id)
 
     case Store.delete(job_id) do
@@ -98,14 +106,22 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
 
   @spec list_results() :: map()
   def list_results do
-    %{"results" => AnalysisResultStore.list()}
+    results =
+      Enum.map(AnalysisResultStore.list(), fn entry ->
+        Map.update(entry, "result", %{}, &WorkflowRecoveryEnvelope.public_result/1)
+      end)
+
+    %{"results" => results}
   end
 
   @spec fetch_result(String.t()) :: {:ok, map()} | {:error, term()}
   def fetch_result(job_id) when is_binary(job_id) do
     case AnalysisResultStore.get(job_id) do
-      {:ok, result} -> {:ok, %{"job_id" => job_id, "result" => result}}
-      :error -> {:error, {:result_not_found, job_id}}
+      {:ok, result} ->
+        {:ok, %{"job_id" => job_id, "result" => WorkflowRecoveryEnvelope.public_result(result)}}
+
+      :error ->
+        {:error, {:result_not_found, job_id}}
     end
   end
 
@@ -135,15 +151,28 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
 
   @spec update_result(String.t(), map()) :: {:ok, map()} | {:error, term()}
   def update_result(job_id, result) when is_binary(job_id) and is_map(result) do
-    :ok = AnalysisResultStore.update(job_id, result)
-    fetch_result(job_id)
+    with :ok <- ensure_result_mutable(job_id),
+         protected_result <- preserve_recovery_record(job_id, result),
+         :ok <- AnalysisResultStore.update(job_id, protected_result) do
+      fetch_result(job_id)
+    end
   end
 
   @spec delete_result(String.t()) :: {:ok, map()} | {:error, term()}
   def delete_result(job_id) when is_binary(job_id) do
-    case AnalysisResultStore.delete(job_id) do
-      {:ok, result} -> {:ok, %{"job_id" => job_id, "result" => result, "deleted" => true}}
-      {:error, _reason} = error -> error
+    with :ok <- ensure_result_mutable(job_id) do
+      case AnalysisResultStore.delete(job_id) do
+        {:ok, result} ->
+          {:ok,
+           %{
+             "job_id" => job_id,
+             "result" => WorkflowRecoveryEnvelope.public_result(result),
+             "deleted" => true
+           }}
+
+        {:error, _reason} = error ->
+          error
+      end
     end
   end
 
@@ -153,7 +182,7 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
 
   defp fetch_raw_result(job_id) do
     case AnalysisResultStore.get(job_id) do
-      {:ok, result} -> {:ok, result}
+      {:ok, result} -> {:ok, WorkflowRecoveryEnvelope.public_result(result)}
       :error -> {:error, {:result_not_found, job_id}}
     end
   end
@@ -213,6 +242,32 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
 
   defp put_has_result(payload, value) do
     update_in(payload, ["job"], &Map.put(&1, "has_result", value))
+  end
+
+  defp ensure_result_mutable(job_id) do
+    internal_key = WorkflowRecoveryEnvelope.internal_key()
+
+    case {Store.get(job_id), AnalysisResultStore.get(job_id)} do
+      {{:ok, %{status: status}}, {:ok, %{^internal_key => %{"state" => state}}}}
+      when status in [:queued, :preprocessing, :partitioning, :solving, :postprocessing] and
+             state in ["pending", "running"] ->
+        {:error, :active_workflow_result_is_read_only}
+
+      _ ->
+        :ok
+    end
+  end
+
+  defp preserve_recovery_record(job_id, result) do
+    internal_key = WorkflowRecoveryEnvelope.internal_key()
+
+    case AnalysisResultStore.get(job_id) do
+      {:ok, %{^internal_key => recovery}} when is_map(recovery) ->
+        Map.put(result, internal_key, recovery)
+
+      _ ->
+        result
+    end
   end
 
   defp format_datetime(%DateTime{} = value), do: DateTime.to_iso8601(value)

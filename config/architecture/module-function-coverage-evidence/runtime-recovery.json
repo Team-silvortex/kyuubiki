@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Executed workflow, Agent watchdog, Orchestra process-loss, two-host in-flight task recovery, and Installer journal fault injection proving branch isolation, stale-timeout recovery, replay-safe failover, and atomic deployment resume.",
+  "summary": "Executed workflow, Agent watchdog, persisted Orchestra application restart, two-host in-flight task recovery, and Installer journal fault injection proving branch isolation, generation-fenced replay, stale-timeout recovery, replay-safe failover, and atomic deployment resume.",
   "paradigm_contract_evidence": {
     "workflow_composition": [
       {
@@ -17,6 +17,13 @@
           "config/architecture/usability-release-gate.json",
           "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery.ex",
           "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery_probe.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+          "apps/web/test/kyuubiki_web/orchestra/workflow_recovery_envelope_test.exs",
+          "apps/web/test/kyuubiki_web/orchestra/workflow_restart_recovery_test.exs",
+          "schemas/workflow-recovery.schema.json",
+          "releases/usability-evidence/2.14.3/persistence-provenance-qualification.json",
           "workers/rust/crates/script-runner/src/runtime_recovery_fault_injection.rs",
           "workers/rust/crates/script-runner/src/orchestra_recovery_fault_injection.rs",
           "config/architecture/distributed-task-recovery-operational-qualification.json",
@@ -44,6 +51,13 @@
           "fault_injection_and_recovery/orchestra-agent-process-loss",
           "kyuubiki.orchestra-process-loss-fault-injection/v1",
           "side_effect_replay_blocked_without_checkpoint",
+          "kyuubiki.workflow-recovery/v1",
+          "kyuubiki.workflow-execution-envelope/v1",
+          "replays an idempotent in-flight workflow after the Orchestra application restarts",
+          "blocks an in-flight side-effect workflow after restart without a checkpoint",
+          "blocks a digest-tampered execution envelope before restart replay",
+          "reclaims an idempotent workflow after its supervised runner is lost",
+          "fails submission when the workflow runner supervisor is unavailable",
           "kyuubiki.distributed-task-recovery-operational-qualification/v1",
           "remote-agent-inflight-loss-policy-and-rejoin",
           "job-scoped-explicit-agent-hold",
@@ -89,6 +103,46 @@
         "\"late_failure_reused_timeout\": true",
         "\"duplicate_failure_created\": false",
         "\"probe_cleanup_completed\": true"
+      ]
+    },
+    {
+      "id": "orchestra-persisted-workflow-restart",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "orchestra-control-plane",
+        "verification-evidence"
+      ],
+      "paradigms": [
+        "workflow_composition",
+        "runtime_api",
+        "validation",
+        "persistence_provenance"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "recovery",
+        "security"
+      ],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_recovery_envelope_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_restart_recovery_test.exs",
+        "schemas/workflow-recovery.schema.json",
+        "releases/usability-evidence/2.14.3/persistence-provenance-qualification.json"
+      ],
+      "required_text": [
+        "kyuubiki.workflow-recovery/v1",
+        "kyuubiki.workflow-execution-envelope/v1",
+        "kyuubiki.persistence-provenance-qualification-report/v1",
+        "replays an idempotent in-flight workflow after the Orchestra application restarts",
+        "blocks an in-flight side-effect workflow after restart without a checkpoint",
+        "blocks a digest-tampered execution envelope before restart replay",
+        "reclaims an idempotent workflow after its supervised runner is lost",
+        "fails submission when the workflow runner supervisor is unavailable"
       ]
     },
     {

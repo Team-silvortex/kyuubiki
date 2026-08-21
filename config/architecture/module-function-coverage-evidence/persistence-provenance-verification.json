@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Repeatable local qualification of Installer mutation audit provenance, Orchestra persistence-envelope recovery, and native deployment-journal recovery.",
+  "summary": "Repeatable local qualification of Installer mutation audit provenance, Orchestra persistence-envelope and in-flight workflow restart recovery, and native deployment-journal recovery.",
   "paradigm_contract_evidence": {
     "persistence_provenance": [
       {
@@ -55,23 +55,31 @@
         "apps/installer-gui/src-tauri/src/main.rs",
         "apps/installer-gui/ui/update-panel.js",
         "apps/web/lib/kyuubiki_web/storage/persistence.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
         "apps/web/test/kyuubiki_web/storage/persistence_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_recovery_envelope_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_restart_recovery_test.exs",
+        "schemas/workflow-recovery.schema.json",
         "workers/rust/crates/installer/src/remote_deployment_journal_store.rs",
         "workers/rust/crates/installer/src/remote_deployment_replay.rs",
-        "releases/usability-evidence/2.14.2/persistence-provenance-qualification.json"
+        "releases/usability-evidence/2.14.3/persistence-provenance-qualification.json"
       ],
       "required_text": [
         "kyuubiki.desktop-audit-record/v1",
         "kyuubiki.persistence-envelope/v1",
+        "kyuubiki.workflow-recovery/v1",
+        "kyuubiki.workflow-execution-envelope/v1",
         "power_loss_sidecar_recovered",
         "\"status\":\"passed\"",
         "\"module_count\":3",
         "\"suite_count\":4",
         "\"round_count\":8",
         "\"passed_round_count\":8",
-        "\"assertion_count\":15",
-        "\"acceptance_assertion_count\":8",
-        "\"rejection_assertion_count\":7",
+        "\"assertion_count\":20",
+        "\"acceptance_assertion_count\":10",
+        "\"rejection_assertion_count\":10",
         "\"failed_suite_ids\":[]"
       ]
     }

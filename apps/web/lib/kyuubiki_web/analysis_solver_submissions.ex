@@ -410,8 +410,15 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
       {:ok, {:ok, result, endpoint}} ->
         unless terminal?(job_id) do
           _ = Store.assign_worker(job_id, AgentClient.worker_id(endpoint))
-          :ok = AnalysisResultStore.put(job_id, result)
-          _ = Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0})
+
+          case AnalysisResultStore.put(job_id, result) do
+            :ok ->
+              _ = Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0})
+
+            {:error, reason} ->
+              unless terminal?(job_id),
+                do: fail_job(job_id, "result persistence failed: #{inspect(reason)}")
+          end
         end
 
       {:ok, {:error, {:rpc_error, "cancelled", message}}} ->
@@ -492,10 +499,11 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
   end
 
   defp terminal?(job_id) do
-    match?(
-      {:ok, %{status: status}} when status in [:completed, :failed, :cancelled],
-      Store.get(job_id)
-    )
+    case Store.get(job_id) do
+      {:ok, %{status: status}} when status in [:completed, :failed, :cancelled] -> true
+      {:ok, _job} -> false
+      :error -> true
+    end
   end
 
   defp dispatch_guard(job_id) do

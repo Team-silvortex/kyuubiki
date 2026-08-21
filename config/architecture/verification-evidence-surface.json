@@ -100,7 +100,13 @@
       "config/architecture/installed-runtime-operational-qualification.json",
       "schemas/installed-runtime-operational-qualification-report.schema.json",
       "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification.rs",
-      "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
+      "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json",
+      "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+      "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+      "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+      "apps/web/test/kyuubiki_web/orchestra/workflow_recovery_envelope_test.exs",
+      "apps/web/test/kyuubiki_web/orchestra/workflow_restart_recovery_test.exs",
+      "schemas/workflow-recovery.schema.json"
     ],
     "required_surfaces": [
       "kyuubiki.agent-headless-bridge/v1",
@@ -109,7 +115,9 @@
       "kyuubiki.headless-workflow-qualification-report/v1",
       "kyuubiki.workbench-validation-qualification-report/v1",
       "kyuubiki.orchestra-workflow-operational-qualification/v1",
-      "kyuubiki.installed-runtime-operational-qualification/v1"
+      "kyuubiki.installed-runtime-operational-qualification/v1",
+      "kyuubiki.workflow-recovery/v1",
+      "kyuubiki.workflow-execution-envelope/v1"
     ]
   },
   "security": {
@@ -239,8 +247,11 @@
       "workers/rust/crates/script-runner/src/persistence_provenance_qualification.rs",
       "workers/rust/crates/desktop-runtime/src/audit_log.rs",
       "apps/web/lib/kyuubiki_web/storage/persistence.ex",
+      "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+      "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+      "schemas/workflow-recovery.schema.json",
       "workers/rust/crates/installer/src/remote_deployment_journal_store.rs",
-      "releases/usability-evidence/2.14.2/persistence-provenance-qualification.json"
+      "releases/usability-evidence/2.14.3/persistence-provenance-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.central-readiness-report/v1",
@@ -249,7 +260,9 @@
       "kyuubiki.persistence-provenance-qualification-contract/v1",
       "kyuubiki.persistence-provenance-qualification-report/v1",
       "kyuubiki.desktop-audit-record/v1",
-      "kyuubiki.persistence-envelope/v1"
+      "kyuubiki.persistence-envelope/v1",
+      "kyuubiki.workflow-recovery/v1",
+      "kyuubiki.workflow-execution-envelope/v1"
     ],
     "generated_artifacts": [
       "tmp/central-readiness-report.json",

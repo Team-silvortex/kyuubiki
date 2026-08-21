@@ -123,6 +123,9 @@ The shared approval-request fixture is the parity vector for all SDKs.
 - `workflow-graph.schema.json` is for headless-first multi-operator workflow
   definitions, including node/edge wiring, typed ports, and portable workflow
   entry/output layout
+- `workflow-recovery.schema.json` defines Orchestra's digest-bound persisted
+  execution envelope, retry-safety policy, checkpoint identity, attempt count,
+  and generation/session fencing across application restarts
 - `workflow-dataset.schema.json` is for ONNX-like cross-operator data
   contracts, including named values, shape semantics, encoding, and stable
   schema references shared across workflow nodes

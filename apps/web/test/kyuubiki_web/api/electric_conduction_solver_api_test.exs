@@ -28,11 +28,12 @@ defmodule KyuubikiWeb.Api.ElectricConductionSolverApiTest do
       |> Router.call(@opts)
 
     assert conn.status == 202
+    payload = Jason.decode!(conn.resp_body)
     assert_receive {:fake_agent_request, rpc_request}, 1_000
     assert rpc_request["method"] == "solve_electric_conduction_plane_quad_2d"
-    assert rpc_request["params"] == request()
+    assert Map.delete(rpc_request["params"], "job_id") == request()
+    assert rpc_request["params"]["job_id"] == payload["job"]["job_id"]
 
-    payload = Jason.decode!(conn.resp_body)
     result_payload = WorkflowApi.wait_for_job(payload["job"]["job_id"], @opts)
     result = result_payload["result"]
     [element] = result["elements"]

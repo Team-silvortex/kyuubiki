@@ -20,11 +20,12 @@ defmodule KyuubikiWeb.Api.CompositeThermoElectricSolverApiTest do
       |> Router.call(@opts)
 
     assert conn.status == 202
+    submission = Jason.decode!(conn.resp_body)
     assert_receive {:fake_agent_request, rpc_request}, 1_000
     assert rpc_request["method"] == "solve_composite_thermo_electric_panel"
-    assert rpc_request["params"] == request
+    assert Map.delete(rpc_request["params"], "job_id") == request
+    assert rpc_request["params"]["job_id"] == submission["job"]["job_id"]
 
-    submission = Jason.decode!(conn.resp_body)
     result_payload = WorkflowApi.wait_for_job(submission["job"]["job_id"], @opts)
     assert result_payload["job"]["status"] == "completed"
 

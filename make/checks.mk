@@ -507,7 +507,7 @@ check-installed-runtime-operational-qualification:
 
 check-persistence-provenance-qualification:
 	@$(ENTRYPOINT) check-persistence-provenance-qualification --self-test
-	@$(ENTRYPOINT) check-persistence-provenance-qualification --verify-report releases/usability-evidence/2.14.2/persistence-provenance-qualification.json
+	@$(ENTRYPOINT) check-persistence-provenance-qualification --verify-report releases/usability-evidence/2.14.3/persistence-provenance-qualification.json
 
 check-runtime-api-verification:
 	@$(ENTRYPOINT) check-protocol-validation-qualification --self-test

@@ -137,9 +137,17 @@ sprawl:
   fallback dispatch, and the same TaskIR with a verified checkpoint is allowed
   to continue. Every scenario then restarts the remote Agent on the same
   endpoint and verifies a fresh closed-form solve. The retained report proves
-  three process-loss recoveries and zero local or remote residue; full host
-  power loss, persisted Orchestra restart with in-flight state, fleet package
-  acquisition, and the installed cross-platform matrix remain open
+  three process-loss recoveries and zero local or remote residue
+- Orchestra now persists a SHA-256-bound workflow execution envelope beside
+  each asynchronous result and scans active jobs when its OTP application
+  restarts. A new session claims a higher generation, stale generations cannot
+  write progress or commit results, idempotent work resumes, uncheckpointed
+  side effects stop before replay, and digest tampering fails closed. Terminal
+  jobs discard the large private envelope while retaining a sanitized recovery
+  receipt. The qualified tests exercise SQLite-backed application restart,
+  supervised runner loss, unavailable Task Supervisor, and batched progress
+  persistence; full host power loss, shared-database Orchestra takeover, fleet
+  package acquisition, and the installed cross-platform matrix remain open
 - Installer-managed Agent update qualification now runs an isolated remote
   Linux install, changed-payload upgrade, executable probe, rollback, and second
   executable probe. Its semantic validator requires the rollback activation

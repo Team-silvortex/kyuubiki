@@ -137,6 +137,9 @@ config :kyuubiki_web, KyuubikiWeb.Jobs.Watchdog,
     String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_QUEUE_TIMEOUT_MS", "1800000")),
   job_timeout_ms: String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_JOB_TIMEOUT_MS", "1800000"))
 
+config :kyuubiki_web, KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator,
+  max_attempts: String.to_integer(System.get_env("KYUUBIKI_WORKFLOW_RECOVERY_MAX_ATTEMPTS", "3"))
+
 config :kyuubiki_web, KyuubikiWeb.PostgresRepo,
   url: database_url,
   pool_size: String.to_integer(System.get_env("POOL_SIZE", "5")),

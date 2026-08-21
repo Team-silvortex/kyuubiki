@@ -56,14 +56,20 @@
           "apps/web/lib/kyuubiki_web/orchestra/operator_task_executor.ex",
           "apps/web/lib/kyuubiki_web/orchestra/control_plane_surface.ex",
           "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery.ex",
-          "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery_operational_probe.ex"
+          "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery_operational_probe.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+          "schemas/workflow-recovery.schema.json"
         ],
         "client_surfaces": ["workbench-shell", "sdk-headless", "runtime-agent-cli"],
         "stability_contracts": [
           "workflow graph execution",
           "operator task execution",
           "control-plane surface",
-          "replay-safe distributed recovery"
+          "replay-safe distributed recovery",
+          "persisted workflow restart recovery",
+          "generation-fenced result commit"
         ]
       },
       {

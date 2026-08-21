@@ -132,25 +132,17 @@ defmodule KyuubikiWeb.Analysis do
            WorkflowGraphResponse.resolve_options(graph, Map.get(normalized, "response_options")),
          %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
          {:ok, job_context} <- AnalysisJobSupport.derive_job_context(params),
-         {:ok, job} <- AnalysisJobSupport.create_job(job_context) do
-      orchestration_context = WorkflowJobRunner.orchestration_context_from_params(params)
-
-      :ok =
-        WorkflowJobRunner.initialize_runtime(
-          job.job_id,
-          graph,
-          orchestration_context,
-          response_options
-        )
-
-      WorkflowJobRunner.start(
-        job.job_id,
-        graph,
-        input_artifacts,
-        orchestration_context,
-        response_options
-      )
-
+         {:ok, job} <- AnalysisJobSupport.create_job(job_context),
+         orchestration_context <- WorkflowJobRunner.orchestration_context_from_params(params),
+         :ok <-
+           WorkflowJobRunner.initialize_runtime(
+             job.job_id,
+             graph,
+             input_artifacts,
+             orchestration_context,
+             response_options
+           ),
+         {:ok, _runner} <- WorkflowJobRunner.start(job.job_id) do
       {:ok, AnalysisJobSupport.serialize_payload(job)}
     else
       nil -> {:error, :invalid_workflow_graph_request}

@@ -6,13 +6,16 @@ defmodule KyuubikiWeb.Application do
   @impl true
   def start(_type, _args) do
     children =
-      [
-        KyuubikiWeb.Playground.AgentRegistry,
-        KyuubikiWeb.Playground.AgentPool,
-        KyuubikiWeb.Playground.AgentExecutionGate,
-        {Task.Supervisor, name: KyuubikiWeb.TaskSupervisor},
-        KyuubikiWeb.Jobs.Watchdog
-      ] ++ storage_children() ++ maybe_http_server()
+      storage_children() ++
+        [
+          {Registry, keys: :unique, name: KyuubikiWeb.Orchestra.WorkflowRunnerRegistry},
+          KyuubikiWeb.Playground.AgentRegistry,
+          KyuubikiWeb.Playground.AgentPool,
+          KyuubikiWeb.Playground.AgentExecutionGate,
+          {Task.Supervisor, name: KyuubikiWeb.TaskSupervisor},
+          KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator,
+          KyuubikiWeb.Jobs.Watchdog
+        ] ++ maybe_http_server()
 
     Supervisor.start_link(children, strategy: :one_for_one, name: KyuubikiWeb.Supervisor)
   end

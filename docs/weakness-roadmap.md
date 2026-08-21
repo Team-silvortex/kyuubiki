@@ -139,9 +139,16 @@ lives at
 `releases/usability-evidence/2.14.8/distributed-task-recovery-operational-qualification.json`
 and is rechecked by
 `make check-distributed-task-recovery-operational-qualification`. This does not
-yet prove full host power loss, persisted Orchestra restart with in-flight
-state, network-partition fencing, Installer-led fleet package acquisition, or
-the installed cross-platform matrix. The earlier control-link probe also
+yet prove full host power loss, shared-database Orchestra takeover,
+network-partition fencing, Installer-led fleet package acquisition, or the
+installed cross-platform matrix. Persisted in-flight workflow state now has a
+separate local qualification: a digest-bound execution envelope survives a
+complete OTP application stop/start, a fresh session claims a higher
+generation, stale writers are fenced, idempotent work resumes, uncheckpointed
+side effects stop, and tampered envelopes fail closed. Runner loss and missing
+Task Supervisor paths are also injected. This remains application-level
+SQLite evidence, not host-loss or HA-database operational proof. The earlier
+control-link probe also
 exposed and fixed an HTTP write-half-close incompatibility with Cowboy; a
 native regression requires the Agent to keep the request connection open until
 the response arrives.
@@ -162,13 +169,15 @@ guarded mutations to a SHA-256 chained ledger and exposes read-only integrity,
 head digest, count, schema, and storage path. Orchestra writes digest-verified
 persistence envelopes, recovers the previous valid generation after tamper or
 an interrupted generation rename, and quarantines unrecoverable state without
-cascading failure. The native
-Installer retains its atomic deployment journal, interrupted-step resume, and
+cascading failure. Orchestra additionally retains digest-bound in-flight
+workflow envelopes with retry policy, checkpoint identity, bounded history,
+and generation/session fencing. The native Installer retains its atomic
+deployment journal, interrupted-step resume, and
 tamper rejection. Legacy plain JSON shell ledgers migrate atomically into the
 same chain without leaving migration sidecars. Four suites repeat twice with
-all 8 suite rounds and 15
+all 8 suite rounds and 20
 acceptance/rejection assertions passing in
-`releases/usability-evidence/2.14.2/persistence-provenance-qualification.json`.
+`releases/usability-evidence/2.14.3/persistence-provenance-qualification.json`.
 This local qualification does not claim remote database durability,
 cross-platform installed-package operation, or multi-host recovery.
 
