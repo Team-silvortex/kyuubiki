@@ -1,8 +1,8 @@
 {
   "schema_version": "kyuubiki.installation-contract/v1",
   "product_line": "moxi 2.x",
-  "shipping_version": "2.7.0",
-  "workspace_version": "2.7.0",
+  "shipping_version": "2.15.0",
+  "workspace_version": "2.15.0",
   "required_layout": [
     {
       "label": "workspace root",
@@ -111,7 +111,7 @@
     {
       "id": "workspace.root",
       "kind": "workspace",
-      "version": "2.7.0",
+      "version": "2.15.0",
       "owner": "kyuubiki",
       "owned_paths": [
         "."
@@ -134,7 +134,7 @@
     {
       "id": "brand.shared",
       "kind": "brand-metadata",
-      "version": "2.7.0",
+      "version": "2.15.0",
       "owner": "kyuubiki",
       "owned_paths": [
         "assets/brand"
@@ -147,7 +147,7 @@
       "visible_rules": [
         {
           "label": "release_version",
-          "value": "2.7.0",
+          "value": "2.15.0",
           "editable": false,
           "description": "Shared brand metadata must expose releaseVersion for every desktop shell copy."
         }
@@ -157,7 +157,7 @@
     {
       "id": "installer.core",
       "kind": "installer",
-      "version": "2.7.0",
+      "version": "2.15.0",
       "owner": "kyuubiki-installer",
       "owned_paths": [
         "deploy",
@@ -188,7 +188,7 @@
     {
       "id": "desktop.installer",
       "kind": "desktop-shell",
-      "version": "2.7.0",
+      "version": "2.15.0",
       "owner": "kyuubiki-installer",
       "owned_paths": [
         "apps/installer-gui"
@@ -214,7 +214,7 @@
     {
       "id": "desktop.hub",
       "kind": "desktop-shell",
-      "version": "2.7.0",
+      "version": "2.15.0",
       "owner": "kyuubiki-hub",
       "owned_paths": [
         "apps/hub-gui"
@@ -240,7 +240,7 @@
     {
       "id": "desktop.workbench",
       "kind": "desktop-shell",
-      "version": "2.7.0",
+      "version": "2.15.0",
       "owner": "kyuubiki-workbench",
       "owned_paths": [
         "apps/workbench-gui"
@@ -266,7 +266,7 @@
     {
       "id": "release.snapshots",
       "kind": "release-history",
-      "version": "2.7.0",
+      "version": "2.15.0",
       "owner": "kyuubiki-release",
       "owned_paths": [
         "releases/snapshots"
@@ -291,7 +291,7 @@
     {
       "id": "runtime.state",
       "kind": "runtime-state",
-      "version": "2.7.0",
+      "version": "2.15.0",
       "owner": "kyuubiki-runtime",
       "owned_paths": [
         "tmp"
@@ -322,7 +322,7 @@
     {
       "id": "central.store.api",
       "kind": "central-service",
-      "version": "2.7.0",
+      "version": "2.15.0",
       "owner": "kyuubiki-central",
       "owned_paths": [
         "apps/web/lib/kyuubiki_web/central_store.ex",
@@ -360,7 +360,7 @@
     {
       "id": "central.store.contracts",
       "kind": "central-contracts",
-      "version": "2.7.0",
+      "version": "2.15.0",
       "owner": "kyuubiki-central",
       "owned_paths": [
         "config/architecture/central-store-contract.json",
@@ -416,7 +416,7 @@
     {
       "id": "central.store.readiness",
       "kind": "central-readiness",
-      "version": "2.7.0",
+      "version": "2.15.0",
       "owner": "kyuubiki-central",
       "owned_paths": [
         "workers/rust/crates/script-runner/src/central_readiness_report.rs",
@@ -507,7 +507,7 @@
     {
       "category": "version",
       "label": "required packaged version",
-      "value": "2.7.0",
+      "value": "2.15.0",
       "editable": false,
       "description": "Packaged desktop shells, workspace packages, and local release descriptors are expected to align to this shipped version."
     },

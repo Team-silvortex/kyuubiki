@@ -9,8 +9,8 @@ For the broader product narrative, release posture, and reading path, use
 
 - codename: `moxi`
 - active line: `2.x`
-- current development point: `moxi 2.14.3`
-- current documentation target: `moxi 2.14.x` line
+- current development point: `moxi 2.15.0`
+- current documentation target: `moxi 2.15.x` line
 - first planned public launch: `daji 3.0.0` on Reddit
 - first 2.x baseline:
   `moxi 2.0.0` is the first formal Kyuubiki 2.x line after the

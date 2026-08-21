@@ -1697,7 +1697,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-desktop-runtime"
-version = "2.7.0"
+version = "2.15.0"
 dependencies = [
  "kyuubiki-platform",
  "libc",
@@ -1708,7 +1708,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-engine"
-version = "2.7.0"
+version = "2.15.0"
 dependencies = [
  "kyuubiki-operator-sdk",
  "kyuubiki-protocol",
@@ -1721,7 +1721,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-hub-gui"
-version = "2.7.0"
+version = "2.15.0"
 dependencies = [
  "kyuubiki-desktop-runtime",
  "kyuubiki-installer",
@@ -1734,7 +1734,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-installer"
-version = "2.7.0"
+version = "2.15.0"
 dependencies = [
  "kyuubiki-engine",
  "kyuubiki-platform",
@@ -1746,7 +1746,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-operator-sdk"
-version = "2.7.0"
+version = "2.15.0"
 dependencies = [
  "kyuubiki-platform",
  "kyuubiki-protocol",
@@ -1756,11 +1756,11 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-platform"
-version = "2.7.0"
+version = "2.15.0"
 
 [[package]]
 name = "kyuubiki-project-bundle"
-version = "2.7.0"
+version = "2.15.0"
 dependencies = [
  "chrono",
  "serde_json",
@@ -1770,7 +1770,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-protocol"
-version = "2.7.0"
+version = "2.15.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -1779,7 +1779,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-solver"
-version = "2.7.0"
+version = "2.15.0"
 dependencies = [
  "kyuubiki-protocol",
  "libc",

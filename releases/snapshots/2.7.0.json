@@ -2,7 +2,7 @@
   "version": "2.7.0",
   "codename": "moxi",
   "line": "2.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-07-27",
   "git_commit": "345f47c4e0822f266e9f40aedab566a1c76faa58",
   "summary": "Moxi 2.7.0 aligns the product line, documentation, language packs, release contracts, and desktop shells while advancing cohesive-interface workflows into bounded heterogeneous structural coassembly.",

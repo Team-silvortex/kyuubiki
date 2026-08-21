@@ -1,0 +1,107 @@
+{
+  "version": "2.15.0",
+  "codename": "moxi",
+  "line": "2.x",
+  "status": "current",
+  "date": "2026-08-21",
+  "git_commit": "edee3b5002b9159996e6791f5396158c7e48cea1",
+  "summary": "Moxi 2.15.0 aligns the desktop, runtime, language-pack, update, and integrity contracts while advancing restart-safe orchestration and research workflow reliability.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md",
+    "operator_sdk": "docs/operator-sdk.md",
+    "workflow_graph": "docs/workflow-graph.md",
+    "workflow_dataset": "docs/workflow-dataset.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": {
+      "version": "2.15.0",
+      "notes": [
+        "Workbench remains a protocol client with streamed UI modules and stable automation anchors.",
+        "Workflow, solver, and research operations remain available through language-neutral contracts."
+      ]
+    },
+    "hub_gui": {
+      "version": "2.15.0",
+      "notes": [
+        "Hub packages the synchronized 2.15.0 documentation, brand, and language-pack contracts.",
+        "Project, runtime, release, and diagnostics journeys use native desktop command boundaries."
+      ]
+    },
+    "workbench_gui": {
+      "version": "2.15.0",
+      "notes": [
+        "Workbench packages the 30-locale language-pack set and current workflow contracts.",
+        "GUI and Python WASM DSL operations share the same product-owned action surface."
+      ]
+    },
+    "installer_gui": {
+      "version": "2.15.0",
+      "notes": [
+        "Installer packages the 2.15.0 update, integrity, cleanup, and remote deployment contracts.",
+        "Installation and replacement behavior remains explicit, inspectable, and rollback-aware."
+      ]
+    },
+    "web_api": {
+      "version": "2.15.0",
+      "notes": [
+        "Headless and distributed control paths remain decoupled from desktop shells.",
+        "Restart-safe orchestra recovery preserves terminal workflow outcomes and retry state."
+      ]
+    }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": [
+      "ONNX-like workflow datasets and versioned graph contracts",
+      "mixed-physics operator composition through TaskIR and engine protocols",
+      "restart-safe orchestration with persisted terminal outcomes and bounded retry recovery"
+    ]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": [
+      "Rust-only worker/operator extension SDK remains distinct from headless control SDKs",
+      "operator descriptors, package preflight, TaskIR, and reliability evidence remain release-gated",
+      "solver execution remains language-neutral across direct, Agent RPC, and workflow paths"
+    ]
+  },
+  "desktop_artifacts": {
+    "hub_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
+    "hub_dmg": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_2.15.0_aarch64.dmg",
+    "workbench_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
+    "workbench_dmg": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_2.15.0_aarch64.dmg",
+    "installer_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
+    "installer_dmg": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Installer_2.15.0_aarch64.dmg",
+    "hub_macos_manifest": "dist/macos/desktop/hub-gui/manifest.json",
+    "hub_linux_manifest": "dist/linux/desktop/hub-gui/manifest.json",
+    "hub_windows_manifest": "dist/windows/desktop/hub-gui/manifest.json",
+    "workbench_macos_manifest": "dist/macos/desktop/workbench-gui/manifest.json",
+    "workbench_linux_manifest": "dist/linux/desktop/workbench-gui/manifest.json",
+    "workbench_windows_manifest": "dist/windows/desktop/workbench-gui/manifest.json",
+    "installer_macos_manifest": "dist/macos/desktop/installer-gui/manifest.json",
+    "installer_linux_manifest": "dist/linux/desktop/installer-gui/manifest.json",
+    "installer_windows_manifest": "dist/windows/desktop/installer-gui/manifest.json"
+  },
+  "verification": {
+    "desktop_bundle_versions": {
+      "hub": "2.15.0",
+      "workbench": "2.15.0",
+      "installer": "2.15.0"
+    },
+    "frontend_checks": [
+      "npm run typecheck",
+      "npm run build",
+      "npm run check:workflow-preflight"
+    ],
+    "repo_checks": [
+      "git diff --check",
+      "make check-version-line",
+      "make audit-project-organization",
+      "make check-ui-automation-contract",
+      "make check-language-packs"
+    ]
+  }
+}
