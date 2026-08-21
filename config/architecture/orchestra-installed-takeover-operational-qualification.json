@@ -1,0 +1,75 @@
+{
+  "$schema": "../../schemas/orchestra-installed-takeover-operational-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.orchestra-installed-takeover-operational-qualification-contract/v1",
+  "qualification_id": "installer-managed-two-orchestra-postgresql-crash-takeover-operational",
+  "target_coordinate": {
+    "module_id": "orchestra-control-plane",
+    "paradigm": "runtime_api",
+    "target_grade": "operational"
+  },
+  "capture": {
+    "package_version": "2.15.0",
+    "orchestra_host_role": "remote-linux-qualification-host",
+    "database_host_role": "remote-linux-qualification-host",
+    "platform": "linux",
+    "architecture": "x86_64",
+    "database": "postgresql",
+    "transport": "local-loopback",
+    "build_profile": "production-otp-release",
+    "failure_mode": "sigkill",
+    "orchestra_processes_minimum": 2,
+    "lease_ttl_ms_maximum": 2000,
+    "fencing_increment_minimum": 1,
+    "cleanup_required": true
+  },
+  "retention": {
+    "report_schema": "kyuubiki.orchestra-installed-takeover-operational-qualification/v1",
+    "report_schema_path": "schemas/orchestra-installed-takeover-operational-qualification-report.schema.json",
+    "report_path": "releases/usability-evidence/2.15.0/orchestra-installed-takeover-operational-qualification.json",
+    "forbidden_content": [
+      "/home/",
+      "/users/",
+      "192.168.",
+      "127.0.0.1",
+      "kyuubiki-lab",
+      "database_url",
+      "api_token",
+      "credential"
+    ]
+  },
+  "source_guard": {
+    "files": [
+      "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/installed.rs",
+      "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/installed_runtime.rs",
+      "workers/rust/crates/installer/src/runtime_payload.rs",
+      "apps/web/config/runtime.exs"
+    ],
+    "required_text": [
+      "mix release kyuubiki_web",
+      "seal-runtime-payload",
+      "install-runtime-payload",
+      "RELEASE_TMP",
+      "kyuubiki.runtime-activation/v1",
+      "source_fallback",
+      "KYUUBIKI_ORCHESTRA_INSTANCE_ID"
+    ]
+  },
+  "required_checks": [
+    "sealed_runtime_payload",
+    "installer_activation_observed",
+    "production_otp_release",
+    "source_tree_detached",
+    "remote_postgresql_ready",
+    "primary_owner_elected",
+    "second_orchestra_standby",
+    "owner_sigkill_injected",
+    "owner_endpoint_closed",
+    "standby_promoted",
+    "fencing_token_incremented",
+    "former_owner_identity_fenced",
+    "immutable_payload_shared",
+    "managed_state_isolated",
+    "cleanup_complete",
+    "retention_sanitized"
+  ]
+}

@@ -3,7 +3,7 @@
 .PHONY: test-hub-gui test-installer-gui test-workbench-gui
 .PHONY: test-integration test-integration-api test-integration-cluster
 .PHONY: test-integration-direct-mesh test-integration-desktop-gui qualify-desktop-ui-validation qualify-protocol-validation qualify-contracts-validation qualify-workbench-validation
-.PHONY: qualify-headless-sdk-validation qualify-runtime-api-verification qualify-benchmark qualify-headless-sdk-operational-remote check-headless-sdk-operational-qualification qualify-desktop-deployment-update qualify-system-security qualify-agent-control-link-operational-remote qualify-orchestra-takeover-operational-remote qualify-agent-solver-operational-remote qualify-agent-update-operational-remote check-agent-update-operational-qualification qualify-runtime-payload-operational-remote check-runtime-payload-operational-qualification qualify-orchestra-workflow-operational-remote qualify-persistence-provenance
+.PHONY: qualify-headless-sdk-validation qualify-runtime-api-verification qualify-benchmark qualify-headless-sdk-operational-remote check-headless-sdk-operational-qualification qualify-desktop-deployment-update qualify-system-security qualify-agent-control-link-operational-remote qualify-orchestra-takeover-operational-remote qualify-orchestra-installed-takeover-operational-remote qualify-agent-solver-operational-remote qualify-agent-update-operational-remote check-agent-update-operational-qualification qualify-runtime-payload-operational-remote check-runtime-payload-operational-qualification qualify-orchestra-workflow-operational-remote qualify-persistence-provenance
 .PHONY: qualify-distributed-task-recovery-operational-remote
 .PHONY: test-integration-benchmark-profile-index
 .PHONY: test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-central-database-smoke remote-central-database-smoke
@@ -96,6 +96,9 @@ qualify-agent-control-link-operational-remote:
 
 qualify-orchestra-takeover-operational-remote:
 	@$(ENTRYPOINT) qualify-orchestra-takeover-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/orchestra-takeover-operational-qualification.json} $${POSTGRES_IMAGE:+--postgres-image $${POSTGRES_IMAGE}} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}
+
+qualify-orchestra-installed-takeover-operational-remote:
+	@$(ENTRYPOINT) qualify-orchestra-installed-takeover-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/orchestra-installed-takeover-operational-qualification.json} $${POSTGRES_IMAGE:+--postgres-image $${POSTGRES_IMAGE}} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}
 
 qualify-distributed-task-recovery-operational-remote:
 	@$(ENTRYPOINT) qualify-distributed-task-recovery-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/distributed-task-recovery-operational-qualification.json} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}

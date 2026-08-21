@@ -68,10 +68,30 @@ It runs a self-test first, then checks:
 
 - npm production lockfiles with `npm audit --omit=dev --package-lock-only`
 - Rust workspace and desktop-shell lockfiles with RustSec `cargo audit`
+- Hex retired-package checks plus lock-version-bound advisory mitigations
 
 The checked `package-lock.json` and `Cargo.lock` files for shipped frontend,
 desktop, SDK, and Rust workspace surfaces must stay reproducible. Do not remove
 lockfiles from review just because the source package manifests look small.
+
+#### Tracked upstream advisory: Cowlib 2.19.0
+
+The web control plane currently resolves Cowboy 2.18.0 and Cowlib 2.19.0.
+Hex still marks Cowlib 2.19.0, the latest published release, with unresolved
+security advisories. Kyuubiki terminates invalid response headers for
+CVE-2026-43966 and does not invoke the affected `cow_link:link/1` serialization
+path for CVE-2026-43971. These are explicit, tested mitigations bound to the
+locked version; they are not substitutes for an upstream patch. Until a patched
+release is available and pinned, Internet-facing deployment remains a security
+residual rather than a qualified product property. Keep control-plane listeners
+private or behind a hardened reverse proxy, minimize accepted HTTP surface, and
+rerun `make audit-dependencies` whenever the lockfile changes.
+
+The installed Orchestra takeover qualification binds both release instances to
+loopback. It proves packaging, activation, lease fencing, process recovery, and
+cleanup; it does not waive these advisories or certify public-network exposure.
+Track the authoritative [Hex advisory list](https://hex.pm/packages/cowlib/advisories)
+and [published Cowlib versions](https://hex.pm/packages/cowlib/versions).
 
 ### Fuzz-smoke guard
 

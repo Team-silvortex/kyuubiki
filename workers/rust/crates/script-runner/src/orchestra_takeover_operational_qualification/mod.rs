@@ -1,3 +1,6 @@
+mod installed;
+mod installed_report;
+mod installed_runtime;
 mod report;
 mod runtime;
 
@@ -8,6 +11,18 @@ use std::path::Path;
 use std::time::Duration;
 
 type RunnerResult<T> = Result<T, String>;
+
+pub(crate) fn run_qualify_installed_remote(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
+    installed::run_qualify_remote(root, args)
+}
+
+pub(crate) fn run_capture_installed_host(args: Vec<OsString>) -> RunnerResult<u8> {
+    installed::run_capture_host(args)
+}
+
+pub(crate) fn run_check_installed(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
+    installed::run_check(root, args)
+}
 
 pub(crate) fn run_qualify_remote(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
     let options = CaptureOptions::parse(args)?;

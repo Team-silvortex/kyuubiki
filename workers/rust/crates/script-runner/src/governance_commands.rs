@@ -139,6 +139,9 @@ pub(crate) fn run_governance_command(
         "check-orchestra-takeover-operational-qualification" => {
             orchestra_takeover_operational_qualification::run_check(root, args)
         }
+        "check-orchestra-installed-takeover-operational-qualification" => {
+            orchestra_takeover_operational_qualification::run_check_installed(root, args)
+        }
         "check-orchestra-workflow-operational-qualification" => {
             orchestra_workflow_operational_qualification::run_check_orchestra_workflow_operational_qualification(
                 root, args,

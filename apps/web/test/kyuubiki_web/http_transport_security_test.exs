@@ -44,4 +44,18 @@ defmodule KyuubikiWeb.HttpTransportSecurityTest do
     assert references == []
     assert HttpTransportSecurity.descriptor()["outbound_cookie_encoder"] == "disabled"
   end
+
+  test "backend source does not invoke cowlib Link header serialization" do
+    references =
+      "lib/**/*.ex"
+      |> Path.wildcard()
+      |> Enum.filter(fn path ->
+        source = File.read!(path)
+        String.contains?(source, [":cow_link", "cow_link:"])
+      end)
+
+    assert references == []
+    assert HttpTransportSecurity.descriptor()["outbound_link_encoder"] == "disabled"
+    assert "CVE-2026-43971" in HttpTransportSecurity.descriptor()["mitigated_advisories"]
+  end
 end

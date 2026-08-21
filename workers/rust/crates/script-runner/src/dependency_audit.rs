@@ -354,7 +354,25 @@ fn classify_hex_audit(
         );
     }
     if command_status == 0 {
-        (0, "0 advisory/retired package(s)".to_string())
+        if mitigations.is_empty() {
+            (
+                0,
+                "0 retired package(s); 0 tracked advisory mitigation(s)".to_string(),
+            )
+        } else {
+            let tracked = mitigations
+                .iter()
+                .map(|mitigation| mitigation.id.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            (
+                0,
+                format!(
+                    "0 retired package(s); {} tracked lock-bound advisory mitigation(s): {tracked}",
+                    mitigations.len()
+                ),
+            )
+        }
     } else {
         (command_status, "Hex audit command failed".to_string())
     }
@@ -449,7 +467,7 @@ fn run_self_test(contract: &AuditContract) -> RunnerResult<()> {
             .iter()
             .map(|mitigation| mitigation.id.as_str())
             .collect::<Vec<_>>(),
-        &["CVE-2026-43966", "CVE-2026-43969"],
+        &["CVE-2026-43966", "CVE-2026-43971"],
         "Hex mitigated advisories",
     )?;
     expect_eq(
@@ -508,10 +526,10 @@ fn run_self_test(contract: &AuditContract) -> RunnerResult<()> {
         return Err("self-test expected bad npm JSON summary".to_string());
     }
     let parsed = parse_hex_advisory_ids(
-        "cowlib 2.19.0 - EEF-CVE-2026-43969\naka: CVE-2026-43969\ncowlib 2.19.0 - EEF-CVE-2026-43966",
+        "cowlib 2.19.0 - EEF-CVE-2026-43971\naka: CVE-2026-43971\ncowlib 2.19.0 - EEF-CVE-2026-43966",
     );
     if parsed.into_iter().collect::<Vec<_>>()
-        != ["CVE-2026-43966".to_string(), "CVE-2026-43969".to_string()]
+        != ["CVE-2026-43966".to_string(), "CVE-2026-43971".to_string()]
     {
         return Err("self-test expected Hex advisory identifiers".to_string());
     }
@@ -614,11 +632,11 @@ mod tests {
     #[test]
     fn hex_advisory_parser_deduplicates_alias_lines() {
         let parsed = parse_hex_advisory_ids(
-            "cowlib - EEF-CVE-2026-43969\naka: CVE-2026-43969, GHSA-test\ncowlib - EEF-CVE-2026-43966",
+            "cowlib - EEF-CVE-2026-43971\naka: CVE-2026-43971, GHSA-test\ncowlib - EEF-CVE-2026-43966",
         );
         assert_eq!(
             parsed.into_iter().collect::<Vec<_>>(),
-            ["CVE-2026-43966", "CVE-2026-43969"]
+            ["CVE-2026-43966", "CVE-2026-43971"]
         );
     }
 
@@ -647,6 +665,18 @@ mod tests {
         let (status, summary) = classify_hex_audit(7, "network unavailable", &[]);
         assert_eq!(status, 7);
         assert_eq!(summary, "Hex audit command failed");
+    }
+
+    #[test]
+    fn hex_audit_surfaces_lock_bound_mitigations_without_retirements() {
+        let mitigations = [mitigation("CVE-2026-43966"), mitigation("CVE-2026-43971")];
+        let (status, summary) = classify_hex_audit(0, "No retired packages found", &mitigations);
+
+        assert_eq!(status, 0);
+        assert_eq!(
+            summary,
+            "0 retired package(s); 2 tracked lock-bound advisory mitigation(s): CVE-2026-43966, CVE-2026-43971"
+        );
     }
 
     #[test]

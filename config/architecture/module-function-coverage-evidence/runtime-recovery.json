@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Executed workflow, Agent watchdog, persisted Orchestra restart, atomic generation fencing, operational two-Orchestra PostgreSQL crash takeover, standby admission rollback, two-host in-flight task recovery, and Installer journal fault injection proving branch isolation, stale-write rejection, single-owner failover, replay safety, and atomic deployment resume.",
+  "summary": "Executed workflow, Agent watchdog, persisted Orchestra restart, atomic generation fencing, source and Installer-managed production-release two-Orchestra PostgreSQL crash takeover, standby admission rollback, two-host in-flight task recovery, and Installer journal fault injection proving branch isolation, stale-write rejection, single-owner failover, replay safety, and atomic deployment resume.",
   "paradigm_contract_evidence": {
     "workflow_composition": [
       {
@@ -43,6 +43,12 @@
           "schemas/orchestra-takeover-operational-qualification-report.schema.json",
           "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/runtime.rs",
           "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/report.rs",
+          "config/architecture/orchestra-installed-takeover-operational-qualification.json",
+          "schemas/orchestra-installed-takeover-operational-qualification-contract.schema.json",
+          "schemas/orchestra-installed-takeover-operational-qualification-report.schema.json",
+          "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/installed.rs",
+          "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/installed_runtime.rs",
+          "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/installed_report.rs",
           "config/architecture/distributed-task-recovery-operational-qualification.json",
           "schemas/distributed-task-recovery-operational-qualification-report.schema.json",
           "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery_operational_probe.ex",
@@ -55,6 +61,7 @@
           "releases/usability-evidence/2.11.7/workflow-branch-recovery-fault-injection.json",
           "releases/usability-evidence/2.11.7/orchestra-agent-process-loss-fault-injection.json",
           "releases/usability-evidence/2.15.0/orchestra-takeover-operational-qualification.json",
+          "releases/usability-evidence/2.15.0/orchestra-installed-takeover-operational-qualification.json",
           "releases/usability-evidence/2.14.8/distributed-task-recovery-operational-qualification.json",
           "releases/usability-evidence/2.11.7/installer-journal-replay-fault-injection.json"
         ],
@@ -84,6 +91,8 @@
           "orchestra_lease_lost",
           "kyuubiki.orchestra-takeover-operational-qualification/v1",
           "two-orchestra-postgresql-sigkill-takeover",
+          "kyuubiki.orchestra-installed-takeover-operational-qualification/v1",
+          "installed-production-release-two-orchestra-postgresql-sigkill-takeover",
           "kyuubiki.distributed-task-recovery-operational-qualification/v1",
           "remote-agent-inflight-loss-policy-and-rejoin",
           "job-scoped-explicit-agent-hold",
@@ -249,7 +258,14 @@
         "schemas/orchestra-takeover-operational-qualification-report.schema.json",
         "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/runtime.rs",
         "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/report.rs",
-        "releases/usability-evidence/2.15.0/orchestra-takeover-operational-qualification.json"
+        "releases/usability-evidence/2.15.0/orchestra-takeover-operational-qualification.json",
+        "config/architecture/orchestra-installed-takeover-operational-qualification.json",
+        "schemas/orchestra-installed-takeover-operational-qualification-contract.schema.json",
+        "schemas/orchestra-installed-takeover-operational-qualification-report.schema.json",
+        "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/installed.rs",
+        "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/installed_runtime.rs",
+        "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/installed_report.rs",
+        "releases/usability-evidence/2.15.0/orchestra-installed-takeover-operational-qualification.json"
       ],
       "required_text": [
         "kyuubiki_orchestra_leases",
@@ -264,6 +280,11 @@
         "workflow_recovery",
         "kyuubiki.orchestra-takeover-operational-qualification/v1",
         "two-orchestra-postgresql-sigkill-takeover",
+        "kyuubiki.orchestra-installed-takeover-operational-qualification/v1",
+        "installed-production-release-two-orchestra-postgresql-sigkill-takeover",
+        "\"runtime_origin\": \"installer-managed\"",
+        "\"source_tree_detached\": true",
+        "\"runtime_store_removed\": true",
         "\"fencing_token\": 2",
         "\"former_owner_rejoin\"",
         "\"remote_database_removed\": true"

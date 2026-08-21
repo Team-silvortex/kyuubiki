@@ -16,9 +16,9 @@ use std::time::{Duration, Instant};
 
 type RunnerResult<T> = Result<T, String>;
 
-const LEASE_TTL_MS: u64 = 1_500;
-const HEARTBEAT_MS: u64 = 400;
-const RETRY_MS: u64 = 200;
+pub(super) const LEASE_TTL_MS: u64 = 1_500;
+pub(super) const HEARTBEAT_MS: u64 = 400;
+pub(super) const RETRY_MS: u64 = 200;
 const MAX_HTTP_BYTES: u64 = 4 * 1024 * 1024;
 
 pub(crate) fn capture(
@@ -44,10 +44,10 @@ enum ProcessRole {
     Standby,
 }
 
-struct LeaseObservation {
-    status: String,
-    owner_instance_id: String,
-    fencing_token: u64,
+pub(super) struct LeaseObservation {
+    pub(super) status: String,
+    pub(super) owner_instance_id: String,
+    pub(super) fencing_token: u64,
 }
 
 struct Session {
@@ -493,7 +493,7 @@ impl Drop for Session {
     }
 }
 
-fn distinct_port(existing: &[u16]) -> RunnerResult<u16> {
+pub(super) fn distinct_port(existing: &[u16]) -> RunnerResult<u16> {
     for _ in 0..16 {
         let port = available_local_port()?;
         if !existing.contains(&port) {
@@ -503,17 +503,17 @@ fn distinct_port(existing: &[u16]) -> RunnerResult<u16> {
     Err("failed to allocate distinct local qualification ports".to_string())
 }
 
-fn random_token() -> RunnerResult<String> {
+pub(super) fn random_token() -> RunnerResult<String> {
     let mut bytes = [0_u8; 32];
     fill_random(&mut bytes).map_err(|error| format!("failed to generate API token: {error}"))?;
     Ok(bytes.iter().map(|byte| format!("{byte:02x}")).collect())
 }
 
-fn local_address(port: u16) -> SocketAddr {
+pub(super) fn local_address(port: u16) -> SocketAddr {
     SocketAddr::from(([127, 0, 0, 1], port))
 }
 
-fn ensure_child_alive(child: &mut Option<Child>, label: &str) -> RunnerResult<()> {
+pub(super) fn ensure_child_alive(child: &mut Option<Child>, label: &str) -> RunnerResult<()> {
     let process = child
         .as_mut()
         .ok_or_else(|| format!("{label} process is unavailable"))?;
@@ -526,7 +526,7 @@ fn ensure_child_alive(child: &mut Option<Child>, label: &str) -> RunnerResult<()
     Ok(())
 }
 
-fn stop_child(child: &mut Option<Child>, label: &str) -> RunnerResult<()> {
+pub(super) fn stop_child(child: &mut Option<Child>, label: &str) -> RunnerResult<()> {
     let Some(mut process) = child.take() else {
         return Ok(());
     };
@@ -545,7 +545,7 @@ fn stop_child(child: &mut Option<Child>, label: &str) -> RunnerResult<()> {
     Ok(())
 }
 
-fn parse_lease(value: Value) -> RunnerResult<LeaseObservation> {
+pub(super) fn parse_lease(value: Value) -> RunnerResult<LeaseObservation> {
     let lease = value
         .pointer("/workflow_recovery/lease")
         .ok_or("health response misses workflow recovery lease")?;
@@ -568,7 +568,7 @@ fn parse_lease(value: Value) -> RunnerResult<LeaseObservation> {
     })
 }
 
-fn owner_role(owner: &str, primary: &str, standby: &str) -> &'static str {
+pub(super) fn owner_role(owner: &str, primary: &str, standby: &str) -> &'static str {
     if owner == primary {
         "primary"
     } else if owner == standby {
@@ -578,7 +578,7 @@ fn owner_role(owner: &str, primary: &str, standby: &str) -> &'static str {
     }
 }
 
-fn http_get_json(port: u16, path: &str, token: &str) -> RunnerResult<Value> {
+pub(super) fn http_get_json(port: u16, path: &str, token: &str) -> RunnerResult<Value> {
     let address = local_address(port);
     let mut stream = TcpStream::connect_timeout(&address, Duration::from_millis(500))
         .map_err(|error| format!("Orchestra HTTP unavailable: {error}"))?;

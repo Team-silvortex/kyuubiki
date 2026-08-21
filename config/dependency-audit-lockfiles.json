@@ -28,7 +28,7 @@
       ]
     },
     {
-      "id": "CVE-2026-43969",
+      "id": "CVE-2026-43971",
       "package": "cowlib",
       "locked_version": "2.19.0",
       "status": "not_reachable",

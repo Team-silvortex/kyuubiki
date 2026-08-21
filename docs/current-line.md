@@ -159,10 +159,16 @@ sprawl:
   PostgreSQL regression, and a retained native two-BEAM crash qualification
   exercise token-1 standby exclusion, forced owner process loss, token-2
   takeover, former-owner rejoin fencing, and complete temporary-resource
-  cleanup. This closes the source runtime path at `operational`, not installed
-  package scope: an Installer-managed takeover journey, long-running workload
-  takeover, database-network disruption, fleet package acquisition, and the
-  cross-platform matrix remain open
+  cleanup. A second retained remote-Linux qualification now builds the
+  production OTP release, seals and activates it through the Installer-managed
+  immutable Runtime store, deletes the synchronized source tree, and repeats
+  the same token-1 to token-2 crash takeover with two isolated writable state
+  roots sharing one installed payload. It also proves removal of the database,
+  Runtime store, managed run root, processes, and ports. Source-runtime and
+  Linux installed-package takeover are therefore both `operational`;
+  long-running workload takeover, database-network disruption, fleet package
+  acquisition, macOS/Windows package execution, and the full cross-platform
+  matrix remain open
 - Installer-managed Agent update qualification now runs an isolated remote
   Linux install, changed-payload upgrade, executable probe, rollback, and second
   executable probe. Its semantic validator requires the rollback activation

@@ -380,6 +380,15 @@ fn run() -> RunnerResult<u8> {
         "qualify-orchestra-takeover-operational-remote" => {
             orchestra_takeover_operational_qualification::run_qualify_remote(&paths.root, rest)
         }
+        "qualify-orchestra-installed-takeover-operational-remote" => {
+            orchestra_takeover_operational_qualification::run_qualify_installed_remote(
+                &paths.root,
+                rest,
+            )
+        }
+        "capture-orchestra-installed-takeover-host" => {
+            orchestra_takeover_operational_qualification::run_capture_installed_host(rest)
+        }
         "qualify-agent-solver-operational-remote" => {
             agent_solver_operational_qualification::run_qualify_agent_solver_operational_remote(
                 &paths.root,

@@ -715,9 +715,22 @@ removal of both BEAM processes, all local ports and logs, the tunnel, and the
 remote container. The retained report contains roles and timings only, never a
 host address, account, database URL, or credential.
 
-This is source-runtime operational evidence. Installer-managed package
-takeover, long-running workflow takeover, and database-network disruption
-remain separate open qualifications.
+This is source-runtime operational evidence. The separate installed-package
+lane builds and activates a production OTP release on the remote Linux host,
+deletes the synchronized source tree, and then repeats the same takeover:
+
+```sh
+make qualify-orchestra-installed-takeover-operational-remote REMOTE=kyuubiki-lab
+make check-orchestra-installed-takeover-operational-qualification
+```
+
+Both installed Orchestra instances share one digest-verified immutable Runtime
+payload while keeping independent writable release state. Success requires an
+Installer activation record, source fallback disabled, owner crash and token
+increment, former-owner fencing, plus zero managed Runtime, container, process,
+port, run-root, or transient evidence residue. Long-running workflow takeover,
+database-network disruption, fleet acquisition, and non-Linux packages remain
+separate open qualifications.
 
 ## Operational Agent Solver Qualification
 

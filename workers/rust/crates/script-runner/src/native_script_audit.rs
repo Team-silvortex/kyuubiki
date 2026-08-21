@@ -591,6 +591,9 @@ fn run_self_test() {
 mod tests {
     use super::*;
     use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static NEXT_TEMP_DIR: AtomicU64 = AtomicU64::new(0);
 
     #[test]
     fn classifies_native_shims_and_migration_targets() {
@@ -736,12 +739,13 @@ mod tests {
     fn unique_temp_dir() -> PathBuf {
         let mut path = std::env::temp_dir();
         path.push(format!(
-            "kyuubiki-native-script-audit-test-{}-{}",
+            "kyuubiki-native-script-audit-test-{}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
-                .as_nanos()
+                .as_nanos(),
+            NEXT_TEMP_DIR.fetch_add(1, Ordering::Relaxed)
         ));
         path
     }

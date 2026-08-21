@@ -12,7 +12,8 @@ defmodule KyuubikiWeb.HttpTransportSecurity do
       "schema_version" => "kyuubiki.http-transport-security/v1",
       "invalid_response_headers" => "error_terminate",
       "outbound_cookie_encoder" => "disabled",
-      "mitigated_advisories" => ["CVE-2026-43966", "CVE-2026-43969"]
+      "outbound_link_encoder" => "disabled",
+      "mitigated_advisories" => ["CVE-2026-43966", "CVE-2026-43971"]
     }
   end
 end

@@ -84,6 +84,8 @@ lab remote-ssh-fixture\n  \
   check-orchestra-recovery-fault-injection\n  \
   check-orchestra-takeover-operational-qualification\n  \
   qualify-orchestra-takeover-operational-remote\n  \
+  check-orchestra-installed-takeover-operational-qualification\n  \
+  qualify-orchestra-installed-takeover-operational-remote\n  \
   check-orchestra-workflow-operational-qualification\n  \
   check-installed-runtime-operational-qualification\n  \
   check-persistence-provenance-qualification\n  \

@@ -1,0 +1,138 @@
+{
+  "schema_version": "kyuubiki.orchestra-installed-takeover-operational-qualification/v1",
+  "generated_at_unix_ms": 1787305989865,
+  "status": "pass",
+  "qualification_id": "installer-managed-two-orchestra-postgresql-crash-takeover-operational",
+  "journey": "installed-production-release-two-orchestra-postgresql-sigkill-takeover",
+  "installation": {
+    "package_version": "2.15.0",
+    "platform": "linux",
+    "architecture": "x86_64",
+    "runtime_origin": "installer-managed",
+    "activation_generation": 1,
+    "payload_manifest_sha256": "b789755c6f444019002f957ff3a496b3074f4b92d76250d315ebd5069fec555b",
+    "service_manifest_sha256": "743dc439598d438cdc8b16b7d283dcedc1710baa8002699504b5bc4b77fc1b56",
+    "orchestra_executable_sha256": "83dd2358a4f0dff8ba7657deb2f23bcfdd5cc4123b0b2eeb0af4d8e39dc461f3",
+    "source_tree_detached": true,
+    "source_fallback": false,
+    "immutable_payload_shared": true
+  },
+  "topology": {
+    "orchestra_host_role": "remote-linux-qualification-host",
+    "database_host_role": "remote-linux-qualification-host",
+    "orchestra_process_count": 2,
+    "database": "postgresql",
+    "database_ephemeral": true,
+    "database_loopback_only": true,
+    "transport": "local-loopback",
+    "build_profile": "production-otp-release",
+    "managed_state_per_instance": true
+  },
+  "lease_policy": {
+    "lease_ttl_ms": 1500,
+    "heartbeat_ms": 400,
+    "retry_ms": 200,
+    "failure_mode": "sigkill"
+  },
+  "phases": {
+    "initial_owner": {
+      "process_role": "primary",
+      "lease_status": "owner",
+      "observed_owner_role": "primary",
+      "fencing_token": 1
+    },
+    "initial_standby": {
+      "process_role": "standby",
+      "lease_status": "standby",
+      "observed_owner_role": "primary",
+      "fencing_token": 1
+    },
+    "takeover": {
+      "process_role": "standby",
+      "lease_status": "owner",
+      "observed_owner_role": "standby",
+      "fencing_token": 2
+    },
+    "former_owner_rejoin": {
+      "process_role": "former-owner",
+      "lease_status": "standby",
+      "observed_owner_role": "standby",
+      "fencing_token": 2
+    },
+    "takeover_elapsed_ms": 1329,
+    "primary_endpoint_closed": true
+  },
+  "cleanup": {
+    "orchestra_processes_stopped": true,
+    "orchestra_ports_closed": true,
+    "remote_database_removed": true,
+    "runtime_store_removed": true,
+    "managed_run_root_removed": true
+  },
+  "checks": [
+    {
+      "id": "sealed_runtime_payload",
+      "status": "pass"
+    },
+    {
+      "id": "installer_activation_observed",
+      "status": "pass"
+    },
+    {
+      "id": "production_otp_release",
+      "status": "pass"
+    },
+    {
+      "id": "source_tree_detached",
+      "status": "pass"
+    },
+    {
+      "id": "remote_postgresql_ready",
+      "status": "pass"
+    },
+    {
+      "id": "primary_owner_elected",
+      "status": "pass"
+    },
+    {
+      "id": "second_orchestra_standby",
+      "status": "pass"
+    },
+    {
+      "id": "owner_sigkill_injected",
+      "status": "pass"
+    },
+    {
+      "id": "owner_endpoint_closed",
+      "status": "pass"
+    },
+    {
+      "id": "standby_promoted",
+      "status": "pass"
+    },
+    {
+      "id": "fencing_token_incremented",
+      "status": "pass"
+    },
+    {
+      "id": "former_owner_identity_fenced",
+      "status": "pass"
+    },
+    {
+      "id": "immutable_payload_shared",
+      "status": "pass"
+    },
+    {
+      "id": "managed_state_isolated",
+      "status": "pass"
+    },
+    {
+      "id": "cleanup_complete",
+      "status": "pass"
+    },
+    {
+      "id": "retention_sanitized",
+      "status": "pass"
+    }
+  ]
+}

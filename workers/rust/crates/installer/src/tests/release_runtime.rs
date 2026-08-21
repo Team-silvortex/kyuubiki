@@ -5,7 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::{
     Platform, build_embedded_runtime_manifest, build_launch_manifest, build_release_manifest,
     build_service_launch_manifest, embedded_runtime_report, expected_release_script_contents,
-    linux_desktop_dependency_plan, release_env_path, workspace_root,
+    find_workspace_root_from, linux_desktop_dependency_plan, release_env_path, workspace_root,
 };
 
 #[test]
@@ -153,5 +153,30 @@ fn release_staging_uses_example_when_local_override_is_absent() {
 
     fs::write(root.join(".env.local"), "KYUUBIKI_STORAGE_BACKEND=sqlite\n").expect("local env");
     assert_eq!(release_env_path(&root), root.join(".env.local"));
+    fs::remove_dir_all(root).expect("remove fixture");
+}
+
+#[test]
+fn workspace_discovery_is_independent_of_the_compilation_directory() {
+    let root = std::env::temp_dir().join(format!(
+        "kyuubiki-workspace-discovery-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos()
+    ));
+    let nested = root.join("cache/target/release");
+    fs::create_dir_all(root.join("workers/rust")).expect("rust marker parent");
+    fs::create_dir_all(root.join("config")).expect("config marker parent");
+    fs::create_dir_all(&nested).expect("nested executable parent");
+    fs::write(
+        root.join(".env.example"),
+        "KYUUBIKI_STORAGE_BACKEND=sqlite\n",
+    )
+    .expect("environment marker");
+    fs::write(root.join("workers/rust/Cargo.toml"), "[workspace]\n").expect("workspace marker");
+    fs::write(root.join("config/toolchains.json"), "{}\n").expect("toolchain marker");
+
+    assert_eq!(find_workspace_root_from(&nested), Some(root.clone()));
     fs::remove_dir_all(root).expect("remove fixture");
 }

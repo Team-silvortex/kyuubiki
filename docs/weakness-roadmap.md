@@ -138,10 +138,12 @@ same-endpoint rejoins, follow-up closed-form solves, and zero residue. Evidence
 lives at
 `releases/usability-evidence/2.14.8/distributed-task-recovery-operational-qualification.json`
 and is rechecked by
-`make check-distributed-task-recovery-operational-qualification`. This does not
-yet prove full host power loss, shared-database Orchestra takeover,
-network-partition fencing, Installer-led fleet package acquisition, or the
-installed cross-platform matrix. Persisted in-flight workflow state now has a
+`make check-distributed-task-recovery-operational-qualification`. Shared
+PostgreSQL Orchestra process-crash takeover is now independently retained for
+both source runtime and a source-detached Installer-managed Linux production
+release. Full host power loss, network-partition fencing, Installer-led fleet
+package acquisition, long-running workflow takeover, and the installed
+cross-platform matrix remain open. Persisted in-flight workflow state now has a
 separate local qualification: a digest-bound execution envelope survives a
 complete OTP application stop/start, a fresh session claims a higher
 generation, stale writers are fenced, idempotent work resumes, uncheckpointed
@@ -255,6 +257,16 @@ machine-validated report is retained under
 Installed cross-platform penetration testing and multi-host adversarial testing
 remain separate operational tiers and are not implied by this local
 qualification.
+
+The web control plane also retains an upstream dependency residual: the latest
+published Cowlib 2.19.0 release is still marked with unresolved Hex security
+advisories. Kyuubiki has lock-bound tests for invalid response-header rejection
+and non-reachability of the affected Link serializer, but these do not replace
+an upstream patch. The retained installed-package Orchestra takeover journey is
+loopback-only and therefore does not qualify public-network exposure. Pin the
+first patched upstream release, rerun dependency and control-plane security
+lanes, then add adversarial reverse-proxy and direct-listener evidence before
+promoting this boundary.
 
 The former leading coordinate, `sdk-headless/workflow_composition`, now meets
 its `qualified` target. Its native qualification requires all 230 Rust

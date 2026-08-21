@@ -537,10 +537,32 @@ fn command_exists(command: &str) -> bool {
 }
 
 pub fn workspace_root() -> PathBuf {
+    if let Some(configured) = env::var_os("KYUUBIKI_REPO_ROOT").map(PathBuf::from) {
+        return configured.canonicalize().unwrap_or(configured);
+    }
+    if let Ok(executable) = env::current_exe()
+        && let Some(root) = executable.parent().and_then(find_workspace_root_from)
+    {
+        return root;
+    }
+    if let Ok(current) = env::current_dir()
+        && let Some(root) = find_workspace_root_from(&current)
+    {
+        return root;
+    }
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../../..")
         .canonicalize()
         .unwrap_or_else(|_| Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.."))
+}
+
+fn find_workspace_root_from(start: &Path) -> Option<PathBuf> {
+    start.ancestors().find_map(|candidate| {
+        (candidate.join(".env.example").is_file()
+            && candidate.join("workers/rust/Cargo.toml").is_file()
+            && candidate.join("config/toolchains.json").is_file())
+        .then(|| candidate.to_path_buf())
+    })
 }
 
 pub fn parse_platform(value: Option<String>) -> Platform {
