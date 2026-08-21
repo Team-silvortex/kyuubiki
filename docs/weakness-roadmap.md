@@ -581,6 +581,11 @@ Current weak point:
   needs more evidence
 - distributed execution must prove recovery from partial failure, package
   fetch failure, node loss, and stale authority state
+- persisted workflow transitions now use backend-atomic compare-and-swap; an
+  eight-writer SQL regression admits one generation owner and rejects seven
+  stale snapshots, and the local memory backend follows the same contract
+- this closes concurrent stale-write overwrite, but not active-owner lease
+  expiry or a retained two-Orchestra PostgreSQL takeover journey
 
 Current moxi hardening focus:
 

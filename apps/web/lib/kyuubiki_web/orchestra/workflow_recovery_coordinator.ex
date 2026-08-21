@@ -326,7 +326,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
            |> Map.update("progress_events", [progress_event], fn events ->
              (List.wrap(events) ++ [progress_event]) |> Enum.take(-25)
            end),
-         :ok <- AnalysisResultStore.put(job_id, updated_runtime),
+         :ok <- AnalysisResultStore.compare_and_swap(job_id, runtime, updated_runtime),
          {:ok, _updated_job} <-
            Store.apply_progress(%{
              job_id: job_id,
@@ -363,7 +363,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
            |> Map.put("progress_events", Map.get(runtime, "progress_events", []))
            |> Map.put("response_options", Map.get(runtime, "response_options", %{}))
            |> Map.put(WorkflowRecoveryEnvelope.internal_key(), completed),
-         :ok <- AnalysisResultStore.put(job_id, final),
+         :ok <- AnalysisResultStore.compare_and_swap(job_id, runtime, final),
          {:ok, _job} <- Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0}) do
       :ok
     else
@@ -444,8 +444,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   defp put_runtime_recovery(job_id, runtime, recovery),
     do:
-      AnalysisResultStore.put(
+      AnalysisResultStore.compare_and_swap(
         job_id,
+        runtime,
         Map.put(runtime, WorkflowRecoveryEnvelope.internal_key(), recovery)
       )
 

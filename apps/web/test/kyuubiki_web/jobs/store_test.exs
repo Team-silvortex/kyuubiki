@@ -2,6 +2,7 @@ defmodule KyuubikiWeb.Jobs.StoreTest do
   use ExUnit.Case, async: false
 
   alias KyuubikiWeb.AnalysisResultStore
+  alias KyuubikiWeb.AnalysisResultMemoryBackend
   alias KyuubikiWeb.Persistence
   alias KyuubikiWeb.Jobs.Store
 
@@ -85,6 +86,60 @@ defmodule KyuubikiWeb.Jobs.StoreTest do
   test "result store reports missing job constraints without crashing" do
     assert {:error, _reason} =
              AnalysisResultStore.put("missing-job", %{"status" => "orphaned_result"})
+  end
+
+  test "result store compare-and-swap permits only one concurrent writer" do
+    job_id = "job-cas"
+
+    assert {:ok, _job} =
+             Store.create(%{
+               job_id: job_id,
+               project_id: "project-cas",
+               simulation_case_id: "case-cas"
+             })
+
+    initial = %{"generation" => 1, "owner" => "session-a"}
+    assert :ok = AnalysisResultStore.put(job_id, initial)
+
+    results =
+      1..8
+      |> Enum.map(fn candidate ->
+        Task.async(fn ->
+          replacement = %{"generation" => 2, "owner" => "session-#{candidate}"}
+          {candidate, AnalysisResultStore.compare_and_swap(job_id, initial, replacement)}
+        end)
+      end)
+      |> Task.await_many(5_000)
+
+    winners = for {candidate, :ok} <- results, do: candidate
+    stale = for {_candidate, {:error, :stale_analysis_result}} <- results, do: :stale
+
+    assert [_winner] = winners
+    assert length(stale) == 7
+    assert {:ok, %{"generation" => 2, "owner" => owner}} = AnalysisResultStore.get(job_id)
+    assert owner == "session-#{hd(winners)}"
+  end
+
+  test "memory result store compare-and-swap is atomic and fail-closed" do
+    start_supervised!({AnalysisResultMemoryBackend, []})
+
+    initial = %{"generation" => 3}
+    replacement = %{"generation" => 4}
+
+    assert :ok = AnalysisResultMemoryBackend.put("memory-cas", initial)
+    assert :ok = AnalysisResultMemoryBackend.compare_and_swap("memory-cas", initial, replacement)
+
+    assert {:error, :stale_analysis_result} =
+             AnalysisResultMemoryBackend.compare_and_swap("memory-cas", initial, %{
+               "generation" => 5
+             })
+
+    assert {:error, {:result_not_found, "missing-memory-cas"}} =
+             AnalysisResultMemoryBackend.compare_and_swap(
+               "missing-memory-cas",
+               initial,
+               replacement
+             )
   end
 
   defp restart_application do

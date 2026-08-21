@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Executed workflow, Agent watchdog, persisted Orchestra application restart, two-host in-flight task recovery, and Installer journal fault injection proving branch isolation, generation-fenced replay, stale-timeout recovery, replay-safe failover, and atomic deployment resume.",
+  "summary": "Executed workflow, Agent watchdog, persisted Orchestra application restart, atomic shared-store generation fencing, two-host in-flight task recovery, and Installer journal fault injection proving branch isolation, stale-write rejection, replay-safe failover, and atomic deployment resume.",
   "paradigm_contract_evidence": {
     "workflow_composition": [
       {
@@ -20,6 +20,10 @@
           "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
           "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
           "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+          "apps/web/lib/kyuubiki_web/results/memory_backend.ex",
+          "apps/web/lib/kyuubiki_web/results/postgres_backend.ex",
+          "apps/web/lib/kyuubiki_web/results/store.ex",
+          "apps/web/test/kyuubiki_web/jobs/store_test.exs",
           "apps/web/test/kyuubiki_web/orchestra/workflow_recovery_envelope_test.exs",
           "apps/web/test/kyuubiki_web/orchestra/workflow_restart_recovery_test.exs",
           "schemas/workflow-recovery.schema.json",
@@ -58,6 +62,8 @@
           "blocks a digest-tampered execution envelope before restart replay",
           "reclaims an idempotent workflow after its supervised runner is lost",
           "fails submission when the workflow runner supervisor is unavailable",
+          "compare-and-swap permits only one concurrent writer",
+          "stale_analysis_result",
           "kyuubiki.distributed-task-recovery-operational-qualification/v1",
           "remote-agent-inflight-loss-policy-and-rejoin",
           "job-scoped-explicit-agent-hold",
@@ -143,6 +149,42 @@
         "blocks a digest-tampered execution envelope before restart replay",
         "reclaims an idempotent workflow after its supervised runner is lost",
         "fails submission when the workflow runner supervisor is unavailable"
+      ]
+    },
+    {
+      "id": "orchestra-shared-store-generation-fencing",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "orchestra-control-plane",
+        "verification-evidence"
+      ],
+      "paradigms": [
+        "workflow_composition",
+        "runtime_api",
+        "validation",
+        "persistence_provenance",
+        "security"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "recovery",
+        "security"
+      ],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/results/memory_backend.ex",
+        "apps/web/lib/kyuubiki_web/results/postgres_backend.ex",
+        "apps/web/lib/kyuubiki_web/results/store.ex",
+        "apps/web/test/kyuubiki_web/jobs/store_test.exs"
+      ],
+      "required_text": [
+        "compare_and_swap",
+        "stale_analysis_result",
+        "record.payload == ^expected",
+        "compare-and-swap permits only one concurrent writer",
+        "length(stale) == 7"
       ]
     },
     {

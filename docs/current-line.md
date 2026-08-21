@@ -146,8 +146,13 @@ sprawl:
   jobs discard the large private envelope while retaining a sanitized recovery
   receipt. The qualified tests exercise SQLite-backed application restart,
   supervised runner loss, unavailable Task Supervisor, and batched progress
-  persistence; full host power loss, shared-database Orchestra takeover, fleet
-  package acquisition, and the installed cross-platform matrix remain open
+  persistence. Every recovery claim, progress write, terminal commit, failure,
+  cancellation, and block transition now conditionally swaps the exact prior
+  runtime record; an eight-writer SQLite regression permits one winner and
+  rejects seven stale writers, while the memory backend retains the same
+  fail-closed contract. This closes the shared-store TOCTOU write race, not
+  active-owner lease detection: full host power loss, live PostgreSQL takeover,
+  fleet package acquisition, and the installed cross-platform matrix remain open
 - Installer-managed Agent update qualification now runs an isolated remote
   Linux install, changed-payload upgrade, executable probe, rollback, and second
   executable probe. Its semantic validator requires the rollback activation

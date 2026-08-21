@@ -1,6 +1,8 @@
 defmodule KyuubikiWeb.AnalysisResultPostgresBackend do
   @moduledoc false
 
+  import Ecto.Query, only: [from: 2]
+
   alias KyuubikiWeb.Storage
   alias KyuubikiWeb.Storage.ResultRecord
 
@@ -66,6 +68,21 @@ defmodule KyuubikiWeb.AnalysisResultPostgresBackend do
 
   def update(job_id, result) when is_binary(job_id) and is_map(result), do: put(job_id, result)
 
+  def compare_and_swap(job_id, expected, replacement)
+      when is_binary(job_id) and is_map(expected) and is_map(replacement) do
+    query =
+      from(record in ResultRecord,
+        where: record.job_id == ^job_id and record.payload == ^expected
+      )
+
+    updates = [set: [payload: replacement, updated_at: DateTime.utc_now()]]
+
+    case apply(repo(), :update_all, [query, updates]) do
+      {1, _records} -> :ok
+      {0, _records} -> compare_and_swap_miss(job_id)
+    end
+  end
+
   def delete(job_id) when is_binary(job_id) do
     case repo_get(ResultRecord, job_id) do
       %ResultRecord{} = record ->
@@ -88,6 +105,7 @@ defmodule KyuubikiWeb.AnalysisResultPostgresBackend do
   end
 
   defp repo_get(schema, id), do: apply(repo(), :get, [schema, id])
+
   defp repo_all(queryable), do: apply(repo(), :all, [queryable])
   defp safe_repo_insert(changeset), do: safe_repo_write(:insert, changeset)
   defp safe_repo_update(changeset), do: safe_repo_write(:update, changeset)
@@ -98,6 +116,12 @@ defmodule KyuubikiWeb.AnalysisResultPostgresBackend do
     apply(repo(), action, [changeset])
   rescue
     error in Ecto.ConstraintError -> {:constraint_error, error}
+  end
+
+  defp compare_and_swap_miss(job_id) do
+    if is_nil(repo_get(ResultRecord, job_id)),
+      do: {:error, {:result_not_found, job_id}},
+      else: {:error, :stale_analysis_result}
   end
 
   defp retry_or_error(job_id, result, attempts_left, reason) when attempts_left > 0 do

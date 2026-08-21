@@ -10,6 +10,10 @@ defmodule KyuubikiWeb.AnalysisResultStore do
   def get(job_id), do: backend().get(job_id)
   def list, do: backend().list()
   def update(job_id, result), do: backend().update(job_id, result)
+
+  def compare_and_swap(job_id, expected, replacement),
+    do: backend().compare_and_swap(job_id, expected, replacement)
+
   def delete(job_id), do: backend().delete(job_id)
   def reset, do: backend().reset()
 

@@ -36,6 +36,24 @@ defmodule KyuubikiWeb.AnalysisResultMemoryBackend do
 
   def update(job_id, result) when is_binary(job_id) and is_map(result), do: put(job_id, result)
 
+  def compare_and_swap(job_id, expected, replacement)
+      when is_binary(job_id) and is_map(expected) and is_map(replacement) do
+    Agent.get_and_update(__MODULE__, fn results ->
+      case Map.fetch(results, job_id) do
+        {:ok, ^expected} ->
+          updated = Map.put(results, job_id, replacement)
+          Persistence.write_json!(Persistence.results_path(), updated)
+          {:ok, updated}
+
+        {:ok, _current} ->
+          {{:error, :stale_analysis_result}, results}
+
+        :error ->
+          {{:error, {:result_not_found, job_id}}, results}
+      end
+    end)
+  end
+
   def delete(job_id) when is_binary(job_id) do
     Agent.get_and_update(__MODULE__, fn results ->
       case Map.pop(results, job_id) do
