@@ -29,11 +29,15 @@
           "workers/rust/crates/cli/src/agent_control_link.rs",
           "workers/rust/crates/cli/src/agent_http.rs",
           "workers/rust/crates/script-runner/src/agent_control_link_operational_qualification/mod.rs",
+          "workers/rust/crates/cli/src/agent_watchdog.rs",
+          "workers/rust/crates/script-runner/src/distributed_task_recovery_operational_qualification/mod.rs",
           "apps/web/lib/kyuubiki_web/playground/agent_registry.ex",
           "apps/web/lib/kyuubiki_web/playground/agent_registry_public.ex",
           "schemas/agent-control-link.schema.json",
           "schemas/agent-control-link-operational-qualification-report.schema.json",
-          "config/architecture/agent-control-link-operational-qualification.json"
+          "config/architecture/agent-control-link-operational-qualification.json",
+          "schemas/distributed-task-recovery-operational-qualification-report.schema.json",
+          "config/architecture/distributed-task-recovery-operational-qualification.json"
         ],
         "client_surfaces": ["runtime-agent-cli", "sdk-headless", "orchestra-control-plane"],
         "stability_contracts": [
@@ -41,7 +45,8 @@
           "solver RPC descriptor",
           "execution capability report",
           "Agent control-link diagnostics",
-          "two-host control-link recovery qualification"
+          "two-host control-link recovery qualification",
+          "in-flight task replay-safety qualification"
         ]
       },
       {
@@ -49,13 +54,16 @@
         "sources": [
           "apps/web/lib/kyuubiki_web/orchestra/engine.ex",
           "apps/web/lib/kyuubiki_web/orchestra/operator_task_executor.ex",
-          "apps/web/lib/kyuubiki_web/orchestra/control_plane_surface.ex"
+          "apps/web/lib/kyuubiki_web/orchestra/control_plane_surface.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery_operational_probe.ex"
         ],
         "client_surfaces": ["workbench-shell", "sdk-headless", "runtime-agent-cli"],
         "stability_contracts": [
           "workflow graph execution",
           "operator task execution",
-          "control-plane surface"
+          "control-plane surface",
+          "replay-safe distributed recovery"
         ]
       },
       {

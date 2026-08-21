@@ -1,0 +1,84 @@
+{
+  "$schema": "../../schemas/distributed-task-recovery-operational-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.distributed-task-recovery-operational-qualification-contract/v1",
+  "qualification_id": "two-host-distributed-task-recovery-operational",
+  "target_coordinate": {
+    "module_id": "orchestra-control-plane",
+    "paradigm": "fault_injection_and_recovery",
+    "target_grade": "operational"
+  },
+  "ownership": {
+    "control_plane_owner": "orchestra-control-plane",
+    "execution_owner": "runtime-agent-cli",
+    "evidence_owner": "verification-evidence"
+  },
+  "capture": {
+    "required_scenarios": [
+      "idempotent",
+      "side_effect_blocked",
+      "checkpointed"
+    ],
+    "orchestrator_platform": "macos",
+    "primary_agent_platform": "linux",
+    "fallback_agent_platform": "macos",
+    "build_profile": "release",
+    "remote_restarts_minimum": 3,
+    "cleanup_required": true
+  },
+  "retention": {
+    "report_schema": "kyuubiki.distributed-task-recovery-operational-qualification/v1",
+    "report_schema_path": "schemas/distributed-task-recovery-operational-qualification-report.schema.json",
+    "report_path": "releases/usability-evidence/2.14.8/distributed-task-recovery-operational-qualification.json",
+    "forbidden_content": [
+      "hostname",
+      "host_address",
+      "username",
+      "credential",
+      "absolute_host_path",
+      "cluster_api_token",
+      "192.168.",
+      "/Users/",
+      "/home/"
+    ]
+  },
+  "source_guard": {
+    "files": [
+      "apps/web/lib/kyuubiki_web/playground/agent_client.ex",
+      "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery.ex",
+      "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery_operational_probe.ex",
+      "workers/rust/crates/cli/src/agent_watchdog.rs",
+      "workers/rust/crates/cli/src/agent_fault_injection.rs",
+      "workers/rust/crates/script-runner/src/distributed_task_recovery_operational_qualification/mod.rs",
+      "workers/rust/crates/script-runner/src/distributed_task_recovery_operational_qualification/agent_process.rs",
+      "workers/rust/crates/script-runner/src/distributed_task_recovery_operational_qualification/probe.rs",
+      "workers/rust/crates/script-runner/src/distributed_task_recovery_operational_qualification/report.rs",
+      "workers/rust/crates/script-runner/src/distributed_task_recovery_operational_qualification/runtime.rs"
+    ],
+    "required_text": [
+      "run_operator_task_ir",
+      "total_started_execution_count",
+      "agent_process_lost",
+      "side_effect_blocked",
+      "checkpointed",
+      "KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_FILE",
+      "remote_agent_terminated_after_dispatch_before_result_commit"
+    ]
+  },
+  "required_checks": [
+    "real_rust_agents",
+    "deterministic_inflight_fault_barrier",
+    "primary_inflight_observed",
+    "idempotent_fallback_completed",
+    "side_effect_replay_blocked",
+    "checkpoint_authorized_fallback",
+    "fallback_counter_consistency",
+    "remote_rejoined_after_each_fault",
+    "followup_solver_verified",
+    "cleanup_complete",
+    "retention_sanitized"
+  ],
+  "commands": {
+    "capture": "make qualify-distributed-task-recovery-operational-remote REMOTE=kyuubiki-lab",
+    "verify": "make check-distributed-task-recovery-operational-qualification"
+  }
+}

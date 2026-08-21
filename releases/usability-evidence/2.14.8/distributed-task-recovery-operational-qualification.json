@@ -1,0 +1,233 @@
+{
+  "schema_version": "kyuubiki.distributed-task-recovery-operational-qualification/v1",
+  "generated_at_unix_ms": 1787284440260,
+  "status": "pass",
+  "journey": "remote-agent-inflight-loss-policy-and-rejoin",
+  "topology": {
+    "orchestration_host_role": "local-macos-orchestra-runtime",
+    "primary_agent_host_role": "remote-linux-primary-agent",
+    "fallback_agent_host_role": "local-macos-fallback-agent",
+    "orchestration_platform": "macos",
+    "primary_agent_platform": "linux",
+    "fallback_agent_platform": "macos",
+    "primary_agent_architecture": "x86_64",
+    "transport": "lan-agent-rpc",
+    "build_profile": "release",
+    "fault_injection_barrier": "job-scoped-explicit-agent-hold",
+    "scenario_count": 3,
+    "remote_process_restart_count": 3,
+    "same_remote_endpoint": true
+  },
+  "scenarios": [
+    {
+      "id": "idempotent",
+      "job_id": "distributed-recovery-idempotent",
+      "method": "solve_bar_1d",
+      "injected_fault": "remote_agent_terminated_after_dispatch_before_result_commit",
+      "outcome": "fallback_completed",
+      "retry_safety": "idempotent",
+      "primary_before": {
+        "started": 0,
+        "completed": 0,
+        "failed": 0,
+        "active": 0
+      },
+      "primary_inflight": {
+        "started": 1,
+        "completed": 0,
+        "failed": 0,
+        "active": 1
+      },
+      "fallback_before": {
+        "started": 0,
+        "completed": 0,
+        "failed": 0,
+        "active": 0
+      },
+      "fallback_after": {
+        "started": 1,
+        "completed": 1,
+        "failed": 0,
+        "active": 0
+      },
+      "fallback_delta": {
+        "started": 1,
+        "completed": 1,
+        "failed": 0
+      },
+      "recovery": {
+        "failure_stage": "receive",
+        "reason_code": "agent_process_lost",
+        "process_loss": true,
+        "retry_safety": "idempotent",
+        "checkpoint_digest": null,
+        "retryable": true,
+        "remaining_agent_count": 1,
+        "safe_to_continue_other_tasks": true,
+        "next_action": "retry_next_agent"
+      },
+      "checkpoint_digest": null,
+      "result_verified": true,
+      "remote_rejoined": true,
+      "followup_solver_verified": true
+    },
+    {
+      "id": "side_effect_blocked",
+      "job_id": "distributed-recovery-side-effect",
+      "method": "run_operator_task_ir",
+      "injected_fault": "remote_agent_terminated_after_dispatch_before_result_commit",
+      "outcome": "replay_blocked",
+      "retry_safety": "checkpoint_required",
+      "primary_before": {
+        "started": 1,
+        "completed": 1,
+        "failed": 0,
+        "active": 0
+      },
+      "primary_inflight": {
+        "started": 2,
+        "completed": 1,
+        "failed": 0,
+        "active": 1
+      },
+      "fallback_before": {
+        "started": 1,
+        "completed": 1,
+        "failed": 0,
+        "active": 0
+      },
+      "fallback_after": {
+        "started": 1,
+        "completed": 1,
+        "failed": 0,
+        "active": 0
+      },
+      "fallback_delta": {
+        "started": 0,
+        "completed": 0,
+        "failed": 0
+      },
+      "recovery": {
+        "failure_stage": "receive",
+        "reason_code": "agent_process_lost",
+        "process_loss": true,
+        "retry_safety": "checkpoint_required",
+        "checkpoint_digest": null,
+        "retryable": false,
+        "remaining_agent_count": 1,
+        "safe_to_continue_other_tasks": true,
+        "next_action": "checkpoint_before_retry"
+      },
+      "checkpoint_digest": null,
+      "result_verified": true,
+      "remote_rejoined": true,
+      "followup_solver_verified": true
+    },
+    {
+      "id": "checkpointed",
+      "job_id": "distributed-recovery-checkpointed",
+      "method": "run_operator_task_ir",
+      "injected_fault": "remote_agent_terminated_after_dispatch_before_result_commit",
+      "outcome": "checkpoint_authorized_fallback",
+      "retry_safety": "checkpointed",
+      "primary_before": {
+        "started": 1,
+        "completed": 1,
+        "failed": 0,
+        "active": 0
+      },
+      "primary_inflight": {
+        "started": 2,
+        "completed": 1,
+        "failed": 0,
+        "active": 1
+      },
+      "fallback_before": {
+        "started": 1,
+        "completed": 1,
+        "failed": 0,
+        "active": 0
+      },
+      "fallback_after": {
+        "started": 2,
+        "completed": 2,
+        "failed": 0,
+        "active": 0
+      },
+      "fallback_delta": {
+        "started": 1,
+        "completed": 1,
+        "failed": 0
+      },
+      "recovery": {
+        "failure_stage": "receive",
+        "reason_code": "agent_process_lost",
+        "process_loss": true,
+        "retry_safety": "checkpointed",
+        "checkpoint_digest": "5fad02c4f04280320fb6d890deec365b36a0a090710950a0acc9bc4a38fcd288",
+        "retryable": true,
+        "remaining_agent_count": 1,
+        "safe_to_continue_other_tasks": true,
+        "next_action": "retry_next_agent"
+      },
+      "checkpoint_digest": "5fad02c4f04280320fb6d890deec365b36a0a090710950a0acc9bc4a38fcd288",
+      "result_verified": true,
+      "remote_rejoined": true,
+      "followup_solver_verified": true
+    }
+  ],
+  "cleanup": {
+    "local_agent_stopped": true,
+    "remote_agent_stopped": true,
+    "local_port_closed": true,
+    "remote_port_closed": true,
+    "managed_remote_root_removed": true,
+    "local_work_root_removed": true
+  },
+  "checks": [
+    {
+      "id": "real_rust_agents",
+      "status": "pass"
+    },
+    {
+      "id": "deterministic_inflight_fault_barrier",
+      "status": "pass"
+    },
+    {
+      "id": "primary_inflight_observed",
+      "status": "pass"
+    },
+    {
+      "id": "idempotent_fallback_completed",
+      "status": "pass"
+    },
+    {
+      "id": "side_effect_replay_blocked",
+      "status": "pass"
+    },
+    {
+      "id": "checkpoint_authorized_fallback",
+      "status": "pass"
+    },
+    {
+      "id": "fallback_counter_consistency",
+      "status": "pass"
+    },
+    {
+      "id": "remote_rejoined_after_each_fault",
+      "status": "pass"
+    },
+    {
+      "id": "followup_solver_verified",
+      "status": "pass"
+    },
+    {
+      "id": "cleanup_complete",
+      "status": "pass"
+    },
+    {
+      "id": "retention_sanitized",
+      "status": "pass"
+    }
+  ]
+}

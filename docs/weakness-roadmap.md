@@ -127,11 +127,24 @@ address. Evidence lives at
 `releases/usability-evidence/2.14.7/agent-control-link-operational-qualification.json`
 and is rechecked by `make check-agent-control-link-operational-qualification`.
 This closes control-link network-loss/rejoin, not Installer-managed package
-acquisition, fleet scheduling, in-flight task replay after remote host loss, or
-installed operation on every supported platform. The earlier probe also exposed
-and fixed an HTTP write-half-close incompatibility with Cowboy; a native
-regression requires the Agent to keep the request connection open until the
-response arrives.
+acquisition, fleet scheduling, or installed operation on every supported
+platform. In-flight process-loss recovery now has its own independent two-host
+operational qualification rather than being inferred from this link test. That
+qualification uses a visible, default-disabled, exact-job execution barrier,
+requires the remote watchdog to show the job active, then kills the remote Rust
+Agent before result commit. It proves idempotent fallback execution,
+checkpoint-required replay blocking, checkpoint-authorized continuation, three
+same-endpoint rejoins, follow-up closed-form solves, and zero residue. Evidence
+lives at
+`releases/usability-evidence/2.14.8/distributed-task-recovery-operational-qualification.json`
+and is rechecked by
+`make check-distributed-task-recovery-operational-qualification`. This does not
+yet prove full host power loss, persisted Orchestra restart with in-flight
+state, network-partition fencing, Installer-led fleet package acquisition, or
+the installed cross-platform matrix. The earlier control-link probe also
+exposed and fixed an HTTP write-half-close incompatibility with Cowboy; a
+native regression requires the Agent to keep the request connection open until
+the response arrives.
 
 The former P0 runtime API tie now meets its `verified` target. The current-line
 protocol report executes 101 tests, proves 55 advertised methods have 55 unique

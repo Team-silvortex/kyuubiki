@@ -272,8 +272,13 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
              )
 
     assert_receive {:fake_agent_request, request}
-    assert request["job_id"] == "analysis-job-42"
-    assert request["params"] == %{"nodes" => [], "elements" => []}
+    refute Map.has_key?(request, "job_id")
+
+    assert request["params"] == %{
+             "nodes" => [],
+             "elements" => [],
+             "job_id" => "analysis-job-42"
+           }
   end
 
   test "describes an agent over the rpc protocol" do
@@ -371,7 +376,12 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
 
     assert_receive {:fake_agent_request, request}
     assert request["method"] == "run_operator_task_ir"
-    assert request["params"] == %{"task_ir" => task_ir}
+
+    assert request["params"] == %{
+             "task_ir" => task_ir,
+             "job_id" => task_ir["task_id"]
+           }
+
     assert result["operator_task_ir_status"] == "accepted"
   end
 
@@ -415,11 +425,22 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
 
     AgentPool.reload()
 
-    assert {:ok, result} = AgentClient.run_operator_task_ir(task_ir, mode: :execute)
+    assert {:ok, result} =
+             AgentClient.run_operator_task_ir(task_ir,
+               mode: :execute,
+               job_id: "operator-task-qualification"
+             )
 
     assert_receive {:fake_agent_request, request}
     assert request["method"] == "run_operator_task_ir"
-    assert request["params"] == %{"task_ir" => task_ir, "mode" => "execute"}
+    refute Map.has_key?(request, "job_id")
+
+    assert request["params"] == %{
+             "task_ir" => task_ir,
+             "mode" => "execute",
+             "job_id" => "operator-task-qualification"
+           }
+
     assert result["requested_mode"] == "execute"
     assert result["execution_readiness"]["status"] == "blocked"
     assert result["execution_readiness"]["required_action"] == "attach_operator_package_runtime"

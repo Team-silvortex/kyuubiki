@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Executed workflow, Agent watchdog, Orchestra process-loss, and Installer journal fault injection proving branch isolation, stale-timeout recovery, replay-safe failover, and atomic deployment resume.",
+  "summary": "Executed workflow, Agent watchdog, Orchestra process-loss, two-host in-flight task recovery, and Installer journal fault injection proving branch isolation, stale-timeout recovery, replay-safe failover, and atomic deployment resume.",
   "paradigm_contract_evidence": {
     "workflow_composition": [
       {
@@ -19,11 +19,18 @@
           "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery_probe.ex",
           "workers/rust/crates/script-runner/src/runtime_recovery_fault_injection.rs",
           "workers/rust/crates/script-runner/src/orchestra_recovery_fault_injection.rs",
+          "config/architecture/distributed-task-recovery-operational-qualification.json",
+          "schemas/distributed-task-recovery-operational-qualification-report.schema.json",
+          "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery_operational_probe.ex",
+          "workers/rust/crates/script-runner/src/distributed_task_recovery_operational_qualification/mod.rs",
+          "workers/rust/crates/script-runner/src/distributed_task_recovery_operational_qualification/runtime.rs",
+          "workers/rust/crates/cli/src/agent_fault_injection.rs",
           "workers/rust/crates/installer/src/remote_deployment_journal_store.rs",
           "workers/rust/crates/installer/src/remote_deployment_replay.rs",
           "workers/rust/crates/script-runner/src/installer_recovery_fault_injection.rs",
           "releases/usability-evidence/2.11.7/workflow-branch-recovery-fault-injection.json",
           "releases/usability-evidence/2.11.7/orchestra-agent-process-loss-fault-injection.json",
+          "releases/usability-evidence/2.14.8/distributed-task-recovery-operational-qualification.json",
           "releases/usability-evidence/2.11.7/installer-journal-replay-fault-injection.json"
         ],
         "required_text": [
@@ -37,6 +44,9 @@
           "fault_injection_and_recovery/orchestra-agent-process-loss",
           "kyuubiki.orchestra-process-loss-fault-injection/v1",
           "side_effect_replay_blocked_without_checkpoint",
+          "kyuubiki.distributed-task-recovery-operational-qualification/v1",
+          "remote-agent-inflight-loss-policy-and-rejoin",
+          "job-scoped-explicit-agent-hold",
           "fault_injection_and_recovery/installer-journal-replay",
           "kyuubiki.installer-journal-replay-fault-injection/v1",
           "power_loss_sidecar_recovered"
@@ -112,6 +122,42 @@
         "\"checkpointed_result_retained\": true",
         "\"checkpoint_digest\":",
         "\"safe_to_continue_other_tasks\": true"
+      ]
+    },
+    {
+      "id": "two-host-distributed-task-recovery-operational",
+      "status": "proven",
+      "grade": "operational",
+      "modules": [
+        "orchestra-control-plane",
+        "runtime-agent-cli",
+        "verification-evidence"
+      ],
+      "paradigms": [
+        "workflow_composition",
+        "runtime_api",
+        "validation"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "recovery",
+        "security"
+      ],
+      "files": [
+        "config/architecture/distributed-task-recovery-operational-qualification.json",
+        "schemas/distributed-task-recovery-operational-qualification-report.schema.json",
+        "releases/usability-evidence/2.14.8/distributed-task-recovery-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"journey\": \"remote-agent-inflight-loss-policy-and-rejoin\"",
+        "\"id\": \"idempotent\"",
+        "\"id\": \"side_effect_blocked\"",
+        "\"id\": \"checkpointed\"",
+        "\"reason_code\": \"agent_process_lost\"",
+        "\"fault_injection_barrier\": \"job-scoped-explicit-agent-hold\"",
+        "\"remote_rejoined\": true",
+        "\"managed_remote_root_removed\": true"
       ]
     },
     {

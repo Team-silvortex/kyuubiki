@@ -12,6 +12,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   alias KyuubikiWeb.Playground.AgentRegistry
 
   @rpc_version 1
+  @operator_control_opts [:job_id, :queue_timeout_ms, :request_timeout_ms, :orchestration]
 
   @spec solve_bar_1d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
   def solve_bar_1d(params, on_progress \\ fn _progress -> :ok end) do
@@ -242,6 +243,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   defp operator_task_routing_opts(task_ir, opts) do
     task_ir
     |> OperatorTaskIR.agent_routing_opts()
+    |> Keyword.merge(Keyword.take(opts, @operator_control_opts))
     |> maybe_override_retry_policy(opts)
     |> maybe_require_operator_package_runtime(Keyword.get(opts, :mode))
   end
@@ -540,16 +542,17 @@ defmodule KyuubikiWeb.Playground.AgentClient do
 
   defp maybe_put_lease_value(lease, _key, _value), do: lease
 
-  defp put_rpc_job_id(request, "solve_" <> _method, opts)
-       when is_map(request) and is_list(opts) do
+  defp put_rpc_job_id(request, method, opts)
+       when is_map(request) and is_binary(method) and is_list(opts) do
     job_id = Keyword.get(opts, :job_id)
+    job_bound = String.starts_with?(method, "solve_") or method == "run_operator_task_ir"
 
-    if is_binary(job_id) and job_id != "",
-      do: Map.put(request, "job_id", job_id),
-      else: request
+    if job_bound and is_binary(job_id) and job_id != "" do
+      Map.update!(request, "params", &Map.put(&1, "job_id", job_id))
+    else
+      request
+    end
   end
-
-  defp put_rpc_job_id(request, _method, _opts), do: request
 
   defp request_once(endpoint, request_id, request, on_progress, opts) do
     case connect(endpoint) do

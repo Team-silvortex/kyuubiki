@@ -122,15 +122,24 @@ sprawl:
   over, side-effecting work stops before blind replay, and explicitly
   checkpointed work resumes. Installer journal replay now survives an injected
   partial atomic commit, resumes from the first incomplete step without
-  replaying the completed prefix, and rejects digest tampering; only remote host
-  kill/rejoin with in-flight task state remains open in this distributed
-  recovery tier
+  replaying the completed prefix, and rejects digest tampering
 - native two-host control-link qualification now keeps one remote Linux Agent
   process alive while the macOS Orchestra is killed and recreated, observes the
   sanitized degraded state, requires full re-registration plus resumed
   heartbeats, and proves zero qualification residue. This closes Agent
-  control-link network-loss/rejoin without claiming in-flight task replay or
-  cross-platform installed-package recovery
+  control-link network-loss/rejoin without treating link recovery itself as
+  proof of task replay or cross-platform installed-package recovery
+- native two-host task-recovery qualification now arms an explicit,
+  default-disabled job-scoped Agent barrier, observes the selected remote Linux
+  Agent with the exact job active, kills that process before result commit, and
+  routes through the macOS Orchestra runtime to a local Rust fallback. A direct
+  solve is replayed, an export TaskIR without a checkpoint is blocked before
+  fallback dispatch, and the same TaskIR with a verified checkpoint is allowed
+  to continue. Every scenario then restarts the remote Agent on the same
+  endpoint and verifies a fresh closed-form solve. The retained report proves
+  three process-loss recoveries and zero local or remote residue; full host
+  power loss, persisted Orchestra restart with in-flight state, fleet package
+  acquisition, and the installed cross-platform matrix remain open
 - Installer-managed Agent update qualification now runs an isolated remote
   Linux install, changed-payload upgrade, executable probe, rollback, and second
   executable probe. Its semantic validator requires the rollback activation

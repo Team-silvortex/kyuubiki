@@ -104,6 +104,7 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
 
   defp order_matches({typed_matches, legacy_fallbacks}) do
     typed_matches
+    |> Enum.reverse()
     |> Enum.sort_by(fn {_endpoint, score} -> -score end)
     |> Enum.map(&elem(&1, 0))
     |> Kernel.++(Enum.reverse(legacy_fallbacks))

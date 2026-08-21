@@ -38,6 +38,7 @@ mod desktop_usability_journeys;
 mod direct_mesh_benchmark_compare;
 mod direct_mesh_container;
 mod direct_mesh_remote;
+mod distributed_task_recovery_operational_qualification;
 mod doc_inventory;
 mod docs_book;
 mod docs_book_research;
@@ -89,6 +90,7 @@ mod native_script_audit;
 mod native_time;
 mod nightly_artifact_overview;
 mod node_tests;
+mod operational_agent_support;
 mod operator_package_dynamic_smoke;
 mod operator_qualification_evidence_kits;
 mod operator_qualification_readiness;
@@ -367,6 +369,12 @@ fn run() -> RunnerResult<u8> {
         "agent-registry-sync" => agent_registry_sync::run_agent_registry_sync(&paths.root, rest),
         "qualify-agent-control-link-operational-remote" => {
             agent_control_link_operational_qualification::run_qualify_remote(&paths.root, rest)
+        }
+        "qualify-distributed-task-recovery-operational-remote" => {
+            distributed_task_recovery_operational_qualification::run_qualify_remote(
+                &paths.root,
+                rest,
+            )
         }
         "qualify-agent-solver-operational-remote" => {
             agent_solver_operational_qualification::run_qualify_agent_solver_operational_remote(

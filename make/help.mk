@@ -66,6 +66,8 @@ help:
 	@echo "  make check-workbench-validation-qualification Recheck retained Workbench validation qualification evidence"
 	@echo "  make qualify-agent-control-link-operational-remote Prove a remote Linux Agent re-registers after local Orchestra process loss"
 	@echo "  make check-agent-control-link-operational-qualification Recheck retained two-host Agent control-link recovery evidence"
+	@echo "  make qualify-distributed-task-recovery-operational-remote Kill an in-flight remote Agent and prove replay-safe two-host recovery"
+	@echo "  make check-distributed-task-recovery-operational-qualification Recheck retained in-flight task recovery evidence"
 	@echo "  make qualify-agent-solver-operational-remote Build, Installer-deploy, solve, restart, recover, and clean on the Linux lab host"
 	@echo "  make check-agent-solver-operational-qualification Recheck retained remote Linux Agent solver operational evidence"
 	@echo "  make qualify-agent-update-operational-remote Exercise Installer-managed Agent upgrade and payload rollback on remote Linux"

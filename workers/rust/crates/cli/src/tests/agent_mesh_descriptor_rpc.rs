@@ -50,6 +50,9 @@ fn handles_describe_agent_rpc_requests() {
     );
     assert!(descriptor_payload["watchdog"]["state"].is_string());
     assert!(descriptor_payload["watchdog"]["active_execution_count"].is_number());
+    assert!(descriptor_payload["watchdog"]["total_started_execution_count"].is_number());
+    assert!(descriptor_payload["watchdog"]["total_completed_execution_count"].is_number());
+    assert!(descriptor_payload["watchdog"]["total_failed_execution_count"].is_number());
     assert_eq!(
         descriptor_payload["operator_package_runtime"]["ready"],
         false

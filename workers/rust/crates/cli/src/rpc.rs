@@ -53,9 +53,9 @@ use crate::agent_state::{
     agent_descriptor_payload, build_progress_frames, extract_job_id, register_cancel,
     take_cancelled,
 };
-use crate::agent_watchdog;
 use crate::operator_task_runtime::run_operator_task_ir;
 use crate::transport::{AgentReply, HeartbeatHandle};
+use crate::{agent_fault_injection, agent_watchdog};
 
 pub(crate) fn handle_request(
     request: RpcRequest,
@@ -565,6 +565,7 @@ fn handle_operator_task_ir(
             HeartbeatHandle::spawn(shared_writer, request_id.clone(), job_id.clone())
         })
     });
+    agent_fault_injection::wait_for_release(&request_id, maybe_job_id.as_deref());
 
     let result = match run_operator_task_ir(&request.params) {
         Ok(result) => result,
@@ -649,6 +650,7 @@ where
             HeartbeatHandle::spawn(shared_writer, request_id.clone(), job_id.clone())
         })
     });
+    agent_fault_injection::wait_for_release(&request_id, maybe_job_id.as_deref());
 
     let params = match decode_solver_params::<Request>(request.params) {
         Ok(params) => params,

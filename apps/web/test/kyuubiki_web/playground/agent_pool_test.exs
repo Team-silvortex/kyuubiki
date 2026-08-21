@@ -30,6 +30,28 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
     assert Enum.map(AgentPool.checkout_endpoints(), & &1.id) == ["agent-c", "agent-a", "agent-b"]
   end
 
+  test "preserves round-robin order when constrained endpoints have equal scores" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{id: "remote-primary", host: "127.0.0.1", port: 5101},
+        %{id: "local-fallback", host: "127.0.0.1", port: 5102}
+      ]
+    )
+
+    assert :ok = AgentPool.reload()
+    opts = [execution_lease: %{lease_id: "qualification-lease"}]
+
+    assert Enum.map(AgentPool.checkout_endpoints("solve_bar_1d", opts), & &1.id) == [
+             "remote-primary",
+             "local-fallback"
+           ]
+
+    assert Enum.map(AgentPool.checkout_endpoints("solve_bar_1d", opts), & &1.id) == [
+             "local-fallback",
+             "remote-primary"
+           ]
+  end
+
   test "loads remote agents from a manifest file in distributed mode" do
     manifest_path = Path.join(System.tmp_dir!(), "kyuubiki-agent-manifest-test.json")
 

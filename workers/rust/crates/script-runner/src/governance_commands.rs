@@ -4,7 +4,8 @@ use crate::{
     central_readiness_report, central_store_contract, commercial_readiness,
     component_integrity_protocol, contracts_runtime_api_surface,
     contracts_validation_qualification, dependency_audit, desktop_deployment_update_validation,
-    desktop_ui_validation, desktop_usability_journeys, doc_inventory, docs_book, frontend_checks,
+    desktop_ui_validation, desktop_usability_journeys,
+    distributed_task_recovery_operational_qualification, doc_inventory, docs_book, frontend_checks,
     gui_runtime_capability_contract, headless_sdk_operational, headless_sdk_validation,
     headless_workflow_qualification, install_update_disk_hygiene, installation_integrity_docs,
     installed_runtime_operational_qualification, installer_recovery_fault_injection,
@@ -194,6 +195,9 @@ pub(crate) fn run_governance_command(
         }
         "check-agent-control-link-operational-qualification" => {
             agent_control_link_operational_qualification::run_check(root, args)
+        }
+        "check-distributed-task-recovery-operational-qualification" => {
+            distributed_task_recovery_operational_qualification::run_check(root, args)
         }
         "check-agent-update-operational-qualification" => {
             agent_update_operational_qualification::run_check_agent_update_operational_qualification(

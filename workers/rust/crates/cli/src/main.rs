@@ -8,6 +8,7 @@ use serde::Deserialize;
 mod agent_artifact;
 mod agent_control_link;
 mod agent_deployment;
+mod agent_fault_injection;
 mod agent_headless_bridge;
 mod agent_http;
 mod agent_mesh;
@@ -67,6 +68,7 @@ fn main() {
 
 fn run_agent(config: &AgentConfig) -> Result<(), String> {
     agent_artifact::configure(config);
+    agent_fault_injection::configure_from_env()?;
     store_runtime_descriptor(build_agent_descriptor(config));
     store_deployment_readiness(build_agent_deployment_readiness_for_config(config));
     store_operator_package_runtime_binding(operator_package_runtime_binding_from_config(config));

@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/distributed-task-recovery-operational-qualification-report.schema.json",
+  "title": "Kyuubiki Two-host Distributed Task Recovery Operational Qualification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "status",
+    "journey",
+    "topology",
+    "scenarios",
+    "cleanup",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.distributed-task-recovery-operational-qualification/v1"
+    },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "status": { "const": "pass" },
+    "journey": { "const": "remote-agent-inflight-loss-policy-and-rejoin" },
+    "topology": { "$ref": "#/$defs/topology" },
+    "scenarios": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "$ref": "#/$defs/scenario" }
+    },
+    "cleanup": { "$ref": "#/$defs/cleanup" },
+    "checks": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "items": { "$ref": "#/$defs/check" }
+    }
+  },
+  "$defs": {
+    "topology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "orchestration_host_role",
+        "primary_agent_host_role",
+        "fallback_agent_host_role",
+        "orchestration_platform",
+        "primary_agent_platform",
+        "fallback_agent_platform",
+        "primary_agent_architecture",
+        "transport",
+        "build_profile",
+        "fault_injection_barrier",
+        "scenario_count",
+        "remote_process_restart_count",
+        "same_remote_endpoint"
+      ],
+      "properties": {
+        "orchestration_host_role": { "const": "local-macos-orchestra-runtime" },
+        "primary_agent_host_role": { "const": "remote-linux-primary-agent" },
+        "fallback_agent_host_role": { "const": "local-macos-fallback-agent" },
+        "orchestration_platform": { "const": "macos" },
+        "primary_agent_platform": { "const": "linux" },
+        "fallback_agent_platform": { "const": "macos" },
+        "primary_agent_architecture": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "transport": { "const": "lan-agent-rpc" },
+        "build_profile": { "const": "release" },
+        "fault_injection_barrier": { "const": "job-scoped-explicit-agent-hold" },
+        "scenario_count": { "const": 3 },
+        "remote_process_restart_count": { "type": "integer", "minimum": 3 },
+        "same_remote_endpoint": { "const": true }
+      }
+    },
+    "counter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["started", "completed", "failed", "active"],
+      "properties": {
+        "started": { "type": "integer", "minimum": 0 },
+        "completed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "active": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "counterDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["started", "completed", "failed"],
+      "properties": {
+        "started": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "completed": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "failed": { "const": 0 }
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "failure_stage",
+        "reason_code",
+        "process_loss",
+        "retry_safety",
+        "checkpoint_digest",
+        "retryable",
+        "remaining_agent_count",
+        "safe_to_continue_other_tasks",
+        "next_action"
+      ],
+      "properties": {
+        "failure_stage": { "const": "receive" },
+        "reason_code": { "const": "agent_process_lost" },
+        "process_loss": { "const": true },
+        "retry_safety": {
+          "enum": ["idempotent", "checkpoint_required", "checkpointed"]
+        },
+        "checkpoint_digest": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "retryable": { "type": "boolean" },
+        "remaining_agent_count": { "const": 1 },
+        "safe_to_continue_other_tasks": { "const": true },
+        "next_action": { "enum": ["retry_next_agent", "checkpoint_before_retry"] }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "job_id",
+        "method",
+        "injected_fault",
+        "outcome",
+        "retry_safety",
+        "primary_before",
+        "primary_inflight",
+        "fallback_before",
+        "fallback_after",
+        "fallback_delta",
+        "recovery",
+        "checkpoint_digest",
+        "result_verified",
+        "remote_rejoined",
+        "followup_solver_verified"
+      ],
+      "properties": {
+        "id": { "enum": ["idempotent", "side_effect_blocked", "checkpointed"] },
+        "job_id": { "type": "string", "minLength": 1 },
+        "method": { "enum": ["solve_bar_1d", "run_operator_task_ir"] },
+        "injected_fault": {
+          "const": "remote_agent_terminated_after_dispatch_before_result_commit"
+        },
+        "outcome": {
+          "enum": ["fallback_completed", "replay_blocked", "checkpoint_authorized_fallback"]
+        },
+        "retry_safety": {
+          "enum": ["idempotent", "checkpoint_required", "checkpointed"]
+        },
+        "primary_before": { "$ref": "#/$defs/counter" },
+        "primary_inflight": { "$ref": "#/$defs/counter" },
+        "fallback_before": { "$ref": "#/$defs/counter" },
+        "fallback_after": { "$ref": "#/$defs/counter" },
+        "fallback_delta": { "$ref": "#/$defs/counterDelta" },
+        "recovery": { "$ref": "#/$defs/recovery" },
+        "checkpoint_digest": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "result_verified": { "const": true },
+        "remote_rejoined": { "const": true },
+        "followup_solver_verified": { "const": true }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "local_agent_stopped",
+        "remote_agent_stopped",
+        "local_port_closed",
+        "remote_port_closed",
+        "managed_remote_root_removed",
+        "local_work_root_removed"
+      ],
+      "properties": {
+        "local_agent_stopped": { "const": true },
+        "remote_agent_stopped": { "const": true },
+        "local_port_closed": { "const": true },
+        "remote_port_closed": { "const": true },
+        "managed_remote_root_removed": { "const": true },
+        "local_work_root_removed": { "const": true }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": { "const": "pass" }
+      }
+    }
+  }
+}

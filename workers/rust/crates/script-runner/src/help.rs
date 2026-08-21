@@ -110,6 +110,8 @@ lab remote-ssh-fixture\n  \
   check-system-security-qualification\n  \
   check-agent-control-link-operational-qualification\n  \
   qualify-agent-control-link-operational-remote\n  \
+  check-distributed-task-recovery-operational-qualification\n  \
+  qualify-distributed-task-recovery-operational-remote\n  \
   check-agent-solver-operational-qualification\n  \
   qualify-agent-solver-operational-remote\n  \
   check-agent-update-operational-qualification\n  \

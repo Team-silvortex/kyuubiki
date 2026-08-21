@@ -55,6 +55,9 @@ pub(crate) struct FailureReport {
 pub(crate) struct WatchdogSnapshot {
     pub(crate) state: String,
     pub(crate) policy: WatchdogPolicySnapshot,
+    pub(crate) total_started_execution_count: u64,
+    pub(crate) total_completed_execution_count: u64,
+    pub(crate) total_failed_execution_count: u64,
     pub(crate) active_execution_count: usize,
     pub(crate) recent_failure_count: usize,
     pub(crate) active_executions: Vec<ActiveExecutionSnapshot>,
@@ -73,6 +76,9 @@ pub(crate) struct ActiveExecutionSnapshot {
 #[derive(Debug, Default)]
 struct WatchdogState {
     policy: WatchdogPolicySnapshot,
+    total_started_execution_count: u64,
+    total_completed_execution_count: u64,
+    total_failed_execution_count: u64,
     active: HashMap<String, ExecutionRecord>,
     recent_failures: VecDeque<FailureReport>,
 }
@@ -121,6 +127,7 @@ fn begin_execution_at(
     now: u128,
 ) -> ExecutionGuard {
     if let Ok(mut state) = state.lock() {
+        state.total_started_execution_count = state.total_started_execution_count.saturating_add(1);
         state.active.insert(
             request_id.clone(),
             ExecutionRecord {
@@ -156,7 +163,10 @@ fn mark_progress_at(state: &Mutex<WatchdogState>, request_id: &str, now: u128) -
 
 fn complete_execution_in(state: &Mutex<WatchdogState>, guard: ExecutionGuard) {
     if let Ok(mut state) = state.lock() {
-        state.active.remove(&guard.request_id);
+        if state.active.remove(&guard.request_id).is_some() {
+            state.total_completed_execution_count =
+                state.total_completed_execution_count.saturating_add(1);
+        }
     }
 }
 
@@ -180,6 +190,8 @@ fn fail_execution_in(
     if let Ok(mut state) = state.lock() {
         if let Some(record) = state.active.remove(&guard.request_id) {
             let report = failure_from_record(record, reason_code, message, now);
+            state.total_failed_execution_count =
+                state.total_failed_execution_count.saturating_add(1);
             retain_failure(&mut state, report.clone());
             return report;
         }
@@ -203,6 +215,7 @@ fn fail_execution_in(
             message,
             now,
         );
+        state.total_failed_execution_count = state.total_failed_execution_count.saturating_add(1);
         retain_failure(&mut state, report.clone());
         report
     } else {
@@ -279,6 +292,7 @@ fn scan_stale_executions_at(state: &Mutex<WatchdogState>, now: u128) -> Vec<Fail
             ),
             now,
         );
+        state.total_failed_execution_count = state.total_failed_execution_count.saturating_add(1);
         retain_failure(&mut state, report.clone());
         reports.push(report);
     }
@@ -314,6 +328,9 @@ fn snapshot_from_at(state: &Mutex<WatchdogState>, now: u128) -> WatchdogSnapshot
                 "watch".to_string()
             },
             policy: state.policy.clone(),
+            total_started_execution_count: state.total_started_execution_count,
+            total_completed_execution_count: state.total_completed_execution_count,
+            total_failed_execution_count: state.total_failed_execution_count,
             active_execution_count: state.active.len(),
             recent_failure_count: state.recent_failures.len(),
             active_executions,
@@ -323,6 +340,9 @@ fn snapshot_from_at(state: &Mutex<WatchdogState>, now: u128) -> WatchdogSnapshot
         WatchdogSnapshot {
             state: "unknown".to_string(),
             policy: WatchdogPolicySnapshot::default(),
+            total_started_execution_count: 0,
+            total_completed_execution_count: 0,
+            total_failed_execution_count: 0,
             active_execution_count: 0,
             recent_failure_count: 0,
             active_executions: vec![],
@@ -542,6 +562,33 @@ fn unix_now_ms() -> u128 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn execution_counters_are_monotonic_and_do_not_double_count_late_failures() {
+        let state = Mutex::new(WatchdogState::default());
+        let failed = begin_execution_in(
+            &state,
+            "failed-request".to_string(),
+            Some("failed-job".to_string()),
+            "run_operator_task_ir".to_string(),
+        );
+        let late = failed.clone();
+        fail_execution_in(&state, failed, "injected", "injected failure");
+        fail_execution_in(&state, late, "late", "late failure");
+
+        let completed = begin_execution_in(
+            &state,
+            "completed-request".to_string(),
+            Some("completed-job".to_string()),
+            "solve_bar_1d".to_string(),
+        );
+        complete_execution_in(&state, completed);
+
+        let snapshot = snapshot_from(&state);
+        assert_eq!(snapshot.total_started_execution_count, 2);
+        assert_eq!(snapshot.total_completed_execution_count, 1);
+        assert_eq!(snapshot.total_failed_execution_count, 1);
+    }
 
     #[test]
     fn fault_injection_releases_slot_and_preserves_reason() {

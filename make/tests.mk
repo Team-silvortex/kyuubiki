@@ -4,6 +4,7 @@
 .PHONY: test-integration test-integration-api test-integration-cluster
 .PHONY: test-integration-direct-mesh test-integration-desktop-gui qualify-desktop-ui-validation qualify-protocol-validation qualify-contracts-validation qualify-workbench-validation
 .PHONY: qualify-headless-sdk-validation qualify-runtime-api-verification qualify-benchmark qualify-headless-sdk-operational-remote check-headless-sdk-operational-qualification qualify-desktop-deployment-update qualify-system-security qualify-agent-control-link-operational-remote qualify-agent-solver-operational-remote qualify-agent-update-operational-remote check-agent-update-operational-qualification qualify-runtime-payload-operational-remote check-runtime-payload-operational-qualification qualify-orchestra-workflow-operational-remote qualify-persistence-provenance
+.PHONY: qualify-distributed-task-recovery-operational-remote
 .PHONY: test-integration-benchmark-profile-index
 .PHONY: test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-central-database-smoke remote-central-database-smoke
 .PHONY: test-integration-direct-mesh-docker-compare
@@ -92,6 +93,9 @@ qualify-agent-solver-operational-remote:
 
 qualify-agent-control-link-operational-remote:
 	@$(ENTRYPOINT) qualify-agent-control-link-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/agent-control-link-operational-qualification.json} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}
+
+qualify-distributed-task-recovery-operational-remote:
+	@$(ENTRYPOINT) qualify-distributed-task-recovery-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/distributed-task-recovery-operational-qualification.json} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}
 
 qualify-agent-update-operational-remote:
 	@$(ENTRYPOINT) qualify-agent-update-operational-remote --host $${REMOTE:-kyuubiki-lab} $${OUTPUT:+--out $${OUTPUT}}

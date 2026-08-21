@@ -1,19 +1,20 @@
 use super::report::{CleanupEvidence, JourneyPhases, PhaseEvidence};
+use crate::operational_agent_support::{
+    available_local_port, connection_profile, query_agent_descriptor, remove_local_work_root,
+    wait_endpoint_closed,
+};
 use crate::qualification_support::generated_at_unix_ms;
 use crate::remote_host::{
-    remote_shell_path, rsync_to, shell_escape, ssh_output, ssh_status, ssh_success_quiet,
+    remote_shell_path, rsync_to, shell_escape, ssh_status, ssh_success_quiet,
 };
 use getrandom::fill as fill_random;
-use kyuubiki_protocol::{
-    AgentControlLinkDescriptor, AgentDescriptor, RPC_VERSION, RpcMethod, RpcRequest, RpcResponse,
-};
-use serde_json::{Value, json};
+use kyuubiki_protocol::AgentControlLinkDescriptor;
+use serde_json::Value;
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpListener, TcpStream};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::str::FromStr;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -22,7 +23,6 @@ type RunnerResult<T> = Result<T, String>;
 const AGENT_ID: &str = "control-link-qualification-agent";
 const CLUSTER_ID: &str = "control-link-qualification-cluster";
 const MAX_HTTP_BYTES: u64 = 4 * 1024 * 1024;
-const MAX_RPC_BYTES: usize = 4 * 1024 * 1024;
 
 pub(crate) fn capture(
     root: &Path,
@@ -38,12 +38,6 @@ pub(crate) fn capture(
         (Ok(_), Err(cleanup_error)) => Err(cleanup_error),
         (Err(error), Err(cleanup_error)) => Err(format!("{error}; cleanup: {cleanup_error}")),
     }
-}
-
-struct ConnectionProfile {
-    local_ip: Ipv4Addr,
-    remote_ip: Ipv4Addr,
-    remote_architecture: String,
 }
 
 struct Session {
@@ -514,58 +508,6 @@ impl Drop for Session {
     }
 }
 
-fn connection_profile(root: &Path, host: &str) -> RunnerResult<ConnectionProfile> {
-    let output = ssh_output(
-        root,
-        host,
-        "printf '%s\\n' \"$SSH_CONNECTION\"; uname -s; uname -m".to_string(),
-    )?;
-    let mut lines = output.lines();
-    let connection = lines
-        .next()
-        .ok_or("remote SSH connection metadata is missing")?
-        .split_whitespace()
-        .collect::<Vec<_>>();
-    if connection.len() != 4 || lines.next() != Some("Linux") {
-        return Err("qualification host must be Linux over a direct SSH connection".to_string());
-    }
-    let local_ip = parse_ipv4(connection[0], "local Orchestra")?;
-    let remote_ip = parse_ipv4(connection[2], "remote Agent")?;
-    let remote_architecture = lines
-        .next()
-        .filter(|value| {
-            !value.is_empty()
-                && value
-                    .bytes()
-                    .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-'))
-        })
-        .ok_or("remote architecture is invalid")?
-        .to_string();
-    Ok(ConnectionProfile {
-        local_ip,
-        remote_ip,
-        remote_architecture,
-    })
-}
-
-fn parse_ipv4(value: &str, label: &str) -> RunnerResult<Ipv4Addr> {
-    match IpAddr::from_str(value) {
-        Ok(IpAddr::V4(address)) if !address.is_loopback() && !address.is_unspecified() => {
-            Ok(address)
-        }
-        _ => Err(format!(
-            "{label} address must be a non-loopback IPv4 address"
-        )),
-    }
-}
-
-fn available_local_port() -> RunnerResult<u16> {
-    TcpListener::bind((Ipv4Addr::UNSPECIFIED, 0))
-        .and_then(|listener| listener.local_addr())
-        .map(|address| address.port())
-        .map_err(|error| format!("failed to reserve a local Orchestra port: {error}"))
-}
-
 fn random_token() -> RunnerResult<String> {
     let mut bytes = [0_u8; 32];
     fill_random(&mut bytes)
@@ -630,54 +572,6 @@ fn remote_reset_agent_command(run_root: &str) -> String {
     format!(
         "set -eu; run_root={run_root}; if test -f \"$run_root/agent.pid\"; then pid=$(cat \"$run_root/agent.pid\"); case \"$pid\" in ''|*[!0-9]*) exit 2 ;; esac; if kill -0 \"$pid\" 2>/dev/null; then actual=$(readlink -f \"/proc/$pid/exe\" || true); test \"$actual\" = \"$run_root/kyuubiki-agent\"; kill \"$pid\"; count=0; while kill -0 \"$pid\" 2>/dev/null && test \"$count\" -lt 50; do sleep 0.1; count=$((count + 1)); done; if kill -0 \"$pid\" 2>/dev/null; then kill -9 \"$pid\"; fi; fi; fi; rm -f \"$run_root/agent.pid\" \"$run_root/control.env\""
     )
-}
-
-fn query_agent_descriptor(address: SocketAddr) -> RunnerResult<AgentDescriptor> {
-    let mut stream = TcpStream::connect_timeout(&address, Duration::from_millis(500))
-        .map_err(|error| format!("Agent RPC unavailable: {error}"))?;
-    stream
-        .set_read_timeout(Some(Duration::from_secs(2)))
-        .map_err(|error| format!("failed to configure Agent RPC read timeout: {error}"))?;
-    stream
-        .set_write_timeout(Some(Duration::from_secs(2)))
-        .map_err(|error| format!("failed to configure Agent RPC write timeout: {error}"))?;
-    let request = RpcRequest {
-        rpc_version: RPC_VERSION,
-        id: "control-link-qualification-describe".to_string(),
-        method: RpcMethod::DescribeAgent,
-        params: json!({}),
-    };
-    let payload = serde_json::to_vec(&request)
-        .map_err(|error| format!("failed to encode Agent RPC request: {error}"))?;
-    let length =
-        u32::try_from(payload.len()).map_err(|_| "Agent RPC request is too large".to_string())?;
-    stream
-        .write_all(&length.to_be_bytes())
-        .and_then(|_| stream.write_all(&payload))
-        .map_err(|error| format!("failed to write Agent RPC request: {error}"))?;
-    let mut header = [0_u8; 4];
-    stream
-        .read_exact(&mut header)
-        .map_err(|error| format!("failed to read Agent RPC response header: {error}"))?;
-    let response_length = u32::from_be_bytes(header) as usize;
-    if response_length == 0 || response_length > MAX_RPC_BYTES {
-        return Err("Agent RPC response length is invalid".to_string());
-    }
-    let mut response_bytes = vec![0_u8; response_length];
-    stream
-        .read_exact(&mut response_bytes)
-        .map_err(|error| format!("failed to read Agent RPC response: {error}"))?;
-    let response: RpcResponse = serde_json::from_slice(&response_bytes)
-        .map_err(|error| format!("invalid Agent RPC response: {error}"))?;
-    if !response.ok {
-        return Err("Agent descriptor RPC was rejected".to_string());
-    }
-    serde_json::from_value(
-        response
-            .result
-            .ok_or("Agent descriptor RPC omitted its result")?,
-    )
-    .map_err(|error| format!("invalid Agent descriptor: {error}"))
 }
 
 fn http_get_json(port: u16, path: &str, token: &str) -> RunnerResult<Value> {
@@ -760,25 +654,6 @@ fn registry_contains_agent(value: &Value, minimum_registrations: u64) -> bool {
                     .and_then(Value::as_u64)
                     .is_some_and(|count| count >= minimum_registrations)
         })
-}
-
-fn wait_endpoint_closed(address: SocketAddr, timeout: Duration) -> RunnerResult<()> {
-    let deadline = Instant::now() + timeout;
-    while Instant::now() < deadline {
-        if TcpStream::connect_timeout(&address, Duration::from_millis(100)).is_err() {
-            return Ok(());
-        }
-        thread::sleep(Duration::from_millis(100));
-    }
-    Err("qualification endpoint remained open after cleanup".to_string())
-}
-
-fn remove_local_work_root(path: &Path) -> RunnerResult<bool> {
-    if path.exists() {
-        fs::remove_dir_all(path)
-            .map_err(|error| format!("failed to remove local qualification work root: {error}"))?;
-    }
-    Ok(!path.exists())
 }
 
 #[cfg(test)]
