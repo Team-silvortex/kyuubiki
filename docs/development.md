@@ -65,7 +65,8 @@ Use `./scripts/kyuubiki` as the top-level local launcher.
   runs the Rust worker directly
 - `./scripts/kyuubiki playground` serves the in-browser FEM playground through the
   Elixir app on `http://127.0.0.1:4000/playground/`
-- `./scripts/kyuubiki frontend` serves the Next.js workbench UI on `http://127.0.0.1:3000`
+- `./scripts/kyuubiki frontend` refreshes the static export when needed, then
+  serves it through the native Rust gateway on `http://127.0.0.1:3000`
 - `./scripts/kyuubiki test` and `./scripts/kyuubiki verify` wrap the repo checks
 
 This is intentionally a host-native launcher rather than a container-first one.
@@ -125,7 +126,8 @@ Fast verification shortcuts:
 
 When the change is workflow-heavy in `apps/frontend`, add one more pass:
 
-- start `npm run dev` inside `apps/frontend`
+- start the native local stack with `./scripts/kyuubiki restart-local`; use
+  `npm run dev` only for isolated UI hot-reload work
 - run `./scripts/kyuubiki workflow-preflight`
 
 ## Active development priorities

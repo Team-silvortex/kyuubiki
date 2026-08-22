@@ -116,8 +116,9 @@ installer-managed on `kyuubiki-lab`:
 - `patchelf`
 
 Use `cargo run -p kyuubiki-installer -- linux-desktop-deps` to print the
-installer-owned dependency plan, including the user-scoped Node runtime path,
-the apt package set, and the preflight command.
+installer-owned dependency plan, including the user-scoped frontend build Node
+path, the apt package set, and the preflight command. That Node tree is not
+copied into an installed Kyuubiki runtime.
 - `./scripts/kyuubiki package-desktop macos|linux|windows`
 - `./scripts/kyuubiki package-desktop all`
 - `./scripts/kyuubiki desktop-upload-remote macos|linux|windows|all`
@@ -151,13 +152,15 @@ Current staged runtime layout:
 - `dist/<platform>/manifests`
 - `dist/<platform>/manifests/embedded-runtimes.json`
 - `dist/<platform>/runtimes`
+- `dist/<platform>/services`
 - `dist/<platform>/scripts`
 - `dist/<platform>/exports`
 
 ## Embedded runtime posture
 
-Self-hosted installs should not require users to manually install Elixir/OTP or
-Node before Kyuubiki can run. The installer-managed release scaffold now writes:
+Self-hosted installs do not require users to install Node. Node is pinned only
+for frontend compilation and development; the installed Workbench is a static
+export served by `kyuubiki-runtime`. The installer-managed release scaffold writes:
 
 - `dist/<platform>/manifests/embedded-runtimes.json`
 - `dist/<platform>/runtimes`
@@ -167,12 +170,24 @@ runtime payloads expected for self-host operation:
 
 - `elixir-otp` for the control plane, workflow mesh checks, and live headless
   tests
-- `node` for runtime scripts, frontend launch surfaces, and docs/contract
-  checks
+- no JavaScript runtime payload: static asset serving, Orchestra proxying, and
+  direct-mesh TCP bridging are native Rust runtime responsibilities
 
 The runtime contract makes versions, target paths, development fallback, and
 installer-managed fail-closed policy visible. Missing runtime payloads are
 deployment blockers for self-host releases, not hidden user prerequisites.
+
+The service launch manifest points `frontend` back to
+`bin/kyuubiki-runtime serve-frontend`. The package therefore contains neither
+`services/frontend/server.js` nor `runtimes/<platform>/node`.
+Restaging is also a migration boundary: known legacy Node runtime directories,
+server entrypoints, and frontend `node_modules` are removed before a new
+payload is sealed, so old installs do not retain an unused JavaScript runtime.
+The old `runtime-payload.json` seal is removed at the same boundary and is only
+recreated after the complete native payload has been assembled.
+Runtime payload assembly builds every Rust, Orchestra, and frontend input
+before mutating the existing staging directory. A failed prerequisite build
+therefore cannot replace a usable staged payload with a partial one.
 
 Development launch commands, integration tests, remote mesh regression, and
 all three desktop shells resolve runtime commands through the shared native
@@ -388,8 +403,8 @@ When packaging desktop deliverables, the smoothest path is now:
 
 1. inspect current readiness:
    `make desktop-status PLATFORM=all`
-2. if the change touches workflow-heavy frontend surfaces, start `npm run dev`
-   in `apps/frontend` and run:
+2. if the change touches workflow-heavy frontend surfaces, start the native
+   local stack with `./scripts/kyuubiki restart-local` and run:
    `make workflow-preflight`
 3. stage or refresh rollout scaffolds:
    `make desktop-stage PLATFORM=all`

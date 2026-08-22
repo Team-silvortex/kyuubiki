@@ -20,34 +20,15 @@ import type {
 } from "./workflow-types.ts";
 import type { JobEnvelope, JobHistoryPayload, JobState } from "./fem-shared.ts";
 import { requestJson } from "./core.ts";
+import {
+  normalizeDirectMeshStudyInput,
+  type DirectMeshStudyKind,
+} from "@/lib/runtime-gateway/direct-mesh-study-contract";
+
+export type { DirectMeshStudyKind } from "@/lib/runtime-gateway/direct-mesh-study-contract";
 
 const LARGE_WORKFLOW_COMPACT_THRESHOLD = 1024;
 type RuntimeRequestJson = <T>(url: string, init?: RequestInit, timeoutMs?: number) => Promise<T>;
-export type DirectMeshStudyKind =
-  | "axial_bar_1d"
-  | "thermal_bar_1d"
-  | "heat_bar_1d"
-  | "electrostatic_plane_triangle_2d"
-  | "electrostatic_plane_quad_2d"
-  | "heat_plane_triangle_2d"
-  | "heat_plane_quad_2d"
-  | "thermal_truss_2d"
-  | "thermal_truss_3d"
-  | "spring_1d"
-  | "spring_2d"
-  | "spring_3d"
-  | "beam_1d"
-  | "thermal_beam_1d"
-  | "thermal_frame_2d"
-  | "torsion_1d"
-  | "truss_2d"
-  | "truss_3d"
-  | "plane_triangle_2d"
-  | "thermal_plane_triangle_2d"
-  | "plane_quad_2d"
-  | "thermal_plane_quad_2d"
-  | "frame_2d";
-
 function compactWorkflowResponseOptions(): WorkflowGraphResponseOptions {
   return {
     include_artifact_lineage: false,
@@ -297,10 +278,11 @@ export function createRuntimeApiClient(request: RuntimeRequestJson) {
       endpoints: string[],
       selectionMode: DirectMeshSelectionMode,
     ) {
+      const normalizedInput = normalizeDirectMeshStudyInput(studyKind, input);
       return request<Awaited<ReturnType<typeof createDirectMeshSolve<TResult>>>>("/api/direct-mesh/solve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ study_kind: studyKind, input, endpoints, selection_mode: selectionMode }),
+        body: JSON.stringify({ study_kind: studyKind, input: normalizedInput, endpoints, selection_mode: selectionMode }),
       });
     },
   };

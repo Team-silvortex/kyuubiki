@@ -13,6 +13,7 @@ defmodule KyuubikiWeb.Application do
           KyuubikiWeb.Playground.AgentPool,
           KyuubikiWeb.Playground.AgentExecutionGate,
           {Task.Supervisor, name: KyuubikiWeb.TaskSupervisor},
+          KyuubikiWeb.Orchestra.HeadlessHandoffRegistry,
           KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator,
           KyuubikiWeb.Jobs.Watchdog
         ] ++ maybe_http_server()

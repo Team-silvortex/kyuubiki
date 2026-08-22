@@ -1,52 +1,57 @@
 import {
   resolveAxialBarJobInput,
   resolveBeam1dJobInput,
+  resolveHeatBar1dJobInput,
+  resolveSpring1dJobInput,
+  resolveThermalBar1dJobInput,
+  resolveThermalBeam1dJobInput,
+  resolveTorsion1dJobInput,
+  type AxialBarJobInput,
+  type Beam1dJobInput,
+  type HeatBar1dJobInput,
+  type Spring1dJobInput,
+  type ThermalBar1dJobInput,
+  type ThermalBeam1dJobInput,
+  type Torsion1dJobInput,
+} from "@/lib/api/fem-1d";
+import {
+  resolveFrame2dJobInput,
+  resolveSpring2dJobInput,
+  resolveThermalFrame2dJobInput,
+  resolveThermalTruss2dJobInput,
+  resolveTruss2dJobInput,
+  type Frame2dJobInput,
+  type Spring2dJobInput,
+  type ThermalFrame2dJobInput,
+  type ThermalTruss2dJobInput,
+  type Truss2dJobInput,
+} from "@/lib/api/fem-2d-line";
+import {
   resolveElectrostaticPlaneQuad2dJobInput,
   resolveElectrostaticPlaneTriangle2dJobInput,
-  resolveFrame2dJobInput,
-  resolveHeatBar1dJobInput,
   resolveHeatPlaneQuad2dJobInput,
   resolveHeatPlaneTriangle2dJobInput,
   resolvePlaneQuad2dJobInput,
   resolvePlaneTriangle2dJobInput,
-  resolveSpring1dJobInput,
-  resolveSpring2dJobInput,
-  resolveSpring3dJobInput,
-  resolveThermalBar1dJobInput,
-  resolveThermalBeam1dJobInput,
-  resolveThermalFrame2dJobInput,
   resolveThermalPlaneQuad2dJobInput,
   resolveThermalPlaneTriangle2dJobInput,
-  resolveThermalTruss2dJobInput,
-  resolveThermalTruss3dJobInput,
-  resolveTorsion1dJobInput,
-  resolveTruss2dJobInput,
-  resolveTruss3dJobInput,
-  type AxialBarJobInput,
-  type Beam1dJobInput,
   type ElectrostaticPlaneQuad2dJobInput,
   type ElectrostaticPlaneTriangle2dJobInput,
-  type Frame2dJobInput,
-  type HeatBar1dJobInput,
   type HeatPlaneQuad2dJobInput,
   type HeatPlaneTriangle2dJobInput,
   type PlaneQuad2dJobInput,
   type PlaneTriangle2dJobInput,
-  type Spring1dJobInput,
-  type Spring2dJobInput,
-  type Spring3dJobInput,
-  type ThermalBar1dJobInput,
-  type ThermalBeam1dJobInput,
-  type ThermalFrame2dJobInput,
   type ThermalPlaneQuad2dJobInput,
   type ThermalPlaneTriangle2dJobInput,
-  type ThermalTruss2dJobInput,
+} from "@/lib/api/fem-2d-surface";
+import {
+  resolveSpring3dJobInput,
+  resolveThermalTruss3dJobInput,
+  resolveTruss3dJobInput,
+  type Spring3dJobInput,
   type ThermalTruss3dJobInput,
-  type Torsion1dJobInput,
-  type Truss2dJobInput,
   type Truss3dJobInput,
-} from "@/lib/api";
-import type { DirectMeshRpcMethod } from "@/lib/direct-mesh/rpc";
+} from "@/lib/api/fem-3d";
 
 export type DirectMeshStudyKind =
   | "axial_bar_1d"
@@ -80,9 +85,34 @@ export type DirectMeshSolveBody = {
   input: Record<string, unknown>;
 };
 
+export type DirectMeshSolveRpcMethod =
+  | "solve_bar_1d"
+  | "solve_thermal_bar_1d"
+  | "solve_heat_bar_1d"
+  | "solve_electrostatic_plane_triangle_2d"
+  | "solve_electrostatic_plane_quad_2d"
+  | "solve_heat_plane_triangle_2d"
+  | "solve_heat_plane_quad_2d"
+  | "solve_thermal_truss_2d"
+  | "solve_thermal_truss_3d"
+  | "solve_spring_1d"
+  | "solve_spring_2d"
+  | "solve_spring_3d"
+  | "solve_beam_1d"
+  | "solve_thermal_beam_1d"
+  | "solve_thermal_frame_2d"
+  | "solve_torsion_1d"
+  | "solve_truss_2d"
+  | "solve_truss_3d"
+  | "solve_plane_triangle_2d"
+  | "solve_thermal_plane_triangle_2d"
+  | "solve_plane_quad_2d"
+  | "solve_thermal_plane_quad_2d"
+  | "solve_frame_2d";
+
 export function directMeshMethodForStudyKind(
   kind: DirectMeshStudyKind,
-): Exclude<DirectMeshRpcMethod, "ping" | "describe_agent"> {
+): DirectMeshSolveRpcMethod {
   switch (kind) {
     case "axial_bar_1d": return "solve_bar_1d";
     case "thermal_bar_1d": return "solve_thermal_bar_1d";

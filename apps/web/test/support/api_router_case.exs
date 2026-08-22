@@ -29,6 +29,7 @@ defmodule KyuubikiWeb.TestSupport.ApiRouterCase do
     KyuubikiWeb.Jobs.Store.reset()
     KyuubikiWeb.AnalysisResultStore.reset()
     KyuubikiWeb.Library.reset()
+    KyuubikiWeb.Orchestra.HeadlessHandoffRegistry.reset()
     KyuubikiWeb.SecurityEvents.Store.reset()
     KyuubikiWeb.Security.reset_cluster_nonce_cache()
 

@@ -64,7 +64,7 @@ back to it instead of re-explaining the same boundary in full.
   `headless-agent-contract.md`
 - Owns:
   stable headless runtime contract, solver RPC layering, and the rule that
-  frontend direct-mesh routes are gateways rather than the runtime source of
+  native desktop direct-mesh routes are gateways rather than the runtime source of
   truth
 - Should not absorb:
   desktop product-role descriptions, binding-state transition rules, or

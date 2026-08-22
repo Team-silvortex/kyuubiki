@@ -84,10 +84,6 @@ fn embedded_runtime_manifest_value(root: &Path, platform: Platform) -> Result<Va
     let elixir = contract
         .get("elixir")
         .ok_or_else(|| "config/toolchains.json is missing elixir".to_string())?;
-    let node = contract
-        .get("node")
-        .ok_or_else(|| "config/toolchains.json is missing node".to_string())?;
-
     Ok(json!({
         "schema_version": "kyuubiki.embedded-runtimes/v1",
         "platform": platform.as_str(),
@@ -117,17 +113,6 @@ fn embedded_runtime_manifest_value(root: &Path, platform: Platform) -> Result<Va
                 "required_for_self_host": true,
                 "used_by": ["orchestrator", "workflow-mesh-regression", "headless-live-test"],
                 "source_contract": "config/toolchains.json#/elixir"
-            },
-            {
-                "id": "node",
-                "kind": "ui-and-tooling-runtime",
-                "version": string_value(node, "preferred"),
-                "minimum": string_value(node, "minimum"),
-                "target_dir": format!("runtimes/{}/node", platform.as_str()),
-                "bin_dirs": [format!("runtimes/{}/node/bin", platform.as_str())],
-                "required_for_self_host": true,
-                "used_by": ["frontend", "runtime-scripts", "docs-and-contract-checks"],
-                "source_contract": "config/toolchains.json#/node"
             }
         ],
         "visibility": {
@@ -135,6 +120,7 @@ fn embedded_runtime_manifest_value(root: &Path, platform: Platform) -> Result<Va
             "operator_visible": true,
             "notes": [
                 "Runtime payloads may be downloaded or mounted by the installer, but their target paths and versions remain manifest-visible.",
+                "Node is a pinned build tool only; installed frontend serving and API bridging are owned by kyuubiki-runtime.",
                 "The release scaffold can be created before payload download; missing payloads are deployment blockers, not hidden host requirements."
             ]
         }

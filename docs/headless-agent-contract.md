@@ -20,7 +20,7 @@ The headless agent contract exists to make one thing explicit:
 
 - a Rust solver agent is a standalone runtime program with its own public
   machine contract
-- frontend `direct-mesh` routes are a product-owned gateway, not the runtime
+- native desktop `direct-mesh` routes are a product-owned gateway, not the runtime
   source of truth
 - handoff envelopes are orchestration payloads, not the lowest-level agent
   protocol
@@ -139,7 +139,7 @@ These are useful product layers, but they are not the runtime source of truth.
 
 Examples:
 
-- `apps/frontend/src/app/api/direct-mesh/**`
+- `workers/rust/crates/desktop-runtime/src/direct_mesh_gateway.rs`
 - `kyuubiki.headless-orchestra-handoff/v1`
 
 These layers may package policy, defaults, or operator context, but they
@@ -298,15 +298,16 @@ headless agents alike:
 - cancellation behavior
 - machine-readable errors
 
-## Current transitional pieces
+## Current gateway pieces
 
-These are still useful, but should be treated as transitional packaging layers:
+These remain product-owned packaging and transport layers, not solver truth:
 
 - [apps/frontend/src/lib/scripting/workbench-headless-orchestra-handoff.ts](../apps/frontend/src/lib/scripting/workbench-headless-orchestra-handoff.ts)
-- [apps/frontend/src/app/api/v1/headless/handoff/route.ts](../apps/frontend/src/app/api/v1/headless/handoff/route.ts)
-- [apps/frontend/src/lib/direct-mesh/rpc.ts](../apps/frontend/src/lib/direct-mesh/rpc.ts)
+- [apps/web/lib/kyuubiki_web/orchestra/headless_handoff_registry.ex](../apps/web/lib/kyuubiki_web/orchestra/headless_handoff_registry.ex)
+- [workers/rust/crates/desktop-runtime/src/direct_mesh_gateway.rs](../workers/rust/crates/desktop-runtime/src/direct_mesh_gateway.rs)
+- [workers/rust/crates/desktop-runtime/src/direct_mesh_rpc.rs](../workers/rust/crates/desktop-runtime/src/direct_mesh_rpc.rs)
 
-They should continue converging toward:
+They preserve:
 
 - thinner packaging
 - less frontend-owned runtime knowledge

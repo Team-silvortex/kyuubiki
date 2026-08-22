@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Exact-coordinate contract and execution evidence for desktop runtime clients and the native installer runtime API.",
+  "summary": "Exact-coordinate contract and execution evidence for desktop runtime clients, the native installed frontend gateway, and the native installer runtime API.",
   "paradigm_contract_evidence": {
     "runtime_api": [
       {
@@ -42,6 +42,27 @@
           "remote_deployment_dry_run",
           "unified_update_preview"
         ]
+      },
+      {
+        "id": "native-installed-frontend-contract",
+        "modules": [
+          "runtime-agent-cli"
+        ],
+        "files": [
+          "apps/frontend/next.config.mjs",
+          "workers/rust/crates/desktop-runtime/src/frontend_server.rs",
+          "workers/rust/crates/desktop-runtime/src/frontend_http.rs",
+          "workers/rust/crates/desktop-runtime/src/frontend_proxy.rs",
+          "workers/rust/crates/desktop-runtime/src/direct_mesh_gateway.rs",
+          "workers/rust/crates/installer/src/release.rs"
+        ],
+        "required_text": [
+          "output: \"export\"",
+          "serve-frontend",
+          "explicit loopback",
+          "frontend_connection_limit",
+          "kyuubiki.frontend-runtime-gateway/direct-mesh-v1"
+        ]
       }
     ]
   },
@@ -71,6 +92,36 @@
         "installer.runtime.start-local",
         "native command is absent from the app backend",
         "guarded native operation is absent"
+      ]
+    },
+    {
+      "id": "native-installed-frontend-execution",
+      "status": "proven",
+      "grade": "verified",
+      "modules": [
+        "runtime-agent-cli"
+      ],
+      "paradigms": [
+        "runtime_api"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "security"
+      ],
+      "files": [
+        "workers/rust/crates/desktop-runtime/src/frontend_server.rs",
+        "workers/rust/crates/desktop-runtime/src/frontend_http.rs",
+        "workers/rust/crates/desktop-runtime/src/direct_mesh_gateway.rs",
+        "workers/rust/crates/desktop-runtime/src/direct_mesh_rpc.rs",
+        "workers/rust/crates/installer/src/tests/release_runtime.rs"
+      ],
+      "required_text": [
+        "api_ownership_is_explicit",
+        "next_export_html_routes_are_resolved_before_spa_fallback",
+        "study_mapping_is_an_explicit_allowlist",
+        "endpoint_parser_rejects_wildcards_and_urls",
+        "serve-frontend"
       ]
     },
     {

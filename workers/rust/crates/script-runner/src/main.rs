@@ -530,7 +530,8 @@ fn run() -> RunnerResult<u8> {
             };
             run_command(&paths.rust, "cargo", cargo_run("kyuubiki-cli", agent_args))
         }
-        "frontend" => run_command(&paths.frontend, "npm", ["run", "dev"].map(OsString::from)),
+        "frontend" => runtime_commands::run_runtime_command("start-local", Vec::new())
+            .unwrap_or_else(|| Err("native start-local command is unavailable".to_string())),
         "format" => {
             let mix = run_command(&paths.web, "mix", ["format"].map(OsString::from))?;
             if mix != 0 {

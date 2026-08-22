@@ -5,7 +5,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::{
     Platform, build_embedded_runtime_manifest, build_launch_manifest, build_release_manifest,
     build_service_launch_manifest, embedded_runtime_report, expected_release_script_contents,
-    find_workspace_root_from, linux_desktop_dependency_plan, release_env_path, workspace_root,
+    find_workspace_root_from, linux_desktop_dependency_plan, release_env_path, stage_release,
+    workspace_root,
 };
 
 #[test]
@@ -19,6 +20,34 @@ fn release_manifest_contains_expected_schema() {
     assert!(manifest.contains("\"platform\": \"macos\""));
     assert!(manifest.contains("\"release_dir\": \".\""));
     assert!(manifest.contains("\"workspace\": \"../..\""));
+    assert!(manifest.contains("\"services\""));
+}
+
+#[test]
+fn staging_cleans_legacy_node_frontend_residue() {
+    let target = std::env::temp_dir().join(format!(
+        "kyuubiki-stage-cleanup-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    let legacy_node = target.join("runtimes/macos/node/bin/node");
+    let legacy_frontend = target.join("services/frontend");
+    fs::create_dir_all(legacy_node.parent().unwrap()).unwrap();
+    fs::create_dir_all(legacy_frontend.join("node_modules/next")).unwrap();
+    fs::create_dir_all(target.join("manifests")).unwrap();
+    fs::write(&legacy_node, "legacy node").unwrap();
+    fs::write(legacy_frontend.join("server.js"), "legacy frontend").unwrap();
+    fs::write(target.join("manifests/runtime-payload.json"), "stale seal").unwrap();
+
+    stage_release(Platform::Macos, Some(target.clone())).unwrap();
+
+    assert!(!target.join("runtimes/macos/node").exists());
+    assert!(!legacy_frontend.exists());
+    assert!(!target.join("manifests/runtime-payload.json").exists());
+    assert!(target.join("services").is_dir());
+    fs::remove_dir_all(target).unwrap();
 }
 
 #[test]
@@ -59,7 +88,8 @@ fn embedded_runtime_manifest_declares_self_host_payloads() {
     let manifest = build_embedded_runtime_manifest(&root, Platform::Linux).unwrap();
     assert!(manifest.contains("\"schema_version\": \"kyuubiki.embedded-runtimes/v1\""));
     assert!(manifest.contains("\"id\": \"elixir-otp\""));
-    assert!(manifest.contains("\"id\": \"node\""));
+    assert!(!manifest.contains("\"id\": \"node\""));
+    assert!(manifest.contains("Node is a pinned build tool only"));
     assert!(manifest.contains("\"required_for_self_host\": true"));
     assert!(manifest.contains("\"source_contract\": \"config/toolchains.json#/elixir\""));
 }
@@ -70,7 +100,7 @@ fn embedded_runtime_report_renders_contract_summary() {
     let rendered = report.render();
     assert!(rendered.contains("kyuubiki embedded runtimes"));
     assert!(rendered.contains("elixir-otp"));
-    assert!(rendered.contains("node"));
+    assert!(!rendered.contains("[required] node"));
 }
 
 #[test]
@@ -89,10 +119,9 @@ fn service_launch_manifest_never_falls_back_to_source_tools() {
             .unwrap();
         assert_eq!(orchestrator["args"], serde_json::json!(["start"]));
         assert_ne!(orchestrator["args"], serde_json::json!(["daemon"]));
-        assert!(
-            rendered.contains("services/frontend/server.js"),
-            "{platform:?}"
-        );
+        assert!(rendered.contains("serve-frontend"), "{platform:?}");
+        assert!(rendered.contains("bin/kyuubiki-runtime"), "{platform:?}");
+        assert!(!rendered.contains("server.js"), "{platform:?}");
         for forbidden in ["npm run dev", "mix run", "cargo run", "apps/frontend"] {
             assert!(!rendered.contains(forbidden), "{platform:?}: {forbidden}");
         }
@@ -106,7 +135,7 @@ fn linux_desktop_dependency_plan_declares_tauri_ubuntu_prerequisites() {
         plan.schema_version,
         "kyuubiki.linux-desktop-dependencies/v1"
     );
-    assert!(plan.node_runtime.contains("node-v20.19.2-linux-x64"));
+    assert!(plan.frontend_build_node.contains("node-v20.19.2-linux-x64"));
     assert!(
         plan.apt_packages
             .iter()

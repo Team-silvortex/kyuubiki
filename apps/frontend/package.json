@@ -10,7 +10,7 @@
     "cli": "../../scripts/kyuubiki",
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "cargo run --manifest-path ../../workers/rust/Cargo.toml -p kyuubiki-desktop-runtime --bin kyuubiki-runtime -- serve-frontend --root out",
     "lint": "next lint",
     "test:unit": "../../scripts/kyuubiki frontend-unit-test",
     "test:unit:coverage": "../../scripts/kyuubiki frontend-unit-coverage-test",

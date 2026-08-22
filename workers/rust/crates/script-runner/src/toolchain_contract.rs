@@ -150,10 +150,25 @@ fn validate_toolchain_contract(root: &Path, contract: &Value) -> RunnerResult<Ve
                 "embedded Elixir source contract",
             ),
             (
-                "config/toolchains.json#/node",
-                "embedded Node source contract",
+                "Node is a pinned build tool only",
+                "installed runtime Node exclusion",
             ),
         ],
+    )?;
+    require_file_tokens(
+        root,
+        &mut issues,
+        "workers/rust/crates/installer/src/release.rs",
+        &[
+            ("serve-frontend", "native installed frontend command"),
+            ("kyuubiki-runtime", "native installed frontend binary"),
+        ],
+    )?;
+    require_file_tokens(
+        root,
+        &mut issues,
+        "workers/rust/crates/script-runner/src/desktop_runtime_payload.rs",
+        &[("frontend.join(\"out\")", "static frontend export payload")],
     )?;
     require_file_tokens(
         root,
@@ -173,12 +188,11 @@ fn validate_toolchain_contract(root: &Path, contract: &Value) -> RunnerResult<Ve
         &mut issues,
         "workers/rust/crates/script-runner/src/workflow_mesh_remote.rs",
         &[
-            ("scripts/toolchain-env.mjs", "toolchain env loader"),
-            ("KYUUBIKI_REMOTE_OTP_VERSION", "remote OTP default key"),
-            (
-                "KYUUBIKI_REMOTE_ELIXIR_VERSION",
-                "remote Elixir default key",
-            ),
+            ("TOOLCHAINS_PATH", "native toolchain contract loader"),
+            ("REMOTE_OTP_VERSION", "remote OTP override key"),
+            ("REMOTE_ELIXIR_VERSION", "remote Elixir override key"),
+            ("lab_otp", "contract-owned remote OTP default"),
+            ("lab_elixir", "contract-owned remote Elixir default"),
         ],
     )?;
     require_file_tokens(

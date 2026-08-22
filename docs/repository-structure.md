@@ -157,7 +157,7 @@ directories.
 - cross-process smoke coverage
 - launcher-driven local workstation validation
 - cluster registration and heartbeat coverage
-- direct-mesh frontend integration paths
+- native frontend-gateway and direct-mesh integration paths
 
 ## Stable Boundaries
 

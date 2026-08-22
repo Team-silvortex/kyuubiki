@@ -88,6 +88,7 @@ test("direct mesh gui can inspect LAN agents, solve directly, and fetch result c
 
     assert.equal(agentsReady.response.status, 200);
     assert.equal(agentsReady.payload.mode, "direct_mesh_gui");
+    assert.equal(agentsReady.payload.gateway_runtime, "rust-native");
     assert.ok(agentsReady.payload.agents.some((agent) => !agent.descriptor_error));
 
     const solveResponse = await fetch(`${FRONTEND_URL}/api/direct-mesh/solve`, {
@@ -100,7 +101,7 @@ test("direct mesh gui can inspect LAN agents, solve directly, and fetch result c
         input: {
           length: 20.0,
           area: 0.01,
-          youngs_modulus_gpa: 70,
+          youngs_modulus: 70e9,
           elements: 60,
           tip_force: 1800,
         },
@@ -119,6 +120,15 @@ test("direct mesh gui can inspect LAN agents, solve directly, and fetch result c
 
     const jobId = solved.job.job_id;
     assert.ok(jobId);
+
+    const fullResultResponse = await fetch(
+      `${FRONTEND_URL}/api/direct-mesh/results/${jobId}`,
+      { headers: { "x-kyuubiki-token": DIRECT_MESH_TOKEN } },
+    );
+    assert.equal(fullResultResponse.status, 200);
+    const fullResult = await fullResultResponse.json();
+    assert.equal(fullResult.job_id, jobId);
+    assert.equal(fullResult.result.nodes.length, 61);
 
     const nodesChunkResponse = await fetch(
       `${FRONTEND_URL}/api/direct-mesh/results/${jobId}/chunks/nodes?offset=20&limit=10`,

@@ -24,15 +24,14 @@ fn write_payload(root: &Path, version: &str) {
         "manifests",
         "services/orchestrator/bin",
         "services/frontend",
-        "runtimes/macos/node/bin",
     ] {
         fs::create_dir_all(root.join(relative)).unwrap();
     }
     for relative in [
         "bin/kyuubiki-cli",
+        "bin/kyuubiki-runtime",
         "services/orchestrator/bin/kyuubiki_web",
-        "services/frontend/server.js",
-        "runtimes/macos/node/bin/node",
+        "services/frontend/index.html",
     ] {
         fs::write(root.join(relative), format!("{relative}:{version}")).unwrap();
     }
@@ -43,7 +42,7 @@ fn write_payload(root: &Path, version: &str) {
           "services":[
             {"id":"agent","command":"bin/kyuubiki-cli","cwd":".","args":[]},
             {"id":"orchestrator","command":"services/orchestrator/bin/kyuubiki_web","cwd":"services/orchestrator","args":[]},
-            {"id":"frontend","command":"runtimes/macos/node/bin/node","cwd":".","args":[]}
+            {"id":"frontend","command":"bin/kyuubiki-runtime","cwd":".","args":["serve-frontend","--root","services/frontend"]}
           ]
         }"#,
     )

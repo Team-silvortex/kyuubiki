@@ -323,21 +323,21 @@ Desired end state:
 - local developer flows may still exist, but as explicit dev-mode adapters
   rather than as architecture-defining runtime paths
 
-### `apps/frontend/src/app/api/direct-mesh/**`
+### Native desktop direct-mesh gateway
 
 Current role:
 
-- Next.js server routes that help the browser workbench talk to Rust agents in
-  direct-mesh mode
+- `kyuubiki-runtime` exposes a loopback-only HTTP gateway that lets the browser
+  workbench talk to Rust agents in direct-mesh mode
 
-Why it is transitional:
+Why it remains a gateway:
 
-- they still place a frontend-adjacent server layer between the UI surface and
-  the pure headless agent shape
+- it translates browser HTTP into the same bounded solver-RPC frames used by
+  headless callers, but does not own solver or scheduling truth
 
 Desired end state:
 
-- keep these routes only as deliberate product-owned gateway contracts
+- keep these routes as deliberate native product-owned gateway contracts
 - require explicit deployment opt-in when they are exposed outside local
   workstation use
 - do not let them become the hidden source of truth for runtime architecture

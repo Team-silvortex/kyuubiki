@@ -11,6 +11,44 @@ pub(crate) fn write_release_scripts(release_dir: &Path, platform: Platform) -> R
     Ok(())
 }
 
+pub(crate) fn cleanup_legacy_release_residue(
+    release_dir: &Path,
+    platform: Platform,
+) -> Result<(), String> {
+    remove_file_if_present(&release_dir.join("manifests/runtime-payload.json"))?;
+    let legacy_node = release_dir
+        .join("runtimes")
+        .join(platform.as_str())
+        .join("node");
+    remove_dir_if_present(&legacy_node)?;
+
+    let frontend = release_dir.join("services/frontend");
+    if frontend.join("server.js").is_file() || frontend.join("node_modules").is_dir() {
+        remove_dir_if_present(&frontend)?;
+    }
+    Ok(())
+}
+
+fn remove_file_if_present(path: &Path) -> Result<(), String> {
+    if !path.exists() {
+        return Ok(());
+    }
+    fs::remove_file(path)
+        .map_err(|error| format!("failed to remove stale seal {}: {error}", path.display()))
+}
+
+fn remove_dir_if_present(path: &Path) -> Result<(), String> {
+    if !path.exists() {
+        return Ok(());
+    }
+    fs::remove_dir_all(path).map_err(|error| {
+        format!(
+            "failed to remove legacy payload {}: {error}",
+            path.display()
+        )
+    })
+}
+
 pub(crate) fn expected_release_script_contents(platform: Platform) -> Vec<(String, String)> {
     if platform == Platform::Windows {
         let runtime_path = format!(".\\dist\\{}\\bin\\kyuubiki-runtime.exe", platform.as_str());
@@ -119,6 +157,7 @@ pub(crate) fn build_release_manifest(
             "    \"exports\",\n",
             "    \"manifests\",\n",
             "    \"runtimes\",\n",
+            "    \"services\",\n",
             "    \"scripts\"\n",
             "  ],\n",
             "  \"recommended_flow\": [\n",
@@ -197,12 +236,8 @@ pub(crate) fn build_service_launch_manifest(platform: Platform) -> String {
             },
             {
                 "id": "frontend",
-                "command": format!(
-                    "runtimes/{}/node/bin/{}",
-                    platform.as_str(),
-                    executable("node")
-                ),
-                "args": ["services/frontend/server.js"],
+                "command": format!("bin/{}", executable("kyuubiki-runtime")),
+                "args": ["serve-frontend", "--root", "services/frontend"],
                 "cwd": "."
             }
         ]
@@ -225,6 +260,7 @@ pub(crate) fn build_release_readme(platform: Platform) -> String {
             "- logs/       runtime logs\n",
             "- manifests/  release and launch manifests\n",
             "- runtimes/   installer-managed embedded language/runtime payloads\n",
+            "- services/   packaged Orchestra and native-served frontend payloads\n",
             "- scripts/    operator entry points\n",
             "- exports/    snapshots and operator exports\n\n",
             "Suggested flow:\n",

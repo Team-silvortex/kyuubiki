@@ -96,7 +96,6 @@ struct RemoteOptions {
     timeout_seconds: u64,
     otp_version: String,
     elixir_version: String,
-    node_version: String,
 }
 
 impl RemoteOptions {
@@ -117,7 +116,6 @@ impl RemoteOptions {
             timeout_seconds: 120,
             otp_version: toolchains.0,
             elixir_version: toolchains.1,
-            node_version: toolchains.2,
         };
         let mut iter = args.into_iter();
         while let Some(arg) = iter.next() {
@@ -339,7 +337,6 @@ fn remote_capture_command(options: &RemoteOptions) -> String {
     let evidence_name = &options.evidence_name;
     let otp = &options.otp_version;
     let elixir = &options.elixir_version;
-    let node = &options.node_version;
     format!(
         "set -euo pipefail; umask 077; run_root={run_root}; source_root=\"$run_root/source\"; \
 target_root=\"$HOME/.kyuubiki/cache/cargo-target/orchestra-installed-takeover\"; \
@@ -352,15 +349,13 @@ export HEX_HOME=\"$MIX_HOME/hex\"; export MIX_DEPS_PATH=\"$mix_cache/deps\"; \
 export MIX_BUILD_PATH=\"$mix_cache/build\"; mkdir -p \"$target_root\" \"$MIX_HOME\" \"$HEX_HOME\" \"$mix_cache\" \"$evidence_root\"; \
 cd \"$source_root/workers/rust\"; CARGO_TARGET_DIR=\"$target_root\" cargo +1.88.0 build --release -p kyuubiki-installer -p kyuubiki-script-runner; \
 CARGO_TARGET_DIR=\"$target_root\" cargo +1.88.0 build --release -p kyuubiki-cli --bin kyuubiki-cli; \
+CARGO_TARGET_DIR=\"$target_root\" cargo +1.88.0 build --release -p kyuubiki-desktop-runtime --bin kyuubiki-runtime; \
 cd \"$source_root/apps/web\"; mix help hex.info >/dev/null 2>&1 || mix local.hex --force >/dev/null; \
 MIX_ENV=prod mix deps.get; MIX_ENV=prod KYUUBIKI_RELEASE_VERSION={version} mix release kyuubiki_web --overwrite --path \"$release_path\"; \
 installer=\"$target_root/release/kyuubiki-installer\"; runner=\"$target_root/release/kyuubiki-script-runner\"; export KYUUBIKI_REPO_ROOT=\"$source_root\"; \
-\"$installer\" stage-release linux \"$payload\"; install -m 0755 \"$target_root/release/kyuubiki-cli\" \"$payload/bin/kyuubiki-cli\"; \
+\"$installer\" stage-release linux \"$payload\"; install -m 0755 \"$target_root/release/kyuubiki-cli\" \"$payload/bin/kyuubiki-cli\"; install -m 0755 \"$target_root/release/kyuubiki-runtime\" \"$payload/bin/kyuubiki-runtime\"; \
 mkdir -p \"$payload/services\"; rm -rf \"$payload/services/orchestrator\"; cp -a \"$release_path\" \"$payload/services/orchestrator\"; \
-node_a=\"$HOME/.local/kyuubiki-runtimes/node-v{node}-linux-x64/bin/node\"; node_b=\"$HOME/.kyuubiki-toolchains/node-v{node}-linux-x64/bin/node\"; \
-if test -x \"$node_a\"; then node_bin=\"$node_a\"; else node_bin=\"$node_b\"; fi; test -x \"$node_bin\"; \
-mkdir -p \"$payload/runtimes/linux/node/bin\" \"$payload/services/frontend\"; install -m 0755 \"$node_bin\" \"$payload/runtimes/linux/node/bin/node\"; \
-printf '%s\\n' 'process.stdout.write(\"frontend qualification slice\\n\");' > \"$payload/services/frontend/server.js\"; \
+mkdir -p \"$payload/services/frontend\"; printf '%s\\n' '<!doctype html><title>Kyuubiki native frontend qualification</title>' > \"$payload/services/frontend/index.html\"; \
 \"$installer\" seal-runtime-payload \"$payload\" {version} linux; export XDG_CONFIG_HOME=\"$run_root/xdg\"; \
 \"$installer\" install-runtime-payload \"$payload\"; store=\"$XDG_CONFIG_HOME/kyuubiki/runtime\"; runtime=\"$store/versions/{version_path}\"; test -x \"$runtime/services/orchestrator/bin/kyuubiki_web\"; \
 rm -rf \"$source_root\" \"$payload\" \"$release_path\"; harness=\"$run_root/harness-repo\"; mkdir -p \"$harness/workers/rust\" \"$harness/scripts\"; : > \"$harness/workers/rust/Cargo.toml\"; \
@@ -401,7 +396,7 @@ fn workspace_version(root: &Path) -> RunnerResult<String> {
         .ok_or_else(|| "workspace version is missing or invalid".to_string())
 }
 
-fn toolchains(root: &Path) -> RunnerResult<(String, String, String)> {
+fn toolchains(root: &Path) -> RunnerResult<(String, String)> {
     let bytes = fs::read(root.join("config/toolchains.json"))
         .map_err(|error| format!("failed to read toolchain contract: {error}"))?;
     let value: Value = serde_json::from_slice(&bytes)
@@ -414,11 +409,7 @@ fn toolchains(root: &Path) -> RunnerResult<(String, String, String)> {
             .map(ToString::to_string)
             .ok_or_else(|| format!("toolchain contract misses {pointer}"))
     };
-    Ok((
-        get("/elixir/lab_otp")?,
-        get("/elixir/lab_elixir")?,
-        get("/node/preferred")?,
-    ))
+    Ok((get("/elixir/lab_otp")?, get("/elixir/lab_elixir")?))
 }
 
 fn repo_path(root: &Path, relative: &str) -> RunnerResult<PathBuf> {
@@ -529,5 +520,27 @@ mod tests {
         assert!(!valid_image_reference("postgres:16;id"));
         assert!(!valid_toolchain_value("28.4;id"));
         assert!(valid_version("2.15.0"));
+    }
+
+    #[test]
+    fn installed_takeover_fixture_uses_the_native_frontend_runtime() {
+        let options = RemoteOptions {
+            help: false,
+            host: "lab".to_string(),
+            output: PathBuf::from("report.json"),
+            remote_run_root: "~/.kyuubiki/lab-runs/test".to_string(),
+            evidence_name: "evidence.json".to_string(),
+            run_id: "test".to_string(),
+            package_version: "2.15.0".to_string(),
+            postgres_image: "postgres:16-alpine".to_string(),
+            timeout_seconds: 120,
+            otp_version: "28.4".to_string(),
+            elixir_version: "1.20.1-otp-28".to_string(),
+        };
+        let command = remote_capture_command(&options);
+        assert!(command.contains("kyuubiki-runtime"));
+        assert!(command.contains("services/frontend/index.html"));
+        assert!(!command.contains("node_bin"));
+        assert!(!command.contains("server.js"));
     }
 }

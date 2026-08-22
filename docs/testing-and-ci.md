@@ -289,9 +289,10 @@ surface lane:
 
 - `make test-runtime-surfaces`
 
-Start `npm run dev` inside `apps/frontend` first. The layout/search guard needs
-the live benchmark route and is intentionally separate from `frontend-test`, so
-plain build validation can stay fast and headless.
+Start `./scripts/kyuubiki start-local` from the repository root first. The
+layout/search guard then exercises the native Rust frontend gateway and live
+benchmark route used by packaged builds. `npm run dev` remains available only
+for isolated UI hot reload; plain build validation stays fast and headless.
 
 For service-executor and headless workflow contract changes, prefer the live
 headless entrypoints before broader integration suites:

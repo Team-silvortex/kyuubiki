@@ -13,9 +13,9 @@ The contract separates compatibility from bootstrap defaults:
   Self-host and container baselines must still satisfy the explicit minimum in
   `config/toolchains.json`; for `moxi 2.x` that means Elixir/Mix
   `1.19.0+` and OTP `28.0+`.
-- Node uses a compatibility engine range plus a preferred installer version so
-  UI shells and docs tooling can run on current local Node releases while
-  installer-managed runtimes still have a stable default.
+- Node uses a compatibility engine range plus a preferred build version so UI
+  compilation, tests, and docs tooling remain reproducible. It is not an
+  installed runtime dependency.
 
 Run `make check-toolchains` before changing any Dockerfile, package manifest,
 remote lab script, or language runtime version. The installer should read the
@@ -35,9 +35,10 @@ the static contract without probing the runtime.
 
 Portable releases also generate
 `dist/<platform>/manifests/embedded-runtimes.json` from this same contract. That
-manifest is the installer-facing promise that Kyuubiki can carry Elixir/OTP and
-Node as managed runtime payloads, similar to products that bundle their
-language runtime dependencies instead of asking users to install them manually.
+manifest is the installer-facing promise for the remaining managed runtime
+payloads. Node is deliberately absent: Next produces a static export at build
+time, and the installed Rust runtime owns HTTP serving, API proxying, and the
+direct-mesh bridge.
 The native runtime reports explicit host-tool fallback only in development
 source mode. Installer-managed mode resolves solely from the activated
 manifest and treats every missing required runtime as a deployment failure.

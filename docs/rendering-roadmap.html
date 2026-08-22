@@ -53,7 +53,7 @@
             <li><strong>viewport dispatch</strong>: <code>apps/frontend/src/components/workbench/workbench-viewport.tsx</code> selects SVG-oriented renderers for axial, line, plane, and truss3d views</li>
             <li><strong>render strategy</strong>: progressive reveal is handled by <code>requestAnimationFrame</code> plus <code>renderBatchSize</code> instead of a persistent GPU scene graph</li>
             <li><strong>field surface</strong>: result fields are already broad in <code>workbench-viewport-core.ts</code>, which means the data model is moving faster than the viewport substrate</li>
-            <li><strong>result chunking</strong>: <code>chunkDirectMeshResult</code> in <code>apps/frontend/src/lib/direct-mesh/results.ts</code> shows that large-result access is already becoming a concern</li>
+            <li><strong>result chunking</strong>: the bounded cache and chunk routes in <code>workers/rust/crates/desktop-runtime/src/direct_mesh_gateway.rs</code> keep large-result access outside the UI thread</li>
           </ul>
         </article>
 

@@ -73,10 +73,13 @@ This currently covers:
 - topology regression checks
 - workflow search and layout guard checks across desktop and phone widths
 
-For the browser-backed layout guards, start the local frontend first:
+For browser-backed layout guards, start the native local stack from the
+repository root so the static Workbench and its API routes use the same gateway
+as a packaged desktop build:
 
 ```bash
-npm run dev
+./scripts/kyuubiki start-local
 ```
 
-Then run the preflight command in a separate shell.
+Then run the preflight command in a separate shell. Use `npm run dev` only for
+isolated UI hot-reload work; it is not the installed runtime contract.

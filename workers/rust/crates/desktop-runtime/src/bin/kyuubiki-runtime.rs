@@ -1,6 +1,6 @@
 use kyuubiki_desktop_runtime::{
     HotServiceMode, ServiceMode, export_database, hot_service_start, hot_service_status,
-    hot_service_stop, service_restart, service_start, service_status, service_stop,
+    hot_service_stop, serve_frontend, service_restart, service_start, service_status, service_stop,
 };
 
 fn main() {
@@ -13,6 +13,9 @@ fn main() {
 fn run() -> Result<(), String> {
     let mut args = std::env::args().skip(1);
     let command = args.next().unwrap_or_else(|| "help".to_string());
+    if command == "serve-frontend" {
+        return serve_frontend(args.collect());
+    }
     let rendered = match command.as_str() {
         "status" => service_status()?,
         "start" => service_start(ServiceMode::Default)?,
@@ -50,6 +53,7 @@ fn help() -> String {
         "  hot-status",
         "  hot-start-local | hot-start-cloud | hot-start-distributed",
         "  hot-stop",
+        "  serve-frontend [--host 127.0.0.1] [--port 3000] [--root services/frontend]",
     ]
     .join("\n")
 }

@@ -4,7 +4,7 @@ const LINUX_DESKTOP_DEPS_SCHEMA_VERSION: &str = "kyuubiki.linux-desktop-dependen
 pub struct LinuxDesktopDependencyPlan {
     pub schema_version: String,
     pub target: String,
-    pub node_runtime: String,
+    pub frontend_build_node: String,
     pub apt_packages: Vec<String>,
     pub preflight_command: String,
     pub install_command: String,
@@ -17,7 +17,7 @@ impl LinuxDesktopDependencyPlan {
             "kyuubiki Linux desktop dependency plan".to_string(),
             format!("schema: {}", self.schema_version),
             format!("target: {}", self.target),
-            format!("node_runtime: {}", self.node_runtime),
+            format!("frontend_build_node: {}", self.frontend_build_node),
             "apt_packages:".to_string(),
         ];
         for package in &self.apt_packages {
@@ -47,7 +47,7 @@ pub fn linux_desktop_dependency_plan() -> LinuxDesktopDependencyPlan {
     LinuxDesktopDependencyPlan {
         schema_version: LINUX_DESKTOP_DEPS_SCHEMA_VERSION.to_string(),
         target: "Ubuntu lab host for Tauri Linux desktop bundles".to_string(),
-        node_runtime: "~/.local/kyuubiki-runtimes/node-v20.19.2-linux-x64".to_string(),
+        frontend_build_node: "~/.local/kyuubiki-runtimes/node-v20.19.2-linux-x64".to_string(),
         preflight_command: "make desktop-linux-remote-preflight".to_string(),
         install_command: format!(
             "sudo apt-get update && sudo apt-get install -y {}",
@@ -55,7 +55,7 @@ pub fn linux_desktop_dependency_plan() -> LinuxDesktopDependencyPlan {
         ),
         apt_packages,
         notes: vec![
-            "Node 20.19.2 is user-scoped under the Kyuubiki runtime directory; do not replace the system Node just for this project.".to_string(),
+            "Node 20.19.2 is a user-scoped frontend build tool; it is not copied into the installed runtime and must not replace system Node.".to_string(),
             "Apt package installation is privileged host state and should be performed by installer-managed remote execution or an operator-controlled sudo session.".to_string(),
             "Run make desktop-linux-remote only after preflight passes.".to_string(),
         ],

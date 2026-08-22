@@ -92,9 +92,15 @@ pub fn doctor_report() -> DoctorReport {
     let env_file = root.join(".env.local");
 
     let mut checks = Vec::new();
-    for command in ["node", "npm", "cargo", "mix"] {
+    for command in ["cargo", "mix"] {
         checks.push(DoctorCheck {
             label: command.to_string(),
+            ok: command_exists(command),
+        });
+    }
+    for command in ["node", "npm"] {
+        checks.push(DoctorCheck {
+            label: format!("frontend-build-{command}"),
             ok: command_exists(command),
         });
     }
@@ -193,6 +199,7 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
     validate_env_path(&release_env_path(&root))?;
     let release_dir = target_dir.unwrap_or_else(|| root.join("dist").join(platform.as_str()));
     let desktop_apps = ["hub-gui", "installer-gui", "workbench-gui"];
+    release::cleanup_legacy_release_residue(&release_dir, platform)?;
 
     for relative in [
         "bin",
@@ -201,6 +208,7 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
         "logs",
         "manifests",
         "runtimes",
+        "services",
         "scripts",
         "exports",
     ] {

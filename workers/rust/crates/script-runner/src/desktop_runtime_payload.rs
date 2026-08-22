@@ -1,7 +1,6 @@
-use std::env;
 use std::ffi::{OsStr, OsString};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 use kyuubiki_installer::{Platform as InstallerPlatform, seal_runtime_payload};
@@ -22,10 +21,12 @@ pub(crate) fn run_desktop_runtime_payload(
         ));
     }
     let version = workspace_version(&paths.rust.join("Cargo.toml"))?;
-    let node = configured_node_binary(platform)?;
-    verify_node_binary(&node)?;
     let stage = paths.root.join("dist").join(platform.as_str());
 
+    // Keep the currently staged payload intact until every build input is ready.
+    build_rust_runtime(paths)?;
+    build_orchestrator(paths, &version)?;
+    build_frontend(paths)?;
     let status = run_installer(
         paths,
         "stage-release",
@@ -34,10 +35,7 @@ pub(crate) fn run_desktop_runtime_payload(
     if status != 0 {
         return Ok(status);
     }
-    build_rust_runtime(paths)?;
-    build_orchestrator(paths, &version)?;
-    build_frontend(paths)?;
-    populate_stage(paths, platform, &stage, &node)?;
+    populate_stage(paths, platform, &stage)?;
     let manifest = seal_runtime_payload(&stage, &version, installer_platform(platform))?;
     println!(
         "sealed {} runtime payload {} at {}",
@@ -92,12 +90,7 @@ fn build_frontend(paths: &RepoPaths) -> RunnerResult<()> {
     run_checked(&paths.frontend, "npm", ["run", "build"], &[])
 }
 
-fn populate_stage(
-    paths: &RepoPaths,
-    platform: Platform,
-    stage: &Path,
-    node: &Path,
-) -> RunnerResult<()> {
+fn populate_stage(paths: &RepoPaths, platform: Platform, stage: &Path) -> RunnerResult<()> {
     let executable = |name: &str| {
         if platform == Platform::Windows {
             format!("{name}.exe")
@@ -130,72 +123,15 @@ fn populate_stage(
     let orchestrator = paths.web.join("_build/prod/rel/kyuubiki_web");
     replace_tree(&orchestrator, &stage.join("services/orchestrator"))?;
 
-    let standalone = paths.frontend.join(".next/standalone");
-    if !standalone.join("server.js").is_file() {
+    let exported = paths.frontend.join("out");
+    if !exported.join("index.html").is_file() {
         return Err(format!(
-            "Next standalone output is missing {}; outputFileTracingRoot must remain app-scoped",
-            standalone.join("server.js").display()
+            "Next static export is missing {}; output must remain export",
+            exported.join("index.html").display()
         ));
     }
     let frontend = stage.join("services/frontend");
-    replace_tree(&standalone, &frontend)?;
-    replace_tree(
-        &paths.frontend.join(".next/static"),
-        &frontend.join(".next/static"),
-    )?;
-    replace_tree(&paths.frontend.join("public"), &frontend.join("public"))?;
-
-    let node_target = stage
-        .join("runtimes")
-        .join(platform.as_str())
-        .join("node/bin")
-        .join(executable("node"));
-    copy_file(node, &node_target)?;
-    Ok(())
-}
-
-fn configured_node_binary(platform: Platform) -> RunnerResult<PathBuf> {
-    let root = env::var_os("KYUUBIKI_NODE_RUNTIME_ROOT")
-        .map(PathBuf::from)
-        .ok_or_else(|| {
-            "KYUUBIKI_NODE_RUNTIME_ROOT must point to an official, self-contained Node runtime; host package-manager Node is not accepted for distribution payloads"
-                .to_string()
-        })?;
-    let candidates = if platform == Platform::Windows {
-        vec![root.join("node.exe"), root.join("bin/node.exe")]
-    } else {
-        vec![root.join("bin/node")]
-    };
-    candidates
-        .into_iter()
-        .find(|path| path.is_file())
-        .ok_or_else(|| {
-            format!(
-                "configured Node runtime has no executable under {}",
-                root.display()
-            )
-        })
-}
-
-fn verify_node_binary(node: &Path) -> RunnerResult<()> {
-    let output = Command::new(node)
-        .arg("--version")
-        .output()
-        .map_err(|error| format!("failed to run configured Node {}: {error}", node.display()))?;
-    if !output.status.success() {
-        return Err(format!(
-            "configured Node runtime failed its version probe: {}",
-            String::from_utf8_lossy(&output.stderr).trim()
-        ));
-    }
-    let version = String::from_utf8_lossy(&output.stdout);
-    if version.trim() != "v20.19.2" {
-        return Err(format!(
-            "configured Node runtime is {}, expected v20.19.2 from config/toolchains.json",
-            version.trim()
-        ));
-    }
-    Ok(())
+    replace_tree(&exported, &frontend)
 }
 
 fn replace_tree(source: &Path, target: &Path) -> RunnerResult<()> {

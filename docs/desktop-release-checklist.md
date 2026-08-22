@@ -62,7 +62,7 @@ Keep these names aligned with:
   - `./scripts/kyuubiki desktop-status all`
 - If the release includes workflow builder, operator search, package-import,
   dataset editor, or workflow integrity UI changes:
-  - start `npm run dev` under `apps/frontend` in a separate shell
+  - start `./scripts/kyuubiki start-local` from the repository root
   - run `./scripts/kyuubiki workflow-preflight`
 - Confirm brand assets exist under:
   - [assets/icons/app](../assets/icons/app)
@@ -75,6 +75,14 @@ Keep these names aligned with:
 - Confirm `dist/<platform>/manifests/service-launch.json` declares only
   Installer-owned relative commands. Installed desktop shells never fall back
   to source-tree `npm run dev`, `mix run`, or `cargo run`.
+- Confirm the frontend service executes `bin/kyuubiki-runtime serve-frontend`,
+  `services/frontend/index.html` exists, and no Node executable is packaged.
+- Restage over a legacy fixture at least once; Installer staging must remove
+  `runtimes/<platform>/node`, `services/frontend/server.js`, and old frontend
+  `node_modules` before sealing the payload.
+- Force one prerequisite build failure in a disposable fixture and confirm the
+  previously staged payload remains untouched; assembly must build first and
+  mutate staging only after all inputs are ready.
 - Confirm every declared service command and working directory is populated.
   A manifest-only scaffold is valid for planning, but `desktop-release` rejects
   it as an incomplete distribution runtime.

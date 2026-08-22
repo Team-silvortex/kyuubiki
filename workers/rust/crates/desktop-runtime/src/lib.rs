@@ -7,6 +7,12 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 mod audit_log;
+mod direct_mesh_gateway;
+mod direct_mesh_rpc;
+mod frontend_http;
+mod frontend_launch;
+mod frontend_proxy;
+mod frontend_server;
 mod runtime_control;
 mod runtime_export;
 mod runtime_layout;
@@ -17,6 +23,7 @@ pub use audit_log::{
     DesktopAuditLedgerStatus, append_desktop_provenance_record, desktop_provenance_status,
     prepare_desktop_provenance_ledger,
 };
+pub use frontend_server::serve_frontend;
 
 const GLOBAL_LANGUAGE_FILE: &str = "desktop-language.txt";
 const PACKAGED_BOOT_RECEIPT_ENV: &str = "KYUUBIKI_PACKAGED_BOOT_RECEIPT";

@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.Router do
   alias KyuubikiWeb.AssetStore
   alias KyuubikiWeb.Library
   alias KyuubikiWeb.ModelArtifactStore
+  alias KyuubikiWeb.Orchestra.HeadlessHandoffRegistry
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator
   alias KyuubikiWeb.Protocol
   alias KyuubikiWeb.ResultArtifactStore
@@ -85,6 +86,42 @@ defmodule KyuubikiWeb.Router do
   get "/api/v1/protocol/agents" do
     with_auth(conn, :read, fn conn ->
       respond_json(conn, 200, %{"agents" => Protocol.describe_agents()})
+    end)
+  end
+
+  get "/api/v1/headless/handoff" do
+    with_auth(conn, :read, fn conn ->
+      respond_json(conn, 200, %{"handoffs" => HeadlessHandoffRegistry.list()})
+    end)
+  end
+
+  post "/api/v1/headless/handoff" do
+    with_auth(conn, :write, fn conn ->
+      case HeadlessHandoffRegistry.register(conn.body_params) do
+        {:ok, receipt} ->
+          respond_json(conn, 201, receipt)
+
+        {:error, message} ->
+          respond_json(conn, 400, %{"error" => "invalid_handoff", "message" => message})
+      end
+    end)
+  end
+
+  get "/api/v1/headless/handoff/:handoff_id" do
+    with_auth(conn, :read, fn conn ->
+      case HeadlessHandoffRegistry.status(handoff_id) do
+        {:ok, status} -> respond_json(conn, 200, status)
+        :error -> handoff_not_found(conn, handoff_id)
+      end
+    end)
+  end
+
+  get "/api/v1/headless/handoff/:handoff_id/snapshot" do
+    with_auth(conn, :read, fn conn ->
+      case HeadlessHandoffRegistry.snapshot(handoff_id) do
+        {:ok, snapshot} -> respond_json(conn, 200, snapshot)
+        :error -> handoff_not_found(conn, handoff_id)
+      end
     end)
   end
 
@@ -676,4 +713,11 @@ defmodule KyuubikiWeb.Router do
 
   defp respond_success({conn, {:ok, payload}}, status), do: respond_json(conn, status, payload)
   defp respond_success({conn, {:error, reason}}, _status), do: unprocessable(conn, reason)
+
+  defp handoff_not_found(conn, handoff_id) do
+    respond_json(conn, 404, %{
+      "error" => "handoff_not_found",
+      "message" => "handoff '#{handoff_id}' is not registered in the current runtime"
+    })
+  end
 end

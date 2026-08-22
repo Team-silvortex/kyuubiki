@@ -14,6 +14,7 @@ use std::os::windows::process::CommandExt;
 
 use serde_json::Value;
 
+use crate::frontend_launch;
 use crate::runtime_layout::{
     RuntimePaths, resolve_development_command, runtime_bin_dirs, runtime_paths,
 };
@@ -67,7 +68,7 @@ pub(super) fn service_status() -> Result<String, String> {
         format!("runtime-policy: {}", paths.origin_label()),
     ];
     if paths.is_development() {
-        for command in ["npm", "mix", "cargo"] {
+        for command in ["mix", "cargo"] {
             lines.push(match resolve_development_command(&paths.root, command) {
                 Ok(path) => format!(
                     "runtime-command[{command}]: development -> {}",
@@ -76,6 +77,13 @@ pub(super) fn service_status() -> Result<String, String> {
                 Err(error) => format!("runtime-command[{command}]: missing ({error})"),
             });
         }
+        lines.push(match resolve_development_command(&paths.root, "npm") {
+            Ok(path) => format!(
+                "frontend-build-command[npm]: development-only -> {}",
+                path.display()
+            ),
+            Err(error) => format!("frontend-build-command[npm]: missing ({error})"),
+        });
     } else {
         lines.push(format!("runtime-root: {}", paths.root.display()));
         lines.push(format!("runtime-state: {}", paths.state.display()));
@@ -419,34 +427,22 @@ fn start_frontend(paths: &RuntimePaths, env: &HashMap<String, String>) -> Result
     let mut process_env = env.clone();
     process_env.insert("HOSTNAME".to_string(), "127.0.0.1".to_string());
     process_env.insert("PORT".to_string(), FRONTEND_PORT.to_string());
-    let (command, args, cwd, label) = if paths.is_development() {
-        (
-            resolve_development_command(&paths.root, "npm")?,
-            vec!["run".into(), "dev".into()],
-            paths.root.join("apps/frontend"),
-            "development Next.js workbench",
-        )
-    } else {
-        let spec = paths.service("frontend", &[])?;
-        (
-            spec.command,
-            spec.args,
-            spec.cwd,
-            "installer-managed workbench frontend",
-        )
-    };
+    let frontend = frontend_launch::resolve(paths)?;
     let process = ManagedProcess {
         label: "frontend".to_string(),
-        command,
-        args,
-        cwd,
+        command: frontend.command,
+        args: frontend.args,
+        cwd: frontend.cwd,
         pid: paths.run.join("frontend.pid"),
         log: paths.run.join("frontend.log"),
         port: Some(FRONTEND_PORT),
         env: process_env,
     };
     spawn_managed(process, Duration::from_secs(60))?;
-    Ok(format!("started {label} at http://127.0.0.1:3000"))
+    Ok(format!(
+        "started {} at http://127.0.0.1:3000",
+        frontend.label
+    ))
 }
 
 fn spawn_managed(process: ManagedProcess, timeout: Duration) -> Result<u32, String> {
