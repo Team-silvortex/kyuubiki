@@ -83,6 +83,8 @@ Keep these names aligned with:
 - Force one prerequisite build failure in a disposable fixture and confirm the
   previously staged payload remains untouched; assembly must build first and
   mutate staging only after all inputs are ready.
+- Confirm `services/orchestrator/releases` and the packaged
+  `lib/kyuubiki_web-*` tree contain only the shipping version after assembly.
 - Confirm every declared service command and working directory is populated.
   A manifest-only scaffold is valid for planning, but `desktop-release` rejects
   it as an incomplete distribution runtime.

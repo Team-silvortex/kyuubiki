@@ -188,6 +188,10 @@ recreated after the complete native payload has been assembled.
 Runtime payload assembly builds every Rust, Orchestra, and frontend input
 before mutating the existing staging directory. A failed prerequisite build
 therefore cannot replace a usable staged payload with a partial one.
+Before Orchestra assembly, only its generated release tree is reset; compiled
+Mix dependency caches are retained. This prevents old application and
+dependency versions from leaking into a new payload without forcing a full
+dependency rebuild.
 
 Development launch commands, integration tests, remote mesh regression, and
 all three desktop shells resolve runtime commands through the shared native

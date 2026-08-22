@@ -78,12 +78,26 @@ fn build_rust_runtime(paths: &RepoPaths) -> RunnerResult<()> {
 }
 
 fn build_orchestrator(paths: &RepoPaths, version: &str) -> RunnerResult<()> {
+    reset_orchestrator_release(&paths.web)?;
     run_checked(
         &paths.web,
         "mix",
         ["release", "kyuubiki_web", "--overwrite"],
         &[("MIX_ENV", "prod"), ("KYUUBIKI_RELEASE_VERSION", version)],
     )
+}
+
+fn reset_orchestrator_release(web: &Path) -> RunnerResult<()> {
+    let release = web.join("_build/prod/rel/kyuubiki_web");
+    if release.exists() {
+        fs::remove_dir_all(&release).map_err(|error| {
+            format!(
+                "failed to clear stale Orchestra release {}: {error}",
+                release.display()
+            )
+        })?;
+    }
+    Ok(())
 }
 
 fn build_frontend(paths: &RepoPaths) -> RunnerResult<()> {
@@ -247,11 +261,37 @@ fn installer_platform(platform: Platform) -> InstallerPlatform {
 
 #[cfg(test)]
 mod tests {
-    use super::workspace_version;
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    use super::{reset_orchestrator_release, workspace_version};
 
     #[test]
     fn reads_workspace_package_version() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../Cargo.toml");
         assert_eq!(workspace_version(&path).unwrap(), env!("CARGO_PKG_VERSION"));
+    }
+
+    #[test]
+    fn orchestra_release_reset_preserves_compiled_dependency_cache() {
+        let root = std::env::temp_dir().join(format!(
+            "kyuubiki-orchestra-release-reset-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let release = root.join("_build/prod/rel/kyuubiki_web/releases/old");
+        let compiled = root.join("_build/prod/lib/dependency/cache.beam");
+        fs::create_dir_all(&release).unwrap();
+        fs::create_dir_all(compiled.parent().unwrap()).unwrap();
+        fs::write(release.join("start.boot"), "old release").unwrap();
+        fs::write(&compiled, "compiled cache").unwrap();
+
+        reset_orchestrator_release(&root).unwrap();
+
+        assert!(!root.join("_build/prod/rel/kyuubiki_web").exists());
+        assert!(compiled.is_file());
+        fs::remove_dir_all(root).unwrap();
     }
 }
