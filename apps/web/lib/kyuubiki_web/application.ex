@@ -43,14 +43,13 @@ defmodule KyuubikiWeb.Application do
   defp maybe_http_server do
     if Application.get_env(:kyuubiki_web, :start_http_server, true) do
       [
-        {Plug.Cowboy,
-         scheme: :http,
-         plug: KyuubikiWeb.Router,
-         options: [
+        {Bandit,
+         [
+           scheme: :http,
+           plug: KyuubikiWeb.Router,
            ip: bind_ip(),
-           port: port(),
-           protocol_options: KyuubikiWeb.HttpTransportSecurity.protocol_options()
-         ]}
+           port: port()
+         ] ++ KyuubikiWeb.HttpTransportSecurity.server_options()}
       ]
     else
       []

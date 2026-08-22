@@ -74,24 +74,23 @@ The checked `package-lock.json` and `Cargo.lock` files for shipped frontend,
 desktop, SDK, and Rust workspace surfaces must stay reproducible. Do not remove
 lockfiles from review just because the source package manifests look small.
 
-#### Tracked upstream advisory: Cowlib 2.19.0
+#### Orchestra HTTP adapter isolation
 
-The web control plane currently resolves Cowboy 2.18.0 and Cowlib 2.19.0.
-Hex still marks Cowlib 2.19.0, the latest published release, with unresolved
-security advisories. Kyuubiki terminates invalid response headers for
-CVE-2026-43966 and does not invoke the affected `cow_link:link/1` serialization
-path for CVE-2026-43971. These are explicit, tested mitigations bound to the
-locked version; they are not substitutes for an upstream patch. Until a patched
-release is available and pinned, Internet-facing deployment remains a security
-residual rather than a qualified product property. Keep control-plane listeners
-private or behind a hardened reverse proxy, minimize accepted HTTP surface, and
-rerun `make audit-dependencies` whenever the lockfile changes.
+The web control plane uses Bandit as its Plug server and no longer resolves the
+Cowboy/Cowlib protocol stack. This removes the lock-bound Cowlib advisory
+exceptions instead of treating application-level reachability checks as a
+permanent substitute for an upstream fix. Plug rejects CR, LF, and NUL bytes in
+response header values before they reach the adapter, while explicit Bandit
+limits bound HTTP/1 headers, HTTP/2 header blocks, reset rates, and WebSocket
+frames. The dependency audit contract requires an empty Hex mitigation list so
+future advisory exceptions cannot become an unnoticed baseline, and rejects
+the legacy Cowboy, Cowlib, Ranch, and Plug.Cowboy packages if they reappear in
+the lockfile.
 
-The installed Orchestra takeover qualification binds both release instances to
-loopback. It proves packaging, activation, lease fencing, process recovery, and
-cleanup; it does not waive these advisories or certify public-network exposure.
-Track the authoritative [Hex advisory list](https://hex.pm/packages/cowlib/advisories)
-and [published Cowlib versions](https://hex.pm/packages/cowlib/versions).
+The installed Orchestra takeover qualification still binds both release
+instances to loopback. It proves packaging, activation, lease fencing, process
+recovery, and cleanup; public-network exposure additionally requires the normal
+authentication, TLS termination, rate limiting, and reverse-proxy controls.
 
 ### Fuzz-smoke guard
 

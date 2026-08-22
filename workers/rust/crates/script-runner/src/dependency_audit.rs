@@ -22,6 +22,7 @@ struct AuditContract {
     npm: Vec<String>,
     cargo: Vec<String>,
     hex: Vec<String>,
+    hex_denied_packages: Vec<String>,
     hex_advisory_mitigations: Vec<HexAdvisoryMitigation>,
 }
 
@@ -230,10 +231,30 @@ fn load_contract(root: &Path) -> RunnerResult<AuditContract> {
         npm: string_array(&value, "npm")?,
         cargo: string_array(&value, "cargo")?,
         hex: string_array(&value, "hex")?,
+        hex_denied_packages: string_array(&value, "hex_denied_packages")?,
         hex_advisory_mitigations: parse_hex_mitigations(&value)?,
     };
+    validate_hex_denied_packages(root, &contract.hex_denied_packages)?;
     validate_hex_mitigations(root, &contract.hex_advisory_mitigations)?;
     Ok(contract)
+}
+
+fn validate_hex_denied_packages(root: &Path, packages: &[String]) -> RunnerResult<()> {
+    let mix_lock = fs::read_to_string(root.join("apps/web/mix.lock"))
+        .map_err(|error| format!("failed to read apps/web/mix.lock: {error}"))?;
+    let denied = packages
+        .iter()
+        .filter(|package| mix_lock.contains(&format!("\"{package}\":")))
+        .cloned()
+        .collect::<Vec<_>>();
+    if denied.is_empty() {
+        Ok(())
+    } else {
+        Err(format!(
+            "{CONTRACT_PATH}: denied Hex packages are locked: {}",
+            denied.join(", ")
+        ))
+    }
 }
 
 fn parse_hex_mitigations(value: &Value) -> RunnerResult<Vec<HexAdvisoryMitigation>> {
@@ -462,23 +483,19 @@ fn run_self_test(contract: &AuditContract) -> RunnerResult<()> {
     )?;
     expect_eq(&contract.hex, &["apps/web"], "hex audit dirs")?;
     expect_eq(
-        &contract
-            .hex_advisory_mitigations
-            .iter()
-            .map(|mitigation| mitigation.id.as_str())
-            .collect::<Vec<_>>(),
-        &["CVE-2026-43966", "CVE-2026-43971"],
-        "Hex mitigated advisories",
+        &contract.hex_denied_packages,
+        &[
+            "cowboy",
+            "cowboy_telemetry",
+            "cowlib",
+            "plug_cowboy",
+            "ranch",
+        ],
+        "denied Hex packages",
     )?;
-    expect_eq(
-        &contract
-            .hex_advisory_mitigations
-            .iter()
-            .map(|mitigation| mitigation.locked_version.as_str())
-            .collect::<Vec<_>>(),
-        &["2.19.0", "2.19.0"],
-        "Hex mitigation lock versions",
-    )?;
+    if !contract.hex_advisory_mitigations.is_empty() {
+        return Err("self-test expected no Hex advisory mitigations".to_string());
+    }
     expect_eq(
         &lockfiles(&contract.npm, "package-lock.json"),
         &[

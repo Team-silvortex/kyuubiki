@@ -4,20 +4,16 @@ defmodule KyuubikiWeb.HttpTransportSecurityTest do
   alias KyuubikiWeb.HttpTransportSecurity
   alias KyuubikiWeb.Workloads
 
-  test "Cowboy terminates responses containing injected header delimiters" do
-    options = HttpTransportSecurity.protocol_options() |> Map.new()
+  test "Plug rejects response header delimiter injection before transport" do
+    conn = Plug.Test.conn(:get, "/")
 
-    assert :ok ==
-             :cowboy_http.validate_response_headers(
-               %{"content-disposition" => "attachment; filename=study.json"},
-               options
-             )
-
-    assert :error_terminate ==
-             :cowboy_http.validate_response_headers(
-               %{"content-disposition" => "attachment\r\nx-injected: true"},
-               options
-             )
+    assert_raise Plug.Conn.InvalidHeaderError, fn ->
+      Plug.Conn.put_resp_header(
+        conn,
+        "content-disposition",
+        "attachment\r\nx-injected: true"
+      )
+    end
   end
 
   test "project bundle filenames cannot inject response headers" do
@@ -32,30 +28,26 @@ defmodule KyuubikiWeb.HttpTransportSecurityTest do
     refute filename =~ "\n"
   end
 
-  test "backend source does not invoke cowlib client cookie serialization" do
-    references =
-      "lib/**/*.ex"
-      |> Path.wildcard()
-      |> Enum.filter(fn path ->
-        source = File.read!(path)
-        String.contains?(source, [":cow_cookie", "cow_cookie:"])
-      end)
+  test "Orchestra declares finite HTTP and WebSocket protocol limits" do
+    descriptor = HttpTransportSecurity.descriptor()
 
-    assert references == []
-    assert HttpTransportSecurity.descriptor()["outbound_cookie_encoder"] == "disabled"
+    assert descriptor["adapter"] == "bandit"
+    assert descriptor["response_header_validation"] == "plug_conn"
+    assert descriptor["limits"]["http_1_max_header_bytes"] == 10_000
+    assert descriptor["limits"]["http_1_max_header_count"] == 50
+    assert descriptor["limits"]["http_2_max_header_block_bytes"] == 50_000
+    assert descriptor["limits"]["websocket_max_frame_bytes"] == 8_000_000
   end
 
-  test "backend source does not invoke cowlib Link header serialization" do
-    references =
-      "lib/**/*.ex"
-      |> Path.wildcard()
-      |> Enum.filter(fn path ->
-        source = File.read!(path)
-        String.contains?(source, [":cow_link", "cow_link:"])
-      end)
+  test "dependency lock excludes the Cowboy and Cowlib protocol stack" do
+    lock = File.read!("mix.lock")
 
-    assert references == []
-    assert HttpTransportSecurity.descriptor()["outbound_link_encoder"] == "disabled"
-    assert "CVE-2026-43971" in HttpTransportSecurity.descriptor()["mitigated_advisories"]
+    assert lock =~ ~s("bandit":)
+
+    for dependency <- ~w(cowboy cowboy_telemetry cowlib plug_cowboy ranch) do
+      refute lock =~ ~s("#{dependency}":)
+    end
+
+    assert HttpTransportSecurity.descriptor()["legacy_adapter_dependencies"] == "removed"
   end
 end

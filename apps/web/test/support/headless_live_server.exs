@@ -24,16 +24,16 @@ end
 fake_agent_port = WorkflowApi.await_fake_agent_port()
 WorkflowApi.configure_fake_agent_pool(fake_agent_port)
 
-server_ref = :"kyuubiki_headless_live_#{System.unique_integer([:positive])}"
-
-{:ok, _pid} =
-  Plug.Cowboy.http(KyuubikiWeb.Router, [],
+{:ok, server_pid} =
+  Bandit.start_link(
+    plug: KyuubikiWeb.Router,
+    scheme: :http,
     ip: {127, 0, 0, 1},
     port: 0,
-    ref: server_ref
+    startup_log: false
   )
 
-http_port = :ranch.get_port(server_ref)
+{:ok, {_address, http_port}} = ThousandIsland.listener_info(server_pid)
 IO.puts("HEADLESS_LIVE_SERVER_READY #{http_port}")
 
 receive do
