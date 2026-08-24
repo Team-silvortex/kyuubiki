@@ -88,7 +88,7 @@ pub(crate) fn operator_task_failure_receipt(
         "operator_id": task_ir.and_then(|task| task.pointer("/operator/id")).cloned().unwrap_or(Value::Null),
         "task_digest": task_ir.and_then(|task| task.pointer("/integrity/task_digest")).cloned().unwrap_or(Value::Null),
         "recovery": {
-            "retryable": false,
+            "retryable": failure_retryable(code),
             "required_action": required_failure_action(code),
             "safe_to_continue_other_tasks": true
         }
@@ -109,6 +109,14 @@ fn required_failure_action(code: &str) -> &'static str {
         "operator_task_execution_failed" => "inspect_operator_runtime_result",
         "operator_package_host_unavailable" => "restart_agent_with_operator_package_runtime",
         "operator_package_not_loaded" => "install_or_activate_required_operator_package",
+        "operator_package_version_missing" => "rebuild_task_ir_with_package_version",
+        "operator_package_cache_not_configured" | "operator_package_cache_layout_invalid" => {
+            "repair_agent_operator_package_cache_configuration"
+        }
+        "operator_package_cache_unavailable" => "restore_agent_operator_package_cache",
+        "operator_package_fetch_failed" => "retry_bound_orchestra_package_fetch",
+        "operator_package_activation_failed" => "inspect_downloaded_operator_package",
+        "operator_package_runtime_not_attached" => "restart_agent_with_operator_package_runtime",
         "operator_package_identity_mismatch" => "repair_package_or_rebuild_task_ir",
         "operator_package_dispatch_failed" => "inspect_external_operator_failure",
         "operator_task_solver_capability_invalid" => "fix_solver_task_ir_contract",
@@ -117,5 +125,50 @@ fn required_failure_action(code: &str) -> &'static str {
         "operator_task_solver_execution_failed" => "inspect_engine_solver_failure",
         "operator_task_solver_result_invalid" => "inspect_engine_solver_result_contract",
         _ => "inspect_task_ir",
+    }
+}
+
+fn failure_retryable(code: &str) -> bool {
+    matches!(
+        code,
+        "operator_package_fetch_failed" | "operator_package_cache_unavailable"
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::operator_task_failure_receipt;
+
+    #[test]
+    fn package_transport_failure_is_retryable_without_blocking_other_tasks() {
+        let receipt = operator_task_failure_receipt(
+            "operator_package_fetch_failed",
+            "fixture failure",
+            "fetch_package",
+            None,
+        );
+
+        assert_eq!(receipt["recovery"]["retryable"], true);
+        assert_eq!(
+            receipt["recovery"]["required_action"],
+            "retry_bound_orchestra_package_fetch"
+        );
+        assert_eq!(receipt["recovery"]["safe_to_continue_other_tasks"], true);
+    }
+
+    #[test]
+    fn package_identity_failure_remains_non_retryable() {
+        let receipt = operator_task_failure_receipt(
+            "operator_package_identity_mismatch",
+            "fixture failure",
+            "verify_package_integrity",
+            None,
+        );
+
+        assert_eq!(receipt["recovery"]["retryable"], false);
+        assert_eq!(
+            receipt["recovery"]["required_action"],
+            "repair_package_or_rebuild_task_ir"
+        );
     }
 }

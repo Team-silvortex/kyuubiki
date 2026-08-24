@@ -124,10 +124,23 @@ Tasks and execution engines are deliberately separate.
 The concrete package boundary uses
 `kyuubiki.operator-package-distribution/v1` at publish time and
 `kyuubiki.operator-package-resolution/v1` for one bound-Agent target. Installer
-can consume that resolution today and activate the verified package in its
-managed store. TaskIR-to-fetch automatic admission remains pending, so the
-current implementation must not be interpreted as a full-library Agent mirror
-or as completed automatic fetch-on-demand.
+can consume that resolution explicitly. An orchestrated Agent also consumes it
+on demand after TaskIR digest, identity, authority, and admission checks. Fetch
+uses only `orchestrator_url`, `cluster_api_token`, and the configured managed
+`operator_packages_root`; there is no source fallback. The newly built dynamic
+host replaces the previous host only after activation succeeds, so a failed
+download or package activation does not clear a working host. Same-package version
+changes are built as isolated, owner-marked generations. Host and binding switch
+together; old generations remain available to in-flight tasks and are removed only
+after their final host lease is released. This avoids deleting a still-loaded DLL
+on Windows while preserving uninterrupted work on every platform.
+
+Cache entries remain execution state rather than an Agent-owned library.
+Task-scope immediate eviction, abnormal-exit stale-generation cleanup, and the
+full Windows/Linux/macOS dynamic-host qualification matrix remain lifecycle work.
+Transient fetch and cache-availability failures are retryable in the structured
+failure receipt and remain isolated from unrelated tasks; identity and
+activation failures stay fail-closed and require repair.
 
 This means a workflow run can move between scheduling modes without changing the
 core engine model: the scheduling authority changes, but the agent-local engine

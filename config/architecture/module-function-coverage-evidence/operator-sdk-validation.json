@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Rust Worker and Operator SDK evidence separated from Headless control SDKs, covering authoring, managed and bound-Orchestra package supply chains, host execution, ABI boundaries, workflow composition, and remaining automatic-fetch and cross-platform operational gaps.",
+  "summary": "Rust Worker and Operator SDK evidence separated from Headless control SDKs, covering authoring, managed and automatic bound-Orchestra package supply chains, generation-safe host rotation, ABI boundaries, workflow composition, and remaining task-eviction and cross-platform operational gaps.",
   "paradigm_contract_evidence": {
     "runtime_api": [
       {
@@ -30,6 +30,9 @@
           "workers/rust/crates/engine/src/tests/operator_sdk_host.rs",
           "workers/rust/crates/cli/src/operator_task_runtime.rs",
           "workers/rust/crates/cli/src/operator_package_runtime.rs",
+          "workers/rust/crates/cli/src/operator_package_fetch_runtime.rs",
+          "workers/rust/crates/cli/src/operator_package_generation.rs",
+          "workers/rust/crates/cli/tests/operator_package_orchestra_fetch_live.rs",
           "workers/rust/crates/cli/tests/operator_package_live.rs"
         ],
         "required_text": [
@@ -37,6 +40,8 @@
           "loads_prebuilt_template_cdylib_through_dynamic_host",
           "ExternalOperatorTrustPolicy",
           "external_operator_package_executed",
+          "prepare_orchestra_operator_package",
+          "agent_fetches_executes_and_safely_rotates_bound_orchestra_package",
           "live_agent_loads_executes_rejects_tamper_and_recovers"
         ]
       }
@@ -336,8 +341,8 @@
       "id": "operator-sdk-bound-orchestra-fetch-qualified",
       "status": "proven",
       "grade": "qualified",
-      "modules": ["orchestra-control-plane", "sdk-operator", "runtime-installer"],
-      "paradigms": ["runtime_api", "validation", "security", "persistence_provenance", "sdk_operator"],
+      "modules": ["orchestra-control-plane", "sdk-operator", "runtime-agent-cli", "runtime-installer"],
+      "paradigms": ["runtime_api", "solver_execution", "validation", "security", "persistence_provenance", "sdk_operator"],
       "dimensions": ["execution", "security", "contract", "recovery", "abi_compatibility"],
       "files": [
         "workers/rust/crates/operator-sdk/src/distribution.rs",
@@ -348,6 +353,12 @@
         "apps/web/test/kyuubiki_web/api/operator_package_distribution_api_test.exs",
         "workers/rust/crates/installer/src/operator_package_fetch.rs",
         "workers/rust/crates/installer/src/tests/operator_package_fetch.rs",
+        "workers/rust/crates/cli/src/operator_package_fetch_runtime.rs",
+        "workers/rust/crates/cli/src/operator_package_generation.rs",
+        "workers/rust/crates/cli/src/operator_package_runtime.rs",
+        "workers/rust/crates/cli/src/operator_task_receipts.rs",
+        "workers/rust/crates/cli/tests/operator_package_orchestra_fetch_live.rs",
+        "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
         "docs/operator-library-centralization.md"
       ],
       "required_text": [
@@ -357,7 +368,12 @@
         "task_required_disposable",
         "resolves and downloads only the requested platform package",
         "fetches_verifies_and_installs_current_platform_package",
-        "rejects_digest_mismatch_without_leaving_an_installed_package"
+        "rejects_digest_mismatch_without_leaving_an_installed_package",
+        "fetched_and_activated",
+        "verified_cache_hit",
+        "prepare_operator_package_generation",
+        "retry_bound_orchestra_package_fetch",
+        "agent_fetches_executes_and_safely_rotates_bound_orchestra_package"
       ]
     },
     {

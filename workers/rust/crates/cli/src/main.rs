@@ -17,6 +17,8 @@ mod agent_state;
 mod agent_watchdog;
 mod agent_watchdog_runtime;
 mod config;
+mod operator_package_fetch_runtime;
+mod operator_package_generation;
 mod operator_package_runtime;
 mod operator_task_builtin;
 mod operator_task_receipts;
@@ -40,8 +42,8 @@ use agent_state::{
 };
 use agent_watchdog_runtime::AgentWatchdogRuntimeHandle;
 use config::{AgentConfig, Command};
+use operator_package_fetch_runtime::configure_operator_package_fetch_runtime;
 use operator_package_runtime::initialize_operator_package_runtime;
-use operator_task_runtime::store_operator_package_runtime_binding;
 use rpc::handle_request;
 use transport::{AgentReply, FrameReadError, read_frame, write_agent_reply};
 use worker::run_worker;
@@ -70,7 +72,7 @@ fn run_agent(config: &AgentConfig) -> Result<(), String> {
     let package_binding = initialize_operator_package_runtime(config)?;
     let mut config = config.clone();
     config.operator_activated_package_count = package_binding.activated_package_count();
-    store_operator_package_runtime_binding(package_binding);
+    configure_operator_package_fetch_runtime(&config);
     agent_artifact::configure(&config);
     agent_fault_injection::configure_from_env()?;
     store_runtime_descriptor(build_agent_descriptor(&config));

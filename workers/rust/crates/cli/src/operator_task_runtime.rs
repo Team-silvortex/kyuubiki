@@ -1,11 +1,11 @@
 use serde_json::Value;
 
 use crate::config::AgentConfig;
+use crate::operator_package_fetch_runtime::prepare_orchestra_operator_package;
 #[cfg(test)]
 pub(crate) use crate::operator_package_runtime::OperatorPackageRuntimeAttachment;
 pub(crate) use crate::operator_package_runtime::{
     OperatorPackageRuntimeBinding, operator_package_runtime_binding_from_config,
-    store_operator_package_runtime_binding,
 };
 use crate::operator_package_runtime::{
     current_runtime_binding, try_execute_external_operator_task,
@@ -51,6 +51,11 @@ const OPERATOR_TASK_RELIABILITY_PROFILE_SCHEMA: &str =
 
 pub(crate) fn operator_package_runtime_snapshot() -> Value {
     let binding = current_runtime_binding();
+    operator_package_runtime_snapshot_from_binding(&binding)
+}
+
+pub(crate) fn operator_package_runtime_snapshot_for_config(config: &AgentConfig) -> Value {
+    let binding = operator_package_runtime_binding_from_config(config);
     operator_package_runtime_snapshot_from_binding(&binding)
 }
 
@@ -103,11 +108,6 @@ pub(crate) fn operator_task_execution_reliability_snapshot_for_binding(
     })
 }
 
-pub(crate) fn operator_package_runtime_snapshot_for_config(config: &AgentConfig) -> Value {
-    let binding = operator_package_runtime_binding_from_config(config);
-    operator_package_runtime_snapshot_from_binding(&binding)
-}
-
 fn operator_package_runtime_snapshot_from_binding(
     binding: &OperatorPackageRuntimeBinding,
 ) -> Value {
@@ -116,7 +116,7 @@ fn operator_package_runtime_snapshot_from_binding(
         "status": binding.status(),
         "expected_host": OPERATOR_PACKAGE_RUNTIME_HOST,
         "expected_sdk": OPERATOR_PACKAGE_RUNTIME_SDK,
-        "attachment": operator_package_runtime_attachment(&binding)
+        "attachment": operator_package_runtime_attachment(binding)
     })
 }
 
@@ -153,7 +153,7 @@ pub(crate) fn run_operator_task_ir(params: &Value) -> Result<Value, OperatorTask
 
 pub(crate) fn run_operator_task_ir_with_runtime(
     params: &Value,
-    package_runtime: OperatorPackageRuntimeBinding,
+    mut package_runtime: OperatorPackageRuntimeBinding,
 ) -> Result<Value, OperatorTaskRuntimeError> {
     let mode = parse_mode(params)?;
     let task_ir = params
@@ -206,8 +206,8 @@ pub(crate) fn run_operator_task_ir_with_runtime(
     }
 
     if mode == OPERATOR_TASK_MODE_EXECUTE {
-        let execution = try_execute_external_operator_task(&summary, task_ir, &package_runtime)
-            .map_err(|error| {
+        let orchestra_fetch_ready =
+            prepare_orchestra_operator_package(&summary).map_err(|error| {
                 OperatorTaskRuntimeError::with_task(
                     error.code,
                     error.message,
@@ -215,6 +215,25 @@ pub(crate) fn run_operator_task_ir_with_runtime(
                     Some(task_ir),
                 )
             })?;
+        if let Some(prepared) = orchestra_fetch_ready.as_ref() {
+            package_runtime = prepared.binding.clone();
+        }
+        let execution = try_execute_external_operator_task(
+            &summary,
+            task_ir,
+            &package_runtime,
+            orchestra_fetch_ready
+                .as_ref()
+                .map(|prepared| prepared.cache_status),
+        )
+        .map_err(|error| {
+            OperatorTaskRuntimeError::with_task(
+                error.code,
+                error.message,
+                error.stage,
+                Some(task_ir),
+            )
+        })?;
         if let Some(execution) = execution {
             return Ok(build_external_operator_execution_payload(
                 summary,

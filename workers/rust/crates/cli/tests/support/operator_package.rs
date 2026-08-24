@@ -119,7 +119,7 @@ pub fn sha256_file(path: &Path) -> Result<String, Box<dyn Error>> {
     Ok(format!("{:x}", digest.finalize()))
 }
 
-struct LiveAgent {
+pub struct LiveAgent {
     child: Child,
     log_path: PathBuf,
     port: u16,
@@ -163,6 +163,50 @@ impl LiveAgent {
         Ok(agent)
     }
 
+    pub fn start_orchestrated(
+        packages_root: &Path,
+        orchestrator_url: &str,
+        token: &str,
+    ) -> Result<Self, Box<dyn Error>> {
+        let port = reserve_port()?;
+        let log_path =
+            std::env::temp_dir().join(format!("kyuubiki-operator-fetch-live-{port}.log"));
+        let log = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(&log_path)?;
+        let child = Command::new(env!("CARGO_BIN_EXE_kyuubiki-cli"))
+            .args([
+                "agent",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                &port.to_string(),
+                "--agent-id",
+                "operator-fetch-live-agent",
+                "--orchestrator-url",
+                orchestrator_url,
+                "--operator-package-host-id",
+                "operator-fetch-live-host",
+                "--operator-packages-root",
+                packages_root.to_str().ok_or("packages root is not utf-8")?,
+                "--operator-activated-package-count",
+                "0",
+            ])
+            .env("KYUUBIKI_CLUSTER_API_TOKEN", token)
+            .stdout(Stdio::from(log.try_clone()?))
+            .stderr(Stdio::from(log))
+            .spawn()?;
+        let mut agent = Self {
+            child,
+            log_path,
+            port,
+        };
+        agent.wait_until_ready(Duration::from_secs(30))?;
+        Ok(agent)
+    }
+
     fn wait_until_ready(&mut self, timeout: Duration) -> Result<(), Box<dyn Error>> {
         let started = Instant::now();
         while started.elapsed() < timeout {
@@ -181,7 +225,7 @@ impl LiveAgent {
         Err(format!("agent did not listen on port {}", self.port).into())
     }
 
-    fn request(&self, id: &str, method: &str, params: Value) -> Result<Value, Box<dyn Error>> {
+    pub fn request(&self, id: &str, method: &str, params: Value) -> Result<Value, Box<dyn Error>> {
         let mut stream = TcpStream::connect(("127.0.0.1", self.port))?;
         stream.set_read_timeout(Some(Duration::from_secs(30)))?;
         stream.set_write_timeout(Some(Duration::from_secs(30)))?;
@@ -210,7 +254,7 @@ impl Drop for LiveAgent {
     }
 }
 
-fn external_operator_task(entrypoint_sha256: &str) -> Value {
+pub fn external_operator_task(entrypoint_sha256: &str) -> Value {
     let mut task = json!({
         "schema_version": "kyuubiki.operator-task-ir/v1",
         "task_id": "operator-package-live-template-summary",
@@ -276,7 +320,7 @@ fn external_operator_task(entrypoint_sha256: &str) -> Value {
     task
 }
 
-fn refresh_task_digest(task: &mut Value) {
+pub fn refresh_task_digest(task: &mut Value) {
     let digest = compute_operator_task_digest(task).expect("digest external operator task");
     task["integrity"] = json!({ "task_digest": digest });
 }

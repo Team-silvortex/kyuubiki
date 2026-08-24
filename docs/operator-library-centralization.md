@@ -167,9 +167,28 @@ returns canonical same-origin download paths. Installer then repeats identity,
 size, digest, and package-readiness checks before atomic activation. A target
 miss is explicit; another platform is never substituted.
 
-This currently closes the explicit Installer pull path. Automatic consumption
-of the existing Agent TaskIR fetch request is still pending and must not be
-counted as operational fetch-on-demand evidence yet.
+This now closes both the explicit Installer pull path and the Agent TaskIR
+handoff. An orchestrated Agent may start with an empty managed `packages`
+directory. On `execute`, an admitted `orchestra_fetch` TaskIR is resolved only
+against that Agent's configured Orchestra, downloaded with its in-memory cluster
+token, verified, atomically installed, and loaded before dispatch.
+Preflight remains side-effect free. Concurrent cache misses are serialized, and
+an already verified package produces a `verified_cache_hit` receipt instead of
+another download.
+
+Every miss is assembled in an owner-marked Agent generation using the same native
+Installer verification and atomic-install APIs. A same-id newer version replaces
+the old package only in the candidate generation. After complete dynamic-host and
+TaskIR identity validation, host and runtime binding switch together. In-flight
+tasks retain the previous host, and a weak-reference reaper deletes its generation
+only after the final task releases it. The active cache remains visible under
+`<store>/agent-runtime-generations` and may be reused for the Agent process
+lifetime.
+
+Immediate task-scope eviction, cleanup after abnormal process termination, and
+three-platform dynamic-library qualification remain open. Until those land,
+`task_required_disposable` describes authority and cleanup intent rather than
+proof of deletion immediately after every task.
 
 ## Interaction with the operator catalog
 

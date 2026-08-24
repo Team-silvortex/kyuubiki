@@ -81,7 +81,7 @@
     },
     {
       "id": "agent_dynamic_host_dispatch",
-      "description": "Start a package-enabled Agent, execute through RPC, reject digest tamper, and recover.",
+      "description": "Run local-package and bound-Orchestra Agent RPC dispatch, including fetch, cache reuse, safe version rotation, retired-generation cleanup, tamper rejection, and recovery.",
       "cwd": "workers/rust",
       "command": [
         "cargo",
@@ -90,6 +90,8 @@
         "kyuubiki-cli",
         "--test",
         "operator_package_live",
+        "--test",
+        "operator_package_orchestra_fetch_live",
         "--",
         "--ignored",
         "--nocapture"

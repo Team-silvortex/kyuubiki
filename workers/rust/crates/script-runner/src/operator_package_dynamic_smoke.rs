@@ -217,6 +217,8 @@ pub fn run_operator_package_dynamic_smoke(
             "kyuubiki-cli",
             "--test",
             "operator_package_live",
+            "--test",
+            "operator_package_orchestra_fetch_live",
             "--",
             "--ignored",
             "--nocapture",
@@ -225,7 +227,7 @@ pub fn run_operator_package_dynamic_smoke(
     )?;
     stages.push(stage_record(
         "agent_dynamic_host_dispatch",
-        "Start a package-enabled Agent, execute through RPC, reject digest tamper, and recover.",
+        "Run local-package and bound-Orchestra Agent RPC dispatch, including fetch, cache reuse, safe version rotation, retired-generation cleanup, tamper rejection, and recovery.",
         rust_cwd.clone(),
         [
             "cargo",
@@ -234,6 +236,8 @@ pub fn run_operator_package_dynamic_smoke(
             "kyuubiki-cli",
             "--test",
             "operator_package_live",
+            "--test",
+            "operator_package_orchestra_fetch_live",
             "--",
             "--ignored",
             "--nocapture",

@@ -138,6 +138,12 @@ fn build_runtime_engine_descriptor(runtime_mode: &str) -> RuntimeEngineDescripto
 
 pub(crate) fn registration_payload(config: &AgentConfig) -> serde_json::Value {
     let descriptor = agent_descriptor();
+    let runtime_snapshot = operator_package_runtime_snapshot();
+    let package_runtime = if runtime_snapshot["ready"].as_bool() == Some(true) {
+        runtime_snapshot
+    } else {
+        operator_package_runtime_snapshot_for_config(config)
+    };
 
     serde_json::json!({
         "id": config.agent_id,
@@ -149,7 +155,7 @@ pub(crate) fn registration_payload(config: &AgentConfig) -> serde_json::Value {
         "methods": descriptor.protocol.methods,
         "capabilities": descriptor.capabilities,
         "headless_bridge": agent_headless_bridge_manifest(),
-        "operator_package_runtime": operator_package_runtime_snapshot_for_config(config),
+        "operator_package_runtime": package_runtime,
         "deployment_readiness": build_agent_deployment_readiness_for_config(config),
         "health_score": descriptor.runtime.health_score,
         "watchdog": agent_watchdog::snapshot(),

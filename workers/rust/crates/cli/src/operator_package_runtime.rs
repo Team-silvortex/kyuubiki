@@ -1,4 +1,8 @@
 use crate::config::AgentConfig;
+use crate::operator_package_generation::{
+    OwnedOperatorPackageGeneration, PreparedOperatorPackageGeneration,
+    remove_owned_operator_package_generation,
+};
 use kyuubiki_engine::{
     BuiltInOperatorRegistryKind, DynamicOperatorHostSession,
     load_external_operator_packages_with_dynamic_host,
@@ -12,8 +16,9 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Read;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, OnceLock, RwLock};
+use std::sync::{Arc, Mutex, OnceLock, RwLock, Weak};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct OperatorPackageRuntimeAttachment {
@@ -53,14 +58,62 @@ struct LoadedOperatorPackage {
 struct AgentOperatorPackageHost {
     session: DynamicOperatorHostSession,
     packages: Vec<LoadedOperatorPackage>,
+    owned_generation: Option<OwnedOperatorPackageGeneration>,
 }
 
 pub(crate) fn initialize_operator_package_runtime(
     config: &AgentConfig,
 ) -> Result<OperatorPackageRuntimeBinding, String> {
-    replace_host(None)?;
+    let (binding, host) = load_operator_package_runtime(config)?;
+    replace_runtime(binding.clone(), host);
+    Ok(binding)
+}
+
+pub(crate) fn activate_fetched_operator_package_runtime(
+    config: &AgentConfig,
+    summary: &OperatorTaskExecutionSummary,
+    generation: PreparedOperatorPackageGeneration,
+) -> Result<OperatorPackageRuntimeBinding, ExternalOperatorTaskError> {
+    let (binding, host) =
+        load_operator_package_runtime(config).map_err(|message| ExternalOperatorTaskError {
+            code: "operator_package_activation_failed",
+            stage: "activate_operator_registry",
+            message,
+        })?;
+    let mut host = host.ok_or_else(|| ExternalOperatorTaskError {
+        code: "operator_package_runtime_not_attached",
+        stage: "activate_operator_registry",
+        message: "operator package runtime detached during fetched package activation".to_string(),
+    })?;
+    if !host
+        .packages
+        .iter()
+        .any(|package| package_matches_summary(package, summary))
+    {
+        drop(host);
+        return Err(identity_error_value(
+            "downloaded package does not satisfy the admitted TaskIR identity",
+        ));
+    }
+    let owned_generation = generation.commit();
+    Arc::get_mut(&mut host)
+        .expect("newly loaded operator package host must be uniquely owned")
+        .owned_generation = Some(owned_generation);
+    replace_runtime(binding.clone(), Some(host));
+    Ok(binding)
+}
+
+fn load_operator_package_runtime(
+    config: &AgentConfig,
+) -> Result<
+    (
+        OperatorPackageRuntimeBinding,
+        Option<Arc<AgentOperatorPackageHost>>,
+    ),
+    String,
+> {
     let Some(root) = config.operator_packages_root.as_deref() else {
-        return Ok(OperatorPackageRuntimeBinding::Detached);
+        return Ok((OperatorPackageRuntimeBinding::Detached, None));
     };
     let packages_root = PathBuf::from(root)
         .canonicalize()
@@ -70,13 +123,6 @@ pub(crate) fn initialize_operator_package_runtime(
         &packages_root,
     )
     .map_err(|error| format!("operator package host activation failed: {error}"))?;
-    if session.report().activated_packages.is_empty() {
-        return Err(format!(
-            "operator packages root {} contains no loadable package",
-            packages_root.display()
-        ));
-    }
-
     let packages = session
         .report()
         .activated_packages
@@ -118,11 +164,14 @@ pub(crate) fn initialize_operator_package_runtime(
         packages_root: packages_root.display().to_string(),
         activated_package_count: packages.len(),
     };
-    replace_host(Some(Arc::new(AgentOperatorPackageHost {
-        session,
-        packages,
-    })))?;
-    Ok(OperatorPackageRuntimeBinding::Attached(attachment))
+    Ok((
+        OperatorPackageRuntimeBinding::Attached(attachment),
+        Some(Arc::new(AgentOperatorPackageHost {
+            session,
+            packages,
+            owned_generation: None,
+        })),
+    ))
 }
 
 pub(crate) fn operator_package_runtime_binding_from_config(
@@ -142,25 +191,24 @@ pub(crate) fn operator_package_runtime_binding_from_config(
     })
 }
 
-pub(crate) fn store_operator_package_runtime_binding(binding: OperatorPackageRuntimeBinding) {
-    if let Ok(mut current) = runtime_binding().lock() {
-        *current = binding;
-    }
-}
-
 pub(crate) fn current_runtime_binding() -> OperatorPackageRuntimeBinding {
-    runtime_binding()
-        .lock()
-        .map(|binding| binding.clone())
-        .unwrap_or(OperatorPackageRuntimeBinding::Detached)
+    runtime_state()
+        .read()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .binding
+        .clone()
 }
 
 pub(crate) fn try_execute_external_operator_task(
     summary: &OperatorTaskExecutionSummary,
     task_ir: &Value,
     binding: &OperatorPackageRuntimeBinding,
+    orchestra_cache_status: Option<&'static str>,
 ) -> Result<Option<ExternalOperatorExecution>, ExternalOperatorTaskError> {
-    if !binding.is_attached() || summary.execution_mode.as_deref() != Some("local_bundle") {
+    let execution_mode = summary.execution_mode.as_deref();
+    let supported_mode = execution_mode == Some("local_bundle")
+        || (execution_mode == Some("orchestra_fetch") && orchestra_cache_status.is_some());
+    if !binding.is_attached() || !supported_mode {
         return Ok(None);
     }
     let host = current_host().ok_or_else(|| ExternalOperatorTaskError {
@@ -216,9 +264,22 @@ pub(crate) fn try_execute_external_operator_task(
             "operator_kind": summary.operator_kind,
             "entrypoint_sha256": package.entrypoint_sha256,
             "integrity_verified": true,
-            "origin": "external_local"
+            "cache_status": orchestra_cache_status.unwrap_or("local_bundle"),
+            "origin": if execution_mode == Some("orchestra_fetch") {
+                "bound_orchestra_fetch"
+            } else {
+                "external_local"
+            }
         }),
     }))
+}
+
+pub(crate) fn operator_package_ready_for_task(summary: &OperatorTaskExecutionSummary) -> bool {
+    current_host().is_some_and(|host| {
+        host.packages
+            .iter()
+            .any(|package| package_matches_summary(package, summary))
+    })
 }
 
 impl OperatorPackageRuntimeBinding {
@@ -246,7 +307,18 @@ fn validate_package_identity(
     summary: &OperatorTaskExecutionSummary,
     task_ir: &Value,
 ) -> Result<(), ExternalOperatorTaskError> {
-    let expected_ref = format!("bundle://{}", package.package_id);
+    let expected_ref = match summary.execution_mode.as_deref() {
+        Some("orchestra_fetch") => {
+            if package.package_id != summary.operator_id {
+                return identity_error(format!(
+                    "central operator {} requires a same-id package",
+                    summary.operator_id
+                ));
+            }
+            format!("orchestra://operator-package/{}", package.package_id)
+        }
+        _ => format!("bundle://{}", package.package_id),
+    };
     if summary.package_ref.as_deref() != Some(expected_ref.as_str()) {
         return identity_error(format!(
             "operator {} requires package_ref {expected_ref}",
@@ -283,6 +355,28 @@ fn validate_package_identity(
         );
     }
     Ok(())
+}
+
+fn package_matches_summary(
+    package: &LoadedOperatorPackage,
+    summary: &OperatorTaskExecutionSummary,
+) -> bool {
+    let expected_package_ref = match summary.execution_mode.as_deref() {
+        Some("orchestra_fetch") if package.package_id == summary.operator_id => Some(format!(
+            "orchestra://operator-package/{}",
+            package.package_id
+        )),
+        Some("local_bundle") => Some(format!("bundle://{}", package.package_id)),
+        _ => None,
+    };
+    expected_package_ref.is_some()
+        && expected_package_ref.as_deref() == summary.package_ref.as_deref()
+        && summary.package_version.as_deref() == Some(package.package_version.as_str())
+        && package
+            .operator_kinds
+            .get(&summary.operator_id)
+            .map(String::as_str)
+            == Some(summary.operator_kind.as_str())
 }
 
 fn identity_error(message: String) -> Result<(), ExternalOperatorTaskError> {
@@ -345,24 +439,97 @@ fn validation_status_label(status: OperatorValidationStatus) -> &'static str {
     }
 }
 
-fn runtime_binding() -> &'static Mutex<OperatorPackageRuntimeBinding> {
-    static BINDING: OnceLock<Mutex<OperatorPackageRuntimeBinding>> = OnceLock::new();
-    BINDING.get_or_init(|| Mutex::new(OperatorPackageRuntimeBinding::Detached))
+struct OperatorPackageRuntimeState {
+    binding: OperatorPackageRuntimeBinding,
+    host: Option<Arc<AgentOperatorPackageHost>>,
 }
 
-fn operator_host() -> &'static RwLock<Option<Arc<AgentOperatorPackageHost>>> {
-    static HOST: OnceLock<RwLock<Option<Arc<AgentOperatorPackageHost>>>> = OnceLock::new();
-    HOST.get_or_init(|| RwLock::new(None))
+struct RetiredOperatorPackageGeneration {
+    host: Weak<AgentOperatorPackageHost>,
+    generation: OwnedOperatorPackageGeneration,
 }
 
-fn current_host() -> Option<Arc<AgentOperatorPackageHost>> {
-    operator_host().read().ok().and_then(|host| host.clone())
+struct AgentOperatorPackageHostLease {
+    host: Option<Arc<AgentOperatorPackageHost>>,
 }
 
-fn replace_host(host: Option<Arc<AgentOperatorPackageHost>>) -> Result<(), String> {
-    let mut current = operator_host()
-        .write()
-        .map_err(|_| "operator package host lock is poisoned".to_string())?;
-    *current = host;
-    Ok(())
+impl Deref for AgentOperatorPackageHostLease {
+    type Target = AgentOperatorPackageHost;
+
+    fn deref(&self) -> &Self::Target {
+        self.host
+            .as_deref()
+            .expect("operator package host lease must remain populated")
+    }
+}
+
+impl Drop for AgentOperatorPackageHostLease {
+    fn drop(&mut self) {
+        drop(self.host.take());
+        reap_retired_generations();
+    }
+}
+
+fn runtime_state() -> &'static RwLock<OperatorPackageRuntimeState> {
+    static STATE: OnceLock<RwLock<OperatorPackageRuntimeState>> = OnceLock::new();
+    STATE.get_or_init(|| {
+        RwLock::new(OperatorPackageRuntimeState {
+            binding: OperatorPackageRuntimeBinding::Detached,
+            host: None,
+        })
+    })
+}
+
+fn retired_generations() -> &'static Mutex<Vec<RetiredOperatorPackageGeneration>> {
+    static RETIRED: OnceLock<Mutex<Vec<RetiredOperatorPackageGeneration>>> = OnceLock::new();
+    RETIRED.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+fn current_host() -> Option<AgentOperatorPackageHostLease> {
+    runtime_state()
+        .read()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .host
+        .clone()
+        .map(|host| AgentOperatorPackageHostLease { host: Some(host) })
+}
+
+fn replace_runtime(
+    binding: OperatorPackageRuntimeBinding,
+    host: Option<Arc<AgentOperatorPackageHost>>,
+) {
+    let previous = {
+        let mut current = runtime_state()
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        current.binding = binding;
+        std::mem::replace(&mut current.host, host)
+    };
+    retire_host(previous);
+}
+
+fn retire_host(host: Option<Arc<AgentOperatorPackageHost>>) {
+    if let Some(host) = host {
+        if let Some(generation) = host.owned_generation.clone() {
+            retired_generations()
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .push(RetiredOperatorPackageGeneration {
+                    host: Arc::downgrade(&host),
+                    generation,
+                });
+        }
+        drop(host);
+    }
+    reap_retired_generations();
+}
+
+fn reap_retired_generations() {
+    let mut retired = retired_generations()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    retired.retain(|entry| {
+        entry.host.upgrade().is_some()
+            || remove_owned_operator_package_generation(&entry.generation).is_err()
+    });
 }

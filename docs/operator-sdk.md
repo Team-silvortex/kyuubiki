@@ -237,11 +237,14 @@ loads both external-local and Installer-managed packages, dispatches over the
 TaskIR RPC boundary, rejects package-integrity substitution, and executes again
 after rejection. The bound-Orchestra path now resolves and serves exactly one
 current-target package, while Installer downloads, verifies, and atomically
-installs it. These are retained local qualifications, not a three-platform
-operational claim. Promotion to the Daji target still requires automatic TaskIR
-fetch handoff and the supported platform ABI matrix. A focused benchmark must measure package
-discovery, admission, load, first dispatch, and steady dispatch without
-borrowing general solver throughput numbers.
+installs it. The Agent now consumes the same contract automatically for admitted
+`orchestra_fetch` TaskIR, hot-loads the package, and distinguishes a first fetch
+from a verified cache hit. These are retained local qualifications, not a
+three-platform operational claim. Promotion to the Daji target still requires
+the supported platform ABI matrix, task-scope cache eviction, safe package
+version rotation, and focused measurements of discovery, admission, load, first
+dispatch, and steady dispatch without borrowing general solver throughput
+numbers.
 
 ### Author-facing crate
 
@@ -403,10 +406,27 @@ The schemas and portable examples are:
 - `schemas/operator-package-resolution.schema.json`
 - `schemas/examples.operator-package-resolution.json`
 
-TaskIR already emits `kyuubiki.operator-package-fetch-request/v1`; wiring that
-request directly to the Installer fetch API during Agent admission remains the
-next runtime step. Until then, the explicit Installer command proves the supply
-chain but is not described as automatic Agent fetch-on-demand.
+TaskIR emits `kyuubiki.operator-package-fetch-request/v1`. During `execute`, an
+Agent configured with one `--orchestrator-url`, its cluster token, and a managed
+`--operator-packages-root <store>/packages` now consumes that request directly.
+It accepts an empty package directory, serializes concurrent misses, rechecks the
+cache after acquiring the fetch lock, invokes the native Installer library API
+without a subprocess, and builds each miss in an owner-marked
+`<store>/agent-runtime-generations/<generation>` store. Existing verified packages
+other than the replaced package are carried into the candidate generation. The
+Agent loads and identity-checks the complete candidate before atomically swapping
+the host and runtime binding.
+
+An in-flight task retains its old host through an `Arc` lease. The retired
+generation is deleted only after the final lease is released, so a Windows DLL is
+never removed while still loaded. Sequential same-package upgrades are therefore
+safe without an explicit uninstall. The execution receipt reports
+`bound_orchestra_fetch` together with `fetched_and_activated` or
+`verified_cache_hit`. Preflight performs no download.
+
+Immediate task/job-scope eviction, an abnormal-exit generation janitor, and
+qualified dynamic-library evidence on Windows, Linux, and macOS remain explicit
+lifecycle gaps rather than hidden best-effort cleanup.
 
 For the repository template package, use the Make target:
 

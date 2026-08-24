@@ -491,6 +491,7 @@ dependencies = [
  "kyuubiki-engine",
  "kyuubiki-headless-sdk",
  "kyuubiki-installer",
+ "kyuubiki-operator-sdk",
  "kyuubiki-protocol",
  "kyuubiki-solver",
  "serde",
