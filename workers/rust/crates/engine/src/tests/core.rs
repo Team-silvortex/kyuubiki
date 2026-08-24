@@ -1,7 +1,8 @@
 use crate::{
     EngineSolveRequest, built_in_operator_descriptors, chunk_result, describe_built_in_operator,
     is_supported_workflow_operator, solve, solve_operator_runtime_manifest,
-    supported_workflow_operator_ids, workflow_solve_executor::run_solve_operator,
+    supported_workflow_operator_ids,
+    workflow_solve_executor::{run_solve_operator, verify_solver_result_provenance},
 };
 use kyuubiki_protocol::{
     AnalysisResult, OperatorKind, ResultChunkKind, ResultChunkRequest, SolidTetra3dElementInput,
@@ -71,6 +72,56 @@ fn runs_stokes_flow_through_workflow_solve_executor() {
         result["_solver_provenance"]["lineage"]["solver_dispatch_verified"],
         true
     );
+    verify_solver_result_provenance(&result, "solve.stokes_flow_quad_2d")
+        .expect("emitted solver provenance should verify");
+}
+
+#[test]
+fn solver_result_provenance_verifies_digest_bound_result() {
+    let result = digest_bound_bar_result();
+
+    verify_solver_result_provenance(&result, "solve.bar_1d")
+        .expect("digest-bound solver result should verify");
+    assert_eq!(result["_solver_provenance"]["digest_algorithm"], "sha256");
+    assert_eq!(
+        result["_solver_provenance"]["result_digest"]
+            .as_str()
+            .map(str::len),
+        Some(64)
+    );
+}
+
+#[test]
+fn solver_result_provenance_rejects_result_tamper() {
+    let mut result = digest_bound_bar_result();
+    result["tampered"] = serde_json::Value::Bool(true);
+
+    let error = verify_solver_result_provenance(&result, "solve.bar_1d")
+        .expect_err("mutated solver result must fail provenance verification");
+    assert!(error.contains("digest mismatch"));
+}
+
+#[test]
+fn solver_result_provenance_rejects_identity_tamper() {
+    let mut result = digest_bound_bar_result();
+    result["_solver_provenance"]["operator_id"] =
+        serde_json::Value::String("solve.heat_bar_1d".to_string());
+
+    let error = verify_solver_result_provenance(&result, "solve.bar_1d")
+        .expect_err("mutated solver identity must fail provenance verification");
+    assert!(error.contains("operator_id mismatch"));
+}
+
+fn digest_bound_bar_result() -> serde_json::Value {
+    let payload = serde_json::to_value(SolveBarRequest {
+        length: 1.0,
+        area: 0.01,
+        youngs_modulus: 210.0e9,
+        elements: 1,
+        tip_force: 1000.0,
+    })
+    .expect("bar payload should encode");
+    run_solve_operator("solve.bar_1d", payload).expect("bar workflow solve should run")
 }
 
 #[test]

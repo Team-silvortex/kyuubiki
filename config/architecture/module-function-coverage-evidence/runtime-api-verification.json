@@ -36,8 +36,11 @@
           "config/architecture/contracts-runtime-api-surface.json",
           "config/architecture/headless-sdk-validation-qualification.json",
           "schemas/headless-sdk-validation-qualification-report.schema.json",
+          "sdks/python/tests/test_security.py",
           "sdks/python/tests/test_smoke.py",
+          "sdks/elixir/test/security_test.exs",
           "sdks/elixir/test/smoke_test.exs",
+          "sdks/rust/tests/security.rs",
           "sdks/rust/tests/smoke.rs",
           "releases/usability-evidence/2.15.0/headless-runtime-api-verification.json"
         ],
@@ -47,13 +50,16 @@
           "test_agent_client_runs_workflow_jobs",
           "agent client runs workflow jobs",
           "agent_client_runs_workflow_jobs",
+          "test_auth_repr_redacts_and_rejects_header_injection",
+          "auth inspection redacts and rejects header injection",
+          "auth_debug_redacts_and_rejects_header_injection",
           "test_execute_operator_task_batch",
           "control plane client executes operator task batch",
           "control_plane_executes_operator_task_batch",
           "session.solver_rpc.release_operator_package_job",
           "KyuubikiSdk.SolverRpcClient.release_operator_package_job",
           "release operator package job",
-          "\"total_passed\": 265"
+          "\"total_passed\": 271"
         ]
       }
     ]
@@ -104,7 +110,8 @@
       "dimensions": [
         "execution",
         "contract",
-        "sdk_parity"
+        "sdk_parity",
+        "security"
       ],
       "files": [
         "releases/usability-evidence/2.15.0/headless-runtime-api-verification.json"
@@ -112,13 +119,16 @@
       "required_text": [
         "\"schema_version\": \"kyuubiki.headless-sdk-validation-qualification-report/v1\"",
         "\"status\": \"pass\"",
-        "\"total_passed\": 265",
-        "\"passed\": 95",
-        "\"passed\": 89",
-        "\"passed\": 81",
+        "\"total_passed\": 271",
+        "\"passed\": 97",
+        "\"passed\": 91",
+        "\"passed\": 83",
         "test_agent_client_runs_workflow_jobs",
         "agent client runs workflow jobs",
         "agent_client_runs_workflow_jobs",
+        "test_auth_repr_redacts_and_rejects_header_injection",
+        "auth inspection redacts and rejects header injection",
+        "auth_debug_redacts_and_rejects_header_injection",
         "\"id\": \"invalid-dispatch-policy\"",
         "\"id\": \"partial-failure-retained\""
       ]

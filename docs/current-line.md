@@ -67,21 +67,21 @@ sprawl:
   orders the remaining work through P0/P1/P2 `daji` criticality. The moxi 2.15
   recalibration now tracks 13 modules and 11 paradigms, including a distinct
   Rust-only Worker/Operator SDK and ABI-compatibility evidence
-- system security qualification now repeats 14 asserted checks across 22 exact
-  module/lane coordinates; the retained 28/28 report closes the former tied P0
-  security cluster without claiming installed or multi-host adversarial proof
-- persistence/provenance qualification now repeats four suites across the
-  Installer shell, Orchestra, and native Installer. Its 8/8 suite rounds retain
-  15 positive and fault-boundary assertions for chained mutation audit,
-  digest-verified state recovery, quarantine, and deployment-journal resume;
-  this is local qualification rather than remote storage or packaged-platform
-  operational proof
+- system security qualification now repeats 20 asserted checks across 28 exact
+  module/lane coordinates; the retained 40/40 report includes Workbench and all
+  three official Headless SDK bindings without claiming installed or multi-host
+  adversarial proof
+- persistence/provenance qualification now repeats seven suites across six
+  modules. Its 14/14 suite rounds retain 28 acceptance and rejection assertions
+  for desktop mutation audit, digest-bound Engine results, Headless task
+  lineage, Orchestra recovery, quarantine, and Installer journal resume; this
+  is local verification rather than remote storage or packaged-platform proof
 - runtime API verification now binds the Protocol and all three official
   Headless SDKs to exact tensor coordinates. Current retained reports cover 101
-  Protocol tests with 56/56 unique RPC round trips and 265 SDK tests with 14
+  Protocol tests with 56/56 unique RPC round trips and 271 SDK tests with 14
   cross-language failure-parity cases. Installer validation now also carries a
   current retained 21/21 cross-shell report; the recalibrated release profile
-  has 46/55 P0 coordinates at target while the external usability gate remains
+  has 51/55 P0 coordinates at target while the external usability gate remains
   closed
 - Rust Operator SDK qualification now retains a six-stage package journey:
   template tests, strict Installer preflight, `cdylib` build, Engine dynamic

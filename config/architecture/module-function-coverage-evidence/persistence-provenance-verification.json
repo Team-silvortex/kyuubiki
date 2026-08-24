@@ -1,15 +1,18 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Repeatable local qualification of Installer mutation audit provenance, Orchestra persistence-envelope and in-flight workflow restart recovery, and native deployment-journal recovery.",
+  "summary": "Repeatable local qualification of desktop mutation audit provenance, Orchestra and Installer recovery, digest-bound Engine solver results, and Headless operator-task lineage.",
   "paradigm_contract_evidence": {
     "persistence_provenance": [
       {
         "id": "persistence-provenance-qualification-contract",
         "modules": [
           "installer-shell",
+          "workbench-shell",
           "orchestra-control-plane",
-          "runtime-installer"
+          "runtime-engine-solver",
+          "runtime-installer",
+          "sdk-headless"
         ],
         "files": [
           "config/architecture/persistence-provenance-qualification.json",
@@ -20,9 +23,12 @@
         "required_text": [
           "kyuubiki.persistence-provenance-qualification-contract/v1",
           "kyuubiki.persistence-provenance-qualification-report/v1",
-          "installer-shell-audit-chain",
+          "desktop-shell-audit-chain",
+          "workbench-shell-provenance-closure",
           "orchestra-persistence-recovery",
-          "runtime-installer-journal-recovery"
+          "runtime-installer-journal-recovery",
+          "engine-solver-result-provenance",
+          "headless-operator-task-provenance"
         ]
       }
     ]
@@ -64,7 +70,7 @@
         "schemas/workflow-recovery.schema.json",
         "workers/rust/crates/installer/src/remote_deployment_journal_store.rs",
         "workers/rust/crates/installer/src/remote_deployment_replay.rs",
-        "releases/usability-evidence/2.14.3/persistence-provenance-qualification.json"
+        "releases/usability-evidence/2.15.0/persistence-provenance-qualification.json"
       ],
       "required_text": [
         "kyuubiki.desktop-audit-record/v1",
@@ -73,14 +79,56 @@
         "kyuubiki.workflow-execution-envelope/v1",
         "power_loss_sidecar_recovered",
         "\"status\":\"passed\"",
-        "\"module_count\":3",
-        "\"suite_count\":4",
-        "\"round_count\":8",
-        "\"passed_round_count\":8",
-        "\"assertion_count\":20",
-        "\"acceptance_assertion_count\":10",
-        "\"rejection_assertion_count\":10",
+        "\"module_count\":6",
+        "\"suite_count\":7",
+        "\"round_count\":14",
+        "\"passed_round_count\":14",
+        "\"assertion_count\":28",
+        "\"acceptance_assertion_count\":14",
+        "\"rejection_assertion_count\":14",
         "\"failed_suite_ids\":[]"
+      ]
+    },
+    {
+      "id": "persistence-provenance-client-engine-verification",
+      "status": "proven",
+      "grade": "verified",
+      "modules": [
+        "workbench-shell",
+        "runtime-engine-solver",
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "persistence_provenance"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "security"
+      ],
+      "files": [
+        "config/architecture/persistence-provenance-qualification.json",
+        "apps/workbench-gui/src-tauri/src/main.rs",
+        "apps/workbench-gui/test/smoke.test.mjs",
+        "workers/rust/crates/desktop-runtime/src/audit_log.rs",
+        "workers/rust/crates/engine/src/workflow_solve_executor.rs",
+        "workers/rust/crates/engine/src/tests/core.rs",
+        "workers/rust/crates/headless-sdk/src/operator_task.rs",
+        "workers/rust/crates/headless-sdk/src/operator_task_provenance.rs",
+        "workers/rust/crates/headless-sdk/src/operator_task_tests.rs",
+        "releases/usability-evidence/2.15.0/persistence-provenance-qualification.json"
+      ],
+      "required_text": [
+        "kyuubiki.workbench-guarded-mutation-provenance/v1",
+        "kyuubiki.engine-solver-provenance/v1",
+        "verify_solver_result_provenance",
+        "result_digest",
+        "kyuubiki.headless-operator-task-provenance/v1",
+        "verify_operator_task_provenance_profile",
+        "\"module_count\":6",
+        "\"suite_count\":7",
+        "\"passed_round_count\":14",
+        "\"assertion_count\":28"
       ]
     }
   ]

@@ -54,6 +54,27 @@ configured state.
 
 ## Current security model
 
+### Workbench and Headless client boundaries
+
+Workbench keeps control-plane, cluster, direct-mesh, and assistant credentials
+in process memory. Settings serialization removes secret-shaped fields and
+startup cleanup deletes legacy session-storage residue. Route-scoped auth tests
+also prove that control-plane tokens are not attached to direct-mesh requests,
+and vice versa. Imported language-pack text is rejected before state mutation
+when it contains script, event-handler, JavaScript URL, or browser-storage
+shapes. The Tauri shell retains a window-scoped command allowlist and a CSP that
+forbids remote script execution, objects, foreign framing, and `unsafe-eval`.
+
+Rust, Python, and Elixir Headless auth descriptors validate header names and
+values before opening a connection. Their standard debug or inspection forms
+redact the credential value, while the native Rust service executor reports
+only whether a token is configured. CRLF, control characters, embedded
+whitespace, empty values, and oversized headers fail without returning the
+rejected token. The repeatable local evidence is retained in
+`releases/usability-evidence/2.15.0/system-security-qualification.json`; it does
+not claim mobile secure-storage implementation, installed cross-platform
+penetration testing, or multi-host adversarial qualification.
+
 ### Supply-chain dependency guard
 
 Dependency updates are part of the security boundary, not just build hygiene.

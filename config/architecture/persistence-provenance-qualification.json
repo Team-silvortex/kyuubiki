@@ -5,13 +5,16 @@
   "rounds": 2,
   "required_modules": [
     "installer-shell",
+    "workbench-shell",
     "orchestra-control-plane",
-    "runtime-installer"
+    "runtime-engine-solver",
+    "runtime-installer",
+    "sdk-headless"
   ],
   "suites": [
     {
-      "id": "installer-shell-audit-chain",
-      "modules": ["installer-shell"],
+      "id": "desktop-shell-audit-chain",
+      "modules": ["installer-shell", "workbench-shell"],
       "program": "cargo",
       "cwd": "workers/rust",
       "args": [
@@ -25,14 +28,18 @@
       ],
       "source_files": [
         "workers/rust/crates/desktop-runtime/src/audit_log.rs",
-        "apps/installer-gui/src-tauri/src/main.rs"
+        "apps/installer-gui/src-tauri/src/main.rs",
+        "apps/workbench-gui/src-tauri/src/main.rs"
       ],
       "required_source_text": [
         "kyuubiki.desktop-audit-record/v1",
         "desktop audit ledger digest mismatch",
         "legacy desktop audit migration rejected",
         "guarded installer action blocked by invalid provenance ledger",
-        "installer action completed but provenance persistence failed"
+        "installer action completed but provenance persistence failed",
+        "kyuubiki.workbench-guarded-mutation-provenance/v1",
+        "guarded Workbench action blocked by invalid provenance ledger",
+        "Workbench action completed but provenance persistence failed"
       ],
       "assertions": [
         {
@@ -94,6 +101,40 @@
           "label": "Installer routes every declarative action and guarded mutation",
           "outcome": "acceptance",
           "boundary": "declarative provenance action ownership"
+        }
+      ]
+    },
+    {
+      "id": "workbench-shell-provenance-closure",
+      "modules": ["workbench-shell"],
+      "program": "node",
+      "cwd": ".",
+      "args": ["--test", "apps/workbench-gui/test/smoke.test.mjs"],
+      "source_files": [
+        "apps/workbench-gui/src-tauri/src/main.rs",
+        "apps/workbench-gui/src-tauri/capabilities/main.json",
+        "apps/workbench-gui/src-tauri/permissions/workbench.toml",
+        "apps/workbench-gui/test/smoke.test.mjs"
+      ],
+      "required_source_text": [
+        "kyuubiki.workbench-guarded-mutation-provenance/v1",
+        "prepare_desktop_provenance_ledger",
+        "append_workbench_guarded_mutation_audit",
+        "allow-guarded-mutation-action",
+        "guarded Workbench mutations use the verified desktop provenance ledger"
+      ],
+      "assertions": [
+        {
+          "id": "workbench-provenance-command-capability",
+          "label": "desktop shell defines a least-privilege main-window capability",
+          "outcome": "acceptance",
+          "boundary": "Workbench guarded mutation capability ownership"
+        },
+        {
+          "id": "workbench-provenance-ledger-closure",
+          "label": "guarded Workbench mutations use the verified desktop provenance ledger",
+          "outcome": "acceptance",
+          "boundary": "Workbench guarded mutation ledger closure"
         }
       ]
     },
@@ -247,6 +288,101 @@
           "label": "native_fault_injection_recovers_partial_commit_and_rejects_tamper",
           "outcome": "rejection",
           "boundary": "partial commit and digest tamper"
+        }
+      ]
+    },
+    {
+      "id": "engine-solver-result-provenance",
+      "modules": ["runtime-engine-solver"],
+      "program": "cargo",
+      "cwd": "workers/rust",
+      "args": [
+        "test",
+        "-p",
+        "kyuubiki-engine",
+        "solver_result_provenance",
+        "--no-fail-fast",
+        "--",
+        "--nocapture"
+      ],
+      "source_files": [
+        "workers/rust/crates/engine/src/workflow_solve_executor.rs",
+        "workers/rust/crates/engine/src/tests/core.rs",
+        "workers/rust/crates/protocol/src/operator_task_ir.rs"
+      ],
+      "required_source_text": [
+        "kyuubiki.engine-solver-provenance/v1",
+        "canonical_json_sha256",
+        "result_digest",
+        "verify_solver_result_provenance",
+        "solver result provenance digest mismatch"
+      ],
+      "assertions": [
+        {
+          "id": "engine-provenance-verifies-bound-result",
+          "label": "solver_result_provenance_verifies_digest_bound_result",
+          "outcome": "acceptance",
+          "boundary": "digest-bound Engine solver result"
+        },
+        {
+          "id": "engine-provenance-rejects-result-tamper",
+          "label": "solver_result_provenance_rejects_result_tamper",
+          "outcome": "rejection",
+          "boundary": "Engine solver result content tamper"
+        },
+        {
+          "id": "engine-provenance-rejects-identity-tamper",
+          "label": "solver_result_provenance_rejects_identity_tamper",
+          "outcome": "rejection",
+          "boundary": "Engine solver provenance identity tamper"
+        }
+      ]
+    },
+    {
+      "id": "headless-operator-task-provenance",
+      "modules": ["sdk-headless"],
+      "program": "cargo",
+      "cwd": "workers/rust",
+      "args": [
+        "test",
+        "-p",
+        "kyuubiki-headless-sdk",
+        "headless_operator_task_provenance",
+        "--no-fail-fast",
+        "--",
+        "--nocapture"
+      ],
+      "source_files": [
+        "workers/rust/crates/headless-sdk/src/operator_task.rs",
+        "workers/rust/crates/headless-sdk/src/operator_task_provenance.rs",
+        "workers/rust/crates/headless-sdk/src/operator_task_tests.rs",
+        "workers/rust/crates/protocol/src/operator_task_ir.rs"
+      ],
+      "required_source_text": [
+        "kyuubiki.headless-operator-task-provenance/v1",
+        "verify_operator_task_provenance_profile",
+        "operator_task_provenance_invalid",
+        "operator task provenance profile does not match verified lineage",
+        "operator task provenance summary and execution preview disagree"
+      ],
+      "assertions": [
+        {
+          "id": "headless-provenance-verifies-bound-profile",
+          "label": "headless_operator_task_provenance_verifies_bound_profile",
+          "outcome": "acceptance",
+          "boundary": "Headless digest-bound operator task profile"
+        },
+        {
+          "id": "headless-provenance-rejects-profile-tamper",
+          "label": "headless_operator_task_provenance_rejects_profile_tamper",
+          "outcome": "rejection",
+          "boundary": "Headless operator task provenance profile tamper"
+        },
+        {
+          "id": "headless-provenance-rejects-lineage-mismatch",
+          "label": "headless_operator_task_provenance_rejects_summary_preview_mismatch",
+          "outcome": "rejection",
+          "boundary": "Headless operator task summary preview mismatch"
         }
       ]
     }

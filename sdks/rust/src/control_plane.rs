@@ -414,7 +414,7 @@ impl ControlPlaneClient {
             body.len()
         );
         if let Some(auth) = &self.auth {
-            request.push_str(&format!("{}: {}\r\n", auth.header_name, auth.header_value));
+            auth.append_http_header(&mut request)?;
         }
         request.push_str("\r\n");
 
@@ -453,7 +453,7 @@ impl ControlPlaneClient {
             self.host
         );
         if let Some(auth) = &self.auth {
-            request.push_str(&format!("{}: {}\r\n", auth.header_name, auth.header_value));
+            auth.append_http_header(&mut request)?;
         }
         request.push_str("\r\n");
 

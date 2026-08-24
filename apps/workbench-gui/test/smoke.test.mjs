@@ -25,6 +25,20 @@ test("desktop shell defines a least-privilege main-window capability", () => {
   assert.match(permissions, /commands\.allow = \["guarded_mutation_action"\]/);
 });
 
+test("desktop shell pins a restrictive WebView security policy", () => {
+  const tauriConfig = JSON.parse(read("src-tauri/tauri.conf.json"));
+  const csp = tauriConfig.app.security.csp;
+
+  assert.equal(tauriConfig.build.frontendDist, "../ui");
+  assert.match(csp, /default-src 'self'/);
+  assert.match(csp, /script-src 'self'/);
+  assert.match(csp, /object-src 'none'/);
+  assert.match(csp, /frame-ancestors 'none'/);
+  assert.match(csp, /base-uri 'self'/);
+  assert.doesNotMatch(csp, /script-src[^;]*'unsafe-eval'/);
+  assert.doesNotMatch(csp, /default-src\s+\*/);
+});
+
 test("desktop shell exposes runtime and log panels", () => {
   const html = read("ui/index.html");
 
@@ -86,4 +100,21 @@ test("tauri backend exposes workbench runtime commands", () => {
     /read_runtime_log/,
     /workbench_environment/,
   ]);
+});
+
+test("guarded Workbench mutations use the verified desktop provenance ledger", () => {
+  const rust = read("src-tauri/src/main.rs");
+  const ledgerGuard = rust.indexOf("prepare_desktop_provenance_ledger");
+  const mutationDispatch = rust.indexOf("let result = match payload.action.as_str()");
+
+  assertMatches(rust, [
+    /kyuubiki\.workbench-guarded-mutation-provenance\/v1/,
+    /workbench-guarded-mutations\.jsonl/,
+    /append_desktop_provenance_record/,
+    /append_workbench_guarded_mutation_audit\(&payload, "ok", detail\)/,
+    /append_workbench_guarded_mutation_audit\(&payload, "failed", detail\)/,
+    /Workbench action completed but provenance persistence failed/,
+  ]);
+  assert.ok(ledgerGuard >= 0);
+  assert.ok(mutationDispatch > ledgerGuard);
 });

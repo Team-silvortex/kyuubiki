@@ -320,6 +320,7 @@ pub use operator_task::{
 };
 pub use operator_task_provenance::{
     HEADLESS_OPERATOR_TASK_PROVENANCE_SCHEMA_VERSION, operator_task_provenance_profile,
+    verify_operator_task_provenance_profile,
 };
 pub use operator_task_security::{
     HEADLESS_OPERATOR_TASK_SECURITY_SCHEMA_VERSION, operator_task_security_profile,

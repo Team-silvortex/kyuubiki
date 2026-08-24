@@ -32,6 +32,24 @@ and reads only a lightweight in-memory secret store for operator tokens. That
 keeps GUI convenience code separate from the service contract that headless
 SDKs depend on.
 
+Authentication descriptors in the Rust, Python, and Elixir SDKs retain their
+simple constructor APIs, but their debug, `repr`, and `Inspect` forms never
+render the credential value. Header names and token values are validated before
+network I/O; empty values, control characters, embedded whitespace, oversized
+values, and CRLF injection fail without echoing the rejected secret. The native
+Rust service executor follows the same rule and exposes only whether a token is
+configured in debug output. These are logging and transport boundaries, not a
+credential persistence mechanism; callers still own secure token acquisition
+and lifetime.
+
+Rust Headless operator-task preparation also verifies that the TaskIR summary,
+execution preview, and `kyuubiki.headless-operator-task-provenance/v1` profile
+describe one digest-bound task. Profile tamper or summary/preview drift fails
+before dispatch. Engine solver outputs follow the adjacent
+`kyuubiki.engine-solver-provenance/v1` contract: canonical result content is
+bound to SHA-256, the expected operator identity, and result type, and can be
+checked with `verify_solver_result_provenance` before durable retention.
+
 ## Language targets
 
 The official SDK families are expected to stay peer implementations over the

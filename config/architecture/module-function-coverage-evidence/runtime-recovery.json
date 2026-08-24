@@ -35,7 +35,7 @@
           "apps/web/test/kyuubiki_web/api/control_plane_api_test.exs",
           "apps/web/test/kyuubiki_web/orchestra/workflow_restart_recovery_test.exs",
           "schemas/workflow-recovery.schema.json",
-          "releases/usability-evidence/2.14.3/persistence-provenance-qualification.json",
+          "releases/usability-evidence/2.15.0/persistence-provenance-qualification.json",
           "workers/rust/crates/script-runner/src/runtime_recovery_fault_injection.rs",
           "workers/rust/crates/script-runner/src/orchestra_recovery_fault_injection.rs",
           "config/architecture/orchestra-takeover-operational-qualification.json",
@@ -167,7 +167,7 @@
         "apps/web/test/kyuubiki_web/orchestra/workflow_recovery_envelope_test.exs",
         "apps/web/test/kyuubiki_web/orchestra/workflow_restart_recovery_test.exs",
         "schemas/workflow-recovery.schema.json",
-        "releases/usability-evidence/2.14.3/persistence-provenance-qualification.json"
+        "releases/usability-evidence/2.15.0/persistence-provenance-qualification.json"
       ],
       "required_text": [
         "kyuubiki.workflow-recovery/v1",

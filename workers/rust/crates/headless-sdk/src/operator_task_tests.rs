@@ -1,8 +1,12 @@
 use crate::{
     HeadlessExecutionBatch, HeadlessExecutionBatchStep, operator_task_error_preview,
-    prepare_operator_task_payload, preview_operator_task_execute_payload, run_batch_dry,
+    operator_task_provenance_profile, prepare_operator_task_payload,
+    preview_operator_task_execute_payload, run_batch_dry, verify_operator_task_provenance_profile,
 };
-use kyuubiki_protocol::compute_operator_task_digest;
+use kyuubiki_protocol::{
+    compute_operator_task_digest, preview_operator_task_execution,
+    summarize_operator_task_execution_checked,
+};
 use serde_json::{Value, json};
 
 #[test]
@@ -71,6 +75,49 @@ fn prepare_operator_task_payload_returns_execution_summary() {
         preview["provenance_profile"]["lineage"]["preview_digest"],
         preview["task_digest"]
     );
+}
+
+#[test]
+fn headless_operator_task_provenance_verifies_bound_profile() {
+    let task = golden_task_fixture(false);
+    let summary = summarize_operator_task_execution_checked(&task)
+        .expect("operator task summary should verify");
+    let preview =
+        preview_operator_task_execution(&task).expect("operator task preview should verify");
+    let profile = operator_task_provenance_profile(&summary, &preview);
+
+    verify_operator_task_provenance_profile(&summary, &preview, &profile)
+        .expect("bound provenance profile should verify");
+}
+
+#[test]
+fn headless_operator_task_provenance_rejects_profile_tamper() {
+    let task = golden_task_fixture(false);
+    let summary = summarize_operator_task_execution_checked(&task)
+        .expect("operator task summary should verify");
+    let preview =
+        preview_operator_task_execution(&task).expect("operator task preview should verify");
+    let mut profile = operator_task_provenance_profile(&summary, &preview);
+    profile["lineage"]["preview_digest"] = Value::String("0".repeat(64));
+
+    let error = verify_operator_task_provenance_profile(&summary, &preview, &profile)
+        .expect_err("tampered provenance profile must fail");
+    assert!(error.contains("does not match verified lineage"));
+}
+
+#[test]
+fn headless_operator_task_provenance_rejects_summary_preview_mismatch() {
+    let task = golden_task_fixture(false);
+    let summary = summarize_operator_task_execution_checked(&task)
+        .expect("operator task summary should verify");
+    let mut preview =
+        preview_operator_task_execution(&task).expect("operator task preview should verify");
+    preview.task_digest = "0".repeat(64);
+    let profile = operator_task_provenance_profile(&summary, &preview);
+
+    let error = verify_operator_task_provenance_profile(&summary, &preview, &profile)
+        .expect_err("summary and preview mismatch must fail");
+    assert!(error.contains("summary and execution preview disagree"));
 }
 
 #[test]

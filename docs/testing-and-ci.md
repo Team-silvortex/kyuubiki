@@ -111,7 +111,7 @@ The repository now keeps validation split by responsibility.
   part of this contract.
 - `make check-system-security-qualification`
   Fast, offline revalidation of the retained Daji P0 system-security report.
-  It validates all 14 check identities, 28 successful round receipts, 22 exact
+  It validates all 20 check identities, 40 successful round receipts, 28 exact
   module/security-lane coordinates, assertions, digests, and summary counts
   without rerunning external audit tools.
 - `make qualify-system-security`
@@ -120,6 +120,14 @@ The repository now keeps validation split by responsibility.
   replay tests, Engine and Installer fuzz boundaries, Agent TaskIR/artifact
   admission, component integrity, and npm/Cargo/Hex dependency audits. Use this
   heavier lane for security changes and release candidates.
+- `make check-persistence-provenance-qualification`
+  Revalidates the retained six-module persistence/provenance report, including
+  all seven suite identities, 14 repeated rounds, 28 assertions, source
+  contracts, output digests, and summary counts without rerunning the suites.
+- `make qualify-persistence-provenance`
+  Runs desktop audit-chain, Workbench closure, Engine result-digest, Headless
+  task-lineage, Orchestra recovery, and Installer journal suites twice, then
+  writes a fresh machine-verifiable report.
 - `./scripts/kyuubiki rust-line-audit`
   Same guard through the unified launcher, useful on remote hosts and CI jobs
   that do not enter through Make

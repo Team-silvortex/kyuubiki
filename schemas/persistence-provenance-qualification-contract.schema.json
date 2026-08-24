@@ -12,13 +12,22 @@
     "rounds": { "type": "integer", "minimum": 2, "maximum": 3 },
     "required_modules": {
       "type": "array",
-      "minItems": 3,
+      "minItems": 6,
       "uniqueItems": true,
-      "items": { "enum": ["installer-shell", "orchestra-control-plane", "runtime-installer"] }
+      "items": {
+        "enum": [
+          "installer-shell",
+          "workbench-shell",
+          "orchestra-control-plane",
+          "runtime-engine-solver",
+          "runtime-installer",
+          "sdk-headless"
+        ]
+      }
     },
     "suites": {
       "type": "array",
-      "minItems": 4,
+      "minItems": 7,
       "items": { "$ref": "#/$defs/suite" }
     }
   },
@@ -57,7 +66,16 @@
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "enum": ["installer-shell", "orchestra-control-plane", "runtime-installer"] }
+          "items": {
+            "enum": [
+              "installer-shell",
+              "workbench-shell",
+              "orchestra-control-plane",
+              "runtime-engine-solver",
+              "runtime-installer",
+              "sdk-headless"
+            ]
+          }
         },
         "program": { "enum": ["cargo", "mix", "node"] },
         "cwd": { "$ref": "#/$defs/repoPath" },

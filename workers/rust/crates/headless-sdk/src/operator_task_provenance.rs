@@ -72,6 +72,29 @@ pub fn operator_task_provenance_profile(
     ]))
 }
 
+pub fn verify_operator_task_provenance_profile(
+    summary: &OperatorTaskExecutionSummary,
+    preview: &OperatorTaskExecutionPreview,
+    profile: &Value,
+) -> Result<(), String> {
+    let summary_preview_matches = summary.task_digest == preview.task_digest
+        && summary.task_id == preview.task_id
+        && summary.operator_id == preview.operator_id
+        && summary.package_ref == preview.package_ref
+        && summary.package_version == preview.package_version
+        && summary.cache_scope == preview.cache_scope
+        && summary.agent_fetchable == preview.agent_fetchable;
+    if !summary_preview_matches {
+        return Err("operator task provenance summary and execution preview disagree".to_string());
+    }
+
+    let expected = operator_task_provenance_profile(summary, preview);
+    if profile != &expected {
+        return Err("operator task provenance profile does not match verified lineage".to_string());
+    }
+    Ok(())
+}
+
 fn optional_string(value: Option<String>) -> Value {
     value.map(Value::from).unwrap_or(Value::Null)
 }

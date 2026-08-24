@@ -175,64 +175,75 @@ defmodule KyuubikiSdk.ControlPlaneClient do
   end
 
   defp request(client, method, path, payload \\ nil) do
-    :inets.start()
-    url = String.to_charlist(client.base_url <> path)
+    with :ok <- validate_auth(client.auth) do
+      :inets.start()
+      url = String.to_charlist(client.base_url <> path)
 
-    headers =
-      [{~c"content-type", ~c"application/json"}] ++
-        if client.auth,
-          do: [
-            {String.to_charlist(client.auth.header_name),
-             String.to_charlist(client.auth.header_value)}
-          ],
-          else: []
+      headers =
+        [{~c"content-type", ~c"application/json"}] ++
+          if client.auth,
+            do: [
+              {String.to_charlist(client.auth.header_name),
+               String.to_charlist(client.auth.header_value)}
+            ],
+            else: []
 
-    body = if payload, do: Jason.encode!(payload), else: ""
+      body = if payload, do: Jason.encode!(payload), else: ""
 
-    request =
-      case method do
-        :get -> {url, headers}
-        _ -> {url, headers, ~c"application/json", body}
+      request =
+        case method do
+          :get -> {url, headers}
+          _ -> {url, headers, ~c"application/json", body}
+        end
+
+      options = [body_format: :binary]
+
+      case :httpc.request(method, request, [], options) do
+        {:ok, {{_, status, _}, _headers, response_body}} when status in 200..299 ->
+          {:ok, Jason.decode!(response_body)}
+
+        {:ok, {{_, status, _}, _headers, response_body}} ->
+          {:error, Error.http(status, response_body)}
+
+        {:error, reason} ->
+          {:error, Error.transport(inspect(reason))}
       end
-
-    options = [body_format: :binary]
-
-    case :httpc.request(method, request, [], options) do
-      {:ok, {{_, status, _}, _headers, response_body}} when status in 200..299 ->
-        {:ok, Jason.decode!(response_body)}
-
-      {:ok, {{_, status, _}, _headers, response_body}} ->
-        {:error, Error.http(status, response_body)}
-
-      {:error, reason} ->
-        {:error, Error.transport(inspect(reason))}
     end
   end
 
   defp request_text(client, method, path) do
-    :inets.start()
-    url = String.to_charlist(client.base_url <> path)
+    with :ok <- validate_auth(client.auth) do
+      :inets.start()
+      url = String.to_charlist(client.base_url <> path)
 
-    headers =
-      [{~c"content-type", ~c"application/json"}] ++
-        if client.auth,
-          do: [
-            {String.to_charlist(client.auth.header_name),
-             String.to_charlist(client.auth.header_value)}
-          ],
-          else: []
+      headers =
+        [{~c"content-type", ~c"application/json"}] ++
+          if client.auth,
+            do: [
+              {String.to_charlist(client.auth.header_name),
+               String.to_charlist(client.auth.header_value)}
+            ],
+            else: []
 
-    options = [body_format: :binary]
+      options = [body_format: :binary]
 
-    case :httpc.request(method, {url, headers}, [], options) do
-      {:ok, {{_, status, _}, _headers, response_body}} when status in 200..299 ->
-        {:ok, response_body}
+      case :httpc.request(method, {url, headers}, [], options) do
+        {:ok, {{_, status, _}, _headers, response_body}} when status in 200..299 ->
+          {:ok, response_body}
 
-      {:ok, {{_, status, _}, _headers, response_body}} ->
-        {:error, Error.http(status, response_body)}
+        {:ok, {{_, status, _}, _headers, response_body}} ->
+          {:error, Error.http(status, response_body)}
 
-      {:error, reason} ->
-        {:error, Error.transport(inspect(reason))}
+        {:error, reason} ->
+          {:error, Error.transport(inspect(reason))}
+      end
+    end
+  end
+
+  defp validate_auth(auth) do
+    case Auth.validate(auth) do
+      :ok -> :ok
+      {:error, message} -> {:error, Error.transport(message)}
     end
   end
 

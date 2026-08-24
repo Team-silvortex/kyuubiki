@@ -273,6 +273,13 @@
       "schemas/persistence-provenance-qualification-report.schema.json",
       "workers/rust/crates/script-runner/src/persistence_provenance_qualification.rs",
       "workers/rust/crates/desktop-runtime/src/audit_log.rs",
+      "apps/workbench-gui/src-tauri/src/main.rs",
+      "apps/workbench-gui/test/smoke.test.mjs",
+      "workers/rust/crates/engine/src/workflow_solve_executor.rs",
+      "workers/rust/crates/engine/src/tests/core.rs",
+      "workers/rust/crates/headless-sdk/src/operator_task.rs",
+      "workers/rust/crates/headless-sdk/src/operator_task_provenance.rs",
+      "workers/rust/crates/headless-sdk/src/operator_task_tests.rs",
       "apps/web/lib/kyuubiki_web/storage/persistence.ex",
       "apps/web/lib/kyuubiki_web/storage/schema_setup.ex",
       "apps/web/lib/kyuubiki_web/orchestra/lease_store.ex",
@@ -291,7 +298,7 @@
       "releases/usability-evidence/2.15.0/orchestra-installed-takeover-operational-qualification.json",
       "schemas/workflow-recovery.schema.json",
       "workers/rust/crates/installer/src/remote_deployment_journal_store.rs",
-      "releases/usability-evidence/2.14.3/persistence-provenance-qualification.json"
+      "releases/usability-evidence/2.15.0/persistence-provenance-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.central-readiness-report/v1",
@@ -300,6 +307,9 @@
       "kyuubiki.persistence-provenance-qualification-contract/v1",
       "kyuubiki.persistence-provenance-qualification-report/v1",
       "kyuubiki.desktop-audit-record/v1",
+      "kyuubiki.workbench-guarded-mutation-provenance/v1",
+      "kyuubiki.engine-solver-provenance/v1",
+      "kyuubiki.headless-operator-task-provenance/v1",
       "kyuubiki.persistence-envelope/v1",
       "kyuubiki_orchestra_leases",
       "orchestra_lease_lost",

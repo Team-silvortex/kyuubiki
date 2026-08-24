@@ -31,7 +31,7 @@
     "rounds": { "type": "integer", "minimum": 2, "maximum": 3 },
     "suites": {
       "type": "array",
-      "minItems": 4,
+      "minItems": 7,
       "items": { "$ref": "#/$defs/suiteReport" }
     },
     "summary": {
@@ -48,13 +48,13 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "module_count": { "const": 3 },
-        "suite_count": { "minimum": 4, "type": "integer" },
-        "round_count": { "minimum": 8, "type": "integer" },
-        "passed_round_count": { "minimum": 8, "type": "integer" },
-        "assertion_count": { "minimum": 13, "type": "integer" },
-        "acceptance_assertion_count": { "minimum": 7, "type": "integer" },
-        "rejection_assertion_count": { "minimum": 6, "type": "integer" },
+        "module_count": { "const": 6 },
+        "suite_count": { "minimum": 7, "type": "integer" },
+        "round_count": { "minimum": 14, "type": "integer" },
+        "passed_round_count": { "minimum": 14, "type": "integer" },
+        "assertion_count": { "minimum": 28, "type": "integer" },
+        "acceptance_assertion_count": { "minimum": 14, "type": "integer" },
+        "rejection_assertion_count": { "minimum": 14, "type": "integer" },
         "failed_suite_ids": { "type": "array", "maxItems": 0 }
       }
     }

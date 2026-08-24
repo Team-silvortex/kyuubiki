@@ -27,14 +27,14 @@ Current moxi baseline:
 
 - `gap_count`: `0`
 - `blocking_gap_count`: `0`
-- `maturity_gap_count`: `9`
-- `thin_evidence_count`: `9`
-- `evidence_grade_gap_count`: `13`
-- required cells meeting their grade target: `64 / 77` (`83.1%`)
-- evidence progress toward configured targets: `93.7%`
-- release-critical P0 cells meeting target: `46 / 55` (`83.6%`)
+- `maturity_gap_count`: `6`
+- `thin_evidence_count`: `6`
+- `evidence_grade_gap_count`: `8`
+- required cells meeting their grade target: `69 / 77` (`89.6%`)
+- evidence progress toward configured targets: `96.0%`
+- release-critical P0 cells meeting target: `51 / 55` (`92.7%`)
 - release-profile P1 cells meeting target: `18 / 22` (`81.8%`)
-- `daji 3.0.0` release state: `blocked` by `9` P0 coordinates plus the
+- `daji 3.0.0` release state: `blocked` by `4` P0 coordinates plus the
   independently controlled external usability release gate
 
 No required coordinate is structurally missing, but the previous `50 / 50`
@@ -45,10 +45,10 @@ an evidence dimension, and promotes security, persistence, validation, and
 benchmark coordinates that were previously marked covered but optional.
 
 The resulting queue is intentionally non-empty. Local Agent package execution
-is now qualified, while the P0 group still requires installed external-package
-operation across SDK, Engine, Agent, and Installer; Workbench and Headless
-security qualification; and Workbench, Engine, Agent, and Headless
-persistence/provenance. Its P1 group is
+is now qualified, while the P0 group has converged on installed external-package
+operation across SDK, Engine, Agent, and Installer. Workbench, Engine, and
+Headless persistence/provenance now meet their local `verified` targets, while
+Workbench and Headless security meet the local `qualified` target. Its P1 group is
 workflow-contract qualification plus focused Orchestra, Protocol, Headless,
 and Operator SDK benchmark evidence. Ordinary lane execution no longer counts
 as asserted verification, and local dynamic-library smoke does not count as an
@@ -166,30 +166,27 @@ the response arrives.
 The former P0 runtime API tie now meets its `verified` target. The current-line
 protocol report executes 101 tests, proves 56 advertised methods have 56 unique
 wire round trips, rejects unknown methods and malformed envelope states, and
-retains TaskIR tamper rejection. The Headless report executes 265 tests across
+retains TaskIR tamper rejection. The Headless report executes 271 tests across
 Python, Elixir, and Rust, including real loopback workflow and operator-task
 routes plus 14 cross-language failure-parity cases. Both reports are retained
-under `releases/usability-evidence/2.14.3/` and are revalidated together by
+under `releases/usability-evidence/2.15.0/` and are revalidated together by
 `make check-runtime-api-verification`. This is local current-line verification,
 not installed-package, remote-host, or cross-platform operational proof.
 
-The former three-coordinate persistence/provenance tie now meets its `verified`
-target and carries `qualified` local evidence. The Installer shell appends
-guarded mutations to a SHA-256 chained ledger and exposes read-only integrity,
-head digest, count, schema, and storage path. Orchestra writes digest-verified
-persistence envelopes, recovers the previous valid generation after tamper or
-an interrupted generation rename, and quarantines unrecoverable state without
-cascading failure. Orchestra additionally retains digest-bound in-flight
-workflow envelopes with retry policy, checkpoint identity, bounded history,
-and generation/session fencing. The native Installer retains its atomic
-deployment journal, interrupted-step resume, and
-tamper rejection. Legacy plain JSON shell ledgers migrate atomically into the
-same chain without leaving migration sidecars. Four suites repeat twice with
-all 8 suite rounds and 20
-acceptance/rejection assertions passing in
-`releases/usability-evidence/2.14.3/persistence-provenance-qualification.json`.
-This local qualification does not claim remote database durability,
-cross-platform installed-package operation, or multi-host recovery.
+The persistence/provenance P0 cluster now meets its local targets across six
+modules. Installer and Workbench guarded mutations share a SHA-256 chained
+ledger that rejects tamper before side effects and records both successful and
+failed actions. Engine solver results bind canonical JSON content to a SHA-256
+digest, expected operator identity, and result type; Headless operator tasks
+verify summary, execution preview, and retained lineage as one fail-closed
+profile. Orchestra still recovers verified generations and fenced in-flight
+workflows, while native Installer retains atomic journal resume and tamper
+rejection. Seven suites repeat twice with all 14 suite rounds and 28 assertions
+passing in
+`releases/usability-evidence/2.15.0/persistence-provenance-qualification.json`.
+Engine, Headless, and Workbench are claimed only at `verified`; this local
+evidence does not imply remote database durability, installed cross-platform
+operation, or multi-host recovery.
 
 The former first coordinate, `sdk-headless / sdk_headless`, now meets its
 `operational` target. Its remote Linux qualification installs the release Rust
@@ -253,14 +250,16 @@ zero residue. The machine-validated report is retained under
 This evidence does not promote Orchestra fleet scheduling or installed
 Headless SDK operation.
 
-The former tied P0 security cluster now meets its `qualified` target for
-contracts, shared desktop UI, Hub, Installer shell, Orchestra, Agent, Engine,
-and native Installer. The native qualification maps 14 asserted checks onto 22
-exact module/security-lane coordinates and repeats every check twice. Its
-28/28 retained rounds cover UI capability boundaries, API authorization and
-replay rejection, runtime fuzz boundaries, dependency and component integrity,
-credential storage, remote deployment metadata, and data contracts. The
-machine-validated report is retained under
+The P0 security cluster now meets its `qualified` target for contracts,
+shared desktop UI, Hub, Workbench, all three official Headless SDK bindings,
+Installer shell, Orchestra, Agent, Engine, and native Installer. The native
+qualification maps 20 asserted checks onto 28 exact module/security-lane
+coordinates and repeats every check twice. Its 40/40 retained rounds cover UI
+capability boundaries, in-memory Workbench secrets, route-scoped auth, hostile
+language-pack rejection, SDK debug redaction and header-injection rejection,
+runtime fuzz boundaries, dependency and component integrity, credential
+storage, remote deployment metadata, and data contracts. The machine-validated
+report is retained under
 `releases/usability-evidence/2.15.0/system-security-qualification.json`.
 Installed cross-platform penetration testing and multi-host adversarial testing
 remain separate operational tiers and are not implied by this local

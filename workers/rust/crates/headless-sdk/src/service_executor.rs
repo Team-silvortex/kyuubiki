@@ -2,6 +2,7 @@ use crate::{
     HeadlessExecutor, HeadlessExecutorError, HeadlessExecutorOutcome, direct_fem_submit_route,
 };
 use serde_json::{Value, json};
+use std::fmt;
 use std::io::{Read, Write};
 
 use crate::service_executor_artifact::prepare_direct_fem_request_body;
@@ -23,10 +24,20 @@ use crate::service_executor_solve::{
 
 pub(crate) const MAX_INLINE_JSON_BYTES: usize = 8_000_000;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct ServiceHeadlessExecutor {
     base_url: String,
     api_token: Option<String>,
+}
+
+impl fmt::Debug for ServiceHeadlessExecutor {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("ServiceHeadlessExecutor")
+            .field("base_url", &self.base_url)
+            .field("api_token_configured", &self.api_token.is_some())
+            .finish()
+    }
 }
 
 impl ServiceHeadlessExecutor {
@@ -54,6 +65,7 @@ impl ServiceHeadlessExecutor {
     ) -> Result<Self, HeadlessExecutorError> {
         let executor = Self::with_token(base_url, api_token);
         parse_http_url(&executor.base_url)?;
+        sanitize_header_value(executor.api_token.as_deref(), "api token")?;
         Ok(executor)
     }
 }
@@ -505,7 +517,7 @@ where
     P: AsRef<str>,
 {
     let path = path.as_ref();
-    if !path.starts_with('/') || path.contains('\\') || path.contains("//") {
+    if !path.starts_with('/') || path.contains('\\') || path.contains("//") || path.contains('%') {
         return Err(HeadlessExecutorError {
             message: format!("invalid request path: {path}"),
         });
@@ -542,6 +554,14 @@ pub(crate) fn sanitize_header_value(
     {
         return Err(HeadlessExecutorError {
             message: format!("{label} contains unsupported control characters"),
+        });
+    }
+    if value.is_empty()
+        || value.len() > 8 * 1024
+        || !value.bytes().all(|byte| byte.is_ascii_graphic())
+    {
+        return Err(HeadlessExecutorError {
+            message: format!("{label} contains unsupported characters or exceeds the size limit"),
         });
     }
     Ok(Some(value.to_string()))
@@ -708,3 +728,7 @@ pub(crate) fn parse_http_url(base_url: &str) -> Result<ParsedHttpUrl, HeadlessEx
 #[cfg(test)]
 #[path = "service_executor_tests.rs"]
 mod service_executor_tests;
+
+#[cfg(test)]
+#[path = "service_executor_security_tests.rs"]
+mod service_executor_security_tests;

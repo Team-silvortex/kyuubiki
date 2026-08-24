@@ -1,5 +1,5 @@
 use crate::{EngineSolveRequest, solve};
-use kyuubiki_protocol::AnalysisResult;
+use kyuubiki_protocol::{AnalysisResult, canonical_json_sha256};
 use serde_json::Value;
 
 pub const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
@@ -82,7 +82,9 @@ pub fn solve_operator_runtime_manifest() -> Value {
         "execution_contract": {
             "input_encoding": "json",
             "output_encoding": "json",
-            "result_provenance_field": "_solver_provenance"
+            "result_provenance_field": "_solver_provenance",
+            "result_digest_field": "result_digest",
+            "result_digest_algorithm": "sha256"
         }
     })
 }
@@ -539,13 +541,18 @@ where
     let selected = selector(result)
         .ok_or_else(|| format!("{operator_id} returned an unexpected result variant"))?;
     let mut encoded = serde_json::to_value(selected).map_err(|err| err.to_string())?;
-    attach_solver_provenance(&mut encoded, operator_id);
+    attach_solver_provenance(&mut encoded, operator_id)?;
+    verify_solver_result_provenance(&encoded, operator_id)?;
     Ok(encoded)
 }
 
-fn attach_solver_provenance(result: &mut Value, operator_id: &str) {
+fn attach_solver_provenance(result: &mut Value, operator_id: &str) -> Result<(), String> {
+    if result.get("_solver_provenance").is_some() {
+        return Err("solver result contains the reserved provenance field".to_string());
+    }
+    let result_digest = canonical_json_sha256(result);
     let Some(object) = result.as_object_mut() else {
-        return;
+        return Err("solver result must serialize as an object".to_string());
     };
     object.insert(
         "_solver_provenance".to_string(),
@@ -556,6 +563,8 @@ fn attach_solver_provenance(result: &mut Value, operator_id: &str) {
             "result_type": result_type_for_operator(operator_id),
             "engine": "kyuubiki-engine",
             "execution_path": "workflow_solve_executor",
+            "digest_algorithm": "sha256",
+            "result_digest": result_digest,
             "persistence_hint": {
                 "artifact_type": result_type_for_operator(operator_id),
                 "recommended_retention_scope": "run",
@@ -563,10 +572,91 @@ fn attach_solver_provenance(result: &mut Value, operator_id: &str) {
             },
             "lineage": {
                 "solver_dispatch_verified": true,
-                "result_serialized": true
+                "result_serialized": true,
+                "result_digest_verified": true
             }
         }),
     );
+    Ok(())
+}
+
+pub fn verify_solver_result_provenance(
+    result: &Value,
+    expected_operator_id: &str,
+) -> Result<(), String> {
+    if !SUPPORTED_SOLVE_OPERATORS.contains(&expected_operator_id) {
+        return Err("solver provenance expected operator is not registered".to_string());
+    }
+    let object = result
+        .as_object()
+        .ok_or_else(|| "solver result must be an object".to_string())?;
+    let provenance = object
+        .get("_solver_provenance")
+        .and_then(Value::as_object)
+        .ok_or_else(|| "solver result provenance is missing".to_string())?;
+
+    require_provenance_value(
+        provenance,
+        "schema_version",
+        SOLVER_PROVENANCE_SCHEMA_VERSION,
+    )?;
+    require_provenance_value(provenance, "provenance_owner", "runtime_engine_solver")?;
+    require_provenance_value(provenance, "operator_id", expected_operator_id)?;
+    require_provenance_value(
+        provenance,
+        "result_type",
+        &result_type_for_operator(expected_operator_id),
+    )?;
+    require_provenance_value(provenance, "engine", "kyuubiki-engine")?;
+    require_provenance_value(provenance, "execution_path", "workflow_solve_executor")?;
+    require_provenance_value(provenance, "digest_algorithm", "sha256")?;
+
+    let expected_digest = provenance
+        .get("result_digest")
+        .and_then(Value::as_str)
+        .filter(|digest| {
+            digest.len() == 64
+                && digest
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        })
+        .ok_or_else(|| "solver result provenance digest is invalid".to_string())?;
+    let mut digest_payload = result.clone();
+    digest_payload
+        .as_object_mut()
+        .expect("result object was checked")
+        .remove("_solver_provenance");
+    if canonical_json_sha256(&digest_payload) != expected_digest {
+        return Err("solver result provenance digest mismatch".to_string());
+    }
+
+    let lineage = provenance
+        .get("lineage")
+        .and_then(Value::as_object)
+        .ok_or_else(|| "solver result provenance lineage is missing".to_string())?;
+    for key in [
+        "solver_dispatch_verified",
+        "result_serialized",
+        "result_digest_verified",
+    ] {
+        if lineage.get(key).and_then(Value::as_bool) != Some(true) {
+            return Err(format!(
+                "solver result provenance lineage {key} is not verified"
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn require_provenance_value(
+    provenance: &serde_json::Map<String, Value>,
+    key: &str,
+    expected: &str,
+) -> Result<(), String> {
+    if provenance.get(key).and_then(Value::as_str) != Some(expected) {
+        return Err(format!("solver result provenance {key} mismatch"));
+    }
+    Ok(())
 }
 
 fn result_type_for_operator(operator_id: &str) -> String {

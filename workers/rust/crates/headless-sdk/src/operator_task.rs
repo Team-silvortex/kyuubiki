@@ -6,7 +6,9 @@ use kyuubiki_protocol::{
 };
 use serde_json::{Map, Value};
 
-use crate::operator_task_provenance::operator_task_provenance_profile;
+use crate::operator_task_provenance::{
+    operator_task_provenance_profile, verify_operator_task_provenance_profile,
+};
 use crate::operator_task_readiness::{
     OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED, OPERATOR_TASK_FETCH_STAGE, detached_execution_plan,
     detached_execution_readiness, package_fetch_request_preview,
@@ -49,6 +51,11 @@ fn prepare_operator_task_payload_checked(
     if !admission_report.accepted {
         return Err(classify_admission_rejection(admission_report, task));
     }
+    let provenance_profile = operator_task_provenance_profile(&summary, &execution_preview);
+    verify_operator_task_provenance_profile(&summary, &execution_preview, &provenance_profile)
+        .map_err(|error| {
+            OperatorTaskPreviewError::new("operator_task_provenance_invalid", error)
+        })?;
 
     Ok(Value::Object(Map::from_iter([
         ("status".to_string(), Value::from("verified")),
@@ -69,10 +76,7 @@ fn prepare_operator_task_payload_checked(
             serde_json::to_value(&admission_report)
                 .expect("operator task admission report should serialize"),
         ),
-        (
-            "provenance_profile".to_string(),
-            operator_task_provenance_profile(&summary, &execution_preview),
-        ),
+        ("provenance_profile".to_string(), provenance_profile),
         ("task_digest".to_string(), Value::from(summary.task_digest)),
         ("task_id".to_string(), Value::from(summary.task_id)),
         ("operator_id".to_string(), Value::from(summary.operator_id)),

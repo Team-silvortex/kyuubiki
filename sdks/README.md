@@ -71,7 +71,9 @@ Each SDK follows the same split:
 - `Session`
   A higher-level AI/automation entry point for submit, batch, and wait flows
 - `Auth`
-  Reusable header-based auth descriptor for control-plane clients
+  Reusable header-based auth descriptor for control-plane clients. Debug and
+  inspection output redacts values, and malformed headers fail before network
+  I/O.
 - `AgentClient`
   AI-oriented orchestration helper for run-study, workflow-run, job-bundle, and chunk-browse flows
 

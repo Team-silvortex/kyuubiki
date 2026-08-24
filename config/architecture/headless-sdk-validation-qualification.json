@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.headless-sdk-validation-qualification-contract/v1",
   "report_schema": "kyuubiki.headless-sdk-validation-qualification-report/v1",
-  "minimum_total_tests": 263,
+  "minimum_total_tests": 271,
   "shared_fixtures": [
     "schemas/examples.workflow-dataset.json",
     "schemas/examples.workflow-graph.json",
@@ -11,11 +11,12 @@
   "language_suites": [
     {
       "id": "python",
-      "minimum_tests": 95,
+      "minimum_tests": 97,
       "source_root": "sdks/python/tests",
       "source_extension": "py",
       "required_tests": [
         "test_agent_client_runs_workflow_jobs",
+        "test_auth_repr_redacts_and_rejects_header_injection",
         "test_execute_operator_task_batch",
         "test_extract_operator_task_failure_receipts",
         "test_validates_retained_screening_bundle"
@@ -23,11 +24,12 @@
     },
     {
       "id": "elixir",
-      "minimum_tests": 89,
+      "minimum_tests": 91,
       "source_root": "sdks/elixir/test",
       "source_extension": "exs",
       "required_tests": [
         "agent client runs workflow jobs",
+        "auth inspection redacts and rejects header injection",
         "control plane client executes operator task batch",
         "extracts nested operator task failure receipts",
         "validates a retained screening bundle"
@@ -35,11 +37,12 @@
     },
     {
       "id": "rust",
-      "minimum_tests": 79,
+      "minimum_tests": 83,
       "source_root": "sdks/rust/tests",
       "source_extension": "rs",
       "required_tests": [
         "agent_client_runs_workflow_jobs",
+        "auth_debug_redacts_and_rejects_header_injection",
         "control_plane_executes_operator_task_batch",
         "extracts_operator_task_recovery_summary",
         "validates_retained_screening_bundle"

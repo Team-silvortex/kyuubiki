@@ -5,9 +5,11 @@
   "required_modules": [
     "contracts",
     "hub-shell",
+    "workbench-shell",
     "desktop-shared-ui",
     "installer-shell",
     "orchestra-control-plane",
+    "sdk-headless",
     "runtime-engine-solver",
     "runtime-agent-cli",
     "runtime-installer"
@@ -62,6 +64,40 @@
       ]
     },
     {
+      "id": "workbench-shell-security-smoke",
+      "program": "self",
+      "cwd": ".",
+      "args": ["workbench-gui-smoke-node-test"],
+      "coordinates": [
+        { "module_id": "workbench-shell", "lane": "ui_boundary" }
+      ],
+      "required_output": [
+        "desktop shell defines a least-privilege main-window capability",
+        "desktop shell pins a restrictive WebView security policy"
+      ]
+    },
+    {
+      "id": "workbench-frontend-security-tests",
+      "program": "self",
+      "cwd": ".",
+      "args": [
+        "frontend-unit-test",
+        "workbench-secrets",
+        "workbench-language-pack-import-security",
+        "workbench-api-auth-context"
+      ],
+      "coordinates": [
+        { "module_id": "workbench-shell", "lane": "ui_boundary" },
+        { "module_id": "workbench-shell", "lane": "credential_storage" },
+        { "module_id": "workbench-shell", "lane": "data_contract" }
+      ],
+      "required_output": [
+        "API auth context attaches control-plane token for orchestrated routes",
+        "workbench language pack import rejects unsafe UI text before state install",
+        "persistWorkbenchSettings stores preferences but keeps secrets memory-only"
+      ]
+    },
+    {
       "id": "installer-shell-security-smoke",
       "program": "self",
       "cwd": ".",
@@ -92,6 +128,76 @@
         { "module_id": "runtime-agent-cli", "lane": "api_auth" }
       ],
       "required_output": ["44 tests, 0 failures"]
+    },
+    {
+      "id": "headless-core-security-tests",
+      "program": "cargo",
+      "cwd": "workers/rust",
+      "args": [
+        "test",
+        "-p",
+        "kyuubiki-headless-sdk",
+        "headless_security",
+        "--",
+        "--nocapture"
+      ],
+      "coordinates": [
+        { "module_id": "sdk-headless", "lane": "api_auth" },
+        { "module_id": "sdk-headless", "lane": "credential_storage" },
+        { "module_id": "sdk-headless", "lane": "data_contract" }
+      ],
+      "required_output": [
+        "headless_security_redacts_executor_debug_and_rejects_auth_injection ... ok",
+        "headless_security_rejects_route_escape_and_dynamic_segment_injection ... ok",
+        "headless_security_enforces_inline_contract_budget_before_dispatch ... ok"
+      ]
+    },
+    {
+      "id": "headless-rust-sdk-auth-security",
+      "program": "cargo",
+      "cwd": ".",
+      "args": [
+        "test",
+        "--manifest-path",
+        "sdks/rust/Cargo.toml",
+        "--test",
+        "security",
+        "--",
+        "--nocapture"
+      ],
+      "coordinates": [
+        { "module_id": "sdk-headless", "lane": "credential_storage" }
+      ],
+      "required_output": [
+        "auth_debug_redacts_and_rejects_header_injection ... ok",
+        "auth_rejects_unsafe_custom_header_names_and_empty_values ... ok"
+      ]
+    },
+    {
+      "id": "headless-python-sdk-auth-security",
+      "program": "python3",
+      "cwd": "sdks/python",
+      "args": ["-m", "unittest", "-v", "tests/test_security.py"],
+      "coordinates": [
+        { "module_id": "sdk-headless", "lane": "credential_storage" }
+      ],
+      "required_output": [
+        "test_auth_repr_redacts_and_rejects_header_injection",
+        "test_auth_rejects_unsafe_custom_header_names_and_empty_values"
+      ]
+    },
+    {
+      "id": "headless-elixir-sdk-auth-security",
+      "program": "mix",
+      "cwd": "sdks/elixir",
+      "args": ["test", "test/security_test.exs", "--trace"],
+      "coordinates": [
+        { "module_id": "sdk-headless", "lane": "credential_storage" }
+      ],
+      "required_output": [
+        "auth inspection redacts and rejects header injection",
+        "auth rejects unsafe custom header names and empty values"
+      ]
     },
     {
       "id": "workflow-dataset-contract",

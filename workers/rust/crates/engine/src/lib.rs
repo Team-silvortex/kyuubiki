@@ -81,7 +81,7 @@ pub use operator_sdk_runtime::{BuiltInOperatorRegistryKind, built_in_operator_re
 pub use workflow::{run_workflow_graph, run_workflow_graph_with_options};
 pub use workflow_executor::{
     is_supported_workflow_operator, run_solve_operator, solve_operator_runtime_manifest,
-    supported_workflow_operator_ids,
+    supported_workflow_operator_ids, verify_solver_result_provenance,
 };
 pub use workflow_topology::{WorkflowTopologyProfile, analyze_workflow_topology};
 

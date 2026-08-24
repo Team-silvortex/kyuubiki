@@ -164,8 +164,11 @@ fn validate_contract(root: &Path, contract: &QualificationContract) -> RunnerRes
     }
     let expected_modules = [
         "installer-shell",
+        "workbench-shell",
         "orchestra-control-plane",
+        "runtime-engine-solver",
         "runtime-installer",
+        "sdk-headless",
     ]
     .into_iter()
     .collect::<BTreeSet<_>>();
@@ -177,8 +180,8 @@ fn validate_contract(root: &Path, contract: &QualificationContract) -> RunnerRes
     if modules != expected_modules || modules.len() != contract.required_modules.len() {
         return Err("persistence provenance required module set drifted".into());
     }
-    if contract.suites.len() < 4 {
-        return Err("persistence provenance qualification requires at least 4 suites".into());
+    if contract.suites.len() < 7 {
+        return Err("persistence provenance qualification requires at least 7 suites".into());
     }
 
     let mut suite_ids = BTreeSet::new();
@@ -257,9 +260,9 @@ fn validate_contract(root: &Path, contract: &QualificationContract) -> RunnerRes
     if covered_modules != modules {
         return Err("not every required module has persistence provenance coverage".into());
     }
-    if acceptance_count < 7 || rejection_count < 6 {
+    if acceptance_count < 14 || rejection_count < 14 {
         return Err(
-            "qualification requires at least 7 acceptance and 6 rejection assertions".into(),
+            "qualification requires at least 14 acceptance and 14 rejection assertions".into(),
         );
     }
     Ok(())

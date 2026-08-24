@@ -197,7 +197,7 @@ fn validate_contract(
                 check.id
             ));
         }
-        if !matches!(check.program.as_str(), "self" | "cargo" | "mix") {
+        if !matches!(check.program.as_str(), "self" | "cargo" | "mix" | "python3") {
             return Err(format!(
                 "security check {} uses an unsupported program",
                 check.id

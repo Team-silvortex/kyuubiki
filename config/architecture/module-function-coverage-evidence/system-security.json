@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Repeatable cross-module security qualification for the Daji P0 contract, UI, control-plane, Agent, solver, and Installer surfaces.",
+  "summary": "Repeatable cross-module security qualification for the Daji P0 contract, Workbench, Headless SDK, control-plane, Agent, solver, and Installer surfaces.",
   "paradigm_contract_evidence": {
     "security": [
       {
@@ -9,9 +9,11 @@
         "modules": [
           "contracts",
           "hub-shell",
+          "workbench-shell",
           "desktop-shared-ui",
           "installer-shell",
           "orchestra-control-plane",
+          "sdk-headless",
           "runtime-engine-solver",
           "runtime-agent-cli",
           "runtime-installer"
@@ -24,6 +26,13 @@
           "workers/rust/crates/script-runner/src/dependency_audit/hex_osv.rs",
           "workers/rust/crates/script-runner/src/governance_commands.rs",
           "apps/hub-gui/test/smoke-shell.mjs",
+          "apps/workbench-gui/test/smoke.test.mjs",
+          "apps/frontend/test/workflow/workbench-secrets.test.ts",
+          "apps/frontend/test/workflow/workbench-language-pack-import-security.test.ts",
+          "workers/rust/crates/headless-sdk/src/service_executor_security_tests.rs",
+          "sdks/rust/tests/security.rs",
+          "sdks/python/tests/test_security.py",
+          "sdks/elixir/test/security_test.exs",
           "apps/web/test/kyuubiki_web/api/cluster_security_api_test.exs",
           "apps/web/test/kyuubiki_web/http_transport_security_test.exs"
         ],
@@ -39,6 +48,12 @@
           "remote_deploy",
           "data_contract",
           "hub assistant secret storage is cleanup-only",
+          "desktop shell pins a restrictive WebView security policy",
+          "persistWorkbenchSettings stores preferences but keeps secrets memory-only",
+          "headless_security_redacts_executor_debug_and_rejects_auth_injection",
+          "auth_debug_redacts_and_rejects_header_injection",
+          "test_auth_repr_redacts_and_rejects_header_injection",
+          "auth inspection redacts and rejects header injection",
           "check-system-security-qualification"
         ]
       }
@@ -52,9 +67,11 @@
       "modules": [
         "contracts",
         "hub-shell",
+        "workbench-shell",
         "desktop-shared-ui",
         "installer-shell",
         "orchestra-control-plane",
+        "sdk-headless",
         "runtime-engine-solver",
         "runtime-agent-cli",
         "runtime-installer"
@@ -74,19 +91,19 @@
         "\"schema_version\":\"kyuubiki.system-security-qualification-report/v1\"",
         "\"status\":\"pass\"",
         "\"rounds\":2",
-        "\"check_count\":14",
-        "\"round_count\":28",
-        "\"passed_round_count\":28",
-        "\"module_count\":8",
+        "\"check_count\":20",
+        "\"round_count\":40",
+        "\"passed_round_count\":40",
+        "\"module_count\":10",
         "\"lane_count\":7",
-        "\"coordinate_count\":22",
+        "\"coordinate_count\":28",
         "\"failed_check_ids\":[]",
         "\"repeatable\":true",
         "apps/web: OSV querybatch (Hex locked versions)",
         "0 known vulnerability record(s)",
         "dependency audit passed",
         "44 tests, 0 failures",
-        "108 passed; 0 failed"
+        "120 passed; 0 failed"
       ]
     }
   ]
