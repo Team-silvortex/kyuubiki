@@ -22,6 +22,7 @@ mod integrity_contract;
 mod integrity_versions;
 mod linux_desktop_dependencies;
 mod operator_package_preflight;
+mod operator_package_store;
 mod release;
 mod remote_deployment;
 mod remote_deployment_artifacts;
@@ -45,6 +46,15 @@ pub use exports::*;
 pub use operator_package_preflight::{
     OperatorPackagePreflightOutcome, operator_package_preflight, operator_package_preflight_json,
     write_operator_package_preflight_json, write_operator_package_preflight_outcome,
+};
+pub use operator_package_store::{
+    MANAGED_OPERATOR_PACKAGE_RECEIPT_SCHEMA_VERSION,
+    MANAGED_OPERATOR_PACKAGE_REMOVAL_SCHEMA_VERSION,
+    MANAGED_OPERATOR_PACKAGE_STATUS_SCHEMA_VERSION, ManagedOperatorPackageReceipt,
+    ManagedOperatorPackageRemoval, ManagedOperatorPackageStatus, install_operator_package,
+    install_operator_package_into, managed_operator_package_status,
+    managed_operator_package_status_in, operator_package_store_root, uninstall_operator_package,
+    uninstall_operator_package_from, verify_managed_operator_package,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]

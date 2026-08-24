@@ -245,8 +245,8 @@ The shared approval-request fixture is the parity vector for all SDKs.
 - `operator-package-dynamic-smoke.schema.json` is for the retained
   end-to-end external operator package smoke report, including template tests,
   strict package preflight, template `cdylib` build, and engine dynamic host
-  loading stage evidence with per-stage descriptions, working directories, and
-  command vectors
+  loading plus direct-Agent and Installer-managed lifecycle evidence with
+  per-stage descriptions, working directories, and command vectors
 - `operator-validation-report.schema.json` is for the machine-readable output
   of `make check-operator-validation` and `make verify-operator-validation`,
   including profile rollups, command kinds, skipped-command placeholders, and
@@ -339,8 +339,8 @@ The shared approval-request fixture is the parity vector for all SDKs.
   `resolve_blocked_cases`, not ordinary failed-case retry
 - `examples.operator-package-dynamic-smoke.json` is the retained report fixture
   for validating external operator package dynamic-smoke stage order,
-  diagnostic working directories and commands, package/operator summary, and
-  evidence paths
+  Installer-managed lifecycle coverage, diagnostic working directories and
+  commands, package/operator summary, and evidence paths
 - `examples.operator-validation-report.json` is the retained fixture for the
   operator validation report shape, including the `boundary_regression` command
   kind and the non-executed `not_run` result form

@@ -23,7 +23,7 @@
       "type": "string"
     },
     "schema_version": {
-      "const": "kyuubiki.operator-package-dynamic-smoke/v2"
+      "const": "kyuubiki.operator-package-dynamic-smoke/v3"
     },
     "generated_at": {
       "type": "string",
@@ -66,8 +66,8 @@
     },
     "stages": {
       "type": "array",
-      "minItems": 5,
-      "maxItems": 5,
+      "minItems": 6,
+      "maxItems": 6,
       "prefixItems": [
         {
           "$ref": "#/$defs/templateTestsStage"
@@ -83,6 +83,9 @@
         },
         {
           "$ref": "#/$defs/agentDynamicHostDispatchStage"
+        },
+        {
+          "$ref": "#/$defs/installerManagedAgentLifecycleStage"
         }
       ],
       "items": false
@@ -191,6 +194,20 @@
           "properties": {
             "id": {
               "const": "agent_dynamic_host_dispatch"
+            }
+          }
+        }
+      ]
+    },
+    "installerManagedAgentLifecycleStage": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/passingStage"
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "installer_managed_agent_lifecycle"
             }
           }
         }

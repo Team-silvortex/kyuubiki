@@ -8,14 +8,16 @@ use kyuubiki_installer::{
     default_remote_deployment_plan, default_remote_host_trust_plan,
     default_remote_ssh_fixture_plan, default_remote_ssh_fixture_report, embedded_runtime_report,
     exit_on_err, export_launch_config, init_env, install_agent_update_package,
-    install_runtime_payload, installation_integrity_report, launch_managed_agent,
-    linux_desktop_dependency_plan, operator_package_preflight, parse_platform,
-    prepare_agent_update_package, prepare_layout, prepare_staged_update, print_help,
-    remote_deployment_roadmap, repair_installation, rollback_agent_update,
-    rollback_runtime_payload, run_agent_solver_operational_qualification,
+    install_operator_package, install_operator_package_into, install_runtime_payload,
+    installation_integrity_report, launch_managed_agent, linux_desktop_dependency_plan,
+    managed_operator_package_status, managed_operator_package_status_in,
+    operator_package_preflight, parse_platform, prepare_agent_update_package, prepare_layout,
+    prepare_staged_update, print_help, remote_deployment_roadmap, repair_installation,
+    rollback_agent_update, rollback_runtime_payload, run_agent_solver_operational_qualification,
     run_agent_update_qualification, run_doctor, run_runtime_payload_qualification,
     runtime_payload_status, seal_agent_update_package, seal_runtime_payload, stage_release,
-    unified_update_plan, unified_update_preview, validate_env_file,
+    unified_update_plan, unified_update_preview, uninstall_operator_package,
+    uninstall_operator_package_from, validate_env_file,
     write_agent_solver_operational_qualification_report, write_agent_update_qualification_report,
     write_operator_package_preflight_outcome, write_runtime_payload_qualification_report,
 };
@@ -263,6 +265,51 @@ fn main() {
                 }
             }
         }
+        "operator-package-status" => match parse_operator_package_store_flag(args.collect()) {
+            Ok(store_root) => exit_on_err(
+                store_root
+                    .as_deref()
+                    .map(managed_operator_package_status_in)
+                    .unwrap_or_else(managed_operator_package_status)
+                    .and_then(pretty_json),
+            ),
+            Err(error) => exit_on_err(Err(error)),
+        },
+        "install-operator-package" => {
+            let Some(package_root) = args.next() else {
+                exit_on_err(Err(
+                    "missing package root for install-operator-package".to_string()
+                ));
+                return;
+            };
+            match parse_operator_package_store_flag(args.collect()) {
+                Ok(Some(store_root)) => exit_on_err(
+                    install_operator_package_into(&PathBuf::from(package_root), &store_root)
+                        .and_then(pretty_json),
+                ),
+                Ok(None) => exit_on_err(
+                    install_operator_package(&PathBuf::from(package_root)).and_then(pretty_json),
+                ),
+                Err(error) => exit_on_err(Err(error)),
+            }
+        }
+        "uninstall-operator-package" => {
+            let Some(package_id) = args.next() else {
+                exit_on_err(Err(
+                    "missing package id for uninstall-operator-package".to_string()
+                ));
+                return;
+            };
+            match parse_operator_package_store_flag(args.collect()) {
+                Ok(Some(store_root)) => exit_on_err(
+                    uninstall_operator_package_from(&store_root, &package_id).and_then(pretty_json),
+                ),
+                Ok(None) => {
+                    exit_on_err(uninstall_operator_package(&package_id).and_then(pretty_json))
+                }
+                Err(error) => exit_on_err(Err(error)),
+            }
+        }
         "update-plan" => {
             let channel = args.next();
             exit_on_err(unified_update_plan(channel).map(|report| report.render()))
@@ -326,6 +373,19 @@ struct OperatorPackagePreflightFlags {
     output_path: Option<PathBuf>,
     fail_on_rejected: bool,
     fail_on_readiness_warnings: bool,
+}
+
+fn parse_operator_package_store_flag(args: Vec<String>) -> Result<Option<PathBuf>, String> {
+    match args.as_slice() {
+        [] => Ok(None),
+        [flag, path] if flag == "--store-root" => Ok(Some(PathBuf::from(path))),
+        [flag] if flag == "--store-root" => Err("missing value for --store-root".to_string()),
+        _ => Err("expected only --store-root <path>".to_string()),
+    }
+}
+
+fn pretty_json(value: impl serde::Serialize) -> Result<String, String> {
+    serde_json::to_string_pretty(&value).map_err(|error| error.to_string())
 }
 
 fn parse_operator_package_preflight_flags(
@@ -399,4 +459,36 @@ fn run_operator_package_preflight_command(
         }
     })?;
     Ok(json)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_operator_package_store_flag;
+    use std::path::PathBuf;
+
+    #[test]
+    fn operator_package_store_flag_defaults_to_platform_store() {
+        assert_eq!(
+            parse_operator_package_store_flag(Vec::new()).expect("parse defaults"),
+            None
+        );
+    }
+
+    #[test]
+    fn operator_package_store_flag_accepts_one_explicit_path() {
+        assert_eq!(
+            parse_operator_package_store_flag(vec![
+                "--store-root".to_string(),
+                "tmp/operator-store".to_string(),
+            ])
+            .expect("parse store root"),
+            Some(PathBuf::from("tmp/operator-store"))
+        );
+    }
+
+    #[test]
+    fn operator_package_store_flag_rejects_ambiguous_arguments() {
+        assert!(parse_operator_package_store_flag(vec!["--store-root".to_string()]).is_err());
+        assert!(parse_operator_package_store_flag(vec!["unexpected".to_string()]).is_err());
+    }
 }

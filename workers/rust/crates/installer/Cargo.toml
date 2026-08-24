@@ -6,6 +6,7 @@ license.workspace = true
 
 [dependencies]
 kyuubiki-engine = { path = "../engine" }
+kyuubiki-operator-sdk = { path = "../operator-sdk" }
 kyuubiki-platform = { path = "../platform" }
 kyuubiki-protocol = { path = "../protocol" }
 serde = "1.0"

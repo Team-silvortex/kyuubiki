@@ -671,7 +671,8 @@ Useful smoke wrappers:
 - `make operator-package-dynamic-smoke`
   Runs the repository template operator as an end-to-end external package:
   template tests, strict preflight, `cdylib` build, and engine dynamic host
-  loading smoke. The default report is
+  loading smoke, followed by direct Agent dispatch and an Installer-managed
+  install/execute/tamper/recover/uninstall lifecycle. The default report is
   `tmp/operator-package-dynamic-smoke.json`; override with `OUT=tmp/name.json`.
 - `make check-operator-package-dynamic-smoke IN=tmp/operator-package-dynamic-smoke.json`
   Validates the retained dynamic-smoke report schema, package/operator

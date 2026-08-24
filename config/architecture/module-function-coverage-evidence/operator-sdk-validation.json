@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Rust Worker and Operator SDK evidence separated from Headless control SDKs, covering authoring, package admission, host execution, ABI boundaries, workflow composition, and remaining operational gaps.",
+  "summary": "Rust Worker and Operator SDK evidence separated from Headless control SDKs, covering authoring, managed package lifecycle, host execution, ABI boundaries, workflow composition, and remaining cross-platform operational gaps.",
   "paradigm_contract_evidence": {
     "runtime_api": [
       {
@@ -65,6 +65,7 @@
         "files": [
           "workers/rust/crates/operator-sdk/src/readiness.rs",
           "workers/rust/crates/installer/src/operator_package_preflight.rs",
+          "workers/rust/crates/installer/src/operator_package_store.rs",
           "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
           "schemas/operator-package-dynamic-smoke.schema.json"
         ],
@@ -72,14 +73,14 @@
           "operator_package_descriptor_readiness",
           "kyuubiki.operator-package-preflight/v1",
           "engine_dynamic_host_load",
-          "kyuubiki.operator-package-dynamic-smoke/v2"
+          "kyuubiki.operator-package-dynamic-smoke/v3"
         ]
       }
     ],
     "benchmark": [
       {
         "id": "operator-sdk-dynamic-smoke-measurement-contract",
-        "modules": ["sdk-operator", "runtime-agent-cli", "verification-evidence"],
+        "modules": ["sdk-operator", "runtime-agent-cli", "runtime-installer", "verification-evidence"],
         "files": [
           "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
           "schemas/operator-package-dynamic-smoke.schema.json",
@@ -90,6 +91,7 @@
           "template_cdylib_build",
           "engine_dynamic_host_load",
           "agent_dynamic_host_dispatch",
+          "installer_managed_agent_lifecycle",
           "operator-package-dynamic-smoke"
         ]
       }
@@ -103,14 +105,20 @@
           "workers/rust/crates/engine/src/tests/operator_sdk_host_security.rs",
           "workers/rust/crates/engine/src/tests/operator_sdk_host.rs",
           "workers/rust/crates/installer/src/tests/operator_package_preflight.rs",
-          "workers/rust/crates/cli/tests/operator_package_live.rs"
+          "workers/rust/crates/installer/src/tests/operator_package_store.rs",
+          "workers/rust/crates/cli/tests/operator_package_live.rs",
+          "workers/rust/crates/cli/tests/operator_package_installer_live.rs"
         ],
         "required_text": [
           "operator_package_manifest_fuzz_smoke_does_not_panic_on_mutated_json",
           "host_policy_rejects_non_library_entrypoint_by_default",
           "host_policy_rejects_entrypoint_symlink_escape",
           "host_policy_rejects_future_minimum_host_version",
-          "live_agent_loads_executes_rejects_tamper_and_recovers"
+          "live_agent_loads_executes_rejects_tamper_and_recovers",
+          "rejects_source_entrypoint_symlink",
+          "rejects_path_semantic_and_windows_reserved_package_ids",
+          "detects_unexpected_managed_package_files",
+          "installer_manages_agent_package_execution_and_residue_free_removal"
         ]
       }
     ],
@@ -121,6 +129,7 @@
         "files": [
           "workers/rust/crates/operator-sdk/src/manifest.rs",
           "workers/rust/crates/installer/src/operator_package_preflight.rs",
+          "workers/rust/crates/installer/src/operator_package_store.rs",
           "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",
           "docs/operator-sdk.md"
         ],
@@ -128,7 +137,8 @@
           "kyuubiki.operator-sdk/v1",
           "minimum_host_version",
           "validation_status",
-          "package admission summary"
+          "package admission summary",
+          "MANAGED_OPERATOR_PACKAGE_RECEIPT_SCHEMA_VERSION"
         ]
       }
     ],
@@ -143,7 +153,9 @@
           "workers/rust/crates/cli/src/operator_task_runtime.rs",
           "workers/rust/crates/cli/src/operator_package_runtime.rs",
           "workers/rust/crates/cli/tests/operator_package_live.rs",
+          "workers/rust/crates/cli/tests/operator_package_installer_live.rs",
           "workers/rust/crates/installer/src/operator_package_preflight.rs",
+          "workers/rust/crates/installer/src/operator_package_store.rs",
           "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
           "releases/usability-evidence/2.15.0/operator-sdk-agent-qualification.json"
         ],
@@ -153,7 +165,8 @@
           "kyuubiki-engine.operator-sdk-host/v1",
           "operator-package-preflight",
           "external_operator_package_executed",
-          "agent_dynamic_host_dispatch"
+          "agent_dynamic_host_dispatch",
+          "installer_managed_agent_lifecycle"
         ]
       }
     ]
@@ -245,7 +258,7 @@
       ]
     },
     {
-      "id": "operator-sdk-installer-admission-qualified",
+      "id": "operator-sdk-installer-lifecycle-qualified",
       "status": "proven",
       "grade": "qualified",
       "modules": ["sdk-operator", "runtime-installer"],
@@ -254,13 +267,19 @@
       "files": [
         "workers/rust/crates/installer/src/operator_package_preflight.rs",
         "workers/rust/crates/installer/src/tests/operator_package_preflight.rs",
+        "workers/rust/crates/installer/src/operator_package_store.rs",
+        "workers/rust/crates/installer/src/tests/operator_package_store.rs",
+        "workers/rust/crates/cli/tests/operator_package_installer_live.rs",
         "workers/rust/crates/operator-sdk/src/readiness.rs"
       ],
       "required_text": [
         "operator package preflight rejected",
         "operator_package_preflight_outcome_can_gate_readiness_warnings",
         "operator_package_preflight_json_can_be_written_to_report_file",
-        "operator_package_descriptor_readiness"
+        "operator_package_descriptor_readiness",
+        "installs_idempotently_verifies_and_prunes_operator_package_store",
+        "uninstall_recovers_from_corrupt_receipt_and_reports_it",
+        "installer_manages_agent_package_execution_and_residue_free_removal"
       ]
     },
     {
@@ -283,11 +302,33 @@
         "strict_preflight",
         "template_cdylib_build",
         "engine_dynamic_host_load",
-        "agent_dynamic_host_dispatch"
+        "agent_dynamic_host_dispatch",
+        "installer_managed_agent_lifecycle"
       ]
     },
     {
-      "id": "operator-sdk-installed-agent-journey",
+      "id": "operator-sdk-installed-agent-journey-qualified",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["sdk-operator", "runtime-engine-solver", "runtime-agent-cli", "runtime-installer"],
+      "paradigms": ["sdk_operator"],
+      "dimensions": ["execution", "security", "recovery", "abi_compatibility"],
+      "files": [
+        "docs/operator-sdk.md",
+        "workers/rust/crates/installer/src/operator_package_store.rs",
+        "workers/rust/crates/installer/src/tests/operator_package_store.rs",
+        "workers/rust/crates/cli/tests/operator_package_installer_live.rs",
+        "releases/usability-evidence/2.15.0/operator-sdk-agent-qualification.json"
+      ],
+      "required_text": [
+        "external_local",
+        "install-operator-package",
+        "installer_manages_agent_package_execution_and_residue_free_removal",
+        "installer_managed_agent_lifecycle"
+      ]
+    },
+    {
+      "id": "operator-sdk-cross-platform-installed-agent-operational",
       "status": "open",
       "grade": "operational",
       "modules": ["sdk-operator", "runtime-engine-solver", "runtime-agent-cli", "runtime-installer"],
@@ -298,7 +339,7 @@
         "config/architecture/usability-release-gate.json"
       ],
       "required_text": [
-        "external_local",
+        "cross-platform packages",
         "dynamic-library activation path",
         "planned_or_static_only_is_not_release_evidence"
       ]

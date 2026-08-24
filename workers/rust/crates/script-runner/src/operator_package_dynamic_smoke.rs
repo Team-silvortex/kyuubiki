@@ -226,7 +226,7 @@ pub fn run_operator_package_dynamic_smoke(
     stages.push(stage_record(
         "agent_dynamic_host_dispatch",
         "Start a package-enabled Agent, execute through RPC, reject digest tamper, and recover.",
-        rust_cwd,
+        rust_cwd.clone(),
         [
             "cargo",
             "test",
@@ -240,6 +240,49 @@ pub fn run_operator_package_dynamic_smoke(
         ],
         agent_dispatch,
     ));
+    if agent_dispatch != 0 {
+        write_report(
+            paths,
+            &options,
+            &stages,
+            &preflight_report_path,
+            &dynamic_library_path,
+        )?;
+        return Ok(agent_dispatch);
+    }
+
+    let managed_lifecycle = run_command(
+        &paths.rust,
+        "cargo",
+        [
+            "test",
+            "-p",
+            "kyuubiki-cli",
+            "--test",
+            "operator_package_installer_live",
+            "--",
+            "--ignored",
+            "--nocapture",
+        ]
+        .map(OsString::from),
+    )?;
+    stages.push(stage_record(
+        "installer_managed_agent_lifecycle",
+        "Install into the managed store, execute through Agent RPC, reject tamper, recover, uninstall, and prune residue.",
+        rust_cwd,
+        [
+            "cargo",
+            "test",
+            "-p",
+            "kyuubiki-cli",
+            "--test",
+            "operator_package_installer_live",
+            "--",
+            "--ignored",
+            "--nocapture",
+        ],
+        managed_lifecycle,
+    ));
     write_report(
         paths,
         &options,
@@ -247,7 +290,7 @@ pub fn run_operator_package_dynamic_smoke(
         &preflight_report_path,
         &dynamic_library_path,
     )?;
-    Ok(agent_dispatch)
+    Ok(managed_lifecycle)
 }
 
 fn parse_options(paths: &RepoPaths, args: Vec<OsString>) -> RunnerResult<Options> {
@@ -296,7 +339,7 @@ fn write_report(
     let ok = stages.iter().all(|stage| stage.status == 0);
     let preflight_summary = read_preflight_summary(preflight_report_path);
     let payload = json!({
-        "schema_version": "kyuubiki.operator-package-dynamic-smoke/v2",
+        "schema_version": "kyuubiki.operator-package-dynamic-smoke/v3",
         "generated_at": utc_iso_timestamp(),
         "ok": ok,
         "package_id": preflight_summary.package_id,

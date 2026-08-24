@@ -347,6 +347,34 @@ cargo run -p kyuubiki-installer -- operator-package-preflight ./operator-package
 cargo run -p kyuubiki-installer -- operator-package-preflight ./operator-packages --fail-on-readiness-warnings
 ```
 
+After preflight, Installer can own the package instead of asking Agent to load
+from an authoring tree:
+
+```bash
+cargo run -p kyuubiki-installer -- install-operator-package ./operator-packages/example
+cargo run -p kyuubiki-installer -- operator-package-status
+cargo run -p kyuubiki-installer -- uninstall-operator-package operator.example
+```
+
+The default store is the platform preference directory under
+`kyuubiki/operator-packages`; every command accepts `--store-root path` for an
+explicit isolated store. Installation first applies strict package readiness,
+then copies only the manifest and current-platform dynamic library into a
+staging directory, records SHA-256 provenance, verifies the staged package,
+and atomically activates `packages/<package_id>`. Status re-verifies installed
+content and exposes the exact `packages_root` that Agent should use. Uninstall
+removes the selected package and prunes an empty store, so package lifecycle
+does not leave a hidden authoring-tree or cache burden.
+If a partial installation or damaged receipt is encountered, uninstall still
+removes the validated package-ID target and reports `receipt_verified: false`
+plus the receipt error instead of trapping the user with an unremovable store.
+
+The same package ID is idempotent only when version, manifest, and binary
+digests match. Different content requires an explicit uninstall before
+replacement. The current lifecycle intentionally has no multi-version slots or
+rollback yet; cross-platform packages must also carry a valid entrypoint for
+each platform on which they are installed.
+
 For the repository template package, use the Make target:
 
 ```bash
@@ -370,6 +398,9 @@ preflight, builds the template `cdylib`, executes the engine host dynamic
 loading smoke, then starts a package-enabled Agent and dispatches the operator
 through RPC. The Agent stage also rejects a TaskIR whose package digest does not
 match the activated entrypoint and proves recovery with a subsequent valid run.
+The final stage installs the same package into an isolated Installer-managed
+store, repeats the Agent execution/tamper/recovery journey, uninstalls it, and
+requires the store to be residue-free.
 It writes
 `tmp/operator-package-dynamic-smoke.json` by default; override with
 `OUT=tmp/custom.json`. Use it when changing the SDK host, package manifest,
@@ -382,9 +413,9 @@ The retained report contract is also documented as
 [operator-package-dynamic-smoke.schema.json](../schemas/operator-package-dynamic-smoke.schema.json)
 with a fixture at
 [examples.operator-package-dynamic-smoke.json](../schemas/examples.operator-package-dynamic-smoke.json).
-The retained `v2` contract has five ordered stages, ending in
-`agent_dynamic_host_dispatch`. Repository-local paths in retained preflight
-evidence are normalized to project-relative paths.
+The retained `v3` contract has six ordered stages, ending in
+`installer_managed_agent_lifecycle`. Repository-local paths in retained
+preflight evidence are normalized to project-relative paths.
 - a minimal typed operator in `src/lib.rs`
 - a tiny runnable `src/main.rs`
 - a crate-local smoke test so authors start with a feedback loop immediately

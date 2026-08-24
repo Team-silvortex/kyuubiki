@@ -170,7 +170,9 @@ only appearing in the report.
 
 The dynamic smoke goes beyond read-only admission: it runs the template crate
 tests, strict preflight, template `cdylib` build, and the engine dynamic host
-test that loads and dispatches the template operator. It writes
+test that loads and dispatches the template operator. It then exercises direct
+Agent dispatch and an Installer-managed install, Agent dispatch, tamper
+rejection, recovery, uninstall, and residue-pruning journey. It writes
 `tmp/operator-package-dynamic-smoke.json` by default and accepts
 `OUT=tmp/name.json` when CI should retain a named artifact.
 The checker validates the retained dynamic-smoke report schema,

@@ -1,6 +1,7 @@
 mod agent_update_payload;
 mod control_update;
 mod operator_package_preflight;
+mod operator_package_store;
 mod release_runtime;
 mod remote_deployment;
 mod remote_deployment_replay;

@@ -490,6 +490,7 @@ version = "2.15.0"
 dependencies = [
  "kyuubiki-engine",
  "kyuubiki-headless-sdk",
+ "kyuubiki-installer",
  "kyuubiki-protocol",
  "kyuubiki-solver",
  "serde",
@@ -543,6 +544,7 @@ name = "kyuubiki-installer"
 version = "2.15.0"
 dependencies = [
  "kyuubiki-engine",
+ "kyuubiki-operator-sdk",
  "kyuubiki-platform",
  "kyuubiki-protocol",
  "serde",

@@ -1,6 +1,6 @@
 {
   "$schema": "operator-package-dynamic-smoke.schema.json",
-  "schema_version": "kyuubiki.operator-package-dynamic-smoke/v2",
+  "schema_version": "kyuubiki.operator-package-dynamic-smoke/v3",
   "generated_at": "2026-07-12T00:00:00Z",
   "ok": true,
   "package_id": "operator.template.summary",
@@ -90,6 +90,24 @@
         "kyuubiki-cli",
         "--test",
         "operator_package_live",
+        "--",
+        "--ignored",
+        "--nocapture"
+      ],
+      "status": 0,
+      "ok": true
+    },
+    {
+      "id": "installer_managed_agent_lifecycle",
+      "description": "Install into the managed store, execute through Agent RPC, reject tamper, recover, uninstall, and prune residue.",
+      "cwd": "workers/rust",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "kyuubiki-cli",
+        "--test",
+        "operator_package_installer_live",
         "--",
         "--ignored",
         "--nocapture"
