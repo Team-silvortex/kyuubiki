@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Rust Worker and Operator SDK evidence separated from Headless control SDKs, covering authoring, managed and automatic bound-Orchestra package supply chains, generation-safe host rotation, immediate task eviction, explicit job-terminal release, ABI boundaries, workflow composition, and remaining packaged multi-host and cross-platform operational gaps.",
+  "summary": "Rust Worker and Operator SDK evidence separated from Headless control SDKs, covering authoring, managed and automatic bound-Orchestra package supply chains, generation-safe host rotation, immediate task eviction, explicit job-terminal release, ABI boundaries, workflow composition, and native macOS/Linux multihost operation while Windows remains deferred.",
   "paradigm_contract_evidence": {
     "runtime_api": [
       {
@@ -189,6 +189,26 @@
           "installer_managed_agent_lifecycle",
           "kyuubiki.agent-operator-cache-eviction/v1",
           "evicted_after_execution"
+        ]
+      },
+      {
+        "id": "operator-sdk-multihost-operational-contract",
+        "modules": ["sdk-operator", "runtime-engine-solver", "runtime-agent-cli", "runtime-installer", "verification-evidence"],
+        "files": [
+          "config/architecture/operator-sdk-multihost-operational-qualification.json",
+          "schemas/operator-sdk-multihost-operational-qualification-contract.schema.json",
+          "schemas/operator-sdk-multihost-operational-qualification-report.schema.json",
+          "workers/rust/crates/script-runner/src/operator_sdk_multihost_qualification/mod.rs",
+          "workers/rust/crates/script-runner/src/operator_sdk_multihost_qualification/validation.rs",
+          "releases/usability-evidence/2.16.4/operator-sdk-multihost-operational-qualification.json"
+        ],
+        "required_text": [
+          "operator-sdk-macos-linux-multihost-operational",
+          "local-macos-qualification-host",
+          "remote-linux-qualification-host",
+          "installer_managed_agent_lifecycle",
+          "deferred_platforms",
+          "remote_run_root_removed"
         ]
       }
     ]
@@ -410,7 +430,32 @@
       ]
     },
     {
-      "id": "operator-sdk-cross-platform-installed-agent-operational",
+      "id": "operator-sdk-macos-linux-multihost-qualified",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["sdk-operator", "runtime-engine-solver", "runtime-agent-cli", "runtime-installer"],
+      "paradigms": ["sdk_operator"],
+      "dimensions": ["execution", "security", "contract", "recovery", "abi_compatibility"],
+      "files": [
+        "config/architecture/operator-sdk-multihost-operational-qualification.json",
+        "schemas/operator-sdk-multihost-operational-qualification-report.schema.json",
+        "workers/rust/crates/script-runner/src/operator_sdk_multihost_qualification/mod.rs",
+        "workers/rust/crates/script-runner/src/operator_sdk_multihost_qualification/validation.rs",
+        "releases/usability-evidence/2.16.4/operator-sdk-macos-agent-qualification.json",
+        "releases/usability-evidence/2.16.4/operator-sdk-linux-agent-qualification.json",
+        "releases/usability-evidence/2.16.4/operator-sdk-multihost-operational-qualification.json"
+      ],
+      "required_text": [
+        "operator-sdk-macos-linux-multihost-operational",
+        "local-macos-qualification-host",
+        "remote-linux-qualification-host",
+        "package_identity_match",
+        "tamper_recovery_both",
+        "remote_cleanup_complete"
+      ]
+    },
+    {
+      "id": "operator-sdk-windows-installed-agent-operational",
       "status": "open",
       "grade": "operational",
       "modules": ["sdk-operator", "runtime-engine-solver", "runtime-agent-cli", "runtime-installer"],
@@ -418,12 +463,13 @@
       "dimensions": ["execution", "security", "recovery", "abi_compatibility"],
       "files": [
         "docs/operator-sdk.md",
-        "config/architecture/usability-release-gate.json"
+        "config/architecture/usability-release-gate.json",
+        "releases/usability-evidence/2.16.4/operator-sdk-multihost-operational-qualification.json"
       ],
       "required_text": [
-        "cross-platform packages",
-        "dynamic-library activation path",
-        "planned_or_static_only_is_not_release_evidence"
+        "deferred_platforms",
+        "windows",
+        "release_complete"
       ]
     },
     {

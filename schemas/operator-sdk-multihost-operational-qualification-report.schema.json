@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/operator-sdk-multihost-operational-qualification-report.schema.json",
+  "title": "Kyuubiki Operator SDK Multihost Operational Qualification Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "status",
+    "qualification_id",
+    "scope",
+    "package",
+    "hosts",
+    "cleanup",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.operator-sdk-multihost-operational-qualification/v1"
+    },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "status": { "const": "pass" },
+    "qualification_id": { "const": "operator-sdk-macos-linux-multihost-operational" },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completed_platforms", "deferred_platforms", "release_complete"],
+      "properties": {
+        "completed_platforms": { "const": ["macos", "linux"] },
+        "deferred_platforms": { "const": ["windows"] },
+        "release_complete": { "const": false }
+      }
+    },
+    "package": { "$ref": "#/$defs/package" },
+    "hosts": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        { "$ref": "#/$defs/localHost" },
+        { "$ref": "#/$defs/remoteHost" }
+      ],
+      "items": false
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["remote_run_root_removed", "local_staging_removed", "residue_count"],
+      "properties": {
+        "remote_run_root_removed": { "const": true },
+        "local_staging_removed": { "const": true },
+        "residue_count": { "const": 0 }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/check" }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package_id", "operator_ids", "host_version", "sdk_api_version"],
+      "properties": {
+        "package_id": { "const": "operator.template.summary" },
+        "operator_ids": { "const": ["extract.template_summary"] },
+        "host_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9._-]+$"
+        },
+        "sdk_api_version": { "const": "kyuubiki.operator-sdk/v1" }
+      }
+    },
+    "hostBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "platform",
+        "architecture",
+        "capture_kind",
+        "report_path",
+        "report_sha256",
+        "preflight_path",
+        "preflight_sha256",
+        "stage_ids",
+        "stage_count",
+        "all_stages_passed"
+      ],
+      "properties": {
+        "role": { "type": "string", "minLength": 1 },
+        "platform": { "enum": ["macos", "linux"] },
+        "architecture": { "enum": ["aarch64", "x86_64"] },
+        "capture_kind": { "enum": ["local-native", "remote-native"] },
+        "report_path": { "$ref": "#/$defs/repoPath" },
+        "report_sha256": { "$ref": "#/$defs/digest" },
+        "preflight_path": { "$ref": "#/$defs/repoPath" },
+        "preflight_sha256": { "$ref": "#/$defs/digest" },
+        "stage_ids": {
+          "const": [
+            "template_tests",
+            "strict_preflight",
+            "template_cdylib_build",
+            "engine_dynamic_host_load",
+            "agent_dynamic_host_dispatch",
+            "installer_managed_agent_lifecycle"
+          ]
+        },
+        "stage_count": { "const": 6 },
+        "all_stages_passed": { "const": true }
+      }
+    },
+    "localHost": {
+      "allOf": [
+        { "$ref": "#/$defs/hostBase" },
+        {
+          "properties": {
+            "role": { "const": "local-macos-qualification-host" },
+            "platform": { "const": "macos" },
+            "architecture": { "const": "aarch64" },
+            "capture_kind": { "const": "local-native" }
+          }
+        }
+      ]
+    },
+    "remoteHost": {
+      "allOf": [
+        { "$ref": "#/$defs/hostBase" },
+        {
+          "properties": {
+            "role": { "const": "remote-linux-qualification-host" },
+            "platform": { "const": "linux" },
+            "architecture": { "const": "x86_64" },
+            "capture_kind": { "const": "remote-native" }
+          }
+        }
+      ]
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ok"],
+      "properties": {
+        "id": {
+          "enum": [
+            "local_macos_capture",
+            "remote_linux_capture",
+            "package_identity_match",
+            "sdk_api_match",
+            "canonical_stage_match",
+            "engine_dynamic_host_both",
+            "agent_dispatch_both",
+            "installer_lifecycle_both",
+            "tamper_recovery_both",
+            "remote_cleanup_complete",
+            "sensitive_metadata_absent"
+          ]
+        },
+        "ok": { "const": true }
+      }
+    }
+  }
+}

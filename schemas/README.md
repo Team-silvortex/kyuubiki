@@ -247,6 +247,15 @@ The shared approval-request fixture is the parity vector for all SDKs.
   strict package preflight, template `cdylib` build, and engine dynamic host
   loading plus direct-Agent and Installer-managed lifecycle evidence with
   per-stage descriptions, working directories, and command vectors
+- `operator-sdk-multihost-operational-qualification-contract.schema.json`
+  defines the native-host qualification plan for the Rust Operator SDK,
+  including required host roles, canonical smoke stages, target tensor
+  coordinates, retained evidence paths, and explicit completed/deferred
+  platform scope
+- `operator-sdk-multihost-operational-qualification-report.schema.json`
+  defines the content-bound combined report for native macOS and Linux runs,
+  including host/toolchain facts, child report digests, cleanup proof, and a
+  release-scope statement that cannot silently promote deferred Windows work
 - `agent-operator-generation-execution.schema.json` defines the Agent execution
   receipt for session-owned dynamic-library generations, host-lease retention,
   next-start crash recovery, and startup janitor outcomes

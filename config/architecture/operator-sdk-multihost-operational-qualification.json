@@ -1,0 +1,68 @@
+{
+  "$schema": "../../schemas/operator-sdk-multihost-operational-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.operator-sdk-multihost-operational-qualification-contract/v1",
+  "qualification_id": "operator-sdk-macos-linux-multihost-operational",
+  "target_coordinates": [
+    { "module_id": "sdk-operator", "paradigm": "sdk_operator", "target_grade": "operational" },
+    { "module_id": "runtime-engine-solver", "paradigm": "sdk_operator", "target_grade": "operational" },
+    { "module_id": "runtime-agent-cli", "paradigm": "sdk_operator", "target_grade": "operational" },
+    { "module_id": "runtime-installer", "paradigm": "sdk_operator", "target_grade": "operational" }
+  ],
+  "capture": {
+    "dynamic_smoke_schema": "kyuubiki.operator-package-dynamic-smoke/v3",
+    "local_host": {
+      "role": "local-macos-qualification-host",
+      "platform": "macos",
+      "architecture": "aarch64"
+    },
+    "remote_host": {
+      "role": "remote-linux-qualification-host",
+      "platform": "linux",
+      "architecture": "x86_64"
+    },
+    "required_stage_ids": [
+      "template_tests",
+      "strict_preflight",
+      "template_cdylib_build",
+      "engine_dynamic_host_load",
+      "agent_dynamic_host_dispatch",
+      "installer_managed_agent_lifecycle"
+    ],
+    "required_completed_platforms": ["macos", "linux"],
+    "deferred_platforms": ["windows"],
+    "release_complete": false
+  },
+  "retention": {
+    "report_schema": "kyuubiki.operator-sdk-multihost-operational-qualification/v1",
+    "report_schema_path": "schemas/operator-sdk-multihost-operational-qualification-report.schema.json",
+    "report_path": "releases/usability-evidence/2.16.4/operator-sdk-multihost-operational-qualification.json",
+    "local_report_path": "releases/usability-evidence/2.16.4/operator-sdk-macos-agent-qualification.json",
+    "local_preflight_path": "releases/usability-evidence/2.16.4/operator-sdk-macos-preflight.json",
+    "remote_report_path": "releases/usability-evidence/2.16.4/operator-sdk-linux-agent-qualification.json",
+    "remote_preflight_path": "releases/usability-evidence/2.16.4/operator-sdk-linux-preflight.json",
+    "forbidden_content": [
+      "host_address",
+      "hostname",
+      "username",
+      "credential",
+      "absolute_host_path"
+    ]
+  },
+  "required_checks": [
+    "local_macos_capture",
+    "remote_linux_capture",
+    "package_identity_match",
+    "sdk_api_match",
+    "canonical_stage_match",
+    "engine_dynamic_host_both",
+    "agent_dispatch_both",
+    "installer_lifecycle_both",
+    "tamper_recovery_both",
+    "remote_cleanup_complete",
+    "sensitive_metadata_absent"
+  ],
+  "commands": {
+    "capture": "make qualify-operator-sdk-multihost-operational-remote REMOTE=kyuubiki-lab",
+    "verify": "make check-operator-sdk-multihost-operational-qualification"
+  }
+}

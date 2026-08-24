@@ -17,6 +17,7 @@ const COVERED_PARADIGMS: &[&str] = &[
     "benchmark",
     "security",
     "deployment_update",
+    "sdk_operator",
     "sdk_headless",
     "persistence_provenance",
 ];
@@ -136,6 +137,11 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
     assert_includes(
         &string_array_at(surface, "/runtime_api/stable_commands"),
         "./scripts/kyuubiki check-installed-runtime-operational-qualification",
+        "stable command",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/stable_commands"),
+        "./scripts/kyuubiki check-operator-sdk-multihost-operational-qualification",
         "stable command",
     )?;
     assert_includes(

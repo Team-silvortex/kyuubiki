@@ -44,15 +44,16 @@ Installer and the three-language Headless SDK family, adds ABI compatibility as
 an evidence dimension, and promotes security, persistence, validation, and
 benchmark coordinates that were previously marked covered but optional.
 
-The resulting queue is intentionally non-empty. Local Agent package execution
-is now qualified, while the P0 group has converged on installed external-package
-operation across SDK, Engine, Agent, and Installer. Workbench, Engine, and
-Headless persistence/provenance now meet their local `verified` targets, while
-Workbench and Headless security meet the local `qualified` target. Its P1 group is
+The resulting queue is intentionally non-empty. Agent package execution is now
+qualified on native macOS aarch64 and physical Linux x86_64, while the P0 group
+has converged on Windows installed external-package operation across SDK,
+Engine, Agent, and Installer. Workbench, Engine, and Headless
+persistence/provenance now meet their local `verified` targets, while Workbench
+and Headless security meet the local `qualified` target. Its P1 group is
 workflow-contract qualification plus focused Orchestra, Protocol, Headless,
 and Operator SDK benchmark evidence. Ordinary lane execution no longer counts
-as asserted verification, and local dynamic-library smoke does not count as an
-installed operational journey.
+as asserted verification, and two native hosts do not imply an untested Windows
+ABI journey.
 
 The earlier Agent, Engine, and verification benchmark qualification remains
 valid. The native current-line route executes a
@@ -595,9 +596,11 @@ Current weak point:
   is covered under concurrent requests
 - `cache_scope: job` now has an explicit terminal RPC, shared-owner retention,
   idempotent release, cancellation cleanup, and final-owner generation eviction
-- the remaining third-party gap is operational delivery depth rather than local
-  dispatch: packaged multi-host acquisition and the macOS/Linux/Windows ABI
-  matrix
+- the same six-stage package journey now passes on native macOS aarch64 and
+  physical Linux x86_64, with content-bound smoke/preflight attachments and
+  residue-free cleanup
+- the remaining third-party gap is native Windows installed-package operation;
+  macOS/Linux evidence does not imply Windows ABI compatibility
 
 Current moxi hardening focus:
 
@@ -614,8 +617,10 @@ Qualification focus:
   copying the complete central library to every Agent
 - retain job-scoped cache retirement at the explicit workload boundary,
   including shared ownership and cancellation
-- promote the same package journey through installed multi-host and supported-
-  platform evidence rather than inheriting local dynamic-smoke results
+- retain the macOS/Linux multihost report and its four SHA-256-bound child
+  attachments under `releases/usability-evidence/2.16.4/`
+- promote the same package journey through native Windows installed-package
+  evidence rather than inheriting macOS/Linux dynamic-smoke results
 - add operator package compatibility fixtures for future SDK API changes
 
 Moxi readiness standard:

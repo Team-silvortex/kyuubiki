@@ -1,0 +1,39 @@
+{
+  "accepted_package_count": 1,
+  "accepted_packages": [
+    {
+      "entrypoint_path": "workers/rust/templates/operator-crate-template/target/debug/libkyuubiki_operator_template.so",
+      "minimum_host_version": "1.15.0",
+      "operator_ids": [
+        "extract.template_summary"
+      ],
+      "package_id": "operator.template.summary",
+      "package_version": "0.1.0",
+      "runtime": "rust_crate",
+      "sdk_api_version": "kyuubiki.operator-sdk/v1",
+      "validation_notes": "Template package runs a local smoke example; replace this with your operator's validation evidence before distribution.",
+      "validation_status": "partial"
+    }
+  ],
+  "host_version": "2.15.0",
+  "package_readiness": [
+    {
+      "issues": [],
+      "manifest_path": "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",
+      "ok": true,
+      "package_id": "operator.template.summary"
+    }
+  ],
+  "packages_root": "workers/rust/templates",
+  "readiness_error_count": 0,
+  "readiness_warning_count": 0,
+  "registry_kind": "extract",
+  "rejected_package_count": 0,
+  "rejected_packages": [],
+  "safety": {
+    "loads_dynamic_libraries": false,
+    "mode": "read_only_preflight",
+    "mutates_runtime_registry": false
+  },
+  "schema_version": "kyuubiki.operator-package-preflight/v1"
+}

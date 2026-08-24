@@ -88,8 +88,10 @@ sprawl:
   load, live Agent RPC dispatch, and Installer-managed lifecycle. Bound-
   Orchestra fetch now covers first load, verified cache hit, task eviction,
   shared job ownership, idempotent terminal release, cancellation cleanup, and
-  refetch. This promotes the local package path to `qualified`; installed
-  multi-host acquisition and the supported platform ABI matrix remain open
+  refetch. The same six stages now pass natively on macOS aarch64 and physical
+  Linux x86_64, with four content-bound child reports and residue-free cleanup.
+  Windows installed-package operation remains deferred, so all four P0 Operator
+  SDK coordinates stay below the release target
 - benchmark qualification now binds the native Agent command route, release
   solver execution, retained direct-mesh repetition, and the remote scale
   archive. It covers 19/19 expected 500k cases and 39/39 expected 1M cases

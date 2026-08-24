@@ -23,6 +23,7 @@
       "./scripts/kyuubiki check-agent-update-operational-qualification",
       "./scripts/kyuubiki check-runtime-payload-operational-qualification",
       "./scripts/kyuubiki check-installed-runtime-operational-qualification",
+      "./scripts/kyuubiki check-operator-sdk-multihost-operational-qualification",
       "./scripts/kyuubiki check-benchmark-qualification",
       "./scripts/kyuubiki build-regression-gate-report",
       "./scripts/kyuubiki build-central-readiness-report",
@@ -260,6 +261,25 @@
       "kyuubiki.installer-headless-surface/v1",
       "kyuubiki.headless-sdk-operational-qualification/v1",
       "kyuubiki.installed-runtime-operational-qualification/v1"
+    ]
+  },
+  "sdk_operator": {
+    "evidence_sources": [
+      "config/architecture/operator-sdk-multihost-operational-qualification.json",
+      "schemas/operator-sdk-multihost-operational-qualification-contract.schema.json",
+      "schemas/operator-sdk-multihost-operational-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/operator_sdk_multihost_qualification/mod.rs",
+      "workers/rust/crates/script-runner/src/operator_sdk_multihost_qualification/validation.rs",
+      "releases/usability-evidence/2.16.4/operator-sdk-macos-agent-qualification.json",
+      "releases/usability-evidence/2.16.4/operator-sdk-linux-agent-qualification.json",
+      "releases/usability-evidence/2.16.4/operator-sdk-multihost-operational-qualification.json"
+    ],
+    "required_surfaces": [
+      "kyuubiki.operator-package-dynamic-smoke/v3",
+      "kyuubiki.operator-sdk-multihost-operational-qualification-contract/v1",
+      "kyuubiki.operator-sdk-multihost-operational-qualification/v1",
+      "operator-sdk-macos-linux-multihost-operational",
+      "windows"
     ]
   },
   "persistence_provenance": {

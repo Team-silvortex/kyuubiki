@@ -93,6 +93,8 @@ help:
 	@echo "  make check-benchmark-qualification Recheck retained benchmark qualification evidence"
 	@echo "  make qualify-headless-sdk-operational-remote Qualify installed Rust Headless SDK on remote Linux"
 	@echo "  make check-headless-sdk-operational-qualification Verify retained installed Headless SDK evidence"
+	@echo "  make qualify-operator-sdk-multihost-operational-remote Qualify the Rust Operator SDK on local macOS and remote Linux"
+	@echo "  make check-operator-sdk-multihost-operational-qualification Verify retained Operator SDK multihost evidence"
 	@echo "  make qualify-headless-workflow Qualify Rust Headless workflow execution and preflight failure contracts"
 	@echo "  make qualify-desktop-deployment-update Qualify Hub-to-Installer update delivery and native digest enforcement"
 	@echo "  make check-test-coverage-posture Verify traditional code-coverage posture and write tmp/test-coverage-posture.{json,md}"

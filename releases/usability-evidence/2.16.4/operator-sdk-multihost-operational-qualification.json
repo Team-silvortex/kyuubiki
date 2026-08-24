@@ -1,0 +1,117 @@
+{
+  "schema_version": "kyuubiki.operator-sdk-multihost-operational-qualification/v1",
+  "generated_at_unix_ms": 1787576814585,
+  "status": "pass",
+  "qualification_id": "operator-sdk-macos-linux-multihost-operational",
+  "scope": {
+    "completed_platforms": [
+      "macos",
+      "linux"
+    ],
+    "deferred_platforms": [
+      "windows"
+    ],
+    "release_complete": false
+  },
+  "package": {
+    "package_id": "operator.template.summary",
+    "operator_ids": [
+      "extract.template_summary"
+    ],
+    "host_version": "2.15.0",
+    "sdk_api_version": "kyuubiki.operator-sdk/v1"
+  },
+  "hosts": [
+    {
+      "role": "local-macos-qualification-host",
+      "platform": "macos",
+      "architecture": "aarch64",
+      "capture_kind": "local-native",
+      "report_path": "releases/usability-evidence/2.16.4/operator-sdk-macos-agent-qualification.json",
+      "report_sha256": "3414c99fb454ddbb6d443cfa7853d546047b9a4b604317a4bcb9706c9ca21f3a",
+      "preflight_path": "releases/usability-evidence/2.16.4/operator-sdk-macos-preflight.json",
+      "preflight_sha256": "2c29913ea7aedd28be3cad827ce4c69c93d5ab7e52145132de41229e62d496a8",
+      "stage_ids": [
+        "template_tests",
+        "strict_preflight",
+        "template_cdylib_build",
+        "engine_dynamic_host_load",
+        "agent_dynamic_host_dispatch",
+        "installer_managed_agent_lifecycle"
+      ],
+      "stage_count": 6,
+      "all_stages_passed": true
+    },
+    {
+      "role": "remote-linux-qualification-host",
+      "platform": "linux",
+      "architecture": "x86_64",
+      "capture_kind": "remote-native",
+      "report_path": "releases/usability-evidence/2.16.4/operator-sdk-linux-agent-qualification.json",
+      "report_sha256": "becd139c5ebd211362b736cec91a70de1bf0b1ce440a5f7032683dd70dba8129",
+      "preflight_path": "releases/usability-evidence/2.16.4/operator-sdk-linux-preflight.json",
+      "preflight_sha256": "dd33055be88101130a92fe2a4cf869a0150d1b33d9e99fe61ed0fd4ca5444591",
+      "stage_ids": [
+        "template_tests",
+        "strict_preflight",
+        "template_cdylib_build",
+        "engine_dynamic_host_load",
+        "agent_dynamic_host_dispatch",
+        "installer_managed_agent_lifecycle"
+      ],
+      "stage_count": 6,
+      "all_stages_passed": true
+    }
+  ],
+  "cleanup": {
+    "remote_run_root_removed": true,
+    "local_staging_removed": true,
+    "residue_count": 0
+  },
+  "checks": [
+    {
+      "id": "local_macos_capture",
+      "ok": true
+    },
+    {
+      "id": "remote_linux_capture",
+      "ok": true
+    },
+    {
+      "id": "package_identity_match",
+      "ok": true
+    },
+    {
+      "id": "sdk_api_match",
+      "ok": true
+    },
+    {
+      "id": "canonical_stage_match",
+      "ok": true
+    },
+    {
+      "id": "engine_dynamic_host_both",
+      "ok": true
+    },
+    {
+      "id": "agent_dispatch_both",
+      "ok": true
+    },
+    {
+      "id": "installer_lifecycle_both",
+      "ok": true
+    },
+    {
+      "id": "tamper_recovery_both",
+      "ok": true
+    },
+    {
+      "id": "remote_cleanup_complete",
+      "ok": true
+    },
+    {
+      "id": "sensitive_metadata_absent",
+      "ok": true
+    }
+  ]
+}

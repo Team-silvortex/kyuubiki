@@ -159,6 +159,8 @@ Installer crate tests are split by installer responsibility instead of growing
 - `make operator-package-dynamic-smoke`
 - `make check-operator-package-dynamic-smoke-contract`
 - `make check-operator-package-dynamic-smoke`
+- `make qualify-operator-sdk-multihost-operational-remote REMOTE=kyuubiki-lab`
+- `make check-operator-sdk-multihost-operational-qualification`
 
 This runs:
 
@@ -191,6 +193,14 @@ repo-local evidence paths, and the matching shared schema fixture under
 The contract target runs the same schema/example fixture checks without
 requiring a freshly generated `tmp/` report, so architecture checks can catch
 contract drift before the dynamic host smoke runs.
+
+The multihost qualification target repeats the canonical six stages on native
+macOS aarch64 and a physical Linux x86_64 host. It uses one unique remote work
+root per run, retrieves four content-bound child reports, removes local and
+remote staging, and retains only normalized evidence under
+`releases/usability-evidence/2.16.4/`. Its checker includes negative self-tests
+for attachment tampering and false Windows completion. Passing this target does
+not promote Windows or mark the release complete.
 
 These tests use small local loopback fixtures and focus on:
 

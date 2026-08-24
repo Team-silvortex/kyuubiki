@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/operator-sdk-multihost-operational-qualification-contract.schema.json",
+  "title": "Kyuubiki Operator SDK Multihost Operational Qualification Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "qualification_id",
+    "target_coordinates",
+    "capture",
+    "retention",
+    "required_checks",
+    "commands"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.operator-sdk-multihost-operational-qualification-contract/v1"
+    },
+    "qualification_id": {
+      "const": "operator-sdk-macos-linux-multihost-operational"
+    },
+    "target_coordinates": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/coordinate" }
+    },
+    "capture": { "$ref": "#/$defs/capture" },
+    "retention": { "$ref": "#/$defs/retention" },
+    "required_checks": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/checkId" }
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capture", "verify"],
+      "properties": {
+        "capture": { "type": "string", "minLength": 1 },
+        "verify": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "coordinate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module_id", "paradigm", "target_grade"],
+      "properties": {
+        "module_id": {
+          "enum": ["sdk-operator", "runtime-engine-solver", "runtime-agent-cli", "runtime-installer"]
+        },
+        "paradigm": { "const": "sdk_operator" },
+        "target_grade": { "const": "operational" }
+      }
+    },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "platform", "architecture"],
+      "properties": {
+        "role": { "type": "string", "minLength": 1 },
+        "platform": { "enum": ["macos", "linux"] },
+        "architecture": { "enum": ["aarch64", "x86_64"] }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dynamic_smoke_schema",
+        "local_host",
+        "remote_host",
+        "required_stage_ids",
+        "required_completed_platforms",
+        "deferred_platforms",
+        "release_complete"
+      ],
+      "properties": {
+        "dynamic_smoke_schema": { "const": "kyuubiki.operator-package-dynamic-smoke/v3" },
+        "local_host": { "$ref": "#/$defs/host" },
+        "remote_host": { "$ref": "#/$defs/host" },
+        "required_stage_ids": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "required_completed_platforms": {
+          "const": ["macos", "linux"]
+        },
+        "deferred_platforms": {
+          "const": ["windows"]
+        },
+        "release_complete": { "const": false }
+      }
+    },
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "report_schema",
+        "report_schema_path",
+        "report_path",
+        "local_report_path",
+        "local_preflight_path",
+        "remote_report_path",
+        "remote_preflight_path",
+        "forbidden_content"
+      ],
+      "properties": {
+        "report_schema": { "const": "kyuubiki.operator-sdk-multihost-operational-qualification/v1" },
+        "report_schema_path": { "$ref": "#/$defs/repoPath" },
+        "report_path": { "$ref": "#/$defs/repoPath" },
+        "local_report_path": { "$ref": "#/$defs/repoPath" },
+        "local_preflight_path": { "$ref": "#/$defs/repoPath" },
+        "remote_report_path": { "$ref": "#/$defs/repoPath" },
+        "remote_preflight_path": { "$ref": "#/$defs/repoPath" },
+        "forbidden_content": {
+          "type": "array",
+          "minItems": 5,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "checkId": {
+      "enum": [
+        "local_macos_capture",
+        "remote_linux_capture",
+        "package_identity_match",
+        "sdk_api_match",
+        "canonical_stage_match",
+        "engine_dynamic_host_both",
+        "agent_dispatch_both",
+        "installer_lifecycle_both",
+        "tamper_recovery_both",
+        "remote_cleanup_complete",
+        "sensitive_metadata_absent"
+      ]
+    }
+  }
+}

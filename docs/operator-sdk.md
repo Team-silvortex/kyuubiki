@@ -231,22 +231,23 @@ admission and deployment actions but no longer owns the SDK itself. Engine and
 Installer depend on this module through explicit topology edges.
 
 The `sdk_operator` tensor paradigm is distinct from `sdk_headless`. Current
-authoring, manifest, readiness, host-policy, workflow-extension, fuzz, and local
+authoring, manifest, readiness, host-policy, workflow-extension, fuzz, and
 dynamic-library evidence qualifies the Rust extension contract. A real Agent
 loads both external-local and Installer-managed packages, dispatches over the
 TaskIR RPC boundary, rejects package-integrity substitution, and executes again
 after rejection. The bound-Orchestra path now resolves and serves exactly one
 current-target package, while Installer downloads, verifies, and atomically
-installs it. The Agent now consumes the same contract automatically for admitted
+installs it. The Agent consumes the same contract automatically for admitted
 `orchestra_fetch` TaskIR, hot-loads the package, and distinguishes a first fetch
-from a verified cache hit. These are retained local qualifications, not a
-three-platform operational claim. `cache_scope: none` now causes immediate
-post-dispatch eviction through a new host-leased generation, and same-package
-version rotation is isolated from in-flight tasks. Promotion to the Daji target
-still requires the supported platform ABI matrix, packaged multi-host
-acquisition evidence, and focused measurements of discovery, admission, load,
-first dispatch, and steady dispatch without borrowing general solver throughput
-numbers.
+from a verified cache hit. The complete six-stage journey now passes natively on
+macOS aarch64 and physical Linux x86_64, with retained content-bound evidence.
+This is still not a three-platform claim: Windows remains explicitly deferred.
+`cache_scope: none` causes immediate post-dispatch eviction through a new
+host-leased generation, and same-package version rotation is isolated from
+in-flight tasks. Promotion to the Daji target still requires the Windows
+installed-package ABI journey and focused measurements of discovery, admission,
+load, first dispatch, and steady dispatch without borrowing general solver
+throughput numbers.
 
 ### Author-facing crate
 
@@ -458,8 +459,9 @@ after registering cancellation. The portable receipt is
 `schemas/agent-operator-job-cache-release.schema.json` and
 `schemas/examples.agent-operator-job-cache-release.json`.
 
-Qualified installed multi-host and dynamic-library evidence on Windows, Linux,
-and macOS remains an explicit operational gap rather than a local-test claim.
+Qualified native dynamic-library evidence now exists on macOS aarch64 and
+physical Linux x86_64. The corresponding installed-package journey on Windows
+remains an explicit operational gap rather than being inferred from those hosts.
 
 For the repository template package, use the Make target:
 
@@ -469,6 +471,8 @@ make operator-package-preflight OUT=tmp/operator-package-preflight.json
 make operator-package-preflight FAIL_ON_REJECTED=1
 make operator-package-dynamic-smoke
 make check-operator-package-dynamic-smoke IN=tmp/operator-package-dynamic-smoke.json
+make qualify-operator-sdk-multihost-operational-remote REMOTE=kyuubiki-lab
+make check-operator-sdk-multihost-operational-qualification
 ```
 
 The JSON schema is `kyuubiki.operator-package-preflight/v1` and includes
@@ -502,6 +506,14 @@ with a fixture at
 The retained `v3` contract has six ordered stages, ending in
 `installer_managed_agent_lifecycle`. Repository-local paths in retained
 preflight evidence are normalized to project-relative paths.
+
+The multihost target runs that same six-stage contract in an isolated local
+staging root and a unique remote Linux work root, then removes both. Its combined
+report binds the macOS and Linux smoke/preflight attachments by SHA-256, checks
+package, operator, host-version, and SDK API parity, and records completed and
+deferred platforms separately. Current retained evidence lives under
+`releases/usability-evidence/2.16.4/`; it records macOS and Linux as complete,
+Windows as deferred, and `release_complete: false`.
 - a minimal typed operator in `src/lib.rs`
 - a tiny runnable `src/main.rs`
 - a crate-local smoke test so authors start with a feedback loop immediately

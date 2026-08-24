@@ -296,7 +296,7 @@ fn schema_requires(schema: &Value, pointer: &str, field_name: &str) -> bool {
         .any(|required| required == field_name)
 }
 
-fn dynamic_smoke_errors(root: &Path, report: &Value, context: &str) -> Vec<String> {
+pub(crate) fn dynamic_smoke_errors(root: &Path, report: &Value, context: &str) -> Vec<String> {
     let mut errors = Vec::new();
     if field(report, "schema_version") != SCHEMA_VERSION {
         errors.push(format!("{context}: unexpected schema_version"));

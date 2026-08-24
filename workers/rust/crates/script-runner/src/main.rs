@@ -98,6 +98,7 @@ mod operator_qualification_release_records;
 mod operator_reliability;
 mod operator_reliability_rules;
 mod operator_reliability_schemas;
+mod operator_sdk_multihost_qualification;
 mod operator_task_ir_contract;
 mod operator_validation;
 mod orchestra_recovery_fault_injection;
@@ -409,6 +410,9 @@ fn run() -> RunnerResult<u8> {
         }
         "qualify-headless-sdk-operational-remote" => {
             headless_sdk_operational::run_qualify_headless_sdk_operational_remote(&paths.root, rest)
+        }
+        "qualify-operator-sdk-multihost-operational-remote" => {
+            operator_sdk_multihost_qualification::run_qualify_remote(&paths, rest)
         }
         "lab" => lab::run_lab(&paths.root, rest),
         "remote-ssh-fixture" => remote_ssh_fixture::run_remote_ssh_fixture(&paths.root, rest),

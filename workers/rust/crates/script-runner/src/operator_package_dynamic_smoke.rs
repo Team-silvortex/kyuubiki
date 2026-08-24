@@ -7,7 +7,8 @@ use std::path::{Path, PathBuf};
 mod check;
 
 pub(crate) use check::{
-    run_check_operator_package_dynamic_smoke, run_check_operator_package_dynamic_smoke_contract,
+    dynamic_smoke_errors, run_check_operator_package_dynamic_smoke,
+    run_check_operator_package_dynamic_smoke_contract,
 };
 
 #[derive(Debug, Clone)]

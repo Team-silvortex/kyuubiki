@@ -125,6 +125,8 @@ lab remote-ssh-fixture\n  \
   qualify-headless-sdk-operational-remote\n  \
   check-headless-sdk-validation-qualification\n  \
   check-headless-sdk-operational-qualification\n  \
+  qualify-operator-sdk-multihost-operational-remote\n  \
+  check-operator-sdk-multihost-operational-qualification\n  \
   check-headless-workflow-qualification\n  \
   validate-material-score-contract\n  \
   audit-local-paths\n  \
