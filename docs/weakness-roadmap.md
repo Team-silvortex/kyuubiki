@@ -471,10 +471,18 @@ Current progress:
   three-candidate baseline, so
   the remaining failure is isolated to discretization or modeling rather than
   algebraic nonconvergence
-- `solve.solid_tetra_3d` now retains parameter-perturbation and rigid-rotation
-  objectivity checks in its active qualification profile; multi-element mesh
-  convergence remains an explicit next-depth boundary rather than an implied
-  capability
+- `solve.solid_tetra_3d` now retains parameter-perturbation, rigid-rotation,
+  and `1/2/4/8` multi-element affine patch checks in its active qualification
+  profile; additive nodal reactions, free-DOF residual, and resultant force
+  balance make equilibrium machine-visible while preserving legacy result
+  deserialization. A self-equilibrated pure-bending manufactured solution now
+  adds strict `2/4/8/16` non-affine displacement, stress, and energy contraction,
+  reaching `3.08%`, `14.60%`, and `2.82%` on `24,576` tetrahedra. Distorted and
+  interior geometry now retains a separate `4/8/16` convergence ladder with
+  minimum mean-ratio quality above `0.2827`; scale-independent quality summaries
+  expose distortion counts and near-incompressible locking risk. Arbitrary
+  unstructured connectivity, a stabilized incompressible formulation, and
+  independent external 3D correlation are now the next-depth boundary
 - `solve.plane_quad_2d` now uses a native bilinear isoparametric Q4 kernel with
   full `2x2` Gauss integration instead of two constant-strain triangles;
   distorted `1x1`, `2x2`, and `4x4` affine patches remain exact, and inverted

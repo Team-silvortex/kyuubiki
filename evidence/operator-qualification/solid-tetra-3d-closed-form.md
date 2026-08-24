@@ -51,18 +51,93 @@ The displacement vector must rotate with the fixture while volume, displacement
 magnitude, von Mises stress, strain-energy density, and total strain energy
 remain invariant. The rotated force-displacement work is checked independently.
 
+## Multi-Element Patch And Equilibrium Checks
+
+The current-line depth lane decomposes a rectangular solid into six linear
+tetrahedra per structured cell and repeats the uniform uniaxial-traction patch
+at `1`, `2`, `4`, and `8` cells per axis. Consistent nodal loads are derived
+from the two boundary triangles on every loaded face cell. The independent
+reference field is:
+
+```text
+epsilon_x = sigma / E
+epsilon_y = epsilon_z = -nu * epsilon_x
+u = (epsilon_x * x, epsilon_y * y, epsilon_z * z)
+sigma_x = sigma
+sigma_y = sigma_z = tau_xy = tau_yz = tau_zx = 0
+U = 0.5 * sigma * epsilon_x * volume
+```
+
+Every refinement must reproduce the affine displacement field, uniaxial
+stress, total volume, and strain energy. The public result also exposes
+constraint reactions, maximum free-DOF residual, and resultant force balance.
+The test requires applied load plus support reaction to close and verifies that
+old serialized results without the additive diagnostics still deserialize with
+safe defaults.
+
+## Non-Affine Pure-Bending Convergence
+
+The next depth lane uses an exact three-dimensional pure-bending elasticity
+field on a rectangular solid centered on all three axes. With curvature
+`kappa`, the manufactured displacement and stress are:
+
+```text
+ux = -kappa * x * z
+uy = nu * kappa * y * z
+uz = 0.5 * kappa * (x^2 - nu * y^2 + nu * z^2)
+sigma_x = -E * kappa * z
+sigma_y = sigma_z = tau_xy = tau_yz = tau_zx = 0
+```
+
+The two end faces receive the exact linear traction `tx = nx * sigma_x` using
+the consistent triangle load integral. The loads have zero resultant force and
+equal opposite bending moments. Six zero-valued scalar anchors remove only the
+rigid-body nullspace and are selected where the analytic displacement is zero.
+
+At `2`, `4`, `8`, and `16` cells per axis, displacement L2 errors contract from
+`0.6156` to `0.3191`, `0.1111`, and `0.0308`; stress L2 errors contract from
+`0.6723` to `0.4640`, `0.2738`, and `0.1460`; strain-energy errors contract from
+`0.6093` to `0.2961`, `0.1010`, and `0.0282`. The finest mesh contains `4,913`
+nodes and `24,576` tetrahedra. The gate also requires negligible anchor
+reaction, free-DOF residual, and resultant force imbalance. This is a genuine
+non-affine convergence check: unlike the constant-stress patch, the linear
+tetrahedral basis cannot represent the quadratic displacement exactly.
+
+## Warped Mesh And Quality Visibility
+
+The same pure-bending field is repeated on `4`, `8`, and `16` meshes after a
+deterministic interior-node warp of up to `22%` of local spacing. The exterior
+geometry, exact end traction, and nullspace anchors remain unchanged. Minimum
+mean-ratio quality remains `0.2962`, `0.2850`, and `0.2827`; displacement errors
+contract from `0.3864` to `0.1521` and `0.0456`, stress errors from `0.5169` to
+`0.3355` and `0.1900`, and energy errors from `0.3388` to `0.1315` and `0.0399`.
+
+Each element now reports normalized tetrahedral mean-ratio quality. The result
+summarizes minimum quality, counts below the visible `0.20` distortion and
+`0.05` severe-distortion thresholds, and emits stable watch terms. Poisson
+ratio `nu >= 0.45` similarly emits
+`near_incompressible_volumetric_locking_risk`; this is a warning, not a false
+claim that the constant-strain formulation avoids locking. Shape degeneracy is
+scale-independent: a geometrically regular tetrahedron scaled to `1e-9` still
+solves, a solvable severe sliver is reported, and mean-ratio quality at or below
+`1e-12` fails closed before factorization.
+
 ## Input Reliability
 
 The retained input reliability regression
 `workers/rust/crates/solver/tests/solid_tetra_input_reliability.rs` rejects
 non-finite node coordinates and loads, missing or duplicate topology,
-zero-volume tetrahedra, invalid Young's modulus, and invalid Poisson ratio
-values before qualification evidence is accepted.
+zero-volume or scale-relative near-degenerate tetrahedra, invalid Young's
+modulus, and invalid Poisson ratio values before qualification evidence is
+accepted.
 
 ## Scope
 
-This qualifies the current single constant-strain tetrahedron path for
-small-strain linear elastic screening. It does not claim full industrial
-solid mechanics coverage, multi-element convergence, contact, plasticity,
-or large deformation behavior. The perturbation lane establishes parameter
-robustness and rigid-rotation objectivity, not mesh-refinement convergence.
+This qualifies the constant-strain tetrahedron for small-strain linear elastic
+single-element references, affine multi-element patch assembly, and the scoped
+manufactured pure-bending convergence ladder on regular and deterministically
+warped interior meshes. It does not claim arbitrary unstructured connectivity,
+nearly incompressible accuracy, plasticity, contact, body-force integration,
+native surface-traction assembly, or large deformation. Broader independent 3D
+references, stabilized incompressible formulations, and higher-order solids
+remain separate work.

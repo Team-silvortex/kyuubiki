@@ -77,6 +77,42 @@ fn solid_tetra_3d_rejects_zero_volume_and_invalid_stiffness() {
     );
 }
 
+#[test]
+fn solid_tetra_3d_uses_scale_independent_shape_degeneracy() {
+    let mut microscopic = tetra_request();
+    for node in &mut microscopic.nodes {
+        node.x *= 1.0e-9;
+        node.y *= 1.0e-9;
+        node.z *= 1.0e-9;
+    }
+    let microscopic_result = solve_solid_tetra_3d(&microscopic)
+        .expect("a well-shaped microscopic tetra should not be rejected by absolute volume");
+    assert!(microscopic_result.quality.minimum_mean_ratio_quality > 0.70);
+
+    let mut distorted = tetra_request();
+    distorted.nodes[3].z = 1.0e-3;
+    let distorted_result = solve_solid_tetra_3d(&distorted)
+        .expect("a solvable distorted tetra should report rather than hide its quality risk");
+    assert_eq!(distorted_result.quality.distorted_element_count, 1);
+    assert_eq!(distorted_result.quality.severely_distorted_element_count, 1);
+    assert!(
+        distorted_result
+            .quality
+            .watch_terms
+            .iter()
+            .any(|term| term == "severely_distorted_constant_strain_tetrahedra"),
+    );
+
+    let mut sliver = tetra_request();
+    sliver.nodes[3].z = 1.0e-20;
+    let error = solve_solid_tetra_3d(&sliver)
+        .expect_err("a scale-relative near-degenerate sliver should be rejected");
+    assert!(
+        error.contains("near-degenerate") && error.contains("mean_ratio_quality"),
+        "unexpected sliver error: {error}",
+    );
+}
+
 fn tetra_request() -> SolveSolidTetra3dRequest {
     SolveSolidTetra3dRequest {
         nodes: vec![

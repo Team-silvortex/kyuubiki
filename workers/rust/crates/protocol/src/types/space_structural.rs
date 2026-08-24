@@ -265,6 +265,12 @@ pub struct SolidTetra3dNodeResult {
     pub uy: f64,
     pub uz: f64,
     pub displacement_magnitude: f64,
+    #[serde(default)]
+    pub reaction_x: f64,
+    #[serde(default)]
+    pub reaction_y: f64,
+    #[serde(default)]
+    pub reaction_z: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -290,6 +296,31 @@ pub struct SolidTetra3dElementResult {
     pub shear_zx: f64,
     pub von_mises_stress: f64,
     pub strain_energy_density: f64,
+    #[serde(default)]
+    pub mean_ratio_quality: f64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct SolidTetra3dEquilibriumResult {
+    pub applied_force: [f64; 3],
+    pub reaction_force: [f64; 3],
+    pub balance_error: [f64; 3],
+    pub applied_force_scale: f64,
+    pub max_free_residual_force: f64,
+    pub free_residual_relative_error: f64,
+    pub force_balance_relative_error: f64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct SolidTetra3dQualityResult {
+    pub minimum_mean_ratio_quality: f64,
+    pub distortion_watch_threshold: f64,
+    pub severe_distortion_threshold: f64,
+    pub near_incompressible_poisson_threshold: f64,
+    pub distorted_element_count: usize,
+    pub severely_distorted_element_count: usize,
+    pub near_incompressible_element_count: usize,
+    pub watch_terms: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -302,6 +333,10 @@ pub struct SolveSolidTetra3dResult {
     pub max_von_mises_stress: f64,
     pub total_strain_energy: f64,
     pub max_strain_energy_density: f64,
+    #[serde(default)]
+    pub equilibrium: SolidTetra3dEquilibriumResult,
+    #[serde(default)]
+    pub quality: SolidTetra3dQualityResult,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -16,7 +16,13 @@
         "constitutive_stress_cross_check",
         "von_mises_energy_invariant",
         "parameter_perturbation_cross_check",
-        "rigid_rotation_objectivity"
+        "rigid_rotation_objectivity",
+        "multi_element_affine_patch_refinement",
+        "reaction_and_force_balance_cross_check",
+        "manufactured_pure_bending_convergence",
+        "warped_interior_mesh_convergence",
+        "scale_independent_shape_quality",
+        "near_incompressible_risk_reporting"
       ],
       "formal_invariants": [
         "restrained_base_displacements_are_zero",
@@ -24,7 +30,13 @@
         "stress_components_match_isotropic_elasticity_matrix",
         "von_mises_matches_deviatoric_closed_form",
         "strain_energy_matches_half_force_displacement_work",
-        "rigid_rotation_preserves_scalar_response_invariants"
+        "rigid_rotation_preserves_scalar_response_invariants",
+        "uniform_traction_patch_recovers_affine_displacement_and_uniaxial_stress",
+        "applied_force_plus_support_reaction_closes_with_small_free_residual",
+        "pure_bending_displacement_stress_and_energy_errors_contract_over_2_4_8_16_meshes",
+        "warped_mesh_pure_bending_errors_contract_over_4_8_16_meshes",
+        "shape_quality_is_scale_independent_and_near_degenerate_slivers_fail_closed",
+        "near_incompressible_constant_strain_tetrahedra_emit_locking_risk"
       ],
       "evidence_paths": [
         "config/operator-reliability/structural-solid.json",
@@ -33,7 +45,9 @@
         "workers/rust/crates/solver/tests/solid_tetra_3d_review.rs",
         "workers/rust/crates/solver/tests/solid_tetra_3d_closed_form.rs",
         "workers/rust/crates/solver/tests/solid_tetra_input_reliability.rs",
-        "workers/rust/crates/solver/tests/mechanical_convergence/solid.rs"
+        "workers/rust/crates/solver/tests/mechanical_convergence/solid.rs",
+        "workers/rust/crates/solver/tests/solid_tetra_3d_mesh_patch.rs",
+        "workers/rust/crates/solver/tests/solid_tetra_3d_bending_convergence.rs"
       ],
       "commands": [
         {
@@ -55,6 +69,16 @@
           "id": "solid-tetra-3d-perturbation-objectivity",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test mechanical_convergence solid_tetra_3d -- --nocapture"
+        },
+        {
+          "id": "solid-tetra-3d-multi-element-patch",
+          "kind": "convergence",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test solid_tetra_3d_mesh_patch -- --nocapture"
+        },
+        {
+          "id": "solid-tetra-3d-pure-bending-convergence",
+          "kind": "convergence",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test solid_tetra_3d_bending_convergence -- --nocapture"
         }
       ]
     }

@@ -514,6 +514,28 @@ reliability regression also rejects non-finite coordinates and loads, invalid
 topology, zero-volume tetrahedra, and material-bound violations before release
 evidence is accepted.
 
+Current-line solid depth now extends beyond that retained single-element
+packet with a `1/2/4/8` structured refinement patch. Each cell is decomposed
+into six tetrahedra, the loaded face receives independently integrated
+consistent nodal traction, and the solver must recover the analytic affine
+Poisson-contraction field, uniaxial stress, volume, and strain energy at every
+level. Additive public equilibrium diagnostics report constrained reactions,
+maximum free-DOF residual, and resultant force balance; legacy result JSON
+without those fields remains deserializable. A second `2/4/8/16` ladder applies
+exact self-equilibrated pure-bending end tractions to a quadratic manufactured
+displacement field. Displacement, stress, and energy relative errors contract
+at every level and reach `3.08%`, `14.60%`, and `2.82%` on the `4,913`-node,
+`24,576`-tetrahedron mesh. This closes scoped non-affine and bending-dominated
+convergence while making the slower constant-strain-tetra stress convergence
+explicit. A deterministic `22%` interior warp retains contraction on the
+`4/8/16` ladder, reaching `4.56%` displacement, `19.00%` stress, and `3.99%`
+energy error with minimum mean-ratio quality `0.2827`. Element and summary
+outputs now expose scale-independent mean-ratio quality, distortion counts,
+and a `nu >= 0.45` volumetric-locking warning; regular microscopic elements are
+no longer rejected by an absolute-volume threshold. Arbitrary unstructured
+connectivity, stabilized near-incompressibility, and broader independent 3D
+references remain outside the claim.
+
 The twenty-first approved qualification packet is
 [nonlinear-spring-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/nonlinear-spring-1d-closed-form-release-evidence.json).
 It promotes `solve.nonlinear_spring_1d` for the retained monotone hardening

@@ -2,8 +2,13 @@ use crate::linear_algebra::{SparseMatrix, reduce_sparse_system, solve_spd_system
 use crate::solid_tetra_3d_element::{SolidTetra3dElementKernel, element_dof_map};
 use crate::solid_tetra_3d_validation::validate_request;
 use kyuubiki_protocol::{
-    SolidTetra3dNodeResult, SolveSolidTetra3dRequest, SolveSolidTetra3dResult,
+    SolidTetra3dElementResult, SolidTetra3dEquilibriumResult, SolidTetra3dNodeResult,
+    SolidTetra3dQualityResult, SolveSolidTetra3dRequest, SolveSolidTetra3dResult,
 };
+
+const DISTORTION_WATCH_THRESHOLD: f64 = 0.20;
+const SEVERE_DISTORTION_THRESHOLD: f64 = 0.05;
+const NEAR_INCOMPRESSIBLE_POISSON_THRESHOLD: f64 = 0.45;
 
 pub fn solve_solid_tetra_3d(
     request: &SolveSolidTetra3dRequest,
@@ -43,6 +48,8 @@ pub fn solve_solid_tetra_3d(
     for (index, &dof) in free.iter().enumerate() {
         displacements[dof] = reduced_displacements[index];
     }
+    let (reactions, equilibrium) =
+        recover_equilibrium(request, &stiffness, &force, &displacements, &constrained);
 
     let nodes = request
         .nodes
@@ -62,6 +69,9 @@ pub fn solve_solid_tetra_3d(
                 uy,
                 uz,
                 displacement_magnitude: (ux * ux + uy * uy + uz * uz).sqrt(),
+                reaction_x: reactions[index][0],
+                reaction_y: reactions[index][1],
+                reaction_z: reactions[index][2],
             }
         })
         .collect::<Vec<_>>();
@@ -74,6 +84,7 @@ pub fn solve_solid_tetra_3d(
             kernel.result(index, element, &element_dof_map(element), &displacements)
         })
         .collect::<Vec<_>>();
+    let quality = summarize_quality(request, &elements);
 
     Ok(SolveSolidTetra3dResult {
         input: request.clone(),
@@ -94,9 +105,123 @@ pub fn solve_solid_tetra_3d(
             .iter()
             .map(|element| element.strain_energy_density.abs())
             .fold(0.0_f64, f64::max),
+        equilibrium,
+        quality,
         nodes,
         elements,
     })
+}
+
+fn summarize_quality(
+    request: &SolveSolidTetra3dRequest,
+    elements: &[SolidTetra3dElementResult],
+) -> SolidTetra3dQualityResult {
+    let minimum_mean_ratio_quality = elements
+        .iter()
+        .map(|element| element.mean_ratio_quality)
+        .reduce(f64::min)
+        .unwrap_or(0.0);
+    let distorted_element_count = elements
+        .iter()
+        .filter(|element| element.mean_ratio_quality < DISTORTION_WATCH_THRESHOLD)
+        .count();
+    let severely_distorted_element_count = elements
+        .iter()
+        .filter(|element| element.mean_ratio_quality < SEVERE_DISTORTION_THRESHOLD)
+        .count();
+    let near_incompressible_element_count = request
+        .elements
+        .iter()
+        .filter(|element| element.poisson_ratio >= NEAR_INCOMPRESSIBLE_POISSON_THRESHOLD)
+        .count();
+    let mut watch_terms = Vec::new();
+    if distorted_element_count > 0 {
+        watch_terms.push("distorted_constant_strain_tetrahedra".to_string());
+    }
+    if severely_distorted_element_count > 0 {
+        watch_terms.push("severely_distorted_constant_strain_tetrahedra".to_string());
+    }
+    if near_incompressible_element_count > 0 {
+        watch_terms.push("near_incompressible_volumetric_locking_risk".to_string());
+    }
+    SolidTetra3dQualityResult {
+        minimum_mean_ratio_quality,
+        distortion_watch_threshold: DISTORTION_WATCH_THRESHOLD,
+        severe_distortion_threshold: SEVERE_DISTORTION_THRESHOLD,
+        near_incompressible_poisson_threshold: NEAR_INCOMPRESSIBLE_POISSON_THRESHOLD,
+        distorted_element_count,
+        severely_distorted_element_count,
+        near_incompressible_element_count,
+        watch_terms,
+    }
+}
+
+fn recover_equilibrium(
+    request: &SolveSolidTetra3dRequest,
+    stiffness: &SparseMatrix,
+    applied: &[f64],
+    displacements: &[f64],
+    constrained: &[usize],
+) -> (Vec<[f64; 3]>, SolidTetra3dEquilibriumResult) {
+    let mut internal = vec![0.0; stiffness.size()];
+    for (row, value) in internal.iter_mut().enumerate() {
+        *value = stiffness
+            .row_entries(row)
+            .iter()
+            .map(|&(column, coefficient)| coefficient * displacements[column])
+            .sum();
+    }
+
+    let mut constrained_mask = vec![false; stiffness.size()];
+    for &dof in constrained {
+        constrained_mask[dof] = true;
+    }
+
+    let mut reactions = vec![[0.0; 3]; request.nodes.len()];
+    let mut reaction_force = [0.0; 3];
+    let mut max_free_residual_force = 0.0_f64;
+    for node in 0..request.nodes.len() {
+        let mut free_residual = [0.0; 3];
+        for axis in 0..3 {
+            let dof = node * 3 + axis;
+            let residual = internal[dof] - applied[dof];
+            if constrained_mask[dof] {
+                reactions[node][axis] = residual;
+                reaction_force[axis] += residual;
+            } else {
+                free_residual[axis] = residual;
+            }
+        }
+        max_free_residual_force = max_free_residual_force.max(vector_norm(free_residual));
+    }
+
+    let applied_force = request.nodes.iter().fold([0.0; 3], |mut total, node| {
+        total[0] += node.load_x;
+        total[1] += node.load_y;
+        total[2] += node.load_z;
+        total
+    });
+    let applied_force_scale = request
+        .nodes
+        .iter()
+        .map(|node| vector_norm([node.load_x, node.load_y, node.load_z]))
+        .sum::<f64>();
+    let balance_error = std::array::from_fn(|axis| applied_force[axis] + reaction_force[axis]);
+    let scale = applied_force_scale.max(1.0e-30);
+    let equilibrium = SolidTetra3dEquilibriumResult {
+        applied_force,
+        reaction_force,
+        balance_error,
+        applied_force_scale,
+        max_free_residual_force,
+        free_residual_relative_error: max_free_residual_force / scale,
+        force_balance_relative_error: vector_norm(balance_error) / scale,
+    };
+    (reactions, equilibrium)
+}
+
+fn vector_norm(vector: [f64; 3]) -> f64 {
+    vector.iter().map(|value| value * value).sum::<f64>().sqrt()
 }
 
 fn element_points(

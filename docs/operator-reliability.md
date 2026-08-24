@@ -868,9 +868,28 @@ maximum summary fields, total strain energy, and external work-energy from the
 public node and element fields. The retained solid tetra input reliability
 regression rejects non-finite coordinates and loads, missing or duplicate
 topology, zero-volume tetrahedra, invalid Young's modulus, and invalid Poisson
-ratio values before release evidence is accepted. This remains a single-element
-linear-elastic qualification, not a mesh-convergence, plasticity, contact, or
-large-deformation claim.
+ratio values before release evidence is accepted. The current-line depth lane
+adds a `1/2/4/8` structured solid patch with six tetrahedra per cell and
+independently distributed face traction. Every level recovers the affine
+Poisson-contraction displacement, uniaxial stress, volume, and energy while
+public reaction, free-residual, and resultant-balance diagnostics close the
+global equilibrium contract. The additive fields preserve deserialization of
+older result JSON. A separate self-equilibrated pure-bending lane uses exact
+linear end traction and nullspace-only anchors across `2/4/8/16` meshes. Its
+quadratic displacement, linear stress, and strain-energy errors contract to
+`3.08%`, `14.60%`, and `2.82%` on `24,576` tetrahedra while anchor reaction and
+force imbalance remain negligible. This qualifies scoped non-affine
+multi-element convergence and exposes the slower stress convergence of the
+constant-strain basis. A deterministic `22%` interior warp repeats the
+`4/8/16` ladder and contracts to `4.56%` displacement, `19.00%` stress, and
+`3.99%` energy error while minimum mean-ratio quality remains above `0.2827`.
+Public quality diagnostics expose per-element mean ratio, visible distortion
+thresholds/counts, and a near-incompressible locking-risk term at `nu >= 0.45`.
+The scale-relative degeneracy gate accepts well-shaped microscopic elements,
+reports solvable severe distortion, and rejects numerical slivers. Arbitrary
+unstructured connectivity, stabilized near-incompressibility, plasticity,
+contact, native body/surface load integration, and large deformation remain
+outside the claim.
 
 `solve.nonlinear_spring_1d` is now qualified for the current single hardening
 spring scope. The retained evidence derives the Cardano root for

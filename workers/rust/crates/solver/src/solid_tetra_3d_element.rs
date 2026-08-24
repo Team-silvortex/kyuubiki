@@ -4,6 +4,7 @@ use crate::linear_algebra::{MatrixAssembler, add_at};
 
 pub(crate) struct SolidTetra3dElementKernel {
     volume: f64,
+    mean_ratio_quality: f64,
     b: [[f64; 12]; 6],
     d: [[f64; 6]; 6],
     stiffness: [[f64; 12]; 12],
@@ -21,12 +22,13 @@ impl SolidTetra3dElementKernel {
                 element.id
             ));
         }
-        let (volume, b) = geometry(points, &element.id)?;
+        let (volume, mean_ratio_quality, b) = geometry(points, &element.id)?;
         let d = elasticity_matrix(element.youngs_modulus, element.poisson_ratio);
         let db = multiply_6x6_6x12(&d, &b);
         let stiffness = multiply_12x6_6x12(&b, &db, volume);
         Ok(Self {
             volume,
+            mean_ratio_quality,
             b,
             d,
             stiffness,
@@ -88,6 +90,7 @@ impl SolidTetra3dElementKernel {
             shear_zx: stress[5],
             von_mises_stress: von_mises_stress(&stress),
             strain_energy_density: strain_energy_density(&stress, &strain),
+            mean_ratio_quality: self.mean_ratio_quality,
         }
     }
 }
@@ -121,12 +124,18 @@ fn validate_properties(element: &SolidTetra3dElementInput) -> Result<(), String>
     Ok(())
 }
 
-fn geometry(points: [[f64; 3]; 4], id: &str) -> Result<(f64, [[f64; 12]; 6]), String> {
+fn geometry(points: [[f64; 3]; 4], id: &str) -> Result<(f64, f64, [[f64; 12]; 6]), String> {
     let matrix = points.map(|point| [1.0, point[0], point[1], point[2]]);
     let determinant = det4(&matrix);
     let volume = determinant.abs() / 6.0;
-    if volume <= 1.0e-18 {
+    if volume == 0.0 {
         return Err(format!("solid tetra element {id} has zero volume"));
+    }
+    let mean_ratio_quality = tetra_mean_ratio_quality(&points, volume);
+    if !mean_ratio_quality.is_finite() || mean_ratio_quality <= 1.0e-12 {
+        return Err(format!(
+            "solid tetra element {id} is near-degenerate (mean_ratio_quality={mean_ratio_quality:.6e})"
+        ));
     }
     let inverse = invert4(matrix)?;
     let mut b = [[0.0; 12]; 6];
@@ -145,7 +154,19 @@ fn geometry(points: [[f64; 3]; 4], id: &str) -> Result<(f64, [[f64; 12]; 6]), St
         b[5][offset] = bz;
         b[5][offset + 2] = bx;
     }
-    Ok((volume, b))
+    Ok((volume, mean_ratio_quality, b))
+}
+
+fn tetra_mean_ratio_quality(points: &[[f64; 3]; 4], volume: f64) -> f64 {
+    let edge_squared_sum = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
+        .into_iter()
+        .map(|(a, b)| {
+            (0..3)
+                .map(|axis| (points[a][axis] - points[b][axis]).powi(2))
+                .sum::<f64>()
+        })
+        .sum::<f64>();
+    12.0 * (3.0 * volume).powf(2.0 / 3.0) / edge_squared_sum
 }
 
 fn elasticity_matrix(youngs_modulus: f64, poisson_ratio: f64) -> [[f64; 6]; 6] {
@@ -254,7 +275,7 @@ fn minor3(matrix: &[[f64; 4]; 4], skip_row: usize, skip_column: usize) -> [[f64;
 
 fn invert4(matrix: [[f64; 4]; 4]) -> Result<[[f64; 4]; 4], String> {
     let determinant = det4(&matrix);
-    if determinant.abs() <= 1.0e-18 {
+    if determinant == 0.0 {
         return Err("solid tetra coordinate matrix is singular".to_string());
     }
     Ok(std::array::from_fn(|row| {
@@ -263,4 +284,27 @@ fn invert4(matrix: [[f64; 4]; 4]) -> Result<[[f64; 4]; 4], String> {
             sign * det3(minor3(&matrix, column, row)) / determinant
         })
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tetra_mean_ratio_quality;
+
+    #[test]
+    fn mean_ratio_is_one_for_a_regular_tetra_and_scale_invariant() {
+        let regular = [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.5, 3.0_f64.sqrt() / 2.0, 0.0],
+            [0.5, 3.0_f64.sqrt() / 6.0, (2.0_f64 / 3.0).sqrt()],
+        ];
+        let volume = 2.0_f64.sqrt() / 12.0;
+        let quality = tetra_mean_ratio_quality(&regular, volume);
+        assert!((quality - 1.0).abs() <= 1.0e-14);
+
+        let scale = 1.0e-9;
+        let microscopic = regular.map(|point| point.map(|coordinate| coordinate * scale));
+        let microscopic_quality = tetra_mean_ratio_quality(&microscopic, volume * scale.powi(3));
+        assert!((microscopic_quality - quality).abs() <= 1.0e-14);
+    }
 }

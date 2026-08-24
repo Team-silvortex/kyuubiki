@@ -107,7 +107,7 @@ fn validate_positive_volume(
         [node.x, node.y, node.z]
     });
     let volume = tetra_volume(points);
-    if !(volume.is_finite() && volume > 1.0e-18) {
+    if !(volume.is_finite() && volume > 0.0) {
         return Err(format!(
             "solid tetra element {} has zero volume",
             element.id
