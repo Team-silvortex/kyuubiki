@@ -253,7 +253,7 @@ exact module/security-lane coordinates and repeats every check twice. Its
 replay rejection, runtime fuzz boundaries, dependency and component integrity,
 credential storage, remote deployment metadata, and data contracts. The
 machine-validated report is retained under
-`releases/usability-evidence/2.13.6/system-security-qualification.json`.
+`releases/usability-evidence/2.15.0/system-security-qualification.json`.
 Installed cross-platform penetration testing and multi-host adversarial testing
 remain separate operational tiers and are not implied by this local
 qualification.

@@ -104,9 +104,11 @@ The repository now keeps validation split by responsibility.
 - `make audit-dependencies`
   Reproducible dependency security audit. It runs npm production dependency
   audits for the frontend and desktop packages, then RustSec `cargo audit` for
-  the Rust workspace, Rust SDK, and every Tauri desktop shell. The Make target
+  the Rust workspace, Rust SDK, and every Tauri desktop shell, plus separate
+  Hex retirement and OSV locked-version vulnerability checks. The Make target
   runs the audit lane self-test before invoking external tools. The checked
-  `Cargo.lock` files under those roots are part of this contract.
+  `Cargo.lock`, `package-lock.json`, and `mix.lock` files under those roots are
+  part of this contract.
 - `make check-system-security-qualification`
   Fast, offline revalidation of the retained Daji P0 system-security report.
   It validates all 14 check identities, 28 successful round receipts, 22 exact

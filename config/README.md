@@ -99,7 +99,10 @@ the profile commands themselves should be executed.
   tensors, language-pack coverage, physics evidence, and benchmark profile
   coverage.
 - `dependency-audit-lockfiles.json`
-  Security-audit lane contract for npm and Rust lockfile checks.
+  Declares npm, Cargo, and Hex lockfile audit lanes plus the HTTPS OSV Hex
+  endpoint, repository-local cache path, timeout, freshness limit, denied
+  packages, repositories allowed to leave the machine, and exact lock-bound
+  advisory exceptions.
 
 Run `make check-module-topology` after changing architecture topology. Run
 `make check-module-function-matrix` after changing module/function coverage.

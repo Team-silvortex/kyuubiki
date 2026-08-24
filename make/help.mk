@@ -208,7 +208,7 @@ help:
 	@echo "  make check-operator-reliability Verify physics-coverage operator reliability evidence"
 	@echo "  make audit-rust-lines Enforce the Rust source file line-count ceiling"
 	@echo "  make audit-project-organization Enforce repository-wide source/docs line-count organization"
-	@echo "  make audit-dependencies Run npm production and RustSec lockfile dependency audits"
+	@echo "  make audit-dependencies Run npm, RustSec, Hex retirement, and OSV Hex lockfile audits"
 	@echo "  make fuzz-smoke Run deterministic protocol, package, installer, central-store, and language-pack security fuzz-smoke tests"
 	@echo "  make architecture-check Run the lightweight new-architecture organization and TaskIR contract check"
 	@echo "  make hub-gui-dev         Run the Tauri Hub GUI in development mode"

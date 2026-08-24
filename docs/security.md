@@ -68,11 +68,23 @@ It runs a self-test first, then checks:
 
 - npm production lockfiles with `npm audit --omit=dev --package-lock-only`
 - Rust workspace and desktop-shell lockfiles with RustSec `cargo audit`
-- Hex retired-package checks plus lock-version-bound advisory mitigations
+- Hex retired-package checks with `mix hex.audit`
+- Hex locked-version vulnerability checks against the OSV `Hex` ecosystem
 
 The checked `package-lock.json` and `Cargo.lock` files for shipped frontend,
 desktop, SDK, and Rust workspace surfaces must stay reproducible. Do not remove
 lockfiles from review just because the source package manifests look small.
+The OSV lane batches every package/version pair parsed from `mix.lock`, binds
+its cache to the lockfile SHA-256 and exact advisory source, and only permits a
+cache no more than 24 hours old when the live HTTPS query is unavailable.
+Future-dated caches, pagination, response-count drift, stale exceptions, and
+unknown advisories fail closed. Its endpoint, timeout, cache path, and
+freshness window are visible in `config/dependency-audit-lockfiles.json`; the
+cache itself lives under ignored project `tmp/` state rather than a hidden
+user-system directory. Only packages from explicitly listed Hex repositories
+are sent to the configured advisory endpoint; the default list contains only
+the public `hexpm` repository, so a future private dependency cannot leak its
+name through this audit by accident.
 
 #### Orchestra HTTP adapter isolation
 
@@ -582,7 +594,7 @@ Sensitivity levels:
 | `apps/frontend/src/lib/models/model-import.ts` | Imports external model JSON into solver/project state. | Schema validation, size limits, numeric bounds, and safe evolution across model schema versions. |
 | `apps/frontend/src/lib/projects/**` | Project bundle import/export. | Archive/file parsing, path traversal prevention, payload size, and result/data export scope. |
 | `apps/frontend/src/lib/materials/material-library.ts` | External material library import. | CSV/JSON parsing, numeric bounds, duplicate IDs, and maliciously large files. |
-| `kyuubiki-script-runner audit-dependencies` and checked JS/Rust lockfiles | Supply-chain gate for npm production dependencies, RustSec advisories, and Hex advisories. | Keep lane coverage, `--package-lock-only`, self-test behavior, and lockfile tracking aligned with shipped app/runtime surfaces. |
+| `kyuubiki-script-runner audit-dependencies` and checked JS/Rust/Hex lockfiles | Supply-chain gate for npm production dependencies, RustSec advisories, Hex retirements, and OSV Hex advisories. | Keep lane coverage, `--package-lock-only`, OSV cache freshness and lock binding, self-test behavior, and lockfile tracking aligned with shipped app/runtime surfaces. |
 | `sdks/python/kyuubiki_sdk/auth.py`, `sdks/elixir/lib/kyuubiki_sdk/auth.ex`, `sdks/rust/src/auth.rs` | Token/header construction used by external automation and AI clients. | Header parity with control plane, token scoping, and clear examples that avoid hardcoding secrets. |
 | `deploy/agents.*.json` and `schemas/agent-manifest.schema.json` | Static distributed-agent manifests. | Do not commit real hostnames/secrets; validate endpoint shape and intended deployment mode. |
 

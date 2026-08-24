@@ -475,7 +475,7 @@ audit-dependencies:
 
 check-system-security-qualification:
 	@$(ENTRYPOINT) check-system-security-qualification --self-test
-	@$(ENTRYPOINT) check-system-security-qualification --verify-report releases/usability-evidence/2.13.6/system-security-qualification.json
+	@$(ENTRYPOINT) check-system-security-qualification --verify-report releases/usability-evidence/2.15.0/system-security-qualification.json
 
 check-contracts-validation-qualification:
 	@$(ENTRYPOINT) check-contracts-validation-qualification --self-test

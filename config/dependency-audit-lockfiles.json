@@ -1,5 +1,5 @@
 {
-  "schema": "kyuubiki.dependency-audit-lockfiles/v1",
+  "schema": "kyuubiki.dependency-audit-lockfiles/v2",
   "npm": [
     "apps/frontend",
     "apps/hub-gui",
@@ -23,5 +23,13 @@
     "plug_cowboy",
     "ranch"
   ],
-  "hex_advisory_mitigations": []
+  "hex_advisory_mitigations": [],
+  "hex_osv": {
+    "endpoint": "https://api.osv.dev/v1/querybatch",
+    "ecosystem": "Hex",
+    "query_repositories": ["hexpm"],
+    "cache_path": "tmp/dependency-audit/hex-osv-cache.json",
+    "cache_max_age_seconds": 86400,
+    "timeout_seconds": 20
+  }
 }

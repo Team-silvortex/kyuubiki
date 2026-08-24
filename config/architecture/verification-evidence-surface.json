@@ -149,7 +149,7 @@
       "config/architecture/system-security-qualification.json",
       "schemas/system-security-qualification-report.schema.json",
       "workers/rust/crates/script-runner/src/system_security_qualification.rs",
-      "releases/usability-evidence/2.13.6/system-security-qualification.json"
+      "releases/usability-evidence/2.15.0/system-security-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.protocol-validation-qualification-contract/v2",

@@ -1,3 +1,6 @@
+mod hex_osv;
+
+use serde::Deserialize;
 use serde_json::Value;
 use std::collections::BTreeSet;
 use std::env;
@@ -8,7 +11,7 @@ use std::process::Command;
 use std::time::{Duration, SystemTime};
 
 const CONTRACT_PATH: &str = "config/dependency-audit-lockfiles.json";
-const SCHEMA: &str = "kyuubiki.dependency-audit-lockfiles/v1";
+const SCHEMA: &str = "kyuubiki.dependency-audit-lockfiles/v2";
 const NPM_ARGS: &[&str] = &["audit", "--omit=dev", "--package-lock-only", "--json"];
 const CARGO_ARGS: &[&str] = &["audit"];
 const CARGO_NO_FETCH_ARGS: &[&str] = &["audit", "--no-fetch"];
@@ -24,6 +27,7 @@ struct AuditContract {
     hex: Vec<String>,
     hex_denied_packages: Vec<String>,
     hex_advisory_mitigations: Vec<HexAdvisoryMitigation>,
+    hex_osv: HexOsvConfig,
 }
 
 #[derive(Clone)]
@@ -33,6 +37,17 @@ struct HexAdvisoryMitigation {
     locked_version: String,
     status: String,
     evidence: Vec<String>,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct HexOsvConfig {
+    endpoint: String,
+    ecosystem: String,
+    query_repositories: Vec<String>,
+    cache_path: String,
+    cache_max_age_seconds: u64,
+    timeout_seconds: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -85,10 +100,17 @@ fn audit_all(root: &Path, contract: &AuditContract) -> Vec<AuditResult> {
     results.extend(contract.hex.iter().map(|cwd| {
         let mut result = run(root, "mix", HEX_ARGS, cwd);
         let output = format!("{}\n{}", result.stdout, result.stderr);
-        let (status, summary) =
-            classify_hex_audit(result.status, &output, &contract.hex_advisory_mitigations);
+        let (status, summary) = classify_hex_retirement_audit(result.status, &output);
         result.status = status;
         AuditResult { summary, ..result }
+    }));
+    results.extend(contract.hex.iter().map(|cwd| {
+        hex_osv::run_hex_osv_audit(
+            root,
+            cwd,
+            &contract.hex_osv,
+            &contract.hex_advisory_mitigations,
+        )
     }));
     results
 }
@@ -233,9 +255,17 @@ fn load_contract(root: &Path) -> RunnerResult<AuditContract> {
         hex: string_array(&value, "hex")?,
         hex_denied_packages: string_array(&value, "hex_denied_packages")?,
         hex_advisory_mitigations: parse_hex_mitigations(&value)?,
+        hex_osv: serde_json::from_value(
+            value
+                .get("hex_osv")
+                .cloned()
+                .ok_or_else(|| format!("{CONTRACT_PATH}: missing hex_osv"))?,
+        )
+        .map_err(|error| format!("{CONTRACT_PATH}: invalid hex_osv: {error}"))?,
     };
     validate_hex_denied_packages(root, &contract.hex_denied_packages)?;
     validate_hex_mitigations(root, &contract.hex_advisory_mitigations)?;
+    hex_osv::validate_config(&contract.hex_osv)?;
     Ok(contract)
 }
 
@@ -281,11 +311,26 @@ fn validate_hex_mitigations(
 ) -> RunnerResult<()> {
     let mix_lock = fs::read_to_string(root.join("apps/web/mix.lock"))
         .map_err(|error| format!("failed to read apps/web/mix.lock: {error}"))?;
-    let mut ids = BTreeSet::new();
+    let mut keys = BTreeSet::new();
     for mitigation in mitigations {
-        if !ids.insert(mitigation.id.as_str()) {
+        let key = (
+            mitigation.id.as_str(),
+            mitigation.package.as_str(),
+            mitigation.locked_version.as_str(),
+        );
+        if !keys.insert(key) {
             return Err(format!(
-                "{CONTRACT_PATH}: duplicate advisory {}",
+                "{CONTRACT_PATH}: duplicate advisory exception {} for {} {}",
+                mitigation.id, mitigation.package, mitigation.locked_version
+            ));
+        }
+        if !mitigation
+            .id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+        {
+            return Err(format!(
+                "{CONTRACT_PATH}: invalid advisory id {}",
                 mitigation.id
             ));
         }
@@ -323,79 +368,16 @@ fn validate_hex_mitigations(
     Ok(())
 }
 
-fn parse_hex_advisory_ids(output: &str) -> BTreeSet<String> {
-    let mut advisories = BTreeSet::new();
-    for (offset, _) in output.match_indices("CVE-") {
-        let id = output[offset..]
-            .chars()
-            .take_while(|character| {
-                character.is_ascii_digit()
-                    || *character == '-'
-                    || *character == 'C'
-                    || *character == 'V'
-                    || *character == 'E'
-            })
-            .collect::<String>();
-        if id.matches('-').count() == 2 {
-            advisories.insert(id);
-        }
-    }
-    advisories
-}
-
-fn classify_hex_audit(
-    command_status: i32,
-    output: &str,
-    mitigations: &[HexAdvisoryMitigation],
-) -> (i32, String) {
-    let advisories = parse_hex_advisory_ids(output);
-    let mitigated = mitigations
-        .iter()
-        .map(|mitigation| mitigation.id.as_str())
-        .collect::<BTreeSet<_>>();
-    let unknown = advisories
-        .iter()
-        .filter(|advisory| !mitigated.contains(advisory.as_str()))
-        .cloned()
-        .collect::<Vec<_>>();
-    if !unknown.is_empty() {
-        return (
-            1,
-            format!("unmitigated Hex advisories: {}", unknown.join(", ")),
-        );
-    }
-    if !advisories.is_empty() {
-        return (
-            0,
-            format!(
-                "{} explicitly mitigated Hex advisory/advisories: {}",
-                advisories.len(),
-                advisories.into_iter().collect::<Vec<_>>().join(", ")
-            ),
-        );
-    }
+fn classify_hex_retirement_audit(command_status: i32, output: &str) -> (i32, String) {
     if command_status == 0 {
-        if mitigations.is_empty() {
-            (
-                0,
-                "0 retired package(s); 0 tracked advisory mitigation(s)".to_string(),
-            )
-        } else {
-            let tracked = mitigations
-                .iter()
-                .map(|mitigation| mitigation.id.as_str())
-                .collect::<Vec<_>>()
-                .join(", ");
-            (
-                0,
-                format!(
-                    "0 retired package(s); {} tracked lock-bound advisory mitigation(s): {tracked}",
-                    mitigations.len()
-                ),
-            )
-        }
+        (0, "0 retired Hex package(s)".to_string())
     } else {
-        (command_status, "Hex audit command failed".to_string())
+        let summary = if output.contains("retired") {
+            "retired Hex package(s) reported"
+        } else {
+            "Hex retirement audit command failed"
+        };
+        (command_status, summary.to_string())
     }
 }
 
@@ -534,6 +516,7 @@ fn run_self_test(contract: &AuditContract) -> RunnerResult<()> {
         "cached cargo audit args",
     )?;
     expect_eq(&HEX_ARGS.to_vec(), &["hex.audit"], "hex audit args")?;
+    hex_osv::run_self_test(&contract.hex_osv)?;
     if summarize_npm_audit(r#"{"metadata":{"vulnerabilities":{"total":0}}}"#)
         != "0 vulnerability(s)"
     {
@@ -541,14 +524,6 @@ fn run_self_test(contract: &AuditContract) -> RunnerResult<()> {
     }
     if summarize_npm_audit("not json") != "unable to parse npm audit JSON" {
         return Err("self-test expected bad npm JSON summary".to_string());
-    }
-    let parsed = parse_hex_advisory_ids(
-        "cowlib 2.19.0 - EEF-CVE-2026-43971\naka: CVE-2026-43971\ncowlib 2.19.0 - EEF-CVE-2026-43966",
-    );
-    if parsed.into_iter().collect::<Vec<_>>()
-        != ["CVE-2026-43966".to_string(), "CVE-2026-43971".to_string()]
-    {
-        return Err("self-test expected Hex advisory identifiers".to_string());
     }
     let formatted = format_npm_audit_failure(
         r#"{"vulnerabilities":{"next":{"name":"next","severity":"critical","isDirect":true,"via":[{"title":"Middleware bypass","url":"https://example.test/advisory"},"postcss"]}}}"#,
@@ -607,21 +582,10 @@ fn field<'a>(value: &'a Value, key: &str) -> &'a str {
 #[cfg(test)]
 mod tests {
     use super::{
-        AuditResult, HexAdvisoryMitigation, cache_timestamp_is_fresh, classify_hex_audit,
-        format_npm_audit_failure, is_cargo_fetch_failure, parse_hex_advisory_ids,
-        summarize_npm_audit,
+        AuditResult, cache_timestamp_is_fresh, classify_hex_retirement_audit,
+        format_npm_audit_failure, is_cargo_fetch_failure, summarize_npm_audit,
     };
     use std::time::{Duration, SystemTime};
-
-    fn mitigation(id: &str) -> HexAdvisoryMitigation {
-        HexAdvisoryMitigation {
-            id: id.to_string(),
-            package: "cowlib".to_string(),
-            locked_version: "2.19.0".to_string(),
-            status: "mitigated".to_string(),
-            evidence: vec!["evidence".to_string()],
-        }
-    }
 
     #[test]
     fn npm_summary_handles_json_and_bad_json() {
@@ -647,52 +611,14 @@ mod tests {
     }
 
     #[test]
-    fn hex_advisory_parser_deduplicates_alias_lines() {
-        let parsed = parse_hex_advisory_ids(
-            "cowlib - EEF-CVE-2026-43971\naka: CVE-2026-43971, GHSA-test\ncowlib - EEF-CVE-2026-43966",
+    fn hex_retirement_audit_is_not_presented_as_vulnerability_audit() {
+        assert_eq!(
+            classify_hex_retirement_audit(0, "No retired packages found"),
+            (0, "0 retired Hex package(s)".to_string())
         );
         assert_eq!(
-            parsed.into_iter().collect::<Vec<_>>(),
-            ["CVE-2026-43966", "CVE-2026-43971"]
-        );
-    }
-
-    #[test]
-    fn hex_audit_only_accepts_explicit_mitigations() {
-        let mitigations = [mitigation("CVE-2026-43966")];
-        let (status, summary) = classify_hex_audit(
-            0,
-            "cowlib - EEF-CVE-2026-43966\naka: CVE-2026-43966",
-            &mitigations,
-        );
-        assert_eq!(status, 0);
-        assert!(summary.contains("explicitly mitigated"));
-
-        let (status, summary) = classify_hex_audit(
-            0,
-            "cowlib - EEF-CVE-2026-43966\nother - CVE-2099-00001",
-            &mitigations,
-        );
-        assert_eq!(status, 1);
-        assert_eq!(summary, "unmitigated Hex advisories: CVE-2099-00001");
-    }
-
-    #[test]
-    fn hex_audit_preserves_command_failure_without_advisories() {
-        let (status, summary) = classify_hex_audit(7, "network unavailable", &[]);
-        assert_eq!(status, 7);
-        assert_eq!(summary, "Hex audit command failed");
-    }
-
-    #[test]
-    fn hex_audit_surfaces_lock_bound_mitigations_without_retirements() {
-        let mitigations = [mitigation("CVE-2026-43966"), mitigation("CVE-2026-43971")];
-        let (status, summary) = classify_hex_audit(0, "No retired packages found", &mitigations);
-
-        assert_eq!(status, 0);
-        assert_eq!(
-            summary,
-            "0 retired package(s); 2 tracked lock-bound advisory mitigation(s): CVE-2026-43966, CVE-2026-43971"
+            classify_hex_retirement_audit(1, "package foo is retired"),
+            (1, "retired Hex package(s) reported".to_string())
         );
     }
 

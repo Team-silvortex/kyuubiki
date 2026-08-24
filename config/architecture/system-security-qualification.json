@@ -91,7 +91,7 @@
         { "module_id": "orchestra-control-plane", "lane": "credential_storage" },
         { "module_id": "runtime-agent-cli", "lane": "api_auth" }
       ],
-      "required_output": ["43 tests, 0 failures"]
+      "required_output": ["44 tests, 0 failures"]
     },
     {
       "id": "workflow-dataset-contract",
@@ -269,6 +269,7 @@
         "apps/frontend: npm audit",
         "workers/rust: cargo audit",
         "apps/web: mix hex.audit",
+        "apps/web: OSV querybatch (Hex locked versions)",
         "dependency audit passed"
       ]
     }

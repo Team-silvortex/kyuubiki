@@ -211,7 +211,7 @@ fn project_files(root: &Path) -> RunnerResult<Vec<String>> {
 
 fn required_audit_lockfiles(root: &Path) -> RunnerResult<Vec<String>> {
     let contract = read_json(root, LOCKFILE_CONTRACT)?;
-    if field(&contract, "schema") != "kyuubiki.dependency-audit-lockfiles/v1" {
+    if field(&contract, "schema") != "kyuubiki.dependency-audit-lockfiles/v2" {
         return Err(format!("{LOCKFILE_CONTRACT}: unexpected schema"));
     }
     let mut files = Vec::new();

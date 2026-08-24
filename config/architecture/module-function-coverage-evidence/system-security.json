@@ -21,6 +21,7 @@
           "schemas/system-security-qualification-report.schema.json",
           "workers/rust/crates/script-runner/src/system_security_qualification.rs",
           "workers/rust/crates/script-runner/src/dependency_audit.rs",
+          "workers/rust/crates/script-runner/src/dependency_audit/hex_osv.rs",
           "workers/rust/crates/script-runner/src/governance_commands.rs",
           "apps/hub-gui/test/smoke-shell.mjs",
           "apps/web/test/kyuubiki_web/api/cluster_security_api_test.exs",
@@ -33,6 +34,7 @@
           "api_auth",
           "runtime_sandbox",
           "supply_chain",
+          "OSV querybatch (Hex locked versions)",
           "credential_storage",
           "remote_deploy",
           "data_contract",
@@ -66,7 +68,7 @@
         "contract"
       ],
       "files": [
-        "releases/usability-evidence/2.13.6/system-security-qualification.json"
+        "releases/usability-evidence/2.15.0/system-security-qualification.json"
       ],
       "required_text": [
         "\"schema_version\":\"kyuubiki.system-security-qualification-report/v1\"",
@@ -80,9 +82,11 @@
         "\"coordinate_count\":22",
         "\"failed_check_ids\":[]",
         "\"repeatable\":true",
+        "apps/web: OSV querybatch (Hex locked versions)",
+        "0 known vulnerability record(s)",
         "dependency audit passed",
-        "43 tests, 0 failures",
-        "101 passed; 0 failed"
+        "44 tests, 0 failures",
+        "108 passed; 0 failed"
       ]
     }
   ]
