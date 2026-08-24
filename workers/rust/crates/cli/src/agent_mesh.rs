@@ -305,6 +305,46 @@ fn unix_now_s() -> u64 {
         .unwrap_or(0)
 }
 
+fn request_agent_descriptor(address: &str) -> Result<AgentDescriptor, String> {
+    let mut stream = TcpStream::connect(address)
+        .map_err(|error| format!("failed to connect to peer {address}: {error}"))?;
+    let _ = stream.set_read_timeout(Some(Duration::from_millis(1_500)));
+    let _ = stream.set_write_timeout(Some(Duration::from_millis(1_500)));
+
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "peer-describe".to_string(),
+        method: RpcMethod::DescribeAgent,
+        params: serde_json::json!({}),
+    };
+
+    let payload = serde_json::to_vec(&request)
+        .map_err(|error| format!("failed to encode peer describe request: {error}"))?;
+    write_frame(&mut stream, &payload)
+        .map_err(|error| format!("failed to write peer request frame: {error}"))?;
+
+    let response_payload = read_frame(&mut stream).map_err(|error| {
+        format!(
+            "failed to read peer response: {}",
+            frame_error_message(error)
+        )
+    })?;
+
+    let response: RpcResponse = serde_json::from_slice(&response_payload)
+        .map_err(|error| format!("failed to decode peer response: {error}"))?;
+
+    if !response.ok {
+        let error = response
+            .error
+            .map(|error| format!("{}: {}", error.code, error.message))
+            .unwrap_or_else(|| "unknown peer error".to_string());
+        return Err(format!("peer describe failed: {error}"));
+    }
+
+    serde_json::from_value(response.result.unwrap_or_default())
+        .map_err(|error| format!("failed to decode peer descriptor: {error}"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -445,44 +485,4 @@ mod tests {
             .unwrap_or(0);
         request.len() >= header_end + 4 + content_length
     }
-}
-
-fn request_agent_descriptor(address: &str) -> Result<AgentDescriptor, String> {
-    let mut stream = TcpStream::connect(address)
-        .map_err(|error| format!("failed to connect to peer {address}: {error}"))?;
-    let _ = stream.set_read_timeout(Some(Duration::from_millis(1_500)));
-    let _ = stream.set_write_timeout(Some(Duration::from_millis(1_500)));
-
-    let request = RpcRequest {
-        rpc_version: RPC_VERSION,
-        id: "peer-describe".to_string(),
-        method: RpcMethod::DescribeAgent,
-        params: serde_json::json!({}),
-    };
-
-    let payload = serde_json::to_vec(&request)
-        .map_err(|error| format!("failed to encode peer describe request: {error}"))?;
-    write_frame(&mut stream, &payload)
-        .map_err(|error| format!("failed to write peer request frame: {error}"))?;
-
-    let response_payload = read_frame(&mut stream).map_err(|error| {
-        format!(
-            "failed to read peer response: {}",
-            frame_error_message(error)
-        )
-    })?;
-
-    let response: RpcResponse = serde_json::from_slice(&response_payload)
-        .map_err(|error| format!("failed to decode peer response: {error}"))?;
-
-    if !response.ok {
-        let error = response
-            .error
-            .map(|error| format!("{}: {}", error.code, error.message))
-            .unwrap_or_else(|| "unknown peer error".to_string());
-        return Err(format!("peer describe failed: {error}"));
-    }
-
-    serde_json::from_value(response.result.unwrap_or_default())
-        .map_err(|error| format!("failed to decode peer descriptor: {error}"))
 }

@@ -1,5 +1,7 @@
 use serde_json::{Map, Value};
 
+type QualityEntry<'a> = (&'a str, &'a Map<String, Value>);
+
 pub(crate) struct QualityTerm {
     value: Value,
     pub(crate) contribution: f64,
@@ -79,7 +81,7 @@ impl CandidateRank {
 
 pub(crate) fn quality_entries(
     object: &Map<String, Value>,
-) -> Result<Vec<(&str, &Map<String, Value>)>, String> {
+) -> Result<Vec<QualityEntry<'_>>, String> {
     let source = object
         .get("qualities")
         .and_then(Value::as_object)

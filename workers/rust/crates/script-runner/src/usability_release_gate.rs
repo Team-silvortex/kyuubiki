@@ -277,8 +277,8 @@ fn build_report(config: &GateConfig, execute: bool) -> RunnerResult<ReadinessRep
     if execute {
         for probe in config.journeys.iter().flat_map(|journey| &journey.probes) {
             let key = probe.join("\u{1f}");
-            if !cache.contains_key(&key) {
-                cache.insert(key, execute_probe(probe)?);
+            if let std::collections::btree_map::Entry::Vacant(e) = cache.entry(key) {
+                e.insert(execute_probe(probe)?);
             }
         }
     }

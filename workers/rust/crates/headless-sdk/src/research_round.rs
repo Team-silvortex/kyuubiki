@@ -538,7 +538,7 @@ fn validate_metric_pointer(pointer: &str) -> Result<(), String> {
 fn metric_step_index(pointer: &str) -> Result<usize, String> {
     let segments = pointer.split('/').collect::<Vec<_>>();
     if segments.len() < 6
-        || segments[0] != ""
+        || !segments[0].is_empty()
         || segments[1] != "steps"
         || segments[3] != "result_preview"
         || !matches!(segments[4], "result" | "metrics")

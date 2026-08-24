@@ -61,7 +61,7 @@ pub fn build_material_candidate_materialization_request(
         "review_decision": approved_batch
             .get("last_review_decision")
             .cloned()
-            .unwrap_or_else(|| json!(null)),
+            .unwrap_or(Value::Null),
         "status": "ready_for_agent_materialization",
     }))
 }

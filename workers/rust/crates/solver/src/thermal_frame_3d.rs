@@ -412,13 +412,13 @@ fn equivalent_thermal_load(
         ),
         &frame3d_thermal_gradient_vector(
             element.youngs_modulus,
-            element.moment_of_inertia_y,
-            element.moment_of_inertia_z,
+            [element.moment_of_inertia_y, element.moment_of_inertia_z],
             element.thermal_expansion,
-            element.section_depth_y,
-            element.section_depth_z,
-            element.temperature_gradient_y,
-            element.temperature_gradient_z,
+            [element.section_depth_y, element.section_depth_z],
+            [
+                element.temperature_gradient_y,
+                element.temperature_gradient_z,
+            ],
         ),
     )
 }

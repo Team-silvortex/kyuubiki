@@ -66,21 +66,23 @@ fn build_failure_report(
     } else {
         format!("kyuubiki.headless.{error_code}")
     };
-    let mut execution_summary = HeadlessExecutionSummary::default();
-    execution_summary.failure = Some(HeadlessFailureReceipt {
-        schema_version: HEADLESS_FAILURE_RECEIPT_SCHEMA_VERSION.to_string(),
-        error_code: canonical_error_code,
-        category: "contract_failure".to_string(),
-        stage: stage.to_string(),
-        step_index: 0,
-        action: "run_preflight".to_string(),
-        message: message.to_string(),
-        retryable: false,
-        retry_strategy: "none".to_string(),
-        recommended_action:
-            "Repair the execution document, command options, or executor selection before retrying."
-                .to_string(),
-    });
+    let execution_summary = HeadlessExecutionSummary {
+        failure: Some(HeadlessFailureReceipt {
+            schema_version: HEADLESS_FAILURE_RECEIPT_SCHEMA_VERSION.to_string(),
+            error_code: canonical_error_code,
+            category: "contract_failure".to_string(),
+            stage: stage.to_string(),
+            step_index: 0,
+            action: "run_preflight".to_string(),
+            message: message.to_string(),
+            retryable: false,
+            retry_strategy: "none".to_string(),
+            recommended_action:
+                "Repair the execution document, command options, or executor selection before retrying."
+                    .to_string(),
+        }),
+        ..HeadlessExecutionSummary::default()
+    };
 
     HeadlessRunReport {
         schema_version: HEADLESS_EXECUTION_RUN_SCHEMA_VERSION.to_string(),

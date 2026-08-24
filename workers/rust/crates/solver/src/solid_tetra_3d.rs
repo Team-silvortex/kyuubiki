@@ -181,13 +181,13 @@ fn recover_equilibrium(
     let mut reactions = vec![[0.0; 3]; request.nodes.len()];
     let mut reaction_force = [0.0; 3];
     let mut max_free_residual_force = 0.0_f64;
-    for node in 0..request.nodes.len() {
+    for (node, node_reactions) in reactions.iter_mut().enumerate() {
         let mut free_residual = [0.0; 3];
         for axis in 0..3 {
             let dof = node * 3 + axis;
             let residual = internal[dof] - applied[dof];
             if constrained_mask[dof] {
-                reactions[node][axis] = residual;
+                node_reactions[axis] = residual;
                 reaction_force[axis] += residual;
             } else {
                 free_residual[axis] = residual;

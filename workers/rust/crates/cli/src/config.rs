@@ -32,7 +32,7 @@ pub(crate) struct AgentConfig {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Command {
     Worker(WorkerConfig),
-    Agent(AgentConfig),
+    Agent(Box<AgentConfig>),
 }
 
 impl Command {
@@ -40,7 +40,7 @@ impl Command {
         let args = std::env::args().skip(1).collect::<Vec<_>>();
 
         match args.first().map(String::as_str) {
-            Some("agent") => Self::Agent(AgentConfig::from_args(&args[1..])),
+            Some("agent") => Self::Agent(Box::new(AgentConfig::from_args(&args[1..]))),
             _ => Self::Worker(WorkerConfig::from_args(&args)),
         }
     }

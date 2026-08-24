@@ -1,3 +1,10 @@
+struct TridiagonalSystem<'a> {
+    diagonal: &'a [f64],
+    lower: &'a [f64],
+    upper: &'a [f64],
+    rhs: &'a [f64],
+}
+
 pub(crate) fn is_indexed_chain(
     node_count: usize,
     edges: impl IntoIterator<Item = (usize, usize)>,
@@ -64,12 +71,13 @@ pub(crate) fn solve_with_prescribed(
             cursor += 1;
         }
         solve_free_segment(
-            start,
-            cursor,
-            diagonal,
-            lower,
-            upper,
-            rhs,
+            start..cursor,
+            &TridiagonalSystem {
+                diagonal,
+                lower,
+                upper,
+                rhs,
+            },
             &mut values,
             &fixed,
         )?;
@@ -78,24 +86,22 @@ pub(crate) fn solve_with_prescribed(
 }
 
 fn solve_free_segment(
-    start: usize,
-    end: usize,
-    diagonal: &[f64],
-    lower: &[f64],
-    upper: &[f64],
-    rhs: &[f64],
+    range: std::ops::Range<usize>,
+    system: &TridiagonalSystem<'_>,
     values: &mut [f64],
     fixed: &[bool],
 ) -> Result<(), String> {
+    let start = range.start;
+    let end = range.end;
     let count = end - start;
-    let mut diagonal_work = diagonal[start..end].to_vec();
-    let mut rhs_work = rhs[start..end].to_vec();
+    let mut diagonal_work = system.diagonal[start..end].to_vec();
+    let mut rhs_work = system.rhs[start..end].to_vec();
 
     if start > 0 && fixed[start - 1] {
-        rhs_work[0] -= lower[start - 1] * values[start - 1];
+        rhs_work[0] -= system.lower[start - 1] * values[start - 1];
     }
     if end < values.len() && fixed[end] {
-        rhs_work[count - 1] -= upper[end - 1] * values[end];
+        rhs_work[count - 1] -= system.upper[end - 1] * values[end];
     }
 
     for local in 1..count {
@@ -104,8 +110,8 @@ fn solve_free_segment(
         if pivot.abs() <= 1.0e-18 {
             return Err("1d chain solver encountered a zero pivot".to_string());
         }
-        let factor = lower[global - 1] / pivot;
-        diagonal_work[local] -= factor * upper[global - 1];
+        let factor = system.lower[global - 1] / pivot;
+        diagonal_work[local] -= factor * system.upper[global - 1];
         rhs_work[local] -= factor * rhs_work[local - 1];
     }
 
@@ -116,7 +122,7 @@ fn solve_free_segment(
     for local in (0..count - 1).rev() {
         let global = start + local;
         values[global] =
-            (rhs_work[local] - upper[global] * values[global + 1]) / diagonal_work[local];
+            (rhs_work[local] - system.upper[global] * values[global + 1]) / diagonal_work[local];
     }
     Ok(())
 }

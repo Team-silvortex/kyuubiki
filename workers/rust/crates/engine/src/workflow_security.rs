@@ -247,8 +247,7 @@ fn validate_entry_and_output_nodes(
         validate_identifier("workflow entry/output node id", node_id, false)?;
         let Some(node) = node_ports.get(node_id) else {
             return Err(format!(
-                "workflow entry/output node {} is not defined",
-                node_id
+                "workflow entry/output node {node_id} is not defined"
             ));
         };
         if node.kind != WorkflowNodeKind::Input {
@@ -261,8 +260,7 @@ fn validate_entry_and_output_nodes(
         validate_identifier("workflow entry/output node id", node_id, false)?;
         let Some(node) = node_ports.get(node_id) else {
             return Err(format!(
-                "workflow entry/output node {} is not defined",
-                node_id
+                "workflow entry/output node {node_id} is not defined"
             ));
         };
         if node.kind != WorkflowNodeKind::Output {
@@ -349,14 +347,12 @@ fn validate_input_artifacts(
             }) => {}
             Some(_) => {
                 return Err(format!(
-                    "workflow input artifact {} must target an input node",
-                    node_id
+                    "workflow input artifact {node_id} must target an input node"
                 ));
             }
             None => {
                 return Err(format!(
-                    "workflow input artifact {} targets an unknown node",
-                    node_id
+                    "workflow input artifact {node_id} targets an unknown node"
                 ));
             }
         }

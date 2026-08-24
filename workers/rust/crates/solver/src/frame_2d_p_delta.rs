@@ -23,6 +23,11 @@ use kyuubiki_protocol::{
 
 const DEFAULT_LOAD_STEPS: usize = 10;
 const DEFAULT_MAXIMUM_CRITICAL_FACTOR_RATIO: f64 = 0.8;
+type Frame2dPDeltaMaterialSolve = (
+    SolveFrame2dPDeltaResult,
+    Vec<Frame2dMaterialHistory>,
+    Vec<Vec<Frame2dMaterialHistory>>,
+);
 
 pub fn solve_frame_2d_p_delta(
     request: &SolveFrame2dPDeltaRequest,
@@ -34,14 +39,7 @@ pub(crate) fn solve_frame_2d_p_delta_with_materials(
     request: &SolveFrame2dPDeltaRequest,
     materials: &[Option<CompiledFrame2dMaterial>],
     load_factor_schedule: Option<&[f64]>,
-) -> Result<
-    (
-        SolveFrame2dPDeltaResult,
-        Vec<Frame2dMaterialHistory>,
-        Vec<Vec<Frame2dMaterialHistory>>,
-    ),
-    String,
-> {
+) -> Result<Frame2dPDeltaMaterialSolve, String> {
     validate_request(request)?;
     let mode_index = request.imperfection_mode_index.unwrap_or(0);
     let mut buckling_request = request.buckling.clone();
@@ -72,8 +70,7 @@ pub(crate) fn solve_frame_2d_p_delta_with_materials(
         && maximum_ratio >= FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO
     {
         return Err(format!(
-            "frame 2d p-delta maximum load factor must remain below {:.3} of the first critical factor",
-            FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO
+            "frame 2d p-delta maximum load factor must remain below {FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO:.3} of the first critical factor"
         ));
     }
 
@@ -466,9 +463,9 @@ fn validate_request(request: &SolveFrame2dPDeltaRequest) -> Result<(), String> {
         return Err("frame 2d branch_continuation_radius must be positive and finite".into());
     }
     if request.branch_continuation_radius.is_some()
-        && !request
+        && request
             .branch_continuation_steps
-            .is_some_and(|steps| steps > 0)
+            .is_none_or(|steps| steps == 0)
     {
         return Err(
             "frame 2d branch_continuation_radius requires branch continuation steps".into(),
@@ -482,9 +479,9 @@ fn validate_request(request: &SolveFrame2dPDeltaRequest) -> Result<(), String> {
         );
     }
     if request.branch_continuation_min_radius_ratio.is_some()
-        && !request
+        && request
             .branch_continuation_steps
-            .is_some_and(|steps| steps > 0)
+            .is_none_or(|steps| steps == 0)
     {
         return Err(
             "frame 2d branch_continuation_min_radius_ratio requires branch continuation steps"

@@ -131,7 +131,7 @@ fn operator_task_reliability_snapshot_reports_attached_runtime() {
     assert!(
         snapshot["recommended_actions"]
             .as_array()
-            .map_or(false, |actions| actions.is_empty())
+            .is_some_and(|actions| actions.is_empty())
     );
 }
 
@@ -176,7 +176,7 @@ fn agent_deployment_readiness_reports_orchestrated_setup_gaps() {
     assert_eq!(readiness.status, "needs_attention");
     assert_eq!(readiness.runtime_mode, "orchestrated");
     assert_eq!(readiness.update_strategy, "orchestra_assisted_pull");
-    assert_eq!(readiness.operator_package_runtime_ready, false);
+    assert!(!readiness.operator_package_runtime_ready);
     assert!(
         readiness
             .issues

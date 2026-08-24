@@ -88,9 +88,7 @@ impl DirectMeshGateway {
                 }),
             ));
         }
-        let Some(expected) = self.config.token.as_deref() else {
-            return None;
-        };
+        let expected = self.config.token.as_deref()?;
         let supplied = request
             .headers
             .get("authorization")

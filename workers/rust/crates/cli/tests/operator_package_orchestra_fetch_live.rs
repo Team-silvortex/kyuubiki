@@ -31,7 +31,7 @@ fn agent_fetches_executes_and_safely_rotates_bound_orchestra_package() {
     let entrypoint = fs::read(template_library_path(&template_root))
         .expect("read prebuilt operator template cdylib");
     let entrypoint_sha256 = sha256(&entrypoint);
-    let fixture = CentralFixture::new(entrypoint);
+    let fixture = CentralFixture::new(entrypoint.clone());
     let (central_url, server) = fixture.serve();
     let agent = LiveAgent::start_orchestrated(&packages_root, &central_url, TOKEN)
         .expect("start orchestrated Agent with empty package cache");
@@ -58,6 +58,10 @@ fn agent_fetches_executes_and_safely_rotates_bound_orchestra_package() {
         1
     );
     assert_eq!(first["result"]["result"]["summary"]["sum"], 14.0);
+    assert_eq!(
+        first["result"]["operator_package_execution"]["cache_generation"]["janitor"]["removed_stale_session_count"],
+        0
+    );
 
     let cached_v1 = agent
         .request(
@@ -125,6 +129,68 @@ fn agent_fetches_executes_and_safely_rotates_bound_orchestra_package() {
     let active_manifest: Value =
         serde_json::from_str(&active_manifest).expect("decode active generation manifest");
     assert_eq!(active_manifest["package_version"], PACKAGE_VERSION_V2);
+
+    let peer_fixture = CentralFixture::for_versions(entrypoint.clone(), &[PACKAGE_VERSION_V2]);
+    let (peer_url, peer_server) = peer_fixture.serve();
+    let peer_agent = LiveAgent::start_orchestrated(&packages_root, &peer_url, TOKEN)
+        .expect("start peer Agent over the same managed cache");
+    let peer_execution = peer_agent
+        .request(
+            "fetch-while-peer-session-is-live",
+            "run_operator_task_ir",
+            json!({
+                "mode": "execute",
+                "task_ir": central_operator_task(PACKAGE_VERSION_V2, &entrypoint_sha256)
+            }),
+        )
+        .expect("execute while another cache session remains live");
+    assert_eq!(peer_execution["ok"], true, "response: {peer_execution}");
+    assert_eq!(
+        peer_execution["result"]["operator_package_execution"]["cache_generation"]["janitor"]["retained_active_session_count"],
+        1
+    );
+    assert_eq!(peer_server.join().expect("peer central fixture").len(), 3);
+    let stale_sessions = session_roots(&work_root.join("store"));
+    assert_eq!(stale_sessions.len(), 2);
+    drop(peer_agent);
+    drop(agent);
+    assert!(
+        stale_sessions.iter().all(|session| session.exists()),
+        "abrupt exits should leave recovery work"
+    );
+
+    let restart_fixture = CentralFixture::for_versions(entrypoint, &[PACKAGE_VERSION_V2]);
+    let (restart_url, restart_server) = restart_fixture.serve();
+    let restarted_agent = LiveAgent::start_orchestrated(&packages_root, &restart_url, TOKEN)
+        .expect("restart Agent over the same managed cache");
+    let restarted = restarted_agent
+        .request(
+            "fetch-after-crash-recovery",
+            "run_operator_task_ir",
+            json!({
+                "mode": "execute",
+                "task_ir": central_operator_task(PACKAGE_VERSION_V2, &entrypoint_sha256)
+            }),
+        )
+        .expect("execute after stale generation recovery");
+    assert_eq!(restarted["ok"], true, "response: {restarted}");
+    assert_eq!(
+        restarted["result"]["operator_package_execution"]["cache_generation"]["janitor"]["removed_stale_session_count"],
+        2
+    );
+    assert!(
+        stale_sessions.iter().all(|session| !session.exists()),
+        "stale sessions were not reclaimed"
+    );
+    assert_eq!(session_roots(&work_root.join("store")).len(), 1);
+    assert_eq!(generation_roots(&work_root.join("store")).len(), 1);
+    assert_eq!(
+        restart_server
+            .join()
+            .expect("restart central fixture")
+            .len(),
+        3
+    );
 }
 
 fn central_operator_task(package_version: &str, entrypoint_sha256: &str) -> Value {
@@ -157,10 +223,15 @@ struct CentralFixture {
 
 impl CentralFixture {
     fn new(entrypoint: Vec<u8>) -> Self {
+        Self::for_versions(entrypoint, &[PACKAGE_VERSION_V1, PACKAGE_VERSION_V2])
+    }
+
+    fn for_versions(entrypoint: Vec<u8>, package_versions: &[&str]) -> Self {
         let target = current_platform_target_id();
         let entrypoint_name = current_platform_library_file_name("kyuubiki_operator_template");
-        let versions = [PACKAGE_VERSION_V1, PACKAGE_VERSION_V2]
-            .into_iter()
+        let versions = package_versions
+            .iter()
+            .copied()
             .map(|version| {
                 let manifest = serde_json::to_vec(&json!({
             "schema_version": "kyuubiki.operator-package/v1",
@@ -270,14 +341,28 @@ impl CentralFixture {
 }
 
 fn generation_roots(store_root: &std::path::Path) -> Vec<PathBuf> {
-    let root = store_root.join("agent-runtime-generations");
-    let mut generations = fs::read_dir(root)
-        .expect("read Agent package generations")
-        .map(|entry| entry.expect("read generation entry").path())
+    let mut generations = session_roots(store_root)
+        .into_iter()
+        .flat_map(|session| {
+            fs::read_dir(session.join("generations"))
+                .expect("read session generations")
+                .map(|entry| entry.expect("read generation entry").path())
+        })
         .filter(|path| path.is_dir())
         .collect::<Vec<_>>();
     generations.sort();
     generations
+}
+
+fn session_roots(store_root: &std::path::Path) -> Vec<PathBuf> {
+    let root = store_root.join("agent-runtime-generations/sessions");
+    let mut sessions = fs::read_dir(root)
+        .expect("read Agent package sessions")
+        .map(|entry| entry.expect("read session entry").path())
+        .filter(|path| path.is_dir())
+        .collect::<Vec<_>>();
+    sessions.sort();
+    sessions
 }
 
 fn read_request(stream: &mut impl Read) -> String {

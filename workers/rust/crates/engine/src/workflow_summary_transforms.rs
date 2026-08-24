@@ -244,7 +244,7 @@ pub fn aggregate_summary_collection(payload: Value, config: Value) -> Result<Val
             .iter()
             .fold(f64::NEG_INFINITY, |current, value| current.max(*value));
         let span = max - min;
-        let field_prefix = format!("{}_{}", output_prefix, field);
+        let field_prefix = format!("{output_prefix}_{field}");
 
         aggregated.insert(format!("{field_prefix}_count"), Value::from(count));
         aggregated.insert(format!("{field_prefix}_min"), Value::from(min));

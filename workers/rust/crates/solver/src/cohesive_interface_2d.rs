@@ -301,9 +301,9 @@ fn assemble_tangent(
         strain_jump[1][2 * node] = weight * geometry.normal[0];
         strain_jump[1][2 * node + 1] = weight * geometry.normal[1];
     }
-    for row in 0..8 {
-        for column in 0..8 {
-            tangent[row][column] += differential_area
+    for (row, tangent_row) in tangent.iter_mut().enumerate() {
+        for (column, tangent_value) in tangent_row.iter_mut().enumerate() {
+            *tangent_value += differential_area
                 * (local_tangent[0] * strain_jump[0][row] * strain_jump[0][column]
                     + local_tangent[1] * strain_jump[1][row] * strain_jump[1][column]);
         }

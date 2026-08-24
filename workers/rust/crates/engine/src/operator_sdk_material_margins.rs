@@ -301,9 +301,9 @@ struct CandidateRank {
     summary: Map<String, Value>,
 }
 
-fn material_candidate_entries(
-    payload: &Value,
-) -> Result<Vec<(String, &Map<String, Value>)>, String> {
+type MaterialCandidateEntry<'a> = (String, &'a Map<String, Value>);
+
+fn material_candidate_entries(payload: &Value) -> Result<Vec<MaterialCandidateEntry<'_>>, String> {
     if let Some(candidates) = payload.get("candidates").and_then(Value::as_object) {
         return Ok(candidates
             .iter()

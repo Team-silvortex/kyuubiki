@@ -136,8 +136,12 @@ after their final host lease is released. This avoids deleting a still-loaded DL
 on Windows while preserving uninterrupted work on every platform.
 
 Cache entries remain execution state rather than an Agent-owned library.
-Task-scope immediate eviction, abnormal-exit stale-generation cleanup, and the
-full Windows/Linux/macOS dynamic-host qualification matrix remain lifecycle work.
+Each Agent process owns a file-locked cache session. The next startup reclaims an
+unlocked session left by an abnormal exit, preserves a locked peer session, and
+retains malformed ownership metadata fail-closed. Removed, active, and invalid
+session counts are carried in the package execution receipt. Task-scope immediate
+eviction and the full Windows/Linux/macOS dynamic-host qualification matrix remain
+lifecycle work.
 Transient fetch and cache-availability failures are retryable in the structured
 failure receipt and remain isolated from unrelated tasks; identity and
 activation failures stay fail-closed and require repair.

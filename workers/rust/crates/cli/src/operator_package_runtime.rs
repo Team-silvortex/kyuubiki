@@ -250,6 +250,21 @@ pub(crate) fn try_execute_external_operator_task(
                 stage: "dispatch_entrypoint",
                 message,
             })?;
+    let cache_generation = host.owned_generation.as_ref().map(|generation| {
+        let janitor = generation.janitor_report();
+        json!({
+            "schema_version": "kyuubiki.agent-operator-generation-execution/v1",
+            "session_id": generation.session_id(),
+            "generation_id": generation.generation_id(),
+            "retention_policy": "host_lease",
+            "crash_recovery": "next_session_start",
+            "janitor": {
+                "removed_stale_session_count": janitor.removed_stale_session_count,
+                "retained_active_session_count": janitor.retained_active_session_count,
+                "retained_invalid_session_count": janitor.retained_invalid_session_count
+            }
+        })
+    });
     Ok(Some(ExternalOperatorExecution {
         result: serde_json::to_value(result)
             .expect("external operator result should serialize through protocol"),
@@ -265,6 +280,7 @@ pub(crate) fn try_execute_external_operator_task(
             "entrypoint_sha256": package.entrypoint_sha256,
             "integrity_verified": true,
             "cache_status": orchestra_cache_status.unwrap_or("local_bundle"),
+            "cache_generation": cache_generation,
             "origin": if execution_mode == Some("orchestra_fetch") {
                 "bound_orchestra_fetch"
             } else {

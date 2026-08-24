@@ -505,17 +505,17 @@ fn run_self_test(contract: &AuditContract) -> RunnerResult<()> {
         "hex lockfiles",
     )?;
     expect_eq(
-        &NPM_ARGS.to_vec(),
+        NPM_ARGS,
         &["audit", "--omit=dev", "--package-lock-only", "--json"],
         "npm audit args",
     )?;
-    expect_eq(&CARGO_ARGS.to_vec(), &["audit"], "cargo audit args")?;
+    expect_eq(CARGO_ARGS, &["audit"], "cargo audit args")?;
     expect_eq(
-        &CARGO_NO_FETCH_ARGS.to_vec(),
+        CARGO_NO_FETCH_ARGS,
         &["audit", "--no-fetch"],
         "cached cargo audit args",
     )?;
-    expect_eq(&HEX_ARGS.to_vec(), &["hex.audit"], "hex audit args")?;
+    expect_eq(HEX_ARGS, &["hex.audit"], "hex audit args")?;
     hex_osv::run_self_test(&contract.hex_osv)?;
     if summarize_npm_audit(r#"{"metadata":{"vulnerabilities":{"total":0}}}"#)
         != "0 vulnerability(s)"

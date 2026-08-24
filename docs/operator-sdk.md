@@ -412,10 +412,10 @@ Agent configured with one `--orchestrator-url`, its cluster token, and a managed
 It accepts an empty package directory, serializes concurrent misses, rechecks the
 cache after acquiring the fetch lock, invokes the native Installer library API
 without a subprocess, and builds each miss in an owner-marked
-`<store>/agent-runtime-generations/<generation>` store. Existing verified packages
-other than the replaced package are carried into the candidate generation. The
-Agent loads and identity-checks the complete candidate before atomically swapping
-the host and runtime binding.
+`<store>/agent-runtime-generations/sessions/<session>/generations/<generation>`
+store. Existing verified packages other than the replaced package are carried
+into the candidate generation. The Agent loads and identity-checks the complete
+candidate before atomically swapping the host and runtime binding.
 
 An in-flight task retains its old host through an `Arc` lease. The retired
 generation is deleted only after the final lease is released, so a Windows DLL is
@@ -424,9 +424,20 @@ safe without an explicit uninstall. The execution receipt reports
 `bound_orchestra_fetch` together with `fetched_and_activated` or
 `verified_cache_hit`. Preflight performs no download.
 
-Immediate task/job-scope eviction, an abnormal-exit generation janitor, and
-qualified dynamic-library evidence on Windows, Linux, and macOS remain explicit
-lifecycle gaps rather than hidden best-effort cleanup.
+Each Agent session holds an exclusive cross-platform file lease. Startup probes
+older session leases: unlocked sessions are validated and removed, locked live
+sessions are retained, and malformed or symlinked sessions are retained
+fail-closed. Pre-session unleased generation directories are also counted as
+invalid and never guessed safe to delete while an older Agent may still be alive.
+After old Agents stop, Installer cleanup may remove that visible legacy residue.
+The `cache_generation` execution receipt exposes all three counts
+through `kyuubiki.agent-operator-generation-execution/v1`; its schema and example
+are `schemas/agent-operator-generation-execution.schema.json` and
+`schemas/examples.agent-operator-generation-execution.json`.
+
+Immediate task/job-scope eviction and qualified dynamic-library evidence on
+Windows, Linux, and macOS remain explicit lifecycle gaps rather than hidden
+best-effort cleanup.
 
 For the repository template package, use the Make target:
 

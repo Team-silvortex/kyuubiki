@@ -79,10 +79,12 @@ pub(super) fn signed_triangle_area(
         - (node_k.x - node_i.x) * (node_j.y - node_i.y))
 }
 
+type PlaneTriangleElementData = ([[f64; 6]; 6], f64, [[f64; 6]; 3], [[f64; 3]; 3]);
+
 fn triangle_element_data(
     nodes: &[PlaneNodeInput],
     element: &PlaneTriangleElementInput,
-) -> Result<([[f64; 6]; 6], f64, [[f64; 6]; 3], [[f64; 3]; 3]), String> {
+) -> Result<PlaneTriangleElementData, String> {
     let node_i = &nodes[element.node_i];
     let node_j = &nodes[element.node_j];
     let node_k = &nodes[element.node_k];
@@ -117,9 +119,9 @@ fn triangle_element_data(
     let bt_d = multiply_matrix_6x3_3x3(&bt, &d_matrix);
     let mut stiffness = multiply_matrix_6x3_3x6(&bt_d, &b_matrix);
     let scale = element.thickness * area;
-    for row in 0..6 {
-        for column in 0..6 {
-            stiffness[row][column] *= scale;
+    for row in &mut stiffness {
+        for value in row {
+            *value *= scale;
         }
     }
 
@@ -159,9 +161,9 @@ pub(super) fn derive_planar_stress_metrics(
 
 fn transpose_3x6(input: &[[f64; 6]; 3]) -> [[f64; 3]; 6] {
     let mut output = [[0.0; 3]; 6];
-    for row in 0..3 {
-        for column in 0..6 {
-            output[column][row] = input[row][column];
+    for (row, input_row) in input.iter().enumerate() {
+        for (column, value) in input_row.iter().enumerate() {
+            output[column][row] = *value;
         }
     }
     output

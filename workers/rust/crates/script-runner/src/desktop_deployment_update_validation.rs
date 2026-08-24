@@ -354,7 +354,7 @@ fn parse_rust_summary(output: &str) -> RustSummary {
             let fields = line.trim().strip_prefix("test result: ok. ")?;
             let mut summary = RustSummary::default();
             for field in fields.split(';') {
-                let mut parts = field.trim().split_whitespace();
+                let mut parts = field.split_whitespace();
                 let Some(value) = parts.next().and_then(|value| value.parse::<usize>().ok()) else {
                     continue;
                 };

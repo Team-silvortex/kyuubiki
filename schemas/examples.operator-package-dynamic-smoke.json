@@ -81,7 +81,7 @@
     },
     {
       "id": "agent_dynamic_host_dispatch",
-      "description": "Run local-package and bound-Orchestra Agent RPC dispatch, including fetch, cache reuse, safe version rotation, retired-generation cleanup, tamper rejection, and recovery.",
+      "description": "Run local-package and bound-Orchestra Agent RPC dispatch, including fetch, cache reuse, safe version rotation, crash-restart stale-session cleanup, tamper rejection, and recovery.",
       "cwd": "workers/rust",
       "command": [
         "cargo",

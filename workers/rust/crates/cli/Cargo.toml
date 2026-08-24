@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+fs2 = "0.4"
 kyuubiki-engine = { path = "../engine" }
 kyuubiki-headless-sdk = { path = "../headless-sdk" }
 kyuubiki-installer = { path = "../installer" }

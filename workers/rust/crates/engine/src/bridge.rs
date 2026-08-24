@@ -275,16 +275,24 @@ pub(crate) fn bridge_electrostatic_result_to_heat_plane_triangle_model(
     ))
 }
 
-fn reduce_bridge_value(
-    reduction: &str,
-    default_value: f64,
+struct BridgeReductionValues {
     count: usize,
     sum: f64,
     weighted_sum: f64,
     weight_total: f64,
     minimum: f64,
     maximum: f64,
-) -> f64 {
+}
+
+fn reduce_bridge_value(reduction: &str, default_value: f64, values: BridgeReductionValues) -> f64 {
+    let BridgeReductionValues {
+        count,
+        sum,
+        weighted_sum,
+        weight_total,
+        minimum,
+        maximum,
+    } = values;
     match reduction {
         "sum" if count > 0 => sum,
         "max" if count > 0 => maximum,
@@ -338,8 +346,7 @@ pub(crate) fn derive_element_nodal_target_field<TElement>(
             let index = resolve_node_index(element, field)?;
             let Some(sum) = sums.get_mut(index) else {
                 return Err(format!(
-                    "bridge node index {} from field {} is out of bounds",
-                    index, field
+                    "bridge node index {index} from field {field} is out of bounds"
                 ));
             };
             *sum += source_value;
@@ -356,12 +363,14 @@ pub(crate) fn derive_element_nodal_target_field<TElement>(
             reduce_bridge_value(
                 contract.reduction.as_str(),
                 contract.default_value,
-                counts[index],
-                sums[index],
-                weighted_sums[index],
-                weight_totals[index],
-                minima[index],
-                maxima[index],
+                BridgeReductionValues {
+                    count: counts[index],
+                    sum: sums[index],
+                    weighted_sum: weighted_sums[index],
+                    weight_total: weight_totals[index],
+                    minimum: minima[index],
+                    maximum: maxima[index],
+                },
             )
         })
         .collect::<Vec<_>>();

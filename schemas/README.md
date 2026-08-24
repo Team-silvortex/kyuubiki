@@ -247,6 +247,9 @@ The shared approval-request fixture is the parity vector for all SDKs.
   strict package preflight, template `cdylib` build, and engine dynamic host
   loading plus direct-Agent and Installer-managed lifecycle evidence with
   per-stage descriptions, working directories, and command vectors
+- `agent-operator-generation-execution.schema.json` defines the Agent execution
+  receipt for session-owned dynamic-library generations, host-lease retention,
+  next-start crash recovery, and startup janitor outcomes
 - `operator-package-distribution.schema.json` defines the portable multi-platform
   index for one Rust operator package version. Every target records only strict
   relative paths, byte sizes, and lowercase SHA-256 digests
@@ -347,6 +350,8 @@ The shared approval-request fixture is the parity vector for all SDKs.
   for validating external operator package dynamic-smoke stage order,
   Installer-managed lifecycle coverage, diagnostic working directories and
   commands, package/operator summary, and evidence paths
+- `examples.agent-operator-generation-execution.json` is the matching portable
+  execution receipt fixture for cache session, generation, and janitor evidence
 - `examples.operator-package-distribution.json` and
   `examples.operator-package-resolution.json` show the publish-time index and
   its current-target Orchestra resolution respectively

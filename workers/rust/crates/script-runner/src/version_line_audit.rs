@@ -264,11 +264,7 @@ fn exact_checks(root: &Path, expected: &str, codename: &str) -> RunnerResult<Vec
         "releases/update-catalog.json",
         "channels[status=current]/versions[status=current]",
         json!(false),
-        json!(
-            current_catalog_payloads(&catalog)
-                .iter()
-                .any(|item| contains_todo(item))
-        ),
+        json!(current_catalog_payloads(&catalog).iter().any(contains_todo)),
     ));
     Ok(checks)
 }

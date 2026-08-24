@@ -3,7 +3,7 @@ use crate::frame_2d_branch_subspace::{
     probe_subspace_branch_switches, unavailable_subspace_branch_switches,
 };
 use crate::frame_2d_branch_switch::{
-    BranchSwitchContext, probe_branch_switches, probe_pairwise_branch_switches,
+    BranchProbePath, BranchSwitchContext, probe_branch_switches, probe_pairwise_branch_switches,
     probe_weighted_branch_switches, unavailable_branch_switches,
     unavailable_pairwise_branch_switches, unavailable_weighted_branch_switches,
 };
@@ -230,43 +230,33 @@ pub(crate) fn solve_arc_length_steps(
                     max_iterations,
                     tolerance,
                 };
+                let path = BranchProbePath {
+                    critical_displacement: displacement,
+                    primary_displacement: &state.displacement,
+                    critical_load_factor: load_factor,
+                    amplitude,
+                    selection: request.branch_switch,
+                };
                 let mut probes = critical_modes
                     .iter()
                     .enumerate()
                     .flat_map(|(mode_index, _)| {
-                        probe_branch_switches(
-                            &context,
-                            displacement,
-                            &state.displacement,
-                            load_factor,
-                            &critical_modes,
-                            mode_index,
-                            amplitude,
-                            request.branch_switch,
-                        )
+                        probe_branch_switches(&context, &path, &critical_modes, mode_index)
                     })
                     .collect::<Vec<_>>();
                 if request.branch_switch_pairwise_combinations {
                     probes.extend(probe_pairwise_branch_switches(
                         &context,
-                        displacement,
-                        &state.displacement,
-                        load_factor,
+                        &path,
                         &critical_modes,
-                        amplitude,
-                        request.branch_switch,
                     ));
                 }
                 if let Some(weights) = &request.branch_switch_mode_weights {
                     probes.extend(probe_weighted_branch_switches(
                         &context,
-                        displacement,
-                        &state.displacement,
-                        load_factor,
+                        &path,
                         &critical_modes,
                         weights,
-                        amplitude,
-                        request.branch_switch,
                     ));
                 }
                 if let Some(sample_count) = request.branch_switch_subspace_sample_count {

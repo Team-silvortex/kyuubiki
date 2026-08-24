@@ -99,10 +99,7 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
         "validation_priority_counts",
         "bundles",
     ] {
-        if !required_fields(schema)
-            .iter()
-            .any(|required| *required == field)
-        {
+        if !required_fields(schema).contains(&field) {
             issues.push(format!("{SCHEMA_PATH}: missing required field {field}"));
         }
     }
@@ -132,7 +129,7 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
         "validation_priority_rank",
         "validation_priority_reasons",
     ] {
-        if !entry_required.iter().any(|required| *required == field) {
+        if !entry_required.contains(&field) {
             issues.push(format!(
                 "{SCHEMA_PATH}: bundleIndexEntry missing required {field}"
             ));

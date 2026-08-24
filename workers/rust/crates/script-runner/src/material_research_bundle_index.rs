@@ -394,18 +394,13 @@ fn validate_index_bundle(bundle: &Value, index: usize) -> RunnerResult<()> {
         ));
     }
     let reasons = string_array(bundle.get("validation_blocking_reasons"));
-    if !reasons
-        .iter()
-        .any(|reason| *reason == "external_validation_required")
-    {
+    if !reasons.contains(&"external_validation_required") {
         return Err(format!(
             "{context}.validation_blocking_reasons must include external_validation_required"
         ));
     }
     if array_len(bundle, "violated_quality_gate_ids") > 0
-        && !reasons
-            .iter()
-            .any(|reason| *reason == "violated_quality_gates")
+        && !reasons.contains(&"violated_quality_gates")
     {
         return Err(format!(
             "{context}.validation_blocking_reasons must include violated_quality_gates"
@@ -416,9 +411,7 @@ fn validate_index_bundle(bundle: &Value, index: usize) -> RunnerResult<()> {
         .and_then(Value::as_u64)
         .unwrap_or(0)
         > 0
-        && !reasons
-            .iter()
-            .any(|reason| *reason == "low_confidence_material_cards")
+        && !reasons.contains(&"low_confidence_material_cards")
     {
         return Err(format!(
             "{context}.validation_blocking_reasons must include low_confidence_material_cards"

@@ -84,7 +84,7 @@ pub fn extract_material_pareto_frontier(payload: Value, config: Value) -> Result
             frontier.push(candidate.frontier_summary());
         }
     }
-    frontier.sort_by(|left, right| compare_frontier_entries(left, right));
+    frontier.sort_by(compare_frontier_entries);
     let best_id = frontier
         .first()
         .and_then(|entry| entry.get("candidate_id"))

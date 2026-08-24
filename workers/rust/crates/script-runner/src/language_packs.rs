@@ -191,7 +191,7 @@ impl<'a> Validator<'a> {
             ));
         }
         self.validate_timestamp(catalog.get("updatedAt"), "language-packs/catalog.json");
-        if !catalog.get("packs").and_then(Value::as_array).is_some() {
+        if catalog.get("packs").and_then(Value::as_array).is_none() {
             self.fail("language-packs/catalog.json: packs must be an array");
         }
     }

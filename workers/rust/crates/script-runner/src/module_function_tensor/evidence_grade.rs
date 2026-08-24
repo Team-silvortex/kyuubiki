@@ -1,4 +1,4 @@
-use super::{RunnerResult, string_array, string_field};
+use super::{CellEvaluationInput, RunnerResult, string_array, string_field};
 use serde_json::{Map, Value, json};
 use std::collections::BTreeSet;
 
@@ -49,10 +49,10 @@ pub(super) fn validate_config(
         if previous_score.is_some_and(|previous| score <= previous) {
             return Err("evidence grade scores must increase strictly".to_string());
         }
-        if !level
+        if level
             .get("description")
             .and_then(Value::as_str)
-            .is_some_and(|description| !description.is_empty())
+            .is_none_or(|description| description.is_empty())
         {
             return Err(format!("evidence grade {id} must describe itself"));
         }
@@ -103,16 +103,17 @@ pub(super) fn validate_config(
     Ok(())
 }
 
-pub(super) fn evaluate(
-    tensor: &Value,
-    module_id: &str,
-    paradigm: &str,
-    status: &str,
-    required: bool,
-    benchmark_tests: &[Value],
-    security_tests: &[Value],
-    contract_evidence: &[Value],
-) -> Value {
+pub(super) fn evaluate(input: &CellEvaluationInput<'_>) -> Value {
+    let CellEvaluationInput {
+        tensor,
+        module_id,
+        paradigm,
+        status,
+        required,
+        benchmark_tests,
+        security_tests,
+        contract_evidence,
+    } = *input;
     let policy = tensor.get("evidence_grade_policy").unwrap_or(&Value::Null);
     let levels = policy
         .get("levels")
@@ -505,6 +506,7 @@ fn array_field<'a>(value: &'a Value, key: &str) -> &'a [Value] {
 #[cfg(test)]
 mod tests {
     use super::{evaluate, summarize, validate_config};
+    use crate::module_function_tensor::CellEvaluationInput;
     use serde_json::{Map, Value, json};
     use std::collections::BTreeSet;
 
@@ -530,16 +532,19 @@ mod tests {
 
     #[test]
     fn runnable_lane_only_reaches_exercised() {
-        let grade = evaluate(
-            &tensor(),
-            "engine",
-            "validation",
-            "covered",
-            true,
-            &[json!({"id": "smoke"})],
-            &[],
-            &[json!({"id": "contract"})],
-        );
+        let tensor = tensor();
+        let benchmark_tests = [json!({"id": "smoke"})];
+        let contract_evidence = [json!({"id": "contract"})];
+        let grade = evaluate(&CellEvaluationInput {
+            tensor: &tensor,
+            module_id: "engine",
+            paradigm: "validation",
+            status: "covered",
+            required: true,
+            benchmark_tests: &benchmark_tests,
+            security_tests: &[],
+            contract_evidence: &contract_evidence,
+        });
         assert_eq!(grade["achieved_grade"], "exercised");
         assert_eq!(grade["gap_steps"], 2);
     }
@@ -563,16 +568,16 @@ mod tests {
                 "paradigms": ["validation"]
             }
         ]);
-        let grade = evaluate(
-            &fixture,
-            "engine",
-            "validation",
-            "covered",
-            true,
-            &[],
-            &[],
-            &[],
-        );
+        let grade = evaluate(&CellEvaluationInput {
+            tensor: &fixture,
+            module_id: "engine",
+            paradigm: "validation",
+            status: "covered",
+            required: true,
+            benchmark_tests: &[],
+            security_tests: &[],
+            contract_evidence: &[],
+        });
         assert_eq!(grade["achieved_grade"], "verified");
         assert_eq!(grade["next_grade"], "qualified");
     }

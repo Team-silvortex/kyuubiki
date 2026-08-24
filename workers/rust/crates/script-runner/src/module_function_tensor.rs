@@ -57,6 +57,18 @@ const GAP_ORDER: &[&str] = &[
     "not_applicable",
 ];
 
+#[derive(Clone, Copy)]
+struct CellEvaluationInput<'a> {
+    tensor: &'a Value,
+    module_id: &'a str,
+    paradigm: &'a str,
+    status: &'a str,
+    required: bool,
+    benchmark_tests: &'a [Value],
+    security_tests: &'a [Value],
+    contract_evidence: &'a [Value],
+}
+
 pub(crate) fn run_check_module_function_tensor(
     root: &Path,
     args: Vec<OsString>,
@@ -135,7 +147,7 @@ fn validate_tensor_config(
         return Err("depth_axes must not be empty".to_string());
     }
     for (axis, description) in depth_axes {
-        if !description.as_str().is_some_and(|text| !text.is_empty()) {
+        if description.as_str().is_none_or(|text| text.is_empty()) {
             return Err(format!("depth axis {axis} must describe itself"));
         }
     }
@@ -342,26 +354,18 @@ fn build_tensor_report(
             );
             let benchmark_tests = get_lane_tests(topology, "benchmark", &benchmark_lanes);
             let security_tests = get_lane_tests(topology, "security", &security_lanes);
-            let maturity = maturity::evaluate(
+            let evaluation = CellEvaluationInput {
                 tensor,
                 module_id,
                 paradigm,
                 status,
                 required,
-                &benchmark_tests,
-                &security_tests,
-                &contract_evidence,
-            );
-            let evidence_grade = evidence_grade::evaluate(
-                tensor,
-                module_id,
-                paradigm,
-                status,
-                required,
-                &benchmark_tests,
-                &security_tests,
-                &contract_evidence,
-            );
+                benchmark_tests: &benchmark_tests,
+                security_tests: &security_tests,
+                contract_evidence: &contract_evidence,
+            };
+            let maturity = maturity::evaluate(&evaluation);
+            let evidence_grade = evidence_grade::evaluate(&evaluation);
             let evidence_depth = json!({
                 "benchmark_lane_count": benchmark_lanes.len(),
                 "security_lane_count": security_lanes.len(),
@@ -431,8 +435,8 @@ fn build_tensor_report(
         );
     }
 
-    gaps.sort_by(|left, right| gap_sort_key(left).cmp(&gap_sort_key(right)));
-    thin_points.sort_by(|left, right| maturity_sort_key(left).cmp(&maturity_sort_key(right)));
+    gaps.sort_by_key(gap_sort_key);
+    thin_points.sort_by_key(maturity_sort_key);
     let blocking_gap_count = gaps
         .iter()
         .filter(|gap| matches!(string_field(gap, "gap"), Some("required_gap" | "missing")))

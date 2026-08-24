@@ -149,8 +149,10 @@ pub(super) fn validate_electrostatic_plane_quad_request(
             n(element.node_l).y,
         )
         .abs();
-        if !(first_area.is_finite() && first_area > 1.0e-12)
-            || !(second_area.is_finite() && second_area > 1.0e-12)
+        if !(first_area.is_finite()
+            && first_area > 1.0e-12
+            && second_area.is_finite()
+            && second_area > 1.0e-12)
         {
             return Err("electrostatic plane quad triangles must have positive area".to_string());
         }

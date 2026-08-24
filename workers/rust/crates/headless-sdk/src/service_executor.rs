@@ -385,9 +385,7 @@ pub(crate) fn normalize_job_state_result(result: Value) -> Value {
 
 fn normalize_result_fetch_result(job_id: &str, result: Value) -> Value {
     let result = match result {
-        Value::Object(mut envelope) => envelope
-            .remove("result")
-            .unwrap_or_else(|| Value::Object(envelope)),
+        Value::Object(mut envelope) => envelope.remove("result").unwrap_or(Value::Object(envelope)),
         value => value,
     };
     json!({

@@ -495,7 +495,7 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
     if let Some(journey) = config
         .journeys
         .iter_mut()
-        .find(|journey| journey.id == "create-open-project" && journey.probes.first().is_some())
+        .find(|journey| journey.id == "create-open-project" && !journey.probes.is_empty())
     {
         journey.probes[0] = vec!["integration-desktop-gui-node-test".to_string()];
     }

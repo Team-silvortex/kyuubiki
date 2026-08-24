@@ -107,11 +107,11 @@ pub fn built_in_explicit_bridge_descriptor(
     family: &str,
     summary: &str,
     capability_tags: &[&str],
-    input_artifact_type: &str,
-    input_dataset_value: &str,
-    output_artifact_type: &str,
-    output_dataset_value: &str,
+    input_port: (&str, &str),
+    output_port: (&str, &str),
 ) -> OperatorDescriptor {
+    let (input_artifact_type, input_dataset_value) = input_port;
+    let (output_artifact_type, output_dataset_value) = output_port;
     OperatorDescriptor {
         id: id.to_string(),
         version: "1.0.0".to_string(),
@@ -218,13 +218,13 @@ pub fn built_in_explicit_transform_descriptor(
     family: &str,
     summary: &str,
     capability_tags: &[&str],
-    left_artifact_type: &str,
-    left_dataset_value: &str,
-    right_artifact_type: &str,
-    right_dataset_value: &str,
-    output_artifact_type: &str,
-    output_dataset_value: &str,
+    ports: [(&str, &str); 3],
 ) -> OperatorDescriptor {
+    let [
+        (left_artifact_type, left_dataset_value),
+        (right_artifact_type, right_dataset_value),
+        (output_artifact_type, output_dataset_value),
+    ] = ports;
     OperatorDescriptor {
         id: id.to_string(),
         version: "1.0.0".to_string(),

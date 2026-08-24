@@ -7,6 +7,22 @@ use kyuubiki_protocol::{
 
 const BETA: f64 = 0.25;
 const GAMMA: f64 = 0.5;
+type NewmarkStateVectors = (Vec<f64>, Vec<f64>, Vec<f64>);
+
+struct NewmarkSystem<'a> {
+    time_step: f64,
+    mass: &'a [f64],
+    damping: &'a [Vec<f64>],
+    stiffness: &'a [Vec<f64>],
+    force: &'a [f64],
+    constrained: &'a [usize],
+}
+
+struct NewmarkState<'a> {
+    displacement: &'a [f64],
+    velocity: &'a [f64],
+    acceleration: &'a [f64],
+}
 
 pub fn solve_transient_spring_1d(
     request: &SolveTransientSpring1dRequest,
@@ -51,19 +67,24 @@ pub fn solve_transient_spring_1d(
         .collect::<Vec<_>>();
     let mut a = initial_acceleration(&mass, &damping, &stiffness, &force, &u, &v, &constrained);
     let mut history = Vec::with_capacity(request.steps + 1);
+    let system = NewmarkSystem {
+        time_step: request.time_step,
+        mass: &mass,
+        damping: &damping,
+        stiffness: &stiffness,
+        force: &force,
+        constrained: &constrained,
+    };
 
     history.push(step_result(0, 0.0, &u, &v, &mass, &stiffness));
     for step in 1..=request.steps {
         let (next_u, next_v, next_a) = newmark_step(
-            request.time_step,
-            &mass,
-            &damping,
-            &stiffness,
-            &force,
-            &u,
-            &v,
-            &a,
-            &constrained,
+            &system,
+            NewmarkState {
+                displacement: &u,
+                velocity: &v,
+                acceleration: &a,
+            },
         )?;
         u = next_u;
         v = next_v;
@@ -103,16 +124,17 @@ pub fn solve_transient_spring_1d(
 }
 
 fn newmark_step(
-    dt: f64,
-    mass: &[f64],
-    damping: &[Vec<f64>],
-    stiffness: &[Vec<f64>],
-    force: &[f64],
-    u: &[f64],
-    v: &[f64],
-    a: &[f64],
-    constrained: &[usize],
-) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>), String> {
+    system: &NewmarkSystem<'_>,
+    state: NewmarkState<'_>,
+) -> Result<NewmarkStateVectors, String> {
+    let dt = system.time_step;
+    let mass = system.mass;
+    let damping = system.damping;
+    let stiffness = system.stiffness;
+    let force = system.force;
+    let u = state.displacement;
+    let v = state.velocity;
+    let a = state.acceleration;
     let count = mass.len();
     let a0 = 1.0 / (BETA * dt * dt);
     let a1 = GAMMA / (BETA * dt);
@@ -137,7 +159,8 @@ fn newmark_step(
         add_at(&mut effective, row, row, a0 * mass[row]);
     }
 
-    let (reduced_system, reduced_rhs, free) = reduce_sparse_system(&effective, &rhs, constrained);
+    let (reduced_system, reduced_rhs, free) =
+        reduce_sparse_system(&effective, &rhs, system.constrained);
     let reduced_u = solve_spd_system(&reduced_system, &reduced_rhs)?;
     let mut next_u = vec![0.0; count];
     for (index, &dof) in free.iter().enumerate() {

@@ -280,12 +280,10 @@ fn with_kit_operator_ids(kits: &Value, operator_ids: &[&str]) -> Value {
 fn collecting_without_artifact_entry(kits: &Value) -> Value {
     let mut updated = kits.clone();
     updated["kits"][0]["status"] = Value::from("collecting");
-    updated["kits"][0]["artifact_requirements"][0]
-        .as_object_mut()
-        .map(|object| {
-            object.remove("artifact_path");
-            object.remove("artifact_command");
-        });
+    if let Some(object) = updated["kits"][0]["artifact_requirements"][0].as_object_mut() {
+        object.remove("artifact_path");
+        object.remove("artifact_command");
+    }
     updated
 }
 

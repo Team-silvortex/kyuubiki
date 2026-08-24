@@ -345,7 +345,7 @@ fn guard_triggered(value: f64, rule: &serde_json::Map<String, Value>) -> bool {
     }
 }
 
-fn rule_comparison<'a>(rule: &'a serde_json::Map<String, Value>) -> &'a str {
+fn rule_comparison(rule: &serde_json::Map<String, Value>) -> &str {
     match rule
         .get("comparison")
         .and_then(Value::as_str)

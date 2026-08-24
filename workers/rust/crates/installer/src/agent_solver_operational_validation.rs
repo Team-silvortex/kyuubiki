@@ -386,10 +386,10 @@ fn expect_string(value: &Value, pointer: &str, expected: &str, errors: &mut Vec<
 }
 
 fn expect_non_empty_string(value: &Value, pointer: &str, errors: &mut Vec<String>) {
-    if !value
+    if value
         .pointer(pointer)
         .and_then(Value::as_str)
-        .is_some_and(|text| !text.trim().is_empty())
+        .is_none_or(|text| text.trim().is_empty())
     {
         errors.push(format!("{pointer} must be a non-empty string"));
     }

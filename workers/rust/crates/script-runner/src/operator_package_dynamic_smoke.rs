@@ -36,7 +36,7 @@ pub fn run_operator_package_dynamic_smoke(
     let preflight_report_path = options
         .output_path
         .parent()
-        .unwrap_or_else(|| paths.root.as_path())
+        .unwrap_or(paths.root.as_path())
         .join("operator-package-dynamic-preflight.json");
     let dynamic_library_path = paths
         .root
@@ -227,7 +227,7 @@ pub fn run_operator_package_dynamic_smoke(
     )?;
     stages.push(stage_record(
         "agent_dynamic_host_dispatch",
-        "Run local-package and bound-Orchestra Agent RPC dispatch, including fetch, cache reuse, safe version rotation, retired-generation cleanup, tamper rejection, and recovery.",
+        "Run local-package and bound-Orchestra Agent RPC dispatch, including fetch, cache reuse, safe version rotation, crash-restart stale-session cleanup, tamper rejection, and recovery.",
         rust_cwd.clone(),
         [
             "cargo",
@@ -333,8 +333,8 @@ fn write_report(
     paths: &RepoPaths,
     options: &Options,
     stages: &[StageRecord],
-    preflight_report_path: &PathBuf,
-    dynamic_library_path: &PathBuf,
+    preflight_report_path: &Path,
+    dynamic_library_path: &Path,
 ) -> RunnerResult<()> {
     if let Some(parent) = options.output_path.parent() {
         std::fs::create_dir_all(parent)
@@ -501,33 +501,6 @@ fn dynamic_library_file_name() -> String {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::normalize_repo_paths;
-    use serde_json::json;
-    use std::path::Path;
-
-    #[test]
-    fn retained_preflight_paths_are_repository_relative() {
-        let mut report = json!({
-            "packages_root": "/repo/workers/rust/templates",
-            "accepted_packages": [{
-                "entrypoint_path": "/repo/workers/rust/templates/example/liboperator.so"
-            }],
-            "external_path": "/outside/package.so"
-        });
-
-        normalize_repo_paths(&mut report, Path::new("/repo"));
-
-        assert_eq!(report["packages_root"], "workers/rust/templates");
-        assert_eq!(
-            report["accepted_packages"][0]["entrypoint_path"],
-            "workers/rust/templates/example/liboperator.so"
-        );
-        assert_eq!(report["external_path"], "/outside/package.so");
-    }
-}
-
 fn repo_relative(paths: &RepoPaths, path: &Path) -> String {
     let absolute = if path.is_absolute() {
         path.to_path_buf()
@@ -576,5 +549,32 @@ fn relative_to(paths: &RepoPaths, base: &Path, path: &Path) -> String {
         ".".to_string()
     } else {
         relative_parts.join("/")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_repo_paths;
+    use serde_json::json;
+    use std::path::Path;
+
+    #[test]
+    fn retained_preflight_paths_are_repository_relative() {
+        let mut report = json!({
+            "packages_root": "/repo/workers/rust/templates",
+            "accepted_packages": [{
+                "entrypoint_path": "/repo/workers/rust/templates/example/liboperator.so"
+            }],
+            "external_path": "/outside/package.so"
+        });
+
+        normalize_repo_paths(&mut report, Path::new("/repo"));
+
+        assert_eq!(report["packages_root"], "workers/rust/templates");
+        assert_eq!(
+            report["accepted_packages"][0]["entrypoint_path"],
+            "workers/rust/templates/example/liboperator.so"
+        );
+        assert_eq!(report["external_path"], "/outside/package.so");
     }
 }

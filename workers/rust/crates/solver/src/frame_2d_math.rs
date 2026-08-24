@@ -124,9 +124,9 @@ pub(crate) fn transform_frame_stiffness(
 
 pub(super) fn transpose_6x6(input: &[[f64; 6]; 6]) -> [[f64; 6]; 6] {
     let mut output = [[0.0; 6]; 6];
-    for row in 0..6 {
-        for column in 0..6 {
-            output[column][row] = input[row][column];
+    for (row, input_row) in input.iter().enumerate() {
+        for (column, value) in input_row.iter().enumerate() {
+            output[column][row] = *value;
         }
     }
     output

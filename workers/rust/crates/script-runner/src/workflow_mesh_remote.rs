@@ -165,14 +165,14 @@ impl Options {
             remote_elixir_version: env::var("REMOTE_ELIXIR_VERSION")
                 .ok()
                 .filter(|value| !value.is_empty())
-                .unwrap_or_else(|| toolchain.remote_elixir_version),
+                .unwrap_or(toolchain.remote_elixir_version),
             remote_host: env::var("KYUUBIKI_LAB_HOST").unwrap_or_else(|_| "kyuubiki-lab".into()),
             remote_log_path: env::var("REMOTE_LOG_PATH")
                 .unwrap_or_else(|_| format!("{remote_dir}/{remote_output_dir}/run.log")),
             remote_otp_version: env::var("REMOTE_OTP_VERSION")
                 .ok()
                 .filter(|value| !value.is_empty())
-                .unwrap_or_else(|| toolchain.remote_otp_version),
+                .unwrap_or(toolchain.remote_otp_version),
             remote_dir,
             remote_output_dir,
             remote_pg_bin_dir: env::var("REMOTE_PG_BIN_DIR")

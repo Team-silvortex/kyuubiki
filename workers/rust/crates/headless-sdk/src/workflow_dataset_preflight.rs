@@ -81,7 +81,7 @@ fn collect_contract_value(
     summaries: &mut BTreeMap<String, DatasetValueSummary>,
     issues: &mut Vec<String>,
 ) {
-    let label = format!("dataset_contract.values[{}]", index);
+    let label = format!("dataset_contract.values[{index}]");
     let Some(id) = text_field(Some(value), "id") else {
         issues.push(format!("{label}.id is missing or empty"));
         return;

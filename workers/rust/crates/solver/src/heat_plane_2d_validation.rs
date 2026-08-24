@@ -146,8 +146,10 @@ pub(super) fn validate_heat_plane_quad_request(
         let nl = to_node(element.node_l);
         let first_area = signed_heat_triangle_area(&ni, &nj, &nk).abs();
         let second_area = signed_heat_triangle_area(&ni, &nk, &nl).abs();
-        if !(first_area.is_finite() && first_area > 1.0e-12)
-            || !(second_area.is_finite() && second_area > 1.0e-12)
+        if !(first_area.is_finite()
+            && first_area > 1.0e-12
+            && second_area.is_finite()
+            && second_area > 1.0e-12)
         {
             return Err("heat plane quad triangles must have positive area".to_string());
         }

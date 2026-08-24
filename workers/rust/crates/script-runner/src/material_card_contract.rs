@@ -85,10 +85,7 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
         "confidence",
         "parameters",
     ] {
-        if !required_fields(schema)
-            .iter()
-            .any(|required| *required == field)
-        {
+        if !required_fields(schema).contains(&field) {
             issues.push(format!("{SCHEMA_PATH}: missing required field {field}"));
         }
     }
@@ -112,7 +109,7 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
         .map(|values| values.iter().filter_map(Value::as_str).collect::<Vec<_>>())
         .unwrap_or_default();
     for field in ["kind", "unit"] {
-        if !parameter_required.iter().any(|required| *required == field) {
+        if !parameter_required.contains(&field) {
             issues.push(format!("{SCHEMA_PATH}: parameter missing required {field}"));
         }
     }

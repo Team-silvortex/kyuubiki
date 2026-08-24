@@ -693,9 +693,9 @@ fn require_boolean(value: Option<&Value>, field: &str, context: &str) -> RunnerR
 }
 
 fn require_number(value: Option<&Value>, field: &str, context: &str) -> RunnerResult<()> {
-    if !value
+    if value
         .and_then(Value::as_i64)
-        .is_some_and(|number| number >= 0)
+        .is_none_or(|number| number < 0)
     {
         return Err(format!("{context}: {field} must be a non-negative integer"));
     }

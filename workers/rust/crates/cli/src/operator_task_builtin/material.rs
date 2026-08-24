@@ -222,7 +222,7 @@ fn evaluate_material_thermal_shock(payload: &Value, config: &Value) -> Result<Va
             .then_with(|| {
                 string_field(left, "candidate_id")
                     .unwrap_or_default()
-                    .cmp(&string_field(right, "candidate_id").unwrap_or_default())
+                    .cmp(string_field(right, "candidate_id").unwrap_or_default())
             })
     });
 

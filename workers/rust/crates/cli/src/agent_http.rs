@@ -314,7 +314,7 @@ pub(crate) fn parse_http_url(url: &str) -> Result<ParsedHttpUrl, String> {
         .strip_prefix("http://")
         .ok_or_else(|| format!("unsupported orchestrator URL: {url} (expected http://...)"))?;
     let (authority, path) = match raw.split_once('/') {
-        Some((authority, path)) => (authority, format!("/{}", path)),
+        Some((authority, path)) => (authority, format!("/{path}")),
         None => (raw, "/".to_string()),
     };
     let (host, port) = match authority.split_once(':') {

@@ -185,10 +185,18 @@ only after the final task releases it. The active cache remains visible under
 `<store>/agent-runtime-generations` and may be reused for the Agent process
 lifetime.
 
-Immediate task-scope eviction, cleanup after abnormal process termination, and
-three-platform dynamic-library qualification remain open. Until those land,
-`task_required_disposable` describes authority and cleanup intent rather than
-proof of deletion immediately after every task.
+Every process holds an exclusive lease in its own cache session. A later Agent
+startup removes only owner-marked sessions whose lease can be exclusively
+acquired, skips sessions still owned by live peers, and retains malformed entries
+fail-closed. Abrupt termination therefore leaves recoverable cache state rather
+than permanent residue, without allowing one Agent to delete another Agent's
+loaded library. Unleased pre-session cache entries are reported as invalid rather
+than deleted speculatively. The generation execution receipt exposes removed,
+active, and invalid session counts.
+
+Immediate task-scope eviction and three-platform dynamic-library qualification
+remain open. Until those land, `task_required_disposable` describes authority and
+cleanup intent rather than proof of deletion immediately after every task.
 
 ## Interaction with the operator catalog
 

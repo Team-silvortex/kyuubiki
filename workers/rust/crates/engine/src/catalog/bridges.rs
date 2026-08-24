@@ -19,10 +19,14 @@ pub(crate) fn bridge_descriptors() -> Vec<OperatorDescriptor> {
             "thermal_plane_triangle_2d",
             "Bridge a heat triangle temperature field into a thermal triangle structural model.",
             &["workflow_bridge", "temperature_field", "triangle", "2d"],
-            "result/heat_plane_triangle_2d",
-            "heat_plane_triangle_2d_result",
-            "study_model/thermal_plane_triangle_2d",
-            "thermal_plane_triangle_2d_model",
+            (
+                "result/heat_plane_triangle_2d",
+                "heat_plane_triangle_2d_result",
+            ),
+            (
+                "study_model/thermal_plane_triangle_2d",
+                "thermal_plane_triangle_2d_model",
+            ),
         ),
         built_in_bridge_descriptor(
             "bridge.electrostatic_field_to_heat_quad_2d",
@@ -51,10 +55,14 @@ pub(crate) fn bridge_descriptors() -> Vec<OperatorDescriptor> {
                 "triangle",
                 "2d",
             ],
-            "result/electrostatic_plane_triangle_2d",
-            "electrostatic_plane_triangle_2d_result",
-            "study_model/heat_plane_triangle_2d",
-            "heat_plane_triangle_2d_model",
+            (
+                "result/electrostatic_plane_triangle_2d",
+                "electrostatic_plane_triangle_2d_result",
+            ),
+            (
+                "study_model/heat_plane_triangle_2d",
+                "heat_plane_triangle_2d_model",
+            ),
         ),
         built_in_explicit_bridge_descriptor(
             "bridge.magnetostatic_field_to_heat_quad_2d",
@@ -70,10 +78,11 @@ pub(crate) fn bridge_descriptors() -> Vec<OperatorDescriptor> {
                 "quad",
                 "2d",
             ],
-            "result/magnetostatic_plane_quad_2d",
-            "magnetostatic_plane_quad_2d_result",
-            "study_model/heat_plane_quad_2d",
-            "heat_plane_quad_2d_model",
+            (
+                "result/magnetostatic_plane_quad_2d",
+                "magnetostatic_plane_quad_2d_result",
+            ),
+            ("study_model/heat_plane_quad_2d", "heat_plane_quad_2d_model"),
         ),
     ];
 

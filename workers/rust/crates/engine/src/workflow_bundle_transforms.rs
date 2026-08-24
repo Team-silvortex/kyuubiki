@@ -435,7 +435,7 @@ fn bundle_guard_triggered(value: f64, rule: &serde_json::Map<String, Value>) -> 
     }
 }
 
-fn bundle_guard_comparison<'a>(rule: &'a serde_json::Map<String, Value>) -> &'a str {
+fn bundle_guard_comparison(rule: &serde_json::Map<String, Value>) -> &str {
     match rule
         .get("comparison")
         .and_then(Value::as_str)

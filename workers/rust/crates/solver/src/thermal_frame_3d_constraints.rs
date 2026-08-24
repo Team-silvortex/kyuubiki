@@ -74,9 +74,9 @@ impl ThermalFrame3dConstraintSystem {
     pub(crate) fn project(&self, matrix: &SparseMatrix, force: &[f64]) -> (SparseMatrix, Vec<f64>) {
         let mut reduced = SparseMatrix::new(self.reduced_size);
         let mut reduced_force = vec![0.0; self.reduced_size];
-        for physical_row in 0..force.len() {
+        for (physical_row, &physical_force) in force.iter().enumerate() {
             for &(reduced_row, row_weight) in &self.physical_to_reduced[physical_row] {
-                reduced_force[reduced_row] += row_weight * force[physical_row];
+                reduced_force[reduced_row] += row_weight * physical_force;
                 for &(physical_column, stiffness) in matrix.row_entries(physical_row) {
                     for &(reduced_column, column_weight) in
                         &self.physical_to_reduced[physical_column]

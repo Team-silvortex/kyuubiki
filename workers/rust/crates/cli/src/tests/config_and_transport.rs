@@ -61,11 +61,11 @@ fn preserves_worker_defaults_when_no_args_are_given() {
 
 #[test]
 fn parses_agent_command_defaults() {
-    let command = Command::Agent(AgentConfig::from_args(&[]));
+    let command = Command::Agent(Box::new(AgentConfig::from_args(&[])));
 
     assert_eq!(
         command,
-        Command::Agent(AgentConfig {
+        Command::Agent(Box::new(AgentConfig {
             host: "127.0.0.1".to_string(),
             port: 5001,
             agent_id: None,
@@ -85,7 +85,7 @@ fn parses_agent_command_defaults() {
             operator_package_host_id: None,
             operator_packages_root: None,
             operator_activated_package_count: 0,
-        })
+        }))
     );
 }
 

@@ -141,8 +141,11 @@ fn transpose_lower(
     let mut entries = vec![0u32; offsets[size]];
     let mut rows = vec![0u32; offsets[size]];
     for row in 0..size {
-        for entry in lower_offsets[row]..lower_offsets[row + 1] {
-            let column = lower_columns[entry] as usize;
+        let start = lower_offsets[row];
+        let end = lower_offsets[row + 1];
+        for (offset, &lower_column) in lower_columns[start..end].iter().enumerate() {
+            let entry = start + offset;
+            let column = lower_column as usize;
             let target = next[column];
             entries[target] = entry as u32;
             rows[target] = row as u32;

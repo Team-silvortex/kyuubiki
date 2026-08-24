@@ -291,7 +291,7 @@ fn resolve_focus_payload(
     let focus_payloads = object
         .get("report_focus_payloads")
         .and_then(Value::as_object)
-        .or_else(|| Some(object))
+        .or(Some(object))
         .ok_or_else(|| {
             format!("{operator_id} expects report_focus_payloads or a focus payload map")
         })?;

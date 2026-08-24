@@ -584,7 +584,7 @@ fn verify_downloaded_artifacts(
         return Err("download record points outside its configured version directory".to_string());
     }
     let manifest_path = managed_path(root, &downloaded.manifest_path, "download manifest")?;
-    if !manifest_path.starts_with(&download_root.join("manifests")) {
+    if !manifest_path.starts_with(download_root.join("manifests")) {
         return Err("download manifest is outside the version manifest directory".to_string());
     }
     let manifest: Value = serde_json::from_str(

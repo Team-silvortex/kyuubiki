@@ -128,7 +128,7 @@ pub(crate) fn run_sync_doc_book_version(root: &Path, args: Vec<OsString>) -> Run
             .get("line")
             .and_then(Value::as_str)
             .map(str::to_string)
-            .unwrap_or_else(|| format!("moxi {}", shipping_version)),
+            .unwrap_or_else(|| format!("moxi {shipping_version}")),
     };
     let minor_line = semver_minor(&shipping_version)?;
 

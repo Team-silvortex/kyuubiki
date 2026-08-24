@@ -1,4 +1,4 @@
-use super::{RunnerResult, read_text, string_array, string_field};
+use super::{CellEvaluationInput, RunnerResult, read_text, string_array, string_field};
 use serde_json::{Value, json};
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -46,16 +46,17 @@ pub(super) fn validate_config(
     validate_evidence_claims(root, tensor, paradigms, module_ids)
 }
 
-pub(super) fn evaluate(
-    tensor: &Value,
-    module_id: &str,
-    paradigm: &str,
-    status: &str,
-    required: bool,
-    benchmark_tests: &[Value],
-    security_tests: &[Value],
-    contract_evidence: &[Value],
-) -> Value {
+pub(super) fn evaluate(input: &CellEvaluationInput<'_>) -> Value {
+    let CellEvaluationInput {
+        tensor,
+        module_id,
+        paradigm,
+        status,
+        required,
+        benchmark_tests,
+        security_tests,
+        contract_evidence,
+    } = *input;
     let mut required_dimensions = string_array(
         tensor.get("maturity_policy").unwrap_or(&Value::Null),
         paradigm,
@@ -300,6 +301,7 @@ fn normalize(values: &mut Vec<String>) {
 #[cfg(test)]
 mod tests {
     use super::evaluate;
+    use crate::module_function_tensor::CellEvaluationInput;
     use serde_json::{Value, json};
 
     #[test]
@@ -322,16 +324,18 @@ mod tests {
                 "files": ["docs/example.md"]
             }]
         });
-        let maturity = evaluate(
-            &tensor,
-            "engine",
-            "validation",
-            "covered",
-            true,
-            &[json!({"id": "run"})],
-            &[],
-            &[json!({"id": "contract"})],
-        );
+        let benchmark_tests = [json!({"id": "run"})];
+        let contract_evidence = [json!({"id": "contract"})];
+        let maturity = evaluate(&CellEvaluationInput {
+            tensor: &tensor,
+            module_id: "engine",
+            paradigm: "validation",
+            status: "covered",
+            required: true,
+            benchmark_tests: &benchmark_tests,
+            security_tests: &[],
+            contract_evidence: &contract_evidence,
+        });
         assert_eq!(maturity["level"], Value::String("medium".to_string()));
         assert_eq!(
             maturity["missing_dimensions"],

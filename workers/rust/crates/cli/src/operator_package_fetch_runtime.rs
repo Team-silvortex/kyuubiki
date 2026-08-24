@@ -1,5 +1,6 @@
 use crate::config::AgentConfig;
 use crate::operator_package_generation::prepare_operator_package_generation;
+use crate::operator_package_generation_session::OperatorPackageGenerationSession;
 use crate::operator_package_runtime::{
     ExternalOperatorTaskError, OperatorPackageRuntimeBinding,
     activate_fetched_operator_package_runtime, current_runtime_binding,
@@ -9,14 +10,14 @@ use kyuubiki_installer::fetch_operator_package_into;
 use kyuubiki_protocol::OperatorTaskExecutionSummary;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, OnceLock, RwLock};
+use std::sync::{Arc, Mutex, OnceLock, RwLock};
 
 #[derive(Clone)]
 struct OperatorPackageFetchRuntimeConfig {
     agent: AgentConfig,
     central_url: String,
     bearer_token: Option<String>,
-    cache_store_root: Option<PathBuf>,
+    generation_session: Option<Arc<OperatorPackageGenerationSession>>,
 }
 
 pub(crate) struct PreparedOrchestraOperatorPackage {
@@ -24,23 +25,36 @@ pub(crate) struct PreparedOrchestraOperatorPackage {
     pub cache_status: &'static str,
 }
 
-pub(crate) fn configure_operator_package_fetch_runtime(config: &AgentConfig) {
-    let configured = config.orchestrator_url.as_ref().map(|central_url| {
-        let mut agent = config.clone();
-        // The startup count is an admission assertion, not a hot-reload ceiling.
-        agent.operator_activated_package_count = 0;
-        let cache_store_root = managed_store_root(&agent).ok();
-        OperatorPackageFetchRuntimeConfig {
-            agent,
-            central_url: central_url.clone(),
-            bearer_token: config.cluster_api_token.clone(),
-            cache_store_root,
-        }
-    });
+pub(crate) fn configure_operator_package_fetch_runtime(config: &AgentConfig) -> Result<(), String> {
+    let configured = config
+        .orchestrator_url
+        .as_ref()
+        .map(|central_url| {
+            let mut agent = config.clone();
+            // The startup count is an admission assertion, not a hot-reload ceiling.
+            agent.operator_activated_package_count = 0;
+            let generation_session = agent
+                .operator_packages_root
+                .as_ref()
+                .map(|_| {
+                    managed_store_root(&agent)
+                        .map_err(|error| error.message)
+                        .and_then(|root| OperatorPackageGenerationSession::open(&root))
+                })
+                .transpose()?;
+            Ok::<_, String>(OperatorPackageFetchRuntimeConfig {
+                agent,
+                central_url: central_url.clone(),
+                bearer_token: config.cluster_api_token.clone(),
+                generation_session,
+            })
+        })
+        .transpose()?;
     let mut current = fetch_runtime_config()
         .write()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     *current = configured;
+    Ok(())
 }
 
 pub(crate) fn prepare_orchestra_operator_package(
@@ -77,14 +91,16 @@ pub(crate) fn prepare_orchestra_operator_package(
             "central operator TaskIR must declare package_version",
         )
     })?;
-    let cache_store_root = config
-        .cache_store_root
-        .clone()
-        .map(Ok)
-        .unwrap_or_else(|| managed_store_root(&config.agent))?;
+    let generation_session = config.generation_session.clone().ok_or_else(|| {
+        fetch_error(
+            "operator_package_cache_not_configured",
+            "prepare_cache_generation",
+            "orchestrated Agent requires a managed package cache session",
+        )
+    })?;
     let active_packages_root = active_packages_root(&config.agent)?;
     let generation = prepare_operator_package_generation(
-        &cache_store_root,
+        generation_session,
         &active_packages_root,
         &summary.operator_id,
     )
@@ -125,20 +141,19 @@ pub(crate) fn prepare_orchestra_operator_package(
             .to_string(),
     );
     let binding = activate_fetched_operator_package_runtime(&next_agent, summary, generation)?;
-    store_active_fetch_config(next_agent, cache_store_root);
+    store_active_fetch_config(next_agent);
     Ok(Some(PreparedOrchestraOperatorPackage {
         binding,
         cache_status: "fetched_and_activated",
     }))
 }
 
-fn store_active_fetch_config(agent: AgentConfig, cache_store_root: PathBuf) {
+fn store_active_fetch_config(agent: AgentConfig) {
     let mut config = fetch_runtime_config()
         .write()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     if let Some(config) = config.as_mut() {
         config.agent = agent;
-        config.cache_store_root = Some(cache_store_root);
     }
 }
 

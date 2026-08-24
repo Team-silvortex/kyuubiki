@@ -139,8 +139,10 @@ fn validate_quad_element(
         n(element.node_l).y,
     )
     .abs();
-    if !(first_area.is_finite() && first_area > 1.0e-12)
-        || !(second_area.is_finite() && second_area > 1.0e-12)
+    if !(first_area.is_finite()
+        && first_area > 1.0e-12
+        && second_area.is_finite()
+        && second_area > 1.0e-12)
     {
         return Err("magnetostatic plane quad triangles must have positive area".to_string());
     }

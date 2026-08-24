@@ -195,8 +195,8 @@ fn accumulate_stiffness(
     d_matrix: &[[f64; 3]; 3],
     scale: f64,
 ) {
-    for row in 0..8 {
-        for column in 0..8 {
+    for (row, stiffness_row) in stiffness.iter_mut().enumerate() {
+        for (column, stiffness_value) in stiffness_row.iter_mut().enumerate() {
             let value = (0..3)
                 .flat_map(|left| {
                     (0..3).map(move |right| {
@@ -204,7 +204,7 @@ fn accumulate_stiffness(
                     })
                 })
                 .sum::<f64>();
-            stiffness[row][column] += value * scale;
+            *stiffness_value += value * scale;
         }
     }
 }

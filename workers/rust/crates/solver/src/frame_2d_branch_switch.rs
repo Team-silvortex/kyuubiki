@@ -20,6 +20,32 @@ pub(crate) struct BranchSwitchContext<'a> {
     pub(crate) tolerance: f64,
 }
 
+pub(crate) struct BranchProbePath<'a> {
+    pub(crate) critical_displacement: &'a [f64],
+    pub(crate) primary_displacement: &'a [f64],
+    pub(crate) critical_load_factor: f64,
+    pub(crate) amplitude: f64,
+    pub(crate) selection: Frame2dBranchSwitchSelection,
+}
+
+struct BranchModeSeed<'a> {
+    critical_mode: &'a [f64],
+    mode_index: usize,
+    mode_eigenvalue: Option<f64>,
+    mode_components: &'a [Frame2dBranchModeComponent],
+    component_modes: &'a [&'a [f64]],
+    constraint_modes: &'a [&'a [f64]],
+    constraint_weights: &'a [f64],
+}
+
+struct BranchProbeIdentity {
+    direction: Frame2dBranchDirection,
+    mode_index: usize,
+    mode_eigenvalue: Option<f64>,
+    mode_components: Vec<Frame2dBranchModeComponent>,
+    amplitude: f64,
+}
+
 pub(crate) fn mark_probe_origin(
     mut probes: Vec<Frame2dBranchSwitchProbeResult>,
     origin: Frame2dBranchProbeOrigin,
@@ -34,13 +60,9 @@ pub(crate) fn mark_probe_origin(
 
 pub(crate) fn probe_branch_switches(
     context: &BranchSwitchContext<'_>,
-    critical_displacement: &[f64],
-    primary_displacement: &[f64],
-    critical_load_factor: f64,
+    path: &BranchProbePath<'_>,
     critical_modes: &[SymmetricCriticalMode],
     mode_index: usize,
-    amplitude: f64,
-    selection: Frame2dBranchSwitchSelection,
 ) -> Vec<Frame2dBranchSwitchProbeResult> {
     let Some(selected_mode) = critical_modes.get(mode_index) else {
         return Vec::new();
@@ -69,29 +91,23 @@ pub(crate) fn probe_branch_switches(
         .collect::<Vec<_>>();
     probe_direction_family(
         context,
-        critical_displacement,
-        primary_displacement,
-        critical_load_factor,
-        &selected_mode.shape,
-        mode_index,
-        Some(selected_mode.normalized_eigenvalue),
-        &components,
-        &component_modes,
-        &constraint_modes,
-        &constraint_weights,
-        amplitude,
-        selection,
+        path,
+        BranchModeSeed {
+            critical_mode: &selected_mode.shape,
+            mode_index,
+            mode_eigenvalue: Some(selected_mode.normalized_eigenvalue),
+            mode_components: &components,
+            component_modes: &component_modes,
+            constraint_modes: &constraint_modes,
+            constraint_weights: &constraint_weights,
+        },
     )
 }
 
 pub(crate) fn probe_pairwise_branch_switches(
     context: &BranchSwitchContext<'_>,
-    critical_displacement: &[f64],
-    primary_displacement: &[f64],
-    critical_load_factor: f64,
+    path: &BranchProbePath<'_>,
     critical_modes: &[SymmetricCriticalMode],
-    amplitude: f64,
-    selection: Frame2dBranchSwitchSelection,
 ) -> Vec<Frame2dBranchSwitchProbeResult> {
     let mut probes = Vec::new();
     for left_index in 0..critical_modes.len() {
@@ -131,15 +147,17 @@ pub(crate) fn probe_pairwise_branch_switches(
                     <= DEGENERATE_EIGENVALUE_TOLERANCE;
                 if !degenerate {
                     probes.extend(mark_probe_origin(
-                        directions(selection)
+                        directions(path.selection)
                             .into_iter()
                             .map(|direction| {
                                 failed_result(
-                                    direction,
-                                    left_index,
-                                    None,
-                                    components.clone(),
-                                    amplitude,
+                                    probe_identity(
+                                        direction,
+                                        left_index,
+                                        None,
+                                        components.clone(),
+                                        path.amplitude,
+                                    ),
                                     0,
                                     None,
                                     "pairwise branch probing requires a degenerate critical eigenspace"
@@ -155,18 +173,16 @@ pub(crate) fn probe_pairwise_branch_switches(
                 probes.extend(mark_probe_origin(
                     probe_direction_family(
                         context,
-                        critical_displacement,
-                        primary_displacement,
-                        critical_load_factor,
-                        &shape,
-                        left_index,
-                        None,
-                        &components,
-                        &component_modes,
-                        &component_modes,
-                        &constraint_weights,
-                        amplitude,
-                        selection,
+                        path,
+                        BranchModeSeed {
+                            critical_mode: &shape,
+                            mode_index: left_index,
+                            mode_eigenvalue: None,
+                            mode_components: &components,
+                            component_modes: &component_modes,
+                            constraint_modes: &component_modes,
+                            constraint_weights: &constraint_weights,
+                        },
                     ),
                     Frame2dBranchProbeOrigin::PairwiseCombination,
                     None,
@@ -177,16 +193,11 @@ pub(crate) fn probe_pairwise_branch_switches(
     probes
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn probe_weighted_branch_switches(
     context: &BranchSwitchContext<'_>,
-    critical_displacement: &[f64],
-    primary_displacement: &[f64],
-    critical_load_factor: f64,
+    path: &BranchProbePath<'_>,
     critical_modes: &[SymmetricCriticalMode],
     weights: &[f64],
-    amplitude: f64,
-    selection: Frame2dBranchSwitchSelection,
 ) -> Vec<Frame2dBranchSwitchProbeResult> {
     let Some(normalized_weights) = normalize_weights(weights) else {
         return Vec::new();
@@ -233,59 +244,30 @@ pub(crate) fn probe_weighted_branch_switches(
     mark_probe_origin(
         probe_direction_family(
             context,
-            critical_displacement,
-            primary_displacement,
-            critical_load_factor,
-            &shape,
-            mode_index,
-            None,
-            &components,
-            &component_modes,
-            &constraint_modes,
-            &constraint_weights,
-            amplitude,
-            selection,
+            path,
+            BranchModeSeed {
+                critical_mode: &shape,
+                mode_index,
+                mode_eigenvalue: None,
+                mode_components: &components,
+                component_modes: &component_modes,
+                constraint_modes: &constraint_modes,
+                constraint_weights: &constraint_weights,
+            },
         ),
         Frame2dBranchProbeOrigin::CallerWeighted,
         None,
     )
 }
 
-#[allow(clippy::too_many_arguments)]
 fn probe_direction_family(
     context: &BranchSwitchContext<'_>,
-    critical_displacement: &[f64],
-    primary_displacement: &[f64],
-    critical_load_factor: f64,
-    critical_mode: &[f64],
-    mode_index: usize,
-    mode_eigenvalue: Option<f64>,
-    mode_components: &[Frame2dBranchModeComponent],
-    component_modes: &[&[f64]],
-    constraint_modes: &[&[f64]],
-    constraint_weights: &[f64],
-    amplitude: f64,
-    selection: Frame2dBranchSwitchSelection,
+    path: &BranchProbePath<'_>,
+    seed: BranchModeSeed<'_>,
 ) -> Vec<Frame2dBranchSwitchProbeResult> {
-    directions(selection)
+    directions(path.selection)
         .into_iter()
-        .map(|direction| {
-            solve_direction(
-                context,
-                critical_displacement,
-                primary_displacement,
-                critical_load_factor,
-                critical_mode,
-                mode_index,
-                mode_eigenvalue,
-                mode_components,
-                component_modes,
-                constraint_modes,
-                constraint_weights,
-                amplitude,
-                direction,
-            )
-        })
+        .map(|direction| solve_direction(context, path, &seed, direction))
         .collect()
 }
 
@@ -299,15 +281,17 @@ pub(crate) fn unavailable_branch_switches(
         .into_iter()
         .map(|direction| {
             failed_result(
-                direction,
-                mode_index,
-                None,
-                vec![Frame2dBranchModeComponent {
+                probe_identity(
+                    direction,
                     mode_index,
-                    normalized_eigenvalue: None,
-                    weight: 1.0,
-                }],
-                amplitude,
+                    None,
+                    vec![Frame2dBranchModeComponent {
+                        mode_index,
+                        normalized_eigenvalue: None,
+                        weight: 1.0,
+                    }],
+                    amplitude,
+                ),
                 0,
                 None,
                 detail.to_string(),
@@ -343,11 +327,13 @@ pub(crate) fn unavailable_pairwise_branch_switches(
                         .into_iter()
                         .map(|direction| {
                             failed_result(
-                                direction,
-                                left_index,
-                                None,
-                                components.clone(),
-                                amplitude,
+                                probe_identity(
+                                    direction,
+                                    left_index,
+                                    None,
+                                    components.clone(),
+                                    amplitude,
+                                ),
                                 0,
                                 None,
                                 detail.to_string(),
@@ -388,11 +374,7 @@ pub(crate) fn unavailable_weighted_branch_switches(
             .into_iter()
             .map(|direction| {
                 failed_result(
-                    direction,
-                    mode_index,
-                    None,
-                    components.clone(),
-                    amplitude,
+                    probe_identity(direction, mode_index, None, components.clone(), amplitude),
                     0,
                     None,
                     detail.to_string(),
@@ -418,110 +400,88 @@ fn directions(selection: Frame2dBranchSwitchSelection) -> Vec<Frame2dBranchDirec
 
 fn solve_direction(
     context: &BranchSwitchContext<'_>,
-    critical_displacement: &[f64],
-    primary_displacement: &[f64],
-    critical_load_factor: f64,
-    critical_mode: &[f64],
-    mode_index: usize,
-    mode_eigenvalue: Option<f64>,
-    mode_components: &[Frame2dBranchModeComponent],
-    component_modes: &[&[f64]],
-    constraint_modes: &[&[f64]],
-    constraint_weights: &[f64],
-    amplitude: f64,
+    path: &BranchProbePath<'_>,
+    seed: &BranchModeSeed<'_>,
     direction: Frame2dBranchDirection,
 ) -> Frame2dBranchSwitchProbeResult {
     let sign = match direction {
         Frame2dBranchDirection::Positive => 1.0,
         Frame2dBranchDirection::Negative => -1.0,
     };
-    let target_projection = sign * amplitude;
-    let constraints = constraint_modes
+    let target_projection = sign * path.amplitude;
+    let constraints = seed
+        .constraint_modes
         .iter()
-        .zip(constraint_weights)
+        .zip(seed.constraint_weights)
         .map(|(mode, weight)| ModalConstraint {
             mode,
             target: target_projection * weight,
         })
         .collect::<Vec<_>>();
     let mut state = BranchState {
-        displacement: critical_displacement
+        displacement: path
+            .critical_displacement
             .iter()
-            .zip(critical_mode)
+            .zip(seed.critical_mode)
             .map(|(value, mode)| value + target_projection * mode)
             .collect(),
-        load_factor: critical_load_factor,
+        load_factor: path.critical_load_factor,
         iterations: 0,
         residual_norm: f64::INFINITY,
         constraint_error: f64::INFINITY,
     };
 
-    let outcome = solve_modal_constraints(context, critical_displacement, &constraints, &mut state);
+    let outcome = solve_modal_constraints(
+        context,
+        path.critical_displacement,
+        &constraints,
+        &mut state,
+    );
+    let identity = probe_identity(
+        direction,
+        seed.mode_index,
+        seed.mode_eigenvalue,
+        seed.mode_components.to_vec(),
+        path.amplitude,
+    );
     match outcome {
-        Ok(true) => successful_result(
-            context,
-            direction,
-            mode_index,
-            mode_eigenvalue,
-            mode_components.to_vec(),
-            component_modes,
-            amplitude,
-            target_projection,
-            critical_displacement,
-            primary_displacement,
-            critical_mode,
-            state,
-        ),
+        Ok(true) => successful_result(context, path, seed, identity, target_projection, state),
         Ok(false) => failed_result(
-            direction,
-            mode_index,
-            mode_eigenvalue,
-            mode_components.to_vec(),
-            amplitude,
+            identity,
             state.iterations,
             Some(state),
             "modal-constraint Newton iteration did not converge".into(),
         ),
-        Err(error) => failed_result(
-            direction,
-            mode_index,
-            mode_eigenvalue,
-            mode_components.to_vec(),
-            amplitude,
-            state.iterations,
-            Some(state),
-            error,
-        ),
+        Err(error) => failed_result(identity, state.iterations, Some(state), error),
     }
 }
 
 fn successful_result(
     context: &BranchSwitchContext<'_>,
-    direction: Frame2dBranchDirection,
-    mode_index: usize,
-    mode_eigenvalue: Option<f64>,
-    mode_components: Vec<Frame2dBranchModeComponent>,
-    component_modes: &[&[f64]],
-    amplitude: f64,
+    path: &BranchProbePath<'_>,
+    seed: &BranchModeSeed<'_>,
+    identity: BranchProbeIdentity,
     target_projection: f64,
-    critical_displacement: &[f64],
-    primary_displacement: &[f64],
-    critical_mode: &[f64],
     state: BranchState,
 ) -> Frame2dBranchSwitchProbeResult {
-    let projection = modal_projection(&state.displacement, critical_displacement, critical_mode);
-    let mode_component_projections = component_modes
+    let projection = modal_projection(
+        &state.displacement,
+        path.critical_displacement,
+        seed.critical_mode,
+    );
+    let mode_component_projections = seed
+        .component_modes
         .iter()
-        .map(|mode| modal_projection(&state.displacement, critical_displacement, mode))
+        .map(|mode| modal_projection(&state.displacement, path.critical_displacement, mode))
         .collect();
-    let distance = displacement_distance(&state.displacement, critical_displacement);
+    let distance = displacement_distance(&state.displacement, path.critical_displacement);
     let projection_matches =
-        projection * target_projection > 0.0 && projection.abs() >= amplitude * 0.9;
+        projection * target_projection > 0.0 && projection.abs() >= identity.amplitude * 0.9;
     let primary = correct_corotational_equilibrium(
         context.positions,
         context.elements,
         context.system,
-        primary_displacement,
+        path.primary_displacement,
         state.load_factor,
         context.max_iterations,
         context.tolerance,
@@ -545,18 +505,18 @@ fn successful_result(
             )),
         ),
     };
-    let distinct_branch =
-        projection_matches && primary_distance.is_some_and(|distance| distance >= amplitude * 0.5);
+    let distinct_branch = projection_matches
+        && primary_distance.is_some_and(|distance| distance >= identity.amplitude * 0.5);
     Frame2dBranchSwitchProbeResult {
         origin: Frame2dBranchProbeOrigin::CriticalMode,
         subspace_refinement_level: None,
         subspace_parent_angle_radians: None,
-        mode_index,
-        mode_eigenvalue,
-        mode_components,
+        mode_index: identity.mode_index,
+        mode_eigenvalue: identity.mode_eigenvalue,
+        mode_components: identity.mode_components,
         mode_component_projections,
-        direction,
-        seed_amplitude: amplitude,
+        direction: identity.direction,
+        seed_amplitude: identity.amplitude,
         iterations: state.iterations,
         equilibrium_converged: true,
         primary_equilibrium_converged,
@@ -576,11 +536,7 @@ fn successful_result(
 }
 
 fn failed_result(
-    direction: Frame2dBranchDirection,
-    mode_index: usize,
-    mode_eigenvalue: Option<f64>,
-    mode_components: Vec<Frame2dBranchModeComponent>,
-    amplitude: f64,
+    identity: BranchProbeIdentity,
     iterations: usize,
     state: Option<BranchState>,
     detail: String,
@@ -589,12 +545,12 @@ fn failed_result(
         origin: Frame2dBranchProbeOrigin::CriticalMode,
         subspace_refinement_level: None,
         subspace_parent_angle_radians: None,
-        mode_index,
-        mode_eigenvalue,
-        mode_components,
+        mode_index: identity.mode_index,
+        mode_eigenvalue: identity.mode_eigenvalue,
+        mode_components: identity.mode_components,
         mode_component_projections: Vec::new(),
-        direction,
-        seed_amplitude: amplitude,
+        direction: identity.direction,
+        seed_amplitude: identity.amplitude,
         iterations,
         equilibrium_converged: false,
         primary_equilibrium_converged: false,
@@ -616,6 +572,22 @@ fn failed_result(
         continuation_steps: Vec::new(),
         continuation_converged: None,
         continuation_failure_detail: None,
+    }
+}
+
+fn probe_identity(
+    direction: Frame2dBranchDirection,
+    mode_index: usize,
+    mode_eigenvalue: Option<f64>,
+    mode_components: Vec<Frame2dBranchModeComponent>,
+    amplitude: f64,
+) -> BranchProbeIdentity {
+    BranchProbeIdentity {
+        direction,
+        mode_index,
+        mode_eigenvalue,
+        mode_components,
+        amplitude,
     }
 }
 

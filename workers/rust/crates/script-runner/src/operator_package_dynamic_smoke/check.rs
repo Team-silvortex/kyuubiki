@@ -7,8 +7,11 @@ use std::path::{Path, PathBuf};
 const DEFAULT_INPUT: &str = "tmp/operator-package-dynamic-smoke.json";
 const SCHEMA_PATH: &str = "schemas/operator-package-dynamic-smoke.schema.json";
 const EXAMPLE_PATH: &str = "schemas/examples.operator-package-dynamic-smoke.json";
+const GENERATION_SCHEMA_PATH: &str = "schemas/agent-operator-generation-execution.schema.json";
+const GENERATION_EXAMPLE_PATH: &str = "schemas/examples.agent-operator-generation-execution.json";
 const SCHEMAS_README_PATH: &str = "schemas/README.md";
 const SCHEMA_VERSION: &str = "kyuubiki.operator-package-dynamic-smoke/v3";
+const GENERATION_SCHEMA_VERSION: &str = "kyuubiki.agent-operator-generation-execution/v1";
 const REQUIRED_STAGES: &[&str] = &[
     "template_tests",
     "strict_preflight",
@@ -170,16 +173,116 @@ fn check_schema_and_example(root: &Path) -> RunnerResult<Option<String>> {
     {
         return Ok(Some(issue));
     }
+    if let Some(issue) = check_generation_execution_contract(root)? {
+        return Ok(Some(issue));
+    }
     let readme = read_repo_text(root, SCHEMAS_README_PATH)?;
     for expected in [
         "operator-package-dynamic-smoke.schema.json",
         "examples.operator-package-dynamic-smoke.json",
+        "agent-operator-generation-execution.schema.json",
+        "examples.agent-operator-generation-execution.json",
     ] {
         if !readme.contains(expected) {
             return Ok(Some(format!("{SCHEMAS_README_PATH}: missing {expected}")));
         }
     }
     Ok(None)
+}
+
+fn check_generation_execution_contract(root: &Path) -> RunnerResult<Option<String>> {
+    let schema = read_repo_json(root, GENERATION_SCHEMA_PATH)?;
+    if schema
+        .pointer("/properties/schema_version/const")
+        .and_then(Value::as_str)
+        != Some(GENERATION_SCHEMA_VERSION)
+    {
+        return Ok(Some(format!(
+            "{GENERATION_SCHEMA_PATH}: schema_version const must match {GENERATION_SCHEMA_VERSION}"
+        )));
+    }
+    for field_name in [
+        "schema_version",
+        "session_id",
+        "generation_id",
+        "retention_policy",
+        "crash_recovery",
+        "janitor",
+    ] {
+        if !schema_requires(&schema, "/required", field_name) {
+            return Ok(Some(format!(
+                "{GENERATION_SCHEMA_PATH}: must require {field_name}"
+            )));
+        }
+    }
+    for field_name in [
+        "removed_stale_session_count",
+        "retained_active_session_count",
+        "retained_invalid_session_count",
+    ] {
+        if !schema_requires(&schema, "/properties/janitor/required", field_name)
+            || schema
+                .pointer(&format!("/properties/janitor/properties/{field_name}/type"))
+                .and_then(Value::as_str)
+                != Some("integer")
+            || schema
+                .pointer(&format!(
+                    "/properties/janitor/properties/{field_name}/minimum"
+                ))
+                .and_then(Value::as_u64)
+                != Some(0)
+        {
+            return Ok(Some(format!(
+                "{GENERATION_SCHEMA_PATH}: janitor.{field_name} must be a required non-negative integer"
+            )));
+        }
+    }
+
+    let example = read_repo_json(root, GENERATION_EXAMPLE_PATH)?;
+    for (field_name, expected) in [
+        ("schema_version", GENERATION_SCHEMA_VERSION),
+        ("retention_policy", "host_lease"),
+        ("crash_recovery", "next_session_start"),
+    ] {
+        if field(&example, field_name) != expected {
+            return Ok(Some(format!(
+                "{GENERATION_EXAMPLE_PATH}: {field_name} must be {expected}"
+            )));
+        }
+    }
+    for field_name in ["session_id", "generation_id"] {
+        if field(&example, field_name).is_empty() {
+            return Ok(Some(format!(
+                "{GENERATION_EXAMPLE_PATH}: {field_name} must be non-empty"
+            )));
+        }
+    }
+    for field_name in [
+        "removed_stale_session_count",
+        "retained_active_session_count",
+        "retained_invalid_session_count",
+    ] {
+        if example
+            .pointer(&format!("/janitor/{field_name}"))
+            .and_then(Value::as_u64)
+            .is_none()
+        {
+            return Ok(Some(format!(
+                "{GENERATION_EXAMPLE_PATH}: janitor.{field_name} must be a non-negative integer"
+            )));
+        }
+    }
+    Ok(None)
+}
+
+fn schema_requires(schema: &Value, pointer: &str, field_name: &str) -> bool {
+    schema
+        .pointer(pointer)
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .any(|required| required == field_name)
 }
 
 fn dynamic_smoke_errors(root: &Path, report: &Value, context: &str) -> Vec<String> {

@@ -1,5 +1,5 @@
 use crate::frame_2d_branch_switch::{
-    BranchSwitchContext, mark_probe_origin, probe_weighted_branch_switches,
+    BranchProbePath, BranchSwitchContext, mark_probe_origin, probe_weighted_branch_switches,
     unavailable_weighted_branch_switches,
 };
 use crate::symmetric_critical_mode::SymmetricCriticalMode;
@@ -118,13 +118,15 @@ fn probe_subspace_direction(
     let mut probes = mark_probe_origin(
         probe_weighted_branch_switches(
             context,
-            critical_displacement,
-            primary_displacement,
-            critical_load_factor,
+            &BranchProbePath {
+                critical_displacement,
+                primary_displacement,
+                critical_load_factor,
+                amplitude,
+                selection,
+            },
             critical_modes,
             weights,
-            amplitude,
-            selection,
         ),
         origin,
         Some(refinement_level),

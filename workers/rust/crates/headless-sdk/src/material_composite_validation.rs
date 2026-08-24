@@ -255,11 +255,11 @@ fn expected_layer_fields(relative_permittivities: &[f64]) -> Vec<f64> {
             .iter()
             .map(|permittivity| LAYER_WIDTH_M / permittivity)
             .sum::<f64>();
-    let expected_layer_fields_v_m = relative_permittivities
+
+    relative_permittivities
         .iter()
         .map(|permittivity| electric_displacement_scale / permittivity)
-        .collect::<Vec<_>>();
-    expected_layer_fields_v_m
+        .collect::<Vec<_>>()
 }
 
 #[cfg(test)]

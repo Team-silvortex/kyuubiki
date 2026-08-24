@@ -186,7 +186,7 @@ fn validate_change_path(
     let segments = path.split('/').collect::<Vec<_>>();
     if path.bytes().any(|byte| byte < b' ' || byte == 0x7f)
         || segments.len() < 5
-        || segments[0] != ""
+        || !segments[0].is_empty()
         || segments[1] != "steps"
         || segments[2..]
             .iter()

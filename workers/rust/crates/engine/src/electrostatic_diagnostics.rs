@@ -1,5 +1,7 @@
 use serde_json::Value;
 
+type PeakVectorEntry<'a> = (&'a Value, f64, Vec<(&'static str, f64)>);
+
 pub fn extract_electrostatic_result_diagnostics(
     payload: Value,
     config: Value,
@@ -161,7 +163,7 @@ fn peak_vector_entry_any<'a>(
     y_fields: &[&str],
     z_field: Option<&str>,
     magnitude_fields: &[&str],
-) -> Option<(&'a Value, f64, Vec<(&'static str, f64)>)> {
+) -> Option<PeakVectorEntry<'a>> {
     entries
         .iter()
         .filter_map(|entry| {
@@ -246,7 +248,7 @@ fn merge_peak_vector(
     diagnostics: Value,
     prefix: &str,
     label: &str,
-    peak: Option<&(&Value, f64, Vec<(&'static str, f64)>)>,
+    peak: Option<&PeakVectorEntry<'_>>,
 ) -> Value {
     let Some((entry, magnitude, components)) = peak else {
         return diagnostics;

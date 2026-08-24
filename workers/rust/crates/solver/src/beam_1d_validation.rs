@@ -96,10 +96,14 @@ pub(crate) fn validate_thermal_beam_1d_request(
             return Err(format!("thermal beam element {index} has zero length"));
         }
 
-        if !(element.youngs_modulus.is_finite() && element.youngs_modulus > 0.0)
-            || !(element.moment_of_inertia.is_finite() && element.moment_of_inertia > 0.0)
-            || !(element.section_modulus.is_finite() && element.section_modulus > 0.0)
-            || !(element.section_depth.is_finite() && element.section_depth > 0.0)
+        if !(element.youngs_modulus.is_finite()
+            && element.youngs_modulus > 0.0
+            && element.moment_of_inertia.is_finite()
+            && element.moment_of_inertia > 0.0
+            && element.section_modulus.is_finite()
+            && element.section_modulus > 0.0
+            && element.section_depth.is_finite()
+            && element.section_depth > 0.0)
         {
             return Err(format!(
                 "thermal beam element {index} must have positive stiffness and section properties"

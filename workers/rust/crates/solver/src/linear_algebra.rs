@@ -260,7 +260,7 @@ impl CompressedSparseMatrix {
 
     pub(crate) fn multiply_vector_into(&self, vector: &[f64], result: &mut [f64]) {
         debug_assert_eq!(result.len(), self.size());
-        for row in 0..self.size() {
+        for (row, result_value) in result.iter_mut().enumerate() {
             let start = self.row_offsets[row];
             let end = self.row_offsets[row + 1];
             let mut sum = 0.0;
@@ -269,7 +269,7 @@ impl CompressedSparseMatrix {
             for (&column, &value) in columns.iter().zip(values.iter()) {
                 sum += value * vector[column];
             }
-            result[row] = sum;
+            *result_value = sum;
         }
     }
 

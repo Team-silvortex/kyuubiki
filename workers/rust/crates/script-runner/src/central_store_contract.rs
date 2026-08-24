@@ -414,18 +414,18 @@ fn field<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
 }
 
 fn require_array(value: Option<&Value>, label: &str, errors: &mut Vec<String>) {
-    if !value
+    if value
         .and_then(Value::as_array)
-        .is_some_and(|items| !items.is_empty())
+        .is_none_or(|items| items.is_empty())
     {
         errors.push(format!("{label} must be a non-empty array"));
     }
 }
 
 fn require_string(value: Option<&Value>, label: &str, errors: &mut Vec<String>) {
-    if !value
+    if value
         .and_then(Value::as_str)
-        .is_some_and(|text| !text.trim().is_empty())
+        .is_none_or(|text| text.trim().is_empty())
     {
         errors.push(format!("{label} must be a non-empty string"));
     }

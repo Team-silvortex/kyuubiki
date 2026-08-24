@@ -140,7 +140,7 @@ pub fn find_material_study(study: &str) -> Option<&'static MaterialStudyDescript
 pub fn material_study_catalog() -> Vec<MaterialStudyCatalogEntry> {
     MATERIAL_STUDIES
         .iter()
-        .map(|descriptor| MaterialStudyCatalogEntry::from_descriptor(descriptor))
+        .map(MaterialStudyCatalogEntry::from_descriptor)
         .collect()
 }
 

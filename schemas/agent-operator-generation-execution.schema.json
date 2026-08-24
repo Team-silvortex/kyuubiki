@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/agent-operator-generation-execution.schema.json",
+  "title": "Kyuubiki Agent operator cache generation execution receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "session_id",
+    "generation_id",
+    "retention_policy",
+    "crash_recovery",
+    "janitor"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.agent-operator-generation-execution/v1"
+    },
+    "session_id": {
+      "type": "string",
+      "pattern": "^session-[A-Za-z0-9._-]+$",
+      "maxLength": 192
+    },
+    "generation_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+      "maxLength": 192
+    },
+    "retention_policy": { "const": "host_lease" },
+    "crash_recovery": { "const": "next_session_start" },
+    "janitor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "removed_stale_session_count",
+        "retained_active_session_count",
+        "retained_invalid_session_count"
+      ],
+      "properties": {
+        "removed_stale_session_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retained_active_session_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retained_invalid_session_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

@@ -267,7 +267,6 @@ fn parse_otp_version(text: &str) -> Option<String> {
                 .strip_prefix("Erlang/OTP")
                 .filter(|version| !version.is_empty())
                 .map(str::to_string)
-                .or_else(|| if token == "Erlang/OTP" { None } else { None })
         })
         .or_else(|| {
             let marker = "Erlang/OTP ";

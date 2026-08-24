@@ -1,22 +1,24 @@
+use crate::operator_package_generation_session::{
+    GenerationJanitorReport, OperatorPackageGenerationSession,
+};
 use kyuubiki_installer::{install_operator_package_into, managed_operator_package_status_in};
 use serde::{Deserialize, Serialize};
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const GENERATIONS_DIRECTORY: &str = "agent-runtime-generations";
 const GENERATION_MARKER_FILE: &str = "kyuubiki-agent-generation.json";
-const GENERATION_MARKER_SCHEMA: &str = "kyuubiki.agent-operator-generation/v1";
+const GENERATION_MARKER_SCHEMA: &str = "kyuubiki.agent-operator-generation/v2";
 const MAX_MARKER_BYTES: u64 = 16 * 1024;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 struct GenerationMarker {
     schema_version: String,
     generation_id: String,
-    owner_pid: u32,
-    cache_store_root: String,
+    session_id: String,
 }
 
 #[derive(Clone, Debug)]
@@ -24,6 +26,7 @@ pub(crate) struct OwnedOperatorPackageGeneration {
     generation_root: PathBuf,
     generations_root: PathBuf,
     marker: GenerationMarker,
+    session: Arc<OperatorPackageGenerationSession>,
 }
 
 pub(crate) struct PreparedOperatorPackageGeneration {
@@ -32,11 +35,10 @@ pub(crate) struct PreparedOperatorPackageGeneration {
 }
 
 pub(crate) fn prepare_operator_package_generation(
-    cache_store_root: &Path,
+    session: Arc<OperatorPackageGenerationSession>,
     active_packages_root: &Path,
     replacing_package_id: &str,
 ) -> Result<PreparedOperatorPackageGeneration, String> {
-    let cache_store_root = canonical_directory(cache_store_root, "operator package cache store")?;
     let active_packages_root =
         canonical_directory(active_packages_root, "active operator packages root")?;
     if active_packages_root
@@ -53,19 +55,7 @@ pub(crate) fn prepare_operator_package_generation(
         .ok_or_else(|| "active operator packages root has no store parent".to_string())?;
     let active = managed_operator_package_status_in(active_store_root)?;
 
-    let generations_root = cache_store_root.join(GENERATIONS_DIRECTORY);
-    reject_symlink(&generations_root, "operator package generations root")?;
-    fs::create_dir_all(&generations_root).map_err(|error| {
-        format!(
-            "failed to create operator package generations root {}: {error}",
-            generations_root.display()
-        )
-    })?;
-    let generations_root =
-        canonical_directory(&generations_root, "operator package generations root")?;
-    if generations_root.parent() != Some(cache_store_root.as_path()) {
-        return Err("operator package generations root escaped its cache store".to_string());
-    }
+    let generations_root = session.generations_root().to_path_buf();
 
     let generation_id = next_generation_id()?;
     let generation_root = generations_root.join(&generation_id);
@@ -78,12 +68,10 @@ pub(crate) fn prepare_operator_package_generation(
     let marker = GenerationMarker {
         schema_version: GENERATION_MARKER_SCHEMA.to_string(),
         generation_id,
-        owner_pid: std::process::id(),
-        cache_store_root: cache_store_root.display().to_string(),
+        session_id: session.session_id().to_string(),
     };
     if let Err(error) = write_marker(&generation_root, &marker) {
         let _ = fs::remove_dir_all(&generation_root);
-        let _ = prune_empty_generations_root(&generations_root);
         return Err(error);
     }
     let prepared = PreparedOperatorPackageGeneration {
@@ -91,6 +79,7 @@ pub(crate) fn prepare_operator_package_generation(
             generation_root,
             generations_root,
             marker,
+            session,
         },
         cleanup_armed: true,
     };
@@ -122,6 +111,20 @@ impl PreparedOperatorPackageGeneration {
     pub(crate) fn commit(mut self) -> OwnedOperatorPackageGeneration {
         self.cleanup_armed = false;
         self.owned.clone()
+    }
+}
+
+impl OwnedOperatorPackageGeneration {
+    pub(crate) fn generation_id(&self) -> &str {
+        &self.marker.generation_id
+    }
+
+    pub(crate) fn session_id(&self) -> &str {
+        self.session.session_id()
+    }
+
+    pub(crate) fn janitor_report(&self) -> GenerationJanitorReport {
+        self.session.janitor_report()
     }
 }
 
@@ -180,7 +183,7 @@ pub(crate) fn remove_owned_operator_package_generation(
             generation.generation_root.display()
         )
     })?;
-    prune_empty_generations_root(&generation.generations_root)
+    Ok(())
 }
 
 fn next_generation_id() -> Result<String, String> {
@@ -246,19 +249,6 @@ fn reject_symlink(path: &Path, label: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn prune_empty_generations_root(path: &Path) -> Result<(), String> {
-    if path.exists()
-        && fs::read_dir(path)
-            .map_err(|error| format!("failed to read {}: {error}", path.display()))?
-            .next()
-            .is_none()
-    {
-        fs::remove_dir(path)
-            .map_err(|error| format!("failed to remove {}: {error}", path.display()))?;
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -268,7 +258,8 @@ mod tests {
         let root = temporary_root("prepared-drop");
         let packages = root.join("packages");
         fs::create_dir_all(&packages).expect("create empty packages root");
-        let generation = prepare_operator_package_generation(&root, &packages, "operator.next")
+        let session = OperatorPackageGenerationSession::open(&root).expect("open session");
+        let generation = prepare_operator_package_generation(session, &packages, "operator.next")
             .expect("prepare generation");
         let generation_root = generation.store_root().to_path_buf();
         assert!(generation_root.exists());
@@ -282,13 +273,15 @@ mod tests {
         let root = temporary_root("marker-guard");
         let packages = root.join("packages");
         fs::create_dir_all(&packages).expect("create empty packages root");
-        let owned = prepare_operator_package_generation(&root, &packages, "operator.next")
+        let session = OperatorPackageGenerationSession::open(&root).expect("open session");
+        let owned = prepare_operator_package_generation(session, &packages, "operator.next")
             .expect("prepare generation")
             .commit();
         fs::write(owned.generation_root.join(GENERATION_MARKER_FILE), b"{}")
             .expect("tamper marker");
         assert!(remove_owned_operator_package_generation(&owned).is_err());
         assert!(owned.generation_root.exists());
+        drop(owned);
         let _ = fs::remove_dir_all(root);
     }
 

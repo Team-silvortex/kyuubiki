@@ -112,10 +112,7 @@ fn check_schema(schema: &Value, issues: &mut Vec<String>) {
         "summaries",
         "runs",
     ] {
-        if !required_fields(schema)
-            .iter()
-            .any(|required| *required == field)
-        {
+        if !required_fields(schema).contains(&field) {
             issues.push(format!("{SCHEMA_PATH}: missing required field {field}"));
         }
     }

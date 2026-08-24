@@ -309,10 +309,7 @@ fn validate_validation_readiness(example: &Value, issues: &mut Vec<String>) {
     }
     let reasons =
         string_array(example.pointer("/validation_evidence/validation_readiness/blocking_reasons"));
-    if !reasons
-        .iter()
-        .any(|reason| *reason == "external_validation_required")
-    {
+    if !reasons.contains(&"external_validation_required") {
         issues.push(format!(
             "{EXAMPLE_PATH}: validation_evidence.validation_readiness.blocking_reasons must include external_validation_required"
         ));
@@ -321,9 +318,7 @@ fn validate_validation_readiness(example: &Value, issues: &mut Vec<String>) {
         .pointer("/validation_evidence/violated_quality_gate_ids")
         .and_then(Value::as_array)
         .is_some_and(|gates| !gates.is_empty())
-        && !reasons
-            .iter()
-            .any(|reason| *reason == "violated_quality_gates")
+        && !reasons.contains(&"violated_quality_gates")
     {
         issues.push(format!(
             "{EXAMPLE_PATH}: validation_evidence.validation_readiness.blocking_reasons must include violated_quality_gates"
@@ -334,9 +329,7 @@ fn validate_validation_readiness(example: &Value, issues: &mut Vec<String>) {
         .and_then(Value::as_u64)
         .unwrap_or(0)
         > 0
-        && !reasons
-            .iter()
-            .any(|reason| *reason == "low_confidence_material_cards")
+        && !reasons.contains(&"low_confidence_material_cards")
     {
         issues.push(format!(
             "{EXAMPLE_PATH}: validation_evidence.validation_readiness.blocking_reasons must include low_confidence_material_cards"
@@ -575,9 +568,9 @@ fn require_string(value: Option<&Value>, field: &str, context: &str, issues: &mu
 }
 
 fn require_array(value: Option<&Value>, field: &str, context: &str, issues: &mut Vec<String>) {
-    if !value
+    if value
         .and_then(Value::as_array)
-        .is_some_and(|items| !items.is_empty())
+        .is_none_or(|items| items.is_empty())
     {
         issues.push(format!("{context}: {field} must be a non-empty array"));
     }

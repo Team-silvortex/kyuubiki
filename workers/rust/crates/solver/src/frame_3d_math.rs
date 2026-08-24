@@ -23,18 +23,15 @@ pub(super) fn frame3d_thermal_uniform_vector(
 
 pub(super) fn frame3d_thermal_gradient_vector(
     youngs_modulus: f64,
-    moment_of_inertia_y: f64,
-    moment_of_inertia_z: f64,
+    moments_of_inertia: [f64; 2],
     thermal_expansion: f64,
-    section_depth_y: f64,
-    section_depth_z: f64,
-    temperature_gradient_y: f64,
-    temperature_gradient_z: f64,
+    section_depths: [f64; 2],
+    temperature_gradients: [f64; 2],
 ) -> [f64; 12] {
-    let thermal_curvature_y = thermal_expansion * temperature_gradient_y / section_depth_y;
-    let thermal_curvature_z = thermal_expansion * temperature_gradient_z / section_depth_z;
-    let thermal_moment_z = youngs_modulus * moment_of_inertia_z * thermal_curvature_y;
-    let thermal_moment_y = youngs_modulus * moment_of_inertia_y * thermal_curvature_z;
+    let thermal_curvature_y = thermal_expansion * temperature_gradients[0] / section_depths[0];
+    let thermal_curvature_z = thermal_expansion * temperature_gradients[1] / section_depths[1];
+    let thermal_moment_z = youngs_modulus * moments_of_inertia[1] * thermal_curvature_y;
+    let thermal_moment_y = youngs_modulus * moments_of_inertia[0] * thermal_curvature_z;
 
     [
         0.0,
@@ -200,9 +197,9 @@ pub(super) fn frame3d_dof_map(node_i: usize, node_j: usize) -> [usize; 12] {
 
 pub(super) fn transpose_12x12(input: &[[f64; 12]; 12]) -> [[f64; 12]; 12] {
     let mut output = [[0.0; 12]; 12];
-    for row in 0..12 {
-        for column in 0..12 {
-            output[column][row] = input[row][column];
+    for (row, input_row) in input.iter().enumerate() {
+        for (column, value) in input_row.iter().enumerate() {
+            output[column][row] = *value;
         }
     }
     output

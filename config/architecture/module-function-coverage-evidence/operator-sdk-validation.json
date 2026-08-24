@@ -32,6 +32,7 @@
           "workers/rust/crates/cli/src/operator_package_runtime.rs",
           "workers/rust/crates/cli/src/operator_package_fetch_runtime.rs",
           "workers/rust/crates/cli/src/operator_package_generation.rs",
+          "workers/rust/crates/cli/src/operator_package_generation_session.rs",
           "workers/rust/crates/cli/tests/operator_package_orchestra_fetch_live.rs",
           "workers/rust/crates/cli/tests/operator_package_live.rs"
         ],
@@ -348,6 +349,8 @@
         "workers/rust/crates/operator-sdk/src/distribution.rs",
         "schemas/operator-package-distribution.schema.json",
         "schemas/operator-package-resolution.schema.json",
+        "schemas/agent-operator-generation-execution.schema.json",
+        "schemas/examples.agent-operator-generation-execution.json",
         "apps/web/lib/kyuubiki_web/operator_package_distribution_store.ex",
         "apps/web/lib/kyuubiki_web/central_store_router.ex",
         "apps/web/test/kyuubiki_web/api/operator_package_distribution_api_test.exs",
@@ -355,6 +358,7 @@
         "workers/rust/crates/installer/src/tests/operator_package_fetch.rs",
         "workers/rust/crates/cli/src/operator_package_fetch_runtime.rs",
         "workers/rust/crates/cli/src/operator_package_generation.rs",
+        "workers/rust/crates/cli/src/operator_package_generation_session.rs",
         "workers/rust/crates/cli/src/operator_package_runtime.rs",
         "workers/rust/crates/cli/src/operator_task_receipts.rs",
         "workers/rust/crates/cli/tests/operator_package_orchestra_fetch_live.rs",
@@ -372,6 +376,9 @@
         "fetched_and_activated",
         "verified_cache_hit",
         "prepare_operator_package_generation",
+        "kyuubiki.agent-operator-generation-session/v1",
+        "kyuubiki.agent-operator-generation-execution/v1",
+        "removed_stale_session_count",
         "retry_bound_orchestra_package_fetch",
         "agent_fetches_executes_and_safely_rotates_bound_orchestra_package"
       ]

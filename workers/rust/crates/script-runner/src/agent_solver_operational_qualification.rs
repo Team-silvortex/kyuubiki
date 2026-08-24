@@ -89,7 +89,7 @@ fn capture_remote_report(root: &Path, options: &RemoteOptions) -> RunnerResult<u
     }
 
     let qualification_status =
-        ssh_status(root, &options.host, remote_qualification_command(&options))?;
+        ssh_status(root, &options.host, remote_qualification_command(options))?;
     if qualification_status != 0 {
         return Ok(qualification_status);
     }
@@ -353,7 +353,8 @@ fn validate_contract(root: &Path, require_retained_report: bool) -> RunnerResult
             "{CONTRACT_PATH}: required_checks must contain 14 checks"
         ));
     }
-    for pointer in ["/retention/report_schema_path"] {
+    {
+        let pointer = "/retention/report_schema_path";
         let relative = contract
             .pointer(pointer)
             .and_then(Value::as_str)

@@ -217,7 +217,7 @@ fn validate_expectation(
         return Err(format!("{context}: expectation.field is required"));
     }
     let value = expectation.get("value").unwrap_or(&Value::Null);
-    if !value.as_str().is_some_and(|text| !text.is_empty()) && finite_number(value).is_none() {
+    if value.as_str().is_none_or(|text| text.is_empty()) && finite_number(value).is_none() {
         return Err(format!(
             "{context}: expectation.value must be a finite number or sign label"
         ));

@@ -114,7 +114,7 @@ fn print_template_groups(templates: &[&HeadlessTemplateDescriptor]) {
     categories.sort_unstable();
     categories.dedup();
     for category in categories {
-        println!("\n[{}]", category);
+        println!("\n[{category}]");
         for template in templates
             .iter()
             .filter(|template| template.category == category)
@@ -405,8 +405,7 @@ fn handle_run(args: &[String]) -> Result<(), String> {
             }
             other => {
                 return Err(format!(
-                    "unsupported executor \"{}\"; currently available: mock, service, hybrid",
-                    other
+                    "unsupported executor \"{other}\"; currently available: mock, service, hybrid"
                 ));
             }
         }

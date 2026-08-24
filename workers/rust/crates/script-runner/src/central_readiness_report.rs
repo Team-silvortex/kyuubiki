@@ -532,7 +532,7 @@ impl BuildOptions {
                 options.self_test = true;
                 Ok(())
             }
-            _ => return Err(format!("unknown argument {flag}")),
+            _ => Err(format!("unknown argument {flag}")),
         })?;
         Ok(options)
     }
@@ -554,7 +554,7 @@ impl CheckOptions {
                 options.self_test = true;
                 Ok(())
             }
-            _ => return Err(format!("unknown argument {flag}")),
+            _ => Err(format!("unknown argument {flag}")),
         })?;
         Ok(options)
     }

@@ -200,12 +200,11 @@ fn runs_electrostatic_to_heat_workflow_graph() {
     assert_eq!(run.workflow_id, "workflow.electrostatic-to-heat-quad-2d");
     assert_eq!(run.completed_nodes.len(), 4);
     assert!(!run.progress_events.is_empty());
-    assert_eq!(
+    assert!(
         run.progress_events
             .last()
             .and_then(|event| event.emitted_at.as_ref())
-            .is_some(),
-        true
+            .is_some()
     );
     let heat_model: SolveHeatPlaneQuad2dRequest = serde_json::from_value(
         run.artifacts
@@ -439,12 +438,11 @@ fn runs_minimal_generic_workflow_graph() {
         run.progress_events.last().map(|event| event.stage.as_str()),
         Some("completed")
     );
-    assert_eq!(
+    assert!(
         run.progress_events
             .last()
             .and_then(|event| event.emitted_at.as_ref())
-            .is_some(),
-        true
+            .is_some()
     );
     let summary = run
         .artifacts

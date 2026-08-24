@@ -384,7 +384,7 @@ fn write_solver_comparison(output: &mut File, cases: &[Value]) -> RunnerResult<(
     Ok(())
 }
 
-fn solver_pairs<'a>(cases: &'a [Value]) -> Vec<(String, &'a Value, &'a Value)> {
+fn solver_pairs(cases: &[Value]) -> Vec<(String, &Value, &Value)> {
     cases
         .iter()
         .filter_map(|reference| {

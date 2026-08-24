@@ -464,7 +464,7 @@ fn parse_rust_summary_line(line: &str) -> Option<SuiteSummary> {
         .1;
     let mut summary = SuiteSummary::default();
     for field in fields.split(';') {
-        let mut parts = field.trim().split_whitespace();
+        let mut parts = field.split_whitespace();
         let Some(value) = parts.next().and_then(|value| value.parse::<usize>().ok()) else {
             continue;
         };

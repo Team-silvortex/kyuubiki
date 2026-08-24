@@ -347,20 +347,17 @@ fn collect_binding_issues(
             if let Some((referenced_step, referenced_output)) = parse_binding(text) {
                 if referenced_step >= step_index {
                     issues.push(format!(
-                        "step {} cannot bind to future-or-self step {}",
-                        step_index, referenced_step
+                        "step {step_index} cannot bind to future-or-self step {referenced_step}"
                     ));
                 } else if let Some(outputs) = known_outputs.get(&referenced_step) {
                     if !outputs.contains(&referenced_output) {
                         issues.push(format!(
-                            "step {} references unavailable output \"{}\" from step {}",
-                            step_index, referenced_output, referenced_step
+                            "step {step_index} references unavailable output \"{referenced_output}\" from step {referenced_step}"
                         ));
                     }
                 } else {
                     issues.push(format!(
-                        "step {} references missing source step {}",
-                        step_index, referenced_step
+                        "step {step_index} references missing source step {referenced_step}"
                     ));
                 }
             }

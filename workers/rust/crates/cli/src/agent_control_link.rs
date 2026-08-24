@@ -154,6 +154,15 @@ fn unix_now_ms() -> u64 {
 }
 
 #[cfg(test)]
+pub(crate) fn test_guard() -> std::sync::MutexGuard<'static, ()> {
+    static TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    TEST_LOCK
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .expect("Agent control-link test lock")
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -192,13 +201,4 @@ mod tests {
         assert_eq!(retry_delay_ms(1_000, 6), 30_000);
         assert_eq!(retry_delay_ms(1_000, 20), 30_000);
     }
-}
-
-#[cfg(test)]
-pub(crate) fn test_guard() -> std::sync::MutexGuard<'static, ()> {
-    static TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    TEST_LOCK
-        .get_or_init(|| Mutex::new(()))
-        .lock()
-        .expect("Agent control-link test lock")
 }

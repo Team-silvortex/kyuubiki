@@ -1,0 +1,13 @@
+{
+  "$schema": "agent-operator-generation-execution.schema.json",
+  "schema_version": "kyuubiki.agent-operator-generation-execution/v1",
+  "session_id": "session-4201-1789000000000000000-0",
+  "generation_id": "4201-1789000000000000100-1",
+  "retention_policy": "host_lease",
+  "crash_recovery": "next_session_start",
+  "janitor": {
+    "removed_stale_session_count": 1,
+    "retained_active_session_count": 0,
+    "retained_invalid_session_count": 0
+  }
+}

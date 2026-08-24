@@ -113,7 +113,7 @@ fn validate_contract(contract: &Value) -> Vec<String> {
         validate_component(
             &mut issues,
             component,
-            &shipping,
+            shipping,
             &global_protected,
             &mut seen_ids,
         );

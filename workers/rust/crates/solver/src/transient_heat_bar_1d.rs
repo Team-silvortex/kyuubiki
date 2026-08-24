@@ -42,8 +42,8 @@ pub fn solve_transient_heat_bar_1d(
             add_at(&mut system, row, row, capacity[row] / request.time_step);
             rhs[row] = capacity[row] * temperatures[row] / request.time_step + heat_load[row];
         }
-        for row in 0..node_count {
-            for &(column, value) in &conductance[row] {
+        for (row, row_conductance) in conductance.iter().enumerate() {
+            for &(column, value) in row_conductance {
                 add_at(&mut system, row, column, value);
             }
         }

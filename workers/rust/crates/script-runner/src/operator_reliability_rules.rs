@@ -163,7 +163,7 @@ pub(crate) fn qualification_evidence_kit_errors(
         .and_then(Value::as_array)
         .into_iter()
         .flatten()
-        .filter_map(|candidate| Some((field(candidate, "candidate_id"), candidate)))
+        .map(|candidate| (field(candidate, "candidate_id"), candidate))
         .collect::<HashMap<_, _>>();
     let mut seen_kits = HashSet::new();
     for kit in kit_items {

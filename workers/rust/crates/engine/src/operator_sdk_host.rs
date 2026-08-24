@@ -68,14 +68,15 @@ impl Default for ExternalOperatorTrustPolicy {
 
 impl ExternalOperatorTrustPolicy {
     pub fn allow_package_ids(package_ids: impl IntoIterator<Item = impl Into<String>>) -> Self {
-        let mut policy = Self::default();
-        policy.allowed_package_ids = Some(
-            package_ids
-                .into_iter()
-                .map(Into::into)
-                .collect::<BTreeSet<_>>(),
-        );
-        policy
+        Self {
+            allowed_package_ids: Some(
+                package_ids
+                    .into_iter()
+                    .map(Into::into)
+                    .collect::<BTreeSet<_>>(),
+            ),
+            ..Self::default()
+        }
     }
 }
 

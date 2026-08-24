@@ -347,7 +347,7 @@ fn parse_test_summary_line(line: &str) -> Option<TestSummary> {
     let fields = line.trim().strip_prefix("test result: ok. ")?;
     let mut summary = TestSummary::default();
     for field in fields.split(';') {
-        let mut parts = field.trim().split_whitespace();
+        let mut parts = field.split_whitespace();
         let Some(value) = parts.next().and_then(|value| value.parse::<usize>().ok()) else {
             continue;
         };

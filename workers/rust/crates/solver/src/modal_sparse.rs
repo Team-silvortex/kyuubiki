@@ -129,12 +129,18 @@ impl SparseMassNormalizedOperator {
             .map(|value| value.recip().powi(2))
             .collect::<Vec<_>>();
         let mut stiffness_off_diagonal = vec![0.0; size - 1];
-        for row in 0..size {
+        let stiffness_slots = stiffness_off_diagonal
+            .iter_mut()
+            .map(Some)
+            .chain(std::iter::once(None));
+        for (row, mut stiffness_slot) in stiffness_slots.enumerate() {
             for entry in self.stiffness.row_offsets[row]..self.stiffness.row_offsets[row + 1] {
                 let column = self.stiffness.columns[entry];
                 let value = self.stiffness.values[entry];
                 if column == row + 1 {
-                    stiffness_off_diagonal[row] = value;
+                    *stiffness_slot
+                        .as_deref_mut()
+                        .expect("last modal row has no upper off-diagonal") = value;
                 } else if column != row && column + 1 != row {
                     return None;
                 }

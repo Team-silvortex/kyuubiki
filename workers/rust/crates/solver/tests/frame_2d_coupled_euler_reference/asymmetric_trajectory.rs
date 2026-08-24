@@ -63,7 +63,7 @@ fn correlate_trajectory(
     reference: (f64, [f64; 2]),
 ) {
     let result =
-        solve_frame_2d_p_delta(&request).expect("asymmetric postcritical trajectory should solve");
+        solve_frame_2d_p_delta(request).expect("asymmetric postcritical trajectory should solve");
     let candidate = result
         .steps
         .iter()

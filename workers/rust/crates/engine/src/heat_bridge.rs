@@ -310,8 +310,7 @@ fn derive_element_heat_nodal_target_field<TElement>(
             let index = resolve_node_index(element, field)?;
             let Some(sum) = sums.get_mut(index) else {
                 return Err(format!(
-                    "heat bridge node index {} from field {} is out of bounds",
-                    index, field
+                    "heat bridge node index {index} from field {field} is out of bounds"
                 ));
             };
             *sum += source_value;
@@ -328,12 +327,14 @@ fn derive_element_heat_nodal_target_field<TElement>(
             reduce_heat_bridge_value(
                 contract.reduction.as_str(),
                 contract.default_value,
-                counts[index],
-                sums[index],
-                weighted_sums[index],
-                weight_totals[index],
-                minima[index],
-                maxima[index],
+                BridgeReductionValues {
+                    count: counts[index],
+                    sum: sums[index],
+                    weighted_sum: weighted_sums[index],
+                    weight_total: weight_totals[index],
+                    minimum: minima[index],
+                    maximum: maxima[index],
+                },
             )
         })
         .collect::<Vec<_>>();
@@ -341,16 +342,28 @@ fn derive_element_heat_nodal_target_field<TElement>(
     Ok((source_values, nodal_values))
 }
 
-fn reduce_heat_bridge_value(
-    reduction: &str,
-    default_value: f64,
+struct BridgeReductionValues {
     count: usize,
     sum: f64,
     weighted_sum: f64,
     weight_total: f64,
     minimum: f64,
     maximum: f64,
+}
+
+fn reduce_heat_bridge_value(
+    reduction: &str,
+    default_value: f64,
+    values: BridgeReductionValues,
 ) -> f64 {
+    let BridgeReductionValues {
+        count,
+        sum,
+        weighted_sum,
+        weight_total,
+        minimum,
+        maximum,
+    } = values;
     match reduction {
         "copy" | "mean" if count > 0 => sum / count as f64,
         "sum" if count > 0 => sum,

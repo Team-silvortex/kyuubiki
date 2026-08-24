@@ -19,10 +19,7 @@ pub(super) fn check_schema(schema: &Value, issues: &mut Vec<String>) {
         issues.push(format!("{SCHEMA_PATH}: posture const must be {POSTURE}"));
     }
     for field in ["artifact_checksums", "reproducibility", "summary", "chain"] {
-        if !required_fields(schema)
-            .iter()
-            .any(|required| *required == field)
-        {
+        if !required_fields(schema).contains(&field) {
             issues.push(format!("{SCHEMA_PATH}: missing required field {field}"));
         }
     }
@@ -36,18 +33,12 @@ pub(super) fn check_schema(schema: &Value, issues: &mut Vec<String>) {
             "{SCHEMA_PATH}: executionTrace missing required authority"
         ));
     }
-    if !required_fields(schema)
-        .iter()
-        .any(|required| *required == "research_evidence")
-    {
+    if !required_fields(schema).contains(&"research_evidence") {
         issues.push(format!(
             "{SCHEMA_PATH}: missing required field research_evidence"
         ));
     }
-    if !required_fields(schema)
-        .iter()
-        .any(|required| *required == "validation_evidence")
-    {
+    if !required_fields(schema).contains(&"validation_evidence") {
         issues.push(format!(
             "{SCHEMA_PATH}: missing required field validation_evidence"
         ));
@@ -58,7 +49,7 @@ pub(super) fn check_schema(schema: &Value, issues: &mut Vec<String>) {
         .map(|fields| fields.iter().filter_map(Value::as_str).collect::<Vec<_>>())
         .unwrap_or_default();
     for field in ["material_card_ref_count", "material_card_refs"] {
-        if !summary_required.iter().any(|required| *required == field) {
+        if !summary_required.contains(&field) {
             issues.push(format!("{SCHEMA_PATH}: summary missing required {field}"));
         }
     }
@@ -83,7 +74,7 @@ pub(super) fn check_schema(schema: &Value, issues: &mut Vec<String>) {
         "chain_trace_round_count",
         "final_winner_candidate_id",
     ] {
-        if !evidence_required.iter().any(|required| *required == field) {
+        if !evidence_required.contains(&field) {
             issues.push(format!(
                 "{SCHEMA_PATH}: researchEvidence missing required {field}"
             ));
@@ -104,10 +95,7 @@ pub(super) fn check_schema(schema: &Value, issues: &mut Vec<String>) {
         "external_validation_plan",
         "violated_quality_gate_ids",
     ] {
-        if !validation_required
-            .iter()
-            .any(|required| *required == field)
-        {
+        if !validation_required.contains(&field) {
             issues.push(format!(
                 "{SCHEMA_PATH}: validationEvidence missing required {field}"
             ));
@@ -124,7 +112,7 @@ pub(super) fn check_schema(schema: &Value, issues: &mut Vec<String>) {
         "next_exploration_sha256",
         "chain_sha256",
     ] {
-        if !checksum_required.iter().any(|required| *required == field) {
+        if !checksum_required.contains(&field) {
             issues.push(format!("{SCHEMA_PATH}: missing checksum field {field}"));
         }
     }

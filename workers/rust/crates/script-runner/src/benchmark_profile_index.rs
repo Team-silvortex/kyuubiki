@@ -276,7 +276,7 @@ fn discover_runs(root: &Path) -> RunnerResult<Discovery> {
         number_field(right, "generated_at_unix_s")
             .total_cmp(&number_field(left, "generated_at_unix_s"))
     });
-    skipped.sort_by(|left, right| string_field(left, "slug").cmp(&string_field(right, "slug")));
+    skipped.sort_by_key(|left| string_field(left, "slug"));
     Ok(Discovery {
         failures,
         runs,
@@ -341,7 +341,7 @@ fn summary_preconditioners(summary: &Value, run_dir: &Path) -> Vec<Value> {
     }
     raw_reports(run_dir)
         .iter()
-        .flat_map(|report| report_preconditioners(&report))
+        .flat_map(report_preconditioners)
         .collect::<BTreeSet<_>>()
         .into_iter()
         .map(Value::from)

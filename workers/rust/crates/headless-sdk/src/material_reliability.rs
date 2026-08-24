@@ -146,7 +146,7 @@ pub fn material_validation_quality_gate(validation_payload: &Value) -> Option<Ma
     let passed = validation_payload
         .get("validation_passed")
         .and_then(Value::as_bool)
-        .unwrap_or_else(|| failed_count == 0 && (!fail_on_missing || missing_count == 0));
+        .unwrap_or(failed_count == 0 && (!fail_on_missing || missing_count == 0));
     let blocking_count = failed_count + if fail_on_missing { missing_count } else { 0 };
 
     Some(material_quality_gate(
