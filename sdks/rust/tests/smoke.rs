@@ -460,11 +460,11 @@ fn session_supports_direct_rpc_for_expanded_solve_kinds() {
     let addr = listener.local_addr().expect("rpc listener addr");
 
     let server = thread::spawn(move || {
-        for _ in 0..6 {
+        for _ in 0..7 {
             let (mut stream, _) = listener.accept().expect("accept");
             let request = read_rpc_request(&mut stream);
             let method = request["method"].as_str().expect("rpc method");
-            let solver = method.strip_prefix("solve_").expect("solve method");
+            let solver = method.strip_prefix("solve_").unwrap_or(method);
 
             let body = serde_json::json!({
                 "ok": true,
@@ -531,6 +531,14 @@ fn session_supports_direct_rpc_for_expanded_solve_kinds() {
         stokes_triangle["solver"].as_str(),
         Some("stokes_flow_plane_triangle_2d")
     );
+
+    let release = session
+        .solver_rpc
+        .as_ref()
+        .expect("solver rpc")
+        .release_operator_package_job("operator-job-42")
+        .expect("release operator package job");
+    assert_eq!(release.result["input"]["job_id"], "operator-job-42");
 
     server.join().expect("server thread");
 }

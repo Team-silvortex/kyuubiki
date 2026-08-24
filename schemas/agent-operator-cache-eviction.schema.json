@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/agent-operator-cache-eviction.schema.json",
+  "title": "Kyuubiki Agent operator package cache eviction receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "requested_cache_scope",
+    "resolved_cache_policy",
+    "disposition",
+    "package_id",
+    "package_version",
+    "remaining_activated_package_count",
+    "generation"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.agent-operator-cache-eviction/v1"
+    },
+    "requested_cache_scope": { "const": "none" },
+    "resolved_cache_policy": { "const": "task_required_disposable" },
+    "disposition": {
+      "enum": [
+        "evicted_after_execution",
+        "superseded_generation_released",
+        "retained_by_other_scope"
+      ]
+    },
+    "package_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+      "maxLength": 192
+    },
+    "package_version": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]*$",
+      "maxLength": 128
+    },
+    "remaining_activated_package_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "generation": {
+      "$ref": "agent-operator-generation-execution.schema.json"
+    }
+  }
+}

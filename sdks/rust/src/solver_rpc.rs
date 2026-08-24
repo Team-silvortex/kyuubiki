@@ -195,6 +195,10 @@ impl SolverRpcClient {
         self.call("cancel_job", json!({ "job_id": job_id }))
     }
 
+    pub fn release_operator_package_job(&self, job_id: &str) -> SdkResult<RpcCallOutcome> {
+        self.call("release_operator_package_job", json!({ "job_id": job_id }))
+    }
+
     pub fn call(&self, method: &str, params: Value) -> SdkResult<RpcCallOutcome> {
         let mut stream = TcpStream::connect((self.host.as_str(), self.port))?;
         stream.set_read_timeout(Some(self.timeout))?;

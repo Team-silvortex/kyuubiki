@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Rust Worker and Operator SDK evidence separated from Headless control SDKs, covering authoring, managed and automatic bound-Orchestra package supply chains, generation-safe host rotation, ABI boundaries, workflow composition, and remaining task-eviction and cross-platform operational gaps.",
+  "summary": "Rust Worker and Operator SDK evidence separated from Headless control SDKs, covering authoring, managed and automatic bound-Orchestra package supply chains, generation-safe host rotation, immediate task eviction, explicit job-terminal release, ABI boundaries, workflow composition, and remaining packaged multi-host and cross-platform operational gaps.",
   "paradigm_contract_evidence": {
     "runtime_api": [
       {
@@ -33,6 +33,8 @@
           "workers/rust/crates/cli/src/operator_package_fetch_runtime.rs",
           "workers/rust/crates/cli/src/operator_package_generation.rs",
           "workers/rust/crates/cli/src/operator_package_generation_session.rs",
+          "workers/rust/crates/cli/src/operator_package_job_runtime.rs",
+          "workers/rust/crates/cli/src/operator_package_retention.rs",
           "workers/rust/crates/cli/tests/operator_package_orchestra_fetch_live.rs",
           "workers/rust/crates/cli/tests/operator_package_live.rs"
         ],
@@ -42,6 +44,8 @@
           "ExternalOperatorTrustPolicy",
           "external_operator_package_executed",
           "prepare_orchestra_operator_package",
+          "release_orchestra_operator_job",
+          "release_operator_package_job",
           "agent_fetches_executes_and_safely_rotates_bound_orchestra_package",
           "live_agent_loads_executes_rejects_tamper_and_recovers"
         ]
@@ -73,6 +77,7 @@
           "workers/rust/crates/installer/src/operator_package_preflight.rs",
           "workers/rust/crates/installer/src/operator_package_store.rs",
           "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
+          "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke/check/lifecycle_contracts.rs",
           "schemas/operator-package-dynamic-smoke.schema.json"
         ],
         "required_text": [
@@ -168,6 +173,10 @@
           "workers/rust/crates/installer/src/operator_package_preflight.rs",
           "workers/rust/crates/installer/src/operator_package_store.rs",
           "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
+          "schemas/agent-operator-cache-eviction.schema.json",
+          "schemas/examples.agent-operator-cache-eviction.json",
+          "schemas/agent-operator-job-cache-release.schema.json",
+          "schemas/examples.agent-operator-job-cache-release.json",
           "releases/usability-evidence/2.15.0/operator-sdk-agent-qualification.json"
         ],
         "required_text": [
@@ -177,7 +186,9 @@
           "operator-package-preflight",
           "external_operator_package_executed",
           "agent_dynamic_host_dispatch",
-          "installer_managed_agent_lifecycle"
+          "installer_managed_agent_lifecycle",
+          "kyuubiki.agent-operator-cache-eviction/v1",
+          "evicted_after_execution"
         ]
       }
     ]
@@ -351,14 +362,21 @@
         "schemas/operator-package-resolution.schema.json",
         "schemas/agent-operator-generation-execution.schema.json",
         "schemas/examples.agent-operator-generation-execution.json",
+        "schemas/agent-operator-cache-eviction.schema.json",
+        "schemas/examples.agent-operator-cache-eviction.json",
+        "schemas/agent-operator-job-cache-release.schema.json",
+        "schemas/examples.agent-operator-job-cache-release.json",
         "apps/web/lib/kyuubiki_web/operator_package_distribution_store.ex",
         "apps/web/lib/kyuubiki_web/central_store_router.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_client.ex",
         "apps/web/test/kyuubiki_web/api/operator_package_distribution_api_test.exs",
         "workers/rust/crates/installer/src/operator_package_fetch.rs",
         "workers/rust/crates/installer/src/tests/operator_package_fetch.rs",
         "workers/rust/crates/cli/src/operator_package_fetch_runtime.rs",
         "workers/rust/crates/cli/src/operator_package_generation.rs",
         "workers/rust/crates/cli/src/operator_package_generation_session.rs",
+        "workers/rust/crates/cli/src/operator_package_job_runtime.rs",
+        "workers/rust/crates/cli/src/operator_package_retention.rs",
         "workers/rust/crates/cli/src/operator_package_runtime.rs",
         "workers/rust/crates/cli/src/operator_task_receipts.rs",
         "workers/rust/crates/cli/tests/operator_package_orchestra_fetch_live.rs",
@@ -379,6 +397,14 @@
         "kyuubiki.agent-operator-generation-session/v1",
         "kyuubiki.agent-operator-generation-execution/v1",
         "removed_stale_session_count",
+        "kyuubiki.agent-operator-cache-eviction/v1",
+        "evicted_after_execution",
+        "kyuubiki.agent-operator-job-cache-release/v1",
+        "release_operator_package_job",
+        "operator_package_job_id_missing",
+        "released_retained_packages",
+        "evicted_after_job_release",
+        "refetch-after-task-scope-eviction",
         "retry_bound_orchestra_package_fetch",
         "agent_fetches_executes_and_safely_rotates_bound_orchestra_package"
       ]

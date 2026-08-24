@@ -128,6 +128,7 @@ defmodule KyuubikiWeb.Protocol do
         "solve_thermal_plane_quad_2d",
         "solve_frame_2d",
         "solve_frame_3d",
+        "release_operator_package_job",
         "cancel_job"
       ]
     }

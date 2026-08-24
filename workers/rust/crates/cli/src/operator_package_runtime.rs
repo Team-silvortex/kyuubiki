@@ -16,7 +16,6 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Read;
-use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock, RwLock, Weak};
 
@@ -74,6 +73,21 @@ pub(crate) fn activate_fetched_operator_package_runtime(
     summary: &OperatorTaskExecutionSummary,
     generation: PreparedOperatorPackageGeneration,
 ) -> Result<OperatorPackageRuntimeBinding, ExternalOperatorTaskError> {
+    activate_operator_package_generation(config, generation, Some(summary))
+}
+
+pub(crate) fn activate_evicted_operator_package_runtime(
+    config: &AgentConfig,
+    generation: PreparedOperatorPackageGeneration,
+) -> Result<OperatorPackageRuntimeBinding, ExternalOperatorTaskError> {
+    activate_operator_package_generation(config, generation, None)
+}
+
+fn activate_operator_package_generation(
+    config: &AgentConfig,
+    generation: PreparedOperatorPackageGeneration,
+    required_package: Option<&OperatorTaskExecutionSummary>,
+) -> Result<OperatorPackageRuntimeBinding, ExternalOperatorTaskError> {
     let (binding, host) =
         load_operator_package_runtime(config).map_err(|message| ExternalOperatorTaskError {
             code: "operator_package_activation_failed",
@@ -85,15 +99,17 @@ pub(crate) fn activate_fetched_operator_package_runtime(
         stage: "activate_operator_registry",
         message: "operator package runtime detached during fetched package activation".to_string(),
     })?;
-    if !host
-        .packages
-        .iter()
-        .any(|package| package_matches_summary(package, summary))
-    {
-        drop(host);
-        return Err(identity_error_value(
-            "downloaded package does not satisfy the admitted TaskIR identity",
-        ));
+    if let Some(summary) = required_package {
+        if !host
+            .packages
+            .iter()
+            .any(|package| package_matches_summary(package, summary))
+        {
+            drop(host);
+            return Err(identity_error_value(
+                "downloaded package does not satisfy the admitted TaskIR identity",
+            ));
+        }
     }
     let owned_generation = generation.commit();
     Arc::get_mut(&mut host)
@@ -199,11 +215,43 @@ pub(crate) fn current_runtime_binding() -> OperatorPackageRuntimeBinding {
         .clone()
 }
 
+pub(crate) fn prepared_operator_package_runtime_for_task(
+    summary: &OperatorTaskExecutionSummary,
+) -> Option<(OperatorPackageRuntimeBinding, ExternalOperatorRuntimeLease)> {
+    let current = runtime_state()
+        .read()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let host = current.host.clone()?;
+    if !host
+        .packages
+        .iter()
+        .any(|package| package_matches_summary(package, summary))
+    {
+        return None;
+    }
+    Some((
+        current.binding.clone(),
+        ExternalOperatorRuntimeLease { host: Some(host) },
+    ))
+}
+
+pub(crate) fn current_operator_package_generation_id() -> Option<String> {
+    let current = runtime_state()
+        .read()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    current
+        .host
+        .as_ref()
+        .and_then(|host| host.owned_generation.as_ref())
+        .map(|generation| generation.generation_id().to_string())
+}
+
 pub(crate) fn try_execute_external_operator_task(
     summary: &OperatorTaskExecutionSummary,
     task_ir: &Value,
     binding: &OperatorPackageRuntimeBinding,
     orchestra_cache_status: Option<&'static str>,
+    prepared_host: Option<&ExternalOperatorRuntimeLease>,
 ) -> Result<Option<ExternalOperatorExecution>, ExternalOperatorTaskError> {
     let execution_mode = summary.execution_mode.as_deref();
     let supported_mode = execution_mode == Some("local_bundle")
@@ -211,11 +259,27 @@ pub(crate) fn try_execute_external_operator_task(
     if !binding.is_attached() || !supported_mode {
         return Ok(None);
     }
-    let host = current_host().ok_or_else(|| ExternalOperatorTaskError {
-        code: "operator_package_host_unavailable",
-        stage: "activate_operator_registry",
-        message: "operator package runtime is attached without an active dynamic host".to_string(),
-    })?;
+    if let Some(host) = prepared_host {
+        return execute_external_operator_task_with_host(
+            summary,
+            task_ir,
+            orchestra_cache_status,
+            host.host(),
+        )
+        .map(Some);
+    }
+    let host = current_host().ok_or_else(host_unavailable_error)?;
+    execute_external_operator_task_with_host(summary, task_ir, orchestra_cache_status, host.host())
+        .map(Some)
+}
+
+fn execute_external_operator_task_with_host(
+    summary: &OperatorTaskExecutionSummary,
+    task_ir: &Value,
+    orchestra_cache_status: Option<&'static str>,
+    host: &AgentOperatorPackageHost,
+) -> Result<ExternalOperatorExecution, ExternalOperatorTaskError> {
+    let execution_mode = summary.execution_mode.as_deref();
     let package = host
         .packages
         .iter()
@@ -250,22 +314,8 @@ pub(crate) fn try_execute_external_operator_task(
                 stage: "dispatch_entrypoint",
                 message,
             })?;
-    let cache_generation = host.owned_generation.as_ref().map(|generation| {
-        let janitor = generation.janitor_report();
-        json!({
-            "schema_version": "kyuubiki.agent-operator-generation-execution/v1",
-            "session_id": generation.session_id(),
-            "generation_id": generation.generation_id(),
-            "retention_policy": "host_lease",
-            "crash_recovery": "next_session_start",
-            "janitor": {
-                "removed_stale_session_count": janitor.removed_stale_session_count,
-                "retained_active_session_count": janitor.retained_active_session_count,
-                "retained_invalid_session_count": janitor.retained_invalid_session_count
-            }
-        })
-    });
-    Ok(Some(ExternalOperatorExecution {
+    let cache_generation = generation_execution_receipt(host);
+    Ok(ExternalOperatorExecution {
         result: serde_json::to_value(result)
             .expect("external operator result should serialize through protocol"),
         package_receipt: json!({
@@ -287,14 +337,32 @@ pub(crate) fn try_execute_external_operator_task(
                 "external_local"
             }
         }),
-    }))
+    })
 }
 
-pub(crate) fn operator_package_ready_for_task(summary: &OperatorTaskExecutionSummary) -> bool {
-    current_host().is_some_and(|host| {
-        host.packages
-            .iter()
-            .any(|package| package_matches_summary(package, summary))
+fn host_unavailable_error() -> ExternalOperatorTaskError {
+    ExternalOperatorTaskError {
+        code: "operator_package_host_unavailable",
+        stage: "activate_operator_registry",
+        message: "operator package runtime is attached without an active dynamic host".to_string(),
+    }
+}
+
+fn generation_execution_receipt(host: &AgentOperatorPackageHost) -> Option<Value> {
+    host.owned_generation.as_ref().map(|generation| {
+        let janitor = generation.janitor_report();
+        json!({
+            "schema_version": "kyuubiki.agent-operator-generation-execution/v1",
+            "session_id": generation.session_id(),
+            "generation_id": generation.generation_id(),
+            "retention_policy": "host_lease",
+            "crash_recovery": "next_session_start",
+            "janitor": {
+                "removed_stale_session_count": janitor.removed_stale_session_count,
+                "retained_active_session_count": janitor.retained_active_session_count,
+                "retained_invalid_session_count": janitor.retained_invalid_session_count
+            }
+        })
     })
 }
 
@@ -465,21 +533,30 @@ struct RetiredOperatorPackageGeneration {
     generation: OwnedOperatorPackageGeneration,
 }
 
-struct AgentOperatorPackageHostLease {
+pub(crate) struct ExternalOperatorRuntimeLease {
     host: Option<Arc<AgentOperatorPackageHost>>,
 }
 
-impl Deref for AgentOperatorPackageHostLease {
-    type Target = AgentOperatorPackageHost;
-
-    fn deref(&self) -> &Self::Target {
+impl ExternalOperatorRuntimeLease {
+    fn host(&self) -> &AgentOperatorPackageHost {
         self.host
             .as_deref()
             .expect("operator package host lease must remain populated")
     }
+
+    pub(crate) fn generation_id(&self) -> Option<&str> {
+        self.host
+            .as_deref()
+            .and_then(|host| host.owned_generation.as_ref())
+            .map(OwnedOperatorPackageGeneration::generation_id)
+    }
+
+    pub(crate) fn generation_receipt(&self) -> Option<Value> {
+        self.host.as_deref().and_then(generation_execution_receipt)
+    }
 }
 
-impl Drop for AgentOperatorPackageHostLease {
+impl Drop for ExternalOperatorRuntimeLease {
     fn drop(&mut self) {
         drop(self.host.take());
         reap_retired_generations();
@@ -501,13 +578,13 @@ fn retired_generations() -> &'static Mutex<Vec<RetiredOperatorPackageGeneration>
     RETIRED.get_or_init(|| Mutex::new(Vec::new()))
 }
 
-fn current_host() -> Option<AgentOperatorPackageHostLease> {
+fn current_host() -> Option<ExternalOperatorRuntimeLease> {
     runtime_state()
         .read()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
         .host
         .clone()
-        .map(|host| AgentOperatorPackageHostLease { host: Some(host) })
+        .map(|host| ExternalOperatorRuntimeLease { host: Some(host) })
 }
 
 fn replace_runtime(

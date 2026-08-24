@@ -140,8 +140,13 @@ Each Agent process owns a file-locked cache session. The next startup reclaims a
 unlocked session left by an abnormal exit, preserves a locked peer session, and
 retains malformed ownership metadata fail-closed. Removed, active, and invalid
 session counts are carried in the package execution receipt. Task-scope immediate
-eviction and the full Windows/Linux/macOS dynamic-host qualification matrix remain
-lifecycle work.
+eviction is now explicit for `cache_scope: none`: the Agent switches to a
+package-free generation after dispatch and records a portable eviction receipt.
+For `cache_scope: job`, Orchestra supplies `job_id` on execution and calls
+`release_operator_package_job` only after that job's task RPCs settle. The Agent
+keeps shared package owners, evicts packages after the last job owner exits, and
+uses the same cleanup path for cancellation. The full Windows/Linux/macOS
+installed dynamic-host qualification matrix remains lifecycle work.
 Transient fetch and cache-availability failures are retryable in the structured
 failure receipt and remain isolated from unrelated tasks; identity and
 activation failures stay fail-closed and require repair.

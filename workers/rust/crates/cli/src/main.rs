@@ -20,6 +20,8 @@ mod config;
 mod operator_package_fetch_runtime;
 mod operator_package_generation;
 mod operator_package_generation_session;
+mod operator_package_job_runtime;
+mod operator_package_retention;
 mod operator_package_runtime;
 mod operator_task_builtin;
 mod operator_task_receipts;

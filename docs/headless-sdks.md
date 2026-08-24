@@ -328,6 +328,7 @@ All three SDKs expose the same conceptual split:
 
 - `ping`
 - `describe_agent`
+- `release_operator_package_job`
 - `solve_bar_1d`
 - `solve_truss_2d`
 - `solve_truss_3d`

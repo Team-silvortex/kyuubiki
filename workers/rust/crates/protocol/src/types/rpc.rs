@@ -231,6 +231,8 @@ pub enum RpcMethod {
     SolveThermalFrame2d,
     #[serde(rename = "solve_thermal_frame_3d")]
     SolveThermalFrame3d,
+    #[serde(rename = "release_operator_package_job")]
+    ReleaseOperatorPackageJob,
     #[serde(rename = "cancel_job")]
     CancelJob,
 }
@@ -270,6 +272,11 @@ pub struct RpcResponse {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CancelJobRequest {
+    pub job_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ReleaseOperatorPackageJobRequest {
     pub job_id: String,
 }
 

@@ -1,0 +1,27 @@
+{
+  "$schema": "agent-operator-job-cache-release.schema.json",
+  "schema_version": "kyuubiki.agent-operator-job-cache-release/v1",
+  "release_boundary": "explicit_job_terminal_rpc",
+  "job_id": "material-study-2026-08-24-001",
+  "disposition": "evicted_after_job_release",
+  "released_package_ids": [
+    "extract.template_summary"
+  ],
+  "evicted_package_ids": [
+    "extract.template_summary"
+  ],
+  "retained_package_ids": [],
+  "remaining_activated_package_count": 0,
+  "generation": {
+    "schema_version": "kyuubiki.agent-operator-generation-execution/v1",
+    "session_id": "session-4201-1789000000000000000-0",
+    "generation_id": "4201-1789000000000000200-3",
+    "retention_policy": "host_lease",
+    "crash_recovery": "next_session_start",
+    "janitor": {
+      "removed_stale_session_count": 0,
+      "retained_active_session_count": 0,
+      "retained_invalid_session_count": 0
+    }
+  }
+}

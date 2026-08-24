@@ -4,7 +4,12 @@ defmodule KyuubikiWeb.Orchestra.DistributedRecovery do
   """
 
   @schema_version "kyuubiki.orchestra-agent-recovery/v1"
-  @idempotent_methods ["ping", "describe_agent", "cancel_job"]
+  @idempotent_methods [
+    "ping",
+    "describe_agent",
+    "cancel_job",
+    "release_operator_package_job"
+  ]
   @process_loss_reasons [:closed, :econnrefused, :econnreset, :enetdown, :enetunreach, :enotconn]
 
   @spec failure_receipt(map(), String.t(), term(), keyword(), non_neg_integer(), pos_integer()) ::

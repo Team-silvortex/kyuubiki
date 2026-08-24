@@ -27,14 +27,14 @@ Current moxi baseline:
 
 - `gap_count`: `0`
 - `blocking_gap_count`: `0`
-- `maturity_gap_count`: `10`
-- `thin_evidence_count`: `10`
-- `evidence_grade_gap_count`: `14`
-- required cells meeting their grade target: `63 / 77` (`81.8%`)
-- evidence progress toward configured targets: `93.3%`
-- release-critical P0 cells meeting target: `45 / 55` (`81.8%`)
+- `maturity_gap_count`: `9`
+- `thin_evidence_count`: `9`
+- `evidence_grade_gap_count`: `13`
+- required cells meeting their grade target: `64 / 77` (`83.1%`)
+- evidence progress toward configured targets: `93.7%`
+- release-critical P0 cells meeting target: `46 / 55` (`83.6%`)
 - release-profile P1 cells meeting target: `18 / 22` (`81.8%`)
-- `daji 3.0.0` release state: `blocked` by `10` P0 coordinates plus the
+- `daji 3.0.0` release state: `blocked` by `9` P0 coordinates plus the
   independently controlled external usability release gate
 
 No required coordinate is structurally missing, but the previous `50 / 50`
@@ -164,7 +164,7 @@ native regression requires the Agent to keep the request connection open until
 the response arrives.
 
 The former P0 runtime API tie now meets its `verified` target. The current-line
-protocol report executes 101 tests, proves 55 advertised methods have 55 unique
+protocol report executes 101 tests, proves 56 advertised methods have 56 unique
 wire round trips, rejects unknown methods and malformed envelope states, and
 retains TaskIR tamper rejection. The Headless report executes 265 tests across
 Python, Elixir, and Rust, including real loopback workflow and operator-task
@@ -310,7 +310,7 @@ service execution remain separate operational proof tiers.
 The former leading coordinate, `runtime-protocol/validation`, now meets its
 `qualified` target. Its native qualification runner requires all 94 protocol
 tests, four configured fuzz profiles totaling 1280 cases, five digest-checked
-TaskIR examples spanning Rust and Elixir authoring, all 55 advertised RPC
+TaskIR examples spanning Rust and Elixir authoring, all 56 advertised RPC
 method round trips, structured TaskIR rejection codes, and strict request,
 response, and progress envelope boundaries. The machine-validated result is
 retained under `releases/usability-evidence/2.13.1`; installed and multi-host
@@ -589,9 +589,16 @@ Primary docs:
 Current weak point:
 
 - the Rust-only operator SDK has descriptors, manifests, readiness checks, and
-  preflight; the external-local package now also executes through a real Agent
-- the remaining third-party gap is operational delivery rather than local
-  dispatch: installed package lifecycle, central pull, and platform ABI depth
+  preflight; external-local and bound-Orchestra packages now execute through a
+  real Agent, including Installer lifecycle coverage
+- `cache_scope: none` now holds an exact host-generation lease through dispatch,
+  evicts immediately after success or failure, refetches on later demand, and
+  is covered under concurrent requests
+- `cache_scope: job` now has an explicit terminal RPC, shared-owner retention,
+  idempotent release, cancellation cleanup, and final-owner generation eviction
+- the remaining third-party gap is operational delivery depth rather than local
+  dispatch: packaged multi-host acquisition and the macOS/Linux/Windows ABI
+  matrix
 
 Current moxi hardening focus:
 
@@ -604,9 +611,12 @@ Qualification focus:
 
 - retain the five-stage external-local qualification from authoring through
   Agent dispatch, tamper rejection, and recovery
-- add an Installer-managed package activation and cleanup journey
-- add Orchestra catalog pull without copying the complete central library to
-  every Agent
+- retain Installer-managed activation/removal and bound-Orchestra pull without
+  copying the complete central library to every Agent
+- retain job-scoped cache retirement at the explicit workload boundary,
+  including shared ownership and cancellation
+- promote the same package journey through installed multi-host and supported-
+  platform evidence rather than inheriting local dynamic-smoke results
 - add operator package compatibility fixtures for future SDK API changes
 
 Moxi readiness standard:

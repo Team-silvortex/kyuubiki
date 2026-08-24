@@ -192,7 +192,8 @@ defmodule KyuubikiSdk.SmokeTest do
               "solve_contact_gap_1d",
               "solve_acoustic_bar_1d",
               "solve_stokes_flow_plane_quad_2d",
-              "solve_stokes_flow_plane_triangle_2d"
+              "solve_stokes_flow_plane_triangle_2d",
+              "release_operator_package_job"
             ] do
           {:ok, socket} = :gen_tcp.accept(listener)
           {:ok, <<size::unsigned-big-32>>} = :gen_tcp.recv(socket, 4)
@@ -246,12 +247,19 @@ defmodule KyuubikiSdk.SmokeTest do
         "elements" => []
       })
 
+    {:ok, release} =
+      KyuubikiSdk.SolverRpcClient.release_operator_package_job(
+        session.solver_rpc,
+        "operator-job-42"
+      )
+
     assert modal["solver"] == "modal_frame_2d"
     assert nonlinear["solver"] == "nonlinear_spring_1d"
     assert contact["solver"] == "contact_gap_1d"
     assert acoustic["solver"] == "acoustic_bar_1d"
     assert stokes["solver"] == "stokes_flow_plane_quad_2d"
     assert stokes_triangle["solver"] == "stokes_flow_plane_triangle_2d"
+    assert release.result["input"]["job_id"] == "operator-job-42"
   end
 
   defp accept_loop(listener, parent) do

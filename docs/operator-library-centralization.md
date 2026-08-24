@@ -107,7 +107,8 @@ Suggested cache scopes:
 - `ephemeral`
   fetched for one execution stage and dropped immediately
 - `job`
-  reused only for the lifetime of one workflow job
+  reused only for the lifetime of one workflow job and released through its
+  explicit terminal RPC
 - `session`
   reused during a short-lived agent session and then reclaimed
 
@@ -194,9 +195,21 @@ loaded library. Unleased pre-session cache entries are reported as invalid rathe
 than deleted speculatively. The generation execution receipt exposes removed,
 active, and invalid session counts.
 
-Immediate task-scope eviction and three-platform dynamic-library qualification
-remain open. Until those land, `task_required_disposable` describes authority and
-cleanup intent rather than proof of deletion immediately after every task.
+`cache_scope: none` now proves immediate task-scope deletion: after dispatch the
+Agent activates an owner-marked generation that excludes the requested package,
+reports `evicted_after_execution`, and refetches on later demand. Host leases keep
+the previous dynamic library alive for concurrent work until its final reference
+is released.
+
+`cache_scope: job` now requires a top-level execute RPC `job_id`. Once all work
+for that identity is terminal, Orchestra calls `release_operator_package_job`.
+The Agent removes that owner, preserves packages shared by another job or a
+durable scope, and evicts all exclusively owned packages in one generation
+switch. Repeating the call returns `already_released`; `cancel_job` routes through
+the same cleanup path. This lifecycle is locally qualified with a real Agent and
+Orchestra package server, including shared ownership and refetch after final
+release. Installed multi-host acquisition and three-platform dynamic-library
+qualification remain open.
 
 ## Interaction with the operator catalog
 

@@ -316,6 +316,15 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIRTest do
              "task_ir" => task,
              "mode" => "execute"
            }
+
+    assert OperatorTaskIR.agent_rpc_params(task,
+             mode: :execute,
+             job_id: "operator-job-42"
+           ) == %{
+             "task_ir" => task,
+             "mode" => "execute",
+             "job_id" => "operator-job-42"
+           }
   end
 
   test "exposes agent routing opts from runtime hints" do

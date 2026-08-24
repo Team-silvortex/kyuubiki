@@ -345,6 +345,7 @@ class SmokeTest(unittest.TestCase):
             "solve_acoustic_bar_1d",
             "solve_stokes_flow_plane_quad_2d",
             "solve_stokes_flow_plane_triangle_2d",
+            "release_operator_package_job",
         ]
 
         def serve_once() -> None:
@@ -388,6 +389,9 @@ class SmokeTest(unittest.TestCase):
             self.assertEqual(acoustic["solver"], "acoustic_bar_1d")
             self.assertEqual(stokes["solver"], "stokes_flow_plane_quad_2d")
             self.assertEqual(stokes_triangle["solver"], "stokes_flow_plane_triangle_2d")
+            assert session.solver_rpc is not None
+            release = session.solver_rpc.release_operator_package_job("operator-job-42")
+            self.assertEqual(release["result"]["input"]["job_id"], "operator-job-42")
         finally:
             listener.close()
             thread.join(timeout=1)

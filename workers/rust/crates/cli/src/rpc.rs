@@ -6,16 +6,16 @@ use serde::de::DeserializeOwned;
 
 use kyuubiki_cli::solve_composite_thermo_electric_panel;
 use kyuubiki_protocol::{
-    CancelJobRequest, RpcEnvelopeErrorCode, RpcMethod, RpcRequest, RpcResponse,
-    SolveAcousticBar1dRequest, SolveAdvectionDiffusionBar1dRequest, SolveBarRequest,
-    SolveBeam1dRequest, SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest,
-    SolveCohesiveInterface1dRequest, SolveCohesiveInterface2dRequest,
-    SolveCohesiveInterfaceMesh2dRequest, SolveCohesiveInterfaceMesh3dRequest,
-    SolveCompositeThermoElectricPanelRequest, SolveContactGap1dRequest,
-    SolveElectricConductionPlaneQuad2dRequest, SolveElectrostaticBar1dRequest,
-    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
-    SolveFrame2dMaterialPDeltaRequest, SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest,
-    SolveFrame2dRequest, SolveFrame3dRequest, SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest,
+    RpcEnvelopeErrorCode, RpcMethod, RpcRequest, RpcResponse, SolveAcousticBar1dRequest,
+    SolveAdvectionDiffusionBar1dRequest, SolveBarRequest, SolveBeam1dRequest,
+    SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest, SolveCohesiveInterface1dRequest,
+    SolveCohesiveInterface2dRequest, SolveCohesiveInterfaceMesh2dRequest,
+    SolveCohesiveInterfaceMesh3dRequest, SolveCompositeThermoElectricPanelRequest,
+    SolveContactGap1dRequest, SolveElectricConductionPlaneQuad2dRequest,
+    SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
+    SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dMaterialPDeltaRequest,
+    SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaRequest, SolveFrame2dRequest,
+    SolveFrame3dRequest, SolveHarmonicSpring1dRequest, SolveHeatBar1dRequest,
     SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
     SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
     SolveModalFrame2dRequest, SolveModalFrame3dRequest, SolveNonlinearSpring1dRequest,
@@ -50,8 +50,7 @@ use kyuubiki_solver::{
 
 use crate::agent_artifact::decode_solver_params;
 use crate::agent_state::{
-    agent_descriptor_payload, build_progress_frames, extract_job_id, register_cancel,
-    take_cancelled,
+    agent_descriptor_payload, build_progress_frames, extract_job_id, take_cancelled,
 };
 use crate::operator_task_runtime::run_operator_task_ir;
 use crate::transport::{AgentReply, HeartbeatHandle};
@@ -82,7 +81,10 @@ pub(crate) fn handle_request(
             Vec::new(),
             RpcResponse::success(request.id, agent_descriptor_payload()),
         ),
-        RpcMethod::CancelJob => handle_cancel_job(request),
+        RpcMethod::CancelJob => crate::operator_package_job_runtime::handle_cancel_job(request),
+        RpcMethod::ReleaseOperatorPackageJob => {
+            crate::operator_package_job_runtime::handle_release_job(request)
+        }
         RpcMethod::RunOperatorTaskIr => handle_operator_task_ir(request, writer),
         RpcMethod::SolveBar1d => run_solver::<SolveBarRequest, _, _, _>(
             request,
@@ -604,24 +606,6 @@ fn handle_operator_task_ir(
     stop_heartbeat(heartbeat);
     agent_watchdog::complete_execution(guard);
     AgentReply::Stream(Vec::new(), RpcResponse::success(request_id, result))
-}
-
-fn handle_cancel_job(request: RpcRequest) -> AgentReply {
-    let params = match serde_json::from_value::<CancelJobRequest>(request.params.clone()) {
-        Ok(params) => params,
-        Err(error) => {
-            return AgentReply::Stream(
-                Vec::new(),
-                RpcResponse::error(request.id, "invalid_params", error.to_string()),
-            );
-        }
-    };
-
-    register_cancel(params.job_id);
-    AgentReply::Stream(
-        Vec::new(),
-        RpcResponse::success(request.id, serde_json::json!({ "cancelled": true })),
-    )
 }
 
 fn run_solver<Request, ResultValue, NodeCount, Solver>(

@@ -78,17 +78,18 @@ sprawl:
   operational proof
 - runtime API verification now binds the Protocol and all three official
   Headless SDKs to exact tensor coordinates. Current retained reports cover 101
-  Protocol tests with 55/55 unique RPC round trips and 265 SDK tests with 14
+  Protocol tests with 56/56 unique RPC round trips and 265 SDK tests with 14
   cross-language failure-parity cases. Installer validation now also carries a
   current retained 21/21 cross-shell report; the recalibrated release profile
-  has 45/55 P0 coordinates at target while the external usability gate remains
+  has 46/55 P0 coordinates at target while the external usability gate remains
   closed
-- Rust Operator SDK qualification now retains a five-stage package journey:
+- Rust Operator SDK qualification now retains a six-stage package journey:
   template tests, strict Installer preflight, `cdylib` build, Engine dynamic
-  load, and live Agent RPC dispatch. The Agent rejects an entrypoint-digest
-  substitution and recovers for a later valid run; this promotes local Agent
-  execution to `qualified`, while installed lifecycle, central pull, and the
-  supported platform ABI matrix remain open
+  load, live Agent RPC dispatch, and Installer-managed lifecycle. Bound-
+  Orchestra fetch now covers first load, verified cache hit, task eviction,
+  shared job ownership, idempotent terminal release, cancellation cleanup, and
+  refetch. This promotes the local package path to `qualified`; installed
+  multi-host acquisition and the supported platform ABI matrix remain open
 - benchmark qualification now binds the native Agent command route, release
   solver execution, retained direct-mesh repetition, and the remote scale
   archive. It covers 19/19 expected 500k cases and 39/39 expected 1M cases

@@ -332,6 +332,26 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
     assert descriptor["authority"]["authority_mode"] == "self_directed"
   end
 
+  test "releases job-scoped operator packages on the exact agent" do
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link(
+        {:capture, self(), [%{"ok" => true, "result" => %{"disposition" => "already_released"}}]}
+      )
+
+    endpoint = %{
+      id: "operator-job-agent",
+      host: "127.0.0.1",
+      port: await_fake_agent_port()
+    }
+
+    assert {:ok, %{"disposition" => "already_released"}} =
+             AgentClient.release_operator_package_job("operator-job-42", endpoint)
+
+    assert_receive {:fake_agent_request, request}
+    assert request["method"] == "release_operator_package_job"
+    assert request["params"] == %{"job_id" => "operator-job-42"}
+  end
+
   test "sends operator task IR using the dedicated agent rpc method" do
     assert {:ok, task_ir} =
              OperatorTaskIR.build(

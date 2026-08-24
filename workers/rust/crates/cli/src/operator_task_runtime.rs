@@ -1,14 +1,11 @@
 use serde_json::Value;
 
 use crate::config::AgentConfig;
-use crate::operator_package_fetch_runtime::prepare_orchestra_operator_package;
 #[cfg(test)]
 pub(crate) use crate::operator_package_runtime::OperatorPackageRuntimeAttachment;
+use crate::operator_package_runtime::current_runtime_binding;
 pub(crate) use crate::operator_package_runtime::{
     OperatorPackageRuntimeBinding, operator_package_runtime_binding_from_config,
-};
-use crate::operator_package_runtime::{
-    current_runtime_binding, try_execute_external_operator_task,
 };
 use crate::operator_task_builtin::{
     is_agent_native_builtin_operator, run_agent_native_builtin_task,
@@ -27,6 +24,7 @@ use kyuubiki_protocol::{
 };
 
 mod engine_solver;
+mod external_execution;
 
 pub(crate) const OPERATOR_TASK_STATUS_VERIFIED_PENDING: &str = "verified_pending_engine_execution";
 pub(crate) const OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED: &str =
@@ -159,6 +157,7 @@ pub(crate) fn run_operator_task_ir_with_runtime(
     let task_ir = params
         .get("task_ir")
         .ok_or_else(|| OperatorTaskRuntimeError::new("invalid_params", "missing task_ir"))?;
+    let job_id = params.get("job_id").and_then(Value::as_str);
 
     verify_operator_task_digest(task_ir).map_err(|error| classify_digest_error(error, task_ir))?;
 
@@ -206,35 +205,9 @@ pub(crate) fn run_operator_task_ir_with_runtime(
     }
 
     if mode == OPERATOR_TASK_MODE_EXECUTE {
-        let orchestra_fetch_ready =
-            prepare_orchestra_operator_package(&summary).map_err(|error| {
-                OperatorTaskRuntimeError::with_task(
-                    error.code,
-                    error.message,
-                    error.stage,
-                    Some(task_ir),
-                )
-            })?;
-        if let Some(prepared) = orchestra_fetch_ready.as_ref() {
-            package_runtime = prepared.binding.clone();
-        }
-        let execution = try_execute_external_operator_task(
-            &summary,
-            task_ir,
-            &package_runtime,
-            orchestra_fetch_ready
-                .as_ref()
-                .map(|prepared| prepared.cache_status),
-        )
-        .map_err(|error| {
-            OperatorTaskRuntimeError::with_task(
-                error.code,
-                error.message,
-                error.stage,
-                Some(task_ir),
-            )
-        })?;
-        if let Some(execution) = execution {
+        if let Some(execution) =
+            external_execution::try_execute(&summary, task_ir, job_id, &mut package_runtime)?
+        {
             return Ok(build_external_operator_execution_payload(
                 summary,
                 preview,

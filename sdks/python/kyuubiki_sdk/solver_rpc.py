@@ -184,6 +184,9 @@ class SolverRpcClient:
     def cancel_job(self, job_id: str) -> dict[str, Any]:
         return self._call("cancel_job", {"job_id": job_id})
 
+    def release_operator_package_job(self, job_id: str) -> dict[str, Any]:
+        return self._call("release_operator_package_job", {"job_id": job_id})
+
 
 def normalize_solve_kind(solve_kind: str) -> str:
     normalized = solve_kind.strip().lower()

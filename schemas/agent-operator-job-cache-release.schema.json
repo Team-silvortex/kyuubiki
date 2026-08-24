@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/agent-operator-job-cache-release.schema.json",
+  "title": "Kyuubiki Agent operator package job cache release receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "release_boundary",
+    "job_id",
+    "disposition",
+    "released_package_ids",
+    "evicted_package_ids",
+    "retained_package_ids",
+    "remaining_activated_package_count",
+    "generation"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.agent-operator-job-cache-release/v1"
+    },
+    "release_boundary": { "const": "explicit_job_terminal_rpc" },
+    "job_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F]+$"
+    },
+    "disposition": {
+      "enum": [
+        "already_released",
+        "released_retained_packages",
+        "evicted_after_job_release"
+      ]
+    },
+    "released_package_ids": { "$ref": "#/$defs/packageIds" },
+    "evicted_package_ids": { "$ref": "#/$defs/packageIds" },
+    "retained_package_ids": { "$ref": "#/$defs/packageIds" },
+    "remaining_activated_package_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "generation": {
+      "oneOf": [
+        { "$ref": "agent-operator-generation-execution.schema.json" },
+        { "type": "null" }
+      ]
+    }
+  },
+  "$defs": {
+    "packageIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+        "maxLength": 192
+      }
+    }
+  }
+}

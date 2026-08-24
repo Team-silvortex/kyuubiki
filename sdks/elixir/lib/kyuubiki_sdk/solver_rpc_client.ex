@@ -110,6 +110,9 @@ defmodule KyuubikiSdk.SolverRpcClient do
 
   def cancel_job(client, job_id), do: call(client, "cancel_job", %{"job_id" => job_id})
 
+  def release_operator_package_job(client, job_id),
+    do: call(client, "release_operator_package_job", %{"job_id" => job_id})
+
   def solve_study(client, solve_kind, payload) do
     case Map.fetch(@solver_methods, normalize_solve_kind(solve_kind)) do
       {:ok, method} -> call(client, method, payload)

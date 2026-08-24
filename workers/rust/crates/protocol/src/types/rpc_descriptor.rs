@@ -71,6 +71,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveFrame2dMaterialPDelta,
                 RpcMethod::SolveThermalFrame2d,
                 RpcMethod::SolveThermalFrame3d,
+                RpcMethod::ReleaseOperatorPackageJob,
                 RpcMethod::CancelJob,
             ],
         }
@@ -380,6 +381,7 @@ impl AgentDescriptor {
                         RpcMethod::Ping,
                         RpcMethod::DescribeAgent,
                         RpcMethod::RunOperatorTaskIr,
+                        RpcMethod::ReleaseOperatorPackageJob,
                         RpcMethod::CancelJob,
                     ],
                     tags: vec![

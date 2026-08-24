@@ -77,6 +77,7 @@ print(cp.health())
 
 rpc = SolverRpcClient("127.0.0.1", 5001)
 print(rpc.describe_agent())
+print(rpc.release_operator_package_job("operator-job-42"))
 print(rpc.solve_study("modal_frame_2d", {"nodes": [], "elements": []}))
 print(rpc.solve_study("nonlinear_spring_1d", {"nodes": [], "elements": []}))
 print(rpc.solve_study("contact_gap_1d", {"nodes": [], "elements": [], "contacts": []}))

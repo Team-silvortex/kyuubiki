@@ -88,6 +88,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
       when is_list(opts) do
     %{"task_ir" => task_ir}
     |> maybe_put_rpc_mode(Keyword.get(opts, :mode))
+    |> maybe_put_rpc_job_id(Keyword.get(opts, :job_id))
   end
 
   def agent_rpc_params(_task_ir, _opts), do: %{"task_ir" => nil}
@@ -313,6 +314,11 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskIR do
 
   defp maybe_put_rpc_mode(params, mode) when is_binary(mode), do: Map.put(params, "mode", mode)
   defp maybe_put_rpc_mode(params, _mode), do: params
+
+  defp maybe_put_rpc_job_id(params, job_id) when is_binary(job_id) and job_id != "",
+    do: Map.put(params, "job_id", job_id)
+
+  defp maybe_put_rpc_job_id(params, _job_id), do: params
 
   defp normalize_string_list(values) when is_list(values) do
     values

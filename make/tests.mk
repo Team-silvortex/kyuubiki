@@ -127,8 +127,8 @@ qualify-headless-sdk-validation:
 	@$(ENTRYPOINT) check-headless-sdk-validation-qualification --out $${OUTPUT:-tmp/headless-sdk-validation-qualification-report.json}
 
 qualify-runtime-api-verification:
-	@$(ENTRYPOINT) check-protocol-validation-qualification --out $${PROTOCOL_OUTPUT:-releases/usability-evidence/2.14.3/protocol-runtime-api-verification.json}
-	@$(ENTRYPOINT) check-headless-sdk-validation-qualification --out $${HEADLESS_OUTPUT:-releases/usability-evidence/2.14.3/headless-runtime-api-verification.json}
+	@$(ENTRYPOINT) check-protocol-validation-qualification --out $${PROTOCOL_OUTPUT:-releases/usability-evidence/2.15.0/protocol-runtime-api-verification.json}
+	@$(ENTRYPOINT) check-headless-sdk-validation-qualification --out $${HEADLESS_OUTPUT:-releases/usability-evidence/2.15.0/headless-runtime-api-verification.json}
 
 qualify-benchmark:
 	@$(ENTRYPOINT) check-benchmark-qualification --out $${OUTPUT:-releases/usability-evidence/2.14.3/benchmark-qualification.json}

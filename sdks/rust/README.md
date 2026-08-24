@@ -109,6 +109,7 @@ retained_bundle.validate()?;
 
 let rpc = SolverRpcClient::new("127.0.0.1", 5001);
 let descriptor = rpc.describe_agent()?;
+let release = rpc.release_operator_package_job("operator-job-42")?;
 
 let auth = KyuubikiAuth::access_token("dev-token");
 let session = KyuubikiSession::from_control_plane_with_auth("http://127.0.0.1:4000", Some(auth))?

@@ -4,6 +4,10 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+mod lifecycle_contracts;
+
+use lifecycle_contracts::check_lifecycle_contracts;
+
 const DEFAULT_INPUT: &str = "tmp/operator-package-dynamic-smoke.json";
 const SCHEMA_PATH: &str = "schemas/operator-package-dynamic-smoke.schema.json";
 const EXAMPLE_PATH: &str = "schemas/examples.operator-package-dynamic-smoke.json";
@@ -176,12 +180,19 @@ fn check_schema_and_example(root: &Path) -> RunnerResult<Option<String>> {
     if let Some(issue) = check_generation_execution_contract(root)? {
         return Ok(Some(issue));
     }
+    if let Some(issue) = check_lifecycle_contracts(root)? {
+        return Ok(Some(issue));
+    }
     let readme = read_repo_text(root, SCHEMAS_README_PATH)?;
     for expected in [
         "operator-package-dynamic-smoke.schema.json",
         "examples.operator-package-dynamic-smoke.json",
         "agent-operator-generation-execution.schema.json",
         "examples.agent-operator-generation-execution.json",
+        "agent-operator-cache-eviction.schema.json",
+        "examples.agent-operator-cache-eviction.json",
+        "agent-operator-job-cache-release.schema.json",
+        "examples.agent-operator-job-cache-release.json",
     ] {
         if !readme.contains(expected) {
             return Ok(Some(format!("{SCHEMAS_README_PATH}: missing {expected}")));

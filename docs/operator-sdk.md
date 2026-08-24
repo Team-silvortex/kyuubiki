@@ -240,10 +240,12 @@ current-target package, while Installer downloads, verifies, and atomically
 installs it. The Agent now consumes the same contract automatically for admitted
 `orchestra_fetch` TaskIR, hot-loads the package, and distinguishes a first fetch
 from a verified cache hit. These are retained local qualifications, not a
-three-platform operational claim. Promotion to the Daji target still requires
-the supported platform ABI matrix, task-scope cache eviction, safe package
-version rotation, and focused measurements of discovery, admission, load, first
-dispatch, and steady dispatch without borrowing general solver throughput
+three-platform operational claim. `cache_scope: none` now causes immediate
+post-dispatch eviction through a new host-leased generation, and same-package
+version rotation is isolated from in-flight tasks. Promotion to the Daji target
+still requires the supported platform ABI matrix, packaged multi-host
+acquisition evidence, and focused measurements of discovery, admission, load,
+first dispatch, and steady dispatch without borrowing general solver throughput
 numbers.
 
 ### Author-facing crate
@@ -435,9 +437,29 @@ through `kyuubiki.agent-operator-generation-execution/v1`; its schema and exampl
 are `schemas/agent-operator-generation-execution.schema.json` and
 `schemas/examples.agent-operator-generation-execution.json`.
 
-Immediate task/job-scope eviction and qualified dynamic-library evidence on
-Windows, Linux, and macOS remain explicit lifecycle gaps rather than hidden
-best-effort cleanup.
+For `cache_scope: none`, successful or failed dispatch now attempts an immediate
+generation switch that excludes the requested package. The old host and DLL stay
+leased until every in-flight task releases them; the response embeds
+`kyuubiki.agent-operator-cache-eviction/v1` with the policy, disposition,
+remaining package count, and replacement generation receipt. Successful
+responses place it under `operator_package_execution.cache_eviction`; failed
+dispatch places it under `operator_task_failure_receipt.cache_eviction`. Its
+schema and example are `schemas/agent-operator-cache-eviction.schema.json` and
+`schemas/examples.agent-operator-cache-eviction.json`.
+
+For `cache_scope: job`, every execute RPC must include a visible `job_id`. The
+Orchestra must send `release_operator_package_job` only after all task RPCs for
+that job have settled. The Agent tracks package ownership in both directions,
+retains packages shared with another job or a `session`/`agent` scope, and uses
+one generation switch to evict every package owned only by the terminal job.
+Repeated release is idempotent, and `cancel_job` invokes the same release path
+after registering cancellation. The portable receipt is
+`kyuubiki.agent-operator-job-cache-release/v1`; its schema and example are
+`schemas/agent-operator-job-cache-release.schema.json` and
+`schemas/examples.agent-operator-job-cache-release.json`.
+
+Qualified installed multi-host and dynamic-library evidence on Windows, Linux,
+and macOS remains an explicit operational gap rather than a local-test claim.
 
 For the repository template package, use the Make target:
 

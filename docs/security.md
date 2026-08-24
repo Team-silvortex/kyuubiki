@@ -214,7 +214,7 @@ make qualify-protocol-validation
 ```
 
 The v2 qualification contract requires 9 named fail-closed boundaries, 94
-protocol tests, 55 advertised RPC method round trips, 5 Task IR examples, and
+protocol tests, 56 advertised RPC method round trips, 5 Task IR examples, and
 1,280 deterministic JSON and byte-ingress fuzz cases. It also verifies that all
 retained Task IR fixtures reject digest tampering and that structural rejection
 paths retain machine-readable error codes.

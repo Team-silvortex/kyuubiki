@@ -50,6 +50,7 @@ client = KyuubikiSdk.ControlPlaneClient.new("http://127.0.0.1:4000", auth: auth)
 
 rpc = KyuubikiSdk.SolverRpcClient.new("127.0.0.1", 5001)
 {:ok, descriptor} = KyuubikiSdk.SolverRpcClient.describe_agent(rpc)
+{:ok, release} = KyuubikiSdk.SolverRpcClient.release_operator_package_job(rpc, "operator-job-42")
 {:ok, modal} = KyuubikiSdk.SolverRpcClient.solve_modal_frame_2d(rpc, %{"nodes" => [], "elements" => []})
 {:ok, nonlinear} = KyuubikiSdk.SolverRpcClient.solve_nonlinear_spring_1d(rpc, %{"nodes" => [], "elements" => []})
 {:ok, contact} = KyuubikiSdk.SolverRpcClient.solve_contact_gap_1d(rpc, %{"nodes" => [], "elements" => [], "contacts" => []})

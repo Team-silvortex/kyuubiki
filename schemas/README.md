@@ -250,6 +250,13 @@ The shared approval-request fixture is the parity vector for all SDKs.
 - `agent-operator-generation-execution.schema.json` defines the Agent execution
   receipt for session-owned dynamic-library generations, host-lease retention,
   next-start crash recovery, and startup janitor outcomes
+- `agent-operator-cache-eviction.schema.json` defines the post-dispatch receipt
+  for an Orchestra package requested with `cache_scope: none`, including the
+  disposable policy, removed package identity, remaining active package count,
+  and the replacement generation contract
+- `agent-operator-job-cache-release.schema.json` defines the explicit job
+  terminal receipt, including shared-owner retention, final-owner eviction,
+  idempotent release, and the optional replacement generation contract
 - `operator-package-distribution.schema.json` defines the portable multi-platform
   index for one Rust operator package version. Every target records only strict
   relative paths, byte sizes, and lowercase SHA-256 digests
@@ -352,6 +359,10 @@ The shared approval-request fixture is the parity vector for all SDKs.
   commands, package/operator summary, and evidence paths
 - `examples.agent-operator-generation-execution.json` is the matching portable
   execution receipt fixture for cache session, generation, and janitor evidence
+- `examples.agent-operator-cache-eviction.json` is the matching portable
+  task-scope cache eviction receipt with an empty post-dispatch package set
+- `examples.agent-operator-job-cache-release.json` is the matching portable
+  final-owner job release receipt and replacement generation fixture
 - `examples.operator-package-distribution.json` and
   `examples.operator-package-resolution.json` show the publish-time index and
   its current-target Orchestra resolution respectively

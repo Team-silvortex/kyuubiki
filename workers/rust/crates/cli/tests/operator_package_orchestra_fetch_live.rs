@@ -7,6 +7,7 @@ use std::fs;
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::PathBuf;
+use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 use support::operator_package::{
@@ -18,6 +19,9 @@ const PACKAGE_ID: &str = "extract.template_summary";
 const PACKAGE_VERSION_V1: &str = "0.1.0";
 const PACKAGE_VERSION_V2: &str = "0.2.0";
 const TOKEN: &str = "operator-fetch-live-token";
+const JOB_ID: &str = "operator-fetch-live-job";
+const SHARED_JOB_ID: &str = "operator-fetch-shared-job";
+const REFETCH_JOB_ID: &str = "operator-refetch-live-job";
 
 #[test]
 #[ignore = "requires prebuilt operator template cdylib"]
@@ -37,11 +41,23 @@ fn agent_fetches_executes_and_safely_rotates_bound_orchestra_package() {
         .expect("start orchestrated Agent with empty package cache");
 
     let task_v1 = central_operator_task(PACKAGE_VERSION_V1, &entrypoint_sha256);
+    let missing_job = agent
+        .request(
+            "reject-job-cache-without-job-id",
+            "run_operator_task_ir",
+            json!({ "mode": "execute", "task_ir": task_v1.clone() }),
+        )
+        .expect("reject missing job identity before package fetch");
+    assert_eq!(missing_job["ok"], false, "response: {missing_job}");
+    assert_eq!(
+        missing_job["error"]["code"],
+        "operator_package_job_id_missing"
+    );
     let first = agent
         .request(
             "fetch-and-execute",
             "run_operator_task_ir",
-            json!({ "mode": "execute", "task_ir": task_v1.clone() }),
+            json!({ "mode": "execute", "job_id": JOB_ID, "task_ir": task_v1.clone() }),
         )
         .expect("fetch and execute central operator package");
     assert_eq!(first["ok"], true, "response: {first}");
@@ -67,7 +83,7 @@ fn agent_fetches_executes_and_safely_rotates_bound_orchestra_package() {
         .request(
             "execute-v1-from-cache",
             "run_operator_task_ir",
-            json!({ "mode": "execute", "task_ir": task_v1 }),
+            json!({ "mode": "execute", "job_id": JOB_ID, "task_ir": task_v1 }),
         )
         .expect("execute v1 from verified Agent cache");
     assert_eq!(cached_v1["ok"], true, "response: {cached_v1}");
@@ -82,7 +98,7 @@ fn agent_fetches_executes_and_safely_rotates_bound_orchestra_package() {
         .request(
             "fetch-rotate-and-execute-v2",
             "run_operator_task_ir",
-            json!({ "mode": "execute", "task_ir": task_v2.clone() }),
+            json!({ "mode": "execute", "job_id": JOB_ID, "task_ir": task_v2.clone() }),
         )
         .expect("rotate and execute central operator package v2");
     assert_eq!(rotated["ok"], true, "response: {rotated}");
@@ -107,7 +123,7 @@ fn agent_fetches_executes_and_safely_rotates_bound_orchestra_package() {
         .request(
             "execute-v2-from-cache",
             "run_operator_task_ir",
-            json!({ "mode": "execute", "task_ir": task_v2 }),
+            json!({ "mode": "execute", "job_id": JOB_ID, "task_ir": task_v2 }),
         )
         .expect("execute v2 from cache after central server exits");
     assert_eq!(cached_v2["ok"], true, "response: {cached_v2}");
@@ -140,6 +156,7 @@ fn agent_fetches_executes_and_safely_rotates_bound_orchestra_package() {
             "run_operator_task_ir",
             json!({
                 "mode": "execute",
+                "job_id": JOB_ID,
                 "task_ir": central_operator_task(PACKAGE_VERSION_V2, &entrypoint_sha256)
             }),
         )
@@ -159,7 +176,10 @@ fn agent_fetches_executes_and_safely_rotates_bound_orchestra_package() {
         "abrupt exits should leave recovery work"
     );
 
-    let restart_fixture = CentralFixture::for_versions(entrypoint, &[PACKAGE_VERSION_V2]);
+    let restart_fixture = CentralFixture::for_versions(
+        entrypoint.clone(),
+        &[PACKAGE_VERSION_V2, PACKAGE_VERSION_V2],
+    );
     let (restart_url, restart_server) = restart_fixture.serve();
     let restarted_agent = LiveAgent::start_orchestrated(&packages_root, &restart_url, TOKEN)
         .expect("restart Agent over the same managed cache");
@@ -169,6 +189,7 @@ fn agent_fetches_executes_and_safely_rotates_bound_orchestra_package() {
             "run_operator_task_ir",
             json!({
                 "mode": "execute",
+                "job_id": JOB_ID,
                 "task_ir": central_operator_task(PACKAGE_VERSION_V2, &entrypoint_sha256)
             }),
         )
@@ -184,23 +205,258 @@ fn agent_fetches_executes_and_safely_rotates_bound_orchestra_package() {
     );
     assert_eq!(session_roots(&work_root.join("store")).len(), 1);
     assert_eq!(generation_roots(&work_root.join("store")).len(), 1);
+    let shared = restarted_agent
+        .request(
+            "share-job-scoped-package",
+            "run_operator_task_ir",
+            json!({
+                "mode": "execute",
+                "job_id": SHARED_JOB_ID,
+                "task_ir": central_operator_task(PACKAGE_VERSION_V2, &entrypoint_sha256)
+            }),
+        )
+        .expect("share package with a second job owner");
+    assert_eq!(shared["ok"], true, "response: {shared}");
+    assert_eq!(
+        shared["result"]["operator_package_execution"]["cache_status"],
+        "verified_cache_hit"
+    );
+    let released = restarted_agent
+        .request(
+            "release-job-scoped-package",
+            "release_operator_package_job",
+            json!({ "job_id": JOB_ID }),
+        )
+        .expect("release job-scoped package");
+    assert_eq!(released["ok"], true, "response: {released}");
+    let release = &released["result"];
+    assert_eq!(release["disposition"], "released_retained_packages");
+    assert_eq!(release["released_package_ids"], json!([PACKAGE_ID]));
+    assert_eq!(release["retained_package_ids"], json!([PACKAGE_ID]));
+    assert_eq!(release["remaining_activated_package_count"], 1);
+    let repeated_release = restarted_agent
+        .request(
+            "release-job-scoped-package-again",
+            "release_operator_package_job",
+            json!({ "job_id": JOB_ID }),
+        )
+        .expect("repeat job-scoped package release");
+    assert_eq!(repeated_release["ok"], true, "response: {repeated_release}");
+    assert_eq!(
+        repeated_release["result"]["disposition"],
+        "already_released"
+    );
+    let shared_release = restarted_agent
+        .request(
+            "release-final-shared-job-owner",
+            "release_operator_package_job",
+            json!({ "job_id": SHARED_JOB_ID }),
+        )
+        .expect("release final shared job owner");
+    assert_eq!(shared_release["ok"], true, "response: {shared_release}");
+    assert_eq!(
+        shared_release["result"]["disposition"],
+        "evicted_after_job_release"
+    );
+    assert_eq!(
+        shared_release["result"]["evicted_package_ids"],
+        json!([PACKAGE_ID])
+    );
+    assert_eq!(
+        shared_release["result"]["remaining_activated_package_count"],
+        0
+    );
+
+    let disposable = restarted_agent
+        .request(
+            "execute-and-evict-task-scoped-package",
+            "run_operator_task_ir",
+            json!({
+                "mode": "execute",
+                "task_ir": central_operator_task_with_scope(
+                    PACKAGE_VERSION_V2,
+                    &entrypoint_sha256,
+                    "none"
+                )
+            }),
+        )
+        .expect("execute and evict disposable package");
+    assert_eq!(disposable["ok"], true, "response: {disposable}");
+    let eviction = &disposable["result"]["operator_package_execution"]["cache_eviction"];
+    assert_eq!(eviction["disposition"], "evicted_after_execution");
+    assert_eq!(eviction["requested_cache_scope"], "none");
+    assert_eq!(
+        eviction["resolved_cache_policy"],
+        "task_required_disposable"
+    );
+    assert_eq!(eviction["remaining_activated_package_count"], 0);
+    let disposable_generations = generation_roots(&work_root.join("store"));
+    assert_eq!(disposable_generations.len(), 1);
+    assert!(
+        !disposable_generations[0]
+            .join("packages")
+            .join(PACKAGE_ID)
+            .exists(),
+        "task-scoped package remained in the active generation"
+    );
     assert_eq!(
         restart_server
             .join()
             .expect("restart central fixture")
             .len(),
-        3
+        6
+    );
+    drop(restarted_agent);
+
+    let refetch_fixture = CentralFixture::for_versions(
+        entrypoint.clone(),
+        &[PACKAGE_VERSION_V2, PACKAGE_VERSION_V2],
+    );
+    let (refetch_url, refetch_server) = refetch_fixture.serve();
+    let refetch_agent = LiveAgent::start_orchestrated(&packages_root, &refetch_url, TOKEN)
+        .expect("restart Agent after disposable package eviction");
+    let refetched = refetch_agent
+        .request(
+            "refetch-after-task-scope-eviction",
+            "run_operator_task_ir",
+            json!({
+                "mode": "execute",
+                "job_id": REFETCH_JOB_ID,
+                "task_ir": central_operator_task(PACKAGE_VERSION_V2, &entrypoint_sha256)
+            }),
+        )
+        .expect("refetch package after task-scope eviction");
+    assert_eq!(refetched["ok"], true, "response: {refetched}");
+    assert_eq!(
+        refetched["result"]["operator_package_execution"]["cache_status"],
+        "fetched_and_activated"
+    );
+    assert_eq!(
+        refetched["result"]["operator_package_execution"]["cache_generation"]["janitor"]["removed_stale_session_count"],
+        1
+    );
+    let refetch_release = refetch_agent
+        .request(
+            "cancel-refetched-job-package",
+            "cancel_job",
+            json!({ "job_id": REFETCH_JOB_ID }),
+        )
+        .expect("cancel and release refetched job package");
+    assert_eq!(refetch_release["ok"], true, "response: {refetch_release}");
+    assert_eq!(
+        refetch_release["result"]["operator_package_job_release"]["disposition"],
+        "evicted_after_job_release"
+    );
+
+    let mut failing_disposable =
+        central_operator_task_with_scope(PACKAGE_VERSION_V2, &entrypoint_sha256, "none");
+    failing_disposable["input_artifact"]["values"] = json!([]);
+    refresh_task_digest(&mut failing_disposable);
+    let rejected = refetch_agent
+        .request(
+            "failed-dispatch-still-evicts-task-package",
+            "run_operator_task_ir",
+            json!({ "mode": "execute", "task_ir": failing_disposable }),
+        )
+        .expect("receive failed disposable dispatch response");
+    assert_eq!(rejected["ok"], false, "response: {rejected}");
+    assert_eq!(
+        rejected["error"]["code"],
+        "operator_package_dispatch_failed"
+    );
+    let rejected_eviction =
+        &rejected["error"]["details"]["operator_task_failure_receipt"]["cache_eviction"];
+    assert_eq!(rejected_eviction["disposition"], "evicted_after_execution");
+    assert_eq!(rejected_eviction["remaining_activated_package_count"], 0);
+    let failed_dispatch_generations = generation_roots(&work_root.join("store"));
+    assert_eq!(failed_dispatch_generations.len(), 1);
+    assert!(
+        !failed_dispatch_generations[0]
+            .join("packages")
+            .join(PACKAGE_ID)
+            .exists(),
+        "failed task left its disposable package active"
+    );
+    assert_eq!(refetch_server.join().expect("refetch fixture").len(), 6);
+    drop(refetch_agent);
+
+    let concurrent_fixture =
+        CentralFixture::for_versions(entrypoint, &[PACKAGE_VERSION_V2, PACKAGE_VERSION_V2]);
+    let (concurrent_url, concurrent_server) = concurrent_fixture.serve();
+    let concurrent_agent = Arc::new(
+        LiveAgent::start_orchestrated(&packages_root, &concurrent_url, TOKEN)
+            .expect("start Agent for concurrent disposable tasks"),
+    );
+    let barrier = Arc::new(Barrier::new(3));
+    let mut workers = Vec::new();
+    for index in 0..2 {
+        let agent = Arc::clone(&concurrent_agent);
+        let barrier = Arc::clone(&barrier);
+        let digest = entrypoint_sha256.clone();
+        workers.push(thread::spawn(move || {
+            barrier.wait();
+            agent
+                .request(
+                    &format!("concurrent-disposable-{index}"),
+                    "run_operator_task_ir",
+                    json!({
+                        "mode": "execute",
+                        "task_ir": central_operator_task_with_scope(
+                            PACKAGE_VERSION_V2,
+                            &digest,
+                            "none"
+                        )
+                    }),
+                )
+                .map_err(|error| error.to_string())
+        }));
+    }
+    barrier.wait();
+    for worker in workers {
+        let response = worker
+            .join()
+            .expect("concurrent disposable request thread")
+            .expect("concurrent disposable request");
+        assert_eq!(response["ok"], true, "response: {response}");
+        assert_eq!(
+            response["result"]["operator_package_execution"]["cache_eviction"]["disposition"],
+            "evicted_after_execution"
+        );
+    }
+    assert_eq!(
+        concurrent_server
+            .join()
+            .expect("concurrent central fixture")
+            .len(),
+        6
+    );
+    let concurrent_generations = generation_roots(&work_root.join("store"));
+    assert_eq!(concurrent_generations.len(), 1);
+    assert!(
+        !concurrent_generations[0]
+            .join("packages")
+            .join(PACKAGE_ID)
+            .exists(),
+        "concurrent disposable tasks left package residue"
     );
 }
 
 fn central_operator_task(package_version: &str, entrypoint_sha256: &str) -> Value {
+    central_operator_task_with_scope(package_version, entrypoint_sha256, "job")
+}
+
+fn central_operator_task_with_scope(
+    package_version: &str,
+    entrypoint_sha256: &str,
+    cache_scope: &str,
+) -> Value {
     let mut task = external_operator_task(entrypoint_sha256);
     let package_ref = format!("orchestra://operator-package/{PACKAGE_ID}");
     task["execution_program"]["package_ref"] = json!(package_ref);
     task["runtime_hints"]["package_ref"] = json!(package_ref);
     task["runtime_hints"]["authority_mode"] = json!("central_operator_library");
     task["runtime_hints"]["execution_mode"] = json!("orchestra_fetch");
-    task["runtime_hints"]["cache_scope"] = json!("job");
+    task["runtime_hints"]["cache_scope"] = json!(cache_scope);
     task["runtime_hints"]["agent_fetchable"] = json!(true);
     task["execution_program"]["package_version"] = json!(package_version);
     task["runtime_hints"]["package_version"] = json!(package_version);

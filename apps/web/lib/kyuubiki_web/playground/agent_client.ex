@@ -183,6 +183,12 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request("cancel_job", %{job_id: job_id})
   end
 
+  @spec release_operator_package_job(String.t(), AgentPool.endpoint() | nil) ::
+          {:ok, map()} | {:error, term()}
+  def release_operator_package_job(job_id, endpoint \\ nil) when is_binary(job_id) do
+    request_to_target("release_operator_package_job", %{job_id: job_id}, endpoint)
+  end
+
   @spec run_operator_task_ir(map(), keyword() | (map() -> any()), (map() -> any())) ::
           {:ok, map()} | {:error, term()}
   def run_operator_task_ir(

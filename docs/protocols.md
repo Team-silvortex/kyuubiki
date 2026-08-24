@@ -64,6 +64,7 @@ The current generic/runtime methods are:
 
 - `ping`
 - `describe_agent`
+- `release_operator_package_job`
 - `cancel_job`
 
 The current solver methods are:

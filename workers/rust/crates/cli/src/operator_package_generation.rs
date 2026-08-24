@@ -3,6 +3,7 @@ use crate::operator_package_generation_session::{
 };
 use kyuubiki_installer::{install_operator_package_into, managed_operator_package_status_in};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -39,6 +40,18 @@ pub(crate) fn prepare_operator_package_generation(
     active_packages_root: &Path,
     replacing_package_id: &str,
 ) -> Result<PreparedOperatorPackageGeneration, String> {
+    prepare_operator_package_generation_excluding(
+        session,
+        active_packages_root,
+        &BTreeSet::from([replacing_package_id.to_string()]),
+    )
+}
+
+pub(crate) fn prepare_operator_package_generation_excluding(
+    session: Arc<OperatorPackageGenerationSession>,
+    active_packages_root: &Path,
+    excluded_package_ids: &BTreeSet<String>,
+) -> Result<PreparedOperatorPackageGeneration, String> {
     let active_packages_root =
         canonical_directory(active_packages_root, "active operator packages root")?;
     if active_packages_root
@@ -74,6 +87,12 @@ pub(crate) fn prepare_operator_package_generation(
         let _ = fs::remove_dir_all(&generation_root);
         return Err(error);
     }
+    if let Err(error) = fs::create_dir(generation_root.join("packages")) {
+        let _ = fs::remove_dir_all(&generation_root);
+        return Err(format!(
+            "failed to create operator package generation store layout: {error}"
+        ));
+    }
     let prepared = PreparedOperatorPackageGeneration {
         owned: OwnedOperatorPackageGeneration {
             generation_root,
@@ -85,7 +104,7 @@ pub(crate) fn prepare_operator_package_generation(
     };
 
     for receipt in active.installed_packages {
-        if receipt.package_id == replacing_package_id {
+        if excluded_package_ids.contains(&receipt.package_id) {
             continue;
         }
         let source = active_store_root.join(&receipt.relative_root);
@@ -106,6 +125,18 @@ impl PreparedOperatorPackageGeneration {
 
     pub(crate) fn packages_root(&self) -> PathBuf {
         self.store_root().join("packages")
+    }
+
+    pub(crate) fn generation_id(&self) -> &str {
+        &self.owned.marker.generation_id
+    }
+
+    pub(crate) fn session_id(&self) -> &str {
+        self.owned.session.session_id()
+    }
+
+    pub(crate) fn janitor_report(&self) -> GenerationJanitorReport {
+        self.owned.session.janitor_report()
     }
 
     pub(crate) fn commit(mut self) -> OwnedOperatorPackageGeneration {
@@ -263,6 +294,7 @@ mod tests {
             .expect("prepare generation");
         let generation_root = generation.store_root().to_path_buf();
         assert!(generation_root.exists());
+        assert!(generation.packages_root().is_dir());
         drop(generation);
         assert!(!generation_root.exists());
         let _ = fs::remove_dir_all(root);

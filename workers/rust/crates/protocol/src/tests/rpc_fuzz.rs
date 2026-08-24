@@ -1,5 +1,5 @@
 use super::prelude::*;
-use crate::CancelJobRequest;
+use crate::{CancelJobRequest, ReleaseOperatorPackageJobRequest};
 use serde_json::{Value, json};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -34,8 +34,14 @@ fn exercise_rpc_boundary(value: Value) {
     if let Ok(request) = serde_json::from_value::<RpcRequest>(value) {
         let _ = serde_json::to_value(&request);
         let _ = serde_json::to_string(&request);
-        if request.method == RpcMethod::CancelJob {
-            let _ = serde_json::from_value::<CancelJobRequest>(request.params);
+        match request.method {
+            RpcMethod::CancelJob => {
+                let _ = serde_json::from_value::<CancelJobRequest>(request.params);
+            }
+            RpcMethod::ReleaseOperatorPackageJob => {
+                let _ = serde_json::from_value::<ReleaseOperatorPackageJobRequest>(request.params);
+            }
+            _ => {}
         }
     }
 }
@@ -81,6 +87,7 @@ fn pick_method_name(rng: &mut FuzzRng) -> String {
         "describe_agent",
         "run_operator_task_ir",
         "cancel_job",
+        "release_operator_package_job",
         "solve_bar_1d",
         "solve_frame_3d",
         "solve_heat_plane_quad_2d",

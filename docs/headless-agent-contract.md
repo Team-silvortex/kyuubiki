@@ -53,6 +53,7 @@ It includes:
 
 - `ping`
 - `describe_agent`
+- `release_operator_package_job`
 - `cancel_job`
 - solver methods such as `solve_truss_3d`, `solve_frame_3d`,
   `solve_heat_plane_quad_2d`, and other declared FEM study entries

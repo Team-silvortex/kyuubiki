@@ -14,7 +14,7 @@
           "config/architecture/protocol-validation-qualification.json",
           "schemas/protocol-validation-qualification-report.schema.json",
           "workers/rust/crates/protocol/src/tests/core.rs",
-          "releases/usability-evidence/2.14.3/protocol-runtime-api-verification.json"
+          "releases/usability-evidence/2.15.0/protocol-runtime-api-verification.json"
         ],
         "required_text": [
           "protocol-runtime-api",
@@ -22,8 +22,8 @@
           "kyuubiki.protocol-validation-qualification-report/v2",
           "validates_rpc_request_envelope_boundaries",
           "validates_rpc_response_and_progress_envelope_states",
-          "\"advertised_method_count\": 55",
-          "\"round_trip_count\": 55",
+          "\"advertised_method_count\": 56",
+          "\"round_trip_count\": 56",
           "\"unknown_method_rejected\": true"
         ]
       },
@@ -39,7 +39,7 @@
           "sdks/python/tests/test_smoke.py",
           "sdks/elixir/test/smoke_test.exs",
           "sdks/rust/tests/smoke.rs",
-          "releases/usability-evidence/2.14.3/headless-runtime-api-verification.json"
+          "releases/usability-evidence/2.15.0/headless-runtime-api-verification.json"
         ],
         "required_text": [
           "protocol-runtime-api",
@@ -50,6 +50,9 @@
           "test_execute_operator_task_batch",
           "control plane client executes operator task batch",
           "control_plane_executes_operator_task_batch",
+          "session.solver_rpc.release_operator_package_job",
+          "KyuubikiSdk.SolverRpcClient.release_operator_package_job",
+          "release operator package job",
           "\"total_passed\": 265"
         ]
       }
@@ -72,15 +75,15 @@
         "security"
       ],
       "files": [
-        "releases/usability-evidence/2.14.3/protocol-runtime-api-verification.json"
+        "releases/usability-evidence/2.15.0/protocol-runtime-api-verification.json"
       ],
       "required_text": [
         "\"schema_version\": \"kyuubiki.protocol-validation-qualification-report/v2\"",
         "\"status\": \"pass\"",
         "\"passed\": 101",
-        "\"advertised_method_count\": 55",
-        "\"round_trip_count\": 55",
-        "\"unique_wire_method_count\": 55",
+        "\"advertised_method_count\": 56",
+        "\"round_trip_count\": 56",
+        "\"unique_wire_method_count\": 56",
         "\"unknown_method_rejected\": true",
         "\"invalid_request_id\"",
         "\"invalid_response_state\"",
@@ -104,7 +107,7 @@
         "sdk_parity"
       ],
       "files": [
-        "releases/usability-evidence/2.14.3/headless-runtime-api-verification.json"
+        "releases/usability-evidence/2.15.0/headless-runtime-api-verification.json"
       ],
       "required_text": [
         "\"schema_version\": \"kyuubiki.headless-sdk-validation-qualification-report/v1\"",

@@ -523,9 +523,9 @@ check-persistence-provenance-qualification:
 
 check-runtime-api-verification:
 	@$(ENTRYPOINT) check-protocol-validation-qualification --self-test
-	@$(ENTRYPOINT) check-protocol-validation-qualification --verify-report releases/usability-evidence/2.14.3/protocol-runtime-api-verification.json
+	@$(ENTRYPOINT) check-protocol-validation-qualification --verify-report releases/usability-evidence/2.15.0/protocol-runtime-api-verification.json
 	@$(ENTRYPOINT) check-headless-sdk-validation-qualification --self-test
-	@$(ENTRYPOINT) check-headless-sdk-validation-qualification --verify-report releases/usability-evidence/2.14.3/headless-runtime-api-verification.json
+	@$(ENTRYPOINT) check-headless-sdk-validation-qualification --verify-report releases/usability-evidence/2.15.0/headless-runtime-api-verification.json
 
 check-benchmark-qualification:
 	@$(ENTRYPOINT) check-benchmark-qualification --self-test
