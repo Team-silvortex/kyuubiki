@@ -85,6 +85,21 @@ pub fn current_platform_library_file_name(stem: &str) -> String {
     )
 }
 
+pub fn current_platform_architecture() -> &'static str {
+    match env::consts::ARCH {
+        "arm64" => "aarch64",
+        architecture => architecture,
+    }
+}
+
+pub fn current_platform_target_id() -> String {
+    format!(
+        "{}-{}",
+        Platform::current().as_str(),
+        current_platform_architecture()
+    )
+}
+
 pub fn current_platform_library_path(parent: impl AsRef<Path>, stem: &str) -> PathBuf {
     parent
         .as_ref()

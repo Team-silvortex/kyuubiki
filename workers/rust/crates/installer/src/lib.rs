@@ -21,6 +21,7 @@ mod integrity;
 mod integrity_contract;
 mod integrity_versions;
 mod linux_desktop_dependencies;
+mod operator_package_fetch;
 mod operator_package_preflight;
 mod operator_package_store;
 mod release;
@@ -43,6 +44,9 @@ mod update_catalog;
 mod update_source;
 
 pub use exports::*;
+pub use operator_package_fetch::{
+    OPERATOR_PACKAGE_RESOLUTION_SCHEMA_VERSION, fetch_operator_package, fetch_operator_package_into,
+};
 pub use operator_package_preflight::{
     OperatorPackagePreflightOutcome, operator_package_preflight, operator_package_preflight_json,
     write_operator_package_preflight_json, write_operator_package_preflight_outcome,

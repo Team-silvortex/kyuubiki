@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Rust Worker and Operator SDK evidence separated from Headless control SDKs, covering authoring, managed package lifecycle, host execution, ABI boundaries, workflow composition, and remaining cross-platform operational gaps.",
+  "summary": "Rust Worker and Operator SDK evidence separated from Headless control SDKs, covering authoring, managed and bound-Orchestra package supply chains, host execution, ABI boundaries, workflow composition, and remaining automatic-fetch and cross-platform operational gaps.",
   "paradigm_contract_evidence": {
     "runtime_api": [
       {
@@ -128,8 +128,11 @@
         "modules": ["sdk-operator", "runtime-installer"],
         "files": [
           "workers/rust/crates/operator-sdk/src/manifest.rs",
+          "workers/rust/crates/operator-sdk/src/distribution.rs",
           "workers/rust/crates/installer/src/operator_package_preflight.rs",
+          "workers/rust/crates/installer/src/operator_package_fetch.rs",
           "workers/rust/crates/installer/src/operator_package_store.rs",
+          "apps/web/lib/kyuubiki_web/operator_package_distribution_store.ex",
           "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",
           "docs/operator-sdk.md"
         ],
@@ -138,7 +141,9 @@
           "minimum_host_version",
           "validation_status",
           "package admission summary",
-          "MANAGED_OPERATOR_PACKAGE_RECEIPT_SCHEMA_VERSION"
+          "MANAGED_OPERATOR_PACKAGE_RECEIPT_SCHEMA_VERSION",
+          "kyuubiki.operator-package-distribution/v1",
+          "kyuubiki.operator-package-resolution/v1"
         ]
       }
     ],
@@ -325,6 +330,34 @@
         "install-operator-package",
         "installer_manages_agent_package_execution_and_residue_free_removal",
         "installer_managed_agent_lifecycle"
+      ]
+    },
+    {
+      "id": "operator-sdk-bound-orchestra-fetch-qualified",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["orchestra-control-plane", "sdk-operator", "runtime-installer"],
+      "paradigms": ["runtime_api", "validation", "security", "persistence_provenance", "sdk_operator"],
+      "dimensions": ["execution", "security", "contract", "recovery", "abi_compatibility"],
+      "files": [
+        "workers/rust/crates/operator-sdk/src/distribution.rs",
+        "schemas/operator-package-distribution.schema.json",
+        "schemas/operator-package-resolution.schema.json",
+        "apps/web/lib/kyuubiki_web/operator_package_distribution_store.ex",
+        "apps/web/lib/kyuubiki_web/central_store_router.ex",
+        "apps/web/test/kyuubiki_web/api/operator_package_distribution_api_test.exs",
+        "workers/rust/crates/installer/src/operator_package_fetch.rs",
+        "workers/rust/crates/installer/src/tests/operator_package_fetch.rs",
+        "docs/operator-library-centralization.md"
+      ],
+      "required_text": [
+        "kyuubiki.operator-package-distribution/v1",
+        "kyuubiki.operator-package-resolution/v1",
+        "bound_orchestra",
+        "task_required_disposable",
+        "resolves and downloads only the requested platform package",
+        "fetches_verifies_and_installs_current_platform_package",
+        "rejects_digest_mismatch_without_leaving_an_installed_package"
       ]
     },
     {

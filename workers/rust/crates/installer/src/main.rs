@@ -7,13 +7,14 @@ use kyuubiki_installer::{
     default_remote_deployment_dry_run, default_remote_deployment_journal,
     default_remote_deployment_plan, default_remote_host_trust_plan,
     default_remote_ssh_fixture_plan, default_remote_ssh_fixture_report, embedded_runtime_report,
-    exit_on_err, export_launch_config, init_env, install_agent_update_package,
-    install_operator_package, install_operator_package_into, install_runtime_payload,
-    installation_integrity_report, launch_managed_agent, linux_desktop_dependency_plan,
-    managed_operator_package_status, managed_operator_package_status_in,
-    operator_package_preflight, parse_platform, prepare_agent_update_package, prepare_layout,
-    prepare_staged_update, print_help, remote_deployment_roadmap, repair_installation,
-    rollback_agent_update, rollback_runtime_payload, run_agent_solver_operational_qualification,
+    exit_on_err, export_launch_config, fetch_operator_package, fetch_operator_package_into,
+    init_env, install_agent_update_package, install_operator_package,
+    install_operator_package_into, install_runtime_payload, installation_integrity_report,
+    launch_managed_agent, linux_desktop_dependency_plan, managed_operator_package_status,
+    managed_operator_package_status_in, operator_package_preflight, parse_platform,
+    prepare_agent_update_package, prepare_layout, prepare_staged_update, print_help,
+    remote_deployment_roadmap, repair_installation, rollback_agent_update,
+    rollback_runtime_payload, run_agent_solver_operational_qualification,
     run_agent_update_qualification, run_doctor, run_runtime_payload_qualification,
     runtime_payload_status, seal_agent_update_package, seal_runtime_payload, stage_release,
     unified_update_plan, unified_update_preview, uninstall_operator_package,
@@ -289,6 +290,49 @@ fn main() {
                 ),
                 Ok(None) => exit_on_err(
                     install_operator_package(&PathBuf::from(package_root)).and_then(pretty_json),
+                ),
+                Err(error) => exit_on_err(Err(error)),
+            }
+        }
+        "fetch-operator-package" => {
+            let Some(central_url) = args.next() else {
+                exit_on_err(Err(
+                    "missing central URL for fetch-operator-package".to_string()
+                ));
+                return;
+            };
+            let Some(package_id) = args.next() else {
+                exit_on_err(Err(
+                    "missing package id for fetch-operator-package".to_string()
+                ));
+                return;
+            };
+            let Some(package_version) = args.next() else {
+                exit_on_err(Err(
+                    "missing package version for fetch-operator-package".to_string()
+                ));
+                return;
+            };
+            let token = env::var("KYUUBIKI_ORCHESTRA_TOKEN").ok();
+            match parse_operator_package_store_flag(args.collect()) {
+                Ok(Some(store_root)) => exit_on_err(
+                    fetch_operator_package_into(
+                        &central_url,
+                        &package_id,
+                        &package_version,
+                        &store_root,
+                        token.as_deref(),
+                    )
+                    .and_then(pretty_json),
+                ),
+                Ok(None) => exit_on_err(
+                    fetch_operator_package(
+                        &central_url,
+                        &package_id,
+                        &package_version,
+                        token.as_deref(),
+                    )
+                    .and_then(pretty_json),
                 ),
                 Err(error) => exit_on_err(Err(error)),
             }

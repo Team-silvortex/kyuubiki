@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/operator-package-resolution.schema.json",
+  "title": "Kyuubiki resolved operator package",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "package_ref",
+    "package_id",
+    "package_version",
+    "sdk_api_version",
+    "target",
+    "authority_mode",
+    "cache_scope",
+    "distribution_sha256",
+    "manifest",
+    "entrypoint"
+  ],
+  "properties": {
+    "schema_version": { "const": "kyuubiki.operator-package-resolution/v1" },
+    "package_ref": { "type": "string", "pattern": "^orchestra://operator-package/(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9._-]{0,126}[A-Za-z0-9])$" },
+    "package_id": { "type": "string", "pattern": "^(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9._-]{0,126}[A-Za-z0-9])$" },
+    "package_version": { "type": "string", "pattern": "^(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9._-]{0,126}[A-Za-z0-9])$" },
+    "sdk_api_version": { "const": "kyuubiki.operator-sdk/v1" },
+    "target": { "type": "string", "pattern": "^(macos|linux|windows)-[a-z0-9_]+$" },
+    "authority_mode": { "const": "bound_orchestra" },
+    "cache_scope": { "const": "task_required_disposable" },
+    "distribution_sha256": { "$ref": "#/$defs/sha256" },
+    "manifest": { "$ref": "#/$defs/artifact" },
+    "entrypoint": { "$ref": "#/$defs/artifact" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "size_bytes", "download_path"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "size_bytes": { "type": "integer", "minimum": 1 },
+        "download_path": {
+          "type": "string",
+          "pattern": "^/api/v1/central/operator-packages/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+/(macos|linux|windows)-[a-z0-9_]+/(manifest|entrypoint)$"
+        }
+      }
+    }
+  }
+}

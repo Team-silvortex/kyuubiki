@@ -233,12 +233,13 @@ Installer depend on this module through explicit topology edges.
 The `sdk_operator` tensor paradigm is distinct from `sdk_headless`. Current
 authoring, manifest, readiness, host-policy, workflow-extension, fuzz, and local
 dynamic-library evidence qualifies the Rust extension contract. A real Agent
-now loads an external-local package, dispatches it over the TaskIR RPC boundary,
-rejects a digest-valid package-integrity substitution, and executes again after
-the rejection. This is retained local qualification, not operational evidence.
-Promotion to the Daji target still requires an Installer-managed installed
-package journey, Orchestra-owned package pull, and the supported platform ABI
-matrix. A separate focused benchmark must measure package
+loads both external-local and Installer-managed packages, dispatches over the
+TaskIR RPC boundary, rejects package-integrity substitution, and executes again
+after rejection. The bound-Orchestra path now resolves and serves exactly one
+current-target package, while Installer downloads, verifies, and atomically
+installs it. These are retained local qualifications, not a three-platform
+operational claim. Promotion to the Daji target still requires automatic TaskIR
+fetch handoff and the supported platform ABI matrix. A focused benchmark must measure package
 discovery, admission, load, first dispatch, and steady dispatch without
 borrowing general solver throughput numbers.
 
@@ -352,6 +353,7 @@ from an authoring tree:
 
 ```bash
 cargo run -p kyuubiki-installer -- install-operator-package ./operator-packages/example
+cargo run -p kyuubiki-installer -- fetch-operator-package http://127.0.0.1:4000 operator.example 0.1.0
 cargo run -p kyuubiki-installer -- operator-package-status
 cargo run -p kyuubiki-installer -- uninstall-operator-package operator.example
 ```
@@ -374,6 +376,37 @@ digests match. Different content requires an explicit uninstall before
 replacement. The current lifecycle intentionally has no multi-version slots or
 rollback yet; cross-platform packages must also carry a valid entrypoint for
 each platform on which they are installed.
+
+### Orchestra-owned distribution
+
+Publish-time platform variants use
+`kyuubiki.operator-package-distribution/v1`, separate from the execution
+manifest. The index lives at
+`<package-id>/<version>/kyuubiki-operator-distribution.json` under the directory
+configured by `KYUUBIKI_OPERATOR_PACKAGE_DISTRIBUTIONS`. Each target such as
+`linux-x86_64` or `macos-aarch64` names a package manifest and dynamic library by
+strict relative path, exact byte size, and lowercase SHA-256 digest.
+
+Orchestra resolves one exact target as
+`kyuubiki.operator-package-resolution/v1`. It never substitutes another target
+and serves only the indexed manifest and entrypoint. Installer disables HTTP
+redirects, limits response sizes, rechecks identity, path, size, and digest, then
+passes the materialized package through the same preflight and atomic managed
+store used for local installation. If the control plane requires authentication,
+the command reads `KYUUBIKI_ORCHESTRA_TOKEN`; tokens are not accepted as command
+arguments and are not written to package receipts.
+
+The schemas and portable examples are:
+
+- `schemas/operator-package-distribution.schema.json`
+- `schemas/examples.operator-package-distribution.json`
+- `schemas/operator-package-resolution.schema.json`
+- `schemas/examples.operator-package-resolution.json`
+
+TaskIR already emits `kyuubiki.operator-package-fetch-request/v1`; wiring that
+request directly to the Installer fetch API during Agent admission remains the
+next runtime step. Until then, the explicit Installer command proves the supply
+chain but is not described as automatic Agent fetch-on-demand.
 
 For the repository template package, use the Make target:
 

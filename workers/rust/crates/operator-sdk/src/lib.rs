@@ -1,4 +1,5 @@
 mod builder;
+mod distribution;
 mod loader;
 mod manifest;
 #[cfg(test)]
@@ -18,10 +19,16 @@ pub use builder::{
     OperatorDescriptorBuilder, operator_port, operator_port_with_dataset, operator_summary_result,
     partial_validation, verified_validation,
 };
+pub use distribution::{
+    OPERATOR_PACKAGE_DISTRIBUTION_FILE, OPERATOR_PACKAGE_DISTRIBUTION_SCHEMA_VERSION,
+    OperatorDistributionError, OperatorPackageDistributionArtifact,
+    OperatorPackageDistributionManifest, operator_distribution_artifact_for_target,
+    read_operator_package_distribution, validate_operator_package_distribution,
+};
 pub use kyuubiki_platform::{
     LIB_EXTENSION_PLACEHOLDER, LIB_PREFIX_PLACEHOLDER, current_platform_library_extension,
     current_platform_library_file_name, current_platform_library_path,
-    current_platform_library_prefix, expand_platform_library_template,
+    current_platform_library_prefix, current_platform_target_id, expand_platform_library_template,
 };
 pub use loader::{
     OperatorPackageActivator, OperatorPackageLoadError, OperatorPackageLoadPlan,

@@ -1,0 +1,26 @@
+{
+  "schema_version": "kyuubiki.operator-package-distribution/v1",
+  "sdk_api_version": "kyuubiki.operator-sdk/v1",
+  "package_id": "operator.example.peak_field",
+  "package_version": "0.1.0",
+  "artifacts": [
+    {
+      "target": "linux-x86_64",
+      "manifest_path": "linux-x86_64/kyuubiki-operator.json",
+      "manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "manifest_size_bytes": 512,
+      "entrypoint_path": "linux-x86_64/liboperator_example_peak_field.so",
+      "entrypoint_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "entrypoint_size_bytes": 4096
+    },
+    {
+      "target": "macos-aarch64",
+      "manifest_path": "macos-aarch64/kyuubiki-operator.json",
+      "manifest_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "manifest_size_bytes": 512,
+      "entrypoint_path": "macos-aarch64/liboperator_example_peak_field.dylib",
+      "entrypoint_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "entrypoint_size_bytes": 4096
+    }
+  ]
+}

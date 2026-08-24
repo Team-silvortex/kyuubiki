@@ -121,6 +121,14 @@ Tasks and execution engines are deliberately separate.
   agent still must not pretend to own a full authoritative operator library
 - fetched packages may be cached only as visible, cleanable execution cache
 
+The concrete package boundary uses
+`kyuubiki.operator-package-distribution/v1` at publish time and
+`kyuubiki.operator-package-resolution/v1` for one bound-Agent target. Installer
+can consume that resolution today and activate the verified package in its
+managed store. TaskIR-to-fetch automatic admission remains pending, so the
+current implementation must not be interpreted as a full-library Agent mirror
+or as completed automatic fetch-on-demand.
+
 This means a workflow run can move between scheduling modes without changing the
 core engine model: the scheduling authority changes, but the agent-local engine
 remains the execution boundary.

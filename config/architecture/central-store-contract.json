@@ -184,6 +184,13 @@
     { "file": "docs/store-deployment-boundary.md", "text": "Self-hosted baseline", "label": "portable self-hosted store docs" },
     { "file": "docs/store-deployment-boundary.md", "text": "Password grants", "label": "generic forbidden password grant docs" },
     { "file": "docs/central-server-components.md", "text": "identity_provider", "label": "central docs identity provider contract" },
-    { "file": "docs/operator-library-centralization.md", "text": "External Stores", "label": "operator docs external store boundary" }
+    { "file": "docs/operator-library-centralization.md", "text": "External Stores", "label": "operator docs external store boundary" },
+    { "file": "apps/web/lib/kyuubiki_web/operator_package_distribution_store.ex", "text": "kyuubiki.operator-package-resolution/v1", "label": "bound Orchestra operator package resolution" },
+    { "file": "apps/web/lib/kyuubiki_web/operator_package_distribution_store.ex", "text": "unsafe_operator_artifact_path", "label": "operator artifact filesystem boundary" },
+    { "file": "apps/web/lib/kyuubiki_web/central_store_router.ex", "text": "/operator-packages/:package_id/:package_version/:target/resolve", "label": "operator target resolution route" },
+    { "file": "schemas/operator-package-distribution.schema.json", "text": "kyuubiki.operator-package-distribution/v1", "label": "operator multi-platform distribution schema" },
+    { "file": "schemas/operator-package-resolution.schema.json", "text": "task_required_disposable", "label": "operator target resolution cache boundary" },
+    { "file": "workers/rust/crates/installer/src/operator_package_fetch.rs", "text": "max_redirects(0)", "label": "Installer operator fetch redirect guard" },
+    { "file": "workers/rust/crates/installer/src/tests/operator_package_fetch.rs", "text": "rejects_digest_mismatch_without_leaving_an_installed_package", "label": "Installer operator fetch rollback test" }
   ]
 }

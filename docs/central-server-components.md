@@ -28,7 +28,12 @@ Architecture boundary: the website service is not a separate top-level module.
 - Artifact admission policy: `GET /api/v1/central/artifact-admission-policy`
 - Publish pipeline: `GET /api/v1/central/publish-pipeline`
 - Database status: `GET /api/v1/central/database-status`
+- Operator target resolve:
+  `GET /api/v1/central/operator-packages/:package_id/:version/:target/resolve`
+- Verified operator manifest/entrypoint download:
+  `GET /api/v1/central/operator-packages/:package_id/:version/:target/:artifact_kind`
 - Backing module: `KyuubikiWeb.CentralStore`
+- Operator distribution module: `KyuubikiWeb.OperatorPackageDistributionStore`
 - Router module: `KyuubikiWeb.CentralStoreRouter`
 - Catalog schema: `schemas/central-store-catalog.schema.json`
 - Contract-check schema: `schemas/central-store-contract-check.schema.json`
@@ -43,6 +48,8 @@ Architecture boundary: the website service is not a separate top-level module.
 - Publish pipeline schema: `schemas/central-publish-pipeline.schema.json`
 - Database status schema: `schemas/central-database-status.schema.json`
 - Readiness report schema: `schemas/central-readiness-report.schema.json`
+- Operator distribution schema: `schemas/operator-package-distribution.schema.json`
+- Operator resolution schema: `schemas/operator-package-resolution.schema.json`
 - Contract-check config: `config/architecture/central-store-contract.json`
 - Module topology service surface: `central-web-service` under
   `orchestra-control-plane`
@@ -80,6 +87,12 @@ It should not:
 The preview catalog currently reuses the local `AssetStore` plus
 `language-packs/catalog.json`. This gives Hub, Workbench, Installer, and
 headless SDKs one future-facing shape before a hosted service exists.
+
+Operator binaries are not loaded from catalog metadata. A deployment explicitly
+sets `KYUUBIKI_OPERATOR_PACKAGE_DISTRIBUTIONS` to a sandboxed package root with
+`<package-id>/<version>/kyuubiki-operator-distribution.json` indexes. The service
+selects one exact platform target, rejects symlinks and path escapes, verifies
+size and SHA-256 at resolve and download time, and exposes no upload route.
 
 ## Publish Policy
 

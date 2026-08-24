@@ -1,0 +1,23 @@
+{
+  "schema_version": "kyuubiki.operator-package-resolution/v1",
+  "package_ref": "orchestra://operator-package/operator.example.peak_field",
+  "package_id": "operator.example.peak_field",
+  "package_version": "0.1.0",
+  "sdk_api_version": "kyuubiki.operator-sdk/v1",
+  "target": "linux-x86_64",
+  "authority_mode": "bound_orchestra",
+  "cache_scope": "task_required_disposable",
+  "distribution_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "manifest": {
+    "path": "operator.example.peak_field/0.1.0/linux-x86_64/kyuubiki-operator.json",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "size_bytes": 512,
+    "download_path": "/api/v1/central/operator-packages/operator.example.peak_field/0.1.0/linux-x86_64/manifest"
+  },
+  "entrypoint": {
+    "path": "operator.example.peak_field/0.1.0/linux-x86_64/liboperator_example_peak_field.so",
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "size_bytes": 4096,
+    "download_path": "/api/v1/central/operator-packages/operator.example.peak_field/0.1.0/linux-x86_64/entrypoint"
+  }
+}

@@ -152,6 +152,25 @@ And return:
 This is not just package distribution.
 It is part of the operator execution contract.
 
+The first executable contract is now present:
+
+- publish-time index: `kyuubiki.operator-package-distribution/v1`
+- resolve response: `kyuubiki.operator-package-resolution/v1`
+- target identity: `<os>-<architecture>`, for example `linux-x86_64`
+- authority mode: `bound_orchestra`
+- cache scope: `task_required_disposable`
+
+The self-hosted distribution root is configured with
+`KYUUBIKI_OPERATOR_PACKAGE_DISTRIBUTIONS`. Orchestra validates the static index,
+package manifest, regular-file layout, byte sizes, and SHA-256 digests before it
+returns canonical same-origin download paths. Installer then repeats identity,
+size, digest, and package-readiness checks before atomic activation. A target
+miss is explicit; another platform is never substituted.
+
+This currently closes the explicit Installer pull path. Automatic consumption
+of the existing Agent TaskIR fetch request is still pending and must not be
+counted as operational fetch-on-demand evidence yet.
+
 ## Interaction with the operator catalog
 
 The operator catalog should eventually expose more than UI-facing descriptors.
