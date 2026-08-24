@@ -107,13 +107,13 @@ qualify-agent-update-operational-remote:
 	@$(ENTRYPOINT) qualify-agent-update-operational-remote --host $${REMOTE:-kyuubiki-lab} $${OUTPUT:+--out $${OUTPUT}}
 
 check-agent-update-operational-qualification:
-	@$(ENTRYPOINT) check-agent-update-operational-qualification $${REPORT:+--verify-report $${REPORT}} --require-remote-linux
+	@$(ENTRYPOINT) check-agent-update-operational-qualification --verify-report $${REPORT:-releases/usability-evidence/2.14.3/agent-update-operational-qualification.json} --require-remote-linux
 
 qualify-runtime-payload-operational-remote:
 	@$(ENTRYPOINT) qualify-runtime-payload-operational-remote --host $${REMOTE:-kyuubiki-lab} $${OUTPUT:+--out $${OUTPUT}}
 
 check-runtime-payload-operational-qualification:
-	@$(ENTRYPOINT) check-runtime-payload-operational-qualification $${REPORT:+--verify-report $${REPORT}} --require-remote-linux
+	@$(ENTRYPOINT) check-runtime-payload-operational-qualification --verify-report $${REPORT:-releases/usability-evidence/2.14.3/runtime-payload-operational-qualification.json} --require-remote-linux
 
 qualify-orchestra-workflow-operational-remote:
 	@KYUUBIKI_LAB_HOST=$${REMOTE:-kyuubiki-lab} OUTPUT_SLUG=orchestra-workflow-operational LOCAL_OUTPUT_DIR=tmp/orchestra-workflow-operational REMOTE_OUTPUT_DIR=tmp/orchestra-workflow-operational $(ENTRYPOINT) workflow-mesh-regression-remote

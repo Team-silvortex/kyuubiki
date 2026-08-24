@@ -1,0 +1,95 @@
+{
+  "schema_version": "kyuubiki.desktop-ui-validation-report/v1",
+  "generated_at_unix_ms": 1787542648215,
+  "contract_path": "config/architecture/desktop-ui-validation.json",
+  "status": "pass",
+  "platform": {
+    "os": "macos",
+    "arch": "aarch64"
+  },
+  "command": [
+    "node",
+    "--test",
+    "--test-reporter=tap",
+    "tests/integration/desktop-deployment-update-closure.test.mjs",
+    "tests/integration/desktop-gui-action-sweep.test.mjs",
+    "tests/integration/desktop-gui-capability-closure.test.mjs",
+    "tests/integration/desktop-gui-call-chain-contract.test.mjs",
+    "tests/integration/desktop-gui-layout-priority.test.mjs",
+    "tests/integration/desktop-gui-navigation-closure.test.mjs",
+    "tests/integration/desktop-shell-regression.test.mjs",
+    "tests/integration/workbench-shell-regression.test.mjs"
+  ],
+  "exit_code": 0,
+  "elapsed_ms": 16414,
+  "summary": {
+    "tests": 21,
+    "passed": 21,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "failed_actions": 0,
+    "missing_actions": 0
+  },
+  "shells": [
+    {
+      "id": "hub",
+      "actions": 43,
+      "blocked": 0
+    },
+    {
+      "id": "installer",
+      "actions": 53,
+      "blocked": 4
+    },
+    {
+      "id": "workbench",
+      "actions": 7,
+      "blocked": 0
+    }
+  ],
+  "assertions": [
+    {
+      "id": "deployment-update-closure",
+      "label": "Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers",
+      "passed": true
+    },
+    {
+      "id": "declarative-terminal-state",
+      "label": "all desktop declarative actions reach an observable terminal state",
+      "passed": true
+    },
+    {
+      "id": "capability-closure",
+      "label": "every required desktop capability closes UI, route, native, and result layers",
+      "passed": true
+    },
+    {
+      "id": "pwdt-parity",
+      "label": "capabilities that promise PWDT parity are catalogued and executable",
+      "passed": true
+    },
+    {
+      "id": "layout-priority",
+      "label": "desktop shell layout keeps operational workspaces dominant",
+      "passed": true
+    },
+    {
+      "id": "navigation-closure",
+      "label": "desktop primary navigation forms a reversible non-empty loop",
+      "passed": true
+    },
+    {
+      "id": "hub-installer-regression",
+      "label": "Hub and Installer desktop shells render regression-critical panels in a headless preview",
+      "passed": true
+    },
+    {
+      "id": "workbench-regression",
+      "label": "Workbench desktop shell mounts runtime, logs, and embedded viewer cleanly in headless preview",
+      "passed": true
+    }
+  ],
+  "output_excerpt": "TAP version 13\n# Subtest: Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers\nok 1 - Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers\n  ---\n  duration_ms: 7159.546042\n  type: 'test'\n  ...\n# Subtest: all desktop declarative actions reach an observable terminal state\n    # Subtest: hub action sweep\n    ok 1 - hub action sweep\n      ---\n      duration_ms: 5021.590833\n      type: 'test'\n      ...\n    # Subtest: installer action sweep\n    ok 2 - installer action sweep\n      ---\n      duration_ms: 1503.378334\n      type: 'test'\n      ...\n    # Subtest: workbench action sweep\n    ok 3 - workbench action sweep\n      ---\n      duration_ms: 1136.212041\n      type: 'test'\n      ...\n    1..3\nok 2 - all desktop declarative actions reach an observable terminal state\n  ---\n  duration_ms: 9509.528541\n  type: 'test'\n  ...\n# hub: 43 actions, 0 explicitly blocked by preconditions\n# installer: 53 actions, 4 explicitly blocked by preconditions\n# workbench: 7 actions, 0 explicitly blocked by preconditions\n# Subtest: Hub closes every direct UI-to-Tauri IPC chain\nok 3 - Hub closes every direct UI-to-Tauri IPC chain\n  ---\n  duration_ms: 25.09275\n  type: 'test'\n  ...\n# Subtest: Hub routes every declarative action and guarded mutation\nok 4 - Hub routes every declarative action and guarded mutation\n  ---\n  duration_ms: 6.502583\n  type: 'test'\n  ...\n# Subtest: Workbench closes every direct UI-to-Tauri IPC chain\nok 5 - Workbench closes every direct UI-to-Tauri IPC chain\n  ---\n  duration_ms: 7.325333\n  type: 'test'\n  ...\n# Subtest: Workbench routes every declarative action and guarded mutation\nok 6 - Workbench routes every declarative action and guarded mutation\n  ---\n  duration_ms: 1.56225\n  type: 'test'\n  ...\n# Subtest: Installer closes every direct UI-to-Tauri IPC chain\nok 7 - Installer closes every direct UI-to-Tauri IPC chain\n  ---\n  duration_ms: 5.341833\n  type: 'test'\n  ...\n# Subtest: Installer routes every declarative action and guarded mutation\nok 8 - Installer routes every declarative action and guarded mutation\n  ---\n  duration_ms: 2.288708\n  type: 'test'\n  ...\n# Subtest: delegated secondary action families keep an event owner\nok 9 - delegated secondary action families keep an event owner\n  ---\n  duration_ms: 1.329834\n  type: 'test'\n  ...\n# Subtest: desktop capability closure contract has unique, complete coordinates\nok 10 - desktop capability closure contract has unique, complete coordinates\n  ---\n  duration_ms: 1.481084\n  type: 'test'\n  ...\n# Subtest: every required desktop capability closes UI, route, native, and result layers\nok 11 - every required desktop capability closes UI, route, native, and result layers\n  ---\n  duration_ms: 29.951042\n  type: 'test'\n  ...\n# Subtest: capabilities that promise PWDT parity are catalogued and executable\nok 12 - capabilities that promise PWDT parity are catalogued and executable\n  ---\n  duration_ms: 0.253333\n  type: 'test'\n  ...\n# Subtest: desktop shell layout keeps operational workspaces dominant\nok 13 - desktop shell layout keeps operational workspaces dominant\n  ---\n  duration_ms: 9824.757041\n  type: 'test'\n  ...\n# Subtest: desktop primary navigation forms a reversible non-empty loop\nok 14 - desktop primary navigation forms a reversible non-empty loop\n  ---\n  duration_ms: 10320.31025\n  type: 'test'\n  ...\n# Subtest: Hub and Installer desktop shells render regression-critical panels in a headless preview\n    # Subtest: Hub guides regression gate stays visible and stable\n    ok 1 - Hub guides regression gate stays visible and stable\n      ---\n      duration_ms: 9864.099\n      type: 'test'\n      ...\n    # Subtest: Installer startup, integrity, updates, and logs mount cleanly\n    ok 2 - Installer startup, integrity, updates, and logs mount cleanly\n      ---\n      duration_ms: 4435.141083\n      type: 'test'\n      ...\n    1..2\nok 15 - Hub and Installer desktop shells render regression-critical panels in a headless preview\n  ---\n  duration_ms: 15963.347792\n  type: 'test'\n  ...\n# Subtest: Workbench desktop shell mounts runtime, logs, and embedded viewer cleanly in headless preview\nok 16 - Workbench desktop shell mounts runtime, logs, and embedded viewer cleanly in headless preview\n  ---\n  duration_ms: 11286.089959\n  type: 'test'\n  ...\n1..16\n# tests 21\n# suites 0\n# pass 21\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 16305.36475\n"
+}

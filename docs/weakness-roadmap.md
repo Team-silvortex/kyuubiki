@@ -27,31 +27,35 @@ Current moxi baseline:
 
 - `gap_count`: `0`
 - `blocking_gap_count`: `0`
-- `maturity_gap_count`: `0`
-- `thin_evidence_count`: `0`
-- `evidence_grade_gap_count`: `0`
-- required cells meeting their grade target: `50 / 50` (`100.0%`)
-- release-critical P0 cells meeting target: `36 / 36` (`100.0%`)
-- release-profile P1 cells meeting target: `14 / 14` (`100.0%`)
-- `daji 3.0.0` release state: `blocked` only by the independently controlled
-  external usability release gate
+- `maturity_gap_count`: `10`
+- `thin_evidence_count`: `10`
+- `evidence_grade_gap_count`: `14`
+- required cells meeting their grade target: `63 / 77` (`81.8%`)
+- evidence progress toward configured targets: `93.3%`
+- release-critical P0 cells meeting target: `45 / 55` (`81.8%`)
+- release-profile P1 cells meeting target: `18 / 22` (`81.8%`)
+- `daji 3.0.0` release state: `blocked` by `10` P0 coordinates plus the
+  independently controlled external usability release gate
 
-This means no required module/function coordinate is structurally missing. It
-does not mean all coordinates are deep enough. Tensor v4 scopes contract
-evidence to the modules it actually covers, requires exact-coordinate evidence
-dimensions, separately grades proof strength, and maps the remaining work onto
-the `daji 3.0.0` P0/P1/P2 release profile. The former maturity points remain
-dimension-complete, but ordinary lane execution no longer masquerades as
-qualification, operational, or release evidence.
+No required coordinate is structurally missing, but the previous `50 / 50`
+view excluded important capabilities from the release denominator. The moxi
+2.15 recalibration separates the Rust-only Worker/Operator SDK from both
+Installer and the three-language Headless SDK family, adds ABI compatibility as
+an evidence dimension, and promotes security, persistence, validation, and
+benchmark coordinates that were previously marked covered but optional.
 
-All release-profile P0 and P1 coordinates now meet their configured evidence
-targets, so the tensor coordinate queue is empty. The external usability release
-gate remains independently closed, so coordinate completion is not a public
-release claim and does not replace packaged, remote-recovery, upgrade, or user
-journey evidence.
+The resulting queue is intentionally non-empty. Local Agent package execution
+is now qualified, while the P0 group still requires installed external-package
+operation across SDK, Engine, Agent, and Installer; Workbench and Headless
+security qualification; and Workbench, Engine, Agent, and Headless
+persistence/provenance. Its P1 group is
+workflow-contract qualification plus focused Orchestra, Protocol, Headless,
+and Operator SDK benchmark evidence. Ordinary lane execution no longer counts
+as asserted verification, and local dynamic-library smoke does not count as an
+installed operational journey.
 
-The former P1 benchmark tie now meets its `qualified` target across Agent,
-Engine, and verification evidence. The native current-line route executes a
+The earlier Agent, Engine, and verification benchmark qualification remains
+valid. The native current-line route executes a
 10k Engine solve three times under a release build and serializes the 49-route
 direct-FEM manifest 1000 times. The retained remote archive covers all 19
 expected 500k cases and all 39 expected 1M cases across six matrices, with every
@@ -63,6 +67,10 @@ subtest samples through the current native comparator. Evidence lives at
 by `make check-benchmark-qualification`. Historical scale numbers remain tied
 to their prior Linux hosts; the report explicitly does not make a
 hardware-independent performance guarantee.
+
+That retained report does not yet qualify the newly required Orchestra,
+Protocol, Headless, or Operator SDK benchmark coordinates. Each needs a scoped
+contract and repeatable measurement rather than inheriting Engine scale numbers.
 
 The Agent portion of `upgrade_and_rollback` now has fresh operational evidence.
 The native controller builds distinct debug and release payloads on the remote
@@ -325,6 +333,18 @@ machine-validated result is retained under
 `releases/usability-evidence/2.12.6`; installed-package and cross-platform proof
 remain separate operational tiers rather than being implied by this result.
 
+The former leading coordinate, `installer-shell/validation`, now also meets
+its `qualified` target without inventing a parallel validation framework. The
+current cross-shell contract is explicitly mapped back to Installer and its
+retained moxi 2.15 report reruns all 21 browser/call-chain tests, observes 53
+Installer actions with zero missing or failed actions, and preserves four
+intentional fail-closed guards. Deployment/update handoff, capability routing,
+workspace priority, reversible navigation, and regression-critical panels are
+all asserted. The report is retained at
+`releases/usability-evidence/2.15.0/desktop-ui-validation-qualification.json`
+and is now rechecked by `make check-desktop-ui-validation` as part of
+`architecture-check`.
+
 The former top two coordinates, `runtime-agent-cli/solver_execution` and
 `runtime-protocol/solver_execution`, now meet the `qualified` target. Their
 shared v2 qualification sends a `solve.bar_1d` TaskIR through a live TCP Agent
@@ -480,9 +500,13 @@ Current progress:
   reaching `3.08%`, `14.60%`, and `2.82%` on `24,576` tetrahedra. Distorted and
   interior geometry now retains a separate `4/8/16` convergence ladder with
   minimum mean-ratio quality above `0.2827`; scale-independent quality summaries
-  expose distortion counts and near-incompressible locking risk. Arbitrary
-  unstructured connectivity, a stabilized incompressible formulation, and
-  independent external 3D correlation are now the next-depth boundary
+  expose distortion counts and near-incompressible locking risk. Per-component
+  topology preflight now rejects orphan nodes, hidden rigid rotations, and
+  floating disconnected domains; independently restrained components solve in
+  one block system, and remapped node/element indices retain the same physical
+  response. A general unstructured mesh generator and broad connectivity-family
+  corpus, a stabilized incompressible formulation, and independent external 3D
+  correlation are now the next-depth boundary
 - `solve.plane_quad_2d` now uses a native bilinear isoparametric Q4 kernel with
   full `2x2` Gauss integration instead of two constant-strain triangles;
   distorted `1x1`, `2x2`, and `4x4` affine patches remain exact, and inverted
@@ -565,22 +589,24 @@ Primary docs:
 Current weak point:
 
 - the Rust-only operator SDK has descriptors, manifests, readiness checks, and
-  preflight, but the third-party author journey is still young
-- external packages need stronger end-to-end examples from authoring to
-  package admission and execution
+  preflight; the external-local package now also executes through a real Agent
+- the remaining third-party gap is operational delivery rather than local
+  dispatch: installed package lifecycle, central pull, and platform ABI depth
 
 Current moxi hardening focus:
 
 - keep the operator crate template green with descriptor readiness tests
 - expose package readiness in Installer preflight JSON and CI gates
-- document the separation between operator SDK and headless SDK everywhere it
-  matters
+- keep TaskIR package identity and entrypoint digest checks fail-closed
+- document the separation between operator SDK and headless SDK everywhere it matters
 
 Qualification focus:
 
-- build one complete external-local operator package example
-- prove package preflight, package loading, registry binding, run dispatch, and
-  failure reporting in one repeatable path
+- retain the five-stage external-local qualification from authoring through
+  Agent dispatch, tamper rejection, and recovery
+- add an Installer-managed package activation and cleanup journey
+- add Orchestra catalog pull without copying the complete central library to
+  every Agent
 - add operator package compatibility fixtures for future SDK API changes
 
 Moxi readiness standard:

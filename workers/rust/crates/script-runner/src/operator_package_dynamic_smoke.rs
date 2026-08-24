@@ -103,6 +103,7 @@ pub fn run_operator_package_dynamic_smoke(
         ]
         .map(OsString::from),
     )?;
+    normalize_preflight_report_paths(paths, &preflight_report_path)?;
     stages.push(stage_record(
         "strict_preflight",
         "Run strict read-only package preflight with rejection and readiness-warning gates.",
@@ -183,7 +184,7 @@ pub fn run_operator_package_dynamic_smoke(
     stages.push(stage_record(
         "engine_dynamic_host_load",
         "Run the engine dynamic host test that loads and dispatches the template operator.",
-        rust_cwd,
+        rust_cwd.clone(),
         [
             "cargo",
             "test",
@@ -196,6 +197,49 @@ pub fn run_operator_package_dynamic_smoke(
         ],
         dynamic_host,
     ));
+    if dynamic_host != 0 {
+        write_report(
+            paths,
+            &options,
+            &stages,
+            &preflight_report_path,
+            &dynamic_library_path,
+        )?;
+        return Ok(dynamic_host);
+    }
+
+    let agent_dispatch = run_command(
+        &paths.rust,
+        "cargo",
+        [
+            "test",
+            "-p",
+            "kyuubiki-cli",
+            "--test",
+            "operator_package_live",
+            "--",
+            "--ignored",
+            "--nocapture",
+        ]
+        .map(OsString::from),
+    )?;
+    stages.push(stage_record(
+        "agent_dynamic_host_dispatch",
+        "Start a package-enabled Agent, execute through RPC, reject digest tamper, and recover.",
+        rust_cwd,
+        [
+            "cargo",
+            "test",
+            "-p",
+            "kyuubiki-cli",
+            "--test",
+            "operator_package_live",
+            "--",
+            "--ignored",
+            "--nocapture",
+        ],
+        agent_dispatch,
+    ));
     write_report(
         paths,
         &options,
@@ -203,7 +247,7 @@ pub fn run_operator_package_dynamic_smoke(
         &preflight_report_path,
         &dynamic_library_path,
     )?;
-    Ok(dynamic_host)
+    Ok(agent_dispatch)
 }
 
 fn parse_options(paths: &RepoPaths, args: Vec<OsString>) -> RunnerResult<Options> {
@@ -230,6 +274,11 @@ fn parse_options(paths: &RepoPaths, args: Vec<OsString>) -> RunnerResult<Options
             }
         }
     }
+    let output_path = if output_path.is_absolute() {
+        output_path
+    } else {
+        paths.root.join(output_path)
+    };
     Ok(Options { output_path })
 }
 
@@ -247,7 +296,7 @@ fn write_report(
     let ok = stages.iter().all(|stage| stage.status == 0);
     let preflight_summary = read_preflight_summary(preflight_report_path);
     let payload = json!({
-        "schema_version": "kyuubiki.operator-package-dynamic-smoke/v1",
+        "schema_version": "kyuubiki.operator-package-dynamic-smoke/v2",
         "generated_at": utc_iso_timestamp(),
         "ok": ok,
         "package_id": preflight_summary.package_id,
@@ -349,11 +398,86 @@ fn read_preflight_summary(path: &Path) -> PreflightSummary {
     }
 }
 
+fn normalize_preflight_report_paths(paths: &RepoPaths, report_path: &Path) -> RunnerResult<()> {
+    let content = std::fs::read_to_string(report_path).map_err(|error| {
+        format!(
+            "failed to read operator package preflight report {}: {error}",
+            report_path.display()
+        )
+    })?;
+    let mut value: Value = serde_json::from_str(&content).map_err(|error| {
+        format!(
+            "failed to decode operator package preflight report {}: {error}",
+            report_path.display()
+        )
+    })?;
+    normalize_repo_paths(&mut value, &paths.root);
+    let content = serde_json::to_string_pretty(&value)
+        .map_err(|error| format!("failed to encode portable preflight report: {error}"))?;
+    std::fs::write(report_path, format!("{content}\n")).map_err(|error| {
+        format!(
+            "failed to write portable preflight report {}: {error}",
+            report_path.display()
+        )
+    })?;
+    Ok(())
+}
+
+fn normalize_repo_paths(value: &mut Value, root: &Path) {
+    match value {
+        Value::Array(values) => {
+            for value in values {
+                normalize_repo_paths(value, root);
+            }
+        }
+        Value::Object(fields) => {
+            for (key, value) in fields {
+                if (key.ends_with("_path") || key == "packages_root")
+                    && let Some(path) = value.as_str()
+                    && let Ok(relative) = Path::new(path).strip_prefix(root)
+                {
+                    *value = Value::String(relative.to_string_lossy().to_string());
+                    continue;
+                }
+                normalize_repo_paths(value, root);
+            }
+        }
+        _ => {}
+    }
+}
+
 fn dynamic_library_file_name() -> String {
     match env::consts::OS {
         "macos" => "libkyuubiki_operator_template.dylib".to_string(),
         "windows" => "kyuubiki_operator_template.dll".to_string(),
         _ => "libkyuubiki_operator_template.so".to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_repo_paths;
+    use serde_json::json;
+    use std::path::Path;
+
+    #[test]
+    fn retained_preflight_paths_are_repository_relative() {
+        let mut report = json!({
+            "packages_root": "/repo/workers/rust/templates",
+            "accepted_packages": [{
+                "entrypoint_path": "/repo/workers/rust/templates/example/liboperator.so"
+            }],
+            "external_path": "/outside/package.so"
+        });
+
+        normalize_repo_paths(&mut report, Path::new("/repo"));
+
+        assert_eq!(report["packages_root"], "workers/rust/templates");
+        assert_eq!(
+            report["accepted_packages"][0]["entrypoint_path"],
+            "workers/rust/templates/example/liboperator.so"
+        );
+        assert_eq!(report["external_path"], "/outside/package.so");
     }
 }
 

@@ -21,8 +21,8 @@ use crate::workflow_summary_validation::validate_summary_tolerance;
 use kyuubiki_operator_sdk::{JsonOperator, OperatorRegistry, OperatorSdkError};
 use kyuubiki_protocol::{
     OperatorDescriptor, OperatorRunContext, OperatorRunRequest, OperatorRunResult,
+    OperatorTaskInputEnvelope,
 };
-use serde::Deserialize;
 use serde_json::Value;
 use std::sync::OnceLock;
 
@@ -37,12 +37,7 @@ static EXTRACT_OPERATOR_REGISTRY: OnceLock<OperatorRegistry> = OnceLock::new();
 static EXPORT_OPERATOR_REGISTRY: OnceLock<OperatorRegistry> = OnceLock::new();
 static TRANSFORM_OPERATOR_REGISTRY: OnceLock<OperatorRegistry> = OnceLock::new();
 
-#[derive(Debug, Deserialize)]
-pub(crate) struct WorkflowOperatorEnvelope {
-    pub(crate) payload: Value,
-    #[serde(default)]
-    pub(crate) config: Value,
-}
+pub(crate) type WorkflowOperatorEnvelope = OperatorTaskInputEnvelope;
 
 struct ResultSummaryOperator {
     descriptor: OperatorDescriptor,

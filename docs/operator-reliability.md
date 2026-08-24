@@ -886,8 +886,14 @@ constant-strain basis. A deterministic `22%` interior warp repeats the
 Public quality diagnostics expose per-element mean ratio, visible distortion
 thresholds/counts, and a near-incompressible locking-risk term at `nu >= 0.45`.
 The scale-relative degeneracy gate accepts well-shaped microscopic elements,
-reports solvable severe distortion, and rejects numerical slivers. Arbitrary
-unstructured connectivity, stabilized near-incompressibility, plasticity,
+reports solvable severe distortion, and rejects numerical slivers. Topology
+preflight rejects orphan nodes and computes a centered, scale-normalized
+six-mode rigid-body restraint rank for every connected component. It rejects
+both a rank-`5/6` hidden rotation and a floating second component before
+factorization. Separately restrained components solve as one block system and
+report their component count; remapped node and element indices preserve the
+physical response. A general unstructured mesh generator and broad
+connectivity-family corpus, stabilized near-incompressibility, plasticity,
 contact, native body/surface load integration, and large deformation remain
 outside the claim.
 

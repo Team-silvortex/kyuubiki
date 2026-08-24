@@ -1,6 +1,6 @@
 use crate::linear_algebra::{SparseMatrix, reduce_sparse_system, solve_spd_system};
 use crate::solid_tetra_3d_element::{SolidTetra3dElementKernel, element_dof_map};
-use crate::solid_tetra_3d_validation::validate_request;
+use crate::solid_tetra_3d_validation::{mesh_component_count, validate_request};
 use kyuubiki_protocol::{
     SolidTetra3dElementResult, SolidTetra3dEquilibriumResult, SolidTetra3dNodeResult,
     SolidTetra3dQualityResult, SolveSolidTetra3dRequest, SolveSolidTetra3dResult,
@@ -145,6 +145,7 @@ fn summarize_quality(
         watch_terms.push("near_incompressible_volumetric_locking_risk".to_string());
     }
     SolidTetra3dQualityResult {
+        connected_component_count: mesh_component_count(request),
         minimum_mean_ratio_quality,
         distortion_watch_threshold: DISTORTION_WATCH_THRESHOLD,
         severe_distortion_threshold: SEVERE_DISTORTION_THRESHOLD,

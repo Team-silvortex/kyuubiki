@@ -8,12 +8,13 @@ const DEFAULT_INPUT: &str = "tmp/operator-package-dynamic-smoke.json";
 const SCHEMA_PATH: &str = "schemas/operator-package-dynamic-smoke.schema.json";
 const EXAMPLE_PATH: &str = "schemas/examples.operator-package-dynamic-smoke.json";
 const SCHEMAS_README_PATH: &str = "schemas/README.md";
-const SCHEMA_VERSION: &str = "kyuubiki.operator-package-dynamic-smoke/v1";
+const SCHEMA_VERSION: &str = "kyuubiki.operator-package-dynamic-smoke/v2";
 const REQUIRED_STAGES: &[&str] = &[
     "template_tests",
     "strict_preflight",
     "template_cdylib_build",
     "engine_dynamic_host_load",
+    "agent_dynamic_host_dispatch",
 ];
 
 pub(crate) fn run_check_operator_package_dynamic_smoke(
@@ -446,6 +447,7 @@ mod tests {
     fn stage_order_is_canonical() {
         assert_eq!(REQUIRED_STAGES[0], "template_tests");
         assert_eq!(REQUIRED_STAGES[3], "engine_dynamic_host_load");
+        assert_eq!(REQUIRED_STAGES[4], "agent_dynamic_host_dispatch");
     }
 
     #[test]
@@ -457,6 +459,6 @@ mod tests {
 
     #[test]
     fn schema_version_is_stable() {
-        assert_eq!(SCHEMA_VERSION, "kyuubiki.operator-package-dynamic-smoke/v1");
+        assert_eq!(SCHEMA_VERSION, "kyuubiki.operator-package-dynamic-smoke/v2");
     }
 }

@@ -16,6 +16,7 @@ const ALLOWED_COMMAND_PREFIXES: &[&str] = &["make ", "cd workers/rust && cargo "
 const ALLOWED_KINDS: &[&str] = &[
     "analytic",
     "boundary_regression",
+    "convergence",
     "contract",
     "cross_check",
     "invariant",

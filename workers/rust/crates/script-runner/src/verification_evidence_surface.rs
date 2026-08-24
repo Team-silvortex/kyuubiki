@@ -110,6 +110,11 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
     )?;
     assert_includes(
         &string_array_at(surface, "/runtime_api/stable_commands"),
+        "./scripts/kyuubiki check-desktop-ui-validation",
+        "stable command",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/stable_commands"),
         "./scripts/kyuubiki check-workbench-validation-qualification",
         "stable command",
     )?;
@@ -161,6 +166,11 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
     assert_includes(
         &string_array_at(surface, "/runtime_api/generated_artifacts"),
         "tmp/contracts-validation-qualification-report.json",
+        "generated artifact",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/generated_artifacts"),
+        "tmp/desktop-ui-validation-report.json",
         "generated artifact",
     )?;
     assert_includes(

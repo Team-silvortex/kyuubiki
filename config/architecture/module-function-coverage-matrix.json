@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.module-function-coverage-matrix/v1",
-  "version_line": "moxi 2.0.x",
+  "version_line": "moxi 2.15.x",
   "topology": "config/architecture/module-topology.json",
   "paradigms": {
     "product_surface": "User-facing shell, navigation, UX, and stable UI automation anchors.",
@@ -12,10 +12,12 @@
     "security": "Authentication, sandboxing, credential handling, package admission, or audit behavior.",
     "persistence_provenance": "Database, snapshot, result bundle, lineage, report, or release evidence retention.",
     "deployment_update": "Install, update, repair, remote deployment, package staging, or cleanup behavior.",
+    "sdk_operator": "Rust-only Worker and Operator SDK authoring, package admission, host ABI, and extension execution.",
     "sdk_headless": "Rust, Python, Elixir, or protocol-first headless automation access."
   },
   "required_by_module": {
     "contracts": [
+      "workflow_composition",
       "validation",
       "security",
       "persistence_provenance"
@@ -36,11 +38,14 @@
       "runtime_api",
       "workflow_composition",
       "validation",
+      "security",
+      "persistence_provenance",
       "sdk_headless"
     ],
     "installer-shell": [
       "product_surface",
       "runtime_api",
+      "validation",
       "deployment_update",
       "security",
       "persistence_provenance"
@@ -48,46 +53,71 @@
     "orchestra-control-plane": [
       "runtime_api",
       "workflow_composition",
+      "validation",
+      "benchmark",
       "security",
       "persistence_provenance"
     ],
     "runtime-protocol": [
       "runtime_api",
       "solver_execution",
+      "workflow_composition",
       "validation",
+      "benchmark",
+      "sdk_operator",
       "security"
+    ],
+    "sdk-operator": [
+      "runtime_api",
+      "solver_execution",
+      "workflow_composition",
+      "validation",
+      "benchmark",
+      "security",
+      "persistence_provenance",
+      "sdk_operator"
     ],
     "runtime-engine-solver": [
       "solver_execution",
       "validation",
       "benchmark",
-      "security"
+      "security",
+      "persistence_provenance",
+      "sdk_operator"
     ],
     "runtime-agent-cli": [
       "runtime_api",
       "solver_execution",
       "benchmark",
+      "validation",
       "security",
-      "deployment_update"
+      "persistence_provenance",
+      "deployment_update",
+      "sdk_operator"
     ],
     "runtime-installer": [
       "runtime_api",
       "deployment_update",
       "security",
       "validation",
-      "persistence_provenance"
+      "persistence_provenance",
+      "sdk_operator"
     ],
     "sdk-headless": [
       "runtime_api",
       "workflow_composition",
       "validation",
+      "benchmark",
+      "security",
+      "persistence_provenance",
       "sdk_headless"
     ],
     "verification-evidence": [
       "validation",
       "benchmark",
       "security",
-      "persistence_provenance"
+      "persistence_provenance",
+      "sdk_operator"
     ]
   },
   "cells": {
@@ -98,6 +128,7 @@
       "benchmark": "covered",
       "security": "covered",
       "persistence_provenance": "covered",
+      "sdk_operator": "covered",
       "sdk_headless": "covered"
     },
     "hub-shell": {
@@ -147,7 +178,19 @@
       "validation": "covered",
       "benchmark": "covered",
       "security": "covered",
+      "sdk_operator": "covered",
       "sdk_headless": "covered"
+    },
+    "sdk-operator": {
+      "runtime_api": "covered",
+      "solver_execution": "covered",
+      "workflow_composition": "covered",
+      "validation": "covered",
+      "benchmark": "covered",
+      "security": "covered",
+      "persistence_provenance": "covered",
+      "deployment_update": "covered",
+      "sdk_operator": "covered"
     },
     "runtime-engine-solver": {
       "runtime_api": "covered",
@@ -157,6 +200,7 @@
       "benchmark": "covered",
       "security": "covered",
       "persistence_provenance": "covered",
+      "sdk_operator": "covered",
       "sdk_headless": "covered"
     },
     "runtime-agent-cli": {
@@ -168,6 +212,7 @@
       "security": "covered",
       "persistence_provenance": "covered",
       "deployment_update": "covered",
+      "sdk_operator": "covered",
       "sdk_headless": "covered"
     },
     "runtime-installer": {
@@ -178,6 +223,7 @@
       "security": "covered",
       "persistence_provenance": "covered",
       "deployment_update": "covered",
+      "sdk_operator": "covered",
       "sdk_headless": "covered"
     },
     "sdk-headless": {
@@ -199,6 +245,7 @@
       "security": "covered",
       "persistence_provenance": "covered",
       "deployment_update": "covered",
+      "sdk_operator": "covered",
       "sdk_headless": "covered"
     }
   }

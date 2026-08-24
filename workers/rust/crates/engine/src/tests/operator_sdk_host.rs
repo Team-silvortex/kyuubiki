@@ -516,7 +516,10 @@ fn loads_prebuilt_template_cdylib_through_dynamic_host() {
     let result = registry
         .run(OperatorRunRequest {
             operator_id: "extract.template_summary".to_string(),
-            input: serde_json::json!({ "values": [2.0, 4.0, 8.0] }),
+            input: serde_json::json!({
+                "payload": { "values": [2.0, 4.0, 8.0] },
+                "config": { "qualification": "engine_dynamic_host" }
+            }),
             context: OperatorRunContext::default(),
         })
         .expect("template operator should run");

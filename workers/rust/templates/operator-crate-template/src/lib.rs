@@ -2,7 +2,10 @@ use kyuubiki_operator_sdk::{
     JsonOperator, OperatorDescriptorBuilder, OperatorRegistry, OperatorSdkError,
     operator_port_with_dataset, operator_summary_result, partial_validation,
 };
-use kyuubiki_protocol::{OperatorKind, OperatorRunContext, OperatorRunRequest, OperatorRunResult};
+use kyuubiki_protocol::{
+    OperatorKind, OperatorRunContext, OperatorRunRequest, OperatorRunResult,
+    OperatorTaskInputEnvelope,
+};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -50,7 +53,7 @@ impl Default for TemplateSummaryOperator {
 }
 
 impl JsonOperator for TemplateSummaryOperator {
-    type Input = TemplateInput;
+    type Input = OperatorTaskInputEnvelope<TemplateInput>;
 
     fn descriptor(&self) -> &kyuubiki_protocol::OperatorDescriptor {
         &self.descriptor
@@ -61,17 +64,18 @@ impl JsonOperator for TemplateSummaryOperator {
         input: Self::Input,
         _context: &OperatorRunContext,
     ) -> Result<OperatorRunResult, OperatorSdkError> {
-        if input.values.is_empty() {
+        if input.payload.values.is_empty() {
             return Err(OperatorSdkError::Handler {
                 operator_id: self.descriptor.id.clone(),
                 message: "template_summary expects at least one numeric value".to_string(),
             });
         }
 
-        let count = input.values.len();
-        let sum = input.values.iter().sum::<f64>();
+        let count = input.payload.values.len();
+        let sum = input.payload.values.iter().sum::<f64>();
         let mean = sum / count as f64;
         let max = input
+            .payload
             .values
             .iter()
             .copied()
@@ -90,9 +94,7 @@ impl JsonOperator for TemplateSummaryOperator {
     }
 }
 
-pub fn install_template_operator(
-    registry: &mut OperatorRegistry,
-) -> Result<(), OperatorSdkError> {
+pub fn install_template_operator(registry: &mut OperatorRegistry) -> Result<(), OperatorSdkError> {
     registry.register_json(TemplateSummaryOperator::new())
 }
 
@@ -112,7 +114,7 @@ pub fn run_template_operator(values: Vec<f64>) -> Result<OperatorRunResult, Oper
     install_template_operator(&mut registry)?;
     registry.run(OperatorRunRequest {
         operator_id: "extract.template_summary".to_string(),
-        input: serde_json::json!({ "values": values }),
+        input: serde_json::json!({ "payload": { "values": values }, "config": {} }),
         context: OperatorRunContext::default(),
     })
 }

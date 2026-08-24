@@ -58,6 +58,7 @@
         "numerical_validation",
         "recovery",
         "sdk_parity",
+        "abi_compatibility",
         "ux_closure"
       ]
     },

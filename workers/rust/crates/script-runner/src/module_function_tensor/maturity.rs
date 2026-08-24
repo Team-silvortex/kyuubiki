@@ -11,6 +11,7 @@ const ALLOWED_DIMENSIONS: &[&str] = &[
     "numerical_validation",
     "recovery",
     "sdk_parity",
+    "abi_compatibility",
     "ux_closure",
 ];
 const ALLOWED_CLAIM_STATUS: &[&str] = &["proven", "partial", "open"];

@@ -532,9 +532,14 @@ explicit. A deterministic `22%` interior warp retains contraction on the
 energy error with minimum mean-ratio quality `0.2827`. Element and summary
 outputs now expose scale-independent mean-ratio quality, distortion counts,
 and a `nu >= 0.45` volumetric-locking warning; regular microscopic elements are
-no longer rejected by an absolute-volume threshold. Arbitrary unstructured
-connectivity, stabilized near-incompressibility, and broader independent 3D
-references remain outside the claim.
+no longer rejected by an absolute-volume threshold. Topology preflight now
+rejects orphan nodes and checks all six rigid-body modes independently for each
+connected component rather than relying on a global fixed-DOF count. Multiple
+independently restrained components solve in one block system and expose their
+component count, while node/index reordering preserves the physical response.
+A general unstructured mesh generator and broader connectivity-family corpus,
+stabilized near-incompressibility, and independent external 3D references
+remain outside the claim.
 
 The twenty-first approved qualification packet is
 [nonlinear-spring-1d-closed-form-release-evidence.json](../releases/qualification-evidence/2.0.0/nonlinear-spring-1d-closed-form-release-evidence.json).

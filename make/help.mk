@@ -84,6 +84,7 @@ help:
 	@echo "  make qualify-persistence-provenance Qualify Installer, Orchestra, and deployment persistence provenance"
 	@echo "  make check-persistence-provenance-qualification Recheck retained persistence provenance evidence"
 	@echo "  make qualify-desktop-ui-validation Run the cross-shell GUI qualification and write a retained JSON report"
+	@echo "  make check-desktop-ui-validation Recheck retained cross-shell and Installer validation evidence"
 	@echo "  make qualify-protocol-validation Run protocol, TaskIR, RPC, and fuzz qualification and retain JSON evidence"
 	@echo "  make qualify-contracts-validation Run repeatable positive and fault-boundary contract qualification"
 	@echo "  make qualify-workbench-validation Run repeatable PWDT and three-viewport Workbench qualification"

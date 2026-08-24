@@ -1,17 +1,16 @@
 {
-  "$schema": "operator-package-dynamic-smoke.schema.json",
   "schema_version": "kyuubiki.operator-package-dynamic-smoke/v2",
-  "generated_at": "2026-07-12T00:00:00Z",
+  "generated_at": "2026-08-24T04:29:43Z",
   "ok": true,
   "package_id": "operator.template.summary",
   "operator_ids": [
     "extract.template_summary"
   ],
-  "host_version": "2.0.0",
+  "host_version": "2.15.0",
   "sdk_api_version": "kyuubiki.operator-sdk/v1",
   "template_manifest": "workers/rust/templates/operator-crate-template/Cargo.toml",
   "package_manifest": "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",
-  "preflight_report": "tmp/operator-package-dynamic-preflight.json",
+  "preflight_report": "releases/usability-evidence/2.15.0/operator-package-dynamic-preflight.json",
   "dynamic_library": "workers/rust/templates/operator-crate-template/target/debug/libkyuubiki_operator_template.dylib",
   "stages": [
     {
@@ -42,7 +41,7 @@
         "operator-package-preflight",
         "templates",
         "--out",
-        "../../tmp/operator-package-dynamic-preflight.json",
+        "../../releases/usability-evidence/2.15.0/operator-package-dynamic-preflight.json",
         "--fail-on-rejected",
         "--fail-on-readiness-warnings"
       ],

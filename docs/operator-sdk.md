@@ -223,6 +223,25 @@ The current shape includes:
 - `OperatorRunResult`
 - `OperatorArtifactRef`
 
+### Architecture And Tensor Status
+
+The machine-readable module owner is `sdk-operator`. It owns
+`workers/rust/crates/operator-sdk` and `workers/rust/templates`; Installer owns
+admission and deployment actions but no longer owns the SDK itself. Engine and
+Installer depend on this module through explicit topology edges.
+
+The `sdk_operator` tensor paradigm is distinct from `sdk_headless`. Current
+authoring, manifest, readiness, host-policy, workflow-extension, fuzz, and local
+dynamic-library evidence qualifies the Rust extension contract. A real Agent
+now loads an external-local package, dispatches it over the TaskIR RPC boundary,
+rejects a digest-valid package-integrity substitution, and executes again after
+the rejection. This is retained local qualification, not operational evidence.
+Promotion to the Daji target still requires an Installer-managed installed
+package journey, Orchestra-owned package pull, and the supported platform ABI
+matrix. A separate focused benchmark must measure package
+discovery, admission, load, first dispatch, and steady dispatch without
+borrowing general solver throughput numbers.
+
 ### Author-facing crate
 
 The first author-facing Rust SDK crate now also exists in
@@ -347,8 +366,11 @@ rather than merely discoverable.
 
 `make operator-package-dynamic-smoke` goes one step further for the repository
 template package: it runs the template crate tests, runs strict package
-preflight, builds the template `cdylib`, and executes the engine host dynamic
-loading smoke. It writes
+preflight, builds the template `cdylib`, executes the engine host dynamic
+loading smoke, then starts a package-enabled Agent and dispatches the operator
+through RPC. The Agent stage also rejects a TaskIR whose package digest does not
+match the activated entrypoint and proves recovery with a subsequent valid run.
+It writes
 `tmp/operator-package-dynamic-smoke.json` by default; override with
 `OUT=tmp/custom.json`. Use it when changing the SDK host, package manifest,
 template, or dynamic-library activation path.
@@ -360,6 +382,9 @@ The retained report contract is also documented as
 [operator-package-dynamic-smoke.schema.json](../schemas/operator-package-dynamic-smoke.schema.json)
 with a fixture at
 [examples.operator-package-dynamic-smoke.json](../schemas/examples.operator-package-dynamic-smoke.json).
+The retained `v2` contract has five ordered stages, ending in
+`agent_dynamic_host_dispatch`. Repository-local paths in retained preflight
+evidence are normalized to project-relative paths.
 - a minimal typed operator in `src/lib.rs`
 - a tiny runnable `src/main.rs`
 - a crate-local smoke test so authors start with a feedback loop immediately
@@ -396,6 +421,31 @@ an explicit activation boundary:
 3. run non-loading readiness checks
 4. resolve package entrypoints into load plans
 5. let the runtime host activate those plans into an `OperatorRegistry`
+6. bind the activated registry to the Agent and dispatch matching TaskIR
+
+### Agent package execution
+
+When `operator_packages_root` is configured, Agent startup now creates the real
+dynamic host before publishing its descriptor. The descriptor reports the
+actual activated package count; an empty root, load failure, or configured-count
+mismatch fails startup rather than advertising a host that cannot execute.
+
+External-local TaskIR uses the same protocol request as built-ins, with an
+`OperatorTaskInputEnvelope` containing separate `payload` and `config` values.
+Before dispatch, the Agent requires all of the following to match the activated
+manifest and binary:
+
+- `package_ref` is exactly `bundle://<package_id>`
+- package version and operator kind match the manifest
+- `package_integrity.algorithm` is `sha256`
+- `package_integrity.digest` matches the activated entrypoint bytes
+
+Successful execution returns a path-free package receipt with package, SDK,
+runtime, operator, validation, and entrypoint digest identity. Failures return a
+typed stage and recovery action. The retained integration test
+`live_agent_loads_executes_rejects_tamper_and_recovers` proves valid execution,
+fail-closed digest handling, and post-failure recovery through the Agent RPC
+surface.
 
 What remains intentionally host-owned is platform policy, not the full loading
 mechanism. The SDK still does not hardcode one universal desktop/headless
@@ -436,6 +486,9 @@ The first runtime migration is also in place:
   in the engine host config:
   package-id allowlists, runtime allowlists, absolute-entrypoint toggles, and
   package-root boundary checks are all evaluated before activation
+- the Agent now owns a live dynamic-host session for `external_local` TaskIR,
+  publishes the actual activated count, verifies package identity and binary
+  digest, and emits a sanitized execution receipt
 
 ### Model-assisted Rust authoring
 

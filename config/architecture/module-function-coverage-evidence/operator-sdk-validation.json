@@ -1,0 +1,323 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Rust Worker and Operator SDK evidence separated from Headless control SDKs, covering authoring, package admission, host execution, ABI boundaries, workflow composition, and remaining operational gaps.",
+  "paradigm_contract_evidence": {
+    "runtime_api": [
+      {
+        "id": "operator-sdk-rust-authoring-contract",
+        "modules": ["sdk-operator"],
+        "files": [
+          "workers/rust/crates/operator-sdk/src/lib.rs",
+          "workers/rust/crates/operator-sdk/src/surface.rs",
+          "workers/rust/crates/operator-sdk/src/readiness.rs",
+          "docs/operator-sdk.md"
+        ],
+        "required_text": [
+          "kyuubiki.operator-sdk-surface/v1",
+          "OperatorRegistry",
+          "operator_package_manifest_readiness",
+          "Rust-only surface for extending operators"
+        ]
+      }
+    ],
+    "solver_execution": [
+      {
+        "id": "operator-sdk-runtime-host-contract",
+        "modules": ["sdk-operator", "runtime-engine-solver", "runtime-agent-cli"],
+        "files": [
+          "workers/rust/crates/engine/src/operator_sdk_host.rs",
+          "workers/rust/crates/engine/src/tests/operator_sdk_host.rs",
+          "workers/rust/crates/cli/src/operator_task_runtime.rs",
+          "workers/rust/crates/cli/src/operator_package_runtime.rs",
+          "workers/rust/crates/cli/tests/operator_package_live.rs"
+        ],
+        "required_text": [
+          "kyuubiki-engine.operator-sdk-host/v1",
+          "loads_prebuilt_template_cdylib_through_dynamic_host",
+          "ExternalOperatorTrustPolicy",
+          "external_operator_package_executed",
+          "live_agent_loads_executes_rejects_tamper_and_recovers"
+        ]
+      }
+    ],
+    "workflow_composition": [
+      {
+        "id": "operator-sdk-workflow-extension-contract",
+        "modules": ["runtime-protocol", "sdk-operator", "runtime-engine-solver"],
+        "files": [
+          "workers/rust/crates/protocol/src/operator.rs",
+          "workers/rust/crates/engine/src/operator_sdk_workflow_extensions.rs",
+          "workers/rust/crates/engine/src/tests/operator_sdk_runtime.rs"
+        ],
+        "required_text": [
+          "OperatorPortDescriptor",
+          "OperatorRunRequest",
+          "register_workflow_transform_extensions",
+          "runs_bridge_operator_through_sdk_registry"
+        ]
+      }
+    ],
+    "validation": [
+      {
+        "id": "operator-sdk-admission-validation-contract",
+        "modules": ["sdk-operator", "runtime-engine-solver", "runtime-agent-cli", "runtime-installer", "verification-evidence"],
+        "files": [
+          "workers/rust/crates/operator-sdk/src/readiness.rs",
+          "workers/rust/crates/installer/src/operator_package_preflight.rs",
+          "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
+          "schemas/operator-package-dynamic-smoke.schema.json"
+        ],
+        "required_text": [
+          "operator_package_descriptor_readiness",
+          "kyuubiki.operator-package-preflight/v1",
+          "engine_dynamic_host_load",
+          "kyuubiki.operator-package-dynamic-smoke/v2"
+        ]
+      }
+    ],
+    "benchmark": [
+      {
+        "id": "operator-sdk-dynamic-smoke-measurement-contract",
+        "modules": ["sdk-operator", "runtime-agent-cli", "verification-evidence"],
+        "files": [
+          "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
+          "schemas/operator-package-dynamic-smoke.schema.json",
+          "schemas/examples.operator-package-dynamic-smoke.json",
+          "make/build.mk"
+        ],
+        "required_text": [
+          "template_cdylib_build",
+          "engine_dynamic_host_load",
+          "agent_dynamic_host_dispatch",
+          "operator-package-dynamic-smoke"
+        ]
+      }
+    ],
+    "security": [
+      {
+        "id": "operator-sdk-host-security-contract",
+        "modules": ["sdk-operator", "runtime-engine-solver", "runtime-agent-cli", "runtime-installer"],
+        "files": [
+          "workers/rust/crates/operator-sdk/src/manifest_fuzz.rs",
+          "workers/rust/crates/engine/src/tests/operator_sdk_host_security.rs",
+          "workers/rust/crates/engine/src/tests/operator_sdk_host.rs",
+          "workers/rust/crates/installer/src/tests/operator_package_preflight.rs",
+          "workers/rust/crates/cli/tests/operator_package_live.rs"
+        ],
+        "required_text": [
+          "operator_package_manifest_fuzz_smoke_does_not_panic_on_mutated_json",
+          "host_policy_rejects_non_library_entrypoint_by_default",
+          "host_policy_rejects_entrypoint_symlink_escape",
+          "host_policy_rejects_future_minimum_host_version",
+          "live_agent_loads_executes_rejects_tamper_and_recovers"
+        ]
+      }
+    ],
+    "persistence_provenance": [
+      {
+        "id": "operator-sdk-package-provenance-contract",
+        "modules": ["sdk-operator", "runtime-installer"],
+        "files": [
+          "workers/rust/crates/operator-sdk/src/manifest.rs",
+          "workers/rust/crates/installer/src/operator_package_preflight.rs",
+          "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",
+          "docs/operator-sdk.md"
+        ],
+        "required_text": [
+          "kyuubiki.operator-sdk/v1",
+          "minimum_host_version",
+          "validation_status",
+          "package admission summary"
+        ]
+      }
+    ],
+    "sdk_operator": [
+      {
+        "id": "operator-sdk-end-to-end-extension-contract",
+        "modules": ["runtime-protocol", "sdk-operator", "runtime-engine-solver", "runtime-agent-cli", "runtime-installer", "verification-evidence"],
+        "files": [
+          "docs/operator-sdk.md",
+          "workers/rust/crates/operator-sdk/src/surface.rs",
+          "workers/rust/crates/engine/src/operator_sdk_host.rs",
+          "workers/rust/crates/cli/src/operator_task_runtime.rs",
+          "workers/rust/crates/cli/src/operator_package_runtime.rs",
+          "workers/rust/crates/cli/tests/operator_package_live.rs",
+          "workers/rust/crates/installer/src/operator_package_preflight.rs",
+          "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
+          "releases/usability-evidence/2.15.0/operator-sdk-agent-qualification.json"
+        ],
+        "required_text": [
+          "Rust-only surface for extending operators",
+          "operator_sdk_surface_manifest",
+          "kyuubiki-engine.operator-sdk-host/v1",
+          "operator-package-preflight",
+          "external_operator_package_executed",
+          "agent_dynamic_host_dispatch"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "operator-sdk-authoring-surface-verified",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-operator"],
+      "paradigms": ["runtime_api", "validation", "persistence_provenance", "sdk_operator"],
+      "dimensions": ["execution", "contract", "abi_compatibility"],
+      "files": [
+        "workers/rust/crates/operator-sdk/src/lib.rs",
+        "workers/rust/crates/operator-sdk/src/surface.rs",
+        "workers/rust/crates/operator-sdk/src/readiness.rs",
+        "workers/rust/crates/operator-sdk/src/manifest.rs"
+      ],
+      "required_text": [
+        "registers_json_operator_and_runs_it",
+        "operator_sdk_surface_areas_are_unique_and_cover_extension_flow",
+        "reports_manifest_descriptor_mismatch",
+        "reads_valid_operator_package_manifest"
+      ]
+    },
+    {
+      "id": "operator-sdk-host-fault-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["sdk-operator", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation", "security", "sdk_operator"],
+      "dimensions": ["execution", "security", "contract", "recovery", "abi_compatibility"],
+      "files": [
+        "workers/rust/crates/operator-sdk/src/manifest_fuzz.rs",
+        "workers/rust/crates/engine/src/tests/operator_sdk_host.rs",
+        "workers/rust/crates/engine/src/tests/operator_sdk_host_security.rs",
+        "schemas/operator-package-dynamic-smoke.schema.json"
+      ],
+      "required_text": [
+        "operator_package_manifest_fuzz_smoke_does_not_panic_on_byte_ingress",
+        "preflight_reports_accepted_and_rejected_packages_without_activation",
+        "host_policy_rejects_non_library_entrypoint_by_default",
+        "engineDynamicHostLoadStage"
+      ]
+    },
+    {
+      "id": "operator-sdk-workflow-composition-qualified",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["runtime-protocol", "sdk-operator", "runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "sdk_operator"],
+      "dimensions": ["execution", "contract", "abi_compatibility"],
+      "files": [
+        "workers/rust/crates/protocol/src/operator.rs",
+        "workers/rust/crates/engine/src/operator_sdk_workflow_extensions.rs",
+        "workers/rust/crates/engine/src/tests/operator_sdk_runtime.rs",
+        "workers/rust/crates/engine/src/tests/operator_sdk_runtime_cfd.rs"
+      ],
+      "required_text": [
+        "OperatorPortDescriptor",
+        "register_workflow_extract_extensions",
+        "runs_transform_operator_through_sdk_registry",
+        "runs_cfd_diagnostics_operator_through_sdk_registry"
+      ]
+    },
+    {
+      "id": "operator-sdk-agent-host-qualified",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["validation", "security", "sdk_operator"],
+      "dimensions": ["execution", "security", "contract", "recovery", "abi_compatibility"],
+      "files": [
+        "workers/rust/crates/cli/src/agent_deployment.rs",
+        "workers/rust/crates/cli/src/operator_task_runtime.rs",
+        "workers/rust/crates/cli/src/operator_package_runtime.rs",
+        "workers/rust/crates/cli/src/tests/agent_mesh_descriptor_rpc.rs",
+        "workers/rust/crates/cli/src/tests/operator_task_ir_rpc.rs",
+        "workers/rust/crates/cli/tests/operator_package_live.rs",
+        "releases/usability-evidence/2.15.0/operator-sdk-agent-qualification.json"
+      ],
+      "required_text": [
+        "operator package host is declared without operator_packages_root",
+        "kyuubiki-engine.operator-sdk-host/v1",
+        "operator_package_host_id",
+        "external_operator_package_executed",
+        "live_agent_loads_executes_rejects_tamper_and_recovers",
+        "agent_dynamic_host_dispatch"
+      ]
+    },
+    {
+      "id": "operator-sdk-installer-admission-qualified",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["sdk-operator", "runtime-installer"],
+      "paradigms": ["validation", "security", "persistence_provenance", "sdk_operator"],
+      "dimensions": ["execution", "security", "contract", "recovery", "abi_compatibility"],
+      "files": [
+        "workers/rust/crates/installer/src/operator_package_preflight.rs",
+        "workers/rust/crates/installer/src/tests/operator_package_preflight.rs",
+        "workers/rust/crates/operator-sdk/src/readiness.rs"
+      ],
+      "required_text": [
+        "operator package preflight rejected",
+        "operator_package_preflight_outcome_can_gate_readiness_warnings",
+        "operator_package_preflight_json_can_be_written_to_report_file",
+        "operator_package_descriptor_readiness"
+      ]
+    },
+    {
+      "id": "operator-sdk-verification-pipeline-qualified",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["sdk-operator", "verification-evidence"],
+      "paradigms": ["benchmark", "validation", "sdk_operator"],
+      "dimensions": ["execution", "benchmark", "contract", "abi_compatibility"],
+      "files": [
+        "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
+        "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke/check.rs",
+        "schemas/operator-package-dynamic-smoke.schema.json",
+        "schemas/examples.operator-package-dynamic-smoke.json",
+        "releases/usability-evidence/2.15.0/operator-sdk-agent-qualification.json",
+        "releases/usability-evidence/2.15.0/operator-package-dynamic-preflight.json"
+      ],
+      "required_text": [
+        "template_tests",
+        "strict_preflight",
+        "template_cdylib_build",
+        "engine_dynamic_host_load",
+        "agent_dynamic_host_dispatch"
+      ]
+    },
+    {
+      "id": "operator-sdk-installed-agent-journey",
+      "status": "open",
+      "grade": "operational",
+      "modules": ["sdk-operator", "runtime-engine-solver", "runtime-agent-cli", "runtime-installer"],
+      "paradigms": ["sdk_operator"],
+      "dimensions": ["execution", "security", "recovery", "abi_compatibility"],
+      "files": [
+        "docs/operator-sdk.md",
+        "config/architecture/usability-release-gate.json"
+      ],
+      "required_text": [
+        "external_local",
+        "dynamic-library activation path",
+        "planned_or_static_only_is_not_release_evidence"
+      ]
+    },
+    {
+      "id": "operator-sdk-performance-qualification",
+      "status": "open",
+      "grade": "qualified",
+      "modules": ["sdk-operator", "verification-evidence"],
+      "paradigms": ["benchmark"],
+      "dimensions": ["benchmark", "contract"],
+      "files": [
+        "docs/operator-sdk.md",
+        "make/build.mk"
+      ],
+      "required_text": [
+        "operator-package-dynamic-smoke",
+        "dynamic-library activation path"
+      ]
+    }
+  ]
+}

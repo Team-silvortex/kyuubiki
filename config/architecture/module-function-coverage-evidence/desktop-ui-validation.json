@@ -33,6 +33,33 @@
           "desktop shell layout keeps operational workspaces dominant",
           "desktop primary navigation forms a reversible non-empty loop"
         ]
+      },
+      {
+        "id": "installer-shell-validation-contract",
+        "modules": [
+          "installer-shell"
+        ],
+        "files": [
+          "config/architecture/desktop-ui-validation.json",
+          "schemas/desktop-ui-validation-report.schema.json",
+          "workers/rust/crates/script-runner/src/desktop_ui_validation.rs",
+          "tests/integration/desktop-deployment-update-closure.test.mjs",
+          "tests/integration/desktop-gui-action-sweep.test.mjs",
+          "tests/integration/desktop-gui-capability-closure.test.mjs",
+          "tests/integration/desktop-gui-layout-priority.test.mjs",
+          "tests/integration/desktop-gui-navigation-closure.test.mjs",
+          "tests/integration/desktop-shell-regression.test.mjs"
+        ],
+        "required_text": [
+          "kyuubiki.desktop-ui-validation-contract/v1",
+          "kyuubiki.desktop-ui-validation-report/v1",
+          "\"id\": \"installer\"",
+          "Hub-to-Installer deployment update closes handoff, source, download, apply, and integrity layers",
+          "all desktop declarative actions reach an observable terminal state",
+          "every required desktop capability closes UI, route, native, and result layers",
+          "Installer workspace should own most of the visible viewport",
+          "Installer should expose its primary navigation"
+        ]
       }
     ]
   },
@@ -66,6 +93,42 @@
         "\"actions\": 7",
         "\"id\": \"deployment-update-closure\"",
         "\"id\": \"pwdt-parity\"",
+        "\"id\": \"navigation-closure\""
+      ]
+    },
+    {
+      "id": "installer-shell-validation-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "installer-shell"
+      ],
+      "paradigms": [
+        "validation"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "ux_closure"
+      ],
+      "files": [
+        "config/architecture/desktop-ui-validation.json",
+        "tests/integration/desktop-deployment-update-closure.test.mjs",
+        "tests/integration/desktop-gui-action-sweep.test.mjs",
+        "tests/integration/desktop-gui-capability-closure.test.mjs",
+        "tests/integration/desktop-gui-layout-priority.test.mjs",
+        "tests/integration/desktop-gui-navigation-closure.test.mjs",
+        "tests/integration/desktop-shell-regression.test.mjs",
+        "releases/usability-evidence/2.15.0/desktop-ui-validation-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"failed_actions\": 0",
+        "\"missing_actions\": 0",
+        "\"id\": \"installer\"",
+        "\"id\": \"deployment-update-closure\"",
+        "\"id\": \"capability-closure\"",
+        "\"id\": \"layout-priority\"",
         "\"id\": \"navigation-closure\""
       ]
     }

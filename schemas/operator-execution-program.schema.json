@@ -58,7 +58,23 @@
     "operator_category_id": { "type": ["string", "null"] },
     "package_ref": { "type": ["string", "null"] },
     "package_version": { "type": ["string", "null"] },
-    "package_integrity": { "type": ["object", "null"] },
+    "package_integrity": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algorithm", "digest"],
+          "properties": {
+            "algorithm": { "const": "sha256" },
+            "digest": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      ]
+    },
     "runtime_protocol": {
       "type": "string",
       "enum": ["kyuubiki.solver-rpc/v1", "kyuubiki.operator-execution/v1"]

@@ -17,6 +17,7 @@ mod agent_state;
 mod agent_watchdog;
 mod agent_watchdog_runtime;
 mod config;
+mod operator_package_runtime;
 mod operator_task_builtin;
 mod operator_task_receipts;
 mod operator_task_runtime;
@@ -39,9 +40,8 @@ use agent_state::{
 };
 use agent_watchdog_runtime::AgentWatchdogRuntimeHandle;
 use config::{AgentConfig, Command};
-use operator_task_runtime::{
-    operator_package_runtime_binding_from_config, store_operator_package_runtime_binding,
-};
+use operator_package_runtime::initialize_operator_package_runtime;
+use operator_task_runtime::store_operator_package_runtime_binding;
 use rpc::handle_request;
 use transport::{AgentReply, FrameReadError, read_frame, write_agent_reply};
 use worker::run_worker;
@@ -67,16 +67,19 @@ fn main() {
 }
 
 fn run_agent(config: &AgentConfig) -> Result<(), String> {
-    agent_artifact::configure(config);
+    let package_binding = initialize_operator_package_runtime(config)?;
+    let mut config = config.clone();
+    config.operator_activated_package_count = package_binding.activated_package_count();
+    store_operator_package_runtime_binding(package_binding);
+    agent_artifact::configure(&config);
     agent_fault_injection::configure_from_env()?;
-    store_runtime_descriptor(build_agent_descriptor(config));
-    store_deployment_readiness(build_agent_deployment_readiness_for_config(config));
-    store_operator_package_runtime_binding(operator_package_runtime_binding_from_config(config));
+    store_runtime_descriptor(build_agent_descriptor(&config));
+    store_deployment_readiness(build_agent_deployment_readiness_for_config(&config));
     let listener = TcpListener::bind((config.host.as_str(), config.port))
         .map_err(|error| format!("failed to bind {}:{}: {error}", config.host, config.port))?;
-    let watchdog = AgentWatchdogRuntimeHandle::maybe_spawn(config)?;
-    let registration = AgentRegistrationHandle::maybe_spawn(config);
-    let peer_mesh = PeerMeshHandle::maybe_spawn(config);
+    let watchdog = AgentWatchdogRuntimeHandle::maybe_spawn(&config)?;
+    let registration = AgentRegistrationHandle::maybe_spawn(&config);
+    let peer_mesh = PeerMeshHandle::maybe_spawn(&config);
 
     for stream in listener.incoming() {
         let stream = stream.map_err(|error| format!("failed to accept connection: {error}"))?;

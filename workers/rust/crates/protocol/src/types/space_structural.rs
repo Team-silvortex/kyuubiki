@@ -313,6 +313,7 @@ pub struct SolidTetra3dEquilibriumResult {
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct SolidTetra3dQualityResult {
+    pub connected_component_count: usize,
     pub minimum_mean_ratio_quality: f64,
     pub distortion_watch_threshold: f64,
     pub severe_distortion_threshold: f64,

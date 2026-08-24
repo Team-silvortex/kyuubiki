@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.module-topology/v1",
-  "version_line": "moxi 2.0.x",
+  "version_line": "moxi 2.15.x",
   "benchmark_lanes": {
     "ui_startup": "WebView, layout, workflow UI, and desktop shell startup/render cost.",
     "workflow_catalog": "Workflow catalog search, topology, package, and graph authoring cost.",
@@ -496,6 +496,33 @@
       ]
     },
     {
+      "id": "sdk-operator",
+      "layer": "sdk",
+      "summary": "Rust-only Worker and Operator SDK for typed operator authoring, package manifests, admission readiness, and dynamic host ABI boundaries.",
+      "owned_paths": [
+        "workers/rust/crates/operator-sdk",
+        "workers/rust/templates"
+      ],
+      "depends_on": [
+        "contracts",
+        "runtime-protocol"
+      ],
+      "benchmark_lanes": [
+        "runtime_solver",
+        "installer_release"
+      ],
+      "security_lanes": [
+        "runtime_sandbox",
+        "supply_chain",
+        "data_contract"
+      ],
+      "risk_tags": [
+        "operator_abi_drift",
+        "package_admission",
+        "dynamic_library_boundary"
+      ]
+    },
+    {
       "id": "runtime-engine-solver",
       "layer": "runtime_data_plane",
       "summary": "Rust engine, solver kernels, operator execution helpers, workflow security, and benchmark runtime.",
@@ -507,7 +534,8 @@
       ],
       "depends_on": [
         "contracts",
-        "runtime-protocol"
+        "runtime-protocol",
+        "sdk-operator"
       ],
       "benchmark_lanes": [
         "runtime_solver",
@@ -559,13 +587,12 @@
       "layer": "runtime_data_plane",
       "summary": "Native installer, update catalog checks, credential storage contracts, package preflight, and templates.",
       "owned_paths": [
-        "workers/rust/crates/installer",
-        "workers/rust/crates/operator-sdk",
-        "workers/rust/templates"
+        "workers/rust/crates/installer"
       ],
       "depends_on": [
         "contracts",
-        "runtime-protocol"
+        "runtime-protocol",
+        "sdk-operator"
       ],
       "benchmark_lanes": [
         "installer_release"

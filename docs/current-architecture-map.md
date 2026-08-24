@@ -15,6 +15,7 @@ flowchart LR
   Workbench["Workbench\nproject workflow surface"]
   Installer["Installer\ndeployment and lifecycle surface"]
   SDK["Headless SDKs\nRust / Python / Elixir"]
+  OperatorSDK["Worker / Operator SDK\nRust-only extension"]
   Control["Orchestra\nElixir control plane"]
   Agent["Agent / CLI\nRust runtime process"]
   Engine["Engine + Solver\noperator execution and FEM kernels"]
@@ -27,13 +28,16 @@ flowchart LR
   Workbench --> Agent
   SDK --> Control
   SDK --> Agent
+  OperatorSDK --> Engine
   Installer --> Agent
   Installer --> Control
+  Installer --> OperatorSDK
   Control --> Agent
   Agent --> Engine
   Engine --> Contracts
   Control --> Contracts
   SDK --> Contracts
+  OperatorSDK --> Contracts
   Workbench --> Contracts
   Installer --> Contracts
   Verify --> Contracts
@@ -225,6 +229,13 @@ runnable smoke coverage from verified, qualified, operational, and externally
 release-gated evidence without weakening the structural architecture gate
 during the current advisory phase.
 
+The moxi 2.15 calibration has 13 modules and 11 paradigms. It assigns
+`workers/rust/crates/operator-sdk` and `workers/rust/templates` to the dedicated
+`sdk-operator` module, adds the `sdk_operator` paradigm and ABI-compatibility
+dimension, and keeps the Headless SDK family as a separate control-client path.
+The recalibrated Daji queue is intentionally non-empty where only source-tree
+or single-platform evidence exists.
+
 ## Repository Ownership Map
 
 - `apps/hub-gui`: Hub desktop shell
@@ -243,6 +254,9 @@ during the current advisory phase.
 - `workers/rust/crates/engine`: execution helpers and operator host logic
 - `workers/rust/crates/solver`: FEM kernels
 - `workers/rust/crates/installer`: native install/update/integrity logic
+- `workers/rust/crates/operator-sdk`: Rust-only Worker/Operator authoring,
+  package, readiness, registry, and host ABI surface
+- `workers/rust/templates`: external-local Rust operator starter packages
 - `workers/rust/crates/headless-sdk`: Rust headless client SDK
 - `workers/rust/crates/cli/src/bin/kyuubiki-headless.rs`: official native
   template discovery, workflow normalization, planning, validation, dry-run,

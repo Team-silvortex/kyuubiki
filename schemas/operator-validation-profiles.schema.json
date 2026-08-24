@@ -51,7 +51,7 @@
       }
     },
     "commandKind": {
-      "enum": ["analytic", "boundary_regression", "contract", "cross_check", "invariant"]
+      "enum": ["analytic", "boundary_regression", "convergence", "contract", "cross_check", "invariant"]
     },
     "profile": {
       "type": "object",

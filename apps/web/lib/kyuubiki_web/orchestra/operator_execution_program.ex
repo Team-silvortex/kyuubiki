@@ -24,7 +24,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorExecutionProgram do
       "operator_category_id" => Map.get(operator, "operator_category_id"),
       "package_ref" => Map.get(execution, "package_ref"),
       "package_version" => Map.get(execution, "package_version", "library-managed"),
-      "package_integrity" => Map.get(execution, "integrity"),
+      "package_integrity" => package_integrity(Map.get(execution, "integrity")),
       "runtime_protocol" => runtime_protocol(kind),
       "abi" => execution_abi(kind),
       "entrypoint" => entrypoint(operator_id, kind),
@@ -77,6 +77,17 @@ defmodule KyuubikiWeb.Orchestra.OperatorExecutionProgram do
       "output_artifact" => "task.output_artifact"
     }
   end
+
+  defp package_integrity(%{"algorithm" => "sha256", "digest" => digest})
+       when is_binary(digest) do
+    %{"algorithm" => "sha256", "digest" => digest}
+  end
+
+  defp package_integrity(%{"sha256" => digest}) when is_binary(digest) do
+    %{"algorithm" => "sha256", "digest" => digest}
+  end
+
+  defp package_integrity(_integrity), do: nil
 
   defp node_binding(%{"id" => node_id} = node) do
     %{

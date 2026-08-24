@@ -14,7 +14,8 @@
           "workers/rust/crates/solver/tests/solid_tetra_3d_review.rs",
           "workers/rust/crates/solver/tests/solid_tetra_3d_closed_form.rs",
           "workers/rust/crates/solver/tests/solid_tetra_3d_mesh_patch.rs",
-          "workers/rust/crates/solver/tests/solid_tetra_3d_bending_convergence.rs"
+          "workers/rust/crates/solver/tests/solid_tetra_3d_bending_convergence.rs",
+          "workers/rust/crates/solver/tests/solid_tetra_topology_reliability.rs"
         ],
         "reliability_suite": "solid_tetra_3d_review",
         "review": {
@@ -31,6 +32,10 @@
             "warped_interior_pure_bending_mesh",
             "scale_independent_microscopic_geometry",
             "near_degenerate_sliver_rejection",
+            "orphan_node_rejection",
+            "per_component_rigid_body_restraint_rank",
+            "multi_component_block_system",
+            "node_and_element_reindexing_invariance",
             "reaction_and_force_balance_closure",
             "degenerate_geometry_rejection"
           ],
@@ -43,12 +48,14 @@
             "free_residual_relative_error",
             "resultant_force_balance",
             "element_mean_ratio_quality",
+            "connected_component_count",
             "distortion_watch_counts",
             "near_incompressible_locking_risk",
             "non_finite_material_input_rejection"
           ],
           "tests": [
-            "workers/rust/crates/solver/tests/solid_tetra_3d_review.rs"
+            "workers/rust/crates/solver/tests/solid_tetra_3d_review.rs",
+            "workers/rust/crates/solver/tests/solid_tetra_topology_reliability.rs"
           ]
         },
         "qualification": {
@@ -65,7 +72,8 @@
             "solid_tetra_3d_multi_element_patch_is_exact_and_balanced_across_refinement",
             "workers/rust/crates/solver/tests/solid_tetra_3d_bending_convergence.rs",
             "solid_tetra_3d_pure_bending_converges_on_regular_and_warped_meshes",
-            "solid_tetra_3d_uses_scale_independent_shape_degeneracy"
+            "solid_tetra_3d_uses_scale_independent_shape_degeneracy",
+            "solid_tetra_response_is_invariant_to_node_and_element_index_order"
           ],
           "provenance": [
             "releases/qualification-evidence/2.0.0/solid-tetra-3d-closed-form-release-evidence.json",
@@ -80,7 +88,8 @@
             "workers/rust/crates/solver/tests/solid_tetra_input_reliability.rs",
             "workers/rust/crates/solver/tests/mechanical_convergence/solid.rs",
             "workers/rust/crates/solver/tests/solid_tetra_3d_mesh_patch.rs",
-            "workers/rust/crates/solver/tests/solid_tetra_3d_bending_convergence.rs"
+            "workers/rust/crates/solver/tests/solid_tetra_3d_bending_convergence.rs",
+            "workers/rust/crates/solver/tests/solid_tetra_topology_reliability.rs"
           ]
         }
       },

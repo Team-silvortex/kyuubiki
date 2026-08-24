@@ -9,6 +9,7 @@
     "config/architecture/module-function-coverage-evidence/contracts-validation.json",
     "config/architecture/module-function-coverage-evidence/product-surface-contracts.json",
     "config/architecture/module-function-coverage-evidence/model-collaboration-sdks.json",
+    "config/architecture/module-function-coverage-evidence/operator-sdk-validation.json",
     "config/architecture/module-function-coverage-evidence/headless-sdk-validation.json",
     "config/architecture/module-function-coverage-evidence/headless-sdk-operational.json",
     "config/architecture/module-function-coverage-evidence/pwdt-frontend-control-plane.json",
@@ -60,6 +61,7 @@
       "security": "p0",
       "persistence_provenance": "p0",
       "deployment_update": "p1",
+      "sdk_operator": "p0",
       "sdk_headless": "p1"
     },
     "cell_criticality_overrides": [
@@ -72,6 +74,10 @@
       { "module_id": "runtime-engine-solver", "paradigm": "solver_execution", "criticality": "p0" },
       { "module_id": "runtime-agent-cli", "paradigm": "deployment_update", "criticality": "p0" },
       { "module_id": "runtime-installer", "paradigm": "deployment_update", "criticality": "p0" },
+      { "module_id": "sdk-operator", "paradigm": "sdk_operator", "criticality": "p0" },
+      { "module_id": "runtime-engine-solver", "paradigm": "sdk_operator", "criticality": "p0" },
+      { "module_id": "runtime-agent-cli", "paradigm": "sdk_operator", "criticality": "p0" },
+      { "module_id": "runtime-installer", "paradigm": "sdk_operator", "criticality": "p0" },
       { "module_id": "sdk-headless", "paradigm": "runtime_api", "criticality": "p0" },
       { "module_id": "sdk-headless", "paradigm": "sdk_headless", "criticality": "p0" }
     ],
@@ -131,6 +137,7 @@
       "security": "qualified",
       "persistence_provenance": "verified",
       "deployment_update": "qualified",
+      "sdk_operator": "qualified",
       "sdk_headless": "qualified"
     },
     "priority_weights": {
@@ -143,6 +150,7 @@
       "security": 60,
       "persistence_provenance": 40,
       "deployment_update": 75,
+      "sdk_operator": 85,
       "sdk_headless": 65
     },
     "cell_overrides": [
@@ -179,6 +187,26 @@
       {
         "module_id": "runtime-installer",
         "paradigm": "deployment_update",
+        "target": "operational"
+      },
+      {
+        "module_id": "sdk-operator",
+        "paradigm": "sdk_operator",
+        "target": "operational"
+      },
+      {
+        "module_id": "runtime-engine-solver",
+        "paradigm": "sdk_operator",
+        "target": "operational"
+      },
+      {
+        "module_id": "runtime-agent-cli",
+        "paradigm": "sdk_operator",
+        "target": "operational"
+      },
+      {
+        "module_id": "runtime-installer",
+        "paradigm": "sdk_operator",
         "target": "operational"
       },
       {
@@ -226,6 +254,13 @@
       "execution",
       "security",
       "contract"
+    ],
+    "sdk_operator": [
+      "execution",
+      "security",
+      "contract",
+      "recovery",
+      "abi_compatibility"
     ],
     "sdk_headless": [
       "execution",
@@ -329,6 +364,17 @@
         "remote_deploy",
         "supply_chain",
         "credential_storage"
+      ]
+    },
+    "sdk_operator": {
+      "benchmark": [
+        "runtime_solver",
+        "installer_release"
+      ],
+      "security": [
+        "runtime_sandbox",
+        "supply_chain",
+        "data_contract"
       ]
     },
     "sdk_headless": {

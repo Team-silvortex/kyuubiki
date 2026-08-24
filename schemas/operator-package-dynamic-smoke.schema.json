@@ -23,7 +23,7 @@
       "type": "string"
     },
     "schema_version": {
-      "const": "kyuubiki.operator-package-dynamic-smoke/v1"
+      "const": "kyuubiki.operator-package-dynamic-smoke/v2"
     },
     "generated_at": {
       "type": "string",
@@ -66,8 +66,8 @@
     },
     "stages": {
       "type": "array",
-      "minItems": 4,
-      "maxItems": 4,
+      "minItems": 5,
+      "maxItems": 5,
       "prefixItems": [
         {
           "$ref": "#/$defs/templateTestsStage"
@@ -80,6 +80,9 @@
         },
         {
           "$ref": "#/$defs/engineDynamicHostLoadStage"
+        },
+        {
+          "$ref": "#/$defs/agentDynamicHostDispatchStage"
         }
       ],
       "items": false
@@ -174,6 +177,20 @@
           "properties": {
             "id": {
               "const": "engine_dynamic_host_load"
+            }
+          }
+        }
+      ]
+    },
+    "agentDynamicHostDispatchStage": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/passingStage"
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "agent_dynamic_host_dispatch"
             }
           }
         }

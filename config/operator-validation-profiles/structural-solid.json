@@ -22,7 +22,10 @@
         "manufactured_pure_bending_convergence",
         "warped_interior_mesh_convergence",
         "scale_independent_shape_quality",
-        "near_incompressible_risk_reporting"
+        "near_incompressible_risk_reporting",
+        "per_component_rigid_body_rank_preflight",
+        "multi_component_block_system",
+        "node_and_element_reindexing_invariance"
       ],
       "formal_invariants": [
         "restrained_base_displacements_are_zero",
@@ -36,7 +39,11 @@
         "pure_bending_displacement_stress_and_energy_errors_contract_over_2_4_8_16_meshes",
         "warped_mesh_pure_bending_errors_contract_over_4_8_16_meshes",
         "shape_quality_is_scale_independent_and_near_degenerate_slivers_fail_closed",
-        "near_incompressible_constant_strain_tetrahedra_emit_locking_risk"
+        "near_incompressible_constant_strain_tetrahedra_emit_locking_risk",
+        "every_connected_component_restrains_all_six_rigid_body_modes",
+        "orphan_nodes_and_floating_components_fail_before_factorization",
+        "independently_restrained_components_solve_in_one_block_system",
+        "node_and_element_index_reordering_preserves_physical_response"
       ],
       "evidence_paths": [
         "config/operator-reliability/structural-solid.json",
@@ -47,7 +54,8 @@
         "workers/rust/crates/solver/tests/solid_tetra_input_reliability.rs",
         "workers/rust/crates/solver/tests/mechanical_convergence/solid.rs",
         "workers/rust/crates/solver/tests/solid_tetra_3d_mesh_patch.rs",
-        "workers/rust/crates/solver/tests/solid_tetra_3d_bending_convergence.rs"
+        "workers/rust/crates/solver/tests/solid_tetra_3d_bending_convergence.rs",
+        "workers/rust/crates/solver/tests/solid_tetra_topology_reliability.rs"
       ],
       "commands": [
         {
@@ -79,6 +87,11 @@
           "id": "solid-tetra-3d-pure-bending-convergence",
           "kind": "convergence",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test solid_tetra_3d_bending_convergence -- --nocapture"
+        },
+        {
+          "id": "solid-tetra-topology-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test solid_tetra_topology_reliability -- --nocapture"
         }
       ]
     }

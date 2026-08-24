@@ -33,6 +33,7 @@ const PARADIGM_ORDER: &[&str] = &[
     "security",
     "persistence_provenance",
     "deployment_update",
+    "sdk_operator",
     "sdk_headless",
 ];
 const DEPTH_AXIS_ORDER: &[&str] = &[

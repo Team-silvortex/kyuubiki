@@ -50,9 +50,9 @@ pub use job::{Job, JobStatus, ProgressEvent};
 pub use operator::{
     OperatorArtifactRef, OperatorDescriptor, OperatorKind, OperatorOrigin, OperatorPortDescriptor,
     OperatorRunContext, OperatorRunRequest, OperatorRunResult, OperatorSchemaRef,
-    OperatorValidationProfile, OperatorValidationStatus, WORKFLOW_DATASET_DATA_CLASSES,
-    WorkflowDatasetAxis, WorkflowDatasetContract, WorkflowDatasetEncoding, WorkflowDatasetShape,
-    WorkflowDatasetValueInfo,
+    OperatorTaskInputEnvelope, OperatorValidationProfile, OperatorValidationStatus,
+    WORKFLOW_DATASET_DATA_CLASSES, WorkflowDatasetAxis, WorkflowDatasetContract,
+    WorkflowDatasetEncoding, WorkflowDatasetShape, WorkflowDatasetValueInfo,
 };
 pub use operator_task_admission::{
     OPERATOR_TASK_ADMISSION_SCHEMA, OperatorTaskAdmissionReport, OperatorTaskAdmissionViolation,

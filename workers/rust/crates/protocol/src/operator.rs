@@ -149,6 +149,13 @@ pub struct OperatorRunRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OperatorTaskInputEnvelope<P = Value, C = Value> {
+    pub payload: P,
+    #[serde(default)]
+    pub config: C,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OperatorArtifactRef {
     pub kind: String,
     pub id: String,

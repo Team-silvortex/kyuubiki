@@ -64,7 +64,9 @@ sprawl:
 
 - tensor v4 now separates structural completeness from release readiness,
   reports both exact target completion and cumulative evidence progress, and
-  orders the remaining work through P0/P1/P2 `daji` criticality
+  orders the remaining work through P0/P1/P2 `daji` criticality. The moxi 2.15
+  recalibration now tracks 13 modules and 11 paradigms, including a distinct
+  Rust-only Worker/Operator SDK and ABI-compatibility evidence
 - system security qualification now repeats 14 asserted checks across 22 exact
   module/lane coordinates; the retained 28/28 report closes the former tied P0
   security cluster without claiming installed or multi-host adversarial proof
@@ -77,14 +79,24 @@ sprawl:
 - runtime API verification now binds the Protocol and all three official
   Headless SDKs to exact tensor coordinates. Current retained reports cover 101
   Protocol tests with 55/55 unique RPC round trips and 265 SDK tests with 14
-  cross-language failure-parity cases; all 36 P0 coordinates now meet target,
-  while the external usability gate remains closed
+  cross-language failure-parity cases. Installer validation now also carries a
+  current retained 21/21 cross-shell report; the recalibrated release profile
+  has 45/55 P0 coordinates at target while the external usability gate remains
+  closed
+- Rust Operator SDK qualification now retains a five-stage package journey:
+  template tests, strict Installer preflight, `cdylib` build, Engine dynamic
+  load, and live Agent RPC dispatch. The Agent rejects an entrypoint-digest
+  substitution and recovers for a later valid run; this promotes local Agent
+  execution to `qualified`, while installed lifecycle, central pull, and the
+  supported platform ABI matrix remain open
 - benchmark qualification now binds the native Agent command route, release
   solver execution, retained direct-mesh repetition, and the remote scale
   archive. It covers 19/19 expected 500k cases and 39/39 expected 1M cases
   across six matrices, with all 10 archived failures resolved by later success;
-  all 14 P1 coordinates and all 50 required tensor coordinates now meet target
-  without turning historical host measurements into a portable speed claim
+  those original coordinates remain qualified, but the recalibrated tensor now
+  requires scoped Orchestra, Protocol, Headless, and Operator SDK benchmark
+  evidence instead of turning historical host measurements into a portable
+  speed claim
 - Installer-managed Agent solver qualification now builds a sealed Linux
   release package on the lab host, activates it through the native Installer,
   runs two independent Agent processes through closed-form solve, unsupported

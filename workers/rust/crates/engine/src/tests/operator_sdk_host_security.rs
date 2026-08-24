@@ -108,6 +108,48 @@ fn host_policy_rejects_malformed_entry_symbol() {
     );
 }
 
+#[cfg(unix)]
+#[test]
+fn host_policy_rejects_entrypoint_symlink_escape() {
+    use std::os::unix::fs::symlink;
+
+    let packages_root = temp_dir("external-host-symlink-escape");
+    let package_dir = packages_root.join("operator-link");
+    let entrypoint_dir = package_dir.join("target/debug");
+    let outside_dir = packages_root.join("outside");
+    fs::create_dir_all(&entrypoint_dir).expect("create package entrypoint dir");
+    fs::create_dir_all(&outside_dir).expect("create outside dir");
+    let library_name = format!(
+        "{}operator_link{}",
+        std::env::consts::DLL_PREFIX,
+        std::env::consts::DLL_SUFFIX
+    );
+    let outside_library = outside_dir.join(&library_name);
+    fs::write(&outside_library, b"not loaded").expect("write outside library");
+    symlink(&outside_library, entrypoint_dir.join(&library_name))
+        .expect("create escaping entrypoint symlink");
+    write_manifest(
+        &package_dir,
+        package_manifest(
+            "operator.link",
+            "extract.link",
+            "target/debug/{lib_prefix}operator_link.{lib_extension}",
+            "register_link",
+        ),
+    );
+
+    let error = reject_package(
+        &packages_root,
+        "host policy should reject entrypoint symlink escape",
+    );
+
+    assert!(
+        error
+            .to_string()
+            .contains("canonical entrypoint escapes package root")
+    );
+}
+
 fn package_manifest(
     package_id: &str,
     operator_id: &str,

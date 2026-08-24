@@ -32,7 +32,8 @@ It should grow as a set of cooperating modules connected by stable contracts:
 - product shells own user interaction
 - control-plane services own orchestration and persistence
 - runtime engines own execution
-- SDKs own headless access
+- Headless SDKs own UI-free control and research automation
+- the Rust-only Operator SDK owns executable operator extension contracts
 - schemas and manifests own shared meaning
 - checks and tests own drift prevention
 
@@ -147,7 +148,7 @@ release profile for `daji 3.0.0`, classifies exact coordinates as P0, P1, or
 P2, and imports external release decisions such as the usability release
 claim. Structural `ok` and release readiness are deliberately separate.
 
-During the current `moxi 2.13.x` checkpoint the release profile is advisory.
+During the current `moxi 2.15.x` checkpoint the release profile is advisory.
 At the configured `moxi 2.17.0` enforcement point, changing its gate mode to
 `enforced` makes an unready release profile fail the command instead of merely
 producing a hardening queue.
@@ -165,7 +166,14 @@ Every contract evidence entry declares the modules it actually covers. The
 report then evaluates required evidence dimensions for the exact
 `module/paradigm` coordinate. Built-in dimensions include execution,
 benchmark, security, contract, numerical validation, recovery, SDK parity, and
-product UX closure.
+ABI compatibility, and product UX closure.
+
+The moxi 2.15 recalibration expands the tensor from 12 modules and 10 paradigms
+to 13 modules and 11 paradigms. `sdk-operator / sdk_operator` is the Rust-only
+Worker/Operator extension path; `sdk-headless / sdk_headless` remains the
+Rust/Python/Elixir control-client path. An installed Headless journey therefore
+cannot promote an external operator package, and a local dynamic-library smoke
+cannot promote a Headless SDK.
 
 Evidence strength uses one ordered ladder:
 
@@ -266,6 +274,10 @@ for the modules explicitly listed by each evidence bundle:
 - `sdk_headless`
   Headless service-action contracts plus Rust, Python, and Elixir workflow
   contract bindings.
+- `sdk_operator`
+  Rust authoring, package manifest/readiness, host admission, dynamic ABI, and
+  operator dispatch contracts. Its operational target requires an installed
+  external package journey rather than source-tree smoke alone.
 - `persistence_provenance`
   Central-store provenance, release snapshots, installer disk hygiene, and
   bounded workbench storage retention.
@@ -408,7 +420,6 @@ Owned paths:
 - `workers/rust/crates/solver`
 - `workers/rust/crates/protocol`
 - `workers/rust/crates/installer`
-- `workers/rust/templates`
 
 Responsibilities:
 
@@ -418,7 +429,6 @@ Responsibilities:
 - operator TaskIR digest and execution summaries
 - capability-admitted agent-native builtins and Engine solver dispatch
 - installer-native runtime checks and package preflight
-- operator SDK template validation
 
 The runtime data plane should execute protocol payloads. It should not know
 Workbench component layout, Hub navigation, or Installer screen structure.
@@ -432,6 +442,8 @@ Owned paths:
 - `sdks/elixir`
 - `workers/rust/crates/headless-sdk`
 - `workers/rust/crates/project-automation`
+- `workers/rust/crates/operator-sdk`
+- `workers/rust/templates`
 
 Responsibilities:
 
@@ -440,9 +452,13 @@ Responsibilities:
 - automation clients for AI and batch workflows
 - native compilation of project-stored automation presets into headless plans
 - language-specific convenience wrappers
+- Rust-only operator descriptors, registries, package readiness, and host ABI
+- copyable external-local operator templates
 
-SDKs are clients of stable contracts. They should not become alternate engines
-or duplicate GUI-only assumptions.
+Headless SDKs are clients of stable contracts and must not become alternate
+engines or duplicate GUI-only assumptions. The Operator SDK is a separate
+Rust-only extension surface consumed by Engine and Installer; it must not be
+reported as Headless SDK parity.
 
 ## Contract Layer
 

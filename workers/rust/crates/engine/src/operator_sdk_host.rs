@@ -4,6 +4,7 @@ use kyuubiki_operator_sdk::{
     OperatorPackageLoadSummary, OperatorRegistrationEntrypoint, OperatorRegistry,
     OperatorSdkReadinessIssue, operator_package_manifest_readiness,
 };
+use kyuubiki_protocol::{OperatorRunRequest, OperatorRunResult};
 use libloading::Library;
 use std::collections::BTreeSet;
 use std::fmt::{Display, Formatter};
@@ -289,6 +290,27 @@ fn validate_load_plan_against_policy(
             ),
         });
     }
+    if trust_policy.require_entrypoint_within_package_root && plan.entrypoint_path.exists() {
+        let canonical_root = plan.package_root.canonicalize().map_err(|error| {
+            ExternalOperatorHostError::Policy {
+                package_id: plan.manifest.package_id.clone(),
+                message: format!("failed to resolve package root: {error}"),
+            }
+        })?;
+        let canonical_entrypoint = plan.entrypoint_path.canonicalize().map_err(|error| {
+            ExternalOperatorHostError::Policy {
+                package_id: plan.manifest.package_id.clone(),
+                message: format!("failed to resolve package entrypoint: {error}"),
+            }
+        })?;
+        if !canonical_entrypoint.starts_with(&canonical_root) {
+            return Err(ExternalOperatorHostError::Policy {
+                package_id: plan.manifest.package_id.clone(),
+                message: "canonical entrypoint escapes package root through a filesystem link"
+                    .to_string(),
+            });
+        }
+    }
 
     if trust_policy.require_platform_library_entrypoint {
         validate_platform_library_entrypoint(plan)?;
@@ -453,6 +475,19 @@ impl DynamicOperatorHostSession {
 
     pub fn loaded_library_count(&self) -> usize {
         self.loaded_libraries.len()
+    }
+
+    pub fn package_for_operator(&self, operator_id: &str) -> Option<&OperatorPackageLoadSummary> {
+        self.report
+            .activated_package_summaries
+            .iter()
+            .find(|package| package.operator_ids.iter().any(|id| id == operator_id))
+    }
+
+    pub fn run_operator(&self, request: OperatorRunRequest) -> Result<OperatorRunResult, String> {
+        self.registry
+            .run(request)
+            .map_err(|error| error.to_string())
     }
 }
 

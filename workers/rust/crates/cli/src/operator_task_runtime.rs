@@ -1,8 +1,15 @@
-use std::sync::{Mutex, OnceLock};
-
 use serde_json::Value;
 
 use crate::config::AgentConfig;
+#[cfg(test)]
+pub(crate) use crate::operator_package_runtime::OperatorPackageRuntimeAttachment;
+pub(crate) use crate::operator_package_runtime::{
+    OperatorPackageRuntimeBinding, operator_package_runtime_binding_from_config,
+    store_operator_package_runtime_binding,
+};
+use crate::operator_package_runtime::{
+    current_runtime_binding, try_execute_external_operator_task,
+};
 use crate::operator_task_builtin::{
     is_agent_native_builtin_operator, run_agent_native_builtin_task,
 };
@@ -29,58 +36,18 @@ const OPERATOR_PACKAGE_RUNTIME_ATTACHED_PENDING_FETCH: &str =
 const OPERATOR_PACKAGE_RUNTIME_READY_FOR_FETCH: &str = "operator_package_runtime_ready_for_fetch";
 const OPERATOR_TASK_STATUS_EXECUTED: &str = "executed";
 const OPERATOR_TASK_AGENT_NATIVE_STATUS: &str = "agent_native_builtin_executed";
+const OPERATOR_TASK_EXTERNAL_PACKAGE_STATUS: &str = "external_operator_package_executed";
 pub(crate) const OPERATOR_TASK_BLOCKED_STAGE: &str = "fetch_package";
 pub(crate) const OPERATOR_TASK_MODE_PREFLIGHT: &str = "preflight";
 pub(crate) const OPERATOR_TASK_MODE_EXECUTE: &str = "execute";
 const OPERATOR_PACKAGE_RUNTIME_HOST: &str = "kyuubiki-engine.operator-sdk-host/v1";
 const OPERATOR_PACKAGE_RUNTIME_SDK: &str = "kyuubiki-operator-sdk";
-const OPERATOR_PACKAGE_RUNTIME_STATUS_DETACHED: &str = "not_attached";
-const OPERATOR_PACKAGE_RUNTIME_STATUS_ATTACHED: &str = "attached";
 const OPERATOR_PACKAGE_FETCH_REQUEST_SCHEMA: &str = "kyuubiki.operator-package-fetch-request/v1";
 const OPERATOR_TASK_READINESS_BLOCKED: &str = "blocked";
 const OPERATOR_TASK_READINESS_READY: &str = "ready_for_package_resolution";
 const OPERATOR_TASK_READINESS_EXECUTED: &str = "executed";
 const OPERATOR_TASK_RELIABILITY_PROFILE_SCHEMA: &str =
     "kyuubiki.agent-operator-task-reliability/v1";
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct OperatorPackageRuntimeAttachment {
-    pub host_id: String,
-    pub packages_root: String,
-    pub activated_package_count: usize,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum OperatorPackageRuntimeBinding {
-    Detached,
-    // Reserved for the next host-wiring step; production currently defaults to Detached.
-    #[allow(dead_code)]
-    Attached(OperatorPackageRuntimeAttachment),
-}
-
-pub(crate) fn operator_package_runtime_binding_from_config(
-    config: &AgentConfig,
-) -> OperatorPackageRuntimeBinding {
-    let Some(packages_root) = config.operator_packages_root.clone() else {
-        return OperatorPackageRuntimeBinding::Detached;
-    };
-
-    OperatorPackageRuntimeBinding::Attached(OperatorPackageRuntimeAttachment {
-        host_id: config
-            .operator_package_host_id
-            .clone()
-            .or_else(|| config.agent_id.clone())
-            .unwrap_or_else(|| "agent-local/operator-host".to_string()),
-        packages_root,
-        activated_package_count: config.operator_activated_package_count,
-    })
-}
-
-pub(crate) fn store_operator_package_runtime_binding(binding: OperatorPackageRuntimeBinding) {
-    if let Ok(mut current) = runtime_binding().lock() {
-        *current = binding;
-    }
-}
 
 pub(crate) fn operator_package_runtime_snapshot() -> Value {
     let binding = current_runtime_binding();
@@ -153,22 +120,6 @@ fn operator_package_runtime_snapshot_from_binding(
     })
 }
 
-impl OperatorPackageRuntimeBinding {
-    fn status(&self) -> &'static str {
-        match self {
-            Self::Detached => OPERATOR_PACKAGE_RUNTIME_STATUS_DETACHED,
-            Self::Attached(_) => OPERATOR_PACKAGE_RUNTIME_STATUS_ATTACHED,
-        }
-    }
-
-    pub(crate) fn is_attached(&self) -> bool {
-        match self {
-            Self::Detached => false,
-            Self::Attached(_) => true,
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct OperatorTaskRuntimeError {
     pub code: &'static str,
@@ -181,7 +132,7 @@ impl OperatorTaskRuntimeError {
         Self::with_task(code, message, "parse_request", None)
     }
 
-    fn with_task(
+    pub(crate) fn with_task(
         code: &'static str,
         message: impl Into<String>,
         stage: &'static str,
@@ -254,6 +205,28 @@ pub(crate) fn run_operator_task_ir_with_runtime(
         ));
     }
 
+    if mode == OPERATOR_TASK_MODE_EXECUTE {
+        let execution = try_execute_external_operator_task(&summary, task_ir, &package_runtime)
+            .map_err(|error| {
+                OperatorTaskRuntimeError::with_task(
+                    error.code,
+                    error.message,
+                    error.stage,
+                    Some(task_ir),
+                )
+            })?;
+        if let Some(execution) = execution {
+            return Ok(build_external_operator_execution_payload(
+                summary,
+                preview,
+                admission_report,
+                package_runtime,
+                execution.package_receipt,
+                execution.result,
+            ));
+        }
+    }
+
     Ok(build_preflight_payload(
         summary,
         preview,
@@ -261,18 +234,6 @@ pub(crate) fn run_operator_task_ir_with_runtime(
         mode,
         package_runtime,
     ))
-}
-
-fn runtime_binding() -> &'static Mutex<OperatorPackageRuntimeBinding> {
-    static BINDING: OnceLock<Mutex<OperatorPackageRuntimeBinding>> = OnceLock::new();
-    BINDING.get_or_init(|| Mutex::new(OperatorPackageRuntimeBinding::Detached))
-}
-
-fn current_runtime_binding() -> OperatorPackageRuntimeBinding {
-    runtime_binding()
-        .lock()
-        .map(|binding| binding.clone())
-        .unwrap_or(OperatorPackageRuntimeBinding::Detached)
 }
 
 fn parse_mode(params: &Value) -> Result<&'static str, OperatorTaskRuntimeError> {
@@ -404,6 +365,39 @@ fn build_agent_native_execution_payload(
         "agent_fetchable": summary.agent_fetchable,
         "result": result
     })
+}
+
+fn build_external_operator_execution_payload(
+    summary: OperatorTaskExecutionSummary,
+    preview: OperatorTaskExecutionPreview,
+    admission_report: OperatorTaskAdmissionReport,
+    package_runtime: OperatorPackageRuntimeBinding,
+    package_receipt: Value,
+    result: Value,
+) -> Value {
+    let mut payload = build_agent_native_execution_payload(
+        summary,
+        preview,
+        admission_report,
+        package_runtime,
+        OPERATOR_TASK_EXTERNAL_PACKAGE_STATUS,
+        Value::Null,
+        result,
+    );
+    let object = payload
+        .as_object_mut()
+        .expect("operator execution payload should be an object");
+    object.remove("solver_execution_capability");
+    object.insert("operator_package_execution".to_string(), package_receipt);
+    object.insert(
+        "execution_plan".to_string(),
+        external_operator_execution_plan(),
+    );
+    object.insert(
+        "next_stage".to_string(),
+        Value::String("complete".to_string()),
+    );
+    payload
 }
 
 fn operator_task_execution_preview_payload(preview: &OperatorTaskExecutionPreview) -> Value {
@@ -695,6 +689,18 @@ fn agent_native_execution_plan() -> Value {
             "owner": "agent_runtime",
             "gate": "passed"
         }
+    ])
+}
+
+fn external_operator_execution_plan() -> Value {
+    serde_json::json!([
+        { "stage": "verify_digest", "status": "complete", "owner": "agent_runtime", "gate": "passed" },
+        { "stage": "summarize_execution_program", "status": "complete", "owner": "agent_runtime", "gate": "passed" },
+        { "stage": "resolve_package", "status": "complete", "owner": "operator_package_runtime", "gate": "passed" },
+        { "stage": "verify_package_integrity", "status": "complete", "owner": "operator_package_runtime", "gate": "passed" },
+        { "stage": "activate_operator_registry", "status": "complete", "owner": "operator_package_runtime", "gate": "passed" },
+        { "stage": "dispatch_entrypoint", "status": "complete", "owner": "agent_runtime", "gate": "passed" },
+        { "stage": "serialize_result", "status": "complete", "owner": "agent_runtime", "gate": "passed" }
     ])
 }
 

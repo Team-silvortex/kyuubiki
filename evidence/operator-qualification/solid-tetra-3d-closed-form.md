@@ -122,6 +122,24 @@ scale-independent: a geometrically regular tetrahedron scaled to `1e-9` still
 solves, a solvable severe sliver is reported, and mean-ratio quality at or below
 `1e-12` fails closed before factorization.
 
+## Topology And Restraint Preflight
+
+The model is partitioned into connected components from tetrahedral incidence
+before assembly. Orphan nodes fail immediately. For each component, constrained
+scalar degrees of freedom are projected onto the three translations and three
+infinitesimal rotations about a centered, scale-normalized frame. The resulting
+constraint matrix must have rigid-body rank `6/6`; simply counting six fixed
+degrees of freedom is not sufficient. A regression demonstrates that two fully
+fixed points still leave rotation about their connecting line and are therefore
+rejected at rank `5/6`.
+
+A second regression rejects an independently floating component before
+factorization, while two independently restrained components solve together as
+one block system and report `connected_component_count = 2`. Reordering node
+storage and remapping element connectivity preserves nodal displacement by id,
+maximum von Mises stress, and total strain energy. These checks remove hidden
+dependence on global indexing and make disconnected-domain intent explicit.
+
 ## Input Reliability
 
 The retained input reliability regression
@@ -136,8 +154,10 @@ accepted.
 This qualifies the constant-strain tetrahedron for small-strain linear elastic
 single-element references, affine multi-element patch assembly, and the scoped
 manufactured pure-bending convergence ladder on regular and deterministically
-warped interior meshes. It does not claim arbitrary unstructured connectivity,
+warped interior meshes. It also qualifies arbitrary node/index ordering and
+multiple independently restrained connected components. It does not claim a
+general unstructured mesh generator or broad connectivity-family corpus,
 nearly incompressible accuracy, plasticity, contact, body-force integration,
-native surface-traction assembly, or large deformation. Broader independent 3D
-references, stabilized incompressible formulations, and higher-order solids
+native surface-traction assembly, or large deformation. Broader independent
+3D references, stabilized incompressible formulations, and higher-order solids
 remain separate work.

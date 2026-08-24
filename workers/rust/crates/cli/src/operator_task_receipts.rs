@@ -17,7 +17,8 @@ pub(crate) fn operator_task_validation_receipt(
     admission: &OperatorTaskAdmissionReport,
     binding: &OperatorPackageRuntimeBinding,
 ) -> Value {
-    let blocked_reason = if preview.package_fetch_required && !binding.is_attached() {
+    let package_runtime_required = preview.package_fetch_required || summary.package_ref.is_some();
+    let blocked_reason = if package_runtime_required && !binding.is_attached() {
         Value::String(OPERATOR_PACKAGE_RUNTIME_NOT_ATTACHED.to_string())
     } else {
         Value::Null
@@ -106,6 +107,10 @@ fn required_failure_action(code: &str) -> &'static str {
         "operator_task_admission_rejected" => "fix_task_ir_authority_and_routing_policy",
         "invalid_params" => "fix_rpc_request_params",
         "operator_task_execution_failed" => "inspect_operator_runtime_result",
+        "operator_package_host_unavailable" => "restart_agent_with_operator_package_runtime",
+        "operator_package_not_loaded" => "install_or_activate_required_operator_package",
+        "operator_package_identity_mismatch" => "repair_package_or_rebuild_task_ir",
+        "operator_package_dispatch_failed" => "inspect_external_operator_failure",
         "operator_task_solver_capability_invalid" => "fix_solver_task_ir_contract",
         "operator_task_solver_capability_rejected" => "select_advertised_solver_operator",
         "operator_task_solver_input_invalid" => "fix_solver_input_artifact",

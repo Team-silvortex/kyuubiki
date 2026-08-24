@@ -22,6 +22,7 @@ const PREFERRED_PARADIGM_ORDER: &[&str] = &[
     "security",
     "persistence_provenance",
     "deployment_update",
+    "sdk_operator",
     "sdk_headless",
 ];
 
