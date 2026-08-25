@@ -74,6 +74,20 @@ defmodule KyuubikiWeb.RouterSupport do
     end
   end
 
+  def with_cluster_agent_session(conn, attrs) when is_map(attrs) do
+    case cluster_agent_session(conn) do
+      %{"agent_session_id" => session_id} -> Map.put(attrs, "agent_session_id", session_id)
+      %{} -> attrs
+    end
+  end
+
+  def cluster_agent_session(conn) do
+    case Plug.Conn.get_req_header(conn, "x-kyuubiki-agent-session-id") do
+      [session_id] when session_id != "" -> %{"agent_session_id" => session_id}
+      _ -> %{}
+    end
+  end
+
   def validate_registered_fingerprint(conn, agent_id) do
     case Enum.find(KyuubikiWeb.Playground.AgentRegistry.agents(), &(&1.id == agent_id)) do
       %{fingerprint: registered} when is_binary(registered) and registered != "" ->
@@ -110,6 +124,17 @@ defmodule KyuubikiWeb.RouterSupport do
         "entity_key" => encode_entity_key(Map.get(conflict, :entity_key)),
         "current" => Map.get(conflict, :current),
         "attempted" => Map.get(conflict, :attempted)
+      }
+    }
+  end
+
+  defp encode_unprocessable({:agent_session_conflict, conflict}) when is_map(conflict) do
+    %{
+      "error" => "agent_session_conflict",
+      "conflict" => %{
+        "agent_id" => Map.get(conflict, :agent_id),
+        "current_agent_session_id" => Map.get(conflict, :current_agent_session_id),
+        "attempted_agent_session_id" => Map.get(conflict, :attempted_agent_session_id)
       }
     }
   end

@@ -29,6 +29,11 @@ Every registered agent advertises one control mode:
 - `orch_managed`
 - `offline_mesh`
 
+Each native Agent process also creates one `agent_session_id`. This is an
+instance-generation fence, not an orchestra identity: it changes when the
+Agent process restarts and remains stable across that process's register,
+heartbeat, execution-claim, and unregister requests.
+
 ### `orch_managed`
 
 In `orch_managed` mode:
@@ -60,6 +65,12 @@ The runtime-visible binding contract is:
 - `control_mode`
 - `orch_id`
 - `orch_session_id`
+- `agent_session_id`
+
+`orch_session_id` identifies the active orchestra authority session, while
+`agent_session_id` identifies one concrete Agent process generation. They are
+deliberately separate because several Agents may share one orchestra session,
+but a late message from an old Agent process must never mutate its replacement.
 
 These fields do not all need to be editable in every UI, but they must be
 inspectable so the operator can understand why an agent is accepted or rejected.
@@ -86,6 +97,15 @@ In practice that means:
 1. unregister the existing agent binding
 2. clear any old runtime association
 3. register again under the new control mode or orchestra
+
+An Agent process replacement within the same authority is fenced separately:
+
+- an active registered generation rejects a different `agent_session_id`
+- after the old generation becomes stale, the same fingerprinted runtime may
+  register a new `agent_session_id`
+- replacement clears any execution lease owned by the stale generation
+- late heartbeat, unregister, health, and execution-claim messages from the old
+  generation are rejected or isolated
 
 ## Why This Matters
 
@@ -147,6 +167,9 @@ The current registry-level guardrails are:
   different orchestra
 - heartbeat updates cannot flip an agent between `orch_managed` and
   `offline_mesh`
+- the native Agent carries one process-generation `agent_session_id` through
+  registration, heartbeat, execution claims, and unregister
+- stale process generations cannot unregister or update their replacement
 
 That gives us a stable base for:
 

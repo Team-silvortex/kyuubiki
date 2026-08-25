@@ -8,33 +8,35 @@ defmodule KyuubikiWeb.Orchestra.LeaseMemoryBackend do
   def acquire(lease_name, owner_instance_id, ttl_ms)
       when is_binary(lease_name) and lease_name != "" and is_binary(owner_instance_id) and
              owner_instance_id != "" and is_integer(ttl_ms) and ttl_ms > 0 do
-    Agent.get_and_update(__MODULE__, fn leases ->
-      now = now_ms()
+    with_name_lock(lease_name, fn ->
+      Agent.get_and_update(__MODULE__, fn leases ->
+        now = now_ms()
 
-      case Map.get(leases, lease_name) do
-        nil ->
-          lease = new_lease(lease_name, owner_instance_id, 1, now + ttl_ms)
-          {{:ok, lease}, Map.put(leases, lease_name, lease)}
+        case Map.get(leases, lease_name) do
+          nil ->
+            lease = new_lease(lease_name, owner_instance_id, 1, now + ttl_ms)
+            {{:ok, lease}, Map.put(leases, lease_name, lease)}
 
-        %{owner_instance_id: ^owner_instance_id, expires_at_ms: expires_at_ms} = current
-        when expires_at_ms > now ->
-          lease = %{current | expires_at_ms: now + ttl_ms}
-          {{:ok, lease}, Map.put(leases, lease_name, lease)}
+          %{owner_instance_id: ^owner_instance_id, expires_at_ms: expires_at_ms} = current
+          when expires_at_ms > now ->
+            lease = %{current | expires_at_ms: now + ttl_ms}
+            {{:ok, lease}, Map.put(leases, lease_name, lease)}
 
-        %{expires_at_ms: expires_at_ms} = current when expires_at_ms <= now ->
-          lease =
-            new_lease(
-              lease_name,
-              owner_instance_id,
-              current.fencing_token + 1,
-              now + ttl_ms
-            )
+          %{expires_at_ms: expires_at_ms} = current when expires_at_ms <= now ->
+            lease =
+              new_lease(
+                lease_name,
+                owner_instance_id,
+                current.fencing_token + 1,
+                now + ttl_ms
+              )
 
-          {{:ok, lease}, Map.put(leases, lease_name, lease)}
+            {{:ok, lease}, Map.put(leases, lease_name, lease)}
 
-        current ->
-          {{:error, {:lease_held, current}}, leases}
-      end
+          current ->
+            {{:error, {:lease_held, current}}, leases}
+        end
+      end)
     end)
   end
 
@@ -51,19 +53,21 @@ defmodule KyuubikiWeb.Orchestra.LeaseMemoryBackend do
       when is_binary(lease_name) and lease_name != "" and is_binary(owner_instance_id) and
              owner_instance_id != "" and is_integer(fencing_token) and fencing_token > 0 and
              is_integer(ttl_ms) and ttl_ms > 0 do
-    Agent.get_and_update(__MODULE__, fn leases ->
-      now = now_ms()
+    with_name_lock(lease_name, fn ->
+      Agent.get_and_update(__MODULE__, fn leases ->
+        now = now_ms()
 
-      case Map.get(leases, lease_name) do
-        %{owner_instance_id: owner, fencing_token: fencing, expires_at_ms: expires} = current
-        when owner == owner_instance_id and fencing == fencing_token and
-               expires > now ->
-          renewed = %{current | expires_at_ms: now + ttl_ms}
-          {{:ok, renewed}, Map.put(leases, lease_name, renewed)}
+        case Map.get(leases, lease_name) do
+          %{owner_instance_id: owner, fencing_token: fencing, expires_at_ms: expires} = current
+          when owner == owner_instance_id and fencing == fencing_token and
+                 expires > now ->
+            renewed = %{current | expires_at_ms: now + ttl_ms}
+            {{:ok, renewed}, Map.put(leases, lease_name, renewed)}
 
-        _ ->
-          {{:error, :orchestra_lease_lost}, leases}
-      end
+          _ ->
+            {{:error, :orchestra_lease_lost}, leases}
+        end
+      end)
     end)
   end
 
@@ -81,20 +85,12 @@ defmodule KyuubikiWeb.Orchestra.LeaseMemoryBackend do
              owner_instance_id != "" and is_integer(fencing_token) and fencing_token > 0 and
              is_function(callback, 0) do
     result =
-      Agent.get(
-        __MODULE__,
-        fn leases ->
-          case Map.get(leases, lease_name) do
-            %{owner_instance_id: owner, fencing_token: fencing, expires_at_ms: expires}
-            when owner == owner_instance_id and fencing == fencing_token ->
-              if expires > now_ms(), do: invoke(callback), else: {:error, :orchestra_lease_lost}
-
-            _ ->
-              {:error, :orchestra_lease_lost}
-          end
-        end,
-        :infinity
-      )
+      with_name_lock(lease_name, fn ->
+        case owned?(lease_name, owner_instance_id, fencing_token) do
+          true -> invoke(callback)
+          false -> {:error, :orchestra_lease_lost}
+        end
+      end)
 
     restore_callback_result(result)
   end
@@ -108,16 +104,18 @@ defmodule KyuubikiWeb.Orchestra.LeaseMemoryBackend do
       })
       when is_binary(lease_name) and lease_name != "" and is_binary(owner_instance_id) and
              owner_instance_id != "" and is_integer(fencing_token) and fencing_token > 0 do
-    Agent.get_and_update(__MODULE__, fn leases ->
-      case Map.get(leases, lease_name) do
-        %{owner_instance_id: owner, fencing_token: fencing}
-        when owner == owner_instance_id and fencing == fencing_token ->
-          expired = %{Map.fetch!(leases, lease_name) | expires_at_ms: now_ms()}
-          {:ok, Map.put(leases, lease_name, expired)}
+    with_name_lock(lease_name, fn ->
+      Agent.get_and_update(__MODULE__, fn leases ->
+        case Map.get(leases, lease_name) do
+          %{owner_instance_id: owner, fencing_token: fencing}
+          when owner == owner_instance_id and fencing == fencing_token ->
+            expired = %{Map.fetch!(leases, lease_name) | expires_at_ms: now_ms()}
+            {:ok, Map.put(leases, lease_name, expired)}
 
-        _ ->
-          {{:error, :orchestra_lease_lost}, leases}
-      end
+          _ ->
+            {{:error, :orchestra_lease_lost}, leases}
+        end
+      end)
     end)
   end
 
@@ -144,6 +142,26 @@ defmodule KyuubikiWeb.Orchestra.LeaseMemoryBackend do
     do: :erlang.raise(kind, reason, stacktrace)
 
   defp restore_callback_result(result), do: result
+
+  defp owned?(lease_name, owner_instance_id, fencing_token) do
+    Agent.get(__MODULE__, fn leases ->
+      case Map.get(leases, lease_name) do
+        %{
+          owner_instance_id: ^owner_instance_id,
+          fencing_token: ^fencing_token,
+          expires_at_ms: expiry
+        } ->
+          expiry > now_ms()
+
+        _ ->
+          false
+      end
+    end)
+  end
+
+  defp with_name_lock(lease_name, callback) do
+    :global.trans({{__MODULE__, lease_name}, self()}, callback)
+  end
 
   defp new_lease(lease_name, owner_instance_id, fencing_token, expires_at_ms) do
     %{

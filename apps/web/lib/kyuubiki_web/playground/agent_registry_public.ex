@@ -18,6 +18,8 @@ defmodule KyuubikiWeb.Playground.AgentRegistryPublic do
       "id" => Map.get(agent, :id) || Map.get(agent, "id"),
       "host" => Map.get(agent, :host) || Map.get(agent, "host"),
       "port" => Map.get(agent, :port) || Map.get(agent, "port"),
+      "agent_session_id" =>
+        Map.get(agent, :agent_session_id) || Map.get(agent, "agent_session_id"),
       "control_mode" => control_mode,
       "session_state" => AgentSessionState.state(agent),
       "orch_id" => orch_id,
@@ -51,6 +53,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistryPublic do
       id: agent.id,
       host: agent.host,
       port: agent.port,
+      agent_session_id: agent.agent_session_id,
       control_mode: agent.control_mode,
       session_state: AgentSessionState.state(agent),
       orch_id: agent.orch_id,
@@ -98,6 +101,8 @@ defmodule KyuubikiWeb.Playground.AgentRegistryPublic do
     %{
       "lease_id" => Map.get(lease, :lease_id) || Map.get(lease, "lease_id"),
       "agent_id" => Map.get(lease, :agent_id) || Map.get(lease, "agent_id"),
+      "agent_session_id" =>
+        Map.get(lease, :agent_session_id) || Map.get(lease, "agent_session_id"),
       "control_mode" => Map.get(lease, :control_mode) || Map.get(lease, "control_mode"),
       "orch_id" => Map.get(lease, :orch_id) || Map.get(lease, "orch_id"),
       "orch_session_id" => Map.get(lease, :orch_session_id) || Map.get(lease, "orch_session_id"),

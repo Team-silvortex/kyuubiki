@@ -229,6 +229,7 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     endpoint
     |> Map.take([
       :active_lease,
+      :agent_session_id,
       :control_mode,
       :orch_id,
       :orch_session_id,
@@ -259,6 +260,7 @@ defmodule KyuubikiWeb.Playground.AgentPool do
       host: host,
       port: port,
       active_lease: Map.get(endpoint, "active_lease"),
+      agent_session_id: Map.get(endpoint, "agent_session_id"),
       control_mode: Map.get(endpoint, "control_mode"),
       orch_id: Map.get(endpoint, "orch_id"),
       orch_session_id: Map.get(endpoint, "orch_session_id"),
@@ -380,6 +382,15 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   end
 
   defp cooldown_remaining_ms(_health, _endpoint), do: 0
+
+  defp endpoint_health_key(%{
+         id: id,
+         host: host,
+         port: port,
+         agent_session_id: session_id
+       })
+       when is_binary(id) and is_binary(host) and is_integer(port) and is_binary(session_id),
+       do: "#{id}@#{host}:#{port}##{session_id}"
 
   defp endpoint_health_key(%{id: id, host: host, port: port})
        when is_binary(id) and is_binary(host) and is_integer(port),

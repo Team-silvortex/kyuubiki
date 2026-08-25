@@ -41,6 +41,7 @@ struct RegistryConfig {
     agent_host: String,
     agent_port: u16,
     fingerprint: String,
+    agent_session_id: String,
     cluster_id: Option<String>,
 }
 
@@ -90,6 +91,7 @@ impl RegistryConfig {
             agent_host,
             agent_port,
             fingerprint,
+            agent_session_id: format!("registry-session-{}-{}", std::process::id(), unix_millis()),
             cluster_id: env_value(&agent_env, "KYUUBIKI_AGENT_CLUSTER_ID")
                 .filter(|value| !value.is_empty()),
         })
@@ -106,7 +108,8 @@ impl RegistryConfig {
             "tags": ["headless", "standalone"],
             "methods": [],
             "capabilities": [],
-            "health_score": 100
+            "health_score": 100,
+            "agent_session_id": self.agent_session_id
         });
         if let Some(cluster_id) = &self.cluster_id {
             payload["cluster_id"] = json!(cluster_id);
@@ -126,6 +129,10 @@ impl RegistryConfig {
             (
                 "x-kyuubiki-agent-fingerprint".to_string(),
                 self.fingerprint.clone(),
+            ),
+            (
+                "x-kyuubiki-agent-session-id".to_string(),
+                self.agent_session_id.clone(),
             ),
         ]
     }
@@ -264,11 +271,13 @@ mod tests {
             agent_host: "host-a".to_string(),
             agent_port: 5001,
             fingerprint: "fp".to_string(),
+            agent_session_id: "registry-session-test".to_string(),
             cluster_id: Some("cluster-a".to_string()),
         };
         let payload = config.payload();
         assert_eq!(payload["id"], "agent-a");
         assert_eq!(payload["cluster_id"], "cluster-a");
         assert_eq!(payload["health_score"], 100);
+        assert_eq!(payload["agent_session_id"], "registry-session-test");
     }
 }

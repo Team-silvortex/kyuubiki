@@ -9,6 +9,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   alias KyuubikiWeb.Orchestra.DistributedRecovery
   alias KyuubikiWeb.Playground.AgentExecutionGate
   alias KyuubikiWeb.Playground.AgentPool
+  alias KyuubikiWeb.Playground.AgentRpcTransport
   alias KyuubikiWeb.Playground.AgentRegistry
 
   @rpc_version 1
@@ -298,11 +299,14 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request_id = request_id()
     opts = put_execution_lease(opts, request_id, method)
     request = build_request(request_id, method, params) |> put_rpc_job_id(method, opts)
-    endpoints = AgentPool.checkout_endpoints(method, opts)
 
-    case endpoints do
-      [] -> {:error, no_matching_agent_error(method, opts)}
-      _ -> attempt_request(endpoints, request_id, request, on_progress, opts, [])
+    with :ok <- AgentRpcTransport.validate_request(request) do
+      endpoints = AgentPool.checkout_endpoints(method, opts)
+
+      case endpoints do
+        [] -> {:error, no_matching_agent_error(method, opts)}
+        _ -> attempt_request(endpoints, request_id, request, on_progress, opts, [])
+      end
     end
   end
 
@@ -324,7 +328,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request = build_request(request_id, method, params)
     normalized = normalize_endpoint(endpoint)
 
-    case request_once(normalized, request_id, request, fn _ -> :ok end, []) do
+    case AgentRpcTransport.request(normalized, request_id, request, fn _ -> :ok end, []) do
       {:ok, result} ->
         :ok = AgentPool.report_success(normalized)
         {:ok, result}
@@ -334,7 +338,9 @@ defmodule KyuubikiWeb.Playground.AgentClient do
         {:error, reason}
 
       {:error, reason} ->
-        :ok = AgentPool.report_failure(normalized, DistributedRecovery.health_reason(reason))
+        unless AgentRpcTransport.local_failure?(reason),
+          do: AgentPool.report_failure(normalized, DistributedRecovery.health_reason(reason))
+
         {:error, reason}
     end
   end
@@ -344,37 +350,37 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   end
 
   defp attempt_request(endpoints, request_id, request, on_progress, opts, failures) do
-    emit_queue_progress(on_progress, opts, endpoints)
+    with :ok <- emit_queue_progress(on_progress, opts, endpoints) do
+      case AgentExecutionGate.acquire(endpoints, request_id, queue_timeout_ms(opts)) do
+        {:ok, endpoint, queue_metadata} ->
+          remaining = Enum.reject(endpoints, &(&1.id == endpoint.id))
 
-    case AgentExecutionGate.acquire(endpoints, request_id, queue_timeout_ms(opts)) do
-      {:ok, endpoint, queue_metadata} ->
-        emit_dispatch_progress(on_progress, opts, endpoint, queue_metadata)
-        remaining = Enum.reject(endpoints, &(&1.id == endpoint.id))
-
-        endpoint_result =
-          try do
-            with :ok <- authorize_dispatch(opts) do
-              with_claimed_endpoint(endpoint, opts, fn ->
-                request_once(endpoint, request_id, request, on_progress, opts)
-              end)
+          endpoint_result =
+            try do
+              with :ok <- emit_dispatch_progress(on_progress, opts, endpoint, queue_metadata),
+                   :ok <- authorize_dispatch(opts) do
+                with_claimed_endpoint(endpoint, opts, fn ->
+                  AgentRpcTransport.request(endpoint, request_id, request, on_progress, opts)
+                end)
+              end
+            after
+              _ = AgentExecutionGate.release(request_id)
             end
-          after
-            AgentExecutionGate.release(request_id)
-          end
 
-        handle_endpoint_result(
-          endpoint_result,
-          endpoint,
-          remaining,
-          request_id,
-          request,
-          on_progress,
-          opts,
-          failures
-        )
+          handle_endpoint_result(
+            endpoint_result,
+            endpoint,
+            remaining,
+            request_id,
+            request,
+            on_progress,
+            opts,
+            failures
+          )
 
-      {:error, reason} ->
-        {:error, reason}
+        {:error, reason} ->
+          {:error, reason}
+      end
     end
   end
 
@@ -416,6 +422,32 @@ defmodule KyuubikiWeb.Playground.AgentClient do
          opts,
          failures
        ) do
+    if AgentRpcTransport.local_failure?(reason) do
+      {:error, reason}
+    else
+      handle_recoverable_endpoint_failure(
+        reason,
+        endpoint,
+        remaining,
+        request_id,
+        request,
+        on_progress,
+        opts,
+        failures
+      )
+    end
+  end
+
+  defp handle_recoverable_endpoint_failure(
+         reason,
+         endpoint,
+         remaining,
+         request_id,
+         request,
+         on_progress,
+         opts,
+         failures
+       ) do
     receipt =
       DistributedRecovery.failure_receipt(
         endpoint,
@@ -430,17 +462,17 @@ defmodule KyuubikiWeb.Playground.AgentClient do
       :ok = AgentPool.report_failure(endpoint, DistributedRecovery.health_reason(reason))
     end
 
-    emit_recovery_progress(on_progress, opts, receipt)
+    with :ok <- emit_recovery_progress(on_progress, opts, receipt) do
+      cond do
+        DistributedRecovery.retryable?(receipt) and remaining != [] ->
+          attempt_request(remaining, request_id, request, on_progress, opts, [receipt | failures])
 
-    cond do
-      DistributedRecovery.retryable?(receipt) and remaining != [] ->
-        attempt_request(remaining, request_id, request, on_progress, opts, [receipt | failures])
+        DistributedRecovery.retryable?(receipt) ->
+          {:error, {:all_agents_failed, Enum.reverse([receipt | failures])}}
 
-      DistributedRecovery.retryable?(receipt) ->
-        {:error, {:all_agents_failed, Enum.reverse([receipt | failures])}}
-
-      true ->
-        {:error, {:agent_retry_blocked, receipt}}
+        true ->
+          {:error, {:agent_retry_blocked, receipt}}
+      end
     end
   end
 
@@ -493,13 +525,22 @@ defmodule KyuubikiWeb.Playground.AgentClient do
         :ok
 
       true ->
-        AgentRegistry.claim_execution(endpoint.id, Map.new(lease))
+        lease
+        |> Map.new()
+        |> maybe_put_agent_session_id(endpoint)
+        |> then(&AgentRegistry.claim_execution(endpoint.id, &1))
         |> case do
           {:ok, _lease} -> :ok
           {:error, _reason} = error -> error
         end
     end
   end
+
+  defp maybe_put_agent_session_id(lease, %{agent_session_id: session_id})
+       when is_binary(session_id),
+       do: Map.put(lease, "agent_session_id", session_id)
+
+  defp maybe_put_agent_session_id(lease, _endpoint), do: lease
 
   defp release_execution(endpoint, lease) when is_map(endpoint) and is_map(lease) do
     if is_binary(Map.get(endpoint, :control_mode)) and is_binary(Map.get(lease, :lease_id)) do
@@ -560,55 +601,6 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     end
   end
 
-  defp request_once(endpoint, request_id, request, on_progress, opts) do
-    case connect(endpoint) do
-      {:ok, socket} ->
-        try do
-          request_over_socket(socket, request_id, request, on_progress, opts)
-        after
-          :gen_tcp.close(socket)
-        end
-
-      {:error, reason} ->
-        {:error, {:agent_transport_failure, :connect, reason}}
-    end
-  end
-
-  defp request_over_socket(socket, request_id, request, on_progress, opts) do
-    with :ok <- tag_transport_error(send_request(socket, request), :send),
-         {:ok, response_payload} <-
-           tag_transport_error(
-             recv_response(socket, request_id, on_progress, request_deadline_ms(opts)),
-             :receive
-           ) do
-      case decode_response(response_payload, request_id) do
-        {:error, {:invalid_response, _reason} = reason} ->
-          {:error, {:agent_transport_failure, :protocol, reason}}
-
-        result ->
-          result
-      end
-    end
-  end
-
-  defp tag_transport_error({:error, reason}, stage),
-    do: {:error, {:agent_transport_failure, stage, reason}}
-
-  defp tag_transport_error(result, _stage), do: result
-
-  defp connect(endpoint) do
-    :gen_tcp.connect(
-      String.to_charlist(endpoint.host),
-      endpoint.port,
-      [
-        :binary,
-        packet: 4,
-        active: false
-      ],
-      connect_timeout_ms()
-    )
-  end
-
   defp normalize_endpoint(%{id: _id, host: _host, port: _port} = endpoint), do: endpoint
 
   defp normalize_endpoint(%{"host" => host, "port" => port} = endpoint) do
@@ -619,96 +611,11 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     }
   end
 
-  defp send_request(socket, request) do
-    payload = Jason.encode!(request)
-    :gen_tcp.send(socket, payload)
-  end
-
-  defp recv_response(socket, request_id, on_progress, deadline_ms) do
-    case remaining_recv_timeout_ms(deadline_ms) do
-      0 ->
-        {:error, :request_timeout}
-
-      timeout_ms ->
-        recv_response_frame(socket, request_id, on_progress, deadline_ms, timeout_ms)
-    end
-  end
-
-  defp recv_response_frame(socket, request_id, on_progress, deadline_ms, timeout_ms) do
-    case :gen_tcp.recv(socket, 0, timeout_ms) do
-      {:ok, payload} ->
-        case Jason.decode(payload) do
-          {:ok, %{"event" => event, "rpc_version" => @rpc_version, "id" => ^request_id} = frame}
-          when event in ["progress", "heartbeat"] ->
-            maybe_emit_progress(on_progress, frame["progress"])
-            recv_response(socket, request_id, on_progress, deadline_ms)
-
-          {:ok, %{"rpc_version" => @rpc_version, "id" => ^request_id}} ->
-            {:ok, payload}
-
-          {:ok, _frame} ->
-            {:error, {:invalid_response, :unexpected_rpc_frame}}
-
-          {:error, reason} ->
-            {:error, {:invalid_response, reason}}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  defp maybe_emit_progress(on_progress, progress) when is_map(progress) do
-    _ = on_progress.(progress)
-    :ok
-  end
-
-  defp maybe_emit_progress(_on_progress, _progress), do: :ok
-
-  defp decode_response(raw_response, request_id) do
-    case Jason.decode(raw_response) do
-      {:ok, %{"rpc_version" => @rpc_version, "id" => ^request_id, "ok" => true} = decoded} ->
-        {:ok, decoded["result"]}
-
-      {:ok, %{"rpc_version" => @rpc_version, "id" => ^request_id, "ok" => false}} ->
-        error = decoded_error(raw_response)
-        {:error, {:rpc_error, error["code"], error["message"]}}
-
-      {:ok, _decoded} ->
-        {:error, {:invalid_response, :malformed_rpc_response}}
-
-      {:error, reason} ->
-        {:error, {:invalid_response, reason}}
-    end
-  end
-
-  defp decoded_error(raw_response) do
-    case Jason.decode(raw_response) do
-      {:ok, %{"error" => error}} when is_map(error) -> error
-      _ -> %{"code" => "invalid_response", "message" => "agent returned malformed error payload"}
-    end
-  end
-
   @spec worker_id(AgentPool.endpoint()) :: String.t()
   def worker_id(endpoint), do: "rust-agent-rpc@#{endpoint.id}"
 
   defp request_id do
     :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
-  end
-
-  defp connect_timeout_ms do
-    Application.get_env(:kyuubiki_web, __MODULE__, [])
-    |> Keyword.get(:connect_timeout_ms, 1_500)
-  end
-
-  defp recv_timeout_ms do
-    Application.get_env(:kyuubiki_web, __MODULE__, [])
-    |> Keyword.get(:recv_timeout_ms, 15_000)
-  end
-
-  defp request_timeout_ms do
-    Application.get_env(:kyuubiki_web, __MODULE__, [])
-    |> Keyword.get(:request_timeout_ms, 120_000)
   end
 
   defp queue_timeout_ms(opts) do
@@ -727,19 +634,21 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     if Keyword.get(opts, :job_id) do
       snapshot = AgentExecutionGate.snapshot()
 
-      on_progress.(%{
+      AgentRpcTransport.emit_progress(on_progress, %{
         "stage" => "queued",
         "progress" => 0.0,
         "message" =>
           "waiting for agent capacity; queue_depth=#{snapshot.queued_request_count}; " <>
             "candidate_agents=#{length(endpoints)}; queue_timeout_ms=#{queue_timeout_ms(opts)}"
       })
+    else
+      :ok
     end
   end
 
   defp emit_dispatch_progress(on_progress, opts, endpoint, queue_metadata) do
     if Keyword.get(opts, :job_id) do
-      on_progress.(%{
+      AgentRpcTransport.emit_progress(on_progress, %{
         "stage" => "preprocessing",
         "progress" => 0.01,
         "message" =>
@@ -747,12 +656,14 @@ defmodule KyuubikiWeb.Playground.AgentClient do
             "queue_wait_ms=#{queue_metadata.waited_ms}; " <>
             "execution_timeout_ms=#{request_timeout_value(opts)}"
       })
+    else
+      :ok
     end
   end
 
   defp emit_recovery_progress(on_progress, opts, receipt) do
     if Keyword.get(opts, :job_id) do
-      on_progress.(%{
+      AgentRpcTransport.emit_progress(on_progress, %{
         "stage" => "recovering",
         "progress" => 0.01,
         "message" =>
@@ -760,14 +671,13 @@ defmodule KyuubikiWeb.Playground.AgentClient do
             "next_action=#{receipt.next_action}",
         "recovery" => receipt
       })
+    else
+      :ok
     end
   end
 
   defp request_timeout_value(opts) do
-    case Keyword.get(opts, :request_timeout_ms) do
-      value when is_integer(value) and value > 0 -> value
-      _ -> request_timeout_ms()
-    end
+    AgentRpcTransport.request_timeout_ms(opts)
   end
 
   defp authorize_dispatch(opts) do
@@ -775,17 +685,5 @@ defmodule KyuubikiWeb.Playground.AgentClient do
       callback when is_function(callback, 0) -> callback.()
       _ -> :ok
     end
-  end
-
-  defp request_deadline_ms(opts) do
-    System.monotonic_time(:millisecond) + request_timeout_value(opts)
-  end
-
-  defp remaining_recv_timeout_ms(deadline_ms) do
-    remaining_ms = deadline_ms - System.monotonic_time(:millisecond)
-
-    if remaining_ms <= 0,
-      do: 0,
-      else: min(recv_timeout_ms(), remaining_ms)
   end
 end

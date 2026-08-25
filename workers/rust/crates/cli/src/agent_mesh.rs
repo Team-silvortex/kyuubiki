@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::net::TcpStream;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -10,13 +10,16 @@ use kyuubiki_protocol::{
 };
 
 use crate::agent_control_link;
-use crate::agent_http::{cluster_auth_headers, delete_request, normalize_base_url, post_json};
-use crate::agent_state::{registration_payload, runtime_descriptor};
+use crate::agent_http::{
+    cluster_auth_headers, delete_request, normalize_base_url, post_json, with_agent_session_header,
+};
+use crate::agent_state::{registration_payload_for_session, runtime_descriptor};
 use crate::config::AgentConfig;
 use crate::transport::{frame_error_message, read_frame, write_frame};
 
 const MIN_REGISTER_INTERVAL_MS: u64 = 100;
 const MAX_REGISTER_INTERVAL_MS: u64 = 300_000;
+static AGENT_SESSION_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 pub(crate) struct AgentRegistrationHandle {
     running: Arc<AtomicBool>,
@@ -41,6 +44,7 @@ impl AgentRegistrationHandle {
         let payload_config = config.clone();
         let orchestrator_url_clone = orchestrator_url.clone();
         let agent_id_clone = agent_id;
+        let agent_session_id = next_agent_session_id();
         agent_control_link::configure(interval_ms);
 
         let join_handle = thread::spawn(move || {
@@ -56,12 +60,15 @@ impl AgentRegistrationHandle {
                 agent_control_link::record_attempt(operation);
                 let result = post_json(
                     &url,
-                    &registration_payload(&payload_config),
-                    cluster_auth_headers(
-                        cluster_api_token.as_deref(),
-                        &agent_id_clone,
-                        cluster_id.as_deref(),
-                        agent_fingerprint.as_deref(),
+                    &registration_payload_for_session(&payload_config, &agent_session_id),
+                    with_agent_session_header(
+                        cluster_auth_headers(
+                            cluster_api_token.as_deref(),
+                            &agent_id_clone,
+                            cluster_id.as_deref(),
+                            agent_fingerprint.as_deref(),
+                        ),
+                        &agent_session_id,
                     ),
                 );
 
@@ -103,11 +110,14 @@ impl AgentRegistrationHandle {
 
             let unregister = delete_request(
                 &format!("{base_url}/api/v1/agents/{agent_id_clone}"),
-                cluster_auth_headers(
-                    cluster_api_token.as_deref(),
-                    &agent_id_clone,
-                    cluster_id.as_deref(),
-                    agent_fingerprint.as_deref(),
+                with_agent_session_header(
+                    cluster_auth_headers(
+                        cluster_api_token.as_deref(),
+                        &agent_id_clone,
+                        cluster_id.as_deref(),
+                        agent_fingerprint.as_deref(),
+                    ),
+                    &agent_session_id,
                 ),
             );
             agent_control_link::record_stopped(unregister.as_ref().err().map(String::as_str));
@@ -126,6 +136,15 @@ impl AgentRegistrationHandle {
             let _ = join_handle.join();
         }
     }
+}
+
+fn next_agent_session_id() -> String {
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_nanos())
+        .unwrap_or(0);
+    let counter = AGENT_SESSION_COUNTER.fetch_add(1, Ordering::Relaxed);
+    format!("agent-session-{}-{nonce}-{counter}", std::process::id())
 }
 
 fn sleep_while_running(running: &AtomicBool, delay_ms: u64) -> bool {
@@ -382,10 +401,7 @@ mod tests {
                 let _ = stream.set_read_timeout(Some(Duration::from_secs(1)));
                 let request = read_http_request(&mut stream);
                 let first_line = request.lines().next().unwrap_or_default().to_string();
-                server_requests
-                    .lock()
-                    .expect("request log")
-                    .push(first_line.clone());
+                server_requests.lock().expect("request log").push(request);
                 let reject = first_line.contains("/heartbeat") && !heartbeat_rejected;
                 heartbeat_rejected |= reject;
                 let status = if reject {
@@ -449,6 +465,19 @@ mod tests {
                 .last()
                 .is_some_and(|line| line.starts_with("DELETE "))
         );
+
+        let session_header = request_header(&requests[0], "x-kyuubiki-agent-session-id")
+            .expect("registration session header");
+        assert!(requests.iter().all(|request| {
+            request_header(request, "x-kyuubiki-agent-session-id") == Some(session_header)
+        }));
+        assert!(
+            requests
+                .iter()
+                .filter(|request| request.starts_with("POST "))
+                .all(|request| request
+                    .contains(&format!("\"agent_session_id\":\"{session_header}\"")))
+        );
     }
 
     #[test]
@@ -456,6 +485,17 @@ mod tests {
         assert_eq!(normalized_registration_interval_ms(0), 100);
         assert_eq!(normalized_registration_interval_ms(5_000), 5_000);
         assert_eq!(normalized_registration_interval_ms(u64::MAX), 300_000);
+    }
+
+    #[test]
+    fn agent_process_sessions_are_unique_and_header_safe() {
+        let first = next_agent_session_id();
+        let second = next_agent_session_id();
+
+        assert_ne!(first, second);
+        assert!(first.bytes().all(|byte| {
+            byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':')
+        }));
     }
 
     fn read_http_request(stream: &mut TcpStream) -> String {
@@ -484,5 +524,13 @@ mod tests {
             })
             .unwrap_or(0);
         request.len() >= header_end + 4 + content_length
+    }
+
+    fn request_header<'a>(request: &'a str, expected_name: &str) -> Option<&'a str> {
+        request.lines().find_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            name.eq_ignore_ascii_case(expected_name)
+                .then_some(value.trim())
+        })
     }
 }

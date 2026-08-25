@@ -276,6 +276,81 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
     assert payload["conflict"]["attempted"]["orch_id"] == "orch-beta"
   end
 
+  test "rejects a late API unregister from a replaced agent process session" do
+    Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
+      api_token: nil,
+      cluster_api_token: nil,
+      protect_reads?: false
+    )
+
+    original_registry_config = Application.get_env(:kyuubiki_web, AgentRegistry, [])
+
+    Application.put_env(
+      :kyuubiki_web,
+      AgentRegistry,
+      Keyword.merge(original_registry_config, stale_after_ms: 1)
+    )
+
+    on_exit(fn ->
+      Application.put_env(:kyuubiki_web, AgentRegistry, original_registry_config)
+    end)
+
+    register = fn session_id ->
+      timestamp = Integer.to_string(System.system_time(:millisecond))
+
+      :post
+      |> conn(
+        "/api/v1/agents/register",
+        Jason.encode!(%{
+          "id" => "solver-api-session",
+          "host" => "10.20.0.41",
+          "port" => 6141,
+          "orch_id" => "orch-alpha"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-agent-id", "solver-api-session")
+      |> put_req_header("x-kyuubiki-cluster-ts", timestamp)
+      |> put_req_header("x-kyuubiki-cluster-nonce", "register-#{session_id}-#{timestamp}")
+      |> put_req_header("x-kyuubiki-agent-session-id", session_id)
+      |> Router.call(@opts)
+    end
+
+    assert register.("agent-session-old").status == 201
+    Process.sleep(5)
+    assert register.("agent-session-new").status == 201
+
+    stale_delete =
+      :delete
+      |> conn("/api/v1/agents/solver-api-session")
+      |> put_req_header("x-kyuubiki-agent-id", "solver-api-session")
+      |> put_req_header(
+        "x-kyuubiki-cluster-ts",
+        Integer.to_string(System.system_time(:millisecond))
+      )
+      |> put_req_header("x-kyuubiki-cluster-nonce", "delete-agent-session-old")
+      |> put_req_header("x-kyuubiki-agent-session-id", "agent-session-old")
+      |> Router.call(@opts)
+
+    assert stale_delete.status == 422
+    assert Jason.decode!(stale_delete.resp_body)["error"] == "agent_session_conflict"
+    assert [%{agent_session_id: "agent-session-new"}] = AgentRegistry.agents()
+
+    current_delete =
+      :delete
+      |> conn("/api/v1/agents/solver-api-session")
+      |> put_req_header("x-kyuubiki-agent-id", "solver-api-session")
+      |> put_req_header(
+        "x-kyuubiki-cluster-ts",
+        Integer.to_string(System.system_time(:millisecond))
+      )
+      |> put_req_header("x-kyuubiki-cluster-nonce", "delete-agent-session-new")
+      |> put_req_header("x-kyuubiki-agent-session-id", "agent-session-new")
+      |> Router.call(@opts)
+
+    assert current_delete.status == 200
+  end
+
   test "serves a Hub-facing workload catalog with project download URLs" do
     previous_trust = Application.get_env(:kyuubiki_web, :trust_forwarded_headers, false)
     Application.put_env(:kyuubiki_web, :trust_forwarded_headers, true)

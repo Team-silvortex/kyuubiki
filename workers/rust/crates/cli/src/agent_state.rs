@@ -164,6 +164,20 @@ pub(crate) fn registration_payload(config: &AgentConfig) -> serde_json::Value {
     })
 }
 
+pub(crate) fn registration_payload_for_session(
+    config: &AgentConfig,
+    agent_session_id: &str,
+) -> serde_json::Value {
+    let mut payload = registration_payload(config);
+    if let Some(object) = payload.as_object_mut() {
+        object.insert(
+            "agent_session_id".to_string(),
+            serde_json::Value::String(agent_session_id.to_string()),
+        );
+    }
+    payload
+}
+
 pub(crate) fn agent_descriptor_payload() -> serde_json::Value {
     let mut payload =
         serde_json::to_value(agent_descriptor()).expect("agent descriptor should serialize");

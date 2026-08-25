@@ -175,6 +175,9 @@ fn registration_payload_reports_operator_package_runtime_snapshot() {
         payload["operator_package_runtime"]["attachment"]["activated_package_count"],
         4
     );
+
+    let session_payload = registration_payload_for_session(&config, "agent-session-test");
+    assert_eq!(session_payload["agent_session_id"], "agent-session-test");
 }
 
 #[test]

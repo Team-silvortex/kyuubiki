@@ -3,7 +3,7 @@ use super::{
     compute_cluster_health_score, decode_rpc_request, filter_self_peers, handle_request_bytes,
     normalize_peer_addresses, parse_http_url,
 };
-use crate::agent_state::registration_payload;
+use crate::agent_state::{registration_payload, registration_payload_for_session};
 use crate::agent_watchdog;
 use crate::config::{AgentConfig, Command, WorkerConfig};
 use crate::transport::AgentReply;

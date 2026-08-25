@@ -12,6 +12,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
   @type execution_lease :: %{
           required(:lease_id) => String.t(),
           required(:agent_id) => String.t(),
+          optional(:agent_session_id) => String.t(),
           optional(:control_mode) => String.t(),
           optional(:orch_id) => String.t(),
           optional(:orch_session_id) => String.t(),
@@ -25,6 +26,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
           required(:id) => String.t(),
           required(:host) => String.t(),
           required(:port) => pos_integer(),
+          optional(:agent_session_id) => String.t(),
           required(:control_mode) => String.t(),
           required(:orch_id) => String.t() | nil,
           required(:orch_session_id) => String.t() | nil,
@@ -60,7 +62,12 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
 
   @spec unregister(String.t()) :: :ok
   def unregister(agent_id) when is_binary(agent_id) do
-    GenServer.call(__MODULE__, {:unregister, agent_id})
+    GenServer.call(__MODULE__, {:unregister, agent_id, :force})
+  end
+
+  @spec unregister(String.t(), map()) :: :ok | {:error, term()}
+  def unregister(agent_id, fence) when is_binary(agent_id) and is_map(fence) do
+    GenServer.call(__MODULE__, {:unregister, agent_id, fence})
   end
 
   @spec claim_execution(String.t(), map()) :: {:ok, execution_lease()} | {:error, term()}
@@ -109,10 +116,11 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
 
     with {:ok, agent} <- build_agent(attrs),
          :ok <- validate_entity_uniqueness(state.agents, agent),
-         :ok <- validate_control_transition(current, agent) do
+         :ok <- validate_registration_transition(current, agent) do
       agent = attach_session_transition(current, agent, "register")
       agents = Map.put(state.agents, agent.id, agent)
-      {:reply, {:ok, agent}, %{state | agents: agents}}
+      leases = reset_replaced_session_lease(state.leases, current, agent)
+      {:reply, {:ok, agent}, %{state | agents: agents, leases: leases}}
     else
       {:error, reason} -> {:reply, {:error, reason}, state}
     end
@@ -121,7 +129,8 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
   def handle_call({:heartbeat, agent_id, attrs}, _from, state) do
     current = Map.get(state.agents, agent_id, %{id: agent_id})
 
-    with {:ok, agent} <- build_agent(merge_heartbeat_attrs(current, attrs, agent_id)),
+    with :ok <- validate_agent_session_fence(Map.get(state.agents, agent_id), attrs),
+         {:ok, agent} <- build_agent(merge_heartbeat_attrs(current, attrs, agent_id)),
          :ok <- validate_entity_uniqueness(state.agents, agent),
          :ok <- validate_control_transition(Map.get(state.agents, agent_id), agent) do
       agent = attach_session_transition(Map.get(state.agents, agent_id), agent, "heartbeat")
@@ -132,18 +141,21 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
     end
   end
 
-  def handle_call({:unregister, agent_id}, _from, state) do
-    {:reply, :ok,
-     %{
-       state
-       | agents: Map.delete(state.agents, agent_id),
-         leases: Map.delete(state.leases, agent_id)
-     }}
+  def handle_call({:unregister, agent_id, fence}, _from, state) do
+    current = Map.get(state.agents, agent_id)
+
+    with :ok <- validate_unregister_fence(current, fence) do
+      {:reply, :ok, remove_agent(state, agent_id)}
+    else
+      {:error, reason} -> {:reply, {:error, reason}, state}
+    end
   end
 
   def handle_call({:claim_execution, agent_id, attrs}, _from, state) do
     with %{id: ^agent_id} = agent <- Map.get(state.agents, agent_id),
+         :ok <- validate_agent_active(agent),
          {:ok, lease} <- build_execution_lease(agent, attrs),
+         :ok <- validate_execution_authority(agent, lease),
          :ok <- validate_execution_claim(Map.get(state.leases, agent_id), lease) do
       {:reply, {:ok, lease}, %{state | leases: Map.put(state.leases, agent_id, lease)}}
     else
@@ -225,6 +237,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
          id: id,
          host: host,
          port: port,
+         agent_session_id: optional_string(attrs, "agent_session_id"),
          control_mode: control_mode,
          orch_id: orch_id,
          orch_session_id: orch_session_id,
@@ -279,6 +292,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
        %{
          lease_id: lease_id,
          agent_id: agent.id,
+         agent_session_id: optional_string(attrs, "agent_session_id") || agent.agent_session_id,
          control_mode: optional_string(attrs, "control_mode") || agent.control_mode,
          orch_id: optional_string(attrs, "orch_id") || agent.orch_id,
          orch_session_id: optional_string(attrs, "orch_session_id") || agent.orch_session_id,
@@ -301,6 +315,111 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
         current: AgentRegistryPublic.public_execution_lease(current, nil),
         attempted: AgentRegistryPublic.public_execution_lease(next_lease, nil)
       }}}
+  end
+
+  defp validate_execution_authority(agent, lease) do
+    expected = execution_authority(agent)
+    attempted = execution_authority(lease)
+
+    if expected == attempted do
+      :ok
+    else
+      {:error,
+       {:agent_execution_authority_conflict,
+        %{agent_id: agent.id, expected: expected, attempted: attempted}}}
+    end
+  end
+
+  defp execution_authority(value) do
+    %{
+      agent_session_id: Map.get(value, :agent_session_id),
+      control_mode: Map.get(value, :control_mode),
+      orch_id: Map.get(value, :orch_id),
+      orch_session_id: Map.get(value, :orch_session_id),
+      cluster_id: Map.get(value, :cluster_id)
+    }
+  end
+
+  defp validate_agent_active(agent) do
+    if active_agent?(agent), do: :ok, else: {:error, {:agent_stale, agent.id}}
+  end
+
+  defp validate_registration_transition(nil, _agent), do: :ok
+
+  defp validate_registration_transition(current, next_agent) do
+    with :ok <- validate_control_transition(current, next_agent),
+         :ok <- validate_registration_session(current, next_agent) do
+      :ok
+    end
+  end
+
+  defp validate_registration_session(current, next_agent) do
+    current_id = Map.get(current, :agent_session_id)
+    next_id = Map.get(next_agent, :agent_session_id)
+
+    cond do
+      is_nil(current_id) ->
+        :ok
+
+      current_id == next_id ->
+        :ok
+
+      is_binary(next_id) and not active_agent?(current) and
+          same_runtime_identity?(current, next_agent) ->
+        :ok
+
+      true ->
+        agent_session_conflict(current, next_id)
+    end
+  end
+
+  defp validate_agent_session_fence(nil, _attrs), do: :ok
+
+  defp validate_agent_session_fence(current, attrs) do
+    current_id = Map.get(current, :agent_session_id)
+    attempted_id = optional_string(attrs, "agent_session_id")
+
+    if is_nil(current_id) or current_id == attempted_id,
+      do: :ok,
+      else: agent_session_conflict(current, attempted_id)
+  end
+
+  defp validate_unregister_fence(_current, :force), do: :ok
+  defp validate_unregister_fence(nil, _fence), do: :ok
+  defp validate_unregister_fence(current, fence), do: validate_agent_session_fence(current, fence)
+
+  defp agent_session_conflict(current, attempted_id) do
+    {:error,
+     {:agent_session_conflict,
+      %{
+        agent_id: current.id,
+        current_agent_session_id: Map.get(current, :agent_session_id),
+        attempted_agent_session_id: attempted_id
+      }}}
+  end
+
+  defp same_runtime_identity?(current, next_agent) do
+    case {Map.get(current, :fingerprint), Map.get(next_agent, :fingerprint)} do
+      {fingerprint, fingerprint} when is_binary(fingerprint) and fingerprint != "" -> true
+      {nil, nil} -> entity_key(current) == entity_key(next_agent)
+      _ -> false
+    end
+  end
+
+  defp reset_replaced_session_lease(leases, nil, _agent), do: leases
+
+  defp reset_replaced_session_lease(leases, current, agent) do
+    if Map.get(current, :agent_session_id) != Map.get(agent, :agent_session_id),
+      do: Map.delete(leases, agent.id),
+      else: leases
+  end
+
+  defp remove_agent(state, agent_id) do
+    %{
+      state
+      | agents: Map.delete(state.agents, agent_id),
+        leases: Map.delete(state.leases, agent_id)
+    }
   end
 
   defp validate_control_transition(nil, _agent), do: :ok
@@ -532,16 +651,17 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
   end
 
   defp active_agents(agents) do
-    limit_ms = stale_after_ms()
-    now = DateTime.utc_now()
-
     agents
     |> Map.values()
-    |> Enum.filter(fn agent ->
-      DateTime.diff(now, agent.last_seen_at, :millisecond) <= limit_ms
-    end)
+    |> Enum.filter(&active_agent?/1)
     |> sort_agents()
   end
+
+  defp active_agent?(%{last_seen_at: %DateTime{} = last_seen_at}) do
+    DateTime.diff(DateTime.utc_now(), last_seen_at, :millisecond) <= stale_after_ms()
+  end
+
+  defp active_agent?(_agent), do: false
 
   defp summarize_control_modes(agents) do
     Enum.reduce(agents, %{orch_managed: 0, offline_mesh: 0}, fn agent, acc ->

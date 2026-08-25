@@ -295,6 +295,23 @@ pub(crate) fn cluster_auth_headers(
     headers
 }
 
+pub(crate) fn with_agent_session_header(
+    mut headers: Vec<(String, String)>,
+    agent_session_id: &str,
+) -> Vec<(String, String)> {
+    if !agent_session_id.is_empty()
+        && agent_session_id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b':'))
+    {
+        headers.push((
+            "x-kyuubiki-agent-session-id".to_string(),
+            agent_session_id.to_string(),
+        ));
+    }
+    headers
+}
+
 fn cluster_request_nonce() -> String {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)

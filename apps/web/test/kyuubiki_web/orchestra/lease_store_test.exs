@@ -87,6 +87,89 @@ defmodule KyuubikiWeb.Orchestra.LeaseStoreTest do
     assert :ok = LeaseMemoryBackend.release(reacquired)
   end
 
+  test "memory lease callbacks can inspect ownership without deadlocking" do
+    ensure_memory_lease_backend()
+    lease_name = unique_lease_name("memory-reentrant-read")
+    assert {:ok, lease} = LeaseMemoryBackend.acquire(lease_name, "memory-reader", 1_000)
+
+    assert {:ok, current} =
+             LeaseMemoryBackend.with_lease(lease, fn ->
+               LeaseMemoryBackend.current(lease_name)
+             end)
+
+    assert current.fencing_token == lease.fencing_token
+    assert :ok = LeaseMemoryBackend.release(lease)
+  end
+
+  test "memory lease callback does not block unrelated lease names" do
+    ensure_memory_lease_backend()
+    guarded_name = unique_lease_name("memory-guarded")
+    unrelated_name = unique_lease_name("memory-unrelated")
+    assert {:ok, guarded} = LeaseMemoryBackend.acquire(guarded_name, "memory-a", 1_000)
+    parent = self()
+
+    guarded_task =
+      Task.async(fn ->
+        LeaseMemoryBackend.with_lease(guarded, fn ->
+          send(parent, {:memory_guard_entered, self()})
+
+          receive do
+            :finish_memory_guard -> :protected
+          after
+            1_000 -> :timed_out
+          end
+        end)
+      end)
+
+    assert_receive {:memory_guard_entered, guard_pid}, 500
+
+    unrelated_task =
+      Task.async(fn ->
+        LeaseMemoryBackend.acquire(unrelated_name, "memory-b", 1_000)
+      end)
+
+    assert {:ok, unrelated} = Task.await(unrelated_task, 500)
+    send(guard_pid, :finish_memory_guard)
+    assert :protected = Task.await(guarded_task, 500)
+    assert :ok = LeaseMemoryBackend.release(guarded)
+    assert :ok = LeaseMemoryBackend.release(unrelated)
+  end
+
+  test "memory lease fencing blocks takeover until a guarded callback exits" do
+    ensure_memory_lease_backend()
+    lease_name = unique_lease_name("memory-guarded-takeover")
+    assert {:ok, lease} = LeaseMemoryBackend.acquire(lease_name, "memory-a", 30)
+    parent = self()
+
+    guarded_task =
+      Task.async(fn ->
+        LeaseMemoryBackend.with_lease(lease, fn ->
+          send(parent, {:takeover_guard_entered, self()})
+
+          receive do
+            :finish_takeover_guard -> :protected
+          after
+            1_000 -> :timed_out
+          end
+        end)
+      end)
+
+    assert_receive {:takeover_guard_entered, guard_pid}, 500
+    Process.sleep(50)
+
+    takeover_task =
+      Task.async(fn ->
+        LeaseMemoryBackend.acquire(lease_name, "memory-b", 1_000)
+      end)
+
+    assert Task.yield(takeover_task, 50) == nil
+    send(guard_pid, :finish_takeover_guard)
+    assert :protected = Task.await(guarded_task, 500)
+    assert {:ok, takeover} = Task.await(takeover_task, 1_000)
+    assert takeover.fencing_token == lease.fencing_token + 1
+    assert :ok = LeaseMemoryBackend.release(takeover)
+  end
+
   test "workflow coordinator demotes immediately when its persisted lease is lost" do
     snapshot = WorkflowRecoveryCoordinator.snapshot()
     assert snapshot["lease"]["status"] == "owner"
@@ -150,6 +233,12 @@ defmodule KyuubikiWeb.Orchestra.LeaseStoreTest do
   defp unique_lease_name(prefix) do
     suffix = :crypto.strong_rand_bytes(8) |> Base.url_encode64(padding: false)
     "#{prefix}-#{System.pid()}-#{suffix}"
+  end
+
+  defp ensure_memory_lease_backend do
+    if is_nil(Process.whereis(LeaseMemoryBackend)) do
+      start_supervised!({LeaseMemoryBackend, []})
+    end
   end
 
   defp wait_for_coordinator_owner(attempts \\ 100)

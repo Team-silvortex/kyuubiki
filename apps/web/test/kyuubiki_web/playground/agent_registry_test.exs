@@ -330,6 +330,119 @@ defmodule KyuubikiWeb.Playground.AgentRegistryTest do
     assert conflict.attempted["lease_id"] == "lease-b"
   end
 
+  test "rejects execution claims whose authority differs from the registered agent" do
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-lease-authority",
+               "host" => "10.20.0.31",
+               "port" => 6131,
+               "agent_session_id" => "agent-session-a",
+               "orch_id" => "orch-alpha",
+               "orch_session_id" => "orch-session-a"
+             })
+
+    assert {:error, {:agent_execution_authority_conflict, conflict}} =
+             AgentRegistry.claim_execution("solver-lease-authority", %{
+               "lease_id" => "lease-authority-a",
+               "agent_session_id" => "agent-session-stale",
+               "control_mode" => "orch_managed",
+               "orch_id" => "orch-alpha",
+               "orch_session_id" => "orch-session-a"
+             })
+
+    assert conflict.expected.agent_session_id == "agent-session-a"
+    assert conflict.attempted.agent_session_id == "agent-session-stale"
+    assert AgentRegistry.status_snapshot().active_execution_lease_count == 0
+  end
+
+  test "fences late lifecycle messages after a stale agent session is replaced" do
+    original_config = Application.get_env(:kyuubiki_web, AgentRegistry, [])
+
+    Application.put_env(
+      :kyuubiki_web,
+      AgentRegistry,
+      Keyword.merge(original_config, stale_after_ms: 1)
+    )
+
+    on_exit(fn ->
+      Application.put_env(:kyuubiki_web, AgentRegistry, original_config)
+    end)
+
+    attrs = %{
+      "id" => "solver-session-fence",
+      "host" => "10.20.0.32",
+      "port" => 6132,
+      "fingerprint" => "fp-session-fence",
+      "orch_id" => "orch-alpha",
+      "orch_session_id" => "orch-session-a"
+    }
+
+    assert {:ok, _agent} =
+             AgentRegistry.register(Map.put(attrs, "agent_session_id", "agent-session-a"))
+
+    assert {:ok, _lease} =
+             AgentRegistry.claim_execution("solver-session-fence", %{
+               "lease_id" => "lease-old-session",
+               "agent_session_id" => "agent-session-a"
+             })
+
+    Process.sleep(5)
+
+    assert {:ok, replacement} =
+             AgentRegistry.register(Map.put(attrs, "agent_session_id", "agent-session-b"))
+
+    assert replacement.agent_session_id == "agent-session-b"
+    assert AgentRegistry.status_snapshot().active_execution_lease_count == 0
+
+    assert {:error, {:agent_session_conflict, heartbeat_conflict}} =
+             AgentRegistry.heartbeat("solver-session-fence", %{
+               "agent_session_id" => "agent-session-a"
+             })
+
+    assert heartbeat_conflict.current_agent_session_id == "agent-session-b"
+
+    assert {:error, {:agent_session_conflict, _conflict}} =
+             AgentRegistry.unregister("solver-session-fence", %{
+               "agent_session_id" => "agent-session-a"
+             })
+
+    assert [%{agent_session_id: "agent-session-b"}] = AgentRegistry.agents()
+
+    assert :ok =
+             AgentRegistry.unregister("solver-session-fence", %{
+               "agent_session_id" => "agent-session-b"
+             })
+  end
+
+  test "does not dispatch a new lease to a stale registered agent" do
+    original_config = Application.get_env(:kyuubiki_web, AgentRegistry, [])
+
+    Application.put_env(
+      :kyuubiki_web,
+      AgentRegistry,
+      Keyword.merge(original_config, stale_after_ms: 1)
+    )
+
+    on_exit(fn ->
+      Application.put_env(:kyuubiki_web, AgentRegistry, original_config)
+    end)
+
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-stale-claim",
+               "host" => "10.20.0.33",
+               "port" => 6133,
+               "orch_id" => "orch-alpha"
+             })
+
+    Process.sleep(5)
+
+    assert {:error, {:agent_stale, "solver-stale-claim"}} =
+             AgentRegistry.claim_execution("solver-stale-claim", %{
+               "lease_id" => "lease-stale-claim"
+             })
+  end
+
   test "marks old execution leases as stale in public views" do
     original_config = Application.get_env(:kyuubiki_web, AgentRegistry, [])
 

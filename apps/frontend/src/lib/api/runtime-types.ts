@@ -199,6 +199,7 @@ export type ProtocolAgentDescriptor = {
   id: string;
   host: string;
   port: number;
+  agent_session_id?: string | null;
   control_mode?: string | null;
   orch_id?: string | null;
   orch_session_id?: string | null;
@@ -212,6 +213,7 @@ export type ProtocolAgentDescriptor = {
   active_lease?: {
     lease_id: string;
     agent_id: string;
+    agent_session_id?: string | null;
     control_mode?: string | null;
     orch_id?: string | null;
     orch_session_id?: string | null;

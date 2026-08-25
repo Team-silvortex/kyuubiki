@@ -190,7 +190,10 @@ defmodule KyuubikiWeb.Router do
 
   post "/api/v1/agents/register" do
     with_auth(conn, :cluster, fn conn ->
-      body_params = with_cluster_fingerprint(conn, conn.body_params)
+      body_params =
+        conn
+        |> then(&with_cluster_fingerprint(&1, conn.body_params))
+        |> then(&with_cluster_agent_session(conn, &1))
 
       case Security.validate_cluster_registration_identity(conn, body_params) do
         :ok ->
@@ -217,7 +220,10 @@ defmodule KyuubikiWeb.Router do
 
   post "/api/v1/agents/:agent_id/heartbeat" do
     with_auth(conn, :cluster, fn conn ->
-      body_params = with_cluster_fingerprint(conn, conn.body_params)
+      body_params =
+        conn
+        |> then(&with_cluster_fingerprint(&1, conn.body_params))
+        |> then(&with_cluster_agent_session(conn, &1))
 
       with :ok <- Security.validate_cluster_agent_identity(conn, agent_id, body_params),
            :ok <- validate_registered_fingerprint(conn, agent_id),
@@ -243,12 +249,17 @@ defmodule KyuubikiWeb.Router do
   delete "/api/v1/agents/:agent_id" do
     with_auth(conn, :cluster, fn conn ->
       with :ok <- Security.validate_cluster_agent_identity(conn, agent_id),
-           :ok <- validate_registered_fingerprint(conn, agent_id) do
-        :ok = KyuubikiWeb.Playground.AgentRegistry.unregister(agent_id)
+           :ok <- validate_registered_fingerprint(conn, agent_id),
+           :ok <-
+             KyuubikiWeb.Playground.AgentRegistry.unregister(
+               agent_id,
+               cluster_agent_session(conn)
+             ) do
         _ = KyuubikiWeb.Playground.AgentPool.reload()
         respond_json(conn, 200, %{"agent_id" => agent_id, "status" => "removed"})
       else
-        {:error, status, payload} -> respond_json(conn, status, payload)
+        {:error, status, payload} when is_integer(status) -> respond_json(conn, status, payload)
+        {:error, reason} -> unprocessable(conn, reason)
       end
     end)
   end

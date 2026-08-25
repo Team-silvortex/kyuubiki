@@ -526,4 +526,60 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
     assert endpoint.last_failure_reason == nil
     assert AgentPool.deployment_info().cooling_down_count == 0
   end
+
+  test "does not let an old agent session clear the replacement session cooldown" do
+    replacement = %{
+      id: "agent-session-a",
+      host: "127.0.0.1",
+      port: 5101,
+      agent_session_id: "session-new"
+    }
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [replacement],
+      failure_cooldown_ms: 60_000
+    )
+
+    assert :ok = AgentPool.reload()
+    assert :ok = AgentPool.report_failure(replacement, :timeout)
+
+    assert :ok =
+             AgentPool.report_success(%{
+               id: "agent-session-a",
+               host: "127.0.0.1",
+               port: 5101,
+               agent_session_id: "session-old"
+             })
+
+    endpoint = hd(AgentPool.endpoints())
+    assert endpoint.consecutive_failures == 1
+    assert endpoint.cooldown_remaining_ms > 0
+  end
+
+  test "does not carry cooldown state across a replacement session on the same address" do
+    old = %{
+      id: "agent-session-b",
+      host: "127.0.0.1",
+      port: 5102,
+      agent_session_id: "session-old"
+    }
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [old],
+      failure_cooldown_ms: 60_000
+    )
+
+    assert :ok = AgentPool.reload()
+    assert :ok = AgentPool.report_failure(old, :timeout)
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{old | agent_session_id: "session-new"}],
+      failure_cooldown_ms: 60_000
+    )
+
+    assert :ok = AgentPool.reload()
+    endpoint = hd(AgentPool.endpoints())
+    assert endpoint.consecutive_failures == 0
+    assert endpoint.cooldown_remaining_ms == 0
+  end
 end
