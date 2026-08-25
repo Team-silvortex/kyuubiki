@@ -41,6 +41,11 @@ function expectTokens(source, tokens, label) {
   }
 }
 
+function hasExecutableAssistantRoute(source, action) {
+  const escaped = action.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  return new RegExp(`(?:case\\s+|^\\s*)["']${escaped}["']\\s*:`, "mu").test(source);
+}
+
 test("desktop capability closure contract has unique, complete coordinates", () => {
   assert.equal(contract.schema_version, "kyuubiki.desktop-capability-closure/v1");
   assert.ok(contract.capabilities.length >= 20, "major desktop capability set must not shrink silently");
@@ -95,8 +100,8 @@ test("capabilities that promise PWDT parity are catalogued and executable", () =
       `${capability.id} is missing from the PWDT action catalog`,
     );
     assert.ok(
-      executor.includes(`case "${capability.automation_action}"`),
-      `${capability.id} has no PWDT execution branch`,
+      hasExecutableAssistantRoute(executor, capability.automation_action),
+      `${capability.id} has no PWDT execution branch or route entry`,
     );
   }
 });

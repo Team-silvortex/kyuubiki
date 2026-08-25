@@ -145,7 +145,9 @@ This directory contains host-native operational entry points.
   envelopes for the current release index version, including exact parity with
   `config/localization/mainstream-language-pack-locales.json`, repo-relative
   path safety, required override-key coverage, and unsafe-text rejection for UI
-  copy. Make now uses the native runner; the retained `.mjs` script is only a
+  copy. It also checks that all 30 locale rows, translated payloads, and language
+  options are projected into the Workbench TypeScript runtime without spawning
+  Node. Make uses this native runner; the retained `.mjs` script is only a
   parity reference.
 - `kyuubiki-script-runner build-workbench-language-pack-catalog`
   Native deterministic generator for the built-in Workbench TypeScript catalog.
@@ -183,6 +185,11 @@ This directory contains host-native operational entry points.
   validates a temporary project bundle through the shared Rust container
   library. This keeps `build-usability-readiness-report` from relying on legacy
   Node integration shims as release evidence.
+- `kyuubiki-script-runner check-usability-release-gate`
+  Validate all eight blocking journeys and require at least one recognized
+  operational probe per journey. Executed reports expose both total and unique
+  operational-probe counts, so static contract checks cannot be mistaken for a
+  release journey.
 - `kyuubiki-script-runner project create|inspect|validate|normalize|unpack|pack|diff`
   Operate on project bundles through the native shared project-container crate
   used by Hub.

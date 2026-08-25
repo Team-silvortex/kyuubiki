@@ -95,7 +95,12 @@ fn write_json_frame<T: serde::Serialize>(
 }
 
 impl HeartbeatHandle {
-    pub(crate) fn spawn(writer: Arc<Mutex<TcpStream>>, request_id: String, job_id: String) -> Self {
+    pub(crate) fn spawn(
+        writer: Arc<Mutex<TcpStream>>,
+        request_id: String,
+        job_id: String,
+        execution_guard: agent_watchdog::ExecutionGuard,
+    ) -> Self {
         let running = Arc::new(AtomicBool::new(true));
         let running_clone = running.clone();
 
@@ -107,7 +112,7 @@ impl HeartbeatHandle {
                     break;
                 }
 
-                let _ = agent_watchdog::mark_progress(&request_id);
+                let _ = agent_watchdog::mark_progress(&execution_guard);
 
                 let heartbeat = RpcProgress::heartbeat(
                     request_id.clone(),

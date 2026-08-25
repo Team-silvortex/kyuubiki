@@ -78,6 +78,7 @@ mod tests {
     fn failure(job_id: Option<&str>) -> agent_watchdog::FailureReport {
         agent_watchdog::FailureReport {
             request_id: "watchdog-runtime-request".to_string(),
+            generation: 1,
             job_id: job_id.map(ToString::to_string),
             method: "solve_bar_1d".to_string(),
             reason_code: "watchdog_timeout".to_string(),

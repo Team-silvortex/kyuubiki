@@ -1,4 +1,5 @@
 import test from "node:test";
+import assert from "node:assert/strict";
 import {
   assertWorkbenchShellRegression,
   chromium,
@@ -35,6 +36,49 @@ test(
         } finally {
           await page.close();
         }
+      }
+
+      const failurePage = await browser.newPage();
+      try {
+        await failurePage.goto(environment.workbenchUrl, { waitUntil: "networkidle", timeout: 60_000 });
+        await failurePage.evaluate(() => {
+          document.querySelector('[data-action="reload-frame"]')?.click();
+        });
+        await failurePage.waitForFunction(
+          () => window.__kyuubikiWorkbenchActionStatus === "completed",
+        );
+        const priorCompletion = await failurePage.evaluate(() => ({
+          action: window.__kyuubikiWorkbenchLastCompletedAction,
+          at: window.__kyuubikiWorkbenchActionCompletedAt,
+        }));
+        await failurePage.evaluate(() => {
+          const originalInvoke = window.__TAURI__.core.invoke;
+          window.__workbenchOriginalInvoke = originalInvoke;
+          window.__TAURI__.core.invoke = async (command, payload) => {
+            if (command === "service_status") throw new Error("forced workbench status failure");
+            return originalInvoke(command, payload);
+          };
+        });
+        await failurePage.evaluate(() => {
+          document.querySelector('[data-action="refresh"]')?.click();
+        });
+        await failurePage.waitForFunction(
+          () => window.__kyuubikiWorkbenchActionStatus === "failed",
+        );
+        const failure = await failurePage.evaluate(() => ({
+          action: window.__kyuubikiWorkbenchLastCompletedAction,
+          at: window.__kyuubikiWorkbenchActionCompletedAt,
+          output: document.querySelector("#status-output")?.textContent || "",
+        }));
+
+        assert.deepEqual(
+          { action: failure.action, at: failure.at },
+          priorCompletion,
+          "a failed refresh must preserve the previous successful action receipt",
+        );
+        assert.match(failure.output, /forced workbench status failure/);
+      } finally {
+        await failurePage.close();
       }
     } finally {
       await browser?.close();

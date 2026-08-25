@@ -287,6 +287,7 @@ pub enum RpcEnvelopeErrorCode {
     InvalidRequestId,
     InvalidResponseState,
     InvalidProgressEvent,
+    InvalidProgressPayload,
 }
 
 impl RpcEnvelopeErrorCode {
@@ -296,6 +297,7 @@ impl RpcEnvelopeErrorCode {
             Self::InvalidRequestId => "invalid_request_id",
             Self::InvalidResponseState => "invalid_response_state",
             Self::InvalidProgressEvent => "invalid_progress_event",
+            Self::InvalidProgressPayload => "invalid_progress_payload",
         }
     }
 }
@@ -346,6 +348,9 @@ pub fn validate_rpc_progress_envelope(
             "rpc progress event must be progress or heartbeat",
         ));
     }
+    crate::validate_progress_event(&progress.progress).map_err(|error| {
+        envelope_error(RpcEnvelopeErrorCode::InvalidProgressPayload, error.message)
+    })?;
     Ok(())
 }
 

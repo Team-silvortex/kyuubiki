@@ -397,7 +397,7 @@ function invokeGuardedMutation(action, payload = {}) {
   });
 }
 
-async function refreshStatus() {
+async function refreshStatus({ throwOnError = false } = {}) {
   try {
     const payload = await invokeTauri("service_status");
     const meshRuntime = await fetchMeshRuntimeHealth(state.orchestratorUrl).catch(() => null);
@@ -406,15 +406,17 @@ async function refreshStatus() {
   } catch (error) {
     renderRuntimeStatusPlane(elements.statusPlane, null);
     elements.statusOutput.textContent = formatStatusReport(String(error));
+    if (throwOnError) throw error;
   }
 }
 
-async function refreshLog() {
+async function refreshLog({ throwOnError = false } = {}) {
   try {
     const payload = await invokeTauri("read_runtime_log", { payload: { service: state.logService } });
     elements.logOutput.textContent = payload.rendered || `${state.logService} log is empty.`;
   } catch (error) {
     elements.logOutput.textContent = String(error);
+    if (throwOnError) throw error;
   }
 }
 
@@ -425,36 +427,36 @@ async function runAction(action) {
   try {
     switch (action) {
       case "refresh":
-        await refreshStatus();
-        if (state.consoleTab === "logs") await refreshLog();
+        await refreshStatus({ throwOnError: true });
+        if (state.consoleTab === "logs") await refreshLog({ throwOnError: true });
         break;
       case "reload-frame":
         loadWorkbenchFrame();
         break;
       case "open-local":
         loadWorkbenchFrame();
-        await refreshStatus();
-        if (state.consoleTab === "logs") await refreshLog();
+        await refreshStatus({ throwOnError: true });
+        if (state.consoleTab === "logs") await refreshLog({ throwOnError: true });
         break;
       case "refresh-log":
-        await refreshLog();
+        await refreshLog({ throwOnError: true });
         break;
       case "stop":
         await invokeGuardedMutation("service_stop");
-        await refreshStatus();
-        if (state.consoleTab === "logs") await refreshLog();
+        await refreshStatus({ throwOnError: true });
+        if (state.consoleTab === "logs") await refreshLog({ throwOnError: true });
         break;
       case "start-local":
         await invokeGuardedMutation("service_start", { mode: "local" });
-        await refreshStatus();
+        await refreshStatus({ throwOnError: true });
         loadWorkbenchFrame();
-        if (state.consoleTab === "logs") await refreshLog();
+        if (state.consoleTab === "logs") await refreshLog({ throwOnError: true });
         break;
       case "restart-local":
         await invokeGuardedMutation("service_restart", { mode: "local" });
-        await refreshStatus();
+        await refreshStatus({ throwOnError: true });
         loadWorkbenchFrame();
-        if (state.consoleTab === "logs") await refreshLog();
+        if (state.consoleTab === "logs") await refreshLog({ throwOnError: true });
         break;
       default:
         elements.statusOutput.textContent = `No Workbench action handler is registered for: ${action}`;
@@ -462,13 +464,13 @@ async function runAction(action) {
         return false;
     }
     window.__kyuubikiWorkbenchActionCompletedAt = Date.now();
+    window.__kyuubikiWorkbenchActionSettledAt = window.__kyuubikiWorkbenchActionCompletedAt;
     window.__kyuubikiWorkbenchLastCompletedAction = action;
     window.__kyuubikiWorkbenchActionStatus = "completed";
     return true;
   } catch (error) {
     elements.statusOutput.textContent = String(error);
-    window.__kyuubikiWorkbenchActionCompletedAt = Date.now();
-    window.__kyuubikiWorkbenchLastCompletedAction = action;
+    window.__kyuubikiWorkbenchActionSettledAt = Date.now();
     window.__kyuubikiWorkbenchActionStatus = "failed";
     return false;
   }

@@ -444,7 +444,7 @@ root as `@bundle-root`. Verify retained evidence without launching an app with:
 
 ```sh
 ./scripts/kyuubiki desktop-packaged-smoke \
-  --verify-report releases/usability-evidence/2.7.0/macos-installed-desktop-smoke.json
+  --verify-report releases/usability-evidence/2.15.0/macos-installed-desktop-smoke.json
 ```
 
 This verifier is host-independent. It checks the report schema, packaged

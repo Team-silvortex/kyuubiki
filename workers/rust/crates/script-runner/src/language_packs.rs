@@ -3,7 +3,6 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsString;
 use std::fs;
 use std::path::Path;
-use std::process::Command;
 
 type RunnerResult<T> = Result<T, String>;
 
@@ -169,7 +168,7 @@ impl<'a> Validator<'a> {
                 }
             }
         }
-        self.run_frontend_catalog_test();
+        self.validate_frontend_catalog_projection(&locale_target);
         self.validate_surface_coverage(&locale_target, &referenced_paths, &packs_by_surface);
     }
 
@@ -406,22 +405,70 @@ impl<'a> Validator<'a> {
         files
     }
 
-    fn run_frontend_catalog_test(&mut self) {
-        let output = Command::new("node")
-            .args([
-                "./scripts/test-unit.mjs",
-                "workflow/workbench-language-pack-catalog",
-            ])
-            .current_dir(self.root.join("apps/frontend"))
-            .output();
-        match output {
-            Ok(output) if output.status.success() => {}
-            Ok(output) => self.fail(format!(
-                "apps/frontend/test/workflow/workbench-language-pack-catalog.test.ts failed\n{}\n{}",
-                String::from_utf8_lossy(&output.stdout).trim(),
-                String::from_utf8_lossy(&output.stderr).trim()
-            ).trim().to_string()),
-            Err(error) => self.fail(format!("apps/frontend/test/workflow/workbench-language-pack-catalog.test.ts failed\n{error}")),
+    fn validate_frontend_catalog_projection(&mut self, locales: &BTreeMap<String, Locale>) {
+        const CATALOG_SOURCE: &str =
+            "apps/frontend/src/components/workbench/workbench-language-pack-catalog.ts";
+        const DATA_SOURCE: &str =
+            "apps/frontend/src/components/workbench/workbench-language-pack-catalog-data.ts";
+        const OPTIONS_SOURCE: &str =
+            "apps/frontend/src/components/workbench/workbench-language-options.ts";
+        let Some(catalog) = self.read_text(CATALOG_SOURCE) else {
+            return;
+        };
+        let Some(data) = self.read_text(DATA_SOURCE) else {
+            return;
+        };
+        let Some(options) = self.read_text(OPTIONS_SOURCE) else {
+            return;
+        };
+        for token in [
+            "WORKBENCH_MAINSTREAM_LANGUAGE_PACK_LOCALES",
+            "WORKBENCH_TRANSLATED_LANGUAGE_PACK_OVERRIDES",
+            "buildWorkbenchLanguagePackCatalogRows",
+            "getBuiltinWorkbenchLanguagePack",
+        ] {
+            if !catalog.contains(token) {
+                self.fail(format!(
+                    "{CATALOG_SOURCE}: missing runtime projection token {token}"
+                ));
+            }
+        }
+        for (language, locale) in locales {
+            let language_literal = serde_json::to_string(language).unwrap_or_default();
+            let english_literal = serde_json::to_string(&locale.english_name).unwrap_or_default();
+            let catalog_row =
+                format!("{{ language: {language_literal}, englishName: {english_literal},");
+            if !catalog.contains(&catalog_row) {
+                self.fail(format!(
+                    "{CATALOG_SOURCE}: missing mainstream locale projection {language}"
+                ));
+            }
+            if !data.contains(&format!("{language_literal}:")) {
+                self.fail(format!(
+                    "{DATA_SOURCE}: missing translated payload {language}"
+                ));
+            }
+            let bare_option = format!("{language}:");
+            let quoted_option = format!("{language_literal}:");
+            if !options.contains(&bare_option) && !options.contains(&quoted_option) {
+                self.fail(format!(
+                    "{OPTIONS_SOURCE}: missing language option {language}"
+                ));
+            }
+        }
+    }
+
+    fn read_text(&mut self, relative_path: &str) -> Option<String> {
+        if !is_safe_repo_relative_path(relative_path) {
+            self.fail(format!("{relative_path}: unsafe repository-relative path"));
+            return None;
+        }
+        match fs::read_to_string(self.root.join(relative_path)) {
+            Ok(text) => Some(text),
+            Err(error) => {
+                self.fail(format!("{relative_path}: {error}"));
+                None
+            }
         }
     }
 

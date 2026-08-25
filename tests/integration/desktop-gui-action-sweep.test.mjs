@@ -60,7 +60,7 @@ async function sweepDeclarativeActions(page, shell) {
         ({ currentAction, lastKey, statusKey }) => {
           const status = window[statusKey];
           return window[lastKey] === currentAction &&
-            ["completed", "failed", "missing"].includes(status);
+            ["completed", "blocked", "cancelled", "failed", "missing"].includes(status);
         },
         {
           currentAction: action,

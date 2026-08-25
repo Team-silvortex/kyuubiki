@@ -46,7 +46,10 @@ pub use benchmark_surface::{
     PROTOCOL_BENCHMARK_SURFACE_SCHEMA_VERSION, ProtocolBenchmarkLane, ProtocolBenchmarkSurface,
     protocol_benchmark_surface,
 };
-pub use job::{Job, JobStatus, ProgressEvent};
+pub use job::{
+    JOB_ID_MAX_BYTES, Job, JobStatus, PROGRESS_MESSAGE_MAX_BYTES, ProgressEvent,
+    ProgressValidationError, ProgressValidationErrorCode, validate_progress_event,
+};
 pub use operator::{
     OperatorArtifactRef, OperatorDescriptor, OperatorKind, OperatorOrigin, OperatorPortDescriptor,
     OperatorRunContext, OperatorRunRequest, OperatorRunResult, OperatorSchemaRef,

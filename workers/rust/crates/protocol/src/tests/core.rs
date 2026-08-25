@@ -7,7 +7,8 @@ fn applies_progress_to_job() {
     event.iteration = Some(12);
     event.residual = Some(1.0e-4);
 
-    job.apply_progress(&event);
+    job.apply_progress(&event)
+        .expect("valid progress should apply");
 
     assert_eq!(job.status, JobStatus::Solving);
     assert_eq!(job.progress, 0.5);
@@ -137,6 +138,49 @@ fn validates_rpc_response_and_progress_envelope_states() {
         validate_rpc_progress_envelope(&progress).unwrap_err().code,
         RpcEnvelopeErrorCode::InvalidProgressEvent
     );
+}
+
+#[test]
+fn rejects_invalid_or_cross_job_progress_without_mutating_job() {
+    let mut job = Job::new("job-safe", "project-1", "case-1");
+    let original = job.clone();
+    let wrong_job = ProgressEvent::new("job-other", JobStatus::Solving, 0.5);
+    assert_eq!(
+        job.apply_progress(&wrong_job).unwrap_err().code,
+        crate::ProgressValidationErrorCode::JobIdMismatch
+    );
+    assert_eq!(job, original);
+
+    let invalid = ProgressEvent::new("job-safe", JobStatus::Solving, 1.5);
+    let progress = RpcProgress::new("rpc-invalid-progress", invalid);
+    assert_eq!(
+        validate_rpc_progress_envelope(&progress).unwrap_err().code,
+        RpcEnvelopeErrorCode::InvalidProgressPayload
+    );
+    assert_eq!(job, original);
+}
+
+#[test]
+fn rejects_progress_regression_and_terminal_job_mutation() {
+    let mut job = Job::new("job-state", "project-1", "case-1");
+    job.apply_progress(&ProgressEvent::new("job-state", JobStatus::Solving, 0.75))
+        .expect("forward progress should apply");
+    assert_eq!(
+        job.apply_progress(&ProgressEvent::new("job-state", JobStatus::Solving, 0.5,))
+            .unwrap_err()
+            .code,
+        crate::ProgressValidationErrorCode::ProgressRegression
+    );
+
+    job.apply_progress(&ProgressEvent::new("job-state", JobStatus::Completed, 1.0))
+        .expect("completion should apply");
+    assert_eq!(
+        job.apply_progress(&ProgressEvent::new("job-state", JobStatus::Failed, 1.0,))
+            .unwrap_err()
+            .code,
+        crate::ProgressValidationErrorCode::TerminalJobMutation
+    );
+    assert_eq!(job.status, JobStatus::Completed);
 }
 
 #[test]

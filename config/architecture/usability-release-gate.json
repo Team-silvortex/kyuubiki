@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.usability-release-gate/v1",
-  "baseline_release": "moxi 2.14.x",
+  "baseline_release": "moxi 2.15.x",
   "target_release": "daji 3.0.0",
   "policy": {
     "all_blocking_journeys_must_pass": true,
@@ -67,7 +67,12 @@
       ],
       "probes": [
         ["check-install-update-disk-hygiene"],
-        ["check-component-integrity-protocol"]
+        ["check-component-integrity-protocol"],
+        [
+          "check-installer-recovery-fault-injection",
+          "--out",
+          "tmp/usability-installer-recovery-fault-injection.json"
+        ]
       ]
     },
     {
@@ -90,7 +95,7 @@
         [
           "desktop-packaged-smoke",
           "--verify-report",
-          "releases/usability-evidence/2.7.0/macos-installed-desktop-smoke.json"
+          "releases/usability-evidence/2.15.0/macos-installed-desktop-smoke.json"
         ],
         ["check-gui-runtime-capability-contract"],
         ["check-ui-automation-contract"]
@@ -106,7 +111,14 @@
       "probes": [
         ["check-workflow-dataset-contract"],
         ["check-desktop-usability-journeys", "--journey", "compose-workflow"],
-        ["check-ui-automation-contract"]
+        ["check-ui-automation-contract"],
+        [
+          "build-material-research-bundle",
+          "--study",
+          "heat-spreader",
+          "--out",
+          "tmp/usability-material-research-bundle.json"
+        ]
       ]
     },
     {
@@ -202,7 +214,12 @@
       "probes": [
         ["validate-language-packs"],
         ["check-desktop-usability-journeys", "--journey", "localize-layout"],
-        ["check-ui-automation-contract"]
+        ["check-ui-automation-contract"],
+        [
+          "check-desktop-ui-validation",
+          "--verify-report",
+          "releases/usability-evidence/2.15.0/desktop-ui-validation-qualification.json"
+        ]
       ]
     },
     {
@@ -216,7 +233,17 @@
       ],
       "probes": [
         ["check-install-update-disk-hygiene"],
-        ["check-component-integrity-protocol"]
+        ["check-component-integrity-protocol"],
+        [
+          "check-agent-update-operational-qualification",
+          "--verify-report",
+          "releases/usability-evidence/2.14.3/agent-update-operational-qualification.json"
+        ],
+        [
+          "check-runtime-payload-operational-qualification",
+          "--verify-report",
+          "releases/usability-evidence/2.14.3/runtime-payload-operational-qualification.json"
+        ]
       ]
     }
   ]

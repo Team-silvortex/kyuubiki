@@ -21,6 +21,18 @@ type HubActionRunnerOptions = {
   skipConfirmation?: boolean;
 };
 
+export type HubActionOutcomeStatus =
+  | "completed"
+  | "blocked"
+  | "cancelled"
+  | "failed"
+  | "missing";
+
+export type HubActionOutcome = Readonly<{
+  action: string;
+  status: HubActionOutcomeStatus;
+}>;
+
 type HubActionRunnerContext = UnknownRecord & {
   invokeTauri: (command: string, payload?: UnknownRecord) => Promise<unknown>;
   directActionRisk: Record<string, HubActionRisk>;
@@ -67,7 +79,7 @@ declare global {
     __kyuubikiHubLastAction?: string;
     __kyuubikiHubActionCompletedAt?: number;
     __kyuubikiHubLastCompletedAction?: string;
-    __kyuubikiHubActionStatus?: "running" | "completed" | "failed" | "missing";
+    __kyuubikiHubActionStatus?: "running" | HubActionOutcomeStatus;
   }
 }
 
@@ -81,7 +93,7 @@ export function createHubActionRunner(context: HubActionRunnerContext) {
     });
   }
 
-  async function runAction(action: string): Promise<void> {
+  async function runAction(action: string): Promise<HubActionOutcome> {
     return runActionWithOptions(action, {});
   }
 
@@ -101,25 +113,25 @@ export function createHubActionRunner(context: HubActionRunnerContext) {
   async function runActionWithOptions(
     action: string,
     options: HubActionRunnerOptions = {},
-  ): Promise<void> {
+  ): Promise<HubActionOutcome> {
     context.setEventMessage?.(`action received: ${action}`, "action:received");
     if (context.state.isBusy) {
       window.__kyuubikiHubLastAction = action;
-      window.__kyuubikiHubActionStatus = "completed";
+      window.__kyuubikiHubActionStatus = "blocked";
       context.setOperationOutput(
         `Hub is still finishing the current action. Try again after the activity state returns to idle. Requested action: ${action}`,
       );
       context.applyDesktopState(context.elements.actionState, "busy", { kind: "activity" });
       context.setEventMessage?.(`busy: ignored ${action}`, "action:busy");
-      return;
+      return { action, status: "blocked" };
     }
 
     if (!options.skipConfirmation && !confirmHubDesktopAction(action)) {
       window.__kyuubikiHubLastAction = action;
-      window.__kyuubikiHubActionStatus = "completed";
+      window.__kyuubikiHubActionStatus = "cancelled";
       context.setOperationOutput(`cancelled desktop action: ${action}`);
       context.applyDesktopState(context.elements.actionState, "cancelled", { kind: "activity" });
-      return;
+      return { action, status: "cancelled" };
     }
 
     context.setBusy(true, "running");
@@ -192,12 +204,14 @@ export function createHubActionRunner(context: HubActionRunnerContext) {
         window.__kyuubikiHubActionStatus = "missing";
         context.setOperationOutput(`No Hub action handler is registered for: ${action}`);
         context.setEventMessage?.(`unhandled action: ${action}`, "action:missing");
-      } else {
-        window.__kyuubikiHubActionStatus = "completed";
-        window.__kyuubikiHubActionCompletedAt = Date.now();
-        window.__kyuubikiHubLastCompletedAction = action;
-        context.setEventMessage?.(`completed: ${action}`, "action:complete");
+        return { action, status: "missing" };
       }
+
+      window.__kyuubikiHubActionStatus = "completed";
+      window.__kyuubikiHubActionCompletedAt = Date.now();
+      window.__kyuubikiHubLastCompletedAction = action;
+      context.setEventMessage?.(`completed: ${action}`, "action:complete");
+      return { action, status: "completed" };
     } catch (error) {
       window.__kyuubikiHubActionStatus = "failed";
       context.setOperationOutput(context.formatHubOperatorError(error, {
@@ -205,7 +219,7 @@ export function createHubActionRunner(context: HubActionRunnerContext) {
       }));
       context.setEventMessage?.(`failed: ${action}: ${String(error)}`, "action:failed");
       context.setBusy(false, "failed");
-      return;
+      return { action, status: "failed" };
     } finally {
       if (context.state.isBusy) {
         context.setBusy(false, "idle");

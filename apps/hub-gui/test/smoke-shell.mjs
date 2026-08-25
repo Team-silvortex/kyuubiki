@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { assertMatches } from "../../desktop-shared/test/smoke-test-helpers.mjs";
+import { createHubActionRunner } from "../ui/hub-action-runner.js";
+import {
+  executeHubAssistantAction,
+  executeHubAssistantPlan,
+} from "../ui/hub-assistant-engine.js";
 import { suggestWorkflowCatalogEntries } from "../ui/hub-workflow-catalog.js";
 import { runHubProjectAction } from "../ui/hub-project-actions.js";
 import {
@@ -182,4 +187,110 @@ test("hub new-bundle history exports only implemented automation routes", () => 
   assert.equal(buildProjectCliCommand(entry), "");
   assert.match(buildPythonMacroStub(entry), /hub\/projectCreate/);
   assert.match(buildPythonMacroStub(entry), /Research\.kyuubiki/);
+});
+
+function actionRunnerFixture({ busy = false, risk = "low", confirm = true } = {}) {
+  const observations = {
+    invocations: [],
+    outputs: [],
+    states: [],
+  };
+  globalThis.window = {
+    confirm: () => confirm,
+    __kyuubikiHubActionCompletedAt: 123,
+    __kyuubikiHubLastCompletedAction: "previous-action",
+  };
+  const context = {
+    directActionRisk: { "desktop-build-host": risk },
+    state: { isBusy: busy },
+    elements: { actionState: {} },
+    invokeTauri: async (...args) => observations.invocations.push(args),
+    setOperationOutput: (value) => observations.outputs.push(value),
+    applyDesktopState: (_element, value) => observations.states.push(value),
+  };
+  return { runner: createHubActionRunner(context), observations };
+}
+
+test("hub busy rejection is observable without impersonating completion", async () => {
+  const previousWindow = globalThis.window;
+  try {
+    const { runner, observations } = actionRunnerFixture({ busy: true });
+    const outcome = await runner.runAction("start-local");
+
+    assert.deepEqual(outcome, { action: "start-local", status: "blocked" });
+    assert.equal(window.__kyuubikiHubLastAction, "start-local");
+    assert.equal(window.__kyuubikiHubActionStatus, "blocked");
+    assert.equal(window.__kyuubikiHubLastCompletedAction, "previous-action");
+    assert.equal(window.__kyuubikiHubActionCompletedAt, 123);
+    assert.deepEqual(observations.invocations, []);
+    assert.deepEqual(observations.states, ["busy"]);
+    assert.match(String(observations.outputs[0]), /still finishing/);
+  } finally {
+    globalThis.window = previousWindow;
+  }
+});
+
+test("hub confirmation cancellation is not reported as completion", async () => {
+  const previousWindow = globalThis.window;
+  try {
+    const { runner, observations } = actionRunnerFixture({
+      risk: "high",
+      confirm: false,
+    });
+    const outcome = await runner.runAction("desktop-build-host");
+
+    assert.deepEqual(outcome, { action: "desktop-build-host", status: "cancelled" });
+    assert.equal(window.__kyuubikiHubLastAction, "desktop-build-host");
+    assert.equal(window.__kyuubikiHubActionStatus, "cancelled");
+    assert.equal(window.__kyuubikiHubLastCompletedAction, "previous-action");
+    assert.equal(window.__kyuubikiHubActionCompletedAt, 123);
+    assert.deepEqual(observations.invocations, []);
+    assert.deepEqual(observations.states, ["cancelled"]);
+    assert.match(String(observations.outputs[0]), /cancelled desktop action/);
+  } finally {
+    globalThis.window = previousWindow;
+  }
+});
+
+test("hub assistant preserves a blocked desktop action instead of auditing success", async () => {
+  const audits = [];
+  const outcome = await executeHubAssistantAction("hub/openWorkbench", {}, "assistant", {
+    assistantRiskLevel: () => "low",
+    confirm: () => true,
+    rememberHubAssistantAudit: (entry) => audits.push(entry),
+    runActionWithOptions: async () => ({ action: "open-workbench", status: "blocked" }),
+  });
+
+  assert.deepEqual(outcome, { action: "hub/openWorkbench", status: "blocked" });
+  assert.equal(audits.length, 1);
+  assert.equal(audits[0].status, "blocked");
+  assert.doesNotMatch(audits[0].note, /opened Workbench shell/);
+});
+
+test("hub assistant plan stops after the first non-completed action", async () => {
+  const executed = [];
+  const outputs = [];
+  await assert.rejects(
+    executeHubAssistantPlan({
+      assistantPlan: {
+        suggested_actions: [
+          { action: "hub/openWorkbench", payload: {} },
+          { action: "hub/openInstaller", payload: {} },
+        ],
+      },
+      assistantApprovePlan: { checked: true },
+      executeHubAssistantAction: async (action) => {
+        executed.push(action);
+        return { action, status: "blocked" };
+      },
+      setAssistantOutput: (value) => outputs.push(value),
+      hubDynamic: (key) => key,
+      rememberHubAssistantAudit: () => {},
+      assistantRiskLevel: () => "low",
+    }),
+    /did not complete \(blocked\)/,
+  );
+
+  assert.deepEqual(executed, ["hub/openWorkbench"]);
+  assert.deepEqual(outputs, []);
 });

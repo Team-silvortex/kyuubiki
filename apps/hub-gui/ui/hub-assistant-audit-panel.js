@@ -10,9 +10,11 @@ export function createHubAssistantAuditPanel(context) {
     switch (status) {
       case "failed":
       case "cancelled":
+      case "missing":
         return "desktop-shell-state desktop-shell-state--danger";
       case "prompted":
       case "confirmed":
+      case "blocked":
         return "desktop-shell-state desktop-shell-state--warning";
       case "completed":
         return "desktop-shell-state desktop-shell-state--healthy";

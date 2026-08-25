@@ -5,6 +5,9 @@ function publishInstallerActionState(action, status, error) {
   if (status === "running") {
     window.__kyuubikiInstallerActionStartedAt = now;
   } else {
+    window.__kyuubikiInstallerActionSettledAt = now;
+  }
+  if (status === "completed") {
     window.__kyuubikiInstallerActionCompletedAt = now;
     window.__kyuubikiInstallerLastCompletedAction = action;
   }

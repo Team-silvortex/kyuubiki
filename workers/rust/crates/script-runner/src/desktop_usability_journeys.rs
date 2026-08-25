@@ -12,8 +12,10 @@ const CAPABILITY_SCHEMA: &str = "kyuubiki.desktop-capability-closure/v1";
 
 const NATIVE_PROBES: &[&str] = &[
     "build-material-research-bundle",
+    "check-agent-update-operational-qualification",
     "check-component-integrity-protocol",
     "check-desktop-usability-journeys",
+    "check-desktop-ui-validation",
     "check-gui-runtime-capability-contract",
     "check-install-update-disk-hygiene",
     "check-installed-runtime-operational-qualification",
@@ -24,6 +26,7 @@ const NATIVE_PROBES: &[&str] = &[
     "check-operator-validation",
     "check-orchestra-recovery-fault-injection",
     "check-runtime-recovery-fault-injection",
+    "check-runtime-payload-operational-qualification",
     "check-ui-automation-contract",
     "check-workflow-dataset-contract",
     "desktop-packaged-smoke",

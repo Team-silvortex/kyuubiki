@@ -63,7 +63,10 @@ make check-language-packs
 
 The retained Node entrypoint `node ./scripts/validate-language-packs.mjs` is
 kept for local compatibility, but the Make target is the release gate and uses
-the native script runner.
+the native script runner. The native path also verifies the 30-locale
+Workbench catalog, translated payload, and selector projections directly from
+their TypeScript sources; it does not launch Node. Frontend behavioral tests
+remain a separate development/CI lane rather than a product runtime dependency.
 
 Full visible-copy coverage and translation maintenance are native as well:
 

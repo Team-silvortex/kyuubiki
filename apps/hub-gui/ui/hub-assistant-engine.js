@@ -244,11 +244,73 @@ export function applyAssistantBundlePayload(payload, options) {
   }
 }
 
+const HUB_ASSISTANT_DESKTOP_ROUTES = Object.freeze({
+  "hub/openWorkbench": ["open-workbench", "opened Workbench shell"],
+  "hub/openInstaller": ["open-installer", "opened Installer shell"],
+  "hub/openDocsIndex": ["open-docs-index", "opened docs index"],
+  "hub/openCurrentLineDoc": ["open-current-line-doc", "opened current-line document"],
+  "hub/openOperationsDoc": ["open-operations-doc", "opened operations guide"],
+  "hub/openTroubleshootingDoc": ["open-troubleshooting-doc", "opened troubleshooting guide"],
+  "hub/startLocal": ["start-local", "started local stack"],
+  "hub/validateEnv": ["validate-env", "validated environment"],
+  "hub/desktopStage": ["open-installer", "opened Installer for desktop staging work"],
+  "hub/desktopBuildHost": ["open-installer", "opened Installer for host-bundle build work"],
+  "hub/desktopVerify": ["open-installer", "opened Installer for desktop verification work"],
+  "hub/projectCreate": ["project-create", "created project bundle and activated its path", true],
+  "hub/projectInspect": ["project-inspect", "inspected project bundle", true],
+  "hub/projectValidate": ["project-validate", "validated project bundle", true],
+  "hub/projectNormalize": ["project-normalize", "normalized project bundle", true],
+  "hub/projectUnpack": ["project-unpack", "unpacked project bundle", true],
+  "hub/projectPack": ["project-pack", "packed project bundle", true],
+  "hub/projectDiff": ["project-diff", "diffed project bundles", true],
+});
+
+const HUB_ACTION_TERMINAL_STATUSES = new Set([
+  "completed",
+  "blocked",
+  "cancelled",
+  "failed",
+  "missing",
+]);
+
+function normalizeHubActionOutcome(action, outcome) {
+  const status = String(outcome?.status || "failed");
+  return {
+    action,
+    status: HUB_ACTION_TERMINAL_STATUSES.has(status) ? status : "failed",
+  };
+}
+
+async function executeHubAssistantDesktopRoute(action, payload, source, risk, route, options) {
+  const [desktopAction, completedNote, appliesBundlePayload = false] = route;
+  if (appliesBundlePayload) {
+    applyAssistantBundlePayload(payload, options);
+  }
+
+  const outcome = normalizeHubActionOutcome(
+    action,
+    await options.runActionWithOptions(desktopAction, { skipConfirmation: true }),
+  );
+  options.rememberHubAssistantAudit({
+    action,
+    risk,
+    status: outcome.status,
+    source,
+    note: outcome.status === "completed" ? completedNote : `${desktopAction} ended as ${outcome.status}`,
+  });
+  return outcome;
+}
+
 export async function executeHubAssistantAction(action, payload = {}, source = "assistant", options) {
   const risk = options.assistantRiskLevel(action);
   if (!confirmHubAssistantAction(action, source, options)) {
     options.setAssistantOutput(options.hubDynamic("assistantCancelled", { action }));
-    return;
+    return { action, status: "cancelled" };
+  }
+
+  const desktopRoute = HUB_ASSISTANT_DESKTOP_ROUTES[action];
+  if (desktopRoute) {
+    return executeHubAssistantDesktopRoute(action, payload, source, risk, desktopRoute, options);
   }
 
   switch (action) {
@@ -260,95 +322,16 @@ export async function executeHubAssistantAction(action, payload = {}, source = "
         }),
       );
       options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "focused Hub section" });
-      return;
-    case "hub/openWorkbench":
-      await options.runActionWithOptions("open-workbench", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened Workbench shell" });
-      return;
-    case "hub/openInstaller":
-      await options.runActionWithOptions("open-installer", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened Installer shell" });
-      return;
-    case "hub/openDocsIndex":
-      await options.runActionWithOptions("open-docs-index", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened docs index" });
-      return;
-    case "hub/openCurrentLineDoc":
-      await options.runActionWithOptions("open-current-line-doc", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened current-line document" });
-      return;
-    case "hub/openOperationsDoc":
-      await options.runActionWithOptions("open-operations-doc", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened operations guide" });
-      return;
-    case "hub/openTroubleshootingDoc":
-      await options.runActionWithOptions("open-troubleshooting-doc", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened troubleshooting guide" });
-      return;
-    case "hub/startLocal":
-      await options.runActionWithOptions("start-local", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "started local stack" });
-      return;
-    case "hub/validateEnv":
-      await options.runActionWithOptions("validate-env", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "validated environment" });
-      return;
-    case "hub/desktopStage":
-      await options.runActionWithOptions("open-installer", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened Installer for desktop staging work" });
-      return;
-    case "hub/desktopBuildHost":
-      await options.runActionWithOptions("open-installer", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened Installer for host-bundle build work" });
-      return;
-    case "hub/desktopVerify":
-      await options.runActionWithOptions("open-installer", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened Installer for desktop verification work" });
-      return;
+      return { action, status: "completed" };
     case "hub/setBundleContext":
       applyAssistantBundlePayload(payload, options);
       options.renderAssistantContext();
       options.setAssistantOutput(options.hubDynamic("assistantUpdatedBundle"));
       options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "updated bundle inputs" });
-      return;
-    case "hub/projectCreate":
-      applyAssistantBundlePayload(payload, options);
-      await options.runActionWithOptions("project-create", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "created project bundle and activated its path" });
-      return;
-    case "hub/projectInspect":
-      applyAssistantBundlePayload(payload, options);
-      await options.runActionWithOptions("project-inspect", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "inspected project bundle" });
-      return;
-    case "hub/projectValidate":
-      applyAssistantBundlePayload(payload, options);
-      await options.runActionWithOptions("project-validate", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "validated project bundle" });
-      return;
-    case "hub/projectNormalize":
-      applyAssistantBundlePayload(payload, options);
-      await options.runActionWithOptions("project-normalize", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "normalized project bundle" });
-      return;
-    case "hub/projectUnpack":
-      applyAssistantBundlePayload(payload, options);
-      await options.runActionWithOptions("project-unpack", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "unpacked project bundle" });
-      return;
-    case "hub/projectPack":
-      applyAssistantBundlePayload(payload, options);
-      await options.runActionWithOptions("project-pack", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "packed project bundle" });
-      return;
-    case "hub/projectDiff":
-      applyAssistantBundlePayload(payload, options);
-      await options.runActionWithOptions("project-diff", { skipConfirmation: true });
-      options.rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "diffed project bundles" });
-      return;
+      return { action, status: "completed" };
     default:
       options.rememberHubAssistantAudit({ action, risk, status: "failed", source, note: "unknown assistant action" });
-      throw new Error(`Unknown assistant action: ${action}`);
+      return { action, status: "failed" };
   }
 }
 
@@ -364,8 +347,9 @@ export async function executeHubAssistantPlan(options) {
   }
 
   for (const entry of options.assistantPlan.suggested_actions) {
+    let outcome;
     try {
-      await options.executeHubAssistantAction(entry.action, entry.payload || {}, "plan");
+      outcome = await options.executeHubAssistantAction(entry.action, entry.payload || {}, "plan");
     } catch (error) {
       options.rememberHubAssistantAudit({
         action: entry.action,
@@ -375,6 +359,9 @@ export async function executeHubAssistantPlan(options) {
         note: error instanceof Error ? error.message : String(error),
       });
       throw error;
+    }
+    if (outcome?.status !== "completed") {
+      throw new Error(`Assistant action ${entry.action} did not complete (${outcome?.status || "failed"}).`);
     }
   }
 

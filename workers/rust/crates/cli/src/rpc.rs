@@ -557,17 +557,25 @@ fn handle_operator_task_ir(
 ) -> AgentReply {
     let request_id = request.id;
     let maybe_job_id = extract_job_id(&request.params);
-    let guard = agent_watchdog::begin_execution(
+    let guard = match agent_watchdog::begin_execution(
         request_id.clone(),
         maybe_job_id.clone(),
         "run_operator_task_ir".to_string(),
-    );
+    ) {
+        Ok(guard) => guard,
+        Err(error) => return watchdog_admission_error(request_id, error),
+    };
     let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
         writer.clone().map(|shared_writer| {
-            HeartbeatHandle::spawn(shared_writer, request_id.clone(), job_id.clone())
+            HeartbeatHandle::spawn(
+                shared_writer,
+                request_id.clone(),
+                job_id.clone(),
+                guard.clone(),
+            )
         })
     });
-    agent_fault_injection::wait_for_release(&request_id, maybe_job_id.as_deref());
+    agent_fault_injection::wait_for_release(&guard, maybe_job_id.as_deref());
 
     let result = match run_operator_task_ir(&request.params) {
         Ok(result) => result,
@@ -626,15 +634,26 @@ where
     let method = rpc_method_name(&request.method);
     let maybe_job_id = extract_job_id(&request.params);
     let externalize_result = request.params.get("model_artifact_ref").is_some();
-    let guard =
-        agent_watchdog::begin_execution(request_id.clone(), maybe_job_id.clone(), method.clone());
+    let guard = match agent_watchdog::begin_execution(
+        request_id.clone(),
+        maybe_job_id.clone(),
+        method.clone(),
+    ) {
+        Ok(guard) => guard,
+        Err(error) => return watchdog_admission_error(request_id, error),
+    };
 
     let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
         writer.clone().map(|shared_writer| {
-            HeartbeatHandle::spawn(shared_writer, request_id.clone(), job_id.clone())
+            HeartbeatHandle::spawn(
+                shared_writer,
+                request_id.clone(),
+                job_id.clone(),
+                guard.clone(),
+            )
         })
     });
-    agent_fault_injection::wait_for_release(&request_id, maybe_job_id.as_deref());
+    agent_fault_injection::wait_for_release(&guard, maybe_job_id.as_deref());
 
     let params = match decode_solver_params::<Request>(request.params) {
         Ok(params) => params,
@@ -725,6 +744,21 @@ fn stop_heartbeat(heartbeat: Option<HeartbeatHandle>) {
     if let Some(heartbeat) = heartbeat {
         heartbeat.stop();
     }
+}
+
+fn watchdog_admission_error(
+    request_id: String,
+    error: agent_watchdog::ExecutionAdmissionError,
+) -> AgentReply {
+    AgentReply::Stream(
+        Vec::new(),
+        RpcResponse::error_with_details(
+            request_id,
+            error.reason_code.clone(),
+            error.message.clone(),
+            serde_json::to_value(error).expect("watchdog admission error should serialize"),
+        ),
+    )
 }
 
 fn rpc_method_name(method: &RpcMethod) -> String {

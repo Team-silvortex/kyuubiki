@@ -21,14 +21,17 @@ pub(crate) fn configure_from_env() -> Result<(), String> {
     Ok(())
 }
 
-pub(crate) fn wait_for_release(request_id: &str, job_id: Option<&str>) {
+pub(crate) fn wait_for_release(
+    execution_guard: &agent_watchdog::ExecutionGuard,
+    job_id: Option<&str>,
+) {
     let path = hold_path().lock().ok().and_then(|path| path.clone());
     let (Some(path), Some(job_id)) = (path, job_id) else {
         return;
     };
     let deadline = Instant::now() + MAX_HOLD;
     while marker_matches(&path, job_id) && Instant::now() < deadline {
-        let _ = agent_watchdog::mark_progress(request_id);
+        let _ = agent_watchdog::mark_progress(execution_guard);
         thread::sleep(Duration::from_millis(10));
     }
 }

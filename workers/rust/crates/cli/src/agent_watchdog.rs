@@ -29,11 +29,20 @@ impl Default for WatchdogPolicySnapshot {
 #[derive(Debug, Clone)]
 pub(crate) struct ExecutionGuard {
     request_id: String,
+    generation: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct ExecutionAdmissionError {
+    pub(crate) request_id: String,
+    pub(crate) reason_code: String,
+    pub(crate) message: String,
 }
 
 #[derive(Debug, Clone)]
 struct ExecutionRecord {
     request_id: String,
+    generation: u64,
     job_id: Option<String>,
     method: String,
     started_unix_ms: u128,
@@ -43,6 +52,7 @@ struct ExecutionRecord {
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct FailureReport {
     pub(crate) request_id: String,
+    pub(crate) generation: u64,
     pub(crate) job_id: Option<String>,
     pub(crate) method: String,
     pub(crate) reason_code: String,
@@ -67,6 +77,7 @@ pub(crate) struct WatchdogSnapshot {
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ActiveExecutionSnapshot {
     pub(crate) request_id: String,
+    pub(crate) generation: u64,
     pub(crate) job_id: Option<String>,
     pub(crate) method: String,
     pub(crate) elapsed_ms: u128,
@@ -79,6 +90,7 @@ struct WatchdogState {
     total_started_execution_count: u64,
     total_completed_execution_count: u64,
     total_failed_execution_count: u64,
+    next_generation: u64,
     active: HashMap<String, ExecutionRecord>,
     recent_failures: VecDeque<FailureReport>,
 }
@@ -106,7 +118,7 @@ pub(crate) fn begin_execution(
     request_id: String,
     job_id: Option<String>,
     method: String,
-) -> ExecutionGuard {
+) -> Result<ExecutionGuard, ExecutionAdmissionError> {
     begin_execution_in(watchdog_state(), request_id, job_id, method)
 }
 
@@ -115,7 +127,7 @@ fn begin_execution_in(
     request_id: String,
     job_id: Option<String>,
     method: String,
-) -> ExecutionGuard {
+) -> Result<ExecutionGuard, ExecutionAdmissionError> {
     begin_execution_at(state, request_id, job_id, method, unix_now_ms())
 }
 
@@ -125,35 +137,61 @@ fn begin_execution_at(
     job_id: Option<String>,
     method: String,
     now: u128,
-) -> ExecutionGuard {
-    if let Ok(mut state) = state.lock() {
-        state.total_started_execution_count = state.total_started_execution_count.saturating_add(1);
-        state.active.insert(
-            request_id.clone(),
-            ExecutionRecord {
-                request_id: request_id.clone(),
-                job_id,
-                method,
-                started_unix_ms: now,
-                last_progress_unix_ms: now,
-            },
-        );
+) -> Result<ExecutionGuard, ExecutionAdmissionError> {
+    let mut state = state.lock().map_err(|_| ExecutionAdmissionError {
+        request_id: request_id.clone(),
+        reason_code: "watchdog_state_unavailable".to_string(),
+        message: "agent watchdog state is unavailable".to_string(),
+    })?;
+    if state.active.contains_key(&request_id) {
+        return Err(ExecutionAdmissionError {
+            request_id,
+            reason_code: "duplicate_active_request_id".to_string(),
+            message: "request id is already active on this agent".to_string(),
+        });
     }
 
-    ExecutionGuard { request_id }
+    state.next_generation =
+        state
+            .next_generation
+            .checked_add(1)
+            .ok_or_else(|| ExecutionAdmissionError {
+                request_id: request_id.clone(),
+                reason_code: "watchdog_generation_exhausted".to_string(),
+                message: "agent watchdog execution generation is exhausted".to_string(),
+            })?;
+    let generation = state.next_generation;
+    state.total_started_execution_count = state.total_started_execution_count.saturating_add(1);
+    state.active.insert(
+        request_id.clone(),
+        ExecutionRecord {
+            request_id: request_id.clone(),
+            generation,
+            job_id,
+            method,
+            started_unix_ms: now,
+            last_progress_unix_ms: now,
+        },
+    );
+
+    Ok(ExecutionGuard {
+        request_id,
+        generation,
+    })
 }
 
 pub(crate) fn complete_execution(guard: ExecutionGuard) {
     complete_execution_in(watchdog_state(), guard);
 }
 
-pub(crate) fn mark_progress(request_id: &str) -> bool {
-    mark_progress_at(watchdog_state(), request_id, unix_now_ms())
+pub(crate) fn mark_progress(guard: &ExecutionGuard) -> bool {
+    mark_progress_at(watchdog_state(), guard, unix_now_ms())
 }
 
-fn mark_progress_at(state: &Mutex<WatchdogState>, request_id: &str, now: u128) -> bool {
+fn mark_progress_at(state: &Mutex<WatchdogState>, guard: &ExecutionGuard, now: u128) -> bool {
     if let Ok(mut state) = state.lock()
-        && let Some(record) = state.active.get_mut(request_id)
+        && let Some(record) = state.active.get_mut(&guard.request_id)
+        && record.generation == guard.generation
     {
         record.last_progress_unix_ms = now;
         return true;
@@ -163,7 +201,11 @@ fn mark_progress_at(state: &Mutex<WatchdogState>, request_id: &str, now: u128) -
 
 fn complete_execution_in(state: &Mutex<WatchdogState>, guard: ExecutionGuard) {
     if let Ok(mut state) = state.lock() {
-        if state.active.remove(&guard.request_id).is_some() {
+        let is_current = state
+            .active
+            .get(&guard.request_id)
+            .is_some_and(|record| record.generation == guard.generation);
+        if is_current && state.active.remove(&guard.request_id).is_some() {
             state.total_completed_execution_count =
                 state.total_completed_execution_count.saturating_add(1);
         }
@@ -188,24 +230,27 @@ fn fail_execution_in(
     let now = unix_now_ms();
 
     if let Ok(mut state) = state.lock() {
-        if let Some(record) = state.active.remove(&guard.request_id) {
+        let is_current = state
+            .active
+            .get(&guard.request_id)
+            .is_some_and(|record| record.generation == guard.generation);
+        if is_current && let Some(record) = state.active.remove(&guard.request_id) {
             let report = failure_from_record(record, reason_code, message, now);
             state.total_failed_execution_count =
                 state.total_failed_execution_count.saturating_add(1);
             retain_failure(&mut state, report.clone());
             return report;
         }
-        if let Some(existing) = state
-            .recent_failures
-            .iter()
-            .find(|failure| failure.request_id == guard.request_id)
-        {
+        if let Some(existing) = state.recent_failures.iter().find(|failure| {
+            failure.request_id == guard.request_id && failure.generation == guard.generation
+        }) {
             return existing.clone();
         }
 
         let report = failure_from_record(
             ExecutionRecord {
                 request_id: guard.request_id,
+                generation: guard.generation,
                 job_id: None,
                 method: "unknown".to_string(),
                 started_unix_ms: now,
@@ -221,6 +266,7 @@ fn fail_execution_in(
     } else {
         FailureReport {
             request_id: guard.request_id,
+            generation: guard.generation,
             job_id: None,
             method: "unknown".to_string(),
             reason_code: reason_code.to_string(),
@@ -239,6 +285,7 @@ fn failure_from_record(
 ) -> FailureReport {
     FailureReport {
         request_id: record.request_id,
+        generation: record.generation,
         job_id: record.job_id,
         method: record.method,
         reason_code: reason_code.to_string(),
@@ -314,6 +361,7 @@ fn snapshot_from_at(state: &Mutex<WatchdogState>, now: u128) -> WatchdogSnapshot
             .values()
             .map(|record| ActiveExecutionSnapshot {
                 request_id: record.request_id.clone(),
+                generation: record.generation,
                 job_id: record.job_id.clone(),
                 method: record.method.clone(),
                 elapsed_ms: now.saturating_sub(record.started_unix_ms),
@@ -360,7 +408,8 @@ pub fn run_fault_injection_probe() -> Result<Value, String> {
         "watchdog-injected-failure".to_string(),
         Some("watchdog-job-failure".to_string()),
         "solve_bar_1d".to_string(),
-    );
+    )
+    .map_err(|error| error.message)?;
     let failure = fail_execution_in(
         &probe_state,
         failed_guard,
@@ -374,7 +423,8 @@ pub fn run_fault_injection_probe() -> Result<Value, String> {
         "watchdog-healthy-after".to_string(),
         Some("watchdog-job-healthy".to_string()),
         "solve_bar_1d".to_string(),
-    );
+    )
+    .map_err(|error| error.message)?;
     complete_execution_in(&probe_state, healthy_guard);
     let after_healthy = snapshot_from(&probe_state);
 
@@ -444,8 +494,9 @@ pub fn run_timeout_fault_injection_probe() -> Result<Value, String> {
         Some("watchdog-stale-job".to_string()),
         "solve_heat_bar_1d".to_string(),
         1_000,
-    );
-    let progress_refreshed = mark_progress_at(&probe_state, "watchdog-stale-request", 1_050);
+    )
+    .map_err(|error| error.message)?;
+    let progress_refreshed = mark_progress_at(&probe_state, &timed_guard, 1_050);
     let before_budget = scan_stale_executions_at(&probe_state, 1_149);
     let timed_out = scan_stale_executions_at(&probe_state, 1_150);
     let after_timeout = snapshot_from_at(&probe_state, 1_150);
@@ -465,7 +516,8 @@ pub fn run_timeout_fault_injection_probe() -> Result<Value, String> {
         Some("watchdog-timeout-follow-up-job".to_string()),
         "solve_heat_bar_1d".to_string(),
         1_200,
-    );
+    )
+    .map_err(|error| error.message)?;
     complete_execution_in(&probe_state, healthy_guard);
     let after_healthy = snapshot_from_at(&probe_state, 1_201);
 
@@ -571,7 +623,8 @@ mod tests {
             "failed-request".to_string(),
             Some("failed-job".to_string()),
             "run_operator_task_ir".to_string(),
-        );
+        )
+        .expect("unique failed request should be admitted");
         let late = failed.clone();
         fail_execution_in(&state, failed, "injected", "injected failure");
         fail_execution_in(&state, late, "late", "late failure");
@@ -581,13 +634,82 @@ mod tests {
             "completed-request".to_string(),
             Some("completed-job".to_string()),
             "solve_bar_1d".to_string(),
-        );
+        )
+        .expect("unique completed request should be admitted");
         complete_execution_in(&state, completed);
 
         let snapshot = snapshot_from(&state);
         assert_eq!(snapshot.total_started_execution_count, 2);
         assert_eq!(snapshot.total_completed_execution_count, 1);
         assert_eq!(snapshot.total_failed_execution_count, 1);
+    }
+
+    #[test]
+    fn duplicate_active_request_is_rejected_without_overwriting_the_original() {
+        let state = Mutex::new(WatchdogState::default());
+        let original = begin_execution_at(
+            &state,
+            "duplicate-request".to_string(),
+            Some("original-job".to_string()),
+            "solve_bar_1d".to_string(),
+            100,
+        )
+        .expect("first request should be admitted");
+        let duplicate = begin_execution_at(
+            &state,
+            "duplicate-request".to_string(),
+            Some("replacement-job".to_string()),
+            "solve_heat_bar_1d".to_string(),
+            200,
+        )
+        .expect_err("active request id must be unique");
+
+        assert_eq!(duplicate.reason_code, "duplicate_active_request_id");
+        let snapshot = snapshot_from_at(&state, 200);
+        assert_eq!(snapshot.total_started_execution_count, 1);
+        assert_eq!(snapshot.active_execution_count, 1);
+        assert_eq!(
+            snapshot.active_executions[0].job_id.as_deref(),
+            Some("original-job")
+        );
+        complete_execution_in(&state, original);
+    }
+
+    #[test]
+    fn late_guard_cannot_finish_a_reused_request_generation() {
+        let state = Mutex::new(WatchdogState::default());
+        configure_policy_in(&state, 10, 100);
+        let stale = begin_execution_at(
+            &state,
+            "reused-request".to_string(),
+            Some("stale-job".to_string()),
+            "solve_bar_1d".to_string(),
+            100,
+        )
+        .expect("stale request should be admitted");
+        assert_eq!(scan_stale_executions_at(&state, 200).len(), 1);
+        let current = begin_execution_at(
+            &state,
+            "reused-request".to_string(),
+            Some("current-job".to_string()),
+            "solve_heat_bar_1d".to_string(),
+            201,
+        )
+        .expect("request id may be reused after timeout");
+
+        complete_execution_in(&state, stale);
+        let active = snapshot_from_at(&state, 202);
+        assert_eq!(active.active_execution_count, 1);
+        assert_eq!(
+            active.active_executions[0].job_id.as_deref(),
+            Some("current-job")
+        );
+        assert_eq!(active.total_completed_execution_count, 0);
+
+        complete_execution_in(&state, current);
+        let completed = snapshot_from_at(&state, 203);
+        assert_eq!(completed.active_execution_count, 0);
+        assert_eq!(completed.total_completed_execution_count, 1);
     }
 
     #[test]

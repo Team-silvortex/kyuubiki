@@ -150,7 +150,7 @@ impl Display for OperatorSdkError {
 
 impl std::error::Error for OperatorSdkError {}
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct OperatorRegistry {
     handlers: BTreeMap<String, Arc<dyn OperatorHandler>>,
 }
@@ -196,6 +196,16 @@ impl OperatorRegistry {
         handler.run(request)
     }
 
+    pub fn try_transaction<E>(
+        &mut self,
+        apply: impl FnOnce(&mut OperatorRegistry) -> Result<(), E>,
+    ) -> Result<(), E> {
+        let mut staged = self.clone();
+        apply(&mut staged)?;
+        *self = staged;
+        Ok(())
+    }
+
     fn insert_handler(
         &mut self,
         handler: Arc<dyn OperatorHandler>,
@@ -231,9 +241,13 @@ mod tests {
 
     impl EchoOperator {
         fn new() -> Self {
+            Self::with_id("transform.echo_integer")
+        }
+
+        fn with_id(operator_id: &str) -> Self {
             Self {
                 descriptor: OperatorDescriptorBuilder::new(
-                    "transform.echo_integer",
+                    operator_id,
                     OperatorKind::Transform,
                     "multi_domain",
                     "echo_integer",
@@ -314,6 +328,25 @@ mod tests {
                 operator_id: "transform.echo_integer".to_string(),
             }
         );
+    }
+
+    #[test]
+    fn registry_transaction_rolls_back_partial_registration() {
+        let mut registry = OperatorRegistry::new();
+        registry
+            .register_json(EchoOperator::new())
+            .expect("base operator should register");
+
+        let result: Result<(), &str> = registry.try_transaction(|staged| {
+            staged
+                .register_json(EchoOperator::with_id("transform.staged_echo"))
+                .map_err(|_| "staged registration failed")?;
+            Err("forced package failure")
+        });
+
+        assert_eq!(result, Err("forced package failure"));
+        assert!(registry.describe("transform.echo_integer").is_some());
+        assert!(registry.describe("transform.staged_echo").is_none());
     }
 
     #[test]

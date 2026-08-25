@@ -5,9 +5,53 @@ import {
   createFixtureReader,
   createFixtureRoot,
 } from "../../desktop-shared/test/smoke-test-helpers.mjs";
+import { bindInstallerActionHandlers } from "../ui/installer-event-bindings.js";
 
 const ROOT = createFixtureRoot(import.meta.url);
 const read = createFixtureReader(ROOT);
+
+test("installer failure settles without replacing the last successful action", async () => {
+  const previousDocument = globalThis.document;
+  const previousWindow = globalThis.window;
+  const previousCustomEvent = globalThis.CustomEvent;
+  const listeners = new Map();
+  const dispatched = [];
+  try {
+    globalThis.window = {};
+    globalThis.CustomEvent = class {
+      constructor(type, options = {}) {
+        this.type = type;
+        this.detail = options.detail;
+      }
+    };
+    globalThis.document = {
+      addEventListener: (type, listener) => listeners.set(type, listener),
+      dispatchEvent: (event) => dispatched.push(event),
+    };
+    bindInstallerActionHandlers({
+      success: async () => {},
+      failure: async () => { throw new Error("forced installer failure"); },
+    });
+    const click = listeners.get("click");
+    const dispatchAction = (action) => click({
+      target: { closest: () => ({ disabled: false, dataset: { action } }) },
+    });
+
+    await dispatchAction("success");
+    const completedAt = window.__kyuubikiInstallerActionCompletedAt;
+    await dispatchAction("failure");
+
+    assert.equal(window.__kyuubikiInstallerActionStatus, "failed");
+    assert.equal(window.__kyuubikiInstallerLastCompletedAction, "success");
+    assert.equal(window.__kyuubikiInstallerActionCompletedAt, completedAt);
+    assert.ok(window.__kyuubikiInstallerActionSettledAt >= completedAt);
+    assert.equal(dispatched.at(-1).detail.error, "forced installer failure");
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.window = previousWindow;
+    globalThis.CustomEvent = previousCustomEvent;
+  }
+});
 
 test("installer shell defines a least-privilege main-window capability", () => {
   const tauriConfig = JSON.parse(read("src-tauri/tauri.conf.json"));

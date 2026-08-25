@@ -14,7 +14,7 @@
         "files": [
           "config/architecture/usability-release-gate.json",
           "workers/rust/crates/script-runner/src/packaged_desktop_smoke.rs",
-          "releases/usability-evidence/2.7.0/macos-installed-desktop-smoke.json"
+          "releases/usability-evidence/2.15.0/macos-installed-desktop-smoke.json"
         ],
         "required_text": [
           "packaged_desktop_round_trip/macos-installed",
@@ -46,15 +46,15 @@
         "ux_closure"
       ],
       "files": [
-        "releases/usability-evidence/2.7.0/macos-installed-desktop-smoke.json"
+        "releases/usability-evidence/2.15.0/macos-installed-desktop-smoke.json"
       ],
       "required_text": [
         "\"status\": \"pass\"",
         "\"passed\": 3",
         "\"failed\": 0",
-        "interactive startup receipt accepted for hub 2.7.0",
-        "interactive startup receipt accepted for installer 2.7.0",
-        "interactive startup receipt accepted for workbench 2.7.0"
+        "interactive startup receipt accepted for hub 2.15.0",
+        "interactive startup receipt accepted for installer 2.15.0",
+        "interactive startup receipt accepted for workbench 2.15.0"
       ]
     }
   ]

@@ -51,9 +51,10 @@ pub(crate) fn run_node_command(
             &paths.root,
             &["tests/integration/direct-mesh-gui-smoke.test.mjs"],
         ),
-        "integration-desktop-gui-node-test" => run_node_test(
+        "integration-desktop-gui-node-test" => run_node_test_serial(
             &paths.root,
             &[
+                "apps/desktop-shared/test/tauri-bridge.test.mjs",
                 "tests/integration/desktop-gui-action-sweep.test.mjs",
                 "tests/integration/desktop-gui-capability-closure.test.mjs",
                 "tests/integration/desktop-gui-call-chain-contract.test.mjs",
@@ -104,6 +105,19 @@ pub(crate) fn run_node_test(cwd: &Path, test_paths: &[&str]) -> RunnerResult<u8>
         cwd,
         "node",
         std::iter::once(OsString::from("--test")).chain(test_paths.iter().map(OsString::from)),
+    )
+}
+
+fn run_node_test_serial(cwd: &Path, test_paths: &[&str]) -> RunnerResult<u8> {
+    crate::run_command(
+        cwd,
+        "node",
+        [
+            OsString::from("--test"),
+            OsString::from("--test-concurrency=1"),
+        ]
+        .into_iter()
+        .chain(test_paths.iter().map(OsString::from)),
     )
 }
 

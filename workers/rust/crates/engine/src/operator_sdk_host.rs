@@ -6,8 +6,10 @@ use kyuubiki_operator_sdk::{
 };
 use kyuubiki_protocol::{OperatorRunRequest, OperatorRunResult};
 use libloading::Library;
+use std::any::Any;
 use std::collections::BTreeSet;
 use std::fmt::{Display, Formatter};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Component, Path, PathBuf};
 use std::sync::Mutex;
 
@@ -522,24 +524,42 @@ impl OperatorPackageActivator for DynamicLibraryOperatorActivator {
             }
         })?;
 
-        for operator in &plan.manifest.operators {
-            let entry_symbol = operator.entry_symbol.as_bytes();
-            let register = unsafe { library.get::<OperatorRegistrationEntrypoint>(entry_symbol) }
-                .map_err(|error| OperatorPackageLoadError::Activation {
-                package_id: plan.manifest.package_id.clone(),
-                message: format!(
-                    "failed to resolve symbol {} in {}: {}",
-                    operator.entry_symbol,
-                    plan.entrypoint_path.display(),
-                    error
-                ),
-            })?;
-            unsafe { register(registry) }.map_err(|error| {
-                OperatorPackageLoadError::Activation {
-                    package_id: plan.manifest.package_id.clone(),
-                    message: error.to_string(),
+        let activation = catch_unwind(AssertUnwindSafe(|| {
+            registry.try_transaction(|staged_registry| {
+                for operator in &plan.manifest.operators {
+                    let entry_symbol = operator.entry_symbol.as_bytes();
+                    let register =
+                        unsafe { library.get::<OperatorRegistrationEntrypoint>(entry_symbol) }
+                            .map_err(|error| OperatorPackageLoadError::Activation {
+                                package_id: plan.manifest.package_id.clone(),
+                                message: format!(
+                                    "failed to resolve symbol {} in {}: {}",
+                                    operator.entry_symbol,
+                                    plan.entrypoint_path.display(),
+                                    error
+                                ),
+                            })?;
+                    unsafe { register(staged_registry) }.map_err(|error| {
+                        OperatorPackageLoadError::Activation {
+                            package_id: plan.manifest.package_id.clone(),
+                            message: error.to_string(),
+                        }
+                    })?;
                 }
-            })?;
+                Ok::<(), OperatorPackageLoadError>(())
+            })
+        }));
+        match activation {
+            Ok(result) => result?,
+            Err(payload) => {
+                return Err(OperatorPackageLoadError::Activation {
+                    package_id: plan.manifest.package_id.clone(),
+                    message: format!(
+                        "operator registration panicked: {}",
+                        operator_activation_panic_message(payload.as_ref())
+                    ),
+                });
+            }
         }
 
         self.loaded_libraries
@@ -548,6 +568,16 @@ impl OperatorPackageActivator for DynamicLibraryOperatorActivator {
             .push(library);
         Ok(())
     }
+}
+
+fn operator_activation_panic_message(payload: &(dyn Any + Send)) -> String {
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        return (*message).to_string();
+    }
+    if let Some(message) = payload.downcast_ref::<String>() {
+        return message.clone();
+    }
+    "unknown panic payload".to_string()
 }
 
 #[derive(Debug, Default, Clone, Copy)]

@@ -68,6 +68,7 @@ struct JourneyResult {
     blocking: bool,
     status: String,
     capabilities: Vec<String>,
+    operational_probe_count: usize,
     probes: Vec<ProbeResult>,
 }
 
@@ -95,6 +96,7 @@ struct Summary {
     failed_count: usize,
     planned_count: usize,
     unique_probe_count: usize,
+    unique_operational_probe_count: usize,
 }
 
 #[derive(Default)]
@@ -169,8 +171,8 @@ fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
     if config.schema_version != CONFIG_SCHEMA {
         return Err(format!("schema_version must be {CONFIG_SCHEMA}"));
     }
-    if config.baseline_release != "moxi 2.14.x" || config.target_release != "daji 3.0.0" {
-        return Err("usability gate must describe the moxi 2.14.x to daji 3.0.0 line".to_string());
+    if config.baseline_release != "moxi 2.15.x" || config.target_release != "daji 3.0.0" {
+        return Err("usability gate must describe the moxi 2.15.x to daji 3.0.0 line".to_string());
     }
     if !config.policy.all_blocking_journeys_must_pass
         || !config.policy.planned_or_static_only_is_not_release_evidence
@@ -243,8 +245,40 @@ fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
                 return Err(format!("journey {} contains an empty probe", journey.id));
             }
         }
+        if config.policy.planned_or_static_only_is_not_release_evidence
+            && !journey
+                .probes
+                .iter()
+                .any(|probe| is_operational_probe(probe))
+        {
+            return Err(format!(
+                "journey {} requires at least one operational probe",
+                journey.id
+            ));
+        }
     }
     validate_source_guards(root, &config.source_guards)
+}
+
+fn is_operational_probe(probe: &[String]) -> bool {
+    let Some(command) = probe.first().map(String::as_str) else {
+        return false;
+    };
+    let has = |argument: &str| probe.iter().any(|entry| entry == argument);
+    match command {
+        "check-desktop-usability-journeys" => has("--execute"),
+        "check-operator-validation" => has("--execute") && has("--out"),
+        "build-material-research-bundle"
+        | "check-installer-recovery-fault-injection"
+        | "check-orchestra-recovery-fault-injection"
+        | "check-runtime-recovery-fault-injection" => has("--out"),
+        "check-agent-update-operational-qualification"
+        | "check-desktop-ui-validation"
+        | "check-installed-runtime-operational-qualification"
+        | "check-runtime-payload-operational-qualification"
+        | "desktop-packaged-smoke" => has("--verify-report"),
+        _ => false,
+    }
 }
 
 fn validate_source_guards(root: &Path, guards: &[SourceGuard]) -> RunnerResult<()> {
@@ -287,6 +321,11 @@ fn build_report(config: &GateConfig, execute: bool) -> RunnerResult<ReadinessRep
         .journeys
         .iter()
         .map(|journey| {
+            let operational_probe_count = journey
+                .probes
+                .iter()
+                .filter(|probe| is_operational_probe(probe))
+                .count();
             let probes = journey
                 .probes
                 .iter()
@@ -316,6 +355,7 @@ fn build_report(config: &GateConfig, execute: bool) -> RunnerResult<ReadinessRep
                 blocking: journey.blocking,
                 status: status.to_string(),
                 capabilities: journey.capabilities.clone(),
+                operational_probe_count,
                 probes,
             }
         })
@@ -365,6 +405,14 @@ fn build_report(config: &GateConfig, execute: bool) -> RunnerResult<ReadinessRep
                     .collect::<BTreeSet<_>>()
                     .len()
             },
+            unique_operational_probe_count: config
+                .journeys
+                .iter()
+                .flat_map(|journey| &journey.probes)
+                .filter(|probe| is_operational_probe(probe))
+                .map(|probe| probe.join("\u{1f}"))
+                .collect::<BTreeSet<_>>()
+                .len(),
         },
         journeys,
     })
@@ -411,6 +459,14 @@ fn validate_report(config: &GateConfig, report: &ReadinessReport) -> RunnerResul
     }
     if report.status == "pass" && !report.release_claim_allowed {
         return Err("release pass cannot be emitted while release claims are blocked".to_string());
+    }
+    if config.policy.planned_or_static_only_is_not_release_evidence
+        && report
+            .journeys
+            .iter()
+            .any(|journey| journey.operational_probe_count == 0)
+    {
+        return Err("usability report contains a static-only journey".to_string());
     }
     Ok(())
 }
@@ -462,6 +518,7 @@ fn run_self_test() -> RunnerResult<()> {
         blocking: true,
         status: "planned".to_string(),
         capabilities: vec!["test.capability".to_string()],
+        operational_probe_count: 1,
         probes: Vec::new(),
     };
     if count_status(&[planned], "planned") != 1 {
@@ -470,12 +527,19 @@ fn run_self_test() -> RunnerResult<()> {
     if truncate("abcdef", 3) != "abc" {
         return Err("probe output truncation failed".to_string());
     }
+    if !is_operational_probe(&[
+        "check-desktop-usability-journeys".to_string(),
+        "--execute".to_string(),
+    ]) || is_operational_probe(&["check-desktop-usability-journeys".to_string()])
+    {
+        return Err("operational probe classification failed".to_string());
+    }
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{JourneyResult, count_status, truncate};
+    use super::{JourneyResult, count_status, is_operational_probe, truncate};
 
     #[test]
     fn counts_planned_journeys() {
@@ -485,6 +549,7 @@ mod tests {
             blocking: true,
             status: "planned".to_string(),
             capabilities: Vec::new(),
+            operational_probe_count: 1,
             probes: Vec::new(),
         };
         assert_eq!(count_status(&[planned], "planned"), 1);
@@ -494,5 +559,20 @@ mod tests {
     fn truncates_probe_output_by_character() {
         assert_eq!(truncate("abcdef", 3), "abc");
         assert_eq!(truncate("可用性", 2), "可用");
+    }
+
+    #[test]
+    fn distinguishes_operational_from_static_probes() {
+        assert!(is_operational_probe(&[
+            "check-operator-validation".to_string(),
+            "--execute".to_string(),
+            "--out".to_string(),
+            "tmp/report.json".to_string(),
+        ]));
+        assert!(!is_operational_probe(&[
+            "check-operator-validation".to_string(),
+            "--profile".to_string(),
+            "line-field-closed-form".to_string(),
+        ]));
     }
 }

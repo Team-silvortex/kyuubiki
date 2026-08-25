@@ -90,13 +90,20 @@ export function normalizeDesktopLanguage(value: unknown): string {
 }
 
 function readLanguagePayload(payload: unknown): string {
-  return normalizeDesktopLanguage((payload as DesktopLanguagePayload | null)?.language);
+  const language = (payload as DesktopLanguagePayload | null)?.language;
+  if (typeof language !== "string" || !language.trim()) {
+    throw new Error("Desktop language preference response did not include a valid language.");
+  }
+  return normalizeDesktopLanguage(language);
+}
+
+async function requestDesktopLanguagePreference(): Promise<string> {
+  return readLanguagePayload(await invokeTauri("get_global_language_preference"));
 }
 
 export async function loadDesktopLanguagePreference(): Promise<string> {
   try {
-    const payload = await invokeTauri("get_global_language_preference");
-    return readLanguagePayload(payload);
+    return await requestDesktopLanguagePreference();
   } catch (_error) {
     return "en";
   }
@@ -130,10 +137,12 @@ export function watchDesktopLanguagePreference({
 
     pending = true;
     try {
-      const nextLanguage = await loadDesktopLanguagePreference();
+      const nextLanguage = await requestDesktopLanguagePreference();
       if (nextLanguage && nextLanguage !== normalizeDesktopLanguage(readCurrentLanguage())) {
         await onChange(nextLanguage);
       }
+    } catch (_error) {
+      // A transient bridge failure must not masquerade as an English preference change.
     } finally {
       pending = false;
     }
