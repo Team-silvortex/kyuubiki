@@ -120,7 +120,7 @@ pub(crate) fn render_comparison_report(
         ));
 
         if let Some(error) = &result.error {
-            lines.push(format!("|  | error | `{}` |  |  |  |", error));
+            lines.push(format!("|  | error | `{error}` |  |  |  |"));
         }
 
         if !result.memory_stages.is_empty() {

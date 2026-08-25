@@ -10,6 +10,7 @@ mod generators_structural;
 mod generators_thermal_structural;
 mod headless_cases;
 mod models;
+mod protocol_cases;
 mod runner;
 mod runner_hotspot;
 mod runner_metrics;
@@ -21,8 +22,6 @@ mod runner_util;
 mod shape_report;
 #[cfg(test)]
 mod workflow_payloads;
-#[cfg(test)]
-include!("tests.rs");
 
 use catalog::benchmark_cases;
 use compare::{
@@ -32,6 +31,7 @@ use compare::{
 use config::{BenchmarkConfig, OutputFormat};
 use headless_cases::{headless_sdk_cases, is_headless_sdk_matrix};
 use models::{BenchmarkReport, select_cases};
+use protocol_cases::{is_protocol_matrix, protocol_cases};
 use runner::{build_report, build_report_with_progress};
 use shape_report::{build_shape_report, print_shape_table};
 
@@ -46,6 +46,8 @@ fn run() -> Result<(), String> {
     let config = BenchmarkConfig::from_env()?;
     let cases = if is_headless_sdk_matrix(&config.matrix) {
         headless_sdk_cases()
+    } else if is_protocol_matrix(&config.matrix) {
+        protocol_cases()
     } else {
         benchmark_cases(config.profile, &config.matrix)
     };
@@ -164,3 +166,6 @@ fn failed_case_messages(report: &BenchmarkReport) -> Vec<String> {
         })
         .collect()
 }
+
+#[cfg(test)]
+include!("tests.rs");

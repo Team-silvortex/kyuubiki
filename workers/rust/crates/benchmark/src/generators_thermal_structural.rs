@@ -296,6 +296,7 @@ fn thermal_triangle_element(
 fn grid_index(row: usize, col: usize, nx: usize) -> usize {
     row * (nx + 1) + col
 }
+#[allow(clippy::too_many_arguments)]
 fn thermal_truss_2d_node(
     id: &str,
     x: f64,

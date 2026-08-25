@@ -80,11 +80,11 @@ frame families that need continuous performance visibility: thermal bar,
 thermal truss 2D/3D, thermal plane triangle/quad, static frame 2D/3D, and
 thermal frame 2D/3D cases.
 
-The `physics-coverage` matrix is the `1.15.x` broad smoke lane. It intentionally
-pulls every built-in benchmark template into one medium-scale run so the
-project can prepare the `1.15.x` engine/operator SDK contracts and the `1.17.x`
-executable task file format against real examples from the major physics
-families.
+The `physics-coverage` matrix is the broad qualification smoke lane. It pulls
+every qualified built-in benchmark template into one medium-scale run. Four
+buckling and precritical templates remain in `stability-screening`, while the
+fixed/adaptive material pair remains in `material-integration`; these iterative
+and focused comparison paths keep dedicated reliability lanes until promotion.
 
 For the `100k`, `200k`, `300k`, and `400k` profiles, prefer running on a dedicated remote/Linux
 host instead of a laptop-class development machine. A full `repeat=3` baseline

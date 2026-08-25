@@ -140,10 +140,10 @@ fn operator_task_execution_preview_exposes_central_package_dispatch() {
     assert_eq!(preview.operator_id, "transform.fixture");
     assert_eq!(preview.operator_kind, "transform");
     assert_eq!(preview.dispatch_route, "fetch_package_then_operator_task");
-    assert_eq!(preview.package_fetch_required, true);
+    assert!(preview.package_fetch_required);
     assert_eq!(preview.package_readiness_gate, "central_package_readiness");
     assert_eq!(preview.result_serialization, "json");
-    assert_eq!(preview.offline_runnable, false);
+    assert!(!preview.offline_runnable);
     assert_eq!(preview.dispatch_warnings, Vec::<String>::new());
 }
 
@@ -162,9 +162,9 @@ fn operator_task_execution_preview_exposes_local_offline_dispatch() {
     let preview = preview_operator_task_execution(&task).expect("preview should build");
 
     assert_eq!(preview.dispatch_route, "local_operator_task");
-    assert_eq!(preview.package_fetch_required, false);
+    assert!(!preview.package_fetch_required);
     assert_eq!(preview.package_readiness_gate, "local_package_readiness");
-    assert_eq!(preview.offline_runnable, true);
+    assert!(preview.offline_runnable);
 }
 
 #[test]

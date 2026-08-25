@@ -26,7 +26,7 @@ fn nonlinear_spring_1d_review_bundle_checks_load_steps_convergence_and_tangent_r
     .expect("review nonlinear spring should solve");
 
     let expected_tip_displacement = 0.077_091_699_705_924_8;
-    let expected_tangent_stiffness = 1891.469_524_532_273;
+    let expected_tangent_stiffness = 1_891.469_524_532_273;
 
     assert!(result.converged);
     assert_eq!(result.steps.len(), 6);

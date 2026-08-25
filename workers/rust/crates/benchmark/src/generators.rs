@@ -103,7 +103,7 @@ pub(crate) fn generate_panel_mesh(
                 x: i as f64 * dx,
                 y: j as f64 * dy,
                 fix_x: i == 0,
-                fix_y: i == 0 || (j == 0 && i == 0),
+                fix_y: i == 0,
                 load_x: if i == nx { 15.0 } else { 0.0 },
                 load_y: if i == nx { -40.0 } else { 0.0 },
             });
@@ -160,7 +160,7 @@ pub(crate) fn generate_quad_panel_mesh(
                 x: i as f64 * dx,
                 y: j as f64 * dy,
                 fix_x: i == 0,
-                fix_y: i == 0 || (j == 0 && i == 0),
+                fix_y: i == 0,
                 load_x: if i == nx { 15.0 } else { 0.0 },
                 load_y: if i == nx { -40.0 } else { 0.0 },
             });
@@ -464,4 +464,21 @@ pub(crate) fn generate_space_frame_grid(
     }
 
     SolveTruss3dRequest { nodes, elements }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{generate_panel_mesh, generate_quad_panel_mesh};
+
+    #[test]
+    fn structural_panels_fix_only_the_cantilever_edge() {
+        let triangle = generate_panel_mesh(3, 2, 6.0, 4.0);
+        let quad = generate_quad_panel_mesh(3, 2, 6.0, 4.0);
+
+        for node in triangle.nodes.iter().chain(&quad.nodes) {
+            let on_left_edge = node.x == 0.0;
+            assert_eq!(node.fix_x, on_left_edge);
+            assert_eq!(node.fix_y, on_left_edge);
+        }
+    }
 }

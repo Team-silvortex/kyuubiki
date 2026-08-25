@@ -1,13 +1,15 @@
 {
   "$schema": "../../schemas/benchmark-qualification-contract.schema.json",
-  "schema_version": "kyuubiki.benchmark-qualification-contract/v1",
-  "report_schema": "kyuubiki.benchmark-qualification-report/v1",
+  "schema_version": "kyuubiki.benchmark-qualification-contract/v2",
+  "report_schema": "kyuubiki.benchmark-qualification-report/v2",
   "required_modules": [
     "runtime-agent-cli",
     "runtime-engine-solver",
+    "runtime-protocol",
+    "sdk-headless",
     "verification-evidence"
   ],
-  "source_index": "tmp/benchmark-profile/index.json",
+  "retained_scale_report": "releases/usability-evidence/2.14.3/benchmark-qualification.json",
   "coverage_manifest": "config/benchmark-profile-coverage.json",
   "direct_mesh_baseline": "tests/integration/benchmarks/direct-mesh-docker-baseline.json",
   "source_files": [
@@ -26,12 +28,15 @@
     "workers/rust/crates/benchmark/src/config.rs",
     "workers/rust/crates/benchmark/src/generators.rs",
     "workers/rust/crates/benchmark/src/headless_cases.rs",
+    "workers/rust/crates/benchmark/src/protocol_cases.rs",
     "workers/rust/crates/benchmark/src/runner.rs",
     "workers/rust/crates/engine/src/lib.rs",
     "workers/rust/crates/solver/src/lib.rs",
     "workers/rust/crates/solver/src/bar_1d.rs",
     "workers/rust/crates/solver/src/bar_1d_validation.rs",
+    "workers/rust/crates/protocol/src/operator_task_ir.rs",
     "workers/rust/crates/protocol/src/types/field.rs",
+    "workers/rust/crates/protocol/src/workflow.rs",
     "workers/rust/crates/headless-sdk/src/lib.rs",
     "workers/rust/crates/headless-sdk/src/direct_fem.rs"
   ],
@@ -53,6 +58,24 @@
       "case_id": "direct-fem-manifest",
       "repeat": 1000,
       "min_node_count": 1
+    },
+    {
+      "id": "current-release-protocol-task-ir",
+      "profile": "10k",
+      "report_profile": "ten_k",
+      "matrix": "protocol",
+      "case_id": "operator-task-ir-preview",
+      "repeat": 1000,
+      "min_node_count": 11
+    },
+    {
+      "id": "current-release-protocol-workflow",
+      "profile": "10k",
+      "report_profile": "ten_k",
+      "matrix": "protocol",
+      "case_id": "workflow-graph-roundtrip",
+      "repeat": 1000,
+      "min_node_count": 5
     }
   ],
   "profile_requirements": [

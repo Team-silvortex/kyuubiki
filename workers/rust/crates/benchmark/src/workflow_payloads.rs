@@ -74,8 +74,11 @@ pub(crate) fn workflow_payload_for_case(case: &BenchmarkCase) -> (&'static str, 
         BenchmarkWorkload::StokesFlowPlaneQuad2d(request) => {
             payload("solve.stokes_flow_quad_2d", request)
         }
-        BenchmarkWorkload::HeadlessActionManifest | BenchmarkWorkload::DirectFemManifest => {
-            panic!("headless manifest benchmarks are not workflow solve payloads")
+        BenchmarkWorkload::HeadlessActionManifest
+        | BenchmarkWorkload::DirectFemManifest
+        | BenchmarkWorkload::ProtocolOperatorTaskPreview(_)
+        | BenchmarkWorkload::ProtocolWorkflowRoundTrip(_) => {
+            panic!("infrastructure benchmarks are not workflow solve payloads")
         }
     }
 }

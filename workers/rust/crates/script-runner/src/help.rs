@@ -61,6 +61,7 @@ lab remote-ssh-fixture\n  \
   check-module-extension-standard\n  \
   check-verification-evidence-surface\n  \
   check-benchmark-qualification\n  \
+  check-orchestra-benchmark-qualification\n  \
   check-central-store-contract\n  \
   check-central-database-readiness\n  \
   central-database-smoke\n  \

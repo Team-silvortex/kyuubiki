@@ -13,7 +13,7 @@
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index check-material-research-bundle-index check-material-research-bundle-index-contract
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
-.PHONY: audit-dependencies check-system-security-qualification check-agent-control-link-operational-qualification check-agent-solver-operational-qualification check-orchestra-takeover-operational-qualification check-orchestra-installed-takeover-operational-qualification check-orchestra-workflow-operational-qualification check-installed-runtime-operational-qualification check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
+.PHONY: audit-dependencies check-system-security-qualification check-agent-control-link-operational-qualification check-agent-solver-operational-qualification check-orchestra-takeover-operational-qualification check-orchestra-installed-takeover-operational-qualification check-orchestra-workflow-operational-qualification check-installed-runtime-operational-qualification check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification check-orchestra-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
 .PHONY: check-distributed-task-recovery-operational-qualification
 
 check-doc-book:
@@ -529,7 +529,11 @@ check-runtime-api-verification:
 
 check-benchmark-qualification:
 	@$(ENTRYPOINT) check-benchmark-qualification --self-test
-	@$(ENTRYPOINT) check-benchmark-qualification --verify-report releases/usability-evidence/2.14.3/benchmark-qualification.json
+	@$(ENTRYPOINT) check-benchmark-qualification --verify-report releases/usability-evidence/2.15.0/benchmark-qualification.json
+
+check-orchestra-benchmark-qualification:
+	@$(ENTRYPOINT) check-orchestra-benchmark-qualification --self-test
+	@$(ENTRYPOINT) check-orchestra-benchmark-qualification --verify-report releases/usability-evidence/2.15.0/orchestra-benchmark-qualification.json
 
 check-minimal-industrial-closure:
 	@$(ENTRYPOINT) validate-minimal-industrial-closure
@@ -560,6 +564,7 @@ architecture-check:
 	@$(MAKE) check-contracts-runtime-api-surface
 	@$(MAKE) check-runtime-api-verification
 	@$(MAKE) check-benchmark-qualification
+	@$(MAKE) check-orchestra-benchmark-qualification
 	@$(MAKE) check-verification-evidence-surface
 	@$(MAKE) check-central-store-contract
 	@$(MAKE) check-central-database-readiness

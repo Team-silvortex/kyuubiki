@@ -388,6 +388,7 @@ fn runs_thermal_frame_2d_extract_export_graph() {
     assert!(content.contains("max_temperature_gradient"));
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run_solver_summary_json_graph(
     workflow_id: &str,
     workflow_name: &str,

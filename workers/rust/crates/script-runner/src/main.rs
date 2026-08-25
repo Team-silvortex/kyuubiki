@@ -101,6 +101,7 @@ mod operator_reliability_schemas;
 mod operator_sdk_multihost_qualification;
 mod operator_task_ir_contract;
 mod operator_validation;
+mod orchestra_benchmark_qualification;
 mod orchestra_recovery_fault_injection;
 mod orchestra_takeover_operational_qualification;
 mod orchestra_workflow_operational_qualification;

@@ -25,6 +25,7 @@
       "./scripts/kyuubiki check-installed-runtime-operational-qualification",
       "./scripts/kyuubiki check-operator-sdk-multihost-operational-qualification",
       "./scripts/kyuubiki check-benchmark-qualification",
+      "./scripts/kyuubiki check-orchestra-benchmark-qualification",
       "./scripts/kyuubiki build-regression-gate-report",
       "./scripts/kyuubiki build-central-readiness-report",
       "./scripts/kyuubiki check-central-readiness-report"
@@ -46,6 +47,7 @@
       "tmp/agent-solver-operational-remote.json",
       "tmp/installed-runtime-operational-qualification.json",
       "tmp/benchmark-qualification-report.json",
+      "tmp/orchestra-benchmark-qualification-report.json",
       "tmp/regression-gate-report.json",
       "tmp/central-readiness-report.json",
       "tmp/central-readiness-report.md"
@@ -195,15 +197,23 @@
       "schemas/benchmark-qualification-report.schema.json",
       "workers/rust/crates/script-runner/src/benchmark_qualification.rs",
       "workers/rust/crates/script-runner/src/benchmark_qualification/validation.rs",
-      "releases/usability-evidence/2.14.3/benchmark-qualification.json"
+      "releases/usability-evidence/2.15.0/benchmark-qualification.json",
+      "config/architecture/orchestra-benchmark-qualification.json",
+      "schemas/orchestra-benchmark-qualification-contract.schema.json",
+      "schemas/orchestra-benchmark-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/orchestra_benchmark_qualification.rs",
+      "releases/usability-evidence/2.15.0/orchestra-benchmark-qualification.json"
     ],
     "required_surfaces": [
-      "kyuubiki.benchmark-qualification-contract/v1",
-      "kyuubiki.benchmark-qualification-report/v1",
+      "kyuubiki.benchmark-qualification-contract/v2",
+      "kyuubiki.benchmark-qualification-report/v2",
       "benchmark-release",
       "five_hundred_k",
       "one_million",
-      "resolved_failure_count"
+      "resolved_failure_count",
+      "kyuubiki.orchestra-benchmark-qualification-contract/v1",
+      "kyuubiki.orchestra-benchmark-qualification-report/v1",
+      "stable_semantics"
     ]
   },
   "deployment_update": {

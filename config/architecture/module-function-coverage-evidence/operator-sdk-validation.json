@@ -260,7 +260,7 @@
       "grade": "qualified",
       "modules": ["runtime-protocol", "sdk-operator", "runtime-engine-solver"],
       "paradigms": ["workflow_composition", "sdk_operator"],
-      "dimensions": ["execution", "contract", "abi_compatibility"],
+      "dimensions": ["execution", "contract", "recovery", "abi_compatibility"],
       "files": [
         "workers/rust/crates/protocol/src/operator.rs",
         "workers/rust/crates/engine/src/operator_sdk_workflow_extensions.rs",
@@ -271,6 +271,7 @@
         "OperatorPortDescriptor",
         "register_workflow_extract_extensions",
         "runs_transform_operator_through_sdk_registry",
+        "sdk_registry_recovers_after_failed_workflow_extension_dispatch",
         "runs_cfd_diagnostics_operator_through_sdk_registry"
       ]
     },
@@ -330,10 +331,12 @@
       "grade": "qualified",
       "modules": ["sdk-operator", "verification-evidence"],
       "paradigms": ["benchmark", "validation", "sdk_operator"],
-      "dimensions": ["execution", "benchmark", "contract", "abi_compatibility"],
+      "dimensions": ["execution", "benchmark", "contract", "recovery", "abi_compatibility"],
       "files": [
         "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
         "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke/check.rs",
+        "workers/rust/crates/cli/tests/operator_package_live.rs",
+        "workers/rust/crates/cli/tests/operator_package_installer_live.rs",
         "schemas/operator-package-dynamic-smoke.schema.json",
         "schemas/examples.operator-package-dynamic-smoke.json",
         "releases/usability-evidence/2.15.0/operator-sdk-agent-qualification.json",
@@ -345,7 +348,9 @@
         "template_cdylib_build",
         "engine_dynamic_host_load",
         "agent_dynamic_host_dispatch",
-        "installer_managed_agent_lifecycle"
+        "installer_managed_agent_lifecycle",
+        "live_agent_loads_executes_rejects_tamper_and_recovers",
+        "installer_manages_agent_package_execution_and_residue_free_removal"
       ]
     },
     {

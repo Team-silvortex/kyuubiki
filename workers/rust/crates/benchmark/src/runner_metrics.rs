@@ -1,6 +1,7 @@
 use crate::models::BenchmarkMemoryStage;
 use crate::runner_structural::WorkloadMetrics;
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn apply_metrics(
     metrics: WorkloadMetrics,
     node_count: &mut usize,

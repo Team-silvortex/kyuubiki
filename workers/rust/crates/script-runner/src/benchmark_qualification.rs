@@ -19,8 +19,9 @@ use validation::{validate_contract, validate_report};
 type RunnerResult<T> = Result<T, String>;
 
 const CONTRACT_PATH: &str = "config/architecture/benchmark-qualification.json";
-const CONTRACT_SCHEMA: &str = "kyuubiki.benchmark-qualification-contract/v1";
-const REPORT_SCHEMA: &str = "kyuubiki.benchmark-qualification-report/v1";
+const CONTRACT_SCHEMA: &str = "kyuubiki.benchmark-qualification-contract/v2";
+const REPORT_SCHEMA: &str = "kyuubiki.benchmark-qualification-report/v2";
+const RETAINED_REPORT_SCHEMA: &str = "kyuubiki.benchmark-qualification-report/v1";
 const REPORT_SCHEMA_PATH: &str = "schemas/benchmark-qualification-report.schema.json";
 const DEFAULT_OUT: &str = "tmp/benchmark-qualification-report.json";
 const DIRECT_MESH_COMPARE_OUT: &str = "tmp/benchmark-qualification/direct-mesh-self-compare.json";
@@ -35,7 +36,7 @@ struct QualificationContract {
     schema_version: String,
     report_schema: String,
     required_modules: Vec<String>,
-    source_index: String,
+    retained_scale_report: String,
     coverage_manifest: String,
     direct_mesh_baseline: String,
     source_files: Vec<String>,
@@ -160,6 +161,10 @@ struct CurrentCaseEvidence {
 struct ScaleArchiveEvidence {
     schema_version: String,
     source_index_sha256: String,
+    #[serde(default)]
+    retained_report_path: String,
+    #[serde(default)]
+    retained_report_sha256: String,
     gate_status: String,
     retained_run_count: usize,
     failed_run_count: usize,
@@ -167,6 +172,13 @@ struct ScaleArchiveEvidence {
     unresolved_failure_count: usize,
     profiles: Vec<ProfileEvidence>,
     one_million_cases: Vec<ScaleCaseEvidence>,
+}
+
+#[derive(Deserialize)]
+struct RetainedScaleReport {
+    schema_version: String,
+    status: String,
+    scale_archive: ScaleArchiveEvidence,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -368,141 +380,15 @@ fn collect_scale_archive(
     contract: &QualificationContract,
     manifest: &CoverageManifest,
 ) -> RunnerResult<ScaleArchiveEvidence> {
-    let index: Value = read_json(root, &contract.source_index)?;
-    if index["schema_version"].as_str() != Some("kyuubiki.benchmark-profile-index/v1") {
-        return Err("benchmark profile index schema drifted".into());
+    let retained: RetainedScaleReport = read_json(root, &contract.retained_scale_report)?;
+    if retained.schema_version != RETAINED_REPORT_SCHEMA || retained.status != "passed" {
+        return Err("retained benchmark scale report header drifted".into());
     }
-    let retained_runs = array_at(&index, "/retained_runs")?;
-    let failed_runs = array_at(&index, "/failed_runs")?;
-    let resolved_failure_count = failed_runs
-        .iter()
-        .filter(|run| run["resolved_by_success"].as_bool() == Some(true))
-        .count();
-    let unresolved_failure_count = failed_runs.len() - resolved_failure_count;
-    let profiles = contract
-        .profile_requirements
-        .iter()
-        .map(|requirement| profile_evidence(&index, requirement))
-        .collect::<RunnerResult<Vec<_>>>()?;
-    let one_million_cases = expected_one_million_cases(manifest)?
-        .into_iter()
-        .flat_map(|(matrix, cases)| {
-            cases
-                .into_iter()
-                .map(move |case_id| (matrix.clone(), case_id))
-        })
-        .map(|(matrix, case_id)| {
-            scale_case_evidence(
-                root,
-                retained_runs,
-                &matrix,
-                &case_id,
-                contract.one_million_node_threshold,
-            )
-        })
-        .collect::<RunnerResult<Vec<_>>>()?;
-    Ok(ScaleArchiveEvidence {
-        schema_version: index["schema_version"].as_str().unwrap_or_default().into(),
-        source_index_sha256: sha256_file(root, &contract.source_index)?,
-        gate_status: index
-            .pointer("/gate/status")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .into(),
-        retained_run_count: retained_runs.len(),
-        failed_run_count: failed_runs.len(),
-        resolved_failure_count,
-        unresolved_failure_count,
-        profiles,
-        one_million_cases,
-    })
-}
-
-fn profile_evidence(
-    index: &Value,
-    requirement: &ProfileRequirement,
-) -> RunnerResult<ProfileEvidence> {
-    let summary = array_at(index, "/profile_coverage_summaries")?
-        .iter()
-        .find(|item| item["profile"].as_str() == Some(&requirement.profile))
-        .ok_or_else(|| format!("profile index misses {}", requirement.profile))?;
-    let evidence = ProfileEvidence {
-        profile: requirement.profile.clone(),
-        expected_case_count: usize_at(summary, "/expected_case_count")?,
-        covered_case_count: usize_at(summary, "/covered_case_count")?,
-        missing_case_count: usize_at(summary, "/missing_case_count")?,
-        scale_qualified_covered_case_count: usize_at(
-            summary,
-            "/scale_qualified_covered_case_count",
-        )?,
-        below_scale_threshold_case_count: usize_at(summary, "/below_scale_threshold_case_count")?,
-    };
-    if evidence.expected_case_count != requirement.expected_case_count
-        || evidence.covered_case_count != requirement.expected_case_count
-        || evidence.missing_case_count != 0
-        || evidence.below_scale_threshold_case_count != 0
-        || (requirement.require_scale_qualified
-            && evidence.scale_qualified_covered_case_count != requirement.expected_case_count)
-    {
-        return Err(format!("profile {} is not qualified", requirement.profile));
-    }
-    Ok(evidence)
-}
-
-fn scale_case_evidence(
-    root: &Path,
-    runs: &[Value],
-    matrix: &str,
-    case_id: &str,
-    threshold: usize,
-) -> RunnerResult<ScaleCaseEvidence> {
-    let mut candidates = runs
-        .iter()
-        .filter(|run| {
-            run["profile"].as_str() == Some("one_million")
-                && run["matrix"].as_str() == Some(matrix)
-                && run["case_shapes"].as_array().is_some_and(|shapes| {
-                    shapes.iter().any(|shape| {
-                        shape["id"].as_str() == Some(case_id)
-                            && shape["node_count"].as_u64().unwrap_or(0) >= threshold as u64
-                    })
-                })
-        })
-        .collect::<Vec<_>>();
-    candidates.sort_by_key(|run| {
-        (
-            run["case_count"].as_u64() == Some(1),
-            run["generated_at_unix_s"].as_u64().unwrap_or(0),
-        )
-    });
-    let run = candidates
-        .pop()
-        .ok_or_else(|| format!("missing qualified 1M case {matrix}/{case_id}"))?;
-    let shape = run["case_shapes"]
-        .as_array()
-        .and_then(|items| {
-            items
-                .iter()
-                .find(|shape| shape["id"].as_str() == Some(case_id))
-        })
-        .ok_or_else(|| format!("missing 1M shape {matrix}/{case_id}"))?;
-    let summary_path = run
-        .pointer("/files/summary_json")
-        .and_then(Value::as_str)
-        .ok_or_else(|| format!("missing summary path for {matrix}/{case_id}"))?;
-    let summary: Value = read_json(root, &format!("tmp/benchmark-profile/{summary_path}"))?;
-    Ok(ScaleCaseEvidence {
-        matrix: matrix.into(),
-        case_id: case_id.into(),
-        node_count: usize_at(shape, "/node_count")?,
-        element_count: usize_at(shape, "/element_count")?,
-        dof_count: usize_at(shape, "/dof_count")?,
-        source_slug: run["slug"].as_str().unwrap_or_default().into(),
-        run_case_count: usize_at(run, "/case_count")?,
-        run_repeat: usize_at(&summary, "/repeat")?,
-        run_total_median_ms: number_at(run, "/total_median_ms")?,
-        run_peak_rss_mib: number_at(run, "/peak_rss_mib")?,
-    })
+    let mut archive = retained.scale_archive;
+    archive.retained_report_path = contract.retained_scale_report.clone();
+    archive.retained_report_sha256 = sha256_file(root, &contract.retained_scale_report)?;
+    validation::validate_scale_archive(root, contract, manifest, &archive)?;
+    Ok(archive)
 }
 
 fn collect_direct_mesh(
@@ -675,6 +561,8 @@ fn run_self_test(
     let scale_archive = ScaleArchiveEvidence {
         schema_version: "kyuubiki.benchmark-profile-index/v1".into(),
         source_index_sha256: "0".repeat(64),
+        retained_report_path: contract.retained_scale_report.clone(),
+        retained_report_sha256: sha256_file(root, &contract.retained_scale_report)?,
         gate_status: "pass".into(),
         retained_run_count: contract.min_retained_runs,
         failed_run_count: contract.min_resolved_failures,
@@ -712,6 +600,12 @@ fn run_self_test(
         limitations: LIMITATIONS.iter().map(|value| (*value).into()).collect(),
     };
     validate_report(root, contract, manifest, &report)?;
+    let retained_report_sha256 = report.scale_archive.retained_report_sha256.clone();
+    report.scale_archive.retained_report_sha256 = "0".repeat(64);
+    if validate_report(root, contract, manifest, &report).is_ok() {
+        return Err("self-test accepted a tampered retained scale report digest".into());
+    }
+    report.scale_archive.retained_report_sha256 = retained_report_sha256;
     report.scale_archive.one_million_cases[0].node_count -= 1;
     if validate_report(root, contract, manifest, &report).is_ok() {
         return Err("self-test accepted a below-threshold 1M case".into());

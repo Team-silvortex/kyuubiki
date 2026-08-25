@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Current release execution, retained remote 500k and 1M scale coverage, direct-mesh repetition, and resolved benchmark failures qualify the native Agent, solver engine, and verification evidence benchmark surfaces.",
+  "summary": "Current release execution, retained remote 500k and 1M scale coverage, direct-mesh repetition, and resolved benchmark failures qualify the native Agent, solver engine, Protocol TaskIR and workflow graph paths, Rust Headless manifest, and verification evidence benchmark surfaces.",
   "paradigm_contract_evidence": {
     "benchmark": [
       {
@@ -9,6 +9,8 @@
         "modules": [
           "runtime-agent-cli",
           "runtime-engine-solver",
+          "runtime-protocol",
+          "sdk-headless",
           "verification-evidence"
         ],
         "files": [
@@ -19,18 +21,70 @@
           "workers/rust/crates/script-runner/src/benchmark_qualification/validation.rs"
         ],
         "required_text": [
-          "kyuubiki.benchmark-qualification-contract/v1",
-          "kyuubiki.benchmark-qualification-report/v1",
+          "kyuubiki.benchmark-qualification-contract/v2",
+          "kyuubiki.benchmark-qualification-report/v2",
           "benchmark-release",
           "one_million_node_threshold",
           "min_resolved_failures",
           "validate_scale_archive",
           "direct mesh comparator self-check"
         ]
+      },
+      {
+        "id": "orchestra-benchmark-qualification-contract",
+        "modules": [
+          "orchestra-control-plane"
+        ],
+        "files": [
+          "config/architecture/orchestra-benchmark-qualification.json",
+          "schemas/orchestra-benchmark-qualification-contract.schema.json",
+          "schemas/orchestra-benchmark-qualification-report.schema.json",
+          "workers/rust/crates/script-runner/src/orchestra_benchmark_qualification.rs"
+        ],
+        "required_text": [
+          "kyuubiki.orchestra-benchmark-qualification-contract/v1",
+          "kyuubiki.orchestra-benchmark-qualification-report/v1",
+          "orchestra-control-plane",
+          "workflow-large-graph-benchmark.exs",
+          "semantic_sha256",
+          "stable_semantics"
+        ]
       }
     ]
   },
   "evidence_claims": [
+    {
+      "id": "orchestra-large-graph-benchmark-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "orchestra-control-plane"
+      ],
+      "paradigms": [
+        "benchmark"
+      ],
+      "dimensions": [
+        "execution",
+        "benchmark",
+        "contract"
+      ],
+      "files": [
+        "config/architecture/orchestra-benchmark-qualification.json",
+        "scripts/workflow-large-graph-benchmark.exs",
+        "apps/web/test/support/workflow_large_graph_benchmark.exs",
+        "workers/rust/crates/script-runner/src/orchestra_benchmark_qualification.rs",
+        "releases/usability-evidence/2.15.0/orchestra-benchmark-qualification.json"
+      ],
+      "required_text": [
+        "orchestra-control-plane",
+        "auto-compact",
+        "\"round_count\":3",
+        "\"case_count\":9",
+        "\"largest_pass_through_count\":1024",
+        "\"stable_semantics\":true",
+        "catastrophic-regression guards"
+      ]
+    },
     {
       "id": "native-agent-benchmark-qualification",
       "status": "proven",
@@ -48,7 +102,7 @@
         "contract"
       ],
       "files": [
-        "releases/usability-evidence/2.14.3/benchmark-qualification.json"
+        "releases/usability-evidence/2.15.0/benchmark-qualification.json"
       ],
       "required_text": [
         "kyuubiki-script-runner benchmark-release",
@@ -73,7 +127,7 @@
         "benchmark"
       ],
       "files": [
-        "releases/usability-evidence/2.14.3/benchmark-qualification.json"
+        "releases/usability-evidence/2.15.0/benchmark-qualification.json"
       ],
       "required_text": [
         "current-release-engine-axial",
@@ -83,6 +137,71 @@
         "\"covered_case_count\":39",
         "\"one_million_case_count\":39",
         "\"one_million_matrix_count\":6"
+      ]
+    },
+    {
+      "id": "protocol-hot-path-benchmark-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "runtime-protocol"
+      ],
+      "paradigms": [
+        "benchmark"
+      ],
+      "dimensions": [
+        "execution",
+        "benchmark",
+        "contract"
+      ],
+      "files": [
+        "config/architecture/benchmark-qualification.json",
+        "workers/rust/crates/benchmark/src/protocol_cases.rs",
+        "workers/rust/crates/benchmark/src/runner.rs",
+        "workers/rust/crates/protocol/src/operator_task_ir.rs",
+        "workers/rust/crates/protocol/src/workflow.rs",
+        "releases/usability-evidence/2.15.0/benchmark-qualification.json"
+      ],
+      "required_text": [
+        "current-release-protocol-task-ir",
+        "current-release-protocol-workflow",
+        "operator-task-ir-preview",
+        "workflow-graph-roundtrip",
+        "protocol_operator_task_ir",
+        "protocol_workflow_graph",
+        "\"repeat\":1000",
+        "\"node_count\":11",
+        "\"node_count\":5"
+      ]
+    },
+    {
+      "id": "rust-headless-manifest-benchmark-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "benchmark"
+      ],
+      "dimensions": [
+        "execution",
+        "benchmark",
+        "contract"
+      ],
+      "files": [
+        "config/architecture/benchmark-qualification.json",
+        "workers/rust/crates/benchmark/src/headless_cases.rs",
+        "workers/rust/crates/benchmark/src/runner.rs",
+        "releases/usability-evidence/2.15.0/benchmark-qualification.json"
+      ],
+      "required_text": [
+        "current-release-headless-manifest",
+        "direct-fem-manifest",
+        "headless_sdk_direct_fem",
+        "\"repeat\":1000",
+        "\"matrix\":\"headless-sdk\"",
+        "\"node_count\":49"
       ]
     },
     {
@@ -101,7 +220,7 @@
         "contract"
       ],
       "files": [
-        "releases/usability-evidence/2.14.3/benchmark-qualification.json"
+        "releases/usability-evidence/2.15.0/benchmark-qualification.json"
       ],
       "required_text": [
         "kyuubiki.benchmark-profile-index/v1",

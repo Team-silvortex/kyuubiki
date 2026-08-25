@@ -1,0 +1,45 @@
+{
+  "$schema": "../../schemas/orchestra-benchmark-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.orchestra-benchmark-qualification-contract/v1",
+  "report_schema": "kyuubiki.orchestra-benchmark-qualification-report/v1",
+  "required_module": "orchestra-control-plane",
+  "rounds": 3,
+  "runner": {
+    "program": "mix",
+    "cwd": "apps/web",
+    "environment": "test",
+    "args_prefix": ["run", "../../scripts/workflow-large-graph-benchmark.exs"]
+  },
+  "cases": [
+    {
+      "pass_through_count": 256,
+      "expected_completed_nodes": 261,
+      "response_mode": "auto-compact",
+      "max_elapsed_ms": 5000
+    },
+    {
+      "pass_through_count": 512,
+      "expected_completed_nodes": 517,
+      "response_mode": "auto-compact",
+      "max_elapsed_ms": 5000
+    },
+    {
+      "pass_through_count": 1024,
+      "expected_completed_nodes": 1029,
+      "response_mode": "auto-compact",
+      "max_elapsed_ms": 5000
+    }
+  ],
+  "source_files": [
+    "config/architecture/orchestra-benchmark-qualification.json",
+    "schemas/orchestra-benchmark-qualification-contract.schema.json",
+    "schemas/orchestra-benchmark-qualification-report.schema.json",
+    "scripts/workflow-large-graph-benchmark.exs",
+    "apps/web/test/support/workflow_large_graph_benchmark.exs",
+    "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
+    "apps/web/lib/kyuubiki_web/workflow_graph_runner_metrics.ex",
+    "apps/web/lib/kyuubiki_web/workflow_graph_scheduler.ex",
+    "apps/web/lib/kyuubiki_web/workflow_graph_response.ex",
+    "workers/rust/crates/script-runner/src/orchestra_benchmark_qualification.rs"
+  ]
+}

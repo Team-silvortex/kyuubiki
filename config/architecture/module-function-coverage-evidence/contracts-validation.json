@@ -26,6 +26,37 @@
   },
   "evidence_claims": [
     {
+      "id": "contracts-workflow-composition-repeatable-qualification",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": [
+        "contracts"
+      ],
+      "paradigms": [
+        "workflow_composition"
+      ],
+      "dimensions": [
+        "execution",
+        "contract"
+      ],
+      "files": [
+        "config/architecture/contracts-validation-qualification.json",
+        "schemas/contracts-validation-qualification-report.schema.json",
+        "workers/rust/crates/script-runner/src/contracts_validation_qualification.rs",
+        "workers/rust/crates/script-runner/src/workflow_dataset_contract.rs",
+        "releases/usability-evidence/2.13.9/contracts-validation-qualification.json"
+      ],
+      "required_text": [
+        "workflow-dataset-valid",
+        "workflow-dataset-duplicate-rejected",
+        "valid-repository-fixture",
+        "duplicate-dataset-value-id",
+        "\"id\":\"workflow-dataset\",\"status\":\"pass\"",
+        "\"round_count\":28",
+        "\"stable_check_count\":14"
+      ]
+    },
+    {
       "id": "contracts-validation-repeatable-qualification",
       "status": "proven",
       "grade": "qualified",

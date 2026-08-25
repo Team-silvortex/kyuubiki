@@ -297,7 +297,9 @@ benchmark, test, validation, and limitation evidence.
 The physics-coverage baseline is ready to hand off to the 2.x contract work
 when:
 
-- the `physics-coverage` matrix runs all built-in benchmark templates
+- the `physics-coverage` matrix runs every qualification-lane built-in template,
+  while stability and fixed/adaptive material integration remain reachable
+  through their dedicated matrices
 - each `physics-coverage` solver family has a matching headless workflow solve
   operator
 - each `physics-coverage` benchmark payload can execute through that headless

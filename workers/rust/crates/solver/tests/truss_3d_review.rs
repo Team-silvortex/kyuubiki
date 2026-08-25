@@ -123,6 +123,7 @@ fn loaded_node_internal_force(
     (force_x, force_y, force_z)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn node(
     id: &str,
     x: f64,

@@ -107,6 +107,7 @@ fn truss_3d_request() -> SolveTruss3dRequest {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn truss_3d_node(
     id: &str,
     x: f64,

@@ -5,6 +5,7 @@ use kyuubiki_protocol::{
 };
 use std::collections::BTreeMap;
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn run_solver_summary_json_graph(
     workflow_id: &str,
     workflow_name: &str,

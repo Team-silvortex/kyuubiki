@@ -91,6 +91,8 @@ help:
 	@echo "  make qualify-headless-sdk-validation Run Rust/Python/Elixir Headless SDK validation qualification"
 	@echo "  make qualify-benchmark Qualify current release runs plus retained 500k/1M and direct-mesh evidence"
 	@echo "  make check-benchmark-qualification Recheck retained benchmark qualification evidence"
+	@echo "  make qualify-orchestra-benchmark Qualify repeatable 256/512/1024-node Orchestra workflow graphs"
+	@echo "  make check-orchestra-benchmark-qualification Recheck retained Orchestra benchmark evidence"
 	@echo "  make qualify-headless-sdk-operational-remote Qualify installed Rust Headless SDK on remote Linux"
 	@echo "  make check-headless-sdk-operational-qualification Verify retained installed Headless SDK evidence"
 	@echo "  make qualify-operator-sdk-multihost-operational-remote Qualify the Rust Operator SDK on local macOS and remote Linux"

@@ -105,7 +105,7 @@ mod tests {
     fn default_catalog_spec_covers_all_profiles() {
         let spec = default_catalog_spec();
 
-        assert_eq!(spec.templates.len(), 42);
+        assert_eq!(spec.templates.len(), 44);
         assert!(spec.matrices.len() >= 10);
         assert_eq!(spec.profiles.len(), 12);
         assert!(spec
@@ -306,6 +306,34 @@ mod tests {
     fn physics_coverage_matrix_runs_all_declared_builtin_templates() {
         let spec = default_catalog_spec();
         let cases = benchmark_cases(BenchmarkProfile::Medium, "physics-coverage");
+        let coverage = spec
+            .matrices
+            .iter()
+            .find(|matrix| matrix.name == "physics-coverage")
+            .expect("physics-coverage matrix should exist");
+        let coverage_stems = coverage
+            .template_stems
+            .iter()
+            .map(String::as_str)
+            .collect::<HashSet<_>>();
+        let missing = spec
+            .templates
+            .iter()
+            .filter(|template| !coverage_stems.contains(template.stem.as_str()))
+            .map(|template| template.stem.as_str())
+            .collect::<HashSet<_>>();
+        let expected_missing = ["stability-screening", "material-integration"]
+            .into_iter()
+            .flat_map(|name| {
+                spec.matrices
+                    .iter()
+                    .find(|matrix| matrix.name == name)
+                    .unwrap_or_else(|| panic!("{name} matrix should exist"))
+                    .template_stems
+                    .iter()
+                    .map(String::as_str)
+            })
+            .collect::<HashSet<_>>();
         let selected = cases.iter().collect::<Vec<_>>();
         let report = crate::runner::build_report(
             &selected,
@@ -315,9 +343,10 @@ mod tests {
             "jacobi",
         );
 
-        // Linear buckling and both precritical stability paths stay in their screening lane.
-        assert_eq!(cases.len(), spec.templates.len() - 4);
-        assert_eq!(report.cases.len(), spec.templates.len() - 4);
+        assert_eq!(missing, expected_missing);
+        assert_eq!(coverage_stems.len(), coverage.template_stems.len());
+        assert_eq!(cases.len(), coverage.template_stems.len());
+        assert_eq!(report.cases.len(), coverage.template_stems.len());
         assert!(report.cases.iter().all(|case| case.ok));
         assert!(report.cases.iter().any(|case| case.family == "frame_3d"));
         assert!(report
@@ -414,10 +443,10 @@ mod tests {
         let missing = cases
             .iter()
             .map(|case| {
-                let operator_id = workflow_operator_id_for_family(case.family);
+                let (operator_id, _) = crate::workflow_payloads::workflow_payload_for_case(case);
                 (case.family, operator_id)
             })
-            .filter(|(_, operator_id)| !supported.contains(operator_id.as_str()))
+            .filter(|(_, operator_id)| !supported.contains(*operator_id))
             .map(|(family, operator_id)| format!("{family} -> {operator_id}"))
             .collect::<Vec<_>>();
 
@@ -473,15 +502,6 @@ mod tests {
                 cases.iter().all(|case| case.id.ends_with("-200k")),
                 "{matrix} should keep the 200k case suffix"
             );
-        }
-    }
-
-    fn workflow_operator_id_for_family(family: &str) -> String {
-        match family {
-            "axial_bar_1d" => "solve.bar_1d".to_string(),
-            "stokes_flow_plane_quad_2d" => "solve.stokes_flow_quad_2d".to_string(),
-            "stokes_flow_plane_triangle_2d" => "solve.stokes_flow_triangle_2d".to_string(),
-            other => format!("solve.{other}"),
         }
     }
 

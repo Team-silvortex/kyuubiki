@@ -73,6 +73,33 @@ fn runs_transform_operator_through_sdk_registry() {
 }
 
 #[test]
+fn sdk_registry_recovers_after_failed_workflow_extension_dispatch() {
+    let error = run_transform_operator(
+        "transform.missing_extension",
+        serde_json::Value::Null,
+        serde_json::Value::Null,
+    )
+    .expect_err("an unknown workflow extension must be rejected");
+    assert!(error.contains("unsupported transform operator"));
+
+    let recovered = run_transform_operator(
+        "transform.compare_summary_pair",
+        serde_json::json!({
+            "left": { "max_temperature": 20.0 },
+            "right": { "max_temperature": 25.0 }
+        }),
+        serde_json::json!({
+            "left_prefix": "baseline",
+            "right_prefix": "candidate",
+            "delta_prefix": "delta"
+        }),
+    )
+    .expect("a failed dispatch must not poison later SDK operator execution");
+
+    assert_eq!(recovered["delta_max_temperature"].as_f64(), Some(5.0));
+}
+
+#[test]
 fn runs_magnetostatic_guard_and_benchmark_transforms_through_sdk_registry() {
     let guard = run_transform_operator(
         "transform.evaluate_magnetostatic_guard",

@@ -32,7 +32,7 @@ fn spring_2d_review_bundle_checks_grid_supports_member_extensions_and_diagonal_f
     assert_close(loaded.ux, 0.050_943_396_226_415_1);
     assert_close(loaded.uy, -0.037_735_849_056_603_77);
     assert_close(result.max_displacement, 0.063_397_349_495_892_24);
-    assert_close(result.max_force, 1120.754_716_981_132);
+    assert_close(result.max_force, 1_120.754_716_981_132);
     assert!(result.total_strain_energy > 0.0);
 
     let right = &result.elements[1];
@@ -42,7 +42,7 @@ fn spring_2d_review_bundle_checks_grid_supports_member_extensions_and_diagonal_f
     assert_close(top.length, 1.0);
     assert_close(diagonal.length, 2.0_f64.sqrt());
     assert_close(right.force, -679.245_283_018_867_9);
-    assert_close(top.force, 1120.754_716_981_132);
+    assert_close(top.force, 1_120.754_716_981_132);
     assert_close(diagonal.force, 112.069_753_999_377_37);
     assert_close(right.extension, right.force / 18_000.0);
     assert_close(top.extension, top.force / 22_000.0);

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/orchestra-benchmark-qualification-contract.schema.json",
+  "title": "Kyuubiki Orchestra Benchmark Qualification Contract",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "report_schema",
+    "required_module",
+    "rounds",
+    "runner",
+    "cases",
+    "source_files"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.orchestra-benchmark-qualification-contract/v1"
+    },
+    "report_schema": {
+      "const": "kyuubiki.orchestra-benchmark-qualification-report/v1"
+    },
+    "required_module": { "const": "orchestra-control-plane" },
+    "rounds": { "type": "integer", "minimum": 2, "maximum": 5 },
+    "runner": {
+      "type": "object",
+      "required": ["program", "cwd", "environment", "args_prefix"],
+      "additionalProperties": false,
+      "properties": {
+        "program": { "const": "mix" },
+        "cwd": { "const": "apps/web" },
+        "environment": { "const": "test" },
+        "args_prefix": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": [
+          "pass_through_count",
+          "expected_completed_nodes",
+          "response_mode",
+          "max_elapsed_ms"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "pass_through_count": { "type": "integer", "minimum": 1 },
+          "expected_completed_nodes": { "type": "integer", "minimum": 1 },
+          "response_mode": { "const": "auto-compact" },
+          "max_elapsed_ms": { "type": "integer", "minimum": 100 }
+        }
+      }
+    },
+    "source_files": {
+      "type": "array",
+      "minItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+      }
+    }
+  }
+}

@@ -213,5 +213,17 @@ pub(crate) fn workload_shape(workload: &BenchmarkWorkload) -> (usize, usize, usi
         BenchmarkWorkload::HeadlessActionManifest | BenchmarkWorkload::DirectFemManifest => {
             (0, 0, 0)
         }
+        BenchmarkWorkload::ProtocolOperatorTaskPreview(task) => {
+            (0, task.as_object().map_or(0, serde_json::Map::len), 0)
+        }
+        BenchmarkWorkload::ProtocolWorkflowRoundTrip(request) => (
+            request.graph.nodes.len(),
+            request.graph.edges.len(),
+            request
+                .graph
+                .dataset_contract
+                .as_ref()
+                .map_or(0, |contract| contract.values.len()),
+        ),
     }
 }

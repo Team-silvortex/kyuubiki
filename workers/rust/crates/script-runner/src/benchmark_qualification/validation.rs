@@ -19,6 +19,8 @@ pub(super) fn validate_contract(
     let expected_modules = [
         "runtime-agent-cli",
         "runtime-engine-solver",
+        "runtime-protocol",
+        "sdk-headless",
         "verification-evidence",
     ]
     .into_iter()
@@ -34,11 +36,11 @@ pub(super) fn validate_contract(
     if manifest.schema_version != "kyuubiki.benchmark-profile-coverage/v1" {
         return Err("benchmark coverage manifest schema drifted".into());
     }
-    for path in contract
-        .source_files
-        .iter()
-        .chain([&contract.coverage_manifest, &contract.direct_mesh_baseline])
-    {
+    for path in contract.source_files.iter().chain([
+        &contract.retained_scale_report,
+        &contract.coverage_manifest,
+        &contract.direct_mesh_baseline,
+    ]) {
         if !repo_path(root, path)?.is_file() {
             return Err(format!(
                 "benchmark qualification source does not exist: {path}"
@@ -93,19 +95,33 @@ pub(super) fn validate_report(
     manifest: &CoverageManifest,
     report: &QualificationReport,
 ) -> RunnerResult<()> {
-    if report.schema_version != REPORT_SCHEMA
-        || report.contract_path != CONTRACT_PATH
-        || report.generated_at_unix_ms == 0
-        || report.status != "passed"
-        || report.platform.os.is_empty()
-        || report.platform.arch.is_empty()
-        || report.source_tree_sha256 != source_tree_digest(root, &contract.source_files)?
-        || report.limitations != LIMITATIONS
-    {
-        return Err("benchmark qualification report header drifted".into());
+    if report.schema_version != REPORT_SCHEMA {
+        return Err("benchmark qualification report schema drifted".into());
+    }
+    if report.contract_path != CONTRACT_PATH {
+        return Err("benchmark qualification report contract path drifted".into());
+    }
+    if report.generated_at_unix_ms == 0 {
+        return Err("benchmark qualification report generation time is invalid".into());
+    }
+    if report.status != "passed" {
+        return Err("benchmark qualification report status drifted".into());
+    }
+    if report.platform.os.is_empty() || report.platform.arch.is_empty() {
+        return Err("benchmark qualification report platform is incomplete".into());
+    }
+    let current_source_digest = source_tree_digest(root, &contract.source_files)?;
+    if report.source_tree_sha256 != current_source_digest {
+        return Err(format!(
+            "benchmark qualification source tree drifted: report {}, current {}",
+            report.source_tree_sha256, current_source_digest
+        ));
+    }
+    if report.limitations != LIMITATIONS {
+        return Err("benchmark qualification report limitations drifted".into());
     }
     validate_current_runs(contract, &report.current_runs)?;
-    validate_scale_archive(contract, manifest, &report.scale_archive)?;
+    validate_scale_archive(root, contract, manifest, &report.scale_archive)?;
     validate_direct_mesh(root, contract, &report.direct_mesh)?;
     let expected = build_summary(
         contract,
@@ -176,13 +192,16 @@ fn valid_timings(case: &CurrentCaseEvidence) -> bool {
         && case.p95_ms <= case.max_ms
 }
 
-fn validate_scale_archive(
+pub(super) fn validate_scale_archive(
+    root: &Path,
     contract: &QualificationContract,
     manifest: &CoverageManifest,
     archive: &ScaleArchiveEvidence,
 ) -> RunnerResult<()> {
     if archive.schema_version != "kyuubiki.benchmark-profile-index/v1"
         || !is_digest(&archive.source_index_sha256)
+        || archive.retained_report_path != contract.retained_scale_report
+        || archive.retained_report_sha256 != sha256_file(root, &contract.retained_scale_report)?
         || archive.gate_status != "pass"
         || archive.retained_run_count < contract.min_retained_runs
         || archive.resolved_failure_count < contract.min_resolved_failures

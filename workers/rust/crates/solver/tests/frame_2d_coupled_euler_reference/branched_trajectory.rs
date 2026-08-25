@@ -186,10 +186,10 @@ fn smallest_symmetric_eigenpair(mut matrix: [[f64; 4]; 4]) -> (f64, [f64; 4]) {
     for _ in 0..64 {
         let mut pivot = (0, 1);
         let mut maximum = 0.0_f64;
-        for row in 0..4 {
-            for column in row + 1..4 {
-                if matrix[row][column].abs() > maximum {
-                    maximum = matrix[row][column].abs();
+        for (row, values) in matrix.iter().enumerate() {
+            for (column, value) in values.iter().enumerate().skip(row + 1) {
+                if value.abs() > maximum {
+                    maximum = value.abs();
                     pivot = (row, column);
                 }
             }
@@ -215,11 +215,11 @@ fn jacobi_rotate(
     let angle = 0.5 * (2.0 * matrix[row][column]).atan2(matrix[column][column] - matrix[row][row]);
     let cosine = angle.cos();
     let sine = angle.sin();
-    for index in 0..4 {
-        let left = matrix[index][row];
-        let right = matrix[index][column];
-        matrix[index][row] = cosine * left - sine * right;
-        matrix[index][column] = sine * left + cosine * right;
+    for values in matrix.iter_mut() {
+        let left = values[row];
+        let right = values[column];
+        values[row] = cosine * left - sine * right;
+        values[column] = sine * left + cosine * right;
     }
     for index in 0..4 {
         let upper = matrix[row][index];

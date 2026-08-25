@@ -138,7 +138,7 @@ fn bending_nodes(divisions: usize, warp_fraction: f64) -> Vec<SolidTetra3dNodeIn
                 let boundary = [i, j, k]
                     .into_iter()
                     .any(|index| index == 0 || index == divisions);
-                if !boundary && !(origin || y_anchor || z_anchor) {
+                if !(boundary || origin || y_anchor || z_anchor) {
                     let steps = [LENGTH, WIDTH, HEIGHT].map(|length| length / divisions as f64);
                     for axis in 0..3 {
                         coordinates[axis] +=

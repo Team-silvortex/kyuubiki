@@ -7,7 +7,7 @@
     "schema_version",
     "report_schema",
     "required_modules",
-    "source_index",
+    "retained_scale_report",
     "coverage_manifest",
     "direct_mesh_baseline",
     "source_files",
@@ -22,18 +22,18 @@
   "properties": {
     "$schema": { "type": "string" },
     "schema_version": {
-      "const": "kyuubiki.benchmark-qualification-contract/v1"
+      "const": "kyuubiki.benchmark-qualification-contract/v2"
     },
     "report_schema": {
-      "const": "kyuubiki.benchmark-qualification-report/v1"
+      "const": "kyuubiki.benchmark-qualification-report/v2"
     },
     "required_modules": {
       "type": "array",
-      "minItems": 3,
+      "minItems": 5,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/id" }
     },
-    "source_index": { "$ref": "#/$defs/repoPath" },
+    "retained_scale_report": { "$ref": "#/$defs/repoPath" },
     "coverage_manifest": { "$ref": "#/$defs/repoPath" },
     "direct_mesh_baseline": { "$ref": "#/$defs/repoPath" },
     "source_files": {

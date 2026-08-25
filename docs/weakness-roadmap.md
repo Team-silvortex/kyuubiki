@@ -27,13 +27,13 @@ Current moxi baseline:
 
 - `gap_count`: `0`
 - `blocking_gap_count`: `0`
-- `maturity_gap_count`: `6`
-- `thin_evidence_count`: `6`
-- `evidence_grade_gap_count`: `8`
-- required cells meeting their grade target: `69 / 77` (`89.6%`)
-- evidence progress toward configured targets: `96.0%`
+- `maturity_gap_count`: `0`
+- `thin_evidence_count`: `0`
+- `evidence_grade_gap_count`: `4`
+- required cells meeting their grade target: `73 / 77` (`94.8%`)
+- evidence progress toward configured targets: `98.7%`
 - release-critical P0 cells meeting target: `51 / 55` (`92.7%`)
-- release-profile P1 cells meeting target: `18 / 22` (`81.8%`)
+- release-profile P1 cells meeting target: `22 / 22` (`100.0%`)
 - `daji 3.0.0` release state: `blocked` by `4` P0 coordinates plus the
   independently controlled external usability release gate
 
@@ -49,29 +49,47 @@ qualified on native macOS aarch64 and physical Linux x86_64, while the P0 group
 has converged on Windows installed external-package operation across SDK,
 Engine, Agent, and Installer. Workbench, Engine, and Headless
 persistence/provenance now meet their local `verified` targets, while Workbench
-and Headless security meet the local `qualified` target. Its P1 group is
-workflow-contract qualification plus focused Orchestra, Protocol, Headless,
-and Operator SDK benchmark evidence. Ordinary lane execution no longer counts
+and Headless security meet the local `qualified` target. Headless manifest
+generation now has a current-line 1000-repeat qualification run. Protocol now
+qualifies TaskIR preview and typed workflow graph round trips with 1000 repeats
+each. Orchestra retains three semantically stable rounds across 256, 512, and
+1024 pass-through graph sizes. Every P1 coordinate now meets its target.
+Operator SDK workflow dispatch now proves same-process recovery after rejecting
+an unknown extension, while the retained dynamic qualification binds tamper
+rejection and Installer lifecycle recovery into the verification coordinate.
+No required coordinate remains maturity-thin.
+The core workflow graph/dataset contract
+now has scoped, repeatable positive and rejection-boundary qualification.
+Ordinary lane execution no longer counts
 as asserted verification, and two native hosts do not imply an untested Windows
 ABI journey.
 
 The earlier Agent, Engine, and verification benchmark qualification remains
 valid. The native current-line route executes a
-10k Engine solve three times under a release build and serializes the 49-route
-direct-FEM manifest 1000 times. The retained remote archive covers all 19
+10k Engine solve three times under a release build, serializes the 49-route
+direct-FEM manifest 1000 times, and exercises both Protocol hot paths 1000
+times. The retained remote archive covers all 19
 expected 500k cases and all 39 expected 1M cases across six matrices, with every
 1M case meeting the one-million-node threshold. It also records 117 retained
 runs and classifies all 10 historical failures as resolved by later success.
 The direct-mesh baseline contributes three repeated Agent journeys and six
-subtest samples through the current native comparator. Evidence lives at
-`releases/usability-evidence/2.14.3/benchmark-qualification.json` and is checked
-by `make check-benchmark-qualification`. Historical scale numbers remain tied
-to their prior Linux hosts; the report explicitly does not make a
-hardware-independent performance guarantee.
+subtest samples through the current native comparator. Current-line evidence
+lives at `releases/usability-evidence/2.15.0/benchmark-qualification.json` and
+is checked by `make check-benchmark-qualification`. Its contract inherits and
+revalidates the retained 500k/1M scale archive from the earlier qualification,
+so a clean checkout does not depend on an untracked `tmp/` index. Historical
+scale numbers remain tied to their prior Linux hosts; the report explicitly
+does not make a hardware-independent performance guarantee.
 
-That retained report does not yet qualify the newly required Orchestra,
-Protocol, Headless, or Operator SDK benchmark coordinates. Each needs a scoped
-contract and repeatable measurement rather than inheriting Engine scale numbers.
+The required Headless and Protocol benchmark coordinates now use scoped
+current-line runs rather than inheriting Engine scale numbers. Orchestra has a
+separate native-controlled qualification at
+`releases/usability-evidence/2.15.0/orchestra-benchmark-qualification.json`.
+It binds the Elixir workload sources by SHA-256, enforces catastrophic-regression
+ceilings, compares timing-independent semantics across three rounds, and is
+rechecked by `make check-orchestra-benchmark-qualification`. Focused Operator
+SDK latency measurement remains useful follow-up work, but it is not a required
+benchmark coordinate in the current Daji release profile.
 
 The Agent portion of `upgrade_and_rollback` now has fresh operational evidence.
 The native controller builds distinct debug and release payloads on the remote

@@ -13,7 +13,7 @@ use kyuubiki_protocol::{
     SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
     SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
     SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
-    SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveTruss2dRequest, SolveTruss3dRequest, WorkflowGraphRunRequest,
 };
 use serde::{Deserialize, Serialize};
 
@@ -72,6 +72,8 @@ pub(crate) enum BenchmarkWorkload {
     StokesFlowPlaneQuad2d(SolveStokesFlowPlaneQuad2dRequest),
     HeadlessActionManifest,
     DirectFemManifest,
+    ProtocolOperatorTaskPreview(serde_json::Value),
+    ProtocolWorkflowRoundTrip(WorkflowGraphRunRequest),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

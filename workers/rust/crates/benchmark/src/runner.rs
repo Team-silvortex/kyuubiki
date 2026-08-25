@@ -2,7 +2,10 @@ use std::time::Instant;
 
 use kyuubiki_engine::{EngineSolveRequest, solve};
 use kyuubiki_headless_sdk::{action_capability_manifest, direct_fem_capability_manifest};
-use kyuubiki_protocol::AnalysisResult;
+use kyuubiki_protocol::{
+    AnalysisResult, WorkflowGraphRunRequest, operator_task_digest_fields,
+    preview_operator_task_execution,
+};
 use kyuubiki_solver::{
     SpdSolveOptions, profile_heat_plane_quad_2d_with_options, profile_truss_2d_with_options,
     solve_beam_1d_with_options, solve_thermal_beam_1d_with_options,
@@ -667,6 +670,42 @@ pub(crate) fn run_case_with_preconditioner(
                         max_displacement = manifest.len() as f64;
                         max_stress = payload.len() as f64;
                     })
+                }
+                BenchmarkWorkload::ProtocolOperatorTaskPreview(task) => {
+                    preview_operator_task_execution(task)
+                        .map_err(|error| error.message)
+                        .and_then(|preview| {
+                            let expected = task
+                                .pointer("/integrity/task_digest")
+                                .and_then(serde_json::Value::as_str)
+                                .ok_or_else(|| "operator task benchmark misses digest".to_string())?;
+                            if preview.task_digest != expected {
+                                return Err("operator task benchmark digest drifted".to_string());
+                            }
+                            node_count = operator_task_digest_fields().len();
+                            element_count = task.as_object().map_or(0, serde_json::Map::len);
+                            dof_count = preview.dispatch_warnings.len();
+                            max_displacement = preview.task_digest.len() as f64;
+                            max_stress = preview.dispatch_route.len() as f64;
+                            Ok(())
+                        })
+                }
+                BenchmarkWorkload::ProtocolWorkflowRoundTrip(request) => {
+                    serde_json::to_vec(request)
+                        .map_err(|error| format!("workflow request serialization failed: {error}"))
+                        .and_then(|payload| {
+                            let decoded = serde_json::from_slice::<WorkflowGraphRunRequest>(&payload)
+                                .map_err(|error| format!("workflow request decode failed: {error}"))?;
+                            if &decoded != request {
+                                return Err("workflow request round-trip drifted".to_string());
+                            }
+                            node_count = decoded.graph.nodes.len();
+                            element_count = decoded.graph.edges.len();
+                            dof_count = decoded.graph.dataset_contract.as_ref().map_or(0, |contract| contract.values.len());
+                            max_displacement = payload.len() as f64;
+                            max_stress = decoded.input_artifacts.len() as f64;
+                            Ok(())
+                        })
                 }
                 _ => unreachable!("thermal structural workloads are handled before main dispatch"),
             }
