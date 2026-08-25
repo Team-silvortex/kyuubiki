@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/operator-sdk-windows-operational-qualification-contract.schema.json",
+  "title": "Kyuubiki Windows Operator SDK Operational Qualification Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "qualification_id",
+    "platform",
+    "required_stages",
+    "source_files",
+    "provenance",
+    "report",
+    "workflow"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.operator-sdk-windows-operational-qualification-contract/v1"
+    },
+    "qualification_id": {
+      "const": "operator-sdk-windows-installed-agent-operational"
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "arch", "abi", "dynamic_library_suffix"],
+      "properties": {
+        "os": { "const": "windows" },
+        "arch": { "const": "x86_64" },
+        "abi": { "const": "msvc" },
+        "dynamic_library_suffix": { "const": ".dll" }
+      }
+    },
+    "required_stages": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "prefixItems": [
+        { "const": "template_tests" },
+        { "const": "strict_preflight" },
+        { "const": "template_cdylib_build" },
+        { "const": "engine_dynamic_host_load" },
+        { "const": "agent_dynamic_host_dispatch" },
+        { "const": "installer_managed_agent_lifecycle" }
+      ],
+      "items": false
+    },
+    "source_files": {
+      "type": "array",
+      "minItems": 12,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/repoPath" }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed_providers", "required_fields"],
+      "properties": {
+        "allowed_providers": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["github-actions", "self-hosted-windows"]
+          }
+        },
+        "required_fields": {
+          "type": "array",
+          "minItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["repository", "commit_sha", "run_id", "runner_id", "workflow_ref"]
+          }
+        }
+      }
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "schema_path",
+        "default_path",
+        "dynamic_smoke_file",
+        "preflight_file"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.operator-sdk-windows-operational-qualification/v1"
+        },
+        "schema_path": { "$ref": "#/$defs/repoPath" },
+        "default_path": { "$ref": "#/$defs/repoPath" },
+        "dynamic_smoke_file": { "const": "operator-sdk-windows-dynamic-smoke.json" },
+        "preflight_file": { "const": "operator-sdk-windows-package-preflight.json" }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "artifact_name", "capture_command"],
+      "properties": {
+        "path": { "$ref": "#/$defs/repoPath" },
+        "artifact_name": { "const": "operator-sdk-windows-operational-evidence" },
+        "capture_command": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    }
+  }
+}

@@ -473,6 +473,8 @@ make operator-package-dynamic-smoke
 make check-operator-package-dynamic-smoke IN=tmp/operator-package-dynamic-smoke.json
 make qualify-operator-sdk-multihost-operational-remote REMOTE=kyuubiki-lab
 make check-operator-sdk-multihost-operational-qualification
+make qualify-operator-sdk-windows-operational
+make check-operator-sdk-windows-operational-qualification
 ```
 
 The JSON schema is `kyuubiki.operator-package-preflight/v1` and includes
@@ -505,7 +507,8 @@ with a fixture at
 [examples.operator-package-dynamic-smoke.json](../schemas/examples.operator-package-dynamic-smoke.json).
 The retained `v3` contract has six ordered stages, ending in
 `installer_managed_agent_lifecycle`. Repository-local paths in retained
-preflight evidence are normalized to project-relative paths.
+preflight evidence are normalized to project-relative paths with portable `/`
+separators on every host.
 
 The multihost target runs that same six-stage contract in an isolated local
 staging root and a unique remote Linux work root, then removes both. Its combined
@@ -514,6 +517,19 @@ package, operator, host-version, and SDK API parity, and records completed and
 deferred platforms separately. Current retained evidence lives under
 `releases/usability-evidence/2.16.4/`; it records macOS and Linux as complete,
 Windows as deferred, and `release_complete: false`.
+
+The Windows lane is a separate native qualification rather than an inferred
+third row in that report. It requires x86_64 Windows with the MSVC ABI, runs all
+six dynamic-package stages, requires a `.dll` entrypoint, binds the dynamic
+smoke and preflight attachments by SHA-256, and records either GitHub Actions or
+explicit self-hosted provenance. The repository workflow
+`.github/workflows/operator-sdk-windows-qualification.yml` can be dispatched
+manually and uploads `operator-sdk-windows-operational-evidence`. A physical
+Windows host can run the same native command after setting the five visible
+`KYUUBIKI_QUALIFICATION_*` provenance variables. Until one of those artifacts
+is reviewed and retained under `releases/usability-evidence/2.15.0/`, the
+Windows operational claim stays open and the four P0 tensor coordinates remain
+blocked.
 - a minimal typed operator in `src/lib.rs`
 - a tiny runnable `src/main.rs`
 - a crate-local smoke test so authors start with a feedback loop immediately

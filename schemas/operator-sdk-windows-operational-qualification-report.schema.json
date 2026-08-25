@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/operator-sdk-windows-operational-qualification-report.schema.json",
+  "title": "Kyuubiki Windows Operator SDK Operational Qualification Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "qualification_id",
+    "generated_at_unix_ms",
+    "status",
+    "source_tree_sha256",
+    "platform",
+    "provenance",
+    "attachments",
+    "summary",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.operator-sdk-windows-operational-qualification/v1"
+    },
+    "qualification_id": {
+      "const": "operator-sdk-windows-installed-agent-operational"
+    },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "status": { "const": "pass" },
+    "source_tree_sha256": { "$ref": "#/$defs/sha256" },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "arch", "abi", "dynamic_library_suffix"],
+      "properties": {
+        "os": { "const": "windows" },
+        "arch": { "const": "x86_64" },
+        "abi": { "const": "msvc" },
+        "dynamic_library_suffix": { "const": ".dll" }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "repository",
+        "commit_sha",
+        "run_id",
+        "runner_id",
+        "workflow_ref"
+      ],
+      "properties": {
+        "provider": { "enum": ["github-actions", "self-hosted-windows"] },
+        "repository": { "type": "string", "minLength": 1 },
+        "commit_sha": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+        },
+        "run_id": { "type": "string", "minLength": 1 },
+        "runner_id": { "type": "string", "minLength": 1 },
+        "workflow_ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "attachments": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dynamic_smoke", "preflight"],
+      "properties": {
+        "dynamic_smoke": { "$ref": "#/$defs/attachment" },
+        "preflight": { "$ref": "#/$defs/attachment" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stage_count",
+        "all_stages_passed",
+        "engine_dynamic_load",
+        "agent_rpc_dispatch",
+        "bound_orchestra_rotation",
+        "tamper_recovery",
+        "installer_managed_lifecycle",
+        "residue_cleanup",
+        "release_complete"
+      ],
+      "properties": {
+        "stage_count": { "const": 6 },
+        "all_stages_passed": { "const": true },
+        "engine_dynamic_load": { "const": true },
+        "agent_rpc_dispatch": { "const": true },
+        "bound_orchestra_rotation": { "const": true },
+        "tamper_recovery": { "const": true },
+        "installer_managed_lifecycle": { "const": true },
+        "residue_cleanup": { "const": true },
+        "release_complete": { "const": true }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "attachment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/repoPath" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

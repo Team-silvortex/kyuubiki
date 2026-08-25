@@ -619,6 +619,8 @@ Current weak point:
   residue-free cleanup
 - the remaining third-party gap is native Windows installed-package operation;
   macOS/Linux evidence does not imply Windows ABI compatibility
+- the native Windows contract, strict validator, and `windows-latest` artifact
+  workflow now exist; the gap remains open until a real report is retained
 
 Current moxi hardening focus:
 
@@ -629,7 +631,7 @@ Current moxi hardening focus:
 
 Qualification focus:
 
-- retain the five-stage external-local qualification from authoring through
+- retain the six-stage external-local qualification from authoring through
   Agent dispatch, tamper rejection, and recovery
 - retain Installer-managed activation/removal and bound-Orchestra pull without
   copying the complete central library to every Agent
@@ -638,7 +640,9 @@ Qualification focus:
 - retain the macOS/Linux multihost report and its four SHA-256-bound child
   attachments under `releases/usability-evidence/2.16.4/`
 - promote the same package journey through native Windows installed-package
-  evidence rather than inheriting macOS/Linux dynamic-smoke results
+  evidence rather than inheriting macOS/Linux dynamic-smoke results; use
+  `make qualify-operator-sdk-windows-operational` on Windows and retain the
+  uploaded three-file evidence set
 - add operator package compatibility fixtures for future SDK API changes
 
 Moxi readiness standard:

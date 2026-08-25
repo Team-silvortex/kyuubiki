@@ -1,0 +1,55 @@
+{
+  "$schema": "../../schemas/operator-sdk-windows-operational-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.operator-sdk-windows-operational-qualification-contract/v1",
+  "qualification_id": "operator-sdk-windows-installed-agent-operational",
+  "platform": {
+    "os": "windows",
+    "arch": "x86_64",
+    "abi": "msvc",
+    "dynamic_library_suffix": ".dll"
+  },
+  "required_stages": [
+    "template_tests",
+    "strict_preflight",
+    "template_cdylib_build",
+    "engine_dynamic_host_load",
+    "agent_dynamic_host_dispatch",
+    "installer_managed_agent_lifecycle"
+  ],
+  "source_files": [
+    ".github/workflows/operator-sdk-windows-qualification.yml",
+    "config/architecture/operator-sdk-windows-operational-qualification.json",
+    "schemas/operator-package-dynamic-smoke.schema.json",
+    "schemas/operator-sdk-windows-operational-qualification-contract.schema.json",
+    "schemas/operator-sdk-windows-operational-qualification-report.schema.json",
+    "workers/rust/crates/cli/tests/operator_package_installer_live.rs",
+    "workers/rust/crates/cli/tests/operator_package_live.rs",
+    "workers/rust/crates/cli/tests/operator_package_orchestra_fetch_live.rs",
+    "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
+    "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke/check.rs",
+    "workers/rust/crates/script-runner/src/operator_sdk_windows_qualification.rs",
+    "workers/rust/crates/script-runner/src/operator_sdk_windows_qualification/validation.rs"
+  ],
+  "provenance": {
+    "allowed_providers": ["github-actions", "self-hosted-windows"],
+    "required_fields": [
+      "repository",
+      "commit_sha",
+      "run_id",
+      "runner_id",
+      "workflow_ref"
+    ]
+  },
+  "report": {
+    "schema_version": "kyuubiki.operator-sdk-windows-operational-qualification/v1",
+    "schema_path": "schemas/operator-sdk-windows-operational-qualification-report.schema.json",
+    "default_path": "releases/usability-evidence/2.15.0/operator-sdk-windows-installed-agent-operational-qualification.json",
+    "dynamic_smoke_file": "operator-sdk-windows-dynamic-smoke.json",
+    "preflight_file": "operator-sdk-windows-package-preflight.json"
+  },
+  "workflow": {
+    "path": ".github/workflows/operator-sdk-windows-qualification.yml",
+    "artifact_name": "operator-sdk-windows-operational-evidence",
+    "capture_command": "cargo run --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-script-runner -- qualify-operator-sdk-windows-operational"
+  }
+}

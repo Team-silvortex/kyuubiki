@@ -484,7 +484,7 @@ fn normalize_repo_paths(value: &mut Value, root: &Path) {
                     && let Some(path) = value.as_str()
                     && let Ok(relative) = Path::new(path).strip_prefix(root)
                 {
-                    *value = Value::String(relative.to_string_lossy().to_string());
+                    *value = Value::String(portable_path_text(relative));
                     continue;
                 }
                 normalize_repo_paths(value, root);
@@ -508,11 +508,11 @@ fn repo_relative(paths: &RepoPaths, path: &Path) -> String {
     } else {
         paths.root.join(path)
     };
-    absolute
-        .strip_prefix(&paths.root)
-        .unwrap_or(&absolute)
-        .to_string_lossy()
-        .to_string()
+    portable_path_text(absolute.strip_prefix(&paths.root).unwrap_or(&absolute))
+}
+
+fn portable_path_text(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
 }
 
 fn relative_to(paths: &RepoPaths, base: &Path, path: &Path) -> String {
@@ -555,7 +555,7 @@ fn relative_to(paths: &RepoPaths, base: &Path, path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::normalize_repo_paths;
+    use super::{normalize_repo_paths, portable_path_text};
     use serde_json::json;
     use std::path::Path;
 
@@ -577,5 +577,13 @@ mod tests {
             "workers/rust/templates/example/liboperator.so"
         );
         assert_eq!(report["external_path"], "/outside/package.so");
+    }
+
+    #[test]
+    fn retained_paths_use_portable_separators() {
+        assert_eq!(
+            portable_path_text(Path::new("workers\\rust\\template.dll")),
+            "workers/rust/template.dll"
+        );
     }
 }

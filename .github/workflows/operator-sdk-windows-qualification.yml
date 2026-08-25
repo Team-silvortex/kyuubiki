@@ -1,0 +1,50 @@
+name: Operator SDK Windows Qualification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/operator-sdk-windows-qualification.yml"
+      - "config/architecture/operator-sdk-windows-operational-qualification.json"
+      - "schemas/operator-package-dynamic-smoke.schema.json"
+      - "schemas/operator-sdk-windows-operational-qualification-*.schema.json"
+      - "workers/rust/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: operator-sdk-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    name: windows-x86_64-msvc-installed-agent
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: workers/rust
+      - name: Capture Windows installed-agent evidence
+        run: >-
+          cargo run --locked --manifest-path workers/rust/Cargo.toml
+          -p kyuubiki-script-runner --
+          qualify-operator-sdk-windows-operational
+      - name: Verify retained evidence
+        run: >-
+          cargo run --locked --manifest-path workers/rust/Cargo.toml
+          -p kyuubiki-script-runner --
+          check-operator-sdk-windows-operational-qualification
+          --verify-report
+          releases/usability-evidence/2.15.0/operator-sdk-windows-installed-agent-operational-qualification.json
+      - name: Upload qualification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: operator-sdk-windows-operational-evidence
+          path: releases/usability-evidence/2.15.0/operator-sdk-windows-*.json
+          if-no-files-found: error
+          retention-days: 30

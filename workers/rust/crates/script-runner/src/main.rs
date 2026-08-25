@@ -99,6 +99,7 @@ mod operator_reliability;
 mod operator_reliability_rules;
 mod operator_reliability_schemas;
 mod operator_sdk_multihost_qualification;
+mod operator_sdk_windows_qualification;
 mod operator_task_ir_contract;
 mod operator_validation;
 mod orchestra_benchmark_qualification;
@@ -252,6 +253,12 @@ fn run() -> RunnerResult<u8> {
                 &paths.root,
                 rest,
             )
+        }
+        "qualify-operator-sdk-windows-operational" => {
+            operator_sdk_windows_qualification::run_qualify(&paths, rest)
+        }
+        "check-operator-sdk-windows-operational-qualification" => {
+            operator_sdk_windows_qualification::run_check(&paths.root, rest)
         }
         "check-operator-reliability-rules" => {
             operator_reliability_rules::run_check_operator_reliability_rules(rest)
