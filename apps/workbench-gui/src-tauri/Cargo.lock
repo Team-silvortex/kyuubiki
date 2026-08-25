@@ -1675,7 +1675,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-desktop-runtime"
-version = "2.15.0"
+version = "2.17.0"
 dependencies = [
  "kyuubiki-platform",
  "libc",
@@ -1686,11 +1686,11 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-platform"
-version = "2.15.0"
+version = "2.17.0"
 
 [[package]]
 name = "kyuubiki-workbench-gui"
-version = "2.15.0"
+version = "2.17.0"
 dependencies = [
  "kyuubiki-desktop-runtime",
  "serde",

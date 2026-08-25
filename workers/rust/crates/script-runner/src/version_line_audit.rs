@@ -13,6 +13,7 @@ const DEFAULT_CODENAME: &str = "moxi";
 const VERSION_POLICY_PATH: &str = "config/version-line-policy.json";
 const VERSION_POLICY_SCHEMA: &str = "kyuubiki.version-line-policy/v1";
 const EXACT_VERSION_FILES: &[&str] = &[
+    "assets/brand/brand.json",
     "apps/frontend/package.json",
     "apps/frontend/public/brand.json",
     "apps/hub-gui/package.json",
@@ -27,7 +28,18 @@ const EXACT_VERSION_FILES: &[&str] = &[
     "apps/installer-gui/src-tauri/Cargo.toml",
     "apps/installer-gui/src-tauri/tauri.conf.json",
     "apps/installer-gui/ui/assets/brand.json",
+    "apps/web/mix.exs",
     "workers/rust/Cargo.toml",
+];
+const PACKAGE_LOCK_FILES: &[&str] = &[
+    "apps/frontend/package-lock.json",
+    "apps/hub-gui/package-lock.json",
+    "apps/workbench-gui/package-lock.json",
+    "apps/installer-gui/package-lock.json",
+];
+const ARCHITECTURE_VERSION_LINE_FILES: &[&str] = &[
+    "config/architecture/module-topology.json",
+    "config/architecture/module-function-coverage-matrix.json",
 ];
 
 type RunnerResult<T> = Result<T, String>;
@@ -142,6 +154,14 @@ fn exact_checks(root: &Path, expected: &str, codename: &str) -> RunnerResult<Vec
                 expected,
                 cargo_version(root, file)?,
             ));
+        } else if file.ends_with("mix.exs") {
+            checks.push(check(
+                "version",
+                file,
+                "version",
+                expected,
+                mix_version(root, file)?,
+            ));
         } else {
             checks.push(check(
                 "minor_line",
@@ -151,6 +171,27 @@ fn exact_checks(root: &Path, expected: &str, codename: &str) -> RunnerResult<Vec
                 json_field(root, file, "version")?,
             ));
         }
+    }
+    for file in PACKAGE_LOCK_FILES {
+        let lock = read_json(root, file)?;
+        checks.push(check(
+            "version",
+            file,
+            "version",
+            expected,
+            string_value(&lock, "version"),
+        ));
+        checks.push(check(
+            "root_package_version",
+            file,
+            "packages[\"\"].version",
+            expected,
+            lock.get("packages")
+                .and_then(|packages| packages.get(""))
+                .and_then(|package| package.get("version"))
+                .cloned()
+                .unwrap_or(Value::Null),
+        ));
     }
     let channels = read_json(root, "deploy/update-channels.json")?;
     let contract = read_json(root, "deploy/installation-integrity-contract.json")?;
@@ -218,6 +259,33 @@ fn exact_checks(root: &Path, expected: &str, codename: &str) -> RunnerResult<Vec
         "version",
         &development_minor,
         json_field(root, "docs/ui-automation-contract.json", "version")?,
+    ));
+    let architecture_line = version_display(codename, &development_minor);
+    for file in ARCHITECTURE_VERSION_LINE_FILES {
+        checks.push(check(
+            "architecture_version_line",
+            file,
+            "version_line",
+            &architecture_line,
+            json_field(root, file, "version_line")?,
+        ));
+    }
+    let formal_release_target =
+        json_field(root, "docs/book-manifest.json", "formal_release_target")?;
+    let transition_line = format!(
+        "{architecture_line} -> {}",
+        formal_release_target.as_str().unwrap_or_default()
+    );
+    checks.push(check(
+        "architecture_transition_line",
+        "config/architecture/module-function-coverage-tensor.json",
+        "version_line",
+        &transition_line,
+        json_field(
+            root,
+            "config/architecture/module-function-coverage-tensor.json",
+            "version_line",
+        )?,
     ));
     checks.push(check(
         "shipping_version",
@@ -550,6 +618,23 @@ fn cargo_version(root: &Path, relative: &str) -> RunnerResult<Value> {
     Ok(Value::Null)
 }
 
+fn mix_version(root: &Path, relative: &str) -> RunnerResult<Value> {
+    for line in read_text(root, relative)?.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("version:") {
+            if let Some(version) = last_quoted_value(trimmed) {
+                return Ok(Value::String(version.to_string()));
+            }
+        }
+    }
+    Ok(Value::Null)
+}
+
+fn last_quoted_value(text: &str) -> Option<&str> {
+    let parts = text.split('"').collect::<Vec<_>>();
+    (parts.len() >= 3).then(|| parts[parts.len() - 2])
+}
+
 fn stable_channel_version(channels: &Value) -> Value {
     let default = field(channels, "default_channel");
     let id = if default.is_empty() {
@@ -664,7 +749,7 @@ fn version_display(codename: &str, version: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{contains_todo, version_allowed, version_minor_line};
+    use super::{contains_todo, last_quoted_value, version_allowed, version_minor_line};
     use serde_json::json;
 
     #[test]
@@ -677,6 +762,14 @@ mod tests {
     fn todo_scan_recurses() {
         assert!(contains_todo(&json!({"nested": ["TODO: fill"]})));
         assert!(!contains_todo(&json!({"nested": ["done"]})));
+    }
+
+    #[test]
+    fn mix_version_uses_the_environment_default() {
+        assert_eq!(
+            last_quoted_value(r#"version: System.get_env("KYUUBIKI_RELEASE_VERSION", "2.17.0"),"#),
+            Some("2.17.0")
+        );
     }
 
     #[test]

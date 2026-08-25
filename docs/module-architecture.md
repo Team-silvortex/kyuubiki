@@ -148,10 +148,10 @@ release profile for `daji 3.0.0`, classifies exact coordinates as P0, P1, or
 P2, and imports external release decisions such as the usability release
 claim. Structural `ok` and release readiness are deliberately separate.
 
-During the current `moxi 2.15.x` checkpoint the release profile is advisory.
-At the configured `moxi 2.17.0` enforcement point, changing its gate mode to
-`enforced` makes an unready release profile fail the command instead of merely
-producing a hardening queue.
+The current `moxi 2.17.0` checkpoint has reached the configured enforcement
+decision point. The release profile remains advisory until its gate mode is
+deliberately changed to `enforced`; after that change, an unready profile fails
+the command instead of merely producing a hardening queue.
 
 Validation contract evidence includes both readiness reports and release
 review gates. Operator qualification records, retained review decisions, and
