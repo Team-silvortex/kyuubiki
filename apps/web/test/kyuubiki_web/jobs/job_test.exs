@@ -41,7 +41,7 @@ defmodule KyuubikiWeb.Jobs.JobTest do
         progress: 1.0
       })
 
-    updated = Job.apply_progress(job, progress_event)
+    {:ok, updated} = Job.apply_progress(job, progress_event)
 
     assert updated.status == :completed
     assert updated.progress == 1.0
@@ -68,7 +68,8 @@ defmodule KyuubikiWeb.Jobs.JobTest do
         message: "agent heartbeat: solver still active"
       })
 
-    assert Job.apply_progress(job, heartbeat) == job
+    assert {:error, {:terminal_job_mutation, :failed, :solving}} =
+             Job.apply_progress(job, heartbeat)
   end
 
   test "records separate queue and execution deadlines" do
@@ -102,7 +103,7 @@ defmodule KyuubikiWeb.Jobs.JobTest do
         emitted_at: ~U[2026-08-04 12:01:00.000000Z]
       })
 
-    running = Job.apply_progress(job, event)
+    {:ok, running} = Job.apply_progress(job, event)
 
     assert running.execution_started_at == ~U[2026-08-04 12:01:00.000000Z]
 
@@ -114,5 +115,92 @@ defmodule KyuubikiWeb.Jobs.JobTest do
              "effective_timeout_ms" => 600_000,
              "effective_deadline" => "2026-08-04T12:11:00.000000Z"
            } = Job.status_detail(running)["timing"]
+  end
+
+  test "rejects progress, stage, and timestamp regression" do
+    updated_at = ~U[2026-08-04 12:01:00.000000Z]
+
+    {:ok, job} =
+      Job.new(%{
+        job_id: "job-monotonic",
+        project_id: "project-1",
+        simulation_case_id: "case-1",
+        status: :solving,
+        progress: 0.6,
+        created_at: ~U[2026-08-04 12:00:00.000000Z],
+        updated_at: updated_at
+      })
+
+    {:ok, progress_regression} =
+      ProgressEvent.new(%{
+        job_id: job.job_id,
+        stage: :solving,
+        progress: 0.5,
+        emitted_at: DateTime.add(updated_at, 1, :second)
+      })
+
+    assert {:error, {:progress_regression, 0.6, 0.5}} =
+             Job.apply_progress(job, progress_regression)
+
+    {:ok, stage_regression} =
+      ProgressEvent.new(%{
+        job_id: job.job_id,
+        stage: :partitioning,
+        progress: 0.6,
+        emitted_at: DateTime.add(updated_at, 1, :second)
+      })
+
+    assert {:error, {:stage_regression, :solving, :partitioning}} =
+             Job.apply_progress(job, stage_regression)
+
+    {:ok, stale_event} =
+      ProgressEvent.new(%{
+        job_id: job.job_id,
+        stage: :solving,
+        progress: 0.7,
+        emitted_at: DateTime.add(updated_at, -1, :second)
+      })
+
+    assert {:error, {:stale_progress_event, ^updated_at, _emitted_at}} =
+             Job.apply_progress(job, stale_event)
+  end
+
+  test "validates completion, residual, message, and emitted timestamp contracts" do
+    base = %{job_id: "job-contract", stage: :completed, progress: 0.9}
+
+    assert {:error, :completed_progress_must_equal_one} = ProgressEvent.new(base)
+
+    assert {:error, {:invalid_non_negative_number, :residual}} =
+             ProgressEvent.new(Map.merge(base, %{stage: :solving, residual: -0.1}))
+
+    assert {:error, {:message_too_large, 4_097}} =
+             ProgressEvent.new(
+               Map.merge(base, %{stage: :solving, message: String.duplicate("x", 4_097)})
+             )
+
+    assert {:error, :invalid_emitted_at} =
+             ProgressEvent.new(Map.merge(base, %{stage: :solving, emitted_at: "not-a-time"}))
+
+    assert {:error, {:invalid_non_negative_integer, :iteration}} =
+             ProgressEvent.new(Map.merge(base, %{stage: :solving, iteration: -1}))
+  end
+
+  test "rejects invalid or reversed lifecycle timestamps" do
+    base = %{
+      job_id: "job-time-contract",
+      project_id: "project-1",
+      simulation_case_id: "case-1"
+    }
+
+    assert {:error, {:invalid_datetime, :created_at}} =
+             Job.new(Map.put(base, :created_at, "not-a-time"))
+
+    assert {:error, :updated_at_precedes_created_at} =
+             Job.new(
+               Map.merge(base, %{
+                 created_at: ~U[2026-08-04 12:01:00.000000Z],
+                 updated_at: ~U[2026-08-04 12:00:00.000000Z]
+               })
+             )
   end
 end

@@ -4,12 +4,27 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
   alias KyuubikiWeb.AnalysisJobSupport
   alias KyuubikiWeb.AnalysisResultStore
   alias KyuubikiWeb.FemModelNormalizer
-  alias KyuubikiWeb.Jobs.Store
+  alias KyuubikiWeb.Jobs.{Job, Store}
   alias KyuubikiWeb.ModelArtifactStore
   alias KyuubikiWeb.Playground.AgentClient
 
   @large_model_execution_timeout_ms 1_800_000
   @default_queue_timeout_ms 1_800_000
+  @active_stage_order %{
+    "queued" => 0,
+    "preprocessing" => 1,
+    "partitioning" => 2,
+    "solving" => 3,
+    "postprocessing" => 4
+  }
+  @agent_progress_fields [
+    {"stage", :stage},
+    {"progress", :progress},
+    {"residual", :residual},
+    {"iteration", :iteration},
+    {"peak_memory", :peak_memory},
+    {"message", :message}
+  ]
 
   def submit_axial_bar(params),
     do: submit_solver_job(params, &FemModelNormalizer.normalize_axial_bar/1, "solve_bar_1d")
@@ -450,23 +465,59 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
     :ok
   end
 
-  defp apply_agent_progress(job_id, progress) when is_binary(job_id) and is_map(progress) do
+  @doc false
+  def apply_agent_progress(job_id, progress) when is_binary(job_id) and is_map(progress) do
     case Store.get(job_id) do
       {:ok, %{status: status}} when status in [:completed, :failed, :cancelled] -> :ok
-      {:ok, _job} -> apply_running_progress(job_id, progress)
-      :error -> :ok
+      {:ok, job} -> apply_running_progress(job, progress)
+      :error -> {:error, {:job_not_found, job_id}}
     end
   end
 
-  defp apply_running_progress(job_id, progress) do
+  defp apply_running_progress(%Job{} = job, progress) do
     attrs =
-      progress
-      |> Map.take(["stage", "progress", "residual", "iteration", "peak_memory", "message"])
-      |> Enum.into(%{}, fn {key, value} -> {String.to_atom(key), value} end)
-      |> Map.put(:job_id, job_id)
+      Enum.reduce(@agent_progress_fields, %{job_id: job.job_id}, fn {source, target}, attrs ->
+        case Map.fetch(progress, source) do
+          {:ok, value} -> Map.put(attrs, target, value)
+          :error -> attrs
+        end
+      end)
+      |> project_monotonic_stage(job)
+      |> project_monotonic_progress(job)
 
-    _ = Store.apply_progress(attrs)
-    :ok
+    case Store.apply_progress(attrs) do
+      {:ok, _updated_job} -> :ok
+      {:error, _reason} = error -> error
+    end
+  end
+
+  defp project_monotonic_stage(attrs, job) do
+    current = Atom.to_string(job.status)
+
+    Map.update(attrs, :stage, current, fn
+      "recovering" -> current
+      incoming -> monotonic_active_stage(current, incoming)
+    end)
+  end
+
+  defp monotonic_active_stage(current, incoming) do
+    case {@active_stage_order[current], @active_stage_order[incoming]} do
+      {current_rank, incoming_rank}
+      when is_integer(current_rank) and is_integer(incoming_rank) and
+             incoming_rank < current_rank ->
+        current
+
+      _ ->
+        incoming
+    end
+  end
+
+  defp project_monotonic_progress(attrs, job) do
+    Map.update(attrs, :progress, job.progress, fn
+      value when is_integer(value) -> max(value * 1.0, job.progress)
+      value when is_float(value) -> max(value, job.progress)
+      value -> value
+    end)
   end
 
   defp orchestration_context_from_params(params) when is_map(params) do

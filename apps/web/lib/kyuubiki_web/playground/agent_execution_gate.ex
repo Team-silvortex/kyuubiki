@@ -9,21 +9,31 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
   use GenServer
 
   @default_queue_timeout_ms 120_000
+  @max_lease_id_bytes 128
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
   def acquire(endpoints, lease_id, timeout_ms \\ @default_queue_timeout_ms)
+
+  def acquire(endpoints, lease_id, timeout_ms)
       when is_list(endpoints) and is_binary(lease_id) and is_integer(timeout_ms) and
-             timeout_ms > 0 do
+             timeout_ms > 0 and byte_size(lease_id) > 0 and
+             byte_size(lease_id) <= @max_lease_id_bytes do
     call_timeout = timeout_ms + 2_000
     GenServer.call(__MODULE__, {:acquire, self(), endpoints, lease_id, timeout_ms}, call_timeout)
   end
 
-  def release(lease_id) when is_binary(lease_id) do
-    GenServer.call(__MODULE__, {:release, lease_id})
+  def acquire(_endpoints, _lease_id, _timeout_ms), do: {:error, :invalid_execution_lease}
+
+  def release(lease_id)
+      when is_binary(lease_id) and byte_size(lease_id) > 0 and
+             byte_size(lease_id) <= @max_lease_id_bytes do
+    GenServer.call(__MODULE__, {:release, self(), lease_id})
   end
+
+  def release(_lease_id), do: {:error, :invalid_execution_lease}
 
   def snapshot(endpoints \\ []) when is_list(endpoints) do
     GenServer.call(__MODULE__, {:snapshot, endpoints})
@@ -43,9 +53,8 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
       endpoints == [] ->
         {:reply, {:error, :no_agent_candidates}, state}
 
-      Map.has_key?(state.leases, lease_id) ->
-        lease = Map.fetch!(state.leases, lease_id)
-        {:reply, {:ok, lease.endpoint, queue_metadata(0, 0)}, state}
+      lease_id_in_use?(state, lease_id) ->
+        {:reply, {:error, {:duplicate_execution_lease, lease_id}}, state}
 
       true ->
         case available_endpoint(endpoints, state.leases) do
@@ -55,9 +64,18 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
     end
   end
 
-  def handle_call({:release, lease_id}, _from, state) do
-    state = release_lease(state, lease_id) |> dispatch_waiters()
-    {:reply, :ok, state}
+  def handle_call({:release, pid, lease_id}, _from, state) do
+    case Map.get(state.leases, lease_id) do
+      nil ->
+        {:reply, :ok, state}
+
+      %{pid: ^pid} ->
+        state = release_lease(state, lease_id) |> dispatch_waiters()
+        {:reply, :ok, state}
+
+      _lease ->
+        {:reply, {:error, {:execution_lease_not_owned, lease_id}}, state}
+    end
   end
 
   def handle_call({:snapshot, endpoints}, _from, state) do
@@ -173,6 +191,11 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
   defp available_endpoint(endpoints, leases) do
     counts = active_counts(leases)
     Enum.find(endpoints, &(Map.get(counts, &1.id, 0) < capacity(&1)))
+  end
+
+  defp lease_id_in_use?(state, lease_id) do
+    Map.has_key?(state.leases, lease_id) or
+      Enum.any?(state.waiters, &(&1.lease_id == lease_id))
   end
 
   defp active_counts(leases) do

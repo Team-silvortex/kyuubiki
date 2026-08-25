@@ -184,6 +184,21 @@ fn rejects_progress_regression_and_terminal_job_mutation() {
 }
 
 #[test]
+fn rejects_active_stage_regression_without_mutating_job() {
+    let mut job = Job::new("job-stage-order", "project-1", "case-1");
+    job.status = JobStatus::Solving;
+    job.progress = 0.5;
+
+    let event = ProgressEvent::new("job-stage-order", JobStatus::Partitioning, 0.5);
+    assert_eq!(
+        job.apply_progress(&event).unwrap_err().code,
+        crate::ProgressValidationErrorCode::StageRegression
+    );
+    assert_eq!(job.status, JobStatus::Solving);
+    assert_eq!(job.progress, 0.5);
+}
+
+#[test]
 fn serializes_operator_descriptor_round_trip() {
     let descriptor = OperatorDescriptor {
         id: "solve.frame_3d".to_string(),

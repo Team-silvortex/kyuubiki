@@ -88,7 +88,7 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
     with {:ok, event} <- ProgressEvent.new(attrs),
          %JobRecord{} = record <- repo_get(JobRecord, event.job_id),
          {:ok, job} <- repo_record_to_job(record),
-         updated_job <- Job.apply_progress(job, event),
+         {:ok, updated_job} <- Job.apply_progress(job, event),
          {:ok, _record} <- update_record(updated_job) do
       {:ok, updated_job}
     else

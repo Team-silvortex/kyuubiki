@@ -12,6 +12,7 @@ pub enum ProgressValidationErrorCode {
     InvalidResidual,
     InvalidMessage,
     ProgressRegression,
+    StageRegression,
     TerminalJobMutation,
 }
 
@@ -45,6 +46,17 @@ impl JobStatus {
             Self::Completed => "completed",
             Self::Failed => "failed",
             Self::Cancelled => "cancelled",
+        }
+    }
+
+    fn active_rank(self) -> Option<u8> {
+        match self {
+            Self::Queued => Some(0),
+            Self::Preprocessing => Some(1),
+            Self::Partitioning => Some(2),
+            Self::Solving => Some(3),
+            Self::Postprocessing => Some(4),
+            Self::Completed | Self::Failed | Self::Cancelled => None,
         }
     }
 }
@@ -105,6 +117,21 @@ impl Job {
                 format!(
                     "progress cannot move backwards from {} to {}",
                     self.progress, event.progress
+                ),
+            ));
+        }
+        if event
+            .stage
+            .active_rank()
+            .zip(self.status.active_rank())
+            .is_some_and(|(next_rank, current_rank)| next_rank < current_rank)
+        {
+            return Err(progress_error(
+                ProgressValidationErrorCode::StageRegression,
+                format!(
+                    "job stage cannot move backwards from {} to {}",
+                    self.status.as_str(),
+                    event.stage.as_str()
                 ),
             ));
         }

@@ -52,4 +52,65 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGateTest do
 
     assert :ok = AgentExecutionGate.release("lease-e")
   end
+
+  test "rejects duplicate lease ids and prevents foreign release" do
+    endpoint = %{id: "static-agent-owned", host: "127.0.0.1", port: 5004}
+
+    assert {:ok, ^endpoint, _metadata} =
+             AgentExecutionGate.acquire([endpoint], "lease-owned", 500)
+
+    foreign =
+      Task.async(fn ->
+        {
+          AgentExecutionGate.acquire([endpoint], "lease-owned", 500),
+          AgentExecutionGate.release("lease-owned")
+        }
+      end)
+
+    assert {
+             {:error, {:duplicate_execution_lease, "lease-owned"}},
+             {:error, {:execution_lease_not_owned, "lease-owned"}}
+           } = Task.await(foreign)
+
+    assert %{active_lease_count: 1} = AgentExecutionGate.snapshot()
+    assert :ok = AgentExecutionGate.release("lease-owned")
+  end
+
+  test "rejects a duplicate id while its original request is queued" do
+    endpoint = %{id: "static-agent-queued", host: "127.0.0.1", port: 5005}
+
+    assert {:ok, ^endpoint, _metadata} =
+             AgentExecutionGate.acquire([endpoint], "lease-capacity-owner", 500)
+
+    parent = self()
+
+    queued =
+      Task.async(fn ->
+        result = AgentExecutionGate.acquire([endpoint], "lease-queued", 1_000)
+        send(parent, {:original_queued_result, result})
+        receive do: (:release -> AgentExecutionGate.release("lease-queued"))
+      end)
+
+    Process.sleep(20)
+
+    assert {:error, {:duplicate_execution_lease, "lease-queued"}} =
+             AgentExecutionGate.acquire([endpoint], "lease-queued", 500)
+
+    assert %{active_lease_count: 1, queued_request_count: 1} =
+             AgentExecutionGate.snapshot()
+
+    assert :ok = AgentExecutionGate.release("lease-capacity-owner")
+    assert_receive {:original_queued_result, {:ok, ^endpoint, _metadata}}, 1_000
+    send(queued.pid, :release)
+    Task.await(queued)
+  end
+
+  test "rejects malformed lease ids without crashing the caller" do
+    endpoint = %{id: "static-agent-invalid", host: "127.0.0.1", port: 5006}
+
+    assert {:error, :invalid_execution_lease} =
+             AgentExecutionGate.acquire([endpoint], "", 500)
+
+    assert {:error, :invalid_execution_lease} = AgentExecutionGate.release("")
+  end
 end

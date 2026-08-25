@@ -108,10 +108,15 @@ defmodule KyuubikiWeb.Jobs.MemoryBackend do
     Agent.get_and_update(__MODULE__, fn jobs ->
       case Map.fetch(jobs, event.job_id) do
         {:ok, job} ->
-          updated_job = Job.apply_progress(job, event)
-          updated_jobs = Map.put(jobs, event.job_id, updated_job)
-          persist_jobs(updated_jobs)
-          {{:ok, updated_job}, updated_jobs}
+          case Job.apply_progress(job, event) do
+            {:ok, updated_job} ->
+              updated_jobs = Map.put(jobs, event.job_id, updated_job)
+              persist_jobs(updated_jobs)
+              {{:ok, updated_job}, updated_jobs}
+
+            {:error, reason} ->
+              {{:error, reason}, jobs}
+          end
 
         :error ->
           {{:error, {:job_not_found, event.job_id}}, jobs}

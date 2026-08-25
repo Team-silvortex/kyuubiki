@@ -13,6 +13,13 @@ defmodule KyuubikiWeb.Jobs.Job do
     failed
     cancelled
   )a
+  @active_stage_order %{
+    queued: 0,
+    preprocessing: 1,
+    partitioning: 2,
+    solving: 3,
+    postprocessing: 4
+  }
 
   @enforce_keys [:job_id, :project_id, :simulation_case_id]
   defstruct [
@@ -80,7 +87,11 @@ defmodule KyuubikiWeb.Jobs.Job do
          {:ok, project_id} <- fetch_required_string(attrs, :project_id),
          {:ok, simulation_case_id} <- fetch_required_string(attrs, :simulation_case_id),
          {:ok, status} <- fetch_status(attrs, :status, :queued),
-         {:ok, progress} <- fetch_progress(attrs, :progress, 0.0) do
+         {:ok, progress} <- fetch_progress(attrs, :progress, 0.0),
+         :ok <- validate_status_progress(status, progress),
+         {:ok, created_at} <- fetch_datetime(attrs, :created_at, now),
+         {:ok, updated_at} <- fetch_datetime(attrs, :updated_at, now),
+         :ok <- validate_datetime_order(created_at, updated_at) do
       {:ok,
        %__MODULE__{
          job_id: job_id,
@@ -96,30 +107,38 @@ defmodule KyuubikiWeb.Jobs.Job do
          progress: progress,
          residual: fetch_optional_number(attrs, :residual),
          iteration: fetch_optional_integer(attrs, :iteration),
-         created_at: Map.get(attrs, :created_at, now),
-         updated_at: Map.get(attrs, :updated_at, now)
+         created_at: created_at,
+         updated_at: updated_at
        }}
     end
   end
 
-  @spec apply_progress(t(), KyuubikiWeb.Jobs.ProgressEvent.t()) :: t()
-  def apply_progress(%__MODULE__{status: status} = job, %KyuubikiWeb.Jobs.ProgressEvent{})
-      when status in [:completed, :failed, :cancelled],
-      do: job
-
+  @spec apply_progress(t(), KyuubikiWeb.Jobs.ProgressEvent.t()) ::
+          {:ok, t()} | {:error, term()}
   def apply_progress(%__MODULE__{} = job, %KyuubikiWeb.Jobs.ProgressEvent{} = event) do
-    emitted_at = event.emitted_at || DateTime.utc_now()
+    with :ok <- validate_job_match(job, event) do
+      if idempotent_terminal_replay?(job, event) do
+        {:ok, job}
+      else
+        with :ok <- validate_terminal_transition(job, event),
+             :ok <- validate_event_order(job, event),
+             :ok <- validate_stage_transition(job.status, event.stage) do
+          emitted_at = event.emitted_at || DateTime.utc_now()
 
-    %__MODULE__{
-      job
-      | status: event.stage,
-        progress: event.progress,
-        message: event.message || job.message,
-        residual: event.residual || job.residual,
-        iteration: event.iteration || job.iteration,
-        execution_started_at: execution_started_at(job, event.stage, emitted_at),
-        updated_at: emitted_at
-    }
+          {:ok,
+           %__MODULE__{
+             job
+             | status: event.stage,
+               progress: event.progress,
+               message: event.message || job.message,
+               residual: event.residual || job.residual,
+               iteration: event.iteration || job.iteration,
+               execution_started_at: execution_started_at(job, event.stage, emitted_at),
+               updated_at: emitted_at
+           }}
+        end
+      end
+    end
   end
 
   @spec to_persisted_map(t()) :: map()
@@ -210,10 +229,65 @@ defmodule KyuubikiWeb.Jobs.Job do
     end
   end
 
+  defp fetch_datetime(attrs, key, default) do
+    case Map.get(attrs, key, default) do
+      %DateTime{} = value -> {:ok, value}
+      _ -> {:error, {:invalid_datetime, key}}
+    end
+  end
+
+  defp validate_datetime_order(created_at, updated_at) do
+    if DateTime.compare(updated_at, created_at) == :lt,
+      do: {:error, :updated_at_precedes_created_at},
+      else: :ok
+  end
+
   defp execution_started_at(job, :queued, _emitted_at), do: job.execution_started_at
 
   defp execution_started_at(%{execution_started_at: nil}, _stage, emitted_at), do: emitted_at
   defp execution_started_at(job, _stage, _emitted_at), do: job.execution_started_at
+
+  defp validate_job_match(%{job_id: job_id}, %{job_id: job_id}), do: :ok
+
+  defp validate_job_match(job, event),
+    do: {:error, {:job_id_mismatch, job.job_id, event.job_id}}
+
+  defp idempotent_terminal_replay?(%{status: status, progress: progress}, event)
+       when status in [:completed, :failed, :cancelled],
+       do: event.stage == status and event.progress == progress
+
+  defp idempotent_terminal_replay?(_job, _event), do: false
+
+  defp validate_terminal_transition(%{status: status, progress: progress}, event)
+       when status in [:completed, :failed, :cancelled] do
+    if event.stage == status and event.progress == progress,
+      do: :ok,
+      else: {:error, {:terminal_job_mutation, status, event.stage}}
+  end
+
+  defp validate_terminal_transition(_job, _event), do: :ok
+
+  defp validate_event_order(job, event) do
+    cond do
+      event.progress < job.progress ->
+        {:error, {:progress_regression, job.progress, event.progress}}
+
+      DateTime.compare(event.emitted_at, job.updated_at) == :lt ->
+        {:error, {:stale_progress_event, job.updated_at, event.emitted_at}}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp validate_stage_transition(current, next)
+       when is_map_key(@active_stage_order, current) and is_map_key(@active_stage_order, next) do
+    if Map.fetch!(@active_stage_order, next) < Map.fetch!(@active_stage_order, current),
+      do: {:error, {:stage_regression, current, next}},
+      else: :ok
+  end
+
+  defp validate_stage_transition(_current, _next), do: :ok
 
   defp timing_detail(job) do
     queued? = job.status == :queued
@@ -304,6 +378,13 @@ defmodule KyuubikiWeb.Jobs.Job do
   rescue
     ArgumentError -> {:error, {:invalid_progress, key}}
   end
+
+  defp validate_status_progress(:completed, 1.0), do: :ok
+
+  defp validate_status_progress(:completed, _progress),
+    do: {:error, :completed_progress_must_equal_one}
+
+  defp validate_status_progress(_status, _progress), do: :ok
 
   defp format_datetime(%DateTime{} = value), do: DateTime.to_iso8601(value)
   defp format_datetime(_value), do: nil
