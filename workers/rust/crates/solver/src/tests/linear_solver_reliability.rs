@@ -105,6 +105,14 @@ fn sparse_spd_profile_exposes_iterative_hotspots() {
     assert!(labels.contains(&"solve_spd_preconditioner_setup"));
     assert!(labels.contains(&"solve_spd_vector_update"));
     assert!(labels.contains(&"solve_spd_dot"));
+    let recomputed_residual = profile
+        .solution
+        .iter()
+        .map(|value| (2.0 - 2.0 * value).powi(2))
+        .sum::<f64>()
+        .sqrt();
+    assert!((profile.residual_norm - recomputed_residual).abs() < 1.0e-12);
+    assert!(profile.residual_norm < 1.0e-10);
 }
 
 #[test]

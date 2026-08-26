@@ -538,10 +538,11 @@ pub(crate) fn solve_spd_system_profile_with_options(
     let compressed = matrix.compress_scaled(&scaling, options.preconditioner);
     let setup_elapsed_ms = setup_started.elapsed().as_secs_f64() * 1000.0;
 
-    match solve_spd_compressed(&compressed, &scaled_rhs, matrix, &options) {
-        Ok(profile) => Ok(profile),
+    let scaled_profile = match solve_spd_compressed(&compressed, &scaled_rhs, matrix, &options) {
+        Ok(profile) => profile,
         Err(error) => {
             let scaled_matrix = scaling::scale_sparse_matrix(matrix, &scaling);
+            let mut recovered = None;
 
             for factor in [1.0e-10, 1.0e-8, 1.0e-6] {
                 let regularized =
@@ -554,23 +555,23 @@ pub(crate) fn solve_spd_system_profile_with_options(
                     &regularized,
                     &options,
                 ) {
-                    return Ok(scaling::unscale_profile(profile, &scaling));
+                    recovered = Some(profile);
+                    break;
                 }
             }
 
-            Err(error)
+            recovered.ok_or(error)?
         }
-    }
-    .map(|mut profile| {
-        profile.residual_norm = sparse_residual_norm(matrix, rhs, &profile.solution);
-        profile
-            .stages
-            .push(crate::linear_solver_profile::SpdSolveStage {
-                label: "solve_spd_preconditioner_setup",
-                elapsed_ms: setup_elapsed_ms,
-            });
-        scaling::unscale_profile(profile, &scaling)
-    })
+    };
+    let mut profile = scaling::unscale_profile(scaled_profile, &scaling);
+    profile.residual_norm = sparse_residual_norm(matrix, rhs, &profile.solution);
+    profile
+        .stages
+        .push(crate::linear_solver_profile::SpdSolveStage {
+            label: "solve_spd_preconditioner_setup",
+            elapsed_ms: setup_elapsed_ms,
+        });
+    Ok(profile)
 }
 
 fn sparse_residual_norm(matrix: &SparseMatrix, rhs: &[f64], solution: &[f64]) -> f64 {

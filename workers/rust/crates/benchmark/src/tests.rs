@@ -5,6 +5,10 @@ mod tests {
         catalog_spec_path_candidates, default_catalog_spec, BenchmarkCatalogSpec,
     };
     use crate::config::BenchmarkProfile;
+    use crate::generators_structural::{
+        generate_buckling_beam_1d_case, generate_buckling_frame_2d_case,
+        generate_frame_2d_corotational_case, generate_frame_2d_p_delta_case,
+    };
     use crate::models::{BenchmarkCase, BenchmarkWorkload};
     use crate::runner::run_case;
     use serde::Deserialize;
@@ -376,8 +380,28 @@ mod tests {
     }
 
     #[test]
-    fn stability_screening_matrix_runs_buckling_templates() {
-        let cases = benchmark_cases(BenchmarkProfile::Medium, "stability-screening");
+    fn stability_screening_matrix_runs_smoke_scale_buckling_templates() {
+        let cases = benchmark_cases(BenchmarkProfile::Medium, "stability-screening")
+            .into_iter()
+            .map(|case| {
+                let workload = match case.family {
+                    "buckling_beam_1d" => BenchmarkWorkload::BucklingBeam1d(
+                        generate_buckling_beam_1d_case(12, 8.0),
+                    ),
+                    "buckling_frame_2d" => BenchmarkWorkload::BucklingFrame2d(
+                        generate_buckling_frame_2d_case(12, 8.0),
+                    ),
+                    "frame_2d_p_delta" => BenchmarkWorkload::Frame2dPDelta(
+                        generate_frame_2d_p_delta_case(12, 8.0),
+                    ),
+                    "frame_2d_corotational" => BenchmarkWorkload::Frame2dPDelta(
+                        generate_frame_2d_corotational_case(12, 8.0),
+                    ),
+                    family => panic!("unexpected stability screening family: {family}"),
+                };
+                BenchmarkCase { workload, ..case }
+            })
+            .collect::<Vec<_>>();
         let selected = cases.iter().collect::<Vec<_>>();
         let report = crate::runner::build_report(
             &selected,
