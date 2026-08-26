@@ -141,6 +141,7 @@ export function directMeshMethodForStudyKind(
 }
 
 export function normalizeDirectMeshStudyInput(kind: DirectMeshStudyKind, input: Record<string, unknown>) {
+  assertDirectMeshStudyInput(kind, input);
   switch (kind) {
     case "axial_bar_1d": return resolveAxialBarJobInput(input as AxialBarJobInput);
     case "thermal_bar_1d": return resolveThermalBar1dJobInput(input as ThermalBar1dJobInput);
@@ -165,5 +166,17 @@ export function normalizeDirectMeshStudyInput(kind: DirectMeshStudyKind, input: 
     case "plane_quad_2d": return resolvePlaneQuad2dJobInput(input as PlaneQuad2dJobInput);
     case "thermal_plane_quad_2d": return resolveThermalPlaneQuad2dJobInput(input as ThermalPlaneQuad2dJobInput);
     case "frame_2d": return resolveFrame2dJobInput(input as Frame2dJobInput);
+  }
+}
+
+function assertDirectMeshStudyInput(kind: DirectMeshStudyKind, input: Record<string, unknown>) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error(`direct mesh ${kind} input must be an object`);
+  }
+  if (kind === "axial_bar_1d") return;
+  for (const field of ["nodes", "elements"] as const) {
+    if (!Array.isArray(input[field])) {
+      throw new Error(`direct mesh ${kind} input field ${field} must be an array`);
+    }
   }
 }

@@ -104,7 +104,7 @@ help:
 	@echo "  make check-test-coverage-posture Verify traditional code-coverage posture and write tmp/test-coverage-posture.{json,md}"
 	@echo "  make coverage Write the current traditional code-coverage posture report without claiming 100% coverage"
 	@echo "  make coverage-rust Generate an LLVM lcov report for the Rust workspace; optional PACKAGE=... TEST_FILTER=..."
-	@echo "  make coverage-frontend Generate Node V8 coverage for frontend unit tests; optional FILTER=..."
+	@echo "  make coverage-frontend Enforce compact Node coverage; optional FILTER=... LINES=... BRANCHES=... FUNCTIONS=..."
 	@echo "  make check-module-extension-standard Verify the standard flow for adding modules, paradigms, surfaces, lanes, and contracts"
 	@echo "  make check-contracts-runtime-api-surface Verify shared contracts runtime API source/client surface index"
 	@echo "  make check-verification-evidence-surface Verify verification evidence commands, artifacts, and central readiness report coverage"

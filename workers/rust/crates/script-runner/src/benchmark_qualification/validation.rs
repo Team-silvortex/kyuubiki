@@ -47,6 +47,30 @@ pub(super) fn validate_contract(
             ));
         }
     }
+    let expected_source_roots = [
+        "workers/rust/crates/benchmark/src",
+        "workers/rust/crates/engine/src",
+        "workers/rust/crates/headless-sdk/src",
+        "workers/rust/crates/protocol/src",
+        "workers/rust/crates/solver/src",
+    ]
+    .into_iter()
+    .collect::<BTreeSet<_>>();
+    let source_roots = contract
+        .source_roots
+        .iter()
+        .map(String::as_str)
+        .collect::<BTreeSet<_>>();
+    if source_roots != expected_source_roots || source_roots.len() != contract.source_roots.len() {
+        return Err("benchmark qualification source root set drifted".into());
+    }
+    for path in &contract.source_roots {
+        if !repo_path(root, path)?.is_dir() {
+            return Err(format!(
+                "benchmark qualification source root does not exist: {path}"
+            ));
+        }
+    }
     if contract.source_files.len() < 6
         || contract.source_files.iter().collect::<BTreeSet<_>>().len()
             != contract.source_files.len()
@@ -110,7 +134,8 @@ pub(super) fn validate_report(
     if report.platform.os.is_empty() || report.platform.arch.is_empty() {
         return Err("benchmark qualification report platform is incomplete".into());
     }
-    let current_source_digest = source_tree_digest(root, &contract.source_files)?;
+    let current_source_digest =
+        source_tree_digest(root, &contract.source_files, &contract.source_roots)?;
     if report.source_tree_sha256 != current_source_digest {
         return Err(format!(
             "benchmark qualification source tree drifted: report {}, current {}",

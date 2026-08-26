@@ -198,6 +198,7 @@
       "schemas/benchmark-qualification-report.schema.json",
       "workers/rust/crates/script-runner/src/benchmark_qualification.rs",
       "workers/rust/crates/script-runner/src/benchmark_qualification/validation.rs",
+      "workers/rust/crates/script-runner/src/benchmark_qualification/source_tree.rs",
       "releases/usability-evidence/2.15.0/benchmark-qualification.json",
       "config/architecture/orchestra-benchmark-qualification.json",
       "schemas/orchestra-benchmark-qualification-contract.schema.json",
@@ -206,7 +207,7 @@
       "releases/usability-evidence/2.15.0/orchestra-benchmark-qualification.json"
     ],
     "required_surfaces": [
-      "kyuubiki.benchmark-qualification-contract/v2",
+      "kyuubiki.benchmark-qualification-contract/v3",
       "kyuubiki.benchmark-qualification-report/v2",
       "benchmark-release",
       "five_hundred_k",

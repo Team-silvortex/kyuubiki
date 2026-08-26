@@ -38,7 +38,7 @@ workflow-preflight:
 test-runtime-surfaces:
 	@cd apps/frontend && npm run test:unit -- hub-runtime-surface installer-runtime-surface workbench-workflow-benchmark-surface
 	@cd apps/web && mix test test/kyuubiki_web/orchestra/control_plane_surface_test.exs
-	@cd workers/rust && cargo test -p kyuubiki-protocol protocol_benchmark_surface -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-protocol --lib protocol_benchmark_surface -- --nocapture
 
 test-sdk:
 	@$(ENTRYPOINT) sdk-smoke

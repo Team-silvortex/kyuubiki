@@ -71,7 +71,7 @@ coverage-rust:
 	@$(ENTRYPOINT) rust-coverage $${PACKAGE:+--package "$$PACKAGE"} $${TEST_FILTER:+--test-filter "$$TEST_FILTER"} --out $${OUT:-tmp/coverage/rust/lcov.info}
 
 coverage-frontend:
-	@$(ENTRYPOINT) frontend-unit-coverage-test --out-dir $${OUT_DIR:-tmp/coverage/frontend/v8} $${FILTER:+$$FILTER}
+	@$(ENTRYPOINT) frontend-unit-coverage-test --out-dir $${OUT_DIR:-tmp/coverage/frontend/v8} --lines $${LINES:-50} --branches $${BRANCHES:-60} --functions $${FUNCTIONS:-55} $${FILTER:+$$FILTER}
 
 check-module-extension-standard:
 	@$(ENTRYPOINT) check-module-extension-standard --self-test
@@ -539,19 +539,19 @@ check-minimal-industrial-closure:
 	@$(ENTRYPOINT) validate-minimal-industrial-closure
 
 fuzz-smoke:
-	@cd workers/rust && cargo test -p kyuubiki-engine workflow_security_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-protocol operator_task_ir_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-protocol rpc_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-operator-sdk operator_package_manifest_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-installer installer_update_catalog_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-installer remote_artifact_manifest_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-installer credential_storage_contract_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-installer remote_host_trust_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-installer remote_ssh_fixture_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-installer remote_deployment_metadata_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-script-runner central_store_contract_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-script-runner central_readiness_report_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-script-runner language_pack_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_security_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-protocol --lib operator_task_ir_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-protocol --lib rpc_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-operator-sdk --lib operator_package_manifest_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer --lib installer_update_catalog_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer --lib remote_artifact_manifest_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer --lib credential_storage_contract_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer --lib remote_host_trust_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer --lib remote_ssh_fixture_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer --lib remote_deployment_metadata_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-script-runner --bin kyuubiki-script-runner central_store_contract_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-script-runner --bin kyuubiki-script-runner central_readiness_report_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-script-runner --bin kyuubiki-script-runner language_pack_fuzz_smoke -- --nocapture
 
 architecture-check:
 	@$(MAKE) audit-project-organization
@@ -610,7 +610,7 @@ architecture-check:
 	@jq empty docs/book-manifest.json
 	@$(MAKE) check-minimal-industrial-closure
 	@cd apps/web && mix test test/kyuubiki_web/api/operator_task_api_test.exs test/kyuubiki_web/orchestra/operator_task_executor_test.exs test/kyuubiki_web/orchestra/operator_task_ir_test.exs
-	@cd workers/rust && cargo test -p kyuubiki-cli operator_task_ir_rpc
+	@cd workers/rust && cargo test -p kyuubiki-cli --bin kyuubiki-cli operator_task_ir_rpc
 	@cd workers/rust && cargo test -p kyuubiki-cli --test operator_task_live
 
 verify:

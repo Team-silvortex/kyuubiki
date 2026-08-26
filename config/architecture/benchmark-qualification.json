@@ -1,6 +1,6 @@
 {
   "$schema": "../../schemas/benchmark-qualification-contract.schema.json",
-  "schema_version": "kyuubiki.benchmark-qualification-contract/v2",
+  "schema_version": "kyuubiki.benchmark-qualification-contract/v3",
   "report_schema": "kyuubiki.benchmark-qualification-report/v2",
   "required_modules": [
     "runtime-agent-cli",
@@ -19,6 +19,7 @@
     "workers/rust/crates/script-runner/src/main.rs",
     "workers/rust/crates/script-runner/src/benchmark_qualification.rs",
     "workers/rust/crates/script-runner/src/benchmark_qualification/validation.rs",
+    "workers/rust/crates/script-runner/src/benchmark_qualification/source_tree.rs",
     "workers/rust/crates/script-runner/src/benchmark_profile_index.rs",
     "workers/rust/crates/script-runner/src/direct_mesh_benchmark_compare.rs",
     "workers/rust/crates/benchmark/Cargo.toml",
@@ -39,6 +40,13 @@
     "workers/rust/crates/protocol/src/workflow.rs",
     "workers/rust/crates/headless-sdk/src/lib.rs",
     "workers/rust/crates/headless-sdk/src/direct_fem.rs"
+  ],
+  "source_roots": [
+    "workers/rust/crates/benchmark/src",
+    "workers/rust/crates/engine/src",
+    "workers/rust/crates/headless-sdk/src",
+    "workers/rust/crates/protocol/src",
+    "workers/rust/crates/solver/src"
   ],
   "current_runs": [
     {

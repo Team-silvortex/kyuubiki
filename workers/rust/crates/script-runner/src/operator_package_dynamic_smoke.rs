@@ -57,6 +57,7 @@ pub fn run_operator_package_dynamic_smoke(
             "test",
             "--manifest-path",
             template_manifest.to_string_lossy().as_ref(),
+            "--lib",
             "--",
             "--nocapture",
         ]
@@ -71,6 +72,7 @@ pub fn run_operator_package_dynamic_smoke(
             "test",
             "--manifest-path",
             template_manifest_report.as_str(),
+            "--lib",
             "--",
             "--nocapture",
         ],
@@ -142,6 +144,7 @@ pub fn run_operator_package_dynamic_smoke(
             "build",
             "--manifest-path",
             template_manifest.to_string_lossy().as_ref(),
+            "--lib",
         ]
         .map(OsString::from),
     )?;
@@ -154,6 +157,7 @@ pub fn run_operator_package_dynamic_smoke(
             "build",
             "--manifest-path",
             template_manifest_report.as_str(),
+            "--lib",
         ],
         build,
     ));
@@ -175,6 +179,7 @@ pub fn run_operator_package_dynamic_smoke(
             "test",
             "-p",
             "kyuubiki-engine",
+            "--lib",
             "loads_prebuilt_template_cdylib_through_dynamic_host",
             "--",
             "--ignored",
@@ -191,6 +196,7 @@ pub fn run_operator_package_dynamic_smoke(
             "test",
             "-p",
             "kyuubiki-engine",
+            "--lib",
             "loads_prebuilt_template_cdylib_through_dynamic_host",
             "--",
             "--ignored",

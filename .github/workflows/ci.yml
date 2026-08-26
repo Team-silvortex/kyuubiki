@@ -66,11 +66,23 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: apps/frontend/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: workers/rust
       - run: npm ci
       - run: npm run typecheck
+      - run: npm run test:unit:coverage
+      - name: Upload frontend coverage summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-${{ github.run_attempt }}
+          path: tmp/coverage/frontend/v8/summary.json
+          if-no-files-found: warn
       - run: npm run build
 
   dependency-audit:

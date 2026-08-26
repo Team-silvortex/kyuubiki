@@ -52,11 +52,21 @@
       "test_command": "npm --prefix apps/frontend run test:unit",
       "planned_tool": "node --experimental-test-coverage",
       "planned_command": "make coverage-frontend",
-      "planned_artifact": "tmp/coverage/frontend/v8",
-      "status": "instrumented",
+      "planned_artifact": "tmp/coverage/frontend/v8/summary.json",
+      "status": "enforced",
+      "enforced_threshold": {
+        "lines": 50,
+        "branches": 60,
+        "functions": 55
+      },
+      "enforcement": {
+        "workflow": ".github/workflows/ci.yml",
+        "command": "npm run test:unit:coverage",
+        "artifact": "tmp/coverage/frontend/v8/summary.json"
+      },
       "minimum_next_threshold": {
         "lines": 70,
-        "branches": 50,
+        "branches": 70,
         "functions": 65
       }
     },
