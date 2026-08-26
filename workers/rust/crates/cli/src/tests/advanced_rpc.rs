@@ -16,6 +16,7 @@ use kyuubiki_protocol::{
     SolveStokesFlowPlaneTriangle2dRequest, StokesFlowPlaneNodeInput,
     StokesFlowPlaneQuadElementInput, StokesFlowPlaneTriangleElementInput, TrussElementInput,
 };
+use std::sync::atomic::{AtomicU64, Ordering};
 
 #[test]
 fn handles_stokes_flow_plane_quad_2d_rpc_requests() {
@@ -405,9 +406,13 @@ fn handles_frame_2d_p_delta_parameter_path_rpc_requests() {
 }
 
 fn execute(method: RpcMethod, params: impl serde::Serialize) -> kyuubiki_protocol::RpcResponse {
+    static NEXT_REQUEST_ID: AtomicU64 = AtomicU64::new(0);
     let request = RpcRequest {
         rpc_version: RPC_VERSION,
-        id: "advanced-rpc".to_string(),
+        id: format!(
+            "advanced-rpc-{}",
+            NEXT_REQUEST_ID.fetch_add(1, Ordering::Relaxed)
+        ),
         method,
         params: serde_json::to_value(params).expect("params should serialize"),
     };
