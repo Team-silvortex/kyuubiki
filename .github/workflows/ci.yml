@@ -125,6 +125,7 @@ jobs:
       - run: make check-material-research-bundle-contract
       - run: make check-toolchains
       - run: make check-doc-book
+      - run: make test-integration-benchmark-profile-index
 
   workflow-preflight:
     name: workflow-preflight
@@ -332,8 +333,8 @@ jobs:
         run: npm ci
       - working-directory: apps/frontend
         run: npx playwright install --with-deps chromium
-      - name: Run desktop GUI regression gate
-        run: make test-integration-desktop-gui
+      - name: Run desktop and Workbench UI invocation regression gates
+        run: make test-integration-ui-invocation
       - name: Upload desktop GUI regression artifacts
         if: failure()
         uses: actions/upload-artifact@v4

@@ -59,7 +59,7 @@ test-installer-gui:
 test-workbench-gui:
 	@cd apps/workbench-gui && npm run test:smoke
 
-test-integration: test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-benchmark-profile-index test-integration-ui-mechanical test-integration-ui-thermal
+test-integration: test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-benchmark-profile-index test-integration-ui-workflow test-integration-ui-mechanical test-integration-ui-thermal
 
 test-integration-api:
 	@$(ENTRYPOINT) integration-api-node-test

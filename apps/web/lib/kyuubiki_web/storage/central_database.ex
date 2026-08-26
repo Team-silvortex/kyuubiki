@@ -87,7 +87,12 @@ defmodule KyuubikiWeb.Storage.CentralDatabase do
         "id" => "catalog_entries",
         "status" => "schema_ready_preview",
         "tables" => tables_for("catalog_entries"),
-        "owned_kinds" => ["operator", "workflow_template", "frontend_dsl_template", "language_pack"]
+        "owned_kinds" => [
+          "operator",
+          "workflow_template",
+          "frontend_dsl_template",
+          "language_pack"
+        ]
       },
       %{
         "id" => "publisher_accounts",

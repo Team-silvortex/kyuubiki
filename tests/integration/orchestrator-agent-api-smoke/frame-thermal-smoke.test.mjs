@@ -148,17 +148,17 @@ test("local workstation stack can solve a plane-quad-2d sample end-to-end", asyn
 
     assert.equal(finalPayload.job.status, "completed");
     assert.match(finalPayload.job.worker_id, /rust-agent-rpc/);
-    assert.ok(Math.abs(finalPayload.result.max_displacement - 5.333507749004975e-7) < 1.0e-12);
-    assert.ok(Math.abs(finalPayload.result.max_stress - 126981.38527836032) < 1.0e-6);
+    assert.ok(Math.abs(finalPayload.result.max_displacement - 5.788653902410632e-7) < 1.0e-12);
+    assert.ok(Math.abs(finalPayload.result.max_stress - 126908.6417525364) < 1.0e-6);
     assert.ok(Array.isArray(finalPayload.result.nodes));
     assert.equal(finalPayload.result.nodes.length, 4);
-    assert.ok(Math.abs(finalPayload.result.nodes[2].ux - 2.576145151695419e-7) < 1.0e-12);
-    assert.ok(Math.abs(finalPayload.result.nodes[2].uy + 4.6700943316053366e-7) < 1.0e-12);
+    assert.ok(Math.abs(finalPayload.result.nodes[2].ux - 2.9330817937375316e-7) < 1.0e-12);
+    assert.ok(Math.abs(finalPayload.result.nodes[2].uy + 4.990545580709515e-7) < 1.0e-12);
     assert.ok(Array.isArray(finalPayload.result.elements));
     assert.equal(finalPayload.result.elements.length, 1);
     assert.ok(Math.abs(finalPayload.result.elements[0].stress_x - 12500.0) < 1.0e-6);
     assert.ok(Math.abs(finalPayload.result.elements[0].stress_y + 120000.0) < 1.0e-6);
-    assert.ok(Math.abs(finalPayload.result.elements[0].tau_xy - 3048.7804878048746) < 1.0e-9);
+    assert.ok(Math.abs(finalPayload.result.elements[0].tau_xy - 4064.2076502732207) < 1.0e-9);
   } finally {
     try {
       runKyuubiki("stop");

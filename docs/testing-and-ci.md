@@ -558,7 +558,7 @@ Baseline and report surfaces:
   `400k` and `500k` matrix contracts: `mechanical-core`, `thermal-core`,
   `compound-core`, and `thermal-structural`. Coverage targets live in
   `config/benchmark-profile-coverage.json`; use
-  `./scripts/build-benchmark-profile-index.mjs --coverage-targets <manifest>`
+  `./scripts/kyuubiki build-benchmark-profile-index --coverage-targets <manifest>`
   for experimental matrix contracts. When an older summary lacks
   `solver_preconditioners`, the index reads that run's retained raw report to
   recover `cases[].solver_preconditioner`; the manifest is validated strictly,

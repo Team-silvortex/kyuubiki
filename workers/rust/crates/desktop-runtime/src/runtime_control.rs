@@ -14,6 +14,8 @@ use std::os::windows::process::CommandExt;
 
 use serde_json::Value;
 
+use kyuubiki_platform::process_is_alive;
+
 use crate::frontend_launch;
 use crate::runtime_layout::{
     RuntimePaths, resolve_development_command, runtime_bin_dirs, runtime_paths,
@@ -520,7 +522,7 @@ fn configure_detached(command: &mut Command) {
 
 fn stop_managed(pid_path: &Path, label: &str, port: Option<u16>) -> Result<String, String> {
     let pid = read_pid(pid_path);
-    if let Some(pid) = pid.filter(|pid| is_pid_alive(*pid)) {
+    if let Some(pid) = pid.filter(|pid| process_is_alive(*pid)) {
         terminate_process(pid)?;
         if let Some(port) = port {
             wait_for_port(port, false, Duration::from_secs(10))?;
@@ -543,10 +545,10 @@ fn terminate_process(pid: u32) -> Result<(), String> {
         libc::kill(-(pid as i32), libc::SIGTERM);
     }
     let started = Instant::now();
-    while started.elapsed() < Duration::from_secs(5) && is_pid_alive(pid) {
+    while started.elapsed() < Duration::from_secs(5) && process_is_alive(pid) {
         thread::sleep(Duration::from_millis(100));
     }
-    if is_pid_alive(pid) {
+    if process_is_alive(pid) {
         unsafe {
             libc::kill(-(pid as i32), libc::SIGKILL);
         }
@@ -594,26 +596,11 @@ fn read_pid(path: &Path) -> Option<u32> {
     fs::read_to_string(path).ok()?.trim().parse().ok()
 }
 
-#[cfg(unix)]
-fn is_pid_alive(pid: u32) -> bool {
-    let result = unsafe { libc::kill(pid as i32, 0) };
-    result == 0 || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
-}
-
-#[cfg(windows)]
-fn is_pid_alive(pid: u32) -> bool {
-    Command::new("tasklist")
-        .args(["/FI", &format!("PID eq {pid}"), "/NH"])
-        .output()
-        .map(|output| String::from_utf8_lossy(&output.stdout).contains(&pid.to_string()))
-        .unwrap_or(false)
-}
-
 fn service_line(label: &str, pid_path: &Path, port: u16, scheme: &str) -> String {
     let pid = read_pid(pid_path);
     let address = format!("{scheme}://127.0.0.1:{port}");
     if is_port_listening(port) {
-        if let Some(pid) = pid.filter(|pid| is_pid_alive(*pid)) {
+        if let Some(pid) = pid.filter(|pid| process_is_alive(*pid)) {
             format!("{label}: running on {address} (pid {pid})")
         } else {
             format!("{label}: running on {address} (unmanaged pid)")

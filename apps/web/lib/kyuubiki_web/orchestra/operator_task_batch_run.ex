@@ -214,12 +214,12 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
       "task_count",
       "verified_count",
       "executed_count",
-         "ok_count",
-         "error_count",
-         "failed_case_ids",
-         "failure_receipts",
-         "readiness_counts"
-       ])
+      "ok_count",
+      "error_count",
+      "failed_case_ids",
+      "failure_receipts",
+      "readiness_counts"
+    ])
     |> Map.put("blocked_readiness_case_ids", blocked_readiness_case_ids(result))
   end
 
@@ -233,12 +233,12 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
       "task_count",
       "verified_count",
       "executed_count",
-         "ok_count",
-         "error_count",
-         "failed_case_ids",
-         "failure_receipts",
-         "readiness_counts"
-       ])
+      "ok_count",
+      "error_count",
+      "failed_case_ids",
+      "failure_receipts",
+      "readiness_counts"
+    ])
   end
 
   defp blocked_readiness_case_ids(%{"results" => results}) when is_list(results) do

@@ -589,6 +589,10 @@ dependencies = [
 [[package]]
 name = "kyuubiki-platform"
 version = "2.17.0"
+dependencies = [
+ "libc",
+ "windows-sys",
+]
 
 [[package]]
 name = "kyuubiki-project-automation"

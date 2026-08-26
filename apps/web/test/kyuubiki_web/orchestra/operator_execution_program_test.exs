@@ -33,6 +33,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorExecutionProgramTest do
 
   test "builds operator-task execution programs with workflow node binding" do
     package_digest = String.duplicate("a", 64)
+
     node = %{
       "id" => "rank_candidates",
       "inputs" => [%{"id" => "candidates", "artifact_type" => "report/summary_collection"}],
@@ -58,10 +59,12 @@ defmodule KyuubikiWeb.Orchestra.OperatorExecutionProgramTest do
     assert program["abi"]["kind"] == "operator_task"
     assert program["entrypoint"]["kind"] == "operator_id"
     assert program["entrypoint"]["name"] == "transform.rank_material_candidates"
+
     assert program["package_integrity"] == %{
              "algorithm" => "sha256",
              "digest" => package_digest
            }
+
     assert program["node_binding"]["node_id"] == "rank_candidates"
     assert program["node_binding"]["input_ports"] == node["inputs"]
   end

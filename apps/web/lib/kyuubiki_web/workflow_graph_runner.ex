@@ -3,6 +3,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
   alias KyuubikiWeb.WorkflowGraphRunnerMetrics
   alias KyuubikiWeb.WorkflowGraphScheduler
   def run(graph, input_artifacts, opts \\ [])
+
   def run(graph, input_artifacts, opts)
       when is_map(graph) and is_map(input_artifacts) and is_list(opts) do
     with nodes when is_list(nodes) <- Map.get(graph, "nodes"),
@@ -23,9 +24,12 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
       _ -> {:error, :invalid_workflow_graph}
     end
   end
+
   def run(_graph, _input_artifacts, _opts), do: {:error, :invalid_workflow_graph}
+
   defp run_ordered_workflow_graph(indexes, input_artifacts, state, opts) do
     state = %{state | loop_passes: state.loop_passes + 1}
+
     {next_state, progressed?} =
       Enum.reduce(indexes.nodes, {state, false}, fn node, {acc, progressed?} ->
         case process_workflow_node(Map.get(node, "id"), indexes, input_artifacts, acc, opts) do
@@ -33,9 +37,11 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
           {:ok, updated, false} -> {updated, progressed?}
         end
       end)
+
     cond do
       WorkflowGraphScheduler.complete?(indexes, next_state) ->
         finalize_workflow_result(indexes, next_state, opts)
+
       progressed? ->
         do_run_workflow_graph(
           indexes,
@@ -44,15 +50,18 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
           next_state,
           opts
         )
+
       true ->
         stalled_workflow(indexes, next_state)
     end
   catch
     {:workflow_node_error, node_id, reason} ->
       {:error, {:workflow_node_error, node_id, reason}}
+
     {:workflow_cancelled, node_id} ->
       {:error, {:workflow_cancelled, node_id}}
   end
+
   defp do_run_workflow_graph(indexes, [], _input_artifacts, state, opts) do
     if WorkflowGraphScheduler.complete?(indexes, state),
       do: finalize_workflow_result(indexes, state, opts),
@@ -67,6 +76,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
          opts
        ) do
     state = %{state | loop_passes: state.loop_passes + 1}
+
     case process_workflow_node(node_id, indexes, input_artifacts, state, opts) do
       {:ok, updated, true} ->
         do_run_workflow_graph(
@@ -76,12 +86,14 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
           updated,
           opts
         )
+
       {:ok, updated, false} ->
         do_run_workflow_graph(indexes, rest, input_artifacts, updated, opts)
     end
   catch
     {:workflow_node_error, node_id, reason} ->
       {:error, {:workflow_node_error, node_id, reason}}
+
     {:workflow_cancelled, node_id} ->
       {:error, {:workflow_cancelled, node_id}}
   end
@@ -90,11 +102,14 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     node = Map.fetch!(indexes.nodes_by_id, node_id)
     incoming = Map.get(indexes.incoming_edges_by_node, node_id, [])
     kind = Map.get(node, "kind")
+
     cond do
       WorkflowGraphScheduler.resolved?(state, node_id) ->
         {:ok, state, false}
+
       kind == "input" or workflow_node_ready?(node, incoming, state.artifacts) ->
         started_at_us = System.monotonic_time(:microsecond)
+
         case execute_workflow_node(node, incoming, input_artifacts, state, opts) do
           {:ok, next_state} ->
             updated =
@@ -593,5 +608,4 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     do: artifact_key(get_in(edge, ["from", "node"]), get_in(edge, ["from", "port"]))
 
   defp artifact_key(node_id, port_id), do: "#{node_id}.#{port_id}"
-
 end
