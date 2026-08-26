@@ -276,6 +276,7 @@
   },
   "sdk_operator": {
     "evidence_sources": [
+      ".gitattributes",
       "config/architecture/operator-sdk-multihost-operational-qualification.json",
       "schemas/operator-sdk-multihost-operational-qualification-contract.schema.json",
       "schemas/operator-sdk-multihost-operational-qualification-report.schema.json",
@@ -287,6 +288,9 @@
       "schemas/operator-sdk-windows-operational-qualification-report.schema.json",
       "workers/rust/crates/script-runner/src/operator_sdk_windows_qualification.rs",
       "workers/rust/crates/script-runner/src/operator_sdk_windows_qualification/validation.rs",
+      "releases/usability-evidence/2.15.0/operator-sdk-windows-dynamic-smoke.json",
+      "releases/usability-evidence/2.15.0/operator-sdk-windows-package-preflight.json",
+      "releases/usability-evidence/2.15.0/operator-sdk-windows-installed-agent-operational-qualification.json",
       "releases/usability-evidence/2.16.4/operator-sdk-macos-agent-qualification.json",
       "releases/usability-evidence/2.16.4/operator-sdk-linux-agent-qualification.json",
       "releases/usability-evidence/2.16.4/operator-sdk-multihost-operational-qualification.json"

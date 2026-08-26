@@ -12,6 +12,7 @@ const INSTALLER_TEST_INDEX: &str = "workers/rust/crates/installer/src/tests.rs";
 const ALLOWED_ROOT_FILES: &[&str] = &[
     ".dockerignore",
     ".env.example",
+    ".gitattributes",
     ".gitignore",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
@@ -614,6 +615,7 @@ mod tests {
 
     #[test]
     fn repository_root_only_accepts_owned_paths() {
+        assert!(is_allowed_repository_path(".gitattributes"));
         assert!(is_allowed_repository_path("README.md"));
         assert!(is_allowed_repository_path("apps/frontend/package.json"));
         assert!(!is_allowed_repository_path("PLACEHOLDER"));

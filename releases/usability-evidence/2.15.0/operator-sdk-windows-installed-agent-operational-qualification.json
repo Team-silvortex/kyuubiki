@@ -1,0 +1,46 @@
+{
+  "schema_version": "kyuubiki.operator-sdk-windows-operational-qualification/v1",
+  "qualification_id": "operator-sdk-windows-installed-agent-operational",
+  "generated_at_unix_ms": 1787704072232,
+  "status": "pass",
+  "source_tree_sha256": "ac508662f8b59cdf4a6a92d5590172c9a42ee3b3f2acd9d3f6786cc6123544bd",
+  "platform": {
+    "os": "windows",
+    "arch": "x86_64",
+    "abi": "msvc",
+    "dynamic_library_suffix": ".dll"
+  },
+  "provenance": {
+    "provider": "github-actions",
+    "repository": "Team-silvortex/kyuubiki",
+    "commit_sha": "a1ad7a9d3b271ce0c45f4f52f890b1b661cd9be1",
+    "run_id": "32914875536:1",
+    "runner_id": "GitHub Actions 1000004390",
+    "workflow_ref": "Team-silvortex/kyuubiki/.github/workflows/operator-sdk-windows-qualification.yml@refs/heads/codex/windows-lock-ci"
+  },
+  "attachments": {
+    "dynamic_smoke": {
+      "path": "releases/usability-evidence/2.15.0/operator-sdk-windows-dynamic-smoke.json",
+      "sha256": "b0855b03c3ddf594040e208b42aacba4944543fb0f4d26b332515835e8eaea9d"
+    },
+    "preflight": {
+      "path": "releases/usability-evidence/2.15.0/operator-sdk-windows-package-preflight.json",
+      "sha256": "b9343ac73dbe81459337eb4602069a55568f9e718d5b26a6159922abd030b37c"
+    }
+  },
+  "summary": {
+    "stage_count": 6,
+    "all_stages_passed": true,
+    "engine_dynamic_load": true,
+    "agent_rpc_dispatch": true,
+    "bound_orchestra_rotation": true,
+    "tamper_recovery": true,
+    "installer_managed_lifecycle": true,
+    "residue_cleanup": true,
+    "release_complete": true
+  },
+  "limitations": [
+    "Evidence covers the x86_64-pc-windows-msvc Operator SDK and installed Agent path only.",
+    "Desktop shell signing and Windows application distribution remain separate release gates."
+  ]
+}

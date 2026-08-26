@@ -240,12 +240,12 @@ current-target package, while Installer downloads, verifies, and atomically
 installs it. The Agent consumes the same contract automatically for admitted
 `orchestra_fetch` TaskIR, hot-loads the package, and distinguishes a first fetch
 from a verified cache hit. The complete six-stage journey now passes natively on
-macOS aarch64 and physical Linux x86_64, with retained content-bound evidence.
-This is still not a three-platform claim: Windows remains explicitly deferred.
-`cache_scope: none` causes immediate post-dispatch eviction through a new
-host-leased generation, and same-package version rotation is isolated from
-in-flight tasks. Promotion to the Daji target still requires the Windows
-installed-package ABI journey and focused measurements of discovery, admission,
+macOS aarch64, physical Linux x86_64, and GitHub-hosted Windows
+x86_64-pc-windows-msvc, with retained content-bound evidence. The Windows
+installed-package ABI and lifecycle gap is closed. `cache_scope: none` causes
+immediate post-dispatch eviction through a new host-leased generation, and
+same-package version rotation is isolated from in-flight tasks. Promotion to
+the Daji target still requires focused measurements of discovery, admission,
 load, first dispatch, and steady dispatch without borrowing general solver
 throughput numbers.
 
@@ -459,9 +459,10 @@ after registering cancellation. The portable receipt is
 `schemas/agent-operator-job-cache-release.schema.json` and
 `schemas/examples.agent-operator-job-cache-release.json`.
 
-Qualified native dynamic-library evidence now exists on macOS aarch64 and
-physical Linux x86_64. The corresponding installed-package journey on Windows
-remains an explicit operational gap rather than being inferred from those hosts.
+Qualified native dynamic-library evidence now exists on macOS aarch64, physical
+Linux x86_64, and GitHub-hosted Windows x86_64-pc-windows-msvc. The Windows
+installed-package result is independently captured rather than inferred from
+the Unix hosts.
 
 For the repository template package, use the Make target:
 
@@ -526,10 +527,11 @@ explicit self-hosted provenance. The repository workflow
 `.github/workflows/operator-sdk-windows-qualification.yml` can be dispatched
 manually and uploads `operator-sdk-windows-operational-evidence`. A physical
 Windows host can run the same native command after setting the five visible
-`KYUUBIKI_QUALIFICATION_*` provenance variables. Until one of those artifacts
-is reviewed and retained under `releases/usability-evidence/2.15.0/`, the
-Windows operational claim stays open and the four P0 tensor coordinates remain
-blocked.
+`KYUUBIKI_QUALIFICATION_*` provenance variables. Reviewed GitHub-hosted evidence
+is retained under `releases/usability-evidence/2.15.0/`: all six stages pass,
+the report is `release_complete`, and its LF-stable source digest verifies on
+both Windows and macOS. The Windows operational claim is therefore proven and
+no longer blocks the four P0 `sdk_operator` tensor coordinates.
 - a minimal typed operator in `src/lib.rs`
 - a tiny runnable `src/main.rs`
 - a crate-local smoke test so authors start with a feedback loop immediately
