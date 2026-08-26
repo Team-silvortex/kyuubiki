@@ -359,7 +359,7 @@ fn run() -> RunnerResult<u8> {
         "package-desktop" => run_package_desktop(&paths, rest),
         "desktop-status" => run_desktop_status(&paths, rest),
         "desktop-stage" => run_desktop_stage(&paths, rest),
-        "desktop-build-host" => run_desktop_build_host(&paths),
+        "desktop-build-host" => run_desktop_build_host(&paths, rest),
         "desktop-install-host" => desktop_install::run_desktop_install_host(&paths.root, rest),
         "desktop-packaged-smoke" => {
             packaged_desktop_smoke::run_packaged_desktop_smoke(&paths.root, rest)

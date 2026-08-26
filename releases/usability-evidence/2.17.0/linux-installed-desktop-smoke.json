@@ -1,0 +1,43 @@
+{
+  "schema_version": "kyuubiki.packaged-desktop-smoke-report/v1",
+  "generated_at": "2026-08-26T02:27:30Z",
+  "platform": "linux",
+  "bundle_root": "@external/bin",
+  "expected_version": "2.17.0",
+  "timeout_secs": 25,
+  "status": "pass",
+  "passed": 3,
+  "failed": 0,
+  "surfaces": [
+    {
+      "surface": "hub",
+      "app_path": "@bundle-root/kyuubiki-hub-gui",
+      "executable_path": "@bundle-root/kyuubiki-hub-gui",
+      "log_path": "tmp/packaged-desktop-smoke/hub.log",
+      "status": "pass",
+      "elapsed_ms": 1506,
+      "pid": 2238466,
+      "detail": "interactive startup receipt accepted for hub 2.17.0"
+    },
+    {
+      "surface": "installer",
+      "app_path": "@bundle-root/kyuubiki-installer-gui",
+      "executable_path": "@bundle-root/kyuubiki-installer-gui",
+      "log_path": "tmp/packaged-desktop-smoke/installer.log",
+      "status": "pass",
+      "elapsed_ms": 1503,
+      "pid": 2238641,
+      "detail": "interactive startup receipt accepted for installer 2.17.0"
+    },
+    {
+      "surface": "workbench",
+      "app_path": "@bundle-root/kyuubiki-workbench-gui",
+      "executable_path": "@bundle-root/kyuubiki-workbench-gui",
+      "log_path": "tmp/packaged-desktop-smoke/workbench.log",
+      "status": "pass",
+      "elapsed_ms": 1102,
+      "pid": 2238832,
+      "detail": "interactive startup receipt accepted for workbench 2.17.0"
+    }
+  ]
+}

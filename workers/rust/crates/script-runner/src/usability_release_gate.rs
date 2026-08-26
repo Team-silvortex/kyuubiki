@@ -13,6 +13,7 @@ const CONFIG_SCHEMA: &str = "kyuubiki.usability-release-gate/v1";
 const CAPABILITY_SCHEMA: &str = "kyuubiki.desktop-capability-closure/v1";
 const REPORT_SCHEMA: &str = "kyuubiki.usability-readiness-report/v1";
 const DEFAULT_OUT: &str = "tmp/usability-readiness-report.json";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Deserialize)]
 struct GateConfig {
@@ -171,8 +172,11 @@ fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
     if config.schema_version != CONFIG_SCHEMA {
         return Err(format!("schema_version must be {CONFIG_SCHEMA}"));
     }
-    if config.baseline_release != "moxi 2.15.x" || config.target_release != "daji 3.0.0" {
-        return Err("usability gate must describe the moxi 2.15.x to daji 3.0.0 line".to_string());
+    let expected_baseline = baseline_release_for(VERSION)?;
+    if config.baseline_release != expected_baseline || config.target_release != "daji 3.0.0" {
+        return Err(format!(
+            "usability gate must describe the {expected_baseline} to daji 3.0.0 line"
+        ));
     }
     if !config.policy.all_blocking_journeys_must_pass
         || !config.policy.planned_or_static_only_is_not_release_evidence
@@ -244,6 +248,7 @@ fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
             if probe.is_empty() || probe[0].trim().is_empty() {
                 return Err(format!("journey {} contains an empty probe", journey.id));
             }
+            validate_retained_probe(root, &journey.id, probe)?;
         }
         if config.policy.planned_or_static_only_is_not_release_evidence
             && !journey
@@ -258,6 +263,40 @@ fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
         }
     }
     validate_source_guards(root, &config.source_guards)
+}
+
+fn baseline_release_for(version: &str) -> RunnerResult<String> {
+    let (minor_line, patch) = version
+        .rsplit_once('.')
+        .ok_or_else(|| format!("package version must use major.minor.patch: {version}"))?;
+    if patch.is_empty()
+        || minor_line.split('.').count() != 2
+        || minor_line.split('.').any(|part| part.is_empty())
+    {
+        return Err(format!(
+            "package version must use major.minor.patch: {version}"
+        ));
+    }
+    Ok(format!("moxi {minor_line}.x"))
+}
+
+fn validate_retained_probe(root: &Path, journey_id: &str, probe: &[String]) -> RunnerResult<()> {
+    if probe.first().map(String::as_str) != Some("desktop-packaged-smoke") {
+        return Ok(());
+    }
+    let Some(index) = probe
+        .iter()
+        .position(|argument| argument == "--verify-report")
+    else {
+        return Ok(());
+    };
+    let relative = probe
+        .get(index + 1)
+        .ok_or_else(|| format!("journey {journey_id} --verify-report requires a path"))?;
+    let path = repo_path(root, relative)?;
+    crate::packaged_desktop_smoke::verify_retained_report(&path).map_err(|error| {
+        format!("journey {journey_id} retained packaged desktop evidence is invalid: {error}")
+    })
 }
 
 fn is_operational_probe(probe: &[String]) -> bool {
@@ -539,7 +578,12 @@ fn run_self_test() -> RunnerResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{JourneyResult, count_status, is_operational_probe, truncate};
+    use std::path::Path;
+
+    use super::{
+        JourneyResult, baseline_release_for, count_status, is_operational_probe, truncate,
+        validate_retained_probe,
+    };
 
     #[test]
     fn counts_planned_journeys() {
@@ -574,5 +618,28 @@ mod tests {
             "--profile".to_string(),
             "line-field-closed-form".to_string(),
         ]));
+    }
+
+    #[test]
+    fn rejects_retained_desktop_probe_without_report_path() {
+        let error = validate_retained_probe(
+            Path::new("/repo"),
+            "create-open-project",
+            &[
+                "desktop-packaged-smoke".to_string(),
+                "--verify-report".to_string(),
+            ],
+        )
+        .expect_err("missing retained report path should fail");
+        assert!(error.contains("--verify-report requires a path"));
+    }
+
+    #[test]
+    fn derives_current_minor_release_baseline() {
+        assert_eq!(
+            baseline_release_for("2.17.0").expect("valid version"),
+            "moxi 2.17.x"
+        );
+        assert!(baseline_release_for("2.17").is_err());
     }
 }

@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.usability-release-gate/v1",
-  "baseline_release": "moxi 2.15.x",
+  "baseline_release": "moxi 2.17.x",
   "target_release": "daji 3.0.0",
   "policy": {
     "all_blocking_journeys_must_pass": true,
@@ -10,6 +10,7 @@
     "release_claim_allowed": false,
     "closed_release_subtiers": [
       "packaged_desktop_round_trip/macos-installed",
+      "packaged_desktop_round_trip/linux-installed",
       "fault_injection_and_recovery/workflow-branch-isolation",
       "fault_injection_and_recovery/agent-watchdog-state-machine",
       "fault_injection_and_recovery/agent-watchdog-stale-timeout",
@@ -95,7 +96,12 @@
         [
           "desktop-packaged-smoke",
           "--verify-report",
-          "releases/usability-evidence/2.15.0/macos-installed-desktop-smoke.json"
+          "releases/usability-evidence/2.17.0/macos-installed-desktop-smoke.json"
+        ],
+        [
+          "desktop-packaged-smoke",
+          "--verify-report",
+          "releases/usability-evidence/2.17.0/linux-installed-desktop-smoke.json"
         ],
         ["check-gui-runtime-capability-contract"],
         ["check-ui-automation-contract"]

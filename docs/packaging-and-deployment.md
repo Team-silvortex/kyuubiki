@@ -88,9 +88,11 @@ Use these commands when building deployable layouts:
 - `make desktop-install-host`
   Stages, validates, and atomically replaces the three fixed macOS application
   bundles, restoring the previous bundle if activation fails
-- `make desktop-packaged-smoke PLATFORM=macos`
-  Launches all three packaged macOS binaries, waits for their interactive UI
-  startup receipts, validates version/surface/PID identity, and retains logs
+- `make desktop-packaged-smoke PLATFORM=macos|linux|windows`
+  Launches all three packaged desktop binaries, waits for their interactive UI
+  startup receipts, validates version/surface/PID identity, and retains logs.
+  Linux uses an isolated D-Bus session plus Xvfb for the WebKitGTK shells;
+  Windows installed-package qualification additionally uses `--install-nsis`
 - `make desktop-release PLATFORM=macos|linux|windows|all`
   Runs `desktop-stage`, host-native desktop bundle builds, and desktop verification
 - `make desktop-verify PLATFORM=macos|linux|windows|all`
@@ -124,9 +126,9 @@ copied into an installed Kyuubiki runtime.
 - `./scripts/kyuubiki desktop-upload-remote macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-status macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-stage macos|linux|windows|all`
-- `./scripts/kyuubiki desktop-build-host`
+- `./scripts/kyuubiki desktop-build-host [--bundles <bundle-list>]`
 - `./scripts/kyuubiki desktop-install-host`
-- `./scripts/kyuubiki desktop-packaged-smoke macos`
+- `./scripts/kyuubiki desktop-packaged-smoke macos|linux|windows`
 - `./scripts/kyuubiki desktop-release macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-verify macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-linux-remote`
@@ -414,8 +416,8 @@ When packaging desktop deliverables, the smoothest path is now:
    `make desktop-stage PLATFORM=all`
 4. build host-native desktop bundles:
    `make desktop-build-host`
-5. prove that every packaged macOS shell reaches its interactive startup point:
-   `make desktop-packaged-smoke PLATFORM=macos`
+5. prove that every packaged host shell reaches its interactive startup point:
+   `make desktop-packaged-smoke PLATFORM=macos|linux|windows`
 6. run the integrated release pass for the current host:
    `make desktop-release`
 7. re-check descriptors and icon coverage:
@@ -438,18 +440,53 @@ After installing the bundles, run the same probe against the installed copy:
 This prevents a source bundle pass from hiding a stale application under the
 system application directory.
 
+For an installed Linux package set, run the native executables under the
+desktop smoke runner. The runner creates the required D-Bus and Xvfb session;
+calling an installed WebKitGTK binary under Xvfb alone is not equivalent.
+
+```sh
+./scripts/kyuubiki desktop-packaged-smoke linux \
+  --bundle-root /usr/bin \
+  --out tmp/linux-installed-desktop-smoke.json
+```
+
+On Windows, the native runner can qualify the complete NSIS lifecycle without
+embedding PowerShell deployment logic in CI. It discovers the three packages,
+installs them silently for the current user, launches each installed WebView2
+shell, verifies its receipt, writes the portable report, and uninstalls all
+three packages before returning:
+
+```text
+cargo run --locked --manifest-path workers/rust/Cargo.toml \
+  -p kyuubiki-script-runner -- desktop-build-host --bundles nsis
+
+cargo run --locked --manifest-path workers/rust/Cargo.toml \
+  -p kyuubiki-script-runner -- desktop-packaged-smoke windows \
+  --install-nsis --out tmp/windows-installed-desktop-smoke.json
+```
+
+The canonical automation is
+`.github/workflows/desktop-windows-qualification.yml`. Its uploaded report is a
+qualification candidate, not retained release evidence by itself. Promote and
+reverify a passing artifact before closing
+`packaged_desktop_round_trip/windows-installed` in the usability release gate.
+
 Retained reports must not contain host absolute paths. The native smoke runner
 encodes external locations as `@external` and paths below the selected bundle
 root as `@bundle-root`. Verify retained evidence without launching an app with:
 
 ```sh
 ./scripts/kyuubiki desktop-packaged-smoke \
-  --verify-report releases/usability-evidence/2.15.0/macos-installed-desktop-smoke.json
+  --verify-report releases/usability-evidence/2.17.0/macos-installed-desktop-smoke.json
+
+./scripts/kyuubiki desktop-packaged-smoke \
+  --verify-report releases/usability-evidence/2.17.0/linux-installed-desktop-smoke.json
 ```
 
 This verifier is host-independent. It checks the report schema, packaged
 version, all three desktop surfaces, successful startup receipts, and portable
-paths. It does not turn macOS evidence into Linux or Windows release evidence.
+paths. Evidence remains platform-specific: macOS evidence does not prove Linux
+or Windows, and Linux evidence does not prove macOS or Windows.
 
 `desktop-status` is intentionally the first stop. It gives operators one place
 to see:

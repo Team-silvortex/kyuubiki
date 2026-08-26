@@ -572,6 +572,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
   };
 
   bindInstallerActionHandlers(actionHandlers);
+  void reportPackagedBootReady();
 
   void runInstallerStartup({
     invoke,
@@ -615,5 +616,5 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     renderRegressionGateReport: (report) => renderRegressionGateReport(ui, report),
     showCompletion,
     brandConfigName: () => brandConfig?.installerName || "Installer GUI",
-  }).then(() => reportPackagedBootReady());
+  });
 })();
