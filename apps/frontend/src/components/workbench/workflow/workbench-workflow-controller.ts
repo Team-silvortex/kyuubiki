@@ -4,8 +4,9 @@ import { useCallback, useMemo, useState, type Dispatch, type MutableRefObject, t
 import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import { dismissWorkbenchAlert, upsertWorkbenchAlert } from "@/components/workbench/workbench-alert-state";
 import {
-  isWorkflowRunFailureStatus,
-  isWorkflowRunTerminalStatus,
+  isWorkflowJobStatusContractValid,
+  normalizeWorkflowRunProgress,
+  resolveWorkflowRunPollDisposition,
 } from "@/lib/api/job-status";
 import type { JobEnvelope } from "@/lib/api/fem-shared";
 import type {
@@ -167,6 +168,11 @@ export function useWorkbenchWorkflowController({
         workflowId: params.sourceWorkflowId,
       });
       const activeJobId = payload.job.job_id;
+      const initialStatusContractValid = isWorkflowJobStatusContractValid({
+        status: payload.job.status,
+        progress: payload.job.progress,
+        statusDetail: payload.job.status_detail,
+      });
       openWorkflowRunsSurface(params.displayWorkflowId);
       setJob(payload.job);
       setWorkflowRuns((current) =>
@@ -175,13 +181,22 @@ export function useWorkbenchWorkflowController({
           workflowId: params.displayWorkflowId,
           status: payload.job.status,
           statusDetail: payload.job.status_detail ?? null,
-          progress: payload.job.progress ?? 0,
-          pollingState: "attached",
+          progress: normalizeWorkflowRunProgress(payload.job.progress),
+          pollingState: initialStatusContractValid ? "attached" : "detached",
           currentNode: payload.job.message ?? null,
           updatedAt: payload.job.updated_at ?? null,
         }),
       );
       await refreshJobHistory();
+      if (!initialStatusContractValid) {
+        upsertWorkbenchAlert(setSystemAlerts, {
+          id: "workflow-run-error",
+          message: `${labels.workflowCatalogFailed}: ${String(payload.job.status)}`,
+          tone: "error",
+        });
+        setMessage(labels.workflowCatalogFailed);
+        return;
+      }
       setMessage(`${labels.workflowCatalogQueued}: ${params.displayWorkflowId}`);
 
       const pollToken = ++jobPollTokenRef.current;
@@ -191,6 +206,15 @@ export function useWorkbenchWorkflowController({
 
         const next = await workflowBackendService.fetchJob<WorkflowGraphJobResult>(payload.job.job_id);
         if (pollToken !== jobPollTokenRef.current) return;
+        const workflowResult = next.result && isWorkflowGraphResult(next.result) ? next.result : null;
+        const statusContractValid = isWorkflowJobStatusContractValid({
+          status: next.job.status,
+          progress: next.job.progress,
+          statusDetail: next.job.status_detail,
+        });
+        const pollDisposition = statusContractValid
+          ? resolveWorkflowRunPollDisposition(next.job.status, next.job.status_detail, Boolean(workflowResult))
+          : "invalid";
 
         setJob(next.job);
         setWorkflowRuns((current) =>
@@ -199,36 +223,47 @@ export function useWorkbenchWorkflowController({
             workflowId: params.displayWorkflowId,
             status: next.job.status,
             statusDetail: next.job.status_detail ?? null,
-            progress: next.job.progress ?? 0,
-            pollingState: "attached",
+            progress: normalizeWorkflowRunProgress(next.job.progress),
+            pollingState: statusContractValid ? "attached" : "detached",
             currentNode:
-              (next.result && isWorkflowGraphResult(next.result) ? next.result.current_node : null) ??
+              workflowResult?.current_node ??
               next.job.message ??
               null,
-            summary: next.result && isWorkflowGraphResult(next.result) ? summarizeWorkflowArtifacts(next.result) : null,
-            skippedNodes: next.result && isWorkflowGraphResult(next.result) ? next.result.skipped_nodes ?? [] : [],
-            branchDecisions: next.result && isWorkflowGraphResult(next.result) ? next.result.branch_decisions ?? [] : [],
-            nodeRuns: next.result && isWorkflowGraphResult(next.result) ? next.result.node_runs ?? [] : [],
-            artifactLineage: next.result && isWorkflowGraphResult(next.result) ? next.result.artifact_lineage ?? [] : [],
-            result: next.result && isWorkflowGraphResult(next.result) ? next.result : undefined,
-            traceSummary: next.result && isWorkflowGraphResult(next.result) ? summarizeWorkflowRunTrace(next.result) : undefined,
+            summary: workflowResult ? summarizeWorkflowArtifacts(workflowResult) : null,
+            skippedNodes: workflowResult?.skipped_nodes ?? [],
+            branchDecisions: workflowResult?.branch_decisions ?? [],
+            nodeRuns: workflowResult?.node_runs ?? [],
+            artifactLineage: workflowResult?.artifact_lineage ?? [],
+            result: workflowResult ?? undefined,
+            traceSummary: workflowResult ? summarizeWorkflowRunTrace(workflowResult) : undefined,
             updatedAt: next.job.updated_at ?? null,
           }),
         );
 
-        if (next.job.status === "completed" && next.result && isWorkflowGraphResult(next.result)) {
+        if (pollDisposition === "invalid") {
           await refreshJobHistory();
-          const summary = summarizeWorkflowArtifacts(next.result);
+          upsertWorkbenchAlert(setSystemAlerts, {
+            id: "workflow-run-error",
+            message: `${labels.workflowCatalogFailed}: ${String(next.job.status)}`,
+            tone: "error",
+          });
+          setMessage(labels.workflowCatalogFailed);
+          return;
+        }
+
+        if (pollDisposition === "completed" && workflowResult) {
+          await refreshJobHistory();
+          const summary = summarizeWorkflowArtifacts(workflowResult);
           dismissWorkbenchAlert(setSystemAlerts, "workflow-run-error");
           setMessage(
             summary
-              ? `${labels.workflowCatalogCompleted}: ${next.result.workflow_id} (${summary})`
-              : `${labels.workflowCatalogCompleted}: ${next.result.workflow_id}`,
+              ? `${labels.workflowCatalogCompleted}: ${workflowResult.workflow_id} (${summary})`
+              : `${labels.workflowCatalogCompleted}: ${workflowResult.workflow_id}`,
           );
           return;
         }
 
-        if (isWorkflowRunFailureStatus(next.job.status)) {
+        if (pollDisposition === "failure") {
           await refreshJobHistory();
           upsertWorkbenchAlert(setSystemAlerts, {
             id: "workflow-run-error",
@@ -236,11 +271,6 @@ export function useWorkbenchWorkflowController({
             tone: "error",
           });
           setMessage(labels.workflowCatalogFailed);
-          return;
-        }
-
-        if (isWorkflowRunTerminalStatus(next.job.status)) {
-          await refreshJobHistory();
           return;
         }
 

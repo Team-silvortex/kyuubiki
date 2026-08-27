@@ -39,6 +39,7 @@ const pendingSnapshotPayloads = new Map<string, PendingSnapshotPayload>();
 const pendingSnapshotWrites = new Map<string, { kind: "idle" | "timeout"; handle: number }>();
 let snapshotIndexCache: StoredWorkflowSnapshotSummary[] | null = null;
 const latestSnapshotFingerprintCache = new Map<string, { snapshotId: string; fingerprint: string }>();
+let snapshotIdSequence = 0;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -50,6 +51,23 @@ function asStringArray(value: unknown): string[] {
 
 function buildSnapshotPayload(payload: PendingSnapshotPayload) {
   return JSON.stringify(payload);
+}
+
+function cloneWorkflowGraph(graph: WorkflowGraphDefinition): WorkflowGraphDefinition {
+  return JSON.parse(JSON.stringify(graph)) as WorkflowGraphDefinition;
+}
+
+function cloneSnapshotSummary(summary: StoredWorkflowSnapshotSummary): StoredWorkflowSnapshotSummary {
+  return { ...summary, summary: [...summary.summary] };
+}
+
+function buildSnapshotId() {
+  snapshotIdSequence = (snapshotIdSequence + 1) % Number.MAX_SAFE_INTEGER;
+  return `snapshot_${Date.now()}_${snapshotIdSequence.toString(36)}`;
+}
+
+function utf8ByteLength(value: string) {
+  return new TextEncoder().encode(value).byteLength;
 }
 
 function sanitizeLegacySnapshotPayloads(index: StoredWorkflowSnapshotSummary[]) {
@@ -95,24 +113,14 @@ function readSnapshotIndex(): StoredWorkflowSnapshotSummary[] {
 
 function writeSnapshotIndex(records: StoredWorkflowSnapshotSummary[]) {
   if (typeof window === "undefined") return;
-  snapshotIndexCache = records;
+  const nextRecords = records.map(cloneSnapshotSummary);
+  window.localStorage.setItem(WORKBENCH_WORKFLOW_SNAPSHOT_INDEX_KEY, JSON.stringify(nextRecords));
+  snapshotIndexCache = nextRecords;
   latestSnapshotFingerprintCache.clear();
-  window.localStorage.setItem(WORKBENCH_WORKFLOW_SNAPSHOT_INDEX_KEY, JSON.stringify(records));
 }
 
 function snapshotPayloadKey(snapshotId: string) {
   return `${WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_PREFIX}${snapshotId}`;
-}
-
-function stringifySortedRecord(record?: Record<string, string> | Record<string, unknown> | null) {
-  if (!record) return "";
-  return JSON.stringify(
-    Object.fromEntries(
-      Object.entries(record)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, value]) => [key, value ?? null]),
-    ),
-  );
 }
 
 function getWindowWithIdleCallback() {
@@ -149,57 +157,18 @@ function scheduleSnapshotPayloadWrite(snapshotId: string, payload: PendingSnapsh
   pendingSnapshotWrites.set(snapshotId, { kind: "timeout", handle });
 }
 
+function canonicalizeSnapshotValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalizeSnapshotValue);
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort((left, right) => left.localeCompare(right))
+      .map((key) => [key, canonicalizeSnapshotValue(value[key])]),
+  );
+}
+
 function buildSnapshotFingerprint(graph: WorkflowGraphDefinition) {
-  return JSON.stringify({
-    schema: graph.schema_version,
-    id: graph.id,
-    version: graph.version ?? "",
-    name: graph.name ?? "",
-    entryNodes: [...(graph.entry_nodes ?? [])].sort(),
-    outputNodes: [...(graph.output_nodes ?? [])].sort(),
-    defaults: stringifySortedRecord(graph.defaults),
-    entryInputs: [...(graph.entry_inputs ?? [])]
-      .map((artifact) => `${artifact.node_id}:${artifact.artifact_type}:${artifact.description}`)
-      .sort(),
-    outputArtifacts: [...(graph.output_artifacts ?? [])]
-      .map((artifact) => `${artifact.node_id}:${artifact.artifact_type}:${artifact.description}`)
-      .sort(),
-    nodes: graph.nodes
-      .map((node) => ({
-        id: node.id,
-        kind: node.kind,
-        operatorId: node.operator_id ?? "",
-        config: stringifySortedRecord(node.config),
-        inputs: [...(node.inputs ?? [])].map((port) => `${port.id}:${port.artifact_type}:${port.dataset_value ?? ""}:${port.description ?? ""}`).sort(),
-        outputs: [...(node.outputs ?? [])].map((port) => `${port.id}:${port.artifact_type}:${port.dataset_value ?? ""}:${port.description ?? ""}`).sort(),
-      }))
-      .sort((left, right) => left.id.localeCompare(right.id)),
-    edges: [...(graph.edges ?? [])]
-      .map((edge) => `${edge.id}:${edge.from.node}.${edge.from.port}:${edge.to.node}.${edge.to.port}:${edge.artifact_type}:${edge.dataset_value ?? ""}`)
-      .sort(),
-    dataset: graph.dataset_contract
-      ? {
-          schema: graph.dataset_contract.schema_version,
-          id: graph.dataset_contract.id,
-          version: graph.dataset_contract.version,
-          name: graph.dataset_contract.name ?? "",
-          description: graph.dataset_contract.description ?? "",
-          metadata: stringifySortedRecord(graph.dataset_contract.metadata),
-          values: graph.dataset_contract.values
-            .map((value) => ({
-              id: value.id,
-              class: value.data_class,
-              element: value.element_type,
-              semantic: value.semantic_type ?? "",
-              unit: value.unit ?? "",
-              encoding: value.encoding ?? "",
-              schemaRef: value.schema_ref ? `${value.schema_ref.schema}@${value.schema_ref.version}` : "",
-              axes: [...(value.shape.axes ?? [])].map((axis) => `${axis.id}:${axis.label ?? ""}:${axis.size ?? ""}:${axis.semantic ?? ""}`).sort(),
-            }))
-            .sort((left, right) => left.id.localeCompare(right.id)),
-        }
-      : null,
-  });
+  return JSON.stringify(canonicalizeSnapshotValue(graph));
 }
 
 function pruneSnapshots(index: StoredWorkflowSnapshotSummary[]) {
@@ -230,7 +199,10 @@ function readLatestSnapshotFingerprint(
 }
 
 export function listStoredWorkflowSnapshots(workflowId: string): StoredWorkflowSnapshotSummary[] {
-  return readSnapshotIndex().filter((entry) => entry.workflowId === workflowId).sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  return readSnapshotIndex()
+    .filter((entry) => entry.workflowId === workflowId)
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+    .map(cloneSnapshotSummary);
 }
 
 export function loadStoredWorkflowSnapshot(snapshotId: string): StoredWorkflowSnapshot | null {
@@ -239,7 +211,7 @@ export function loadStoredWorkflowSnapshot(snapshotId: string): StoredWorkflowSn
   if (!indexEntry) return null;
   if (indexEntry.payloadState === "summary_only") return null;
   const pendingPayload = pendingSnapshotPayloads.get(snapshotId);
-  if (pendingPayload) return { ...indexEntry, ...pendingPayload };
+  if (pendingPayload) return { ...cloneSnapshotSummary(indexEntry), graph: cloneWorkflowGraph(pendingPayload.graph) };
   try {
     const raw = window.localStorage.getItem(snapshotPayloadKey(snapshotId));
     if (!raw) return null;
@@ -247,7 +219,7 @@ export function loadStoredWorkflowSnapshot(snapshotId: string): StoredWorkflowSn
     if (!isRecord(parsed)) return null;
     const graph = asWorkflowGraphDefinition(parsed.graph);
     if (!graph) return null;
-    return { ...indexEntry, graph };
+    return { ...cloneSnapshotSummary(indexEntry), graph: cloneWorkflowGraph(graph) };
   } catch {
     return null;
   }
@@ -263,8 +235,9 @@ export function saveStoredWorkflowSnapshot(params: {
 }) {
   if (typeof window === "undefined") return null;
   const index = readSnapshotIndex();
-  const nextFingerprint = buildSnapshotFingerprint(params.graph);
-  const payload = { graph: params.graph };
+  const capturedGraph = cloneWorkflowGraph(params.graph);
+  const nextFingerprint = buildSnapshotFingerprint(capturedGraph);
+  const payload = { graph: capturedGraph };
   const payloadText = buildSnapshotPayload(payload);
   const latestEntry = index.find((entry) => entry.workflowId === params.workflowId);
   if (latestEntry) {
@@ -278,7 +251,7 @@ export function saveStoredWorkflowSnapshot(params: {
       return latestEntry;
     }
   }
-  const id = `snapshot_${Date.now()}`;
+  const id = buildSnapshotId();
   const indexEntry: StoredWorkflowSnapshotSummary = {
     id,
     workflowId: params.workflowId,
@@ -286,7 +259,7 @@ export function saveStoredWorkflowSnapshot(params: {
     createdAt: new Date().toISOString(),
     reason: params.reason,
     summary: params.summary,
-    payloadState: payloadText.length > WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_MAX_BYTES ? "summary_only" : "full",
+    payloadState: utf8ByteLength(payloadText) > WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_MAX_BYTES ? "summary_only" : "full",
   };
   writeSnapshotIndex(pruneSnapshots([indexEntry, ...index]));
   latestSnapshotFingerprintCache.set(params.workflowId, {
@@ -301,7 +274,7 @@ export function saveStoredWorkflowSnapshot(params: {
     count: params.summary.length,
   });
   if (indexEntry.payloadState === "full") scheduleSnapshotPayloadWrite(id, payload);
-  return indexEntry;
+  return cloneSnapshotSummary(indexEntry);
 }
 
 export function removeStoredWorkflowSnapshot(snapshotId: string) {

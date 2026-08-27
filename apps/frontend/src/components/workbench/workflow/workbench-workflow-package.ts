@@ -93,39 +93,40 @@ export type WorkflowPackage = {
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function asStringArray(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const values = value.filter((entry): entry is string => typeof entry === "string");
-  return values.length > 0 ? values : undefined;
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }
-function asStringRecord(value: unknown): Record<string, string> | undefined {
-  if (!isRecord(value)) return undefined;
-  return Object.fromEntries(
-    Object.entries(value).filter(
-      ([key, entryValue]) => typeof key === "string" && typeof entryValue === "string",
-    ),
-  ) as Record<string, string>;
+function isOptionalString(value: unknown): value is string | undefined {
+  return value === undefined || typeof value === "string";
 }
-function asStringArrayRecord(value: unknown): Record<string, string[]> | undefined {
-  if (!isRecord(value)) return undefined;
-  const entries = Object.entries(value).flatMap(([key, entryValue]) => {
+function asStringArray(value: unknown): string[] | null {
+  if (!Array.isArray(value) || !value.every((entry) => typeof entry === "string")) return null;
+  return [...value];
+}
+function asStringRecord(value: unknown): Record<string, string> | null {
+  if (!isRecord(value) || !Object.values(value).every((entry) => typeof entry === "string")) return null;
+  return { ...value } as Record<string, string>;
+}
+function asStringArrayRecord(value: unknown): Record<string, string[]> | null {
+  if (!isRecord(value)) return null;
+  const entries: Array<[string, string[]]> = [];
+  for (const [key, entryValue] of Object.entries(value)) {
     const values = asStringArray(entryValue);
-    return typeof key === "string" && values ? [[key, values] as const] : [];
-  });
-  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+    if (!values) return null;
+    entries.push([key, values]);
+  }
+  return Object.fromEntries(entries);
 }
 
 function asTemplateChainPreferences(
   value: unknown,
-): WorkflowTemplateChainPreferenceSnapshot | undefined {
-  if (!isRecord(value)) return undefined;
-  const favoriteChainIds = asStringArray(value.favoriteChainIds) ?? [];
-  const favoriteChainAliases = asStringRecord(value.favoriteChainAliases) ?? {};
-  if (favoriteChainIds.length === 0 && Object.keys(favoriteChainAliases).length === 0) {
-    return undefined;
-  }
+): WorkflowTemplateChainPreferenceSnapshot | null {
+  if (!isRecord(value)) return null;
+  const favoriteChainIds = asStringArray(value.favoriteChainIds);
+  const favoriteChainAliases = asStringRecord(value.favoriteChainAliases);
+  if (!favoriteChainIds || !favoriteChainAliases) return null;
   return { favoriteChainIds, favoriteChainAliases };
 }
 
@@ -168,16 +169,14 @@ function formatSchemaRef(value?: { schema: string; version: string } | null) {
 function buildArtifactContractEntries(params: {
   artifacts: WorkflowCatalogEntryArtifact[];
   graph: WorkflowGraphDefinition;
+  portDirection: "input" | "output";
 }) {
   const values = params.graph.dataset_contract?.values ?? [];
   const valueMap = new Map(values.map((value) => [value.id, value] as const));
 
   return params.artifacts.map((artifact) => {
     const node = params.graph.nodes.find((entry) => entry.id === artifact.node_id);
-    const ports = [
-      ...(node?.inputs ?? []),
-      ...(node?.outputs ?? []),
-    ];
+    const ports = params.portDirection === "input" ? node?.inputs ?? [] : node?.outputs ?? [];
     const matchedPort = ports.find((port) => port.artifact_type === artifact.artifact_type);
     const matchedValue =
       (matchedPort?.dataset_value ? valueMap.get(matchedPort.dataset_value) : null) ??
@@ -208,10 +207,12 @@ export function buildWorkflowPackageContractManifest(
     entry_contracts: buildArtifactContractEntries({
       artifacts: graph.entry_inputs ?? [],
       graph,
+      portDirection: "input",
     }),
     output_contracts: buildArtifactContractEntries({
       artifacts: graph.output_artifacts ?? [],
       graph,
+      portDirection: "output",
     }),
   };
 }
@@ -313,7 +314,7 @@ export function buildWorkflowPackage(params: {
 }): WorkflowPackage {
   const tags = params.workflow.local?.tags ?? params.workflow.capability_tags ?? [];
 
-  return {
+  const packageValue: WorkflowPackage = {
     format: "kyuubiki.workflow-package",
     version: 1,
     package_id: params.workflow.local?.imported_from_package_id ?? params.workflow.id,
@@ -349,226 +350,173 @@ export function buildWorkflowPackage(params: {
       template_chain_preferences: params.templateChainPreferences,
     },
   };
+  return structuredClone(packageValue);
+}
+
+function asParsedArray<T>(value: unknown, parser: (entry: unknown) => T | null): T[] | null {
+  if (!Array.isArray(value)) return null;
+  const entries: T[] = [];
+  for (const entry of value) {
+    const parsed = parser(entry);
+    if (!parsed) return null;
+    entries.push(parsed);
+  }
+  return entries;
+}
+
+function asPackageContractEntry(value: unknown): WorkflowPackageContractEntry | null {
+  if (!isRecord(value) || !isNonEmptyString(value.node_id) || !isNonEmptyString(value.artifact_type)) return null;
+  if (!isOptionalString(value.description) || !isOptionalString(value.dataset_value) || !isOptionalString(value.semantic_type) || !isOptionalString(value.schema_ref)) return null;
+  return {
+    node_id: value.node_id,
+    artifact_type: value.artifact_type,
+    description: value.description,
+    dataset_value: value.dataset_value,
+    semantic_type: value.semantic_type,
+    schema_ref: value.schema_ref,
+  };
+}
+
+function asPackageContractManifest(value: unknown): WorkflowPackageContractManifest | null {
+  if (!isRecord(value)) return null;
+  if (!isOptionalString(value.dataset_schema) || !isOptionalString(value.dataset_contract_id) || !isOptionalString(value.dataset_contract_version)) return null;
+  const datasetValueIds = asStringArray(value.dataset_value_ids);
+  const entryContracts = asParsedArray(value.entry_contracts, asPackageContractEntry);
+  const outputContracts = asParsedArray(value.output_contracts, asPackageContractEntry);
+  if (!datasetValueIds || !entryContracts || !outputContracts) return null;
+  return {
+    dataset_schema: value.dataset_schema,
+    dataset_contract_id: value.dataset_contract_id,
+    dataset_contract_version: value.dataset_contract_version,
+    dataset_value_ids: datasetValueIds,
+    entry_contracts: entryContracts,
+    output_contracts: outputContracts,
+  };
+}
+
+function asBridgeSeedSummary(value: unknown): WorkflowPackageBridgeSeedSummary | null {
+  if (!isRecord(value) || !isNonEmptyString(value.operator_id)) return null;
+  if (!Number.isInteger(value.node_count) || (value.node_count as number) < 0) return null;
+  if (!Number.isInteger(value.element_count) || (value.element_count as number) < 0) return null;
+  if (!isOptionalString(value.contract_version)) return null;
+  return {
+    operator_id: value.operator_id,
+    node_count: value.node_count as number,
+    element_count: value.element_count as number,
+    contract_version: value.contract_version,
+  };
+}
+
+function asOperatorFetchEntry(value: unknown): WorkflowPackageOperatorFetchEntry | null {
+  if (!isRecord(value) || !isNonEmptyString(value.operator_id) || !isNonEmptyString(value.source_ref)) return null;
+  if (value.execution_mode !== "orchestra_fetch" && value.execution_mode !== "orchestra_only") return null;
+  if (value.cache_scope !== "ephemeral" && value.cache_scope !== "job" && value.cache_scope !== "session") return null;
+  if (!isOptionalString(value.package_ref) || !isOptionalString(value.package_version) || !isOptionalString(value.integrity)) return null;
+  const placementTags = asStringArray(value.placement_tags);
+  const requiredCapabilities = asStringArray(value.required_capabilities);
+  if (!placementTags || !requiredCapabilities) return null;
+  return {
+    operator_id: value.operator_id,
+    execution_mode: value.execution_mode,
+    source_ref: value.source_ref,
+    package_ref: value.package_ref,
+    package_version: value.package_version,
+    integrity: value.integrity,
+    placement_tags: placementTags,
+    required_capabilities: requiredCapabilities,
+    cache_scope: value.cache_scope,
+  };
+}
+
+function asRuntimeManifest(value: unknown): WorkflowPackageRuntimeManifest | null {
+  if (!isRecord(value) || !isRecord(value.dispatch_policy)) return null;
+  const policy = value.dispatch_policy;
+  if (policy.authority_mode !== "central_operator_library" || policy.agent_cache_policy !== "ephemeral_fetch" || policy.missing_operator_behavior !== "fetch_from_orchestra" || policy.agent_library_replication !== "forbidden") return null;
+  const requiredOperatorIds = asStringArray(value.required_operator_ids);
+  const sampleInputNodeIds = asStringArray(value.sample_input_node_ids);
+  const includedInputTextNodeIds = asStringArray(value.included_input_text_node_ids);
+  const bridgeSeedSummaries = asParsedArray(value.bridge_seed_summaries, asBridgeSeedSummary);
+  const operatorFetchPlan = asParsedArray(value.operator_fetch_plan, asOperatorFetchEntry);
+  if (!requiredOperatorIds || !sampleInputNodeIds || !includedInputTextNodeIds || !bridgeSeedSummaries || !operatorFetchPlan) return null;
+  return {
+    required_operator_ids: requiredOperatorIds,
+    sample_input_node_ids: sampleInputNodeIds,
+    included_input_text_node_ids: includedInputTextNodeIds,
+    bridge_seed_summaries: bridgeSeedSummaries,
+    dispatch_policy: {
+      authority_mode: "central_operator_library",
+      agent_cache_policy: "ephemeral_fetch",
+      missing_operator_behavior: "fetch_from_orchestra",
+      agent_library_replication: "forbidden",
+    },
+    operator_fetch_plan: operatorFetchPlan,
+  };
+}
+
+function asPackageSearchIndex(value: unknown): WorkflowPackageSearchIndex | null {
+  if (!isRecord(value)) return null;
+  const domains = asStringArray(value.domains);
+  const capabilityTags = asStringArray(value.capability_tags);
+  const operatorIds = asStringArray(value.operator_ids);
+  const entryArtifacts = asStringArray(value.entry_artifacts);
+  const outputArtifacts = asStringArray(value.output_artifacts);
+  if (!domains || !capabilityTags || !operatorIds || !entryArtifacts || !outputArtifacts) return null;
+  return {
+    domains,
+    capability_tags: capabilityTags,
+    operator_ids: operatorIds,
+    entry_artifacts: entryArtifacts,
+    output_artifacts: outputArtifacts,
+  };
 }
 
 export function asWorkflowPackage(value: unknown): WorkflowPackage | null {
-  if (!isRecord(value)) return null;
-  if (
-    value.format !== "kyuubiki.workflow-package" ||
-    value.version !== 1 ||
-    typeof value.package_id !== "string" ||
-    typeof value.name !== "string" ||
-    !isRecord(value.workflow)
-  ) {
-    return null;
-  }
-
+  if (!isRecord(value) || value.format !== "kyuubiki.workflow-package" || value.version !== 1) return null;
+  if (!isNonEmptyString(value.package_id) || !isNonEmptyString(value.name) || !isRecord(value.workflow)) return null;
+  if (!isOptionalString(value.summary) || !isOptionalString(value.package_version)) return null;
+  if (typeof value.exported_at !== "string" || !Number.isFinite(Date.parse(value.exported_at))) return null;
+  const tags = value.tags === undefined ? undefined : asStringArray(value.tags);
+  if (tags === null) return null;
+  const searchIndex = asPackageSearchIndex(value.search_index);
+  const contractManifest = asPackageContractManifest(value.contract_manifest);
+  const runtimeManifest = asRuntimeManifest(value.runtime_manifest);
   const graph = asWorkflowGraphDefinition(value.workflow.graph);
-  if (!graph) return null;
+  if (!searchIndex || !contractManifest || !runtimeManifest || !graph || !isNonEmptyString(value.workflow.id)) return null;
+  if (!isOptionalString(value.workflow.source_workflow_id) || !isOptionalString(value.workflow.source_workflow_name) || !isOptionalString(value.workflow.variant_of_workflow_id) || !isOptionalString(value.workflow.variant_of_workflow_name) || !isOptionalString(value.workflow.notes)) return null;
 
-  return {
+  const inputArtifactTexts = value.workflow.input_artifact_texts === undefined ? undefined : asStringRecord(value.workflow.input_artifact_texts);
+  const inputArtifactSemanticTypes = value.workflow.input_artifact_semantic_types === undefined ? undefined : asStringRecord(value.workflow.input_artifact_semantic_types);
+  const inputArtifactContractWarnings = value.workflow.input_artifact_contract_warnings === undefined ? undefined : asStringArrayRecord(value.workflow.input_artifact_contract_warnings);
+  const templateChainPreferences = value.workflow.template_chain_preferences === undefined ? undefined : asTemplateChainPreferences(value.workflow.template_chain_preferences);
+  if (inputArtifactTexts === null || inputArtifactSemanticTypes === null || inputArtifactContractWarnings === null || templateChainPreferences === null) return null;
+
+  const packageValue: WorkflowPackage = {
     format: "kyuubiki.workflow-package",
     version: 1,
     package_id: value.package_id,
     name: value.name,
-    summary: typeof value.summary === "string" ? value.summary : undefined,
-    tags: asStringArray(value.tags),
-    package_version:
-      typeof value.package_version === "string" ? value.package_version : undefined,
-    exported_at:
-      typeof value.exported_at === "string" ? value.exported_at : new Date().toISOString(),
-    search_index: isRecord(value.search_index)
-      ? {
-          domains: asStringArray(value.search_index.domains) ?? [],
-          capability_tags: asStringArray(value.search_index.capability_tags) ?? [],
-          operator_ids: asStringArray(value.search_index.operator_ids) ?? [],
-          entry_artifacts: asStringArray(value.search_index.entry_artifacts) ?? [],
-          output_artifacts: asStringArray(value.search_index.output_artifacts) ?? [],
-        }
-      : buildWorkflowPackageSearchIndex({ graph, tags: asStringArray(value.tags) }),
-    contract_manifest: isRecord(value.contract_manifest)
-      ? {
-          dataset_schema:
-            typeof value.contract_manifest.dataset_schema === "string"
-              ? value.contract_manifest.dataset_schema
-              : undefined,
-          dataset_contract_id:
-            typeof value.contract_manifest.dataset_contract_id === "string"
-              ? value.contract_manifest.dataset_contract_id
-              : undefined,
-          dataset_contract_version:
-            typeof value.contract_manifest.dataset_contract_version === "string"
-              ? value.contract_manifest.dataset_contract_version
-              : undefined,
-          dataset_value_ids: asStringArray(value.contract_manifest.dataset_value_ids) ?? [],
-          entry_contracts: Array.isArray(value.contract_manifest.entry_contracts)
-            ? value.contract_manifest.entry_contracts.flatMap((entry) =>
-                isRecord(entry) && typeof entry.node_id === "string" && typeof entry.artifact_type === "string"
-                  ? [
-                      {
-                        node_id: entry.node_id,
-                        artifact_type: entry.artifact_type,
-                        description:
-                          typeof entry.description === "string" ? entry.description : undefined,
-                        dataset_value:
-                          typeof entry.dataset_value === "string" ? entry.dataset_value : undefined,
-                        semantic_type:
-                          typeof entry.semantic_type === "string" ? entry.semantic_type : undefined,
-                        schema_ref:
-                          typeof entry.schema_ref === "string" ? entry.schema_ref : undefined,
-                      },
-                    ]
-                  : [],
-              )
-            : [],
-          output_contracts: Array.isArray(value.contract_manifest.output_contracts)
-            ? value.contract_manifest.output_contracts.flatMap((entry) =>
-                isRecord(entry) && typeof entry.node_id === "string" && typeof entry.artifact_type === "string"
-                  ? [
-                      {
-                        node_id: entry.node_id,
-                        artifact_type: entry.artifact_type,
-                        description:
-                          typeof entry.description === "string" ? entry.description : undefined,
-                        dataset_value:
-                          typeof entry.dataset_value === "string" ? entry.dataset_value : undefined,
-                        semantic_type:
-                          typeof entry.semantic_type === "string" ? entry.semantic_type : undefined,
-                        schema_ref:
-                          typeof entry.schema_ref === "string" ? entry.schema_ref : undefined,
-                      },
-                    ]
-                  : [],
-              )
-            : [],
-        }
-      : buildWorkflowPackageContractManifest(graph),
-    runtime_manifest: isRecord(value.runtime_manifest)
-      ? {
-          required_operator_ids:
-            asStringArray(value.runtime_manifest.required_operator_ids) ?? [],
-          sample_input_node_ids:
-            asStringArray(value.runtime_manifest.sample_input_node_ids) ?? [],
-          included_input_text_node_ids:
-            asStringArray(value.runtime_manifest.included_input_text_node_ids) ?? [],
-          bridge_seed_summaries: Array.isArray(value.runtime_manifest.bridge_seed_summaries)
-            ? value.runtime_manifest.bridge_seed_summaries.flatMap((entry) =>
-                isRecord(entry) &&
-                typeof entry.operator_id === "string" &&
-                typeof entry.node_count === "number" &&
-                typeof entry.element_count === "number"
-                  ? [
-                      {
-                        operator_id: entry.operator_id,
-                        node_count: entry.node_count,
-                        element_count: entry.element_count,
-                        contract_version:
-                          typeof entry.contract_version === "string"
-                            ? entry.contract_version
-                            : undefined,
-                      },
-                    ]
-                  : [],
-              )
-            : [],
-          dispatch_policy:
-            isRecord(value.runtime_manifest.dispatch_policy) &&
-            value.runtime_manifest.dispatch_policy.authority_mode ===
-              "central_operator_library" &&
-            value.runtime_manifest.dispatch_policy.agent_cache_policy ===
-              "ephemeral_fetch" &&
-            value.runtime_manifest.dispatch_policy.missing_operator_behavior ===
-              "fetch_from_orchestra" &&
-            value.runtime_manifest.dispatch_policy.agent_library_replication ===
-              "forbidden"
-              ? {
-                  authority_mode: "central_operator_library",
-                  agent_cache_policy: "ephemeral_fetch",
-                  missing_operator_behavior: "fetch_from_orchestra",
-                  agent_library_replication: "forbidden",
-                }
-              : {
-                  authority_mode: "central_operator_library",
-                  agent_cache_policy: "ephemeral_fetch",
-                  missing_operator_behavior: "fetch_from_orchestra",
-                  agent_library_replication: "forbidden",
-                },
-          operator_fetch_plan: Array.isArray(value.runtime_manifest.operator_fetch_plan)
-            ? value.runtime_manifest.operator_fetch_plan.flatMap((entry) =>
-                isRecord(entry) &&
-                typeof entry.operator_id === "string" &&
-                (entry.execution_mode === "orchestra_fetch" ||
-                  entry.execution_mode === "orchestra_only") &&
-                typeof entry.source_ref === "string" &&
-                (entry.cache_scope === "ephemeral" ||
-                  entry.cache_scope === "job" ||
-                  entry.cache_scope === "session")
-                  ? [
-                      {
-                        operator_id: entry.operator_id,
-                        execution_mode: entry.execution_mode,
-                        source_ref: entry.source_ref,
-                        package_ref:
-                          typeof entry.package_ref === "string"
-                            ? entry.package_ref
-                            : undefined,
-                        package_version:
-                          typeof entry.package_version === "string"
-                            ? entry.package_version
-                            : undefined,
-                        integrity:
-                          typeof entry.integrity === "string"
-                            ? entry.integrity
-                            : undefined,
-                        placement_tags: asStringArray(entry.placement_tags) ?? [],
-                        required_capabilities:
-                          asStringArray(entry.required_capabilities) ?? [],
-                        cache_scope: entry.cache_scope,
-                      },
-                    ]
-                  : [],
-              )
-            : buildWorkflowPackageRuntimeManifest({
-                graph,
-                inputArtifactTexts: asStringRecord(value.workflow.input_artifact_texts),
-              }).operator_fetch_plan,
-        }
-      : buildWorkflowPackageRuntimeManifest({
-          graph,
-          inputArtifactTexts: asStringRecord(value.workflow.input_artifact_texts),
-        }),
+    summary: value.summary,
+    tags,
+    package_version: value.package_version,
+    exported_at: value.exported_at,
+    search_index: searchIndex,
+    contract_manifest: contractManifest,
+    runtime_manifest: runtimeManifest,
     workflow: {
-      id: typeof value.workflow.id === "string" ? value.workflow.id : graph.id,
-      source_workflow_id:
-        typeof value.workflow.source_workflow_id === "string"
-          ? value.workflow.source_workflow_id
-          : undefined,
-      source_workflow_name:
-        typeof value.workflow.source_workflow_name === "string"
-          ? value.workflow.source_workflow_name
-          : undefined,
-      variant_of_workflow_id:
-        typeof value.workflow.variant_of_workflow_id === "string"
-          ? value.workflow.variant_of_workflow_id
-          : undefined,
-      variant_of_workflow_name:
-        typeof value.workflow.variant_of_workflow_name === "string"
-          ? value.workflow.variant_of_workflow_name
-          : undefined,
-      notes: typeof value.workflow.notes === "string" ? value.workflow.notes : undefined,
+      id: value.workflow.id,
+      source_workflow_id: value.workflow.source_workflow_id,
+      source_workflow_name: value.workflow.source_workflow_name,
+      variant_of_workflow_id: value.workflow.variant_of_workflow_id,
+      variant_of_workflow_name: value.workflow.variant_of_workflow_name,
+      notes: value.workflow.notes,
       graph,
-      input_artifact_texts: asStringRecord(value.workflow.input_artifact_texts),
-      input_artifact_semantic_types: asStringRecord(
-        value.workflow.input_artifact_semantic_types,
-      ),
-      input_artifact_contract_warnings: asStringArrayRecord(
-        value.workflow.input_artifact_contract_warnings,
-      ),
-      template_chain_preferences: asTemplateChainPreferences(
-        value.workflow.template_chain_preferences,
-      ),
+      input_artifact_texts: inputArtifactTexts,
+      input_artifact_semantic_types: inputArtifactSemanticTypes,
+      input_artifact_contract_warnings: inputArtifactContractWarnings,
+      template_chain_preferences: templateChainPreferences,
     },
   };
+  return structuredClone(packageValue);
 }
 
 function deriveOperatorPlacementTags(operatorId: string) {

@@ -14,32 +14,23 @@ export type WorkflowDraftBundle = {
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function asStringRecord(value: unknown): Record<string, string> | undefined {
-  if (!isRecord(value)) return undefined;
-  return Object.fromEntries(
-    Object.entries(value).filter(
-      ([key, entryValue]) => typeof key === "string" && typeof entryValue === "string",
-    ),
-  ) as Record<string, string>;
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return isRecord(value) && Object.values(value).every((entry) => typeof entry === "string");
 }
 
 function asTemplateChainPreferences(
   value: unknown,
-): WorkflowTemplateChainPreferenceSnapshot | undefined {
-  if (!isRecord(value)) return undefined;
-  const favoriteChainIds = Array.isArray(value.favoriteChainIds)
-    ? value.favoriteChainIds.filter(
-        (entry): entry is string => typeof entry === "string",
-      )
-    : [];
-  const favoriteChainAliases = asStringRecord(value.favoriteChainAliases) ?? {};
-  if (favoriteChainIds.length === 0 && Object.keys(favoriteChainAliases).length === 0) {
-    return undefined;
-  }
-  return { favoriteChainIds, favoriteChainAliases };
+): WorkflowTemplateChainPreferenceSnapshot | null {
+  if (!isRecord(value)) return null;
+  if (!Array.isArray(value.favoriteChainIds) || !value.favoriteChainIds.every((entry) => typeof entry === "string")) return null;
+  if (!isStringRecord(value.favoriteChainAliases)) return null;
+  return {
+    favoriteChainIds: [...value.favoriteChainIds],
+    favoriteChainAliases: { ...value.favoriteChainAliases },
+  };
 }
 
 export function buildWorkflowDraftBundle(params: {
@@ -51,9 +42,13 @@ export function buildWorkflowDraftBundle(params: {
     format: "kyuubiki.workflow-draft-bundle",
     version: 1,
     exported_at: new Date().toISOString(),
-    graph: params.graph,
-    input_artifact_texts: params.inputArtifactTexts,
-    template_chain_preferences: params.templateChainPreferences,
+    graph: structuredClone(params.graph),
+    input_artifact_texts: params.inputArtifactTexts
+      ? { ...params.inputArtifactTexts }
+      : undefined,
+    template_chain_preferences: params.templateChainPreferences
+      ? structuredClone(params.templateChainPreferences)
+      : undefined,
   };
 }
 
@@ -65,17 +60,22 @@ export function asWorkflowDraftBundle(value: unknown): WorkflowDraftBundle | nul
   ) {
     return null;
   }
+  if (typeof value.exported_at !== "string" || !Number.isFinite(Date.parse(value.exported_at))) return null;
   const graph = asWorkflowGraphDefinition(value.graph);
   if (!graph) return null;
+  if (value.input_artifact_texts !== undefined && !isStringRecord(value.input_artifact_texts)) return null;
+  const templateChainPreferences = value.template_chain_preferences === undefined
+    ? undefined
+    : asTemplateChainPreferences(value.template_chain_preferences);
+  if (templateChainPreferences === null) return null;
   return {
     format: "kyuubiki.workflow-draft-bundle",
     version: 1,
-    exported_at:
-      typeof value.exported_at === "string" ? value.exported_at : new Date().toISOString(),
-    graph,
-    input_artifact_texts: asStringRecord(value.input_artifact_texts),
-    template_chain_preferences: asTemplateChainPreferences(
-      value.template_chain_preferences,
-    ),
+    exported_at: value.exported_at,
+    graph: structuredClone(graph),
+    input_artifact_texts: value.input_artifact_texts
+      ? { ...value.input_artifact_texts }
+      : undefined,
+    template_chain_preferences: templateChainPreferences ?? undefined,
   };
 }

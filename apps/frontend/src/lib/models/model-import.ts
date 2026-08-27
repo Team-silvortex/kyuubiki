@@ -27,22 +27,15 @@ import {
   parseThermalTruss3dV1,
   parseTruss3dV1,
 } from "@/lib/models/model-import-spatial";
+import { assertImportedModelIntegrity } from "@/lib/models/model-import-integrity";
 export type * from "@/lib/models/model-import-types";
 import type { ImportedModel } from "@/lib/models/model-import-types";
 import { assertSupportedVersion } from "@/lib/models/model-import-utils";
 
-export function parsePlaygroundModel(text: string): ImportedModel {
-  const raw = JSON.parse(text) as Record<string, unknown>;
-  assertSupportedVersion(raw);
-
-  const kind =
-    typeof raw.kind === "string"
-      ? raw.kind
-      : Array.isArray(raw.nodes) || Array.isArray(raw.elements)
-        ? "truss_2d"
-        : "axial_bar_1d";
-
+function parseModelByKind(raw: Record<string, unknown>, kind: string): ImportedModel {
   switch (kind) {
+    case "axial_bar_1d":
+      return parseAxialBarV1(raw);
     case "electrostatic_plane_triangle_2d":
       return parseElectrostaticPlaneTriangle2dV1(raw);
     case "plane_triangle_2d":
@@ -88,6 +81,27 @@ export function parsePlaygroundModel(text: string): ImportedModel {
     case "truss_2d":
       return parseTruss2dV1(raw);
     default:
-      return parseAxialBarV1(raw);
+      throw new Error(`unsupported model kind: ${kind}`);
   }
+}
+
+export function parsePlaygroundModel(text: string): ImportedModel {
+  const parsed: unknown = JSON.parse(text);
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error("model payload must be an object");
+  }
+  const raw = parsed as Record<string, unknown>;
+  assertSupportedVersion(raw);
+
+  const hasExplicitKind = Object.prototype.hasOwnProperty.call(raw, "kind");
+  if (hasExplicitKind && (typeof raw.kind !== "string" || raw.kind.trim().length === 0)) {
+    throw new Error("kind must be a non-empty string");
+  }
+  const kind = hasExplicitKind
+    ? (raw.kind as string)
+    : Array.isArray(raw.nodes) || Array.isArray(raw.elements)
+      ? "truss_2d"
+      : "axial_bar_1d";
+
+  return assertImportedModelIntegrity(parseModelByKind(raw, kind));
 }

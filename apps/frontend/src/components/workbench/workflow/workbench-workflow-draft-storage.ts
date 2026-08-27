@@ -16,8 +16,10 @@ export type StoredWorkflowDraft = {
   templateChainPreferences?: WorkflowTemplateChainPreferenceSnapshot;
 };
 
+let workflowDraftIdSequence = 0;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function asStringRecord(value: unknown): Record<string, string> | undefined {
@@ -109,6 +111,11 @@ function buildDraftName(workflowName: string, graph: WorkflowGraphDefinition): s
   return `${base} (${stamp})`;
 }
 
+function buildDraftId() {
+  workflowDraftIdSequence = (workflowDraftIdSequence + 1) % Number.MAX_SAFE_INTEGER;
+  return `draft_${Date.now()}_${workflowDraftIdSequence.toString(36)}`;
+}
+
 export function listStoredWorkflowDrafts(workflowId: string): StoredWorkflowDraft[] {
   return readStoredDrafts()
     .filter((entry) => entry.workflowId === workflowId)
@@ -123,12 +130,14 @@ export function saveStoredWorkflowDraft(params: {
   templateChainPreferences?: WorkflowTemplateChainPreferenceSnapshot;
 }): StoredWorkflowDraft {
   const nextRecord: StoredWorkflowDraft = {
-    id: `draft_${Date.now()}`,
+    id: buildDraftId(),
     workflowId: params.workflowId,
     name: buildDraftName(params.workflowName, params.graph),
     savedAt: new Date().toISOString(),
-    graph: params.graph,
-    templateChainPreferences: params.templateChainPreferences,
+    graph: structuredClone(params.graph),
+    templateChainPreferences: params.templateChainPreferences
+      ? structuredClone(params.templateChainPreferences)
+      : undefined,
   };
   const next = [nextRecord, ...readStoredDrafts()].slice(0, 40);
   writeStoredDrafts(next);

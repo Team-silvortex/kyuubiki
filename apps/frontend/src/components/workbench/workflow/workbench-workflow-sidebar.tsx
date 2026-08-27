@@ -528,7 +528,7 @@ export function WorkbenchWorkflowSidebar({
                       <span className={`status-pill status-pill--${tag.tone}`} key={`${run.jobId}:${tag.label}`}>{tag.label}</span>
                     ))}
                     {run.pollingState === "detached" ? <span className="status-pill status-pill--watch">detached</span> : null}
-                    <span className={`status-pill status-pill--${resolveWorkflowRunStatusTone(run.status, run.pollingState)}`}>{run.status}</span>
+                    <span className={`status-pill status-pill--${resolveWorkflowRunStatusTone(run.status, run.pollingState, run.statusDetail)}`}>{run.status}</span>
                   </div>
                 </div>
                 {(() => {

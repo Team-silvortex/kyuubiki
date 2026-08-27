@@ -20,8 +20,26 @@ type PlaneStudyJobInput =
   | ThermalPlaneTriangle2dJobInput
   | ThermalPlaneQuad2dJobInput;
 
+type MaterialField = "name" | "youngs_modulus" | "poisson_ratio";
+
+function nextMaterialIndex(materials: ModelMaterial[] | undefined) {
+  const ids = new Set((materials ?? []).map((material) => material.id));
+  let index = 1;
+  while (ids.has(`mat-${index}`)) index += 1;
+  return index;
+}
+
+function normalizeMaterialUpdateValue(field: MaterialField, value: string | number) {
+  if (field === "name") return typeof value === "string" ? value : String(value);
+  const numericValue = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numericValue)) return undefined;
+  if (field === "youngs_modulus" && numericValue <= 0) return undefined;
+  if (field === "poisson_ratio" && (numericValue <= -1 || numericValue >= 0.5)) return undefined;
+  return numericValue;
+}
+
 export function nextMaterialId(materials: ModelMaterial[] | undefined) {
-  return `mat-${(materials?.length ?? 0) + 1}`;
+  return `mat-${nextMaterialIndex(materials)}`;
 }
 
 export function ensureTrussModelMaterials(model: Truss2dJobInput, fallbackValue = "70"): Truss2dJobInput {
@@ -98,24 +116,26 @@ export function ensureFrameModelMaterials(model: Frame2dJobInput, fallbackValue 
 }
 
 export function addPresetMaterialToTrussModel(model: Truss2dJobInput, activeMaterial: string) {
+  const nextIndex = nextMaterialIndex(model.materials);
   return {
     ...model,
     materials: [
       ...(model.materials ?? []),
-      createMaterialDefinition(activeMaterial, (model.materials?.length ?? 0) + 1, {
-        id: nextMaterialId(model.materials),
+      createMaterialDefinition(activeMaterial, nextIndex, {
+        id: `mat-${nextIndex}`,
       }),
     ],
   };
 }
 
 export function addPresetMaterialToTruss3dModel(model: Truss3dJobInput, activeMaterial: string) {
+  const nextIndex = nextMaterialIndex(model.materials);
   return {
     ...model,
     materials: [
       ...(model.materials ?? []),
-      createMaterialDefinition(activeMaterial, (model.materials?.length ?? 0) + 1, {
-        id: nextMaterialId(model.materials),
+      createMaterialDefinition(activeMaterial, nextIndex, {
+        id: `mat-${nextIndex}`,
       }),
     ],
   };
@@ -123,6 +143,7 @@ export function addPresetMaterialToTruss3dModel(model: Truss3dJobInput, activeMa
 
 export function addPresetMaterialToPlaneModel<T extends PlaneStudyJobInput>(model: T, activeMaterial: string): T {
   const firstElement = model.elements[0];
+  const nextIndex = nextMaterialIndex(model.materials);
   const fallbackPoisson =
     firstElement && "poisson_ratio" in firstElement && typeof firstElement.poisson_ratio === "number"
       ? firstElement.poisson_ratio
@@ -131,8 +152,8 @@ export function addPresetMaterialToPlaneModel<T extends PlaneStudyJobInput>(mode
     ...model,
     materials: [
       ...(model.materials ?? []),
-      createMaterialDefinition(activeMaterial, (model.materials?.length ?? 0) + 1, {
-        id: nextMaterialId(model.materials),
+      createMaterialDefinition(activeMaterial, nextIndex, {
+        id: `mat-${nextIndex}`,
         poisson_ratio: fallbackPoisson,
       }),
     ],
@@ -140,12 +161,13 @@ export function addPresetMaterialToPlaneModel<T extends PlaneStudyJobInput>(mode
 }
 
 export function addPresetMaterialToFrameModel(model: Frame2dJobInput, activeMaterial: string) {
+  const nextIndex = nextMaterialIndex(model.materials);
   return {
     ...model,
     materials: [
       ...(model.materials ?? []),
-      createMaterialDefinition(activeMaterial, (model.materials?.length ?? 0) + 1, {
-        id: nextMaterialId(model.materials),
+      createMaterialDefinition(activeMaterial, nextIndex, {
+        id: `mat-${nextIndex}`,
       }),
     ],
   };
@@ -154,28 +176,28 @@ export function addPresetMaterialToFrameModel(model: Frame2dJobInput, activeMate
 export function addCustomMaterialToTrussModel(model: Truss2dJobInput) {
   return {
     ...model,
-    materials: [...(model.materials ?? []), createCustomMaterial((model.materials?.length ?? 0) + 1)],
+    materials: [...(model.materials ?? []), createCustomMaterial(nextMaterialIndex(model.materials))],
   };
 }
 
 export function addCustomMaterialToTruss3dModel(model: Truss3dJobInput) {
   return {
     ...model,
-    materials: [...(model.materials ?? []), createCustomMaterial((model.materials?.length ?? 0) + 1)],
+    materials: [...(model.materials ?? []), createCustomMaterial(nextMaterialIndex(model.materials))],
   };
 }
 
 export function addCustomMaterialToPlaneModel<T extends PlaneStudyJobInput>(model: T): T {
   return {
     ...model,
-    materials: [...(model.materials ?? []), createCustomMaterial((model.materials?.length ?? 0) + 1)],
+    materials: [...(model.materials ?? []), createCustomMaterial(nextMaterialIndex(model.materials))],
   } as T;
 }
 
 export function addCustomMaterialToFrameModel(model: Frame2dJobInput) {
   return {
     ...model,
-    materials: [...(model.materials ?? []), createCustomMaterial((model.materials?.length ?? 0) + 1)],
+    materials: [...(model.materials ?? []), createCustomMaterial(nextMaterialIndex(model.materials))],
   };
 }
 
@@ -186,6 +208,7 @@ export function applyMaterialToTrussModel(
   selectedElement: number | null,
 ) {
   const material = model.materials?.find((entry) => entry.id === materialId);
+  if (!material) return model;
   return {
     ...model,
     elements: model.elements.map((element, index) =>
@@ -207,6 +230,7 @@ export function applyMaterialToTruss3dModel(
   selectedElement: number | null,
 ) {
   const material = model.materials?.find((entry) => entry.id === materialId);
+  if (!material) return model;
   return {
     ...model,
     elements: model.elements.map((element, index) =>
@@ -228,6 +252,7 @@ export function applyMaterialToPlaneModel<T extends PlaneStudyJobInput>(
   selectedElement: number | null,
 ): T {
   const material = model.materials?.find((entry) => entry.id === materialId);
+  if (!material) return model;
   return {
     ...model,
     elements: model.elements.map((element, index) =>
@@ -259,6 +284,7 @@ export function applyMaterialToFrameModel(
   selectedElement: number | null,
 ) {
   const material = model.materials?.find((entry) => entry.id === materialId);
+  if (!material) return model;
   return {
     ...model,
     elements: model.elements.map((element, index) =>
@@ -296,11 +322,15 @@ export function mergeImportedMaterials(current: ModelMaterial[] | undefined, imp
 export function updateMaterialInTrussModel(
   model: Truss2dJobInput,
   materialId: string,
-  field: "name" | "youngs_modulus" | "poisson_ratio",
+  field: MaterialField,
   value: string | number,
 ) {
+  const normalizedValue = normalizeMaterialUpdateValue(field, value);
+  if (normalizedValue === undefined || !model.materials?.some((material) => material.id === materialId)) {
+    return model;
+  }
   const materials = (model.materials ?? []).map((material) =>
-    material.id === materialId ? { ...material, [field]: value } : material,
+    material.id === materialId ? { ...material, [field]: normalizedValue } : material,
   );
 
   return {
@@ -308,7 +338,7 @@ export function updateMaterialInTrussModel(
     materials,
     elements: model.elements.map((element) =>
       element.material_id === materialId && field === "youngs_modulus"
-        ? { ...element, youngs_modulus: Number(value) }
+        ? { ...element, youngs_modulus: Number(normalizedValue) }
         : element,
     ),
   };
@@ -317,11 +347,15 @@ export function updateMaterialInTrussModel(
 export function updateMaterialInTruss3dModel(
   model: Truss3dJobInput,
   materialId: string,
-  field: "name" | "youngs_modulus" | "poisson_ratio",
+  field: MaterialField,
   value: string | number,
 ) {
+  const normalizedValue = normalizeMaterialUpdateValue(field, value);
+  if (normalizedValue === undefined || !model.materials?.some((material) => material.id === materialId)) {
+    return model;
+  }
   const materials = (model.materials ?? []).map((material) =>
-    material.id === materialId ? { ...material, [field]: value } : material,
+    material.id === materialId ? { ...material, [field]: normalizedValue } : material,
   );
 
   return {
@@ -329,7 +363,7 @@ export function updateMaterialInTruss3dModel(
     materials,
     elements: model.elements.map((element) =>
       element.material_id === materialId && field === "youngs_modulus"
-        ? { ...element, youngs_modulus: Number(value) }
+        ? { ...element, youngs_modulus: Number(normalizedValue) }
         : element,
     ),
   };
@@ -338,11 +372,15 @@ export function updateMaterialInTruss3dModel(
 export function updateMaterialInPlaneModel<T extends PlaneStudyJobInput>(
   model: T,
   materialId: string,
-  field: "name" | "youngs_modulus" | "poisson_ratio",
+  field: MaterialField,
   value: string | number,
 ): T {
+  const normalizedValue = normalizeMaterialUpdateValue(field, value);
+  if (normalizedValue === undefined || !model.materials?.some((material) => material.id === materialId)) {
+    return model;
+  }
   const materials = (model.materials ?? []).map((material) =>
-    material.id === materialId ? { ...material, [field]: value } : material,
+    material.id === materialId ? { ...material, [field]: normalizedValue } : material,
   );
 
   return {
@@ -351,10 +389,10 @@ export function updateMaterialInPlaneModel<T extends PlaneStudyJobInput>(
     elements: model.elements.map((element) => {
       if (element.material_id !== materialId) return element;
       if (field === "youngs_modulus" && "youngs_modulus" in element) {
-        return { ...element, youngs_modulus: Number(value) };
+        return { ...element, youngs_modulus: Number(normalizedValue) };
       }
       if (field === "poisson_ratio" && "poisson_ratio" in element) {
-        return { ...element, poisson_ratio: Number(value) };
+        return { ...element, poisson_ratio: Number(normalizedValue) };
       }
       return element;
     }),
@@ -364,11 +402,15 @@ export function updateMaterialInPlaneModel<T extends PlaneStudyJobInput>(
 export function updateMaterialInFrameModel(
   model: Frame2dJobInput,
   materialId: string,
-  field: "name" | "youngs_modulus" | "poisson_ratio",
+  field: MaterialField,
   value: string | number,
 ) {
+  const normalizedValue = normalizeMaterialUpdateValue(field, value);
+  if (normalizedValue === undefined || !model.materials?.some((material) => material.id === materialId)) {
+    return model;
+  }
   const materials = (model.materials ?? []).map((material) =>
-    material.id === materialId ? { ...material, [field]: value } : material,
+    material.id === materialId ? { ...material, [field]: normalizedValue } : material,
   );
 
   return {
@@ -376,7 +418,7 @@ export function updateMaterialInFrameModel(
     materials,
     elements: model.elements.map((element) =>
       element.material_id === materialId && field === "youngs_modulus"
-        ? { ...element, youngs_modulus: Number(value) }
+        ? { ...element, youngs_modulus: Number(normalizedValue) }
         : element,
     ),
   };

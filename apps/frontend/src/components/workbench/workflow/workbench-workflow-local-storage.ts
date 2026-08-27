@@ -4,6 +4,7 @@ import type { WorkflowCatalogEntry, WorkflowGraphDefinition } from "@/lib/api";
 import { asWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-import";
 import { summarizeWorkflowInputArtifactContractHealth } from "@/components/workbench/workflow/workbench-workflow-fem-validation";
 import { buildWorkflowPackageSearchIndex } from "@/components/workbench/workflow/workbench-workflow-package";
+import { KYUUBIKI_PRODUCT_VERSION_LABEL } from "@/lib/product-version";
 
 export const WORKBENCH_LOCAL_WORKFLOWS_KEY = "kyuubiki.workbench.workflowLibrary.v1";
 
@@ -24,6 +25,8 @@ export type StoredLocalWorkflow = {
   importedFromPackageId?: string;
   importedFromPackageVersion?: string;
 };
+
+let localWorkflowIdSequence = 0;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -121,7 +124,8 @@ function buildLocalWorkflowId(baseName: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || "workflow";
-  return `workflow.local.${slug}.${Date.now()}`;
+  localWorkflowIdSequence = (localWorkflowIdSequence + 1) % Number.MAX_SAFE_INTEGER;
+  return `workflow.local.${slug}.${Date.now()}.${localWorkflowIdSequence.toString(36)}`;
 }
 
 function cloneWorkflowGraph(graph: WorkflowGraphDefinition): WorkflowGraphDefinition {
@@ -151,7 +155,7 @@ export function saveStoredLocalWorkflow(params: {
   const nextGraph = cloneWorkflowGraph(params.graph);
   nextGraph.id = nextId;
   nextGraph.name = `${baseName} Local`;
-  nextGraph.version = "moxi 2.0.0 local";
+  nextGraph.version = `${KYUUBIKI_PRODUCT_VERSION_LABEL} local`;
 
   const nextRecord: StoredLocalWorkflow = {
     id: nextId,
@@ -220,7 +224,7 @@ export function duplicateStoredLocalWorkflow(workflowId: string): StoredLocalWor
   const nextGraph = cloneWorkflowGraph(current.graph);
   nextGraph.id = nextId;
   nextGraph.name = baseName;
-  nextGraph.version = "moxi 2.0.0 local";
+  nextGraph.version = `${KYUUBIKI_PRODUCT_VERSION_LABEL} local`;
   const nextRecord: StoredLocalWorkflow = {
     id: nextId,
     sourceWorkflowId: current.sourceWorkflowId,

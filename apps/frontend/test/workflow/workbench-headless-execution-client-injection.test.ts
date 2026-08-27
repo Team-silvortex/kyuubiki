@@ -114,3 +114,33 @@ test("headless execution batch uses injected result client for direct mesh resul
   assert.deepEqual(calls, ["direct-result:job-a"]);
   assert.deepEqual(result.steps[0]?.result, { job_id: "job-a", result: { energy: 42 } });
 });
+
+test("headless job wait rejects unknown backend statuses instead of polling to timeout", async () => {
+  const runtimeClient = {
+    fetchJobStatus: async () => ({
+      job: {
+        job_id: "job-invalid",
+        status: "mystery",
+        worker_id: null,
+        progress: 0.25,
+      },
+    }),
+  } as unknown as RuntimeApiClient;
+
+  await assert.rejects(
+    runHeadlessExecutionBatch(
+      batch([
+        {
+          action: "job_wait",
+          guidanceNotes: [],
+          index: 0,
+          payload: literal({ job_id: "job-invalid", interval_ms: 1, timeout_ms: 5 }),
+          risk: "normal",
+        },
+      ]),
+      undefined,
+      { runtimeClient },
+    ),
+    /Unexpected job status.*mystery/,
+  );
+});

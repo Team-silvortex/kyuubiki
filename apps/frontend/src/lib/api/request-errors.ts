@@ -11,6 +11,13 @@ type WorkbenchRequestErrorInput = {
   url: string;
 };
 
+const TRANSIENT_HTTP_STATUS_CODES = new Set([408, 425, 429]);
+
+function isRetryableHttpStatus(statusCode?: number) {
+  return typeof statusCode === "number" &&
+    (TRANSIENT_HTTP_STATUS_CODES.has(statusCode) || statusCode >= 500);
+}
+
 function buildRecoveryHint(kind: WorkbenchRequestFailureKind, statusCode?: number) {
   if (kind === "offline") {
     return "Runtime endpoint is unavailable. Verify the hub, agent, or local backend process and retry.";
@@ -32,6 +39,14 @@ function buildRecoveryHint(kind: WorkbenchRequestFailureKind, statusCode?: numbe
     return "Requested runtime resource was not found. Refresh the catalog or verify the selected target still exists.";
   }
 
+  if (kind === "http" && statusCode === 408) {
+    return "Runtime request timed out before completion. Retry once the service is responsive.";
+  }
+
+  if (kind === "http" && (statusCode === 425 || statusCode === 429)) {
+    return "Runtime service is temporarily limiting requests. Wait briefly, then retry.";
+  }
+
   if (kind === "http" && statusCode && statusCode >= 500) {
     return "Runtime service reported an internal failure. Retry after the backend stabilizes.";
   }
@@ -44,7 +59,10 @@ function inferFailureKind(error: unknown): WorkbenchRequestFailureKind {
     return error.kind;
   }
 
-  if (error instanceof TypeError && /fetch/i.test(error.message)) {
+  if (
+    error instanceof TypeError &&
+    /(fetch|load failed|network\s*(?:error|request failed)|internet.*disconnected)/i.test(error.message)
+  ) {
     return "offline";
   }
 
@@ -73,7 +91,7 @@ export class WorkbenchRequestError extends Error {
     this.retryable =
       input.kind === "offline" ||
       input.kind === "timeout" ||
-      (input.kind === "http" && Boolean(input.statusCode && input.statusCode >= 500));
+      (input.kind === "http" && isRetryableHttpStatus(input.statusCode));
     this.recoveryHint = buildRecoveryHint(input.kind, input.statusCode);
   }
 }

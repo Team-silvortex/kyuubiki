@@ -4,6 +4,11 @@ import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction, 
 import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import { dismissWorkbenchAlert, upsertWorkbenchAlert } from "@/components/workbench/workbench-alert-state";
 import { strategyResultWindowLimit, type ViewportRenderStrategy } from "@/components/workbench/workbench-render-diagnostics";
+import {
+  resolveResultWindowStudyKind,
+  type ResultWindowGuards,
+  type ResultWindowStudyKind as StudyKind,
+} from "@/components/workbench/workbench-result-window-kind";
 import { type FrontendRuntimeMode, type ResultChunkPayload } from "@/lib/api";
 import {
   resolveResultBackendService,
@@ -20,31 +25,6 @@ import {
   writeChunkCache,
 } from "@/lib/workbench/result-window";
 
-type StudyKind =
-  | "axial_bar_1d"
-  | "heat_bar_1d"
-  | "electrostatic_plane_triangle_2d"
-  | "electrostatic_plane_quad_2d"
-  | "heat_plane_triangle_2d"
-  | "heat_plane_quad_2d"
-  | "thermal_bar_1d"
-  | "thermal_beam_1d"
-  | "thermal_frame_2d"
-  | "thermal_truss_2d"
-  | "thermal_truss_3d"
-  | "thermal_plane_triangle_2d"
-  | "thermal_plane_quad_2d"
-  | "spring_1d"
-  | "spring_2d"
-  | "spring_3d"
-  | "beam_1d"
-  | "torsion_1d"
-  | "truss_2d"
-  | "truss_3d"
-  | "plane_triangle_2d"
-  | "plane_quad_2d"
-  | "frame_2d";
-
 export type ResultWindowState = {
   jobId: string;
   studyKind: Exclude<StudyKind, "axial_bar_1d">;
@@ -53,27 +33,6 @@ export type ResultWindowState = {
   totalNodes: number;
   totalElements: number;
   limit: number;
-};
-
-type ResultWindowGuards = {
-  isAxialResult: (value: unknown) => boolean;
-  isTrussResult: (value: unknown) => boolean;
-  isHeatBar1dResult: (value: unknown) => boolean;
-  isElectrostaticPlaneQuad2dResult: (value: unknown) => boolean;
-  isElectrostaticPlaneTriangle2dResult: (value: unknown) => boolean;
-  isHeatPlaneQuad2dResult: (value: unknown) => boolean;
-  isHeatPlaneTriangle2dResult: (value: unknown) => boolean;
-  isThermalBar1dResult: (value: unknown) => boolean;
-  isThermalBeam1dResult: (value: unknown) => boolean;
-  isThermalTruss2dResult: (value: unknown) => boolean;
-  isThermalTruss3dResult: (value: unknown) => boolean;
-  isTruss3dResult: (value: unknown) => boolean;
-  isSpring1dResult: (value: unknown) => boolean;
-  isSpring2dResult: (value: unknown) => boolean;
-  isSpring3dResult: (value: unknown) => boolean;
-  isBeam1dResult: (value: unknown) => boolean;
-  isTorsion1dResult: (value: unknown) => boolean;
-  isFrame2dResult: (value: unknown) => boolean;
 };
 
 type UseWorkbenchResultWindowControllerArgs = {
@@ -98,50 +57,6 @@ type UseWorkbenchResultWindowControllerArgs = {
   studyKind: StudyKind;
   resultBackendService?: WorkbenchResultBackendService;
 };
-
-function resolveResultWindowStudyKind(
-  result: unknown,
-  studyKind: StudyKind,
-  guards: ResultWindowGuards,
-): Exclude<StudyKind, "axial_bar_1d"> {
-  return guards.isTrussResult(result)
-    ? "truss_2d"
-    : guards.isHeatBar1dResult(result)
-      ? "heat_bar_1d"
-      : guards.isElectrostaticPlaneQuad2dResult(result)
-        ? "electrostatic_plane_quad_2d"
-        : guards.isElectrostaticPlaneTriangle2dResult(result)
-          ? "electrostatic_plane_triangle_2d"
-      : guards.isHeatPlaneQuad2dResult(result)
-        ? "heat_plane_quad_2d"
-        : guards.isHeatPlaneTriangle2dResult(result)
-          ? "heat_plane_triangle_2d"
-          : guards.isThermalBar1dResult(result)
-            ? "thermal_bar_1d"
-            : guards.isThermalBeam1dResult(result)
-              ? "thermal_beam_1d"
-              : guards.isThermalTruss2dResult(result)
-                ? "thermal_truss_2d"
-                : guards.isThermalTruss3dResult(result)
-                  ? "thermal_truss_3d"
-                  : guards.isTruss3dResult(result)
-                    ? "truss_3d"
-                    : guards.isSpring1dResult(result)
-                      ? "spring_1d"
-                      : guards.isSpring2dResult(result)
-                        ? "spring_2d"
-                        : guards.isSpring3dResult(result)
-                          ? "spring_3d"
-                          : guards.isBeam1dResult(result)
-                            ? "beam_1d"
-                            : guards.isTorsion1dResult(result)
-                              ? "torsion_1d"
-                              : guards.isFrame2dResult(result)
-                                ? "frame_2d"
-                                : studyKind === "plane_quad_2d"
-                                  ? "plane_quad_2d"
-                                  : "plane_triangle_2d";
-}
 
 export function useWorkbenchResultWindowController({
   canvasStageRef,
@@ -175,6 +90,7 @@ export function useWorkbenchResultWindowController({
     isHeatPlaneTriangle2dResult,
     isThermalBar1dResult,
     isThermalBeam1dResult,
+    isThermalFrame2dResult,
     isThermalTruss2dResult,
     isThermalTruss3dResult,
     isTruss3dResult,
@@ -191,10 +107,19 @@ export function useWorkbenchResultWindowController({
   const chunkCacheRef = useRef<Map<string, ResultChunkPayload<Record<string, unknown>>>>(new Map());
 
   useEffect(() => {
+    setResultWindow(null);
     setResultWindowOffset(0);
     setResultWindowLimit(strategyResultWindowLimit(RESULT_WINDOW_BASE_SIZE, renderStrategy));
     chunkCacheRef.current.clear();
-  }, [jobId, renderStrategy, setResultWindowLimit, setResultWindowOffset, studyKind]);
+  }, [
+    jobId,
+    renderStrategy,
+    resultBackendService.backendId,
+    setResultWindow,
+    setResultWindowLimit,
+    setResultWindowOffset,
+    studyKind,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -256,6 +181,7 @@ export function useWorkbenchResultWindowController({
       isHeatPlaneTriangle2dResult,
       isThermalBar1dResult,
       isThermalBeam1dResult,
+      isThermalFrame2dResult,
       isThermalTruss2dResult,
       isThermalTruss3dResult,
       isTruss3dResult,
@@ -277,7 +203,9 @@ export function useWorkbenchResultWindowController({
           if (cached) return cached;
 
           const chunk = await resultBackendService.fetchChunk({ jobId, kind, offset, limit });
-          writeChunkCache(chunkCacheRef.current, key, chunk as ResultChunkPayload<Record<string, unknown>>);
+          if (!cancelled) {
+            writeChunkCache(chunkCacheRef.current, key, chunk as ResultChunkPayload<Record<string, unknown>>);
+          }
           return chunk;
         };
 
@@ -365,6 +293,7 @@ export function useWorkbenchResultWindowController({
     isSpring3dResult,
     isThermalBar1dResult,
     isThermalBeam1dResult,
+    isThermalFrame2dResult,
     isThermalTruss2dResult,
     isThermalTruss3dResult,
     isTorsion1dResult,

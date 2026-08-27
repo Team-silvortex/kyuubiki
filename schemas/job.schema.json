@@ -56,7 +56,8 @@
         "lifecycle",
         "active",
         "terminal",
-        "recoverable"
+        "recoverable",
+        "timing"
       ],
       "properties": {
         "lifecycle": {
@@ -89,6 +90,64 @@
         },
         "recoverable": {
           "type": "boolean"
+        },
+        "timing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "phase",
+            "queue_wait_ms",
+            "execution_elapsed_ms",
+            "total_elapsed_ms",
+            "queue_timeout_ms",
+            "execution_timeout_ms",
+            "effective_timeout_ms",
+            "job_submission_deadline",
+            "execution_started_at",
+            "effective_deadline"
+          ],
+          "properties": {
+            "phase": {
+              "type": "string",
+              "enum": ["queue", "execution"]
+            },
+            "queue_wait_ms": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "execution_elapsed_ms": {
+              "type": ["integer", "null"],
+              "minimum": 0
+            },
+            "total_elapsed_ms": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "queue_timeout_ms": {
+              "type": ["integer", "null"],
+              "minimum": 1
+            },
+            "execution_timeout_ms": {
+              "type": ["integer", "null"],
+              "minimum": 1
+            },
+            "effective_timeout_ms": {
+              "type": ["integer", "null"],
+              "minimum": 1
+            },
+            "job_submission_deadline": {
+              "type": ["string", "null"],
+              "format": "date-time"
+            },
+            "execution_started_at": {
+              "type": ["string", "null"],
+              "format": "date-time"
+            },
+            "effective_deadline": {
+              "type": ["string", "null"],
+              "format": "date-time"
+            }
+          }
         }
       }
     },

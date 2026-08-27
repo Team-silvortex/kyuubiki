@@ -1,6 +1,7 @@
 "use client";
 
 import type { SidebarSection } from "@/components/workbench/workbench-types";
+import { KYUUBIKI_PRODUCT_VERSION_LABEL } from "@/lib/product-version";
 
 type RailItem = {
   key: SidebarSection;
@@ -32,7 +33,7 @@ export function WorkbenchAppRail({
       <div className="rail-brand">
         <img alt={`${shortTitle} mark`} className="rail-brand__mark" src="/kyuubiki.png" />
         <strong>{shortTitle}</strong>
-        <span>moxi 2.0.0</span>
+        <span>{KYUUBIKI_PRODUCT_VERSION_LABEL}</span>
       </div>
       <div className="rail-nav">
         {railItems.map((item) => (

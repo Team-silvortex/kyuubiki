@@ -1,3 +1,5 @@
+import { KYUUBIKI_PRODUCT_VERSION } from "@/lib/product-version";
+
 export type WorkbenchLanguagePackSystemCopy = {
   compatibilityExact: string;
   compatibilityLine: string;
@@ -136,7 +138,7 @@ for (const [language, copy] of Object.entries(translatedCopy)) {
   const targetPrefix = copy.targetPrefix ?? en.targetPrefix;
   SYSTEM_COPY[language] = {
     ...en,
-    compatibilityExact: `✓ Workbench 2.0.0`,
+    compatibilityExact: `✓ Workbench ${KYUUBIKI_PRODUCT_VERSION}`,
     compatibilityLine: `✓ moxi 2.x`,
     compatibilityMismatch: `⚠ ${targetPrefix}: Workbench`,
     compatibilityGeneric: `◇ ${targetPrefix}: moxi`,

@@ -17,23 +17,27 @@ const defaultWorkbenchApiRequestContext: WorkbenchApiRequestContext = {
   buildAuthHeaders: buildWorkbenchApiAuthHeaders,
 };
 
-function isAbortLikeError(error: unknown): boolean {
-  return error instanceof DOMException
-    ? error.name === "AbortError"
-    : error instanceof Error && error.name === "AbortError";
-}
-
 function buildTimeoutMessage(url: string) {
   return `request timed out: ${url}`;
 }
 
 async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
-  const timeoutId = globalThis.setTimeout(() => controller.abort(buildTimeoutMessage(url)), timeoutMs);
-  const forwardAbort = () => controller.abort(init?.signal?.reason);
+  const abortState: { source: "external" | "timeout" | null } = { source: null };
+  const timeoutId = globalThis.setTimeout(() => {
+    if (abortState.source) return;
+    abortState.source = "timeout";
+    controller.abort();
+  }, timeoutMs);
+  const forwardAbort = () => {
+    if (abortState.source) return;
+    abortState.source = "external";
+    controller.abort(init?.signal?.reason);
+  };
 
   if (init?.signal) {
     if (init.signal.aborted) {
+      abortState.source = "external";
       controller.abort(init.signal.reason);
     } else {
       init.signal.addEventListener("abort", forwardAbort, { once: true });
@@ -46,12 +50,8 @@ async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = DEF
       signal: controller.signal,
     });
   } catch (error) {
-    if (isAbortLikeError(error)) {
-      const reason =
-        typeof controller.signal.reason === "string" && controller.signal.reason.trim()
-          ? controller.signal.reason
-          : buildTimeoutMessage(url);
-      throw new Error(reason);
+    if (abortState.source === "timeout") {
+      throw new Error(buildTimeoutMessage(url), { cause: error });
     }
 
     throw error;

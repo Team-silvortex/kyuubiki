@@ -28,6 +28,14 @@ export function numberOrZero(value: unknown): number {
   return Number.isFinite(number) ? number : 0;
 }
 
+export function requiredPoissonRatio(value: unknown, name: string): number {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= -1 || number >= 0.5) {
+    throw new Error(`${name} must be a finite number between -1 and 0.5`);
+  }
+  return number;
+}
+
 export function requiredNonNegativeInteger(value: unknown, name: string): number {
   const number = Number(value);
   if (!Number.isInteger(number) || number < 0) throw new Error(`${name} must be a non-negative integer`);
@@ -73,7 +81,7 @@ export function parseMaterials(
       poisson_ratio:
         material.poisson_ratio === undefined || material.poisson_ratio === null
           ? fallbackPoissonRatio ?? null
-          : Number(material.poisson_ratio),
+          : requiredPoissonRatio(material.poisson_ratio, `materials[${index}].poisson_ratio`),
     });
   });
 }
