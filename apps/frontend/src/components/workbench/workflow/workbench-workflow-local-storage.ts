@@ -102,7 +102,11 @@ function readStoredLocalWorkflows(): StoredLocalWorkflow[] {
       ];
     });
     if (hadLegacyInputs) {
-      writeStoredLocalWorkflows(records);
+      try {
+        writeStoredLocalWorkflows(records);
+      } catch {
+        // Keep the sanitized in-memory library visible when storage is read-only.
+      }
     }
     return records;
   } catch {

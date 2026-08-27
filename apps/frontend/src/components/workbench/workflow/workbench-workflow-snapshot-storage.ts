@@ -185,9 +185,10 @@ function pruneSnapshots(index: StoredWorkflowSnapshotSummary[]) {
 function readLatestSnapshotFingerprint(
   latestEntry: StoredWorkflowSnapshotSummary | undefined,
 ): string | null {
-  if (!latestEntry || latestEntry.payloadState !== "full") return null;
+  if (!latestEntry) return null;
   const cached = latestSnapshotFingerprintCache.get(latestEntry.workflowId);
   if (cached?.snapshotId === latestEntry.id) return cached.fingerprint;
+  if (latestEntry.payloadState !== "full") return null;
   const latestSnapshot = loadStoredWorkflowSnapshot(latestEntry.id);
   if (!latestSnapshot) return null;
   const fingerprint = buildSnapshotFingerprint(latestSnapshot.graph);

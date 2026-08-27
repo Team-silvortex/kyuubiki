@@ -12,6 +12,7 @@ export function resolveWorkflowTraceContractHealthTone(label: string): WorkflowT
 }
 
 export function resolveWorkflowTraceContractWarningTone(count: number): WorkflowTraceStatusTone {
+  if (!Number.isInteger(count) || count < 0) return "risk";
   if (count === 0) return "good";
   if (count <= 3) return "watch";
   return "risk";
@@ -32,11 +33,17 @@ export function resolveWorkflowTraceBranchPredicateTone(
 export function resolveWorkflowTraceLineageSourceTone(
   sourceArtifacts?: string[],
 ): WorkflowTraceStatusTone {
-  return (sourceArtifacts?.length ?? 0) > 0 ? "good" : "watch";
+  return hasWorkflowTraceLineageSource(sourceArtifacts) ? "good" : "watch";
 }
 
 export function resolveWorkflowTraceLineageSourceLabel(sourceArtifacts?: string[]) {
-  return (sourceArtifacts?.length ?? 0) > 0 ? "derived" : "root";
+  return hasWorkflowTraceLineageSource(sourceArtifacts) ? "derived" : "root";
+}
+
+function hasWorkflowTraceLineageSource(sourceArtifacts?: string[]) {
+  return sourceArtifacts?.some(
+    (artifact) => typeof artifact === "string" && artifact.trim().length > 0,
+  ) ?? false;
 }
 
 export function resolveWorkflowTraceHeaderHealthLabel(

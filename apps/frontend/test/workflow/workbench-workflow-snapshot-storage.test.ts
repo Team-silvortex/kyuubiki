@@ -123,3 +123,19 @@ test("snapshot payload limits use UTF-8 bytes instead of JavaScript characters",
     removeStoredWorkflowSnapshotsByWorkflowId(workflowId);
   }
 });
+
+test("summary-only snapshots still deduplicate identical graphs during the cooldown", () => {
+  const workflowId = "snapshot-summary-only-deduplication";
+  try {
+    const largeGraph = graph(workflowId);
+    largeGraph.name = "large-snapshot".repeat(20_000);
+
+    const first = save(workflowId, largeGraph);
+    const second = save(workflowId, largeGraph);
+
+    assert.equal(first?.payloadState, "summary_only");
+    assert.equal(second?.id, first?.id);
+  } finally {
+    removeStoredWorkflowSnapshotsByWorkflowId(workflowId);
+  }
+});

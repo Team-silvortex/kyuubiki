@@ -4,8 +4,10 @@ import assert from "node:assert/strict";
 import type { WorkflowGraphDefinition } from "../../src/lib/api/workflow-types.ts";
 import { KYUUBIKI_PRODUCT_VERSION_LABEL } from "../../src/lib/product-version.ts";
 import {
+  listStoredLocalWorkflows,
   removeStoredLocalWorkflow,
   saveStoredLocalWorkflow,
+  WORKBENCH_LOCAL_WORKFLOWS_KEY,
 } from "../../src/components/workbench/workflow/workbench-workflow-local-storage.ts";
 
 function createMemoryStorage(): Storage {
@@ -61,5 +63,36 @@ test("local workflow IDs remain unique and use the current product version", () 
   } finally {
     Date.now = originalNow;
     created.forEach(removeStoredLocalWorkflow);
+  }
+});
+
+test("legacy local workflows remain visible when sanitized migration cannot write back", () => {
+  const browserWindow = window as unknown as { localStorage: Storage };
+  const originalStorage = browserWindow.localStorage;
+  const legacyRecord = {
+    id: "workflow.local.legacy",
+    sourceWorkflowId: "workflow.source",
+    name: "Legacy local workflow",
+    summary: "Legacy record",
+    version: "local",
+    promotedAt: "2026-08-27T00:00:00.000Z",
+    graph: graph("workflow.local.legacy"),
+    inputArtifactTexts: { model: "legacy-sensitive-input" },
+  };
+  browserWindow.localStorage = {
+    ...createMemoryStorage(),
+    getItem: (key) => key === WORKBENCH_LOCAL_WORKFLOWS_KEY ? JSON.stringify([legacyRecord]) : null,
+    setItem: () => {
+      throw new Error("storage is read-only");
+    },
+  } as Storage;
+
+  try {
+    const records = listStoredLocalWorkflows();
+    assert.equal(records.length, 1);
+    assert.equal(records[0]?.id, legacyRecord.id);
+    assert.equal(records[0]?.inputArtifactTexts, undefined);
+  } finally {
+    browserWindow.localStorage = originalStorage;
   }
 });

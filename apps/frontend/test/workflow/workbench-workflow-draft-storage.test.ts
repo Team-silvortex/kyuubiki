@@ -86,3 +86,33 @@ test("saved drafts own their graph and template preference state", () => {
     listStoredWorkflowDrafts(workflowId).forEach((draft) => removeStoredWorkflowDraft(draft.id));
   }
 });
+
+test("legacy drafts remain visible when sanitized migration cannot write back", () => {
+  const browserWindow = window as unknown as { localStorage: Storage };
+  const originalStorage = browserWindow.localStorage;
+  const workflowId = "workflow.legacy-draft";
+  const legacyRecord = {
+    id: "draft_legacy",
+    workflowId,
+    name: "Legacy draft",
+    savedAt: "2026-08-27T00:00:00.000Z",
+    graph: graph(workflowId),
+    inputArtifactTexts: { model: "legacy-sensitive-input" },
+  };
+  browserWindow.localStorage = {
+    ...createMemoryStorage(),
+    getItem: (key) => key === "kyuubiki.workbench.workflowDrafts.v1" ? JSON.stringify([legacyRecord]) : null,
+    setItem: () => {
+      throw new Error("storage is read-only");
+    },
+  } as Storage;
+
+  try {
+    const records = listStoredWorkflowDrafts(workflowId);
+    assert.equal(records.length, 1);
+    assert.equal(records[0]?.id, legacyRecord.id);
+    assert.equal(records[0]?.inputArtifactTexts, undefined);
+  } finally {
+    browserWindow.localStorage = originalStorage;
+  }
+});

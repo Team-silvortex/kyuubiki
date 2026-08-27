@@ -89,7 +89,11 @@ function readStoredDrafts(): StoredWorkflowDraft[] {
       ];
     });
     if (hadLegacyInputs) {
-      writeStoredDrafts(records);
+      try {
+        writeStoredDrafts(records);
+      } catch {
+        // Keep the sanitized in-memory drafts visible when storage is read-only.
+      }
     }
     return records;
   } catch {
