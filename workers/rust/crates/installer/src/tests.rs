@@ -1,5 +1,6 @@
 mod agent_update_payload;
 mod control_update;
+mod desktop_bundle_set;
 mod fleet_update;
 mod operator_package_fetch;
 mod operator_package_preflight;

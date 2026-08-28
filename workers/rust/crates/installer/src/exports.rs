@@ -51,6 +51,26 @@ pub use crate::credential_storage::{
 pub use crate::cross_platform::{
     CrossPlatformAuditIssue, CrossPlatformAuditReport, cross_platform_audit_report,
 };
+pub use crate::desktop_bundle_package::{
+    DESKTOP_BUNDLE_SET_SCHEMA_VERSION, DesktopBundleComponent, DesktopBundleFile,
+    DesktopBundleSetManifest, DesktopBundleSourceLayout, desktop_bundle_source_layout,
+    prepare_desktop_bundle_set, seal_desktop_bundle_set, verify_desktop_bundle_set,
+};
+pub use crate::desktop_bundle_qualification::{
+    DESKTOP_BUNDLE_QUALIFICATION_SCHEMA_VERSION, DesktopBundleBootProbe,
+    DesktopBundleComponentObservation, DesktopBundlePayloadObservation,
+    DesktopBundleQualificationCheck, DesktopBundleQualificationReport,
+    run_desktop_bundle_qualification, write_desktop_bundle_qualification_report,
+};
+pub use crate::desktop_bundle_qualification_validation::{
+    DesktopBundleQualificationSummary, validate_desktop_bundle_qualification_report,
+};
+pub use crate::desktop_bundle_store::{
+    DESKTOP_BUNDLE_ACTIVATION_SCHEMA_VERSION, DesktopBundleActivationRecord,
+    DesktopBundleEntrypoint, DesktopBundleSetStatus, active_desktop_bundle_entrypoints,
+    active_desktop_bundle_root, desktop_bundle_set_status, install_desktop_bundle_set,
+    rollback_desktop_bundle_set,
+};
 pub use crate::embedded_runtime::{
     EmbeddedRuntimeReport, build_embedded_runtime_manifest, embedded_runtime_report,
 };

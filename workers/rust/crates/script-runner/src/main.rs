@@ -26,6 +26,7 @@ mod contracts_runtime_api_surface;
 mod contracts_validation_qualification;
 mod dependency_audit;
 mod desktop;
+mod desktop_bundle_operational_qualification;
 mod desktop_deployment_update_validation;
 mod desktop_distribution;
 mod desktop_icon_variants;

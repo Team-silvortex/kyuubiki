@@ -64,8 +64,8 @@ identity, and retains only a path-free report after cleaning the remote run
 root. Lifecycle mutations are accepted only from an operating-system-confirmed
 loopback peer, so the managed SSH boundary places Installer on the Agent host;
 the ordinary remote solver socket cannot drain or resume the process. It proves
-the two-Agent Linux journey, not packaged desktop rollback or a production
-scheduler-wide availability guarantee.
+the two-Agent Linux journey, not the remaining Linux/Windows packaged desktop
+rollback tiers or a production scheduler-wide availability guarantee.
 
 This document explains:
 

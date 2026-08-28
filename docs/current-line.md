@@ -199,8 +199,16 @@ sprawl:
   executes the declared Agent, Orchestra, and frontend service entries before
   and after upgrade and again after rollback, and requires the aggregate
   content digest to return exactly to the initial value. The retained remote
-  Linux report closes only the Runtime payload Linux sub-tier; packaged macOS,
-  Linux, and Windows desktop update journeys remain open
+  Linux report closes only the Runtime payload Linux sub-tier; packaged desktop
+  update journeys are tracked separately
+- packaged macOS desktop update now has a retained operational qualification.
+  Installer treats Hub, Installer, and Workbench as one immutable, SHA-256-bound
+  bundle set, activates two differently marked and ad-hoc re-signed package
+  generations, launches all three shells after install, upgrade, and rollback,
+  and restores the exact initial payload digest. The nine boot probes close the
+  macOS package-switching sub-tier, while Linux and Windows remain open. Both
+  logical package generations use the current `2.17.0` runtime, so historical
+  binary compatibility is not claimed
 - `create-open-project` now executes a real native bundle round trip. Hub and
   `kyuubiki project create|inspect|validate|normalize|pack|unpack|diff` share
   `workers/rust/crates/project-bundle` instead of maintaining separate storage

@@ -1,0 +1,256 @@
+{
+  "schema_version": "kyuubiki.desktop-bundle-update-qualification/v1",
+  "status": "pass",
+  "journey": "installer-managed-packaged-desktop-set-upgrade-and-rollback",
+  "execution_host_role": "local-macos-qualification-host",
+  "platform": "macos",
+  "runtime_version": "2.17.0",
+  "first_version": "2.16.9",
+  "second_version": "2.17.0",
+  "first_payload": {
+    "version": "2.16.9",
+    "payload_sha256": "93f74e02039f54c7f8d86952fa76d30ed8cc787ef0e9593834b110f12a0b2011",
+    "components": [
+      {
+        "component_id": "hub",
+        "content_sha256": "55dc966638f9b91dc8fa6dee0c801a3c44e2bd9e12a29638aac5b075a071a23c",
+        "entrypoint_sha256": "46a0e892ee73186d77dfffc89f1c6ce498f12052f89111f1ca38adf2c9ab1fbd",
+        "file_count": 5
+      },
+      {
+        "component_id": "installer",
+        "content_sha256": "7fd77b31329b92791ece57ec598af8313813f08bb46b3bbe56ce7dcd450dedb5",
+        "entrypoint_sha256": "e7182fd4dda8b02183c0edecc8be5ec1d3e189702a1f044ea3214d1cfa9d9b11",
+        "file_count": 5
+      },
+      {
+        "component_id": "workbench",
+        "content_sha256": "3f50074295c184e7b577571039bd1a1a4f203d992d5a0b8de6d8038850655f68",
+        "entrypoint_sha256": "cb2867dbe4ac030cd4c8e68309cc7f51127a39d0c21dcc78c38590427d4aef3e",
+        "file_count": 5
+      }
+    ]
+  },
+  "second_payload": {
+    "version": "2.17.0",
+    "payload_sha256": "1ac166f44f0e0f9fb3f274c52d80d42547b5da391e8af7bff9ddcef912578752",
+    "components": [
+      {
+        "component_id": "hub",
+        "content_sha256": "fcab5d4432bc490791583aed9c6ca0572ca28d6169ffc8696d8afa5db495c2b6",
+        "entrypoint_sha256": "088c501d8d06f69e608aa7ae2f984dd8834ad5819b667b590ea7063a99940bd1",
+        "file_count": 5
+      },
+      {
+        "component_id": "installer",
+        "content_sha256": "9e9267adc8cfa68609c9d5b8259e5e049bd5edd233de206305ca748c1b5ac40a",
+        "entrypoint_sha256": "ba2cd0d419bd7e00ef67627462c2e9fcbff8aa0a95d3df7677357143bc96522d",
+        "file_count": 5
+      },
+      {
+        "component_id": "workbench",
+        "content_sha256": "b0391a7334afeb0b2f28cc1fb435f82fd38a394cf139a91fb14d0da189ab513f",
+        "entrypoint_sha256": "cf662efd14e4209fdfb3b3f51f573db32871cc38a0eca7286b6f4e84118bd9c6",
+        "file_count": 5
+      }
+    ]
+  },
+  "rollback_payload": {
+    "version": "2.16.9",
+    "payload_sha256": "93f74e02039f54c7f8d86952fa76d30ed8cc787ef0e9593834b110f12a0b2011",
+    "components": [
+      {
+        "component_id": "hub",
+        "content_sha256": "55dc966638f9b91dc8fa6dee0c801a3c44e2bd9e12a29638aac5b075a071a23c",
+        "entrypoint_sha256": "46a0e892ee73186d77dfffc89f1c6ce498f12052f89111f1ca38adf2c9ab1fbd",
+        "file_count": 5
+      },
+      {
+        "component_id": "installer",
+        "content_sha256": "7fd77b31329b92791ece57ec598af8313813f08bb46b3bbe56ce7dcd450dedb5",
+        "entrypoint_sha256": "e7182fd4dda8b02183c0edecc8be5ec1d3e189702a1f044ea3214d1cfa9d9b11",
+        "file_count": 5
+      },
+      {
+        "component_id": "workbench",
+        "content_sha256": "3f50074295c184e7b577571039bd1a1a4f203d992d5a0b8de6d8038850655f68",
+        "entrypoint_sha256": "cb2867dbe4ac030cd4c8e68309cc7f51127a39d0c21dcc78c38590427d4aef3e",
+        "file_count": 5
+      }
+    ]
+  },
+  "first_activation": {
+    "schema_version": "kyuubiki.desktop-bundle-activation/v1",
+    "generation": 1,
+    "version": "2.16.9",
+    "previous_version": null,
+    "relative_path": "versions/2.16.9",
+    "platform": "macos",
+    "payload_sha256": "93f74e02039f54c7f8d86952fa76d30ed8cc787ef0e9593834b110f12a0b2011"
+  },
+  "second_activation": {
+    "schema_version": "kyuubiki.desktop-bundle-activation/v1",
+    "generation": 2,
+    "version": "2.17.0",
+    "previous_version": "2.16.9",
+    "relative_path": "versions/2.17.0",
+    "platform": "macos",
+    "payload_sha256": "1ac166f44f0e0f9fb3f274c52d80d42547b5da391e8af7bff9ddcef912578752"
+  },
+  "rollback_activation": {
+    "schema_version": "kyuubiki.desktop-bundle-activation/v1",
+    "generation": 3,
+    "version": "2.16.9",
+    "previous_version": "2.17.0",
+    "relative_path": "versions/2.16.9",
+    "platform": "macos",
+    "payload_sha256": "93f74e02039f54c7f8d86952fa76d30ed8cc787ef0e9593834b110f12a0b2011"
+  },
+  "active_after_upgrade": "2.17.0",
+  "active_after_rollback": "2.16.9",
+  "installed_versions": [
+    "2.16.9",
+    "2.17.0"
+  ],
+  "probes": [
+    {
+      "phase": "initial-install",
+      "package_version": "2.16.9",
+      "component_id": "hub",
+      "runtime_version": "2.17.0",
+      "executable_sha256": "46a0e892ee73186d77dfffc89f1c6ce498f12052f89111f1ca38adf2c9ab1fbd",
+      "pid": 87884,
+      "success": true
+    },
+    {
+      "phase": "initial-install",
+      "package_version": "2.16.9",
+      "component_id": "installer",
+      "runtime_version": "2.17.0",
+      "executable_sha256": "e7182fd4dda8b02183c0edecc8be5ec1d3e189702a1f044ea3214d1cfa9d9b11",
+      "pid": 88002,
+      "success": true
+    },
+    {
+      "phase": "initial-install",
+      "package_version": "2.16.9",
+      "component_id": "workbench",
+      "runtime_version": "2.17.0",
+      "executable_sha256": "cb2867dbe4ac030cd4c8e68309cc7f51127a39d0c21dcc78c38590427d4aef3e",
+      "pid": 88143,
+      "success": true
+    },
+    {
+      "phase": "upgraded-install",
+      "package_version": "2.17.0",
+      "component_id": "hub",
+      "runtime_version": "2.17.0",
+      "executable_sha256": "088c501d8d06f69e608aa7ae2f984dd8834ad5819b667b590ea7063a99940bd1",
+      "pid": 88292,
+      "success": true
+    },
+    {
+      "phase": "upgraded-install",
+      "package_version": "2.17.0",
+      "component_id": "installer",
+      "runtime_version": "2.17.0",
+      "executable_sha256": "ba2cd0d419bd7e00ef67627462c2e9fcbff8aa0a95d3df7677357143bc96522d",
+      "pid": 88302,
+      "success": true
+    },
+    {
+      "phase": "upgraded-install",
+      "package_version": "2.17.0",
+      "component_id": "workbench",
+      "runtime_version": "2.17.0",
+      "executable_sha256": "cf662efd14e4209fdfb3b3f51f573db32871cc38a0eca7286b6f4e84118bd9c6",
+      "pid": 88365,
+      "success": true
+    },
+    {
+      "phase": "rollback",
+      "package_version": "2.16.9",
+      "component_id": "hub",
+      "runtime_version": "2.17.0",
+      "executable_sha256": "46a0e892ee73186d77dfffc89f1c6ce498f12052f89111f1ca38adf2c9ab1fbd",
+      "pid": 88450,
+      "success": true
+    },
+    {
+      "phase": "rollback",
+      "package_version": "2.16.9",
+      "component_id": "installer",
+      "runtime_version": "2.17.0",
+      "executable_sha256": "e7182fd4dda8b02183c0edecc8be5ec1d3e189702a1f044ea3214d1cfa9d9b11",
+      "pid": 88462,
+      "success": true
+    },
+    {
+      "phase": "rollback",
+      "package_version": "2.16.9",
+      "component_id": "workbench",
+      "runtime_version": "2.17.0",
+      "executable_sha256": "cb2867dbe4ac030cd4c8e68309cc7f51127a39d0c21dcc78c38590427d4aef3e",
+      "pid": 88519,
+      "success": true
+    }
+  ],
+  "checks": [
+    {
+      "id": "initial_activation",
+      "ok": true
+    },
+    {
+      "id": "upgrade_activation",
+      "ok": true
+    },
+    {
+      "id": "rollback_activation",
+      "ok": true
+    },
+    {
+      "id": "active_after_upgrade",
+      "ok": true
+    },
+    {
+      "id": "active_after_rollback",
+      "ok": true
+    },
+    {
+      "id": "monotonic_generations",
+      "ok": true
+    },
+    {
+      "id": "all_component_payloads_changed",
+      "ok": true
+    },
+    {
+      "id": "rollback_payload_restored",
+      "ok": true
+    },
+    {
+      "id": "initial_three_shell_boot",
+      "ok": true
+    },
+    {
+      "id": "upgraded_three_shell_boot",
+      "ok": true
+    },
+    {
+      "id": "rollback_three_shell_boot",
+      "ok": true
+    },
+    {
+      "id": "runtime_version_aligned",
+      "ok": true
+    },
+    {
+      "id": "update_lock_clean",
+      "ok": true
+    },
+    {
+      "id": "staging_clean",
+      "ok": true
+    }
+  ]
+}

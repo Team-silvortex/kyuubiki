@@ -93,6 +93,16 @@ Use these commands when building deployable layouts:
   startup receipts, validates version/surface/PID identity, and retains logs.
   Linux uses an isolated D-Bus session plus Xvfb for the WebKitGTK shells;
   Windows installed-package qualification additionally uses `--install-nsis`
+- `./scripts/kyuubiki qualify-desktop-bundle-update-operational-host`
+  Copies the current host bundles into an isolated qualification root, creates
+  two content-distinct package generations, and executes the three-shell
+  install, upgrade, and exact rollback journey. macOS variants are ad-hoc
+  re-signed after their qualification marker is added; the source bundles and
+  installed applications are never modified
+- `./scripts/kyuubiki check-desktop-bundle-update-operational-qualification`
+  Semantically revalidates a retained report, including all three payloads,
+  three monotonic activation records, nine unique boot probes, exact rollback,
+  and clean lock/staging state
 - `make desktop-release PLATFORM=macos|linux|windows|all`
   Runs `desktop-stage`, host-native desktop bundle builds, and desktop verification
 - `make desktop-verify PLATFORM=macos|linux|windows|all`
@@ -110,7 +120,7 @@ Use these commands when building deployable layouts:
   bundle build.
 
 The Linux remote preflight currently expects these Ubuntu packages to be
-installer-managed on `kyuubiki-lab`:
+installer-managed on the configured Ubuntu qualification host:
 
 - `libwebkit2gtk-4.1-dev`
 - `libgtk-3-dev`
@@ -129,6 +139,8 @@ copied into an installed Kyuubiki runtime.
 - `./scripts/kyuubiki desktop-build-host [--bundles <bundle-list>]`
 - `./scripts/kyuubiki desktop-install-host`
 - `./scripts/kyuubiki desktop-packaged-smoke macos|linux|windows`
+- `./scripts/kyuubiki qualify-desktop-bundle-update-operational-host`
+- `./scripts/kyuubiki check-desktop-bundle-update-operational-qualification`
 - `./scripts/kyuubiki desktop-release macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-verify macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-linux-remote`
@@ -137,6 +149,15 @@ copied into an installed Kyuubiki runtime.
 
 `make package-runtime` is the cleanest entry point when you want a portable
 runtime layout that keeps component outputs organized in one generated tree.
+
+The managed desktop bundle format is
+`kyuubiki.desktop-bundle-set/v1`. Its manifest binds the platform, package
+version, exact three-component inventory, entrypoints, executable bits, file
+sizes, per-file SHA-256 values, per-component digests, and aggregate payload
+digest. Installer stores verified versions immutably and changes the active set
+only by appending a `kyuubiki.desktop-bundle-activation/v1` record. Rollback is
+therefore another atomic activation of a previously verified complete set, not
+a best-effort overwrite of three unrelated applications.
 
 Current staged runtime layout:
 

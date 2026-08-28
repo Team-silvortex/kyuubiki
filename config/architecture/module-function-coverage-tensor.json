@@ -20,6 +20,7 @@
     "config/architecture/module-function-coverage-evidence/desktop-usability.json",
     "config/architecture/module-function-coverage-evidence/desktop-ui-validation.json",
     "config/architecture/module-function-coverage-evidence/desktop-deployment-update.json",
+    "config/architecture/module-function-coverage-evidence/desktop-bundle-update-operational.json",
     "config/architecture/module-function-coverage-evidence/agent-update-operational.json",
     "config/architecture/module-function-coverage-evidence/fleet-update-operational.json",
     "config/architecture/module-function-coverage-evidence/agent-rolling-replacement-operational.json",

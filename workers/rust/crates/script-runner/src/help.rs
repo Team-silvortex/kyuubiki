@@ -175,6 +175,8 @@ lab remote-ssh-fixture\n  \
   integration-desktop-gui-node-test\n  \
   check-desktop-ui-validation\n  \
   check-desktop-deployment-update-qualification\n  \
+  qualify-desktop-bundle-update-operational-host\n  \
+  check-desktop-bundle-update-operational-qualification\n  \
   integration-benchmark-profile-index-node-test\n  \
   integration-ui-mechanical-node-test\n  \
   integration-ui-thermal-node-test\n  \

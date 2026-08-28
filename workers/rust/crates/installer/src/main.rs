@@ -2,25 +2,28 @@ use std::env;
 use std::path::PathBuf;
 
 use kyuubiki_installer::{
-    active_agent_binary, agent_update_status, credential_storage_contract,
-    cross_platform_audit_report, default_remote_artifact_delivery_manifest,
-    default_remote_deployment_dry_run, default_remote_deployment_journal,
-    default_remote_deployment_plan, default_remote_host_trust_plan,
-    default_remote_ssh_fixture_plan, default_remote_ssh_fixture_report, embedded_runtime_report,
+    active_agent_binary, active_desktop_bundle_root, agent_update_status,
+    credential_storage_contract, cross_platform_audit_report,
+    default_remote_artifact_delivery_manifest, default_remote_deployment_dry_run,
+    default_remote_deployment_journal, default_remote_deployment_plan,
+    default_remote_host_trust_plan, default_remote_ssh_fixture_plan,
+    default_remote_ssh_fixture_report, desktop_bundle_set_status, embedded_runtime_report,
     exit_on_err, export_launch_config, fetch_operator_package, fetch_operator_package_into,
-    init_env, install_agent_update_package, install_operator_package,
+    init_env, install_agent_update_package, install_desktop_bundle_set, install_operator_package,
     install_operator_package_into, install_runtime_payload, installation_integrity_report,
     launch_managed_agent, linux_desktop_dependency_plan, managed_operator_package_status,
     managed_operator_package_status_in, operator_package_preflight, parse_platform,
-    prepare_agent_update_package, prepare_layout, prepare_staged_update, print_help,
-    remote_deployment_roadmap, repair_installation, rollback_agent_update,
-    rollback_runtime_payload, run_agent_rolling_qualification,
-    run_agent_solver_operational_qualification, run_agent_update_qualification, run_doctor,
+    prepare_agent_update_package, prepare_desktop_bundle_set, prepare_layout,
+    prepare_staged_update, print_help, remote_deployment_roadmap, repair_installation,
+    rollback_agent_update, rollback_desktop_bundle_set, rollback_runtime_payload,
+    run_agent_rolling_qualification, run_agent_solver_operational_qualification,
+    run_agent_update_qualification, run_desktop_bundle_qualification, run_doctor,
     run_fleet_update_qualification, run_runtime_payload_qualification, runtime_payload_status,
-    seal_agent_update_package, seal_runtime_payload, stage_release, unified_update_plan,
-    unified_update_preview, uninstall_operator_package, uninstall_operator_package_from,
-    validate_env_file, write_agent_rolling_qualification_report,
-    write_agent_solver_operational_qualification_report, write_agent_update_qualification_report,
+    seal_agent_update_package, seal_desktop_bundle_set, seal_runtime_payload, stage_release,
+    unified_update_plan, unified_update_preview, uninstall_operator_package,
+    uninstall_operator_package_from, validate_env_file, verify_desktop_bundle_set,
+    write_agent_rolling_qualification_report, write_agent_solver_operational_qualification_report,
+    write_agent_update_qualification_report, write_desktop_bundle_qualification_report,
     write_fleet_update_qualification_report, write_operator_package_preflight_outcome,
     write_runtime_payload_qualification_report,
 };
@@ -41,6 +44,12 @@ fn main() {
             exit_on_err(runtime_payload_status().map(|report| report.render()))
         }
         "agent-update-status" => exit_on_err(agent_update_status().map(|report| report.render())),
+        "desktop-bundle-status" => {
+            exit_on_err(desktop_bundle_set_status().map(|report| report.render()))
+        }
+        "active-desktop-bundle-root" => {
+            exit_on_err(active_desktop_bundle_root().map(|path| path.display().to_string()))
+        }
         "active-agent-binary" => {
             exit_on_err(active_agent_binary().map(|path| path.display().to_string()))
         }
@@ -62,6 +71,68 @@ fn main() {
         }
         "rollback-agent-update" => {
             exit_on_err(rollback_agent_update().map(|record| record.render()))
+        }
+        "install-desktop-bundle-set" => {
+            let Some(path) = args.next() else {
+                eprintln!("missing package path for install-desktop-bundle-set");
+                std::process::exit(1);
+            };
+            exit_on_err(
+                install_desktop_bundle_set(&PathBuf::from(path)).map(|record| record.render()),
+            )
+        }
+        "rollback-desktop-bundle-set" => {
+            exit_on_err(rollback_desktop_bundle_set().map(|record| record.render()))
+        }
+        "prepare-desktop-bundle-set" => {
+            let Some(source) = args.next() else {
+                eprintln!("missing source root for prepare-desktop-bundle-set");
+                std::process::exit(1);
+            };
+            let Some(package) = args.next() else {
+                eprintln!("missing package root for prepare-desktop-bundle-set");
+                std::process::exit(1);
+            };
+            let Some(version) = args.next() else {
+                eprintln!("missing version for prepare-desktop-bundle-set");
+                std::process::exit(1);
+            };
+            let platform = parse_platform(args.next());
+            exit_on_err(
+                prepare_desktop_bundle_set(
+                    &PathBuf::from(source),
+                    &PathBuf::from(package),
+                    &version,
+                    platform,
+                )
+                .map(|manifest| format!("prepared desktop bundle set: {}", manifest.version)),
+            )
+        }
+        "seal-desktop-bundle-set" => {
+            let Some(package) = args.next() else {
+                eprintln!("missing package root for seal-desktop-bundle-set");
+                std::process::exit(1);
+            };
+            let Some(version) = args.next() else {
+                eprintln!("missing version for seal-desktop-bundle-set");
+                std::process::exit(1);
+            };
+            let platform = parse_platform(args.next());
+            exit_on_err(
+                seal_desktop_bundle_set(&PathBuf::from(package), &version, platform)
+                    .map(|manifest| format!("sealed desktop bundle set: {}", manifest.version)),
+            )
+        }
+        "verify-desktop-bundle-set" => {
+            let Some(package) = args.next() else {
+                eprintln!("missing package root for verify-desktop-bundle-set");
+                std::process::exit(1);
+            };
+            let platform = parse_platform(args.next());
+            exit_on_err(
+                verify_desktop_bundle_set(&PathBuf::from(package), platform)
+                    .map(|manifest| format!("verified desktop bundle set: {}", manifest.version)),
+            )
         }
         "seal-agent-update" => {
             let Some(path) = args.next() else {
@@ -137,6 +208,50 @@ fn main() {
                         write_agent_update_qualification_report(&report, &path)?;
                         Ok(format!(
                             "agent update qualification passed: {}",
+                            path.display()
+                        ))
+                    }
+                    None => {
+                        serde_json::to_string_pretty(&report).map_err(|error| error.to_string())
+                    }
+                }),
+            )
+        }
+        "qualify-desktop-bundle-set" => {
+            let Some(first_source) = args.next() else {
+                eprintln!("missing first source root for qualify-desktop-bundle-set");
+                std::process::exit(1);
+            };
+            let Some(second_source) = args.next() else {
+                eprintln!("missing second source root for qualify-desktop-bundle-set");
+                std::process::exit(1);
+            };
+            let Some(work_root) = args.next() else {
+                eprintln!("missing work root for qualify-desktop-bundle-set");
+                std::process::exit(1);
+            };
+            let Some(first_version) = args.next() else {
+                eprintln!("missing first version for qualify-desktop-bundle-set");
+                std::process::exit(1);
+            };
+            let Some(second_version) = args.next() else {
+                eprintln!("missing second version for qualify-desktop-bundle-set");
+                std::process::exit(1);
+            };
+            let output = args.next().map(PathBuf::from);
+            exit_on_err(
+                run_desktop_bundle_qualification(
+                    &PathBuf::from(first_source),
+                    &PathBuf::from(second_source),
+                    &PathBuf::from(work_root),
+                    &first_version,
+                    &second_version,
+                )
+                .and_then(|report| match output {
+                    Some(path) => {
+                        write_desktop_bundle_qualification_report(&report, &path)?;
+                        Ok(format!(
+                            "desktop bundle qualification passed: {}",
                             path.display()
                         ))
                     }

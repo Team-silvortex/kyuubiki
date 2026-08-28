@@ -102,8 +102,8 @@ managed run root. The semantic validator intentionally rejects the older
 The accepted evidence is
 `releases/usability-evidence/2.14.3/agent-update-operational-qualification.json`
 and is rechecked by `make check-agent-update-operational-qualification`. The
-parent release tier remains open until desktop/runtime update rollback is
-proven across the required packaged platforms.
+parent release tier remains open until packaged desktop update rollback is
+proven across the remaining required platforms.
 
 The Runtime payload portion now also has remote Linux operational evidence.
 Installer seals distinct Debug and Release native payloads, installs them into
@@ -115,7 +115,7 @@ clock values. The accepted report is
 `releases/usability-evidence/2.14.3/runtime-payload-operational-qualification.json`
 and is rechecked by `make check-runtime-payload-operational-qualification`.
 This closes only `upgrade_and_rollback/runtime-payload-remote-linux`; packaged
-desktop update and rollback on macOS, Linux, and Windows remain open.
+desktop update and rollback on Linux and Windows remain open.
 
 The coordinated fleet portion now has retained remote Linux evidence as well.
 Installer applies one Runtime payload and two Agent packages as a single
@@ -131,7 +131,7 @@ small report is retained. Evidence lives at
 and is rechecked by
 `./scripts/kyuubiki check-fleet-update-operational-qualification --verify-report releases/usability-evidence/2.17.0/fleet-update-operational-qualification.json --require-remote-linux`.
 This closes `upgrade_and_rollback/installer-managed-fleet-remote-linux`, not the
-parent tier: packaged desktop rollback on all supported platforms remains open.
+parent tier: packaged desktop rollback on Linux and Windows remains open.
 
 Live workload continuity during Agent replacement now has its own retained
 remote Linux qualification. Each Rust Agent exposes a fenced admission lifecycle
@@ -152,7 +152,24 @@ and is rechecked by
 This closes only
 `upgrade_and_rollback/live-agent-rolling-replacement-remote-linux`; the parent
 upgrade tier remains open until packaged desktop update and rollback are proven
-on every required platform.
+on Linux and Windows as well.
+
+The packaged desktop set now has its first operational update/rollback tier on
+macOS. Installer hashes every file in Hub, Installer, and Workbench, stores the
+three shells as one immutable versioned unit, records monotonic atomic
+activations, rejects content drift and unmanaged files, and rolls back to the
+exact original aggregate and component digests. The host qualification makes
+two differently marked and ad-hoc re-signed variants from the current release
+bundles, then launches all three shells after initial install, upgrade, and
+rollback. All nine boot-receipt probes pass, and the isolated store, staging
+tree, update lock, and GUI processes are removed afterward. Evidence lives at
+`releases/usability-evidence/2.17.0/desktop-bundle-update-operational-qualification.json`
+and is rechecked by
+`./scripts/kyuubiki check-desktop-bundle-update-operational-qualification --verify-report releases/usability-evidence/2.17.0/desktop-bundle-update-operational-qualification.json --require-platform macos`.
+The `2.16.9` and `2.17.0` labels identify the two qualification package
+generations; both contain the current `2.17.0` runtime, so this proves package
+switching and exact rollback rather than historical binary compatibility. It
+closes only `upgrade_and_rollback/packaged-desktop-set-macos`.
 
 The first Installer-managed end-to-end runtime subtier is now operational on
 remote Linux. A sealed installed payload starts Orchestra and two Rust Agents
