@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
-type SystemPanelTab = "config" | "scripts" | "runtime" | "data";
+type SystemPanelTab = "overview" | "config" | "scripts" | "runtime" | "data";
 type SystemSurfaceTab = "settings" | "runtime" | "data";
 type SettingsPage = "overview" | "config" | "scripts";
 
@@ -39,19 +39,12 @@ export function WorkbenchSystemSidebar({
   runtimeContent,
   dataContent,
 }: WorkbenchSystemSidebarProps) {
-  const [surfaceTab, setSurfaceTab] = useState<SystemSurfaceTab>(
-    systemPanelTab === "runtime" || systemPanelTab === "data" ? systemPanelTab : "settings",
-  );
-  const [settingsPage, setSettingsPage] = useState<SettingsPage>("overview");
-
-  useEffect(() => {
-    if (systemPanelTab === "runtime" || systemPanelTab === "data") {
-      setSurfaceTab(systemPanelTab);
-      return;
-    }
-    setSurfaceTab("settings");
-    setSettingsPage(systemPanelTab);
-  }, [systemPanelTab]);
+  const surfaceTab: SystemSurfaceTab =
+    systemPanelTab === "runtime" || systemPanelTab === "data" ? systemPanelTab : "settings";
+  const settingsPage: SettingsPage =
+    systemPanelTab === "overview" || systemPanelTab === "config" || systemPanelTab === "scripts"
+      ? systemPanelTab
+      : "overview";
 
   return (
     <div className="sidebar-stack panel-scroll-window" data-workbench-system-sidebar="root">
@@ -59,10 +52,7 @@ export function WorkbenchSystemSidebar({
         <button
           className={`panel-tab${surfaceTab === "settings" ? " panel-tab--active" : ""}`}
           data-workbench-system-surface-tab="settings"
-          onClick={() => {
-            setSurfaceTab("settings");
-            setSettingsPage("overview");
-          }}
+          onClick={() => onSystemPanelTabChange("overview")}
           type="button"
         >
           {settingsTabLabel}
@@ -70,10 +60,7 @@ export function WorkbenchSystemSidebar({
         <button
           className={`panel-tab${surfaceTab === "runtime" ? " panel-tab--active" : ""}`}
           data-workbench-system-surface-tab="runtime"
-          onClick={() => {
-            setSurfaceTab("runtime");
-            onSystemPanelTabChange("runtime");
-          }}
+          onClick={() => onSystemPanelTabChange("runtime")}
           type="button"
         >
           {runtimeTabLabel}
@@ -81,10 +68,7 @@ export function WorkbenchSystemSidebar({
         <button
           className={`panel-tab${surfaceTab === "data" ? " panel-tab--active" : ""}`}
           data-workbench-system-surface-tab="data"
-          onClick={() => {
-            setSurfaceTab("data");
-            onSystemPanelTabChange("data");
-          }}
+          onClick={() => onSystemPanelTabChange("data")}
           type="button"
         >
           {dataTabLabel}
@@ -97,7 +81,7 @@ export function WorkbenchSystemSidebar({
             <button
               className={`panel-tab${settingsPage === "overview" ? " panel-tab--active" : ""}`}
               data-workbench-system-settings-page="overview"
-              onClick={() => setSettingsPage("overview")}
+              onClick={() => onSystemPanelTabChange("overview")}
               type="button"
             >
               {overviewPageLabel}
@@ -105,10 +89,7 @@ export function WorkbenchSystemSidebar({
             <button
               className={`panel-tab${settingsPage === "config" ? " panel-tab--active" : ""}`}
               data-workbench-system-settings-page="config"
-              onClick={() => {
-                setSettingsPage("config");
-                onSystemPanelTabChange("config");
-              }}
+              onClick={() => onSystemPanelTabChange("config")}
               type="button"
             >
               {configPageLabel}
@@ -116,10 +97,7 @@ export function WorkbenchSystemSidebar({
             <button
               className={`panel-tab${settingsPage === "scripts" ? " panel-tab--active" : ""}`}
               data-workbench-system-settings-page="scripts"
-              onClick={() => {
-                setSettingsPage("scripts");
-                onSystemPanelTabChange("scripts");
-              }}
+              onClick={() => onSystemPanelTabChange("scripts")}
               type="button"
             >
               {scriptsPageLabel}
@@ -134,10 +112,7 @@ export function WorkbenchSystemSidebar({
                 <p className="card-copy">{configOverviewHint}</p>
                 <div className="button-row">
                   <button
-                    onClick={() => {
-                      setSettingsPage("config");
-                      onSystemPanelTabChange("config");
-                    }}
+                    onClick={() => onSystemPanelTabChange("config")}
                     type="button"
                   >
                     {configPageLabel}
@@ -151,10 +126,7 @@ export function WorkbenchSystemSidebar({
                 <p className="card-copy">{scriptsOverviewHint}</p>
                 <div className="button-row">
                   <button
-                    onClick={() => {
-                      setSettingsPage("scripts");
-                      onSystemPanelTabChange("scripts");
-                    }}
+                    onClick={() => onSystemPanelTabChange("scripts")}
                     type="button"
                   >
                     {scriptsPageLabel}

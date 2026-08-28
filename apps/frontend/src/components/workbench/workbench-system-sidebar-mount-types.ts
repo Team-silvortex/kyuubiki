@@ -9,8 +9,8 @@ import type { ProtocolAgentDescriptor } from "@/lib/api";
 
 export type WorkbenchSystemSidebarMountProps = {
   t: WorkbenchCopy;
-  systemPanelTab: "config" | "scripts" | "runtime" | "data";
-  handleSystemPanelTabChange: (tab: "config" | "scripts" | "runtime" | "data") => void;
+  systemPanelTab: "overview" | "config" | "scripts" | "runtime" | "data";
+  handleSystemPanelTabChange: (tab: "overview" | "config" | "scripts" | "runtime" | "data") => void;
   setSidebarSection: (section: "study" | "model" | "workflow" | "library" | "system") => void;
   handleWorkflowPanelTabChange: (tab: WorkflowSurfaceTab) => void;
   runtimeRecoveryCard?: ReactNode;

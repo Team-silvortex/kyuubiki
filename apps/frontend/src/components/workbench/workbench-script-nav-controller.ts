@@ -17,7 +17,7 @@ type ScriptNavControllerDeps = {
   setModelTab: (value: "tools" | "tree") => void;
   setModelToolsPage: (value: "overview" | "study" | "studio" | "materials" | "generate") => void;
   setLibraryTab: (value: "results" | "samples" | "projects" | "models" | "jobs") => void;
-  setSystemPanelTab: (value: "config" | "scripts" | "runtime" | "data") => void;
+  setSystemPanelTab: (value: "overview" | "config" | "scripts" | "runtime" | "data") => void;
   setAssistantWindowOpen: (value: boolean) => void;
   setSystemDataTab: (value: "jobs" | "results") => void;
   handleLanguageChange: (value: string) => void;
@@ -110,6 +110,7 @@ export async function handleWorkbenchScriptNavAction({
         setLibraryTab(payload.libraryTab);
       }
       if (
+        payload.systemPanelTab === "overview" ||
         payload.systemPanelTab === "config" ||
         payload.systemPanelTab === "assistant" ||
         payload.systemPanelTab === "scripts" ||

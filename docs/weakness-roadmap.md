@@ -345,10 +345,11 @@ Installer security without independent retained evidence for those surfaces.
 
 The former leading coordinate, `desktop-shared-ui/validation`, now meets its
 `qualified` target. The native qualification runner executes the cross-shell
-browser suite, requires all 27 tests to pass, preserves Hub, Installer, and
+browser suite, requires all 31 tests to pass, preserves Hub, Installer, and
 Workbench action counts, and verifies UI-to-native closure, PWDT parity,
 workspace-dominant layouts, reversible navigation, regression panels, live
-Workbench chunk mounting, and Pwdt session recovery. The machine-validated
+Workbench chunk mounting, controlled Model/Study, System, and Library deep-page
+round trips, Store request ownership, and Pwdt session recovery. The machine-validated
 result is retained under `releases/usability-evidence/2.17.0`; installed-package
 and cross-platform proof remain separate operational tiers.
 

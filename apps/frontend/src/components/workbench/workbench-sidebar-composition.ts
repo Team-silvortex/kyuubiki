@@ -3,10 +3,13 @@
 import { createElement } from "react";
 import { buildWorkbenchSidebarMountProps } from "@/components/workbench/workbench-sidebar-mount-props";
 import { WorkbenchRuntimeRecoveryCard } from "@/components/workbench/system/workbench-runtime-recovery-card";
+import type { ModelToolsPage } from "@/components/workbench/model/workbench-model-sidebar";
 import type { WorkbenchSystemSidebarMountProps } from "@/components/workbench/workbench-system-sidebar-mount-types";
 
 type WorkbenchSidebarCompositionProps = Record<string, any> &
-  Pick<WorkbenchSystemSidebarMountProps, "protocolAgents">;
+  Pick<WorkbenchSystemSidebarMountProps, "jobHistory" | "protocolAgents"> & {
+    handleModelToolsPageChange: (page: ModelToolsPage) => void;
+  };
 
 export function buildWorkbenchSidebarComposition(props: WorkbenchSidebarCompositionProps) {
   const { shellState, workspaceState, studyResultDerived, interactionControllers, flowControllers, workflowController } =

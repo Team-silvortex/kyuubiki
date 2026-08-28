@@ -232,6 +232,281 @@ test("Workbench rail mounts every declared sidebar chunk without client errors",
   }
 }, { timeout: 120_000 });
 
+test("Workbench Model navigation and Pwdt study alias preserve the complete workspace path", async () => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  try {
+    await page.goto(workbenchUrl(runtime), { waitUntil: "networkidle", timeout: 60_000 });
+    await click(page, '[aria-label="workbench-rail:model"]', "Model rail");
+    await waitForVisibleOrPageError(
+      page,
+      page.locator('[data-workbench-model="panel"]'),
+      "Model panel",
+    );
+
+    for (const pageName of ["overview", "study", "studio", "generate"]) {
+      const selector = `[data-workbench-model-tools-page="${pageName}"]`;
+      await click(
+        page,
+        selector,
+        `Model ${pageName} page`,
+      );
+      await page.locator(`${selector}.panel-tab--active`).waitFor({ state: "visible", timeout: 15_000 });
+    }
+
+    await click(page, '[data-workbench-model-tools-page="study"]', "Model study return");
+    const studyKind = page.locator('[data-workbench-model-study-kind="select"]');
+    await studyKind.selectOption("truss_2d");
+    await page.waitForFunction(
+      () => document.querySelector('[data-workbench-model-study-kind="select"]')?.value === "truss_2d",
+      undefined,
+      { timeout: 15_000 },
+    );
+    await click(page, '[data-workbench-model-tools-page="materials"]', "Model materials page");
+    await page.locator('[data-workbench-model-tools-page="materials"].panel-tab--active').waitFor({
+      state: "visible",
+      timeout: 15_000,
+    });
+
+    await click(page, '[data-workbench-model-tab="tree"]', "Model tree tab");
+    await page.locator('[data-workbench-model-tab="tree"].panel-tab--active').waitFor({
+      state: "visible",
+      timeout: 15_000,
+    });
+    await click(page, '[data-workbench-model-tab="tools"]', "Model tools tab");
+    await click(page, '[data-workbench-model-tools-page="studio"]', "Model studio detour");
+
+    await page.waitForFunction(() => Boolean(window.__kyuubikiPwdt));
+    const aliasResult = await page.evaluate(() =>
+      window.__kyuubikiPwdt.invoke("nav/setSidebarSection", { section: "study" }),
+    );
+    assert.equal(aliasResult.ok, true);
+    await waitForVisibleOrPageError(
+      page,
+      page.locator('[data-workbench-model-study="panel"]'),
+      "Workspace study panel",
+    );
+    await page.locator('[data-workbench-model-tools-page="study"].panel-tab--active').waitFor({
+      state: "visible",
+      timeout: 15_000,
+    });
+    assert.equal(await page.locator('[data-workbench-sidebar-section="model"]').count(), 1);
+    assert.equal(await page.locator('[data-workbench-model-study-kind="select"]').count(), 1);
+    assert.equal(await page.locator('[data-workbench-model-study-run="true"]').count(), 1);
+    assert.deepEqual(pageErrors, []);
+  } finally {
+    await context.close();
+  }
+}, { timeout: 90_000 });
+
+test("Workbench System navigation preserves controlled state across deep page round trips", async () => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  try {
+    await page.goto(workbenchUrl(runtime), { waitUntil: "networkidle", timeout: 60_000 });
+    await click(page, '[aria-label="workbench-rail:system"]', "System rail");
+    await waitForVisibleOrPageError(
+      page,
+      page.locator('[data-workbench-system-sidebar="root"]'),
+      "System sidebar",
+    );
+
+    const overview = page.locator('[data-workbench-system-settings-page="overview"]');
+    assert.match(await overview.getAttribute("class"), /panel-tab--active/u);
+
+    await click(page, '[data-workbench-system-surface-tab="runtime"]', "Runtime surface");
+    await waitForVisibleOrPageError(
+      page,
+      page.locator('[data-workbench-runtime="panel"]'),
+      "Runtime panel",
+    );
+    for (const runtimeTab of ["overview", "control", "stack", "security", "agents", "audit", "watchdog"]) {
+      const target = await click(
+        page,
+        `[data-workbench-runtime-tab="${runtimeTab}"]`,
+        `Runtime ${runtimeTab} tab`,
+      );
+      assert.match(await target.getAttribute("class"), /panel-tab--active/u);
+    }
+
+    await click(page, '[data-workbench-system-surface-tab="settings"]', "Settings surface");
+    assert.match(await overview.getAttribute("class"), /panel-tab--active/u);
+    await click(page, '[aria-label="workbench-rail:model"]', "Model rail");
+    await waitForVisibleOrPageError(
+      page,
+      page.locator('[data-workbench-sidebar-section="model"]'),
+      "Model sidebar",
+    );
+    await click(page, '[aria-label="workbench-rail:system"]', "System rail return");
+    await waitForVisibleOrPageError(page, overview, "Preserved System overview");
+    assert.match(await overview.getAttribute("class"), /panel-tab--active/u);
+
+    await click(page, '[data-workbench-system-settings-page="config"]', "System config page");
+    assert.match(
+      await page.locator('[data-workbench-system-settings-page="config"]').getAttribute("class"),
+      /panel-tab--active/u,
+    );
+    await click(page, '[data-workbench-system-settings-page="scripts"]', "System scripts page");
+    assert.match(
+      await page.locator('[data-workbench-system-settings-page="scripts"]').getAttribute("class"),
+      /panel-tab--active/u,
+    );
+
+    await click(page, '[data-workbench-system-surface-tab="data"]', "Data surface");
+    await waitForVisibleOrPageError(
+      page,
+      page.locator('[data-workbench-data-admin="panel"]'),
+      "Data admin panel",
+    );
+    for (const dataTab of ["jobs", "results"]) {
+      const target = await click(page, `[data-workbench-data-tab="${dataTab}"]`, `Data ${dataTab} tab`);
+      assert.match(await target.getAttribute("class"), /panel-tab--active/u);
+    }
+    for (const dataPage of ["overview", "browse", "edit"]) {
+      const target = await click(page, `[data-workbench-data-page="${dataPage}"]`, `Data ${dataPage} page`);
+      assert.match(await target.getAttribute("class"), /panel-tab--active/u);
+    }
+
+    assert.deepEqual(pageErrors, []);
+  } finally {
+    await context.close();
+  }
+}, { timeout: 120_000 });
+
+test("Workbench Library navigation mounts every primary and secondary page without client errors", async () => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  try {
+    await page.goto(workbenchUrl(runtime), { waitUntil: "networkidle", timeout: 60_000 });
+    await click(page, '[aria-label="workbench-rail:library"]', "Library rail");
+    await waitForVisibleOrPageError(
+      page,
+      page.locator('[data-workbench-library="panel"]'),
+      "Library panel",
+    );
+
+    for (const tab of ["jobs", "results", "models", "projects", "samples"]) {
+      const target = await click(page, `[data-workbench-library-tab="${tab}"]`, `Library ${tab} tab`);
+      assert.match(await target.getAttribute("class"), /panel-tab--active/u);
+    }
+    for (const pageName of ["catalog", "import"]) {
+      const target = await click(
+        page,
+        `[data-workbench-library-sample-page="${pageName}"]`,
+        `Library sample ${pageName} page`,
+      );
+      assert.match(await target.getAttribute("class"), /panel-tab--active/u);
+    }
+
+    await click(page, '[data-workbench-library-tab="projects"]', "Library projects return");
+    for (const pageName of ["manage", "exchange"]) {
+      const target = await click(
+        page,
+        `[data-workbench-library-project-page="${pageName}"]`,
+        `Library project ${pageName} page`,
+      );
+      assert.match(await target.getAttribute("class"), /panel-tab--active/u);
+    }
+
+    await click(page, '[data-workbench-library-tab="models"]', "Library models return");
+    for (const pageName of ["saved", "versions"]) {
+      const target = await click(
+        page,
+        `[data-workbench-library-model-page="${pageName}"]`,
+        `Library model ${pageName} page`,
+      );
+      assert.match(await target.getAttribute("class"), /panel-tab--active/u);
+    }
+    assert.deepEqual(pageErrors, []);
+  } finally {
+    await context.close();
+  }
+}, { timeout: 90_000 });
+
+test("Workbench Store ignores stale responses after the active kind changes", async () => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await page.route("**/api/v1/store**", async (route) => {
+    const url = new URL(route.request().url());
+    const requestedKind = url.searchParams.get("kind") || "all";
+    const entryKind = requestedKind === "all" ? "operator" : requestedKind;
+    const delay = requestedKind === "operator" ? 700 : requestedKind === "workflow_template" ? 20 : 5;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        entries: [{
+          id: `qualification-${requestedKind}`,
+          kind: entryKind,
+          title: `Qualification ${requestedKind}`,
+          version: "1",
+          source_id: "qualification",
+          source_kind: "builtin",
+          tags: [],
+          install: { mode: "workspace", requires_download: false },
+        }],
+        sources: [{
+          id: "qualification",
+          type: "builtin",
+          label: "Qualification",
+          enabled: true,
+          editable: false,
+          status: "ready",
+          supports: ["operator", "workflow_template", "frontend_dsl_template"],
+        }],
+        summary: { entry_count: 1, kinds: { [entryKind]: 1 }, sources: { qualification: 1 } },
+      }),
+    });
+  });
+
+  try {
+    await page.goto(workbenchUrl(runtime), { waitUntil: "networkidle", timeout: 60_000 });
+    await click(page, '[aria-label="workbench-rail:store"]', "Store rail");
+    const storePanel = page.locator('[data-workbench-store-panel="true"]');
+    await waitForVisibleOrPageError(page, storePanel, "Store panel");
+    await page.locator('[data-workbench-store-entry-id="qualification-all"]').waitFor({
+      state: "visible",
+      timeout: 30_000,
+    });
+
+    const operatorRequest = page.waitForRequest((request) =>
+      request.url().includes("/api/v1/store?kind=operator"),
+    );
+    await click(page, '[data-workbench-store-kind="operator"]', "Store operator kind");
+    await operatorRequest;
+    await click(page, '[data-workbench-store-kind="workflow_template"]', "Store workflow kind");
+    const workflowEntry = page.locator(
+      '[data-workbench-store-entry-id="qualification-workflow_template"]',
+    );
+    await workflowEntry.waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForTimeout(900);
+
+    assert.match(
+      await page.locator('[data-workbench-store-kind="workflow_template"]').getAttribute("class"),
+      /active/u,
+    );
+    assert.equal(await workflowEntry.count(), 1);
+    assert.equal(await page.locator('[data-workbench-store-entry-id="qualification-operator"]').count(), 0);
+    assert.equal(await storePanel.getAttribute("data-workbench-store-status"), "ready");
+    assert.deepEqual(pageErrors, []);
+  } finally {
+    await context.close();
+  }
+}, { timeout: 90_000 });
+
 test("Workbench Pwdt preserves hydrated script and DSL sessions", async () => {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
   const page = await context.newPage();

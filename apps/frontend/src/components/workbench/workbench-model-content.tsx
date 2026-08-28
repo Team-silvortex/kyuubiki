@@ -179,7 +179,7 @@ export function buildWorkbenchModelContent(props: Record<string, any>) {
   ) : null;
 
   const modelStudyContent: ReactNode = (
-    <section className="sidebar-card">
+    <section className="sidebar-card" data-workbench-model-study="panel">
       <div className="card-head">
         <h2>{t.sections.study}</h2>
         <span aria-label="workbench-loaded-model">{loadedModelName}</span>
@@ -192,6 +192,7 @@ export function buildWorkbenchModelContent(props: Record<string, any>) {
               <button
                 key={option.key}
                 className={`ghost-button ghost-button--compact${classifyStudyKindDomain(studyKind) === option.key ? " ghost-button--active" : ""}`}
+                data-workbench-model-study-domain={option.key}
                 onClick={() => {
                   const fallback = studyKindOptionGroups.find((group: { domainKey: string; options: Array<{ value: string }> }) => group.domainKey === option.key)?.options[0]?.value;
                   if (fallback && fallback !== studyKind) {
@@ -208,6 +209,7 @@ export function buildWorkbenchModelContent(props: Record<string, any>) {
         <label>
           <span>{t.studyTypeLabel}</span>
           <select
+            data-workbench-model-study-kind="select"
             value={studyKind}
             onChange={(event) => {
               selectStudyKind(event.target.value);
@@ -236,7 +238,13 @@ export function buildWorkbenchModelContent(props: Record<string, any>) {
           </div>
         ))}
       </div>
-      <button className="solve-button" disabled={isPending} onClick={runAnalysis} type="button">
+      <button
+        className="solve-button"
+        data-workbench-model-study-run="true"
+        disabled={isPending}
+        onClick={runAnalysis}
+        type="button"
+      >
         {isPending ? t.running : t.run}
       </button>
     </section>

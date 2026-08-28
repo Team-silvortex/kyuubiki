@@ -205,7 +205,7 @@ export function useWorkbenchWorkspaceState(params: {
   const [modelToolsPage, setModelToolsPage] = useState<ModelToolsPage>("overview");
   const [libraryTab, setLibraryTab] = useState<LibraryPanelTab>("jobs");
   const [systemDataTab, setSystemDataTab] = useState<SystemDataTab>("jobs");
-  const [systemPanelTab, setSystemPanelTab] = useState<SystemPanelTab>("config");
+  const [systemPanelTab, setSystemPanelTab] = useState<SystemPanelTab>("overview");
   const [draggingNode, setDraggingNode] = useState<number | null>(null);
   const [truss3dLinkMode, setTruss3dLinkMode] = useState(false);
   const [selectedTruss3dNodes, setSelectedTruss3dNodes] = useState<number[]>([]);

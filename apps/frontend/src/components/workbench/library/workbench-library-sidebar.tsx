@@ -98,13 +98,13 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
   const waitingJobsCount = useMemo(() => jobRows.filter((row) => row.hasResult === labels.no).length, [jobRows, labels.no]);
 
   return (
-    <div className="sidebar-stack panel-scroll-window">
+    <div className="sidebar-stack panel-scroll-window" data-workbench-library="panel">
       <div className="panel-tabs panel-tabs--wide">
-        <button aria-label="workbench-library-tab:jobs" className={`panel-tab panel-tab--icon${libraryTab === "jobs" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("jobs")} type="button"><span className="panel-tab__glyph">J</span><span>{labels.tabs.jobs}</span></button>
-        <button aria-label="workbench-library-tab:results" className={`panel-tab panel-tab--icon${libraryTab === "results" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("results")} type="button"><span className="panel-tab__glyph">R</span><span>{labels.tabs.results}</span></button>
-        <button aria-label="workbench-library-tab:models" className={`panel-tab panel-tab--icon${libraryTab === "models" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("models")} type="button"><span className="panel-tab__glyph">M</span><span>{labels.tabs.models}</span></button>
-        <button aria-label="workbench-library-tab:projects" className={`panel-tab panel-tab--icon${libraryTab === "projects" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("projects")} type="button"><span className="panel-tab__glyph">P</span><span>{labels.tabs.projects}</span></button>
-        <button aria-label="workbench-library-tab:samples" className={`panel-tab panel-tab--icon${libraryTab === "samples" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("samples")} type="button"><span className="panel-tab__glyph">S</span><span>{labels.tabs.samples}</span></button>
+        <button aria-label="workbench-library-tab:jobs" className={`panel-tab panel-tab--icon${libraryTab === "jobs" ? " panel-tab--active" : ""}`} data-workbench-library-tab="jobs" onClick={() => onLibraryTabChange("jobs")} type="button"><span className="panel-tab__glyph">J</span><span>{labels.tabs.jobs}</span></button>
+        <button aria-label="workbench-library-tab:results" className={`panel-tab panel-tab--icon${libraryTab === "results" ? " panel-tab--active" : ""}`} data-workbench-library-tab="results" onClick={() => onLibraryTabChange("results")} type="button"><span className="panel-tab__glyph">R</span><span>{labels.tabs.results}</span></button>
+        <button aria-label="workbench-library-tab:models" className={`panel-tab panel-tab--icon${libraryTab === "models" ? " panel-tab--active" : ""}`} data-workbench-library-tab="models" onClick={() => onLibraryTabChange("models")} type="button"><span className="panel-tab__glyph">M</span><span>{labels.tabs.models}</span></button>
+        <button aria-label="workbench-library-tab:projects" className={`panel-tab panel-tab--icon${libraryTab === "projects" ? " panel-tab--active" : ""}`} data-workbench-library-tab="projects" onClick={() => onLibraryTabChange("projects")} type="button"><span className="panel-tab__glyph">P</span><span>{labels.tabs.projects}</span></button>
+        <button aria-label="workbench-library-tab:samples" className={`panel-tab panel-tab--icon${libraryTab === "samples" ? " panel-tab--active" : ""}`} data-workbench-library-tab="samples" onClick={() => onLibraryTabChange("samples")} type="button"><span className="panel-tab__glyph">S</span><span>{labels.tabs.samples}</span></button>
       </div>
 
       {libraryTab === "jobs" ? (
@@ -212,6 +212,7 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
           <div className="panel-tabs panel-tabs--wide">
             <button
               className={`panel-tab${samplePage === "catalog" ? " panel-tab--active" : ""}`}
+              data-workbench-library-sample-page="catalog"
               onClick={() => setSamplePage("catalog")}
               type="button"
             >
@@ -219,6 +220,7 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
             </button>
             <button
               className={`panel-tab${samplePage === "import" ? " panel-tab--active" : ""}`}
+              data-workbench-library-sample-page="import"
               onClick={() => setSamplePage("import")}
               type="button"
             >
@@ -328,6 +330,7 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
           <div className="panel-tabs panel-tabs--wide">
             <button
               className={`panel-tab${projectPage === "manage" ? " panel-tab--active" : ""}`}
+              data-workbench-library-project-page="manage"
               onClick={() => setProjectPage("manage")}
               type="button"
             >
@@ -335,6 +338,7 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
             </button>
             <button
               className={`panel-tab${projectPage === "exchange" ? " panel-tab--active" : ""}`}
+              data-workbench-library-project-page="exchange"
               onClick={() => setProjectPage("exchange")}
               type="button"
             >
@@ -426,6 +430,7 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
           <div className="panel-tabs panel-tabs--wide">
             <button
               className={`panel-tab${modelPage === "saved" ? " panel-tab--active" : ""}`}
+              data-workbench-library-model-page="saved"
               onClick={() => setModelPage("saved")}
               type="button"
             >
@@ -433,6 +438,7 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
             </button>
             <button
               className={`panel-tab${modelPage === "versions" ? " panel-tab--active" : ""}`}
+              data-workbench-library-model-page="versions"
               onClick={() => setModelPage("versions")}
               type="button"
             >

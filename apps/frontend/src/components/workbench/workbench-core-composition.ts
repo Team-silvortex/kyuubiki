@@ -232,7 +232,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
         rootState.spring2dModel,
         rootState.spring3dModel,
         rootState.parametric,
-        props.round,
+        round,
       ),
   });
 
@@ -348,6 +348,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     deferredJobHistory,
     deferredResultRecords,
     resultWindowMaxTotal,
+    round,
     handleCanvasStageScroll,
     refreshHealth,
     refreshProjects,

@@ -28,7 +28,7 @@
           "user_extensible_ui_allowed",
           "headless_sdk_parity_required",
           "check-desktop-usability-journeys",
-          "WORKBENCH_UI_AUTOMATION_CONTRACT_VERSION = 1"
+          "WORKBENCH_UI_AUTOMATION_CONTRACT_VERSION = 2"
         ]
       },
       {

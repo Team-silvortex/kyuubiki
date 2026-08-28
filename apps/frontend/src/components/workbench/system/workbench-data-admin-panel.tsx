@@ -184,27 +184,27 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
   const waitingJobsCount = jobRows.filter((row) => row.status !== "completed").length;
   const latestResult = resultRows[0];
   return (
-    <section className="sidebar-card sidebar-card--compact">
+    <section className="sidebar-card sidebar-card--compact" data-workbench-data-admin="panel">
       <div className="card-head">
         <h2>{title}</h2>
         <span>{recordCountLabel}</span>
       </div>
       <div className="panel-tabs">
-        <button className={`panel-tab${activeTab === "jobs" ? " panel-tab--active" : ""}`} onClick={() => onTabChange("jobs")} type="button">
+        <button className={`panel-tab${activeTab === "jobs" ? " panel-tab--active" : ""}`} data-workbench-data-tab="jobs" onClick={() => onTabChange("jobs")} type="button">
           {jobsTabLabel}
         </button>
-        <button className={`panel-tab${activeTab === "results" ? " panel-tab--active" : ""}`} onClick={() => onTabChange("results")} type="button">
+        <button className={`panel-tab${activeTab === "results" ? " panel-tab--active" : ""}`} data-workbench-data-tab="results" onClick={() => onTabChange("results")} type="button">
           {resultsTabLabel}
         </button>
       </div>
       <div className="panel-tabs panel-tabs--wide">
-        <button className={`panel-tab${dataPage === "overview" ? " panel-tab--active" : ""}`} onClick={() => setDataPage("overview")} type="button">
+        <button className={`panel-tab${dataPage === "overview" ? " panel-tab--active" : ""}`} data-workbench-data-page="overview" onClick={() => setDataPage("overview")} type="button">
           {overviewTabLabel}
         </button>
-        <button className={`panel-tab${dataPage === "browse" ? " panel-tab--active" : ""}`} onClick={() => setDataPage("browse")} type="button">
+        <button className={`panel-tab${dataPage === "browse" ? " panel-tab--active" : ""}`} data-workbench-data-page="browse" onClick={() => setDataPage("browse")} type="button">
           {browsePageLabel}
         </button>
-        <button className={`panel-tab${dataPage === "edit" ? " panel-tab--active" : ""}`} onClick={() => setDataPage("edit")} type="button">
+        <button className={`panel-tab${dataPage === "edit" ? " panel-tab--active" : ""}`} data-workbench-data-page="edit" onClick={() => setDataPage("edit")} type="button">
           {editPageLabel}
         </button>
       </div>

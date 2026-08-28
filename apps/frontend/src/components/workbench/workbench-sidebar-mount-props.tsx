@@ -5,11 +5,14 @@ import {
   type WorkbenchUiChunkId,
 } from "@/components/workbench/workbench-ui-streaming";
 import { buildWorkbenchUiChunkRuntimeAttrs } from "@/components/workbench/workbench-ui-streaming-runtime";
+import type { ModelToolsPage } from "@/components/workbench/model/workbench-model-sidebar";
 import type { SidebarSection } from "@/components/workbench/workbench-types";
 import type { WorkbenchSystemSidebarMountProps } from "@/components/workbench/workbench-system-sidebar-mount-types";
 
 type WorkbenchSidebarMountSource = Record<string, any> &
-  Pick<WorkbenchSystemSidebarMountProps, "protocolAgents">;
+  Pick<WorkbenchSystemSidebarMountProps, "protocolAgents"> & {
+    handleModelToolsPageChange: (page: ModelToolsPage) => void;
+  };
 
 const WorkbenchLibrarySectionMount = lazy(() =>
   import("@/components/workbench/workbench-library-section-mount").then((module) => ({

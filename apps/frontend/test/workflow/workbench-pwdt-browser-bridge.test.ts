@@ -95,7 +95,17 @@ test("Pwdt browser bridge resolves UI contract selectors for stable automation",
   try {
     const bridge = makeBridge();
 
+    assert.equal(bridge.uiContract().contractVersion, 2);
+    assert.equal(bridge.uiSelector("railButton", "library"), '[aria-label="workbench-rail:library"]');
+    assert.equal(bridge.uiSelector("modelTab", "tree"), '[data-workbench-model-tab="tree"]');
+    assert.equal(bridge.uiSelector("modelToolsPage", "study"), '[data-workbench-model-tools-page="study"]');
+    assert.equal(bridge.uiSelector("modelStudyDomain", "thermal"), '[data-workbench-model-study-domain="thermal"]');
+    assert.equal(bridge.uiSelector("modelStudyKind"), '[data-workbench-model-study-kind="select"]');
     assert.equal(bridge.uiSelector("runtimeTab", "control"), '[data-workbench-runtime-tab="control"]');
+    assert.equal(bridge.uiSelector("libraryTab", "models"), '[data-workbench-library-tab="models"]');
+    assert.equal(bridge.uiSelector("libraryModelPage", "versions"), '[data-workbench-library-model-page="versions"]');
+    assert.equal(bridge.uiSelector("storeKind", "operator"), '[data-workbench-store-kind="operator"]');
+    assert.equal(bridge.uiSelector("systemSettingsPage", "overview"), '[data-workbench-system-settings-page="overview"]');
     assert.equal(bridge.uiSelector("workflowCatalogEntry", "solve.bar_1d"), '[data-workflow-catalog-id="solve.bar_1d"]');
     assert.equal(bridge.uiSelector("workflowTopologyKind"), '[data-workflow-topology-kind="select"]');
     assert.equal(bridge.uiSelector("workflowInputArtifact", "load-input"), '[data-workflow-input-artifact="load-input"]');

@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Cross-shell desktop UI qualification evidence covering observable actions, capability routing, PWDT parity, layout priority, reversible navigation, live Workbench chunk mounting, and persisted-session recovery.",
+  "summary": "Cross-shell desktop UI qualification evidence covering observable actions, capability routing, PWDT parity, layout priority, reversible navigation, live Workbench chunk mounting, controlled Model, System, and Library navigation, Store request ownership, and persisted-session recovery.",
   "paradigm_contract_evidence": {
     "validation": [
       {
@@ -35,6 +35,10 @@
           "desktop shell layout keeps operational workspaces dominant",
           "desktop primary navigation forms a reversible non-empty loop",
           "Workbench rail mounts every declared sidebar chunk without client errors",
+          "Workbench Model navigation and Pwdt study alias preserve the complete workspace path",
+          "Workbench System navigation preserves controlled state across deep page round trips",
+          "Workbench Library navigation mounts every primary and secondary page without client errors",
+          "Workbench Store ignores stale responses after the active kind changes",
           "Workbench Pwdt preserves hydrated script and DSL sessions"
         ]
       },
@@ -90,8 +94,8 @@
       ],
       "required_text": [
         "\"status\": \"pass\"",
-        "\"tests\": 27",
-        "\"passed\": 27",
+        "\"tests\": 31",
+        "\"passed\": 31",
         "\"failed_actions\": 0",
         "\"missing_actions\": 0",
         "\"actions\": 43",
@@ -101,6 +105,10 @@
         "\"id\": \"pwdt-parity\"",
         "\"id\": \"navigation-closure\"",
         "\"id\": \"workbench-interaction-closure\"",
+        "\"id\": \"workbench-model-navigation-closure\"",
+        "\"id\": \"workbench-system-navigation-closure\"",
+        "\"id\": \"workbench-library-navigation-closure\"",
+        "\"id\": \"workbench-store-request-ownership\"",
         "\"id\": \"workbench-pwdt-session-recovery\""
       ]
     },

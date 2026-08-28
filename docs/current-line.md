@@ -80,7 +80,9 @@ sprawl:
   Headless SDKs to exact tensor coordinates. Current retained reports cover 101
   Protocol tests with 56/56 unique RPC round trips and 271 SDK tests with 14
   cross-language failure-parity cases. Desktop validation now carries a current
-  retained 27/27 cross-shell and live Workbench interaction report; the
+  retained 31/31 cross-shell and live Workbench interaction report, including
+  controlled Model/Study, System, Library, Runtime, and Data round trips plus
+  stale Store response rejection; the
   recalibrated release profile has 55/55 P0 coordinates at target while the
   external usability gate remains closed
 - Rust Operator SDK qualification now retains a six-stage package journey:

@@ -55,10 +55,14 @@ export function WorkbenchModelSidebar({
   treeContent,
 }: WorkbenchModelSidebarProps) {
   return (
-    <div className={`sidebar-stack panel-scroll-window${isTruss3d ? " sidebar-stack--space" : ""}`}>
+    <div
+      className={`sidebar-stack panel-scroll-window${isTruss3d ? " sidebar-stack--space" : ""}`}
+      data-workbench-model="panel"
+    >
       <div className="panel-tabs">
         <button
           className={`panel-tab${modelTab === "tools" ? " panel-tab--active" : ""}`}
+          data-workbench-model-tab="tools"
           onClick={() => onModelTabChange("tools")}
           type="button"
         >
@@ -66,6 +70,7 @@ export function WorkbenchModelSidebar({
         </button>
         <button
           className={`panel-tab${modelTab === "tree" ? " panel-tab--active" : ""}`}
+          data-workbench-model-tab="tree"
           onClick={() => onModelTabChange("tree")}
           type="button"
         >
@@ -78,6 +83,7 @@ export function WorkbenchModelSidebar({
           <div className="panel-tabs panel-tabs--wide">
             <button
               className={`panel-tab${toolsPage === "overview" ? " panel-tab--active" : ""}`}
+              data-workbench-model-tools-page="overview"
               onClick={() => onToolsPageChange("overview")}
               type="button"
             >
@@ -86,6 +92,7 @@ export function WorkbenchModelSidebar({
             {studyContent ? (
               <button
                 className={`panel-tab${toolsPage === "study" ? " panel-tab--active" : ""}`}
+                data-workbench-model-tools-page="study"
                 onClick={() => onToolsPageChange("study")}
                 type="button"
               >
@@ -94,6 +101,7 @@ export function WorkbenchModelSidebar({
             ) : null}
             <button
               className={`panel-tab${toolsPage === "studio" ? " panel-tab--active" : ""}`}
+              data-workbench-model-tools-page="studio"
               onClick={() => onToolsPageChange("studio")}
               type="button"
             >
@@ -102,6 +110,7 @@ export function WorkbenchModelSidebar({
             {materialsContent ? (
               <button
                 className={`panel-tab${toolsPage === "materials" ? " panel-tab--active" : ""}`}
+                data-workbench-model-tools-page="materials"
                 onClick={() => onToolsPageChange("materials")}
                 type="button"
               >
@@ -111,6 +120,7 @@ export function WorkbenchModelSidebar({
             {generateContent ? (
               <button
                 className={`panel-tab${toolsPage === "generate" ? " panel-tab--active" : ""}`}
+                data-workbench-model-tools-page="generate"
                 onClick={() => onToolsPageChange("generate")}
                 type="button"
               >

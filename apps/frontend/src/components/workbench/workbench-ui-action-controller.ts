@@ -87,10 +87,12 @@ export function createWorkbenchUiActionController({
   toggleImmersiveViewport,
 }: WorkbenchUiActionControllerDeps) {
   const handleSidebarSectionChange = (section: SidebarSection) => {
-    const nextSection = section === "study" ? "model" : section;
+    const opensWorkspaceStudy = section === "study";
+    const nextSection = opensWorkspaceStudy ? "model" : section;
     setSidebarSection(nextSection);
     if (nextSection === "model") {
       setModelTab("tools");
+      if (opensWorkspaceStudy) setModelToolsPage("study");
     }
     if (nextSection === "workflow" && workflowCatalogLength === 0 && !workflowCatalogBusy) {
       void refreshWorkflowCatalog();

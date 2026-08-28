@@ -12,7 +12,7 @@
     "tests/integration/workbench-ui-workflow-invocation.test.mjs",
     "tests/integration/workbench-shell-regression.test.mjs"
   ],
-  "minimum_test_count": 27,
+  "minimum_test_count": 31,
   "shell_minimum_actions": [
     { "id": "hub", "minimum_actions": 40 },
     { "id": "installer", "minimum_actions": 50 },
@@ -54,6 +54,22 @@
     {
       "id": "workbench-interaction-closure",
       "label": "Workbench rail mounts every declared sidebar chunk without client errors"
+    },
+    {
+      "id": "workbench-model-navigation-closure",
+      "label": "Workbench Model navigation and Pwdt study alias preserve the complete workspace path"
+    },
+    {
+      "id": "workbench-system-navigation-closure",
+      "label": "Workbench System navigation preserves controlled state across deep page round trips"
+    },
+    {
+      "id": "workbench-library-navigation-closure",
+      "label": "Workbench Library navigation mounts every primary and secondary page without client errors"
+    },
+    {
+      "id": "workbench-store-request-ownership",
+      "label": "Workbench Store ignores stale responses after the active kind changes"
     },
     {
       "id": "workbench-pwdt-session-recovery",

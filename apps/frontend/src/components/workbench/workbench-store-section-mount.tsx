@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchAssetStore,
   type AssetStoreEntry,
@@ -46,12 +46,14 @@ export function WorkbenchStoreSectionMount({
   const [error, setError] = useState<string | null>(null);
   const [storageError, setStorageError] = useState<string | null>(null);
   const [manifest, setManifest] = useState(() => blankWorkspaceStoreManifest(selectedProjectId));
+  const refreshRequestRef = useRef(0);
 
   const copy = resolveStoreCopy(language);
   const entries = useMemo(() => payload?.entries ?? [], [payload?.entries]);
   const sources = payload?.sources ?? [];
 
   async function refreshStore() {
+    const requestId = ++refreshRequestRef.current;
     setBusy(true);
     setError(null);
 
@@ -60,14 +62,16 @@ export function WorkbenchStoreSectionMount({
         kind: kind || undefined,
         q: query.trim() || undefined,
       });
+      if (requestId !== refreshRequestRef.current) return;
       setPayload(nextPayload);
       setMessage(copy.loaded(nextPayload.summary.entry_count));
     } catch (refreshError) {
+      if (requestId !== refreshRequestRef.current) return;
       const message = refreshError instanceof Error ? refreshError.message : copy.failed;
       setError(message);
       setMessage(copy.failed);
     } finally {
-      setBusy(false);
+      if (requestId === refreshRequestRef.current) setBusy(false);
     }
   }
 
@@ -146,7 +150,11 @@ export function WorkbenchStoreSectionMount({
   }
 
   return (
-    <div className="sidebar-stack panel-scroll-window" data-workbench-store-panel="true">
+    <div
+      className="sidebar-stack panel-scroll-window"
+      data-workbench-store-panel="true"
+      data-workbench-store-status={busy ? "loading" : error ? "error" : "ready"}
+    >
       <section className="sidebar-card sidebar-card--compact">
         <div className="card-head">
           <div>
@@ -186,6 +194,7 @@ export function WorkbenchStoreSectionMount({
         <label className="form-field">
           <span>{copy.search}</span>
           <input
+            data-workbench-store-search="query"
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") void refreshStore();
@@ -198,6 +207,7 @@ export function WorkbenchStoreSectionMount({
           {KIND_FILTERS.map((filter) => (
             <button
               className={kind === filter.kind ? "active" : ""}
+              data-workbench-store-kind={filter.kind || "all"}
               key={filter.kind || "all"}
               onClick={() => setKind(filter.kind)}
               type="button"
@@ -288,7 +298,11 @@ function StoreEntryCard({
   onInstall: (entry: AssetStoreEntry) => void;
 }) {
   return (
-    <article className="history-item">
+    <article
+      className="history-item"
+      data-workbench-store-entry-id={entry.id}
+      data-workbench-store-entry-kind={entry.kind}
+    >
       <div>
         <strong>{entry.title}</strong>
         <small>{copy.kindLabel(entry.kind)} · {entry.source_id} · {entry.version ?? "v0"}</small>
