@@ -1,13 +1,14 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Cross-shell desktop UI qualification evidence covering observable actions, capability routing, PWDT parity, layout priority, reversible navigation, and regression panels.",
+  "summary": "Cross-shell desktop UI qualification evidence covering observable actions, capability routing, PWDT parity, layout priority, reversible navigation, live Workbench chunk mounting, and persisted-session recovery.",
   "paradigm_contract_evidence": {
     "validation": [
       {
         "id": "desktop-ui-validation-contract",
         "modules": [
-          "desktop-shared-ui"
+          "desktop-shared-ui",
+          "workbench-shell"
         ],
         "files": [
           "config/architecture/desktop-ui-validation.json",
@@ -20,6 +21,7 @@
           "tests/integration/desktop-gui-layout-priority.test.mjs",
           "tests/integration/desktop-gui-navigation-closure.test.mjs",
           "tests/integration/desktop-shell-regression.test.mjs",
+          "tests/integration/workbench-ui-workflow-invocation.test.mjs",
           "tests/integration/workbench-shell-regression.test.mjs"
         ],
         "required_text": [
@@ -31,7 +33,9 @@
           "every required desktop capability closes UI, route, native, and result layers",
           "capabilities that promise PWDT parity are catalogued and executable",
           "desktop shell layout keeps operational workspaces dominant",
-          "desktop primary navigation forms a reversible non-empty loop"
+          "desktop primary navigation forms a reversible non-empty loop",
+          "Workbench rail mounts every declared sidebar chunk without client errors",
+          "Workbench Pwdt preserves hydrated script and DSL sessions"
         ]
       },
       {
@@ -48,7 +52,8 @@
           "tests/integration/desktop-gui-capability-closure.test.mjs",
           "tests/integration/desktop-gui-layout-priority.test.mjs",
           "tests/integration/desktop-gui-navigation-closure.test.mjs",
-          "tests/integration/desktop-shell-regression.test.mjs"
+          "tests/integration/desktop-shell-regression.test.mjs",
+          "tests/integration/workbench-ui-workflow-invocation.test.mjs"
         ],
         "required_text": [
           "kyuubiki.desktop-ui-validation-contract/v1",
@@ -69,7 +74,8 @@
       "status": "proven",
       "grade": "qualified",
       "modules": [
-        "desktop-shared-ui"
+        "desktop-shared-ui",
+        "workbench-shell"
       ],
       "paradigms": [
         "validation"
@@ -80,20 +86,22 @@
         "ux_closure"
       ],
       "files": [
-        "releases/usability-evidence/2.12.6/desktop-ui-validation-qualification.json"
+        "releases/usability-evidence/2.17.0/desktop-ui-validation-qualification.json"
       ],
       "required_text": [
         "\"status\": \"pass\"",
-        "\"tests\": 21",
-        "\"passed\": 21",
+        "\"tests\": 27",
+        "\"passed\": 27",
         "\"failed_actions\": 0",
         "\"missing_actions\": 0",
         "\"actions\": 43",
-        "\"actions\": 52",
+        "\"actions\": 53",
         "\"actions\": 7",
         "\"id\": \"deployment-update-closure\"",
         "\"id\": \"pwdt-parity\"",
-        "\"id\": \"navigation-closure\""
+        "\"id\": \"navigation-closure\"",
+        "\"id\": \"workbench-interaction-closure\"",
+        "\"id\": \"workbench-pwdt-session-recovery\""
       ]
     },
     {
@@ -119,7 +127,8 @@
         "tests/integration/desktop-gui-layout-priority.test.mjs",
         "tests/integration/desktop-gui-navigation-closure.test.mjs",
         "tests/integration/desktop-shell-regression.test.mjs",
-        "releases/usability-evidence/2.15.0/desktop-ui-validation-qualification.json"
+        "tests/integration/workbench-ui-workflow-invocation.test.mjs",
+        "releases/usability-evidence/2.17.0/desktop-ui-validation-qualification.json"
       ],
       "required_text": [
         "\"status\": \"pass\"",

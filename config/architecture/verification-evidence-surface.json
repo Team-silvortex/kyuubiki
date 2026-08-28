@@ -174,7 +174,7 @@
       "config/architecture/desktop-ui-validation.json",
       "schemas/desktop-ui-validation-report.schema.json",
       "workers/rust/crates/script-runner/src/desktop_ui_validation.rs",
-      "releases/usability-evidence/2.15.0/desktop-ui-validation-qualification.json",
+      "releases/usability-evidence/2.17.0/desktop-ui-validation-qualification.json",
       "config/architecture/workbench-validation-qualification.json",
       "schemas/workbench-validation-qualification-report.schema.json",
       "workers/rust/crates/script-runner/src/workbench_validation_qualification.rs",

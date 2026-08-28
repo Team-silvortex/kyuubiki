@@ -79,10 +79,10 @@ sprawl:
 - runtime API verification now binds the Protocol and all three official
   Headless SDKs to exact tensor coordinates. Current retained reports cover 101
   Protocol tests with 56/56 unique RPC round trips and 271 SDK tests with 14
-  cross-language failure-parity cases. Installer validation now also carries a
-  current retained 21/21 cross-shell report; the recalibrated release profile
-  has 51/55 P0 coordinates at target while the external usability gate remains
-  closed
+  cross-language failure-parity cases. Desktop validation now carries a current
+  retained 27/27 cross-shell and live Workbench interaction report; the
+  recalibrated release profile has 55/55 P0 coordinates at target while the
+  external usability gate remains closed
 - Rust Operator SDK qualification now retains a six-stage package journey:
   template tests, strict Installer preflight, `cdylib` build, Engine dynamic
   load, live Agent RPC dispatch, and Installer-managed lifecycle. Bound-

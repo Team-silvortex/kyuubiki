@@ -29,24 +29,25 @@ Current moxi baseline:
 - `blocking_gap_count`: `0`
 - `maturity_gap_count`: `0`
 - `thin_evidence_count`: `0`
-- `evidence_grade_gap_count`: `4`
-- required cells meeting their grade target: `73 / 77` (`94.8%`)
-- evidence progress toward configured targets: `98.7%`
-- release-critical P0 cells meeting target: `51 / 55` (`92.7%`)
+- `evidence_grade_gap_count`: `0`
+- required cells meeting their grade target: `77 / 77` (`100.0%`)
+- evidence progress toward configured targets: `100.0%`
+- release-critical P0 cells meeting target: `55 / 55` (`100.0%`)
 - release-profile P1 cells meeting target: `22 / 22` (`100.0%`)
-- `daji 3.0.0` release state: `blocked` by `4` P0 coordinates plus the
-  independently controlled external usability release gate
+- `daji 3.0.0` release state: `blocked` solely by the independently controlled
+  external usability release gate
 
-No required coordinate is structurally missing, but the previous `50 / 50`
-view excluded important capabilities from the release denominator. The moxi
-2.15 recalibration separates the Rust-only Worker/Operator SDK from both
-Installer and the three-language Headless SDK family, adds ABI compatibility as
-an evidence dimension, and promotes security, persistence, validation, and
-benchmark coordinates that were previously marked covered but optional.
+No configured coordinate remains below its current evidence target. This does
+not grant a daji release claim: packaged cross-platform recovery and upgrade
+tiers remain independently open, and static or local evidence cannot close
+them. The moxi 2.15 recalibration separated the Rust-only Worker/Operator SDK
+from both Installer and the three-language Headless SDK family, added ABI
+compatibility as an evidence dimension, and promoted security, persistence,
+validation, and benchmark coordinates that were previously optional.
 
-The resulting queue is intentionally non-empty. Agent package execution is now
-qualified on native macOS aarch64 and physical Linux x86_64, while the P0 group
-has converged on Windows installed external-package operation across SDK,
+The remaining release queue is now external rather than coordinate-local.
+Agent package execution is qualified on native macOS aarch64 and physical
+Linux x86_64, while Windows installed external-package operation spans SDK,
 Engine, Agent, and Installer. Workbench, Engine, and Headless
 persistence/provenance now meet their local `verified` targets, while Workbench
 and Headless security meet the local `qualified` target. Headless manifest
@@ -344,22 +345,22 @@ Installer security without independent retained evidence for those surfaces.
 
 The former leading coordinate, `desktop-shared-ui/validation`, now meets its
 `qualified` target. The native qualification runner executes the cross-shell
-browser suite, requires all 21 tests to pass, preserves Hub, Installer, and
+browser suite, requires all 27 tests to pass, preserves Hub, Installer, and
 Workbench action counts, and verifies UI-to-native closure, PWDT parity,
-workspace-dominant layouts, reversible navigation, and regression panels. The
-machine-validated result is retained under
-`releases/usability-evidence/2.12.6`; installed-package and cross-platform proof
-remain separate operational tiers rather than being implied by this result.
+workspace-dominant layouts, reversible navigation, regression panels, live
+Workbench chunk mounting, and Pwdt session recovery. The machine-validated
+result is retained under `releases/usability-evidence/2.17.0`; installed-package
+and cross-platform proof remain separate operational tiers.
 
 The former leading coordinate, `installer-shell/validation`, now also meets
 its `qualified` target without inventing a parallel validation framework. The
 current cross-shell contract is explicitly mapped back to Installer and its
-retained moxi 2.15 report reruns all 21 browser/call-chain tests, observes 53
+retained moxi 2.17 report reruns all 27 browser/call-chain tests, observes 53
 Installer actions with zero missing or failed actions, and preserves four
 intentional fail-closed guards. Deployment/update handoff, capability routing,
 workspace priority, reversible navigation, and regression-critical panels are
 all asserted. The report is retained at
-`releases/usability-evidence/2.15.0/desktop-ui-validation-qualification.json`
+`releases/usability-evidence/2.17.0/desktop-ui-validation-qualification.json`
 and is now rechecked by `make check-desktop-ui-validation` as part of
 `architecture-check`.
 

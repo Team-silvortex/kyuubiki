@@ -9,9 +9,10 @@
     "tests/integration/desktop-gui-layout-priority.test.mjs",
     "tests/integration/desktop-gui-navigation-closure.test.mjs",
     "tests/integration/desktop-shell-regression.test.mjs",
+    "tests/integration/workbench-ui-workflow-invocation.test.mjs",
     "tests/integration/workbench-shell-regression.test.mjs"
   ],
-  "minimum_test_count": 21,
+  "minimum_test_count": 27,
   "shell_minimum_actions": [
     { "id": "hub", "minimum_actions": 40 },
     { "id": "installer", "minimum_actions": 50 },
@@ -49,6 +50,14 @@
     {
       "id": "workbench-regression",
       "label": "Workbench desktop shell mounts runtime, logs, and embedded viewer cleanly in headless preview"
+    },
+    {
+      "id": "workbench-interaction-closure",
+      "label": "Workbench rail mounts every declared sidebar chunk without client errors"
+    },
+    {
+      "id": "workbench-pwdt-session-recovery",
+      "label": "Workbench Pwdt preserves hydrated script and DSL sessions"
     }
   ]
 }

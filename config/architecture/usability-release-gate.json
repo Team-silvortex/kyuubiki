@@ -224,7 +224,7 @@
         [
           "check-desktop-ui-validation",
           "--verify-report",
-          "releases/usability-evidence/2.15.0/desktop-ui-validation-qualification.json"
+          "releases/usability-evidence/2.17.0/desktop-ui-validation-qualification.json"
         ]
       ]
     },
