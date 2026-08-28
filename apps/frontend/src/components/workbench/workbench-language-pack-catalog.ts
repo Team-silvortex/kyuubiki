@@ -5,6 +5,7 @@ import {
   type WorkbenchLanguagePack,
 } from "@/lib/workbench/helpers";
 import { WORKBENCH_TRANSLATED_LANGUAGE_PACK_OVERRIDES } from "@/components/workbench/workbench-language-pack-catalog-data";
+import { getWorkbenchWorkflowStorageWriteFailedLabel } from "@/components/workbench/workbench-workflow-storage-copy";
 
 export type WorkbenchLanguagePackCatalogEntry = {
   id: string;
@@ -112,6 +113,10 @@ export function getBuiltinWorkbenchLanguagePack(packId: string): WorkbenchLangua
     source: "downloaded",
     updatedAt: UPDATED_AT,
     description: `${locale.englishName} UI translations for Workbench navigation, workflow, store, and system surfaces.`,
-    overrides: WORKBENCH_TRANSLATED_LANGUAGE_PACK_OVERRIDES[locale.language] ?? {},
+    overrides: {
+      ...(WORKBENCH_TRANSLATED_LANGUAGE_PACK_OVERRIDES[locale.language] ?? {}),
+      workflowStorageWriteFailedLabel:
+        getWorkbenchWorkflowStorageWriteFailedLabel(locale.language),
+    },
   };
 }

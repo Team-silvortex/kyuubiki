@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 
 import type { WorkflowGraphDefinition } from "../../src/lib/api/workflow-types.ts";
 import {
+  listStoredWorkflowSnapshots,
   loadStoredWorkflowSnapshot,
   removeStoredWorkflowSnapshotsByWorkflowId,
   saveStoredWorkflowSnapshot,
+  WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_PREFIX,
 } from "../../src/components/workbench/workflow/workbench-workflow-snapshot-storage.ts";
 
 function createMemoryStorage(): Storage {
@@ -136,6 +138,85 @@ test("summary-only snapshots still deduplicate identical graphs during the coold
     assert.equal(first?.payloadState, "summary_only");
     assert.equal(second?.id, first?.id);
   } finally {
+    removeStoredWorkflowSnapshotsByWorkflowId(workflowId);
+  }
+});
+
+test("failed deferred payload writes downgrade snapshots without throwing", () => {
+  const workflowId = "snapshot-deferred-write-failure";
+  const browserWindow = window as unknown as {
+    localStorage: Storage;
+    setTimeout: typeof globalThis.setTimeout;
+  };
+  const originalStorage = browserWindow.localStorage;
+  const originalSetTimeout = browserWindow.setTimeout;
+  const backingStorage = createMemoryStorage();
+  let deferredWrite: (() => void) | undefined;
+  browserWindow.localStorage = {
+    ...backingStorage,
+    setItem: (key, value) => {
+      if (key.startsWith(WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_PREFIX)) {
+        throw new Error("snapshot quota exhausted");
+      }
+      backingStorage.setItem(key, value);
+    },
+  } as Storage;
+  browserWindow.setTimeout = ((callback: () => void) => {
+    deferredWrite = callback;
+    return 1;
+  }) as unknown as typeof globalThis.setTimeout;
+
+  try {
+    const saved = save(workflowId, graph(workflowId));
+    assert.equal(saved?.payloadState, "full");
+    assert(deferredWrite);
+    assert.doesNotThrow(() => deferredWrite?.());
+
+    const [summary] = listStoredWorkflowSnapshots(workflowId);
+    assert.equal(summary?.payloadState, "summary_only");
+    assert.equal(loadStoredWorkflowSnapshot(saved!.id), null);
+  } finally {
+    removeStoredWorkflowSnapshotsByWorkflowId(workflowId);
+    browserWindow.localStorage = originalStorage;
+    browserWindow.setTimeout = originalSetTimeout;
+  }
+});
+
+test("failed index commits do not block edits or prune retained snapshots", () => {
+  const workflowId = "snapshot-index-write-failure";
+  const browserWindow = window as unknown as { localStorage: Storage };
+  const originalStorage = browserWindow.localStorage;
+  const created = Array.from({ length: 20 }, (_, index) =>
+    save(workflowId, graph(`${workflowId}-${index}`)),
+  );
+  const oldest = created[0];
+  assert(oldest);
+  browserWindow.localStorage = {
+    get length() {
+      return originalStorage.length;
+    },
+    clear: () => originalStorage.clear(),
+    getItem: (key) => originalStorage.getItem(key),
+    key: (index) => originalStorage.key(index),
+    removeItem: (key) => originalStorage.removeItem(key),
+    setItem: (key, value) => {
+      if (key === "kyuubiki.workbench.workflowSnapshots.index.v1") {
+        throw new Error("snapshot index is read-only");
+      }
+      originalStorage.setItem(key, value);
+    },
+  };
+
+  try {
+    let failedSave: ReturnType<typeof save> | "not-run" = "not-run";
+    assert.doesNotThrow(() => {
+      failedSave = save(workflowId, graph(`${workflowId}-rejected`));
+    });
+    assert.equal(failedSave, null);
+    assert.equal(listStoredWorkflowSnapshots(workflowId).length, 20);
+    assert.equal(loadStoredWorkflowSnapshot(oldest.id)?.graph.id, `${workflowId}-0`);
+  } finally {
+    browserWindow.localStorage = originalStorage;
     removeStoredWorkflowSnapshotsByWorkflowId(workflowId);
   }
 });

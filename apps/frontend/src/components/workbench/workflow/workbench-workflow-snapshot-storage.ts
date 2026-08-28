@@ -70,26 +70,100 @@ function utf8ByteLength(value: string) {
   return new TextEncoder().encode(value).byteLength;
 }
 
-function sanitizeLegacySnapshotPayloads(index: StoredWorkflowSnapshotSummary[]) {
+function asStoredWorkflowSnapshotSummary(
+  value: unknown,
+): StoredWorkflowSnapshotSummary | null {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "string" ||
+    value.id.trim().length === 0 ||
+    typeof value.workflowId !== "string" ||
+    value.workflowId.trim().length === 0 ||
+    typeof value.workflowName !== "string" ||
+    typeof value.createdAt !== "string" ||
+    !Number.isFinite(Date.parse(value.createdAt)) ||
+    typeof value.reason !== "string"
+  ) {
+    return null;
+  }
+  if (
+    value.payloadState !== undefined &&
+    value.payloadState !== "full" &&
+    value.payloadState !== "summary_only"
+  ) {
+    return null;
+  }
+  return {
+    id: value.id,
+    workflowId: value.workflowId,
+    workflowName: value.workflowName,
+    createdAt: value.createdAt,
+    reason: value.reason,
+    summary: asStringArray(value.summary),
+    payloadState: value.payloadState === "summary_only" ? "summary_only" : "full",
+  };
+}
+
+function reconcileStoredSnapshotPayloads(
+  index: StoredWorkflowSnapshotSummary[],
+  indexWasSanitized: boolean,
+) {
   if (typeof window === "undefined") return;
+  let indexChanged = indexWasSanitized;
   index.forEach((entry) => {
     if (entry.payloadState !== "full") return;
     const pendingPayload = pendingSnapshotPayloads.get(entry.id);
     if (pendingPayload) {
       pendingSnapshotPayloads.set(entry.id, { graph: pendingPayload.graph });
+      return;
     }
+    let raw: string | null;
     try {
-      const raw = window.localStorage.getItem(snapshotPayloadKey(entry.id));
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as unknown;
-      if (!isRecord(parsed) || !("inputArtifactTexts" in parsed)) return;
-      const graph = asWorkflowGraphDefinition(parsed.graph);
-      if (!graph) return;
-      window.localStorage.setItem(snapshotPayloadKey(entry.id), buildSnapshotPayload({ graph }));
+      raw = window.localStorage.getItem(snapshotPayloadKey(entry.id));
     } catch {
       return;
     }
+    if (!raw) {
+      entry.payloadState = "summary_only";
+      indexChanged = true;
+      return;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw) as unknown;
+    } catch {
+      entry.payloadState = "summary_only";
+      indexChanged = true;
+      return;
+    }
+    const graph = isRecord(parsed) ? asWorkflowGraphDefinition(parsed.graph) : null;
+    if (!graph) {
+      entry.payloadState = "summary_only";
+      indexChanged = true;
+      try {
+        window.localStorage.removeItem(snapshotPayloadKey(entry.id));
+      } catch {
+        // Keep the invalid payload isolated behind the summary-only index state.
+      }
+      return;
+    }
+    if (isRecord(parsed) && "inputArtifactTexts" in parsed) {
+      try {
+        window.localStorage.setItem(snapshotPayloadKey(entry.id), buildSnapshotPayload({ graph }));
+      } catch {
+        pendingSnapshotPayloads.set(entry.id, { graph });
+      }
+    }
   });
+  if (!indexChanged) return;
+  try {
+    window.localStorage.setItem(
+      WORKBENCH_WORKFLOW_SNAPSHOT_INDEX_KEY,
+      JSON.stringify(index.map(cloneSnapshotSummary)),
+    );
+  } catch {
+    // The reconciled in-memory index remains authoritative for this session.
+  }
 }
 
 function readSnapshotIndex(): StoredWorkflowSnapshotSummary[] {
@@ -100,11 +174,17 @@ function readSnapshotIndex(): StoredWorkflowSnapshotSummary[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
+    const seenIds = new Set<string>();
     snapshotIndexCache = parsed.flatMap((entry) => {
-      if (!isRecord(entry) || typeof entry.id !== "string" || typeof entry.workflowId !== "string" || typeof entry.workflowName !== "string" || typeof entry.createdAt !== "string" || typeof entry.reason !== "string") return [];
-      return [{ id: entry.id, workflowId: entry.workflowId, workflowName: entry.workflowName, createdAt: entry.createdAt, reason: entry.reason, summary: asStringArray(entry.summary), payloadState: entry.payloadState === "summary_only" ? "summary_only" : "full" }];
-    });
-    sanitizeLegacySnapshotPayloads(snapshotIndexCache);
+      const summary = asStoredWorkflowSnapshotSummary(entry);
+      if (!summary || seenIds.has(summary.id)) return [];
+      seenIds.add(summary.id);
+      return [summary];
+    }).slice(0, WORKBENCH_WORKFLOW_SNAPSHOT_LIMIT);
+    reconcileStoredSnapshotPayloads(
+      snapshotIndexCache,
+      snapshotIndexCache.length !== parsed.length,
+    );
     return snapshotIndexCache;
   } catch {
     return [];
@@ -136,11 +216,37 @@ function cancelPendingSnapshotWrite(snapshotId: string) {
   pendingSnapshotWrites.delete(snapshotId);
 }
 
+function downgradeSnapshotPayload(
+  snapshotId: string,
+  payload: PendingSnapshotPayload,
+) {
+  const index = readSnapshotIndex();
+  const snapshot = index.find((entry) => entry.id === snapshotId);
+  if (!snapshot) return;
+  const nextIndex = index.map((entry) =>
+    entry.id === snapshotId ? { ...entry, payloadState: "summary_only" as const } : entry,
+  );
+  try {
+    writeSnapshotIndex(nextIndex);
+  } catch {
+    snapshotIndexCache = nextIndex.map(cloneSnapshotSummary);
+    latestSnapshotFingerprintCache.clear();
+  }
+  latestSnapshotFingerprintCache.set(snapshot.workflowId, {
+    snapshotId,
+    fingerprint: buildSnapshotFingerprint(payload.graph),
+  });
+}
+
 function flushSnapshotPayload(snapshotId: string) {
   const payload = pendingSnapshotPayloads.get(snapshotId);
   pendingSnapshotWrites.delete(snapshotId);
   if (!payload) return;
-  window.localStorage.setItem(snapshotPayloadKey(snapshotId), buildSnapshotPayload(payload));
+  try {
+    window.localStorage.setItem(snapshotPayloadKey(snapshotId), buildSnapshotPayload(payload));
+  } catch {
+    downgradeSnapshotPayload(snapshotId, payload);
+  }
   pendingSnapshotPayloads.delete(snapshotId);
 }
 
@@ -172,14 +278,19 @@ function buildSnapshotFingerprint(graph: WorkflowGraphDefinition) {
 }
 
 function pruneSnapshots(index: StoredWorkflowSnapshotSummary[]) {
-  if (typeof window === "undefined") return index;
-  const next = index.slice(0, WORKBENCH_WORKFLOW_SNAPSHOT_LIMIT);
-  for (const entry of index.slice(WORKBENCH_WORKFLOW_SNAPSHOT_LIMIT)) {
+  return index.slice(0, WORKBENCH_WORKFLOW_SNAPSHOT_LIMIT);
+}
+
+function discardPrunedSnapshotPayloads(entries: StoredWorkflowSnapshotSummary[]) {
+  for (const entry of entries) {
     cancelPendingSnapshotWrite(entry.id);
     pendingSnapshotPayloads.delete(entry.id);
-    window.localStorage.removeItem(snapshotPayloadKey(entry.id));
+    try {
+      window.localStorage.removeItem(snapshotPayloadKey(entry.id));
+    } catch {
+      // Index retention already succeeded; stale payload cleanup is best effort.
+    }
   }
-  return next;
 }
 
 function readLatestSnapshotFingerprint(
@@ -262,7 +373,16 @@ export function saveStoredWorkflowSnapshot(params: {
     summary: params.summary,
     payloadState: utf8ByteLength(payloadText) > WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_MAX_BYTES ? "summary_only" : "full",
   };
-  writeSnapshotIndex(pruneSnapshots([indexEntry, ...index]));
+  const candidateIndex = [indexEntry, ...index];
+  const nextIndex = pruneSnapshots(candidateIndex);
+  try {
+    writeSnapshotIndex(nextIndex);
+  } catch {
+    return null;
+  }
+  discardPrunedSnapshotPayloads(
+    candidateIndex.slice(WORKBENCH_WORKFLOW_SNAPSHOT_LIMIT),
+  );
   latestSnapshotFingerprintCache.set(params.workflowId, {
     snapshotId: id,
     fingerprint: nextFingerprint,

@@ -4,7 +4,8 @@ import type { WorkflowGraphDefinition } from "@/lib/api";
 import { asWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-import";
 import type { WorkflowTemplateChainPreferenceSnapshot } from "@/components/workbench/workflow/workbench-workflow-template-chain-storage";
 
-const WORKBENCH_WORKFLOW_DRAFTS_KEY = "kyuubiki.workbench.workflowDrafts.v1";
+export const WORKBENCH_WORKFLOW_DRAFTS_KEY = "kyuubiki.workbench.workflowDrafts.v1";
+export const WORKBENCH_WORKFLOW_DRAFT_LIMIT = 40;
 
 export type StoredWorkflowDraft = {
   id: string;
@@ -20,6 +21,16 @@ let workflowDraftIdSequence = 0;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function normalizeTimestamp(value: unknown): string | null {
+  if (!isNonEmptyString(value)) return null;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
 }
 
 function asStringRecord(value: unknown): Record<string, string> | undefined {
@@ -52,6 +63,44 @@ function stripLegacyDraftInputs(records: StoredWorkflowDraft[]) {
   return sanitized as StoredWorkflowDraft[];
 }
 
+function asStoredWorkflowDraft(value: unknown): StoredWorkflowDraft | null {
+  if (!isRecord(value)) return null;
+  if (
+    !isNonEmptyString(value.id) ||
+    !isNonEmptyString(value.workflowId) ||
+    !isNonEmptyString(value.name)
+  ) {
+    return null;
+  }
+  const savedAt = normalizeTimestamp(value.savedAt);
+  const graph = asWorkflowGraphDefinition(value.graph);
+  if (!savedAt || !graph) return null;
+  return {
+    id: value.id,
+    workflowId: value.workflowId,
+    name: value.name,
+    savedAt,
+    graph,
+    templateChainPreferences: asTemplateChainPreferences(value.templateChainPreferences),
+  };
+}
+
+function normalizeStoredWorkflowDrafts(values: unknown[]): StoredWorkflowDraft[] {
+  const candidates = values
+    .map(asStoredWorkflowDraft)
+    .filter((entry): entry is StoredWorkflowDraft => entry !== null)
+    .sort((left, right) => right.savedAt.localeCompare(left.savedAt));
+  const seenIds = new Set<string>();
+  const records: StoredWorkflowDraft[] = [];
+  for (const entry of candidates) {
+    if (seenIds.has(entry.id)) continue;
+    seenIds.add(entry.id);
+    records.push(entry);
+    if (records.length === WORKBENCH_WORKFLOW_DRAFT_LIMIT) break;
+  }
+  return records;
+}
+
 function readStoredDrafts(): StoredWorkflowDraft[] {
   if (typeof window === "undefined") return [];
   try {
@@ -59,41 +108,11 @@ function readStoredDrafts(): StoredWorkflowDraft[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    let hadLegacyInputs = false;
-    const records = parsed.flatMap((entry) => {
-      if (!isRecord(entry)) return [];
-      if (
-        typeof entry.id !== "string" ||
-        typeof entry.workflowId !== "string" ||
-        typeof entry.name !== "string" ||
-        typeof entry.savedAt !== "string"
-      ) {
-        return [];
-      }
-      const graph = asWorkflowGraphDefinition(entry.graph);
-      if (!graph) return [];
-      if (asStringRecord(entry.inputArtifactTexts)) {
-        hadLegacyInputs = true;
-      }
-      return [
-        {
-          id: entry.id,
-          workflowId: entry.workflowId,
-          name: entry.name,
-          savedAt: entry.savedAt,
-          graph,
-          templateChainPreferences: asTemplateChainPreferences(
-            entry.templateChainPreferences,
-          ),
-        },
-      ];
-    });
-    if (hadLegacyInputs) {
-      try {
-        writeStoredDrafts(records);
-      } catch {
-        // Keep the sanitized in-memory drafts visible when storage is read-only.
-      }
+    const records = normalizeStoredWorkflowDrafts(parsed);
+    const normalized = JSON.stringify(stripLegacyDraftInputs(records));
+    if (raw !== normalized) {
+      // Normalization is best effort; recoverable drafts remain usable in memory.
+      writeStoredDrafts(records);
     }
     return records;
   } catch {
@@ -101,12 +120,17 @@ function readStoredDrafts(): StoredWorkflowDraft[] {
   }
 }
 
-function writeStoredDrafts(records: StoredWorkflowDraft[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    WORKBENCH_WORKFLOW_DRAFTS_KEY,
-    JSON.stringify(stripLegacyDraftInputs(records)),
-  );
+function writeStoredDrafts(records: StoredWorkflowDraft[]): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    window.localStorage.setItem(
+      WORKBENCH_WORKFLOW_DRAFTS_KEY,
+      JSON.stringify(stripLegacyDraftInputs(records)),
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function buildDraftName(workflowName: string, graph: WorkflowGraphDefinition): string {
@@ -132,7 +156,7 @@ export function saveStoredWorkflowDraft(params: {
   graph: WorkflowGraphDefinition;
   inputArtifactTexts?: Record<string, string>;
   templateChainPreferences?: WorkflowTemplateChainPreferenceSnapshot;
-}): StoredWorkflowDraft {
+}): StoredWorkflowDraft | null {
   const nextRecord: StoredWorkflowDraft = {
     id: buildDraftId(),
     workflowId: params.workflowId,
@@ -143,11 +167,12 @@ export function saveStoredWorkflowDraft(params: {
       ? structuredClone(params.templateChainPreferences)
       : undefined,
   };
-  const next = [nextRecord, ...readStoredDrafts()].slice(0, 40);
-  writeStoredDrafts(next);
-  return nextRecord;
+  const next = [nextRecord, ...readStoredDrafts()].slice(0, WORKBENCH_WORKFLOW_DRAFT_LIMIT);
+  return writeStoredDrafts(next) ? nextRecord : null;
 }
 
-export function removeStoredWorkflowDraft(draftId: string) {
-  writeStoredDrafts(readStoredDrafts().filter((entry) => entry.id !== draftId));
+export function removeStoredWorkflowDraft(draftId: string): boolean {
+  const current = readStoredDrafts();
+  if (!current.some((entry) => entry.id === draftId)) return false;
+  return writeStoredDrafts(current.filter((entry) => entry.id !== draftId));
 }

@@ -17,6 +17,10 @@ import {
 } from "@/components/workbench/workflow/workbench-workflow-contract-health";
 import { PINNED_WORKFLOW_IDS } from "@/components/workbench/workflow/workbench-workflow-catalog-highlights";
 import { removeStoredLocalWorkflow } from "@/components/workbench/workflow/workbench-workflow-local-storage";
+import {
+  clearWorkflowBuilderAlert,
+  pushWorkflowBuilderAlert,
+} from "@/components/workbench/workflow/workbench-workflow-builder-helpers";
 import { WorkbenchWorkflowOperatorModuleSummary } from "@/components/workbench/workflow/workbench-workflow-operator-module-summary";
 import {
   markWorkflowSurfaceIntent,
@@ -141,7 +145,16 @@ export function WorkbenchWorkflowSidebar({
   const filteredWorkflowRuns = useMemo(() => sortedWorkflowRuns.filter((run) => { const state = resolveBridgeRuntimeFilterState(workflowById.get(run.workflowId), run); return runsFilter === "all" ? true : runsFilter === "bridge_alerts" ? state === "bridge_drift" || state === "bridge_missing_runtime" : state === runsFilter; }), [runsFilter, sortedWorkflowRuns, workflowById]);
   function deleteCatalogLocalWorkflow(workflow: WorkflowCatalogEntry) {
     if (!workflow.local) return;
-    removeStoredLocalWorkflow(workflow.local.storage_id);
+    if (!removeStoredLocalWorkflow(workflow.local.storage_id)) {
+      pushWorkflowBuilderAlert(
+        setSystemAlerts,
+        "workflow-builder-storage-write-failed",
+        labels.storageWriteFailedLabel,
+        "warning",
+      );
+      return;
+    }
+    clearWorkflowBuilderAlert(setSystemAlerts, "workflow-builder-storage-write-failed");
     onRefreshWorkflowCatalog();
   }
   function openSurfaceTab(tab: WorkflowSurfaceTab) {

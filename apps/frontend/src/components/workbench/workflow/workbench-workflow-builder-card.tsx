@@ -75,6 +75,19 @@ export function WorkbenchWorkflowBuilderCard({
     message: string,
     tone: WorkbenchNoticeItem["tone"] = "info",
   ) => showWorkflowBuilderNotice(setImportNotice, id, message, tone);
+  const confirmWorkflowStorageWrite = (succeeded: boolean) => {
+    if (succeeded) {
+      clearBuilderAlert("workflow-builder-storage-write-failed");
+      return true;
+    }
+    pushBuilderAlert(
+      "workflow-builder-storage-write-failed",
+      labels.storageWriteFailedLabel,
+      "warning",
+    );
+    clearBuilderNotice();
+    return false;
+  };
   const resetBuilderFocus = () =>
     resetWorkflowBuilderFocus({
       setFocusedNodeId,
@@ -388,13 +401,14 @@ export function WorkbenchWorkflowBuilderCard({
   }
   function saveCurrentDraft() {
     if (!selectedWorkflow || !selectedWorkflow.id || !selectedGraph) return;
-    saveStoredWorkflowDraft({
+    const saved = saveStoredWorkflowDraft({
       workflowId: selectedWorkflow.id,
       workflowName: selectedWorkflow.name,
       graph: selectedGraph,
       inputArtifactTexts: draftInputTexts,
       templateChainPreferences: readWorkflowTemplateChainPreferences(),
     });
+    if (!confirmWorkflowStorageWrite(saved !== null)) return;
     setSavedDrafts(listStoredWorkflowDrafts(selectedWorkflow.id));
     showBuilderNotice("workflow-builder-draft-saved", labels.draftSavedLabel, "info");
   }
@@ -425,7 +439,7 @@ export function WorkbenchWorkflowBuilderCard({
   }
   function promoteCurrentDraft() {
     if (!selectedWorkflow || !selectedGraph) return;
-    saveStoredLocalWorkflow(
+    const saved = saveStoredLocalWorkflow(
       buildPromotedWorkflowParams({
         workflow: selectedWorkflow,
         graph: selectedGraph,
@@ -433,6 +447,7 @@ export function WorkbenchWorkflowBuilderCard({
         importedPackage,
       }),
     );
+    if (!confirmWorkflowStorageWrite(saved !== null)) return;
     onRefreshWorkflowCatalog();
     showBuilderNotice("workflow-builder-local-promoted", labels.localWorkflowPromotedLabel, "info");
   }
@@ -440,15 +455,33 @@ export function WorkbenchWorkflowBuilderCard({
     if (!selectedWorkflow?.local) return;
     const nextName = window.prompt(labels.localWorkflowRenamePrompt, selectedWorkflow.name);
     if (!nextName?.trim()) return;
-    renameStoredLocalWorkflow(selectedWorkflow.local.storage_id, nextName);
+    if (!confirmWorkflowStorageWrite(
+      renameStoredLocalWorkflow(selectedWorkflow.local.storage_id, nextName),
+    )) return;
     onRefreshWorkflowCatalog();
     showBuilderNotice("workflow-builder-local-renamed", `${labels.localWorkflowBadgeLabel}: ${nextName.trim()}`, "info");
   }
-  function duplicateCurrentLocalWorkflow() { if (!selectedWorkflow?.local) return; duplicateStoredLocalWorkflow(selectedWorkflow.local.storage_id); onRefreshWorkflowCatalog(); showBuilderNotice("workflow-builder-local-duplicated", labels.localWorkflowDuplicatedLabel, "info"); }
-  function deleteCurrentLocalWorkflow() { if (!selectedWorkflow?.local) return; removeStoredWorkflowSnapshotsByWorkflowId(selectedWorkflow.id); removeStoredLocalWorkflow(selectedWorkflow.local.storage_id); onRefreshWorkflowCatalog(); showBuilderNotice("workflow-builder-local-deleted", labels.localWorkflowDeletedLabel, "info"); }
+  function duplicateCurrentLocalWorkflow() {
+    if (!selectedWorkflow?.local) return;
+    const duplicated = duplicateStoredLocalWorkflow(selectedWorkflow.local.storage_id);
+    if (!confirmWorkflowStorageWrite(duplicated !== null)) return;
+    onRefreshWorkflowCatalog();
+    showBuilderNotice("workflow-builder-local-duplicated", labels.localWorkflowDuplicatedLabel, "info");
+  }
+  function deleteCurrentLocalWorkflow() {
+    if (!selectedWorkflow?.local) return;
+    if (!confirmWorkflowStorageWrite(
+      removeStoredLocalWorkflow(selectedWorkflow.local.storage_id),
+    )) return;
+    removeStoredWorkflowSnapshotsByWorkflowId(selectedWorkflow.id);
+    onRefreshWorkflowCatalog();
+    showBuilderNotice("workflow-builder-local-deleted", labels.localWorkflowDeletedLabel, "info");
+  }
   function saveCurrentLocalWorkflowMetadata(summary: string, notes: string) {
     if (!selectedWorkflow?.local) return;
-    updateStoredLocalWorkflowMetadata(selectedWorkflow.local.storage_id, { notes, summary });
+    if (!confirmWorkflowStorageWrite(
+      updateStoredLocalWorkflowMetadata(selectedWorkflow.local.storage_id, { notes, summary }),
+    )) return;
     onRefreshWorkflowCatalog();
     showBuilderNotice("workflow-builder-local-metadata-saved", labels.localWorkflowMetadataSavedLabel, "info");
   }
@@ -472,7 +505,12 @@ export function WorkbenchWorkflowBuilderCard({
     resetBuilderFocus();
     showBuilderNotice("workflow-builder-draft-loaded", labels.draftLoadedLabel, "info");
   }
-  function deleteSavedDraft(draftId: string) { if (!selectedWorkflow) return; removeStoredWorkflowDraft(draftId); setSavedDrafts(listStoredWorkflowDrafts(selectedWorkflow.id)); showBuilderNotice("workflow-builder-draft-deleted", labels.draftDeletedLabel, "info"); }
+  function deleteSavedDraft(draftId: string) {
+    if (!selectedWorkflow) return;
+    if (!confirmWorkflowStorageWrite(removeStoredWorkflowDraft(draftId))) return;
+    setSavedDrafts(listStoredWorkflowDrafts(selectedWorkflow.id));
+    showBuilderNotice("workflow-builder-draft-deleted", labels.draftDeletedLabel, "info");
+  }
   function restoreSnapshot(snapshotId: string) {
     const snapshot = loadStoredWorkflowSnapshot(snapshotId);
     if (!snapshot) {

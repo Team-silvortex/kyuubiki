@@ -184,6 +184,7 @@ export const copyJa = {
     workflowDraftSavedLabel: "ローカル workflow 草稿を保存しました。",
     workflowDraftLoadedLabel: "ローカル workflow 草稿を読み込みました。",
     workflowDraftDeletedLabel: "ローカル workflow 草稿を削除しました。",
+    workflowStorageWriteFailedLabel: "ローカルワークフローデータを保存できませんでした。空き容量を確認して再試行してください。",
     workflowLocalWorkflowPromotedLabel: "草稿をローカル workflow library に昇格しました。",
     workflowLocalWorkflowDeleteLabel: "ローカル workflow を削除",
     workflowLocalWorkflowDeletedLabel: "ローカル workflow を削除しました。",
