@@ -410,6 +410,7 @@ export function useWorkbenchMainComposition(props: Record<string, any>) {
     refreshProjects: props.refreshProjects,
     retryRuntimeRecovery: props.retryRuntimeRecovery,
     health: props.health,
+    protocolAgents: props.protocolAgents,
     runtimeRecovery: props.runtimeRecovery,
     securityEventRecords: props.securityEventRecords,
     securityEventWindowFilter: props.securityEventWindowFilter,

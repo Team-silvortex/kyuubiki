@@ -112,6 +112,17 @@ const STORAGE_BUCKETS: StorageBucketDefinition[] = [
     detail: "Imported operator-chain templates, including explicit branch and merge topology.",
   },
   {
+    id: "workspace_store_manifests",
+    label: "Workspace store manifests",
+    keyPrefixes: ["kyuubiki-workbench-store-manifests"],
+    mode: "careful",
+    authority: "workbench",
+    dataClass: "source_of_truth",
+    portable: true,
+    cleanupLabel: "Manual review first",
+    detail: "Project-scoped staged operator, workflow-template, and frontend-DSL asset manifests.",
+  },
+  {
     id: "script_presets",
     label: "Script presets",
     keyPrefixes: [

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { WorkbenchAlertStrip } from "@/components/workbench/workbench-alert-strip";
 import { WorkbenchHeadlessWorkflowPanel } from "@/components/workbench/workbench-headless-workflow-panel";
 import type { FrontendMacroAssetRecord } from "@/components/workbench/workbench-headless-workflow-panel";
@@ -18,7 +18,7 @@ import { WorkbenchScriptInspectPanel } from "@/components/workbench/workbench-sc
 import { WorkbenchScriptLaunchCard } from "@/components/workbench/workbench-script-launch-card";
 import { executeWorkbenchPythonSource } from "@/components/workbench/workbench-script-panel-runtime";
 import {
-  safeWorkbenchPanelStorageGet,
+  safeWorkbenchPanelStorageGetResult,
   writeWorkbenchPanelStorage,
 } from "@/components/workbench/workbench-script-panel-storage";
 import { workbenchScriptPanelCopy, type WorkbenchScriptPanelCopyEntry } from "@/components/workbench/workbench-script-panel-copy";
@@ -76,6 +76,7 @@ type WorkbenchScriptPanelProps = {
   onInvokeAction: (action: string, payload?: Record<string, unknown>) => Promise<unknown>;
 };
 type RuntimeStatus = "idle" | "loading" | "ready" | "running" | "error";
+type PanelStorageStatus = "loading" | "ready" | "blocked";
 const STORAGE_KEY = "kyuubiki-workbench-python-panel", DSL_STORAGE_KEY = "kyuubiki-workbench-dsl-panel";
 function stringifyPayload(payload: Record<string, unknown> | undefined): string {
   return serializeWorkbenchPythonLiteral(payload ?? {});
@@ -89,23 +90,37 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatus>("idle");
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [dslError, setDslError] = useState<string | null>(null);
+  const [scriptStorageStatus, setScriptStorageStatus] = useState<PanelStorageStatus>("loading");
+  const [dslStorageStatus, setDslStorageStatus] = useState<PanelStorageStatus>("loading");
+  const storageBootstrappedRef = useRef(false);
   const [presetSecurityNotice, setPresetSecurityNotice] = useState<string | null>(null);
   const [presetName, setPresetName] = useState("");
   const [presetRecords, setPresetRecords] = useState<WorkbenchMacroPresetRecord[]>([]);
   const [snippetPresetRecords, setSnippetPresetRecords] = useState<WorkbenchScriptSnippetPresetRecord[]>([]);
   const [macroDraftBuffer, setMacroDraftBuffer] = useState<ReturnType<typeof buildWorkbenchRecordedMacroDraft> | null>(null);
   useEffect(() => {
-    const stored = safeWorkbenchPanelStorageGet(STORAGE_KEY);
-    if (stored?.code) setScriptCode(stored.code);
-    const storedDsl = safeWorkbenchPanelStorageGet(DSL_STORAGE_KEY);
-    if (storedDsl?.code) setDslCode(storedDsl.code);
-  }, []);
+    if (storageBootstrappedRef.current) return;
+    storageBootstrappedRef.current = true;
+    const stored = safeWorkbenchPanelStorageGetResult(STORAGE_KEY);
+    const storedDsl = safeWorkbenchPanelStorageGetResult(DSL_STORAGE_KEY);
+    if (stored.value) setScriptCode(stored.value.code);
+    if (storedDsl.value) setDslCode(storedDsl.value.code);
+    setScriptStorageStatus(stored.readable ? "ready" : "blocked");
+    setDslStorageStatus(storedDsl.readable ? "ready" : "blocked");
+    if (!stored.readable || !storedDsl.readable) setRuntimeError(t.sessionStorageFailed);
+  }, [t.sessionStorageFailed]);
   useEffect(() => {
-    writeWorkbenchPanelStorage(STORAGE_KEY, scriptCode);
-  }, [scriptCode]);
+    if (scriptStorageStatus !== "ready") return;
+    if (!writeWorkbenchPanelStorage(STORAGE_KEY, scriptCode)) {
+      setRuntimeError(t.sessionStorageFailed);
+    }
+  }, [scriptCode, scriptStorageStatus, t.sessionStorageFailed]);
   useEffect(() => {
-    writeWorkbenchPanelStorage(DSL_STORAGE_KEY, dslCode);
-  }, [dslCode]);
+    if (dslStorageStatus !== "ready") return;
+    if (!writeWorkbenchPanelStorage(DSL_STORAGE_KEY, dslCode)) {
+      setRuntimeError(t.sessionStorageFailed);
+    }
+  }, [dslCode, dslStorageStatus, t.sessionStorageFailed]);
   useEffect(() => {
     setPresetRecords(listWorkbenchMacroPresets(snapshot.selectedProjectId));
     setSnippetPresetRecords(listWorkbenchSnippetPresets(snapshot.selectedProjectId));

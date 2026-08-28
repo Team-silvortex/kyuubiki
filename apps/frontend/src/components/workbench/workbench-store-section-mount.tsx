@@ -10,9 +10,11 @@ import {
 import { downloadTextFile } from "@/components/workbench/workbench-file-helpers";
 import {
   addManifestEntry,
+  blankWorkspaceStoreManifest,
+  manifestForSelectedProject,
   manifestEntryKey,
   persistWorkspaceStoreManifest,
-  readWorkspaceStoreManifest,
+  readWorkspaceStoreManifestResult,
   removeManifestEntry,
   type WorkspaceStoreManifestEntry,
 } from "@/lib/workbench/store-manifest";
@@ -42,7 +44,8 @@ export function WorkbenchStoreSectionMount({
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [manifest, setManifest] = useState(() => readWorkspaceStoreManifest(selectedProjectId));
+  const [storageError, setStorageError] = useState<string | null>(null);
+  const [manifest, setManifest] = useState(() => blankWorkspaceStoreManifest(selectedProjectId));
 
   const copy = resolveStoreCopy(language);
   const entries = useMemo(() => payload?.entries ?? [], [payload?.entries]);
@@ -73,15 +76,23 @@ export function WorkbenchStoreSectionMount({
   }, [kind]);
 
   useEffect(() => {
-    setManifest(readWorkspaceStoreManifest(selectedProjectId));
-  }, [selectedProjectId]);
+    const result = readWorkspaceStoreManifestResult(selectedProjectId);
+    setManifest(result.manifest);
+    setStorageError(result.readable ? null : copy.storageReadFailed);
+  }, [language, selectedProjectId]);
 
   const selectedProjectLabel = selectedProjectId ?? copy.noProject;
   const selectedModelLabel = selectedModelId ?? copy.noModel;
+  const activeManifest = manifestForSelectedProject(manifest, selectedProjectId);
   const installedKeys = useMemo(
-    () => new Set(manifest.entries.map((entry) => manifestEntryKey(entry.kind, entry.id))),
-    [manifest.entries],
+    () => new Set(activeManifest.entries.map((entry) => manifestEntryKey(entry.kind, entry.id))),
+    [activeManifest.entries],
   );
+
+  function reportStorageFailure(message: string) {
+    setStorageError(message);
+    setMessage(message);
+  }
 
   function installEntry(entry: AssetStoreEntry) {
     if (!selectedProjectId) {
@@ -89,26 +100,48 @@ export function WorkbenchStoreSectionMount({
       return;
     }
 
-    setManifest((current) => {
-      const nextManifest = addManifestEntry(current, entry);
-      persistWorkspaceStoreManifest(nextManifest);
-      return nextManifest;
-    });
+    const current = readWorkspaceStoreManifestResult(selectedProjectId);
+    if (!current.readable) {
+      reportStorageFailure(copy.storageReadFailed);
+      return;
+    }
+    const nextManifest = addManifestEntry(current.manifest, entry);
+    if (!nextManifest) {
+      reportStorageFailure(copy.invalidAsset);
+      return;
+    }
+    if (!persistWorkspaceStoreManifest(nextManifest)) {
+      reportStorageFailure(copy.storageWriteFailed);
+      return;
+    }
+    setManifest(nextManifest);
+    setStorageError(null);
     setMessage(copy.installed(entry));
   }
 
   function removeEntry(entry: WorkspaceStoreManifestEntry) {
-    setManifest((current) => {
-      const nextManifest = removeManifestEntry(current, entry);
-      persistWorkspaceStoreManifest(nextManifest);
-      return nextManifest;
-    });
+    if (!selectedProjectId) {
+      setMessage(copy.selectProjectFirst);
+      return;
+    }
+    const current = readWorkspaceStoreManifestResult(selectedProjectId);
+    if (!current.readable) {
+      reportStorageFailure(copy.storageReadFailed);
+      return;
+    }
+    const nextManifest = removeManifestEntry(current.manifest, entry);
+    if (!persistWorkspaceStoreManifest(nextManifest)) {
+      reportStorageFailure(copy.storageWriteFailed);
+      return;
+    }
+    setManifest(nextManifest);
+    setStorageError(null);
     setMessage(copy.removed(entry.title));
   }
 
   function exportManifest() {
     const filename = `${selectedProjectId ?? "kyuubiki-workspace"}.store-manifest.json`;
-    downloadTextFile(filename, `${JSON.stringify(manifest, null, 2)}\n`);
+    downloadTextFile(filename, `${JSON.stringify(activeManifest, null, 2)}\n`);
     setMessage(copy.exported);
   }
 
@@ -138,7 +171,7 @@ export function WorkbenchStoreSectionMount({
           </div>
           <div className="sidebar-list__row">
             <span>{copy.installedAssets}</span>
-            <strong>{manifest.entries.length}</strong>
+            <strong>{activeManifest.entries.length}</strong>
           </div>
         </div>
       </section>
@@ -174,6 +207,7 @@ export function WorkbenchStoreSectionMount({
           ))}
         </div>
         {error ? <p className="warning-copy">{error}</p> : null}
+        {storageError ? <p className="warning-copy">{storageError}</p> : null}
       </section>
 
       <section className="sidebar-card sidebar-card--compact">
@@ -199,7 +233,7 @@ export function WorkbenchStoreSectionMount({
           <h2>{copy.manifestTitle}</h2>
           <button
             className="ghost-button ghost-button--compact"
-            disabled={manifest.entries.length === 0}
+            disabled={activeManifest.entries.length === 0}
             onClick={exportManifest}
             type="button"
           >
@@ -208,7 +242,7 @@ export function WorkbenchStoreSectionMount({
         </div>
         <p className="card-copy">{copy.manifestHint}</p>
         <div className="history-list">
-          {manifest.entries.length > 0 ? manifest.entries.map((entry) => (
+          {activeManifest.entries.length > 0 ? activeManifest.entries.map((entry) => (
             <article className="history-item" key={manifestEntryKey(entry.kind, entry.id)}>
               <div>
                 <strong>{entry.title}</strong>
@@ -310,6 +344,21 @@ function resolveStoreCopy(language: string) {
     ready: zh ? "就绪" : ja ? "準備完了" : "Ready",
     empty: zh ? "没有匹配的资产。" : ja ? "一致する資産がありません。" : "No assets matched this search.",
     failed: zh ? "商店目录加载失败。" : ja ? "ストアカタログの読み込みに失敗しました。" : "Failed to load store catalog.",
+    storageReadFailed: zh
+      ? "项目商店 manifest 无法读取；为避免覆盖现有数据，本次修改已阻止。"
+      : ja
+        ? "プロジェクトの store manifest を読み取れないため、既存データを保護して変更を停止しました。"
+        : "The project store manifest could not be read. Changes were blocked to protect existing data.",
+    storageWriteFailed: zh
+      ? "项目商店 manifest 写入失败，界面没有应用这次修改。"
+      : ja
+        ? "プロジェクトの store manifest を保存できなかったため、画面にも変更を適用しませんでした。"
+        : "The project store manifest could not be saved, so the UI did not apply the change.",
+    invalidAsset: zh
+      ? "商店返回了无效资产条目，未加入当前项目。"
+      : ja
+        ? "ストアから無効な資産エントリが返されたため、プロジェクトには追加しませんでした。"
+        : "The store returned an invalid asset entry, so it was not added to the project.",
     stage: zh ? "加入当前项目" : ja ? "プロジェクトに追加" : "Add to project",
     installedBadge: zh ? "已加入" : ja ? "追加済み" : "Added",
     installedAssets: zh ? "项目资产" : ja ? "追加済み資産" : "Project assets",

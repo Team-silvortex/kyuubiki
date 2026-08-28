@@ -67,6 +67,7 @@ type PersistedModelControllerDeps = PersistedModelEffects & {
   importedProjectLabel: string;
   importedVersionLabel: string;
   importFailedLabel: string;
+  storeManifestPersistenceFailedLabel: string;
   formatImportNotice: (skippedSensitivePresetCount: number) => WorkbenchNoticeItem;
   setMessage: (value: string) => void;
   setSystemAlerts: Dispatch<SetStateAction<WorkbenchAlertItem[]>>;
@@ -100,6 +101,7 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
 
   try {
     dismissWorkbenchAlert(effects.setSystemAlerts, "project-import-error");
+    dismissWorkbenchAlert(effects.setSystemAlerts, "project-import-store-manifest-warning");
     dismissWorkbenchNotice(effects.setImportNotice);
     const bundle = await parseProjectBundleFile(file);
     const createdProject = await effects.createProject({
@@ -176,9 +178,16 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
     }
 
     if (bundle.store_manifest) {
-      persistWorkspaceStoreManifest(
+      const manifestPersisted = persistWorkspaceStoreManifest(
         rewriteWorkspaceStoreManifestProject(bundle.store_manifest, createdProject.project.project_id),
       );
+      if (!manifestPersisted) {
+        upsertWorkbenchAlert(effects.setSystemAlerts, {
+          id: "project-import-store-manifest-warning",
+          message: effects.storeManifestPersistenceFailedLabel,
+          tone: "warning",
+        });
+      }
     }
 
     await effects.refreshProjects();

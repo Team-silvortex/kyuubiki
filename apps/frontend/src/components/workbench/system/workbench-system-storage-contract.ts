@@ -2,6 +2,7 @@ export type WorkbenchStandardStorageContract = {
   storageScope: string;
   localWorkflowKey: string;
   templateChainLibraryKey: string;
+  workspaceStoreManifestKey: string;
   snapshotIndexKey: string;
   snapshotPayloadPrefix: string;
   maintenanceLogKey: string;
@@ -25,6 +26,7 @@ export const WORKBENCH_STANDARD_STORAGE_CONTRACT: WorkbenchStandardStorageContra
   storageScope: "browser localStorage / per-user workspace profile",
   localWorkflowKey: "kyuubiki.workbench.workflowLibrary.v1",
   templateChainLibraryKey: "kyuubiki.workflow.templateChainLibrary.v1",
+  workspaceStoreManifestKey: "kyuubiki-workbench-store-manifests",
   snapshotIndexKey: "kyuubiki.workbench.workflowSnapshots.index.v1",
   snapshotPayloadPrefix: "kyuubiki.workbench.workflowSnapshots.payload.v1:",
   maintenanceLogKey: "kyuubiki.workbench.workflowPackageMaintenanceLog.v1",

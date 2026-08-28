@@ -2,7 +2,7 @@
 
 import type { FrontendRuntimeMode } from "@/lib/api";
 import type { WorkbenchScriptLanguage } from "@/lib/scripting/workbench-script-runtime";
-import { readInMemoryWorkbenchSecrets } from "@/lib/workbench/helpers";
+import { safeStorageGetResult } from "@/lib/workbench/helpers";
 
 export function readStoredWorkbenchAuth(): {
   frontendRuntimeMode: FrontendRuntimeMode;
@@ -21,30 +21,18 @@ export function readStoredWorkbenchAuth(): {
     };
   }
 
-  try {
-    const settings = JSON.parse(window.localStorage.getItem("kyuubiki-workbench-settings") ?? "{}") as {
-      frontendRuntimeMode?: "orchestrated_gui" | "direct_mesh_gui";
-      directMeshEndpointsText?: string;
-    };
-    const secrets = readInMemoryWorkbenchSecrets();
-
-    return {
-      frontendRuntimeMode:
-        settings.frontendRuntimeMode === "direct_mesh_gui" ? "direct_mesh_gui" : "orchestrated_gui",
-      directMeshEndpointsText: settings.directMeshEndpointsText ?? "",
-      controlPlaneApiToken: secrets.controlPlaneApiToken ?? "",
-      clusterApiToken: secrets.clusterApiToken ?? "",
-      directMeshApiToken: secrets.directMeshApiToken ?? "",
-    };
-  } catch {
-    return {
-      frontendRuntimeMode: "orchestrated_gui" as FrontendRuntimeMode,
-      directMeshEndpointsText: "",
-      controlPlaneApiToken: "",
-      clusterApiToken: "",
-      directMeshApiToken: "",
-    };
-  }
+  const settings = safeStorageGetResult().settings;
+  return {
+    frontendRuntimeMode:
+      settings.frontendRuntimeMode === "direct_mesh_gui" ? "direct_mesh_gui" : "orchestrated_gui",
+    directMeshEndpointsText:
+      typeof settings.directMeshEndpointsText === "string" ? settings.directMeshEndpointsText : "",
+    controlPlaneApiToken:
+      typeof settings.controlPlaneApiToken === "string" ? settings.controlPlaneApiToken : "",
+    clusterApiToken: typeof settings.clusterApiToken === "string" ? settings.clusterApiToken : "",
+    directMeshApiToken:
+      typeof settings.directMeshApiToken === "string" ? settings.directMeshApiToken : "",
+  };
 }
 
 export function buildHeadlessWorkflowPanelCopy(language: WorkbenchScriptLanguage) {

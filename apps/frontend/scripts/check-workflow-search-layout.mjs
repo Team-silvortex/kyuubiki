@@ -31,13 +31,14 @@ async function waitForDoublePaint(page) {
 
 async function openBenchmarkPage(page, viewportName, failures) {
   try {
-    const response = await page.goto(baseUrl, { waitUntil: "networkidle", timeout: 30_000 });
+    const response = await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
     if (!response?.ok()) {
       failures.push(
         formatIssue(viewportName, `page responded with HTTP ${response?.status?.() ?? "unknown"}`),
       );
       return false;
     }
+    await page.waitForFunction(() => Boolean(window.__kyuubikiWorkflowDebug), { timeout: 10_000 });
     await waitForDoublePaint(page);
     return true;
   } catch (error) {
@@ -67,6 +68,12 @@ async function fillCatalogSearch(page, query, viewportName, failures) {
   const search = page
     .locator('[data-workbench-workflow-surface="catalog"]')
     .locator('[data-workflow-catalog-search="query"]');
+  try {
+    await search.first().waitFor({ state: "visible", timeout: 10_000 });
+  } catch {
+    failures.push(formatIssue(viewportName, "catalog search did not mount in time"));
+    return false;
+  }
   const count = await search.count();
   if (count !== 1) {
     failures.push(formatIssue(viewportName, `expected one catalog search input, received ${count}`));
@@ -83,12 +90,17 @@ async function fillBuilderSearch(page, query, viewportName, failures) {
     .locator('[data-workbench-workflow-surface="builder"]')
     .locator(".form-grid.compact")
     .locator('[data-workflow-operator-search="query"]');
+  try {
+    await search.first().waitFor({ state: "visible", timeout: 10_000 });
+  } catch {
+    failures.push(formatIssue(viewportName, "builder search did not mount in time"));
+    return false;
+  }
   const count = await search.count();
   if (count !== 1) {
     failures.push(formatIssue(viewportName, `expected one builder search input, received ${count}`));
     return false;
   }
-  await search.waitFor({ state: "visible", timeout: 10_000 });
   await search.click();
   await search.fill(query);
   await search.blur();
@@ -100,13 +112,18 @@ async function fillTemplateChainSearch(page, query, viewportName, failures) {
   const search = page
     .locator('[data-workbench-workflow-surface="builder"]')
     .locator('[data-workflow-template-chain-search="query"]');
+  try {
+    await search.first().waitFor({ state: "visible", timeout: 10_000 });
+  } catch {
+    failures.push(formatIssue(viewportName, "template-chain search did not mount in time"));
+    return false;
+  }
   const count = await search.count();
   if (count !== 1) {
     failures.push(formatIssue(viewportName, `expected one template-chain search input, received ${count}`));
     return false;
   }
   await search.scrollIntoViewIfNeeded();
-  await search.waitFor({ state: "visible", timeout: 10_000 });
   await search.click();
   await search.fill(query);
   await search.blur();
@@ -116,6 +133,12 @@ async function fillTemplateChainSearch(page, query, viewportName, failures) {
 
 async function focusScopedContainer(page, selector, viewportName, failures) {
   const container = page.locator(selector);
+  try {
+    await container.first().waitFor({ state: "attached", timeout: 10_000 });
+  } catch {
+    failures.push(formatIssue(viewportName, `scoped container ${selector} did not mount in time`));
+    return false;
+  }
   const count = await container.count();
   if (count !== 1) {
     failures.push(formatIssue(viewportName, `expected one scoped container ${selector}, received ${count}`));
@@ -140,6 +163,12 @@ async function waitForDeferredBuilderPanels(page, viewportName, failures) {
 
 async function injectLongImportMessage(page, viewportName, failures) {
   const toolbar = page.locator('[data-workflow-builder-toolbar="actions"]');
+  try {
+    await toolbar.first().waitFor({ state: "attached", timeout: 10_000 });
+  } catch {
+    failures.push(formatIssue(viewportName, "builder toolbar did not mount in time"));
+    return false;
+  }
   if ((await toolbar.count()) !== 1) {
     failures.push(formatIssue(viewportName, "expected one builder toolbar container"));
     return false;

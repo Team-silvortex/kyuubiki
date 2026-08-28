@@ -1,6 +1,13 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import type { WorkflowGraphNode, WorkflowOperatorDescriptor } from "@/lib/api";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 import {
@@ -15,9 +22,22 @@ import {
   suggestWorkflowNodeTemplatePresets,
 } from "@/components/workbench/workflow/workbench-workflow-operator-search-match";
 import type { WorkflowNodeTemplatePreset } from "@/components/workbench/workflow/workbench-workflow-node-templates";
+import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
+import {
+  dismissWorkbenchAlert,
+  upsertWorkbenchAlert,
+} from "@/components/workbench/workbench-alert-state";
+import {
+  persistFavoriteWorkflowOperatorIds,
+  persistRecentWorkflowOperatorIds,
+  prependRecentWorkflowOperatorId,
+  readFavoriteWorkflowOperatorIds,
+  readRecentWorkflowOperatorIds,
+  toggleFavoriteWorkflowOperatorId,
+} from "@/components/workbench/workflow/workbench-workflow-operator-preference-storage";
 
-const RECENT_OPERATOR_STORAGE_KEY = "kyuubiki.workflow.recentOperators";
-const FAVORITE_OPERATOR_STORAGE_KEY = "kyuubiki.workflow.favoriteOperators";
+const RECENT_OPERATOR_STORAGE_ALERT_ID = "workflow-operator-recent-storage-failed";
+const FAVORITE_OPERATOR_STORAGE_ALERT_ID = "workflow-operator-favorite-storage-failed";
 
 function rankWorkflowOperatorValidationStatus(
   status?: WorkflowOperatorDescriptor["validation"]["baseline_status"],
@@ -124,6 +144,7 @@ export function WorkbenchWorkflowOperatorSearch(props: {
   onValidationFilterChange: (value: string) => void;
   onCapabilityFilterChange: (value: string) => void;
   onQuickInsert: (operatorId: string) => void;
+  setSystemAlerts: Dispatch<SetStateAction<WorkbenchAlertItem[]>>;
 }) {
   const {
     labels,
@@ -143,9 +164,12 @@ export function WorkbenchWorkflowOperatorSearch(props: {
     onValidationFilterChange,
     onCapabilityFilterChange,
     onQuickInsert,
+    setSystemAlerts,
   } = props;
   const [recentOperatorIds, setRecentOperatorIds] = useState<string[]>([]);
   const [favoriteOperatorIds, setFavoriteOperatorIds] = useState<string[]>([]);
+  const [recentStorageReadable, setRecentStorageReadable] = useState(false);
+  const [favoriteStorageReadable, setFavoriteStorageReadable] = useState(false);
   const deferredQuery = useDeferredValue(query);
   const groupedPresets = useMemo(
     () => groupWorkflowOperatorOptionPresets(filteredPresets, operatorDescriptorMap),
@@ -161,27 +185,15 @@ export function WorkbenchWorkflowOperatorSearch(props: {
     [filteredPresets],
   );
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(RECENT_OPERATOR_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        setRecentOperatorIds(parsed.filter((value): value is string => typeof value === "string"));
-      }
-    } catch {}
-  }, []);
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(FAVORITE_OPERATOR_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        setFavoriteOperatorIds(
-          parsed.filter((value): value is string => typeof value === "string"),
-        );
-      }
-    } catch {}
-  }, []);
+    const recentRead = readRecentWorkflowOperatorIds();
+    const favoriteRead = readFavoriteWorkflowOperatorIds();
+    setRecentOperatorIds(recentRead.operatorIds);
+    setFavoriteOperatorIds(favoriteRead.operatorIds);
+    setRecentStorageReadable(recentRead.readable);
+    setFavoriteStorageReadable(favoriteRead.readable);
+    if (!recentRead.readable) reportStorageFailure(RECENT_OPERATOR_STORAGE_ALERT_ID);
+    if (!favoriteRead.readable) reportStorageFailure(FAVORITE_OPERATOR_STORAGE_ALERT_ID);
+  }, [labels.storageWriteFailedLabel, setSystemAlerts]);
   const favoritePresets = useMemo(
     () =>
       favoriteOperatorIds
@@ -222,24 +234,41 @@ export function WorkbenchWorkflowOperatorSearch(props: {
       : null,
   ].filter(Boolean) as string[];
   const hasActiveFilters = activeFilters.length > 0;
+  function reportStorageFailure(alertId: string) {
+    upsertWorkbenchAlert(setSystemAlerts, {
+      id: alertId,
+      message: labels.storageWriteFailedLabel,
+      tone: "warning",
+    });
+  }
+  function clearStorageFailure(alertId: string) {
+    dismissWorkbenchAlert(setSystemAlerts, alertId);
+  }
   function rememberOperator(operatorId: string) {
-    const next = [operatorId, ...recentOperatorIds.filter((value) => value !== operatorId)].slice(
-      0,
-      12,
-    );
+    if (!recentStorageReadable) {
+      reportStorageFailure(RECENT_OPERATOR_STORAGE_ALERT_ID);
+      return;
+    }
+    const next = prependRecentWorkflowOperatorId(recentOperatorIds, operatorId);
+    if (!persistRecentWorkflowOperatorIds(next)) {
+      reportStorageFailure(RECENT_OPERATOR_STORAGE_ALERT_ID);
+      return;
+    }
     setRecentOperatorIds(next);
-    try {
-      window.localStorage.setItem(RECENT_OPERATOR_STORAGE_KEY, JSON.stringify(next));
-    } catch {}
+    clearStorageFailure(RECENT_OPERATOR_STORAGE_ALERT_ID);
   }
   function toggleFavoriteOperator(operatorId: string) {
-    const next = favoriteOperatorIds.includes(operatorId)
-      ? favoriteOperatorIds.filter((value) => value !== operatorId)
-      : [operatorId, ...favoriteOperatorIds].slice(0, 16);
+    if (!favoriteStorageReadable) {
+      reportStorageFailure(FAVORITE_OPERATOR_STORAGE_ALERT_ID);
+      return;
+    }
+    const next = toggleFavoriteWorkflowOperatorId(favoriteOperatorIds, operatorId);
+    if (!persistFavoriteWorkflowOperatorIds(next)) {
+      reportStorageFailure(FAVORITE_OPERATOR_STORAGE_ALERT_ID);
+      return;
+    }
     setFavoriteOperatorIds(next);
-    try {
-      window.localStorage.setItem(FAVORITE_OPERATOR_STORAGE_KEY, JSON.stringify(next));
-    } catch {}
+    clearStorageFailure(FAVORITE_OPERATOR_STORAGE_ALERT_ID);
   }
   function favoriteLabel(operatorId: string) {
     return favoriteOperatorIds.includes(operatorId)

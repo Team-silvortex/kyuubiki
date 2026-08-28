@@ -13,6 +13,7 @@ export const WORKBENCH_UI_AUTOMATION_CONTRACT_VERSION = 1 as const;
 
 export const workbenchAutomationSelectors = {
   shell: '[data-workbench-shell="root"]',
+  uiChunk: (chunkId: string) => `[data-workbench-ui-chunk="${chunkId}"]`,
   sidebar: '[data-workbench-panel="sidebar"]',
   sidebarSection: (section: string) => `[data-workbench-sidebar-section="${section}"]`,
   railButton: (section: string) => `workbench-rail:${section}`,
@@ -39,6 +40,9 @@ export const workbenchAutomationSelectors = {
   workflowRunStatus: (status: string) => `[data-workflow-run-status="${status}"]`,
   workflowRunWorkflow: (workflowId: string) => `[data-workflow-run-workflow-id="${workflowId}"]`,
   runtimePanel: '[data-workbench-runtime="panel"]',
+  systemSidebar: '[data-workbench-system-sidebar="root"]',
+  systemSurfaceTab: (tab: string) => `[data-workbench-system-surface-tab="${tab}"]`,
+  systemSettingsPage: (page: string) => `[data-workbench-system-settings-page="${page}"]`,
   runtimeTabs: '[data-workbench-runtime="tabs"]',
   runtimeTab: (page: string) => `[data-workbench-runtime-tab="${page}"]`,
   controlWindow: '[data-workbench-control-window="root"]',

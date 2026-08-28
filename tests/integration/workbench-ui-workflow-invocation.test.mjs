@@ -24,10 +24,26 @@ after(async () => {
 async function click(page, selector, label) {
   const candidates = page.locator(selector);
   const target = candidates.first();
-  await target.waitFor({ state: "visible", timeout: 30_000 });
+  await waitForVisibleOrPageError(page, target, label);
   assert.equal(await candidates.count(), 1, `${label} should resolve to one visible control`);
   await target.click({ timeout: 15_000 });
   return target;
+}
+
+async function waitForVisibleOrPageError(page, locator, label, timeout = 30_000) {
+  let rejectPageError;
+  const pageError = new Promise((_, reject) => {
+    rejectPageError = (error) => reject(new Error(`${label} aborted after client error: ${error.message}`));
+    page.once("pageerror", rejectPageError);
+  });
+  try {
+    await Promise.race([
+      locator.waitFor({ state: "visible", timeout }),
+      pageError,
+    ]);
+  } finally {
+    page.off("pageerror", rejectPageError);
+  }
 }
 
 async function openQualificationBuilder(page) {
@@ -112,3 +128,162 @@ test("Workbench isolated workflow UI blocks invalid draft input without backend 
     await context.close();
   }
 }, { timeout: 75_000 });
+
+test("Workbench startup preserves hydrated settings and language packs", async () => {
+  const context = await browser.newContext({ viewport: { width: 1180, height: 920 } });
+  const page = await context.newPage();
+  const settingsKey = "kyuubiki-workbench-settings";
+  const languagePacksKey = "kyuubiki-workbench-language-packs";
+  const seededPack = {
+    schema_version: "kyuubiki.language-pack/v1",
+    id: "qualification-fr-pack",
+    language: "fr",
+    targetSurface: "workbench",
+    name: "Qualification French pack",
+    version: "2.17.0",
+    source: "imported",
+    updatedAt: "2026-08-28T00:00:00.000Z",
+    overrides: { workflowCatalogTitle: "Catalogue de qualification" },
+  };
+
+  await context.addInitScript(({ settingsKey, languagePacksKey, seededPack }) => {
+    window.localStorage.setItem(settingsKey, JSON.stringify({
+      theme: "marine",
+      language: "fr",
+      showShortcutHints: false,
+      immersiveGuardrails: true,
+      frontendRuntimeMode: "orchestrated_gui",
+      directMeshEndpointsText: "solver-a:5001",
+      directMeshSelectionMode: "healthiest",
+      assistantMode: "local",
+      assistantApiBaseUrl: "https://assistant.example.test",
+      assistantModel: "qualification-model",
+    }));
+    window.localStorage.setItem(languagePacksKey, JSON.stringify([seededPack]));
+  }, { settingsKey, languagePacksKey, seededPack });
+
+  try {
+    await page.goto(workbenchUrl(runtime), { waitUntil: "networkidle", timeout: 60_000 });
+    await page.locator('[data-workbench-shell="root"]').waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(() => document.documentElement.dataset.theme === "marine");
+    await page.waitForTimeout(500);
+
+    const hydrated = await page.evaluate(({ settingsKey, languagePacksKey }) => ({
+      settings: JSON.parse(window.localStorage.getItem(settingsKey) || "{}"),
+      packs: JSON.parse(window.localStorage.getItem(languagePacksKey) || "[]"),
+    }), { settingsKey, languagePacksKey });
+    assert.equal(hydrated.settings.theme, "marine");
+    assert.equal(hydrated.settings.language, "fr");
+    assert.equal(hydrated.settings.showShortcutHints, false);
+    assert.equal(hydrated.packs.length, 1);
+    assert.equal(hydrated.packs[0]?.id, seededPack.id);
+
+    await page.reload({ waitUntil: "networkidle", timeout: 60_000 });
+    await page.waitForFunction(() => document.documentElement.dataset.theme === "marine");
+    const reloaded = await page.evaluate(({ settingsKey, languagePacksKey }) => ({
+      settings: JSON.parse(window.localStorage.getItem(settingsKey) || "{}"),
+      packs: JSON.parse(window.localStorage.getItem(languagePacksKey) || "[]"),
+    }), { settingsKey, languagePacksKey });
+    assert.equal(reloaded.settings.language, "fr");
+    assert.equal(reloaded.packs[0]?.id, seededPack.id);
+  } finally {
+    await context.close();
+  }
+}, { timeout: 90_000 });
+
+test("Workbench startup does not overwrite a corrupt language pack store", async () => {
+  const context = await browser.newContext({ viewport: { width: 1180, height: 920 } });
+  const page = await context.newPage();
+  const languagePacksKey = "kyuubiki-workbench-language-packs";
+  await context.addInitScript((key) => {
+    window.localStorage.setItem(key, "");
+  }, languagePacksKey);
+
+  try {
+    await page.goto(workbenchUrl(runtime), { waitUntil: "networkidle", timeout: 60_000 });
+    await page.locator('[data-workbench-shell="root"]').waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForTimeout(500);
+    assert.equal(await page.evaluate((key) => window.localStorage.getItem(key), languagePacksKey), "");
+  } finally {
+    await context.close();
+  }
+}, { timeout: 75_000 });
+
+test("Workbench rail mounts every declared sidebar chunk without client errors", async () => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+  const page = await context.newPage();
+  const sections = ["model", "workflow", "store", "library", "system"];
+
+  try {
+    await page.goto(workbenchUrl(runtime), { waitUntil: "networkidle", timeout: 60_000 });
+    for (const section of sections) {
+      await click(page, `[aria-label="workbench-rail:${section}"]`, `${section} rail`);
+      await waitForVisibleOrPageError(
+        page,
+        page.locator(`[data-workbench-sidebar-section="${section}"]`),
+        `${section} sidebar section`,
+      );
+      const chunk = page.locator(`[data-workbench-ui-chunk="section.${section}"]`);
+      await waitForVisibleOrPageError(page, chunk, `${section} sidebar chunk`);
+      assert.equal(await chunk.getAttribute("data-workbench-ui-chunk-phase"), "load");
+    }
+  } finally {
+    await context.close();
+  }
+}, { timeout: 120_000 });
+
+test("Workbench Pwdt preserves hydrated script and DSL sessions", async () => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+  const page = await context.newPage();
+  const scriptKey = "kyuubiki-workbench-python-panel";
+  const dslKey = "kyuubiki-workbench-dsl-panel";
+  const scriptCode = "print('hydrated-pwdt-script')";
+  const dslCode = JSON.stringify({
+    schema_version: "kyuubiki.frontend-dsl/v1",
+    name: "hydrated-pwdt-dsl",
+    steps: [],
+  }, null, 2);
+  await context.addInitScript(({ scriptKey, dslKey, scriptCode, dslCode }) => {
+    window.sessionStorage.setItem(scriptKey, JSON.stringify({ code: scriptCode }));
+    window.sessionStorage.setItem(dslKey, JSON.stringify({ code: dslCode }));
+  }, { scriptKey, dslKey, scriptCode, dslCode });
+
+  try {
+    await page.goto(workbenchUrl(runtime), { waitUntil: "networkidle", timeout: 60_000 });
+    await click(page, '[aria-label="workbench-rail:system"]', "System rail");
+    await waitForVisibleOrPageError(
+      page,
+      page.locator('[data-workbench-sidebar-section="system"]'),
+      "System sidebar section",
+    );
+    await click(
+      page,
+      '[data-workbench-system-surface-tab="settings"]',
+      "System settings surface",
+    );
+    await click(
+      page,
+      '[data-workbench-system-settings-page="scripts"]',
+      "System scripts page",
+    );
+    await page.waitForFunction(
+      ({ scriptCode, dslCode }) => {
+        const values = [...document.querySelectorAll("textarea.script-panel__editor")]
+          .map((element) => element.value);
+        return values.includes(scriptCode) && values.includes(dslCode);
+      },
+      { scriptCode, dslCode },
+      { timeout: 30_000 },
+    );
+    await page.waitForTimeout(500);
+
+    const persisted = await page.evaluate(({ scriptKey, dslKey }) => ({
+      script: JSON.parse(window.sessionStorage.getItem(scriptKey) || "{}")?.code,
+      dsl: JSON.parse(window.sessionStorage.getItem(dslKey) || "{}")?.code,
+    }), { scriptKey, dslKey });
+    assert.equal(persisted.script, scriptCode);
+    assert.equal(persisted.dsl, dslCode);
+  } finally {
+    await context.close();
+  }
+}, { timeout: 90_000 });

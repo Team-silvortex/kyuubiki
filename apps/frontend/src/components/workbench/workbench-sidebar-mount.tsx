@@ -20,12 +20,12 @@ type WorkbenchSidebarMountProps = {
   railItems: RailItem[];
   sidebarSection: SidebarSection;
   onSidebarSectionChange: (section: SidebarSection) => void;
-  studySection?: ReactNode;
-  modelSection?: ReactNode;
-  workflowSection?: ReactNode;
-  storeSection?: ReactNode;
-  librarySection?: ReactNode;
-  systemSection?: ReactNode;
+  studySection: ReactNode;
+  modelSection: ReactNode;
+  workflowSection: ReactNode;
+  storeSection: ReactNode;
+  librarySection: ReactNode;
+  systemSection: ReactNode;
   assistantLabel?: string;
   assistantOpen?: boolean;
   onAssistantToggle?: () => void;

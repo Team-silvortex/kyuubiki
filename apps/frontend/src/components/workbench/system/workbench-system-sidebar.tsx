@@ -54,10 +54,11 @@ export function WorkbenchSystemSidebar({
   }, [systemPanelTab]);
 
   return (
-    <div className="sidebar-stack panel-scroll-window">
+    <div className="sidebar-stack panel-scroll-window" data-workbench-system-sidebar="root">
       <div className="panel-tabs panel-tabs--editor">
         <button
           className={`panel-tab${surfaceTab === "settings" ? " panel-tab--active" : ""}`}
+          data-workbench-system-surface-tab="settings"
           onClick={() => {
             setSurfaceTab("settings");
             setSettingsPage("overview");
@@ -68,6 +69,7 @@ export function WorkbenchSystemSidebar({
         </button>
         <button
           className={`panel-tab${surfaceTab === "runtime" ? " panel-tab--active" : ""}`}
+          data-workbench-system-surface-tab="runtime"
           onClick={() => {
             setSurfaceTab("runtime");
             onSystemPanelTabChange("runtime");
@@ -78,6 +80,7 @@ export function WorkbenchSystemSidebar({
         </button>
         <button
           className={`panel-tab${surfaceTab === "data" ? " panel-tab--active" : ""}`}
+          data-workbench-system-surface-tab="data"
           onClick={() => {
             setSurfaceTab("data");
             onSystemPanelTabChange("data");
@@ -93,6 +96,7 @@ export function WorkbenchSystemSidebar({
           <div className="panel-tabs panel-tabs--wide">
             <button
               className={`panel-tab${settingsPage === "overview" ? " panel-tab--active" : ""}`}
+              data-workbench-system-settings-page="overview"
               onClick={() => setSettingsPage("overview")}
               type="button"
             >
@@ -100,6 +104,7 @@ export function WorkbenchSystemSidebar({
             </button>
             <button
               className={`panel-tab${settingsPage === "config" ? " panel-tab--active" : ""}`}
+              data-workbench-system-settings-page="config"
               onClick={() => {
                 setSettingsPage("config");
                 onSystemPanelTabChange("config");
@@ -110,6 +115,7 @@ export function WorkbenchSystemSidebar({
             </button>
             <button
               className={`panel-tab${settingsPage === "scripts" ? " panel-tab--active" : ""}`}
+              data-workbench-system-settings-page="scripts"
               onClick={() => {
                 setSettingsPage("scripts");
                 onSystemPanelTabChange("scripts");

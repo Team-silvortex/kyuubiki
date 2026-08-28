@@ -25,7 +25,6 @@ import {
   readPersistedWorkbenchApiBaseUrl,
   resolveWorkbenchBackendTarget,
 } from "@/lib/api/backend-target";
-import type { ProtocolAgentDescriptor } from "@/lib/api";
 import type { WorkbenchSecurityAuditRisk, WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
 
 export function WorkbenchSystemSidebarMount({
@@ -65,7 +64,7 @@ export function WorkbenchSystemSidebarMount({
   downloadSecurityEventExport,
   downloadSecurityEventCsvExport,
   runtimeAuditEntries,
-  protocolAgents,
+  protocolAgents = [],
   protocolAgentCards,
   runtimeWatchdogRows,
   theme,
@@ -148,7 +147,7 @@ export function WorkbenchSystemSidebarMount({
   setMessage,
   refreshJobHistory,
 }: WorkbenchSystemSidebarMountProps) {
-  const mergedProtocolAgents = protocolAgents as ProtocolAgentDescriptor[];
+  const mergedProtocolAgents = protocolAgents;
   const activeLeaseCount = mergedProtocolAgents.filter((agent) => Boolean(agent.active_lease)).length, staleLeaseCount = mergedProtocolAgents.filter((agent) => agent.active_lease?.is_stale).length;
   const protocolAgentCopy = getWorkbenchProtocolAgentCopy(language);
   const protocolAgentCountLabel = protocolAgentCopy.countLabel(mergedProtocolAgents.length, activeLeaseCount, staleLeaseCount);

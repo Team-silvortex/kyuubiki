@@ -199,6 +199,7 @@ export function WorkbenchWorkflowTopologyCard({
           onValidationFilterChange={setNextOperatorValidationFilter}
           query={nextOperatorSearchQuery}
           selectedSourceNode={selectedNodes[0] ?? null}
+          setSystemAlerts={setSystemAlerts}
           validationFilter={nextOperatorValidationFilter}
         />
         <button data-workflow-topology-action="add-node" onClick={() => onAddNode({ kind: nextNodeKind, operatorId: nextOperatorId || undefined })} type="button">{labels.addNodeLabel}</button>

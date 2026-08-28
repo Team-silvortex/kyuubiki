@@ -5,6 +5,7 @@ import type { WorkflowGraphDefinition } from "../../src/lib/api/workflow-types.t
 import {
   listStoredWorkflowSnapshots,
   loadStoredWorkflowSnapshot,
+  removeStoredWorkflowSnapshot,
   removeStoredWorkflowSnapshotsByWorkflowId,
   saveStoredWorkflowSnapshot,
   WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_PREFIX,
@@ -215,6 +216,77 @@ test("failed index commits do not block edits or prune retained snapshots", () =
     assert.equal(failedSave, null);
     assert.equal(listStoredWorkflowSnapshots(workflowId).length, 20);
     assert.equal(loadStoredWorkflowSnapshot(oldest.id)?.graph.id, `${workflowId}-0`);
+  } finally {
+    browserWindow.localStorage = originalStorage;
+    removeStoredWorkflowSnapshotsByWorkflowId(workflowId);
+  }
+});
+
+test("failed snapshot deletion index commits keep the snapshot restorable", () => {
+  const workflowId = "snapshot-delete-index-failure";
+  const browserWindow = window as unknown as { localStorage: Storage };
+  const originalStorage = browserWindow.localStorage;
+  const saved = save(workflowId, graph(workflowId));
+  assert(saved);
+  let payloadRemovalCount = 0;
+  browserWindow.localStorage = {
+    get length() {
+      return originalStorage.length;
+    },
+    clear: () => originalStorage.clear(),
+    getItem: (key) => originalStorage.getItem(key),
+    key: (index) => originalStorage.key(index),
+    removeItem: (key) => {
+      if (key.startsWith(WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_PREFIX)) {
+        payloadRemovalCount += 1;
+      }
+      originalStorage.removeItem(key);
+    },
+    setItem: (key, value) => {
+      if (key === "kyuubiki.workbench.workflowSnapshots.index.v1") {
+        throw new Error("snapshot index is read-only");
+      }
+      originalStorage.setItem(key, value);
+    },
+  };
+
+  try {
+    assert.equal(removeStoredWorkflowSnapshot(saved.id), false);
+    assert.equal(payloadRemovalCount, 0);
+    assert.equal(listStoredWorkflowSnapshots(workflowId)[0]?.id, saved.id);
+    assert.equal(loadStoredWorkflowSnapshot(saved.id)?.graph.id, workflowId);
+  } finally {
+    browserWindow.localStorage = originalStorage;
+    removeStoredWorkflowSnapshotsByWorkflowId(workflowId);
+  }
+});
+
+test("snapshot deletion commits the index even when stale payload cleanup fails", () => {
+  const workflowId = "snapshot-delete-payload-cleanup-failure";
+  const browserWindow = window as unknown as { localStorage: Storage };
+  const originalStorage = browserWindow.localStorage;
+  const saved = save(workflowId, graph(workflowId));
+  assert(saved);
+  browserWindow.localStorage = {
+    get length() {
+      return originalStorage.length;
+    },
+    clear: () => originalStorage.clear(),
+    getItem: (key) => originalStorage.getItem(key),
+    key: (index) => originalStorage.key(index),
+    removeItem: (key) => {
+      if (key.startsWith(WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_PREFIX)) {
+        throw new Error("payload cleanup denied");
+      }
+      originalStorage.removeItem(key);
+    },
+    setItem: (key, value) => originalStorage.setItem(key, value),
+  };
+
+  try {
+    assert.equal(removeStoredWorkflowSnapshot(saved.id), true);
+    assert.equal(listStoredWorkflowSnapshots(workflowId).length, 0);
+    assert.equal(loadStoredWorkflowSnapshot(saved.id), null);
   } finally {
     browserWindow.localStorage = originalStorage;
     removeStoredWorkflowSnapshotsByWorkflowId(workflowId);

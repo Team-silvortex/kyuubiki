@@ -6,6 +6,10 @@ import {
 } from "@/components/workbench/workbench-ui-streaming";
 import { buildWorkbenchUiChunkRuntimeAttrs } from "@/components/workbench/workbench-ui-streaming-runtime";
 import type { SidebarSection } from "@/components/workbench/workbench-types";
+import type { WorkbenchSystemSidebarMountProps } from "@/components/workbench/workbench-system-sidebar-mount-types";
+
+type WorkbenchSidebarMountSource = Record<string, any> &
+  Pick<WorkbenchSystemSidebarMountProps, "protocolAgents">;
 
 const WorkbenchLibrarySectionMount = lazy(() =>
   import("@/components/workbench/workbench-library-section-mount").then((module) => ({
@@ -38,7 +42,7 @@ const WorkbenchWorkflowSectionMount = lazy(() =>
   })),
 );
 
-export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
+export function buildWorkbenchSidebarMountProps(props: WorkbenchSidebarMountSource) {
   return {
     shortTitle: props.t.shortTitle,
     roleLabel: props.t.roleLabel,

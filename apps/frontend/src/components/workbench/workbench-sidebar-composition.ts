@@ -3,8 +3,12 @@
 import { createElement } from "react";
 import { buildWorkbenchSidebarMountProps } from "@/components/workbench/workbench-sidebar-mount-props";
 import { WorkbenchRuntimeRecoveryCard } from "@/components/workbench/system/workbench-runtime-recovery-card";
+import type { WorkbenchSystemSidebarMountProps } from "@/components/workbench/workbench-system-sidebar-mount-types";
 
-export function buildWorkbenchSidebarComposition(props: Record<string, any>) {
+type WorkbenchSidebarCompositionProps = Record<string, any> &
+  Pick<WorkbenchSystemSidebarMountProps, "protocolAgents">;
+
+export function buildWorkbenchSidebarComposition(props: WorkbenchSidebarCompositionProps) {
   const { shellState, workspaceState, studyResultDerived, interactionControllers, flowControllers, workflowController } =
     props;
   const { topLevelActions, assistantAudit, uiActionController } = interactionControllers;

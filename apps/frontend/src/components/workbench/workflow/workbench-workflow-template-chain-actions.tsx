@@ -173,14 +173,17 @@ export function WorkbenchWorkflowTemplateChainActions({
   }
 
   function writePreferences(nextIds: string[], nextAliases = favoriteChainAliases) {
-    setFavoriteChainIds(nextIds);
-    setFavoriteChainAliases(nextAliases);
     const persisted = writeWorkflowTemplateChainPreferences({
       favoriteChainIds: nextIds,
       favoriteChainAliases: nextAliases,
     });
-    if (persisted) clearStorageWriteFailure();
-    else reportStorageWriteFailure();
+    if (persisted) {
+      setFavoriteChainIds(nextIds);
+      setFavoriteChainAliases(nextAliases);
+      clearStorageWriteFailure();
+    } else {
+      reportStorageWriteFailure();
+    }
     return persisted;
   }
 

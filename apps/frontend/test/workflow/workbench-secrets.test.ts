@@ -1,12 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readStoredWorkbenchAuth } from "@/components/workbench/workbench-headless-workflow-panel-helpers";
 import {
   readInMemoryWorkbenchSecrets,
   scrubPersistedWorkbenchSecrets,
   WORKBENCH_SECRETS_KEY,
   writeInMemoryWorkbenchSecrets,
 } from "@/lib/workbench/workbench-secrets";
-import { persistWorkbenchSettings, sanitizeWorkbenchSettings, type WorkbenchSettingsInput } from "@/lib/workbench/helpers";
+import {
+  persistWorkbenchSettings,
+  safeStorageGetResult,
+  sanitizeWorkbenchSettings,
+  type WorkbenchSettingsInput,
+} from "@/lib/workbench/helpers";
 
 function buildSettingsInput(overrides: Partial<WorkbenchSettingsInput> = {}): WorkbenchSettingsInput {
   return {
@@ -94,7 +100,7 @@ test("persistWorkbenchSettings stores preferences but keeps secrets memory-only"
   } as unknown as Window & typeof globalThis;
 
   try {
-    persistWorkbenchSettings(buildSettingsInput());
+    assert.equal(persistWorkbenchSettings(buildSettingsInput()), true);
     const persisted = JSON.parse(localStorage.get("kyuubiki-workbench-settings") ?? "{}") as Record<string, unknown>;
 
     assert.equal("controlPlaneApiToken" in persisted, false);
@@ -108,6 +114,105 @@ test("persistWorkbenchSettings stores preferences but keeps secrets memory-only"
       assistantApiKey: "assistant-key",
     });
     assert.equal(sessionStorage.has(WORKBENCH_SECRETS_KEY), false);
+  } finally {
+    writeInMemoryWorkbenchSecrets({});
+    globalThis.window = previousWindow;
+  }
+});
+
+test("workbench settings reads distinguish missing, malformed, and unavailable storage", () => {
+  const localStorage = new Map<string, string>();
+  const sessionStorage = new Map<string, string>();
+  const previousWindow = globalThis.window;
+  let failReads = false;
+
+  globalThis.window = {
+    localStorage: {
+      getItem: (key: string) => {
+        if (failReads) throw new Error("storage read failed");
+        return localStorage.get(key) ?? null;
+      },
+      setItem: (key: string, value: string) => localStorage.set(key, value),
+      removeItem: (key: string) => localStorage.delete(key),
+    },
+    sessionStorage: {
+      getItem: (key: string) => sessionStorage.get(key) ?? null,
+      setItem: (key: string, value: string) => sessionStorage.set(key, value),
+      removeItem: (key: string) => sessionStorage.delete(key),
+    },
+  } as unknown as Window & typeof globalThis;
+
+  try {
+    assert.equal(safeStorageGetResult().readable, true);
+
+    localStorage.set("kyuubiki-workbench-settings", "");
+    assert.equal(safeStorageGetResult().readable, false);
+
+    localStorage.set("kyuubiki-workbench-settings", "[]");
+    assert.equal(safeStorageGetResult().readable, false);
+
+    failReads = true;
+    assert.equal(safeStorageGetResult().readable, false);
+  } finally {
+    globalThis.window = previousWindow;
+  }
+});
+
+test("failed settings persistence does not publish new in-memory secrets", () => {
+  const previousWindow = globalThis.window;
+  writeInMemoryWorkbenchSecrets({});
+  globalThis.window = {
+    localStorage: {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("storage write failed");
+      },
+      removeItem: () => undefined,
+    },
+    sessionStorage: {
+      getItem: () => null,
+      setItem: () => undefined,
+      removeItem: () => undefined,
+    },
+  } as unknown as Window & typeof globalThis;
+
+  try {
+    assert.equal(persistWorkbenchSettings(buildSettingsInput()), false);
+    assert.deepEqual(readInMemoryWorkbenchSecrets(), {});
+  } finally {
+    writeInMemoryWorkbenchSecrets({});
+    globalThis.window = previousWindow;
+  }
+});
+
+test("headless auth keeps in-memory credentials when persisted settings are corrupt", () => {
+  const previousWindow = globalThis.window;
+  writeInMemoryWorkbenchSecrets({
+    controlPlaneApiToken: "control-token",
+    clusterApiToken: "cluster-token",
+    directMeshApiToken: "mesh-token",
+  });
+  globalThis.window = {
+    localStorage: {
+      getItem: () => "",
+      setItem: () => undefined,
+      removeItem: () => undefined,
+    },
+    sessionStorage: {
+      getItem: () => null,
+      setItem: () => undefined,
+      removeItem: () => undefined,
+    },
+  } as unknown as Window & typeof globalThis;
+
+  try {
+    assert.deepEqual(readStoredWorkbenchAuth(), {
+      frontendRuntimeMode: "orchestrated_gui",
+      directMeshEndpointsText: "",
+      controlPlaneApiToken: "control-token",
+      clusterApiToken: "cluster-token",
+      directMeshApiToken: "mesh-token",
+    });
   } finally {
     writeInMemoryWorkbenchSecrets({});
     globalThis.window = previousWindow;

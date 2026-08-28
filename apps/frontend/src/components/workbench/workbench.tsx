@@ -65,6 +65,7 @@ export function Workbench() {
           studySection={sidebarMountProps.studySection}
           modelSection={sidebarMountProps.modelSection}
           workflowSection={sidebarMountProps.workflowSection}
+          storeSection={sidebarMountProps.storeSection}
           librarySection={sidebarMountProps.librarySection}
           systemSection={sidebarMountProps.systemSection}
         />

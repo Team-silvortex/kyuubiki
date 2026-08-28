@@ -5,6 +5,8 @@ import type { WorkflowSurfaceTab } from "@/components/workbench/workflow/workben
 import type { WorkbenchScriptActionLogEntry, WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
 import type { WorkbenchSecurityAuditRisk, WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
 
+import type { ProtocolAgentDescriptor } from "@/lib/api";
+
 export type WorkbenchSystemSidebarMountProps = {
   t: WorkbenchCopy;
   systemPanelTab: "config" | "scripts" | "runtime" | "data";
@@ -42,7 +44,7 @@ export type WorkbenchSystemSidebarMountProps = {
   downloadSecurityEventExport: () => Promise<void>;
   downloadSecurityEventCsvExport: () => Promise<void>;
   runtimeAuditEntries: Array<{ id: string; at: string; action: string; source: string; risk: string; status: string; note: string }>;
-  protocolAgents: Array<unknown>;
+  protocolAgents: ProtocolAgentDescriptor[];
   protocolAgentCards: Array<{
     id: string;
     endpoint: string;

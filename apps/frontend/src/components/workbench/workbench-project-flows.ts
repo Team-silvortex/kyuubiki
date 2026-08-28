@@ -60,6 +60,7 @@ export function buildWorkbenchProjectFlows(props: Record<string, any>) {
     importedProjectLabel: props.t.projectImported,
     importedVersionLabel: props.t.versionLoaded,
     importFailedLabel: props.t.importFailed,
+    storeManifestPersistenceFailedLabel: projectFlowCopy.storeManifestPersistenceFailed,
     formatImportNotice: (skippedSensitivePresetCount: number): WorkbenchNoticeItem => ({
       id: "project-import-notice",
       tone: "warning",

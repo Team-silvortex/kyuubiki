@@ -240,6 +240,7 @@ test("workbench extended UI copy covers guardrails, audit, and material labels",
     assert.ok(protocolAgent.countLabel(2, 1, 1).trim(), locale.language);
     assert.ok(auditEmpty.trim(), locale.language);
     assert.ok(projectFlow.noJobVersion.trim(), locale.language);
+    assert.ok(projectFlow.storeManifestPersistenceFailed.trim(), locale.language);
     assert.ok(projectFlow.skippedSensitivePresets(2).trim(), locale.language);
     assert.ok(assistantAudit.manualRecording.trim(), locale.language);
     assert.ok(assistantAudit.governanceDriftDetected("drift").trim(), locale.language);

@@ -145,11 +145,12 @@ function pushAuditFailures(failures, audit, prefix) {
 async function openAuditedPage(page, pagePath, prefix, failures) {
   const auditUrl = resolveAuditUrl(pagePath);
   try {
-    const response = await page.goto(auditUrl, { waitUntil: "networkidle", timeout: 30_000 });
+    const response = await page.goto(auditUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
     if (!response?.ok()) {
       failures.push(formatIssue(prefix, `page responded with HTTP ${response?.status?.() ?? "unknown"}`));
       return false;
     }
+    await waitForDoublePaint(page);
     return true;
   } catch (error) {
     failures.push(
