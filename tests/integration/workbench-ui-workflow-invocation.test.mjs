@@ -590,6 +590,48 @@ test("Workbench Pwdt stages, exports, and removes Store assets through shared co
     assert.equal(exportedManifest.entries[0].id, "qualification-operator");
 
     page.once("dialog", (dialog) => dialog.accept());
+    const projectDownloadPromise = page.waitForEvent("download");
+    const projectExportPromise = page.evaluate(() =>
+      window.__kyuubikiPwdt.invoke("project/exportJson"));
+    const [projectDownload, projectExported] = await Promise.all([
+      projectDownloadPromise,
+      projectExportPromise,
+    ]);
+    assert.equal(projectDownload.suggestedFilename(), "Qualification project.kyuubiki.json");
+    assert.equal(projectExported.ok, true);
+    const projectDownloadPath = await projectDownload.path();
+    assert.ok(projectDownloadPath);
+    const projectBundle = JSON.parse(await readFile(projectDownloadPath, "utf8"));
+    assert.equal(projectBundle.store_manifest.project_id, "qualification-project");
+    assert.equal(projectBundle.store_manifest.entries[0].id, "qualification-operator");
+
+    page.once("dialog", (dialog) => dialog.accept());
+    const archiveDownloadPromise = page.waitForEvent("download");
+    const archiveExportPromise = page.evaluate(() =>
+      window.__kyuubikiPwdt.invoke("project/exportZip"));
+    const [archiveDownload, archiveExported] = await Promise.all([
+      archiveDownloadPromise,
+      archiveExportPromise,
+    ]);
+    assert.equal(archiveDownload.suggestedFilename(), "Qualification project.kyuubiki");
+    assert.equal(archiveExported.ok, true);
+    const archiveDownloadPath = await archiveDownload.path();
+    assert.ok(archiveDownloadPath);
+    const archiveBytes = await readFile(archiveDownloadPath);
+    assert.equal(archiveBytes.subarray(0, 2).toString("ascii"), "PK");
+
+    page.once("dialog", (dialog) => dialog.accept());
+    const databaseExportFailure = await page.evaluate(async () => {
+      try {
+        await window.__kyuubikiPwdt.invoke("data/exportDatabase");
+        return null;
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error);
+      }
+    });
+    assert.match(databaseExportFailure ?? "", /404|unhandled qualification route/u);
+
+    page.once("dialog", (dialog) => dialog.accept());
     const removed = await page.evaluate(() =>
       window.__kyuubikiPwdt.removeStoreEntry("operator", "qualification-operator"));
     assert.equal(removed.manifestEntryCount, 0);

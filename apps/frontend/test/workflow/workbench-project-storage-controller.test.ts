@@ -101,7 +101,7 @@ function projectLibraryService(calls: string[]): WorkbenchProjectLibraryBackendS
   };
 }
 
-function baseController(calls: string[]) {
+function baseController(calls: string[], getSelectedProject: () => ProjectRecord | null = projectRecord) {
   return createWorkbenchProjectStorageController({
     activeMaterial: "steel",
     adminDataBackendService: adminDataService(calls),
@@ -109,7 +109,7 @@ function baseController(calls: string[]) {
     beamModel: {},
     frameModel: {},
     getPersistedModelEffects: () => ({}),
-    getSelectedProject: projectRecord,
+    getSelectedProject,
     getSelectedProjectModels: () => [{ model_id: "model-a" }],
     heatBarModel: {},
     heatPlaneModel: {},
@@ -173,4 +173,15 @@ test("project bundle export reads job results through admin data backend service
     },
   ]);
   assert.deepEqual(calls, ["fetch-model:model-a", "fetch-versions:model-a", "fetch-job:job-a"]);
+});
+
+test("project storage download wrappers preserve explicit failure outcomes", async () => {
+  const controller = baseController([], () => null);
+
+  for (const download of [controller.downloadProjectBundleJson, controller.downloadProjectBundleZip]) {
+    const result = await download();
+    assert.equal(result.ok, false);
+    if (result.ok) assert.fail("missing project must not report a successful download");
+    assert.match(result.error.message, /project required/u);
+  }
 });

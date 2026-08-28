@@ -10,6 +10,7 @@ import type {
   VersionRow,
 } from "@/components/workbench/library/workbench-library-sidebar-types";
 import type { ModelRecord, ModelVersionRecord, ProjectRecord, WorkflowCatalogEntry } from "@/lib/api";
+import type { WorkbenchDownloadResult } from "@/components/workbench/workbench-export-controller";
 
 type WorkbenchLibrarySectionMountProps = {
   labels: LibraryLabels;
@@ -29,8 +30,8 @@ type WorkbenchLibrarySectionMountProps = {
   createProjectRecord: () => void;
   updateProjectRecord: () => void;
   deleteProjectRecord: () => void;
-  downloadProjectBundleJson: () => Promise<void>;
-  downloadProjectBundleZip: () => Promise<void>;
+  downloadProjectBundleJson: () => Promise<WorkbenchDownloadResult>;
+  downloadProjectBundleZip: () => Promise<WorkbenchDownloadResult>;
   importProjectBundle: (file: File) => Promise<void>;
   selectedProjectModels: ModelRecord[];
   modelRows: ModelRow[];

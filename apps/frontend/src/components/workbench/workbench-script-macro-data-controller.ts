@@ -1,6 +1,8 @@
 "use client";
 
 import type { JobState } from "@/lib/api";
+import type { WorkbenchDownloadResult } from "@/components/workbench/workbench-export-controller";
+import type { WorkbenchOperationResult } from "@/lib/workbench/operation-result";
 import { getWorkbenchScriptErrorCopy } from "@/components/workbench/workbench-extended-language-copy";
 import { getWorkbenchScriptMacroSummary } from "@/components/workbench/workbench-script-catalog-copy";
 import type { WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
@@ -31,10 +33,10 @@ type ScriptMacroDataControllerDeps = {
   setSidebarSection: (value: "study" | "model" | "workflow" | "library" | "system") => void;
   setSystemPanelTab: (value: "overview" | "config" | "scripts" | "runtime" | "data") => void;
   resolveScriptLinkedJob: (payload: Record<string, unknown>) => JobState | null;
-  openModelVersionById: (modelVersionId: string) => void;
-  openProjectContextById: (projectId: string) => void;
-  applyJobContextToWorkbench: (linkedJob: JobState) => void;
-  downloadDatabaseSnapshot: () => Promise<void>;
+  openModelVersionById: (modelVersionId: string) => Promise<WorkbenchOperationResult>;
+  openProjectContextById: (projectId: string) => Promise<WorkbenchOperationResult>;
+  applyJobContextToWorkbench: (linkedJob: JobState) => Promise<WorkbenchOperationResult>;
+  downloadDatabaseSnapshot: () => Promise<WorkbenchDownloadResult>;
 };
 
 export async function handleWorkbenchScriptMacroDataAction({
@@ -119,14 +121,17 @@ export async function handleWorkbenchScriptMacroDataAction({
         if (!linkedJob.model_version_id) {
           throw new Error(copy.linkedVersionMissing);
         }
-        openModelVersionById(linkedJob.model_version_id);
+        const result = await openModelVersionById(linkedJob.model_version_id);
+        if (!result.ok) throw result.error;
       } else if (mode === "project") {
         if (!linkedJob.project_id) {
           throw new Error(copy.linkedProjectMissing);
         }
-        openProjectContextById(linkedJob.project_id);
+        const result = await openProjectContextById(linkedJob.project_id);
+        if (!result.ok) throw result.error;
       } else {
-        applyJobContextToWorkbench(linkedJob);
+        const result = await applyJobContextToWorkbench(linkedJob);
+        if (!result.ok) throw result.error;
       }
 
       return {
@@ -139,7 +144,8 @@ export async function handleWorkbenchScriptMacroDataAction({
       };
     }
     case "data/exportDatabase": {
-      await downloadDatabaseSnapshot();
+      const download = await downloadDatabaseSnapshot();
+      if (!download.ok) throw download.error;
       return { ok: true, action };
     }
     default:

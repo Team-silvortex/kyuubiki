@@ -3,6 +3,7 @@ import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
 import type { SecurityEventWindow } from "@/components/workbench/workbench-types";
 import type { WorkflowSurfaceTab } from "@/components/workbench/workflow/workbench-workflow-types";
 import type { WorkbenchScriptActionLogEntry, WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
+import type { WorkbenchDownloadResult } from "@/components/workbench/workbench-export-controller";
 import type { WorkbenchSecurityAuditRisk, WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
 
 import type { ProtocolAgentDescriptor } from "@/lib/api";
@@ -90,7 +91,7 @@ export type WorkbenchSystemSidebarMountProps = {
   setDirectMeshApiToken: (value: string) => void;
   setShowShortcutHints: (value: boolean) => void;
   setImmersiveGuardrails: (value: boolean) => void;
-  downloadDatabaseSnapshot: () => Promise<void>;
+  downloadDatabaseSnapshot: () => Promise<WorkbenchDownloadResult>;
   scriptActionLog: WorkbenchScriptActionLogEntry[];
   getScriptSnapshot: () => WorkbenchScriptSnapshot;
   scriptRecordingMode: boolean;

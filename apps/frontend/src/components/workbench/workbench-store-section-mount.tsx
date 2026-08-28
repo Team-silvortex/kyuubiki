@@ -419,16 +419,16 @@ function resolveStoreCopy(language: string) {
     stage: zh ? "加入当前项目" : ja ? "プロジェクトに追加" : "Add to project",
     installedBadge: zh ? "已加入" : ja ? "追加済み" : "Added",
     installedAssets: zh ? "项目资产" : ja ? "追加済み資産" : "Project assets",
-    manifestTitle: zh ? "项目 manifest 草稿" : ja ? "manifest 草稿" : "Project manifest draft",
+    manifestTitle: zh ? "项目资产 manifest" : ja ? "プロジェクト資産 manifest" : "Project asset manifest",
     manifestHint: zh
-      ? "先把商店资产写入当前项目的前端 manifest 草稿，后续会迁移到 project bundle/lock。"
+      ? "商店资产随当前项目保存，并自动写入导出的 .kyuubiki 项目包。"
       : ja
-        ? "まず現在のプロジェクト manifest 草稿に保存し、後で bundle/lock に移します。"
-        : "Store assets are staged in a project manifest draft before backend bundle/lock persistence lands.",
+        ? "ストア資産は現在のプロジェクトに保存され、書き出した .kyuubiki バンドルにも自動的に含まれます。"
+        : "Store assets are saved with the current project and included automatically in exported .kyuubiki bundles.",
     manifestEmpty: zh ? "当前项目还没有加入商店资产。" : ja ? "まだ追加済み資産はありません。" : "No store assets added to this project yet.",
     exportManifest: zh ? "导出" : ja ? "書き出し" : "Export",
     remove: zh ? "移除" : ja ? "削除" : "Remove",
-    exported: zh ? "已导出项目商店 manifest 草稿。" : ja ? "manifest 草稿を書き出しました。" : "Exported workspace store manifest draft.",
+    exported: zh ? "已导出项目商店 manifest。" : ja ? "プロジェクトの store manifest を書き出しました。" : "Exported the project Store manifest.",
     selectProjectFirst: zh ? "先选择或创建一个项目，再加入商店资产。" : ja ? "先にプロジェクトを選択してください。" : "Select or create a project before adding store assets.",
     loaded: (count: number) => zh ? `工作区商店已加载：${count} 个资产。` : ja ? `ストアを読み込みました: ${count} 件。` : `Workspace Store loaded ${count} assets.`,
     kindLabel: (kind: AssetStoreEntryKind) => labelForLanguage(
@@ -437,15 +437,15 @@ function resolveStoreCopy(language: string) {
     ),
     installed: (entry: AssetStoreEntry) =>
       zh
-        ? `已把 ${entry.title} 加入当前项目 manifest 草稿。`
+        ? `已把 ${entry.title} 加入当前项目资产 manifest。`
         : ja
-          ? `${entry.title} を現在の manifest 草稿へ追加しました。`
-          : `Added ${entry.title} to the current project manifest draft.`,
+          ? `${entry.title} を現在のプロジェクト資産 manifest へ追加しました。`
+          : `Added ${entry.title} to the current project asset manifest.`,
     removed: (title: string) =>
       zh
-        ? `已从当前项目 manifest 草稿移除 ${title}。`
+        ? `已从当前项目资产 manifest 移除 ${title}。`
         : ja
-          ? `${title} を manifest 草稿から削除しました。`
-          : `Removed ${title} from the current project manifest draft.`,
+          ? `${title} をプロジェクト資産 manifest から削除しました。`
+          : `Removed ${title} from the current project asset manifest.`,
   };
 }
