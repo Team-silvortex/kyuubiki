@@ -19,7 +19,8 @@
       "remote_agent_orchestra_round_trip/installer-managed-linux",
       "upgrade_and_rollback/agent-remote-linux",
       "upgrade_and_rollback/runtime-payload-remote-linux",
-      "upgrade_and_rollback/installer-managed-fleet-remote-linux"
+      "upgrade_and_rollback/installer-managed-fleet-remote-linux",
+      "upgrade_and_rollback/live-agent-rolling-replacement-remote-linux"
     ],
     "unclosed_release_tiers": [
       "packaged_desktop_round_trip",
@@ -256,6 +257,12 @@
           "check-fleet-update-operational-qualification",
           "--verify-report",
           "releases/usability-evidence/2.17.0/fleet-update-operational-qualification.json",
+          "--require-remote-linux"
+        ],
+        [
+          "check-agent-rolling-replacement-operational-qualification",
+          "--verify-report",
+          "releases/usability-evidence/2.17.0/agent-rolling-replacement-operational-qualification.json",
           "--require-remote-linux"
         ]
       ]

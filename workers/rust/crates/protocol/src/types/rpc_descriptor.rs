@@ -1,9 +1,9 @@
 use crate::{RPC_VERSION, SOLVER_RPC_PROTOCOL};
 
 use super::rpc::{
-    AgentClusterDescriptor, AgentControlLinkDescriptor, AgentDescriptor, CapabilityDescriptor,
-    RpcMethod, RpcProtocolDescriptor, RuntimeAuthorityDescriptor, RuntimeEngineDescriptor,
-    TransportDescriptor,
+    AgentClusterDescriptor, AgentControlLinkDescriptor, AgentDescriptor, AgentLifecycleDescriptor,
+    CapabilityDescriptor, RpcMethod, RpcProtocolDescriptor, RuntimeAuthorityDescriptor,
+    RuntimeEngineDescriptor, TransportDescriptor,
 };
 
 impl RpcProtocolDescriptor {
@@ -19,6 +19,9 @@ impl RpcProtocolDescriptor {
             methods: vec![
                 RpcMethod::Ping,
                 RpcMethod::DescribeAgent,
+                RpcMethod::BeginAgentDrain,
+                RpcMethod::DescribeAgentLifecycle,
+                RpcMethod::ResumeAgentAdmission,
                 RpcMethod::RunOperatorTaskIr,
                 RpcMethod::SolveBar1d,
                 RpcMethod::SolveAcousticBar1d,
@@ -380,6 +383,9 @@ impl AgentDescriptor {
                     methods: vec![
                         RpcMethod::Ping,
                         RpcMethod::DescribeAgent,
+                        RpcMethod::BeginAgentDrain,
+                        RpcMethod::DescribeAgentLifecycle,
+                        RpcMethod::ResumeAgentAdmission,
                         RpcMethod::RunOperatorTaskIr,
                         RpcMethod::ReleaseOperatorPackageJob,
                         RpcMethod::CancelJob,
@@ -387,6 +393,8 @@ impl AgentDescriptor {
                     tags: vec![
                         "control".to_string(),
                         "general".to_string(),
+                        "agent-drain-v1".to_string(),
+                        "host-loopback-mutation-v1".to_string(),
                         "operator-task-admission-v1".to_string(),
                     ],
                 },
@@ -405,6 +413,7 @@ impl AgentDescriptor {
                 peers: vec![],
             },
             control_plane_link: AgentControlLinkDescriptor::default(),
+            lifecycle: AgentLifecycleDescriptor::default(),
             authority: RuntimeAuthorityDescriptor {
                 control_mode: "standalone".to_string(),
                 authority_mode: "self_directed".to_string(),

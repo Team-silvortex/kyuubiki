@@ -31,9 +31,13 @@ cargo run -p kyuubiki-installer -- remote-deployment-dry-run
 cargo run -p kyuubiki-installer -- remote-host-trust
 cargo run -p kyuubiki-installer -- remote-ssh-fixture
 cargo run -p kyuubiki-installer -- remote-ssh-fixture-plan
-./scripts/kyuubiki qualify-fleet-update-operational-remote --host kyuubiki-lab --agents 2
+./scripts/kyuubiki qualify-fleet-update-operational-remote --host lab-host --agents 2
 ./scripts/kyuubiki check-fleet-update-operational-qualification \
   --verify-report releases/usability-evidence/2.17.0/fleet-update-operational-qualification.json \
+  --require-remote-linux
+./scripts/kyuubiki qualify-agent-rolling-replacement-operational-remote --host lab-host
+./scripts/kyuubiki check-agent-rolling-replacement-operational-qualification \
+  --verify-report releases/usability-evidence/2.17.0/agent-rolling-replacement-operational-qualification.json \
   --require-remote-linux
 ```
 
@@ -51,6 +55,17 @@ local command shape only; it does not open sockets and is the bridge toward a
 containerized sshd fixture. The fixture-plan command points to the manual
 Docker scaffold and the ignored runtime paths for throwaway keys and known-host
 files.
+
+The rolling-replacement qualification is the live-service companion to the
+static fleet transaction. It starts two isolated Rust Agents, drains and
+replaces them one at a time, executes a solver probe on the peer during each
+replacement window, fences stale drain owners, requires a changed process
+identity, and retains only a path-free report after cleaning the remote run
+root. Lifecycle mutations are accepted only from an operating-system-confirmed
+loopback peer, so the managed SSH boundary places Installer on the Agent host;
+the ordinary remote solver socket cannot drain or resume the process. It proves
+the two-Agent Linux journey, not packaged desktop rollback or a production
+scheduler-wide availability guarantee.
 
 This document explains:
 

@@ -136,6 +136,11 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
     )?;
     assert_includes(
         &string_array_at(surface, "/runtime_api/stable_commands"),
+        "./scripts/kyuubiki check-agent-rolling-replacement-operational-qualification",
+        "stable command",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/stable_commands"),
         "./scripts/kyuubiki check-installed-runtime-operational-qualification",
         "stable command",
     )?;

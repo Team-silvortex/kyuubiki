@@ -14,11 +14,12 @@ use kyuubiki_installer::{
     managed_operator_package_status_in, operator_package_preflight, parse_platform,
     prepare_agent_update_package, prepare_layout, prepare_staged_update, print_help,
     remote_deployment_roadmap, repair_installation, rollback_agent_update,
-    rollback_runtime_payload, run_agent_solver_operational_qualification,
-    run_agent_update_qualification, run_doctor, run_fleet_update_qualification,
-    run_runtime_payload_qualification, runtime_payload_status, seal_agent_update_package,
-    seal_runtime_payload, stage_release, unified_update_plan, unified_update_preview,
-    uninstall_operator_package, uninstall_operator_package_from, validate_env_file,
+    rollback_runtime_payload, run_agent_rolling_qualification,
+    run_agent_solver_operational_qualification, run_agent_update_qualification, run_doctor,
+    run_fleet_update_qualification, run_runtime_payload_qualification, runtime_payload_status,
+    seal_agent_update_package, seal_runtime_payload, stage_release, unified_update_plan,
+    unified_update_preview, uninstall_operator_package, uninstall_operator_package_from,
+    validate_env_file, write_agent_rolling_qualification_report,
     write_agent_solver_operational_qualification_report, write_agent_update_qualification_report,
     write_fleet_update_qualification_report, write_operator_package_preflight_outcome,
     write_runtime_payload_qualification_report,
@@ -225,6 +226,9 @@ fn main() {
         }
         "qualify-fleet-update" => {
             exit_on_err(run_fleet_update_qualification_command(args.collect()))
+        }
+        "qualify-agent-rolling-replacement" => {
+            exit_on_err(run_agent_rolling_qualification_command(args.collect()))
         }
         "install-runtime-payload" => {
             let Some(path) = args.next() else {
@@ -466,6 +470,33 @@ fn run_fleet_update_qualification_command(args: Vec<String>) -> Result<String, S
             write_fleet_update_qualification_report(&report, &path)?;
             Ok(format!(
                 "fleet update qualification passed: {}",
+                path.display()
+            ))
+        }
+        None => serde_json::to_string_pretty(&report).map_err(|error| error.to_string()),
+    })
+}
+
+fn run_agent_rolling_qualification_command(args: Vec<String>) -> Result<String, String> {
+    if !(5..=6).contains(&args.len()) {
+        return Err(
+            "qualify-agent-rolling-replacement requires first-binary second-binary work-root first-version second-version [out]"
+                .to_string(),
+        );
+    }
+    let output = args.get(5).map(PathBuf::from);
+    run_agent_rolling_qualification(
+        &PathBuf::from(&args[0]),
+        &PathBuf::from(&args[1]),
+        &PathBuf::from(&args[2]),
+        &args[3],
+        &args[4],
+    )
+    .and_then(|report| match output {
+        Some(path) => {
+            write_agent_rolling_qualification_report(&report, &path)?;
+            Ok(format!(
+                "Agent rolling replacement qualification passed: {}",
                 path.display()
             ))
         }

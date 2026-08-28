@@ -33,6 +33,39 @@ fn agent_rejects_invalid_rpc_request_ids_before_dispatch() {
 }
 
 #[test]
+fn remote_peer_cannot_mutate_agent_lifecycle() {
+    for method in [RpcMethod::BeginAgentDrain, RpcMethod::ResumeAgentAdmission] {
+        let AgentReply::Stream(_, response) = handle_request_from_peer(
+            RpcRequest {
+                rpc_version: RPC_VERSION,
+                id: "remote-lifecycle-mutation".to_string(),
+                method,
+                params: serde_json::json!({}),
+            },
+            None,
+            false,
+        );
+        let error = response.error.expect("remote mutation must fail closed");
+        assert_eq!(error.code, "agent_lifecycle_control_requires_loopback");
+    }
+
+    let AgentReply::Stream(_, response) = handle_request_from_peer(
+        RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "remote-lifecycle-describe".to_string(),
+            method: RpcMethod::DescribeAgentLifecycle,
+            params: serde_json::json!({}),
+        },
+        None,
+        false,
+    );
+    assert!(
+        response.ok,
+        "remote read-only lifecycle inspection is allowed"
+    );
+}
+
+#[test]
 fn formats_events_for_machine_consumption() {
     let mut event = ProgressEvent::new("job-1", JobStatus::Solving, 0.5);
     event.iteration = Some(2);

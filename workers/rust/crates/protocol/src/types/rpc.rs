@@ -38,6 +38,10 @@ pub struct AgentClusterDescriptor {
 }
 
 pub const AGENT_CONTROL_LINK_SCHEMA: &str = "kyuubiki.agent-control-link/v1";
+pub const AGENT_LIFECYCLE_SCHEMA: &str = "kyuubiki.agent-lifecycle/v1";
+pub const AGENT_DRAIN_CONTROLLER_ID_MAX_BYTES: usize = 256;
+pub const AGENT_DRAIN_REASON_MAX_BYTES: usize = 512;
+pub const AGENT_PROCESS_INSTANCE_ID_MAX_BYTES: usize = 256;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AgentControlLinkDescriptor {
@@ -72,6 +76,41 @@ impl Default for AgentControlLinkDescriptor {
             last_failure_code: None,
             last_failure_message: None,
             next_retry_delay_ms: 0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AgentLifecycleDescriptor {
+    pub schema_version: String,
+    pub process_instance_id: String,
+    pub mutation_control_scope: String,
+    pub state: String,
+    pub drain_generation: u64,
+    pub accepting_new_work: bool,
+    pub active_execution_count: usize,
+    pub quiescent: bool,
+    pub safe_to_replace: bool,
+    pub drain_owner_id: Option<String>,
+    pub drain_reason: Option<String>,
+    pub drain_started_unix_ms: Option<u128>,
+}
+
+impl Default for AgentLifecycleDescriptor {
+    fn default() -> Self {
+        Self {
+            schema_version: AGENT_LIFECYCLE_SCHEMA.to_string(),
+            process_instance_id: "descriptor-default".to_string(),
+            mutation_control_scope: "host_loopback".to_string(),
+            state: "accepting".to_string(),
+            drain_generation: 0,
+            accepting_new_work: true,
+            active_execution_count: 0,
+            quiescent: false,
+            safe_to_replace: false,
+            drain_owner_id: None,
+            drain_reason: None,
+            drain_started_unix_ms: None,
         }
     }
 }
@@ -114,6 +153,8 @@ pub struct AgentDescriptor {
     pub runtime: AgentClusterDescriptor,
     #[serde(default)]
     pub control_plane_link: AgentControlLinkDescriptor,
+    #[serde(default)]
+    pub lifecycle: AgentLifecycleDescriptor,
     pub authority: RuntimeAuthorityDescriptor,
     pub engine: RuntimeEngineDescriptor,
 }
@@ -125,6 +166,12 @@ pub enum RpcMethod {
     Ping,
     #[serde(rename = "describe_agent")]
     DescribeAgent,
+    #[serde(rename = "begin_agent_drain")]
+    BeginAgentDrain,
+    #[serde(rename = "describe_agent_lifecycle")]
+    DescribeAgentLifecycle,
+    #[serde(rename = "resume_agent_admission")]
+    ResumeAgentAdmission,
     #[serde(rename = "run_operator_task_ir")]
     RunOperatorTaskIr,
     #[serde(rename = "solve_bar_1d")]
@@ -273,6 +320,18 @@ pub struct RpcResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CancelJobRequest {
     pub job_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BeginAgentDrainRequest {
+    pub controller_id: String,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ResumeAgentAdmissionRequest {
+    pub controller_id: String,
+    pub drain_generation: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

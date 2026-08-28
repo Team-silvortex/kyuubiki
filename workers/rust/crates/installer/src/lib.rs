@@ -5,6 +5,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod agent_lifecycle_control;
+mod agent_replacement;
+mod agent_rolling_process;
+mod agent_rolling_qualification;
+mod agent_rolling_qualification_validation;
 mod agent_solver_operational;
 mod agent_solver_operational_validation;
 mod agent_update_payload;

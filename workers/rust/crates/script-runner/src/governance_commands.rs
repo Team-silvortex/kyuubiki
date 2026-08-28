@@ -1,10 +1,10 @@
 use crate::{
-    agent_control_link_operational_qualification, agent_solver_operational_qualification,
-    agent_update_operational_qualification, benchmark_qualification, central_database_readiness,
-    central_readiness_report, central_store_contract, commercial_readiness,
-    component_integrity_protocol, contracts_runtime_api_surface,
-    contracts_validation_qualification, dependency_audit, desktop_deployment_update_validation,
-    desktop_ui_validation, desktop_usability_journeys,
+    agent_control_link_operational_qualification, agent_rolling_operational_qualification,
+    agent_solver_operational_qualification, agent_update_operational_qualification,
+    benchmark_qualification, central_database_readiness, central_readiness_report,
+    central_store_contract, commercial_readiness, component_integrity_protocol,
+    contracts_runtime_api_surface, contracts_validation_qualification, dependency_audit,
+    desktop_deployment_update_validation, desktop_ui_validation, desktop_usability_journeys,
     distributed_task_recovery_operational_qualification, doc_inventory, docs_book,
     fleet_update_operational_qualification, frontend_checks, gui_runtime_capability_contract,
     headless_sdk_operational, headless_sdk_validation, headless_workflow_qualification,
@@ -224,6 +224,9 @@ pub(crate) fn run_governance_command(
         }
         "check-fleet-update-operational-qualification" => {
             fleet_update_operational_qualification::run_check(root, args)
+        }
+        "check-agent-rolling-replacement-operational-qualification" => {
+            agent_rolling_operational_qualification::run_check(root, args)
         }
         "check-headless-sdk-validation-qualification" => {
             headless_sdk_validation::run_check_headless_sdk_validation(root, args)

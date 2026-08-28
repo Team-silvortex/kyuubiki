@@ -131,8 +131,28 @@ small report is retained. Evidence lives at
 and is rechecked by
 `./scripts/kyuubiki check-fleet-update-operational-qualification --verify-report releases/usability-evidence/2.17.0/fleet-update-operational-qualification.json --require-remote-linux`.
 This closes `upgrade_and_rollback/installer-managed-fleet-remote-linux`, not the
-parent tier: packaged desktop rollback on all supported platforms and live
-workload continuity during rolling replacement remain open.
+parent tier: packaged desktop rollback on all supported platforms remains open.
+
+Live workload continuity during Agent replacement now has its own retained
+remote Linux qualification. Each Rust Agent exposes a fenced admission lifecycle
+with an exact active-execution count and immutable process-instance identity.
+Lifecycle mutation is fail-closed to an operating-system-confirmed loopback
+peer; remote callers may inspect state but cannot drain or resume an Agent over
+the unauthenticated solver socket. Installer therefore executes the replacement
+controller on the target host through the managed SSH boundary.
+Installer drains one of two Agents to quiescence, replaces its binary, requires
+a new accepting process identity, and repeats for the peer. During both
+replacement windows the other Agent completes a real bar solve; initial and
+final probes prove the complete two-node fleet remains executable. The run also
+requires changed payload digests and removes its isolated remote work root.
+Evidence lives at
+`releases/usability-evidence/2.17.0/agent-rolling-replacement-operational-qualification.json`
+and is rechecked by
+`./scripts/kyuubiki check-agent-rolling-replacement-operational-qualification --verify-report releases/usability-evidence/2.17.0/agent-rolling-replacement-operational-qualification.json --require-remote-linux`.
+This closes only
+`upgrade_and_rollback/live-agent-rolling-replacement-remote-linux`; the parent
+upgrade tier remains open until packaged desktop update and rollback are proven
+on every required platform.
 
 The first Installer-managed end-to-end runtime subtier is now operational on
 remote Linux. A sealed installed payload starts Orchestra and two Rust Agents

@@ -54,7 +54,7 @@ use crate::agent_state::{
 };
 use crate::operator_task_runtime::run_operator_task_ir;
 use crate::transport::{AgentReply, HeartbeatHandle};
-use crate::{agent_fault_injection, agent_watchdog};
+use crate::{agent_fault_injection, agent_lifecycle};
 
 pub(crate) fn handle_request(
     request: RpcRequest,
@@ -81,6 +81,9 @@ pub(crate) fn handle_request(
             Vec::new(),
             RpcResponse::success(request.id, agent_descriptor_payload()),
         ),
+        RpcMethod::BeginAgentDrain => crate::agent_lifecycle_rpc::handle_begin_drain(request),
+        RpcMethod::DescribeAgentLifecycle => crate::agent_lifecycle_rpc::handle_describe(request),
+        RpcMethod::ResumeAgentAdmission => crate::agent_lifecycle_rpc::handle_resume(request),
         RpcMethod::CancelJob => crate::operator_package_job_runtime::handle_cancel_job(request),
         RpcMethod::ReleaseOperatorPackageJob => {
             crate::operator_package_job_runtime::handle_release_job(request)
@@ -551,19 +554,30 @@ pub(crate) fn handle_request(
     }
 }
 
+pub(crate) fn handle_request_from_peer(
+    request: RpcRequest,
+    writer: Option<Arc<Mutex<TcpStream>>>,
+    peer_is_loopback: bool,
+) -> AgentReply {
+    if !peer_is_loopback && crate::agent_lifecycle_rpc::is_mutation(&request.method) {
+        return crate::agent_lifecycle_rpc::reject_non_loopback_mutation(request.id);
+    }
+    handle_request(request, writer)
+}
+
 fn handle_operator_task_ir(
     request: RpcRequest,
     writer: Option<Arc<Mutex<TcpStream>>>,
 ) -> AgentReply {
     let request_id = request.id;
     let maybe_job_id = extract_job_id(&request.params);
-    let guard = match agent_watchdog::begin_execution(
+    let guard = match agent_lifecycle::begin_execution(
         request_id.clone(),
         maybe_job_id.clone(),
         "run_operator_task_ir".to_string(),
     ) {
         Ok(guard) => guard,
-        Err(error) => return watchdog_admission_error(request_id, error),
+        Err(error) => return execution_admission_error(request_id, error),
     };
     let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
         writer.clone().map(|shared_writer| {
@@ -581,7 +595,7 @@ fn handle_operator_task_ir(
         Ok(result) => result,
         Err(error) => {
             stop_heartbeat(heartbeat);
-            let report = agent_watchdog::fail_execution(guard, error.code, error.message);
+            let report = agent_lifecycle::fail_execution(guard, error.code, error.message);
             let mut details =
                 serde_json::to_value(report).expect("failure report should serialize");
             details["operator_task_failure_receipt"] = error.details;
@@ -598,7 +612,7 @@ fn handle_operator_task_ir(
     {
         stop_heartbeat(heartbeat);
         let report =
-            agent_watchdog::fail_execution(guard, "cancelled", "operator task was cancelled");
+            agent_lifecycle::fail_execution(guard, "cancelled", "operator task was cancelled");
         let reason_code = report.reason_code.clone();
         return AgentReply::Stream(
             Vec::new(),
@@ -612,7 +626,7 @@ fn handle_operator_task_ir(
     }
 
     stop_heartbeat(heartbeat);
-    agent_watchdog::complete_execution(guard);
+    agent_lifecycle::complete_execution(guard);
     AgentReply::Stream(Vec::new(), RpcResponse::success(request_id, result))
 }
 
@@ -634,13 +648,13 @@ where
     let method = rpc_method_name(&request.method);
     let maybe_job_id = extract_job_id(&request.params);
     let externalize_result = request.params.get("model_artifact_ref").is_some();
-    let guard = match agent_watchdog::begin_execution(
+    let guard = match agent_lifecycle::begin_execution(
         request_id.clone(),
         maybe_job_id.clone(),
         method.clone(),
     ) {
         Ok(guard) => guard,
-        Err(error) => return watchdog_admission_error(request_id, error),
+        Err(error) => return execution_admission_error(request_id, error),
     };
 
     let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
@@ -659,7 +673,8 @@ where
         Ok(params) => params,
         Err(error) => {
             stop_heartbeat(heartbeat);
-            let report = agent_watchdog::fail_execution(guard, "invalid_params", error.to_string());
+            let report =
+                agent_lifecycle::fail_execution(guard, "invalid_params", error.to_string());
             return AgentReply::Stream(
                 Vec::new(),
                 RpcResponse::error_with_details(
@@ -678,7 +693,7 @@ where
                 if take_cancelled(job_id) {
                     stop_heartbeat(heartbeat);
                     let report =
-                        agent_watchdog::fail_execution(guard, "cancelled", "job was cancelled");
+                        agent_lifecycle::fail_execution(guard, "cancelled", "job was cancelled");
                     let reason_code = report.reason_code.clone();
                     return AgentReply::Stream(
                         Vec::new(),
@@ -703,7 +718,7 @@ where
                 Err(error) => {
                     stop_heartbeat(heartbeat);
                     let report =
-                        agent_watchdog::fail_execution(guard, "result_transport_failed", error);
+                        agent_lifecycle::fail_execution(guard, "result_transport_failed", error);
                     return AgentReply::Stream(
                         Vec::new(),
                         RpcResponse::error_with_details(
@@ -718,7 +733,7 @@ where
             let progress_frames =
                 build_progress_frames(model_name, &request_id, node_count(&params));
             stop_heartbeat(heartbeat);
-            agent_watchdog::complete_execution(guard);
+            agent_lifecycle::complete_execution(guard);
             AgentReply::Stream(
                 progress_frames,
                 RpcResponse::success(request_id, encoded_result),
@@ -726,7 +741,7 @@ where
         }
         Err(error) => {
             stop_heartbeat(heartbeat);
-            let report = agent_watchdog::fail_execution(guard, "solve_failed", error);
+            let report = agent_lifecycle::fail_execution(guard, "solve_failed", error);
             AgentReply::Stream(
                 Vec::new(),
                 RpcResponse::error_with_details(
@@ -746,9 +761,9 @@ fn stop_heartbeat(heartbeat: Option<HeartbeatHandle>) {
     }
 }
 
-fn watchdog_admission_error(
+fn execution_admission_error(
     request_id: String,
-    error: agent_watchdog::ExecutionAdmissionError,
+    error: agent_lifecycle::ExecutionAdmissionError,
 ) -> AgentReply {
     AgentReply::Stream(
         Vec::new(),
@@ -756,7 +771,7 @@ fn watchdog_admission_error(
             request_id,
             error.reason_code.clone(),
             error.message.clone(),
-            serde_json::to_value(error).expect("watchdog admission error should serialize"),
+            serde_json::to_value(error).expect("execution admission error should serialize"),
         ),
     )
 }

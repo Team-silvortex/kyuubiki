@@ -1,3 +1,4 @@
+mod agent_lifecycle;
 mod agent_solver_qualification;
 mod analysis;
 mod artifact_transport;
@@ -32,6 +33,7 @@ mod types {
     pub mod transport_results;
 }
 
+pub use agent_lifecycle::{AgentLifecycleValidationError, validate_agent_lifecycle_descriptor};
 pub use agent_solver_qualification::{
     AGENT_SOLVER_QUALIFICATION_EXPECTED_TIP_DISPLACEMENT, AGENT_SOLVER_QUALIFICATION_OPERATOR_ID,
     AGENT_SOLVER_QUALIFICATION_SCHEMA, AgentSolverQualificationSummary,

@@ -7,6 +7,7 @@ use std::time::SystemTime;
 
 mod agent_control_link_operational_qualification;
 mod agent_registry_sync;
+mod agent_rolling_operational_qualification;
 mod agent_solver_operational_qualification;
 mod agent_update_operational_qualification;
 mod beam_frame_release_evidence;
@@ -419,6 +420,9 @@ fn run() -> RunnerResult<u8> {
         }
         "qualify-fleet-update-operational-remote" => {
             fleet_update_operational_qualification::run_qualify_remote(&paths.root, rest)
+        }
+        "qualify-agent-rolling-replacement-operational-remote" => {
+            agent_rolling_operational_qualification::run_qualify_remote(&paths.root, rest)
         }
         "qualify-headless-sdk-operational-remote" => {
             headless_sdk_operational::run_qualify_headless_sdk_operational_remote(&paths.root, rest)

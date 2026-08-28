@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/agent-rolling-replacement-qualification-report.schema.json",
+  "title": "Kyuubiki Agent Rolling Replacement Qualification Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "journey",
+    "execution_host_role",
+    "platform",
+    "first_version",
+    "second_version",
+    "first_binary_sha256",
+    "second_binary_sha256",
+    "agent_count",
+    "initial_instances",
+    "replacements",
+    "final_instances",
+    "execution_probes",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.agent-rolling-replacement-qualification/v1"
+    },
+    "status": { "const": "pass" },
+    "journey": {
+      "const": "installer-managed-two-agent-live-rolling-replacement"
+    },
+    "execution_host_role": {
+      "type": "string",
+      "pattern": "^(local|remote)-(macos|linux|windows)-qualification-host$"
+    },
+    "platform": { "enum": ["macos", "linux", "windows"] },
+    "first_version": { "$ref": "#/$defs/version" },
+    "second_version": { "$ref": "#/$defs/version" },
+    "first_binary_sha256": { "$ref": "#/$defs/digest" },
+    "second_binary_sha256": { "$ref": "#/$defs/digest" },
+    "agent_count": { "const": 2 },
+    "initial_instances": { "$ref": "#/$defs/instances" },
+    "replacements": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "$ref": "#/$defs/replacement" }
+    },
+    "final_instances": { "$ref": "#/$defs/instances" },
+    "execution_probes": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": { "$ref": "#/$defs/probe" }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "items": { "$ref": "#/$defs/check" }
+    }
+  },
+  "$defs": {
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "node_id": {
+      "enum": ["agent-01", "agent-02"]
+    },
+    "instance_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[A-Za-z0-9._:/-]+$"
+    },
+    "instance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "process_instance_id",
+        "binary_sha256",
+        "accepting_new_work"
+      ],
+      "properties": {
+        "node_id": { "$ref": "#/$defs/node_id" },
+        "process_instance_id": { "$ref": "#/$defs/instance_id" },
+        "binary_sha256": { "$ref": "#/$defs/digest" },
+        "accepting_new_work": { "const": true }
+      }
+    },
+    "instances": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "$ref": "#/$defs/instance" }
+    },
+    "replacement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "node_id",
+        "controller_id",
+        "drain_generation",
+        "previous_process_instance_id",
+        "active_process_instance_id",
+        "quiescent_observed",
+        "replacement_verified"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.agent-replacement-receipt/v1"
+        },
+        "node_id": { "$ref": "#/$defs/node_id" },
+        "controller_id": { "const": "installer-rolling-qualification" },
+        "drain_generation": { "type": "integer", "minimum": 1 },
+        "previous_process_instance_id": { "$ref": "#/$defs/instance_id" },
+        "active_process_instance_id": { "$ref": "#/$defs/instance_id" },
+        "quiescent_observed": { "const": true },
+        "replacement_verified": { "const": true }
+      }
+    },
+    "probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase",
+        "node_id",
+        "success",
+        "max_stress",
+        "tip_displacement"
+      ],
+      "properties": {
+        "phase": {
+          "enum": [
+            "initial",
+            "during-agent-01-replacement",
+            "during-agent-02-replacement",
+            "final"
+          ]
+        },
+        "node_id": { "$ref": "#/$defs/node_id" },
+        "success": { "const": true },
+        "max_stress": { "type": "number" },
+        "tip_displacement": { "type": "number" }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ok"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "ok": { "const": true }
+      }
+    }
+  }
+}

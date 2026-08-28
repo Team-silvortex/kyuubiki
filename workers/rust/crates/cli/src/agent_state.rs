@@ -16,7 +16,7 @@ use crate::operator_task_runtime::{
     operator_package_runtime_snapshot, operator_package_runtime_snapshot_for_config,
     operator_task_execution_reliability_snapshot,
 };
-use crate::{agent_fault_injection, agent_watchdog};
+use crate::{agent_fault_injection, agent_lifecycle, agent_watchdog};
 
 pub(crate) fn agent_descriptor() -> AgentDescriptor {
     runtime_descriptor()
@@ -159,6 +159,7 @@ pub(crate) fn registration_payload(config: &AgentConfig) -> serde_json::Value {
         "deployment_readiness": build_agent_deployment_readiness_for_config(config),
         "health_score": descriptor.runtime.health_score,
         "watchdog": agent_watchdog::snapshot(),
+        "lifecycle": agent_lifecycle::snapshot(),
         "fault_injection": agent_fault_injection::snapshot(),
         "control_plane_link": agent_control_link::snapshot()
     })
@@ -187,6 +188,11 @@ pub(crate) fn agent_descriptor_payload() -> serde_json::Value {
             "watchdog".to_string(),
             serde_json::to_value(agent_watchdog::snapshot())
                 .expect("agent watchdog snapshot should serialize"),
+        );
+        object.insert(
+            "lifecycle".to_string(),
+            serde_json::to_value(agent_lifecycle::snapshot())
+                .expect("agent lifecycle snapshot should serialize"),
         );
         object.insert(
             "fault_injection".to_string(),

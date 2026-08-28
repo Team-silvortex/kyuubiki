@@ -127,6 +127,8 @@ lab remote-ssh-fixture\n  \
   qualify-runtime-payload-operational-remote\n  \
   check-fleet-update-operational-qualification\n  \
   qualify-fleet-update-operational-remote\n  \
+  check-agent-rolling-replacement-operational-qualification\n  \
+  qualify-agent-rolling-replacement-operational-remote\n  \
   qualify-headless-sdk-operational-remote\n  \
   check-headless-sdk-validation-qualification\n  \
   check-headless-sdk-operational-qualification\n  \

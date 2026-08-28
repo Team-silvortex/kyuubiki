@@ -1,3 +1,19 @@
+pub use crate::agent_lifecycle_control::{
+    AgentLifecycleClient, AgentLifecycleControl, AgentLifecycleControlError,
+};
+pub use crate::agent_replacement::{
+    AGENT_REPLACEMENT_RECEIPT_SCHEMA_VERSION, AgentReplacementFailure, AgentReplacementReceipt,
+    replace_agent_with_drain,
+};
+pub use crate::agent_rolling_qualification::{
+    AGENT_ROLLING_QUALIFICATION_SCHEMA_VERSION, AgentRollingExecutionProbe,
+    AgentRollingInstanceObservation, AgentRollingQualificationCheck,
+    AgentRollingQualificationReport, run_agent_rolling_qualification,
+    write_agent_rolling_qualification_report,
+};
+pub use crate::agent_rolling_qualification_validation::{
+    AgentRollingQualificationSummary, validate_agent_rolling_qualification_report,
+};
 pub use crate::agent_solver_operational::{
     AGENT_SOLVER_OPERATIONAL_QUALIFICATION_SCHEMA_VERSION,
     AgentSolverOperationalQualificationReport, run_agent_solver_operational_qualification,
