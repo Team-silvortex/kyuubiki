@@ -1,6 +1,6 @@
 "use client";
 
-import { lazy, Suspense, useEffect, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useRef, type ReactNode } from "react";
 import {
   type WorkbenchUiChunkId,
 } from "@/components/workbench/workbench-ui-streaming";
@@ -32,13 +32,20 @@ const WorkbenchMainViewportPanelMount = lazy(() =>
 type WorkbenchMainShellMountProps = Record<string, any>;
 
 export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
+  const getScriptSnapshotRef = useRef(props.getScriptSnapshot);
+  const invokeScriptActionRef = useRef(props.invokeScriptAction);
+  getScriptSnapshotRef.current = props.getScriptSnapshot;
+  invokeScriptActionRef.current = props.invokeScriptAction;
+  const bridgeReady = typeof props.getScriptSnapshot === "function" && typeof props.invokeScriptAction === "function";
+
   useEffect(() => {
-    if (!props.getScriptSnapshot || !props.invokeScriptAction) return undefined;
+    if (!bridgeReady) return undefined;
     return installWorkbenchPwdtBrowserBridge({
-      getSnapshot: props.getScriptSnapshot,
-      invokeAction: props.invokeScriptAction,
+      getSnapshot: () => getScriptSnapshotRef.current(),
+      invokeAction: (action, payload, source, note) =>
+        invokeScriptActionRef.current(action, payload, source, note),
     });
-  }, [props.getScriptSnapshot, props.invokeScriptAction]);
+  }, [bridgeReady]);
 
   return (
     <>

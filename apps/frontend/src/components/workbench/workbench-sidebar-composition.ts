@@ -73,6 +73,7 @@ export function buildWorkbenchSidebarComposition(props: WorkbenchSidebarComposit
     librarySampleRows: studyResultDerived.librarySampleRows,
     projects: workspaceState.projects,
     selectedProjectId: workspaceState.selectedProjectId,
+    storeBackendService: props.storeBackendService,
     setSelectedProjectId: workspaceState.setSelectedProjectId,
     setSelectedModelId: workspaceState.setSelectedModelId,
     projectNameDraft: workspaceState.projectNameDraft,

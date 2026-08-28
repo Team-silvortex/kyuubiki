@@ -24,6 +24,8 @@ export function useWorkbenchInteractionControllers(props: Record<string, any>) {
     sidebarSection: props.sidebarSection,
     studyTab: props.studyTab,
     modelTab: props.modelTab,
+    modelToolsPage: props.modelToolsPage,
+    workflowPanelTab: props.workflowPanelTab,
     libraryTab: props.libraryTab,
     systemPanelTab: props.systemPanelTab,
     systemDataTab: props.systemDataTab,

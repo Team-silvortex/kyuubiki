@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Cross-shell desktop UI qualification evidence covering observable actions, capability routing, PWDT parity, layout priority, reversible navigation, live Workbench chunk mounting, controlled Model, System, and Library navigation, Store request ownership, and persisted-session recovery.",
+  "summary": "Cross-shell desktop UI qualification evidence covering observable actions, capability routing, PWDT parity, layout priority, reversible navigation, live Workbench chunk mounting, controlled Model, System, and Library navigation, Store request ownership and command closure, no-click PWDT Store/Workflow navigation, and persisted-session recovery.",
   "paradigm_contract_evidence": {
     "validation": [
       {
@@ -39,6 +39,8 @@
           "Workbench System navigation preserves controlled state across deep page round trips",
           "Workbench Library navigation mounts every primary and secondary page without client errors",
           "Workbench Store ignores stale responses after the active kind changes",
+          "Workbench Pwdt stages, exports, and removes Store assets through shared commands",
+          "Workbench Pwdt opens Store and round-trips every Workflow surface without DOM clicks",
           "Workbench Pwdt preserves hydrated script and DSL sessions"
         ]
       },
@@ -94,8 +96,8 @@
       ],
       "required_text": [
         "\"status\": \"pass\"",
-        "\"tests\": 31",
-        "\"passed\": 31",
+        "\"tests\": 33",
+        "\"passed\": 33",
         "\"failed_actions\": 0",
         "\"missing_actions\": 0",
         "\"actions\": 43",
@@ -109,6 +111,8 @@
         "\"id\": \"workbench-system-navigation-closure\"",
         "\"id\": \"workbench-library-navigation-closure\"",
         "\"id\": \"workbench-store-request-ownership\"",
+        "\"id\": \"workbench-pwdt-store-command-closure\"",
+        "\"id\": \"workbench-pwdt-store-workflow-navigation-closure\"",
         "\"id\": \"workbench-pwdt-session-recovery\""
       ]
     },

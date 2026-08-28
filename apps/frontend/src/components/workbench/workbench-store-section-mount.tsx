@@ -2,28 +2,36 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  fetchAssetStore,
   type AssetStoreEntry,
   type AssetStoreEntryKind,
   type AssetStorePayload,
 } from "@/lib/api";
 import { downloadTextFile } from "@/components/workbench/workbench-file-helpers";
 import {
-  addManifestEntry,
   blankWorkspaceStoreManifest,
   manifestForSelectedProject,
   manifestEntryKey,
-  persistWorkspaceStoreManifest,
   readWorkspaceStoreManifestResult,
-  removeManifestEntry,
+  STORE_MANIFEST_CHANGED_EVENT,
   type WorkspaceStoreManifestEntry,
 } from "@/lib/workbench/store-manifest";
+import {
+  buildWorkspaceStoreManifestExport,
+  removeWorkspaceStoreEntry,
+  stageWorkspaceStoreEntry,
+  WorkspaceStoreCommandError,
+} from "@/lib/workbench/store-command-service";
+import {
+  workbenchStoreBackendService,
+  type WorkbenchStoreBackendService,
+} from "@/lib/workbench/store-backend-service";
 
 type WorkbenchStoreSectionMountProps = {
   language: string;
   selectedProjectId: string | null;
   selectedModelId: string | null;
   setMessage: (value: string) => void;
+  storeBackendService?: WorkbenchStoreBackendService;
 };
 
 const KIND_FILTERS: Array<{ kind: "" | AssetStoreEntryKind; en: string; zh: string; ja: string }> = [
@@ -38,6 +46,7 @@ export function WorkbenchStoreSectionMount({
   selectedProjectId,
   selectedModelId,
   setMessage,
+  storeBackendService = workbenchStoreBackendService,
 }: WorkbenchStoreSectionMountProps) {
   const [payload, setPayload] = useState<AssetStorePayload | null>(null);
   const [kind, setKind] = useState<"" | AssetStoreEntryKind>("");
@@ -58,7 +67,7 @@ export function WorkbenchStoreSectionMount({
     setError(null);
 
     try {
-      const nextPayload = await fetchAssetStore({
+      const nextPayload = await storeBackendService.fetchCatalog({
         kind: kind || undefined,
         q: query.trim() || undefined,
       });
@@ -80,9 +89,14 @@ export function WorkbenchStoreSectionMount({
   }, [kind]);
 
   useEffect(() => {
-    const result = readWorkspaceStoreManifestResult(selectedProjectId);
-    setManifest(result.manifest);
-    setStorageError(result.readable ? null : copy.storageReadFailed);
+    const syncManifest = () => {
+      const result = readWorkspaceStoreManifestResult(selectedProjectId);
+      setManifest(result.manifest);
+      setStorageError(result.readable ? null : copy.storageReadFailed);
+    };
+    syncManifest();
+    window.addEventListener(STORE_MANIFEST_CHANGED_EVENT, syncManifest);
+    return () => window.removeEventListener(STORE_MANIFEST_CHANGED_EVENT, syncManifest);
   }, [language, selectedProjectId]);
 
   const selectedProjectLabel = selectedProjectId ?? copy.noProject;
@@ -98,29 +112,29 @@ export function WorkbenchStoreSectionMount({
     setMessage(message);
   }
 
+  function reportCommandFailure(commandError: unknown) {
+    if (!(commandError instanceof WorkspaceStoreCommandError)) {
+      reportStorageFailure(copy.storageWriteFailed);
+      return;
+    }
+    const message = commandErrorMessage(commandError.code, copy);
+    reportStorageFailure(message);
+  }
+
   function installEntry(entry: AssetStoreEntry) {
     if (!selectedProjectId) {
       setMessage(copy.selectProjectFirst);
       return;
     }
 
-    const current = readWorkspaceStoreManifestResult(selectedProjectId);
-    if (!current.readable) {
-      reportStorageFailure(copy.storageReadFailed);
-      return;
+    try {
+      const nextManifest = stageWorkspaceStoreEntry(selectedProjectId, entry);
+      setManifest(nextManifest);
+      setStorageError(null);
+      setMessage(copy.installed(entry));
+    } catch (commandError) {
+      reportCommandFailure(commandError);
     }
-    const nextManifest = addManifestEntry(current.manifest, entry);
-    if (!nextManifest) {
-      reportStorageFailure(copy.invalidAsset);
-      return;
-    }
-    if (!persistWorkspaceStoreManifest(nextManifest)) {
-      reportStorageFailure(copy.storageWriteFailed);
-      return;
-    }
-    setManifest(nextManifest);
-    setStorageError(null);
-    setMessage(copy.installed(entry));
   }
 
   function removeEntry(entry: WorkspaceStoreManifestEntry) {
@@ -128,31 +142,32 @@ export function WorkbenchStoreSectionMount({
       setMessage(copy.selectProjectFirst);
       return;
     }
-    const current = readWorkspaceStoreManifestResult(selectedProjectId);
-    if (!current.readable) {
-      reportStorageFailure(copy.storageReadFailed);
-      return;
+    try {
+      const nextManifest = removeWorkspaceStoreEntry(selectedProjectId, entry.kind, entry.id);
+      setManifest(nextManifest);
+      setStorageError(null);
+      setMessage(copy.removed(entry.title));
+    } catch (commandError) {
+      reportCommandFailure(commandError);
     }
-    const nextManifest = removeManifestEntry(current.manifest, entry);
-    if (!persistWorkspaceStoreManifest(nextManifest)) {
-      reportStorageFailure(copy.storageWriteFailed);
-      return;
-    }
-    setManifest(nextManifest);
-    setStorageError(null);
-    setMessage(copy.removed(entry.title));
   }
 
   function exportManifest() {
-    const filename = `${selectedProjectId ?? "kyuubiki-workspace"}.store-manifest.json`;
-    downloadTextFile(filename, `${JSON.stringify(activeManifest, null, 2)}\n`);
-    setMessage(copy.exported);
+    try {
+      const exported = buildWorkspaceStoreManifestExport(selectedProjectId);
+      downloadTextFile(exported.filename, exported.contents);
+      setStorageError(null);
+      setMessage(copy.exported);
+    } catch (commandError) {
+      reportCommandFailure(commandError);
+    }
   }
 
   return (
     <div
       className="sidebar-stack panel-scroll-window"
       data-workbench-store-panel="true"
+      data-workbench-store-manifest-count={activeManifest.entries.length}
       data-workbench-store-status={busy ? "loading" : error ? "error" : "ready"}
     >
       <section className="sidebar-card sidebar-card--compact">
@@ -243,6 +258,7 @@ export function WorkbenchStoreSectionMount({
           <h2>{copy.manifestTitle}</h2>
           <button
             className="ghost-button ghost-button--compact"
+            data-workbench-store-manifest-action="export"
             disabled={activeManifest.entries.length === 0}
             onClick={exportManifest}
             type="button"
@@ -253,13 +269,23 @@ export function WorkbenchStoreSectionMount({
         <p className="card-copy">{copy.manifestHint}</p>
         <div className="history-list">
           {activeManifest.entries.length > 0 ? activeManifest.entries.map((entry) => (
-            <article className="history-item" key={manifestEntryKey(entry.kind, entry.id)}>
+            <article
+              className="history-item"
+              data-workbench-store-manifest-entry-id={entry.id}
+              data-workbench-store-manifest-entry-kind={entry.kind}
+              key={manifestEntryKey(entry.kind, entry.id)}
+            >
               <div>
                 <strong>{entry.title}</strong>
                 <small>{copy.kindLabel(entry.kind)} · {entry.source_id} · {entry.version ?? "v0"}</small>
               </div>
               <div className="button-row">
-                <button className="ghost-button ghost-button--compact" onClick={() => removeEntry(entry)} type="button">
+                <button
+                  className="ghost-button ghost-button--compact"
+                  data-workbench-store-manifest-action="remove"
+                  onClick={() => removeEntry(entry)}
+                  type="button"
+                >
                   {copy.remove}
                 </button>
               </div>
@@ -311,6 +337,7 @@ function StoreEntryCard({
       <div className="button-row">
         <button
           className="ghost-button ghost-button--compact"
+          data-workbench-store-entry-action="stage"
           disabled={installed}
           onClick={() => onInstall(entry)}
           type="button"
@@ -320,6 +347,17 @@ function StoreEntryCard({
       </div>
     </article>
   );
+}
+
+function commandErrorMessage(
+  code: WorkspaceStoreCommandError["code"],
+  copy: ReturnType<typeof resolveStoreCopy>,
+) {
+  if (code === "project_required") return copy.selectProjectFirst;
+  if (code === "manifest_unreadable") return copy.storageReadFailed;
+  if (code === "invalid_asset") return copy.invalidAsset;
+  if (code === "entry_missing") return copy.entryMissing;
+  return copy.storageWriteFailed;
 }
 
 function labelForLanguage(
@@ -373,6 +411,11 @@ function resolveStoreCopy(language: string) {
       : ja
         ? "ストアから無効な資産エントリが返されたため、プロジェクトには追加しませんでした。"
         : "The store returned an invalid asset entry, so it was not added to the project.",
+    entryMissing: zh
+      ? "该资产已不在当前项目 manifest 中。"
+      : ja
+        ? "この資産は現在のプロジェクト manifest にありません。"
+        : "The asset is no longer present in the current project manifest.",
     stage: zh ? "加入当前项目" : ja ? "プロジェクトに追加" : "Add to project",
     installedBadge: zh ? "已加入" : ja ? "追加済み" : "Added",
     installedAssets: zh ? "项目资产" : ja ? "追加済み資産" : "Project assets",

@@ -85,6 +85,20 @@ test("Pwdt browser bridge runs macros and action steps through the same action b
   assert.equal(stepResults.length, 2);
 });
 
+test("Pwdt browser bridge exposes Store manifest commands without DOM clicks", async () => {
+  const calls: string[] = [];
+  const bridge = makeBridge(calls);
+
+  await bridge.stageStoreEntry("operator", "solve.bar_1d");
+  await bridge.exportStoreManifest();
+  await bridge.removeStoreEntry("operator", "solve.bar_1d");
+
+  assert.deepEqual(
+    calls.map((entry) => entry.split(":")[1]),
+    ["store/stageEntry", "store/exportManifest", "store/removeEntry"],
+  );
+});
+
 test("Pwdt browser bridge resolves UI contract selectors for stable automation", () => {
   const previousDocument = (globalThis as any).document;
   (globalThis as any).document = {
@@ -105,6 +119,9 @@ test("Pwdt browser bridge resolves UI contract selectors for stable automation",
     assert.equal(bridge.uiSelector("libraryTab", "models"), '[data-workbench-library-tab="models"]');
     assert.equal(bridge.uiSelector("libraryModelPage", "versions"), '[data-workbench-library-model-page="versions"]');
     assert.equal(bridge.uiSelector("storeKind", "operator"), '[data-workbench-store-kind="operator"]');
+    assert.equal(bridge.uiSelector("storeEntryAction", "stage"), '[data-workbench-store-entry-action="stage"]');
+    assert.equal(bridge.uiSelector("storeManifestEntry", "solve.bar_1d"), '[data-workbench-store-manifest-entry-id="solve.bar_1d"]');
+    assert.equal(bridge.uiSelector("storeManifestAction", "remove"), '[data-workbench-store-manifest-action="remove"]');
     assert.equal(bridge.uiSelector("systemSettingsPage", "overview"), '[data-workbench-system-settings-page="overview"]');
     assert.equal(bridge.uiSelector("workflowCatalogEntry", "solve.bar_1d"), '[data-workflow-catalog-id="solve.bar_1d"]');
     assert.equal(bridge.uiSelector("workflowTopologyKind"), '[data-workflow-topology-kind="select"]');

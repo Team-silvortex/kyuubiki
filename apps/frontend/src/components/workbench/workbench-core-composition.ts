@@ -54,6 +54,7 @@ import {
 import {
   workbenchAdminDataBackendService,
 } from "@/lib/workbench/admin-data-backend-service";
+import { workbenchStoreBackendService } from "@/lib/workbench/store-backend-service";
 
 export function useWorkbenchCoreComposition(props: Record<string, any>) {
   const { rootState } = props;
@@ -398,6 +399,8 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     jobPollTokenRef: rootState.jobPollTokenRef,
     adminDataBackendService:
       props.adminDataBackendService ?? workbenchAdminDataBackendService,
+    storeBackendService:
+      props.storeBackendService ?? workbenchStoreBackendService,
     downloadTextFile: props.downloadTextFile,
     resetActiveResult: () => resetActiveResult(rootState.setResult, rootState.setJob),
     projectLibraryBackendService:

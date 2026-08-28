@@ -18,6 +18,7 @@ export function buildWorkbenchFlowControllerProps(props: WorkbenchFlowController
     setPanelParametric: props.setPanelParametric,
     startTransition: props.startTransition,
     adminDataBackendService: props.adminDataBackendService,
+    storeBackendService: props.storeBackendService,
     resultRefreshSeqRef: props.resultRefreshSeqRef,
     setResultRecords: props.setResultRecords,
     setSelectedAdminResultJobId: props.setSelectedAdminResultJobId,

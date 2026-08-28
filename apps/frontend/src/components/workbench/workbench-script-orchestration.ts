@@ -10,6 +10,8 @@ export function buildWorkbenchScriptSnapshot(props: Record<string, any>) {
     sidebarSection: props.sidebarSection,
     studyTab: props.studyTab,
     modelTab: props.modelTab,
+    modelToolsPage: props.modelToolsPage,
+    workflowPanelTab: props.workflowPanelTab,
     libraryTab: props.libraryTab,
     systemPanelTab: props.systemPanelTab,
     systemDataTab: props.systemDataTab,
@@ -43,6 +45,8 @@ export function buildWorkbenchScriptSnapshot(props: Record<string, any>) {
     resultCount: props.resultRecords?.length ?? 0,
     protocolAgentCount: props.protocolAgents?.length ?? 0,
     healthStatus: props.health?.status ?? null,
+    storeManifestEntryCount: props.storeManifestEntryCount ?? 0,
+    storeManifestReadable: props.storeManifestReadable ?? false,
     message: props.message,
   };
 }
@@ -210,34 +214,40 @@ export async function invokeWorkbenchScriptAction(options: Record<string, any>):
       if (projectModelResult) {
         resultPayload = projectModelResult;
       } else {
-        const stateResult = await options.handleWorkbenchScriptStateAction(options.stateArgs);
-        if (stateResult) {
-          resultPayload = stateResult;
+        const storeResult = await options.handleWorkbenchScriptStoreAction(options.storeArgs);
+        if (storeResult) {
+          resultPayload = storeResult;
         } else {
-          const macroDataResult = await options.handleWorkbenchScriptMacroDataAction({
-            ...options.macroDataArgs,
-            invokeScriptAction: (
-              action: string,
-              payload: Record<string, unknown> = {},
-              source = "script",
-              note?: string,
-            ) =>
-              invokeWorkbenchScriptAction({
-                ...options,
-                action,
-                payload,
-                source,
-                note,
-                navArgs: { ...options.navArgs, action, payload },
-                projectModelArgs: { ...options.projectModelArgs, action, payload },
-                stateArgs: { ...options.stateArgs, action, payload },
-                macroDataArgs: { ...options.macroDataArgs, action, payload, source, note },
-              }),
-          });
-          if (macroDataResult) {
-            resultPayload = macroDataResult;
+          const stateResult = await options.handleWorkbenchScriptStateAction(options.stateArgs);
+          if (stateResult) {
+            resultPayload = stateResult;
           } else {
-            throw new Error(`Unknown script action: ${options.action}`);
+            const macroDataResult = await options.handleWorkbenchScriptMacroDataAction({
+              ...options.macroDataArgs,
+              invokeScriptAction: (
+                action: string,
+                payload: Record<string, unknown> = {},
+                source = "script",
+                note?: string,
+              ) =>
+                invokeWorkbenchScriptAction({
+                  ...options,
+                  action,
+                  payload,
+                  source,
+                  note,
+                  navArgs: { ...options.navArgs, action, payload },
+                  projectModelArgs: { ...options.projectModelArgs, action, payload },
+                  storeArgs: { ...options.storeArgs, action, payload },
+                  stateArgs: { ...options.stateArgs, action, payload },
+                  macroDataArgs: { ...options.macroDataArgs, action, payload, source, note },
+                }),
+            });
+            if (macroDataResult) {
+              resultPayload = macroDataResult;
+            } else {
+              throw new Error(`Unknown script action: ${options.action}`);
+            }
           }
         }
       }

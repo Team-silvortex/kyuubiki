@@ -112,6 +112,9 @@ export type WorkbenchPwdtBrowserBridge = {
   openTabs: (tabs: Record<string, unknown>) => Promise<Record<string, unknown>>;
   configure: (settings: Record<string, unknown>) => Promise<Record<string, unknown>>;
   refreshAll: () => Promise<Record<string, unknown>>;
+  stageStoreEntry: (kind: string, entryId: string) => Promise<Record<string, unknown>>;
+  removeStoreEntry: (kind: string, entryId: string) => Promise<Record<string, unknown>>;
+  exportStoreManifest: () => Promise<Record<string, unknown>>;
   ensureProject: (name?: string, description?: string) => Promise<string | null>;
   buildParametricTruss2d: (params?: WorkbenchPwdtTrussStudyParams) => Promise<Partial<WorkbenchScriptSnapshot>>;
   prepareElectrostaticPlaneTriangleStudy: (params?: WorkbenchPwdtElectrostaticHeatThermoTriangleParams) => Promise<Partial<WorkbenchScriptSnapshot>>;
@@ -303,6 +306,9 @@ export function createWorkbenchPwdtBrowserBridge({
     openTabs: (tabs) => bridge.invoke("nav/setTabs", tabs),
     configure: (settings) => bridge.invoke("settings/patch", settings),
     refreshAll: () => bridge.invoke("runtime/refreshAll"),
+    stageStoreEntry: (kind, entryId) => bridge.invoke("store/stageEntry", { kind, entryId }),
+    removeStoreEntry: (kind, entryId) => bridge.invoke("store/removeEntry", { kind, entryId }),
+    exportStoreManifest: () => bridge.invoke("store/exportManifest"),
     async ensureProject(name = "Pwdt automation study", description = "Created from Pwdt") {
       const selectedProjectId = snapshotRecord(getSnapshot).selectedProjectId;
       if (selectedProjectId) return selectedProjectId;

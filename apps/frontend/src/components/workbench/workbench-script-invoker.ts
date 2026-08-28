@@ -5,6 +5,7 @@ import { handleWorkbenchScriptMacroDataAction } from "@/components/workbench/wor
 import { handleWorkbenchScriptNavAction } from "@/components/workbench/workbench-script-nav-controller";
 import { handleWorkbenchScriptProjectModelAction } from "@/components/workbench/workbench-script-project-model-controller";
 import { handleWorkbenchScriptStateAction } from "@/components/workbench/workbench-script-state-controller";
+import { handleWorkbenchScriptStoreAction } from "@/components/workbench/workbench-script-store-controller";
 
 export function createWorkbenchScriptInvoker(options: Record<string, any>) {
   return async (
@@ -24,6 +25,7 @@ export function createWorkbenchScriptInvoker(options: Record<string, any>) {
       appendScriptActionLog: options.appendScriptActionLog,
       handleWorkbenchScriptNavAction,
       handleWorkbenchScriptProjectModelAction,
+      handleWorkbenchScriptStoreAction,
       handleWorkbenchScriptStateAction,
       handleWorkbenchScriptMacroDataAction,
       navArgs: {
@@ -39,6 +41,7 @@ export function createWorkbenchScriptInvoker(options: Record<string, any>) {
         setModelTab: options.setModelTab,
         setModelToolsPage: options.setModelToolsPage,
         setLibraryTab: options.setLibraryTab,
+        setWorkflowPanelTab: options.setWorkflowPanelTab,
         setSystemPanelTab: options.setSystemPanelTab,
         setAssistantWindowOpen: options.setAssistantWindowOpen,
         setSystemDataTab: options.setSystemDataTab,
@@ -95,6 +98,15 @@ export function createWorkbenchScriptInvoker(options: Record<string, any>) {
         versionRenamedLabel: options.versionRenamedLabel,
         versionDeletedLabel: options.versionDeletedLabel,
         setMessage: options.setMessage,
+      },
+      storeArgs: {
+        action,
+        payload,
+        selectedProjectId: options.selectedProjectId,
+        language: options.language,
+        setMessage: options.setMessage,
+        storeBackendService: options.storeBackendService,
+        downloadTextFile: options.downloadTextFile,
       },
       stateArgs: {
         action,

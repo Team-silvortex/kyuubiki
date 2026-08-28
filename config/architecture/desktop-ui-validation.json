@@ -12,7 +12,7 @@
     "tests/integration/workbench-ui-workflow-invocation.test.mjs",
     "tests/integration/workbench-shell-regression.test.mjs"
   ],
-  "minimum_test_count": 31,
+  "minimum_test_count": 33,
   "shell_minimum_actions": [
     { "id": "hub", "minimum_actions": 40 },
     { "id": "installer", "minimum_actions": 50 },
@@ -70,6 +70,14 @@
     {
       "id": "workbench-store-request-ownership",
       "label": "Workbench Store ignores stale responses after the active kind changes"
+    },
+    {
+      "id": "workbench-pwdt-store-command-closure",
+      "label": "Workbench Pwdt stages, exports, and removes Store assets through shared commands"
+    },
+    {
+      "id": "workbench-pwdt-store-workflow-navigation-closure",
+      "label": "Workbench Pwdt opens Store and round-trips every Workflow surface without DOM clicks"
     },
     {
       "id": "workbench-pwdt-session-recovery",

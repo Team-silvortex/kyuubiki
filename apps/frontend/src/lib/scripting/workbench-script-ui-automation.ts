@@ -156,6 +156,21 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
         template: workbenchAutomationSelectors.storeEntry(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${entryId}"),
       },
       {
+        key: "storeEntryAction",
+        parameter: "action",
+        template: workbenchAutomationSelectors.storeEntryAction(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${action}"),
+      },
+      {
+        key: "storeManifestEntry",
+        parameter: "entryId",
+        template: workbenchAutomationSelectors.storeManifestEntry(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${entryId}"),
+      },
+      {
+        key: "storeManifestAction",
+        parameter: "action",
+        template: workbenchAutomationSelectors.storeManifestAction(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${action}"),
+      },
+      {
         key: "workflowSurfaceTab",
         parameter: "tab",
         template: workbenchAutomationSelectors.workflowSurfaceTab(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${tab}"),

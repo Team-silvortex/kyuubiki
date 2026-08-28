@@ -154,6 +154,7 @@ export function buildWorkbenchSidebarMountProps(props: WorkbenchSidebarMountSour
         selectedModelId={props.selectedModelId}
         selectedProjectId={props.selectedProjectId}
         setMessage={props.setMessage}
+        storeBackendService={props.storeBackendService}
       />,
     ),
     librarySection: sectionChunk(

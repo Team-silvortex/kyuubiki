@@ -31,10 +31,10 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
     category: "navigation",
     risk: "normal",
     summary: {
-      en: "Switch study, model, library, system, or data subtabs in one action.",
-      zh: "一次动作切换 study、model、library、system 或 data 子标签。",
+      en: "Switch study, model, workflow, library, system, or data subtabs in one action.",
+      zh: "一次动作切换 study、model、workflow、library、system 或 data 子标签。",
     },
-    payloadExample: { libraryTab: "projects", systemPanelTab: "data", systemDataTab: "results" },
+    payloadExample: { workflowPanelTab: "builder", libraryTab: "projects", systemPanelTab: "data", systemDataTab: "results" },
   },
   {
     id: "settings/patch",
@@ -53,6 +53,36 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
     summary: {
       en: "Refresh health, jobs, results, and projects.",
       zh: "刷新健康状态、任务、结果和项目。",
+    },
+  },
+  {
+    id: "store/stageEntry",
+    category: "store",
+    risk: "normal",
+    summary: {
+      en: "Fetch a Store asset and stage it in the selected project manifest.",
+      zh: "获取商店资产并加入当前项目 manifest。",
+    },
+    payloadExample: { kind: "operator", entryId: "solve.bar_1d" },
+  },
+  {
+    id: "store/removeEntry",
+    category: "store",
+    risk: "destructive",
+    requiresConfirmation: true,
+    summary: {
+      en: "Remove a staged Store asset from the selected project after confirmation.",
+      zh: "确认后从当前项目移除已加入的商店资产。",
+    },
+    payloadExample: { kind: "operator", entryId: "solve.bar_1d" },
+  },
+  {
+    id: "store/exportManifest",
+    category: "store",
+    risk: "normal",
+    summary: {
+      en: "Export the selected project Store manifest.",
+      zh: "导出当前项目的商店 manifest。",
     },
   },
   {

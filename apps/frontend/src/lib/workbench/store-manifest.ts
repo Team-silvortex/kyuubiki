@@ -2,6 +2,7 @@ import type { AssetStoreEntry, AssetStoreEntryKind } from "@/lib/api";
 
 export const STORE_MANIFEST_STORAGE_KEY = "kyuubiki-workbench-store-manifests";
 export const STORE_MANIFEST_SCHEMA_VERSION = "kyuubiki.workspace-store-manifest/v1";
+export const STORE_MANIFEST_CHANGED_EVENT = "kyuubiki:workspace-store-manifest-changed";
 export const STORE_MANIFEST_ENTRY_LIMIT = 128;
 export const STORE_MANIFEST_PROJECT_LIMIT = 64;
 
@@ -103,6 +104,9 @@ export function persistWorkspaceStoreManifest(manifest: WorkspaceStoreManifest):
 
   try {
     window.localStorage.setItem(STORE_MANIFEST_STORAGE_KEY, JSON.stringify(nextCollection));
+    if (typeof window.dispatchEvent === "function" && typeof Event === "function") {
+      window.dispatchEvent(new Event(STORE_MANIFEST_CHANGED_EVENT));
+    }
     return true;
   } catch {
     return false;

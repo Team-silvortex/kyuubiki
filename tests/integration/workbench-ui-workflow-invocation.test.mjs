@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
+import { readFile } from "node:fs/promises";
 
 import { launchIntegrationBrowser } from "./playwright-browser.shared.mjs";
 import {
@@ -19,7 +20,7 @@ before(async () => {
 after(async () => {
   await browser?.close();
   await runtime?.stop();
-}, { timeout: 30_000 });
+}, { timeout: 90_000 });
 
 async function click(page, selector, label) {
   const candidates = page.locator(selector);
@@ -501,6 +502,150 @@ test("Workbench Store ignores stale responses after the active kind changes", as
     assert.equal(await workflowEntry.count(), 1);
     assert.equal(await page.locator('[data-workbench-store-entry-id="qualification-operator"]').count(), 0);
     assert.equal(await storePanel.getAttribute("data-workbench-store-status"), "ready");
+    assert.deepEqual(pageErrors, []);
+  } finally {
+    await context.close();
+  }
+}, { timeout: 90_000 });
+
+test("Workbench Pwdt stages, exports, and removes Store assets through shared commands", async () => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, acceptDownloads: true });
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  const entry = {
+    id: "qualification-operator",
+    kind: "operator",
+    title: "Qualification operator",
+    version: "2.17.0",
+    source_id: "qualification",
+    source_kind: "builtin",
+    tags: ["qualification"],
+    install: { mode: "workspace", requires_download: false, target: "operators/qualification" },
+  };
+  await page.route("**/api/v1/store**", async (route) => {
+    const url = new URL(route.request().url());
+    const detailPath = "/api/v1/store/operator/qualification-operator";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(url.pathname === detailPath
+        ? { entry }
+        : {
+            entries: [entry],
+            sources: [{
+              id: "qualification",
+              type: "builtin",
+              label: "Qualification",
+              enabled: true,
+              editable: false,
+              status: "ready",
+              supports: ["operator"],
+            }],
+            summary: { entry_count: 1, kinds: { operator: 1 }, sources: { qualification: 1 } },
+          }),
+    });
+  });
+
+  try {
+    await page.goto(workbenchUrl(runtime), { waitUntil: "networkidle", timeout: 60_000 });
+    await page.waitForFunction(() => Boolean(window.__kyuubikiPwdt), undefined, { timeout: 30_000 });
+    const projectId = await page.evaluate(async () => {
+      const snapshot = await window.__kyuubikiPwdt.waitUntil(
+        (state) => Boolean(state.selectedProjectId),
+        { timeoutMs: 15_000 },
+      );
+      return snapshot.selectedProjectId;
+    });
+    assert.equal(projectId, "qualification-project");
+
+    await page.evaluate(() => window.__kyuubikiPwdt.openSidebar("store"));
+    await waitForVisibleOrPageError(
+      page,
+      page.locator('[data-workbench-store-entry-id="qualification-operator"]'),
+      "Store qualification entry",
+    );
+
+    const staged = await page.evaluate(() =>
+      window.__kyuubikiPwdt.stageStoreEntry("operator", "qualification-operator"));
+    assert.equal(staged.manifestEntryCount, 1);
+    await page.evaluate(() => window.__kyuubikiPwdt.waitForState(
+      { storeManifestEntryCount: 1, storeManifestReadable: true },
+      { timeoutMs: 15_000 },
+    ));
+    const manifestEntry = page.locator('[data-workbench-store-manifest-entry-id="qualification-operator"]');
+    await manifestEntry.waitFor({ state: "visible", timeout: 15_000 });
+    assert.equal(await page.locator('[data-workbench-store-panel="true"]').getAttribute("data-workbench-store-manifest-count"), "1");
+    assert.equal(await page.locator('[data-workbench-store-entry-action="stage"]').isDisabled(), true);
+
+    const downloadPromise = page.waitForEvent("download");
+    const exportedPromise = page.evaluate(() => window.__kyuubikiPwdt.exportStoreManifest());
+    const [download, exported] = await Promise.all([downloadPromise, exportedPromise]);
+    assert.equal(download.suggestedFilename(), "qualification-project.store-manifest.json");
+    assert.equal(exported.manifestEntryCount, 1);
+    const downloadPath = await download.path();
+    assert.ok(downloadPath);
+    const exportedManifest = JSON.parse(await readFile(downloadPath, "utf8"));
+    assert.equal(exportedManifest.entries[0].id, "qualification-operator");
+
+    page.once("dialog", (dialog) => dialog.accept());
+    const removed = await page.evaluate(() =>
+      window.__kyuubikiPwdt.removeStoreEntry("operator", "qualification-operator"));
+    assert.equal(removed.manifestEntryCount, 0);
+    await page.evaluate(() => window.__kyuubikiPwdt.waitForState(
+      { storeManifestEntryCount: 0 },
+      { timeoutMs: 15_000 },
+    ));
+    await manifestEntry.waitFor({ state: "detached", timeout: 15_000 });
+    assert.equal(await page.locator('[data-workbench-store-entry-action="stage"]').isEnabled(), true);
+    assert.deepEqual(pageErrors, []);
+  } finally {
+    await context.close();
+  }
+}, { timeout: 90_000 });
+
+test("Workbench Pwdt opens Store and round-trips every Workflow surface without DOM clicks", async () => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  try {
+    await page.goto(workbenchUrl(runtime), { waitUntil: "networkidle", timeout: 60_000 });
+    await page.waitForFunction(() => Boolean(window.__kyuubikiPwdt), undefined, { timeout: 30_000 });
+
+    const storeResult = await page.evaluate(() => window.__kyuubikiPwdt.openSidebar("store"));
+    assert.equal(storeResult.section, "store");
+    await page.evaluate(() => window.__kyuubikiPwdt.waitForState(
+      { sidebarSection: "store" },
+      { timeoutMs: 15_000 },
+    ));
+    await waitForVisibleOrPageError(
+      page,
+      page.locator('[data-workbench-store-panel="true"]'),
+      "Pwdt Store panel",
+    );
+
+    await page.evaluate(() => window.__kyuubikiPwdt.openSidebar("workflow"));
+    await page.evaluate(() => window.__kyuubikiPwdt.waitForState(
+      { sidebarSection: "workflow" },
+      { timeoutMs: 15_000 },
+    ));
+    for (const workflowPanelTab of ["overview", "catalog", "builder", "runs"]) {
+      await page.evaluate((tab) => window.__kyuubikiPwdt.openTabs({ workflowPanelTab: tab }), workflowPanelTab);
+      await page.evaluate((tab) => window.__kyuubikiPwdt.waitForState(
+        { workflowPanelTab: tab },
+        { timeoutMs: 15_000 },
+      ), workflowPanelTab);
+      const activeTab = page.locator(`[data-workflow-surface-tab="${workflowPanelTab}"]`);
+      await waitForVisibleOrPageError(page, activeTab, `Pwdt Workflow ${workflowPanelTab} tab`);
+      assert.match(await activeTab.getAttribute("class"), /panel-tab--active/u);
+    }
+
+    const snapshot = await page.evaluate(() => window.__kyuubikiPwdt.state());
+    assert.equal(snapshot.sidebarSection, "workflow");
+    assert.equal(snapshot.workflowPanelTab, "runs");
     assert.deepEqual(pageErrors, []);
   } finally {
     await context.close();

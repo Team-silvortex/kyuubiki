@@ -7,6 +7,8 @@ export type WorkbenchScriptSnapshot = {
   sidebarSection: string;
   studyTab: string;
   modelTab: string;
+  modelToolsPage: string;
+  workflowPanelTab: string;
   libraryTab: string;
   systemPanelTab: string;
   systemDataTab: string;
@@ -40,6 +42,8 @@ export type WorkbenchScriptSnapshot = {
   resultCount: number;
   protocolAgentCount: number;
   healthStatus: string | null;
+  storeManifestEntryCount: number;
+  storeManifestReadable: boolean;
   message: string;
 };
 

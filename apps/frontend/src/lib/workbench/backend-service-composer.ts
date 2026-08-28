@@ -6,6 +6,7 @@ import { createAdminDataBackendService } from "@/lib/workbench/admin-data-backen
 import { createJobHistoryBackendService } from "@/lib/workbench/job-history-backend-service-core";
 import { createRuntimeStatusBackendService } from "@/lib/runtime-gateway/runtime-status-gateway";
 import { createStudyRunBackendServiceFromRuntimeClient } from "@/lib/workbench/study-run-backend-service";
+import { createWorkbenchStoreBackendService } from "@/lib/workbench/store-backend-service-core";
 import { createWorkflowBackendService } from "@/lib/workbench/workflow-backend-service-core";
 
 export function createWorkbenchRuntimeBackedBackendServices(runtimeClient: RuntimeApiClient) {
@@ -29,6 +30,10 @@ export function createWorkbenchRuntimeBackedBackendServices(runtimeClient: Runti
       fetchRegisteredAgents: runtimeClient.fetchRegisteredAgents,
     }),
     studyRun: createStudyRunBackendServiceFromRuntimeClient(runtimeClient),
+    store: createWorkbenchStoreBackendService({
+      fetchCatalog: runtimeClient.fetchAssetStore,
+      fetchEntry: runtimeClient.fetchAssetStoreEntry,
+    }),
     workflow: createWorkflowBackendService({
       fetchCatalog: runtimeClient.fetchWorkflowCatalog,
       fetchOperators: runtimeClient.fetchWorkflowOperators,

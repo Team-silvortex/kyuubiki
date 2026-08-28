@@ -21,6 +21,7 @@ export function buildWorkbenchFlowComposition(props: Record<string, any>) {
     setPanelParametric: workspaceState.setPanelParametric,
     startTransition: props.startTransition,
     adminDataBackendService: props.adminDataBackendService,
+    storeBackendService: props.storeBackendService,
     resultRefreshSeqRef: props.resultRefreshSeqRef,
     setResultRecords: workspaceState.setResultRecords,
     setSelectedAdminResultJobId: props.setSelectedAdminResultJobId,
