@@ -1,6 +1,8 @@
 "use client";
 
 import type { WorkbenchStudyKind } from "@/lib/workbench/history";
+import type { WorkbenchOperationResult } from "@/lib/workbench/operation-result";
+import type { WorkbenchRunOperationResult } from "@/components/workbench/workbench-run-controller";
 
 type ScriptStateControllerDeps = {
   action: string;
@@ -44,8 +46,8 @@ type ScriptStateControllerDeps = {
   toggleImmersiveViewport: () => Promise<void>;
   handleUndo: () => void;
   handleRedo: () => void;
-  runAnalysis: () => void;
-  cancelCurrentJob: () => void;
+  runAnalysis: () => Promise<WorkbenchRunOperationResult>;
+  cancelCurrentJob: () => Promise<WorkbenchOperationResult<{ jobId: string }>>;
   setTruss3dViewPreset: (value: "iso" | "front" | "right" | "top") => void;
   setTruss3dProjectionMode: (value: "ortho" | "persp") => void;
 };
@@ -196,12 +198,14 @@ export async function handleWorkbenchScriptStateAction({
       return { ok: true, action };
     }
     case "job/run": {
-      runAnalysis();
-      return { ok: true, action };
+      const result = await runAnalysis();
+      if (!result.ok) throw result.error;
+      return { ...result, action };
     }
     case "job/cancel": {
-      cancelCurrentJob();
-      return { ok: true, action };
+      const result = await cancelCurrentJob();
+      if (!result.ok) throw result.error;
+      return { ...result, action };
     }
     case "history/undo": {
       handleUndo();

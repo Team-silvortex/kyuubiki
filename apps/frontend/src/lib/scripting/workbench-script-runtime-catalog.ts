@@ -328,8 +328,8 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
     category: "job",
     risk: "normal",
     summary: {
-      en: "Submit the current study.",
-      zh: "提交当前研究求解。",
+      en: "Submit the current study and wait for an observable run outcome.",
+      zh: "提交当前研究求解，并等待可观测的运行结果。",
     },
   },
   {

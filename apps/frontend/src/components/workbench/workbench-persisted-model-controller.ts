@@ -20,6 +20,7 @@ import {
   rewriteWorkspaceStoreManifestProject,
 } from "@/lib/workbench/store-manifest";
 import {
+  runWorkbenchTransitionOperation,
   workbenchOperationFailure,
   type WorkbenchOperationResult,
 } from "@/lib/workbench/operation-result";
@@ -259,7 +260,7 @@ export function openPersistedWorkbenchModel(model: ModelRecord, effects: Persist
     }
   };
 
-  return runPersistedOpen(run, effects.startTransition);
+  return runWorkbenchTransitionOperation(effects.startTransition, run);
 }
 
 export function openPersistedWorkbenchVersion(version: ModelVersionRecord, effects: PersistedModelControllerDeps) {
@@ -292,18 +293,5 @@ export function openPersistedWorkbenchVersionById(versionId: string, effects: Pe
     }
   };
 
-  return runPersistedOpen(run, effects.startTransition);
-}
-
-function runPersistedOpen(
-  run: () => Promise<WorkbenchOperationResult>,
-  startTransition?: (callback: () => void) => void,
-): Promise<WorkbenchOperationResult> {
-  if (!startTransition) return run();
-
-  return new Promise((resolve) => {
-    startTransition(() => {
-      void run().then(resolve);
-    });
-  });
+  return runWorkbenchTransitionOperation(effects.startTransition, run);
 }

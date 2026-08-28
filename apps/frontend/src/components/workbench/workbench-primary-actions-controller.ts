@@ -33,6 +33,11 @@ import { scientific, serializeCurrentModel } from "@/lib/workbench/helpers";
 import type {
   WorkbenchAdminDataBackendService,
 } from "@/lib/workbench/admin-data-backend-service-core";
+import type { WorkbenchStudyRunBackendService } from "@/lib/workbench/study-run-backend-service-core";
+import {
+  runWorkbenchTransitionOperation,
+  workbenchOperationFailure,
+} from "@/lib/workbench/operation-result";
 import {
   generatePrattTruss,
   generateRectangularPanelMesh,
@@ -126,6 +131,7 @@ type PrimaryActionsControllerDeps = {
   selectedAdminResultJobId: string | null;
   downloadTextFile: (name: string, contents: string) => void;
   adminDataEffects: any;
+  runBackendService?: WorkbenchStudyRunBackendService;
 };
 
 export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsControllerDeps) {
@@ -138,71 +144,70 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
     });
   }
 
-  const runAnalysis = () => {
-    deps.startTransition(() => {
-      void (async () => {
-        try {
-          dismissWorkbenchAlert(deps.setSystemAlerts, "run-analysis-error");
-          await runWorkbenchAnalysis({
-            axialForm: deps.axialForm,
-            beamModel: deps.beamModel,
-            copy: deps.t,
-            directMeshEndpointsText: deps.directMeshEndpointsText,
-            directMeshSelectionMode: deps.directMeshSelectionMode,
-            frontendRuntimeMode: deps.frontendRuntimeMode,
-            frameModel: deps.frameModel,
-            heatBarModel: deps.heatBarModel,
-            heatPlaneModel: deps.heatPlaneModel,
-            jobPollTokenRef: deps.jobPollTokenRef,
-            labels: {
-              precheckPrefix: deps.t.precheckPrefix,
-              dispatching: deps.t.dispatching,
-              directMeshEndpointsHelp: deps.t.directMeshEndpointsHelp,
-              directMeshCompleted: deps.t.directMeshCompleted,
-              requestTimedOut: deps.t.requestTimedOut,
-              initialFailed: deps.t.initialFailed,
-              pollingDetached: deps.t.pollingDetached,
-            },
-            planeModel: deps.planeModel,
-            refreshJobHistory: deps.refreshJobHistory,
-            selectedProjectId: deps.selectedProjectId,
-            selectedVersionId: deps.selectedVersionId,
-            setDirectMeshExecution: deps.setDirectMeshExecution,
-            setJob: deps.setJob,
-            setMessage: deps.setMessage,
-            setSystemAlerts: deps.setSystemAlerts,
-            setResult: deps.setResult,
-            spring2dModel: deps.spring2dModel,
-            spring3dModel: deps.spring3dModel,
-            springModel: deps.springModel,
-            studyKind: deps.studyKind,
-            thermalBarModel: deps.thermalBarModel,
-            thermalBeamModel: deps.thermalBeamModel,
-            thermalFrameModel: deps.thermalFrameModel,
-            thermalTruss3dModel: deps.thermalTruss3dModel,
-            thermalTrussModel: deps.thermalTrussModel,
-            torsionModel: deps.torsionModel,
-            truss3dModel: deps.truss3dModel,
-            trussDiagnostics: deps.trussDiagnostics,
-            trussModel: deps.trussModel,
-          });
-        } catch (error) {
-          const message =
-            error instanceof Error
-              ? error.message.startsWith("request timed out:")
-                ? deps.t.requestTimedOut
-                : error.message
-              : deps.t.initialFailed;
-          upsertWorkbenchAlert(deps.setSystemAlerts, {
-            id: "run-analysis-error",
-            message,
-            tone: error instanceof Error && error.message.startsWith("request timed out:") ? "warning" : "error",
-          });
-          deps.setMessage(message);
-        }
-      })();
+  const runAnalysis = () =>
+    runWorkbenchTransitionOperation(deps.startTransition, async () => {
+      try {
+        dismissWorkbenchAlert(deps.setSystemAlerts, "run-analysis-error");
+        return await runWorkbenchAnalysis({
+          axialForm: deps.axialForm,
+          beamModel: deps.beamModel,
+          copy: deps.t,
+          directMeshEndpointsText: deps.directMeshEndpointsText,
+          directMeshSelectionMode: deps.directMeshSelectionMode,
+          frontendRuntimeMode: deps.frontendRuntimeMode,
+          frameModel: deps.frameModel,
+          heatBarModel: deps.heatBarModel,
+          heatPlaneModel: deps.heatPlaneModel,
+          jobPollTokenRef: deps.jobPollTokenRef,
+          labels: {
+            precheckPrefix: deps.t.precheckPrefix,
+            dispatching: deps.t.dispatching,
+            directMeshEndpointsHelp: deps.t.directMeshEndpointsHelp,
+            directMeshCompleted: deps.t.directMeshCompleted,
+            requestTimedOut: deps.t.requestTimedOut,
+            initialFailed: deps.t.initialFailed,
+            pollingDetached: deps.t.pollingDetached,
+          },
+          planeModel: deps.planeModel,
+          refreshJobHistory: deps.refreshJobHistory,
+          runBackendService: deps.runBackendService,
+          selectedProjectId: deps.selectedProjectId,
+          selectedVersionId: deps.selectedVersionId,
+          setDirectMeshExecution: deps.setDirectMeshExecution,
+          setJob: deps.setJob,
+          setMessage: deps.setMessage,
+          setSystemAlerts: deps.setSystemAlerts,
+          setResult: deps.setResult,
+          spring2dModel: deps.spring2dModel,
+          spring3dModel: deps.spring3dModel,
+          springModel: deps.springModel,
+          studyKind: deps.studyKind,
+          thermalBarModel: deps.thermalBarModel,
+          thermalBeamModel: deps.thermalBeamModel,
+          thermalFrameModel: deps.thermalFrameModel,
+          thermalTruss3dModel: deps.thermalTruss3dModel,
+          thermalTrussModel: deps.thermalTrussModel,
+          torsionModel: deps.torsionModel,
+          truss3dModel: deps.truss3dModel,
+          trussDiagnostics: deps.trussDiagnostics,
+          trussModel: deps.trussModel,
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message.startsWith("request timed out:")
+              ? deps.t.requestTimedOut
+              : error.message
+            : deps.t.initialFailed;
+        upsertWorkbenchAlert(deps.setSystemAlerts, {
+          id: "run-analysis-error",
+          message,
+          tone: error instanceof Error && error.message.startsWith("request timed out:") ? "warning" : "error",
+        });
+        deps.setMessage(message);
+        return workbenchOperationFailure(new Error(message), deps.t.initialFailed);
+      }
     });
-  };
 
   const openHistoryJob = (jobId: string) => {
     deps.jobPollTokenRef.current += 1;

@@ -16,3 +16,16 @@ export function workbenchOperationFailure(
     error: error instanceof Error ? error : new Error(fallback),
   };
 }
+
+export function runWorkbenchTransitionOperation<T>(
+  startTransition: ((callback: () => void) => void) | undefined,
+  run: () => Promise<T>,
+): Promise<T> {
+  if (!startTransition) return run();
+
+  return new Promise((resolve, reject) => {
+    startTransition(() => {
+      void run().then(resolve, reject);
+    });
+  });
+}
