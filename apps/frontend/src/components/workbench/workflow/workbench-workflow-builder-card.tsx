@@ -498,7 +498,9 @@ export function WorkbenchWorkflowBuilderCard({
         ),
     );
     if (draft.templateChainPreferences) {
-      writeWorkflowTemplateChainPreferences(draft.templateChainPreferences);
+      confirmWorkflowStorageWrite(
+        writeWorkflowTemplateChainPreferences(draft.templateChainPreferences),
+      );
     }
     setImportedPackage(null);
     setSelectedDatasetValueId(nextGraph?.dataset_contract?.values?.[0]?.id ?? null);
@@ -566,7 +568,9 @@ export function WorkbenchWorkflowBuilderCard({
           ),
       );
       if (templateChainPreferences) {
-        writeWorkflowTemplateChainPreferences(templateChainPreferences);
+        confirmWorkflowStorageWrite(
+          writeWorkflowTemplateChainPreferences(templateChainPreferences),
+        );
       }
       setImportDiagnostics([...(importedPayload.diagnostics ?? []), ...imported.diagnostics]);
       setImportedPackage(nextImportedPackage);

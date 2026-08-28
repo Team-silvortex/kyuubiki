@@ -49,6 +49,8 @@ type WorkbenchWorkflowTemplateChainActionsProps = {
   setSystemAlerts: Dispatch<SetStateAction<WorkbenchAlertItem[]>>;
 };
 
+const TEMPLATE_CHAIN_STORAGE_ALERT_ID = "workflow-template-chain-storage-write-failed";
+
 function sortChainsByPriority(
   chains: WorkflowTemplateChainDefinition[],
   favoriteChainIds: string[],
@@ -153,13 +155,33 @@ export function WorkbenchWorkflowTemplateChainActions({
     [filteredBuiltInChains],
   );
 
+  function reportStorageWriteFailure() {
+    upsertWorkbenchAlert(setSystemAlerts, {
+      id: TEMPLATE_CHAIN_STORAGE_ALERT_ID,
+      message: labels.storageWriteFailedLabel,
+      tone: "warning",
+    });
+    showWorkbenchNotice(setNotice, {
+      id: TEMPLATE_CHAIN_STORAGE_ALERT_ID,
+      message: labels.storageWriteFailedLabel,
+      tone: "warning",
+    });
+  }
+
+  function clearStorageWriteFailure() {
+    dismissWorkbenchAlert(setSystemAlerts, TEMPLATE_CHAIN_STORAGE_ALERT_ID);
+  }
+
   function writePreferences(nextIds: string[], nextAliases = favoriteChainAliases) {
     setFavoriteChainIds(nextIds);
     setFavoriteChainAliases(nextAliases);
-    writeWorkflowTemplateChainPreferences({
+    const persisted = writeWorkflowTemplateChainPreferences({
       favoriteChainIds: nextIds,
       favoriteChainAliases: nextAliases,
     });
+    if (persisted) clearStorageWriteFailure();
+    else reportStorageWriteFailure();
+    return persisted;
   }
 
   function insertChain(chain: WorkflowTemplateChainDefinition) {
@@ -182,7 +204,11 @@ export function WorkbenchWorkflowTemplateChainActions({
   }
 
   function deleteImportedChain(chainId: string) {
-    removeImportedWorkflowTemplateChain(chainId);
+    if (!removeImportedWorkflowTemplateChain(chainId)) {
+      reportStorageWriteFailure();
+      return;
+    }
+    clearStorageWriteFailure();
     setImportedChains(listStoredWorkflowTemplateChains());
     writePreferences(
       favoriteChainIds.filter((value) => value !== chainId),
@@ -209,8 +235,15 @@ export function WorkbenchWorkflowTemplateChainActions({
         });
         return;
       }
-      saveImportedWorkflowTemplateChain(packageToWorkflowTemplateChainDefinition(pkg));
+      const saved = saveImportedWorkflowTemplateChain(
+        packageToWorkflowTemplateChainDefinition(pkg),
+      );
+      if (!saved) {
+        reportStorageWriteFailure();
+        return;
+      }
       setImportedChains(listStoredWorkflowTemplateChains());
+      clearStorageWriteFailure();
       dismissWorkbenchAlert(setSystemAlerts, "workflow-template-chain-import-error");
       showWorkbenchNotice(setNotice, {
         id: "workflow-template-chain-import-success",
@@ -279,10 +312,15 @@ export function WorkbenchWorkflowTemplateChainActions({
       buildSuggestedTemplateChainLabel(selectedNodes),
     )?.trim();
     if (!nextLabel) return;
-    saveImportedWorkflowTemplateChain(
+    const saved = saveImportedWorkflowTemplateChain(
       buildImportedTemplateChainFromNodes({ label: nextLabel, nodes: selectedNodes }),
     );
+    if (!saved) {
+      reportStorageWriteFailure();
+      return;
+    }
     setImportedChains(listStoredWorkflowTemplateChains());
+    clearStorageWriteFailure();
     showWorkbenchNotice(setNotice, {
       id: "workflow-template-chain-save-selection-success",
       message: labels.templateChainSaveSelectionSuccessLabel,
@@ -293,21 +331,31 @@ export function WorkbenchWorkflowTemplateChainActions({
   function renameImportedChain(chain: WorkflowTemplateChainDefinition) {
     const nextLabel = window.prompt(labels.templateChainRenamePrompt, chain.label)?.trim();
     if (!nextLabel) return;
-    updateImportedWorkflowTemplateChain(chain.id, (current) => ({
+    const updated = updateImportedWorkflowTemplateChain(chain.id, (current) => ({
       ...current,
       label: nextLabel,
     }));
+    if (!updated) {
+      reportStorageWriteFailure();
+      return;
+    }
     setImportedChains(listStoredWorkflowTemplateChains());
+    clearStorageWriteFailure();
   }
 
   function editImportedChainSummary(chain: WorkflowTemplateChainDefinition) {
     const nextSummary = window.prompt(labels.templateChainSummaryPrompt, chain.summary ?? "");
     if (nextSummary === null) return;
-    updateImportedWorkflowTemplateChain(chain.id, (current) => ({
+    const updated = updateImportedWorkflowTemplateChain(chain.id, (current) => ({
       ...current,
       summary: nextSummary.trim() || undefined,
     }));
+    if (!updated) {
+      reportStorageWriteFailure();
+      return;
+    }
     setImportedChains(listStoredWorkflowTemplateChains());
+    clearStorageWriteFailure();
   }
 
   function selectTag(tag: string) {

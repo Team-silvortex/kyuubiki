@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { WorkflowCatalogEntry } from "@/lib/api";
 import { WORKBENCH_STANDARD_STORAGE_CONTRACT } from "@/components/workbench/system/workbench-system-storage-contract";
 import {
+  buildWorkflowPackageMaintenanceLogEntryId,
   listStoredWorkflowPackageMaintenanceHistory,
   saveStoredWorkflowPackageMaintenanceHistory,
+  WORKBENCH_WORKFLOW_PACKAGE_MAINTENANCE_PER_WORKFLOW_LIMIT,
   type WorkflowPackageMaintenanceLogEntry,
 } from "@/components/workbench/workflow/workbench-workflow-package-maintenance-log";
 import {
@@ -103,6 +105,7 @@ export function WorkbenchWorkflowPackageInstallCard({
 }: WorkbenchWorkflowPackageInstallCardProps) {
   const [previewResidualIds, setPreviewResidualIds] = useState<string[] | null>(null);
   const [history, setHistory] = useState<WorkflowPackageMaintenanceLogEntry[]>([]);
+  const historyRef = useRef<WorkflowPackageMaintenanceLogEntry[]>([]);
   const [query, setQuery] = useState("");
   const rows = buildInstallRows(
     labels,
@@ -143,29 +146,42 @@ export function WorkbenchWorkflowPackageInstallCard({
       .map((item) => item.entry);
   }, [history, query]);
   useEffect(() => {
-    setHistory(listStoredWorkflowPackageMaintenanceHistory(workflow.id));
+    const storedHistory = listStoredWorkflowPackageMaintenanceHistory(workflow.id);
+    historyRef.current = storedHistory;
+    setHistory(storedHistory);
     setPreviewResidualIds(null);
     setQuery("");
   }, [workflow.id]);
-  function appendHistory(kind: WorkflowPackageMaintenanceLogEntry["kind"], lines: string[]) {
-    if (lines.length === 0) return;
-    setHistory((current) => {
-      const next = [
-        { id: `${kind}:${Date.now()}`, at: new Date().toISOString(), kind, lines, workflowId: workflow.id },
-        ...current,
-      ].slice(0, 12);
-      saveStoredWorkflowPackageMaintenanceHistory(
-        workflow.id,
-        next.map(({ id, at, kind: nextKind, lines: nextLines }) => ({
-          id,
-          at,
-          kind: nextKind,
-          lines: nextLines,
-        })),
-      );
-      return next;
-    });
-  }
+  const appendHistory = useCallback((
+    kind: WorkflowPackageMaintenanceLogEntry["kind"],
+    lines: string[],
+  ) => {
+    const normalizedLines = lines
+      .filter((line) => line.trim().length > 0)
+      .slice(0, 64);
+    if (normalizedLines.length === 0) return;
+    const next = [
+      {
+        id: buildWorkflowPackageMaintenanceLogEntryId(kind),
+        at: new Date().toISOString(),
+        kind,
+        lines: normalizedLines,
+        workflowId: workflow.id,
+      },
+      ...historyRef.current.filter((entry) => entry.workflowId === workflow.id),
+    ].slice(0, WORKBENCH_WORKFLOW_PACKAGE_MAINTENANCE_PER_WORKFLOW_LIMIT);
+    historyRef.current = next;
+    saveStoredWorkflowPackageMaintenanceHistory(
+      workflow.id,
+      next.map(({ id, at, kind: nextKind, lines: nextLines }) => ({
+        id,
+        at,
+        kind: nextKind,
+        lines: nextLines,
+      })),
+    );
+    setHistory(next);
+  }, [workflow.id]);
   const scanResidualsWithHistory = useCallback(() => {
     const receipt = onScanResiduals();
     appendHistory("scan", receipt);
@@ -174,7 +190,7 @@ export function WorkbenchWorkflowPackageInstallCard({
       "complete",
       receipt[0] ?? labels.packageInstallRulesResidualsCleanLabel,
     );
-  }, [labels.packageInstallRulesResidualsCleanLabel, onScanResiduals]);
+  }, [appendHistory, labels.packageInstallRulesResidualsCleanLabel, onScanResiduals]);
   const previewSafeRepairs = useCallback(() => {
     const ids = residuals.filter((entry) => entry.auto_fixable).map((entry) => entry.id);
     if (ids.length === 0) return;

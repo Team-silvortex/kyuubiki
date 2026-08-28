@@ -1,6 +1,7 @@
 export type WorkbenchStandardStorageContract = {
   storageScope: string;
   localWorkflowKey: string;
+  templateChainLibraryKey: string;
   snapshotIndexKey: string;
   snapshotPayloadPrefix: string;
   maintenanceLogKey: string;
@@ -23,6 +24,7 @@ export type WorkbenchInstallGovernanceDiagnostics = {
 export const WORKBENCH_STANDARD_STORAGE_CONTRACT: WorkbenchStandardStorageContract = {
   storageScope: "browser localStorage / per-user workspace profile",
   localWorkflowKey: "kyuubiki.workbench.workflowLibrary.v1",
+  templateChainLibraryKey: "kyuubiki.workflow.templateChainLibrary.v1",
   snapshotIndexKey: "kyuubiki.workbench.workflowSnapshots.index.v1",
   snapshotPayloadPrefix: "kyuubiki.workbench.workflowSnapshots.payload.v1:",
   maintenanceLogKey: "kyuubiki.workbench.workflowPackageMaintenanceLog.v1",
@@ -30,7 +32,7 @@ export const WORKBENCH_STANDARD_STORAGE_CONTRACT: WorkbenchStandardStorageContra
   cleanupAuthority:
     "safe cache cleanup may be initiated by hub/workbench; destructive removal of retained workflow assets stays explicit",
   retentionPolicy:
-    "snapshots and drafts are bounded caches; local workflow assets, presets, and settings persist until explicit delete or repair",
+    "snapshots and drafts are bounded caches; local workflows, imported template chains, presets, and settings persist until explicit delete or repair",
   ownershipModel:
     "hub is the system entrypoint, workbench owns workflow state, installer owns runtime deployment, agents execute but do not become the source of truth",
   formatContract: "kyuubiki.workflow-package v1 + workflow dataset contract JSON",

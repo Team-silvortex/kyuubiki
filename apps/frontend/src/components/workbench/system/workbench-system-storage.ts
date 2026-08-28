@@ -101,6 +101,17 @@ const STORAGE_BUCKETS: StorageBucketDefinition[] = [
     detail: "User-kept local workflow assets promoted from catalog or package imports.",
   },
   {
+    id: "workflow_template_library",
+    label: "Workflow template library",
+    keyPrefixes: ["kyuubiki.workflow.templateChainLibrary.v1"],
+    mode: "careful",
+    authority: "workbench",
+    dataClass: "source_of_truth",
+    portable: true,
+    cleanupLabel: "Manual review first",
+    detail: "Imported operator-chain templates, including explicit branch and merge topology.",
+  },
+  {
     id: "script_presets",
     label: "Script presets",
     keyPrefixes: [
@@ -120,13 +131,15 @@ const STORAGE_BUCKETS: StorageBucketDefinition[] = [
     keyPrefixes: [
       "kyuubiki.workflow.favoriteTemplateChains",
       "kyuubiki.workflow.favoriteTemplateChainAliases",
+      "kyuubiki.workflow.recentOperators",
+      "kyuubiki.workflow.favoriteOperators",
     ],
     mode: "careful",
     authority: "workbench",
     dataClass: "preference",
     portable: true,
     cleanupLabel: "Manual review first",
-    detail: "Favorite template chains and user aliases used by workflow search and quick insertion.",
+    detail: "Favorite chains, aliases, and recent or favorite operators used by workflow search and quick insertion.",
   },
   {
     id: "settings",

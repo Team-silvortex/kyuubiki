@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 import type { WorkflowNodeTemplateSelection } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import type { WorkflowTemplateChainDefinition } from "@/components/workbench/workflow/workbench-workflow-template-chain-library";
+import { isWorkflowTemplateChainTopologyValid } from "@/components/workbench/workflow/workbench-workflow-template-chain-contract";
 
 function compactTemplateStepLabel(template: WorkflowNodeTemplateSelection) {
   const base = template.operatorId?.split(".").pop() || template.kind || "step";
@@ -32,9 +33,11 @@ function describeTemplateChainPreview(chain: WorkflowTemplateChainDefinition) {
 }
 
 function buildTemplateChainPreviewLayout(chain: WorkflowTemplateChainDefinition) {
+  const explicitConnections = chain.connections ?? [];
   const connections =
-    chain.connections?.length
-      ? chain.connections
+    explicitConnections.length > 0 &&
+    isWorkflowTemplateChainTopologyValid(chain.templates.length, explicitConnections)
+      ? explicitConnections
       : chain.templates.slice(1).map((_, index) => ({ from: index, to: index + 1 }));
   const columnByIndex = new Map<number, number>();
   for (let index = 0; index < chain.templates.length; index += 1) {

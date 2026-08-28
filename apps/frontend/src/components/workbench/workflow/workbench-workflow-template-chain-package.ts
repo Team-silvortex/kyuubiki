@@ -5,6 +5,10 @@ import type {
   WorkflowTemplateChainConnection,
   WorkflowTemplateChainDefinition,
 } from "@/components/workbench/workflow/workbench-workflow-template-chain-library";
+import {
+  asWorkflowTemplateChainConnections,
+  asWorkflowTemplateChainSelections,
+} from "@/components/workbench/workflow/workbench-workflow-template-chain-contract";
 
 export type WorkflowTemplateChainPackage = {
   format: "kyuubiki.workflow-template-chain-package";
@@ -20,41 +24,13 @@ export type WorkflowTemplateChainPackage = {
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function asTemplateSelections(
-  value: unknown,
-): WorkflowNodeTemplateSelection[] | null {
-  if (!Array.isArray(value)) return null;
-  const templates = value.filter(
-    (entry): entry is WorkflowNodeTemplateSelection =>
-      isRecord(entry) &&
-      typeof entry.kind === "string" &&
-      (typeof entry.operatorId === "string" || entry.operatorId === undefined),
-  );
-  return templates.length === value.length ? templates : null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function asStringArray(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const tags = value.filter((entry): entry is string => typeof entry === "string");
   return tags.length === 0 ? undefined : tags;
-}
-
-function asConnections(
-  value: unknown,
-): WorkflowTemplateChainConnection[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const connections = value.filter(
-    (entry): entry is WorkflowTemplateChainConnection =>
-      isRecord(entry) &&
-      typeof entry.from === "number" &&
-      typeof entry.to === "number" &&
-      (typeof entry.fromPort === "string" || entry.fromPort === undefined) &&
-      (typeof entry.toPort === "string" || entry.toPort === undefined),
-  );
-  return connections.length === value.length ? connections : undefined;
 }
 
 export function buildWorkflowTemplateChainPackage(
@@ -66,11 +42,11 @@ export function buildWorkflowTemplateChainPackage(
     package_id: chain.id,
     name: chain.label,
     summary: chain.summary,
-    tags: chain.tags,
+    tags: chain.tags ? [...chain.tags] : undefined,
     package_version: chain.version ?? "1.0.0",
     exported_at: new Date().toISOString(),
-    templates: chain.templates,
-    connections: chain.connections,
+    templates: structuredClone(chain.templates),
+    connections: chain.connections ? structuredClone(chain.connections) : undefined,
   };
 }
 
@@ -82,12 +58,18 @@ export function asWorkflowTemplateChainPackage(
     value.format !== "kyuubiki.workflow-template-chain-package" ||
     value.version !== 1 ||
     typeof value.package_id !== "string" ||
-    typeof value.name !== "string"
+    value.package_id.trim().length === 0 ||
+    typeof value.name !== "string" ||
+    value.name.trim().length === 0 ||
+    typeof value.exported_at !== "string" ||
+    !Number.isFinite(Date.parse(value.exported_at))
   ) {
     return null;
   }
-  const templates = asTemplateSelections(value.templates);
+  const templates = asWorkflowTemplateChainSelections(value.templates);
   if (!templates) return null;
+  const connections = asWorkflowTemplateChainConnections(value.connections, templates.length);
+  if (connections === null) return null;
   return {
     format: "kyuubiki.workflow-template-chain-package",
     version: 1,
@@ -97,10 +79,9 @@ export function asWorkflowTemplateChainPackage(
     tags: asStringArray(value.tags),
     package_version:
       typeof value.package_version === "string" ? value.package_version : undefined,
-    exported_at:
-      typeof value.exported_at === "string" ? value.exported_at : new Date().toISOString(),
+    exported_at: new Date(Date.parse(value.exported_at)).toISOString(),
     templates,
-    connections: asConnections(value.connections),
+    connections: connections as WorkflowTemplateChainConnection[] | undefined,
   };
 }
 
@@ -111,9 +92,9 @@ export function packageToWorkflowTemplateChainDefinition(
     id: pkg.package_id,
     label: pkg.name,
     summary: pkg.summary,
-    tags: pkg.tags,
+    tags: pkg.tags ? [...pkg.tags] : undefined,
     version: pkg.package_version,
-    templates: pkg.templates,
-    connections: pkg.connections,
+    templates: structuredClone(pkg.templates),
+    connections: pkg.connections ? structuredClone(pkg.connections) : undefined,
   };
 }

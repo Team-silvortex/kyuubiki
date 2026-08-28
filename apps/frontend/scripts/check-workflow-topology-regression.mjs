@@ -1,5 +1,5 @@
 import { chromium } from "playwright";
-import { isRestrictedPlaywrightLaunchError, reportRestrictedPlaywrightSkip } from "./playwright-runtime-guard.mjs";
+import { isRestrictedPlaywrightLaunchError, launchPlaywrightChromium, reportRestrictedPlaywrightSkip } from "./playwright-runtime-guard.mjs";
 
 const baseUrl = process.env.WORKFLOW_BENCHMARK_URL || "http://127.0.0.1:3000/workflow-benchmark";
 
@@ -37,7 +37,7 @@ async function getSelectValue(page, selector) {
 async function run() {
   let browser;
   try {
-    browser = await chromium.launch({ headless: true });
+    browser = await launchPlaywrightChromium(chromium, { headless: true });
   } catch (error) {
     if (isRestrictedPlaywrightLaunchError(error)) {
       reportRestrictedPlaywrightSkip("Workflow topology regression check", error);

@@ -20,6 +20,7 @@ import {
   type WorkflowNodeTemplateSelection,
 } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import type { WorkflowTemplateChainDefinition } from "@/components/workbench/workflow/workbench-workflow-template-chain-library";
+import { isWorkflowTemplateChainTopologyValid } from "@/components/workbench/workflow/workbench-workflow-template-chain-contract";
 import { applyTemplateChainNodeSemantics } from "@/components/workbench/workflow/workbench-workflow-template-chain-insert-semantics";
 import { pickConnectedPorts } from "@/components/workbench/workflow/workbench-workflow-topology-connection";
 import { applyWorkflowNodeTemplateSync } from "@/components/workbench/workflow/workbench-workflow-template-impact";
@@ -401,7 +402,10 @@ export function createWorkflowTopologyActions(
 
       const sourceNode =
         sourceNodeId ? next.nodes.find((node) => node.id === sourceNodeId) ?? null : null;
-      if (chain.connections?.length) {
+      if (
+        chain.connections?.length &&
+        isWorkflowTemplateChainTopologyValid(chain.templates.length, chain.connections)
+      ) {
         appendGraphTemplateChain(next, sourceNode, chain, operatorDescriptors);
       } else {
         appendLinearTemplateChain(next, sourceNode, chain.templates, operatorDescriptors);
