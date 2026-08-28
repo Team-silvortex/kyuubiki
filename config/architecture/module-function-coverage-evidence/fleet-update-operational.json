@@ -1,0 +1,78 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Operational Installer-managed fleet transaction for one Runtime payload and multiple Rust Agents, with aligned-version preflight, mid-fleet fault compensation, executable probes, explicit rollback, clean stores, and retained remote Linux evidence.",
+  "paradigm_contract_evidence": {
+    "deployment_update": [
+      {
+        "id": "fleet-update-operational-contract",
+        "modules": [
+          "runtime-agent-cli",
+          "runtime-installer"
+        ],
+        "files": [
+          "schemas/fleet-update-qualification-report.schema.json",
+          "workers/rust/crates/installer/src/fleet_update.rs",
+          "workers/rust/crates/installer/src/fleet_update_qualification.rs",
+          "workers/rust/crates/installer/src/fleet_update_qualification_validation.rs",
+          "workers/rust/crates/script-runner/src/fleet_update_operational_qualification.rs",
+          "workers/rust/crates/installer/src/main.rs",
+          "workers/rust/crates/script-runner/src/governance_commands.rs"
+        ],
+        "required_text": [
+          "kyuubiki.fleet-update-transaction/v1",
+          "kyuubiki.fleet-update-qualification/v1",
+          "apply_fleet_update_transaction",
+          "rollback_fleet_update_transaction",
+          "FleetTransactionLock",
+          "store overlaps component",
+          "validate_fleet_update_qualification_report",
+          "qualify-fleet-update",
+          "qualify-fleet-update-operational-remote",
+          "check-fleet-update-operational-qualification",
+          "failed_upgrade_compensated",
+          "payloads_restored",
+          "stores_clean"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "fleet-update-remote-linux-operational",
+      "status": "proven",
+      "grade": "operational",
+      "modules": [
+        "runtime-agent-cli",
+        "runtime-installer"
+      ],
+      "paradigms": [
+        "deployment_update"
+      ],
+      "dimensions": [
+        "execution",
+        "security",
+        "contract",
+        "recovery"
+      ],
+      "files": [
+        "releases/usability-evidence/2.17.0/fleet-update-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"journey\": \"installer-managed-runtime-agent-fleet-upgrade-compensation-and-rollback\"",
+        "\"execution_host_role\": \"remote-linux-qualification-host\"",
+        "\"first_version\": \"2.16.9\"",
+        "\"second_version\": \"2.17.0\"",
+        "\"failed_component_id\": \"agent-02\"",
+        "\"failure_class\": \"injected-fault\"",
+        "\"compensated\": true",
+        "\"phase\": \"compensated\"",
+        "\"phase\": \"upgraded\"",
+        "\"phase\": \"rolled-back\"",
+        "\"id\": \"payloads_restored\"",
+        "\"id\": \"stores_clean\""
+      ]
+    }
+  ]
+}

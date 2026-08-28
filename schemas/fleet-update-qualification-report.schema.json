@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/fleet-update-qualification-report.schema.json",
+  "title": "Kyuubiki Fleet Update Qualification Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "journey",
+    "execution_host_role",
+    "platform",
+    "first_version",
+    "second_version",
+    "agent_count",
+    "initial",
+    "failure_injection",
+    "compensated_after_failure",
+    "upgrade_transaction",
+    "rollback_transaction",
+    "probes",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.fleet-update-qualification/v1"
+    },
+    "status": { "const": "pass" },
+    "journey": {
+      "const": "installer-managed-runtime-agent-fleet-upgrade-compensation-and-rollback"
+    },
+    "execution_host_role": {
+      "type": "string",
+      "pattern": "^(local|remote)-(macos|linux|windows)-qualification-host$"
+    },
+    "platform": { "enum": ["macos", "linux", "windows"] },
+    "first_version": { "$ref": "#/$defs/version" },
+    "second_version": { "$ref": "#/$defs/version" },
+    "agent_count": { "type": "integer", "minimum": 2, "maximum": 8 },
+    "initial": { "$ref": "#/$defs/snapshot" },
+    "failure_injection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "failed_component_id",
+        "failure_class",
+        "compensated",
+        "compensation_error_count"
+      ],
+      "properties": {
+        "failed_component_id": { "const": "agent-02" },
+        "failure_class": { "const": "injected-fault" },
+        "compensated": { "const": true },
+        "compensation_error_count": { "const": 0 }
+      }
+    },
+    "compensated_after_failure": { "$ref": "#/$defs/snapshot" },
+    "upgrade_transaction": { "$ref": "#/$defs/transaction" },
+    "rollback_transaction": { "$ref": "#/$defs/transaction" },
+    "probes": {
+      "type": "array",
+      "minItems": 20,
+      "maxItems": 44,
+      "items": { "$ref": "#/$defs/probe" }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": { "$ref": "#/$defs/check" },
+      "allOf": [
+        { "contains": { "properties": { "id": { "const": "initial_fleet_aligned" } } } },
+        { "contains": { "properties": { "id": { "const": "mid_fleet_failure_injected" } } } },
+        { "contains": { "properties": { "id": { "const": "failed_upgrade_compensated" } } } },
+        { "contains": { "properties": { "id": { "const": "compensated_fleet_executable" } } } },
+        { "contains": { "properties": { "id": { "const": "successful_upgrade_aligned" } } } },
+        { "contains": { "properties": { "id": { "const": "upgraded_fleet_executable" } } } },
+        { "contains": { "properties": { "id": { "const": "explicit_rollback_aligned" } } } },
+        { "contains": { "properties": { "id": { "const": "rolled_back_fleet_executable" } } } },
+        { "contains": { "properties": { "id": { "const": "payloads_changed" } } } },
+        { "contains": { "properties": { "id": { "const": "payloads_restored" } } } },
+        { "contains": { "properties": { "id": { "const": "generation_progression_valid" } } } },
+        { "contains": { "properties": { "id": { "const": "stores_clean" } } } }
+      ]
+    }
+  },
+  "$defs": {
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "component_id",
+        "role",
+        "generation",
+        "active_version",
+        "previous_version",
+        "payload_sha256"
+      ],
+      "properties": {
+        "component_id": {
+          "type": "string",
+          "pattern": "^(runtime|agent-[0-9]{2})$"
+        },
+        "role": { "enum": ["runtime", "agent"] },
+        "generation": { "type": "integer", "minimum": 1 },
+        "active_version": { "$ref": "#/$defs/version" },
+        "previous_version": {
+          "oneOf": [{ "$ref": "#/$defs/version" }, { "type": "null" }]
+        },
+        "payload_sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["active_version", "components"],
+      "properties": {
+        "active_version": { "$ref": "#/$defs/version" },
+        "components": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 9,
+          "items": { "$ref": "#/$defs/component" }
+        }
+      }
+    },
+    "transaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "operation",
+        "before_version",
+        "active_version",
+        "components"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.fleet-update-transaction/v1"
+        },
+        "operation": { "enum": ["upgrade", "rollback"] },
+        "before_version": { "$ref": "#/$defs/version" },
+        "active_version": { "$ref": "#/$defs/version" },
+        "components": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 9,
+          "items": { "$ref": "#/$defs/component" }
+        }
+      }
+    },
+    "probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase",
+        "component_id",
+        "role",
+        "version",
+        "success",
+        "marker_observed"
+      ],
+      "properties": {
+        "phase": {
+          "enum": ["initial", "compensated", "upgraded", "rolled-back"]
+        },
+        "component_id": {
+          "type": "string",
+          "pattern": "^(runtime\\.(agent|orchestrator|frontend)|agent-[0-9]{2})$"
+        },
+        "role": { "enum": ["runtime-service", "agent"] },
+        "version": { "$ref": "#/$defs/version" },
+        "success": { "const": true },
+        "marker_observed": { "const": true }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ok"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "ok": { "const": true }
+      }
+    }
+  }
+}

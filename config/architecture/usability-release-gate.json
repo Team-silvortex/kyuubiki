@@ -18,7 +18,8 @@
       "fault_injection_and_recovery/installer-journal-replay",
       "remote_agent_orchestra_round_trip/installer-managed-linux",
       "upgrade_and_rollback/agent-remote-linux",
-      "upgrade_and_rollback/runtime-payload-remote-linux"
+      "upgrade_and_rollback/runtime-payload-remote-linux",
+      "upgrade_and_rollback/installer-managed-fleet-remote-linux"
     ],
     "unclosed_release_tiers": [
       "packaged_desktop_round_trip",
@@ -235,7 +236,8 @@
       "capabilities": [
         "installer.update.download",
         "installer.update.apply",
-        "installer.integrity.inspect"
+        "installer.integrity.inspect",
+        "installer.runtime.install-payload"
       ],
       "probes": [
         ["check-install-update-disk-hygiene"],
@@ -249,6 +251,12 @@
           "check-runtime-payload-operational-qualification",
           "--verify-report",
           "releases/usability-evidence/2.14.3/runtime-payload-operational-qualification.json"
+        ],
+        [
+          "check-fleet-update-operational-qualification",
+          "--verify-report",
+          "releases/usability-evidence/2.17.0/fleet-update-operational-qualification.json",
+          "--require-remote-linux"
         ]
       ]
     }

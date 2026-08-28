@@ -5,9 +5,10 @@ use crate::{
     component_integrity_protocol, contracts_runtime_api_surface,
     contracts_validation_qualification, dependency_audit, desktop_deployment_update_validation,
     desktop_ui_validation, desktop_usability_journeys,
-    distributed_task_recovery_operational_qualification, doc_inventory, docs_book, frontend_checks,
-    gui_runtime_capability_contract, headless_sdk_operational, headless_sdk_validation,
-    headless_workflow_qualification, install_update_disk_hygiene, installation_integrity_docs,
+    distributed_task_recovery_operational_qualification, doc_inventory, docs_book,
+    fleet_update_operational_qualification, frontend_checks, gui_runtime_capability_contract,
+    headless_sdk_operational, headless_sdk_validation, headless_workflow_qualification,
+    install_update_disk_hygiene, installation_integrity_docs,
     installed_runtime_operational_qualification, installer_recovery_fault_injection,
     language_packs, local_path_audit, make_modules, material_exploration_chain_contract,
     material_score_contract, material_study_execution_plan_contract, materialization_plan_contract,
@@ -220,6 +221,9 @@ pub(crate) fn run_governance_command(
             runtime_payload_operational_qualification::run_check_runtime_payload_operational_qualification(
                 root, args,
             )
+        }
+        "check-fleet-update-operational-qualification" => {
+            fleet_update_operational_qualification::run_check(root, args)
         }
         "check-headless-sdk-validation-qualification" => {
             headless_sdk_validation::run_check_headless_sdk_validation(root, args)

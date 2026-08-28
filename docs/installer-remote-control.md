@@ -31,6 +31,10 @@ cargo run -p kyuubiki-installer -- remote-deployment-dry-run
 cargo run -p kyuubiki-installer -- remote-host-trust
 cargo run -p kyuubiki-installer -- remote-ssh-fixture
 cargo run -p kyuubiki-installer -- remote-ssh-fixture-plan
+./scripts/kyuubiki qualify-fleet-update-operational-remote --host kyuubiki-lab --agents 2
+./scripts/kyuubiki check-fleet-update-operational-qualification \
+  --verify-report releases/usability-evidence/2.17.0/fleet-update-operational-qualification.json \
+  --require-remote-linux
 ```
 
 That command previews the intended deployment phases before the GUI or SSH

@@ -14,6 +14,7 @@ pub fn print_help() {
         "  rollback-runtime-payload  Atomically activate the previous verified runtime\n",
         "  seal-runtime-payload <path> <version> [platform]  Seal immutable runtime files\n",
         "  qualify-runtime-payload <first-binary> <second-binary> <work-root> <first-version> <second-version> [out]  Exercise sealed runtime install, service probes, upgrade, and payload rollback\n",
+        "  qualify-fleet-update <first-binary> <second-binary> <work-root> <first-version> <second-version> [out] [agent-count]  Exercise coordinated Runtime and Agent upgrade, failure compensation, execution probes, and rollback\n",
         "  agent-update-status  Show installer-managed Rust agent versions\n",
         "  active-agent-binary  Resolve and verify the currently activated Rust agent\n",
         "  launch-managed-agent [args...]  Launch the verified active agent with forwarded arguments\n",

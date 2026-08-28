@@ -117,6 +117,23 @@ and is rechecked by `make check-runtime-payload-operational-qualification`.
 This closes only `upgrade_and_rollback/runtime-payload-remote-linux`; packaged
 desktop update and rollback on macOS, Linux, and Windows remain open.
 
+The coordinated fleet portion now has retained remote Linux evidence as well.
+Installer applies one Runtime payload and two Agent packages as a single
+aligned-version transaction. It rejects aliased or overlapping component
+stores, serializes controllers with a fleet-level lock, injects a failure before
+the second Agent switch, compensates the Runtime and first Agent, executes every
+component after compensation, completes a clean upgrade, and then rolls the
+entire fleet back.
+The Release-built Installer keeps repeated SHA-256 verification fast, and the
+successful qualification removes its 451 MB temporary payload tree before the
+small report is retained. Evidence lives at
+`releases/usability-evidence/2.17.0/fleet-update-operational-qualification.json`
+and is rechecked by
+`./scripts/kyuubiki check-fleet-update-operational-qualification --verify-report releases/usability-evidence/2.17.0/fleet-update-operational-qualification.json --require-remote-linux`.
+This closes `upgrade_and_rollback/installer-managed-fleet-remote-linux`, not the
+parent tier: packaged desktop rollback on all supported platforms and live
+workload continuity during rolling replacement remain open.
+
 The first Installer-managed end-to-end runtime subtier is now operational on
 remote Linux. A sealed installed payload starts Orchestra and two Rust Agents
 without loading the frontend; an installed Rust Headless client submits a real

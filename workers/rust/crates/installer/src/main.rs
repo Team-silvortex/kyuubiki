@@ -15,12 +15,13 @@ use kyuubiki_installer::{
     prepare_agent_update_package, prepare_layout, prepare_staged_update, print_help,
     remote_deployment_roadmap, repair_installation, rollback_agent_update,
     rollback_runtime_payload, run_agent_solver_operational_qualification,
-    run_agent_update_qualification, run_doctor, run_runtime_payload_qualification,
-    runtime_payload_status, seal_agent_update_package, seal_runtime_payload, stage_release,
-    unified_update_plan, unified_update_preview, uninstall_operator_package,
-    uninstall_operator_package_from, validate_env_file,
+    run_agent_update_qualification, run_doctor, run_fleet_update_qualification,
+    run_runtime_payload_qualification, runtime_payload_status, seal_agent_update_package,
+    seal_runtime_payload, stage_release, unified_update_plan, unified_update_preview,
+    uninstall_operator_package, uninstall_operator_package_from, validate_env_file,
     write_agent_solver_operational_qualification_report, write_agent_update_qualification_report,
-    write_operator_package_preflight_outcome, write_runtime_payload_qualification_report,
+    write_fleet_update_qualification_report, write_operator_package_preflight_outcome,
+    write_runtime_payload_qualification_report,
 };
 
 fn main() {
@@ -221,6 +222,9 @@ fn main() {
                     }
                 }),
             )
+        }
+        "qualify-fleet-update" => {
+            exit_on_err(run_fleet_update_qualification_command(args.collect()))
         }
         "install-runtime-payload" => {
             let Some(path) = args.next() else {
@@ -430,6 +434,43 @@ fn parse_operator_package_store_flag(args: Vec<String>) -> Result<Option<PathBuf
 
 fn pretty_json(value: impl serde::Serialize) -> Result<String, String> {
     serde_json::to_string_pretty(&value).map_err(|error| error.to_string())
+}
+
+fn run_fleet_update_qualification_command(args: Vec<String>) -> Result<String, String> {
+    if !(5..=7).contains(&args.len()) {
+        return Err(
+            "qualify-fleet-update requires first-binary second-binary work-root first-version second-version [out] [agent-count]"
+                .to_string(),
+        );
+    }
+    let output = args.get(5).map(PathBuf::from);
+    let agent_count = args
+        .get(6)
+        .map(|value| {
+            value
+                .parse::<usize>()
+                .map_err(|_| "agent-count must be an integer".to_string())
+        })
+        .transpose()?
+        .unwrap_or(2);
+    run_fleet_update_qualification(
+        &PathBuf::from(&args[0]),
+        &PathBuf::from(&args[1]),
+        &PathBuf::from(&args[2]),
+        &args[3],
+        &args[4],
+        agent_count,
+    )
+    .and_then(|report| match output {
+        Some(path) => {
+            write_fleet_update_qualification_report(&report, &path)?;
+            Ok(format!(
+                "fleet update qualification passed: {}",
+                path.display()
+            ))
+        }
+        None => serde_json::to_string_pretty(&report).map_err(|error| error.to_string()),
+    })
 }
 
 fn parse_operator_package_preflight_flags(

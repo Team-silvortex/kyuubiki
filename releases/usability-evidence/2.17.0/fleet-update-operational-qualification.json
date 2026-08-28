@@ -1,0 +1,350 @@
+{
+  "schema_version": "kyuubiki.fleet-update-qualification/v1",
+  "status": "pass",
+  "journey": "installer-managed-runtime-agent-fleet-upgrade-compensation-and-rollback",
+  "execution_host_role": "remote-linux-qualification-host",
+  "platform": "linux",
+  "first_version": "2.16.9",
+  "second_version": "2.17.0",
+  "agent_count": 2,
+  "initial": {
+    "active_version": "2.16.9",
+    "components": [
+      {
+        "component_id": "runtime",
+        "role": "runtime",
+        "generation": 1,
+        "active_version": "2.16.9",
+        "previous_version": null,
+        "payload_sha256": "e36ba32e95da93b3004e149bc06141895daf6fa123350f4a822e8e9fa6fa411f"
+      },
+      {
+        "component_id": "agent-01",
+        "role": "agent",
+        "generation": 1,
+        "active_version": "2.16.9",
+        "previous_version": null,
+        "payload_sha256": "3c4d5a8ba9f16540028671755a636db4b75509225a73acadbe2912874e417cae"
+      },
+      {
+        "component_id": "agent-02",
+        "role": "agent",
+        "generation": 1,
+        "active_version": "2.16.9",
+        "previous_version": null,
+        "payload_sha256": "3c4d5a8ba9f16540028671755a636db4b75509225a73acadbe2912874e417cae"
+      }
+    ]
+  },
+  "failure_injection": {
+    "failed_component_id": "agent-02",
+    "failure_class": "injected-fault",
+    "compensated": true,
+    "compensation_error_count": 0
+  },
+  "compensated_after_failure": {
+    "active_version": "2.16.9",
+    "components": [
+      {
+        "component_id": "runtime",
+        "role": "runtime",
+        "generation": 3,
+        "active_version": "2.16.9",
+        "previous_version": "2.17.0",
+        "payload_sha256": "e36ba32e95da93b3004e149bc06141895daf6fa123350f4a822e8e9fa6fa411f"
+      },
+      {
+        "component_id": "agent-01",
+        "role": "agent",
+        "generation": 3,
+        "active_version": "2.16.9",
+        "previous_version": "2.17.0",
+        "payload_sha256": "3c4d5a8ba9f16540028671755a636db4b75509225a73acadbe2912874e417cae"
+      },
+      {
+        "component_id": "agent-02",
+        "role": "agent",
+        "generation": 1,
+        "active_version": "2.16.9",
+        "previous_version": null,
+        "payload_sha256": "3c4d5a8ba9f16540028671755a636db4b75509225a73acadbe2912874e417cae"
+      }
+    ]
+  },
+  "upgrade_transaction": {
+    "schema_version": "kyuubiki.fleet-update-transaction/v1",
+    "operation": "upgrade",
+    "before_version": "2.16.9",
+    "active_version": "2.17.0",
+    "components": [
+      {
+        "component_id": "runtime",
+        "role": "runtime",
+        "generation": 4,
+        "active_version": "2.17.0",
+        "previous_version": "2.16.9",
+        "payload_sha256": "28fe0a43fb500033c15f75295513c677ae58e02f6dfb5a349a4027e4048d9919"
+      },
+      {
+        "component_id": "agent-01",
+        "role": "agent",
+        "generation": 4,
+        "active_version": "2.17.0",
+        "previous_version": "2.16.9",
+        "payload_sha256": "9f03449ef5c4b92c7432a9bf3cd6239a6d1aea949386af61dd7175aabce3b950"
+      },
+      {
+        "component_id": "agent-02",
+        "role": "agent",
+        "generation": 2,
+        "active_version": "2.17.0",
+        "previous_version": "2.16.9",
+        "payload_sha256": "9f03449ef5c4b92c7432a9bf3cd6239a6d1aea949386af61dd7175aabce3b950"
+      }
+    ]
+  },
+  "rollback_transaction": {
+    "schema_version": "kyuubiki.fleet-update-transaction/v1",
+    "operation": "rollback",
+    "before_version": "2.17.0",
+    "active_version": "2.16.9",
+    "components": [
+      {
+        "component_id": "runtime",
+        "role": "runtime",
+        "generation": 5,
+        "active_version": "2.16.9",
+        "previous_version": "2.17.0",
+        "payload_sha256": "e36ba32e95da93b3004e149bc06141895daf6fa123350f4a822e8e9fa6fa411f"
+      },
+      {
+        "component_id": "agent-01",
+        "role": "agent",
+        "generation": 5,
+        "active_version": "2.16.9",
+        "previous_version": "2.17.0",
+        "payload_sha256": "3c4d5a8ba9f16540028671755a636db4b75509225a73acadbe2912874e417cae"
+      },
+      {
+        "component_id": "agent-02",
+        "role": "agent",
+        "generation": 3,
+        "active_version": "2.16.9",
+        "previous_version": "2.17.0",
+        "payload_sha256": "3c4d5a8ba9f16540028671755a636db4b75509225a73acadbe2912874e417cae"
+      }
+    ]
+  },
+  "probes": [
+    {
+      "phase": "initial",
+      "component_id": "runtime.agent",
+      "role": "runtime-service",
+      "version": "2.16.9",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "initial",
+      "component_id": "runtime.orchestrator",
+      "role": "runtime-service",
+      "version": "2.16.9",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "initial",
+      "component_id": "runtime.frontend",
+      "role": "runtime-service",
+      "version": "2.16.9",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "initial",
+      "component_id": "agent-01",
+      "role": "agent",
+      "version": "2.16.9",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "initial",
+      "component_id": "agent-02",
+      "role": "agent",
+      "version": "2.16.9",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "compensated",
+      "component_id": "runtime.agent",
+      "role": "runtime-service",
+      "version": "2.16.9",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "compensated",
+      "component_id": "runtime.orchestrator",
+      "role": "runtime-service",
+      "version": "2.16.9",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "compensated",
+      "component_id": "runtime.frontend",
+      "role": "runtime-service",
+      "version": "2.16.9",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "compensated",
+      "component_id": "agent-01",
+      "role": "agent",
+      "version": "2.16.9",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "compensated",
+      "component_id": "agent-02",
+      "role": "agent",
+      "version": "2.16.9",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "upgraded",
+      "component_id": "runtime.agent",
+      "role": "runtime-service",
+      "version": "2.17.0",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "upgraded",
+      "component_id": "runtime.orchestrator",
+      "role": "runtime-service",
+      "version": "2.17.0",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "upgraded",
+      "component_id": "runtime.frontend",
+      "role": "runtime-service",
+      "version": "2.17.0",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "upgraded",
+      "component_id": "agent-01",
+      "role": "agent",
+      "version": "2.17.0",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "upgraded",
+      "component_id": "agent-02",
+      "role": "agent",
+      "version": "2.17.0",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "rolled-back",
+      "component_id": "runtime.agent",
+      "role": "runtime-service",
+      "version": "2.16.9",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "rolled-back",
+      "component_id": "runtime.orchestrator",
+      "role": "runtime-service",
+      "version": "2.16.9",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "rolled-back",
+      "component_id": "runtime.frontend",
+      "role": "runtime-service",
+      "version": "2.16.9",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "rolled-back",
+      "component_id": "agent-01",
+      "role": "agent",
+      "version": "2.16.9",
+      "success": true,
+      "marker_observed": true
+    },
+    {
+      "phase": "rolled-back",
+      "component_id": "agent-02",
+      "role": "agent",
+      "version": "2.16.9",
+      "success": true,
+      "marker_observed": true
+    }
+  ],
+  "checks": [
+    {
+      "id": "initial_fleet_aligned",
+      "ok": true
+    },
+    {
+      "id": "mid_fleet_failure_injected",
+      "ok": true
+    },
+    {
+      "id": "failed_upgrade_compensated",
+      "ok": true
+    },
+    {
+      "id": "compensated_fleet_executable",
+      "ok": true
+    },
+    {
+      "id": "successful_upgrade_aligned",
+      "ok": true
+    },
+    {
+      "id": "upgraded_fleet_executable",
+      "ok": true
+    },
+    {
+      "id": "explicit_rollback_aligned",
+      "ok": true
+    },
+    {
+      "id": "rolled_back_fleet_executable",
+      "ok": true
+    },
+    {
+      "id": "payloads_changed",
+      "ok": true
+    },
+    {
+      "id": "payloads_restored",
+      "ok": true
+    },
+    {
+      "id": "generation_progression_valid",
+      "ok": true
+    },
+    {
+      "id": "stores_clean",
+      "ok": true
+    }
+  ]
+}

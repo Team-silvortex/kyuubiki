@@ -38,6 +38,20 @@ pub use crate::cross_platform::{
 pub use crate::embedded_runtime::{
     EmbeddedRuntimeReport, build_embedded_runtime_manifest, embedded_runtime_report,
 };
+pub use crate::fleet_update::{
+    FLEET_UPDATE_TRANSACTION_SCHEMA_VERSION, FleetAgentUpdateTarget, FleetUpdateComponentState,
+    FleetUpdatePlan, FleetUpdateSnapshot, FleetUpdateTransactionFailure,
+    FleetUpdateTransactionReceipt, apply_fleet_update_transaction, inspect_fleet_update_state,
+    rollback_fleet_update_transaction,
+};
+pub use crate::fleet_update_qualification::{
+    FLEET_UPDATE_QUALIFICATION_SCHEMA_VERSION, FleetUpdateExecutionProbe,
+    FleetUpdateFailureObservation, FleetUpdateQualificationCheck, FleetUpdateQualificationReport,
+    run_fleet_update_qualification, write_fleet_update_qualification_report,
+};
+pub use crate::fleet_update_qualification_validation::{
+    FleetUpdateQualificationSummary, validate_fleet_update_qualification_report,
+};
 pub use crate::headless_surface::{
     INSTALLER_HEADLESS_SURFACE_SCHEMA_VERSION, InstallerBenchmarkLane, InstallerHeadlessEntrypoint,
     InstallerHeadlessRuntimeApi, InstallerHeadlessSurfaceManifest, InstallerWorkflowComposition,

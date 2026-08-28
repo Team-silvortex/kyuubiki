@@ -43,6 +43,7 @@ mod doc_inventory;
 mod docs_book;
 mod docs_book_research;
 mod elixir_self_host;
+mod fleet_update_operational_qualification;
 mod frontend_checks;
 mod governance_commands;
 mod gui_runtime_capability_contract;
@@ -415,6 +416,9 @@ fn run() -> RunnerResult<u8> {
                 &paths.root,
                 rest,
             )
+        }
+        "qualify-fleet-update-operational-remote" => {
+            fleet_update_operational_qualification::run_qualify_remote(&paths.root, rest)
         }
         "qualify-headless-sdk-operational-remote" => {
             headless_sdk_operational::run_qualify_headless_sdk_operational_remote(&paths.root, rest)
