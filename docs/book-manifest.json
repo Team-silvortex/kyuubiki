@@ -1,8 +1,8 @@
 {
   "schema_version": "kyuubiki.docs-book/v1",
   "title": "Kyuubiki Book",
-  "version_line": "moxi 2.17.0",
-  "current_development_version": "2.17.0",
+  "version_line": "moxi 2.18.3",
+  "current_development_version": "2.18.3",
   "formal_release_target": "daji 3.0.0",
   "entry_html": "docs/book.html",
   "purpose": "Single-entry documentation guide for humans and large models.",

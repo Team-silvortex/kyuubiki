@@ -4,9 +4,9 @@
   "language": "sw",
   "targetSurface": "workbench",
   "name": "Swahili Workbench Core",
-  "version": "2.17.0",
+  "version": "2.18.3",
   "versionLine": "moxi 2.x",
-  "targetAppVersion": "2.17.0",
+  "targetAppVersion": "2.18.3",
   "source": "downloaded",
   "updatedAt": "2026-07-21T04:04:21.116Z",
   "description": "Swahili UI translations for Workbench navigation, workflow, store, and system surfaces.",
@@ -29,6 +29,7 @@
     }
   ],
   "overrides": {
+    "workflowStorageWriteFailedLabel": "Imeshindikana kuhifadhi data ya mtiririko wa kazi ya ndani. Angalia nafasi ya hifadhi inayopatikana kisha ujaribu tena.",
     "title": "Kyuubiki Workbench · Kiswahili",
     "subtitle": "Nafasi ya kazi kwa uigaji, mitiririko na mawakala.",
     "rail": {

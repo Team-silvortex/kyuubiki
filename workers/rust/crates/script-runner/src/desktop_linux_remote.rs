@@ -12,6 +12,18 @@ const LINUX_DESKTOP_APT_PACKAGES: &[&str] = &[
     "patchelf",
 ];
 
+const REMOTE_SYNC_EXCLUDES: &[&str] = &[
+    ".git/",
+    "node_modules/",
+    "target/",
+    "dist/",
+    "tmp/",
+    ".next/",
+    "out/",
+    "_build/",
+    "deps/",
+];
+
 struct Options {
     frontend_node_dir: String,
     remote_build_command: String,
@@ -76,9 +88,8 @@ impl RemoteLinuxAction {
 impl Options {
     fn from_env() -> Self {
         Self {
-            frontend_node_dir: env::var("KYUUBIKI_LAB_NODE_DIR").unwrap_or_else(|_| {
-                "~/.local/kyuubiki-runtimes/node-v20.19.2-linux-x64".to_string()
-            }),
+            frontend_node_dir: env::var("KYUUBIKI_LAB_NODE_DIR")
+                .unwrap_or_else(|_| "~/.kyuubiki-toolchains/node-v20.19.2-linux-x64".to_string()),
             remote_build_command: env::var("REMOTE_BUILD_COMMAND")
                 .unwrap_or_else(|_| default_remote_build_command()),
             remote_dir: env::var("KYUUBIKI_LAB_DESKTOP_DIR")
@@ -113,12 +124,7 @@ fn sync_repo(root: &Path, options: &Options) -> RunnerResult<()> {
 
     let source = root.join(".");
     let destination = format!("{}:{}/", options.remote_host, options.remote_dir);
-    let status = rsync_to(
-        root,
-        &[".git/", "node_modules/", "target/", "dist/", "tmp/"],
-        &[source],
-        &destination,
-    )?;
+    let status = rsync_to(root, REMOTE_SYNC_EXCLUDES, &[source], &destination)?;
     if status != 0 {
         return Err(format!("rsync failed with status {status}"));
     }
@@ -200,7 +206,7 @@ Build Linux desktop packages on the Ubuntu lab host.\n\n\
 Environment:\n  \
 KYUUBIKI_LAB_HOST              SSH host alias, default kyuubiki-lab\n  \
 KYUUBIKI_LAB_DESKTOP_DIR       remote checkout, default ~/kyuubiki-desktop\n  \
-KYUUBIKI_LAB_NODE_DIR          remote Node 20.19.2 root, default ~/.local/kyuubiki-runtimes/node-v20.19.2-linux-x64\n  \
+KYUUBIKI_LAB_NODE_DIR          remote Node 20.19.2 root, default ~/.kyuubiki-toolchains/node-v20.19.2-linux-x64\n  \
 REMOTE_BUILD_COMMAND           remote command, defaults to npm ci for desktop apps plus Linux package/verify\n  \
 SYNC_TO_REMOTE                 1 to rsync before building, 0 to reuse remote checkout\n  \
 HTTP_PROXY / HTTPS_PROXY / NO_PROXY are forwarded when present\n"
@@ -210,12 +216,13 @@ HTTP_PROXY / HTTPS_PROXY / NO_PROXY are forwarded when present\n"
 #[cfg(test)]
 mod tests {
     use super::{
-        Options, default_remote_build_command, remote_build_command, remote_preflight_command,
+        Options, REMOTE_SYNC_EXCLUDES, default_remote_build_command, remote_build_command,
+        remote_preflight_command,
     };
 
     fn options() -> Options {
         Options {
-            frontend_node_dir: "~/.local/kyuubiki-runtimes/node-v20.19.2-linux-x64".to_string(),
+            frontend_node_dir: "~/.kyuubiki-toolchains/node-v20.19.2-linux-x64".to_string(),
             remote_build_command: "echo build".to_string(),
             remote_dir: "~/kyuubiki-desktop".to_string(),
             remote_host: "kyuubiki-lab".to_string(),
@@ -245,5 +252,19 @@ mod tests {
             .find("make package-desktop PLATFORM=linux")
             .expect("desktop package command");
         assert!(frontend < package);
+    }
+
+    #[test]
+    fn remote_sync_excludes_generated_dependency_and_build_trees() {
+        for generated in [
+            "node_modules/",
+            "target/",
+            ".next/",
+            "out/",
+            "_build/",
+            "deps/",
+        ] {
+            assert!(REMOTE_SYNC_EXCLUDES.contains(&generated), "{generated}");
+        }
     }
 }

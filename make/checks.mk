@@ -483,7 +483,7 @@ check-contracts-validation-qualification:
 
 check-desktop-ui-validation:
 	@$(ENTRYPOINT) check-desktop-ui-validation --self-test
-	@$(ENTRYPOINT) check-desktop-ui-validation --verify-report releases/usability-evidence/2.17.0/desktop-ui-validation-qualification.json
+	@$(ENTRYPOINT) check-desktop-ui-validation --verify-report releases/usability-evidence/2.18.3/desktop-ui-validation-qualification.json
 
 check-workbench-validation-qualification:
 	@$(ENTRYPOINT) check-workbench-validation-qualification --self-test

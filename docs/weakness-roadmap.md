@@ -405,18 +405,18 @@ workspace-dominant layouts, reversible navigation, regression panels, live
 Workbench chunk mounting, controlled Model/Study, System, and Library deep-page
 round trips, Store request ownership, shared GUI/PWDT Store manifest mutation,
 no-click PWDT Store/Workflow navigation, and Pwdt session recovery. The machine-validated
-result is retained under `releases/usability-evidence/2.17.0`; installed-package
+result is refreshed under `releases/usability-evidence/2.18.3`; installed-package
 and cross-platform proof remain separate operational tiers.
 
 The former leading coordinate, `installer-shell/validation`, now also meets
 its `qualified` target without inventing a parallel validation framework. The
 current cross-shell contract is explicitly mapped back to Installer and its
-retained moxi 2.17 report reruns all 27 browser/call-chain tests, observes 53
+retained moxi 2.18.3 report reruns all 27 browser/call-chain tests, observes 53
 Installer actions with zero missing or failed actions, and preserves four
 intentional fail-closed guards. Deployment/update handoff, capability routing,
 workspace priority, reversible navigation, and regression-critical panels are
 all asserted. The report is retained at
-`releases/usability-evidence/2.17.0/desktop-ui-validation-qualification.json`
+`releases/usability-evidence/2.18.3/desktop-ui-validation-qualification.json`
 and is now rechecked by `make check-desktop-ui-validation` as part of
 `architecture-check`.
 

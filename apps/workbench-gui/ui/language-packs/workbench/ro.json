@@ -4,9 +4,9 @@
   "language": "ro",
   "targetSurface": "workbench",
   "name": "Romanian Workbench Core",
-  "version": "2.17.0",
+  "version": "2.18.3",
   "versionLine": "moxi 2.x",
-  "targetAppVersion": "2.17.0",
+  "targetAppVersion": "2.18.3",
   "source": "downloaded",
   "updatedAt": "2026-07-21T03:40:51.471Z",
   "description": "Romanian UI translations for Workbench navigation, workflow, store, and system surfaces.",
@@ -29,6 +29,7 @@
     }
   ],
   "overrides": {
+    "workflowStorageWriteFailedLabel": "Datele locale ale fluxului de lucru nu au putut fi salvate. Verificați spațiul de stocare disponibil și încercați din nou.",
     "title": "Kyuubiki Workbench · Română",
     "subtitle": "Spațiu de lucru pentru simulare, workflow-uri și agenți.",
     "rail": {

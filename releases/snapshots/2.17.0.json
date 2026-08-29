@@ -2,7 +2,7 @@
   "version": "2.17.0",
   "codename": "moxi",
   "line": "2.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-08-26",
   "git_commit": "f5f2de7720d726d1d8ead2e40c0937724ced30a0",
   "summary": "Moxi 2.17.0 strengthens distributed Agent lifecycle fencing, restart-safe orchestration, native headless control, and release-contract alignment across every shipped surface.",

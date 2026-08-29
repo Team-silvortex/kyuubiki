@@ -37,7 +37,7 @@ help:
 	@echo "  make desktop-status Show host/platform desktop packaging readiness for PLATFORM=<host|macos|linux|windows|all>"
 	@echo "  make desktop-stage Stage the desktop/runtime release scaffold for PLATFORM=<host|macos|linux|windows|all>"
 	@echo "  make desktop-build-host Build all three desktop shells with a shared host-platform Cargo cache"
-	@echo "  make desktop-install-host Atomically replace the three macOS /Applications bundles"
+	@echo "  make desktop-install-host Install and verify the three-shell set on macOS or Ubuntu Linux"
 	@echo "  make desktop-packaged-smoke Launch and verify all packaged host desktop shells"
 	@echo "  make desktop-release Stage, build, and verify desktop release output for PLATFORM=<host|macos|linux|windows|all>"
 	@echo "  make desktop-verify Verify staged manifests and icon inputs for PLATFORM=<host|macos|linux|windows|all>"

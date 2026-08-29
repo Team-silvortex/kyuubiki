@@ -86,8 +86,11 @@ Use these commands when building deployable layouts:
   Builds the `hub-gui`, `installer-gui`, and `workbench-gui` bundles for the current host using
   one shared, platform-scoped Cargo cache
 - `make desktop-install-host`
-  Stages, validates, and atomically replaces the three fixed macOS application
-  bundles, restoring the previous bundle if activation fails
+  Installs the current three-shell set on the host. macOS stages, validates,
+  and atomically replaces the fixed application bundles, restoring the prior
+  bundle if activation fails. Ubuntu validates exactly three current-version
+  `.deb` packages and their architecture, installs them through non-interactive
+  `sudo -n apt-get`, then verifies package versions and `/usr/bin` entrypoints
 - `make desktop-packaged-smoke PLATFORM=macos|linux|windows`
   Launches all three packaged desktop binaries, waits for their interactive UI
   startup receipts, validates version/surface/PID identity, and retains logs.
@@ -498,10 +501,10 @@ root as `@bundle-root`. Verify retained evidence without launching an app with:
 
 ```sh
 ./scripts/kyuubiki desktop-packaged-smoke \
-  --verify-report releases/usability-evidence/2.17.0/macos-installed-desktop-smoke.json
+  --verify-report releases/usability-evidence/2.18.3/macos-installed-desktop-smoke.json
 
 ./scripts/kyuubiki desktop-packaged-smoke \
-  --verify-report releases/usability-evidence/2.17.0/linux-installed-desktop-smoke.json
+  --verify-report releases/usability-evidence/2.18.3/linux-installed-desktop-smoke.json
 ```
 
 This verifier is host-independent. It checks the report schema, packaged

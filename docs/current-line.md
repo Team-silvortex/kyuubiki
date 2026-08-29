@@ -13,7 +13,7 @@ Use it when you want the shortest answer to:
 `moxi 2.x` is the point where Kyuubiki treats its core contracts as product
 baseline rather than loose prototypes.
 
-The current development point in this line is `moxi 2.17.0`.
+The current development point in this line is `moxi 2.18.3`.
 
 At this checkpoint, the cross-operator contract layer has repeatable positive
 and fault-boundary qualification across workflow datasets, TaskIR, runtime API
@@ -56,9 +56,9 @@ The current rule is:
 - keep GUI convenience separate from runtime authority
 - keep agent/orchestra/mesh behavior protocol-driven
 
-## Current 2.17 Checkpoint
+## Current 2.18 Checkpoint
 
-`moxi 2.17.x` treats the next trust jump as contract-equivalent ecosystem
+`moxi 2.18.x` treats the next trust jump as contract-equivalent ecosystem
 surfaces plus measurable preparation for `daji 3.0.0`, rather than raw feature
 sprawl:
 
@@ -127,10 +127,10 @@ sprawl:
   against slipping back to Node integration shims; `make
   build-usability-readiness-report` executes the 8 blocking paths and records
   the current `baseline_pass` evidence
-- the macOS installed-package layer now retains a `3/3` native startup-receipt
-  report for Hub, Installer, and Workbench; the report is path-portable and can
-  be rechecked on any host, while Linux and Windows package journeys remain
-  explicit release blockers
+- the macOS and Linux installed-package layers now each retain a `3/3` native
+  startup-receipt report for Hub, Installer, and Workbench. Both reports are
+  path-portable and host-independently recheckable; Windows installed-package
+  qualification remains the explicit cross-platform desktop blocker
 - native workflow fault injection now proves that one failed branch is recorded
   and isolated while an independent branch completes; the same fault without a
   recovery policy fails fast. The Rust agent watchdog additionally proves

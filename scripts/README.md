@@ -768,7 +768,9 @@ Linux desktop packaging lane on `kyuubiki-lab`; use
 `desktop-linux-remote preflight` before the full build, and
 `desktop-linux-remote install-deps` for the installer-aligned privileged
 dependency lane. It uses `sudo -n`, so it fails cleanly instead of prompting for
-or storing a password.
+or storing a password. `desktop-install-host` applies the same fail-closed
+policy while installing and verifying the current three-package Ubuntu desktop
+set; on macOS it retains the atomic `/Applications` replacement path.
 
 Keep these scripts thin. Product logic should live in the application/runtime
 code, not in shell branching.

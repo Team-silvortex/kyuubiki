@@ -92,7 +92,7 @@
         "ux_closure"
       ],
       "files": [
-        "releases/usability-evidence/2.17.0/desktop-ui-validation-qualification.json"
+        "releases/usability-evidence/2.18.3/desktop-ui-validation-qualification.json"
       ],
       "required_text": [
         "\"status\": \"pass\"",
@@ -140,7 +140,7 @@
         "tests/integration/desktop-gui-navigation-closure.test.mjs",
         "tests/integration/desktop-shell-regression.test.mjs",
         "tests/integration/workbench-ui-workflow-invocation.test.mjs",
-        "releases/usability-evidence/2.17.0/desktop-ui-validation-qualification.json"
+        "releases/usability-evidence/2.18.3/desktop-ui-validation-qualification.json"
       ],
       "required_text": [
         "\"status\": \"pass\"",

@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.usability-release-gate/v1",
-  "baseline_release": "moxi 2.17.x",
+  "baseline_release": "moxi 2.18.x",
   "target_release": "daji 3.0.0",
   "policy": {
     "all_blocking_journeys_must_pass": true,
@@ -99,12 +99,12 @@
         [
           "desktop-packaged-smoke",
           "--verify-report",
-          "releases/usability-evidence/2.17.0/macos-installed-desktop-smoke.json"
+          "releases/usability-evidence/2.18.3/macos-installed-desktop-smoke.json"
         ],
         [
           "desktop-packaged-smoke",
           "--verify-report",
-          "releases/usability-evidence/2.17.0/linux-installed-desktop-smoke.json"
+          "releases/usability-evidence/2.18.3/linux-installed-desktop-smoke.json"
         ],
         ["check-gui-runtime-capability-contract"],
         ["check-ui-automation-contract"]
@@ -227,7 +227,7 @@
         [
           "check-desktop-ui-validation",
           "--verify-report",
-          "releases/usability-evidence/2.17.0/desktop-ui-validation-qualification.json"
+          "releases/usability-evidence/2.18.3/desktop-ui-validation-qualification.json"
         ]
       ]
     },

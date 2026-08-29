@@ -4,9 +4,9 @@
   "language": "it",
   "targetSurface": "workbench",
   "name": "Italian Workbench Core",
-  "version": "2.17.0",
+  "version": "2.18.3",
   "versionLine": "moxi 2.x",
-  "targetAppVersion": "2.17.0",
+  "targetAppVersion": "2.18.3",
   "source": "downloaded",
   "updatedAt": "2026-07-22T02:52:09.301Z",
   "description": "Italian UI translations for Workbench navigation, workflow, store, and system surfaces.",
@@ -29,6 +29,7 @@
     }
   ],
   "overrides": {
+    "workflowStorageWriteFailedLabel": "Impossibile salvare i dati locali del flusso di lavoro. Controlla lo spazio di archiviazione disponibile e riprova.",
     "title": "Kyuubiki Workbench · Italiano",
     "subtitle": "Spazio di lavoro per simulazione, workflow e agenti.",
     "rail": {

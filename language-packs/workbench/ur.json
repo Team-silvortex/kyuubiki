@@ -4,9 +4,9 @@
   "language": "ur",
   "targetSurface": "workbench",
   "name": "Urdu Workbench Core",
-  "version": "2.17.0",
+  "version": "2.18.3",
   "versionLine": "moxi 2.x",
-  "targetAppVersion": "2.17.0",
+  "targetAppVersion": "2.18.3",
   "source": "downloaded",
   "updatedAt": "2026-07-20T07:56:33.224Z",
   "description": "Urdu UI translations for Workbench navigation, workflow, store, and system surfaces.",
@@ -29,6 +29,7 @@
     }
   ],
   "overrides": {
+    "workflowStorageWriteFailedLabel": "مقامی ورک فلو ڈیٹا محفوظ نہیں ہو سکا۔ دستیاب اسٹوریج چیک کریں اور دوبارہ کوشش کریں۔",
     "title": "Kyuubiki Workbench · اردو",
     "subtitle": "سیمولیشن، ورک فلو اور ایجنٹس کے لیے ورک اسپیس۔",
     "rail": {

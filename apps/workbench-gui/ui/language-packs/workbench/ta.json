@@ -4,9 +4,9 @@
   "language": "ta",
   "targetSurface": "workbench",
   "name": "Tamil Workbench Core",
-  "version": "2.17.0",
+  "version": "2.18.3",
   "versionLine": "moxi 2.x",
-  "targetAppVersion": "2.17.0",
+  "targetAppVersion": "2.18.3",
   "source": "downloaded",
   "updatedAt": "2026-07-21T04:36:44.912Z",
   "description": "Tamil UI translations for Workbench navigation, workflow, store, and system surfaces.",
@@ -29,6 +29,7 @@
     }
   ],
   "overrides": {
+    "workflowStorageWriteFailedLabel": "உள்ளூர் பணிப்பாய்வு தரவைச் சேமிக்க முடியவில்லை. கிடைக்கும் சேமிப்பிடத்தைச் சரிபார்த்து மீண்டும் முயலவும்.",
     "title": "Kyuubiki Workbench · தமிழ்",
     "subtitle": "உருவகிப்பு, பணியோட்டம் மற்றும் agent களுக்கான பணியிடம்.",
     "rail": {

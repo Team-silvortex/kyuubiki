@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-08-25T22:58:22Z",
-  "shipping_version": "2.17.0",
+  "generated_at": "2026-08-28T13:59:58Z",
+  "shipping_version": "2.18.3",
   "default_channel": "stable",
   "line": "moxi 2.x",
   "source": {
@@ -16,14 +16,14 @@
       "aliases": [
         "moxi:latest",
         "moxi:2",
-        "moxi:2.17",
-        "moxi:2.17.0"
+        "moxi:2.18",
+        "moxi:2.18.3"
       ],
       "line": "2.x",
       "status": "current",
-      "version": "2.17.0",
-      "summary": "Moxi 2.17.0 strengthens distributed Agent lifecycle fencing, restart-safe orchestration, native headless control, and release-contract alignment across every shipped surface.",
-      "date": "2026-08-26",
+      "version": "2.18.3",
+      "summary": "Moxi 2.18.3 consolidates immutable desktop bundle updates, exact rollback, distributed Agent replacement safety, and release evidence into one version-aligned operational contract.",
+      "date": "2026-08-28",
       "notes": [
         "Primary operator-facing update track for the current moxi 2.x line.",
         "Targets standard installs that follow the visible installation contract."
@@ -65,7 +65,7 @@
         "managed_path_policy": "workspace_relative",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/2.17.0.json",
+      "snapshot_path": "releases/snapshots/2.18.3.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
@@ -77,38 +77,38 @@
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "2.17.0",
+          "version": "2.18.3",
           "notes": [
-            "Workbench remains a protocol client with streamed UI modules and stable automation anchors.",
-            "Workflow, solver, and research operations remain available through language-neutral contracts."
+            "Workbench remains a streamed protocol client with stable GUI and Python WASM DSL action contracts.",
+            "Workflow, solver, research, and evidence operations remain language-neutral behind the desktop shell."
           ]
         },
         "hub_gui": {
-          "version": "2.17.0",
+          "version": "2.18.3",
           "notes": [
-            "Hub packages the synchronized 2.17.0 documentation, brand, and language-pack contracts.",
-            "Project, runtime, release, and diagnostics journeys use native desktop command boundaries."
+            "Hub packages the synchronized 2.18.3 documentation, brand, and language-pack contracts.",
+            "Project, runtime, release, and diagnostics journeys retain native desktop command boundaries."
           ]
         },
         "workbench_gui": {
-          "version": "2.17.0",
+          "version": "2.18.3",
           "notes": [
-            "Workbench packages the 30-locale language-pack set and current workflow contracts.",
-            "GUI and Python WASM DSL operations share the same product-owned action surface."
+            "Workbench packages the complete 30-locale language-pack set and current workflow contracts.",
+            "GUI and Python WASM DSL operations continue to share product-owned actions."
           ]
         },
         "installer_gui": {
-          "version": "2.17.0",
+          "version": "2.18.3",
           "notes": [
-            "Installer packages the 2.17.0 update, integrity, cleanup, and remote deployment contracts.",
-            "Installation and replacement behavior remains explicit, inspectable, and rollback-aware."
+            "Installer treats Hub, Workbench, and Installer as one immutable SHA-256-bound desktop bundle set.",
+            "Activation history, tamper detection, atomic updates, and exact rollback are visible and testable."
           ]
         },
         "web_api": {
-          "version": "2.17.0",
+          "version": "2.18.3",
           "notes": [
-            "Headless and distributed control paths remain decoupled from desktop shells.",
-            "Process-generation Agent session fencing rejects stale lifecycle events and stale execution claims after replacement."
+            "Headless and distributed control paths remain decoupled from all desktop shells.",
+            "Agent lifecycle generations fence stale controllers, executions, and replacement events."
           ]
         }
       },
@@ -118,13 +118,13 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
           "kind": "dmg",
           "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_2.17.0_aarch64.dmg",
+          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_2.18.3_aarch64.dmg",
           "exists": false
         },
         {
@@ -132,13 +132,13 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
           "kind": "dmg",
           "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_2.17.0_aarch64.dmg",
+          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_2.18.3_aarch64.dmg",
           "exists": false
         },
         {
@@ -146,13 +146,13 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
           "kind": "dmg",
           "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Installer_2.17.0_aarch64.dmg",
+          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Installer_2.18.3_aarch64.dmg",
           "exists": false
         },
         {
@@ -223,12 +223,12 @@
   ],
   "versions": [
     {
-      "version": "2.17.0",
+      "version": "2.18.3",
       "line": "2.x",
       "status": "current",
-      "date": "2026-08-26",
-      "summary": "Moxi 2.17.0 strengthens distributed Agent lifecycle fencing, restart-safe orchestration, native headless control, and release-contract alignment across every shipped surface.",
-      "snapshot_path": "releases/snapshots/2.17.0.json",
+      "date": "2026-08-28",
+      "summary": "Moxi 2.18.3 consolidates immutable desktop bundle updates, exact rollback, distributed Agent replacement safety, and release evidence into one version-aligned operational contract.",
+      "snapshot_path": "releases/snapshots/2.18.3.json",
       "channels": [
         "stable"
       ],
@@ -236,9 +236,163 @@
         "moxi:stable",
         "moxi:latest",
         "moxi:2",
-        "moxi:2.17",
-        "moxi:2.17.0"
+        "moxi:2.18",
+        "moxi:2.18.3"
       ],
+      "product_surfaces": {
+        "frontend_workbench": {
+          "version": "2.18.3",
+          "notes": [
+            "Workbench remains a streamed protocol client with stable GUI and Python WASM DSL action contracts.",
+            "Workflow, solver, research, and evidence operations remain language-neutral behind the desktop shell."
+          ]
+        },
+        "hub_gui": {
+          "version": "2.18.3",
+          "notes": [
+            "Hub packages the synchronized 2.18.3 documentation, brand, and language-pack contracts.",
+            "Project, runtime, release, and diagnostics journeys retain native desktop command boundaries."
+          ]
+        },
+        "workbench_gui": {
+          "version": "2.18.3",
+          "notes": [
+            "Workbench packages the complete 30-locale language-pack set and current workflow contracts.",
+            "GUI and Python WASM DSL operations continue to share product-owned actions."
+          ]
+        },
+        "installer_gui": {
+          "version": "2.18.3",
+          "notes": [
+            "Installer treats Hub, Workbench, and Installer as one immutable SHA-256-bound desktop bundle set.",
+            "Activation history, tamper detection, atomic updates, and exact rollback are visible and testable."
+          ]
+        },
+        "web_api": {
+          "version": "2.18.3",
+          "notes": [
+            "Headless and distributed control paths remain decoupled from all desktop shells.",
+            "Agent lifecycle generations fence stale controllers, executions, and replacement events."
+          ]
+        }
+      },
+      "desktop_artifacts": [
+        {
+          "product": "hub",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
+          "exists": true
+        },
+        {
+          "product": "hub",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_2.18.3_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
+          "exists": true
+        },
+        {
+          "product": "workbench",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_2.18.3_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
+          "exists": true
+        },
+        {
+          "product": "installer",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Installer_2.18.3_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "manifest",
+          "platform": "macos",
+          "path": "dist/macos/desktop/hub-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "hub",
+          "kind": "manifest",
+          "platform": "linux",
+          "path": "dist/linux/desktop/hub-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "hub",
+          "kind": "manifest",
+          "platform": "windows",
+          "path": "dist/windows/desktop/hub-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "workbench",
+          "kind": "manifest",
+          "platform": "macos",
+          "path": "dist/macos/desktop/workbench-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "workbench",
+          "kind": "manifest",
+          "platform": "linux",
+          "path": "dist/linux/desktop/workbench-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "workbench",
+          "kind": "manifest",
+          "platform": "windows",
+          "path": "dist/windows/desktop/workbench-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "installer",
+          "kind": "manifest",
+          "platform": "macos",
+          "path": "dist/macos/desktop/installer-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "installer",
+          "kind": "manifest",
+          "platform": "linux",
+          "path": "dist/linux/desktop/installer-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "installer",
+          "kind": "manifest",
+          "platform": "windows",
+          "path": "dist/windows/desktop/installer-gui/manifest.json",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "version": "2.17.0",
+      "line": "2.x",
+      "status": "archived",
+      "date": "2026-08-26",
+      "summary": "Moxi 2.17.0 strengthens distributed Agent lifecycle fencing, restart-safe orchestration, native headless control, and release-contract alignment across every shipped surface.",
+      "snapshot_path": "releases/snapshots/2.17.0.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {
         "frontend_workbench": {
           "version": "2.17.0",
@@ -282,21 +436,21 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
           "kind": "dmg",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_2.17.0_aarch64.dmg",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -310,7 +464,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -436,7 +590,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -450,7 +604,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -464,7 +618,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -590,7 +744,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -604,7 +758,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -618,7 +772,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -739,7 +893,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -774,7 +928,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -809,7 +963,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
