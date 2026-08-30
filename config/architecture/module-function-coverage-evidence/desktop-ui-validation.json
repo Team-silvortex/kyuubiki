@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Cross-shell desktop UI qualification evidence covering observable actions, capability routing, PWDT parity, layout priority, reversible navigation, live Workbench chunk mounting, controlled Model, System, and Library navigation, topology snapshot round trips, direct Store GUI command closure, Workflow catalog and graph execution, topology mutation, no-click PWDT navigation, and persisted-session recovery.",
+  "summary": "Cross-shell desktop UI qualification evidence covering observable actions, capability routing, PWDT parity, layout priority, reversible navigation, live Workbench chunk mounting, controlled Model, System, and Library navigation, stateful Library project and Data record lifecycles, topology snapshot round trips, direct Store GUI command closure, Workflow catalog and graph execution, topology mutation, no-click PWDT navigation, and persisted-session recovery.",
   "paradigm_contract_evidence": {
     "validation": [
       {
@@ -21,6 +21,7 @@
           "tests/integration/desktop-gui-layout-priority.test.mjs",
           "tests/integration/desktop-gui-navigation-closure.test.mjs",
           "tests/integration/desktop-shell-regression.test.mjs",
+          "tests/integration/workbench-ui-data-library-actions.test.mjs",
           "tests/integration/workbench-ui-functional-closure.test.mjs",
           "tests/integration/workbench-ui-workflow-builder-actions.test.mjs",
           "tests/integration/workbench-ui-workflow-invocation.test.mjs",
@@ -37,6 +38,8 @@
           "desktop shell layout keeps operational workspaces dominant",
           "desktop primary navigation forms a reversible non-empty loop",
           "Workbench rail mounts every declared sidebar chunk without client errors",
+          "Workbench Library GUI creates, updates, exports, and deletes a project",
+          "Workbench Data GUI updates, exports, and deletes Job and Result records",
           "Workbench System exports, imports, inspects, and resets a topology snapshot",
           "Workbench Store GUI stages, exports, removes, and restores an asset action",
           "Workbench workflow catalog runs a visible entry directly to completion",
@@ -103,8 +106,8 @@
       ],
       "required_text": [
         "\"status\": \"pass\"",
-        "\"tests\": 38",
-        "\"passed\": 38",
+        "\"tests\": 40",
+        "\"passed\": 40",
         "\"failed_actions\": 0",
         "\"missing_actions\": 0",
         "\"actions\": 43",
@@ -114,6 +117,8 @@
         "\"id\": \"pwdt-parity\"",
         "\"id\": \"navigation-closure\"",
         "\"id\": \"workbench-interaction-closure\"",
+        "\"id\": \"workbench-library-project-lifecycle-closure\"",
+        "\"id\": \"workbench-data-record-lifecycle-closure\"",
         "\"id\": \"workbench-system-snapshot-closure\"",
         "\"id\": \"workbench-store-gui-command-closure\"",
         "\"id\": \"workbench-workflow-catalog-run-closure\"",

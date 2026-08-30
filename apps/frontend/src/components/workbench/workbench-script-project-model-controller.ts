@@ -25,7 +25,7 @@ type ScriptProjectModelControllerDeps = {
   setModelVersions: (value: any[]) => void;
   setLoadedModelName: (value: string) => void;
   setActiveMaterial: (value: string) => void;
-  refreshProjects: () => Promise<void>;
+  refreshProjects: (bootstrap?: boolean, preferredProjectId?: string | null) => Promise<void>;
   refreshVersions: (modelId: string) => Promise<void>;
   downloadProjectBundleJson: () => Promise<WorkbenchDownloadResult>;
   downloadProjectBundleZip: () => Promise<WorkbenchDownloadResult>;
@@ -97,7 +97,7 @@ export async function handleWorkbenchScriptProjectModelAction({
       setSelectedProjectId(created.project.project_id);
       setProjectNameDraft(created.project.name);
       setProjectDescriptionDraft(created.project.description ?? "");
-      await refreshProjects();
+      await refreshProjects(false, created.project.project_id);
       setMessage(projectCreatedLabel);
       return { ok: true, action, projectId: created.project.project_id };
     }

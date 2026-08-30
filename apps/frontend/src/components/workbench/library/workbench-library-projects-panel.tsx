@@ -45,7 +45,7 @@ export function WorkbenchLibraryProjectsPanel({
   setProjectPage,
 }: WorkbenchLibraryProjectsPanelProps) {
   return (
-    <section className="sidebar-card">
+    <section className="sidebar-card" data-workbench-library-projects="panel">
       <div className="card-head">
         <h2>{labels.projectLibrary}</h2>
         <span>{projects.length}</span>
@@ -73,18 +73,27 @@ export function WorkbenchLibraryProjectsPanel({
           <div className="form-grid compact">
             <label>
               <span>{labels.projectNameField}</span>
-              <input value={projectNameDraft} onChange={(event) => onProjectNameDraftChange(event.target.value)} />
+              <input
+                data-workbench-library-project-field="name"
+                value={projectNameDraft}
+                onChange={(event) => onProjectNameDraftChange(event.target.value)}
+              />
             </label>
             <label>
               <span>{labels.projectDescriptionField}</span>
               <input
+                data-workbench-library-project-field="description"
                 value={projectDescriptionDraft}
                 onChange={(event) => onProjectDescriptionDraftChange(event.target.value)}
               />
             </label>
             <label>
               <span>{labels.projectLibrary}</span>
-              <select value={selectedProjectId ?? ""} onChange={(event) => onSelectedProjectChange(event.target.value || null)}>
+              <select
+                data-workbench-library-project-field="selection"
+                value={selectedProjectId ?? ""}
+                onChange={(event) => onSelectedProjectChange(event.target.value || null)}
+              >
                 <option value="">{labels.none}</option>
                 {projects.map((project) => (
                   <option key={project.project_id} value={project.project_id}>
@@ -95,13 +104,13 @@ export function WorkbenchLibraryProjectsPanel({
             </label>
           </div>
           <div className="button-row">
-            <button className="ghost-button" onClick={onCreateProject} type="button">
+            <button className="ghost-button" data-workbench-library-project-action="create" onClick={onCreateProject} type="button">
               {labels.createProject}
             </button>
-            <button className="ghost-button" disabled={!selectedProjectId} onClick={onUpdateProject} type="button">
+            <button className="ghost-button" data-workbench-library-project-action="update" disabled={!selectedProjectId} onClick={onUpdateProject} type="button">
               {labels.updateProject}
             </button>
-            <button className="ghost-button" disabled={!selectedProjectId} onClick={onDeleteProject} type="button">
+            <button className="ghost-button" data-workbench-library-project-action="delete" disabled={!selectedProjectId} onClick={onDeleteProject} type="button">
               {labels.deleteProject}
             </button>
           </div>
@@ -110,10 +119,10 @@ export function WorkbenchLibraryProjectsPanel({
       ) : (
         <>
           <div className="button-row">
-            <button className="ghost-button" disabled={!selectedProjectId} onClick={onExportProjectJson} type="button">
+            <button className="ghost-button" data-workbench-library-project-action="export-json" disabled={!selectedProjectId} onClick={onExportProjectJson} type="button">
               {labels.exportProjectJson}
             </button>
-            <button className="ghost-button" disabled={!selectedProjectId} onClick={onExportProjectZip} type="button">
+            <button className="ghost-button" data-workbench-library-project-action="export-zip" disabled={!selectedProjectId} onClick={onExportProjectZip} type="button">
               {labels.exportProjectZip}
             </button>
           </div>
@@ -121,6 +130,7 @@ export function WorkbenchLibraryProjectsPanel({
             <span>{labels.importProject}</span>
             <small>{labels.importProjectHint}</small>
             <input
+              data-workbench-library-project-action="import"
               type="file"
               accept=".kyuubiki,.kyuubiki.json,application/json,application/zip"
               onChange={(event) => void onImportProjectBundle(event.target.files?.[0])}

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
+import { KYUUBIKI_PRODUCT_VERSION_LABEL } from "@/lib/product-version";
 
 export const metadata: Metadata = {
-  title: "Workbench Window Protection | moxi 2.0.0",
+  title: `Workbench Window Protection | ${KYUUBIKI_PRODUCT_VERSION_LABEL}`,
   description: "Responsive protection rules for the built-in moxi workbench shell.",
 };
 
@@ -95,7 +96,7 @@ export default function WorkbenchWindowProtectionPage() {
   return (
     <main style={mainStyle}>
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
-        <p style={eyebrowStyle}>moxi 2.0.0</p>
+        <p style={eyebrowStyle}>{KYUUBIKI_PRODUCT_VERSION_LABEL}</p>
         <h1 style={{ fontSize: "clamp(2rem, 4vw, 3.4rem)", margin: "0 0 12px" }}>
           Workbench Window Protection
         </h1>

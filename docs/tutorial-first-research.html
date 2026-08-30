@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tutorial · First Workbench Research Loop</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">Tutorial 01 · Workbench GUI</div>
+        <h1>Finish one small research loop</h1>
+        <p class="docs-copy">
+          This route proves the basic Workbench chain: project -> model -> saved
+          state -> job -> result -> reopen. Use a small 2D truss so product wiring,
+          not mesh size, is the variable under test.
+        </p>
+        <div class="docs-meta">
+          <span class="docs-chip">Surface: Workbench</span>
+          <span class="docs-chip">Suggested time: 15 minutes</span>
+          <span class="docs-chip">Risk: normal</span>
+          <span class="docs-chip">Output: persisted project + result</span>
+        </div>
+        <div class="docs-links">
+          <a class="docs-link" href="./tutorials.html">Tutorial center</a>
+          <a class="docs-link" href="./tutorial-pwdt-automation.html">Automate the same loop</a>
+          <a class="docs-link" href="./tutorial-recovery.html">Recovery guide</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Before starting</h2>
+        <ul class="docs-list">
+          <li>Open Workbench through Hub or the installed Workbench shell.</li>
+          <li>Confirm the event bar has no unresolved runtime-start or project-storage failure.</li>
+          <li>Keep the case small: about six truss bays, one material, and one load case.</li>
+          <li>Do not continue from an unknown active project. Create a new one or deliberately select an existing one.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 1</div>
+        <h2>Create the research container</h2>
+        <ol class="docs-list">
+          <li>Open the <strong>History / Library</strong> rail section.</li>
+          <li>Open the projects view and create a project named <code>tutorial-truss-loop</code>.</li>
+          <li>Confirm that the new project is selected before leaving the section.</li>
+        </ol>
+        <p class="docs-checkpoint"><strong>Checkpoint:</strong> the active project id and name are visible, and the project list contains exactly the project you intend to modify.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 2</div>
+        <h2>Build a bounded model</h2>
+        <ol class="docs-list">
+          <li>Open <strong>Workspace / Model</strong> and choose the 2D parametric truss generator.</li>
+          <li>Use six bays, span 18, height 3.5, and a vertical load near -1500 in the active unit convention.</li>
+          <li>Inspect the viewport before solving: supports, load direction, connectivity, and scale must be visually plausible.</li>
+          <li>Save the model as <code>tutorial-truss-v1</code> using Save As.</li>
+        </ol>
+        <p class="docs-checkpoint"><strong>Checkpoint:</strong> the model belongs to <code>tutorial-truss-loop</code>, has a stable model id, and reappears in the project model list.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 3</div>
+        <h2>Run and wait for evidence</h2>
+        <ol class="docs-list">
+          <li>Open <strong>Research / Study</strong> and review the active study kind, material, loads, and boundary summary.</li>
+          <li>Run the current study once. Do not click Run repeatedly while the job is queued or running.</li>
+          <li>Follow the observable job state until it becomes <code>completed</code> or a terminal failure is reported.</li>
+          <li>If it fails, keep the job id and event message before changing the model.</li>
+        </ol>
+        <p class="docs-checkpoint"><strong>Checkpoint:</strong> one terminal job record exists, it is associated with the selected project and model, and the result count is greater than zero.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 4</div>
+        <h2>Inspect, then prove persistence</h2>
+        <ol class="docs-list">
+          <li>Open Results for the completed job and inspect deformation shape, extrema, units, and warnings.</li>
+          <li>Record the project id, model id, job id, solver/operator version, and the primary result metric.</li>
+          <li>Return to History / Library, leave the project, then reopen <code>tutorial-truss-loop</code>.</li>
+          <li>Reopen <code>tutorial-truss-v1</code> and its result without rebuilding the geometry.</li>
+        </ol>
+        <p class="docs-note">A colorful result is not a validation claim. This tutorial proves product closure and persistence only; physical trust requires an accuracy baseline and an appropriate convergence or cross-validation route.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Completion contract</h2>
+        <table class="docs-table">
+          <thead><tr><th>Item</th><th>Pass condition</th><th>If missing</th></tr></thead>
+          <tbody>
+            <tr><td>Project</td><td>Can be selected again after leaving it</td><td>Stop at project storage</td></tr>
+            <tr><td>Model</td><td>Saved model reopens with the same geometry and study</td><td>Stop at model persistence</td></tr>
+            <tr><td>Run</td><td>Exactly one terminal job record with an id</td><td>Use runtime/job recovery</td></tr>
+            <tr><td>Result</td><td>Result opens and exposes units, extrema, and warnings</td><td>Stop at result fetch</td></tr>
+            <tr><td>Evidence</td><td>Ids, versions, input summary, metric, and limitation retained</td><td>Do not call the run research</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Next step</h2>
+        <p class="docs-copy">Repeat the same chain without clicking through every panel, or move the model into a composite operator flow.</p>
+        <div class="docs-links">
+          <a class="docs-link" href="./tutorial-pwdt-automation.html">Repeat with PWDT</a>
+          <a class="docs-link" href="./tutorial-composite-workflow.html">Build a composite workflow</a>
+          <a class="docs-link" href="./accuracy-baselines.md">Read accuracy baselines</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

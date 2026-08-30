@@ -280,21 +280,21 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
           <div className="form-grid compact">
             <label>
               <span>{filterProjectLabel}</span>
-              <input value={filterProjectValue} onChange={(event) => onFilterProjectChange(event.target.value)} />
+              <input data-workbench-data-field="filter-project" value={filterProjectValue} onChange={(event) => onFilterProjectChange(event.target.value)} />
             </label>
             <label>
               <span>{filterVersionLabel}</span>
-              <input value={filterVersionValue} onChange={(event) => onFilterVersionChange(event.target.value)} />
+              <input data-workbench-data-field="filter-version" value={filterVersionValue} onChange={(event) => onFilterVersionChange(event.target.value)} />
             </label>
           </div>
           <div className="button-row">
-            <button className="ghost-button ghost-button--compact" disabled={!canUseCurrentProject} onClick={onUseCurrentProject} type="button">
+            <button className="ghost-button ghost-button--compact" data-workbench-data-action="use-current-project" disabled={!canUseCurrentProject} onClick={onUseCurrentProject} type="button">
               {useCurrentProjectLabel}
             </button>
-            <button className="ghost-button ghost-button--compact" disabled={!canUseCurrentVersion} onClick={onUseCurrentVersion} type="button">
+            <button className="ghost-button ghost-button--compact" data-workbench-data-action="use-current-version" disabled={!canUseCurrentVersion} onClick={onUseCurrentVersion} type="button">
               {useCurrentVersionLabel}
             </button>
-            <button className="ghost-button ghost-button--compact" onClick={onClearFilters} type="button">
+            <button className="ghost-button ghost-button--compact" data-workbench-data-action="clear-filters" onClick={onClearFilters} type="button">
               {clearFiltersLabel}
             </button>
           </div>
@@ -313,6 +313,8 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
               renderItem={(entry) => (
                 <button
                   className={`history-item${selectedAdminJobId === entry.id ? " history-item--active" : ""}`}
+                  data-workbench-data-record-id={entry.id}
+                  data-workbench-data-record-kind="job"
                   onClick={() => onSelectAdminJob(entry.id)}
                   type="button"
                 >
@@ -331,11 +333,12 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
           {dataPage === "edit" && selectedAdminJob ? (
             <>
               <div className="button-row">
-                <button className="ghost-button" disabled={!canCancelSelectedJob} onClick={onCancelSelectedJob} type="button">
+                <button className="ghost-button" data-workbench-data-action="cancel-job" disabled={!canCancelSelectedJob} onClick={onCancelSelectedJob} type="button">
                   {cancelJobLabel}
                 </button>
                 <button
                   className="ghost-button"
+                  data-workbench-data-action="apply-job-context"
                   disabled={!selectedAdminJobHasContext}
                   onClick={onApplySelectedJobContext}
                   type="button"
@@ -344,6 +347,7 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                 </button>
                 <button
                   className="ghost-button"
+                  data-workbench-data-action="open-job-project"
                   disabled={!selectedAdminJobHasProject}
                   onClick={onOpenSelectedJobProject}
                   type="button"
@@ -352,6 +356,7 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                 </button>
                 <button
                   className="ghost-button"
+                  data-workbench-data-action="open-job-version"
                   disabled={!selectedAdminJobHasVersion}
                   onClick={onOpenSelectedJobVersion}
                   type="button"
@@ -362,26 +367,26 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
               <div className="form-grid compact">
                 <label>
                   <span>{adminMessageLabel}</span>
-                  <input value={adminJobMessage} onChange={(event) => onAdminJobMessageChange(event.target.value)} />
+                  <input data-workbench-data-field="job-message" value={adminJobMessage} onChange={(event) => onAdminJobMessageChange(event.target.value)} />
                 </label>
                 <label>
                   <span>{adminProjectIdLabel}</span>
-                  <input value={adminJobProjectId} onChange={(event) => onAdminJobProjectIdChange(event.target.value)} />
+                  <input data-workbench-data-field="job-project" value={adminJobProjectId} onChange={(event) => onAdminJobProjectIdChange(event.target.value)} />
                 </label>
                 <label>
                   <span>{adminModelVersionIdLabel}</span>
-                  <input value={adminJobModelVersionId} onChange={(event) => onAdminJobModelVersionIdChange(event.target.value)} />
+                  <input data-workbench-data-field="job-version" value={adminJobModelVersionId} onChange={(event) => onAdminJobModelVersionIdChange(event.target.value)} />
                 </label>
                 <label>
                   <span>{adminCaseIdLabel}</span>
-                  <input value={adminJobCaseId} onChange={(event) => onAdminJobCaseIdChange(event.target.value)} />
+                  <input data-workbench-data-field="job-case" value={adminJobCaseId} onChange={(event) => onAdminJobCaseIdChange(event.target.value)} />
                 </label>
               </div>
               <div className="button-row">
-                <button className="ghost-button" onClick={onSaveAdminJob} type="button">
+                <button className="ghost-button" data-workbench-data-action="save-job" onClick={onSaveAdminJob} type="button">
                   {saveRecordLabel}
                 </button>
-                <button className="ghost-button" onClick={onDeleteAdminJob} type="button">
+                <button className="ghost-button" data-workbench-data-action="delete-job" onClick={onDeleteAdminJob} type="button">
                   {deleteRecordLabel}
                 </button>
               </div>
@@ -403,6 +408,8 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
               renderItem={(entry) => (
                 <button
                   className={`history-item${selectedAdminResultJobId === entry.id ? " history-item--active" : ""}`}
+                  data-workbench-data-record-id={entry.id}
+                  data-workbench-data-record-kind="result"
                   onClick={() => onSelectAdminResult(entry.id)}
                   type="button"
                 >
@@ -423,6 +430,7 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                   <span>{resultPayloadLabel}</span>
                   <textarea
                     className="json-editor"
+                    data-workbench-data-field="result-payload"
                     value={adminResultDraft}
                     onChange={(event) => onAdminResultDraftChange(event.target.value)}
                     rows={10}
@@ -430,11 +438,12 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                 </label>
               </div>
               <div className="button-row">
-                <button className="ghost-button" onClick={onSaveAdminResult} type="button">
+                <button className="ghost-button" data-workbench-data-action="save-result" onClick={onSaveAdminResult} type="button">
                   {saveRecordLabel}
                 </button>
                 <button
                   className="ghost-button"
+                  data-workbench-data-action="apply-result-context"
                   disabled={!selectedAdminResultHasContext}
                   onClick={onApplySelectedResultContext}
                   type="button"
@@ -443,6 +452,7 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                 </button>
                 <button
                   className="ghost-button"
+                  data-workbench-data-action="open-result-project"
                   disabled={!selectedAdminResultHasProject}
                   onClick={onOpenSelectedResultProject}
                   type="button"
@@ -451,16 +461,17 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                 </button>
                 <button
                   className="ghost-button"
+                  data-workbench-data-action="open-result-version"
                   disabled={!selectedAdminResultHasVersion}
                   onClick={onOpenSelectedResultVersion}
                   type="button"
                 >
                   {openLinkedVersionLabel}
                 </button>
-                <button className="ghost-button" onClick={onExportAdminResult} type="button">
+                <button className="ghost-button" data-workbench-data-action="export-result" onClick={onExportAdminResult} type="button">
                   {exportRecordLabel}
                 </button>
-                <button className="ghost-button" onClick={onDeleteAdminResult} type="button">
+                <button className="ghost-button" data-workbench-data-action="delete-result" onClick={onDeleteAdminResult} type="button">
                   {deleteRecordLabel}
                 </button>
               </div>

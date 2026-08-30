@@ -9,12 +9,13 @@
     "tests/integration/desktop-gui-layout-priority.test.mjs",
     "tests/integration/desktop-gui-navigation-closure.test.mjs",
     "tests/integration/desktop-shell-regression.test.mjs",
+    "tests/integration/workbench-ui-data-library-actions.test.mjs",
     "tests/integration/workbench-ui-functional-closure.test.mjs",
     "tests/integration/workbench-ui-workflow-builder-actions.test.mjs",
     "tests/integration/workbench-ui-workflow-invocation.test.mjs",
     "tests/integration/workbench-shell-regression.test.mjs"
   ],
-  "minimum_test_count": 38,
+  "minimum_test_count": 40,
   "shell_minimum_actions": [
     { "id": "hub", "minimum_actions": 40 },
     { "id": "installer", "minimum_actions": 50 },
@@ -56,6 +57,14 @@
     {
       "id": "workbench-interaction-closure",
       "label": "Workbench rail mounts every declared sidebar chunk without client errors"
+    },
+    {
+      "id": "workbench-library-project-lifecycle-closure",
+      "label": "Workbench Library GUI creates, updates, exports, and deletes a project"
+    },
+    {
+      "id": "workbench-data-record-lifecycle-closure",
+      "label": "Workbench Data GUI updates, exports, and deletes Job and Result records"
     },
     {
       "id": "workbench-system-snapshot-closure",

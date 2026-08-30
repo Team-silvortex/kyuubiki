@@ -20,6 +20,13 @@ const HTML_FILES: &[&str] = &[
     "docs/book-ch06-sdk-surfaces.html",
     "docs/book-ch07-trust-and-safety.html",
     "docs/book-ch08-reading-paths.html",
+    "docs/tutorials.html",
+    "docs/tutorial-first-research.html",
+    "docs/tutorial-composite-workflow.html",
+    "docs/tutorial-pwdt-automation.html",
+    "docs/tutorial-headless-rust.html",
+    "docs/tutorial-operator-sdk.html",
+    "docs/tutorial-recovery.html",
     "docs/model-research-onboarding.html",
     "docs/update-catalog.html",
     "docs/installation-integrity-contract.html",
@@ -33,7 +40,10 @@ const HTML_FILES: &[&str] = &[
 
 const CURRENT_VERSION_FILES: &[&str] = &[
     "docs/book.html",
+    "docs/book-ch02-moxi-line.html",
     "docs/book-manifest.json",
+    "docs/model-research-onboarding.html",
+    "docs/tutorials.html",
     "docs/component-integrity-protocol.html",
     "docs/navigation-matrix.html",
     "apps/hub-gui/ui/docs/index.html",
@@ -55,6 +65,15 @@ const ROLE_PATHS: &[&str] = &[
     "runtime_engineer",
     "sdk_engineer",
     "llm_integrator",
+];
+
+const TUTORIAL_IDS: &[&str] = &[
+    "first-research",
+    "composite-workflow",
+    "pwdt-automation",
+    "headless-rust",
+    "operator-sdk",
+    "recovery",
 ];
 
 pub(crate) fn run_check_doc_book(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
@@ -254,6 +273,51 @@ fn validate_doc_book(
         }
     }
 
+    if manifest.get("tutorial_entry_html").and_then(Value::as_str) != Some("docs/tutorials.html") {
+        issues.push(
+            "docs/book-manifest.json: tutorial_entry_html must be docs/tutorials.html".to_string(),
+        );
+    }
+    let tutorials = manifest
+        .get("tutorials")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    if tutorials.len() != TUTORIAL_IDS.len() {
+        issues.push(format!(
+            "docs/book-manifest.json: expected {} tutorials, found {}",
+            TUTORIAL_IDS.len(),
+            tutorials.len()
+        ));
+    }
+    for expected_id in TUTORIAL_IDS {
+        if !tutorials
+            .iter()
+            .any(|tutorial| tutorial.get("id").and_then(Value::as_str) == Some(expected_id))
+        {
+            issues.push(format!(
+                "docs/book-manifest.json: missing tutorial {expected_id}"
+            ));
+        }
+    }
+    for tutorial in tutorials {
+        let id = tutorial
+            .get("id")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown");
+        let Some(page) = tutorial.get("page").and_then(Value::as_str) else {
+            issues.push(format!(
+                "docs/book-manifest.json: tutorial {id} missing page"
+            ));
+            continue;
+        };
+        if !root.join(page).is_file() {
+            issues.push(format!(
+                "docs/book-manifest.json: missing tutorial page {page}"
+            ));
+        }
+    }
+
     let reading_paths = manifest.get("reading_paths").and_then(Value::as_object);
     for role in ROLE_PATHS {
         let entries = reading_paths
@@ -280,6 +344,13 @@ fn validate_doc_book(
 fn required_snippets(relative_path: &str) -> &'static [&'static str] {
     match relative_path {
         "docs/book.html" => &["Chapter 1: What Kyuubiki is", "Open chapter page"],
+        "docs/tutorials.html" => &["Start with a finished loop", "Choose the right surface"],
+        "docs/tutorial-first-research.html" => &["project -> model", "Completion contract"],
+        "docs/tutorial-composite-workflow.html" => &["graph + dataset", "Consistency check"],
+        "docs/tutorial-pwdt-automation.html" => &["No DOM guessing", "run_recipe"],
+        "docs/tutorial-headless-rust.html" => &["executor mock", "executor service"],
+        "docs/tutorial-operator-sdk.html" => &["Rust-only", "operator-package-preflight"],
+        "docs/tutorial-recovery.html" => &["Five-stage recovery map", "Stop conditions"],
         "docs/book-ch08-reading-paths.html" => &[
             "book-manifest.json",
             "docs/README.md",
@@ -475,6 +546,22 @@ fn sync_replacements(
                 ),
                 semver_rule("\"shipping_version\": \"", "\"", shipping_version),
             ],
+        ),
+        (
+            "docs/book-ch02-moxi-line.html",
+            vec![semver_rule(
+                "current checkpoint is ",
+                " inside",
+                shipping_version,
+            )],
+        ),
+        (
+            "docs/model-research-onboarding.html",
+            vec![semver_rule(">moxi ", " -", shipping_version)],
+        ),
+        (
+            "docs/tutorials.html",
+            vec![semver_rule("Current development: ", "", shipping_version)],
         ),
         (
             "docs/component-integrity-protocol.html",

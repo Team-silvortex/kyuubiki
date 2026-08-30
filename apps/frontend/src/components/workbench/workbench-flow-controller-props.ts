@@ -96,6 +96,7 @@ export function buildWorkbenchFlowControllerProps(props: WorkbenchFlowController
     adminJobProjectId: props.adminJobProjectId,
     adminJobModelVersionId: props.adminJobModelVersionId,
     adminJobCaseId: props.adminJobCaseId,
+    selectedAdminResultJobId: props.selectedAdminResultJobId,
     adminResultDraft: props.adminResultDraft,
     downloadTextFile: props.downloadTextFile,
     adminDataEffects: props.adminDataEffects,

@@ -136,7 +136,7 @@ export function useWorkbenchDataRefreshController({
     }
   }
 
-  async function refreshProjects(bootstrap = false) {
+  async function refreshProjects(bootstrap = false, preferredProjectId?: string | null) {
     const refreshSeq = ++projectRefreshSeqRef.current;
 
     try {
@@ -155,9 +155,10 @@ export function useWorkbenchDataRefreshController({
 
       setProjects(nextProjects);
 
+      const requestedProjectId = preferredProjectId === undefined ? selectedProjectId : preferredProjectId;
       const nextProjectId =
-        selectedProjectId && nextProjects.some((project) => project.project_id === selectedProjectId)
-          ? selectedProjectId
+        requestedProjectId && nextProjects.some((project) => project.project_id === requestedProjectId)
+          ? requestedProjectId
           : nextProjects[0]?.project_id ?? null;
 
       setSelectedProjectId(nextProjectId);

@@ -51,6 +51,7 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
       systemSidebar: workbenchAutomationSelectors.systemSidebar,
       dataAdminPanel: workbenchAutomationSelectors.dataAdminPanel,
       libraryPanel: workbenchAutomationSelectors.libraryPanel,
+      libraryProjectsPanel: workbenchAutomationSelectors.libraryProjectsPanel,
       storePanel: workbenchAutomationSelectors.storePanel,
       storeSearch: workbenchAutomationSelectors.storeSearch,
       controlWindow: workbenchAutomationSelectors.controlWindow,
@@ -147,6 +148,36 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
         key: "dataPage",
         parameter: "page",
         template: workbenchAutomationSelectors.dataPage(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${page}"),
+      },
+      {
+        key: "dataAction",
+        parameter: "action",
+        template: workbenchAutomationSelectors.dataAction(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${action}"),
+      },
+      {
+        key: "dataField",
+        parameter: "field",
+        template: workbenchAutomationSelectors.dataField(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${field}"),
+      },
+      {
+        key: "dataRecord",
+        parameter: "recordId",
+        template: workbenchAutomationSelectors.dataRecord(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${recordId}"),
+      },
+      {
+        key: "dataRecordKind",
+        parameter: "kind",
+        template: workbenchAutomationSelectors.dataRecordKind(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${kind}"),
+      },
+      {
+        key: "libraryProjectAction",
+        parameter: "action",
+        template: workbenchAutomationSelectors.libraryProjectAction(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${action}"),
+      },
+      {
+        key: "libraryProjectField",
+        parameter: "field",
+        template: workbenchAutomationSelectors.libraryProjectField(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${field}"),
       },
       {
         key: "storeKind",

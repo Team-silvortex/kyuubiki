@@ -1,13 +1,20 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
+import { KYUUBIKI_PRODUCT_VERSION_LABEL } from "@/lib/product-version";
 
 export const metadata: Metadata = {
-  title: "Workflow Docs | moxi 2.0.0",
-  description: "Architecture and contract references for the moxi workflow system.",
+  title: `Workflow Docs | ${KYUUBIKI_PRODUCT_VERSION_LABEL}`,
+  description: "Task tutorials plus architecture and contract references for the moxi workflow system.",
 };
 
 const DOCS = [
+  {
+    href: "/docs/tutorials",
+    title: "Tutorial Paths",
+    summary:
+      "Start with a complete project-to-result loop, then choose composite workflow, PWDT automation, Rust Headless control, or Rust operator authoring.",
+  },
   {
     href: "/docs/workflow-architecture",
     title: "Workflow Architecture",
@@ -38,15 +45,15 @@ export default function DocsPage() {
   return (
     <main style={mainStyle}>
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
-        <p style={eyebrowStyle}>moxi 2.0.0</p>
+        <p style={eyebrowStyle}>{KYUUBIKI_PRODUCT_VERSION_LABEL}</p>
         <h1 style={{ fontSize: "clamp(2rem, 4vw, 3.4rem)", margin: "0 0 12px" }}>
           Workflow Docs
         </h1>
         <p style={copyStyle}>
-          This documentation hub collects the architectural and contract-level references for the
-          workflow system so the builder, headless SDK, and future runtime targets can align on one
-          shared model. It also tracks newer workflow families such as the dedicated peak
-          diagnostics review path.
+          Start with the task tutorials when you need to finish a real loop. Use the architectural
+          and contract references after the project, workflow, runtime, or SDK boundary is clear.
+          The builder, PWDT, Headless SDK, and operator runtime stay aligned on shared contracts
+          without becoming the same extension surface.
         </p>
 
         <section style={{ marginTop: 32, display: "grid", gap: 16 }}>

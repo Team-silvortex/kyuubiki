@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tutorial · Composite Operator Workflow</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">Tutorial 02 · Workflow Builder</div>
+        <h1>Turn operators into one traceable flow</h1>
+        <p class="docs-copy">
+          Start from a known catalog flow, inspect its graph and dataset contract,
+          then create a bounded local variant. The goal is not graph size; it is a
+          complete solve -> bridge -> solve -> extract/export chain with lineage.
+        </p>
+        <div class="docs-meta">
+          <span class="docs-chip">Surface: Workbench Workflow</span>
+          <span class="docs-chip">Contract: graph + dataset</span>
+          <span class="docs-chip">Evidence: run record + exports</span>
+        </div>
+        <div class="docs-links">
+          <a class="docs-link" href="./tutorials.html">Tutorial center</a>
+          <a class="docs-link" href="./workflow-graph.md">Graph contract</a>
+          <a class="docs-link" href="./workflow-dataset.md">Dataset contract</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Prerequisite</h2>
+        <p class="docs-copy">
+          Finish the first GUI loop and keep one active project. A workflow run
+          must have a project owner, and a local draft must not silently attach to
+          whichever project happens to be selected later.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 1</div>
+        <h2>Prove the catalog path first</h2>
+        <ol class="docs-list">
+          <li>Open <strong>Workflow -> Catalog</strong> and refresh the catalog.</li>
+          <li>Filter for a healthy built-in heat/thermo or electrostatic/heat workflow.</li>
+          <li>Run the reference sample without modifying it.</li>
+          <li>Open <strong>Workflow -> Runs</strong> and confirm node progress, terminal status, and exported summary.</li>
+        </ol>
+        <p class="docs-checkpoint"><strong>Checkpoint:</strong> the catalog id, workflow run id, current/terminal node, and output artifact are all visible before authoring starts.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 2</div>
+        <h2>Open a local graph variant</h2>
+        <ol class="docs-list">
+          <li>Open the selected catalog entry in <strong>Builder</strong>.</li>
+          <li>Duplicate or promote it to a local workflow instead of editing the built-in source.</li>
+          <li>Name the variant <code>tutorial-heat-thermo-v1</code>.</li>
+          <li>Inspect node ids, operator ids, ports, edges, entry inputs, and output artifacts before changing topology.</li>
+        </ol>
+        <p class="docs-note">A workflow node describes an operator task. The executable engine contract remains TaskIR/runtime-protocol based; the UI graph and any Elixir description layer do not become the solver implementation.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 3</div>
+        <h2>Build one cross-operator contract</h2>
+        <ol class="docs-list">
+          <li>Insert the known <strong>heat -> bridge -> thermo</strong> chain, or its electrostatic -> heat -> thermo counterpart.</li>
+          <li>Keep solve outputs and bridge inputs typed. Do not connect ports only because their JSON happens to look similar.</li>
+          <li>Declare dataset values with stable ids, types, units, provenance, and producer/consumer ownership.</li>
+          <li>Declare at least one output artifact and bind it to the final extract or export node.</li>
+        </ol>
+        <p class="docs-checkpoint"><strong>Checkpoint:</strong> every edge resolves existing ports, every required input has one source, and the dataset contract has no orphan producer or consumer.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 4</div>
+        <h2>Validate before running</h2>
+        <ol class="docs-list">
+          <li>Open <strong>Consistency check</strong> and review all graph and dataset diagnostics.</li>
+          <li>Preview automatic fixes before applying them. Retain the correction snapshot.</li>
+          <li>Resolve manual-review items explicitly; do not treat “no auto-fix” as “safe”.</li>
+          <li>Run the current draft only when validation reports no unresolved contract error.</li>
+        </ol>
+        <p class="docs-note">The builder keeps correction snapshots for recovery, but summary-only snapshots cannot restore a complete draft. Verify the snapshot type before relying on it.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 5</div>
+        <h2>Inspect lineage and export the right thing</h2>
+        <ol class="docs-list">
+          <li>Use Runs to inspect each node status and the bridge-alignment diagnostics.</li>
+          <li>Export Graph JSON and Dataset JSON as inspectable workflow contracts.</li>
+          <li>Export a workflow template/package only when the reusable topology and install rules are intentional.</li>
+          <li>Use KCore for the portable research/result artifact, not as a replacement for the editable workflow project.</li>
+        </ol>
+        <pre class="docs-code">./scripts/kyuubiki kcore export schemas/examples.kcore-export.json --out tmp/tutorial-result.kcore
+./scripts/kyuubiki kcore inspect tmp/tutorial-result.kcore
+./scripts/kyuubiki kcore verify tmp/tutorial-result.kcore</pre>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Completion contract</h2>
+        <ul class="docs-list">
+          <li>The local variant has its own id and still names its catalog origin.</li>
+          <li>Graph and dataset validation complete without unresolved contract errors.</li>
+          <li>The run record exposes node-level progress and a terminal workflow state.</li>
+          <li>At least one output artifact resolves back to its producing node and source inputs.</li>
+          <li>Graph JSON, Dataset JSON, and any KCore artifact pass their respective validators.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

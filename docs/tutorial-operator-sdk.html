@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tutorial · Rust Operator SDK</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">Tutorial 05 · Rust Operator SDK</div>
+        <h1>Add executable operator capability</h1>
+        <p class="docs-copy">
+          The Worker/Operator SDK is Rust-only and extends what an agent engine
+          can execute. It is separate from PWDT frontend automation and from the
+          Rust, Python, or Elixir Headless control SDKs.
+        </p>
+        <div class="docs-meta">
+          <span class="docs-chip">Language: Rust</span>
+          <span class="docs-chip">Output: typed operator package</span>
+          <span class="docs-chip">Gate: readiness + baseline + preflight</span>
+        </div>
+        <div class="docs-links">
+          <a class="docs-link" href="./tutorials.html">Tutorial center</a>
+          <a class="docs-link" href="./operator-sdk.md">Operator SDK reference</a>
+          <a class="docs-link" href="./operator-reliability.md">Reliability policy</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Choose the correct extension surface</h2>
+        <table class="docs-table">
+          <thead><tr><th>You need to</th><th>Use</th></tr></thead>
+          <tbody>
+            <tr><td>Add a new solver, transform, bridge, extraction, or export capability</td><td>Rust Operator SDK</td></tr>
+            <tr><td>Compose or submit existing capabilities without a GUI</td><td>Headless SDK</td></tr>
+            <tr><td>Automate the fixed Workbench interface</td><td>PWDT</td></tr>
+            <tr><td>Describe or schedule tasks at the control plane</td><td>Task description layer, compiled to TaskIR</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 1</div>
+        <h2>Run the untouched template</h2>
+        <pre class="docs-code">cd workers/rust/templates/operator-crate-template
+cargo test
+cargo run</pre>
+        <p class="docs-checkpoint"><strong>Checkpoint:</strong> the descriptor-readiness test passes and the sample prints a JSON summary for the small temperature collection.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 2</div>
+        <h2>Create an external-local package</h2>
+        <ol class="docs-list">
+          <li>Duplicate the template into a new crate under your local operator package root.</li>
+          <li>Rename the crate, package id, operator id, family, and entry symbol.</li>
+          <li>Replace the sample input/output types with explicit typed contracts.</li>
+          <li>Update <code>kyuubiki-operator.json</code> so SDK compatibility, host version, validation status, notes, and operator ids match the implementation.</li>
+        </ol>
+        <p class="docs-note">Keep <code>validation_status</code> at <code>partial</code> until repeatable baselines, tolerances, and documented limits exist. “It ran once” is not <code>verified</code>.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 3</div>
+        <h2>Make the descriptor executable and reviewable</h2>
+        <ul class="docs-list">
+          <li>Declare stable input/output ports and schemas.</li>
+          <li>Declare domain, capabilities, runtime requirements, units, and determinism posture.</li>
+          <li>Return structured failures; do not collapse invalid input, numerical failure, cancellation, and infrastructure loss into one string.</li>
+          <li>Add a tiny golden case, a malformed-input case, and at least one tolerance-based baseline.</li>
+          <li>Keep operator implementation independent of Elixir task-description code. The runtime consumes protocol/TaskIR contracts.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 4</div>
+        <h2>Preflight the package root</h2>
+        <pre class="docs-code">./scripts/kyuubiki operator-package-preflight ./operator-packages \
+  --out tmp/operator-package-preflight.json \
+  --fail-on-rejected \
+  --fail-on-readiness-warnings
+
+./scripts/kyuubiki operator-package-dynamic-smoke \
+  --out tmp/operator-package-dynamic-smoke.json</pre>
+        <p class="docs-copy">Preflight checks package discovery and manifest/readiness posture. Dynamic smoke checks the executable package path. Neither replaces numerical validation.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Completion contract</h2>
+        <ul class="docs-list">
+          <li>The crate builds and its unit, malformed-input, and baseline tests pass.</li>
+          <li>The descriptor readiness report has no unresolved error.</li>
+          <li>The package manifest and implementation expose the same operator ids and entry symbol.</li>
+          <li>Package preflight accepts the package and dynamic smoke exercises its runtime boundary.</li>
+          <li>Known physical limits, tolerance basis, and validation status are visible to workflow authors.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
+import { KYUUBIKI_PRODUCT_VERSION_LABEL } from "@/lib/product-version";
 
 export const metadata: Metadata = {
-  title: "Workflow Architecture | moxi 2.0.0",
+  title: `Workflow Architecture | ${KYUUBIKI_PRODUCT_VERSION_LABEL}`,
   description: "Architecture overview for the moxi workflow operator system.",
 };
 
@@ -119,7 +120,7 @@ export default function WorkflowArchitecturePage() {
   return (
     <main style={mainStyle}>
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
-        <p style={eyebrowStyle}>moxi 2.0.0</p>
+        <p style={eyebrowStyle}>{KYUUBIKI_PRODUCT_VERSION_LABEL}</p>
         <h1 style={{ fontSize: "clamp(2rem, 4vw, 3.4rem)", margin: "0 0 12px" }}>
           Workflow Architecture
         </h1>

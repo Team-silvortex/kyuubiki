@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tutorial · PWDT Frontend Automation</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">Tutorial 03 · Python WASM DSL Tooling</div>
+        <h1>Automate the fixed Workbench UI</h1>
+        <p class="docs-copy">
+          PWDT runs Python through Pyodide inside the WebView and invokes the same
+          product-owned actions as the GUI. It is the frontend automation surface,
+          not a solver SDK and not a replacement for headless service control.
+        </p>
+        <div class="docs-meta">
+          <span class="docs-chip">Workbench: full console</span>
+          <span class="docs-chip">Hub: launcher only</span>
+          <span class="docs-chip">Installer: restricted surface planned</span>
+          <span class="docs-chip">No DOM guessing</span>
+        </div>
+        <div class="docs-links">
+          <a class="docs-link" href="./tutorials.html">Tutorial center</a>
+          <a class="docs-link" href="./ui-automation-contract.html">UI automation contract</a>
+          <a class="docs-link" href="./tutorial-headless-rust.html">Headless alternative</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Open and inspect before running</h2>
+        <ol class="docs-list">
+          <li>Open <strong>System -> Scripts / PWDT</strong> in Workbench.</li>
+          <li>Inspect <code>state</code>, <code>actions</code>, <code>macros</code>, <code>recipes</code>, and <code>ui_contract</code>.</li>
+          <li>Confirm required actions or recipes exist before invoking them.</li>
+          <li>Use action ids and recipe ids as contracts; localized labels are presentation only.</li>
+        </ol>
+        <pre class="docs-code">ky.log("Study:", state["studyKind"])
+ky.log("Sidebar:", state["sidebarSection"])
+ky.log("UI contract:", ui_contract["contractVersion"])
+
+ky.require_action("runtime/refreshAll")
+ky.require_recipe("recipe/truss2d/closed-loop")</pre>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Path A · Explicit actions</div>
+        <h2>Repeat the first GUI loop</h2>
+        <pre class="docs-code">await ky.invoke("runtime/refreshAll")
+
+project_id = await ky.ensure_project("Pwdt tutorial loop")
+await ky.build_parametric_truss_2d(
+    bays=6,
+    span=18,
+    height=3.5,
+    load_y=-1500,
+)
+await ky.save_model(name="pwdt-truss-v1", save_as=True)
+
+run_state = await ky.run_current_study()
+if run_state["jobStatus"] != "completed":
+    raise RuntimeError(f"study ended as {run_state['jobStatus']}")
+
+await ky.open_results(project_id=project_id)
+ky.log("Result count:", run_state["resultCount"])</pre>
+        <p class="docs-checkpoint"><strong>Checkpoint:</strong> the script ends only after a terminal job state, opens the result for the created project, and leaves an action timeline that can be inspected.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Path B · Product recipe</div>
+        <h2>Prefer recipes for stable closed loops</h2>
+        <pre class="docs-code">result = await ky.run_recipe(
+    "recipe/truss2d/closed-loop",
+    {
+        "projectName": "Pwdt recipe tutorial",
+        "modelName": "pwdt-recipe-truss",
+        "bays": 6,
+        "span": 18,
+        "height": 3.5,
+        "loadY": -1500,
+    },
+)
+ky.log("Recipe result:", result)</pre>
+        <p class="docs-copy">
+          Recipes are versioned product paths assembled from registered actions.
+          Use explicit actions when exploring or debugging; use a recipe when its
+          completion contract matches the workflow you need.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Waiting and failure rules</h2>
+        <ul class="docs-list">
+          <li>Wait on observable state with <code>wait_for_job_done</code>, <code>wait_for_message</code>, or <code>wait_until</code>; do not add arbitrary sleeps around network work.</li>
+          <li>Use <code>sleep</code> only for bounded UI settling where no stronger state exists.</li>
+          <li>High-risk actions still require product confirmation. PWDT does not create hidden authority.</li>
+          <li>If an action is absent, stop and inspect the parity report instead of clicking a similarly named element.</li>
+          <li>If a run fails, preserve the action log and current snapshot before replaying any step.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Stable selector escape hatch</h2>
+        <p class="docs-copy">
+          Prefer actions and recipes. When a read-only UI assertion truly needs a
+          selector, resolve it through the product UI contract instead of writing a
+          CSS selector tied to layout or translated copy.
+        </p>
+        <pre class="docs-code">selector = ky.ui_selector("runtimeTab", "control")
+panel = ky.query_selector("runtimePanel")
+tabs = ky.query_selector_all("runtimeTab", "overview")</pre>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Completion contract</h2>
+        <ul class="docs-list">
+          <li>The script checks capabilities before mutation.</li>
+          <li>The same project, model, terminal run, and result exist as in the manual tutorial.</li>
+          <li>No localized copy, layout class, or raw DOM path is used as an action contract.</li>
+          <li>The action timeline identifies the failing action if the loop does not complete.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

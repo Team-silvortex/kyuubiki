@@ -99,6 +99,7 @@ export function buildWorkbenchFlowComposition(props: Record<string, any>) {
     adminJobProjectId: props.adminJobProjectId,
     adminJobModelVersionId: props.adminJobModelVersionId,
     adminJobCaseId: props.adminJobCaseId,
+    selectedAdminResultJobId: props.selectedAdminResultJobId,
     adminResultDraft: props.adminResultDraft,
     downloadTextFile: props.downloadTextFile,
     adminDataEffects: projectFlows.adminDataEffects,

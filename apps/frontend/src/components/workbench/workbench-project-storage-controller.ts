@@ -62,7 +62,7 @@ type ProjectStorageControllerDeps = {
   setModelVersions: (value: any[]) => void;
   adminDataBackendService: WorkbenchAdminDataBackendService;
   projectLibraryBackendService: WorkbenchProjectLibraryBackendService;
-  refreshProjects: () => Promise<void>;
+  refreshProjects: (bootstrap?: boolean, preferredProjectId?: string | null) => Promise<void>;
   refreshVersions: (modelId: string) => Promise<void>;
   serializeCurrentModel: () => Record<string, unknown>;
   getPersistedModelEffects: () => any;
@@ -233,7 +233,7 @@ export function createWorkbenchProjectStorageController({
           description: projectDescriptionDraft,
         });
         setSelectedProjectId(payload.project.project_id);
-        await refreshProjects();
+        await refreshProjects(false, payload.project.project_id);
         setMessage(t.projectCreated);
       } catch (error) {
         setMessage(error instanceof Error ? error.message : t.initialFailed);

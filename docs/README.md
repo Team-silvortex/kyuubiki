@@ -20,30 +20,32 @@ Read these first, in order:
 1. `../llms.txt` for model ingestion, or `book.html` for human reading
 2. `model-research-bootstrap.json` for a model preparing research
 3. `model-research-onboarding.html`
-4. `book-manifest.json`
-5. `navigation-matrix.html`
-6. `current-line.md`
-7. `current-architecture-map.md`
-8. `system-overview.md`
-9. `module-architecture.md`
-10. `project-architecture-organization.md`
-11. `protocols.md`
-12. `repository-structure.md`
-13. `testing-and-ci.md`
-14. `maintenance.md`
-15. `installer-remote-control.md`
-16. `minimal-industrial-closure.md`
-17. `weakness-roadmap.md`
+4. `tutorials.html` for task-oriented onboarding
+5. `book-manifest.json`
+6. `navigation-matrix.html`
+7. `current-line.md`
+8. `current-architecture-map.md`
+9. `system-overview.md`
+10. `module-architecture.md`
+11. `project-architecture-organization.md`
+12. `protocols.md`
+13. `repository-structure.md`
+14. `testing-and-ci.md`
+15. `maintenance.md`
+16. `installer-remote-control.md`
+17. `minimal-industrial-closure.md`
+18. `weakness-roadmap.md`
 
-For the current `2.13.x` hardening path, keep four threads mentally linked:
+For the current `2.18.x` hardening path, keep five threads mentally linked:
 
 - centralized docs book and Hub shelf mirrors
 - headless live execution checks
 - native usability journey readiness reports
 - Installer-owned remote control
 - orchestrated and direct-mesh runtime posture
+- task-oriented tutorials with explicit completion contracts
 
-`2.13.x` sits inside the active `moxi 2.x` hardening line. Documentation changes
+`2.18.x` sits inside the active `moxi 2.x` hardening line. Documentation changes
 in this window should connect each capability to its contract, evidence,
 runtime owner, automation surface, and explicit limitation.
 
@@ -80,6 +82,30 @@ runtime owner, automation surface, and explicit limitation.
 - `book-ch08-reading-paths.html`
 - `../apps/hub-gui/ui/docs/index.html`
   Desktop-facing mirror entry for the same narrative, tuned for the Hub shelf.
+
+## Tutorial Center
+
+- `tutorials.html`
+  Task-oriented entrypoint that routes users by outcome and keeps GUI, PWDT,
+  Headless, and Operator SDK responsibilities separate.
+- `tutorial-first-research.html`
+  First Workbench closure: project, bounded model, saved state, terminal job,
+  result inspection, evidence identity, and persistence check.
+- `tutorial-composite-workflow.html`
+  Catalog-to-builder route for graph and dataset contracts, validation,
+  node-level run evidence, exports, and KCore boundaries.
+- `tutorial-pwdt-automation.html`
+  Workbench PWDT route using the registered action catalog, product recipes,
+  observable waits, and the stable UI contract instead of raw DOM guessing.
+- `tutorial-headless-rust.html`
+  Rust Headless route from template discovery through validation, retained plan,
+  mock orchestration, live service execution, and material evidence.
+- `tutorial-operator-sdk.html`
+  Rust-only operator extension route from the crate template through descriptor
+  readiness, baselines, package preflight, and dynamic smoke.
+- `tutorial-recovery.html`
+  Cross-surface failure classification, evidence retention, bounded retry, and
+  escalation stop conditions.
 
 ## Maintenance
 
