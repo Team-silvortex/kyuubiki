@@ -115,6 +115,33 @@
   min-height: var(--workbench-min-touch-target, 36px);
 }
 
+.workbench-shell[data-workbench-compact-chrome="true"] .sidebar-header {
+  padding: 8px 10px;
+}
+
+.workbench-shell[data-workbench-compact-chrome="true"] .sidebar-header__mark,
+.workbench-shell[data-workbench-compact-chrome="true"] .sidebar-header > p:last-child {
+  display: none;
+}
+
+.workbench-shell[data-workbench-compact-chrome="true"] .sidebar-header__brand {
+  margin-bottom: 4px;
+}
+
+.workbench-shell[data-workbench-compact-chrome="true"] .sidebar-header .eyebrow {
+  margin: 0;
+  font-size: 0.65rem;
+}
+
+.workbench-shell[data-workbench-compact-chrome="true"] .sidebar-header h1 {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 1rem;
+  line-height: 1.15;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .workbench-shell[data-workbench-viewport-profile="phone"] {
   padding: 4px;
   gap: 4px;

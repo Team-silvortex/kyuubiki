@@ -68,7 +68,11 @@ test("Workbench isolated workflow UI completes catalog, builder, draft, submit, 
   const page = await context.newPage();
   try {
     const builder = await openQualificationBuilder(page);
-    const nodesBefore = await builder.locator('[data-workflow-node-id]').count();
+    assert.equal(await builder.getAttribute("data-workflow-builder-stage"), "topology");
+    assert.equal(await builder.locator("[data-workflow-builder-stage-target]").count(), 4);
+    const nodeView = builder.locator('[data-workflow-topology-view-target="nodes"]');
+    const nodesBefore = Number(await nodeView.getAttribute("data-workflow-topology-view-count"));
+    await builder.locator('[data-workflow-topology-view-target="add"]').click();
     await builder.locator('[data-workflow-topology-kind="select"]').selectOption("solve");
     const operatorSearch = builder.locator('[data-workflow-operator-search="query"]');
     await operatorSearch.fill("mechanical");
@@ -76,7 +80,7 @@ test("Workbench isolated workflow UI completes catalog, builder, draft, submit, 
     await quickInsert.waitFor({ state: "visible", timeout: 30_000 });
     await quickInsert.click();
     await page.waitForFunction(
-      (previousCount) => document.querySelectorAll("[data-workflow-node-id]").length > previousCount,
+      (previousCount) => Number(document.querySelector('[data-workflow-topology-view-target="nodes"]')?.getAttribute("data-workflow-topology-view-count")) > previousCount,
       nodesBefore,
       { timeout: 30_000 },
     );
@@ -115,6 +119,8 @@ test("Workbench isolated workflow UI blocks invalid draft input without backend 
     await runDraft.waitFor({ state: "visible", timeout: 30_000 });
     assert.equal(await runDraft.isEnabled(), true, "valid qualification draft should be runnable");
     const submissionsBefore = runtime.state.catalogSubmissions + runtime.state.graphSubmissions;
+    await builder.locator('[data-workflow-builder-stage-target="contracts"]').click();
+    assert.equal(await builder.getAttribute("data-workflow-builder-stage"), "contracts");
     await builder.locator('[data-workflow-input-artifact="bar_1d_model"]').fill('{"nodes":');
     await page.waitForFunction(
       () => document.querySelector('[data-workflow-builder-action="run-draft"]')?.hasAttribute("disabled"),
@@ -574,9 +580,11 @@ test("Workbench Pwdt stages, exports, and removes Store assets through shared co
       { storeManifestEntryCount: 1, storeManifestReadable: true },
       { timeoutMs: 15_000 },
     ));
+    await click(page, '[data-workbench-store-view-tab="project"]', "Store project assets view");
     const manifestEntry = page.locator('[data-workbench-store-manifest-entry-id="qualification-operator"]');
     await manifestEntry.waitFor({ state: "visible", timeout: 15_000 });
     assert.equal(await page.locator('[data-workbench-store-panel="true"]').getAttribute("data-workbench-store-manifest-count"), "1");
+    await click(page, '[data-workbench-store-view-tab="catalog"]', "Store catalog return");
     assert.equal(await page.locator('[data-workbench-store-entry-action="stage"]').isDisabled(), true);
 
     const downloadPromise = page.waitForEvent("download");
@@ -631,6 +639,7 @@ test("Workbench Pwdt stages, exports, and removes Store assets through shared co
     });
     assert.match(databaseExportFailure ?? "", /404|unhandled qualification route/u);
 
+    await click(page, '[data-workbench-store-view-tab="project"]', "Store project assets removal view");
     page.once("dialog", (dialog) => dialog.accept());
     const removed = await page.evaluate(() =>
       window.__kyuubikiPwdt.removeStoreEntry("operator", "qualification-operator"));
@@ -640,6 +649,7 @@ test("Workbench Pwdt stages, exports, and removes Store assets through shared co
       { timeoutMs: 15_000 },
     ));
     await manifestEntry.waitFor({ state: "detached", timeout: 15_000 });
+    await click(page, '[data-workbench-store-view-tab="catalog"]', "Store catalog after removal");
     assert.equal(await page.locator('[data-workbench-store-entry-action="stage"]').isEnabled(), true);
     assert.deepEqual(pageErrors, []);
   } finally {

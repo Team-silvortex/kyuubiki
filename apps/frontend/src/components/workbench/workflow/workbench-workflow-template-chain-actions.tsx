@@ -50,6 +50,7 @@ type WorkbenchWorkflowTemplateChainActionsProps = {
 };
 
 const TEMPLATE_CHAIN_STORAGE_ALERT_ID = "workflow-template-chain-storage-write-failed";
+const TEMPLATE_CHAIN_PAGE_SIZE = 5;
 
 function sortChainsByPriority(
   chains: WorkflowTemplateChainDefinition[],
@@ -72,11 +73,6 @@ function sortChainsByPriority(
   });
 }
 
-function isDiagnosticsTemplateChain(chain: WorkflowTemplateChainDefinition) {
-  const tags = chain.tags ?? [];
-  return tags.includes("diagnostics") || chain.id.includes("diagnostics");
-}
-
 export function WorkbenchWorkflowTemplateChainActions({
   labels,
   selectedSourceNodeId,
@@ -89,6 +85,7 @@ export function WorkbenchWorkflowTemplateChainActions({
   const [importedChains, setImportedChains] = useState<WorkflowTemplateChainDefinition[]>([]);
   const [notice, setNotice] = useState<WorkbenchNoticeItem | null>(null);
   const [query, setQuery] = useState("");
+  const [builtInPage, setBuiltInPage] = useState(0);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const builtInChains = useMemo(() => listBuiltInWorkflowTemplateChains(), []);
   const availableChains = useMemo(
@@ -123,8 +120,9 @@ export function WorkbenchWorkflowTemplateChainActions({
       favoriteChainIds
         .map((chainId) => availableChains.find((entry) => entry.id === chainId))
         .filter(Boolean)
-        .slice(0, 6) as WorkflowTemplateChainDefinition[],
-    [availableChains, favoriteChainIds],
+        .filter((chain) => filteredChains.some((entry) => entry.id === chain?.id))
+        .slice(0, 3) as WorkflowTemplateChainDefinition[],
+    [availableChains, favoriteChainIds, filteredChains],
   );
   const pinnedFavoriteChains = useMemo(
     () => sortChainsByPriority(favoriteChains, favoriteChainIds),
@@ -146,14 +144,27 @@ export function WorkbenchWorkflowTemplateChainActions({
       ),
     [favoriteChainIds, filteredChains],
   );
+  const catalogBuiltInChains = useMemo(
+    () => filteredBuiltInChains.filter((chain) => !favoriteChainIds.includes(chain.id)),
+    [favoriteChainIds, filteredBuiltInChains],
+  );
+  const builtInPageCount = Math.max(1, Math.ceil(catalogBuiltInChains.length / TEMPLATE_CHAIN_PAGE_SIZE));
+  const visibleBuiltInChains = useMemo(
+    () => catalogBuiltInChains.slice(
+      builtInPage * TEMPLATE_CHAIN_PAGE_SIZE,
+      (builtInPage + 1) * TEMPLATE_CHAIN_PAGE_SIZE,
+    ),
+    [builtInPage, catalogBuiltInChains],
+  );
   const groupedBuiltInChains = useMemo(
-    () => groupTemplateChainsByDomain(filteredBuiltInChains),
-    [filteredBuiltInChains],
+    () => groupTemplateChainsByDomain(visibleBuiltInChains),
+    [visibleBuiltInChains],
   );
-  const featuredDiagnosticsChains = useMemo(
-    () => filteredBuiltInChains.filter(isDiagnosticsTemplateChain).slice(0, 4),
-    [filteredBuiltInChains],
-  );
+
+  useEffect(() => setBuiltInPage(0), [query]);
+  useEffect(() => {
+    setBuiltInPage((current) => Math.min(current, builtInPageCount - 1));
+  }, [builtInPageCount]);
 
   function reportStorageWriteFailure() {
     upsertWorkbenchAlert(setSystemAlerts, {
@@ -427,38 +438,10 @@ export function WorkbenchWorkflowTemplateChainActions({
         </div>
       ) : null}
 
-      {featuredDiagnosticsChains.length > 0 ? (
-        <div className="sidebar-list">
-          <div className="sidebar-list__row">
-            <span>diagnostics workflows</span>
-            <strong>{featuredDiagnosticsChains.length}</strong>
-          </div>
-          <p className="card-copy">
-            Bundle multi-domain diagnostics, evaluate guard rules, and export a review-ready report.
-          </p>
-          <div className="button-row button-row--adaptive">
-            {featuredDiagnosticsChains.map((chain) => (
-              <WorkbenchWorkflowTemplateChainCard
-                activeQuery={query}
-                chain={chain}
-                favorite={favoriteChainIds.includes(chain.id)}
-                key={`featured-diagnostics:${chain.id}`}
-                labels={labels}
-                onExport={() => exportChainPackage(chain)}
-                onInsert={() => insertChain(chain)}
-                onPrimaryAction={() => toggleFavorite(chain.id)}
-                onPrimaryLabel={chainInsertLabel(chain)}
-                onSelectTag={selectTag}
-              />
-            ))}
-          </div>
-        </div>
-      ) : null}
-
       <div className="sidebar-list">
         <div className="sidebar-list__row">
           <span>{labels.templateChainBuiltInLabel}</span>
-          <strong>{filteredBuiltInChains.length}</strong>
+          <strong>{catalogBuiltInChains.length}</strong>
         </div>
         {groupedBuiltInChains.map((group) => (
           <div className="sidebar-stack" key={group.key}>
@@ -484,6 +467,27 @@ export function WorkbenchWorkflowTemplateChainActions({
             </div>
           </div>
         ))}
+        <div className="workflow-template-chain-pager" data-workflow-template-chain-page={builtInPage + 1}>
+          <button
+            aria-label={`${labels.templateChainBuiltInLabel} ${builtInPage}`}
+            data-workflow-template-chain-page-action="previous"
+            disabled={builtInPage === 0}
+            onClick={() => setBuiltInPage((current) => Math.max(0, current - 1))}
+            type="button"
+          >
+            ←
+          </button>
+          <strong>{builtInPage + 1}/{builtInPageCount}</strong>
+          <button
+            aria-label={`${labels.templateChainBuiltInLabel} ${builtInPage + 2}`}
+            data-workflow-template-chain-page-action="next"
+            disabled={builtInPage + 1 >= builtInPageCount}
+            onClick={() => setBuiltInPage((current) => Math.min(builtInPageCount - 1, current + 1))}
+            type="button"
+          >
+            →
+          </button>
+        </div>
       </div>
 
       <div className="sidebar-list">

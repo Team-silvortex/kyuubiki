@@ -177,6 +177,8 @@ async function runWorkflowBenchmarkInteractiveAudit(browser, viewport, failures)
 
     await page.evaluate(() => window.__kyuubikiWorkflowDebug?.setSurfaceTab("builder"));
     await waitForDoublePaint(page);
+    await page.locator('[data-workflow-topology-view-target="add"]').click();
+    await waitForDoublePaint(page);
     const operatorSearch = page.locator('[data-workflow-operator-search="query"]');
     await operatorSearch.fill("thermal bridge");
     await operatorSearch.blur();

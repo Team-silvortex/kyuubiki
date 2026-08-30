@@ -531,3 +531,164 @@ html[data-theme="graphite"] .immersive-switches {
   word-break: break-word;
   line-height: 1.45;
 }
+
+.panel-tabs--overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.workbench-route-journey {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workbench-route-step {
+  width: 100%;
+  min-width: 0;
+  min-height: 54px;
+  display: grid;
+  position: relative;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 20px 7px 7px;
+  color: var(--ink);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-cool) 10%, transparent), transparent 46%),
+    var(--panel-soft);
+  text-align: left;
+}
+
+.workbench-route-step:hover {
+  border-color: color-mix(in srgb, var(--accent-cool) 48%, var(--line));
+  background-color: var(--panel-strong);
+}
+
+.workbench-route-step__index {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent-cool) 46%, var(--line));
+  border-radius: 6px;
+  color: var(--accent-cool);
+  background: rgba(0, 0, 0, 0.18);
+  font: 700 0.76rem/1 "IBM Plex Mono", "SFMono-Regular", monospace;
+}
+
+.workbench-route-step__copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.workbench-route-step__copy strong,
+.workbench-route-step__copy small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.workbench-route-step__copy small,
+.workbench-route-step__status {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+
+.workbench-route-step__copy small {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.workbench-route-step__status {
+  grid-column: 2;
+  max-width: none;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.workbench-route-step__arrow {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--accent-cool);
+  font-weight: 800;
+}
+
+.store-context-card {
+  padding-block: 8px;
+}
+
+.store-context-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.store-context-grid .sidebar-list__row {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 6px 7px;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+[data-workbench-store-navigation="true"] {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+}
+
+.store-page-controls {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.store-page-controls .button-row {
+  margin: 0;
+  flex-wrap: nowrap;
+}
+
+.store-entry-list {
+  display: grid;
+  gap: 8px;
+}
+
+.store-entry-card {
+  border-radius: 8px;
+  padding: 9px;
+  gap: 2px;
+}
+
+.store-entry-card p {
+  display: -webkit-box;
+  margin: 2px 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.store-entry-card .button-row {
+  margin-top: 4px;
+}

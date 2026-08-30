@@ -1,6 +1,7 @@
 "use client";
 import { useDeferredValue, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
+import { WorkbenchRouteJourney } from "@/components/workbench/workbench-route-journey";
 import { resolveWorkflowRunStatusTone } from "@/lib/api";
 import type { JobState, ProtocolAgentDescriptor, WorkflowCatalogEntry, WorkflowGraphDefinition, WorkflowOperatorDescriptor, WorkflowOperatorModuleSummary } from "@/lib/api";
 import type { HeatPlaneStudyJobInput, PlaneStudyJobInput, StudyKind } from "@/components/workbench/workbench-types";
@@ -316,76 +317,61 @@ export function WorkbenchWorkflowSidebar({
       data-workbench-workflow-surface={surfaceTab}
       data-workbench-workflow-runs-filter={runsFilter}
     >
-      <div className="panel-tabs panel-tabs--editor">
-        <button
-          className={`panel-tab${surfaceTab === "overview" ? " panel-tab--active" : ""}`}
-          data-workflow-surface-tab="overview"
-          onClick={() => openSurfaceTab("overview")}
-          type="button"
-        >
-          {labels.overviewPageLabel}
-        </button>
-        <button
-          className={`panel-tab${surfaceTab === "catalog" ? " panel-tab--active" : ""}`}
-          data-workflow-surface-tab="catalog"
-          onClick={() => openSurfaceTab("catalog")}
-          type="button"
-        >
-          {labels.catalogPageLabel}
-        </button>
-        <button
-          className={`panel-tab${surfaceTab === "builder" ? " panel-tab--active" : ""}`}
-          data-workflow-surface-tab="builder"
-          onClick={() => openSurfaceTab("builder")}
-          type="button"
-        >
-          {labels.builderPageLabel}
-        </button>
-        <button
-          className={`panel-tab${surfaceTab === "runs" ? " panel-tab--active" : ""}`}
-          data-workflow-surface-tab="runs"
-          onClick={() => openSurfaceTab("runs")}
-          type="button"
-        >
-          {labels.runsPageLabel}
-        </button>
-      </div>
+      {surfaceTab === "overview" ? (
+        <div className="panel-tabs panel-tabs--overview">
+          <button
+            className="panel-tab panel-tab--active"
+            data-workflow-surface-tab="overview"
+            onClick={() => openSurfaceTab("overview")}
+            type="button"
+          >
+            {labels.overviewPageLabel}
+          </button>
+        </div>
+      ) : (
+        <div className="panel-tabs panel-tabs--editor">
+          <button className="panel-tab" data-workflow-surface-tab="overview" onClick={() => openSurfaceTab("overview")} type="button">
+            {labels.overviewPageLabel}
+          </button>
+          <button className={`panel-tab${surfaceTab === "catalog" ? " panel-tab--active" : ""}`} data-workflow-surface-tab="catalog" onClick={() => openSurfaceTab("catalog")} type="button">
+            {labels.catalogPageLabel}
+          </button>
+          <button className={`panel-tab${surfaceTab === "builder" ? " panel-tab--active" : ""}`} data-workflow-surface-tab="builder" onClick={() => openSurfaceTab("builder")} type="button">
+            {labels.builderPageLabel}
+          </button>
+          <button className={`panel-tab${surfaceTab === "runs" ? " panel-tab--active" : ""}`} data-workflow-surface-tab="runs" onClick={() => openSurfaceTab("runs")} type="button">
+            {labels.runsPageLabel}
+          </button>
+        </div>
+      )}
 
       {surfaceTab === "overview" ? (
-        <div className="runtime-overview-grid">
-          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-            <div className="card-head">
-              <h2>{labels.catalogPageLabel}</h2>
-            </div>
-            <p className="card-copy">{labels.catalogHint}</p>
-            <div className="button-row button-row--adaptive">
-              <button onClick={() => openSurfaceTab("catalog")} type="button">
-                {labels.catalogPageLabel}
-              </button>
-            </div>
-          </section>
-          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-            <div className="card-head">
-              <h2>{labels.builderPageLabel}</h2>
-            </div>
-            <p className="card-copy">{labels.builderHint}</p>
-            <div className="button-row">
-              <button onClick={() => openSurfaceTab("builder")} type="button">
-                {labels.builderPageLabel}
-              </button>
-            </div>
-          </section>
-          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-            <div className="card-head">
-              <h2>{labels.runsPageLabel}</h2>
-            </div>
-            <p className="card-copy">{labels.runsHint}</p>
-            <div className="button-row">
-              <button onClick={() => openSurfaceTab("runs")} type="button">
-                {labels.runsPageLabel}
-              </button>
-            </div>
-          </section>
+        <>
+          <WorkbenchRouteJourney
+            steps={[
+              {
+                id: "catalog",
+                title: labels.catalogPageLabel,
+                hint: labels.catalogHint,
+                automation: { "data-workflow-surface-tab": "catalog" },
+                onOpen: () => openSurfaceTab("catalog"),
+              },
+              {
+                id: "builder",
+                title: labels.builderPageLabel,
+                hint: labels.builderHint,
+                automation: { "data-workflow-surface-tab": "builder" },
+                onOpen: () => openSurfaceTab("builder"),
+              },
+              {
+                id: "runs",
+                title: labels.runsPageLabel,
+                hint: labels.runsHint,
+                automation: { "data-workflow-surface-tab": "runs" },
+                onOpen: () => openSurfaceTab("runs"),
+              },
+            ]}
+          />
           <section className="sidebar-card sidebar-card--compact runtime-overview-card">
             <div className="card-head">
               <h2>{labels.sectionTitle}</h2>
@@ -393,13 +379,10 @@ export function WorkbenchWorkflowSidebar({
                 {workflowCatalogBusy ? labels.statusBusyLabel : labels.statusReadyLabel}
               </span>
             </div>
-            <p className="card-copy">{labels.overviewHint}</p>
             {selectedWorkflow ? (
-              <div className="sidebar-list">
-                <div className="sidebar-list__row">
-                  <span>{labels.builderPageLabel}</span>
-                  <strong>{selectedWorkflow.name}</strong>
-                </div>
+              <>
+                <p className="card-copy">{selectedWorkflow.name}</p>
+                <div className="sidebar-list">
                 <div className="sidebar-list__row">
                   <span>{labels.runsPageLabel}</span>
                   <strong>{latestRun?.status ?? "--"}</strong>
@@ -408,10 +391,11 @@ export function WorkbenchWorkflowSidebar({
                   <span>{labels.overviewBridgeStatusLabel}</span>
                   <strong style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}><button {...getBridgeOverviewNavTooltipProps("aligned")} onClick={() => { setCatalogFilter("bridge_aligned"); openSurfaceTab("catalog"); }} style={{ all: "unset", cursor: "pointer" }} type="button"><WorkbenchWorkflowBridgeStatusPill mode="summary" summary={String(overviewBridgeSummary.aligned)} tone="good" tooltipProps={getBridgeOverviewNavTooltipProps("aligned")} /></button><button {...getBridgeOverviewNavTooltipProps("drift")} onClick={() => { setCatalogFilter("bridge_drift"); openSurfaceTab("catalog"); }} style={{ all: "unset", cursor: "pointer" }} type="button"><WorkbenchWorkflowBridgeStatusPill mode="summary" summary={String(overviewBridgeSummary.drift)} tone="watch" tooltipProps={getBridgeOverviewNavTooltipProps("drift")} /></button><button {...getBridgeOverviewNavTooltipProps("missing-runtime")} onClick={() => { setRunsFilter("bridge_missing_runtime"); openSurfaceTab("runs"); }} style={{ all: "unset", cursor: "pointer" }} type="button"><WorkbenchWorkflowBridgeStatusPill mode="summary" summary={String(overviewBridgeSummary.missing)} tone="risk" tooltipProps={getBridgeOverviewNavTooltipProps("missing-runtime")} /></button></strong>
                 </div>
-              </div>
-            ) : null}
+                </div>
+              </>
+            ) : <p className="card-copy">{labels.overviewHint}</p>}
           </section>
-        </div>
+        </>
       ) : null}
 
       {surfaceTab === "catalog" ? (

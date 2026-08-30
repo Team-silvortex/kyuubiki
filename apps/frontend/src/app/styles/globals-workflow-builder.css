@@ -37,6 +37,68 @@
     linear-gradient(180deg, rgba(28, 35, 45, 0.88), rgba(14, 18, 24, 0.94));
 }
 
+.workflow-builder-stage-tabs {
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(14px);
+}
+
+.workflow-builder-stage-tab {
+  min-width: 0;
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+  padding: 6px 7px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--muted);
+  background: transparent;
+  text-align: left;
+}
+
+.workflow-builder-stage-tab span {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 7px;
+  color: color-mix(in srgb, var(--muted) 90%, white);
+  background: color-mix(in srgb, var(--panel-soft) 82%, transparent);
+  font-size: 0.68rem;
+}
+
+.workflow-builder-stage-tab strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.72rem;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-builder-stage-tab--active {
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--line));
+  color: var(--text);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 19%, var(--panel-soft)), var(--panel-soft));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.workflow-builder-stage-tab--active span {
+  color: var(--panel);
+  background: var(--accent);
+}
+
 .workflow-builder-shell > .workflow-builder-toolbar,
 .workflow-builder-shell > .workflow-focus-strip {
   padding: 12px 13px;
@@ -55,8 +117,22 @@
   color: rgba(207, 216, 228, 0.78);
 }
 
+.workflow-builder-toolbar .card-head h2 {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 1.12;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .workflow-builder-toolbar > .card-copy:first-of-type {
   margin-top: 2px;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .workflow-builder-toolbar .sidebar-list {
@@ -65,6 +141,32 @@
 
 .workflow-builder-toolbar .button-row {
   margin-top: 12px;
+}
+
+.workflow-builder-more-actions {
+  margin-top: 8px;
+}
+
+.workflow-builder-more-actions summary {
+  width: 100%;
+  min-height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, rgba(128, 146, 168, 0.24) 86%, transparent);
+  border-radius: 9px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.025);
+  cursor: pointer;
+  list-style: none;
+}
+
+.workflow-builder-more-actions summary::-webkit-details-marker {
+  display: none;
+}
+
+.workflow-builder-more-actions[open] summary {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
 }
 
 .workflow-builder-shell > .sidebar-card:not(.workflow-builder-shell),
@@ -126,6 +228,116 @@
 
 .workflow-topology-toolbar {
   align-items: end;
+}
+
+.workflow-topology-view-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+  padding: 5px;
+  border: 1px solid color-mix(in srgb, rgba(128, 146, 168, 0.2) 86%, transparent);
+  border-radius: 12px;
+  background: rgba(12, 16, 22, 0.36);
+}
+
+.workflow-topology-view-tab {
+  min-width: 0;
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--muted);
+  background: transparent;
+}
+
+.workflow-topology-view-tab span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-topology-view-tab strong {
+  min-width: 20px;
+  padding: 2px 5px;
+  border-radius: 7px;
+  color: color-mix(in srgb, var(--muted) 88%, white);
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+.workflow-topology-view-tab--active {
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--line));
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 15%, var(--panel-soft));
+}
+
+.workflow-topology-selection {
+  display: grid;
+  gap: 6px;
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, rgba(128, 146, 168, 0.18) 88%, transparent);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.workflow-template-chain-pager {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.workflow-template-chain-pager strong {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.workflow-template-chain-pager button {
+  min-height: 34px;
+  padding: 4px;
+}
+
+.workflow-dataset-workspace {
+  display: grid;
+  gap: 10px;
+}
+
+.workflow-dataset-view-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  border-radius: 12px;
+  background: rgba(12, 16, 22, 0.44);
+}
+
+.workflow-dataset-view-tab {
+  min-width: 0;
+  min-height: 36px;
+  overflow: hidden;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-dataset-view-tab--active {
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--line));
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel-soft));
 }
 
 .workflow-topology-toolbar > button,

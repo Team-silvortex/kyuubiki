@@ -112,6 +112,19 @@ export function flashWorkflowBuilderFixReceiptHighlights(params: {
   flashWorkflowFixReceiptHighlights(params);
 }
 
+function scrollToMountedBuilderTarget(
+  builderRootRef: RefObject<HTMLElement | null>,
+  selector: string,
+) {
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      builderRootRef.current
+        ?.querySelector<HTMLElement>(selector)
+        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+  });
+}
+
 export function locateWorkflowBuilderIssue(params: {
   locate: WorkflowBuilderLocateTarget;
   builderRootRef: RefObject<HTMLElement | null>;
@@ -143,20 +156,12 @@ export function locateWorkflowBuilderIssue(params: {
   resetBuilderFocus();
   if (locate.kind === "node") {
     setFocusedNodeId(locate.nodeId);
-    queueMicrotask(() => {
-      builderRootRef.current
-        ?.querySelector<HTMLElement>(`[data-workflow-node-id="${locate.nodeId}"]`)
-        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    });
+    scrollToMountedBuilderTarget(builderRootRef, `[data-workflow-node-id="${locate.nodeId}"]`);
     return;
   }
   if (locate.kind === "edge") {
     setFocusedEdgeId(locate.edgeId);
-    queueMicrotask(() => {
-      builderRootRef.current
-        ?.querySelector<HTMLElement>(`[data-workflow-edge-id="${locate.edgeId}"]`)
-        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    });
+    scrollToMountedBuilderTarget(builderRootRef, `[data-workflow-edge-id="${locate.edgeId}"]`);
     return;
   }
   if (locate.kind === "dataset") {
@@ -168,23 +173,16 @@ export function locateWorkflowBuilderIssue(params: {
       setFocusedDatasetValueId(existingValue.id);
     }
     setHighlightDatasetEditor(true);
-    queueMicrotask(() => {
-      builderRootRef.current
-        ?.querySelector<HTMLElement>('[data-workflow-dataset-editor="editor"]')
-        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    });
+    scrollToMountedBuilderTarget(builderRootRef, '[data-workflow-dataset-editor="editor"]');
     return;
   }
   if (locate.kind === "snapshot" || locate.kind === "local") {
-    queueMicrotask(() => {
-      builderRootRef.current
-        ?.querySelector<HTMLElement>(
-          locate.kind === "snapshot"
-            ? '[data-workflow-snapshot-card="card"]'
-            : '[data-workflow-local-card="card"]',
-        )
-        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    });
+    scrollToMountedBuilderTarget(
+      builderRootRef,
+      locate.kind === "snapshot"
+        ? '[data-workflow-snapshot-card="card"]'
+        : '[data-workflow-local-card="card"]',
+    );
     return;
   }
   const artifacts =
@@ -197,11 +195,7 @@ export function locateWorkflowBuilderIssue(params: {
   if (artifactIndex < 0) return;
   const artifactKey = `${locate.mode}:${locate.nodeId}:${locate.artifactType}:${artifactIndex}`;
   setFocusedArtifactKey(artifactKey);
-  queueMicrotask(() => {
-    builderRootRef.current
-      ?.querySelector<HTMLElement>(`[data-workflow-artifact-key="${artifactKey}"]`)
-      ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  });
+  scrollToMountedBuilderTarget(builderRootRef, `[data-workflow-artifact-key="${artifactKey}"]`);
 }
 
 export function locateWorkflowBridgeRuntimeIssue(params: {
@@ -240,11 +234,7 @@ export function locateWorkflowBridgeRuntimeIssue(params: {
   );
   if (edgeIds[0]) setFocusedEdgeId(edgeIds[0]);
   if (edgeIds.length > 0) flashHighlightedEdges(edgeIds);
-  queueMicrotask(() => {
-    builderRootRef.current
-      ?.querySelector<HTMLElement>(`[data-workflow-node-id="${issue.nodeId}"]`)
-      ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  });
+  scrollToMountedBuilderTarget(builderRootRef, `[data-workflow-node-id="${issue.nodeId}"]`);
   window.setTimeout(
     () =>
       setHighlightedNodeIds((current) =>

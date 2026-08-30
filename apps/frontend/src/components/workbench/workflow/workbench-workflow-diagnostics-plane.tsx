@@ -69,6 +69,7 @@ type WorkflowDiagnosticsFocusTarget =
   | "packageImportDataset"
   | "packageImportPackage"
   | "activity";
+type WorkflowDiagnosticsPanel = "validation" | "bridge" | "integrity" | "package" | "import" | "activity";
 
 function workflowDiagnosticsFocusRing(active: boolean) {
   return active
@@ -107,6 +108,7 @@ export function WorkbenchWorkflowDiagnosticsPlane({
   auditFocusHint,
 }: WorkbenchWorkflowDiagnosticsPlaneProps) {
   const [activeFocusTarget, setActiveFocusTarget] = useState<WorkflowDiagnosticsFocusTarget | null>(null);
+  const [activePanel, setActivePanel] = useState<WorkflowDiagnosticsPanel>("validation");
   const validationRef = useRef<HTMLDivElement | null>(null);
   const integrityRef = useRef<HTMLDivElement | null>(null);
   const bridgeRef = useRef<HTMLDivElement | null>(null);
@@ -152,6 +154,19 @@ export function WorkbenchWorkflowDiagnosticsPlane({
   }, [activeFocusTarget, focusTargetRefMap]);
 
   function focusDiagnosticsTarget(target: WorkflowDiagnosticsFocusTarget) {
+    setActivePanel(
+      target.startsWith("validation")
+        ? "validation"
+        : target.startsWith("bridge")
+          ? "bridge"
+          : target === "integrity"
+            ? "integrity"
+            : target.startsWith("packageResiduals")
+              ? "package"
+              : target.startsWith("packageImport")
+                ? "import"
+                : "activity",
+    );
     setActiveFocusTarget((current) => (current === target ? null : target));
   }
   const activeBridgeStatusFilter =
@@ -190,7 +205,7 @@ export function WorkbenchWorkflowDiagnosticsPlane({
           ? "package"
           : "all";
   return (
-    <section className="workflow-diagnostics-plane">
+    <section className="workflow-diagnostics-plane" data-workflow-diagnostics-panel={activePanel}>
       <div className="workflow-diagnostics-plane__summary sidebar-list">
         <div className="sidebar-list__row">
           <span>{labels.validationTitle}</span>
@@ -283,7 +298,7 @@ export function WorkbenchWorkflowDiagnosticsPlane({
         </div>
       </div>
       <div className="workflow-diagnostics-plane__cards">
-        <div
+        {activePanel === "validation" ? <div
           ref={validationRef}
           style={workflowDiagnosticsFocusRing(
             activeFocusTarget === "validation" ||
@@ -301,8 +316,8 @@ export function WorkbenchWorkflowDiagnosticsPlane({
             recentFixSummary={recentFixSummary}
             validationIssues={validationIssues}
           />
-        </div>
-        <div
+        </div> : null}
+        {activePanel === "bridge" ? <div
           ref={bridgeRef}
           style={workflowDiagnosticsFocusRing(
             activeFocusTarget === "bridge" ||
@@ -317,12 +332,11 @@ export function WorkbenchWorkflowDiagnosticsPlane({
             onLocateIssue={onLocateBridgeRuntimeIssue}
             result={latestRun?.result ?? null}
           />
-        </div>
-        <div ref={integrityRef} style={workflowDiagnosticsFocusRing(activeFocusTarget === "integrity")}>
+        </div> : null}
+        {activePanel === "integrity" ? <div ref={integrityRef} style={workflowDiagnosticsFocusRing(activeFocusTarget === "integrity")}>
           <WorkbenchWorkflowIntegrityCard onLocateIssue={onLocateIntegrityIssue} report={integrityReport} />
-        </div>
-        <WorkbenchWorkflowControlFlowHistoryCard entries={controlFlowHistoryEntries} onLocateTarget={onLocateAuditTarget} onReplayEntry={onReplayAuditEntry} />
-        <div
+        </div> : null}
+        {activePanel === "package" ? <div
           ref={packageResidualsRef}
           style={workflowDiagnosticsFocusRing(
             activeFocusTarget === "packageResiduals" ||
@@ -344,8 +358,8 @@ export function WorkbenchWorkflowDiagnosticsPlane({
             summaryOnlySnapshotCount={integrityReport.summaryOnlySnapshotCount}
             workflow={workflow}
           />
-        </div>
-        <div
+        </div> : null}
+        {activePanel === "import" ? <div
           ref={packageImportRef}
           style={workflowDiagnosticsFocusRing(
             activeFocusTarget === "packageImport" ||
@@ -361,10 +375,15 @@ export function WorkbenchWorkflowDiagnosticsPlane({
             labels={labels}
             onLocateDiagnostic={onLocateImportDiagnostic}
           />
-        </div>
-        <div ref={activityRef} style={workflowDiagnosticsFocusRing(activeFocusTarget === "activity")}>
-          <WorkbenchWorkflowActivityLogCard auditFocusHint={auditFocusHint} entries={activityLogEntries} onLocateTarget={onLocateAuditTarget} protocolAgents={protocolAgents} workflowId={workflow.id} />
-        </div>
+        </div> : null}
+        {activePanel === "activity" ? (
+          <>
+            <WorkbenchWorkflowControlFlowHistoryCard entries={controlFlowHistoryEntries} onLocateTarget={onLocateAuditTarget} onReplayEntry={onReplayAuditEntry} />
+            <div ref={activityRef} style={workflowDiagnosticsFocusRing(activeFocusTarget === "activity")}>
+              <WorkbenchWorkflowActivityLogCard auditFocusHint={auditFocusHint} entries={activityLogEntries} onLocateTarget={onLocateAuditTarget} protocolAgents={protocolAgents} workflowId={workflow.id} />
+            </div>
+          </>
+        ) : null}
       </div>
     </section>
   );

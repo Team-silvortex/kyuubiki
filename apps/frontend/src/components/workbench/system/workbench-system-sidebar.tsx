@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { WorkbenchRouteJourney } from "@/components/workbench/workbench-route-journey";
 
 type SystemPanelTab = "overview" | "config" | "scripts" | "runtime" | "data";
 type SystemSurfaceTab = "settings" | "runtime" | "data";
@@ -76,68 +77,69 @@ export function WorkbenchSystemSidebar({
       </div>
 
       {surfaceTab === "settings" ? (
-        <section className="sidebar-card sidebar-card--compact">
-          <div className="panel-tabs panel-tabs--wide">
-            <button
-              className={`panel-tab${settingsPage === "overview" ? " panel-tab--active" : ""}`}
-              data-workbench-system-settings-page="overview"
-              onClick={() => onSystemPanelTabChange("overview")}
-              type="button"
-            >
-              {overviewPageLabel}
-            </button>
-            <button
-              className={`panel-tab${settingsPage === "config" ? " panel-tab--active" : ""}`}
-              data-workbench-system-settings-page="config"
-              onClick={() => onSystemPanelTabChange("config")}
-              type="button"
-            >
-              {configPageLabel}
-            </button>
-            <button
-              className={`panel-tab${settingsPage === "scripts" ? " panel-tab--active" : ""}`}
-              data-workbench-system-settings-page="scripts"
-              onClick={() => onSystemPanelTabChange("scripts")}
-              type="button"
-            >
-              {scriptsPageLabel}
-            </button>
-          </div>
-          {settingsPage === "overview" ? (
-            <div className="runtime-overview-grid">
-              <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-                <div className="card-head">
-                  <h2>{configPageLabel}</h2>
-                </div>
-                <p className="card-copy">{configOverviewHint}</p>
-                <div className="button-row">
-                  <button
-                    onClick={() => onSystemPanelTabChange("config")}
-                    type="button"
-                  >
-                    {configPageLabel}
-                  </button>
-                </div>
-              </section>
-              <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-                <div className="card-head">
-                  <h2>{scriptsPageLabel}</h2>
-                </div>
-                <p className="card-copy">{scriptsOverviewHint}</p>
-                <div className="button-row">
-                  <button
-                    onClick={() => onSystemPanelTabChange("scripts")}
-                    type="button"
-                  >
-                    {scriptsPageLabel}
-                  </button>
-                </div>
-              </section>
+        settingsPage === "overview" ? (
+          <>
+            <div className="panel-tabs panel-tabs--overview">
+              <button
+                className="panel-tab panel-tab--active"
+                data-workbench-system-settings-page="overview"
+                onClick={() => onSystemPanelTabChange("overview")}
+                type="button"
+              >
+                {overviewPageLabel}
+              </button>
             </div>
-          ) : null}
-          {settingsPage === "config" ? configContent : null}
-          {settingsPage === "scripts" ? scriptsContent : null}
-        </section>
+            <WorkbenchRouteJourney
+              steps={[
+                {
+                  id: "config",
+                  title: configPageLabel,
+                  hint: configOverviewHint,
+                  automation: { "data-workbench-system-settings-page": "config" },
+                  onOpen: () => onSystemPanelTabChange("config"),
+                },
+                {
+                  id: "scripts",
+                  title: scriptsPageLabel,
+                  hint: scriptsOverviewHint,
+                  automation: { "data-workbench-system-settings-page": "scripts" },
+                  onOpen: () => onSystemPanelTabChange("scripts"),
+                },
+              ]}
+            />
+          </>
+        ) : (
+          <section className="sidebar-card sidebar-card--compact">
+            <div className="panel-tabs panel-tabs--wide">
+              <button
+                className="panel-tab"
+                data-workbench-system-settings-page="overview"
+                onClick={() => onSystemPanelTabChange("overview")}
+                type="button"
+              >
+                {overviewPageLabel}
+              </button>
+              <button
+                className={`panel-tab${settingsPage === "config" ? " panel-tab--active" : ""}`}
+                data-workbench-system-settings-page="config"
+                onClick={() => onSystemPanelTabChange("config")}
+                type="button"
+              >
+                {configPageLabel}
+              </button>
+              <button
+                className={`panel-tab${settingsPage === "scripts" ? " panel-tab--active" : ""}`}
+                data-workbench-system-settings-page="scripts"
+                onClick={() => onSystemPanelTabChange("scripts")}
+                type="button"
+              >
+                {scriptsPageLabel}
+              </button>
+            </div>
+            {settingsPage === "config" ? configContent : null}
+            {settingsPage === "scripts" ? scriptsContent : null}
+          </section>
+        )
       ) : null}
 
       {surfaceTab === "runtime" ? runtimeContent : null}

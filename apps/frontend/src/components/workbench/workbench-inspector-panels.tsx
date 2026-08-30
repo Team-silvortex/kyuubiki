@@ -293,7 +293,7 @@ export function WorkbenchInspectorActionsExportPanel({
           : planeThermalRows;
 
   return (
-    <section className="info-card">
+    <section className="info-card" data-workbench-inspector-actions-export="true">
       <h3>{t.actions}</h3>
       {reportScopeLabel || reportScopeHint ? (
         <p className="card-copy">

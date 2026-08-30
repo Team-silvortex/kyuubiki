@@ -34,6 +34,10 @@ type WorkbenchStoreSectionMountProps = {
   storeBackendService?: WorkbenchStoreBackendService;
 };
 
+type StoreView = "catalog" | "project" | "sources";
+
+const STORE_PAGE_SIZE = 5;
+
 const KIND_FILTERS: Array<{ kind: "" | AssetStoreEntryKind; en: string; zh: string; ja: string }> = [
   { kind: "", en: "All", zh: "全部", ja: "すべて" },
   { kind: "operator", en: "Operators", zh: "算子", ja: "オペレーター" },
@@ -51,6 +55,9 @@ export function WorkbenchStoreSectionMount({
   const [payload, setPayload] = useState<AssetStorePayload | null>(null);
   const [kind, setKind] = useState<"" | AssetStoreEntryKind>("");
   const [query, setQuery] = useState("");
+  const [view, setView] = useState<StoreView>("catalog");
+  const [catalogPage, setCatalogPage] = useState(0);
+  const [manifestPage, setManifestPage] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [storageError, setStorageError] = useState<string | null>(null);
@@ -73,6 +80,7 @@ export function WorkbenchStoreSectionMount({
       });
       if (requestId !== refreshRequestRef.current) return;
       setPayload(nextPayload);
+      setCatalogPage(0);
       setMessage(copy.loaded(nextPayload.summary.entry_count));
     } catch (refreshError) {
       if (requestId !== refreshRequestRef.current) return;
@@ -100,12 +108,19 @@ export function WorkbenchStoreSectionMount({
   }, [language, selectedProjectId]);
 
   const selectedProjectLabel = selectedProjectId ?? copy.noProject;
-  const selectedModelLabel = selectedModelId ?? copy.noModel;
   const activeManifest = manifestForSelectedProject(manifest, selectedProjectId);
   const installedKeys = useMemo(
     () => new Set(activeManifest.entries.map((entry) => manifestEntryKey(entry.kind, entry.id))),
     [activeManifest.entries],
   );
+  const catalogPageCount = Math.max(1, Math.ceil(entries.length / STORE_PAGE_SIZE));
+  const activeCatalogPage = Math.min(catalogPage, catalogPageCount - 1);
+  const catalogStart = activeCatalogPage * STORE_PAGE_SIZE;
+  const visibleEntries = entries.slice(catalogStart, catalogStart + STORE_PAGE_SIZE);
+  const manifestPageCount = Math.max(1, Math.ceil(activeManifest.entries.length / STORE_PAGE_SIZE));
+  const activeManifestPage = Math.min(manifestPage, manifestPageCount - 1);
+  const manifestStart = activeManifestPage * STORE_PAGE_SIZE;
+  const visibleManifestEntries = activeManifest.entries.slice(manifestStart, manifestStart + STORE_PAGE_SIZE);
 
   function reportStorageFailure(message: string) {
     setStorageError(message);
@@ -168,9 +183,12 @@ export function WorkbenchStoreSectionMount({
       className="sidebar-stack panel-scroll-window"
       data-workbench-store-panel="true"
       data-workbench-store-manifest-count={activeManifest.entries.length}
+      data-workbench-store-model={selectedModelId ?? ""}
       data-workbench-store-status={busy ? "loading" : error ? "error" : "ready"}
+      data-workbench-store-view={view}
+      data-workbench-store-visible-count={view === "catalog" ? visibleEntries.length : visibleManifestEntries.length}
     >
-      <section className="sidebar-card sidebar-card--compact">
+      <section className="sidebar-card sidebar-card--compact store-context-card">
         <div className="card-head">
           <div>
             <p className="eyebrow">{copy.eyebrow}</p>
@@ -178,82 +196,94 @@ export function WorkbenchStoreSectionMount({
           </div>
           <span className="status-pill">{busy ? copy.loading : copy.ready}</span>
         </div>
-        <p className="card-copy">{copy.hint}</p>
-        <div className="sidebar-list">
+        <div className="store-context-grid">
           <div className="sidebar-list__row">
             <span>{copy.project}</span>
             <strong>{selectedProjectLabel}</strong>
-          </div>
-          <div className="sidebar-list__row">
-            <span>{copy.model}</span>
-            <strong>{selectedModelLabel}</strong>
-          </div>
-          <div className="sidebar-list__row">
-            <span>{copy.sources}</span>
-            <strong>{sources.filter((source) => source.enabled).length}/{sources.length}</strong>
           </div>
           <div className="sidebar-list__row">
             <span>{copy.installedAssets}</span>
             <strong>{activeManifest.entries.length}</strong>
           </div>
         </div>
-      </section>
-
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{copy.browse}</h2>
-          <button className="ghost-button ghost-button--compact" disabled={busy} onClick={() => void refreshStore()} type="button">
-            {copy.refresh}
-          </button>
-        </div>
-        <label className="form-field">
-          <span>{copy.search}</span>
-          <input
-            data-workbench-store-search="query"
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") void refreshStore();
-            }}
-            placeholder={copy.searchPlaceholder}
-            value={query}
-          />
-        </label>
-        <div className="panel-tabs panel-tabs--wrap" role="tablist">
-          {KIND_FILTERS.map((filter) => (
-            <button
-              className={kind === filter.kind ? "active" : ""}
-              data-workbench-store-kind={filter.kind || "all"}
-              key={filter.kind || "all"}
-              onClick={() => setKind(filter.kind)}
-              type="button"
-            >
-              {labelForLanguage(filter, language)}
-            </button>
-          ))}
-        </div>
         {error ? <p className="warning-copy">{error}</p> : null}
         {storageError ? <p className="warning-copy">{storageError}</p> : null}
       </section>
 
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{copy.entries}</h2>
-          <span className="status-pill">{entries.length}</span>
-        </div>
-        <div className="history-list">
-          {entries.length > 0 ? entries.map((entry) => (
-            <StoreEntryCard
-              copy={copy}
-              entry={entry}
-              installed={installedKeys.has(manifestEntryKey(entry.kind, entry.id))}
-              key={`${entry.kind}:${entry.id}`}
-              onInstall={installEntry}
-            />
-          )) : <p className="card-copy">{busy ? copy.loading : copy.empty}</p>}
-        </div>
-      </section>
+      <div className="panel-tabs panel-tabs--editor" data-workbench-store-navigation="true">
+        <button className={`panel-tab${view === "catalog" ? " panel-tab--active" : ""}`} data-workbench-store-view-tab="catalog" onClick={() => setView("catalog")} type="button">
+          {copy.browse}
+        </button>
+        <button className={`panel-tab${view === "project" ? " panel-tab--active" : ""}`} data-workbench-store-view-tab="project" onClick={() => setView("project")} type="button">
+          {copy.projectAssets} · {activeManifest.entries.length}
+        </button>
+        <button className={`panel-tab${view === "sources" ? " panel-tab--active" : ""}`} data-workbench-store-view-tab="sources" onClick={() => setView("sources")} type="button">
+          {copy.sources} · {sources.length}
+        </button>
+      </div>
 
-      <section className="sidebar-card sidebar-card--compact">
+      {view === "catalog" ? (
+        <section className="sidebar-card sidebar-card--compact">
+          <div className="card-head">
+            <h2>{copy.entries}</h2>
+            <button className="ghost-button ghost-button--compact" disabled={busy} onClick={() => void refreshStore()} type="button">
+              {copy.refresh}
+            </button>
+          </div>
+          <label className="form-field">
+            <span>{copy.search}</span>
+            <input
+              data-workbench-store-search="query"
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setCatalogPage(0);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void refreshStore();
+              }}
+              placeholder={copy.searchPlaceholder}
+              value={query}
+            />
+          </label>
+          <div className="panel-tabs panel-tabs--wrap" role="tablist">
+            {KIND_FILTERS.map((filter) => (
+              <button
+                className={kind === filter.kind ? "active" : ""}
+                data-workbench-store-kind={filter.kind || "all"}
+                key={filter.kind || "all"}
+                onClick={() => {
+                  setCatalogPage(0);
+                  setKind(filter.kind);
+                }}
+                type="button"
+              >
+                {labelForLanguage(filter, language)}
+              </button>
+            ))}
+          </div>
+          <StorePager
+            copy={copy}
+            count={entries.length}
+            page={activeCatalogPage}
+            pageCount={catalogPageCount}
+            pageStart={catalogStart}
+            onPageChange={setCatalogPage}
+          />
+          <div className="history-list store-entry-list">
+            {entries.length > 0 ? visibleEntries.map((entry) => (
+              <StoreEntryCard
+                copy={copy}
+                entry={entry}
+                installed={installedKeys.has(manifestEntryKey(entry.kind, entry.id))}
+                key={`${entry.kind}:${entry.id}`}
+                onInstall={installEntry}
+              />
+            )) : <p className="card-copy">{busy ? copy.loading : copy.empty}</p>}
+          </div>
+        </section>
+      ) : null}
+
+      {view === "project" ? <section className="sidebar-card sidebar-card--compact">
         <div className="card-head">
           <h2>{copy.manifestTitle}</h2>
           <button
@@ -267,8 +297,16 @@ export function WorkbenchStoreSectionMount({
           </button>
         </div>
         <p className="card-copy">{copy.manifestHint}</p>
+        <StorePager
+          copy={copy}
+          count={activeManifest.entries.length}
+          page={activeManifestPage}
+          pageCount={manifestPageCount}
+          pageStart={manifestStart}
+          onPageChange={setManifestPage}
+        />
         <div className="history-list">
-          {activeManifest.entries.length > 0 ? activeManifest.entries.map((entry) => (
+          {activeManifest.entries.length > 0 ? visibleManifestEntries.map((entry) => (
             <article
               className="history-item"
               data-workbench-store-manifest-entry-id={entry.id}
@@ -292,9 +330,9 @@ export function WorkbenchStoreSectionMount({
             </article>
           )) : <p className="card-copy">{copy.manifestEmpty}</p>}
         </div>
-      </section>
+      </section> : null}
 
-      <section className="sidebar-card sidebar-card--compact">
+      {view === "sources" ? <section className="sidebar-card sidebar-card--compact">
         <div className="card-head">
           <h2>{copy.sourceTitle}</h2>
           <span className="status-pill">{sources.length}</span>
@@ -307,7 +345,39 @@ export function WorkbenchStoreSectionMount({
             </div>
           ))}
         </div>
-      </section>
+      </section> : null}
+    </div>
+  );
+}
+
+function StorePager({
+  copy,
+  count,
+  page,
+  pageCount,
+  pageStart,
+  onPageChange,
+}: {
+  copy: ReturnType<typeof resolveStoreCopy>;
+  count: number;
+  page: number;
+  pageCount: number;
+  pageStart: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (count === 0) return null;
+  const pageEnd = Math.min(count, pageStart + STORE_PAGE_SIZE);
+  return (
+    <div className="store-page-controls" data-workbench-store-page={`${page + 1}/${pageCount}`}>
+      <span>{copy.pageRange(pageStart + 1, pageEnd, count)}</span>
+      <div className="button-row">
+        <button className="ghost-button ghost-button--compact" data-workbench-store-page-action="previous" disabled={page === 0} onClick={() => onPageChange(page - 1)} type="button">
+          {copy.previous}
+        </button>
+        <button className="ghost-button ghost-button--compact" data-workbench-store-page-action="next" disabled={page >= pageCount - 1} onClick={() => onPageChange(page + 1)} type="button">
+          {copy.next}
+        </button>
+      </div>
     </div>
   );
 }
@@ -325,7 +395,7 @@ function StoreEntryCard({
 }) {
   return (
     <article
-      className="history-item"
+      className="history-item store-entry-card"
       data-workbench-store-entry-id={entry.id}
       data-workbench-store-entry-kind={entry.kind}
     >
@@ -391,6 +461,7 @@ function resolveStoreCopy(language: string) {
     search: zh ? "搜索" : ja ? "検索" : "Search",
     searchPlaceholder: zh ? "按名称、ID、领域或标签搜索" : ja ? "名前、ID、タグで検索" : "Search by name, id, domain, or tags",
     entries: zh ? "资产条目" : ja ? "資産エントリ" : "Store entries",
+    projectAssets: zh ? "项目资产" : ja ? "プロジェクト資産" : "Project assets",
     sourceTitle: zh ? "来源配置" : ja ? "ソース設定" : "Source configuration",
     loading: zh ? "加载中" : ja ? "読み込み中" : "Loading",
     ready: zh ? "就绪" : ja ? "準備完了" : "Ready",
@@ -419,6 +490,14 @@ function resolveStoreCopy(language: string) {
     stage: zh ? "加入当前项目" : ja ? "プロジェクトに追加" : "Add to project",
     installedBadge: zh ? "已加入" : ja ? "追加済み" : "Added",
     installedAssets: zh ? "项目资产" : ja ? "追加済み資産" : "Project assets",
+    previous: zh ? "上一页" : ja ? "前へ" : "Previous",
+    next: zh ? "下一页" : ja ? "次へ" : "Next",
+    pageRange: (start: number, end: number, count: number) =>
+      zh
+        ? `${start}-${end} / ${count}`
+        : ja
+          ? `${start}-${end} / ${count}`
+          : `${start}-${end} of ${count}`,
     manifestTitle: zh ? "项目资产 manifest" : ja ? "プロジェクト資産 manifest" : "Project asset manifest",
     manifestHint: zh
       ? "商店资产随当前项目保存，并自动写入导出的 .kyuubiki 项目包。"

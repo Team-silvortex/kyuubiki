@@ -103,7 +103,10 @@ pub(crate) fn run_node_command(
         ),
         "integration-ui-workflow-node-test" => run_node_test(
             &paths.root,
-            &["tests/integration/workbench-ui-workflow-invocation.test.mjs"],
+            &[
+                "tests/integration/workbench-ui-workflow-invocation.test.mjs",
+                "tests/integration/workbench-ui-layout-flow.test.mjs",
+            ],
         ),
         _ => return None,
     };

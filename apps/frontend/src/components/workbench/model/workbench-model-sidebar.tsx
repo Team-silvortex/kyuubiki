@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { WorkbenchRouteJourney } from "@/components/workbench/workbench-route-journey";
 
 type ModelPanelTab = "tools" | "tree";
 export type ModelToolsPage = "overview" | "study" | "studio" | "materials" | "generate";
@@ -80,120 +81,107 @@ export function WorkbenchModelSidebar({
 
       {modelTab === "tools" ? (
         <>
-          <div className="panel-tabs panel-tabs--wide">
-            <button
-              className={`panel-tab${toolsPage === "overview" ? " panel-tab--active" : ""}`}
-              data-workbench-model-tools-page="overview"
-              onClick={() => onToolsPageChange("overview")}
-              type="button"
-            >
-              {toolsPageOverviewLabel}
-            </button>
-            {studyContent ? (
-              <button
-                className={`panel-tab${toolsPage === "study" ? " panel-tab--active" : ""}`}
-                data-workbench-model-tools-page="study"
-                onClick={() => onToolsPageChange("study")}
-                type="button"
-              >
-                {toolsPageStudyLabel}
-              </button>
-            ) : null}
-            <button
-              className={`panel-tab${toolsPage === "studio" ? " panel-tab--active" : ""}`}
-              data-workbench-model-tools-page="studio"
-              onClick={() => onToolsPageChange("studio")}
-              type="button"
-            >
-              {toolsPageStudioLabel}
-            </button>
-            {materialsContent ? (
-              <button
-                className={`panel-tab${toolsPage === "materials" ? " panel-tab--active" : ""}`}
-                data-workbench-model-tools-page="materials"
-                onClick={() => onToolsPageChange("materials")}
-                type="button"
-              >
-                {toolsPageMaterialsLabel}
-              </button>
-            ) : null}
-            {generateContent ? (
-              <button
-                className={`panel-tab${toolsPage === "generate" ? " panel-tab--active" : ""}`}
-                data-workbench-model-tools-page="generate"
-                onClick={() => onToolsPageChange("generate")}
-                type="button"
-              >
-                {toolsPageGenerateLabel}
-              </button>
-            ) : null}
-          </div>
           {toolsPage === "overview" ? (
-            <div className="runtime-overview-grid">
+            <div className="panel-tabs panel-tabs--overview">
+              <button
+                className="panel-tab panel-tab--active"
+                data-workbench-model-tools-page="overview"
+                onClick={() => onToolsPageChange("overview")}
+                type="button"
+              >
+                {toolsPageOverviewLabel}
+              </button>
+            </div>
+          ) : (
+            <div className="panel-tabs panel-tabs--wide">
+              <button
+                className="panel-tab"
+                data-workbench-model-tools-page="overview"
+                onClick={() => onToolsPageChange("overview")}
+                type="button"
+              >
+                {toolsPageOverviewLabel}
+              </button>
               {studyContent ? (
-                <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-                  <div className="card-head">
-                    <h2>{toolsPageStudyLabel}</h2>
-                  </div>
-                  <p className="card-copy">{studyOverviewHint}</p>
-                  <div className="button-row">
-                    <button onClick={() => onToolsPageChange("study")} type="button">
-                      {toolsPageStudyLabel}
-                    </button>
-                  </div>
-                </section>
+                <button
+                  className={`panel-tab${toolsPage === "study" ? " panel-tab--active" : ""}`}
+                  data-workbench-model-tools-page="study"
+                  onClick={() => onToolsPageChange("study")}
+                  type="button"
+                >
+                  {toolsPageStudyLabel}
+                </button>
               ) : null}
-              <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-                <div className="card-head">
-                  <h2>{toolsPageStudioLabel}</h2>
-                </div>
-                <p className="card-copy">{studioOverviewHint}</p>
-                <div className="button-row">
-                  <button onClick={() => onToolsPageChange("studio")} type="button">
-                    {toolsPageStudioLabel}
-                  </button>
-                </div>
-              </section>
+              <button
+                className={`panel-tab${toolsPage === "studio" ? " panel-tab--active" : ""}`}
+                data-workbench-model-tools-page="studio"
+                onClick={() => onToolsPageChange("studio")}
+                type="button"
+              >
+                {toolsPageStudioLabel}
+              </button>
               {materialsContent ? (
-                <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-                  <div className="card-head">
-                    <h2>{toolsPageMaterialsLabel}</h2>
-                  </div>
-                  <p className="card-copy">{materialsOverviewHint}</p>
-                  <div className="button-row">
-                    <button onClick={() => onToolsPageChange("materials")} type="button">
-                      {toolsPageMaterialsLabel}
-                    </button>
-                  </div>
-                </section>
+                <button
+                  className={`panel-tab${toolsPage === "materials" ? " panel-tab--active" : ""}`}
+                  data-workbench-model-tools-page="materials"
+                  onClick={() => onToolsPageChange("materials")}
+                  type="button"
+                >
+                  {toolsPageMaterialsLabel}
+                </button>
               ) : null}
               {generateContent ? (
-                <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-                  <div className="card-head">
-                    <h2>{toolsPageGenerateLabel}</h2>
-                  </div>
-                  <p className="card-copy">{generateOverviewHint}</p>
-                  <div className="button-row">
-                    <button onClick={() => onToolsPageChange("generate")} type="button">
-                      {toolsPageGenerateLabel}
-                    </button>
-                  </div>
-                </section>
-              ) : null}
-              {treeContent ? (
-                <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-                  <div className="card-head">
-                    <h2>{treeTabLabel}</h2>
-                  </div>
-                  <p className="card-copy">{browseOverviewHint}</p>
-                  <div className="button-row">
-                    <button onClick={() => onModelTabChange("tree")} type="button">
-                      {treeTabLabel}
-                    </button>
-                  </div>
-                </section>
+                <button
+                  className={`panel-tab${toolsPage === "generate" ? " panel-tab--active" : ""}`}
+                  data-workbench-model-tools-page="generate"
+                  onClick={() => onToolsPageChange("generate")}
+                  type="button"
+                >
+                  {toolsPageGenerateLabel}
+                </button>
               ) : null}
             </div>
+          )}
+          {toolsPage === "overview" ? (
+            <WorkbenchRouteJourney
+              steps={[
+                ...(studyContent ? [{
+                  id: "study",
+                  title: toolsPageStudyLabel,
+                  hint: studyOverviewHint,
+                  automation: { "data-workbench-model-tools-page": "study" },
+                  onOpen: () => onToolsPageChange("study"),
+                }] : []),
+                {
+                  id: "studio",
+                  title: toolsPageStudioLabel,
+                  hint: studioOverviewHint,
+                  automation: { "data-workbench-model-tools-page": "studio" },
+                  onOpen: () => onToolsPageChange("studio"),
+                },
+                ...(materialsContent ? [{
+                  id: "materials",
+                  title: toolsPageMaterialsLabel,
+                  hint: materialsOverviewHint,
+                  automation: { "data-workbench-model-tools-page": "materials" },
+                  onOpen: () => onToolsPageChange("materials"),
+                }] : []),
+                ...(generateContent ? [{
+                  id: "generate",
+                  title: toolsPageGenerateLabel,
+                  hint: generateOverviewHint,
+                  automation: { "data-workbench-model-tools-page": "generate" },
+                  onOpen: () => onToolsPageChange("generate"),
+                }] : []),
+                ...(treeContent ? [{
+                  id: "tree",
+                  title: treeTabLabel,
+                  hint: browseOverviewHint,
+                  automation: { "data-workbench-model-tab": "tree" },
+                  onOpen: () => onModelTabChange("tree"),
+                }] : []),
+              ]}
+            />
           ) : null}
           {toolsPage === "study" ? studyContent : null}
           {toolsPage === "studio" ? studioContent : null}

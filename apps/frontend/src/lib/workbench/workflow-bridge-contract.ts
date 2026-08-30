@@ -219,9 +219,40 @@ export function resolveBridgeContractForOperator(
   operatorId?: string | null,
   config?: Record<string, unknown> | null,
 ): WorkflowBridgeContract | null {
+  const fallback = createBridgeContractForOperator(operatorId);
   const contract = config?.contract;
   if (contract && typeof contract === "object" && typeof (contract as { version?: unknown }).version === "string") {
-    return contract as WorkflowBridgeContract;
+    const candidate = contract as Partial<WorkflowBridgeContract>;
+    const source = candidate.source;
+    const transform = candidate.transform;
+    const target = candidate.target;
+    return {
+      version: candidate.version!,
+      source: {
+        field: typeof source?.field === "string" ? source.field : fallback?.source.field ?? "",
+        distribution:
+          typeof source?.distribution === "string"
+            ? source.distribution
+            : fallback?.source.distribution ?? "node_to_node",
+        node_index_fields: Array.isArray(source?.node_index_fields)
+          ? source.node_index_fields.filter((field): field is string => typeof field === "string")
+          : [...(fallback?.source.node_index_fields ?? [])],
+      },
+      transform: {
+        scale: typeof transform?.scale === "number" ? transform.scale : fallback?.transform.scale ?? 1,
+        reduction:
+          typeof transform?.reduction === "string"
+            ? transform.reduction
+            : fallback?.transform.reduction ?? "copy",
+        default_value:
+          typeof transform?.default_value === "number"
+            ? transform.default_value
+            : fallback?.transform.default_value ?? 0,
+      },
+      target: {
+        field: typeof target?.field === "string" ? target.field : fallback?.target.field ?? "",
+      },
+    };
   }
-  return createBridgeContractForOperator(operatorId);
+  return fallback;
 }

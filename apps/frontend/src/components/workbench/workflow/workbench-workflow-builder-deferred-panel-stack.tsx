@@ -17,7 +17,6 @@ import type {
 import { WorkbenchWorkflowArtifactCard } from "@/components/workbench/workflow/workbench-workflow-artifact-card";
 import { WorkbenchWorkflowDatasetCard } from "@/components/workbench/workflow/workbench-workflow-dataset-card";
 import { WorkbenchWorkflowDiagnosticsPlane } from "@/components/workbench/workflow/workbench-workflow-diagnostics-plane";
-import { WorkbenchWorkflowGraphSummaryCard } from "@/components/workbench/workflow/workbench-workflow-graph-summary-card";
 import { WorkbenchWorkflowLocalMetadataCard } from "@/components/workbench/workflow/workbench-workflow-local-metadata-card";
 import { WorkbenchWorkflowSnapshotCard } from "@/components/workbench/workflow/workbench-workflow-snapshot-card";
 import type { WorkflowIntegrityIssue, WorkflowIntegrityReport } from "@/components/workbench/workflow/workbench-workflow-integrity";
@@ -38,6 +37,7 @@ type ArtifactUpdater = (artifact: WorkflowCatalogEntryArtifact) => WorkflowCatal
 type DatasetUpdater = (value: WorkflowDatasetValueInfo) => WorkflowDatasetValueInfo;
 
 type WorkbenchWorkflowBuilderDeferredPanelStackProps = {
+  mode: "contracts" | "validation";
   labels: WorkflowSidebarLabels;
   workflow: WorkflowCatalogEntry;
   frontendRuntimeMode: "orchestrated_gui" | "direct_mesh_gui";
@@ -64,8 +64,6 @@ type WorkbenchWorkflowBuilderDeferredPanelStackProps = {
   focusedNodeId: string | null;
   highlightDatasetEditor: boolean;
   highlightedArtifactKeys: string[];
-  highlightedEdgeIds: string[];
-  highlightedNodeIds: string[];
   traceFocusBranchNodeId?: string | null;
   traceFocusBranchOutputId?: string | null;
   addArtifact: (field: "entry_inputs" | "output_artifacts") => void;
@@ -98,6 +96,7 @@ type WorkbenchWorkflowBuilderDeferredPanelStackProps = {
 };
 
 export function WorkbenchWorkflowBuilderDeferredPanelStack({
+  mode,
   labels,
   workflow,
   frontendRuntimeMode,
@@ -124,8 +123,6 @@ export function WorkbenchWorkflowBuilderDeferredPanelStack({
   focusedNodeId,
   highlightDatasetEditor,
   highlightedArtifactKeys,
-  highlightedEdgeIds,
-  highlightedNodeIds,
   traceFocusBranchNodeId,
   traceFocusBranchOutputId,
   addArtifact,
@@ -156,15 +153,21 @@ export function WorkbenchWorkflowBuilderDeferredPanelStack({
   onSaveLocalMetadata,
   onScanPackageResiduals,
 }: WorkbenchWorkflowBuilderDeferredPanelStackProps) {
+  if (mode === "contracts") {
+    return (
+      <>
+        <WorkbenchWorkflowDatasetCard addDatasetAxis={addDatasetAxis} addDatasetValue={addDatasetValue} labels={labels} removeDatasetAxis={removeDatasetAxis} removeSelectedDatasetValue={removeSelectedDatasetValue} selectedDatasetContract={selectedDatasetContract} selectedDatasetValue={selectedDatasetValue} selectedDatasetValueId={selectedDatasetValueId} selectedDatasetValues={selectedDatasetValues} selectedEdges={selectedEdges} focusedDatasetValueId={focusedDatasetValueId} highlightDatasetEditor={highlightDatasetEditor} selectedNodes={selectedNodes} setSelectedDatasetValueId={setSelectedDatasetValueId} updateDatasetAxis={updateDatasetAxis} updateDatasetValue={updateDatasetValue} updateEdgeDatasetValue={updateEdgeDatasetValue} updateNodePortDatasetValue={updateNodePortDatasetValue} />
+        <WorkbenchWorkflowArtifactCard addLabel={labels.artifactAddEntryLabel} artifacts={selectedEntryInputs} highlightedArtifactKeys={highlightedArtifactKeys} labels={labels} mode="entry" onAddArtifact={() => addArtifact("entry_inputs")} onRemoveArtifact={(index) => removeArtifact("entry_inputs", index)} onUpdateArtifact={(index, updater) => updateArtifact("entry_inputs", index, updater)} focusedArtifactKey={focusedArtifactKey} selectedNodes={selectedNodes} title={labels.entryInputsTitle} />
+        <WorkbenchWorkflowArtifactCard addLabel={labels.artifactAddOutputLabel} artifacts={selectedOutputArtifacts} highlightedArtifactKeys={highlightedArtifactKeys} labels={labels} mode="output" onAddArtifact={() => addArtifact("output_artifacts")} onRemoveArtifact={(index) => removeArtifact("output_artifacts", index)} onUpdateArtifact={(index, updater) => updateArtifact("output_artifacts", index, updater)} focusedArtifactKey={focusedArtifactKey} selectedNodes={selectedNodes} title={labels.outputArtifactsTitle} />
+      </>
+    );
+  }
+
   return (
     <>
       <WorkbenchWorkflowDiagnosticsPlane auditFocusHint={{ nodeId: focusedNodeId, edgeId: focusedEdgeId, branchNodeId: traceFocusBranchNodeId, branchOutputId: traceFocusBranchOutputId, datasetValueId: focusedDatasetValueId, ...parseWorkflowArtifactFocusKey(focusedArtifactKey) }} frontendRuntimeMode={frontendRuntimeMode} importedPackage={importedPackage} integrityReport={integrityReport} labels={labels} latestRun={latestRun} onApplyAllValidationFixes={onApplyAllValidationFixes} onApplyValidationFix={onApplyValidationFix} onExportPackageInstallReport={onExportPackageInstallReport} onLocateAuditTarget={onLocateAuditTarget} onLocateBridgeRuntimeIssue={onLocateBridgeRuntimeIssue} onLocateIntegrityIssue={onLocateIntegrityIssue} onLocatePackageResidual={onLocatePackageResidual} onLocateImportDiagnostic={onLocateImportDiagnostic} onLocateValidationIssue={onLocateValidationIssue} onReplayAuditEntry={onReplayAuditEntry} onRepairPackageResidual={onRepairPackageResidual} onScanPackageResiduals={onScanPackageResiduals} importDiagnostics={importDiagnostics} packageResiduals={packageResiduals} protocolAgents={protocolAgents} recentFixSummary={recentFixSummary} snapshotCount={snapshots.length} validationIssues={validationIssues} workflow={workflow} />
       {workflow.local ? <WorkbenchWorkflowLocalMetadataCard labels={labels} onSave={onSaveLocalMetadata} workflow={workflow} /> : null}
       <WorkbenchWorkflowSnapshotCard labels={labels} onDeleteSnapshot={onDeleteSnapshot} onRestoreSnapshot={onRestoreSnapshot} snapshots={snapshots} />
-      <WorkbenchWorkflowGraphSummaryCard focusedEdgeId={focusedEdgeId} focusedNodeId={focusedNodeId} highlightedEdgeIds={highlightedEdgeIds} highlightedNodeIds={highlightedNodeIds} labels={labels} selectedEdges={selectedEdges} selectedEntryInputsCount={selectedEntryInputs.length} selectedNodes={selectedNodes} selectedOutputArtifactsCount={selectedOutputArtifacts.length} />
-      <WorkbenchWorkflowDatasetCard addDatasetAxis={addDatasetAxis} addDatasetValue={addDatasetValue} labels={labels} removeDatasetAxis={removeDatasetAxis} removeSelectedDatasetValue={removeSelectedDatasetValue} selectedDatasetContract={selectedDatasetContract} selectedDatasetValue={selectedDatasetValue} selectedDatasetValueId={selectedDatasetValueId} selectedDatasetValues={selectedDatasetValues} selectedEdges={selectedEdges} focusedDatasetValueId={focusedDatasetValueId} highlightDatasetEditor={highlightDatasetEditor} selectedNodes={selectedNodes} setSelectedDatasetValueId={setSelectedDatasetValueId} updateDatasetAxis={updateDatasetAxis} updateDatasetValue={updateDatasetValue} updateEdgeDatasetValue={updateEdgeDatasetValue} updateNodePortDatasetValue={updateNodePortDatasetValue} />
-      <WorkbenchWorkflowArtifactCard addLabel={labels.artifactAddEntryLabel} artifacts={selectedEntryInputs} highlightedArtifactKeys={highlightedArtifactKeys} labels={labels} mode="entry" onAddArtifact={() => addArtifact("entry_inputs")} onRemoveArtifact={(index) => removeArtifact("entry_inputs", index)} onUpdateArtifact={(index, updater) => updateArtifact("entry_inputs", index, updater)} focusedArtifactKey={focusedArtifactKey} selectedNodes={selectedNodes} title={labels.entryInputsTitle} />
-      <WorkbenchWorkflowArtifactCard addLabel={labels.artifactAddOutputLabel} artifacts={selectedOutputArtifacts} highlightedArtifactKeys={highlightedArtifactKeys} labels={labels} mode="output" onAddArtifact={() => addArtifact("output_artifacts")} onRemoveArtifact={(index) => removeArtifact("output_artifacts", index)} onUpdateArtifact={(index, updater) => updateArtifact("output_artifacts", index, updater)} focusedArtifactKey={focusedArtifactKey} selectedNodes={selectedNodes} title={labels.outputArtifactsTitle} />
     </>
   );
 }

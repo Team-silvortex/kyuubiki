@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import type { WorkflowGraphEdge, WorkflowGraphJobResult, WorkflowGraphNode, WorkflowGraphPort, WorkflowOperatorDescriptor } from "@/lib/api";
@@ -45,6 +45,7 @@ type WorkbenchWorkflowTopologyCardProps = {
 };
 
 const NODE_KIND_OPTIONS = ["input", "solve", "transform", "extract", "export", "output", "condition"];
+type WorkflowTopologyView = "nodes" | "edges" | "add" | "templates";
 
 function getSuggestedPorts(ports: WorkflowGraphPort[], edge: WorkflowGraphEdge, direction: "inputs" | "outputs") {
   const datasetMatched = edge.dataset_value ? ports.filter((port) => port.dataset_value === edge.dataset_value) : [];
@@ -86,12 +87,15 @@ export function WorkbenchWorkflowTopologyCard({
   onUpdateEdge,
   setSystemAlerts,
 }: WorkbenchWorkflowTopologyCardProps) {
+  const [topologyView, setTopologyView] = useState<WorkflowTopologyView>("nodes");
   const [nextNodeKind, setNextNodeKind] = useState("transform");
   const [nextOperatorId, setNextOperatorId] = useState("");
   const [nextOperatorSearchQuery, setNextOperatorSearchQuery] = useState("");
   const [nextOperatorDomainFilter, setNextOperatorDomainFilter] = useState("");
   const [nextOperatorValidationFilter, setNextOperatorValidationFilter] = useState("");
   const [nextOperatorCapabilityFilter, setNextOperatorCapabilityFilter] = useState("");
+  const [activeNodeId, setActiveNodeId] = useState(selectedNodes[0]?.id ?? "");
+  const [activeEdgeId, setActiveEdgeId] = useState(selectedEdges[0]?.id ?? "");
   const [localHighlightedEdgeIds, setLocalHighlightedEdgeIds] = useState<string[]>([]);
   const operatorDescriptorMap = useMemo(() => new Map((operatorDescriptors ?? []).map((descriptor) => [descriptor.id, descriptor] as const)), [operatorDescriptors]);
   const selectedNodeMap = useMemo(() => new Map(selectedNodes.map((node) => [node.id, node] as const)), [selectedNodes]);
@@ -149,6 +153,27 @@ export function WorkbenchWorkflowTopologyCard({
       }),
     [focusedEdgeId, highlightedEdgeIds, localHighlightedEdgeIds, selectedEdges, selectedNodeMap],
   );
+  const activeNode = selectedNodeMap.get(activeNodeId) ?? selectedNodes[0] ?? null;
+  const activeEdgeView = edgeViewModels.find(({ edge }) => edge.id === activeEdgeId) ?? edgeViewModels[0] ?? null;
+
+  useEffect(() => {
+    if (focusedNodeId && selectedNodeMap.has(focusedNodeId)) {
+      setActiveNodeId(focusedNodeId);
+      setTopologyView("nodes");
+    }
+  }, [focusedNodeId, selectedNodeMap]);
+  useEffect(() => {
+    if (focusedEdgeId && edgeViewModels.some(({ edge }) => edge.id === focusedEdgeId)) {
+      setActiveEdgeId(focusedEdgeId);
+      setTopologyView("edges");
+    }
+  }, [edgeViewModels, focusedEdgeId]);
+  useEffect(() => {
+    if (!selectedNodeMap.has(activeNodeId)) setActiveNodeId(selectedNodes[0]?.id ?? "");
+  }, [activeNodeId, selectedNodeMap, selectedNodes]);
+  useEffect(() => {
+    if (!edgeViewModels.some(({ edge }) => edge.id === activeEdgeId)) setActiveEdgeId(edgeViewModels[0]?.edge.id ?? "");
+  }, [activeEdgeId, edgeViewModels]);
   const confirmNodeTemplateSync = (node: WorkflowGraphNode, operatorId?: string) => {
     const impact = getWorkflowNodeTemplateSyncImpact({ nodes: selectedNodes, edges: selectedEdges }, node.id, { kind: node.kind, operatorId }, operatorDescriptors ?? []);
     const preview = describeWorkflowNodeTemplateSyncImpact(impact);
@@ -164,66 +189,94 @@ export function WorkbenchWorkflowTopologyCard({
   };
 
   return (
-    <section className="sidebar-card sidebar-card--compact workflow-topology-card" data-workflow-topology="editor">
+    <section className="sidebar-card sidebar-card--compact workflow-topology-card" data-workflow-topology="editor" data-workflow-topology-view={topologyView}>
       <div className="card-head">
         <h2>{labels.topologyEditorTitle}</h2>
-        <div className="button-row">
-          <button data-workflow-topology-action="add-edge" onClick={onAddEdge} type="button">{labels.addEdgeLabel}</button>
-        </div>
       </div>
-      <div className="form-grid compact workflow-topology-toolbar" data-workflow-topology-toolbar="controls">
-        <label>
-          <span>{labels.kindLabel}</span>
-          <select
-            data-workflow-topology-kind="select"
-            onChange={(event) => setNextNodeKind(event.target.value)}
-            value={nextNodeKind}
+      <nav aria-label={labels.topologyEditorTitle} className="workflow-topology-view-tabs">
+        {([
+          ["nodes", labels.nodesTitle, selectedNodes.length],
+          ["edges", labels.edgesTitle, selectedEdges.length],
+          ["add", labels.addNodeLabel, nextOperatorTemplates.length],
+          ["templates", labels.templateChainLibraryLabel, null],
+        ] as Array<[WorkflowTopologyView, string, number | null]>).map(([view, label, count]) => (
+          <button
+            aria-pressed={topologyView === view}
+            className={topologyView === view ? "workflow-topology-view-tab workflow-topology-view-tab--active" : "workflow-topology-view-tab"}
+            data-workflow-topology-view-count={count}
+            data-workflow-topology-view-target={view}
+            key={view}
+            onClick={() => setTopologyView(view)}
+            type="button"
           >
-            {NODE_KIND_OPTIONS.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
-          </select>
-        </label>
-        <WorkbenchWorkflowOperatorSearch
-          availableCapabilities={availableCapabilities}
-          availableDomains={availableDomains}
-          capabilityFilter={nextOperatorCapabilityFilter}
-          domainFilter={nextOperatorDomainFilter}
-          filteredPresets={sortedNextOperatorTemplates}
-          labels={labels}
-          operatorDescriptorMap={operatorDescriptorMap}
-          operatorId={nextOperatorId}
-          onCapabilityFilterChange={setNextOperatorCapabilityFilter}
-          onDomainFilterChange={setNextOperatorDomainFilter}
-          onOperatorIdChange={setNextOperatorId}
-          onQueryChange={setNextOperatorSearchQuery}
-          onQuickInsert={(operatorId) => { setNextOperatorId(operatorId); onAddNode({ kind: nextNodeKind, operatorId }); }}
-          onValidationFilterChange={setNextOperatorValidationFilter}
-          query={nextOperatorSearchQuery}
-          selectedSourceNode={selectedNodes[0] ?? null}
-          setSystemAlerts={setSystemAlerts}
-          validationFilter={nextOperatorValidationFilter}
-        />
-        <button data-workflow-topology-action="add-node" onClick={() => onAddNode({ kind: nextNodeKind, operatorId: nextOperatorId || undefined })} type="button">{labels.addNodeLabel}</button>
-      </div>
-      <WorkbenchWorkflowOperatorDescriptorSummary descriptor={nextOperatorDescriptor} labels={labels} />
-      <WorkbenchWorkflowTemplateChainActions labels={labels} onInsertTemplateChain={onInsertTemplateChain} selectedSourceNodeId={selectedNodes[0]?.id ?? null} selectedNodes={selectedNodes} setSystemAlerts={setSystemAlerts} />
-      <div className="sidebar-stack workflow-topology-node-stack" data-workflow-topology-stack="nodes">
-        {selectedNodes.map((node) => (
+            <span>{label}</span>
+            {count === null ? null : <strong>{count}</strong>}
+          </button>
+        ))}
+      </nav>
+      {topologyView === "add" ? (
+        <>
+          <div className="form-grid compact workflow-topology-toolbar" data-workflow-topology-toolbar="controls">
+            <label>
+              <span>{labels.kindLabel}</span>
+              <select
+                data-workflow-topology-kind="select"
+                onChange={(event) => setNextNodeKind(event.target.value)}
+                value={nextNodeKind}
+              >
+                {NODE_KIND_OPTIONS.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
+              </select>
+            </label>
+            <WorkbenchWorkflowOperatorSearch
+              availableCapabilities={availableCapabilities}
+              availableDomains={availableDomains}
+              capabilityFilter={nextOperatorCapabilityFilter}
+              domainFilter={nextOperatorDomainFilter}
+              filteredPresets={sortedNextOperatorTemplates}
+              labels={labels}
+              operatorDescriptorMap={operatorDescriptorMap}
+              operatorId={nextOperatorId}
+              onCapabilityFilterChange={setNextOperatorCapabilityFilter}
+              onDomainFilterChange={setNextOperatorDomainFilter}
+              onOperatorIdChange={setNextOperatorId}
+              onQueryChange={setNextOperatorSearchQuery}
+              onQuickInsert={(operatorId) => { setNextOperatorId(operatorId); onAddNode({ kind: nextNodeKind, operatorId }); }}
+              onValidationFilterChange={setNextOperatorValidationFilter}
+              query={nextOperatorSearchQuery}
+              selectedSourceNode={activeNode}
+              setSystemAlerts={setSystemAlerts}
+              validationFilter={nextOperatorValidationFilter}
+            />
+            <button data-workflow-topology-action="add-node" onClick={() => onAddNode({ kind: nextNodeKind, operatorId: nextOperatorId || undefined })} type="button">{labels.addNodeLabel}</button>
+          </div>
+          <WorkbenchWorkflowOperatorDescriptorSummary descriptor={nextOperatorDescriptor} labels={labels} />
+        </>
+      ) : null}
+      {topologyView === "templates" ? <WorkbenchWorkflowTemplateChainActions labels={labels} onInsertTemplateChain={onInsertTemplateChain} selectedSourceNodeId={activeNode?.id ?? null} selectedNodes={selectedNodes} setSystemAlerts={setSystemAlerts} /> : null}
+      {topologyView === "nodes" ? (
+        <div className="sidebar-stack workflow-topology-node-stack" data-workflow-topology-stack="nodes">
+          <label className="workflow-topology-selection">
+            <span>{labels.nodesTitle}</span>
+            <select data-workflow-topology-node-select="active" onChange={(event) => setActiveNodeId(event.target.value)} value={activeNode?.id ?? ""}>
+              {selectedNodes.map((node) => <option key={node.id} value={node.id}>{node.id}</option>)}
+            </select>
+          </label>
+          {activeNode ? (
           <WorkbenchWorkflowTopologyNodeSection
-            bridgePeerNodes={bridgePeerNodesByNode.get(node.id) ?? []}
-            controlFlowEdges={controlFlowEdgesByNode.get(node.id) ?? []}
+            bridgePeerNodes={bridgePeerNodesByNode.get(activeNode.id) ?? []}
+            controlFlowEdges={controlFlowEdgesByNode.get(activeNode.id) ?? []}
             currentHeatPlaneModel={currentHeatPlaneModel}
             currentPlaneModel={currentPlaneModel}
             currentStudyKind={currentStudyKind}
-            bridgeRuntimeStatus={bridgeRuntimeStatusMap.get(node.id)}
-            isFocused={focusedNodeId === node.id}
-            isHighlighted={highlightedNodeIds.includes(node.id)}
+            bridgeRuntimeStatus={bridgeRuntimeStatusMap.get(activeNode.id)}
+            isFocused={focusedNodeId === activeNode.id}
+            isHighlighted={highlightedNodeIds.includes(activeNode.id)}
             highlightedPortKeys={highlightedPortKeys}
-            key={node.id}
             labels={labels}
             nextNodeKind={nextNodeKind}
             nextOperatorId={nextOperatorId}
-            node={node}
-            nodeOperatorPresets={nodeOperatorPresetMap.get(node.kind) ?? []}
+            node={activeNode}
+            nodeOperatorPresets={nodeOperatorPresetMap.get(activeNode.kind) ?? []}
             onAddConnectedNode={onAddConnectedNode}
             onAddNodePort={onAddNodePort}
             onConfirmNodeTemplateSync={confirmNodeTemplateSync}
@@ -232,29 +285,40 @@ export function WorkbenchWorkflowTopologyCard({
             onSyncNodeTemplate={onSyncNodeTemplate}
             onUpdateNode={onUpdateNode}
             onUpdateNodePort={onUpdateNodePort}
-            operatorDescriptor={node.operator_id ? operatorDescriptorMap.get(node.operator_id) : undefined}
+            operatorDescriptor={activeNode.operator_id ? operatorDescriptorMap.get(activeNode.operator_id) : undefined}
             operatorDescriptorMap={operatorDescriptorMap}
           />
-        ))}
-      </div>
-      <div className="sidebar-stack workflow-topology-edge-stack" data-workflow-topology-stack="edges">
-        {edgeViewModels.map(({ edge, isFocused, isHighlighted, isLocallyHighlighted, sourcePorts, targetPorts }) => (
+          ) : <p className="card-copy">{labels.noSelectionLabel}</p>}
+        </div>
+      ) : null}
+      {topologyView === "edges" ? (
+        <div className="sidebar-stack workflow-topology-edge-stack" data-workflow-topology-stack="edges">
+          <div className="button-row">
+            <button data-workflow-topology-action="add-edge" onClick={onAddEdge} type="button">{labels.addEdgeLabel}</button>
+          </div>
+          <label className="workflow-topology-selection">
+            <span>{labels.edgesTitle}</span>
+            <select data-workflow-topology-edge-select="active" onChange={(event) => setActiveEdgeId(event.target.value)} value={activeEdgeView?.edge.id ?? ""}>
+              {edgeViewModels.map(({ edge }) => <option key={edge.id} value={edge.id}>{edge.id}</option>)}
+            </select>
+          </label>
+          {activeEdgeView ? (
           <WorkbenchWorkflowTopologyEdgeSection
-            edge={edge}
-            isFocused={isFocused}
-            isHighlighted={isHighlighted}
-            isLocallyHighlighted={isLocallyHighlighted}
-            key={edge.id}
+            edge={activeEdgeView.edge}
+            isFocused={activeEdgeView.isFocused}
+            isHighlighted={activeEdgeView.isHighlighted}
+            isLocallyHighlighted={activeEdgeView.isLocallyHighlighted}
             labels={labels}
             nodeSelectOptions={nodeSelectOptions}
             onRemoveEdge={onRemoveEdge}
             onUpdateEdge={onUpdateEdge}
             selectedNodeMap={selectedNodeMap}
-            sourcePorts={sourcePorts}
-            targetPorts={targetPorts}
+            sourcePorts={activeEdgeView.sourcePorts}
+            targetPorts={activeEdgeView.targetPorts}
           />
-        ))}
-      </div>
+          ) : <p className="card-copy">{labels.noSelectionLabel}</p>}
+        </div>
+      ) : null}
     </section>
   );
 }

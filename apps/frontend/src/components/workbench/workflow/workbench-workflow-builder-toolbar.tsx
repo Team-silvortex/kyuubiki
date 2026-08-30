@@ -62,7 +62,7 @@ export function WorkbenchWorkflowBuilderToolbar({
   return (
     <section className="workflow-builder-toolbar">
       <div className="card-head">
-        <h2>{selectedWorkflow.name}</h2>
+        <h2 title={selectedWorkflow.name}>{selectedWorkflow.name}</h2>
         <span className="status-pill status-pill--good">{selectedWorkflow.version}</span>
       </div>
       <p className="card-copy">{selectedWorkflow.summary}</p>
@@ -116,18 +116,23 @@ export function WorkbenchWorkflowBuilderToolbar({
         <button data-workflow-builder-action="run-draft" disabled={!canRunDraft} onClick={onRunDraft} type="button">{labels.runDraftLabel}</button>
         <button data-workflow-builder-action="save-draft" onClick={onSaveDraft} type="button">{labels.saveDraftLabel}</button>
         <button disabled={!canRunDraft} onClick={onPromoteDraft} type="button">{labels.promoteDraftLabel}</button>
-        {selectedWorkflow.local ? (
-          <>
-            <button onClick={onDuplicateLocalWorkflow} type="button">{labels.duplicateLocalWorkflowLabel}</button>
-            <button onClick={onRenameLocalWorkflow} type="button">{labels.renameLocalWorkflowLabel}</button>
-            <button onClick={onDeleteLocalWorkflow} type="button">{labels.localWorkflowDeleteLabel}</button>
-          </>
-        ) : null}
-        <button onClick={() => graphInputRef.current?.click()} type="button">{labels.importGraphLabel}</button>
-        <button onClick={() => datasetInputRef.current?.click()} type="button">{labels.importDatasetContractLabel}</button>
-        <button onClick={onExportGraph} type="button">{labels.exportGraphLabel}</button>
-        <button disabled={!canExportDataset} onClick={onExportDataset} type="button">{labels.exportDatasetContractLabel}</button>
       </div>
+      <details className="workflow-builder-more-actions" data-workflow-builder-tools="secondary">
+        <summary aria-label={`${labels.importGraphLabel} / ${labels.exportGraphLabel}`} title={`${labels.importGraphLabel} / ${labels.exportGraphLabel}`}>···</summary>
+        <div className="button-row button-row--adaptive">
+          {selectedWorkflow.local ? (
+            <>
+              <button onClick={onDuplicateLocalWorkflow} type="button">{labels.duplicateLocalWorkflowLabel}</button>
+              <button onClick={onRenameLocalWorkflow} type="button">{labels.renameLocalWorkflowLabel}</button>
+              <button onClick={onDeleteLocalWorkflow} type="button">{labels.localWorkflowDeleteLabel}</button>
+            </>
+          ) : null}
+          <button onClick={() => graphInputRef.current?.click()} type="button">{labels.importGraphLabel}</button>
+          <button onClick={() => datasetInputRef.current?.click()} type="button">{labels.importDatasetContractLabel}</button>
+          <button onClick={onExportGraph} type="button">{labels.exportGraphLabel}</button>
+          <button disabled={!canExportDataset} onClick={onExportDataset} type="button">{labels.exportDatasetContractLabel}</button>
+        </div>
+      </details>
       <input accept="application/json,.json" hidden onChange={onGraphFileChange} ref={graphInputRef} type="file" />
       <input accept="application/json,.json" hidden onChange={onDatasetFileChange} ref={datasetInputRef} type="file" />
       <WorkbenchPanelNotice

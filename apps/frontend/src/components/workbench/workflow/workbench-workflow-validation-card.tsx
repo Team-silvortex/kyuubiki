@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { WorkflowGraphValidationIssue } from "@/components/workbench/workflow/workbench-workflow-builder-validation";
 import {
   publishWorkflowPolicyActionFeedback,
@@ -19,6 +19,8 @@ type WorkbenchWorkflowValidationCardProps = {
   onLocateValidationIssue: (issueId: string) => void;
 };
 
+const VALIDATION_PAGE_SIZE = 5;
+
 export function WorkbenchWorkflowValidationCard({
   activeFilter = "all",
   labels,
@@ -29,6 +31,7 @@ export function WorkbenchWorkflowValidationCard({
   onLocateValidationIssue,
 }: WorkbenchWorkflowValidationCardProps) {
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [issuePage, setIssuePage] = useState(0);
   const filteredIssues =
     activeFilter === "fixable"
       ? validationIssues.filter((issue) => issue.fix)
@@ -36,6 +39,11 @@ export function WorkbenchWorkflowValidationCard({
         ? validationIssues.filter((issue) => !issue.fix)
         : validationIssues;
   const fixableIssues = filteredIssues.filter((issue) => issue.fix);
+  const issuePageCount = Math.max(1, Math.ceil(filteredIssues.length / VALIDATION_PAGE_SIZE));
+  const visibleIssues = filteredIssues.slice(
+    issuePage * VALIDATION_PAGE_SIZE,
+    (issuePage + 1) * VALIDATION_PAGE_SIZE,
+  );
   const fixableIssueCount = fixableIssues.length;
   const previewIssues = fixableIssues.slice(0, 3);
   const remainingPreviewCount = fixableIssueCount - previewIssues.length;
@@ -57,6 +65,10 @@ export function WorkbenchWorkflowValidationCard({
       previewDetail,
     );
   });
+  useEffect(() => setIssuePage(0), [activeFilter]);
+  useEffect(() => {
+    setIssuePage((current) => Math.min(current, issuePageCount - 1));
+  }, [issuePageCount]);
   return (
     <section className="sidebar-card sidebar-card--compact" data-workflow-validation-card="card">
       <div className="card-head">
@@ -110,8 +122,8 @@ export function WorkbenchWorkflowValidationCard({
             </div>
           ) : null}
           <div className="sidebar-list">
-            {filteredIssues.map((issue) => (
-              <div className="sidebar-list__row" key={issue.id}>
+            {visibleIssues.map((issue) => (
+              <div className="sidebar-list__row" data-workflow-validation-issue-id={issue.id} key={issue.id}>
                 <span>{issue.level}</span>
                 <strong>{issue.message}</strong>
                 {issue.locate ? (
@@ -126,6 +138,27 @@ export function WorkbenchWorkflowValidationCard({
                 ) : null}
               </div>
             ))}
+          </div>
+          <div className="workflow-template-chain-pager" data-workflow-validation-page={issuePage + 1}>
+            <button
+              aria-label={`${labels.validationTitle} ${issuePage}`}
+              data-workflow-validation-page-action="previous"
+              disabled={issuePage === 0}
+              onClick={() => setIssuePage((current) => Math.max(0, current - 1))}
+              type="button"
+            >
+              ←
+            </button>
+            <strong>{issuePage + 1}/{issuePageCount}</strong>
+            <button
+              aria-label={`${labels.validationTitle} ${issuePage + 2}`}
+              data-workflow-validation-page-action="next"
+              disabled={issuePage + 1 >= issuePageCount}
+              onClick={() => setIssuePage((current) => Math.min(issuePageCount - 1, current + 1))}
+              type="button"
+            >
+              →
+            </button>
           </div>
           {fixableIssueCount > 1 ? (
             <div className="button-row">
