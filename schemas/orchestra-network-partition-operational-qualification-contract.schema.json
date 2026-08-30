@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.kyuubiki.local/orchestra-network-partition-operational-qualification-contract.schema.json",
+  "title": "Kyuubiki Orchestra Network Partition Operational Qualification Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "qualification_id",
+    "target_coordinate",
+    "capture",
+    "retention",
+    "source_guard",
+    "required_checks"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.orchestra-network-partition-operational-qualification-contract/v1"
+    },
+    "qualification_id": {
+      "const": "two-orchestra-postgresql-network-partition-fencing-operational"
+    },
+    "target_coordinate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module_id", "paradigm", "target_grade"],
+      "properties": {
+        "module_id": { "const": "orchestra-control-plane" },
+        "paradigm": { "const": "runtime_api" },
+        "target_grade": { "const": "operational" }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "orchestra_host_role",
+        "database_host_role",
+        "database_platform",
+        "database",
+        "transport",
+        "failure_mode",
+        "orchestra_processes_minimum",
+        "independent_database_tunnels_minimum",
+        "lease_ttl_ms_maximum",
+        "fail_closed_ms_maximum",
+        "takeover_ms_maximum",
+        "fencing_increment_minimum",
+        "cleanup_required"
+      ],
+      "properties": {
+        "orchestra_host_role": { "const": "local-orchestra-qualification-host" },
+        "database_host_role": { "const": "remote-linux-qualification-host" },
+        "database_platform": { "const": "linux" },
+        "database": { "const": "postgresql" },
+        "transport": { "const": "independent-ssh-loopback-tunnels" },
+        "failure_mode": { "const": "primary-database-network-partition" },
+        "orchestra_processes_minimum": { "type": "integer", "minimum": 2 },
+        "independent_database_tunnels_minimum": { "type": "integer", "minimum": 2 },
+        "lease_ttl_ms_maximum": { "type": "integer", "minimum": 1, "maximum": 2000 },
+        "fail_closed_ms_maximum": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "takeover_ms_maximum": { "type": "integer", "minimum": 1, "maximum": 30000 },
+        "fencing_increment_minimum": { "type": "integer", "minimum": 1 },
+        "cleanup_required": { "const": true }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["report_schema", "report_schema_path", "report_path", "forbidden_content"],
+      "properties": {
+        "report_schema": {
+          "const": "kyuubiki.orchestra-network-partition-operational-qualification/v1"
+        },
+        "report_schema_path": {
+          "const": "schemas/orchestra-network-partition-operational-qualification-report.schema.json"
+        },
+        "report_path": {
+          "const": "releases/usability-evidence/2.18.3/orchestra-network-partition-operational-qualification.json"
+        },
+        "forbidden_content": {
+          "type": "array",
+          "minItems": 6,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "source_guard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files", "required_text"],
+      "properties": {
+        "files": {
+          "type": "array",
+          "minItems": 5,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "required_text": {
+          "type": "array",
+          "minItems": 8,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "required_checks": {
+      "type": "array",
+      "minItems": 16,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

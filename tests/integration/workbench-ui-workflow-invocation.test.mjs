@@ -8,7 +8,6 @@ import {
   startIsolatedWorkbenchUiRuntime,
   workbenchUrl,
 } from "./workbench-ui-isolated.shared.mjs";
-
 let browser;
 let runtime;
 

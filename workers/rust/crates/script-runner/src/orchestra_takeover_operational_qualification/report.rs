@@ -342,7 +342,7 @@ fn validate_phases(phases: &PhaseEvidence, fencing_increment: u64) -> RunnerResu
     Ok(())
 }
 
-fn validate_phase(
+pub(super) fn validate_phase(
     phase: &LeasePhase,
     process_role: &str,
     lease_status: &str,
@@ -358,7 +358,7 @@ fn validate_phase(
     Ok(())
 }
 
-fn cleanup_complete(cleanup: &CleanupEvidence) -> bool {
+pub(super) fn cleanup_complete(cleanup: &CleanupEvidence) -> bool {
     cleanup.orchestra_processes_stopped
         && cleanup.orchestra_ports_closed
         && cleanup.ssh_tunnel_stopped
@@ -367,7 +367,11 @@ fn cleanup_complete(cleanup: &CleanupEvidence) -> bool {
         && cleanup.local_work_root_removed
 }
 
-fn validate_schema_const(root: &Path, relative: &str, expected: &str) -> RunnerResult<()> {
+pub(super) fn validate_schema_const(
+    root: &Path,
+    relative: &str,
+    expected: &str,
+) -> RunnerResult<()> {
     let schema: Value = read_json(root, relative)?;
     if schema
         .pointer("/properties/schema_version/const")
@@ -395,7 +399,7 @@ fn validate_source_guard(root: &Path, guard: &SourceGuard) -> RunnerResult<()> {
     Ok(())
 }
 
-fn require_exact_set<'a>(
+pub(super) fn require_exact_set<'a>(
     actual: impl Iterator<Item = &'a str>,
     expected: impl Iterator<Item = &'a str>,
     label: &str,

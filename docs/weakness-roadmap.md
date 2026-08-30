@@ -223,9 +223,12 @@ and is rechecked by
 `make check-distributed-task-recovery-operational-qualification`. Shared
 PostgreSQL Orchestra process-crash takeover is now independently retained for
 both source runtime and a source-detached Installer-managed Linux production
-release. Full host power loss, network-partition fencing, Installer-led fleet
-package acquisition, long-running workflow takeover, and the installed
-cross-platform matrix remain open. Persisted in-flight workflow state now has a
+release. Network-partition fencing now has separate physical-database evidence:
+the owner remains alive but loses only its database tunnel, fails closed, the
+standby takes token 2, and the former owner rejects writes after rejoining.
+Full host power loss, Installer-led fleet package acquisition, long-running
+workflow takeover, and the installed cross-platform matrix remain open.
+Persisted in-flight workflow state now has a
 separate local qualification: a digest-bound execution envelope survives a
 complete OTP application stop/start, a fresh session claims a higher
 generation, stale writers are fenced, idempotent work resumes, uncheckpointed
@@ -674,10 +677,11 @@ Current weak point:
 - the same six-stage package journey now passes on native macOS aarch64 and
   physical Linux x86_64, with content-bound smoke/preflight attachments and
   residue-free cleanup
-- the remaining third-party gap is native Windows installed-package operation;
-  macOS/Linux evidence does not imply Windows ABI compatibility
-- the native Windows contract, strict validator, and `windows-latest` artifact
-  workflow now exist; the gap remains open until a real report is retained
+- native Windows installed-package operation now has retained six-stage evidence,
+  including MSVC dynamic loading, Agent RPC dispatch, bound-Orchestra rotation,
+  tamper recovery, Installer lifecycle, and residue cleanup
+- the remaining third-party gap is forward compatibility across future operator
+  SDK API and ABI revisions, not initial Windows installation coverage
 
 Current moxi hardening focus:
 
@@ -696,10 +700,9 @@ Qualification focus:
   including shared ownership and cancellation
 - retain the macOS/Linux multihost report and its four SHA-256-bound child
   attachments under `releases/usability-evidence/2.16.4/`
-- promote the same package journey through native Windows installed-package
-  evidence rather than inheriting macOS/Linux dynamic-smoke results; use
-  `make qualify-operator-sdk-windows-operational` on Windows and retain the
-  uploaded three-file evidence set
+- preserve the native Windows installed-package report and its bound evidence
+  under `releases/usability-evidence/2.15.0/`; rerun the same journey whenever
+  the operator SDK API, ABI, package format, or Installer lifecycle changes
 - add operator package compatibility fixtures for future SDK API changes
 
 Moxi readiness standard:

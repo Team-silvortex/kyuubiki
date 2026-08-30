@@ -23,6 +23,7 @@ fn parses_smoke_options() {
         root.join("target/desktop-cache/macos/release/bundle/macos")
     );
     assert!(options.verify_report.is_none());
+    assert!(options.retain_report.is_none());
     let linux = parse_options(root, vec![OsString::from("linux")]).expect("linux options");
     assert_eq!(linux.platform, Platform::Linux);
     assert_eq!(linux.bundle_root, Path::new("/usr/bin"));
@@ -40,6 +41,47 @@ fn parses_smoke_options() {
     assert_eq!(windows.platform, Platform::Windows);
     assert_eq!(windows.bundle_root, Path::new("/tmp/windows-apps"));
     assert!(windows.install_nsis);
+}
+
+#[test]
+fn retains_a_valid_candidate_once_without_overwriting_evidence() {
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock")
+        .as_nanos();
+    let root = std::env::temp_dir().join(format!("kyuubiki-desktop-retain-{nonce}"));
+    fs::create_dir_all(&root).expect("test root");
+    let candidate = root.join("candidate.json");
+    let report = retained_report(Platform::Windows, "@external/LocalAppData");
+    fs::write(
+        &candidate,
+        serde_json::to_vec_pretty(&report).expect("candidate json"),
+    )
+    .expect("candidate write");
+
+    let retained = retain_qualified_report(&root, &candidate).expect("retain candidate");
+    assert_eq!(
+        retained,
+        root.join(format!(
+            "releases/usability-evidence/{VERSION}/windows-installed-desktop-smoke.json"
+        ))
+    );
+    verify_retained_report(&retained).expect("retained report");
+    assert_eq!(
+        retain_qualified_report(&root, &candidate).expect("idempotent retain"),
+        retained
+    );
+
+    let mut changed = report;
+    changed["generated_at"] = Value::String("changed".to_string());
+    fs::write(
+        &candidate,
+        serde_json::to_vec_pretty(&changed).expect("changed json"),
+    )
+    .expect("changed write");
+    let error = retain_qualified_report(&root, &candidate).expect_err("overwrite must fail");
+    assert!(error.contains("refusing to replace different retained evidence"));
+    fs::remove_dir_all(root).expect("cleanup test root");
 }
 
 #[test]

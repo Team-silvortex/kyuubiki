@@ -59,6 +59,7 @@ defmodule KyuubikiWeb.Protocol do
       },
       "resources" => %{
         "health" => "/api/health",
+        "orchestra_lease" => "/api/v1/orchestra/lease",
         "protocol" => "/api/v1/protocol",
         "agents" => "/api/v1/agents",
         "jobs" => "/api/v1/jobs",

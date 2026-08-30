@@ -30,6 +30,7 @@ jobs:
           key: ${{ runner.os }}-beam-web-${{ hashFiles('apps/web/mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-beam-web-
+      - run: mix deps.get
       - run: mix format --check-formatted
       - run: mix test
 
@@ -43,6 +44,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.19.5"
+          otp-version: "28.0"
+      - name: Install live-service dependencies
+        working-directory: apps/web
+        run: mix deps.get
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
@@ -100,6 +108,10 @@ jobs:
             apps/hub-gui/package-lock.json
             apps/installer-gui/package-lock.json
             apps/workbench-gui/package-lock.json
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.19.5"
+          otp-version: "28.0"
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
@@ -325,6 +337,9 @@ jobs:
           cache: "npm"
           cache-dependency-path: ${{ matrix.cache_path }}
       - working-directory: ${{ matrix.working_directory }}
+        run: npm ci
+      - if: matrix.target == 'hub'
+        working-directory: apps/frontend
         run: npm ci
       - working-directory: ${{ matrix.working_directory }}
         run: npm run test:smoke

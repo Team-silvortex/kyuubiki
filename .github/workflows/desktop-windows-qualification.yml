@@ -81,6 +81,11 @@ jobs:
           cargo run --locked --manifest-path workers/rust/Cargo.toml
           -p kyuubiki-script-runner -- desktop-packaged-smoke
           --verify-report tmp/windows-installed-desktop-smoke.json
+      - name: Promote immutable qualification evidence
+        run: >-
+          cargo run --locked --manifest-path workers/rust/Cargo.toml
+          -p kyuubiki-script-runner -- desktop-packaged-smoke
+          --retain-report tmp/windows-installed-desktop-smoke.json
       - name: Upload Windows desktop qualification evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -89,5 +94,6 @@ jobs:
           path: |
             tmp/windows-installed-desktop-smoke.json
             tmp/packaged-desktop-smoke/*.log
+            releases/usability-evidence/*/windows-installed-desktop-smoke.json
           if-no-files-found: warn
           retention-days: 30

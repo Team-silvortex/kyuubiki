@@ -1,0 +1,92 @@
+{
+  "schema_version": "kyuubiki.orchestra-network-partition-operational-qualification/v1",
+  "generated_at_unix_ms": 1788076776287,
+  "status": "pass",
+  "journey": "primary-database-partition-standby-takeover-rejoin-fencing",
+  "topology": {
+    "orchestra_host_role": "local-orchestra-qualification-host",
+    "database_host_role": "remote-linux-qualification-host",
+    "orchestra_platform": "macos",
+    "database_platform": "linux",
+    "database_architecture": "x86_64",
+    "orchestra_process_count": 2,
+    "database": "postgresql",
+    "database_ephemeral": true,
+    "database_loopback_only": true,
+    "transport": "independent-ssh-loopback-tunnels",
+    "independent_database_tunnel_count": 2,
+    "build_profile": "development-no-compile"
+  },
+  "lease_policy": {
+    "lease_ttl_ms": 1500,
+    "heartbeat_ms": 400,
+    "retry_ms": 200,
+    "failure_mode": "primary-database-network-partition"
+  },
+  "phases": {
+    "initial_owner": {
+      "process_role": "primary",
+      "lease_status": "owner",
+      "observed_owner_role": "primary",
+      "fencing_token": 1
+    },
+    "initial_standby": {
+      "process_role": "standby",
+      "lease_status": "standby",
+      "observed_owner_role": "primary",
+      "fencing_token": 1
+    },
+    "partitioned_owner": {
+      "process_role": "partitioned-owner",
+      "lease_status": "standby",
+      "observed_owner_role": "none",
+      "visible_fencing_token": null,
+      "last_error": "orchestra_lease_store_unavailable"
+    },
+    "takeover": {
+      "process_role": "standby",
+      "lease_status": "owner",
+      "observed_owner_role": "standby",
+      "fencing_token": 2
+    },
+    "former_owner_rejoin": {
+      "process_role": "former-owner",
+      "lease_status": "standby",
+      "observed_owner_role": "standby",
+      "fencing_token": 2
+    },
+    "partition_to_fail_closed_elapsed_ms": 4415,
+    "takeover_elapsed_ms": 4417,
+    "primary_process_survived": true,
+    "primary_endpoint_remained_open": true,
+    "isolated_tunnel_closed": true,
+    "standby_tunnel_remained_open": true,
+    "stale_owner_submission_rejected": true
+  },
+  "cleanup": {
+    "orchestra_processes_stopped": true,
+    "orchestra_ports_closed": true,
+    "ssh_tunnel_stopped": true,
+    "tunnel_port_closed": true,
+    "remote_database_removed": true,
+    "local_work_root_removed": true
+  },
+  "checks": [
+    { "id": "remote_postgresql_ready", "status": "pass" },
+    { "id": "independent_database_tunnels_ready", "status": "pass" },
+    { "id": "primary_owner_elected", "status": "pass" },
+    { "id": "second_orchestra_standby", "status": "pass" },
+    { "id": "primary_database_partition_injected", "status": "pass" },
+    { "id": "primary_process_survived", "status": "pass" },
+    { "id": "primary_failed_closed", "status": "pass" },
+    { "id": "standby_database_path_remained_available", "status": "pass" },
+    { "id": "standby_promoted", "status": "pass" },
+    { "id": "fencing_token_incremented", "status": "pass" },
+    { "id": "primary_network_restored", "status": "pass" },
+    { "id": "former_owner_identity_fenced", "status": "pass" },
+    { "id": "stale_owner_submission_rejected", "status": "pass" },
+    { "id": "ephemeral_database_isolated", "status": "pass" },
+    { "id": "cleanup_complete", "status": "pass" },
+    { "id": "retention_sanitized", "status": "pass" }
+  ]
+}

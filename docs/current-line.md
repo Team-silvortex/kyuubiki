@@ -183,10 +183,13 @@ sprawl:
   the same token-1 to token-2 crash takeover with two isolated writable state
   roots sharing one installed payload. It also proves removal of the database,
   Runtime store, managed run root, processes, and ports. Source-runtime and
-  Linux installed-package takeover are therefore both `operational`;
-  long-running workload takeover, database-network disruption, fleet package
-  acquisition, macOS/Windows package execution, and the full cross-platform
-  matrix remain open
+  Linux installed-package takeover are therefore both `operational`. A separate
+  retained two-tunnel qualification keeps both BEAM processes alive, partitions
+  only the owner's PostgreSQL path, proves fail-closed demotion and token-2
+  standby takeover, restores the old path, and rejects a stale-owner workflow
+  write. Long-running workload takeover, fleet package acquisition,
+  macOS/Windows package execution, and the full cross-platform matrix remain
+  open
 - Installer-managed Agent update qualification now runs an isolated remote
   Linux install, changed-payload upgrade, executable probe, rollback, and second
   executable probe. Its semantic validator requires the rollback activation

@@ -490,10 +490,25 @@ cargo run --locked --manifest-path workers/rust/Cargo.toml \
 ```
 
 The canonical automation is
-`.github/workflows/desktop-windows-qualification.yml`. Its uploaded report is a
-qualification candidate, not retained release evidence by itself. Promote and
-reverify a passing artifact before closing
+`.github/workflows/desktop-windows-qualification.yml`. It uploads both the raw
+qualification candidate and the native validator's canonical retained-report
+layout. The artifact still has to be reviewed and merged into release evidence
+before closing
 `packaged_desktop_round_trip/windows-installed` in the usability release gate.
+
+After downloading the candidate into `tmp/`, retain it through the native
+validator rather than copying it by hand:
+
+```text
+./scripts/kyuubiki desktop-packaged-smoke \
+  --retain-report tmp/windows-installed-desktop-smoke.json
+```
+
+The command rejects failed, stale-version, incomplete, or path-bearing reports
+before atomically writing
+`releases/usability-evidence/<version>/windows-installed-desktop-smoke.json`.
+It is idempotent for identical evidence and refuses to overwrite a different
+report for the same release without explicit review.
 
 Retained reports must not contain host absolute paths. The native smoke runner
 encodes external locations as `@external` and paths below the selected bundle

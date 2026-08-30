@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.kyuubiki.local/orchestra-network-partition-operational-qualification-report.schema.json",
+  "title": "Kyuubiki Orchestra Network Partition Operational Qualification Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "status",
+    "journey",
+    "topology",
+    "lease_policy",
+    "phases",
+    "cleanup",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.orchestra-network-partition-operational-qualification/v1"
+    },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "status": { "const": "pass" },
+    "journey": { "const": "primary-database-partition-standby-takeover-rejoin-fencing" },
+    "topology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "orchestra_host_role",
+        "database_host_role",
+        "orchestra_platform",
+        "database_platform",
+        "database_architecture",
+        "orchestra_process_count",
+        "database",
+        "database_ephemeral",
+        "database_loopback_only",
+        "transport",
+        "independent_database_tunnel_count",
+        "build_profile"
+      ],
+      "properties": {
+        "orchestra_host_role": { "const": "local-orchestra-qualification-host" },
+        "database_host_role": { "const": "remote-linux-qualification-host" },
+        "orchestra_platform": { "enum": ["macos", "linux"] },
+        "database_platform": { "const": "linux" },
+        "database_architecture": { "type": "string", "minLength": 1 },
+        "orchestra_process_count": { "type": "integer", "minimum": 2 },
+        "database": { "const": "postgresql" },
+        "database_ephemeral": { "const": true },
+        "database_loopback_only": { "const": true },
+        "transport": { "const": "independent-ssh-loopback-tunnels" },
+        "independent_database_tunnel_count": { "type": "integer", "minimum": 2 },
+        "build_profile": { "const": "development-no-compile" }
+      }
+    },
+    "lease_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lease_ttl_ms", "heartbeat_ms", "retry_ms", "failure_mode"],
+      "properties": {
+        "lease_ttl_ms": { "type": "integer", "minimum": 1, "maximum": 2000 },
+        "heartbeat_ms": { "type": "integer", "minimum": 1 },
+        "retry_ms": { "type": "integer", "minimum": 1 },
+        "failure_mode": { "const": "primary-database-network-partition" }
+      }
+    },
+    "phases": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "initial_owner",
+        "initial_standby",
+        "partitioned_owner",
+        "takeover",
+        "former_owner_rejoin",
+        "partition_to_fail_closed_elapsed_ms",
+        "takeover_elapsed_ms",
+        "primary_process_survived",
+        "primary_endpoint_remained_open",
+        "isolated_tunnel_closed",
+        "standby_tunnel_remained_open",
+        "stale_owner_submission_rejected"
+      ],
+      "properties": {
+        "initial_owner": { "$ref": "#/$defs/lease_phase" },
+        "initial_standby": { "$ref": "#/$defs/lease_phase" },
+        "partitioned_owner": { "$ref": "#/$defs/partitioned_owner_phase" },
+        "takeover": { "$ref": "#/$defs/lease_phase" },
+        "former_owner_rejoin": { "$ref": "#/$defs/lease_phase" },
+        "partition_to_fail_closed_elapsed_ms": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "takeover_elapsed_ms": { "type": "integer", "minimum": 1, "maximum": 30000 },
+        "primary_process_survived": { "const": true },
+        "primary_endpoint_remained_open": { "const": true },
+        "isolated_tunnel_closed": { "const": true },
+        "standby_tunnel_remained_open": { "const": true },
+        "stale_owner_submission_rejected": { "const": true }
+      }
+    },
+    "cleanup": { "$ref": "#/$defs/cleanup" },
+    "checks": {
+      "type": "array",
+      "minItems": 16,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "status": { "const": "pass" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "lease_phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["process_role", "lease_status", "observed_owner_role", "fencing_token"],
+      "properties": {
+        "process_role": { "enum": ["primary", "standby", "former-owner"] },
+        "lease_status": { "enum": ["owner", "standby"] },
+        "observed_owner_role": { "enum": ["primary", "standby"] },
+        "fencing_token": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "partitioned_owner_phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "process_role",
+        "lease_status",
+        "observed_owner_role",
+        "visible_fencing_token",
+        "last_error"
+      ],
+      "properties": {
+        "process_role": { "const": "partitioned-owner" },
+        "lease_status": { "const": "standby" },
+        "observed_owner_role": { "const": "none" },
+        "visible_fencing_token": { "type": "null" },
+        "last_error": { "const": "orchestra_lease_store_unavailable" }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "orchestra_processes_stopped",
+        "orchestra_ports_closed",
+        "ssh_tunnel_stopped",
+        "tunnel_port_closed",
+        "remote_database_removed",
+        "local_work_root_removed"
+      ],
+      "properties": {
+        "orchestra_processes_stopped": { "const": true },
+        "orchestra_ports_closed": { "const": true },
+        "ssh_tunnel_stopped": { "const": true },
+        "tunnel_port_closed": { "const": true },
+        "remote_database_removed": { "const": true },
+        "local_work_root_removed": { "const": true }
+      }
+    }
+  }
+}

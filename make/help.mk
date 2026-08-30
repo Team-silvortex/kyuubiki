@@ -68,6 +68,8 @@ help:
 	@echo "  make check-agent-control-link-operational-qualification Recheck retained two-host Agent control-link recovery evidence"
 	@echo "  make qualify-orchestra-takeover-operational-remote Prove two Orchestras fence and take over through remote PostgreSQL"
 	@echo "  make check-orchestra-takeover-operational-qualification Recheck retained PostgreSQL crash-takeover evidence"
+	@echo "  make qualify-orchestra-network-partition-operational-remote Isolate only the owner database path and prove fencing"
+	@echo "  make check-orchestra-network-partition-operational-qualification Recheck retained database-partition evidence"
 	@echo "  make qualify-orchestra-installed-takeover-operational-remote Prove Installer-managed production Orchestras take over after source detach"
 	@echo "  make check-orchestra-installed-takeover-operational-qualification Recheck retained installed-package takeover evidence"
 	@echo "  make qualify-distributed-task-recovery-operational-remote Kill an in-flight remote Agent and prove replay-safe two-host recovery"

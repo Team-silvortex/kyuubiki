@@ -59,6 +59,7 @@ struct SmokeOptions {
     bundle_root: PathBuf,
     install_nsis: bool,
     verify_report: Option<PathBuf>,
+    retain_report: Option<PathBuf>,
 }
 
 struct ChildGuard(Option<Child>);
@@ -91,6 +92,14 @@ pub(crate) fn run_packaged_desktop_smoke(root: &Path, args: Vec<OsString>) -> Ru
         println!(
             "packaged desktop smoke report passed: {}",
             report_path.display()
+        );
+        return Ok(0);
+    }
+    if let Some(report_path) = &options.retain_report {
+        let retained_path = retain_qualified_report(root, report_path)?;
+        println!(
+            "packaged desktop smoke report retained: {}",
+            retained_path.display()
         );
         return Ok(0);
     }
@@ -410,6 +419,7 @@ fn parse_options(root: &Path, args: Vec<OsString>) -> RunnerResult<SmokeOptions>
     let mut output_path = root.join("tmp/packaged-desktop-smoke.json");
     let mut install_nsis = false;
     let mut verify_report = None;
+    let mut retain_report = None;
     let (platform, mut index) = match args.first().map(String::as_str) {
         Some("macos") => (Platform::Macos, 1),
         Some("linux") => (Platform::Linux, 1),
@@ -466,6 +476,18 @@ fn parse_options(root: &Path, args: Vec<OsString>) -> RunnerResult<SmokeOptions>
                     root.join(path)
                 });
             }
+            "--retain-report" => {
+                index += 1;
+                let value = args
+                    .get(index)
+                    .ok_or_else(|| "--retain-report requires a path".to_string())?;
+                let path = PathBuf::from(value);
+                retain_report = Some(if path.is_absolute() {
+                    path
+                } else {
+                    root.join(path)
+                });
+            }
             "--install-nsis" => install_nsis = true,
             argument => {
                 return Err(format!(
@@ -482,6 +504,7 @@ fn parse_options(root: &Path, args: Vec<OsString>) -> RunnerResult<SmokeOptions>
         bundle_root,
         install_nsis,
         verify_report,
+        retain_report,
     })
 }
 
@@ -502,6 +525,57 @@ pub(crate) fn verify_retained_report(path: &Path) -> RunnerResult<()> {
     let report: Value = serde_json::from_slice(&bytes)
         .map_err(|error| format!("invalid retained report {}: {error}", path.display()))?;
     validate_retained_report(&report)
+}
+
+fn retain_qualified_report(root: &Path, candidate_path: &Path) -> RunnerResult<PathBuf> {
+    let bytes = fs::read(candidate_path).map_err(|error| {
+        format!(
+            "failed to read desktop qualification candidate {}: {error}",
+            candidate_path.display()
+        )
+    })?;
+    let report: Value = serde_json::from_slice(&bytes).map_err(|error| {
+        format!(
+            "invalid desktop qualification candidate {}: {error}",
+            candidate_path.display()
+        )
+    })?;
+    validate_retained_report(&report)?;
+    let platform = report
+        .get("platform")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "desktop qualification candidate misses platform".to_string())?;
+    let target = root
+        .join("releases/usability-evidence")
+        .join(VERSION)
+        .join(format!("{platform}-installed-desktop-smoke.json"));
+    let mut canonical = serde_json::to_vec_pretty(&report)
+        .map_err(|error| format!("failed to serialize desktop qualification report: {error}"))?;
+    canonical.push(b'\n');
+    if target.is_file() {
+        let existing = fs::read(&target)
+            .map_err(|error| format!("failed to read {}: {error}", target.display()))?;
+        if existing == canonical {
+            return Ok(target);
+        }
+        return Err(format!(
+            "refusing to replace different retained evidence {}; review it explicitly",
+            target.display()
+        ));
+    }
+    let parent = target
+        .parent()
+        .ok_or_else(|| "retained desktop report has no parent directory".to_string())?;
+    fs::create_dir_all(parent)
+        .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+    let temporary = parent.join(format!(".desktop-smoke-{}.tmp", std::process::id()));
+    fs::write(&temporary, canonical)
+        .map_err(|error| format!("failed to write {}: {error}", temporary.display()))?;
+    fs::rename(&temporary, &target).map_err(|error| {
+        let _ = fs::remove_file(&temporary);
+        format!("failed to retain {}: {error}", target.display())
+    })?;
+    Ok(target)
 }
 
 fn validate_retained_report(report: &Value) -> RunnerResult<()> {

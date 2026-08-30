@@ -248,14 +248,14 @@ fn required_selectors() -> Vec<RequiredSelector> {
             "sampleDomain(domain)",
             "[aria-label=\"workbench-sample-domain:${domain}\"]",
             "workbench-sample-domain:",
-            &["apps/frontend/src/components/workbench/library/workbench-library-sidebar.tsx"],
+            &["apps/frontend/src/components/workbench/library/workbench-library-samples-panel.tsx"],
             "workbench-sample-domain:",
         ),
         RequiredSelector::with_ts(
             "sample(sampleId)",
             "[aria-label=\"workbench-sample:${sampleId}\"]",
             "workbench-sample:",
-            &["apps/frontend/src/components/workbench/library/workbench-library-sidebar.tsx"],
+            &["apps/frontend/src/components/workbench/library/workbench-library-samples-panel.tsx"],
             "workbench-sample:",
         ),
         RequiredSelector::with_ts(

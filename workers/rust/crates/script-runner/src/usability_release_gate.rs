@@ -35,6 +35,7 @@ struct Policy {
     release_claim_allowed: bool,
     closed_release_subtiers: Vec<String>,
     unclosed_release_tiers: Vec<String>,
+    open_release_subtiers: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -83,6 +84,7 @@ struct ReadinessReport {
     release_claim_allowed: bool,
     closed_release_subtiers: Vec<String>,
     unclosed_release_tiers: Vec<String>,
+    open_release_subtiers: Vec<String>,
     executed: bool,
     status: String,
     summary: Summary,
@@ -98,6 +100,7 @@ struct Summary {
     planned_count: usize,
     unique_probe_count: usize,
     unique_operational_probe_count: usize,
+    open_release_subtier_count: usize,
 }
 
 #[derive(Default)]
@@ -187,12 +190,7 @@ fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
     if config.policy.gate_scope.trim().is_empty() {
         return Err("usability gate scope must be explicit".to_string());
     }
-    if config.policy.release_claim_allowed != config.policy.unclosed_release_tiers.is_empty() {
-        return Err(
-            "release_claim_allowed must be true only when no release tiers remain unclosed"
-                .to_string(),
-        );
-    }
+    validate_release_tier_policy(&config.policy)?;
     if config.policy.closed_release_subtiers.is_empty()
         || config
             .policy
@@ -263,6 +261,57 @@ fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
         }
     }
     validate_source_guards(root, &config.source_guards)
+}
+
+fn validate_release_tier_policy(policy: &Policy) -> RunnerResult<()> {
+    let unclosed = policy
+        .unclosed_release_tiers
+        .iter()
+        .map(String::as_str)
+        .collect::<BTreeSet<_>>();
+    let closed = policy
+        .closed_release_subtiers
+        .iter()
+        .map(String::as_str)
+        .collect::<BTreeSet<_>>();
+    let open = policy
+        .open_release_subtiers
+        .iter()
+        .map(String::as_str)
+        .collect::<BTreeSet<_>>();
+    if unclosed.len() != policy.unclosed_release_tiers.len()
+        || closed.len() != policy.closed_release_subtiers.len()
+        || open.len() != policy.open_release_subtiers.len()
+    {
+        return Err("release tier ids must be unique".to_string());
+    }
+    if policy.release_claim_allowed != (unclosed.is_empty() && open.is_empty()) {
+        return Err(
+            "release_claim_allowed must be true only when no release tiers or subtiers remain open"
+                .to_string(),
+        );
+    }
+    if !closed.is_disjoint(&open) {
+        return Err("release subtiers cannot be both closed and open".to_string());
+    }
+    let mut represented_parents = BTreeSet::new();
+    for subtier in &open {
+        let (parent, child) = subtier
+            .split_once('/')
+            .ok_or_else(|| format!("open release subtier must use parent/child: {subtier}"))?;
+        if parent.is_empty() || child.is_empty() || !unclosed.contains(parent) {
+            return Err(format!(
+                "open release subtier {subtier} must belong to an unclosed parent tier"
+            ));
+        }
+        represented_parents.insert(parent);
+    }
+    if represented_parents != unclosed {
+        return Err(
+            "every unclosed release tier must expose at least one open subtier".to_string(),
+        );
+    }
+    Ok(())
 }
 
 fn baseline_release_for(version: &str) -> RunnerResult<String> {
@@ -426,6 +475,7 @@ fn build_report(config: &GateConfig, execute: bool) -> RunnerResult<ReadinessRep
         release_claim_allowed: config.policy.release_claim_allowed,
         closed_release_subtiers: config.policy.closed_release_subtiers.clone(),
         unclosed_release_tiers: config.policy.unclosed_release_tiers.clone(),
+        open_release_subtiers: config.policy.open_release_subtiers.clone(),
         executed: execute,
         status: status.to_string(),
         summary: Summary {
@@ -453,6 +503,7 @@ fn build_report(config: &GateConfig, execute: bool) -> RunnerResult<ReadinessRep
                 .map(|probe| probe.join("\u{1f}"))
                 .collect::<BTreeSet<_>>()
                 .len(),
+            open_release_subtier_count: config.policy.open_release_subtiers.len(),
         },
         journeys,
     })
@@ -582,9 +633,27 @@ mod tests {
     use std::path::Path;
 
     use super::{
-        JourneyResult, baseline_release_for, count_status, is_operational_probe, truncate,
-        validate_retained_probe,
+        JourneyResult, Policy, baseline_release_for, count_status, is_operational_probe, truncate,
+        validate_release_tier_policy, validate_retained_probe,
     };
+
+    fn release_policy(
+        release_claim_allowed: bool,
+        closed: &[&str],
+        unclosed: &[&str],
+        open: &[&str],
+    ) -> Policy {
+        Policy {
+            all_blocking_journeys_must_pass: true,
+            planned_or_static_only_is_not_release_evidence: true,
+            production_runtime_must_be_native: true,
+            gate_scope: "test".to_string(),
+            release_claim_allowed,
+            closed_release_subtiers: closed.iter().map(|value| value.to_string()).collect(),
+            unclosed_release_tiers: unclosed.iter().map(|value| value.to_string()).collect(),
+            open_release_subtiers: open.iter().map(|value| value.to_string()).collect(),
+        }
+    }
 
     #[test]
     fn counts_planned_journeys() {
@@ -642,5 +711,45 @@ mod tests {
             "moxi 2.17.x"
         );
         assert!(baseline_release_for("2.17").is_err());
+    }
+
+    #[test]
+    fn accepts_open_subtiers_that_cover_every_unclosed_parent() {
+        let policy = release_policy(
+            false,
+            &["desktop/macos"],
+            &["desktop", "recovery"],
+            &["desktop/windows", "recovery/power-loss"],
+        );
+        validate_release_tier_policy(&policy).expect("well-formed policy should pass");
+    }
+
+    #[test]
+    fn rejects_open_subtiers_without_an_unclosed_parent() {
+        let policy = release_policy(false, &[], &["desktop"], &["recovery/power-loss"]);
+        let error = validate_release_tier_policy(&policy)
+            .expect_err("orphaned open subtier should fail validation");
+        assert!(error.contains("must belong to an unclosed parent tier"));
+    }
+
+    #[test]
+    fn rejects_unclosed_parents_without_a_concrete_open_subtier() {
+        let policy = release_policy(false, &[], &["desktop", "recovery"], &["desktop/windows"]);
+        let error = validate_release_tier_policy(&policy)
+            .expect_err("every unclosed parent should expose concrete work");
+        assert!(error.contains("every unclosed release tier"));
+    }
+
+    #[test]
+    fn rejects_subtiers_marked_open_and_closed() {
+        let policy = release_policy(
+            false,
+            &["desktop/windows"],
+            &["desktop"],
+            &["desktop/windows"],
+        );
+        let error = validate_release_tier_policy(&policy)
+            .expect_err("a subtier cannot be open and closed simultaneously");
+        assert!(error.contains("both closed and open"));
     }
 }

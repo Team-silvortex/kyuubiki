@@ -392,6 +392,9 @@ fn run() -> RunnerResult<u8> {
         "qualify-orchestra-takeover-operational-remote" => {
             orchestra_takeover_operational_qualification::run_qualify_remote(&paths.root, rest)
         }
+        "qualify-orchestra-network-partition-operational-remote" => {
+            orchestra_takeover_operational_qualification::run_qualify_partition_remote(&paths.root, rest)
+        }
         "qualify-orchestra-installed-takeover-operational-remote" => {
             orchestra_takeover_operational_qualification::run_qualify_installed_remote(
                 &paths.root,

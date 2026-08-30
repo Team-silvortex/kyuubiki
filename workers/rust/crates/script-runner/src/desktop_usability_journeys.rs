@@ -12,11 +12,14 @@ const CAPABILITY_SCHEMA: &str = "kyuubiki.desktop-capability-closure/v1";
 
 const NATIVE_PROBES: &[&str] = &[
     "build-material-research-bundle",
+    "check-agent-rolling-replacement-operational-qualification",
     "check-agent-update-operational-qualification",
     "check-component-integrity-protocol",
+    "check-desktop-bundle-update-operational-qualification",
     "check-desktop-usability-journeys",
     "check-desktop-ui-validation",
     "check-gui-runtime-capability-contract",
+    "check-fleet-update-operational-qualification",
     "check-install-update-disk-hygiene",
     "check-installed-runtime-operational-qualification",
     "check-installer-recovery-fault-injection",
@@ -24,6 +27,7 @@ const NATIVE_PROBES: &[&str] = &[
     "check-material-research-bundle",
     "check-operator-task-ir-contract",
     "check-operator-validation",
+    "check-orchestra-network-partition-operational-qualification",
     "check-orchestra-recovery-fault-injection",
     "check-runtime-recovery-fault-injection",
     "check-runtime-payload-operational-qualification",
@@ -380,6 +384,7 @@ fn validate_required_chains(config: &GateConfig, selected: Option<&str>, issues:
             for probe_id in [
                 "check-runtime-recovery-fault-injection",
                 "check-orchestra-recovery-fault-injection",
+                "check-orchestra-network-partition-operational-qualification",
                 "check-installer-recovery-fault-injection",
             ] {
                 if !journey

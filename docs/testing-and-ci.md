@@ -738,6 +738,21 @@ removal of both BEAM processes, all local ports and logs, the tunnel, and the
 remote container. The retained report contains roles and timings only, never a
 host address, account, database URL, or credential.
 
+The database-partition lane keeps both Orchestra processes alive and gives each
+one an independent SSH loopback tunnel to the same PostgreSQL instance:
+
+```sh
+make qualify-orchestra-network-partition-operational-remote REMOTE=kyuubiki-lab
+make check-orchestra-network-partition-operational-qualification
+```
+
+It removes only the current owner's tunnel, requires that owner to demote with
+`orchestra_lease_store_unavailable`, proves the standby path remains available,
+then observes a higher fencing token. After restoring the old owner's network,
+the lane requires it to rejoin as standby and rejects a valid workflow write
+with `orchestra_standby`. The lease-only introspection route avoids depending
+on unrelated database-backed health components during the partition.
+
 This is source-runtime operational evidence. The separate installed-package
 lane builds and activates a production OTP release on the remote Linux host,
 deletes the synchronized source tree, and then repeats the same takeover:
@@ -752,8 +767,7 @@ payload while keeping independent writable release state. Success requires an
 Installer activation record, source fallback disabled, owner crash and token
 increment, former-owner fencing, plus zero managed Runtime, container, process,
 port, run-root, or transient evidence residue. Long-running workflow takeover,
-database-network disruption, fleet acquisition, and non-Linux packages remain
-separate open qualifications.
+fleet acquisition, and non-Linux packages remain separate open qualifications.
 
 ## Operational Agent Solver Qualification
 

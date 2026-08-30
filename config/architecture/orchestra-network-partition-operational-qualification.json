@@ -1,0 +1,83 @@
+{
+  "$schema": "../../schemas/orchestra-network-partition-operational-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.orchestra-network-partition-operational-qualification-contract/v1",
+  "qualification_id": "two-orchestra-postgresql-network-partition-fencing-operational",
+  "target_coordinate": {
+    "module_id": "orchestra-control-plane",
+    "paradigm": "runtime_api",
+    "target_grade": "operational"
+  },
+  "capture": {
+    "orchestra_host_role": "local-orchestra-qualification-host",
+    "database_host_role": "remote-linux-qualification-host",
+    "database_platform": "linux",
+    "database": "postgresql",
+    "transport": "independent-ssh-loopback-tunnels",
+    "failure_mode": "primary-database-network-partition",
+    "orchestra_processes_minimum": 2,
+    "independent_database_tunnels_minimum": 2,
+    "lease_ttl_ms_maximum": 2000,
+    "fail_closed_ms_maximum": 10000,
+    "takeover_ms_maximum": 30000,
+    "fencing_increment_minimum": 1,
+    "cleanup_required": true
+  },
+  "retention": {
+    "report_schema": "kyuubiki.orchestra-network-partition-operational-qualification/v1",
+    "report_schema_path": "schemas/orchestra-network-partition-operational-qualification-report.schema.json",
+    "report_path": "releases/usability-evidence/2.18.3/orchestra-network-partition-operational-qualification.json",
+    "forbidden_content": [
+      "192.168.",
+      "database_url",
+      "ecto://",
+      "postgres://",
+      "authorization: bearer",
+      "kyuubiki-dev",
+      "/users/",
+      "ssh-rsa"
+    ]
+  },
+  "source_guard": {
+    "files": [
+      "apps/web/lib/kyuubiki_web/orchestra/lease_sql_backend.ex",
+      "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+      "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_ownership.ex",
+      "apps/web/lib/kyuubiki_web/router.ex",
+      "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/runtime.rs",
+      "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/runtime_http.rs",
+      "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/partition_report.rs",
+      "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/partition_validation.rs"
+    ],
+    "required_text": [
+      "primary_tunnel_port",
+      "standby_tunnel_port",
+      "partitioned-owner",
+      "orchestra_lease_store_unavailable",
+      "stale_owner_submission_rejected",
+      "independent-ssh-loopback-tunnels",
+      "with_lease",
+      "fencing_token",
+      "stop_child",
+      "orchestra_standby",
+      "/api/v1/orchestra/lease"
+    ]
+  },
+  "required_checks": [
+    "remote_postgresql_ready",
+    "independent_database_tunnels_ready",
+    "primary_owner_elected",
+    "second_orchestra_standby",
+    "primary_database_partition_injected",
+    "primary_process_survived",
+    "primary_failed_closed",
+    "standby_database_path_remained_available",
+    "standby_promoted",
+    "fencing_token_incremented",
+    "primary_network_restored",
+    "former_owner_identity_fenced",
+    "stale_owner_submission_rejected",
+    "ephemeral_database_isolated",
+    "cleanup_complete",
+    "retention_sanitized"
+  ]
+}
