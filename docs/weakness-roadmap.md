@@ -237,9 +237,12 @@ Evidence lives at
 `releases/usability-evidence/2.18.3/orchestra-long-workflow-takeover-operational-qualification.json`
 and is rechecked by
 `make check-orchestra-long-workflow-takeover-operational-qualification`. This
-closes that subtier and leaves nine explicit release subtiers open. Full host
-power loss, Installer-led fleet package acquisition, and the installed
-cross-platform matrix remain among them.
+closes that subtier. The `moxi 2.19.0` source-line rollover reopens macOS and
+Linux installed-desktop qualification until fresh packages are built and run;
+the gate therefore carries eleven explicit release subtiers. The retained
+`2.18.3` reports remain historical evidence rather than current-package proof.
+Full host power loss, Installer-led fleet package acquisition, and the installed
+cross-platform matrix remain among the open work.
 Persisted in-flight workflow state now has a
 separate local qualification: a digest-bound execution envelope survives a
 complete OTP application stop/start, a fresh session claims a higher

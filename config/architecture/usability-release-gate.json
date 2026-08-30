@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.usability-release-gate/v1",
-  "baseline_release": "moxi 2.18.x",
+  "baseline_release": "moxi 2.19.x",
   "target_release": "daji 3.0.0",
   "policy": {
     "all_blocking_journeys_must_pass": true,
@@ -9,8 +9,6 @@
     "gate_scope": "development_contract_and_ui_invocation",
     "release_claim_allowed": false,
     "closed_release_subtiers": [
-      "packaged_desktop_round_trip/macos-installed",
-      "packaged_desktop_round_trip/linux-installed",
       "fault_injection_and_recovery/workflow-branch-isolation",
       "fault_injection_and_recovery/agent-watchdog-state-machine",
       "fault_injection_and_recovery/agent-watchdog-stale-timeout",
@@ -32,6 +30,8 @@
       "upgrade_and_rollback"
     ],
     "open_release_subtiers": [
+      "packaged_desktop_round_trip/macos-installed",
+      "packaged_desktop_round_trip/linux-installed",
       "packaged_desktop_round_trip/windows-installed",
       "fault_injection_and_recovery/full-host-power-loss",
       "fault_injection_and_recovery/installed-cross-platform",
@@ -108,16 +108,6 @@
           "--journey",
           "create-open-project",
           "--execute"
-        ],
-        [
-          "desktop-packaged-smoke",
-          "--verify-report",
-          "releases/usability-evidence/2.18.3/macos-installed-desktop-smoke.json"
-        ],
-        [
-          "desktop-packaged-smoke",
-          "--verify-report",
-          "releases/usability-evidence/2.18.3/linux-installed-desktop-smoke.json"
         ],
         ["check-gui-runtime-capability-contract"],
         ["check-ui-automation-contract"]

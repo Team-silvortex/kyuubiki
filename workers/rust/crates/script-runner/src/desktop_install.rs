@@ -410,7 +410,7 @@ mod tests {
         ));
         let _ = fs::remove_dir_all(&source_root);
         fs::create_dir(&source_root).unwrap();
-        let package = source_root.join("Kyuubiki Hub_2.18.3_amd64.deb");
+        let package = source_root.join("Kyuubiki Hub_2.19.0_amd64.deb");
         fs::write(&package, b"package").unwrap();
 
         let staged = stage_debs_for_apt(&[package]).unwrap();

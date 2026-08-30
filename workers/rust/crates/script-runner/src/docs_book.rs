@@ -561,7 +561,10 @@ fn sync_replacements(
         ),
         (
             "docs/tutorials.html",
-            vec![semver_rule("Current development: ", "", shipping_version)],
+            vec![
+                line_rule("Kyuubiki Tutorials · moxi ", "</div>", &display_version),
+                semver_rule("Current development: ", "", shipping_version),
+            ],
         ),
         (
             "docs/component-integrity-protocol.html",
@@ -594,6 +597,7 @@ fn sync_replacements(
             "apps/hub-gui/ui/docs/current-line.html",
             vec![
                 line_rule(">moxi ", "<", &display_version),
+                semver_rule("Current ", " checkpoint", shipping_version),
                 line_rule(
                     "The current development point is <code>moxi ",
                     "</code>",

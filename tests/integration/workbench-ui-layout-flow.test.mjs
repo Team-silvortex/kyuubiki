@@ -42,7 +42,7 @@ test("Workbench keeps overview routes shallow and isolates inspector actions", a
           kind: "operator",
           title: `Layout operator ${index}`,
           summary: "Bounded catalog entry used to verify the compact Store window.",
-          version: "2.18.3",
+          version: "2.19.0",
           source_id: "layout-test",
           source_kind: "builtin",
           tags: ["layout"],

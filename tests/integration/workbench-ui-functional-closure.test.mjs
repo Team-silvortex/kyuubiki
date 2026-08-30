@@ -114,7 +114,7 @@ test("Workbench Store GUI stages, exports, removes, and restores an asset action
     id: "qualification-gui-operator",
     kind: "operator",
     title: "Qualification GUI operator",
-    version: "2.18.3",
+    version: "2.19.0",
     source_id: "qualification",
     source_kind: "builtin",
     tags: ["qualification", "gui"],
