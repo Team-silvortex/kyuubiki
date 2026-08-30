@@ -18,7 +18,7 @@
   grid-template-columns: 68px minmax(212px, 252px) minmax(0, 1fr);
 }
 
-.workbench-shell[data-workbench-window-mode="narrow"] .workbench-shell__workspace {
+.workbench-shell[data-workbench-window-mode="narrow"]:not([data-workbench-stack-panels="true"]) .workbench-shell__workspace {
   display: contents;
 }
 

@@ -86,6 +86,7 @@ export function WorkbenchWorkflowTemplateChainActions({
   const [notice, setNotice] = useState<WorkbenchNoticeItem | null>(null);
   const [query, setQuery] = useState("");
   const [builtInPage, setBuiltInPage] = useState(0);
+  const [expandedChainCardId, setExpandedChainCardId] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const builtInChains = useMemo(() => listBuiltInWorkflowTemplateChains(), []);
   const availableChains = useMemo(
@@ -165,6 +166,10 @@ export function WorkbenchWorkflowTemplateChainActions({
   useEffect(() => {
     setBuiltInPage((current) => Math.min(current, builtInPageCount - 1));
   }, [builtInPageCount]);
+
+  function toggleChainCardDetails(instanceId: string) {
+    setExpandedChainCardId((current) => current === instanceId ? null : instanceId);
+  }
 
   function reportStorageWriteFailure() {
     upsertWorkbenchAlert(setSystemAlerts, {
@@ -425,13 +430,18 @@ export function WorkbenchWorkflowTemplateChainActions({
               <WorkbenchWorkflowTemplateChainCard
                 activeQuery={query}
                 chain={chain}
+                detailActions={[
+                  { id: "export", label: labels.templateChainExportLabel, onClick: () => exportChainPackage(chain) },
+                  { id: "rename", label: labels.templateChainRenameLabel, onClick: () => renameFavorite(chain.id) },
+                ]}
+                detailsOpen={expandedChainCardId === `pinned:${chain.id}`}
+                instanceId={`pinned:${chain.id}`}
                 key={`favorite-chain:${chain.id}`}
                 labels={labels}
-                onExport={() => exportChainPackage(chain)}
                 onInsert={() => insertChain(chain)}
-                onPrimaryAction={() => renameFavorite(chain.id)}
                 onPrimaryLabel={chainDisplayLabel(chain)}
                 onSelectTag={selectTag}
+                onToggleDetails={() => toggleChainCardDetails(`pinned:${chain.id}`)}
               />
             ))}
           </div>
@@ -454,14 +464,22 @@ export function WorkbenchWorkflowTemplateChainActions({
                 <WorkbenchWorkflowTemplateChainCard
                   activeQuery={query}
                   chain={chain}
-                  favorite={favoriteChainIds.includes(chain.id)}
+                  detailActions={[
+                    { id: "export", label: labels.templateChainExportLabel, onClick: () => exportChainPackage(chain) },
+                    {
+                      id: "favorite",
+                      label: favoriteChainIds.includes(chain.id) ? labels.templateChainFavoriteRemoveLabel : labels.templateChainFavoriteAddLabel,
+                      onClick: () => toggleFavorite(chain.id),
+                    },
+                  ]}
+                  detailsOpen={expandedChainCardId === `built-in:${chain.id}`}
+                  instanceId={`built-in:${chain.id}`}
                   key={chain.id}
                   labels={labels}
-                  onExport={() => exportChainPackage(chain)}
                   onInsert={() => insertChain(chain)}
-                  onPrimaryAction={() => toggleFavorite(chain.id)}
                   onPrimaryLabel={chainInsertLabel(chain)}
                   onSelectTag={selectTag}
+                  onToggleDetails={() => toggleChainCardDetails(`built-in:${chain.id}`)}
                 />
               ))}
             </div>
@@ -499,30 +517,24 @@ export function WorkbenchWorkflowTemplateChainActions({
 
       <div className="button-row button-row--adaptive">
         {filteredImportedChains.map((chain) => (
-          <div key={chain.id} className="sidebar-card sidebar-card--compact">
-            <div className="sidebar-list__row">
-              <span>{chainInsertLabel(chain)}</span>
-              <strong>{chain.templates.length}</strong>
-            </div>
-            {chain.summary ? <p className="card-copy">{chain.summary}</p> : null}
-            <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-              <button onClick={() => insertChain(chain)} type="button">
-                {chainInsertLabel(chain)}
-              </button>
-              <button onClick={() => exportChainPackage(chain)} type="button">
-                {labels.templateChainExportLabel}
-              </button>
-              <button onClick={() => renameImportedChain(chain)} type="button">
-                {labels.templateChainRenameTemplateLabel}
-              </button>
-              <button onClick={() => editImportedChainSummary(chain)} type="button">
-                {labels.templateChainSummaryEditLabel}
-              </button>
-              <button onClick={() => deleteImportedChain(chain.id)} type="button">
-                {labels.templateChainDeleteImportedLabel}
-              </button>
-            </div>
-          </div>
+          <WorkbenchWorkflowTemplateChainCard
+            activeQuery={query}
+            chain={chain}
+            detailActions={[
+              { id: "export", label: labels.templateChainExportLabel, onClick: () => exportChainPackage(chain) },
+              { id: "rename", label: labels.templateChainRenameTemplateLabel, onClick: () => renameImportedChain(chain) },
+              { id: "summary", label: labels.templateChainSummaryEditLabel, onClick: () => editImportedChainSummary(chain) },
+              { id: "delete", label: labels.templateChainDeleteImportedLabel, onClick: () => deleteImportedChain(chain.id) },
+            ]}
+            detailsOpen={expandedChainCardId === `imported:${chain.id}`}
+            instanceId={`imported:${chain.id}`}
+            key={chain.id}
+            labels={labels}
+            onInsert={() => insertChain(chain)}
+            onPrimaryLabel={chainInsertLabel(chain)}
+            onSelectTag={selectTag}
+            onToggleDetails={() => toggleChainCardDetails(`imported:${chain.id}`)}
+          />
         ))}
       </div>
     </div>

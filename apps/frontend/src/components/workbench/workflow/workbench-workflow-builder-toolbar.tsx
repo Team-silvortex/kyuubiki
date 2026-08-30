@@ -63,17 +63,12 @@ export function WorkbenchWorkflowBuilderToolbar({
     <section className="workflow-builder-toolbar">
       <div className="card-head">
         <h2 title={selectedWorkflow.name}>{selectedWorkflow.name}</h2>
-        <span className="status-pill status-pill--good">{selectedWorkflow.version}</span>
+        <span className="workflow-builder-toolbar__status" data-workflow-builder-toolbar="status">
+          <span className="status-pill status-pill--good">{selectedWorkflow.version}</span>
+          <span className={`status-pill status-pill--${draftStatusTone}`} title={labels.runDraftLabel}>{draftStatusLabel}</span>
+        </span>
       </div>
       <p className="card-copy">{selectedWorkflow.summary}</p>
-      <div className="sidebar-list">
-        <div className="sidebar-list__row">
-          <span>{labels.runDraftLabel}</span>
-          <strong>
-            <span className={`status-pill status-pill--${draftStatusTone}`}>{draftStatusLabel}</span>
-          </strong>
-        </div>
-      </div>
       {selectedWorkflow.local ? (
         <div className="sidebar-list">
           <div className="sidebar-list__row">
@@ -112,14 +107,14 @@ export function WorkbenchWorkflowBuilderToolbar({
       ) : null}
       {selectedWorkflow.local?.notes ? <p className="card-copy">{selectedWorkflow.local.notes}</p> : null}
       <div className="button-row button-row--adaptive" data-workflow-builder-toolbar="actions">
-        <button data-workflow-builder-action="run-catalog" onClick={onRunCatalog} type="button">{labels.runLabel}</button>
         <button data-workflow-builder-action="run-draft" disabled={!canRunDraft} onClick={onRunDraft} type="button">{labels.runDraftLabel}</button>
         <button data-workflow-builder-action="save-draft" onClick={onSaveDraft} type="button">{labels.saveDraftLabel}</button>
-        <button disabled={!canRunDraft} onClick={onPromoteDraft} type="button">{labels.promoteDraftLabel}</button>
       </div>
       <details className="workflow-builder-more-actions" data-workflow-builder-tools="secondary">
         <summary aria-label={`${labels.importGraphLabel} / ${labels.exportGraphLabel}`} title={`${labels.importGraphLabel} / ${labels.exportGraphLabel}`}>···</summary>
         <div className="button-row button-row--adaptive">
+          <button data-workflow-builder-action="run-catalog" onClick={onRunCatalog} type="button">{labels.runLabel}</button>
+          <button data-workflow-builder-action="promote-draft" disabled={!canRunDraft} onClick={onPromoteDraft} type="button">{labels.promoteDraftLabel}</button>
           {selectedWorkflow.local ? (
             <>
               <button onClick={onDuplicateLocalWorkflow} type="button">{labels.duplicateLocalWorkflowLabel}</button>

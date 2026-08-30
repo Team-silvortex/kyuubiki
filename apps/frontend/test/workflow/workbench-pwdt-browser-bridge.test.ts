@@ -124,7 +124,11 @@ test("Pwdt browser bridge resolves UI contract selectors for stable automation",
     assert.equal(bridge.uiSelector("storeManifestAction", "remove"), '[data-workbench-store-manifest-action="remove"]');
     assert.equal(bridge.uiSelector("systemSettingsPage", "overview"), '[data-workbench-system-settings-page="overview"]');
     assert.equal(bridge.uiSelector("workflowCatalogEntry", "solve.bar_1d"), '[data-workflow-catalog-id="solve.bar_1d"]');
+    assert.equal(bridge.uiSelector("workflowBuilderSecondaryTools"), '[data-workflow-builder-tools="secondary"]');
     assert.equal(bridge.uiSelector("workflowTopologyKind"), '[data-workflow-topology-kind="select"]');
+    assert.equal(bridge.uiSelector("workflowTopologyAction", "add-edge"), '[data-workflow-topology-action="add-edge"]');
+    assert.equal(bridge.uiSelector("workflowControlNode", "condition_2"), '[data-workflow-control-node-id="condition_2"]');
+    assert.equal(bridge.uiSelector("workflowControlEmptyAction"), '[data-workflow-control-empty-action="insert"]');
     assert.equal(bridge.uiSelector("workflowInputArtifact", "load-input"), '[data-workflow-input-artifact="load-input"]');
     assert.equal(bridge.uiSelector("workflowRun", "job-42"), '[data-workflow-run-id="job-42"]');
     assert.equal(bridge.uiSelector("workflowRunStatus", "completed"), '[data-workflow-run-status="completed"]');

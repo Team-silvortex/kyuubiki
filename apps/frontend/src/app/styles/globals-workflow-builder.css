@@ -127,12 +127,20 @@
   -webkit-line-clamp: 2;
 }
 
+.workflow-builder-toolbar__status {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
 .workflow-builder-toolbar > .card-copy:first-of-type {
   margin-top: 2px;
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
 }
 
 .workflow-builder-toolbar .sidebar-list {
@@ -141,6 +149,15 @@
 
 .workflow-builder-toolbar .button-row {
   margin-top: 12px;
+}
+
+.workflow-builder-toolbar [data-workflow-builder-toolbar="actions"] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.workflow-builder-toolbar [data-workflow-builder-toolbar="actions"] > button {
+  width: 100%;
 }
 
 .workflow-builder-more-actions {
@@ -303,6 +320,100 @@
 .workflow-template-chain-pager button {
   min-height: 34px;
   padding: 4px;
+}
+
+.button-row > .workflow-template-chain-card {
+  flex-basis: 100%;
+  width: 100%;
+}
+
+.workflow-template-chain-card {
+  display: grid;
+  gap: 8px;
+}
+
+.workflow-template-chain-card > .sidebar-list__row span,
+.workflow-template-chain-card__actions > button:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-template-chain-card__preview {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-template-chain-card__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  gap: 6px;
+}
+
+.workflow-template-chain-card__actions button {
+  min-height: 36px;
+  padding: 6px 8px;
+}
+
+.workflow-template-chain-card__details {
+  display: grid;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.workflow-contract-view-tabs,
+.workflow-control-flow-view-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  border-radius: 12px;
+  background: rgba(12, 16, 22, 0.44);
+}
+
+.workflow-contract-view-tab,
+.workflow-control-flow-view-tab {
+  min-width: 0;
+  min-height: 36px;
+  overflow: hidden;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-contract-view-tab--active,
+.workflow-control-flow-view-tab--active {
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--line));
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel-soft));
+}
+
+.workflow-control-flow-view-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.workflow-control-flow-view-tab span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.workflow-control-flow-empty {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: 12px;
 }
 
 .workflow-dataset-workspace {

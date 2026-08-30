@@ -41,8 +41,11 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
       workflowSurface: workbenchAutomationSelectors.workflowSurface,
       workflowCatalogSearch: workbenchAutomationSelectors.workflowCatalogSearch,
       workflowBuilder: workbenchAutomationSelectors.workflowBuilder,
+      workflowBuilderSecondaryTools: workbenchAutomationSelectors.workflowBuilderSecondaryTools,
       workflowOperatorSearch: workbenchAutomationSelectors.workflowOperatorSearch,
       workflowTopologyKind: workbenchAutomationSelectors.workflowTopologyKind,
+      workflowControlPlane: workbenchAutomationSelectors.workflowControlPlane,
+      workflowControlEmptyAction: workbenchAutomationSelectors.workflowControlEmptyAction,
       runtimePanel: workbenchAutomationSelectors.runtimePanel,
       runtimeTabs: workbenchAutomationSelectors.runtimeTabs,
       systemSidebar: workbenchAutomationSelectors.systemSidebar,
@@ -189,6 +192,16 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
         key: "workflowOperatorAction",
         parameter: "action",
         template: workbenchAutomationSelectors.workflowOperatorAction(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${action}"),
+      },
+      {
+        key: "workflowTopologyAction",
+        parameter: "action",
+        template: workbenchAutomationSelectors.workflowTopologyAction(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${action}"),
+      },
+      {
+        key: "workflowControlNode",
+        parameter: "nodeId",
+        template: workbenchAutomationSelectors.workflowControlNode(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${nodeId}"),
       },
       {
         key: "workflowBuilderAction",

@@ -52,7 +52,7 @@ export function WorkbenchWorkflowArtifactCard({
   }, [mode, selectedNodes]);
 
   return (
-    <section className="sidebar-card sidebar-card--compact">
+    <section className="sidebar-card sidebar-card--compact" data-workflow-artifact-card={mode}>
       <div className="card-head">
         <h2>{title}</h2>
         <span className="status-pill status-pill--watch">{labels.artifactDraftLocalLabel}</span>

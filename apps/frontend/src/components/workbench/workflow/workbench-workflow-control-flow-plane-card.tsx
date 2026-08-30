@@ -37,6 +37,7 @@ type WorkbenchWorkflowControlFlowPlaneCardProps = {
 
 type ArmedConnection = { mode: "outgoing" | "incoming"; nodeId: string; portId: string };
 type HoveredTarget = { nodeId: string; portId: string };
+type WorkflowControlFlowView = "flow" | "add" | "readiness";
 
 function isControlFlowNode(node: WorkflowGraphNode) {
   return node.kind === "condition" || node.operator_id === "transform.first_available";
@@ -415,6 +416,7 @@ export function WorkbenchWorkflowControlFlowPlaneCard({
   onInsertControlFlowPlane,
   onSetControlFlowEdge,
 }: WorkbenchWorkflowControlFlowPlaneCardProps) {
+  const [activeView, setActiveView] = useState<WorkflowControlFlowView>("flow");
   const [selectedLaneKey, setSelectedLaneKey] = useState<string | null>(null);
   const [armedConnection, setArmedConnection] = useState<ArmedConnection | null>(null);
   const [hoveredTarget, setHoveredTarget] = useState<HoveredTarget | null>(null);
@@ -474,7 +476,7 @@ export function WorkbenchWorkflowControlFlowPlaneCard({
     }, 1200);
     return () => window.clearTimeout(handle);
   }, [recentConnectedSource, recentConnectedTarget, recentConnectedNodeId]);
-  useEffect(() => { if (!traceFocusBranchNodeId || !traceFocusBranchOutputId) return; setSelectedLaneKey(laneKey(traceFocusBranchNodeId, traceFocusBranchOutputId === "if_false" ? "false" : "true")); }, [traceFocusBranchNodeId, traceFocusBranchOutputId, traceFocusBranchToken]);
+  useEffect(() => { if (!traceFocusBranchNodeId || !traceFocusBranchOutputId) return; setActiveView("flow"); setSelectedLaneKey(laneKey(traceFocusBranchNodeId, traceFocusBranchOutputId === "if_false" ? "false" : "true")); }, [traceFocusBranchNodeId, traceFocusBranchOutputId, traceFocusBranchToken]);
 
   function handleConnectionCommitted(sourcePortKey: string, targetPortKey: string) {
     setRecentConnectedSource(sourcePortKey);
@@ -507,27 +509,38 @@ export function WorkbenchWorkflowControlFlowPlaneCard({
         </span>
       </div>
       <p className="card-copy">{labels.controlFlowPlaneHint}</p>
-      {selectedSourceNodeId ? (
-        <div className="sidebar-list workflow-control-flow-deck">
-          <div className="sidebar-list__row">
-            <span>{labels.localWorkflowSourceLabel}</span>
-            <strong>{selectedSourceNodeId}</strong>
+      <nav aria-label={labels.controlFlowPlaneTitle} className="workflow-control-flow-view-tabs" data-workflow-control-view={activeView}>
+        {([
+          { id: "flow", label: labels.controlFlowPlaneTitle, count: controlNodes.length },
+          { id: "add", label: labels.addNodeLabel, count: operatorDescriptors?.length ?? 0 },
+          { id: "readiness", label: labels.statusReadyLabel, count: validationIssues.length + invalidInputCount },
+        ] as Array<{ id: WorkflowControlFlowView; label: string; count: number }>).map((view) => (
+          <button className={activeView === view.id ? "workflow-control-flow-view-tab workflow-control-flow-view-tab--active" : "workflow-control-flow-view-tab"} data-workflow-control-view-target={view.id} key={view.id} onClick={() => setActiveView(view.id)} title={view.label} type="button">
+            <span>{view.label}</span><strong>{view.count}</strong>
+          </button>
+        ))}
+      </nav>
+      {activeView === "add" ? (
+        <>
+          {selectedSourceNodeId ? (
+            <div className="sidebar-list workflow-control-flow-deck">
+              <div className="sidebar-list__row">
+                <span>{labels.localWorkflowSourceLabel}</span>
+                <strong>{selectedSourceNodeId}</strong>
+              </div>
+            </div>
+          ) : null}
+          <div className="button-row button-row--adaptive workflow-control-flow-deck">
+            <button onClick={() => onInsertControlFlowPlane(selectedSourceNodeId)} type="button">{labels.controlFlowPlaneInsertLabel}</button>
+            <button onClick={onAddConditionNode} type="button">{labels.controlFlowPlaneConditionLabel}</button>
+            <button onClick={onAddMergeNode} type="button">{labels.controlFlowPlaneMergeLabel}</button>
           </div>
-        </div>
+          <WorkbenchWorkflowControlFlowQuickAddCard labels={labels} onAddNode={onAddNode} operatorDescriptors={operatorDescriptors} />
+        </>
       ) : null}
-      <div className="button-row button-row--adaptive workflow-control-flow-deck">
-        <button onClick={() => onInsertControlFlowPlane(selectedSourceNodeId)} type="button">
-          {labels.controlFlowPlaneInsertLabel}
-        </button>
-        <button onClick={onAddConditionNode} type="button">
-          {labels.controlFlowPlaneConditionLabel}
-        </button>
-        <button onClick={onAddMergeNode} type="button">
-          {labels.controlFlowPlaneMergeLabel}
-        </button>
-      </div>
-      <WorkbenchWorkflowControlFlowReadinessCard invalidInputCount={invalidInputCount} labels={labels} selectedEdges={selectedEdges} selectedNodes={selectedNodes} validationIssues={validationIssues} />
-      <WorkbenchWorkflowControlFlowQuickAddCard labels={labels} onAddNode={onAddNode} operatorDescriptors={operatorDescriptors} />
+      {activeView === "readiness" ? <WorkbenchWorkflowControlFlowReadinessCard invalidInputCount={invalidInputCount} labels={labels} selectedEdges={selectedEdges} selectedNodes={selectedNodes} validationIssues={validationIssues} /> : null}
+      {activeView === "flow" ? (
+        <>
       {armedConnection ? (
         <div
           className="workflow-control-flow-arm-panel"
@@ -555,7 +568,10 @@ export function WorkbenchWorkflowControlFlowPlaneCard({
         </div>
       ) : null}
       {controlNodes.length === 0 ? (
-        <p className="card-copy">{labels.controlFlowPlaneEmptyLabel}</p>
+        <div className="workflow-control-flow-empty">
+          <p className="card-copy">{labels.controlFlowPlaneEmptyLabel}</p>
+          <button data-workflow-control-empty-action="insert" onClick={() => onInsertControlFlowPlane(selectedSourceNodeId)} type="button">{labels.controlFlowPlaneInsertLabel}</button>
+        </div>
       ) : null}
       {controlSnapshots.map((snapshot) => (
         <section className="sidebar-card sidebar-card--compact runtime-overview-card" key={`snapshot:${snapshot.conditionId}`}>
@@ -570,6 +586,7 @@ export function WorkbenchWorkflowControlFlowPlaneCard({
       {controlNodes.map((node) => (
           <section
             className={`sidebar-card sidebar-card--compact runtime-overview-card${canAcceptArmedConnection(node, armedConnection) ? " workflow-control-flow-accepting-node" : ""}${recentConnectedNodeId === node.id ? " workflow-control-flow-node--connected" : ""}`}
+            data-workflow-control-node-id={node.id}
             key={`control:${node.id}`}
             style={canAcceptArmedConnection(node, armedConnection) ? buildLaneHighlightStyle(true, "watch") : undefined}
           >
@@ -588,8 +605,10 @@ export function WorkbenchWorkflowControlFlowPlaneCard({
             {renderControlPlaneCanvas(node, selectedEdges, labels, selectedNodes, onSetControlFlowEdge, selectedLaneKey, armedConnection, setArmedConnection, handleConnectionCommitted, recentConnectedSource, registerPortButton)}
             <WorkbenchWorkflowControlFlowHint node={node} selectedEdges={selectedEdges} />
           </section>
-        ))}
+      ))}
       </div>
+        </>
+      ) : null}
     </section>
   );
 }

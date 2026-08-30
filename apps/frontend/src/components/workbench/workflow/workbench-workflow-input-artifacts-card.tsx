@@ -64,7 +64,7 @@ export function WorkbenchWorkflowInputArtifactsCard({
   }
 
   return (
-    <section className="sidebar-card sidebar-card--compact">
+    <section className="sidebar-card sidebar-card--compact" data-workflow-input-artifacts-card="card">
       <div className="card-head">
         <h2>{labels.inputArtifactsTitle}</h2>
         <span className="status-pill status-pill--watch">{labels.artifactDraftLocalLabel}</span>

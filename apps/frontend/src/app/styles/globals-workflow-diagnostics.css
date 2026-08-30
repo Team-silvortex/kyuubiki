@@ -3,16 +3,122 @@
   gap: 12px;
 }
 
-.workflow-diagnostics-plane__summary {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: 0;
+.workflow-diagnostics-plane__tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  border-radius: 12px;
+  background: rgba(12, 16, 22, 0.44);
 }
 
-.workflow-diagnostics-plane__summary .sidebar-list__row {
-  padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--line) 84%, transparent);
-  border-radius: 12px;
-  background: linear-gradient(180deg, var(--panel-soft), rgba(255, 255, 255, 0.48));
+.workflow-diagnostics-plane__tab {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.7rem;
+}
+
+.workflow-diagnostics-plane__tab span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-diagnostics-plane__tab--active {
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--line));
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel-soft));
+}
+
+.workflow-diagnostics-plane__filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 6px;
+}
+
+.workflow-diagnostics-plane__filters button {
+  min-width: 0;
+  min-height: 34px;
+  overflow: hidden;
+  padding: 5px 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-diagnostics-plane__filters button[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--accent) 46%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel-soft));
+}
+
+.workflow-package-policy-details,
+.workflow-audit-controls {
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
+  border-radius: 11px;
+  background: rgba(12, 16, 22, 0.26);
+}
+
+.workflow-package-policy-details > summary,
+.workflow-audit-controls > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.workflow-package-policy-details[open] > summary,
+.workflow-audit-controls[open] > summary {
+  padding-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 84%, transparent);
+}
+
+.workflow-package-policy-details .sidebar-list,
+.workflow-audit-controls > .button-row,
+.workflow-audit-controls > label {
+  margin-top: 8px;
+}
+
+.workflow-audit-entry {
+  display: grid;
+  gap: 8px;
+}
+
+.workflow-audit-entry__summary {
+  display: grid;
+  grid-template-columns: max-content max-content minmax(0, 1fr) max-content;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+}
+
+.workflow-audit-entry__summary .status-pill {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  word-break: normal;
+}
+
+.workflow-audit-entry__kind {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-audit-entry__summary > button {
+  min-height: 32px;
+  padding: 4px 8px;
 }
 
 .workflow-diagnostics-plane__cards {

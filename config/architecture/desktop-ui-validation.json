@@ -9,10 +9,12 @@
     "tests/integration/desktop-gui-layout-priority.test.mjs",
     "tests/integration/desktop-gui-navigation-closure.test.mjs",
     "tests/integration/desktop-shell-regression.test.mjs",
+    "tests/integration/workbench-ui-functional-closure.test.mjs",
+    "tests/integration/workbench-ui-workflow-builder-actions.test.mjs",
     "tests/integration/workbench-ui-workflow-invocation.test.mjs",
     "tests/integration/workbench-shell-regression.test.mjs"
   ],
-  "minimum_test_count": 33,
+  "minimum_test_count": 38,
   "shell_minimum_actions": [
     { "id": "hub", "minimum_actions": 40 },
     { "id": "installer", "minimum_actions": 50 },
@@ -54,6 +56,26 @@
     {
       "id": "workbench-interaction-closure",
       "label": "Workbench rail mounts every declared sidebar chunk without client errors"
+    },
+    {
+      "id": "workbench-system-snapshot-closure",
+      "label": "Workbench System exports, imports, inspects, and resets a topology snapshot"
+    },
+    {
+      "id": "workbench-store-gui-command-closure",
+      "label": "Workbench Store GUI stages, exports, removes, and restores an asset action"
+    },
+    {
+      "id": "workbench-workflow-catalog-run-closure",
+      "label": "Workbench workflow catalog runs a visible entry directly to completion"
+    },
+    {
+      "id": "workbench-workflow-graph-run-closure",
+      "label": "Workbench isolated workflow UI promotes and runs a valid graph draft"
+    },
+    {
+      "id": "workbench-workflow-topology-mutation-closure",
+      "label": "Workbench workflow builder mutates topology and inserts a control-flow plane"
     },
     {
       "id": "workbench-model-navigation-closure",

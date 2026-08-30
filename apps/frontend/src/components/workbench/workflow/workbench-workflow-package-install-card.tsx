@@ -114,6 +114,7 @@ export function WorkbenchWorkflowPackageInstallCard({
     snapshotCount,
     summaryOnlySnapshotCount,
   );
+  const [mountStateRow, ...detailRows] = rows;
   const autoFixableCount = residuals.filter((entry) => entry.auto_fixable).length;
   const previewResiduals = previewResidualIds ? residuals.filter((entry) => previewResidualIds.includes(entry.id)) : [];
   const previewRepairPlan = buildWorkflowPackageRepairPlan(previewResiduals);
@@ -227,7 +228,7 @@ export function WorkbenchWorkflowPackageInstallCard({
         />
       </label>
       <div className="sidebar-list">
-        {rows.map(([label, value]) => (
+        {[mountStateRow].map(([label, value]) => (
           <div className="sidebar-list__row" key={label}>
             <span>{label}</span>
             <strong>{value}</strong>
@@ -238,6 +239,17 @@ export function WorkbenchWorkflowPackageInstallCard({
           <strong>{filteredResiduals.length === 0 ? labels.packageInstallRulesResidualsCleanLabel : `${filteredResiduals.length} warning(s)`}</strong>
         </div>
       </div>
+      <details className="workflow-package-policy-details" data-workflow-package-policy-details="rules">
+        <summary>{`${labels.packageInstallRulesReadonlyLabel} · ${detailRows.length}`}</summary>
+        <div className="sidebar-list">
+          {detailRows.map(([label, value]) => (
+            <div className="sidebar-list__row" key={label}>
+              <span>{label}</span>
+              <strong>{value}</strong>
+            </div>
+          ))}
+        </div>
+      </details>
       {query.trim() && filteredResiduals.length === 0 && filteredHistory.length === 0 ? (
         <p className="card-copy">{labels.packageDiagnosticsSearchEmptyLabel}</p>
       ) : null}

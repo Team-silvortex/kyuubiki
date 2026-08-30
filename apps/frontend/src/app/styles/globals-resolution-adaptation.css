@@ -82,6 +82,7 @@
 
 .workbench-shell[data-workbench-stack-panels="true"] {
   grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: none;
   grid-auto-rows: auto;
 }
 

@@ -173,6 +173,7 @@ export function useWorkbenchWorkflowController({
         progress: payload.job.progress,
         statusDetail: payload.job.status_detail,
       });
+      setWorkflowPanelTab("runs");
       openWorkflowRunsSurface(params.displayWorkflowId);
       setJob(payload.job);
       setWorkflowRuns((current) =>

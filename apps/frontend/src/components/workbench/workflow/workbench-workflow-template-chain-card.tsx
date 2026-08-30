@@ -202,55 +202,57 @@ function WorkbenchWorkflowTemplateChainPreview(props: {
 export function WorkbenchWorkflowTemplateChainCard(props: {
   activeQuery: string;
   chain: WorkflowTemplateChainDefinition;
-  favorite?: boolean;
+  detailActions: Array<{ id: string; label: string; onClick: () => void }>;
+  detailsOpen: boolean;
+  instanceId: string;
   labels: WorkflowSidebarLabels;
-  onExport: () => void;
   onInsert: () => void;
-  onPrimaryAction: () => void;
   onPrimaryLabel: string;
   onSelectTag: (tag: string) => void;
+  onToggleDetails: () => void;
 }) {
   const {
     activeQuery,
     chain,
+    detailActions,
+    detailsOpen,
+    instanceId,
     labels,
-    onExport,
     onInsert,
-    onPrimaryAction,
     onPrimaryLabel,
     onSelectTag,
+    onToggleDetails,
   } = props;
+  const detailsId = `workflow-template-chain-details-${instanceId.replaceAll(/[^a-zA-Z0-9_-]/g, "-")}`;
+  const detailsLabel = detailActions.map((action) => action.label).join(" · ");
 
   return (
-    <div className="sidebar-card sidebar-card--compact">
+    <div className="sidebar-card sidebar-card--compact workflow-template-chain-card" data-workflow-template-chain-id={chain.id}>
       <div className="sidebar-list__row">
-        <span>{onPrimaryLabel}</span>
+        <span title={onPrimaryLabel}>{onPrimaryLabel}</span>
         <strong>{chain.templates.length}</strong>
       </div>
-      <WorkbenchWorkflowTemplateChainPreview chain={chain} />
-      <p className="card-copy">{describeTemplateChainPreview(chain)}</p>
-      <TemplateChainTagRow
-        activeQuery={activeQuery}
-        label={labels.templateChainTagsLabel}
-        onSelectTag={onSelectTag}
-        tags={chain.tags}
-      />
-      {chain.summary ? <p className="card-copy">{chain.summary}</p> : null}
-      <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+      <p className="card-copy workflow-template-chain-card__preview">{describeTemplateChainPreview(chain)}</p>
+      <div className="workflow-template-chain-card__actions">
         <button onClick={onInsert} type="button">
           {onPrimaryLabel}
         </button>
-        <button onClick={onExport} type="button">
-          {labels.templateChainExportLabel}
-        </button>
-        <button onClick={onPrimaryAction} type="button">
-          {props.favorite === undefined
-            ? labels.templateChainRenameLabel
-            : props.favorite
-              ? labels.templateChainFavoriteRemoveLabel
-              : labels.templateChainFavoriteAddLabel}
+        <button aria-controls={detailsId} aria-expanded={detailsOpen} aria-label={detailsLabel} data-workflow-template-chain-details={instanceId} onClick={onToggleDetails} title={detailsLabel} type="button">
+          {detailsOpen ? "−" : "···"}
         </button>
       </div>
+      {detailsOpen ? (
+        <div className="workflow-template-chain-card__details" id={detailsId}>
+          <WorkbenchWorkflowTemplateChainPreview chain={chain} />
+          <TemplateChainTagRow activeQuery={activeQuery} label={labels.templateChainTagsLabel} onSelectTag={onSelectTag} tags={chain.tags} />
+          {chain.summary ? <p className="card-copy">{chain.summary}</p> : null}
+          <div className="button-row button-row--adaptive">
+            {detailActions.map((action) => (
+              <button key={action.id} onClick={action.onClick} type="button">{action.label}</button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

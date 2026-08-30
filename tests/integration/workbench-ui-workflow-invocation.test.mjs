@@ -63,7 +63,25 @@ async function openQualificationBuilder(page) {
   return builder;
 }
 
+async function openBuilderSecondaryTools(builder) {
+  const tools = builder.locator('[data-workflow-builder-tools="secondary"]');
+  if (await tools.getAttribute("open") === null) {
+    await tools.locator("summary").click();
+  }
+  await tools.locator('[data-workflow-builder-action="run-catalog"]').waitFor({ state: "visible" });
+  return tools;
+}
+
+function resetWorkflowRuntimeState() {
+  runtime.state.catalogFetches = 0;
+  runtime.state.operatorFetches = 0;
+  runtime.state.catalogSubmissions = 0; runtime.state.graphSubmissions = 0;
+  runtime.state.jobPolls = 0; runtime.state.historyFetches = 0;
+  runtime.state.submissionBodies.length = 0;
+}
+
 test("Workbench isolated workflow UI completes catalog, builder, draft, submit, poll, and result rendering", async () => {
+  resetWorkflowRuntimeState();
   const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
   const page = await context.newPage();
   try {
@@ -87,12 +105,32 @@ test("Workbench isolated workflow UI completes catalog, builder, draft, submit, 
 
     await click(page, '[data-workflow-builder-action="save-draft"]', "Save workflow draft");
     await builder.locator('[data-workflow-import-message="text"]').waitFor({ state: "visible", timeout: 15_000 });
+    const savedDrafts = await page.evaluate(() => JSON.parse(
+      window.localStorage.getItem("kyuubiki.workbench.workflowDrafts.v1") || "[]",
+    ));
+    assert.equal(savedDrafts.length, 1);
+    assert.equal(savedDrafts[0]?.workflowId, "workflow.bar-1d-summary-json");
+    await openBuilderSecondaryTools(builder);
     await click(page, '[data-workflow-builder-action="run-catalog"]', "Run catalog workflow");
 
     const completedRun = page.locator(
       '[data-workflow-run-id="qualification-workflow-job"][data-workflow-run-status="completed"]',
     );
-    await completedRun.waitFor({ state: "visible", timeout: 45_000 });
+    try {
+      await completedRun.waitFor({ state: "visible", timeout: 45_000 });
+    } catch (error) {
+      const uiSnapshot = await page.evaluate(() => ({
+        activeSurface: document.querySelector("[data-workbench-workflow-surface]")
+          ?.getAttribute("data-workbench-workflow-surface"),
+        runs: [...document.querySelectorAll("[data-workflow-run-id]")].map((entry) => ({
+          id: entry.getAttribute("data-workflow-run-id"),
+          status: entry.getAttribute("data-workflow-run-status"),
+          workflowId: entry.getAttribute("data-workflow-run-workflow-id"),
+        })),
+        alerts: [...document.querySelectorAll("[role=alert]")].map((entry) => entry.textContent?.trim()),
+      }));
+      throw new Error(`${String(error)}\nui=${JSON.stringify(uiSnapshot)}\nbackend=${JSON.stringify(runtime.state)}`);
+    }
     assert.match(await completedRun.innerText(), /100%/u);
     assert.match(await completedRun.innerText(), /max_displacement=1\.250e-3/u);
     assert.equal(runtime.state.catalogSubmissions, 1);
@@ -111,6 +149,7 @@ test("Workbench isolated workflow UI completes catalog, builder, draft, submit, 
 }, { timeout: 90_000 });
 
 test("Workbench isolated workflow UI blocks invalid draft input without backend submission", async () => {
+  resetWorkflowRuntimeState();
   const context = await browser.newContext({ viewport: { width: 1180, height: 920 } });
   const page = await context.newPage();
   try {
