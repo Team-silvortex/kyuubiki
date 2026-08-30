@@ -298,6 +298,11 @@ fn cancellation_registry() -> &'static Mutex<HashSet<String>> {
     REGISTRY.get_or_init(|| Mutex::new(HashSet::new()))
 }
 
+fn execution_cancellation_registry() -> &'static Mutex<HashSet<String>> {
+    static REGISTRY: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+    REGISTRY.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
 pub(crate) fn register_cancel(job_id: String) {
     if let Ok(mut registry) = cancellation_registry().lock() {
         registry.insert(job_id);
@@ -312,10 +317,35 @@ pub(crate) fn take_cancelled(job_id: &str) -> bool {
     false
 }
 
+pub(crate) fn register_execution_cancel(request_id: String) {
+    if let Ok(mut registry) = execution_cancellation_registry().lock() {
+        registry.insert(request_id);
+    }
+}
+
+pub(crate) fn take_execution_cancelled(request_id: &str) -> bool {
+    execution_cancellation_registry()
+        .lock()
+        .is_ok_and(|mut registry| registry.remove(request_id))
+}
+
 pub(crate) fn extract_job_id(params: &serde_json::Value) -> Option<String> {
     params
         .as_object()
         .and_then(|value| value.get("job_id"))
         .and_then(|value| value.as_str())
         .map(|value| value.to_string())
+}
+
+#[cfg(test)]
+mod cancellation_tests {
+    use super::*;
+
+    #[test]
+    fn transport_cancellation_is_scoped_to_one_request_generation() {
+        register_execution_cancel("request-generation-one".to_string());
+        assert!(take_execution_cancelled("request-generation-one"));
+        assert!(!take_execution_cancelled("request-generation-two"));
+        assert!(!take_cancelled("shared-job"));
+    }
 }

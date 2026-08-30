@@ -51,6 +51,7 @@ use kyuubiki_solver::{
 use crate::agent_artifact::decode_solver_params;
 use crate::agent_state::{
     agent_descriptor_payload, build_progress_frames, extract_job_id, take_cancelled,
+    take_execution_cancelled,
 };
 use crate::operator_task_runtime::run_operator_task_ir;
 use crate::transport::{AgentReply, HeartbeatHandle};
@@ -607,9 +608,7 @@ fn handle_operator_task_ir(
         }
     };
 
-    if let Some(job_id) = maybe_job_id.as_deref()
-        && take_cancelled(job_id)
-    {
+    if execution_cancelled(&request_id, maybe_job_id.as_deref()) {
         stop_heartbeat(heartbeat);
         let report =
             agent_lifecycle::fail_execution(guard, "cancelled", "operator task was cancelled");
@@ -689,22 +688,20 @@ where
 
     match solver(&params) {
         Ok(result) => {
-            if let Some(job_id) = maybe_job_id.as_deref() {
-                if take_cancelled(job_id) {
-                    stop_heartbeat(heartbeat);
-                    let report =
-                        agent_lifecycle::fail_execution(guard, "cancelled", "job was cancelled");
-                    let reason_code = report.reason_code.clone();
-                    return AgentReply::Stream(
-                        Vec::new(),
-                        RpcResponse::error_with_details(
-                            request_id,
-                            reason_code,
-                            report.message.clone(),
-                            serde_json::to_value(report).expect("failure report should serialize"),
-                        ),
-                    );
-                }
+            if execution_cancelled(&request_id, maybe_job_id.as_deref()) {
+                stop_heartbeat(heartbeat);
+                let report =
+                    agent_lifecycle::fail_execution(guard, "cancelled", "job was cancelled");
+                let reason_code = report.reason_code.clone();
+                return AgentReply::Stream(
+                    Vec::new(),
+                    RpcResponse::error_with_details(
+                        request_id,
+                        reason_code,
+                        report.message.clone(),
+                        serde_json::to_value(report).expect("failure report should serialize"),
+                    ),
+                );
             }
 
             let encoded_result = if externalize_result {
@@ -753,6 +750,12 @@ where
             )
         }
     }
+}
+
+fn execution_cancelled(request_id: &str, job_id: Option<&str>) -> bool {
+    let request_cancelled = take_execution_cancelled(request_id);
+    let job_cancelled = job_id.is_some_and(take_cancelled);
+    request_cancelled || job_cancelled
 }
 
 fn stop_heartbeat(heartbeat: Option<HeartbeatHandle>) {

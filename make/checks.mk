@@ -13,7 +13,7 @@
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index check-material-research-bundle-index check-material-research-bundle-index-contract
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
-.PHONY: audit-dependencies check-system-security-qualification check-agent-control-link-operational-qualification check-agent-solver-operational-qualification check-orchestra-takeover-operational-qualification check-orchestra-network-partition-operational-qualification check-orchestra-installed-takeover-operational-qualification check-orchestra-workflow-operational-qualification check-installed-runtime-operational-qualification check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification check-orchestra-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
+.PHONY: audit-dependencies check-system-security-qualification check-agent-control-link-operational-qualification check-agent-solver-operational-qualification check-orchestra-takeover-operational-qualification check-orchestra-network-partition-operational-qualification check-orchestra-long-workflow-takeover-operational-qualification check-orchestra-installed-takeover-operational-qualification check-orchestra-workflow-operational-qualification check-installed-runtime-operational-qualification check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification check-orchestra-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
 .PHONY: check-distributed-task-recovery-operational-qualification
 
 check-doc-book:
@@ -504,6 +504,10 @@ check-orchestra-takeover-operational-qualification:
 check-orchestra-network-partition-operational-qualification:
 	@$(ENTRYPOINT) check-orchestra-network-partition-operational-qualification --self-test
 	@$(ENTRYPOINT) check-orchestra-network-partition-operational-qualification --verify-report releases/usability-evidence/2.18.3/orchestra-network-partition-operational-qualification.json
+
+check-orchestra-long-workflow-takeover-operational-qualification:
+	@$(ENTRYPOINT) check-orchestra-long-workflow-takeover-operational-qualification --self-test
+	@$(ENTRYPOINT) check-orchestra-long-workflow-takeover-operational-qualification --verify-report releases/usability-evidence/2.18.3/orchestra-long-workflow-takeover-operational-qualification.json
 
 check-orchestra-installed-takeover-operational-qualification:
 	@$(ENTRYPOINT) check-orchestra-installed-takeover-operational-qualification --self-test

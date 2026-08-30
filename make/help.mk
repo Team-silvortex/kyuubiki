@@ -70,6 +70,8 @@ help:
 	@echo "  make check-orchestra-takeover-operational-qualification Recheck retained PostgreSQL crash-takeover evidence"
 	@echo "  make qualify-orchestra-network-partition-operational-remote Isolate only the owner database path and prove fencing"
 	@echo "  make check-orchestra-network-partition-operational-qualification Recheck retained database-partition evidence"
+	@echo "  make qualify-orchestra-long-workflow-takeover-operational-remote Prove safe in-flight replay and checkpoint replay blocking"
+	@echo "  make check-orchestra-long-workflow-takeover-operational-qualification Recheck retained long-workflow takeover evidence"
 	@echo "  make qualify-orchestra-installed-takeover-operational-remote Prove Installer-managed production Orchestras take over after source detach"
 	@echo "  make check-orchestra-installed-takeover-operational-qualification Recheck retained installed-package takeover evidence"
 	@echo "  make qualify-distributed-task-recovery-operational-remote Kill an in-flight remote Agent and prove replay-safe two-host recovery"

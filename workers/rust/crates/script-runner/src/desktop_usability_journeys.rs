@@ -27,6 +27,7 @@ const NATIVE_PROBES: &[&str] = &[
     "check-material-research-bundle",
     "check-operator-task-ir-contract",
     "check-operator-validation",
+    "check-orchestra-long-workflow-takeover-operational-qualification",
     "check-orchestra-network-partition-operational-qualification",
     "check-orchestra-recovery-fault-injection",
     "check-runtime-recovery-fault-injection",
@@ -384,6 +385,7 @@ fn validate_required_chains(config: &GateConfig, selected: Option<&str>, issues:
             for probe_id in [
                 "check-runtime-recovery-fault-injection",
                 "check-orchestra-recovery-fault-injection",
+                "check-orchestra-long-workflow-takeover-operational-qualification",
                 "check-orchestra-network-partition-operational-qualification",
                 "check-installer-recovery-fault-injection",
             ] {

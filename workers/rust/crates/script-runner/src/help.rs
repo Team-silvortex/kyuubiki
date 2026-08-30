@@ -89,6 +89,8 @@ lab remote-ssh-fixture\n  \
   qualify-orchestra-takeover-operational-remote\n  \
   check-orchestra-network-partition-operational-qualification\n  \
   qualify-orchestra-network-partition-operational-remote\n  \
+  check-orchestra-long-workflow-takeover-operational-qualification\n  \
+  qualify-orchestra-long-workflow-takeover-operational-remote\n  \
   check-orchestra-installed-takeover-operational-qualification\n  \
   qualify-orchestra-installed-takeover-operational-remote\n  \
   check-orchestra-workflow-operational-qualification\n  \

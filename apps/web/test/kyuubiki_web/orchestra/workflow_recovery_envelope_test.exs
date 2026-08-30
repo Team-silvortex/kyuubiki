@@ -77,6 +77,25 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelopeTest do
              WorkflowRecoveryEnvelope.verify(policy_tamper)
   end
 
+  test "normalizes JSON numbers before binding the durable envelope" do
+    artifacts = %{
+      "input" => %{
+        "integral_float" => 1000.0,
+        "fraction" => 0.01,
+        "nested" => [2.0, 2.5]
+      }
+    }
+
+    assert {:ok, recovery} =
+             WorkflowRecoveryEnvelope.new(idempotent_graph(), artifacts, %{}, %{})
+
+    normalized = recovery["envelope"]["input_artifacts"]["input"]
+    assert normalized["integral_float"] === 1000
+    assert normalized["fraction"] === 0.01
+    assert normalized["nested"] === [2, 2.5]
+    assert :ok = WorkflowRecoveryEnvelope.verify(recovery)
+  end
+
   test "public results expose audit state but never the durable execution payload" do
     assert {:ok, recovery} =
              WorkflowRecoveryEnvelope.new(idempotent_graph(), input_artifacts(), %{}, %{})

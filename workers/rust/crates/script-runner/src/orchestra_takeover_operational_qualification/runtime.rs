@@ -57,7 +57,7 @@ pub(crate) fn capture_partition(
 }
 
 #[derive(Clone, Copy)]
-enum ProcessRole {
+pub(super) enum ProcessRole {
     Primary,
     Standby,
 }
@@ -68,23 +68,24 @@ pub(super) struct LeaseObservation {
     pub(super) fencing_token: u64,
 }
 
-struct Session {
+pub(super) struct Session {
     root: PathBuf,
     host: String,
     postgres_image: String,
     timeout: Duration,
-    work_root: PathBuf,
+    pub(super) work_root: PathBuf,
     container_name: String,
     lease_name: String,
-    primary_id: String,
-    standby_id: String,
-    token: String,
-    database_architecture: String,
+    pub(super) primary_id: String,
+    pub(super) standby_id: String,
+    pub(super) token: String,
+    pub(super) database_architecture: String,
+    pub(super) agent_endpoints: String,
     remote_database_port: Option<u16>,
     primary_tunnel_port: u16,
     standby_tunnel_port: u16,
-    primary_port: u16,
-    standby_port: u16,
+    pub(super) primary_port: u16,
+    pub(super) standby_port: u16,
     primary_tunnel: Option<Child>,
     standby_tunnel: Option<Child>,
     primary: Option<Child>,
@@ -94,7 +95,12 @@ struct Session {
 }
 
 impl Session {
-    fn new(root: &Path, host: &str, postgres_image: &str, timeout: Duration) -> RunnerResult<Self> {
+    pub(super) fn new(
+        root: &Path,
+        host: &str,
+        postgres_image: &str,
+        timeout: Duration,
+    ) -> RunnerResult<Self> {
         if !cfg!(unix) {
             return Err(
                 "SIGKILL takeover capture requires a Unix Orchestra qualification host".to_string(),
@@ -122,6 +128,7 @@ impl Session {
             standby_id: format!("qualification-standby-{suffix}"),
             token: random_token()?,
             database_architecture: String::new(),
+            agent_endpoints: String::new(),
             remote_database_port: None,
             primary_tunnel_port,
             standby_tunnel_port,
@@ -168,7 +175,9 @@ impl Session {
         })
     }
 
-    fn initialize_cluster(&mut self) -> RunnerResult<(LeaseObservation, LeaseObservation)> {
+    pub(super) fn initialize_cluster(
+        &mut self,
+    ) -> RunnerResult<(LeaseObservation, LeaseObservation)> {
         let primary_id = self.primary_id.clone();
         self.compile_web()?;
         self.prepare_remote_database()?;
@@ -365,7 +374,7 @@ impl Session {
         Err(format!("{label} readiness timed out"))
     }
 
-    fn start_orchestra(&mut self, role: ProcessRole, rejoin: bool) -> RunnerResult<()> {
+    pub(super) fn start_orchestra(&mut self, role: ProcessRole, rejoin: bool) -> RunnerResult<()> {
         let database_port = self.tunnel_port(role);
         let (port, instance_id, slot, label) = match role {
             ProcessRole::Primary => (
@@ -401,7 +410,7 @@ impl Session {
             .env("DATABASE_URL", database_url)
             .env("POOL_SIZE", "3")
             .env("KYUUBIKI_AGENT_DISCOVERY", "static")
-            .env("KYUUBIKI_AGENT_ENDPOINTS", "")
+            .env("KYUUBIKI_AGENT_ENDPOINTS", &self.agent_endpoints)
             .env("KYUUBIKI_API_TOKEN", &self.token)
             .env("KYUUBIKI_CLUSTER_API_TOKEN", &self.token)
             .env("KYUUBIKI_PROTECT_READS", "true")
@@ -422,7 +431,7 @@ impl Session {
         Ok(())
     }
 
-    fn wait_for_lease(
+    pub(super) fn wait_for_lease(
         &mut self,
         role: ProcessRole,
         expected_status: &str,
@@ -539,14 +548,14 @@ impl Session {
         })
     }
 
-    fn ensure_orchestra_alive(&mut self, role: ProcessRole) -> RunnerResult<()> {
+    pub(super) fn ensure_orchestra_alive(&mut self, role: ProcessRole) -> RunnerResult<()> {
         match role {
             ProcessRole::Primary => ensure_child_alive(&mut self.primary, "primary Orchestra"),
             ProcessRole::Standby => ensure_child_alive(&mut self.standby, "standby Orchestra"),
         }
     }
 
-    fn port(&self, role: ProcessRole) -> u16 {
+    pub(super) fn port(&self, role: ProcessRole) -> u16 {
         match role {
             ProcessRole::Primary => self.primary_port,
             ProcessRole::Standby => self.standby_port,
@@ -567,7 +576,7 @@ impl Session {
         }
     }
 
-    fn crash(&mut self, role: ProcessRole) -> RunnerResult<()> {
+    pub(super) fn crash(&mut self, role: ProcessRole) -> RunnerResult<()> {
         let slot = match role {
             ProcessRole::Primary => &mut self.primary,
             ProcessRole::Standby => &mut self.standby,
@@ -575,7 +584,7 @@ impl Session {
         stop_child(slot, "Orchestra crash target")
     }
 
-    fn cleanup(&mut self) -> RunnerResult<CleanupEvidence> {
+    pub(super) fn cleanup(&mut self) -> RunnerResult<CleanupEvidence> {
         if self.cleaned {
             return Err("takeover qualification session was already cleaned".to_string());
         }

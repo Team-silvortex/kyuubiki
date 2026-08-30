@@ -16,6 +16,7 @@
       "fault_injection_and_recovery/agent-watchdog-stale-timeout",
       "fault_injection_and_recovery/orchestra-agent-process-loss",
       "fault_injection_and_recovery/network-partition-fencing",
+      "fault_injection_and_recovery/long-running-workflow-takeover",
       "fault_injection_and_recovery/installer-journal-replay",
       "remote_agent_orchestra_round_trip/installer-managed-linux",
       "upgrade_and_rollback/agent-remote-linux",
@@ -33,7 +34,6 @@
     "open_release_subtiers": [
       "packaged_desktop_round_trip/windows-installed",
       "fault_injection_and_recovery/full-host-power-loss",
-      "fault_injection_and_recovery/long-running-workflow-takeover",
       "fault_injection_and_recovery/installed-cross-platform",
       "remote_agent_orchestra_round_trip/multi-host-package-acquisition",
       "remote_agent_orchestra_round_trip/fleet-scheduling",
@@ -196,6 +196,11 @@
           "check-orchestra-network-partition-operational-qualification",
           "--verify-report",
           "releases/usability-evidence/2.18.3/orchestra-network-partition-operational-qualification.json"
+        ],
+        [
+          "check-orchestra-long-workflow-takeover-operational-qualification",
+          "--verify-report",
+          "releases/usability-evidence/2.18.3/orchestra-long-workflow-takeover-operational-qualification.json"
         ],
         [
           "check-installer-recovery-fault-injection",

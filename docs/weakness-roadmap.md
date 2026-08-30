@@ -226,8 +226,20 @@ both source runtime and a source-detached Installer-managed Linux production
 release. Network-partition fencing now has separate physical-database evidence:
 the owner remains alive but loses only its database tunnel, fails closed, the
 standby takes token 2, and the former owner rejects writes after rejoining.
-Full host power loss, Installer-led fleet package acquisition, long-running
-workflow takeover, and the installed cross-platform matrix remain open.
+Long-running workflow takeover is now independently operational as well. An
+exact remote Agent barrier holds generation-one work while the active Orchestra
+is lost: idempotent work is claimed as generation two, dispatches exactly
+twice, and commits one verified result; uncheckpointed `checkpoint_required`
+work remains generation one, is blocked without redispatch, and ignores the
+orphan completion. Both former owners rejoin as standby and the retained run
+leaves no managed process, port, tunnel, database, or work-root residue.
+Evidence lives at
+`releases/usability-evidence/2.18.3/orchestra-long-workflow-takeover-operational-qualification.json`
+and is rechecked by
+`make check-orchestra-long-workflow-takeover-operational-qualification`. This
+closes that subtier and leaves nine explicit release subtiers open. Full host
+power loss, Installer-led fleet package acquisition, and the installed
+cross-platform matrix remain among them.
 Persisted in-flight workflow state now has a
 separate local qualification: a digest-bound execution envelope survives a
 complete OTP application stop/start, a fresh session claims a higher

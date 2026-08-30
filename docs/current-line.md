@@ -173,7 +173,7 @@ sprawl:
   row plus fencing token, memory follows the same contract, standby instances
   reject writes without leaving orphan queue records, and lease loss stops tracked
   runners before retrying ownership. Health responses expose the current role,
-  owner identity, expiry, and fencing token. The 503-test Web suite, real
+  owner identity, expiry, and fencing token. The 540-test Web suite, real
   PostgreSQL regression, and a retained native two-BEAM crash qualification
   exercise token-1 standby exclusion, forced owner process loss, token-2
   takeover, former-owner rejoin fencing, and complete temporary-resource
@@ -187,9 +187,18 @@ sprawl:
   retained two-tunnel qualification keeps both BEAM processes alive, partitions
   only the owner's PostgreSQL path, proves fail-closed demotion and token-2
   standby takeover, restores the old path, and rejects a stale-owner workflow
-  write. Long-running workload takeover, fleet package acquisition,
-  macOS/Windows package execution, and the full cross-platform matrix remain
-  open
+  write. A third retained qualification pauses exact remote Rust Agent
+  executions across two source-runtime Orchestra instances and the same remote
+  PostgreSQL store. Idempotent work advances from generation one to two with
+  exactly two dispatches and one verified terminal commit; uncheckpointed
+  `checkpoint_required` work remains generation one, enters
+  `recovery_blocked`, is never redispatched, and ignores its orphan completion.
+  Request-scoped transport cancellation prevents the old Agent generation from
+  cancelling the replacement, both former owners rejoin as standby, and every
+  managed process, tunnel, database, port, and work root is removed. Long-running
+  workflow takeover is therefore `operational`; fleet package acquisition,
+  macOS/Windows package execution, full host power loss, and the full
+  cross-platform matrix remain open
 - Installer-managed Agent update qualification now runs an isolated remote
   Linux install, changed-payload upgrade, executable probe, rollback, and second
   executable probe. Its semantic validator requires the rollback activation

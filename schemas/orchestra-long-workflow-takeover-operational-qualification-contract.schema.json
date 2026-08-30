@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.kyuubiki.local/orchestra-long-workflow-takeover-operational-qualification-contract.schema.json",
+  "title": "Kyuubiki Orchestra Long Workflow Takeover Operational Qualification Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "qualification_id",
+    "target_coordinate",
+    "capture",
+    "retention",
+    "source_guard",
+    "required_checks"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.orchestra-long-workflow-takeover-operational-qualification-contract/v1"
+    },
+    "qualification_id": {
+      "const": "two-orchestra-postgresql-long-workflow-takeover-operational"
+    },
+    "target_coordinate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module_id", "paradigm", "target_grade"],
+      "properties": {
+        "module_id": { "const": "orchestra-control-plane" },
+        "paradigm": { "const": "fault_injection_and_recovery" },
+        "target_grade": { "const": "operational" }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_scenarios",
+        "orchestra_processes_minimum",
+        "lease_ttl_ms_maximum",
+        "takeover_ms_maximum",
+        "idempotent_agent_dispatches",
+        "checkpoint_required_agent_dispatches",
+        "cleanup_required"
+      ],
+      "properties": {
+        "required_scenarios": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": { "enum": ["idempotent_resume", "checkpoint_required_block"] }
+        },
+        "orchestra_processes_minimum": { "type": "integer", "minimum": 2 },
+        "lease_ttl_ms_maximum": { "type": "integer", "minimum": 1, "maximum": 2000 },
+        "takeover_ms_maximum": { "type": "integer", "minimum": 1, "maximum": 30000 },
+        "idempotent_agent_dispatches": { "const": 2 },
+        "checkpoint_required_agent_dispatches": { "const": 1 },
+        "cleanup_required": { "const": true }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["report_schema", "report_schema_path", "report_path", "forbidden_content"],
+      "properties": {
+        "report_schema": {
+          "const": "kyuubiki.orchestra-long-workflow-takeover-operational-qualification/v1"
+        },
+        "report_schema_path": {
+          "const": "schemas/orchestra-long-workflow-takeover-operational-qualification-report.schema.json"
+        },
+        "report_path": {
+          "const": "releases/usability-evidence/2.18.3/orchestra-long-workflow-takeover-operational-qualification.json"
+        },
+        "forbidden_content": {
+          "type": "array",
+          "minItems": 8,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "source_guard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files", "required_text"],
+      "properties": {
+        "files": {
+          "type": "array",
+          "minItems": 7,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "required_text": {
+          "type": "array",
+          "minItems": 8,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "required_checks": {
+      "type": "array",
+      "minItems": 18,
+      "maxItems": 18,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

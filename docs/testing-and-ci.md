@@ -753,6 +753,22 @@ the lane requires it to rejoin as standby and rejects a valid workflow write
 with `orchestra_standby`. The lease-only introspection route avoids depending
 on unrelated database-backed health components during the partition.
 
+The long-workflow lane pauses an exact remote Agent execution while two local
+Orchestra processes share the remote PostgreSQL recovery store:
+
+```sh
+make qualify-orchestra-long-workflow-takeover-operational-remote REMOTE=kyuubiki-lab
+make check-orchestra-long-workflow-takeover-operational-qualification
+```
+
+It proves that an idempotent workflow advances from generation one to two,
+dispatches exactly twice, and produces one verified terminal commit. A separate
+`checkpoint_required` workflow stays on generation one, enters
+`recovery_blocked`, is not redispatched, and cannot be mutated by the orphaned
+completion. Both former owners must rejoin as standby, a follow-up solve must
+succeed, and all Agent, Orchestra, tunnel, database, port, and work-root state
+must be removed. The retained report is host-identity and credential free.
+
 This is source-runtime operational evidence. The separate installed-package
 lane builds and activates a production OTP release on the remote Linux host,
 deletes the synchronized source tree, and then repeats the same takeover:
@@ -766,8 +782,8 @@ Both installed Orchestra instances share one digest-verified immutable Runtime
 payload while keeping independent writable release state. Success requires an
 Installer activation record, source fallback disabled, owner crash and token
 increment, former-owner fencing, plus zero managed Runtime, container, process,
-port, run-root, or transient evidence residue. Long-running workflow takeover,
-fleet acquisition, and non-Linux packages remain separate open qualifications.
+port, run-root, or transient evidence residue. Fleet acquisition and non-Linux
+packages remain separate open qualifications.
 
 ## Operational Agent Solver Qualification
 

@@ -354,6 +354,14 @@ valid workflow submission. `/api/v1/orchestra/lease` exposes only the local
 Coordinator snapshot so fencing can be diagnosed while broader health
 components are blocked on the unavailable database.
 
+Long-running takeover uses request-generation-scoped Agent cancellation for
+transport loss. A broken heartbeat from the fenced owner can cancel only its
+own execution request, not a replacement request carrying the same workflow job
+ID. Explicit operator cancellation remains job-scoped. Persisted workflow
+envelopes also canonicalize numerically integral JSON floats before hashing so
+PostgreSQL JSONB normalization cannot create a false digest-tamper result;
+non-integral values retain their original numeric value.
+
 ### Direct mesh GUI
 
 Direct mesh routes can now be disabled or token-protected:

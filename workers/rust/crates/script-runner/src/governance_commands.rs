@@ -156,6 +156,9 @@ pub(crate) fn run_governance_command(
         "check-orchestra-network-partition-operational-qualification" => {
             orchestra_takeover_operational_qualification::run_check_partition(root, args)
         }
+        "check-orchestra-long-workflow-takeover-operational-qualification" => {
+            orchestra_takeover_operational_qualification::run_check_long_workflow(root, args)
+        }
         "check-orchestra-installed-takeover-operational-qualification" => {
             orchestra_takeover_operational_qualification::run_check_installed(root, args)
         }
