@@ -4,6 +4,26 @@
   overflow-x: clip;
 }
 
+.workbench-shell[data-workbench-scrollable-shell="false"] {
+  height: 100dvh;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+  overflow-y: hidden;
+}
+
+.workbench-shell[data-workbench-scrollable-shell="false"] .app-rail,
+.workbench-shell[data-workbench-scrollable-shell="false"] .workspace-sidebar,
+.workbench-shell[data-workbench-scrollable-shell="false"] .workspace-main,
+.workbench-shell[data-workbench-scrollable-shell="false"] .workspace-inspector {
+  height: 100%;
+  max-height: 100%;
+}
+
+.workbench-shell[data-workbench-scrollable-shell="false"] .app-rail {
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
 .workspace-sidebar,
 .workspace-inspector {
   max-height: calc(100dvh - 20px);

@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState, type ReactNode } from "react";
+import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
 
 import { WorkbenchSystemControlModeWindow } from "@/components/workbench/system/workbench-system-control-mode-window";
 import type {
@@ -41,10 +42,14 @@ type ProtocolAgentCardRow = {
   endpoint: string;
   metrics: ProtocolAgentMetric[];
   chips: ProtocolAgentChip[];
+  chipPreviewLimit?: number;
+  showMoreLabel: string;
+  showLessLabel: string;
   error?: string;
 };
 
 type WorkbenchSystemRuntimePanelProps = {
+  storageCopy: WorkbenchCopy;
   overviewTabLabel: string;
   stackTabLabel: string;
   securityTabLabel: string;
@@ -131,6 +136,7 @@ type WorkbenchSystemRuntimePanelProps = {
 };
 
 export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimePanel({
+  storageCopy,
   overviewTabLabel,
   stackTabLabel,
   securityTabLabel,
@@ -211,8 +217,8 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
     ? buildControlTopologySummaryFromSnapshot(snapshotOverride, controlWindow.copy)
     : controlWindow.topology;
   const snapshotSource: WorkbenchSystemTopologySnapshotSource = snapshotOverride
-    ? { kind: "imported_snapshot", label: "Imported snapshot", observedAt: snapshotOverride.observed_at }
-    : { kind: "derived_frontend", label: "Derived frontend runtime" };
+    ? { kind: "imported_snapshot", label: controlWindow.copy.importedSnapshotSourceLabel, observedAt: snapshotOverride.observed_at }
+    : { kind: "derived_frontend", label: controlWindow.copy.derivedRuntimeSourceLabel };
 
   function handleImportSnapshot(file: File) {
     const reader = new FileReader();
@@ -395,7 +401,7 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
           </section>
 
           {recoveryCard}
-          <WorkbenchSystemStorageCard />
+          <WorkbenchSystemStorageCard copy={storageCopy} />
         </div>
       ) : null}
       {page === "control" ? (
@@ -427,7 +433,7 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
               ) : null
             }
           />
-          <WorkbenchSystemStorageCard />
+          <WorkbenchSystemStorageCard copy={storageCopy} />
         </>
       ) : null}
       {page === "security" ? (

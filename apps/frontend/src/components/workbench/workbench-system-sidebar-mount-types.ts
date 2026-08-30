@@ -51,6 +51,9 @@ export type WorkbenchSystemSidebarMountProps = {
     endpoint: string;
     metrics: Array<{ label: string; value: string | number; tone?: string }>;
     chips: Array<{ key: string; label: string; tone?: string; title?: string }>;
+    chipPreviewLimit?: number;
+    showMoreLabel: string;
+    showLessLabel: string;
     error?: string;
   }>;
   runtimeWatchdogRows: Array<{ label: string; value: ReactNode }>;
@@ -82,7 +85,7 @@ export type WorkbenchSystemSidebarMountProps = {
   handleExportInstalledLanguagePack: () => void;
   handleImportLanguagePack: (file: File) => Promise<void>;
   handleRemoveLanguagePack: (packId: string) => void;
-  handleInstallCatalogLanguagePack: (packId: string) => void;
+  handleInstallCatalogLanguagePack: (packId: string) => Promise<void>;
   setFrontendRuntimeMode: (value: "orchestrated_gui" | "direct_mesh_gui") => void;
   setDirectMeshSelectionMode: (value: "healthiest" | "first_reachable") => void;
   setDirectMeshEndpointsText: (value: string) => void;

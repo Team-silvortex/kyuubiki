@@ -12,7 +12,6 @@ import {
 } from "@/components/workbench/workbench-notice-state";
 import type { ModelRecord, ModelVersionRecord } from "@/lib/api/project-types";
 import { parsePlaygroundModel } from "@/lib/models/model-import";
-import { parseProjectBundleFile } from "@/lib/projects/project-format";
 import { saveWorkbenchMacroPreset, saveWorkbenchSnippetPreset } from "@/lib/scripting/workbench-script-runtime";
 import { isSensitivePresetSaveError } from "@/lib/scripting/workbench-script-preset-security";
 import {
@@ -108,6 +107,7 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
     dismissWorkbenchAlert(effects.setSystemAlerts, "project-import-error");
     dismissWorkbenchAlert(effects.setSystemAlerts, "project-import-store-manifest-warning");
     dismissWorkbenchNotice(effects.setImportNotice);
+    const { parseProjectBundleFile } = await import("@/lib/projects/project-format");
     const bundle = await parseProjectBundleFile(file);
     const createdProject = await effects.createProject({
       name: bundle.project.name,

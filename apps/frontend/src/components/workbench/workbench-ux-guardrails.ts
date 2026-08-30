@@ -1,3 +1,5 @@
+import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
+
 export type WorkbenchUxGuardrailTone = "ok" | "warn" | "block";
 
 export type WorkbenchUxGuardrailInput = {
@@ -30,6 +32,34 @@ export type WorkbenchUxGuardrailSummary = {
   nextAction: string;
 };
 
+type WorkbenchUxGuardrailPresentationCopy = Pick<
+  WorkbenchCopy,
+  | "assistantConfigureDirectMesh"
+  | "assistantConfigureDirectMeshHint"
+  | "assistantEmpty"
+  | "assistantNeedsProjectHint"
+  | "controlPlaneProtocol"
+  | "controlPlaneTokenHelp"
+  | "controlPlaneTokenPlaceholder"
+  | "createProject"
+  | "directMeshEndpointsHelp"
+  | "directMeshTokenHelp"
+  | "directMeshTokenPlaceholder"
+  | "initialFailed"
+  | "languagePackImport"
+  | "languagePacksEmptyLabel"
+  | "languagePacksHint"
+  | "modelWorkspaceHint"
+  | "noVersions"
+  | "offline"
+  | "projectRequired"
+  | "ready"
+  | "refresh"
+  | "save"
+  | "saveAs"
+  | "watchdog"
+>;
+
 const CONTROL_PLANE_TOKEN_MIN_LENGTH = 8;
 
 export function buildWorkbenchUxGuardrailSummary(input: WorkbenchUxGuardrailInput): WorkbenchUxGuardrailSummary {
@@ -47,6 +77,23 @@ export function buildWorkbenchUxGuardrailSummary(input: WorkbenchUxGuardrailInpu
     warningCount,
     items: items.length > 0 ? items : [okItem()],
     nextAction: items.find((item) => item.tone === "block")?.nextAction ?? items[0]?.nextAction ?? "Keep working.",
+  };
+}
+
+export function localizeWorkbenchUxGuardrailSummary(
+  summary: WorkbenchUxGuardrailSummary,
+  copy: WorkbenchUxGuardrailPresentationCopy,
+): WorkbenchUxGuardrailSummary {
+  const items = summary.items.map((guardrail) => ({
+    ...guardrail,
+    ...localizedGuardrailCopy(guardrail.id, copy),
+  }));
+  return {
+    ...summary,
+    items,
+    nextAction: items.find((guardrail) => guardrail.tone === "block")?.nextAction
+      ?? items[0]?.nextAction
+      ?? copy.ready,
   };
 }
 
@@ -100,4 +147,37 @@ function item(id: string, tone: WorkbenchUxGuardrailTone, title: string, detail:
 
 function okItem(): WorkbenchUxGuardrailItem {
   return item("ready", "ok", "Ready for guided operation", "No blocking UX guardrail is active.", "Continue with the current workflow.");
+}
+
+function localizedGuardrailCopy(
+  id: string,
+  copy: WorkbenchUxGuardrailPresentationCopy,
+): Pick<WorkbenchUxGuardrailItem, "title" | "detail" | "nextAction"> | null {
+  switch (id) {
+    case "backend-offline":
+    case "protocol-offline":
+      return { title: `${copy.controlPlaneProtocol}: ${copy.offline}`, detail: copy.initialFailed, nextAction: copy.refresh };
+    case "short-control-token":
+      return { title: copy.controlPlaneTokenPlaceholder, detail: copy.controlPlaneTokenHelp, nextAction: copy.save };
+    case "missing-mesh-endpoints":
+      return {
+        title: copy.assistantConfigureDirectMesh,
+        detail: copy.assistantConfigureDirectMeshHint,
+        nextAction: copy.directMeshEndpointsHelp,
+      };
+    case "missing-mesh-token":
+      return { title: copy.directMeshTokenPlaceholder, detail: copy.directMeshTokenHelp, nextAction: copy.save };
+    case "watchdog-offline":
+      return { title: `${copy.watchdog}: ${copy.offline}`, detail: copy.initialFailed, nextAction: copy.refresh };
+    case "no-project":
+      return { title: copy.projectRequired, detail: copy.assistantNeedsProjectHint, nextAction: copy.createProject };
+    case "no-version":
+      return { title: copy.noVersions, detail: copy.modelWorkspaceHint, nextAction: copy.saveAs };
+    case "no-language-pack":
+      return { title: copy.languagePacksEmptyLabel, detail: copy.languagePacksHint, nextAction: copy.languagePackImport };
+    case "ready":
+      return { title: copy.ready, detail: copy.assistantEmpty, nextAction: copy.ready };
+    default:
+      return null;
+  }
 }

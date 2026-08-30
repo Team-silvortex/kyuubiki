@@ -12,7 +12,6 @@ import {
 import type { JobResultRecord } from "@/lib/api/fem-shared";
 import type { ProjectRecord } from "@/lib/api/project-types";
 import type { WorkbenchSecurityAuditRisk, WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
-import { exportProjectBundleZip } from "@/lib/projects/project-format";
 import {
   workbenchOperationFailure,
   type WorkbenchOperationResult,
@@ -48,6 +47,7 @@ export async function downloadWorkbenchProjectBundleZip(params: {
   const { selectedProject, buildBundle, setMessage, labels } = params;
   try {
     const { bundle, partial } = await buildBundle();
+    const { exportProjectBundleZip } = await import("@/lib/projects/project-format");
     const blob = await exportProjectBundleZip(bundle);
     downloadBlobFile(`${selectedProject?.name || "kyuubiki-project"}.kyuubiki`, blob);
     setMessage(partial ? labels.projectExportedPartial : labels.projectExported);

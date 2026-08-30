@@ -39,6 +39,7 @@ test("model streaming state keeps 3d renderer warm but evictable", () => {
   const state = resolveWorkbenchUiStreamingState("model");
 
   assert(state.activeChunks.includes("section.model"));
+  assert.equal(state.prefetchChunks[0], "section.library");
   assert(state.prefetchChunks.includes("renderer.truss3d"));
   assert(state.evictableChunks.includes("section.workflow"));
   assert(!state.evictableChunks.includes("shell.sidebar"));

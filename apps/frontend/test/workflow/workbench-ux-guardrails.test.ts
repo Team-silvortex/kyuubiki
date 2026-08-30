@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
 
 import {
   buildWorkbenchUxGuardrailSummary,
+  localizeWorkbenchUxGuardrailSummary,
   type WorkbenchUxGuardrailInput,
 } from "../../src/components/workbench/workbench-ux-guardrails.ts";
+import { resolveWorkbenchBaseCopy } from "../../src/components/workbench/workbench-copy.ts";
 
 const BASE_INPUT: WorkbenchUxGuardrailInput = {
   frontendRuntimeMode: "orchestrated_gui",
@@ -55,4 +57,18 @@ test("UX guardrails report ready when runtime, workspace, and language pack are 
   assert.equal(summary.blockedActionCount, 0);
   assert.equal(summary.warningCount, 0);
   assert.equal(summary.items[0]?.id, "ready");
+});
+
+test("UX guardrail presentation uses the active workbench language copy", () => {
+  const summary = buildWorkbenchUxGuardrailSummary({
+    ...BASE_INPUT,
+    selectedVersionId: null,
+    languagePackCount: 0,
+  });
+  const localized = localizeWorkbenchUxGuardrailSummary(summary, resolveWorkbenchBaseCopy("zh"));
+
+  assert.equal(localized.items[0]?.title, "还没有版本记录。");
+  assert.equal(localized.items[1]?.title, "当前还没有安装自定义语言包。");
+  assert.equal(localized.nextAction, "另存为");
+  assert.doesNotMatch(localized.items.map((item) => `${item.title} ${item.detail} ${item.nextAction}`).join(" "), /No |Save |Install /);
 });

@@ -8,6 +8,7 @@ import type { WorkbenchSystemSidebarMountProps } from "@/components/workbench/wo
 
 type WorkbenchSidebarCompositionProps = Record<string, any> &
   Pick<WorkbenchSystemSidebarMountProps, "jobHistory" | "protocolAgents"> & {
+    handleLanguageChange: (language: string) => void;
     handleModelToolsPageChange: (page: ModelToolsPage) => void;
   };
 
@@ -110,7 +111,7 @@ export function buildWorkbenchSidebarComposition(props: WorkbenchSidebarComposit
     setSidebarSection: workspaceState.setSidebarSection,
     health: props.health,
     runtimeRecoveryCard: createElement(WorkbenchRuntimeRecoveryCard, {
-      language: shellState.language,
+      copy: shellState.t,
       recovery: props.runtimeRecovery,
       onRetryAll: () => void props.retryRuntimeRecovery(),
       onRetryHealth: () => void props.refreshHealth(),

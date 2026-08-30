@@ -8,6 +8,14 @@ import { buildWorkbenchUiChunkRuntimeAttrs } from "@/components/workbench/workbe
 import type { ModelToolsPage } from "@/components/workbench/model/workbench-model-sidebar";
 import type { SidebarSection } from "@/components/workbench/workbench-types";
 import type { WorkbenchSystemSidebarMountProps } from "@/components/workbench/workbench-system-sidebar-mount-types";
+import {
+  loadWorkbenchLibrarySectionMount,
+  loadWorkbenchModelSectionMount,
+  loadWorkbenchStudySectionMount,
+  loadWorkbenchStoreSectionMount,
+  loadWorkbenchSystemSidebarMount,
+  loadWorkbenchWorkflowSectionMount,
+} from "@/components/workbench/workbench-sidebar-chunk-loader";
 
 type WorkbenchSidebarMountSource = Record<string, any> &
   Pick<WorkbenchSystemSidebarMountProps, "protocolAgents"> & {
@@ -15,32 +23,32 @@ type WorkbenchSidebarMountSource = Record<string, any> &
   };
 
 const WorkbenchLibrarySectionMount = lazy(() =>
-  import("@/components/workbench/workbench-library-section-mount").then((module) => ({
+  loadWorkbenchLibrarySectionMount().then((module) => ({
     default: module.WorkbenchLibrarySectionMount,
   })),
 );
 const WorkbenchModelSectionMount = lazy(() =>
-  import("@/components/workbench/workbench-model-section-mount").then((module) => ({
+  loadWorkbenchModelSectionMount().then((module) => ({
     default: module.WorkbenchModelSectionMount,
   })),
 );
 const WorkbenchStudySectionMount = lazy(() =>
-  import("@/components/workbench/workbench-study-section-mount").then((module) => ({
+  loadWorkbenchStudySectionMount().then((module) => ({
     default: module.WorkbenchStudySectionMount,
   })),
 );
 const WorkbenchStoreSectionMount = lazy(() =>
-  import("@/components/workbench/workbench-store-section-mount").then((module) => ({
+  loadWorkbenchStoreSectionMount().then((module) => ({
     default: module.WorkbenchStoreSectionMount,
   })),
 );
 const WorkbenchSystemSidebarMount = lazy(() =>
-  import("@/components/workbench/workbench-system-sidebar-mount").then((module) => ({
+  loadWorkbenchSystemSidebarMount().then((module) => ({
     default: module.WorkbenchSystemSidebarMount,
   })),
 );
 const WorkbenchWorkflowSectionMount = lazy(() =>
-  import("@/components/workbench/workbench-workflow-section-mount").then((module) => ({
+  loadWorkbenchWorkflowSectionMount().then((module) => ({
     default: module.WorkbenchWorkflowSectionMount,
   })),
 );

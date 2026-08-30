@@ -276,6 +276,20 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.panel-tabs--library > .panel-tab {
+  padding-inline: 6px;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.panel-tabs--library > .panel-tab:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.panel-tabs--library .panel-tab__glyph {
+  display: none;
+}
+
 .panel-tabs--editor {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));

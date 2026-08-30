@@ -114,59 +114,55 @@ async function setWorkflowSurfaceTab(page, tab) {
   }, tab);
 }
 
-async function openSample(page, domainLabel, sampleLabel, importedModelLabel, studyLabel) {
+async function openSample(page, domainKey, sampleId, sampleLabel, importedModelLabel, studyLabel) {
   const steps = [];
   steps.push(
-    await measureStep("open_history", async () => {
-      await page.getByRole("button", { name: "H History" }).click();
+    await measureStep("open_library", async () => {
+      await page.getByLabel("workbench-rail:library").click();
+      await page.locator('[data-workbench-library="panel"]').waitFor({ state: "visible", timeout: 30_000 });
     }),
   );
   steps.push(
     await measureStep("open_samples", async () => {
-      await page.getByRole("button", { name: /^S\s+Samples$/ }).click();
+      await page.getByLabel("workbench-library-tab:samples").click();
+      await page.getByLabel(`workbench-sample-domain:${domainKey}`).waitFor({ state: "visible", timeout: 30_000 });
     }),
   );
   steps.push(
-    await measureStep(`select_domain:${domainLabel}`, async () => {
-      await page
-        .locator("button")
-        .filter({ hasText: new RegExp(`^${domainLabel}$`) })
-        .first()
-        .click();
+    await measureStep(`select_domain:${domainKey}`, async () => {
+      await page.getByLabel(`workbench-sample-domain:${domainKey}`).click();
     }),
   );
   steps.push(
-    await measureStep(`select_sample:${sampleLabel}`, async () => {
-      await page
-        .locator("button.history-item")
-        .filter({ hasText: sampleLabel })
-        .first()
-        .click();
+    await measureStep(`select_sample:${sampleId}`, async () => {
+      await page.getByLabel(`workbench-sample:${sampleId}`).click();
       await page.waitForFunction(
         ({ importedModel, study }) => {
+          const loadedModel = document.querySelector('[data-workbench-state="loaded-model"]');
           const text = document.body.innerText || "";
-          return text.includes(`Imported model: ${importedModel}`) && text.includes(study);
+          return (loadedModel?.textContent || "").includes(importedModel) && text.includes(study);
         },
         { importedModel: importedModelLabel, study: studyLabel },
         { timeout: 60_000 },
       );
     }),
   );
+  const inspector = page.locator('[data-workbench-panel="inspector"]');
   steps.push(
     await measureStep("open_result", async () => {
-      await page.getByRole("button", { name: "Result" }).first().click();
+      await inspector.getByRole("button", { name: "Result", exact: true }).click();
     }),
   );
   steps.push(
     await measureStep("open_actions", async () => {
-      await page.getByRole("button", { name: "Actions" }).first().click();
+      await inspector.getByRole("button", { name: "Actions", exact: true }).click();
     }),
   );
   steps.push(
     await measureStep("open_export_menu", async () => {
-      await page.getByRole("button", { name: "Export Data" }).first().click();
-      await page.getByRole("button", { name: "Export Data JSON" }).first().waitFor({ state: "visible", timeout: 15_000 });
-      await page.getByRole("button", { name: "Export Data CSV" }).first().waitFor({ state: "visible", timeout: 15_000 });
+      await inspector.getByRole("button", { name: "Export Data", exact: true }).click();
+      await inspector.getByRole("button", { name: "Export Data JSON", exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+      await inspector.getByRole("button", { name: "Export Data CSV", exact: true }).waitFor({ state: "visible", timeout: 15_000 });
     }),
   );
   return steps;
@@ -176,11 +172,13 @@ async function runCase(browser, config) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
   try {
     const load = await measureStep(`goto:${config.id}`, async () => {
-      await page.goto(FRONTEND_URL, { waitUntil: "networkidle", timeout: 60_000 });
+      await page.goto(FRONTEND_URL, { waitUntil: "domcontentloaded", timeout: 60_000 });
+      await page.getByLabel("workbench-rail:library").waitFor({ state: "visible", timeout: 60_000 });
     });
     const steps = await openSample(
       page,
-      config.domain,
+      config.domainKey,
+      config.sampleId,
       config.sample,
       config.importedModel,
       config.studyLabel,
@@ -202,19 +200,19 @@ async function runWorkflowCase(browser) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
   try {
     const load = await measureStep("goto:workflow", async () => {
-      await page.goto(FRONTEND_URL, { waitUntil: "networkidle", timeout: 60_000 });
+      await page.goto(FRONTEND_URL, { waitUntil: "domcontentloaded", timeout: 60_000 });
+      await page.getByLabel("workbench-rail:workflow").waitFor({ state: "visible", timeout: 60_000 });
     });
     const steps = [];
     steps.push(
       await measureStep("open_workflow_rail", async () => {
-        await page.getByRole("button", { name: /Workflow/ }).click();
-        await page.getByRole("button", { name: "Catalog" }).first().waitFor({ state: "visible", timeout: 30_000 });
+        await page.getByLabel("workbench-rail:workflow").click();
+        await page.locator('[data-workflow-surface-tab="catalog"]').waitFor({ state: "visible", timeout: 30_000 });
       }),
     );
-    const workflowTabs = page.locator(".panel-tabs--editor").first();
     steps.push(
       await measureStep("open_workflow_catalog", async () => {
-        await workflowTabs.getByRole("button", { name: "Catalog" }).click();
+        await page.locator('[data-workflow-surface-tab="catalog"]').click();
         await page.getByText("Workflow Catalog").first().waitFor({ state: "visible", timeout: 30_000 });
       }),
     );
@@ -226,7 +224,7 @@ async function runWorkflowCase(browser) {
           await waitForNextPaint(page);
           return;
         }
-        await workflowTabs.getByRole("button", { name: "Builder" }).click();
+        await page.locator('[data-workflow-surface-tab="builder"]').click();
         await waitForNextPaint(page);
       }),
     );
@@ -278,6 +276,8 @@ async function main() {
       await runCase(browser, {
         id: "mechanical.spring-grid-2d",
         domain: "Mechanical",
+        domainKey: "mechanical",
+        sampleId: "spring-grid-2d",
         sample: "Spring Grid 2D",
         importedModel: "spring-grid-2d",
         studyLabel: "2D spring",
@@ -287,6 +287,8 @@ async function main() {
       await runCase(browser, {
         id: "thermal.heat-plane-quad-2d",
         domain: "Thermal",
+        domainKey: "thermal",
+        sampleId: "heat-plane-quad-2d",
         sample: "Heat Plane Quad 2D",
         importedModel: "Heat Plane Quad 2D",
         studyLabel: "2D heat plane quad",

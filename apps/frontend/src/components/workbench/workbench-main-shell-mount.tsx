@@ -5,6 +5,7 @@ import {
   type WorkbenchUiChunkId,
 } from "@/components/workbench/workbench-ui-streaming";
 import { buildWorkbenchUiChunkRuntimeAttrs } from "@/components/workbench/workbench-ui-streaming-runtime";
+import { scheduleWorkbenchSidebarChunkPrefetch } from "@/components/workbench/workbench-sidebar-chunk-loader";
 import type { SidebarSection } from "@/components/workbench/workbench-types";
 import { installWorkbenchPwdtBrowserBridge } from "@/lib/scripting/workbench-script-runtime";
 
@@ -46,6 +47,11 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
         invokeScriptActionRef.current(action, payload, source, note),
     });
   }, [bridgeReady]);
+
+  useEffect(
+    () => scheduleWorkbenchSidebarChunkPrefetch(props.sidebarSection as SidebarSection),
+    [props.sidebarSection],
+  );
 
   return (
     <>

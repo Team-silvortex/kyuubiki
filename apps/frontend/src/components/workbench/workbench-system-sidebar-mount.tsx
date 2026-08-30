@@ -156,7 +156,7 @@ export function WorkbenchSystemSidebarMount({
     { label: protocolAgentCopy.activeLeases, value: activeLeaseCount },
     { label: protocolAgentCopy.staleLeases, value: staleLeaseCount },
   ];
-  const controlWindowCopy = buildWorkbenchSystemControlModeCopy(language, frontendRuntimeMode);
+  const controlWindowCopy = buildWorkbenchSystemControlModeCopy(language, frontendRuntimeMode, t);
   const controlWindowTopology = buildWorkbenchSystemControlTopologySummary({
     frontendRuntimeMode,
     directMeshSelectionMode,
@@ -224,6 +224,7 @@ export function WorkbenchSystemSidebarMount({
             onOpenRuntime={() => handleSystemPanelTabChange("runtime")}
             onOpenWorkflow={() => { setSidebarSection("workflow"); handleWorkflowPanelTabChange("catalog"); }}
             summary={uxGuardrailSummary}
+            workbenchCopy={t}
           />
           <WorkbenchSystemConfigCard
             title={t.settings}
@@ -231,7 +232,7 @@ export function WorkbenchSystemSidebarMount({
             workspacePageLabel={t.workspace}
             routingPageLabel={t.routing}
             accessPageLabel={t.access}
-            governancePageLabel="governance"
+            governancePageLabel={t.settingsInstallPolicyTitle}
             packsPageLabel={t.packs}
             themeLabel={t.theme}
             languageLabel={t.language}
@@ -248,7 +249,6 @@ export function WorkbenchSystemSidebarMount({
             languagePackRemoveLabel={t.languagePackRemove}
             languagePackCatalogTitle={t.languagePackCatalogTitle}
             languagePackCatalogHint={t.languagePackCatalogHint}
-            languagePackCatalogActionLabel={t.languagePackCatalogAction}
             frontendModeLabel={t.frontendMode}
             backendTargetLabel={backendTargetCopy.label}
             backendTargetHelp={backendTargetCopy.help}
@@ -273,8 +273,8 @@ export function WorkbenchSystemSidebarMount({
             immersiveGuardHelp={t.immersiveGuardHelp}
             browserLimitsNote={t.browserLimitsNote}
             exportDatabaseLabel={t.exportDatabase}
-            governanceTitle="System governance"
-            governanceHint="A persisted, read-only architecture contract for hub, workbench, installer, and agent responsibilities."
+            governanceTitle={t.settingsInstallPolicyTitle}
+            governanceHint={t.settingsInstallPolicyHint}
             governanceRows={governanceRows}
             governanceJson={JSON.stringify(governanceConfig, null, 2)}
             theme={theme}
@@ -325,6 +325,7 @@ export function WorkbenchSystemSidebarMount({
             onExportDatabase={() => void downloadDatabaseSnapshot()}
           />
           <WorkbenchSystemInstallLayoutCard
+            copy={t}
             title={t.workflowPackageInstallRulesTitle}
             hint={t.workflowPackageManifestNoneLabel}
           />
@@ -348,6 +349,7 @@ export function WorkbenchSystemSidebarMount({
       }
       runtimeContent={
         <WorkbenchSystemRuntimePanel
+          storageCopy={t}
           recoveryCard={runtimeRecoveryCard}
           overviewTabLabel={t.overview}
           stackTabLabel={t.stack}

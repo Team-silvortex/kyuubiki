@@ -7,6 +7,7 @@ import type {
   WorkbenchSystemTopologySnapshot,
   WorkbenchSystemTopologySnapshotSource,
 } from "@/components/workbench/system/workbench-system-control-mode-contract";
+import { formatWorkbenchHealthScore } from "@/components/workbench/system/workbench-system-control-mode-contract";
 
 type WindowMode = "orchestrated" | "direct" | "mesh";
 
@@ -23,16 +24,11 @@ function deriveWindowMode(mode: WorkbenchSystemControlTopologySummary["mode"]): 
   return mode;
 }
 
-function formatClusterHealth(score: number | null) {
-  if (score === null) return "--";
-  return `${Math.round(score * 100)}%`;
-}
-
 function formatControlGroupLine(
   group: WorkbenchSystemControlTopologySummary["controlGroups"][number],
   copy: WorkbenchSystemControlModeCopy,
 ) {
-  const base = `${group.agentCount} agents · ${group.peerCount} peers · ${formatClusterHealth(group.averageHealthScore)}`;
+  const base = `${group.agentCount} ${copy.agentUnitLabel} · ${group.peerCount} ${copy.peerUnitLabel} · ${formatWorkbenchHealthScore(group.averageHealthScore)}`;
   if (group.kind === "orchestrated") {
     return `${base} · ${copy.rows.groupSessionsLabel}: ${group.sessionCount}`;
   }
@@ -131,7 +127,7 @@ export function WorkbenchSystemControlModeWindow({
         </header>
         <div className="sidebar-list sidebar-list--metrics" data-workbench-control-window="snapshot-meta">
           <div className="sidebar-list__row">
-            <span>source</span>
+            <span>{copy.sourceLabel}</span>
             <strong>{snapshotSource.label}</strong>
           </div>
           <div className="sidebar-list__row">
@@ -293,7 +289,7 @@ export function WorkbenchSystemControlModeWindow({
                   </div>
                   <div className="sidebar-list__row">
                     <span>{copy.rows.meshEntryHealthLabel}</span>
-                    <strong>{formatClusterHealth(selectedGroup.averageHealthScore)}</strong>
+                    <strong>{formatWorkbenchHealthScore(selectedGroup.averageHealthScore)}</strong>
                   </div>
                   <div className="sidebar-list__row">
                     <span>{copy.rows.groupSessionsLabel}</span>
@@ -328,11 +324,11 @@ export function WorkbenchSystemControlModeWindow({
               style={{ display: "none" }}
               type="file"
             />
-            <span>Load snapshot</span>
+            <span>{copy.importSnapshotLabel}</span>
           </label>
           {snapshotSource.kind === "imported_snapshot" ? (
             <button data-workbench-control-action="reset-snapshot-source" onClick={onResetSnapshotSource} type="button">
-              Use live derived
+              {copy.liveSnapshotLabel}
             </button>
           ) : null}
         </div>

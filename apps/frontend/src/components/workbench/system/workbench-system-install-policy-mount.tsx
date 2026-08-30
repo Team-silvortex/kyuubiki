@@ -23,6 +23,7 @@ export function WorkbenchSystemInstallPolicyMount({
     <WorkbenchSystemInstallPolicyCard
       title={t.settingsInstallPolicyTitle}
       hint={t.settingsInstallPolicyHint}
+      statusLabel={t.workflowPackageInstallRulesReadonlyLabel}
       integrityLabel={t.workflowValidationTitle}
       integrityValue={t.settingsInstallPolicyIntegrityValue}
       integrityAction={buildSystemWorkflowPolicyAction(t, setSidebarSection, handleWorkflowPanelTabChange, "validation", "watch")}

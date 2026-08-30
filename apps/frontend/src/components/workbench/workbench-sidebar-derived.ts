@@ -19,8 +19,31 @@ import {
   buildRuntimeAuditTrendBars,
 } from "@/components/workbench/workbench-runtime-audit-helpers";
 import { clusterHealthTone, formatPeerStatus, formatProtocolMethodLabel, materialColorByIndex } from "@/components/workbench/workbench-result-helpers";
+import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
+import { getWorkbenchRuntimeAuditCopy } from "@/components/workbench/workbench-extended-language-copy";
 import { SAMPLE_LIBRARY } from "@/lib/models";
 import { buildWorkbenchGovernanceRuntimeDiagnostics } from "@/lib/workbench/governance";
+
+function localizeGovernanceRuntimeValue(
+  value: string,
+  copy: WorkbenchCopy,
+  securityUi: { configured: string; notConfigured: string; clusterToken: string; controlPlaneToken: string },
+) {
+  const knownValues: Record<string, string> = {
+    "direct-mesh authority": `${copy.frontendModes.direct_mesh_gui} · ${securityUi.configured}`,
+    "direct-mesh authority missing token": `${copy.frontendModes.direct_mesh_gui} · ${securityUi.notConfigured}`,
+    "single orchestrator authority via cluster token": `${copy.frontendModes.orchestrated_gui} · ${securityUi.clusterToken}`,
+    "single orchestrator authority via control-plane token": `${copy.frontendModes.orchestrated_gui} · ${securityUi.controlPlaneToken}`,
+    "orchestrator authority missing token": `${copy.frontendModes.orchestrated_gui} · ${securityUi.notConfigured}`,
+    "single cluster scope": `${copy.cluster} · 1`,
+    "direct mesh missing endpoints": `${copy.directMeshEndpoints} · ${securityUi.notConfigured}`,
+    "multi-cluster exposure": `${copy.cluster} · ${copy.stabilityWatch}`,
+    "mixed runtime modes": `${copy.runtimeMode} · ${copy.stabilityWatch}`,
+    aligned: copy.ready,
+  };
+  const visibleClusters = value.match(/^(\d+) clusters visible$/);
+  return visibleClusters ? `${copy.cluster} · ${visibleClusters[1]}` : knownValues[value] ?? value;
+}
 
 export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
   const {
@@ -122,37 +145,39 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
   const protocolAgentCards = buildProtocolAgentCards({
     agents: protocolAgents,
     labels: {
-      authorityMode: language === "zh" ? "控制权模式" : language === "ja" ? "権限モード" : "Authority mode",
-      controlMode: language === "zh" ? "控制绑定" : language === "ja" ? "制御バインド" : "Control binding",
+      authorityMode: `${t.controls} · ${t.runtimeMode}`,
+      controlMode: `${t.controls} · ${t.status}`,
       runtimeMode: t.runtimeMode,
       cluster: t.cluster,
-      meshGroup: language === "zh" ? "Mesh 组" : language === "ja" ? "mesh グループ" : "Mesh group",
+      meshGroup: `${t.mesh} · ${t.cluster}`,
       clusterSize: t.clusterSize,
       clusterHealth: t.clusterHealth,
       peers: t.peers,
-      relay: language === "zh" ? "Relay 候选" : language === "ja" ? "Relay 候補" : "Relay candidate",
+      relay: `${t.mesh} · relay`,
       headless: t.headless,
       yes: t.yes,
       no: t.no,
       capabilities: t.capabilities,
       methods: t.methods,
-      engine: language === "zh" ? "引擎" : language === "ja" ? "エンジン" : "Engine",
-      taskSource: language === "zh" ? "任务来源" : language === "ja" ? "タスク元" : "Task source",
-      operatorSource: language === "zh" ? "算子来源" : language === "ja" ? "演算子元" : "Operator source",
+      engine: t.solverAgent,
+      taskSource: `${t.tabs.jobs} · ${t.sourceModel}`,
+      operatorSource: `${t.sections.workflow} · ${t.sourceModel}`,
       peerState: t.peerState,
-      meshRoleChip: language === "zh" ? "Mesh 角色" : language === "ja" ? "mesh 役割" : "Mesh role",
-      relayChip: language === "zh" ? "Relay" : language === "ja" ? "Relay" : "Relay",
-      meshGroupChip: language === "zh" ? "组" : language === "ja" ? "グループ" : "Group",
-      execution: language === "zh" ? "执行状态" : language === "ja" ? "実行状態" : "Execution",
-      leaseAge: language === "zh" ? "租约时长" : language === "ja" ? "リース時間" : "Lease age",
-      leaseIdle: language === "zh" ? "空闲" : language === "ja" ? "待機" : "Idle",
-      leaseActive: language === "zh" ? "占用中" : language === "ja" ? "実行中" : "Leased",
-      leaseStale: language === "zh" ? "过期租约" : language === "ja" ? "期限切れリース" : "Stale lease",
+      meshRoleChip: t.runtimeMode,
+      relayChip: "relay",
+      meshGroupChip: t.cluster,
+      execution: t.status,
+      leaseAge: `${t.activeJobs} · ${t.lastHeartbeat}`,
+      leaseIdle: t.ready,
+      leaseActive: t.busy,
+      leaseStale: t.stalledJobs,
       leaseUnknown: "--",
-      leaseStateChip: language === "zh" ? "租约" : language === "ja" ? "リース" : "Lease",
-      leaseAgeChip: language === "zh" ? "时长" : language === "ja" ? "経過" : "Age",
-      leaseJobChip: language === "zh" ? "任务" : language === "ja" ? "ジョブ" : "Job",
-      leaseMethodChip: language === "zh" ? "方法" : language === "ja" ? "メソッド" : "Method",
+      leaseStateChip: t.status,
+      leaseAgeChip: t.lastHeartbeat,
+      leaseJobChip: t.tabs.jobs,
+      leaseMethodChip: t.methods,
+      showMore: t.details,
+      showLess: t.close,
     },
     clusterHealthTone,
     peerStatusLabel: (status?: string) => formatPeerStatus(status, t),
@@ -176,7 +201,7 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
     { label: t.controlPlaneProtocol, value: health?.protocol?.protocol?.name ?? "--" },
     { label: t.solverRpcProtocol, value: health?.protocol?.compatible_solver_rpc?.name ?? "--" },
     {
-      label: language === "zh" ? "控制面控制权" : language === "ja" ? "制御面権限" : "Control-plane authority",
+      label: `${t.controlPlaneProtocol} · ${t.runtimeMode}`,
       value: health?.protocol?.authority
         ? `${health.protocol.authority.authority_mode}${health.protocol.authority.orchestrator_id ? ` · ${health.protocol.authority.orchestrator_id}` : ""}`
         : "--",
@@ -185,11 +210,11 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
     { label: t.discoveryMode, value: health?.deployment?.discovery ?? "--" },
     { label: t.registeredAgents, value: health?.remote_solver_registry?.active_agents ?? 0 },
     {
-      label: language === "zh" ? "Mesh clusters" : language === "ja" ? "mesh クラスター" : "Mesh clusters",
+      label: `${t.mesh} · ${t.cluster}`,
       value: health?.remote_solver_registry?.mesh_topology?.offline_mesh?.clustered_meshes?.length ?? 0,
     },
     {
-      label: language === "zh" ? "Mesh relay 候选" : language === "ja" ? "mesh Relay 候補" : "Mesh relay candidates",
+      label: `${t.mesh} · relay`,
       value:
         health?.remote_solver_registry?.mesh_topology?.offline_mesh?.clustered_meshes?.reduce(
           (sum: number, cluster: any) => sum + (cluster.relay_candidate_ids?.length ?? 0),
@@ -217,16 +242,16 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
 
   const runtimeSecurityRows = [
     {
-      label: language === "zh" ? "控制权归属" : language === "ja" ? "制御権限" : "Control authority",
-      value: governanceRuntime.authorityLabel,
+      label: `${t.controls} · ${t.runtimeMode}`,
+      value: localizeGovernanceRuntimeValue(governanceRuntime.authorityLabel, t, securityUi),
     },
     {
-      label: language === "zh" ? "Cluster 暴露" : language === "ja" ? "Cluster 露出" : "Cluster exposure",
-      value: governanceRuntime.exposureLabel,
+      label: `${t.cluster} · ${t.access}`,
+      value: localizeGovernanceRuntimeValue(governanceRuntime.exposureLabel, t, securityUi),
     },
     {
-      label: language === "zh" ? "治理漂移" : language === "ja" ? "ガバナンス偏差" : "Governance drift",
-      value: governanceRuntime.driftLabel,
+      label: `${t.security} · ${t.status}`,
+      value: localizeGovernanceRuntimeValue(governanceRuntime.driftLabel, t, securityUi),
     },
     {
       label: securityUi.controlPlaneToken,
@@ -241,19 +266,19 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
       value: `${health?.security?.cluster_timestamp_window_ms ?? 30000} ms`,
     },
     {
-      label: language === "zh" ? "Agent 白名单" : language === "ja" ? "Agent 許可リスト" : "Agent allowlist",
+      label: `${t.access} · agent`,
       value: health?.security?.cluster_agent_allowlist_enabled
         ? `${securityUi.enabled} · ${health?.security?.cluster_agent_allowlist_count ?? 0}`
         : securityUi.disabled,
     },
     {
-      label: language === "zh" ? "Cluster 白名单" : language === "ja" ? "Cluster 許可リスト" : "Cluster allowlist",
+      label: `${t.access} · ${t.cluster}`,
       value: health?.security?.cluster_cluster_allowlist_enabled
         ? `${securityUi.enabled} · ${health?.security?.cluster_cluster_allowlist_count ?? 0}`
         : securityUi.disabled,
     },
     {
-      label: language === "zh" ? "Fingerprint 绑定" : language === "ja" ? "Fingerprint バインディング" : "Fingerprint binding",
+      label: `${t.security} · fingerprint`,
       value: health?.security?.cluster_fingerprint_required ? securityUi.enabled : securityUi.disabled,
     },
     {
@@ -274,64 +299,21 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
     },
   ];
 
+  const runtimeAuditCopy = getWorkbenchRuntimeAuditCopy(language);
   const runtimeAuditEntries = securityEventRecords.map((entry: any) => ({
     id: entry.event_id,
     at: formatTime(entry.occurred_at, language),
     action: entry.action,
-    source:
-      entry.source === "assistant"
-        ? language === "zh"
-          ? "助手"
-          : language === "ja"
-            ? "アシスタント"
-            : "Assistant"
-        : entry.source === "governance"
-          ? language === "zh"
-            ? "治理"
-            : language === "ja"
-              ? "ガバナンス"
-              : "Governance"
-        : language === "zh"
-          ? "脚本"
-          : language === "ja"
-            ? "スクリプト"
-            : "Script",
-    risk:
-      entry.risk === "destructive"
-        ? language === "zh"
-          ? "高风险"
-          : language === "ja"
-            ? "破壊的"
-            : "Destructive"
-        : language === "zh"
-          ? "敏感"
-          : language === "ja"
-            ? "機微"
-            : "Sensitive",
+    source: entry.source === "assistant" ? runtimeAuditCopy.assistant : entry.source === "governance" ? t.controls : runtimeAuditCopy.script,
+    risk: entry.risk === "destructive" ? runtimeAuditCopy.destructive : runtimeAuditCopy.sensitive,
     status:
       entry.status === "prompted"
-        ? language === "zh"
-          ? "待确认"
-          : language === "ja"
-            ? "確認待ち"
-            : "Prompted"
+        ? runtimeAuditCopy.prompted
         : entry.status === "cancelled"
-          ? language === "zh"
-            ? "已取消"
-            : language === "ja"
-              ? "取消済み"
-              : "Cancelled"
+          ? runtimeAuditCopy.cancelled
           : entry.status === "completed"
-            ? language === "zh"
-              ? "已执行"
-              : language === "ja"
-                ? "完了"
-                : "Completed"
-            : language === "zh"
-              ? "失败"
-              : language === "ja"
-                ? "失敗"
-                : "Failed",
+            ? runtimeAuditCopy.completed
+            : runtimeAuditCopy.failed,
     note: entry.note ?? "--",
   }));
 
@@ -352,21 +334,17 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
   const latestWatchdogIssue = recentWatchdogIssueJobs[0];
   const latestWatchdogIssueLabel = latestWatchdogIssue
     ? `${latestWatchdogIssue.job_id.slice(0, 8)} ${resolveJobStatusDetailLabel(latestWatchdogIssue.status_detail) ?? latestWatchdogIssue.status}`
-    : language === "zh"
-      ? "无"
-      : language === "ja"
-        ? "なし"
-        : "None";
+    : t.none;
   const runtimeWatchdogRows = [
     { label: t.activeJobs, value: health?.watchdog?.active_jobs ?? 0 },
     { label: t.stalledJobs, value: health?.watchdog?.stalled_jobs ?? 0 },
     { label: t.timedOutJobs, value: health?.watchdog?.timed_out_jobs ?? 0 },
     {
-      label: language === "zh" ? "近期问题任务" : language === "ja" ? "最近の問題ジョブ" : "Recent issue jobs",
+      label: `${t.watchdog} · ${t.tabs.jobs}`,
       value: recentWatchdogIssueJobs.length,
     },
     {
-      label: language === "zh" ? "最近问题" : language === "ja" ? "最新の問題" : "Latest issue",
+      label: t.failureReason,
       value: latestWatchdogIssue
         ? `${latestWatchdogIssueLabel} · ${formatTime(latestWatchdogIssue.updated_at, language)}`
         : latestWatchdogIssueLabel,

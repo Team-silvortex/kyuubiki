@@ -1,10 +1,11 @@
 "use client";
 
+import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
 import type { WorkbenchRuntimeRecoveryState } from "@/components/workbench/workbench-runtime-recovery";
 import { WorkbenchSystemOverviewCard } from "@/components/workbench/system/workbench-system-overview-card";
 
 type WorkbenchRuntimeRecoveryCardProps = {
-  language: string;
+  copy: WorkbenchCopy;
   recovery: WorkbenchRuntimeRecoveryState;
   onRetryAll: () => void;
   onRetryHealth: () => void;
@@ -14,7 +15,7 @@ type WorkbenchRuntimeRecoveryCardProps = {
 };
 
 export function WorkbenchRuntimeRecoveryCard({
-  language,
+  copy,
   recovery,
   onRetryAll,
   onRetryHealth,
@@ -22,78 +23,30 @@ export function WorkbenchRuntimeRecoveryCard({
   onRetrySecurityEvents,
   onRetryWorkflowCatalog,
 }: WorkbenchRuntimeRecoveryCardProps) {
-  const copy =
-    language === "zh"
-      ? {
-          title: "错误恢复",
-          healthy: "正常",
-          degraded: "降级",
-          offline: "离线",
-          empty: "当前没有待恢复的运行时故障。",
-          retryAll: "全部重试",
-          health: "重试健康检查",
-          projects: "重试项目同步",
-          security: "重试安全审计",
-          workflow: "重试算子目录",
-          hint: "恢复建议",
-          lastFailure: "最近失败",
-          code: "状态码",
-        }
-      : language === "ja"
-        ? {
-            title: "障害回復",
-            healthy: "正常",
-            degraded: "低下",
-            offline: "オフライン",
-            empty: "回復待ちのランタイム障害はありません。",
-            retryAll: "すべて再試行",
-            health: "ヘルス再試行",
-            projects: "プロジェクト同期再試行",
-            security: "監査再試行",
-            workflow: "演算子カタログ再試行",
-            hint: "回復ヒント",
-            lastFailure: "直近の失敗",
-            code: "ステータス",
-          }
-        : {
-            title: "Recovery",
-            healthy: "healthy",
-            degraded: "degraded",
-            offline: "offline",
-            empty: "No runtime recovery issues are pending.",
-            retryAll: "Retry all",
-            health: "Retry health",
-            projects: "Retry projects",
-            security: "Retry audit",
-            workflow: "Retry operators",
-            hint: "Recovery hint",
-            lastFailure: "Last failure",
-            code: "Status",
-          };
   const statusLabel =
     recovery.availability === "offline"
       ? copy.offline
       : recovery.availability === "degraded"
-        ? copy.degraded
-        : copy.healthy;
+        ? copy.stabilityWatch
+        : copy.ready;
 
   return (
     <WorkbenchSystemOverviewCard
       className="runtime-overview-card"
       status={statusLabel}
-      title={copy.title}
+      title={copy.suggestedFixes}
       actions={
         <>
-          <button onClick={onRetryAll} type="button">{copy.retryAll}</button>
-          <button onClick={onRetryHealth} type="button">{copy.health}</button>
-          <button onClick={onRetryProjects} type="button">{copy.projects}</button>
-          <button onClick={onRetrySecurityEvents} type="button">{copy.security}</button>
-          <button onClick={onRetryWorkflowCatalog} type="button">{copy.workflow}</button>
+          <button onClick={onRetryAll} type="button">{copy.refresh}</button>
+          <button onClick={onRetryHealth} type="button">{copy.clusterHealth}</button>
+          <button onClick={onRetryProjects} type="button">{copy.projectLibrary}</button>
+          <button onClick={onRetrySecurityEvents} type="button">{copy.audit}</button>
+          <button onClick={onRetryWorkflowCatalog} type="button">{copy.workflowCatalogTitle}</button>
         </>
       }
     >
       {recovery.issues.length === 0 ? (
-        <p className="card-copy">{copy.empty}</p>
+        <p className="card-copy">{copy.diagnosticsClear}</p>
       ) : (
         <div className="sidebar-list sidebar-list--metrics">
           {recovery.issues.slice(0, 3).map((issue) => (
@@ -103,10 +56,10 @@ export function WorkbenchRuntimeRecoveryCard({
                 <strong>{issue.kind}</strong>
               </div>
               <p className="card-copy" style={{ margin: 0 }}>{issue.message}</p>
-              <p className="card-copy" style={{ margin: 0 }}>{copy.hint}: {issue.recoveryHint}</p>
+              <p className="card-copy" style={{ margin: 0 }}>{copy.suggestedFixes}: {issue.recoveryHint}</p>
               <p className="card-copy" style={{ margin: 0 }}>
-                {copy.lastFailure}: {new Date(issue.lastFailureAt).toLocaleString()}
-                {typeof issue.statusCode === "number" ? ` · ${copy.code} ${issue.statusCode}` : ""}
+                {copy.failureReason}: {new Date(issue.lastFailureAt).toLocaleString()}
+                {typeof issue.statusCode === "number" ? ` · ${copy.status} ${issue.statusCode}` : ""}
               </p>
             </div>
           ))}

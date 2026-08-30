@@ -401,6 +401,7 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
     modelMaterialsContent,
     modelGenerateContent,
     modelTreeContent,
+    handleLanguageChange,
     handleModelToolsPageChange,
     workflowLabels: buildWorkbenchWorkflowLabels(props.t),
     createProjectRecord,

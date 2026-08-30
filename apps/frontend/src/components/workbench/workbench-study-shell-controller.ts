@@ -237,7 +237,7 @@ export function useWorkbenchStudyShellController(props: Record<string, any>) {
   };
 
   const handleLanguageChange = (nextLanguage: typeof props.shellState.language) => {
-    props.shellState.applyLanguagePreference(nextLanguage);
+    void props.shellState.applyLanguagePreference(nextLanguage);
   };
 
   return {

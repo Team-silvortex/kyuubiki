@@ -1,13 +1,6 @@
 "use client";
 
 import {
-  downloadWorkbenchFrameForceSummary,
-  downloadWorkbenchFrameHotspotSummary,
-  downloadWorkbenchPlaneHotspotSummary,
-  downloadWorkbenchResultCsv,
-  downloadWorkbenchResultJson,
-} from "@/components/workbench/workbench-result-export-controller";
-import {
   useWorkbenchResultWindowController,
 } from "@/components/workbench/workbench-result-window-controller";
 import {
@@ -322,11 +315,36 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
   const resultDerivedBindings = bindWorkbenchStudyResultDerived(studyResultDerived);
 
   const resultExportEffects = resultDerivedBindings.resultExportEffects;
-  const downloadResultJson = () => downloadWorkbenchResultJson(resultExportEffects);
-  const downloadResultCsv = () => downloadWorkbenchResultCsv(resultExportEffects);
-  const downloadPlaneHotspotSummary = () => downloadWorkbenchPlaneHotspotSummary(resultExportEffects);
-  const downloadFrameHotspotSummary = () => downloadWorkbenchFrameHotspotSummary(resultExportEffects);
-  const downloadFrameForceSummary = () => downloadWorkbenchFrameForceSummary(resultExportEffects);
+  const downloadResultJson = async () => {
+    const { downloadWorkbenchResultJson } = await import(
+      "@/components/workbench/workbench-result-export-controller"
+    );
+    downloadWorkbenchResultJson(resultExportEffects);
+  };
+  const downloadResultCsv = async () => {
+    const { downloadWorkbenchResultCsv } = await import(
+      "@/components/workbench/workbench-result-export-controller"
+    );
+    downloadWorkbenchResultCsv(resultExportEffects);
+  };
+  const downloadPlaneHotspotSummary = async () => {
+    const { downloadWorkbenchPlaneHotspotSummary } = await import(
+      "@/components/workbench/workbench-result-export-controller"
+    );
+    downloadWorkbenchPlaneHotspotSummary(resultExportEffects);
+  };
+  const downloadFrameHotspotSummary = async () => {
+    const { downloadWorkbenchFrameHotspotSummary } = await import(
+      "@/components/workbench/workbench-result-export-controller"
+    );
+    downloadWorkbenchFrameHotspotSummary(resultExportEffects);
+  };
+  const downloadFrameForceSummary = async () => {
+    const { downloadWorkbenchFrameForceSummary } = await import(
+      "@/components/workbench/workbench-result-export-controller"
+    );
+    downloadWorkbenchFrameForceSummary(resultExportEffects);
+  };
 
   const railItems = [
     { key: "model", label: rootState.t.rail.model, symbol: "M" },

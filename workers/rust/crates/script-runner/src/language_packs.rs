@@ -423,9 +423,9 @@ impl<'a> Validator<'a> {
         };
         for token in [
             "WORKBENCH_MAINSTREAM_LANGUAGE_PACK_LOCALES",
-            "WORKBENCH_TRANSLATED_LANGUAGE_PACK_OVERRIDES",
+            "loadWorkbenchTranslatedLanguagePackOverrides",
             "buildWorkbenchLanguagePackCatalogRows",
-            "getBuiltinWorkbenchLanguagePack",
+            "loadBuiltinWorkbenchLanguagePack",
         ] {
             if !catalog.contains(token) {
                 self.fail(format!(

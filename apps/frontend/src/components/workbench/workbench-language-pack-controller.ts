@@ -9,7 +9,7 @@ import {
   WORKBENCH_LANGUAGE_PACK_VERSION_LINE,
   getWorkbenchLanguagePackCompatibility,
 } from "@/lib/workbench/helpers";
-import { getBuiltinWorkbenchLanguagePack } from "@/components/workbench/workbench-language-pack-catalog";
+import { loadBuiltinWorkbenchLanguagePack } from "@/components/workbench/workbench-language-pack-catalog";
 import { getWorkbenchLanguagePackSystemCopy } from "@/components/workbench/workbench-language-pack-system-copy";
 
 const UNSAFE_LANGUAGE_PACK_TEXT_PATTERNS = [
@@ -163,14 +163,20 @@ export function installWorkbenchLanguagePackPayload(params: {
   setMessage(compatibility === "mismatch" ? copy.importedMismatch : copy.imported);
 }
 
-export function installBuiltinWorkbenchLanguagePack(params: {
+export async function installBuiltinWorkbenchLanguagePack(params: {
   packId: string;
   language: WorkbenchLanguage;
   setLanguagePacks: Dispatch<SetStateAction<WorkbenchLanguagePack[]>>;
   setMessage: (value: string) => void;
 }) {
   const { packId, language, setLanguagePacks, setMessage } = params;
-  const pack = getBuiltinWorkbenchLanguagePack(packId);
+  let pack: WorkbenchLanguagePack | null;
+  try {
+    pack = await loadBuiltinWorkbenchLanguagePack(packId);
+  } catch {
+    setMessage(getWorkbenchLanguagePackSystemCopy(language).notFound);
+    return;
+  }
   if (!pack) {
     setMessage(getWorkbenchLanguagePackSystemCopy(language).notFound);
     return;

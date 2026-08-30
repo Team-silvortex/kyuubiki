@@ -3,6 +3,7 @@
 type WorkbenchSystemInstallPolicyCardProps = {
   title: string;
   hint: string;
+  statusLabel: string;
   integrityLabel: string;
   integrityValue: string;
   integrityAction?: { label: string; onClick: () => void; target: string; tone?: "good" | "watch" };
@@ -24,6 +25,7 @@ type WorkbenchSystemInstallPolicyCardProps = {
 export function WorkbenchSystemInstallPolicyCard({
   title,
   hint,
+  statusLabel,
   integrityLabel,
   integrityValue,
   integrityAction,
@@ -52,7 +54,7 @@ export function WorkbenchSystemInstallPolicyCard({
     <section className="sidebar-card sidebar-card--compact system-policy-card">
       <div className="card-head">
         <h2>{title}</h2>
-        <span>policy</span>
+        <span>{statusLabel}</span>
       </div>
       <p className="card-copy">{hint}</p>
       <div className="sidebar-list system-policy-card__list">

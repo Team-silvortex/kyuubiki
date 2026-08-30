@@ -30,7 +30,7 @@ export function HistoryWorkspaceCard({
         ))}
       </div>
       <div className="button-row">
-        <button className="ghost-button" disabled={actionDisabled} onClick={onAction} type="button">
+        <button className="ghost-button ghost-button--compact" disabled={actionDisabled} onClick={onAction} type="button">
           {actionLabel}
         </button>
       </div>

@@ -10,6 +10,8 @@ type RunnerResult<T> = Result<T, String>;
 const PACKS_DIRECTORY: &str = "language-packs/workbench";
 const OUTPUT_PATH: &str =
     "apps/frontend/src/components/workbench/workbench-language-pack-catalog-data.ts";
+const OUTPUT_DIRECTORY: &str =
+    "apps/frontend/src/components/workbench/workbench-language-pack-data";
 const FRAGMENT_SCHEMA: &str = "kyuubiki.language-pack-fragment/v1";
 
 pub(crate) fn run_build_workbench_language_pack_catalog(
@@ -26,7 +28,7 @@ pub(crate) fn run_build_workbench_language_pack_catalog(
     if options.check {
         let actual = fs::read_to_string(&output_path)
             .map_err(|error| format!("failed to read {OUTPUT_PATH}: {error}"))?;
-        if actual != expected {
+        if actual != expected.index || !generated_modules_match(root, &expected.modules)? {
             return Err(
                 "Workbench language-pack catalog is stale; run make build-workbench-language-pack-catalog"
                     .to_string(),
@@ -36,8 +38,9 @@ pub(crate) fn run_build_workbench_language_pack_catalog(
         return Ok(0);
     }
 
-    fs::write(&output_path, expected)
+    fs::write(&output_path, expected.index)
         .map_err(|error| format!("failed to write {OUTPUT_PATH}: {error}"))?;
+    write_generated_modules(root, &expected.modules)?;
     println!("Built Workbench language-pack catalog from language-packs/workbench.");
     Ok(0)
 }
@@ -169,21 +172,135 @@ fn merge_overrides(base: &mut Value, next: Value) {
     }
 }
 
-fn render_catalog(packs: &[(String, Value)]) -> RunnerResult<String> {
+struct RenderedCatalog {
+    index: String,
+    modules: Vec<(String, String)>,
+}
+
+fn render_catalog(packs: &[(String, Value)]) -> RunnerResult<RenderedCatalog> {
     let mut lines = vec![
         "// Generated from language-packs/workbench/*.json. Do not edit by hand.".to_string(),
-        "export const WORKBENCH_TRANSLATED_LANGUAGE_PACK_OVERRIDES: Record<string, Record<string, unknown>> = {".to_string(),
+        "type WorkbenchLanguagePackOverrides = Record<string, unknown>;".to_string(),
+        "type WorkbenchLanguagePackLoader = () => Promise<WorkbenchLanguagePackOverrides>;".to_string(),
+        String::new(),
+        "const WORKBENCH_TRANSLATED_LANGUAGE_PACK_LOADERS: Record<string, WorkbenchLanguagePackLoader> = {".to_string(),
     ];
+    let mut modules = Vec::with_capacity(packs.len());
     for (language, overrides) in packs {
-        let language = serde_json::to_string(language)
+        let language_literal = serde_json::to_string(language)
             .map_err(|error| format!("failed to encode language id: {error}"))?;
-        let overrides = serde_json::to_string(overrides)
+        let filename = language_module_filename(language);
+        lines.push(format!(
+            "  {language_literal}: () => import(\"./workbench-language-pack-data/{filename}\").then((module) => module.default),"
+        ));
+
+        let payload = serde_json::to_string(overrides)
             .map_err(|error| format!("failed to encode language overrides: {error}"))?;
-        lines.push(format!("  {language}: {overrides},"));
+        modules.push((
+            format!("{filename}.ts"),
+            format!(
+                "// Generated from language-packs/workbench/{filename}.json. Do not edit by hand.\nconst overrides: Record<string, unknown> = {payload};\n\nexport default overrides;\n"
+            ),
+        ));
     }
     lines.push("};".to_string());
     lines.push(String::new());
-    Ok(lines.join("\n"))
+    lines.push(
+        "const workbenchLanguagePackCache = new Map<string, Promise<WorkbenchLanguagePackOverrides>>();"
+            .to_string(),
+    );
+    lines.push(String::new());
+    lines.push(
+        "export function loadWorkbenchTranslatedLanguagePackOverrides(language: string): Promise<WorkbenchLanguagePackOverrides | null> {"
+            .to_string(),
+    );
+    lines
+        .push("  const loader = WORKBENCH_TRANSLATED_LANGUAGE_PACK_LOADERS[language];".to_string());
+    lines.push("  if (!loader) return Promise.resolve(null);".to_string());
+    lines.push("  const cached = workbenchLanguagePackCache.get(language);".to_string());
+    lines.push("  if (cached) return cached;".to_string());
+    lines.push("  const pending = loader().catch((error) => {".to_string());
+    lines.push("    workbenchLanguagePackCache.delete(language);".to_string());
+    lines.push("    throw error;".to_string());
+    lines.push("  });".to_string());
+    lines.push("  workbenchLanguagePackCache.set(language, pending);".to_string());
+    lines.push("  return pending;".to_string());
+    lines.push("}".to_string());
+    lines.push(String::new());
+    Ok(RenderedCatalog {
+        index: lines.join("\n"),
+        modules,
+    })
+}
+
+fn language_module_filename(language: &str) -> String {
+    let mut filename = String::new();
+    for character in language.chars() {
+        if character.is_ascii_alphanumeric() {
+            filename.push(character.to_ascii_lowercase());
+        } else if !filename.ends_with('-') {
+            filename.push('-');
+        }
+    }
+    filename.trim_matches('-').to_string()
+}
+
+fn generated_modules_match(root: &Path, expected: &[(String, String)]) -> RunnerResult<bool> {
+    let output_directory = root.join(OUTPUT_DIRECTORY);
+    let expected_names = expected
+        .iter()
+        .map(|(filename, _)| filename.as_str())
+        .collect::<BTreeSet<_>>();
+    let actual_names = fs::read_dir(&output_directory)
+        .map_err(|error| format!("failed to read {OUTPUT_DIRECTORY}: {error}"))?
+        .filter_map(Result::ok)
+        .filter_map(|entry| entry.file_name().into_string().ok())
+        .filter(|filename| filename.ends_with(".ts"))
+        .collect::<BTreeSet<_>>();
+    if actual_names.len() != expected_names.len()
+        || actual_names
+            .iter()
+            .any(|filename| !expected_names.contains(filename.as_str()))
+    {
+        return Ok(false);
+    }
+    for (filename, contents) in expected {
+        let actual = fs::read_to_string(output_directory.join(filename))
+            .map_err(|error| format!("failed to read {OUTPUT_DIRECTORY}/{filename}: {error}"))?;
+        if actual != *contents {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+fn write_generated_modules(root: &Path, modules: &[(String, String)]) -> RunnerResult<()> {
+    let output_directory = root.join(OUTPUT_DIRECTORY);
+    fs::create_dir_all(&output_directory)
+        .map_err(|error| format!("failed to create {OUTPUT_DIRECTORY}: {error}"))?;
+    let expected_names = modules
+        .iter()
+        .map(|(filename, _)| filename.as_str())
+        .collect::<BTreeSet<_>>();
+    for entry in fs::read_dir(&output_directory)
+        .map_err(|error| format!("failed to read {OUTPUT_DIRECTORY}: {error}"))?
+    {
+        let entry =
+            entry.map_err(|error| format!("failed to inspect {OUTPUT_DIRECTORY}: {error}"))?;
+        let Some(filename) = entry.file_name().to_str().map(str::to_string) else {
+            continue;
+        };
+        if filename.ends_with(".ts") && !expected_names.contains(filename.as_str()) {
+            fs::remove_file(entry.path()).map_err(|error| {
+                format!("failed to remove stale {OUTPUT_DIRECTORY}/{filename}: {error}")
+            })?;
+        }
+    }
+    for (filename, contents) in modules {
+        fs::write(output_directory.join(filename), contents)
+            .map_err(|error| format!("failed to write {OUTPUT_DIRECTORY}/{filename}: {error}"))?;
+    }
+    Ok(())
 }
 
 fn read_json(path: &Path, label: &str) -> RunnerResult<Value> {
@@ -211,7 +328,10 @@ fn safe_fragment_path(relative_path: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{OUTPUT_PATH, read_workbench_packs, render_catalog};
+    use super::{
+        OUTPUT_DIRECTORY, OUTPUT_PATH, generated_modules_match, read_workbench_packs,
+        render_catalog,
+    };
     use std::fs;
     use std::path::PathBuf;
 
@@ -222,7 +342,12 @@ mod tests {
         let expected = render_catalog(&packs).expect("catalog should render");
         let actual =
             fs::read_to_string(root.join(OUTPUT_PATH)).expect("generated catalog should load");
-        assert_eq!(actual, expected);
+        assert_eq!(actual, expected.index);
+        assert!(
+            generated_modules_match(&root, &expected.modules)
+                .expect("generated language-pack modules should load"),
+            "{OUTPUT_DIRECTORY} must match the source packs"
+        );
     }
 
     #[test]

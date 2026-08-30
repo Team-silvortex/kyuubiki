@@ -8,6 +8,13 @@
   border-radius: var(--desktop-radius-shell);
 }
 
+.hero > *,
+.hero-brand > *,
+.hero-meta,
+.meta-card {
+  min-width: 0;
+}
+
 .hero-brand {
   display: flex;
   align-items: center;
@@ -236,6 +243,12 @@
     grid-template-columns: 1fr;
   }
 
+  .hero-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 380px) {
   .hero-meta {
     grid-template-columns: 1fr;
   }

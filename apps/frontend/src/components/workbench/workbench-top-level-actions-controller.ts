@@ -293,8 +293,8 @@ export function createWorkbenchTopLevelActionsController(args: TopLevelActionsAr
     });
   };
 
-  const handleInstallCatalogLanguagePack = (packId: string) => {
-    installBuiltinWorkbenchLanguagePack({
+  const handleInstallCatalogLanguagePack = async (packId: string) => {
+    await installBuiltinWorkbenchLanguagePack({
       packId,
       language: args.language,
       setLanguagePacks: args.setLanguagePacks,

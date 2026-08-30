@@ -1,4 +1,5 @@
 import { lineResultFieldValue, planeResultFieldValue } from "@/components/workbench/workbench-result-helpers";
+import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
 import { scientific } from "@/lib/workbench/helpers";
 
 type PlaneElement = {
@@ -493,36 +494,20 @@ export function buildWorkbenchSelectionData({
   };
 }
 
-export function buildWorkbenchSecurityUi(language: string) {
-  return language === "zh"
-    ? {
-        controlPlaneToken: "控制面 API Token",
-        clusterToken: "集群 API Token",
-        directMeshToken: "直连网格 Token",
-        protectReads: "保护只读接口",
-        clusterWindow: "集群时间窗",
-        directMeshRoutes: "直连网格路由",
-        security: "安全",
-        enabled: "已启用",
-        disabled: "未启用",
-        configured: "已配置",
-        notConfigured: "未配置",
-        mutatingRoutes: "写入路由保护",
-        clusterRoutes: "集群路由保护",
-      }
-    : {
-        controlPlaneToken: "Control-plane API token",
-        clusterToken: "Cluster API token",
-        directMeshToken: "Direct mesh token",
-        protectReads: "Protect reads",
-        clusterWindow: "Cluster time window",
-        directMeshRoutes: "Direct mesh routes",
-        security: "Security",
-        enabled: "Enabled",
-        disabled: "Disabled",
-        configured: "Configured",
-        notConfigured: "Not configured",
-        mutatingRoutes: "Mutating routes",
-        clusterRoutes: "Cluster routes",
-      };
+export function buildWorkbenchSecurityUi(copy: WorkbenchCopy) {
+  return {
+    controlPlaneToken: `${copy.controlPlaneProtocol} · token`,
+    clusterToken: `${copy.cluster} · token`,
+    directMeshToken: `${copy.mesh} · token`,
+    protectReads: `${copy.security} · GET`,
+    clusterWindow: `${copy.cluster} · ms`,
+    directMeshRoutes: `${copy.routing} · mesh`,
+    security: copy.security,
+    enabled: copy.yes,
+    disabled: copy.no,
+    configured: `${copy.yes} · ${copy.ready}`,
+    notConfigured: copy.no,
+    mutatingRoutes: `${copy.security} · POST / PUT / PATCH / DELETE`,
+    clusterRoutes: `${copy.routing} · ${copy.cluster}`,
+  };
 }
