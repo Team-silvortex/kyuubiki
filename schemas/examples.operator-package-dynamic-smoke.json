@@ -9,6 +9,7 @@
   ],
   "host_version": "2.0.0",
   "sdk_api_version": "kyuubiki.operator-sdk/v1",
+  "execution_abi": "kyuubiki.operator-json-c/v1",
   "template_manifest": "workers/rust/templates/operator-crate-template/Cargo.toml",
   "package_manifest": "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",
   "preflight_report": "tmp/operator-package-dynamic-preflight.json",

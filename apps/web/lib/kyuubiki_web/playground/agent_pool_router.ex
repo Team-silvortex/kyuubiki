@@ -309,7 +309,7 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
     endpoints
     |> Enum.with_index()
     |> Enum.sort_by(fn {endpoint, index} ->
-      {-(Map.get(endpoint, :health_score) || 100), -Map.get(endpoint, :capacity, 1), index}
+      {-(Map.get(endpoint, :health_score) || 100), -(Map.get(endpoint, :capacity) || 1), index}
     end)
     |> Enum.map(&elem(&1, 0))
   end

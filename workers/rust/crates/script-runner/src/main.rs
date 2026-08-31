@@ -95,6 +95,7 @@ mod native_time;
 mod nightly_artifact_overview;
 mod node_tests;
 mod operational_agent_support;
+mod operator_package_acquisition_operational_qualification;
 mod operator_package_dynamic_smoke;
 mod operator_qualification_evidence_kits;
 mod operator_qualification_readiness;

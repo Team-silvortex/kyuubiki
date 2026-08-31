@@ -13,6 +13,7 @@ mod magnetostatic_diagnostics;
 mod magnetostatic_quality;
 mod modal_quality;
 mod operator_sdk_bridges;
+mod operator_sdk_dynamic_abi;
 mod operator_sdk_host;
 mod operator_sdk_material_envelope;
 mod operator_sdk_material_margins;

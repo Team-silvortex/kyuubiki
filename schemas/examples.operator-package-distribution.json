@@ -1,6 +1,7 @@
 {
   "schema_version": "kyuubiki.operator-package-distribution/v1",
   "sdk_api_version": "kyuubiki.operator-sdk/v1",
+  "execution_abi": "kyuubiki.operator-json-c/v1",
   "package_id": "operator.example.peak_field",
   "package_version": "0.1.0",
   "artifacts": [

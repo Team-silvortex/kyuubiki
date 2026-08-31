@@ -66,6 +66,8 @@ help:
 	@echo "  make check-workbench-validation-qualification Recheck retained Workbench validation qualification evidence"
 	@echo "  make qualify-agent-control-link-operational-remote Prove a remote Linux Agent re-registers after local Orchestra process loss"
 	@echo "  make check-agent-control-link-operational-qualification Recheck retained two-host Agent control-link recovery evidence"
+	@echo "  make qualify-operator-package-acquisition-operational-remote Prove a remote installed Agent fetches, executes, evicts, and refetches an Orchestra package"
+	@echo "  make check-operator-package-acquisition-operational-qualification Recheck retained two-host package-acquisition evidence"
 	@echo "  make qualify-orchestra-takeover-operational-remote Prove two Orchestras fence and take over through remote PostgreSQL"
 	@echo "  make check-orchestra-takeover-operational-qualification Recheck retained PostgreSQL crash-takeover evidence"
 	@echo "  make qualify-orchestra-network-partition-operational-remote Isolate only the owner database path and prove fencing"

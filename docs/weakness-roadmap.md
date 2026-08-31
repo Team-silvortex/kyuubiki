@@ -200,7 +200,24 @@ root, and remote run directory is removed. Sanitized evidence is retained at
 and rechecked by
 `make check-fleet-scheduling-operational-qualification`. This closes
 `remote_agent_orchestra_round_trip/fleet-scheduling` only. The two Agents share
-one remote physical host, so multi-host package acquisition remains open.
+one remote physical host, so that report alone does not prove multi-host package
+acquisition.
+
+Multi-host package acquisition now has separate operational evidence. A real
+Elixir Orchestra on macOS owns the only Linux operator package copy and submits
+two concrete TaskIRs to an Installer-managed release Agent on physical Linux.
+Both tasks independently resolve, download, integrity-check, dynamically execute,
+and immediately evict the package; the second task therefore proves refetch
+rather than cache reuse. The package uses `kyuubiki.operator-json-c/v1`, so host
+and plugin exchange JSON bytes rather than Rust values even though their locked
+dependency versions differ. The remote build artifact is removed before Agent
+startup, every final package count is zero, and all ports, processes, credentials,
+and managed roots are cleaned. Sanitized evidence is retained at
+`releases/usability-evidence/2.19.0/operator-package-acquisition-operational-qualification.json`
+and rechecked by
+`make check-operator-package-acquisition-operational-qualification`. This closes
+`remote_agent_orchestra_round_trip/multi-host-package-acquisition`; installed
+macOS and Windows round trips remain open.
 
 Agent control-link recovery is now explicit rather than silent. The Rust Agent
 records registration and heartbeat attempts through the shared
@@ -710,9 +727,12 @@ Current weak point:
   residue-free cleanup
 - native Windows installed-package operation now has retained six-stage evidence,
   including MSVC dynamic loading, Agent RPC dispatch, bound-Orchestra rotation,
-  tamper recovery, Installer lifecycle, and residue cleanup
+  tamper recovery, Installer lifecycle, and residue cleanup for the historical
+  Rust-object boundary; the current stable JSON C ABI still needs a Windows rerun
+- real two-host central acquisition now passes through macOS Orchestra and an
+  Installer-managed physical Linux Agent with refetch and residue-free cleanup
 - the remaining third-party gap is forward compatibility across future operator
-  SDK API and ABI revisions, not initial Windows installation coverage
+  SDK API and ABI revisions plus current-ABI Windows requalification
 
 Current moxi hardening focus:
 
@@ -732,8 +752,12 @@ Qualification focus:
 - retain the macOS/Linux multihost report and its four SHA-256-bound child
   attachments under `releases/usability-evidence/2.16.4/`
 - preserve the native Windows installed-package report and its bound evidence
-  under `releases/usability-evidence/2.15.0/`; rerun the same journey whenever
-  the operator SDK API, ABI, package format, or Installer lifecycle changes
+  under `releases/usability-evidence/2.15.0/` as historical evidence; rerun the
+  same journey for `kyuubiki.operator-json-c/v1` before restoring the Windows
+  operational claim
+- retain the two-host central acquisition report under
+  `releases/usability-evidence/2.19.0/` and recheck both fetch sequences,
+  eviction, refetch, stable ABI, and zero residue
 - add operator package compatibility fixtures for future SDK API changes
 
 Moxi readiness standard:

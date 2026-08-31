@@ -252,6 +252,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
          capabilities: optional_capabilities(attrs, "capabilities"),
          health_score: optional_health_score(attrs, "health_score"),
          watchdog: optional_map(attrs, "watchdog"),
+         operator_package_runtime: optional_map(attrs, "operator_package_runtime"),
          control_plane_link: optional_map(attrs, "control_plane_link"),
          last_seen_at: now
        }}

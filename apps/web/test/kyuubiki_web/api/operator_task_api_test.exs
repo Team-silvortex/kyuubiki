@@ -109,6 +109,68 @@ defmodule KyuubikiWeb.OperatorTaskApiTest do
     assert payload["result"]["material_thermal_shock_status"] == "pass"
   end
 
+  test "dispatches Orchestra-fetched operator packages to a package-ready Agent" do
+    task =
+      fixture_task!()
+      |> put_in(["execution_program", "package_version"], "0.1.0")
+      |> put_in(["runtime_hints", "package_version"], "0.1.0")
+      |> refresh_task_digest()
+
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link(
+        {:capture, self(),
+         [
+           %{
+             "ok" => true,
+             "result" => %{
+               "execution_runtime_status" => "external_operator_package_executed",
+               "operator_package_execution" => %{
+                 "origin" => "bound_orchestra_fetch",
+                 "cache_status" => "fetched_and_activated"
+               },
+               "result" => %{"summary" => %{"sum" => 14.0}}
+             }
+           }
+         ]}
+      )
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "operator-package-agent",
+          host: "127.0.0.1",
+          port: port,
+          methods: ["run_operator_task_ir"],
+          operator_package_runtime: %{ready: true}
+        }
+      ]
+    )
+
+    AgentPool.reload()
+
+    conn =
+      :post
+      |> conn("/api/v1/operator-tasks/execute", Jason.encode!(%{"task" => task}))
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["status"] == "executed"
+    assert payload["result"]["execution_runtime_status"] == "external_operator_package_executed"
+
+    assert payload["result"]["operator_package_execution"]["origin"] ==
+             "bound_orchestra_fetch"
+
+    assert_receive {:fake_agent_request, request}
+    assert request["method"] == "run_operator_task_ir"
+    assert request["params"]["mode"] == "execute"
+    assert request["params"]["job_id"] == task["task_id"]
+    assert request["params"]["task_ir"] == task
+  end
+
   test "prepares an operator task batch through the service API" do
     {:ok, task_a} = material_shock_task("batch-case-a", 120.0)
     {:ok, task_b} = material_shock_task("batch-case-b", 160.0)

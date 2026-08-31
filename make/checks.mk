@@ -13,7 +13,7 @@
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index check-material-research-bundle-index check-material-research-bundle-index-contract
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
-.PHONY: audit-dependencies check-system-security-qualification check-agent-control-link-operational-qualification check-agent-solver-operational-qualification check-orchestra-takeover-operational-qualification check-orchestra-network-partition-operational-qualification check-orchestra-long-workflow-takeover-operational-qualification check-orchestra-installed-takeover-operational-qualification check-orchestra-workflow-operational-qualification check-installed-runtime-operational-qualification check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification check-orchestra-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
+.PHONY: audit-dependencies check-system-security-qualification check-agent-control-link-operational-qualification check-operator-package-acquisition-operational-qualification check-agent-solver-operational-qualification check-orchestra-takeover-operational-qualification check-orchestra-network-partition-operational-qualification check-orchestra-long-workflow-takeover-operational-qualification check-orchestra-installed-takeover-operational-qualification check-orchestra-workflow-operational-qualification check-installed-runtime-operational-qualification check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification check-orchestra-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
 .PHONY: check-distributed-task-recovery-operational-qualification check-fleet-scheduling-operational-qualification
 
 check-doc-book:
@@ -497,6 +497,10 @@ check-agent-control-link-operational-qualification:
 	@$(ENTRYPOINT) check-agent-control-link-operational-qualification --self-test
 	@$(ENTRYPOINT) check-agent-control-link-operational-qualification --verify-report releases/usability-evidence/2.14.7/agent-control-link-operational-qualification.json
 
+check-operator-package-acquisition-operational-qualification:
+	@$(ENTRYPOINT) check-operator-package-acquisition-operational-qualification --self-test
+	@$(ENTRYPOINT) check-operator-package-acquisition-operational-qualification --verify-report $${REPORT:-releases/usability-evidence/2.19.0/operator-package-acquisition-operational-qualification.json}
+
 check-orchestra-takeover-operational-qualification:
 	@$(ENTRYPOINT) check-orchestra-takeover-operational-qualification --self-test
 	@$(ENTRYPOINT) check-orchestra-takeover-operational-qualification --verify-report releases/usability-evidence/2.15.0/orchestra-takeover-operational-qualification.json
@@ -607,6 +611,7 @@ architecture-check:
 	@$(MAKE) check-workbench-validation-qualification
 	@$(MAKE) check-system-security-qualification
 	@$(MAKE) check-agent-control-link-operational-qualification
+	@$(MAKE) check-operator-package-acquisition-operational-qualification
 	@$(MAKE) check-orchestra-takeover-operational-qualification
 	@$(MAKE) check-orchestra-installed-takeover-operational-qualification
 	@$(MAKE) check-distributed-task-recovery-operational-qualification

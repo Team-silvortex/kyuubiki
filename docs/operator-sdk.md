@@ -232,7 +232,11 @@ Installer depend on this module through explicit topology edges.
 
 The `sdk_operator` tensor paradigm is distinct from `sdk_headless`. Current
 authoring, manifest, readiness, host-policy, workflow-extension, fuzz, and
-dynamic-library evidence qualifies the Rust extension contract. A real Agent
+dynamic-library evidence qualifies the Rust extension contract. Dynamic
+packages now cross the host boundary through `kyuubiki.operator-json-c/v1`:
+only UTF-8 JSON bytes and a fixed C buffer struct cross the library boundary;
+Rust trait objects, registries, `serde_json::Value`, and allocator ownership do
+not. A real Agent
 loads both external-local and Installer-managed packages, dispatches over the
 TaskIR RPC boundary, rejects package-integrity substitution, and executes again
 after rejection. The bound-Orchestra path now resolves and serves exactly one
@@ -247,7 +251,11 @@ immediate post-dispatch eviction through a new host-leased generation, and
 same-package version rotation is isolated from in-flight tasks. Promotion to
 the Daji target still requires focused measurements of discovery, admission,
 load, first dispatch, and steady dispatch without borrowing general solver
-throughput numbers.
+throughput numbers. A two-physical-host qualification now also proves a real
+Elixir Orchestra dispatching two disposable package tasks to an
+Installer-managed Linux Agent, with two complete authenticated fetch sequences,
+two executions, two evictions, a later refetch, and zero retained package or
+qualification residue.
 
 ### Author-facing crate
 
@@ -298,12 +306,15 @@ For external-local authoring, there is now a copyable starter crate at
 `workers/rust/templates/operator-crate-template/` with:
 
 - a ready-to-rename `Cargo.toml`
+- a minimal typed operator in `src/lib.rs`
+- a tiny runnable `src/main.rs`
+- a crate-local smoke test so authors start with a feedback loop immediately
 - a `kyuubiki-operator.json` manifest for external-local discovery using
   `{lib_prefix}` / `{lib_extension}` placeholders for cross-platform library
   naming
 - required package-level industrialization fields:
-  `sdk_api_version`, `minimum_host_version`, `validation_status`, and
-  `validation_notes`
+  `sdk_api_version`, `execution_abi`, `minimum_host_version`,
+  `validation_status`, and `validation_notes`
 - strict manifest validation, so packages that do not declare their SDK
   contract or verification posture fail before runtime activation
 
@@ -313,6 +324,7 @@ The current package manifest contract is:
 {
   "schema_version": "kyuubiki.operator-package/v1",
   "sdk_api_version": "kyuubiki.operator-sdk/v1",
+  "execution_abi": "kyuubiki.operator-json-c/v1",
   "package_id": "operator.template.summary",
   "package_version": "0.1.0",
   "minimum_host_version": "1.15.0",
@@ -324,7 +336,7 @@ The current package manifest contract is:
     {
       "operator_id": "extract.my_summary",
       "kind": "extract",
-      "entry_symbol": "register_my_operator"
+      "entry_symbol": "run_my_operator_json"
     }
   ]
 }
@@ -338,9 +350,16 @@ the first host line they actually require.
 The engine host checks `minimum_host_version` before activation, so an operator
 package built for a newer host line fails at load time instead of reaching an
 undefined runtime path.
+It also requires `execution_abi: kyuubiki.operator-json-c/v1` at manifest,
+distribution, resolution, preflight, installed-receipt, and Agent execution
+boundaries. The host serializes `OperatorRunRequest`, invokes the operator's
+declared JSON entry symbol, copies the response, and returns its buffer to the
+same library through `kyuubiki_operator_json_free`. This remains valid when the
+host and package use different Rust or `serde_json` versions because no
+Rust-layout value or cross-allocator ownership crosses the ABI.
 Successful activation also produces a package admission summary with the host
-version, SDK API version, validation status, validation notes, runtime, and
-operator ids so Installer and future CLI/UI surfaces can explain what was
+version, SDK API version, execution ABI, validation status, validation notes,
+runtime, and operator ids so Installer and future CLI/UI surfaces can explain what was
 accepted without reparsing the full package manifest.
 Hosts can also call the external-operator preflight path to collect accepted
 and rejected package summaries without activating dynamic code. Runtime loading
@@ -392,6 +411,9 @@ manifest. The index lives at
 configured by `KYUUBIKI_OPERATOR_PACKAGE_DISTRIBUTIONS`. Each target such as
 `linux-x86_64` or `macos-aarch64` names a package manifest and dynamic library by
 strict relative path, exact byte size, and lowercase SHA-256 digest.
+Both the distribution and resolved response declare the same execution ABI as
+the inner package manifest, so Installer rejects incompatible packages before
+downloading executable bytes and verifies the declaration again after download.
 
 Orchestra resolves one exact target as
 `kyuubiki.operator-package-resolution/v1`. It never substitutes another target
@@ -474,6 +496,8 @@ make operator-package-dynamic-smoke
 make check-operator-package-dynamic-smoke IN=tmp/operator-package-dynamic-smoke.json
 make qualify-operator-sdk-multihost-operational-remote REMOTE=kyuubiki-lab
 make check-operator-sdk-multihost-operational-qualification
+make qualify-operator-package-acquisition-operational-remote REMOTE=kyuubiki-lab
+make check-operator-package-acquisition-operational-qualification
 make qualify-operator-sdk-windows-operational
 make check-operator-sdk-windows-operational-qualification
 ```
@@ -528,13 +552,19 @@ explicit self-hosted provenance. The repository workflow
 manually and uploads `operator-sdk-windows-operational-evidence`. A physical
 Windows host can run the same native command after setting the five visible
 `KYUUBIKI_QUALIFICATION_*` provenance variables. Reviewed GitHub-hosted evidence
-is retained under `releases/usability-evidence/2.15.0/`: all six stages pass,
-the report is `release_complete`, and its LF-stable source digest verifies on
-both Windows and macOS. The Windows operational claim is therefore proven and
-no longer blocks the four P0 `sdk_operator` tensor coordinates.
-- a minimal typed operator in `src/lib.rs`
-- a tiny runnable `src/main.rs`
-- a crate-local smoke test so authors start with a feedback loop immediately
+is retained under `releases/usability-evidence/2.15.0/` as historical proof for
+the earlier dynamic boundary. The report remains `release_complete` for that
+source state, but **stable JSON C ABI rerun required** is the current Windows
+status before restoring a current-line operational claim.
+
+The current two-host acquisition report lives at
+`releases/usability-evidence/2.19.0/operator-package-acquisition-operational-qualification.json`.
+It uses a real Elixir Orchestra on macOS and an Installer-managed release Agent
+on physical Linux. The operator package exists centrally only, the remote build
+artifact is removed before Agent startup, both `cache_scope: none` dispatches
+resolve/download/execute/evict independently, and the retained report is
+sanitized of host identity, address, credentials, SSH aliases, and absolute
+paths.
 
 The Rust operator SDK now defines the first external-local manifest,
 discovery, and activation-boundary helpers:

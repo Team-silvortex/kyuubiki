@@ -19,6 +19,7 @@ pub struct OperatorPackageLoadSummary {
     pub package_id: String,
     pub package_version: String,
     pub sdk_api_version: String,
+    pub execution_abi: String,
     pub minimum_host_version: String,
     pub validation_status: OperatorValidationStatus,
     pub validation_notes: String,
@@ -33,6 +34,7 @@ impl OperatorPackageLoadPlan {
             package_id: self.manifest.package_id.clone(),
             package_version: self.manifest.package_version.clone(),
             sdk_api_version: self.manifest.sdk_api_version.clone(),
+            execution_abi: self.manifest.execution_abi.clone(),
             minimum_host_version: self.manifest.minimum_host_version.clone(),
             validation_status: self.manifest.validation_status,
             validation_notes: self.manifest.validation_notes.clone(),
@@ -272,6 +274,7 @@ mod tests {
             serde_json::json!({
                 "schema_version": crate::OPERATOR_PACKAGE_SCHEMA_VERSION,
                 "sdk_api_version": crate::OPERATOR_SDK_API_VERSION,
+                "execution_abi": crate::OPERATOR_JSON_ABI_SCHEMA_VERSION,
                 "package_id": "operator.example.loader",
                 "package_version": "0.1.0",
                 "minimum_host_version": "1.15.0",
@@ -283,7 +286,7 @@ mod tests {
                     {
                         "operator_id": "extract.example_loader",
                         "kind": "extract",
-                        "entry_symbol": "register_operator"
+                        "entry_symbol": "run_operator_json"
                     }
                 ]
             })
@@ -308,6 +311,10 @@ mod tests {
         );
         let summary = plan.admission_summary();
         assert_eq!(summary.package_id, "operator.example.loader");
+        assert_eq!(
+            summary.execution_abi,
+            crate::OPERATOR_JSON_ABI_SCHEMA_VERSION
+        );
         assert_eq!(summary.minimum_host_version, "1.15.0");
         assert_eq!(summary.operator_ids, vec!["extract.example_loader"]);
         assert!(!plan.entrypoint_candidates.is_empty());
@@ -323,6 +330,7 @@ mod tests {
             serde_json::json!({
                 "schema_version": crate::OPERATOR_PACKAGE_SCHEMA_VERSION,
                 "sdk_api_version": crate::OPERATOR_SDK_API_VERSION,
+                "execution_abi": crate::OPERATOR_JSON_ABI_SCHEMA_VERSION,
                 "package_id": "operator.alpha",
                 "package_version": "0.1.0",
                 "minimum_host_version": "1.15.0",
@@ -334,7 +342,7 @@ mod tests {
                     {
                         "operator_id": "extract.alpha",
                         "kind": "extract",
-                        "entry_symbol": "register_alpha"
+                        "entry_symbol": "run_alpha_json"
                     }
                 ]
             })

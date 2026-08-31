@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Rust Worker and Operator SDK evidence separated from Headless control SDKs, covering authoring, managed and automatic bound-Orchestra package supply chains, generation-safe host rotation, immediate task eviction, explicit job-terminal release, ABI boundaries, workflow composition, native macOS/Linux multihost operation, and a guarded Windows evidence capture channel whose operational run remains open.",
+  "summary": "Rust Worker and Operator SDK evidence separated from Headless control SDKs, covering authoring, a stable JSON C execution ABI, managed and automatic bound-Orchestra package supply chains, generation-safe host rotation, immediate task eviction, explicit job-terminal release, workflow composition, and real two-host macOS-Orchestra to Installer-managed Linux-Agent acquisition. Earlier Windows evidence remains historical until the stable ABI lane is rerun.",
   "paradigm_contract_evidence": {
     "runtime_api": [
       {
@@ -9,12 +9,14 @@
         "modules": ["sdk-operator"],
         "files": [
           "workers/rust/crates/operator-sdk/src/lib.rs",
+          "workers/rust/crates/operator-sdk/src/json_abi.rs",
           "workers/rust/crates/operator-sdk/src/surface.rs",
           "workers/rust/crates/operator-sdk/src/readiness.rs",
           "docs/operator-sdk.md"
         ],
         "required_text": [
           "kyuubiki.operator-sdk-surface/v1",
+          "kyuubiki.operator-json-c/v1",
           "OperatorRegistry",
           "operator_package_manifest_readiness",
           "Rust-only surface for extending operators"
@@ -27,6 +29,7 @@
         "modules": ["sdk-operator", "runtime-engine-solver", "runtime-agent-cli"],
         "files": [
           "workers/rust/crates/engine/src/operator_sdk_host.rs",
+          "workers/rust/crates/engine/src/operator_sdk_dynamic_abi.rs",
           "workers/rust/crates/engine/src/tests/operator_sdk_host.rs",
           "workers/rust/crates/cli/src/operator_task_runtime.rs",
           "workers/rust/crates/cli/src/operator_package_runtime.rs",
@@ -41,6 +44,7 @@
         "required_text": [
           "kyuubiki-engine.operator-sdk-host/v1",
           "loads_prebuilt_template_cdylib_through_dynamic_host",
+          "decode_operator_json_abi_response",
           "ExternalOperatorTrustPolicy",
           "external_operator_package_executed",
           "prepare_orchestra_operator_package",
@@ -140,6 +144,7 @@
         "files": [
           "workers/rust/crates/operator-sdk/src/manifest.rs",
           "workers/rust/crates/operator-sdk/src/distribution.rs",
+          "workers/rust/crates/operator-sdk/src/json_abi.rs",
           "workers/rust/crates/installer/src/operator_package_preflight.rs",
           "workers/rust/crates/installer/src/operator_package_fetch.rs",
           "workers/rust/crates/installer/src/operator_package_store.rs",
@@ -149,6 +154,7 @@
         ],
         "required_text": [
           "kyuubiki.operator-sdk/v1",
+          "kyuubiki.operator-json-c/v1",
           "minimum_host_version",
           "validation_status",
           "package admission summary",
@@ -165,7 +171,10 @@
         "files": [
           "docs/operator-sdk.md",
           "workers/rust/crates/operator-sdk/src/surface.rs",
+          "workers/rust/crates/operator-sdk/src/json_abi.rs",
           "workers/rust/crates/engine/src/operator_sdk_host.rs",
+          "workers/rust/crates/engine/src/operator_sdk_dynamic_abi.rs",
+          "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",
           "workers/rust/crates/cli/src/operator_task_runtime.rs",
           "workers/rust/crates/cli/src/operator_package_runtime.rs",
           "workers/rust/crates/cli/tests/operator_package_live.rs",
@@ -182,6 +191,7 @@
         "required_text": [
           "Rust-only surface for extending operators",
           "operator_sdk_surface_manifest",
+          "OPERATOR_JSON_ABI_SCHEMA_VERSION",
           "kyuubiki-engine.operator-sdk-host/v1",
           "operator-package-preflight",
           "external_operator_package_executed",
@@ -395,14 +405,16 @@
       ]
     },
     {
-      "id": "operator-sdk-bound-orchestra-fetch-qualified",
+      "id": "operator-sdk-bound-orchestra-fetch-operational",
       "status": "proven",
-      "grade": "qualified",
-      "modules": ["orchestra-control-plane", "sdk-operator", "runtime-agent-cli", "runtime-installer"],
+      "grade": "operational",
+      "modules": ["orchestra-control-plane", "sdk-operator", "runtime-engine-solver", "runtime-agent-cli", "runtime-installer", "verification-evidence"],
       "paradigms": ["runtime_api", "solver_execution", "validation", "security", "persistence_provenance", "sdk_operator"],
       "dimensions": ["execution", "security", "contract", "recovery", "abi_compatibility"],
       "files": [
         "workers/rust/crates/operator-sdk/src/distribution.rs",
+        "workers/rust/crates/operator-sdk/src/json_abi.rs",
+        "workers/rust/crates/engine/src/operator_sdk_dynamic_abi.rs",
         "schemas/operator-package-distribution.schema.json",
         "schemas/operator-package-resolution.schema.json",
         "schemas/agent-operator-generation-execution.schema.json",
@@ -426,11 +438,17 @@
         "workers/rust/crates/cli/src/operator_task_receipts.rs",
         "workers/rust/crates/cli/tests/operator_package_orchestra_fetch_live.rs",
         "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
+        "config/architecture/operator-package-acquisition-operational-qualification.json",
+        "schemas/operator-package-acquisition-operational-qualification-contract.schema.json",
+        "schemas/operator-package-acquisition-operational-qualification-report.schema.json",
+        "workers/rust/crates/script-runner/src/operator_package_acquisition_operational_qualification/report.rs",
+        "releases/usability-evidence/2.19.0/operator-package-acquisition-operational-qualification.json",
         "docs/operator-library-centralization.md"
       ],
       "required_text": [
         "kyuubiki.operator-package-distribution/v1",
         "kyuubiki.operator-package-resolution/v1",
+        "kyuubiki.operator-json-c/v1",
         "bound_orchestra",
         "task_required_disposable",
         "resolves and downloads only the requested platform package",
@@ -451,7 +469,10 @@
         "evicted_after_job_release",
         "refetch-after-task-scope-eviction",
         "retry_bound_orchestra_package_fetch",
-        "agent_fetches_executes_and_safely_rotates_bound_orchestra_package"
+        "agent_fetches_executes_and_safely_rotates_bound_orchestra_package",
+        "two-host-installer-managed-orchestra-package-acquisition",
+        "second_dispatch_refetched",
+        "retention_sanitized"
       ]
     },
     {
@@ -481,7 +502,7 @@
     },
     {
       "id": "operator-sdk-windows-installed-agent-operational",
-      "status": "proven",
+      "status": "partial",
       "grade": "operational",
       "modules": ["sdk-operator", "runtime-engine-solver", "runtime-agent-cli", "runtime-installer"],
       "paradigms": ["sdk_operator"],
@@ -504,7 +525,8 @@
         "windows-latest",
         "x86_64-pc-windows-msvc",
         "tamper_recovery",
-        "release_complete"
+        "release_complete",
+        "stable JSON C ABI rerun required"
       ]
     },
     {

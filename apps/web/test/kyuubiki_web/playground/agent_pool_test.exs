@@ -53,6 +53,29 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
            ]
   end
 
+  test "routes a package-ready endpoint whose optional capacity is nil" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "package-agent",
+          host: "127.0.0.1",
+          port: 5104,
+          capacity: nil,
+          methods: ["run_operator_task_ir"],
+          operator_package_runtime: %{"ready" => true, "status" => "attached"}
+        }
+      ]
+    )
+
+    assert :ok = AgentPool.reload()
+
+    assert [%{id: "package-agent"}] =
+             AgentPool.checkout_endpoints("run_operator_task_ir",
+               execution_lease: %{lease_id: "package-lease"},
+               requires_operator_package_runtime: true
+             )
+  end
+
   test "loads remote agents from a manifest file in distributed mode" do
     manifest_path = Path.join(System.tmp_dir!(), "kyuubiki-agent-manifest-test.json")
 

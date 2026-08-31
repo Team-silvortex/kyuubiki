@@ -80,6 +80,7 @@ fn package_manifest(
     serde_json::json!({
         "schema_version": kyuubiki_operator_sdk::OPERATOR_PACKAGE_SCHEMA_VERSION,
         "sdk_api_version": kyuubiki_operator_sdk::OPERATOR_SDK_API_VERSION,
+        "execution_abi": kyuubiki_operator_sdk::OPERATOR_JSON_ABI_SCHEMA_VERSION,
         "package_id": package_id,
         "package_version": "0.1.0",
         "minimum_host_version": "1.15.0",
@@ -492,7 +493,7 @@ fn loads_prebuilt_template_cdylib_through_dynamic_host() {
             "extract.template_summary",
             "rust_crate",
             &template_dylib,
-            "register_template_operator",
+            "run_template_operator_json",
         )
         .to_string(),
     )

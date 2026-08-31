@@ -2,8 +2,9 @@ use crate::{
     ManagedOperatorPackageReceipt, install_operator_package_into, operator_package_store_root,
 };
 use kyuubiki_operator_sdk::{
-    OPERATOR_PACKAGE_MANIFEST_FILE, OPERATOR_PACKAGE_SCHEMA_VERSION, OPERATOR_SDK_API_VERSION,
-    OperatorPackageManifest, current_platform_target_id, expand_platform_library_template,
+    OPERATOR_JSON_ABI_SCHEMA_VERSION, OPERATOR_PACKAGE_MANIFEST_FILE,
+    OPERATOR_PACKAGE_SCHEMA_VERSION, OPERATOR_SDK_API_VERSION, OperatorPackageManifest,
+    current_platform_target_id, expand_platform_library_template,
 };
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
@@ -25,6 +26,7 @@ struct OperatorPackageResolution {
     package_id: String,
     package_version: String,
     sdk_api_version: String,
+    execution_abi: String,
     target: String,
     authority_mode: String,
     cache_scope: String,
@@ -129,6 +131,7 @@ fn validate_resolution(
 ) -> Result<(), String> {
     if resolution.schema_version != OPERATOR_PACKAGE_RESOLUTION_SCHEMA_VERSION
         || resolution.sdk_api_version != OPERATOR_SDK_API_VERSION
+        || resolution.execution_abi != OPERATOR_JSON_ABI_SCHEMA_VERSION
     {
         return Err("unsupported operator package resolution contract".to_string());
     }
@@ -185,6 +188,7 @@ fn validate_downloaded_manifest(
 ) -> Result<(), String> {
     if manifest.schema_version != OPERATOR_PACKAGE_SCHEMA_VERSION
         || manifest.sdk_api_version != OPERATOR_SDK_API_VERSION
+        || manifest.execution_abi != OPERATOR_JSON_ABI_SCHEMA_VERSION
         || manifest.package_id != package_id
         || manifest.package_version != package_version
     {

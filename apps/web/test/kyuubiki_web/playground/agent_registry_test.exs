@@ -64,6 +64,30 @@ defmodule KyuubikiWeb.Playground.AgentRegistryTest do
     assert [%{"job_id" => "job-failed-a"}] = public_agent["watchdog"]["recent_failures"]
   end
 
+  test "preserves package runtime readiness for public views and scheduling" do
+    package_runtime = %{
+      "ready" => true,
+      "status" => "attached",
+      "attachment" => %{
+        "host_id" => "operator-host-a",
+        "activated_package_count" => 0
+      }
+    }
+
+    assert {:ok, agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-package-runtime-a",
+               "host" => "10.20.0.22",
+               "port" => 6122,
+               "orch_id" => "orch-alpha",
+               "operator_package_runtime" => package_runtime
+             })
+
+    assert agent.operator_package_runtime == package_runtime
+    assert AgentRegistry.public_agent(agent)["operator_package_runtime"] == package_runtime
+    assert hd(AgentRegistry.active_endpoints()).operator_package_runtime == package_runtime
+  end
+
   test "refreshes last seen through heartbeat" do
     assert {:ok, _agent} =
              AgentRegistry.register(%{

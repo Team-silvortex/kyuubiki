@@ -27,6 +27,7 @@ pub struct ManagedOperatorPackageReceipt {
     pub package_id: String,
     pub package_version: String,
     pub sdk_api_version: String,
+    pub execution_abi: String,
     pub runtime: String,
     pub operator_ids: Vec<String>,
     pub relative_root: String,
@@ -222,6 +223,7 @@ pub fn verify_managed_operator_package(
     if receipt.package_id != plan.manifest.package_id
         || receipt.package_version != plan.manifest.package_version
         || receipt.sdk_api_version != plan.manifest.sdk_api_version
+        || receipt.execution_abi != plan.manifest.execution_abi
         || receipt.runtime != plan.manifest.runtime
     {
         return Err("managed operator package receipt does not match its manifest".to_string());
@@ -278,6 +280,7 @@ fn stage_and_promote(
         package_id: source_plan.manifest.package_id.clone(),
         package_version: source_plan.manifest.package_version.clone(),
         sdk_api_version: source_plan.manifest.sdk_api_version.clone(),
+        execution_abi: source_plan.manifest.execution_abi.clone(),
         runtime: source_plan.manifest.runtime.clone(),
         operator_ids: source_plan
             .manifest

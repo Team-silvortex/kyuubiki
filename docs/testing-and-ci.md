@@ -161,12 +161,29 @@ Installer crate tests are split by installer responsibility instead of growing
 - `make check-operator-package-dynamic-smoke`
 - `make qualify-operator-sdk-multihost-operational-remote REMOTE=kyuubiki-lab`
 - `make check-operator-sdk-multihost-operational-qualification`
+- `make qualify-operator-package-acquisition-operational-remote REMOTE=kyuubiki-lab`
+- `make check-operator-package-acquisition-operational-qualification`
 
 This runs:
 
 - Python SDK smoke tests
 - Elixir SDK smoke tests
 - Rust SDK smoke tests
+
+The package-acquisition qualification is a separate two-physical-host release
+lane. It starts a real Elixir Orchestra on macOS, deploys the remote Linux Agent
+through Installer-owned activation, publishes one Linux operator package only
+to Orchestra, and dispatches two disposable TaskIR executions. Passing evidence
+requires two authenticated resolve/manifest/entrypoint download sequences,
+dynamic execution, post-execution eviction, a later refetch, zero active
+packages at both observation boundaries, and complete removal of temporary
+credentials and managed test roots. Retained evidence never contains host
+addresses, SSH aliases, usernames, credentials, or absolute host paths.
+The package manifest, distribution index, resolved response, Installer receipt,
+and execution report must all agree on `kyuubiki.operator-json-c/v1`. The
+qualification deliberately builds the Agent workspace and operator template
+with their independent dependency locks to prove that no Rust object layout or
+allocator ownership crosses the dynamic-library boundary.
 
 The operator package preflight is a separate read-only admission check for the
 external Rust operator template. It emits `kyuubiki.operator-package-preflight/v1`

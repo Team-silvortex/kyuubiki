@@ -1,0 +1,93 @@
+{
+  "$schema": "../../schemas/operator-package-acquisition-operational-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.operator-package-acquisition-operational-qualification-contract/v1",
+  "qualification_id": "two-host-installer-managed-orchestra-package-acquisition",
+  "target_coordinate": {
+    "module_id": "runtime-agent-cli",
+    "paradigm": "sdk_operator",
+    "target_grade": "operational"
+  },
+  "ownership": {
+    "control_plane_owner": "orchestra-control-plane",
+    "execution_owner": "runtime-agent-cli",
+    "deployment_owner": "runtime-installer",
+    "evidence_owner": "verification-evidence"
+  },
+  "capture": {
+    "orchestrator_host_role": "local-macos-qualification-host",
+    "agent_host_role": "remote-linux-qualification-host",
+    "orchestrator_platform": "macos",
+    "agent_platform": "linux",
+    "transport": "lan-http-plus-agent-rpc",
+    "build_profile": "release",
+    "central_source_copy_count": 1,
+    "execution_count": 2,
+    "fetch_sequence_count": 2,
+    "cleanup_required": true
+  },
+  "retention": {
+    "report_schema": "kyuubiki.operator-package-acquisition-operational-qualification/v1",
+    "report_schema_path": "schemas/operator-package-acquisition-operational-qualification-report.schema.json",
+    "report_path": "releases/usability-evidence/2.19.0/operator-package-acquisition-operational-qualification.json",
+    "forbidden_content": [
+      "hostname",
+      "host_address",
+      "username",
+      "credential",
+      "absolute_host_path",
+      "cluster_api_token",
+      "ssh_alias",
+      "192.168.",
+      "/users/",
+      "/home/"
+    ]
+  },
+  "source_guard": {
+    "files": [
+      "workers/rust/crates/script-runner/src/operator_package_acquisition_operational_qualification/mod.rs",
+      "workers/rust/crates/script-runner/src/operator_package_acquisition_operational_qualification/runtime.rs",
+      "workers/rust/crates/script-runner/src/operator_package_acquisition_operational_qualification/report.rs",
+      "workers/rust/crates/script-runner/src/operator_package_acquisition_operational_qualification/distribution.rs",
+      "workers/rust/crates/script-runner/src/operator_package_acquisition_operational_qualification/installed.rs",
+      "workers/rust/crates/script-runner/src/operator_package_acquisition_operational_qualification/remote.rs",
+      "workers/rust/crates/script-runner/src/operator_package_acquisition_operational_qualification/task.rs",
+      "apps/web/lib/kyuubiki_web/orchestra/operator_task_executor.ex",
+      "apps/web/lib/kyuubiki_web/playground/agent_registry.ex",
+      "apps/web/lib/kyuubiki_web/playground/agent_registry_public.ex",
+      "apps/web/lib/kyuubiki_web/operator_package_distribution_store.ex",
+      "workers/rust/crates/installer/src/operator_package_fetch.rs",
+      "workers/rust/crates/cli/src/operator_package_fetch_runtime.rs"
+    ],
+    "required_text": [
+      "qualify-operator-package-acquisition-operational-remote",
+      "KYUUBIKI_OPERATOR_PACKAGE_DISTRIBUTIONS",
+      "fetched_and_activated",
+      "evicted_after_execution",
+      "kyuubiki.operator-json-c/v1",
+      "operator_package_runtime",
+      "prepare_agent_update_package",
+      "max_redirects(0)"
+    ]
+  },
+  "required_checks": [
+    "two_physical_hosts",
+    "real_elixir_orchestra",
+    "installer_managed_rust_agent",
+    "central_single_source_copy",
+    "remote_build_artifact_removed",
+    "empty_agent_cache_before_dispatch",
+    "orchestra_http_task_dispatch",
+    "authenticated_resolution_download",
+    "manifest_and_entrypoint_integrity",
+    "dynamic_operator_execution",
+    "disposable_cache_eviction",
+    "second_dispatch_refetched",
+    "zero_active_packages_after_execution",
+    "cleanup_complete",
+    "retention_sanitized"
+  ],
+  "commands": {
+    "capture": "make qualify-operator-package-acquisition-operational-remote REMOTE=kyuubiki-lab",
+    "verify": "make check-operator-package-acquisition-operational-qualification"
+  }
+}

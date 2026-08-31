@@ -12,6 +12,7 @@ pub const OPERATOR_PACKAGE_MANIFEST_FILE: &str = "kyuubiki-operator.json";
 pub struct OperatorPackageManifest {
     pub schema_version: String,
     pub sdk_api_version: String,
+    pub execution_abi: String,
     pub package_id: String,
     pub package_version: String,
     pub minimum_host_version: String,
@@ -146,6 +147,16 @@ fn validate_operator_package_manifest(
             ),
         });
     }
+    if manifest.execution_abi != crate::OPERATOR_JSON_ABI_SCHEMA_VERSION {
+        return Err(OperatorManifestError::Invalid {
+            path: manifest_path.to_path_buf(),
+            message: format!(
+                "expected execution_abi {} but found {}",
+                crate::OPERATOR_JSON_ABI_SCHEMA_VERSION,
+                manifest.execution_abi
+            ),
+        });
+    }
     if manifest.package_id.trim().is_empty() {
         return Err(OperatorManifestError::Invalid {
             path: manifest_path.to_path_buf(),
@@ -227,6 +238,7 @@ mod tests {
             serde_json::json!({
                 "schema_version": OPERATOR_PACKAGE_SCHEMA_VERSION,
                 "sdk_api_version": super::OPERATOR_SDK_API_VERSION,
+                "execution_abi": crate::OPERATOR_JSON_ABI_SCHEMA_VERSION,
                 "package_id": "operator.example.peak_field",
                 "package_version": "0.1.0",
                 "minimum_host_version": "1.15.0",
@@ -238,7 +250,7 @@ mod tests {
                     {
                         "operator_id": "extract.electrostatic_peak_field",
                         "kind": "extract",
-                        "entry_symbol": "register_operator"
+                        "entry_symbol": "run_operator_json"
                     }
                 ]
             })
@@ -265,6 +277,7 @@ mod tests {
             serde_json::json!({
                 "schema_version": OPERATOR_PACKAGE_SCHEMA_VERSION,
                 "sdk_api_version": super::OPERATOR_SDK_API_VERSION,
+                "execution_abi": crate::OPERATOR_JSON_ABI_SCHEMA_VERSION,
                 "package_id": "operator.alpha",
                 "package_version": "0.1.0",
                 "minimum_host_version": "1.15.0",
@@ -276,7 +289,7 @@ mod tests {
                     {
                         "operator_id": "extract.alpha",
                         "kind": "extract",
-                        "entry_symbol": "register_operator"
+                        "entry_symbol": "run_operator_json"
                     }
                 ]
             })
@@ -288,6 +301,7 @@ mod tests {
             serde_json::json!({
                 "schema_version": OPERATOR_PACKAGE_SCHEMA_VERSION,
                 "sdk_api_version": super::OPERATOR_SDK_API_VERSION,
+                "execution_abi": crate::OPERATOR_JSON_ABI_SCHEMA_VERSION,
                 "package_id": "operator.beta",
                 "package_version": "0.2.0",
                 "minimum_host_version": "1.15.0",
@@ -299,7 +313,7 @@ mod tests {
                     {
                         "operator_id": "extract.beta",
                         "kind": "extract",
-                        "entry_symbol": "register_operator"
+                        "entry_symbol": "run_operator_json"
                     }
                 ]
             })
@@ -322,6 +336,7 @@ mod tests {
             serde_json::json!({
                 "schema_version": OPERATOR_PACKAGE_SCHEMA_VERSION,
                 "sdk_api_version": "kyuubiki.operator-sdk/v0",
+                "execution_abi": crate::OPERATOR_JSON_ABI_SCHEMA_VERSION,
                 "package_id": "operator.bad",
                 "package_version": "0.1.0",
                 "minimum_host_version": "1.15.0",
@@ -333,7 +348,7 @@ mod tests {
                     {
                         "operator_id": "extract.bad",
                         "kind": "extract",
-                        "entry_symbol": "register_bad"
+                        "entry_symbol": "run_bad_json"
                     }
                 ]
             })
@@ -346,6 +361,37 @@ mod tests {
     }
 
     #[test]
+    fn rejects_manifest_with_wrong_execution_abi() {
+        let dir = temp_dir("manifest-execution-abi");
+        let manifest_path = dir.join(OPERATOR_PACKAGE_MANIFEST_FILE);
+        fs::write(
+            &manifest_path,
+            serde_json::json!({
+                "schema_version": OPERATOR_PACKAGE_SCHEMA_VERSION,
+                "sdk_api_version": super::OPERATOR_SDK_API_VERSION,
+                "execution_abi": "kyuubiki.operator-rust-object/v0",
+                "package_id": "operator.bad",
+                "package_version": "0.1.0",
+                "minimum_host_version": "1.15.0",
+                "validation_status": "partial",
+                "validation_notes": "Bad execution ABI fixture.",
+                "runtime": "rust_crate",
+                "entrypoint": "target/debug/liboperator_bad.dylib",
+                "operators": [{
+                    "operator_id": "extract.bad",
+                    "kind": "extract",
+                    "entry_symbol": "run_bad_operator_json"
+                }]
+            })
+            .to_string(),
+        )
+        .expect("write manifest");
+
+        let error = read_operator_package_manifest(&manifest_path).expect_err("manifest rejects");
+        assert!(error.to_string().contains("execution_abi"));
+    }
+
+    #[test]
     fn rejects_manifest_without_validation_notes() {
         let dir = temp_dir("manifest-validation-notes");
         let manifest_path = dir.join(OPERATOR_PACKAGE_MANIFEST_FILE);
@@ -354,6 +400,7 @@ mod tests {
             serde_json::json!({
                 "schema_version": OPERATOR_PACKAGE_SCHEMA_VERSION,
                 "sdk_api_version": super::OPERATOR_SDK_API_VERSION,
+                "execution_abi": crate::OPERATOR_JSON_ABI_SCHEMA_VERSION,
                 "package_id": "operator.bad",
                 "package_version": "0.1.0",
                 "minimum_host_version": "1.15.0",
@@ -365,7 +412,7 @@ mod tests {
                     {
                         "operator_id": "extract.bad",
                         "kind": "extract",
-                        "entry_symbol": "register_bad"
+                        "entry_symbol": "run_bad_json"
                     }
                 ]
             })

@@ -4,7 +4,7 @@
 .PHONY: test-integration test-integration-api test-integration-cluster
 .PHONY: test-integration-direct-mesh test-integration-desktop-gui qualify-desktop-ui-validation qualify-protocol-validation qualify-contracts-validation qualify-workbench-validation
 .PHONY: qualify-headless-sdk-validation qualify-runtime-api-verification qualify-benchmark qualify-orchestra-benchmark qualify-headless-sdk-operational-remote check-headless-sdk-operational-qualification qualify-desktop-deployment-update qualify-system-security qualify-agent-control-link-operational-remote qualify-orchestra-takeover-operational-remote qualify-orchestra-network-partition-operational-remote qualify-orchestra-long-workflow-takeover-operational-remote qualify-orchestra-installed-takeover-operational-remote qualify-agent-solver-operational-remote qualify-agent-update-operational-remote check-agent-update-operational-qualification qualify-runtime-payload-operational-remote check-runtime-payload-operational-qualification qualify-orchestra-workflow-operational-remote qualify-persistence-provenance
-.PHONY: qualify-distributed-task-recovery-operational-remote qualify-fleet-scheduling-operational-remote qualify-operator-sdk-multihost-operational-remote check-operator-sdk-multihost-operational-qualification
+.PHONY: qualify-distributed-task-recovery-operational-remote qualify-fleet-scheduling-operational-remote qualify-operator-package-acquisition-operational-remote qualify-operator-sdk-multihost-operational-remote check-operator-sdk-multihost-operational-qualification
 .PHONY: qualify-operator-sdk-windows-operational check-operator-sdk-windows-operational-qualification
 .PHONY: test-integration-benchmark-profile-index
 .PHONY: test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-central-database-smoke remote-central-database-smoke
@@ -94,6 +94,9 @@ qualify-agent-solver-operational-remote:
 
 qualify-agent-control-link-operational-remote:
 	@$(ENTRYPOINT) qualify-agent-control-link-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/agent-control-link-operational-qualification.json} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}
+
+qualify-operator-package-acquisition-operational-remote:
+	@$(ENTRYPOINT) qualify-operator-package-acquisition-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/operator-package-acquisition-operational-qualification.json} $${PACKAGE_VERSION:+--package-version $${PACKAGE_VERSION}} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}
 
 qualify-orchestra-takeover-operational-remote:
 	@$(ENTRYPOINT) qualify-orchestra-takeover-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/orchestra-takeover-operational-qualification.json} $${POSTGRES_IMAGE:+--postgres-image $${POSTGRES_IMAGE}} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}

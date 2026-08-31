@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/operator-package-acquisition-operational-qualification-contract.schema.json",
+  "title": "Kyuubiki Operator Package Acquisition Operational Qualification Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "qualification_id",
+    "target_coordinate",
+    "ownership",
+    "capture",
+    "retention",
+    "source_guard",
+    "required_checks",
+    "commands"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.operator-package-acquisition-operational-qualification-contract/v1"
+    },
+    "qualification_id": {
+      "const": "two-host-installer-managed-orchestra-package-acquisition"
+    },
+    "target_coordinate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module_id", "paradigm", "target_grade"],
+      "properties": {
+        "module_id": { "const": "runtime-agent-cli" },
+        "paradigm": { "const": "sdk_operator" },
+        "target_grade": { "const": "operational" }
+      }
+    },
+    "ownership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "control_plane_owner",
+        "execution_owner",
+        "deployment_owner",
+        "evidence_owner"
+      ],
+      "properties": {
+        "control_plane_owner": { "const": "orchestra-control-plane" },
+        "execution_owner": { "const": "runtime-agent-cli" },
+        "deployment_owner": { "const": "runtime-installer" },
+        "evidence_owner": { "const": "verification-evidence" }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "orchestrator_host_role",
+        "agent_host_role",
+        "orchestrator_platform",
+        "agent_platform",
+        "transport",
+        "build_profile",
+        "central_source_copy_count",
+        "execution_count",
+        "fetch_sequence_count",
+        "cleanup_required"
+      ],
+      "properties": {
+        "orchestrator_host_role": { "const": "local-macos-qualification-host" },
+        "agent_host_role": { "const": "remote-linux-qualification-host" },
+        "orchestrator_platform": { "const": "macos" },
+        "agent_platform": { "const": "linux" },
+        "transport": { "const": "lan-http-plus-agent-rpc" },
+        "build_profile": { "const": "release" },
+        "central_source_copy_count": { "const": 1 },
+        "execution_count": { "const": 2 },
+        "fetch_sequence_count": { "const": 2 },
+        "cleanup_required": { "const": true }
+      }
+    },
+    "retention": { "$ref": "#/$defs/retention" },
+    "source_guard": { "$ref": "#/$defs/sourceGuard" },
+    "required_checks": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 15,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capture", "verify"],
+      "properties": {
+        "capture": { "type": "string", "minLength": 1 },
+        "verify": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["report_schema", "report_schema_path", "report_path", "forbidden_content"],
+      "properties": {
+        "report_schema": {
+          "const": "kyuubiki.operator-package-acquisition-operational-qualification/v1"
+        },
+        "report_schema_path": { "$ref": "#/$defs/repoPath" },
+        "report_path": { "$ref": "#/$defs/repoPath" },
+        "forbidden_content": {
+          "type": "array",
+          "minItems": 7,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "sourceGuard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files", "required_text"],
+      "properties": {
+        "files": {
+          "type": "array",
+          "minItems": 8,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/repoPath" }
+        },
+        "required_text": {
+          "type": "array",
+          "minItems": 6,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

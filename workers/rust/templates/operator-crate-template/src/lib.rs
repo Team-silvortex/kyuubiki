@@ -1,5 +1,6 @@
 use kyuubiki_operator_sdk::{
-    JsonOperator, OperatorDescriptorBuilder, OperatorRegistry, OperatorSdkError,
+    JsonOperator, OperatorDescriptorBuilder, OperatorJsonAbiBuffer, OperatorRegistry,
+    OperatorSdkError, execute_operator_json_abi, free_operator_json_abi_buffer,
     operator_port_with_dataset, operator_summary_result, partial_validation,
 };
 use kyuubiki_protocol::{
@@ -98,15 +99,32 @@ pub fn install_template_operator(registry: &mut OperatorRegistry) -> Result<(), 
     registry.register_json(TemplateSummaryOperator::new())
 }
 
-#[unsafe(no_mangle)]
 /// # Safety
 ///
-/// This symbol is loaded by the Kyuubiki runtime host from a trusted operator
-/// package built against the same SDK/runtime contract.
-pub unsafe fn register_template_operator(
-    registry: &mut OperatorRegistry,
-) -> Result<(), OperatorSdkError> {
-    install_template_operator(registry)
+/// The request pointer and output buffer must satisfy the stable JSON ABI
+/// contract declared by `kyuubiki-operator-sdk`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn run_template_operator_json(
+    request_ptr: *const u8,
+    request_len: usize,
+    output: *mut OperatorJsonAbiBuffer,
+) -> i32 {
+    unsafe {
+        execute_operator_json_abi(request_ptr, request_len, output, |request| {
+            let mut registry = OperatorRegistry::new();
+            install_template_operator(&mut registry)?;
+            registry.run(request)
+        })
+    }
+}
+
+/// # Safety
+///
+/// The buffer must have been allocated by `run_template_operator_json` and
+/// must be returned exactly once.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn kyuubiki_operator_json_free(buffer: OperatorJsonAbiBuffer) {
+    unsafe { free_operator_json_abi_buffer(buffer) }
 }
 
 pub fn run_template_operator(values: Vec<f64>) -> Result<OperatorRunResult, OperatorSdkError> {
@@ -121,8 +139,14 @@ pub fn run_template_operator(values: Vec<f64>) -> Result<OperatorRunResult, Oper
 
 #[cfg(test)]
 mod tests {
-    use super::{TemplateSummaryOperator, run_template_operator};
-    use kyuubiki_operator_sdk::operator_descriptor_readiness;
+    use super::{
+        TemplateSummaryOperator, kyuubiki_operator_json_free, run_template_operator,
+        run_template_operator_json,
+    };
+    use kyuubiki_operator_sdk::{
+        OperatorJsonAbiBuffer, decode_operator_json_abi_response, operator_descriptor_readiness,
+    };
+    use kyuubiki_protocol::{OperatorRunContext, OperatorRunRequest};
 
     #[test]
     fn computes_template_summary() {
@@ -138,5 +162,27 @@ mod tests {
         let operator = TemplateSummaryOperator::new();
         let report = operator_descriptor_readiness(&operator.descriptor);
         assert!(report.ok, "{:?}", report.issues);
+    }
+
+    #[test]
+    fn stable_json_abi_never_shares_rust_values_with_the_host() {
+        let request = serde_json::to_vec(&OperatorRunRequest {
+            operator_id: "extract.template_summary".to_string(),
+            input: serde_json::json!({
+                "payload": { "values": [2.0, 4.0, 8.0] },
+                "config": {}
+            }),
+            context: OperatorRunContext::default(),
+        })
+        .expect("request JSON");
+        let mut output = OperatorJsonAbiBuffer::empty();
+        let status = unsafe {
+            run_template_operator_json(request.as_ptr(), request.len(), &mut output)
+        };
+        let bytes = unsafe { std::slice::from_raw_parts(output.ptr, output.len) }.to_vec();
+        unsafe { kyuubiki_operator_json_free(output) };
+        let result = decode_operator_json_abi_response(status, &bytes).expect("ABI result");
+        assert_eq!(result.summary["count"], 3);
+        assert_eq!(result.summary["sum"], 14.0);
     }
 }

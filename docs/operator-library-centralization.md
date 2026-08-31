@@ -208,8 +208,12 @@ durable scope, and evicts all exclusively owned packages in one generation
 switch. Repeating the call returns `already_released`; `cancel_job` routes through
 the same cleanup path. This lifecycle is locally qualified with a real Agent and
 Orchestra package server, including shared ownership and refetch after final
-release. Installed multi-host acquisition and three-platform dynamic-library
-qualification remain open.
+release. Real two-host central acquisition is now retained under
+`releases/usability-evidence/2.19.0/operator-package-acquisition-operational-qualification.json`:
+a macOS Elixir Orchestra serves the only package copy to an Installer-managed
+Linux Agent, two disposable tasks both refetch after eviction, and cleanup leaves
+no active package or managed run root. Current stable-ABI Windows requalification
+and installed desktop operation on all three platforms remain open.
 
 ## Interaction with the operator catalog
 

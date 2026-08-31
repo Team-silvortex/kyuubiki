@@ -357,6 +357,7 @@ fn write_report(
         "operator_ids": preflight_summary.operator_ids,
         "host_version": preflight_summary.host_version,
         "sdk_api_version": preflight_summary.sdk_api_version,
+        "execution_abi": preflight_summary.execution_abi,
         "template_manifest": repo_relative(paths, &paths.root.join("workers/rust/templates/operator-crate-template/Cargo.toml")),
         "package_manifest": repo_relative(paths, &paths.root.join("workers/rust/templates/operator-crate-template/kyuubiki-operator.json")),
         "preflight_report": repo_relative(paths, preflight_report_path),
@@ -405,6 +406,7 @@ struct PreflightSummary {
     operator_ids: Vec<String>,
     host_version: Option<String>,
     sdk_api_version: Option<String>,
+    execution_abi: Option<String>,
 }
 
 fn read_preflight_summary(path: &Path) -> PreflightSummary {
@@ -414,6 +416,7 @@ fn read_preflight_summary(path: &Path) -> PreflightSummary {
             operator_ids: Vec::new(),
             host_version: None,
             sdk_api_version: None,
+            execution_abi: None,
         };
     };
     let Ok(value) = serde_json::from_str::<Value>(&content) else {
@@ -422,6 +425,7 @@ fn read_preflight_summary(path: &Path) -> PreflightSummary {
             operator_ids: Vec::new(),
             host_version: None,
             sdk_api_version: None,
+            execution_abi: None,
         };
     };
     let first_package = value
@@ -447,6 +451,10 @@ fn read_preflight_summary(path: &Path) -> PreflightSummary {
             .map(ToString::to_string),
         sdk_api_version: first_package
             .and_then(|package| package.get("sdk_api_version"))
+            .and_then(Value::as_str)
+            .map(ToString::to_string),
+        execution_abi: first_package
+            .and_then(|package| package.get("execution_abi"))
             .and_then(Value::as_str)
             .map(ToString::to_string),
     }

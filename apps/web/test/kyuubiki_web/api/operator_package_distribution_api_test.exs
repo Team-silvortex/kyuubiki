@@ -36,6 +36,7 @@ defmodule KyuubikiWeb.Api.OperatorPackageDistributionApiTest do
     resolution = Jason.decode!(resolution_conn.resp_body)
     assert resolution["schema_version"] == "kyuubiki.operator-package-resolution/v1"
     assert resolution["package_ref"] == "orchestra://operator-package/#{@package_id}"
+    assert resolution["execution_abi"] == "kyuubiki.operator-json-c/v1"
     assert resolution["target"] == @target
     assert resolution["authority_mode"] == "bound_orchestra"
     assert resolution["cache_scope"] == "task_required_disposable"
@@ -126,6 +127,7 @@ defmodule KyuubikiWeb.Api.OperatorPackageDistributionApiTest do
     manifest = %{
       "schema_version" => "kyuubiki.operator-package/v1",
       "sdk_api_version" => "kyuubiki.operator-sdk/v1",
+      "execution_abi" => "kyuubiki.operator-json-c/v1",
       "package_id" => @package_id,
       "package_version" => @package_version,
       "minimum_host_version" => "2.15.0",
@@ -149,6 +151,7 @@ defmodule KyuubikiWeb.Api.OperatorPackageDistributionApiTest do
     distribution = %{
       "schema_version" => "kyuubiki.operator-package-distribution/v1",
       "sdk_api_version" => "kyuubiki.operator-sdk/v1",
+      "execution_abi" => "kyuubiki.operator-json-c/v1",
       "package_id" => @package_id,
       "package_version" => @package_version,
       "artifacts" => [
