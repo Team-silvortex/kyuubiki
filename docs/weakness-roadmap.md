@@ -216,6 +216,18 @@ and is rechecked by
 still requires multi-host package acquisition and installed operation on the
 remaining supported platforms.
 
+The next installed recovery subtier now has an executable protocol rather than
+a design note. `qualify-installed-runtime-power-loss-remote` provisions the
+same sealed production Runtime, removes its source tree, completes a real
+Headless solve, and durably binds the job result, three live process identities,
+ports, machine identity, boot identity, and payload digests. A non-reboot
+physical-Linux rehearsal has passed through `prepare` and validated `cleanup`
+with zero residue. `resume` is fail-closed until a real boot-ID change and then
+must retrieve that exact persisted job from the restarted installed stack.
+This remains a `partial` tensor claim until the disruptive reboot boundary is
+executed and a sanitized retained report exists; it does not yet close
+`fault_injection_and_recovery/installed-cross-platform`.
+
 Installer-managed capacity scheduling now has independent remote Linux
 operational evidence. The native runner seals one Release Agent package, installs
 it into two isolated stores, and starts capacities 3 and 1. Orchestra's

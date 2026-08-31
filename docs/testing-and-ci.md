@@ -853,6 +853,26 @@ fallback, changed numerical output, missing Agent dispatch, stale PID files,
 open ports, or cleanup residue. Only the compact path-free report is retained;
 the remote run root and local raw captures are removed.
 
+The full installed Runtime reboot lane is a separate two-phase boundary. It
+persists one completed Headless job while the installed Orchestra and two Rust
+Agents are still running, then requires a physical Linux reboot before the same
+job can be fetched again:
+
+```sh
+make qualify-installed-runtime-power-loss-remote ACTION=prepare
+make qualify-installed-runtime-power-loss-remote ACTION=reboot ARGS=--confirm-physical-reboot
+make qualify-installed-runtime-power-loss-remote ACTION=resume
+make check-installed-runtime-power-loss-qualification \
+  REPORT=releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json
+```
+
+The native command itself requires `--confirm-physical-reboot`; the Make target
+does not bypass that guard. An abandoned run is removed with `ACTION=cleanup`.
+Preparation and resume use a digest-bound local session plus a durable remote
+intent, verify every file named by the sealed Runtime payload, keep the source
+tree detached, and reject a resume unless the machine identity is unchanged and
+the boot identity changed. Only the final path-free report is retained.
+
 ## Operational Agent Solver Qualification
 
 The operational solver lane closes the gap between a source-level TaskIR test

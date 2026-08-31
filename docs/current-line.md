@@ -157,6 +157,13 @@ sprawl:
   tree, executes a real bar solve, and retrieves the same completed job after
   two managed restarts. The current `2.19.0` report verifies all installed
   binary digests against the payload and leaves zero remote residue
+- a full installed Runtime physical-reboot protocol now extends that journey
+  without conflating it with the earlier Agent-only host reboot probe. The
+  remote `prepare` phase has been exercised on physical Linux through a real
+  installed Headless solve, source detachment, durable intent, live Orchestra
+  plus two-Agent capture, and validated zero-residue cleanup. `reboot` requires
+  explicit confirmation; the cross-boot `resume` evidence remains intentionally
+  partial until that disruptive phase is run and retained
 - native two-host control-link qualification now keeps one remote Linux Agent
   process alive while the macOS Orchestra is killed and recreated, observes the
   sanitized degraded state, requires full re-registration plus resumed

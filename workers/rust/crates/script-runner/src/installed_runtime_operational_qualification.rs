@@ -12,7 +12,8 @@ use std::path::Path;
 type RunnerResult<T> = Result<T, String>;
 
 mod host;
-mod remote;
+pub(crate) mod remote;
+pub(crate) mod support;
 
 const CONTRACT_PATH: &str = "config/architecture/installed-runtime-operational-qualification.json";
 const CONTRACT_SCHEMA: &str = "kyuubiki.installed-runtime-operational-qualification-contract/v1";

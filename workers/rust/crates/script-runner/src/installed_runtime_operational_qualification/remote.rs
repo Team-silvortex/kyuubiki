@@ -59,6 +59,26 @@ struct Options {
     elixir_version: String,
 }
 
+#[derive(Clone, Debug)]
+pub(crate) struct RuntimeProvision {
+    pub(crate) remote_run_root: String,
+    pub(crate) package_version: String,
+    pub(crate) otp_version: String,
+    pub(crate) elixir_version: String,
+}
+
+impl RuntimeProvision {
+    pub(crate) fn from_workspace(root: &Path, remote_run_root: String) -> RunnerResult<Self> {
+        let (otp_version, elixir_version) = toolchains(root)?;
+        Ok(Self {
+            remote_run_root,
+            package_version: workspace_version(root)?,
+            otp_version,
+            elixir_version,
+        })
+    }
+}
+
 impl Options {
     fn parse(root: &Path, contract: &Contract, args: Vec<OsString>) -> RunnerResult<Self> {
         let slug = format!("installed-runtime-operational-{}", utc_timestamp_slug());
@@ -94,21 +114,11 @@ impl Options {
 }
 
 fn prepare_remote(root: &Path, options: &Options) -> RunnerResult<()> {
-    let run_root = remote_shell_path(&options.remote_run_root);
-    require_zero(
-        "prepare managed remote run root",
-        ssh_status(
-            root,
-            &options.host,
-            format!(
-                "set -eu; umask 077; case {run_root} in \"$HOME/.kyuubiki/lab-runs/\"*) ;; *) exit 2 ;; esac; mkdir -p {run_root}/source/workers/rust {run_root}/source/apps/web {run_root}/source/config"
-            ),
-        )?,
-    )
+    prepare_run_root(root, &options.host, &options.remote_run_root)
 }
 
 fn capture_remote(root: &Path, options: &Options, local: &Path) -> RunnerResult<()> {
-    sync_sources(root, options)?;
+    sync_sources_to(root, &options.host, &options.remote_run_root)?;
     require_zero(
         "run installed Runtime host capture",
         ssh_status(root, &options.host, remote_capture_command(options))?,
@@ -129,35 +139,40 @@ fn capture_remote(root: &Path, options: &Options, local: &Path) -> RunnerResult<
     Ok(())
 }
 
-fn sync_sources(root: &Path, options: &Options) -> RunnerResult<()> {
+pub(crate) fn prepare_run_root(root: &Path, host: &str, remote_run_root: &str) -> RunnerResult<()> {
+    let run_root = remote_shell_path(remote_run_root);
+    require_zero(
+        "prepare managed remote run root",
+        ssh_status(
+            root,
+            host,
+            format!(
+                "set -eu; umask 077; case {run_root} in \"$HOME/.kyuubiki/lab-runs/\"*) ;; *) exit 2 ;; esac; test ! -e {run_root}; mkdir -p {run_root}/source/workers/rust {run_root}/source/apps/web {run_root}/source/config"
+            ),
+        )?,
+    )
+}
+
+pub(crate) fn sync_sources_to(root: &Path, host: &str, remote_run_root: &str) -> RunnerResult<()> {
     for (sources, destination) in [
         (
             vec![root.join("workers/rust/")],
-            format!(
-                "{}:{}/source/workers/rust/",
-                options.host, options.remote_run_root
-            ),
+            format!("{host}:{remote_run_root}/source/workers/rust/"),
         ),
         (
             ["mix.exs", "mix.lock", "config", "lib"]
                 .into_iter()
                 .map(|path| root.join("apps/web").join(path))
                 .collect(),
-            format!(
-                "{}:{}/source/apps/web/",
-                options.host, options.remote_run_root
-            ),
+            format!("{host}:{remote_run_root}/source/apps/web/"),
         ),
         (
             vec![root.join(".env.example")],
-            format!("{}:{}/source/", options.host, options.remote_run_root),
+            format!("{host}:{remote_run_root}/source/"),
         ),
         (
             vec![root.join("config/toolchains.json")],
-            format!(
-                "{}:{}/source/config/",
-                options.host, options.remote_run_root
-            ),
+            format!("{host}:{remote_run_root}/source/config/"),
         ),
     ] {
         require_zero(
@@ -181,11 +196,37 @@ fn sync_sources(root: &Path, options: &Options) -> RunnerResult<()> {
 }
 
 fn remote_capture_command(options: &Options) -> String {
-    let run_root = remote_shell_path(&options.remote_run_root);
-    let version = shell_escape(&options.package_version);
-    let version_path = &options.package_version;
-    let otp = &options.otp_version;
-    let elixir = &options.elixir_version;
+    let provision = RuntimeProvision {
+        remote_run_root: options.remote_run_root.clone(),
+        package_version: options.package_version.clone(),
+        otp_version: options.otp_version.clone(),
+        elixir_version: options.elixir_version.clone(),
+    };
+    provision_command(
+        &provision,
+        "KYUUBIKI_REPO_ROOT=\"$harness\" \"$runner\" capture-installed-runtime-operational-host --managed-root \"$run_root\" --runtime-root \"$runtime\" --detached-source-root \"$source_root\" --out \"$run_root/capture\" --package-version \"$package_version\"",
+    )
+}
+
+pub(crate) fn provision_runtime(
+    root: &Path,
+    host: &str,
+    provision: &RuntimeProvision,
+    host_action: &str,
+) -> RunnerResult<()> {
+    sync_sources_to(root, host, &provision.remote_run_root)?;
+    require_zero(
+        "provision installed Runtime qualification",
+        ssh_status(root, host, provision_command(provision, host_action))?,
+    )
+}
+
+fn provision_command(provision: &RuntimeProvision, host_action: &str) -> String {
+    let run_root = remote_shell_path(&provision.remote_run_root);
+    let version = shell_escape(&provision.package_version);
+    let version_path = &provision.package_version;
+    let otp = &provision.otp_version;
+    let elixir = &provision.elixir_version;
     format!(
         "set -euo pipefail; umask 077; run_root={run_root}; source_root=\"$run_root/source\"; \
 target_root=\"$HOME/.kyuubiki/cache/cargo-target/installed-runtime-operational\"; \
@@ -203,18 +244,23 @@ mkdir -p \"$payload/services\"; rm -rf \"$payload/services/orchestrator\"; cp -a
 mkdir -p \"$payload/services/frontend\"; printf '%s\\n' '<!doctype html><title>Kyuubiki native frontend qualification</title>' > \"$payload/services/frontend/index.html\"; \
 \"$installer\" seal-runtime-payload \"$payload\" {version} linux; export XDG_CONFIG_HOME=\"$run_root/xdg\"; \"$installer\" install-runtime-payload \"$payload\"; \
 store=\"$XDG_CONFIG_HOME/kyuubiki/runtime\"; runtime=\"$store/versions/{version_path}\"; test -x \"$runtime/bin/kyuubiki-headless\"; test -x \"$runtime/services/orchestrator/bin/kyuubiki_web\"; \
+mkdir -p \"$run_root/bin\"; install -m 0755 \"$runner\" \"$run_root/bin/kyuubiki-script-runner\"; runner=\"$run_root/bin/kyuubiki-script-runner\"; package_version={version}; \
 rm -rf \"$source_root\" \"$payload\" \"$release_path\"; harness=\"$run_root/harness-repo\"; mkdir -p \"$harness/workers/rust\" \"$harness/scripts\"; : > \"$harness/workers/rust/Cargo.toml\"; \
-KYUUBIKI_REPO_ROOT=\"$harness\" \"$runner\" capture-installed-runtime-operational-host --managed-root \"$run_root\" --runtime-root \"$runtime\" --detached-source-root \"$source_root\" --out \"$run_root/capture\" --package-version {version}"
+{host_action}"
     )
 }
 
 fn cleanup_remote(root: &Path, options: &Options) -> RunnerResult<()> {
-    let run_root = remote_shell_path(&options.remote_run_root);
+    remove_run_root(root, &options.host, &options.remote_run_root)
+}
+
+pub(crate) fn remove_run_root(root: &Path, host: &str, remote_run_root: &str) -> RunnerResult<()> {
+    let run_root = remote_shell_path(remote_run_root);
     require_zero(
         "clean managed remote qualification root",
         ssh_status(
             root,
-            &options.host,
+            host,
             format!(
                 "set -eu; case {run_root} in \"$HOME/.kyuubiki/lab-runs/\"*) rm -rf {run_root} ;; *) exit 2 ;; esac; test ! -e {run_root}"
             ),
@@ -222,8 +268,8 @@ fn cleanup_remote(root: &Path, options: &Options) -> RunnerResult<()> {
     )?;
     if !ssh_success_quiet(
         root,
-        &options.host,
-        format!("test ! -e {}", remote_shell_path(&options.remote_run_root)),
+        host,
+        format!("test ! -e {}", remote_shell_path(remote_run_root)),
     )? {
         return Err("remote installed Runtime root remains after cleanup".to_string());
     }
@@ -295,7 +341,7 @@ fn promote_report(output: &Path, report: &Value) -> RunnerResult<()> {
         .map_err(|error| format!("failed to promote report {}: {error}", output.display()))
 }
 
-fn workspace_version(root: &Path) -> RunnerResult<String> {
+pub(crate) fn workspace_version(root: &Path) -> RunnerResult<String> {
     let text = fs::read_to_string(root.join("workers/rust/Cargo.toml"))
         .map_err(|error| format!("failed to read workspace version: {error}"))?;
     text.split_once("[workspace.package]")
@@ -309,7 +355,7 @@ fn workspace_version(root: &Path) -> RunnerResult<String> {
         .ok_or_else(|| "Rust workspace version is missing".to_string())
 }
 
-fn toolchains(root: &Path) -> RunnerResult<(String, String)> {
+pub(crate) fn toolchains(root: &Path) -> RunnerResult<(String, String)> {
     let value: Value = serde_json::from_slice(
         &fs::read(root.join("config/toolchains.json"))
             .map_err(|error| format!("failed to read toolchain contract: {error}"))?,

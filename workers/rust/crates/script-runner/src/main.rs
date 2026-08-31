@@ -4,7 +4,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 use std::time::SystemTime;
-
 mod agent_control_link_operational_qualification;
 mod agent_registry_sync;
 mod agent_rolling_operational_qualification;
@@ -58,6 +57,7 @@ mod help;
 mod install_update_disk_hygiene;
 mod installation_integrity_docs;
 mod installed_runtime_operational_qualification;
+mod installed_runtime_power_loss_qualification;
 mod installer_recovery_fault_injection;
 mod kcore_cli;
 mod lab;

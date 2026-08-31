@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.installed-runtime-operational-qualification/v1",
-  "generated_at_unix_ms": 1788165918566,
+  "generated_at_unix_ms": 1788169113175,
   "status": "pass",
   "qualification_id": "remote-linux-installer-managed-runtime-operational",
   "journey": "installed-headless-orchestra-agent-restart",
@@ -15,11 +15,11 @@
     "runtime_policy": "installer-managed",
     "source_tree_detached": true,
     "source_fallback": false,
-    "payload_manifest_sha256": "4c6fc5e2dcc563683ef7e5bf07e55783ea70e16be051a9d991155bb9d15b46f7",
+    "payload_manifest_sha256": "eedc17e96aca11b5a811ffa099529e166ee74fce145e1c49860f896d148cf31b",
     "service_manifest_sha256": "a761efe3565a5d0b25e47a477bdea7e461e0df213be8af7de540b32e11e29a58",
-    "runtime_binary_sha256": "f497fae83eee2c46dd5b1b4bd6e9c2849d0df1577fa5872da63ba5871f48dc9a",
-    "headless_binary_sha256": "6fda429df9ee378691c5d52570f6d69f1c6edbceca9aa28ef3d8da4492211d0c",
-    "agent_binary_sha256": "fbde0161e08a17e4854978b1a82146907ca87aeb89f08130b49d7b53b186c7af"
+    "runtime_binary_sha256": "446e171067b5f27a819efc2387c50e6de40f96434446735e12729623e3b417f7",
+    "headless_binary_sha256": "5d80deee9a1ee67e5ab2ba9d982361b7334e9f867c2bc36c9d1cb25eab4ce2ee",
+    "agent_binary_sha256": "3c94fb0b4c7250094765a0aa5eebf91d4a5b517882ed1eeef8305661bf43592a"
   },
   "runtime": {
     "control_mode": "standalone",
@@ -31,7 +31,7 @@
     "workflow_id": "qualification.installed-runtime.bar",
     "mode": "execute:service",
     "status": "completed",
-    "job_id_sha256": "1d0cc966f9a825db24210b629446fd275a110093f33044fcae68245427ba1596",
+    "job_id_sha256": "1bfb4b6d3cd8e73c80f0e2bfc4fab46fd2393ad46d6028dc5449d9cac52b51b6",
     "worker_transport": "rust-agent-rpc",
     "agent_dispatched": true,
     "tip_displacement": 5.714285714285714e-7,
@@ -51,11 +51,11 @@
   },
   "capture_digests": {
     "cleanup_report_sha256": "0a5af41477b72f2419d2d42360e1d41847222b618e1d75a94bc57ca4d7f4571d",
-    "detached_fetch_report_sha256": "2ade2c0039eca3f2e38c7334b9453c533e9b2d1b1a940d57974a7d6dc07e00d8",
-    "detached_status_sha256": "53299b02dfa3daa1656d9d348abd589c5d56daa6ea971b843e4e21ecad0633ca",
-    "installed_digests_sha256": "636d2359c49ab9aec8478c06b9a6f4845df4047baa529171d69d1472130b9d69",
-    "restart_fetch_report_sha256": "2ade2c0039eca3f2e38c7334b9453c533e9b2d1b1a940d57974a7d6dc07e00d8",
-    "solve_report_sha256": "6187853ce268184ee9f5cf3b2a681ba251b15ccaf9a77edab35a53396976b0e9"
+    "detached_fetch_report_sha256": "821a8611730055c5654be93fc4270f17fc59da3d35f24f4f65b9b5459f77659a",
+    "detached_status_sha256": "eb5986571bf014f7f1cf82868aa97eebcd5ec928d39886103c6ff5f31223e6cf",
+    "installed_digests_sha256": "ff288b0e1e5255daf694111e043f3b088db25831066c22450b7bd24682a2d366",
+    "restart_fetch_report_sha256": "a7f44702b11043ff2fd0766e4f4b5bf681c5a0b081548fe154be28397cc9bffb",
+    "solve_report_sha256": "23608f1874ea99b53ea0fa03e6e4946c7d7ce0bc52c23a6574c4a1e2a34608ca"
   },
   "checks": [
     {

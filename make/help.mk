@@ -90,6 +90,8 @@ help:
 	@echo "  make check-orchestra-workflow-operational-qualification Recheck retained remote Orchestra workflow operational evidence"
 	@echo "  make check-installed-runtime-operational-qualification Recheck the retained Installer-managed Headless-Orchestra-Agent-Engine journey"
 	@echo "  make qualify-installed-runtime-operational-remote Rebuild that journey on the physical Linux qualification host"
+	@echo "  make check-installed-runtime-power-loss-qualification Validate the full installed Runtime reboot protocol and optional REPORT"
+	@echo "  make qualify-installed-runtime-power-loss-remote ACTION=prepare|reboot|resume|cleanup Run the physical Linux reboot protocol"
 	@echo "  make qualify-persistence-provenance Qualify desktop, Engine, Headless, Orchestra, and Installer provenance"
 	@echo "  make check-persistence-provenance-qualification Recheck retained persistence provenance evidence"
 	@echo "  make qualify-desktop-ui-validation Run the cross-shell GUI qualification and write a retained JSON report"

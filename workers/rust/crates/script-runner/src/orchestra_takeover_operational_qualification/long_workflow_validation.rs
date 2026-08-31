@@ -298,8 +298,7 @@ fn validate_observation(
         || observation.attempt != attempt
     {
         return Err(format!(
-            "long workflow observation is invalid: {:?}",
-            observation
+            "long workflow observation is invalid: {observation:?}"
         ));
     }
     Ok(())
