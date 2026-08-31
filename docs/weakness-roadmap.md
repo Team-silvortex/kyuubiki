@@ -728,9 +728,16 @@ Current weak point:
 - native Windows installed-package operation now has retained six-stage evidence,
   including MSVC dynamic loading, Agent RPC dispatch, bound-Orchestra rotation,
   tamper recovery, Installer lifecycle, and residue cleanup for the historical
-  Rust-object boundary; the current stable JSON C ABI still needs a Windows rerun
+  Rust-object boundary; current JSON C ABI execution now also passes all six
+  stages natively, while the v2 qualification still needs a retained rerun to
+  bind current sources and attachments
 - real two-host central acquisition now passes through macOS Orchestra and an
   Installer-managed physical Linux Agent with refetch and residue-free cleanup
+- release qualification now measures the actual dynamic ABI path rather than
+  borrowing solver throughput: compact p95 is 9.208 microseconds, the 4096-value
+  p95 is 366.042 microseconds, and four-worker throughput is about 516,407
+  dispatches per second with zero errors; cold activation is 429.674 ms and the
+  cached resident activation p95 is 0.417 ms
 - the remaining third-party gap is forward compatibility across future operator
   SDK API and ABI revisions plus current-ABI Windows requalification
 
@@ -739,6 +746,8 @@ Current moxi hardening focus:
 - keep the operator crate template green with descriptor readiness tests
 - expose package readiness in Installer preflight JSON and CI gates
 - keep TaskIR package identity and entrypoint digest checks fail-closed
+- reduce dynamic package activation cost while preserving package discovery,
+  admission, library ownership, and source-bound performance evidence
 - document the separation between operator SDK and headless SDK everywhere it matters
 
 Qualification focus:
@@ -753,11 +762,13 @@ Qualification focus:
   attachments under `releases/usability-evidence/2.16.4/`
 - preserve the native Windows installed-package report and its bound evidence
   under `releases/usability-evidence/2.15.0/` as historical evidence; rerun the
-  same journey for `kyuubiki.operator-json-c/v1` before restoring the Windows
-  operational claim
+  now-passing `kyuubiki.operator-json-c/v1` journey under the v2 report contract
+  before restoring the Windows operational claim
 - retain the two-host central acquisition report under
   `releases/usability-evidence/2.19.0/` and recheck both fetch sequences,
   eviction, refetch, stable ABI, and zero residue
+- retain and recheck the source-bound operator SDK performance report under the
+  same release evidence directory
 - add operator package compatibility fixtures for future SDK API changes
 
 Moxi readiness standard:

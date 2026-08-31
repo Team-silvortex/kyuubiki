@@ -5,7 +5,7 @@
 .PHONY: test-integration-direct-mesh test-integration-desktop-gui qualify-desktop-ui-validation qualify-protocol-validation qualify-contracts-validation qualify-workbench-validation
 .PHONY: qualify-headless-sdk-validation qualify-runtime-api-verification qualify-benchmark qualify-orchestra-benchmark qualify-headless-sdk-operational-remote check-headless-sdk-operational-qualification qualify-desktop-deployment-update qualify-system-security qualify-agent-control-link-operational-remote qualify-orchestra-takeover-operational-remote qualify-orchestra-network-partition-operational-remote qualify-orchestra-long-workflow-takeover-operational-remote qualify-orchestra-installed-takeover-operational-remote qualify-agent-solver-operational-remote qualify-agent-update-operational-remote check-agent-update-operational-qualification qualify-runtime-payload-operational-remote check-runtime-payload-operational-qualification qualify-orchestra-workflow-operational-remote qualify-persistence-provenance
 .PHONY: qualify-distributed-task-recovery-operational-remote qualify-fleet-scheduling-operational-remote qualify-operator-package-acquisition-operational-remote qualify-operator-sdk-multihost-operational-remote check-operator-sdk-multihost-operational-qualification
-.PHONY: qualify-operator-sdk-windows-operational check-operator-sdk-windows-operational-qualification
+.PHONY: qualify-operator-sdk-performance check-operator-sdk-performance-qualification qualify-operator-sdk-windows-operational check-operator-sdk-windows-operational-qualification
 .PHONY: test-integration-benchmark-profile-index
 .PHONY: test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-central-database-smoke remote-central-database-smoke
 .PHONY: test-integration-direct-mesh-docker-compare
@@ -160,6 +160,12 @@ qualify-operator-sdk-multihost-operational-remote:
 
 check-operator-sdk-multihost-operational-qualification:
 	@$(ENTRYPOINT) check-operator-sdk-multihost-operational-qualification --self-test --verify-report $${REPORT:-releases/usability-evidence/2.16.4/operator-sdk-multihost-operational-qualification.json}
+
+qualify-operator-sdk-performance:
+	@cargo run --release --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-script-runner -- qualify-operator-sdk-performance --out $${OUTPUT:-tmp/operator-sdk-performance-qualification.json}
+
+check-operator-sdk-performance-qualification:
+	@$(ENTRYPOINT) check-operator-sdk-performance-qualification --self-test $${REPORT:+--verify-report $${REPORT}}
 
 qualify-operator-sdk-windows-operational:
 	@$(ENTRYPOINT) qualify-operator-sdk-windows-operational $${OUTPUT:+--out $${OUTPUT}}

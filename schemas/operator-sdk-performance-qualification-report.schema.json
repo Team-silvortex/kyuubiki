@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/operator-sdk-performance-qualification-report.schema.json",
+  "title": "Kyuubiki Operator SDK Performance Qualification Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "qualification_id",
+    "generated_at_unix_ms",
+    "status",
+    "source_tree_sha256",
+    "platform",
+    "package",
+    "measurement",
+    "thresholds",
+    "metrics",
+    "optimization_contract",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": { "const": "kyuubiki.operator-sdk-performance-qualification/v1" },
+    "qualification_id": { "const": "operator-sdk-dynamic-json-abi-performance" },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "status": { "const": "pass" },
+    "source_tree_sha256": { "$ref": "#/$defs/sha256" },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "arch", "build_profile"],
+      "properties": {
+        "os": { "type": "string", "minLength": 1 },
+        "arch": { "type": "string", "minLength": 1 },
+        "build_profile": { "const": "release" }
+      }
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package_id", "operator_id", "execution_abi"],
+      "properties": {
+        "package_id": { "const": "operator.template.summary" },
+        "operator_id": { "const": "extract.template_summary" },
+        "execution_abi": { "const": "kyuubiki.operator-json-c/v1" }
+      }
+    },
+    "measurement": { "$ref": "#/$defs/measurement" },
+    "thresholds": { "$ref": "#/$defs/thresholds" },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activation", "first_dispatch_ns", "compact", "medium", "concurrent"],
+      "properties": {
+        "activation": { "$ref": "#/$defs/activationCase" },
+        "first_dispatch_ns": { "type": "integer", "minimum": 1 },
+        "compact": { "$ref": "#/$defs/latencyCase" },
+        "medium": { "$ref": "#/$defs/latencyCase" },
+        "concurrent": { "$ref": "#/$defs/concurrentCase" }
+      }
+    },
+    "optimization_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "host_response_copy_bytes_per_dispatch",
+        "registry_initializations_per_library",
+        "response_buffer_release"
+      ],
+      "properties": {
+        "host_response_copy_bytes_per_dispatch": { "const": 0 },
+        "registry_initializations_per_library": { "const": 1 },
+        "response_buffer_release": { "const": "same-library-raii" }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resident_activation_iterations",
+        "warmup_iterations",
+        "compact_iterations",
+        "medium_iterations",
+        "medium_value_count",
+        "concurrent_workers",
+        "concurrent_iterations_per_worker"
+      ],
+      "properties": {
+        "resident_activation_iterations": { "type": "integer", "minimum": 3 },
+        "warmup_iterations": { "type": "integer", "minimum": 10 },
+        "compact_iterations": { "type": "integer", "minimum": 100 },
+        "medium_iterations": { "type": "integer", "minimum": 50 },
+        "medium_value_count": { "type": "integer", "minimum": 1024 },
+        "concurrent_workers": { "type": "integer", "minimum": 2 },
+        "concurrent_iterations_per_worker": { "type": "integer", "minimum": 50 }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cold_activation_max_ns",
+        "resident_activation_p95_max_ns",
+        "first_dispatch_max_ns",
+        "compact_p95_max_ns",
+        "medium_p95_max_ns",
+        "concurrent_min_dispatches_per_second"
+      ],
+      "properties": {
+        "cold_activation_max_ns": { "type": "integer", "minimum": 1 },
+        "resident_activation_p95_max_ns": { "type": "integer", "minimum": 1 },
+        "first_dispatch_max_ns": { "type": "integer", "minimum": 1 },
+        "compact_p95_max_ns": { "type": "integer", "minimum": 1 },
+        "medium_p95_max_ns": { "type": "integer", "minimum": 1 },
+        "concurrent_min_dispatches_per_second": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "activationCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cold_ns",
+        "resident_iterations",
+        "resident_p50_ns",
+        "resident_p95_ns",
+        "resident_max_ns",
+        "resident_mean_ns",
+        "errors"
+      ],
+      "properties": {
+        "cold_ns": { "type": "integer", "minimum": 1 },
+        "resident_iterations": { "type": "integer", "minimum": 3 },
+        "resident_p50_ns": { "type": "integer", "minimum": 1 },
+        "resident_p95_ns": { "type": "integer", "minimum": 1 },
+        "resident_max_ns": { "type": "integer", "minimum": 1 },
+        "resident_mean_ns": { "type": "number", "exclusiveMinimum": 0 },
+        "errors": { "const": 0 }
+      }
+    },
+    "latencyCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["iterations", "request_bytes", "p50_ns", "p95_ns", "max_ns", "mean_ns", "errors"],
+      "properties": {
+        "iterations": { "type": "integer", "minimum": 1 },
+        "request_bytes": { "type": "integer", "minimum": 1 },
+        "p50_ns": { "type": "integer", "minimum": 1 },
+        "p95_ns": { "type": "integer", "minimum": 1 },
+        "max_ns": { "type": "integer", "minimum": 1 },
+        "mean_ns": { "type": "number", "exclusiveMinimum": 0 },
+        "errors": { "const": 0 }
+      }
+    },
+    "concurrentCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workers", "total_dispatches", "elapsed_ns", "dispatches_per_second", "errors"],
+      "properties": {
+        "workers": { "type": "integer", "minimum": 2 },
+        "total_dispatches": { "type": "integer", "minimum": 1 },
+        "elapsed_ns": { "type": "integer", "minimum": 1 },
+        "dispatches_per_second": { "type": "number", "exclusiveMinimum": 0 },
+        "errors": { "const": 0 }
+      }
+    }
+  }
+}

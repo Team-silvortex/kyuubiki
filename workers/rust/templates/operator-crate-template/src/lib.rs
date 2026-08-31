@@ -8,6 +8,7 @@ use kyuubiki_protocol::{
     OperatorTaskInputEnvelope,
 };
 use serde::Deserialize;
+use std::sync::OnceLock;
 
 #[derive(Debug, Deserialize)]
 pub struct TemplateInput {
@@ -99,6 +100,15 @@ pub fn install_template_operator(registry: &mut OperatorRegistry) -> Result<(), 
     registry.register_json(TemplateSummaryOperator::new())
 }
 
+fn template_registry() -> &'static OperatorRegistry {
+    static REGISTRY: OnceLock<OperatorRegistry> = OnceLock::new();
+    REGISTRY.get_or_init(|| {
+        let mut registry = OperatorRegistry::new();
+        install_template_operator(&mut registry).expect("template operator registration must work");
+        registry
+    })
+}
+
 /// # Safety
 ///
 /// The request pointer and output buffer must satisfy the stable JSON ABI
@@ -111,9 +121,7 @@ pub unsafe extern "C" fn run_template_operator_json(
 ) -> i32 {
     unsafe {
         execute_operator_json_abi(request_ptr, request_len, output, |request| {
-            let mut registry = OperatorRegistry::new();
-            install_template_operator(&mut registry)?;
-            registry.run(request)
+            template_registry().run(request)
         })
     }
 }
@@ -176,9 +184,8 @@ mod tests {
         })
         .expect("request JSON");
         let mut output = OperatorJsonAbiBuffer::empty();
-        let status = unsafe {
-            run_template_operator_json(request.as_ptr(), request.len(), &mut output)
-        };
+        let status =
+            unsafe { run_template_operator_json(request.as_ptr(), request.len(), &mut output) };
         let bytes = unsafe { std::slice::from_raw_parts(output.ptr, output.len) }.to_vec();
         unsafe { kyuubiki_operator_json_free(output) };
         let result = decode_operator_json_abi_response(status, &bytes).expect("ABI result");

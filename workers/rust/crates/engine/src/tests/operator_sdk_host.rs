@@ -166,6 +166,18 @@ fn loads_external_local_package_into_built_in_registry() {
         Some("operator.alpha")
     );
     assert_eq!(result.summary["source"].as_str(), Some("external_local"));
+
+    let empty_packages_root = temp_dir("external-host-cache-isolation");
+    let (fresh_registry, fresh_report) = built_in_registry_with_external_packages(
+        &ExternalOperatorHostConfig::new(
+            BuiltInOperatorRegistryKind::Extract,
+            &empty_packages_root,
+        ),
+        &TestActivator,
+    )
+    .expect("cached built-in registry should clone cleanly");
+    assert!(fresh_report.activated_packages.is_empty());
+    assert!(fresh_registry.describe("extract.alpha").is_none());
 }
 
 #[test]

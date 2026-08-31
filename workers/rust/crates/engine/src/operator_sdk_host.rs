@@ -1,5 +1,5 @@
 pub use crate::operator_sdk_dynamic_abi::DynamicLibraryOperatorActivator;
-use crate::operator_sdk_runtime::{BuiltInOperatorRegistryKind, built_in_operator_registry};
+use crate::operator_sdk_runtime::{BuiltInOperatorRegistryKind, built_in_operator_registry_ref};
 use kyuubiki_operator_sdk::{
     OperatorPackageActivator, OperatorPackageLoadError, OperatorPackageLoadPlan,
     OperatorPackageLoadSummary, OperatorRegistry, OperatorSdkReadinessIssue,
@@ -149,7 +149,7 @@ pub fn built_in_registry_with_external_packages(
     config: &ExternalOperatorHostConfig,
     activator: &impl OperatorPackageActivator,
 ) -> Result<(OperatorRegistry, ExternalOperatorLoadReport), ExternalOperatorHostError> {
-    let mut registry = built_in_operator_registry(config.registry_kind);
+    let mut registry = built_in_operator_registry_ref(config.registry_kind).clone();
     let activated_packages =
         discover_activate_and_validate_operator_packages(config, activator, &mut registry)?;
     Ok((

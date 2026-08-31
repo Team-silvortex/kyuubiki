@@ -7,6 +7,7 @@
   "required": [
     "schema_version",
     "qualification_id",
+    "execution_abi",
     "generated_at_unix_ms",
     "status",
     "source_tree_sha256",
@@ -18,11 +19,12 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "kyuubiki.operator-sdk-windows-operational-qualification/v1"
+      "const": "kyuubiki.operator-sdk-windows-operational-qualification/v2"
     },
     "qualification_id": {
       "const": "operator-sdk-windows-installed-agent-operational"
     },
+    "execution_abi": { "const": "kyuubiki.operator-json-c/v1" },
     "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
     "status": { "const": "pass" },
     "source_tree_sha256": { "$ref": "#/$defs/sha256" },
@@ -75,6 +77,7 @@
       "required": [
         "stage_count",
         "all_stages_passed",
+        "stable_json_c_abi",
         "engine_dynamic_load",
         "agent_rpc_dispatch",
         "bound_orchestra_rotation",
@@ -86,6 +89,7 @@
       "properties": {
         "stage_count": { "const": 6 },
         "all_stages_passed": { "const": true },
+        "stable_json_c_abi": { "const": true },
         "engine_dynamic_load": { "const": true },
         "agent_rpc_dispatch": { "const": true },
         "bound_orchestra_rotation": { "const": true },

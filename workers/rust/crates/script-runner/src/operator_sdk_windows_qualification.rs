@@ -20,9 +20,11 @@ use validation::{
 
 const CONTRACT_PATH: &str =
     "config/architecture/operator-sdk-windows-operational-qualification.json";
-const CONTRACT_SCHEMA: &str = "kyuubiki.operator-sdk-windows-operational-qualification-contract/v1";
-const REPORT_SCHEMA: &str = "kyuubiki.operator-sdk-windows-operational-qualification/v1";
+const CONTRACT_SCHEMA: &str = "kyuubiki.operator-sdk-windows-operational-qualification-contract/v2";
+const REPORT_SCHEMA: &str = "kyuubiki.operator-sdk-windows-operational-qualification/v2";
+const EXECUTION_ABI: &str = kyuubiki_operator_sdk::OPERATOR_JSON_ABI_SCHEMA_VERSION;
 const QUALIFICATION_ID: &str = "operator-sdk-windows-installed-agent-operational";
+const WORKFLOW_REPORT_PATH: &str = "tmp/operator-sdk-windows-current/operator-sdk-windows-installed-agent-operational-qualification.json";
 const STAGED_DYNAMIC_REPORT: &str = "dynamic-smoke.json";
 const STAGED_PREFLIGHT_REPORT: &str = "operator-package-dynamic-preflight.json";
 const LIMITATIONS: &[&str] = &[
@@ -34,6 +36,7 @@ const LIMITATIONS: &[&str] = &[
 struct QualificationContract {
     schema_version: String,
     qualification_id: String,
+    execution_abi: String,
     platform: Platform,
     required_stages: Vec<String>,
     source_files: Vec<String>,
@@ -70,12 +73,14 @@ struct WorkflowPolicy {
     path: String,
     artifact_name: String,
     capture_command: String,
+    generated_report_path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct QualificationReport {
     schema_version: String,
     qualification_id: String,
+    execution_abi: String,
     generated_at_unix_ms: u128,
     status: String,
     source_tree_sha256: String,
@@ -112,6 +117,7 @@ struct Attachment {
 struct Summary {
     stage_count: usize,
     all_stages_passed: bool,
+    stable_json_c_abi: bool,
     engine_dynamic_load: bool,
     agent_rpc_dispatch: bool,
     bound_orchestra_rotation: bool,
@@ -219,6 +225,7 @@ fn capture(
     let report = QualificationReport {
         schema_version: REPORT_SCHEMA.to_string(),
         qualification_id: QUALIFICATION_ID.to_string(),
+        execution_abi: EXECUTION_ABI.to_string(),
         generated_at_unix_ms: generated_at_unix_ms()?,
         status: "pass".to_string(),
         source_tree_sha256,
@@ -237,6 +244,7 @@ fn capture(
         summary: Summary {
             stage_count: contract.required_stages.len(),
             all_stages_passed: true,
+            stable_json_c_abi: true,
             engine_dynamic_load: true,
             agent_rpc_dispatch: true,
             bound_orchestra_rotation: true,

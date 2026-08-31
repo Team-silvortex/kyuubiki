@@ -243,15 +243,17 @@ after rejection. The bound-Orchestra path now resolves and serves exactly one
 current-target package, while Installer downloads, verifies, and atomically
 installs it. The Agent consumes the same contract automatically for admitted
 `orchestra_fetch` TaskIR, hot-loads the package, and distinguishes a first fetch
-from a verified cache hit. The complete six-stage journey now passes natively on
-macOS aarch64, physical Linux x86_64, and GitHub-hosted Windows
-x86_64-pc-windows-msvc, with retained content-bound evidence. The Windows
-installed-package ABI and lifecycle gap is closed. `cache_scope: none` causes
+from a verified cache hit. The complete six-stage journey passes natively on
+macOS aarch64 and physical Linux x86_64 with retained content-bound evidence.
+The current JSON C ABI also passes the GitHub-hosted Windows
+x86_64-pc-windows-msvc runtime journey, but its v2 retained evidence rerun is
+still required before the Windows operational tensor coordinate can be closed.
+`cache_scope: none` causes
 immediate post-dispatch eviction through a new host-leased generation, and
-same-package version rotation is isolated from in-flight tasks. Promotion to
-the Daji target still requires focused measurements of discovery, admission,
-load, first dispatch, and steady dispatch without borrowing general solver
-throughput numbers. A two-physical-host qualification now also proves a real
+same-package version rotation is isolated from in-flight tasks. A focused
+release qualification now measures dynamic activation, first dispatch, compact
+and medium steady dispatch, and concurrent throughput without borrowing general
+solver numbers. A two-physical-host qualification also proves a real
 Elixir Orchestra dispatching two disposable package tasks to an
 Installer-managed Linux Agent, with two complete authenticated fetch sequences,
 two executions, two evictions, a later refetch, and zero retained package or
@@ -353,8 +355,9 @@ undefined runtime path.
 It also requires `execution_abi: kyuubiki.operator-json-c/v1` at manifest,
 distribution, resolution, preflight, installed-receipt, and Agent execution
 boundaries. The host serializes `OperatorRunRequest`, invokes the operator's
-declared JSON entry symbol, copies the response, and returns its buffer to the
-same library through `kyuubiki_operator_json_free`. This remains valid when the
+declared JSON entry symbol, decodes directly from the borrowed plugin-owned
+response buffer, and returns that buffer exactly once to the same library through
+`kyuubiki_operator_json_free` with an RAII guard. This remains valid when the
 host and package use different Rust or `serde_json` versions because no
 Rust-layout value or cross-allocator ownership crosses the ABI.
 Successful activation also produces a package admission summary with the host
@@ -481,10 +484,10 @@ after registering cancellation. The portable receipt is
 `schemas/agent-operator-job-cache-release.schema.json` and
 `schemas/examples.agent-operator-job-cache-release.json`.
 
-Qualified native dynamic-library evidence now exists on macOS aarch64, physical
-Linux x86_64, and GitHub-hosted Windows x86_64-pc-windows-msvc. The Windows
-installed-package result is independently captured rather than inferred from
-the Unix hosts.
+Qualified native dynamic-library evidence exists on macOS aarch64 and physical
+Linux x86_64. The current ABI has also passed a native GitHub-hosted Windows
+run; its v2 retained rerun remains explicit rather than being inferred from the
+Unix hosts or promoted from historical evidence.
 
 For the repository template package, use the Make target:
 
@@ -498,6 +501,9 @@ make qualify-operator-sdk-multihost-operational-remote REMOTE=kyuubiki-lab
 make check-operator-sdk-multihost-operational-qualification
 make qualify-operator-package-acquisition-operational-remote REMOTE=kyuubiki-lab
 make check-operator-package-acquisition-operational-qualification
+make qualify-operator-sdk-performance
+make check-operator-sdk-performance-qualification \
+  REPORT=releases/usability-evidence/2.19.0/operator-sdk-performance-qualification.json
 make qualify-operator-sdk-windows-operational
 make check-operator-sdk-windows-operational-qualification
 ```
@@ -535,6 +541,19 @@ The retained `v3` contract has six ordered stages, ending in
 preflight evidence are normalized to project-relative paths with portable `/`
 separators on every host.
 
+`make qualify-operator-sdk-performance` builds both the host and official
+template in release mode, activates the real package layout, and verifies that
+exactly one traceable dynamic operator was loaded before measuring it. The
+retained macOS aarch64 report records zero errors, a 9.208 microsecond compact
+p95, a 366.042 microsecond p95 for a 4096-value request, and about 516,407
+dispatches per second across four workers. First dispatch is 0.411 ms. The
+source-bound cold activation is 429.674 ms, while five activations with the
+dynamic library already resident have a 0.417 ms p95. Separating those two
+signals prevents release-build load from being mistaken for repeated Engine
+work. The report also binds the zero host-side response-copy path, cached
+built-in registry clone, singleton per-library registry, and same-library RAII
+release contract to a source-tree digest.
+
 The multihost target runs that same six-stage contract in an isolated local
 staging root and a unique remote Linux work root, then removes both. Its combined
 report binds the macOS and Linux smoke/preflight attachments by SHA-256, checks
@@ -554,8 +573,16 @@ Windows host can run the same native command after setting the five visible
 `KYUUBIKI_QUALIFICATION_*` provenance variables. Reviewed GitHub-hosted evidence
 is retained under `releases/usability-evidence/2.15.0/` as historical proof for
 the earlier dynamic boundary. The report remains `release_complete` for that
-source state, but **stable JSON C ABI rerun required** is the current Windows
-status before restoring a current-line operational claim.
+source state. A native Windows run of the current stable JSON C ABI now passes
+all six stages and reports `kyuubiki.operator-json-c/v1` in both dynamic smoke
+and Installer preflight. Its outer qualification report still used v1, so a
+**v2 evidence rerun required** status remains before restoring the current-line
+operational claim.
+The current v2 qualification contract requires the top-level report, dynamic
+smoke attachment, and Installer preflight package to agree on
+`kyuubiki.operator-json-c/v1`. The workflow captures into an isolated `tmp/`
+directory and verifies that exact fresh report before upload; it cannot pass by
+re-reading the historical `2.15.0` evidence bundled with the repository.
 
 The current two-host acquisition report lives at
 `releases/usability-evidence/2.19.0/operator-package-acquisition-operational-qualification.json`.

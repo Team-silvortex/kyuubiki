@@ -524,25 +524,43 @@
         "operator-sdk-windows-installed-agent-operational",
         "windows-latest",
         "x86_64-pc-windows-msvc",
+        "kyuubiki.operator-sdk-windows-operational-qualification/v2",
+        "kyuubiki.operator-json-c/v1",
+        "freshly captured evidence",
         "tamper_recovery",
         "release_complete",
-        "stable JSON C ABI rerun required"
+        "v2 evidence rerun required"
       ]
     },
     {
       "id": "operator-sdk-performance-qualification",
-      "status": "open",
+      "status": "proven",
       "grade": "qualified",
       "modules": ["sdk-operator", "verification-evidence"],
-      "paradigms": ["benchmark"],
+      "paradigms": ["benchmark", "sdk_operator"],
       "dimensions": ["benchmark", "contract"],
       "files": [
+        "config/architecture/operator-sdk-performance-qualification.json",
+        "schemas/operator-sdk-performance-qualification-contract.schema.json",
+        "schemas/operator-sdk-performance-qualification-report.schema.json",
+        "workers/rust/crates/engine/src/operator_sdk_dynamic_abi.rs",
+        "workers/rust/crates/engine/src/tests/operator_sdk_host.rs",
+        "workers/rust/crates/script-runner/src/operator_sdk_performance_qualification/mod.rs",
+        "workers/rust/crates/script-runner/src/operator_sdk_performance_qualification/validation.rs",
+        "workers/rust/templates/operator-crate-template/src/lib.rs",
+        "releases/usability-evidence/2.19.0/operator-sdk-performance-qualification.json",
         "docs/operator-sdk.md",
-        "make/build.mk"
+        "make/tests.mk"
       ],
       "required_text": [
-        "operator-package-dynamic-smoke",
-        "dynamic-library activation path"
+        "kyuubiki.operator-sdk-performance-qualification/v1",
+        "operator-sdk-dynamic-json-abi-performance",
+        "host_response_copy_bytes_per_dispatch",
+        "external-host-cache-isolation",
+        "resident_activation_p95_max_ns",
+        "compact_p95_max_ns",
+        "same-library-raii",
+        "qualify-operator-sdk-performance"
       ]
     }
   ]

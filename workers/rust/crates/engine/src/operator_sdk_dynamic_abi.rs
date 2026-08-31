@@ -127,14 +127,7 @@ impl OperatorHandler for DynamicJsonOperatorHandler {
 
         let mut output = OperatorJsonAbiBuffer::empty();
         let status = unsafe { (self.entrypoint)(request.as_ptr(), request.len(), &mut output) };
-        let response =
-            unsafe { copy_and_release_output(output, self.free) }.map_err(|message| {
-                OperatorSdkError::Handler {
-                    operator_id: operator_id.clone(),
-                    message,
-                }
-            })?;
-        decode_operator_json_abi_response(status, &response).map_err(|message| {
+        unsafe { decode_and_release_output(status, output, self.free) }.map_err(|message| {
             OperatorSdkError::Handler {
                 operator_id,
                 message,
@@ -143,29 +136,44 @@ impl OperatorHandler for DynamicJsonOperatorHandler {
     }
 }
 
-unsafe fn copy_and_release_output(
+struct DynamicAbiResponseBuffer {
     output: OperatorJsonAbiBuffer,
     free: OperatorJsonFreeEntrypoint,
-) -> Result<Vec<u8>, String> {
+}
+
+impl DynamicAbiResponseBuffer {
+    unsafe fn as_bytes(&self) -> &[u8] {
+        unsafe { slice::from_raw_parts(self.output.ptr, self.output.len) }
+    }
+}
+
+impl Drop for DynamicAbiResponseBuffer {
+    fn drop(&mut self) {
+        unsafe { (self.free)(self.output) };
+    }
+}
+
+unsafe fn decode_and_release_output(
+    status: i32,
+    output: OperatorJsonAbiBuffer,
+    free: OperatorJsonFreeEntrypoint,
+) -> Result<OperatorRunResult, String> {
     if output.ptr.is_null() {
         return Err("stable operator ABI returned a null response buffer".to_string());
     }
     if output.capacity < output.len {
         return Err("stable operator ABI returned an invalid response capacity".to_string());
     }
+    let response = DynamicAbiResponseBuffer { output, free };
     if output.len > MAX_OPERATOR_JSON_ABI_BYTES {
-        unsafe { free(output) };
         return Err(format!(
             "stable operator ABI response exceeds {MAX_OPERATOR_JSON_ABI_BYTES} bytes"
         ));
     }
-    let response = unsafe { slice::from_raw_parts(output.ptr, output.len) }.to_vec();
-    unsafe { free(output) };
-    if response.is_empty() {
-        Err("stable operator ABI returned an empty response".to_string())
-    } else {
-        Ok(response)
+    if output.len == 0 {
+        return Err("stable operator ABI returned an empty response".to_string());
     }
+    decode_operator_json_abi_response(status, unsafe { response.as_bytes() })
 }
 
 fn external_descriptor(
@@ -229,5 +237,85 @@ fn activation_error(plan: &OperatorPackageLoadPlan, message: String) -> Operator
     OperatorPackageLoadError::Activation {
         package_id: plan.manifest.package_id.clone(),
         message,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kyuubiki_operator_sdk::{
+        OPERATOR_JSON_ABI_OK, OPERATOR_JSON_ABI_SCHEMA_VERSION, free_operator_json_abi_buffer,
+    };
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static FREE_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static INVALID_FREE_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn counting_free(output: OperatorJsonAbiBuffer) {
+        FREE_CALLS.fetch_add(1, Ordering::SeqCst);
+        unsafe { free_operator_json_abi_buffer(output) };
+    }
+
+    unsafe extern "C" fn invalid_counting_free(_output: OperatorJsonAbiBuffer) {
+        INVALID_FREE_CALLS.fetch_add(1, Ordering::SeqCst);
+    }
+
+    fn owned_buffer(bytes: impl Into<Vec<u8>>) -> OperatorJsonAbiBuffer {
+        let mut bytes = bytes.into();
+        let output = OperatorJsonAbiBuffer {
+            ptr: bytes.as_mut_ptr(),
+            len: bytes.len(),
+            capacity: bytes.capacity(),
+        };
+        std::mem::forget(bytes);
+        output
+    }
+
+    #[test]
+    fn borrowed_response_decode_releases_exactly_once_on_every_decodable_path() {
+        FREE_CALLS.store(0, Ordering::SeqCst);
+        let response = serde_json::to_vec(&serde_json::json!({
+            "schema_version": OPERATOR_JSON_ABI_SCHEMA_VERSION,
+            "ok": true,
+            "result": {
+                "operator_id": "extract.response_fixture",
+                "summary": {"values": [1, 2, 3]},
+                "artifacts": []
+            }
+        }))
+        .expect("response JSON");
+        let result = unsafe {
+            decode_and_release_output(OPERATOR_JSON_ABI_OK, owned_buffer(response), counting_free)
+        }
+        .expect("borrowed response should decode");
+        assert_eq!(result.summary["values"][2], 3);
+        assert_eq!(FREE_CALLS.load(Ordering::SeqCst), 1);
+
+        let error = unsafe {
+            decode_and_release_output(
+                OPERATOR_JSON_ABI_OK,
+                owned_buffer(b"{".to_vec()),
+                counting_free,
+            )
+        }
+        .expect_err("malformed response should fail");
+        assert!(error.contains("invalid operator ABI response JSON"));
+        assert_eq!(FREE_CALLS.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn invalid_response_capacity_is_rejected_without_calling_untrusted_free() {
+        INVALID_FREE_CALLS.store(0, Ordering::SeqCst);
+        let output = OperatorJsonAbiBuffer {
+            ptr: std::ptr::dangling_mut(),
+            len: 2,
+            capacity: 1,
+        };
+        let error = unsafe {
+            decode_and_release_output(OPERATOR_JSON_ABI_OK, output, invalid_counting_free)
+        }
+        .expect_err("invalid capacity must fail closed");
+        assert!(error.contains("invalid response capacity"));
+        assert_eq!(INVALID_FREE_CALLS.load(Ordering::SeqCst), 0);
     }
 }

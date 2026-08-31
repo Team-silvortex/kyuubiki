@@ -1,6 +1,7 @@
 use super::{
-    Attachment, Attachments, CONTRACT_PATH, CONTRACT_SCHEMA, LIMITATIONS, Platform, Provenance,
-    QUALIFICATION_ID, QualificationContract, QualificationReport, REPORT_SCHEMA, Summary,
+    Attachment, Attachments, CONTRACT_PATH, CONTRACT_SCHEMA, EXECUTION_ABI, LIMITATIONS, Platform,
+    Provenance, QUALIFICATION_ID, QualificationContract, QualificationReport, REPORT_SCHEMA,
+    Summary, WORKFLOW_REPORT_PATH,
 };
 use crate::RunnerResult;
 use crate::operator_package_dynamic_smoke::dynamic_smoke_errors;
@@ -29,13 +30,21 @@ const REQUIRED_SOURCES: &[&str] = &[
     "schemas/operator-package-dynamic-smoke.schema.json",
     "schemas/operator-sdk-windows-operational-qualification-contract.schema.json",
     "schemas/operator-sdk-windows-operational-qualification-report.schema.json",
+    "workers/rust/crates/cli/src/operator_package_runtime.rs",
     "workers/rust/crates/cli/tests/operator_package_installer_live.rs",
     "workers/rust/crates/cli/tests/operator_package_live.rs",
     "workers/rust/crates/cli/tests/operator_package_orchestra_fetch_live.rs",
+    "workers/rust/crates/engine/src/operator_sdk_dynamic_abi.rs",
+    "workers/rust/crates/installer/src/operator_package_fetch.rs",
+    "workers/rust/crates/installer/src/operator_package_store.rs",
+    "workers/rust/crates/operator-sdk/src/json_abi.rs",
+    "workers/rust/crates/operator-sdk/src/manifest.rs",
     "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
     "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke/check.rs",
     "workers/rust/crates/script-runner/src/operator_sdk_windows_qualification.rs",
     "workers/rust/crates/script-runner/src/operator_sdk_windows_qualification/validation.rs",
+    "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",
+    "workers/rust/templates/operator-crate-template/src/lib.rs",
 ];
 const REQUIRED_PROVENANCE_FIELDS: &[&str] = &[
     "repository",
@@ -52,6 +61,9 @@ pub(super) fn load_and_validate_contract(root: &Path) -> RunnerResult<Qualificat
     }
     if contract.qualification_id != QUALIFICATION_ID {
         return Err("Windows qualification_id mismatch".to_string());
+    }
+    if contract.execution_abi != EXECUTION_ABI {
+        return Err("Windows qualification execution_abi mismatch".to_string());
     }
     let expected_platform = Platform {
         os: "windows".to_string(),
@@ -85,6 +97,9 @@ pub(super) fn load_and_validate_contract(root: &Path) -> RunnerResult<Qualificat
     {
         return Err("Windows qualification report policy drifted".to_string());
     }
+    if contract.workflow.generated_report_path != WORKFLOW_REPORT_PATH {
+        return Err("Windows qualification workflow report path drifted".to_string());
+    }
     for path in contract
         .source_files
         .iter()
@@ -116,6 +131,7 @@ pub(super) fn validate_report(
 ) -> RunnerResult<()> {
     if report.schema_version != REPORT_SCHEMA
         || report.qualification_id != QUALIFICATION_ID
+        || report.execution_abi != contract.execution_abi
         || report.status != "pass"
         || report.generated_at_unix_ms == 0
     {
@@ -171,6 +187,7 @@ fn validate_provenance(
 fn validate_summary(contract: &QualificationContract, summary: &Summary) -> RunnerResult<()> {
     let complete = summary.stage_count == contract.required_stages.len()
         && summary.all_stages_passed
+        && summary.stable_json_c_abi
         && summary.engine_dynamic_load
         && summary.agent_rpc_dispatch
         && summary.bound_orchestra_rotation
@@ -214,6 +231,9 @@ fn validate_dynamic_report(
     }
     if field(dynamic, "preflight_report") != report.attachments.preflight.path {
         return Err("Windows dynamic smoke preflight attachment mismatch".to_string());
+    }
+    if field(dynamic, "execution_abi") != report.execution_abi {
+        return Err("Windows dynamic smoke execution ABI mismatch".to_string());
     }
     let stages = dynamic
         .get("stages")
@@ -268,6 +288,7 @@ fn validate_preflight(
         .ok_or_else(|| "Windows preflight accepted package is missing".to_string())?;
     if field(package, "package_id") != field(dynamic, "package_id")
         || field(package, "sdk_api_version") != field(dynamic, "sdk_api_version")
+        || field(package, "execution_abi") != report.execution_abi
         || field(preflight, "host_version") != field(dynamic, "host_version")
         || field(package, "runtime") != "rust_crate"
     {
@@ -306,6 +327,24 @@ fn validate_workflow(root: &Path, contract: &QualificationContract) -> RunnerRes
                 "Windows qualification workflow is missing token {token}"
             ));
         }
+    }
+    for expected in [
+        format!("--out {}", contract.workflow.generated_report_path),
+        format!(
+            "--verify-report {}",
+            contract.workflow.generated_report_path
+        ),
+    ] {
+        if !text.contains(&expected) {
+            return Err(format!(
+                "Windows qualification workflow does not verify fresh evidence: {expected}"
+            ));
+        }
+    }
+    if text.contains("releases/usability-evidence/2.15.0/operator-sdk-windows") {
+        return Err(
+            "Windows qualification workflow still verifies historical evidence".to_string(),
+        );
     }
     Ok(())
 }
@@ -394,6 +433,7 @@ fn run_validator_self_test(
         "accepted_packages": [{
             "package_id": field(&dynamic, "package_id"),
             "sdk_api_version": field(&dynamic, "sdk_api_version"),
+            "execution_abi": EXECUTION_ABI,
             "runtime": "rust_crate",
             "entrypoint_path": "workers/rust/templates/operator-crate-template/target/debug/kyuubiki_operator_template.dll"
         }]
@@ -402,6 +442,7 @@ fn run_validator_self_test(
     let report = QualificationReport {
         schema_version: REPORT_SCHEMA.to_string(),
         qualification_id: QUALIFICATION_ID.to_string(),
+        execution_abi: EXECUTION_ABI.to_string(),
         generated_at_unix_ms: 1,
         status: "pass".to_string(),
         source_tree_sha256: source_tree_digest(root, &contract.source_files)?,
@@ -427,6 +468,7 @@ fn run_validator_self_test(
         summary: Summary {
             stage_count: REQUIRED_STAGES.len(),
             all_stages_passed: true,
+            stable_json_c_abi: true,
             engine_dynamic_load: true,
             agent_rpc_dispatch: true,
             bound_orchestra_rotation: true,
@@ -448,6 +490,33 @@ fn run_validator_self_test(
     if validate_report(root, contract, &incomplete).is_ok() {
         return Err("Windows validator accepted an incomplete report".to_string());
     }
+    let mut wrong_execution_abi = report.clone();
+    wrong_execution_abi.execution_abi = "kyuubiki.operator-rust-object/v0".to_string();
+    if validate_report(root, contract, &wrong_execution_abi).is_ok() {
+        return Err("Windows validator accepted the wrong execution ABI".to_string());
+    }
+
+    let mut wrong_dynamic = dynamic.clone();
+    wrong_dynamic["execution_abi"] = Value::String("kyuubiki.operator-rust-object/v0".to_string());
+    write_json(root, &dynamic_path, &wrong_dynamic)?;
+    let mut wrong_dynamic_report = report.clone();
+    wrong_dynamic_report.attachments.dynamic_smoke.sha256 = sha256_file(root, &dynamic_path)?;
+    if validate_report(root, contract, &wrong_dynamic_report).is_ok() {
+        return Err("Windows validator accepted a rebound wrong dynamic ABI".to_string());
+    }
+    write_json(root, &dynamic_path, &dynamic)?;
+
+    let mut wrong_preflight = preflight.clone();
+    wrong_preflight["accepted_packages"][0]["execution_abi"] =
+        Value::String("kyuubiki.operator-rust-object/v0".to_string());
+    write_json(root, &preflight_path, &wrong_preflight)?;
+    let mut wrong_preflight_report = report.clone();
+    wrong_preflight_report.attachments.preflight.sha256 = sha256_file(root, &preflight_path)?;
+    if validate_report(root, contract, &wrong_preflight_report).is_ok() {
+        return Err("Windows validator accepted a rebound wrong preflight ABI".to_string());
+    }
+    write_json(root, &preflight_path, &preflight)?;
+
     fs::write(repo_path(root, &dynamic_path)?, b"{}")
         .map_err(|error| format!("failed to tamper validator attachment: {error}"))?;
     if validate_report(root, contract, &report).is_ok() {

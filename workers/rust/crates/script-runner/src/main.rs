@@ -104,6 +104,7 @@ mod operator_reliability;
 mod operator_reliability_rules;
 mod operator_reliability_schemas;
 mod operator_sdk_multihost_qualification;
+mod operator_sdk_performance_qualification;
 mod operator_sdk_windows_qualification;
 mod operator_task_ir_contract;
 mod operator_validation;

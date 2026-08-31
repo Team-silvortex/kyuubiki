@@ -11,6 +11,8 @@ operator-package-preflight\n  \
 operator-package-dynamic-smoke\n  \
   check-operator-package-dynamic-smoke\n  \
   check-operator-package-dynamic-smoke-contract\n  \
+  qualify-operator-sdk-performance\n  \
+  check-operator-sdk-performance-qualification\n  \
   qualify-operator-sdk-windows-operational\n  \
   check-operator-sdk-windows-operational-qualification\n  \
   check-operator-reliability-rules\n  \

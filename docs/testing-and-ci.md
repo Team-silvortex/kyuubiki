@@ -163,6 +163,10 @@ Installer crate tests are split by installer responsibility instead of growing
 - `make check-operator-sdk-multihost-operational-qualification`
 - `make qualify-operator-package-acquisition-operational-remote REMOTE=kyuubiki-lab`
 - `make check-operator-package-acquisition-operational-qualification`
+- `make qualify-operator-sdk-performance`
+- `make check-operator-sdk-performance-qualification REPORT=releases/usability-evidence/2.19.0/operator-sdk-performance-qualification.json`
+- `make qualify-operator-sdk-windows-operational` on native x86_64 MSVC Windows
+- `make check-operator-sdk-windows-operational-qualification`
 
 This runs:
 
@@ -218,6 +222,22 @@ remote staging, and retains only normalized evidence under
 `releases/usability-evidence/2.16.4/`. Its checker includes negative self-tests
 for attachment tampering and false Windows completion. Passing this target does
 not promote Windows or mark the release complete.
+
+The Windows qualification v2 lane is native rather than cross-compiled. It
+binds the six-stage report to `kyuubiki.operator-json-c/v1`, verifies the ABI in
+both the dynamic smoke and Installer preflight attachments, and hashes the
+actual SDK, Engine, Installer, Agent CLI, template, and qualification sources.
+GitHub Actions validates the report generated in the current run before
+uploading it; repository-retained historical evidence is never used as the CI
+pass condition.
+
+The operator SDK performance qualification is a release-only in-process dynamic
+ABI lane. It rejects empty package discovery, verifies package/operator
+traceability, warms the loaded library, and records activation, first dispatch,
+compact and 4096-value p50/p95/max latency, plus four-worker throughput. Its
+checker binds the report to the measured sources and rejects response-copy,
+latency, throughput, or dispatch-error regressions without rerunning the heavy
+measurement in every architecture check.
 
 These tests use small local loopback fixtures and focus on:
 

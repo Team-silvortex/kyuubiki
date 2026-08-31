@@ -157,6 +157,8 @@ help:
 	@echo "  make check-material-research-bundle-index-contract Verify retained bundle index schema/example/docs contract"
 	@echo "  make check-operator-task-ir-contract Verify TaskIR mirrors, digests, and examples"
 	@echo "  make check-operator-package-dynamic-smoke-contract Verify external operator dynamic-smoke schema and fixture"
+	@echo "  make qualify-operator-sdk-performance Measure release dynamic-ABI activation, latency, and concurrent throughput"
+	@echo "  make check-operator-sdk-performance-qualification Verify the performance contract or REPORT=<retained report>"
 	@echo "  make check-operator-reliability-rules Verify pure operator reliability rule helpers"
 	@echo "  make check-operator-reliability-schemas Verify operator reliability config/schema version contracts"
 	@echo "  make check-operator-validation Verify operator validation profiles without executing heavy checks"

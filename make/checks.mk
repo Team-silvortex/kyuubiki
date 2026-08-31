@@ -598,6 +598,7 @@ architecture-check:
 	@$(MAKE) check-material-study-sdk-examples
 	@$(MAKE) check-operator-task-ir-contract
 	@$(MAKE) check-operator-package-dynamic-smoke-contract
+	@$(MAKE) check-operator-sdk-performance-qualification
 	@$(MAKE) check-operator-sdk-windows-operational-qualification
 	@$(MAKE) check-operator-reliability
 	@$(MAKE) check-operator-validation

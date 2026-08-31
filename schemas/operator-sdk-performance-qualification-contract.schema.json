@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/operator-sdk-performance-qualification-contract.schema.json",
+  "title": "Kyuubiki Operator SDK Performance Qualification Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "qualification_id",
+    "execution_abi",
+    "source_files",
+    "measurement",
+    "thresholds",
+    "report"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.operator-sdk-performance-qualification-contract/v1"
+    },
+    "qualification_id": {
+      "const": "operator-sdk-dynamic-json-abi-performance"
+    },
+    "execution_abi": { "const": "kyuubiki.operator-json-c/v1" },
+    "source_files": {
+      "type": "array",
+      "minItems": 19,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/repoPath" }
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resident_activation_iterations",
+        "warmup_iterations",
+        "compact_iterations",
+        "medium_iterations",
+        "medium_value_count",
+        "concurrent_workers",
+        "concurrent_iterations_per_worker"
+      ],
+      "properties": {
+        "resident_activation_iterations": { "type": "integer", "minimum": 3 },
+        "warmup_iterations": { "type": "integer", "minimum": 10 },
+        "compact_iterations": { "type": "integer", "minimum": 100 },
+        "medium_iterations": { "type": "integer", "minimum": 50 },
+        "medium_value_count": { "type": "integer", "minimum": 1024 },
+        "concurrent_workers": { "type": "integer", "minimum": 2 },
+        "concurrent_iterations_per_worker": { "type": "integer", "minimum": 50 }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cold_activation_max_ns",
+        "resident_activation_p95_max_ns",
+        "first_dispatch_max_ns",
+        "compact_p95_max_ns",
+        "medium_p95_max_ns",
+        "concurrent_min_dispatches_per_second"
+      ],
+      "properties": {
+        "cold_activation_max_ns": { "type": "integer", "minimum": 1 },
+        "resident_activation_p95_max_ns": { "type": "integer", "minimum": 1 },
+        "first_dispatch_max_ns": { "type": "integer", "minimum": 1 },
+        "compact_p95_max_ns": { "type": "integer", "minimum": 1 },
+        "medium_p95_max_ns": { "type": "integer", "minimum": 1 },
+        "concurrent_min_dispatches_per_second": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "schema_path", "default_output", "retained_path"],
+      "properties": {
+        "schema_version": {
+          "const": "kyuubiki.operator-sdk-performance-qualification/v1"
+        },
+        "schema_path": { "$ref": "#/$defs/repoPath" },
+        "default_output": { "$ref": "#/$defs/repoPath" },
+        "retained_path": { "$ref": "#/$defs/repoPath" }
+      }
+    }
+  },
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    }
+  }
+}
