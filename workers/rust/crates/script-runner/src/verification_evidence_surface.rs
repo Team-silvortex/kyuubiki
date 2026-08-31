@@ -151,6 +151,11 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
     )?;
     assert_includes(
         &string_array_at(surface, "/runtime_api/stable_commands"),
+        "./scripts/kyuubiki check-linux-host-power-loss-qualification",
+        "stable command",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/stable_commands"),
         "./scripts/kyuubiki check-operator-sdk-multihost-operational-qualification",
         "stable command",
     )?;
@@ -217,6 +222,11 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
     assert_includes(
         &string_array_at(surface, "/runtime_api/generated_artifacts"),
         "tmp/installed-runtime-operational-qualification.json",
+        "generated artifact",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/generated_artifacts"),
+        "tmp/linux-host-power-loss-operational-qualification.json",
         "generated artifact",
     )?;
     assert_includes(

@@ -245,6 +245,20 @@ These tests use small local loopback fixtures and focus on:
 - result fetch
 - chunk browsing
 
+### Recovery qualification checks
+
+- `make check-linux-host-power-loss-qualification`
+
+The retained Linux host-loss lane is a physical, two-phase qualification rather
+than a simulated process restart. Its checker reruns contract and negative
+self-tests, validates the SHA-256-bound reboot intent semantics, and verifies
+the retained `2.19.0` report. Passing requires a changed boot identity on the
+same machine, interruption of the pre-reboot Agent sentinel, unchanged
+Installer-managed payload, stable solver result and TaskIR recovery behavior,
+quiescent watchdog state, and zero qualification residue. The heavy capture is
+run manually on the managed Linux host; ordinary CI only revalidates the
+portable retained evidence.
+
 ### Cross-process integration checks
 
 - `make test-integration`

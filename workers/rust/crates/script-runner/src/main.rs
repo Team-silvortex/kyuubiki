@@ -65,6 +65,8 @@ mod language_packs;
 mod line_field_baseline;
 mod line_field_provenance;
 mod line_field_release_evidence;
+mod linux_host_power_loss_qualification;
+mod linux_host_power_loss_validation;
 mod local_path_audit;
 mod macro_cli;
 mod make_modules;

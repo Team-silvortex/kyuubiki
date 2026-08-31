@@ -638,6 +638,7 @@ dependencies = [
  "kyuubiki-project-automation",
  "kyuubiki-project-bundle",
  "kyuubiki-protocol",
+ "libc",
  "serde",
  "serde_json",
  "sha2",

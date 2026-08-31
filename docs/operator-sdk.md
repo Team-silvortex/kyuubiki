@@ -245,9 +245,12 @@ installs it. The Agent consumes the same contract automatically for admitted
 `orchestra_fetch` TaskIR, hot-loads the package, and distinguishes a first fetch
 from a verified cache hit. The complete six-stage journey passes natively on
 macOS aarch64 and physical Linux x86_64 with retained content-bound evidence.
-The current JSON C ABI also passes the GitHub-hosted Windows
-x86_64-pc-windows-msvc runtime journey, but its v2 retained evidence rerun is
-still required before the Windows operational tensor coordinate can be closed.
+The current JSON C ABI also has retained GitHub-hosted Windows
+x86_64-pc-windows-msvc operational evidence. Its v2 report binds the current
+source tree, stable C ABI, six execution stages, two attachments, CI provenance,
+tamper recovery, Installer lifecycle, and residue cleanup. This closes the
+Windows Operator SDK operational tensor coordinate without implying Windows
+desktop-shell distribution qualification.
 `cache_scope: none` causes
 immediate post-dispatch eviction through a new host-leased generation, and
 same-package version rotation is isolated from in-flight tasks. A focused
@@ -571,18 +574,19 @@ explicit self-hosted provenance. The repository workflow
 manually and uploads `operator-sdk-windows-operational-evidence`. A physical
 Windows host can run the same native command after setting the five visible
 `KYUUBIKI_QUALIFICATION_*` provenance variables. Reviewed GitHub-hosted evidence
-is retained under `releases/usability-evidence/2.15.0/` as historical proof for
-the earlier dynamic boundary. The report remains `release_complete` for that
-source state. A native Windows run of the current stable JSON C ABI now passes
-all six stages and reports `kyuubiki.operator-json-c/v1` in both dynamic smoke
-and Installer preflight. Its outer qualification report still used v1, so a
-**v2 evidence rerun required** status remains before restoring the current-line
-operational claim.
+under `releases/usability-evidence/2.15.0/` remains historical proof for the
+earlier dynamic boundary. Current-line v2 evidence is retained under
+`releases/usability-evidence/2.19.0/`; it reports
+`kyuubiki.operator-json-c/v1` in the top-level report, dynamic smoke, and
+Installer preflight, and records the originating GitHub Actions run and source
+commit.
 The current v2 qualification contract requires the top-level report, dynamic
 smoke attachment, and Installer preflight package to agree on
 `kyuubiki.operator-json-c/v1`. The workflow captures into an isolated `tmp/`
 directory and verifies that exact fresh report before upload; it cannot pass by
-re-reading the historical `2.15.0` evidence bundled with the repository.
+re-reading historical evidence bundled with the repository. Repository
+retention rebases only the two attachment paths, recomputes their SHA-256
+bindings, and revalidates the complete report.
 
 The current two-host acquisition report lives at
 `releases/usability-evidence/2.19.0/operator-package-acquisition-operational-qualification.json`.

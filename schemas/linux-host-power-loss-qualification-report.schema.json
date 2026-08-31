@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/linux-host-power-loss-qualification-report.schema.json",
+  "title": "Kyuubiki Linux Host Power-Loss Qualification Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "qualification_id",
+    "status",
+    "journey",
+    "execution_host_role",
+    "platform",
+    "architecture",
+    "runtime_version",
+    "generated_at_unix_ms",
+    "preparation",
+    "intent_sha256",
+    "recovery",
+    "postflight",
+    "cleanup",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": { "const": "kyuubiki.linux-host-power-loss-qualification/v1" },
+    "qualification_id": { "const": "physical-linux-host-power-loss-recovery" },
+    "status": { "const": "pass" },
+    "journey": { "const": "installer-managed-agent-engine-across-host-reboot" },
+    "execution_host_role": { "const": "remote-linux-qualification-host" },
+    "platform": { "const": "linux" },
+    "architecture": { "type": "string", "minLength": 1 },
+    "runtime_version": { "type": "string", "minLength": 1 },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "preparation": { "$ref": "linux-host-power-loss-intent.schema.json#/properties/payload" },
+    "intent_sha256": { "$ref": "#/$defs/sha256" },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "post_boot_id_sha256",
+        "post_machine_id_sha256",
+        "post_uptime_seconds",
+        "boot_identity_changed",
+        "same_machine",
+        "sentinel_port_free_before_resume",
+        "active_entrypoint_sha256"
+      ],
+      "properties": {
+        "post_boot_id_sha256": { "$ref": "#/$defs/sha256" },
+        "post_machine_id_sha256": { "$ref": "#/$defs/sha256" },
+        "post_uptime_seconds": { "type": "integer", "minimum": 0 },
+        "boot_identity_changed": { "const": true },
+        "same_machine": { "const": true },
+        "sentinel_port_free_before_resume": { "const": true },
+        "active_entrypoint_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "postflight": { "type": "object" },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "state_root_removed", "sentinel_port_released", "residue_count"],
+      "properties": {
+        "scope": { "const": "qualification-state-root" },
+        "state_root_removed": { "const": true },
+        "sentinel_port_released": { "const": true },
+        "residue_count": { "const": 0 }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 13,
+      "maxItems": 13,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "ok"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "ok": { "const": true }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

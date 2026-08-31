@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Installer-managed packaged desktop set update and exact rollback with immutable activation history, fail-closed content verification, and nine real macOS Hub, Installer, and Workbench boot probes.",
+  "summary": "Installer-managed packaged desktop set update and exact rollback with immutable activation history, fail-closed content verification, and nine real Hub, Installer, and Workbench boot probes on both macOS and Linux.",
   "paradigm_contract_evidence": {
     "deployment_update": [
       {
@@ -66,6 +66,45 @@
         "\"execution_host_role\": \"local-macos-qualification-host\"",
         "\"active_after_upgrade\": \"2.17.0\"",
         "\"active_after_rollback\": \"2.16.9\"",
+        "\"phase\": \"initial-install\"",
+        "\"phase\": \"upgraded-install\"",
+        "\"phase\": \"rollback\"",
+        "\"component_id\": \"hub\"",
+        "\"component_id\": \"installer\"",
+        "\"component_id\": \"workbench\"",
+        "\"id\": \"rollback_payload_restored\"",
+        "\"id\": \"update_lock_clean\"",
+        "\"id\": \"staging_clean\""
+      ]
+    },
+    {
+      "id": "desktop-bundle-update-linux-operational",
+      "status": "proven",
+      "grade": "operational",
+      "modules": [
+        "hub-shell",
+        "installer-shell",
+        "workbench-shell",
+        "runtime-installer"
+      ],
+      "paradigms": [
+        "deployment_update"
+      ],
+      "dimensions": [
+        "execution",
+        "security",
+        "contract",
+        "recovery"
+      ],
+      "files": [
+        "releases/usability-evidence/2.19.0/linux-desktop-bundle-update-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"execution_host_role\": \"remote-linux-qualification-host\"",
+        "\"runtime_version\": \"2.19.0\"",
+        "\"active_after_upgrade\": \"2.19.0\"",
+        "\"active_after_rollback\": \"2.18.9\"",
         "\"phase\": \"initial-install\"",
         "\"phase\": \"upgraded-install\"",
         "\"phase\": \"rollback\"",

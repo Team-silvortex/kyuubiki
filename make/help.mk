@@ -142,6 +142,7 @@ help:
 	@echo "  make check-runtime-recovery-fault-injection Inject workflow and Agent watchdog recovery faults and retain the report"
 	@echo "  make check-orchestra-recovery-fault-injection Inject Agent process loss and verify safe Orchestra replay policy"
 	@echo "  make check-installer-recovery-fault-injection Inject journal commit loss and verify Installer resume safety"
+	@echo "  make check-linux-host-power-loss-qualification Verify retained physical Linux reboot recovery evidence"
 	@echo "  make check-version-line Verify cadence, release, snapshot, package, docs, and language-pack version contracts"
 	@echo "  make check-workflow-dataset-contract Verify workflow dataset schema, examples, and graph dataset references"
 	@echo "  make check-material-card-contract Verify material-card schema, golden fixture, docs, and workflow preflight anchors"

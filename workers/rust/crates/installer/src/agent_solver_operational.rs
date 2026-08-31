@@ -8,7 +8,7 @@ use kyuubiki_protocol::{
     AGENT_SOLVER_QUALIFICATION_EXPECTED_TIP_DISPLACEMENT, compute_operator_task_digest,
     validate_agent_solver_qualification_report,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
@@ -24,7 +24,7 @@ const RPC_VERSION: u8 = 1;
 const MAX_FRAME_BYTES: usize = 16 * 1024 * 1024;
 const RESULT_TOLERANCE: f64 = 1.0e-12;
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct AgentSolverOperationalQualificationReport {
     pub schema_version: String,
     pub generated_at_unix_ms: u128,
@@ -43,14 +43,14 @@ pub struct AgentSolverOperationalQualificationReport {
     pub checks: Vec<OperationalCheck>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct OperationalControlBoundary {
     pub deployment_owner: String,
     pub execution_owner: String,
     pub capture_transport: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct OperationalInstalledState {
     pub active_version: String,
     pub installed_versions: Vec<String>,
@@ -59,28 +59,28 @@ pub struct OperationalInstalledState {
     pub store_relative_path: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct OperationalTransport {
     pub protocol: String,
     pub rpc_version: u8,
     pub bind_scope: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct OperationalSolverRun {
     pub phase: String,
     pub process_id: u32,
     pub qualification: Value,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct OperationalCleanupReceipt {
     pub scope: String,
     pub work_root_removed: bool,
     pub residue_count: u64,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct OperationalCheck {
     pub id: String,
     pub ok: bool,

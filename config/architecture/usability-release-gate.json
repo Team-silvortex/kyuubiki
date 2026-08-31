@@ -16,6 +16,7 @@
       "fault_injection_and_recovery/network-partition-fencing",
       "fault_injection_and_recovery/long-running-workflow-takeover",
       "fault_injection_and_recovery/installer-journal-replay",
+      "fault_injection_and_recovery/full-host-power-loss",
       "remote_agent_orchestra_round_trip/installer-managed-linux",
       "remote_agent_orchestra_round_trip/fleet-scheduling",
       "remote_agent_orchestra_round_trip/multi-host-package-acquisition",
@@ -23,7 +24,10 @@
       "upgrade_and_rollback/runtime-payload-remote-linux",
       "upgrade_and_rollback/installer-managed-fleet-remote-linux",
       "upgrade_and_rollback/live-agent-rolling-replacement-remote-linux",
-      "upgrade_and_rollback/packaged-desktop-set-macos"
+      "upgrade_and_rollback/packaged-desktop-set-macos",
+      "upgrade_and_rollback/packaged-desktop-set-linux",
+      "packaged_desktop_round_trip/macos-installed",
+      "packaged_desktop_round_trip/linux-installed"
     ],
     "unclosed_release_tiers": [
       "packaged_desktop_round_trip",
@@ -32,14 +36,10 @@
       "upgrade_and_rollback"
     ],
     "open_release_subtiers": [
-      "packaged_desktop_round_trip/macos-installed",
-      "packaged_desktop_round_trip/linux-installed",
       "packaged_desktop_round_trip/windows-installed",
-      "fault_injection_and_recovery/full-host-power-loss",
       "fault_injection_and_recovery/installed-cross-platform",
       "remote_agent_orchestra_round_trip/installed-macos",
       "remote_agent_orchestra_round_trip/installed-windows",
-      "upgrade_and_rollback/packaged-desktop-set-linux",
       "upgrade_and_rollback/packaged-desktop-set-windows"
     ]
   },
@@ -207,6 +207,11 @@
           "--out",
           "tmp/usability-installer-recovery-fault-injection.json"
         ],
+        [
+          "check-linux-host-power-loss-qualification",
+          "--verify-report",
+          "releases/usability-evidence/2.19.0/linux-host-power-loss-operational-qualification.json"
+        ],
         ["check-gui-runtime-capability-contract"],
         ["check-component-integrity-protocol"]
       ]
@@ -295,6 +300,13 @@
           "releases/usability-evidence/2.17.0/desktop-bundle-update-operational-qualification.json",
           "--require-platform",
           "macos"
+        ],
+        [
+          "check-desktop-bundle-update-operational-qualification",
+          "--verify-report",
+          "releases/usability-evidence/2.19.0/linux-desktop-bundle-update-operational-qualification.json",
+          "--require-platform",
+          "linux"
         ]
       ]
     }

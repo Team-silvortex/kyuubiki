@@ -11,8 +11,8 @@ use crate::{
     frontend_checks, gui_runtime_capability_contract, headless_sdk_operational,
     headless_sdk_validation, headless_workflow_qualification, install_update_disk_hygiene,
     installation_integrity_docs, installed_runtime_operational_qualification,
-    installer_recovery_fault_injection, language_packs, local_path_audit, make_modules,
-    material_exploration_chain_contract, material_score_contract,
+    installer_recovery_fault_injection, language_packs, linux_host_power_loss_qualification,
+    local_path_audit, make_modules, material_exploration_chain_contract, material_score_contract,
     material_study_execution_plan_contract, materialization_plan_contract,
     minimal_industrial_closure, module_extension_standard, module_function_matrix,
     module_function_tensor, module_topology, module_topology_report, moxi_handoff,
@@ -183,6 +183,12 @@ pub(crate) fn run_governance_command(
             installer_recovery_fault_injection::run_check_installer_recovery_fault_injection(
                 root, args,
             )
+        }
+        "qualify-linux-host-power-loss" => {
+            linux_host_power_loss_qualification::run_qualify(root, args)
+        }
+        "check-linux-host-power-loss-qualification" => {
+            linux_host_power_loss_qualification::run_check(root, args)
         }
         "check-workflow-dataset-contract" => {
             workflow_dataset_contract::run_check_workflow_dataset_contract(root, args)

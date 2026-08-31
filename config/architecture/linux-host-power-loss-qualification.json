@@ -1,0 +1,56 @@
+{
+  "$schema": "../../schemas/linux-host-power-loss-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.linux-host-power-loss-qualification-contract/v1",
+  "qualification_id": "physical-linux-host-power-loss-recovery",
+  "platform": "linux",
+  "execution_host_role": "remote-linux-qualification-host",
+  "reboot_identity": {
+    "boot_id_source": "/proc/sys/kernel/random/boot_id",
+    "machine_id_source": "/etc/machine-id",
+    "require_changed_boot_id": true,
+    "require_same_machine": true
+  },
+  "persistent_state": {
+    "intent_schema": "kyuubiki.linux-host-power-loss-intent/v1",
+    "intent_schema_path": "schemas/linux-host-power-loss-intent.schema.json",
+    "write_protocol": "create-sync-rename-directory-sync",
+    "delete_policy": "valid-intent-marker-required",
+    "contains_absolute_paths": false
+  },
+  "execution": {
+    "deployment_owner": "kyuubiki-installer",
+    "execution_owner": "kyuubiki-agent-engine",
+    "pre_reboot_probe": "installer-managed-agent-solver-operational",
+    "post_reboot_probe": "installer-managed-agent-solver-operational",
+    "sentinel_bind_scope": "loopback",
+    "frontend_loaded": false
+  },
+  "retention": {
+    "report_schema": "kyuubiki.linux-host-power-loss-qualification/v1",
+    "report_schema_path": "schemas/linux-host-power-loss-qualification-report.schema.json",
+    "report_path": "releases/usability-evidence/2.19.0/linux-host-power-loss-operational-qualification.json",
+    "forbidden_content": [
+      "/home/",
+      "/Users/",
+      "192.168.",
+      "kyuubiki-lab",
+      "username",
+      "credential"
+    ]
+  },
+  "required_checks": [
+    "remote_linux_host",
+    "intent_digest_verified",
+    "same_machine_after_reboot",
+    "boot_identity_changed",
+    "prepared_agent_interrupted",
+    "managed_package_persisted",
+    "pre_reboot_solver_passed",
+    "post_reboot_solver_passed",
+    "solver_result_stable",
+    "tamper_recovery_stable",
+    "watchdog_quiescent",
+    "state_cleanup_complete",
+    "retention_sanitized"
+  ]
+}

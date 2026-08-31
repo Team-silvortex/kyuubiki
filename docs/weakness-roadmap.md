@@ -39,8 +39,9 @@ Current moxi baseline:
 
 No configured coordinate remains below its current evidence target. This does
 not grant a daji release claim: packaged cross-platform recovery and upgrade
-tiers remain independently open, and static or local evidence cannot close
-them. The moxi 2.15 recalibration separated the Rust-only Worker/Operator SDK
+tiers still remain independently open on the unqualified platforms, and static
+or local evidence cannot close them. The moxi 2.15 recalibration separated the
+Rust-only Worker/Operator SDK
 from both Installer and the three-language Headless SDK family, added ABI
 compatibility as an evidence dimension, and promoted security, persistence,
 validation, and benchmark coordinates that were previously optional.
@@ -115,7 +116,7 @@ clock values. The accepted report is
 `releases/usability-evidence/2.14.3/runtime-payload-operational-qualification.json`
 and is rechecked by `make check-runtime-payload-operational-qualification`.
 This closes only `upgrade_and_rollback/runtime-payload-remote-linux`; packaged
-desktop update and rollback on Linux and Windows remain open.
+desktop update and rollback are tracked by their own platform qualifications.
 
 The coordinated fleet portion now has retained remote Linux evidence as well.
 Installer applies one Runtime payload and two Agent packages as a single
@@ -131,7 +132,7 @@ small report is retained. Evidence lives at
 and is rechecked by
 `./scripts/kyuubiki check-fleet-update-operational-qualification --verify-report releases/usability-evidence/2.17.0/fleet-update-operational-qualification.json --require-remote-linux`.
 This closes `upgrade_and_rollback/installer-managed-fleet-remote-linux`, not the
-parent tier: packaged desktop rollback on Linux and Windows remains open.
+parent tier: packaged desktop rollback still requires every target platform.
 
 Live workload continuity during Agent replacement now has its own retained
 remote Linux qualification. Each Rust Agent exposes a fenced admission lifecycle
@@ -152,7 +153,7 @@ and is rechecked by
 This closes only
 `upgrade_and_rollback/live-agent-rolling-replacement-remote-linux`; the parent
 upgrade tier remains open until packaged desktop update and rollback are proven
-on Linux and Windows as well.
+on Windows as well.
 
 The packaged desktop set now has its first operational update/rollback tier on
 macOS. Installer hashes every file in Hub, Installer, and Workbench, stores the
@@ -168,8 +169,34 @@ and is rechecked by
 `./scripts/kyuubiki check-desktop-bundle-update-operational-qualification --verify-report releases/usability-evidence/2.17.0/desktop-bundle-update-operational-qualification.json --require-platform macos`.
 The `2.16.9` and `2.17.0` labels identify the two qualification package
 generations; both contain the current `2.17.0` runtime, so this proves package
-switching and exact rollback rather than historical binary compatibility. It
-closes only `upgrade_and_rollback/packaged-desktop-set-macos`.
+switching and exact rollback rather than historical binary compatibility.
+
+The same protocol now has physical Ubuntu evidence. Installer stages the three
+installed `2.19.0` binaries from `/usr/bin` into two content-distinct package
+generations, performs an atomic `2.18.9 -> 2.19.0 -> 2.18.9` activation journey,
+and launches Hub, Installer, and Workbench under isolated D-Bus/Xvfb sessions
+after every transition. All nine WebView receipts and fourteen semantic checks
+pass, the original aggregate and component digests are restored, and the run
+leaves no managed store, staging tree, lock, or GUI process behind. Evidence
+lives at
+`releases/usability-evidence/2.19.0/linux-desktop-bundle-update-operational-qualification.json`
+and is rechecked with `--require-platform linux`. This closes both
+`upgrade_and_rollback/packaged-desktop-set-macos` and
+`upgrade_and_rollback/packaged-desktop-set-linux`; Windows remains open.
+
+Physical Linux host loss now has a separate two-phase operational qualification.
+The native `prepare` phase installs and activates a sealed Agent through
+Installer, executes the complete solver/tamper/recovery probe, starts a
+loopback-only sentinel, and commits a digest-bound intent with file and directory
+sync. After a real physical reboot, `resume` requires a changed Linux boot ID on
+the same machine, proves the old process and port disappeared, verifies the
+installed payload digest, and repeats the numerical and watchdog checks. The
+retained report passes all thirteen checks and removes the managed state root
+with zero residue. Evidence lives at
+`releases/usability-evidence/2.19.0/linux-host-power-loss-operational-qualification.json`
+and is rechecked by `make check-linux-host-power-loss-qualification`. This
+closes `fault_injection_and_recovery/full-host-power-loss`; installed recovery
+on the remaining supported platforms is still open.
 
 The first Installer-managed end-to-end runtime subtier is now operational on
 remote Linux. A sealed installed payload starts Orchestra and two Rust Agents
@@ -269,12 +296,18 @@ Evidence lives at
 `releases/usability-evidence/2.18.3/orchestra-long-workflow-takeover-operational-qualification.json`
 and is rechecked by
 `make check-orchestra-long-workflow-takeover-operational-qualification`. This
-closes that subtier. The `moxi 2.19.0` source-line rollover reopens macOS and
-Linux installed-desktop qualification until fresh packages are built and run;
-the gate therefore carries ten explicit release subtiers. The retained
-`2.18.3` reports remain historical evidence rather than current-package proof.
-Full host power loss, Installer-led fleet package acquisition, and the installed
-cross-platform matrix remain among the open work.
+closes that subtier. The `moxi 2.19.0` macOS desktop set has now been rebuilt,
+atomically installed into `/Applications`, and qualified through three
+interactive startup receipts; current evidence lives at
+`releases/usability-evidence/2.19.0/macos-installed-desktop-smoke.json`. The
+Linux desktop set has also been rebuilt, upgraded through Installer-managed
+Ubuntu packages, and qualified through three real WebView startup receipts;
+its current evidence lives at
+`releases/usability-evidence/2.19.0/linux-installed-desktop-smoke.json`. The
+gate now carries six explicit open release subtiers. Historical `2.18.3`
+reports remain evidence for their source state rather than current-package
+proof. Full host power loss and the remaining installed cross-platform matrix
+remain open work.
 Persisted in-flight workflow state now has a
 separate local qualification: a digest-bound execution envelope survives a
 complete OTP application stop/start, a fresh session claims a higher
@@ -725,12 +758,10 @@ Current weak point:
 - the same six-stage package journey now passes on native macOS aarch64 and
   physical Linux x86_64, with content-bound smoke/preflight attachments and
   residue-free cleanup
-- native Windows installed-package operation now has retained six-stage evidence,
-  including MSVC dynamic loading, Agent RPC dispatch, bound-Orchestra rotation,
-  tamper recovery, Installer lifecycle, and residue cleanup for the historical
-  Rust-object boundary; current JSON C ABI execution now also passes all six
-  stages natively, while the v2 qualification still needs a retained rerun to
-  bind current sources and attachments
+- native Windows installed-package operation now has current-line retained v2
+  evidence for the stable JSON C ABI, including MSVC dynamic loading, Agent RPC
+  dispatch, bound-Orchestra rotation, tamper recovery, Installer lifecycle,
+  residue cleanup, current sources, and SHA-256-bound attachments
 - real two-host central acquisition now passes through macOS Orchestra and an
   Installer-managed physical Linux Agent with refetch and residue-free cleanup
 - release qualification now measures the actual dynamic ABI path rather than
@@ -739,7 +770,7 @@ Current weak point:
   dispatches per second with zero errors; cold activation is 429.674 ms and the
   cached resident activation p95 is 0.417 ms
 - the remaining third-party gap is forward compatibility across future operator
-  SDK API and ABI revisions plus current-ABI Windows requalification
+  SDK API and ABI revisions
 
 Current moxi hardening focus:
 
@@ -760,10 +791,9 @@ Qualification focus:
   including shared ownership and cancellation
 - retain the macOS/Linux multihost report and its four SHA-256-bound child
   attachments under `releases/usability-evidence/2.16.4/`
-- preserve the native Windows installed-package report and its bound evidence
-  under `releases/usability-evidence/2.15.0/` as historical evidence; rerun the
-  now-passing `kyuubiki.operator-json-c/v1` journey under the v2 report contract
-  before restoring the Windows operational claim
+- preserve the historical Windows report under
+  `releases/usability-evidence/2.15.0/` and the current stable JSON C ABI v2
+  report plus bound attachments under `releases/usability-evidence/2.19.0/`
 - retain the two-host central acquisition report under
   `releases/usability-evidence/2.19.0/` and recheck both fetch sequences,
   eviction, refetch, stable ABI, and zero residue

@@ -1,0 +1,256 @@
+{
+  "schema_version": "kyuubiki.desktop-bundle-update-qualification/v1",
+  "status": "pass",
+  "journey": "installer-managed-packaged-desktop-set-upgrade-and-rollback",
+  "execution_host_role": "remote-linux-qualification-host",
+  "platform": "linux",
+  "runtime_version": "2.19.0",
+  "first_version": "2.18.9",
+  "second_version": "2.19.0",
+  "first_payload": {
+    "version": "2.18.9",
+    "payload_sha256": "41c19b5707b1298d7c5cdfa7788fd84de17ac5b4e88699eec44a43f74081e1fa",
+    "components": [
+      {
+        "component_id": "hub",
+        "content_sha256": "8885db8cdae2ab938728b98ee567cb9f9cfdc9170904c1e3e008cd9422c4fddb",
+        "entrypoint_sha256": "68ee383025819a9f5f9c8536cb3dfe03a26cacc4fa60b85a751b11d7c892b5d7",
+        "file_count": 1
+      },
+      {
+        "component_id": "installer",
+        "content_sha256": "2d3f9a6e2a428cff6e6eee6599f61f4c12f9b06aacac84b899dfa7a68266d5ef",
+        "entrypoint_sha256": "ad9da66113444cd913cac8b9e176cc6db147ddbdbfeff1c9f361fed2a0d6f76d",
+        "file_count": 1
+      },
+      {
+        "component_id": "workbench",
+        "content_sha256": "9db4b014f1d7432ccbb9e4bb05a37de4ba2cdcdf5db8a1851003667c2a1e3dec",
+        "entrypoint_sha256": "7605cb680ec47ff09338caf58db9e93e6040b288a282a9ac086330300c7f6939",
+        "file_count": 1
+      }
+    ]
+  },
+  "second_payload": {
+    "version": "2.19.0",
+    "payload_sha256": "f3dd5f1a164d140954d14909e0d0eb36209e6db02dab1eb3622b463e1c4933e2",
+    "components": [
+      {
+        "component_id": "hub",
+        "content_sha256": "f35095d2829b1a3cbb4f4d6cb7d809616dbaabc6b821d97e14f055bcab0ec6ab",
+        "entrypoint_sha256": "3c59b38717e520e34f53b6be43675bea419b9e4fc6d6e3a847f38a290623f42b",
+        "file_count": 1
+      },
+      {
+        "component_id": "installer",
+        "content_sha256": "2a57f317ba2b952fb0de33d338e2e80c530732e4f4b032b17b808f4918340d79",
+        "entrypoint_sha256": "8c87f136ff5922fd653efbef98b3e481652f64d005577d8e74f03229853504cd",
+        "file_count": 1
+      },
+      {
+        "component_id": "workbench",
+        "content_sha256": "5e30128ce254fdf879abef8b0517fedc94e168ebffdb5b16d9efbe96df108e04",
+        "entrypoint_sha256": "4a682dca5e8c2f3995d6ce95d9cfab859406f3d950daec68ef2bdee86b87abde",
+        "file_count": 1
+      }
+    ]
+  },
+  "rollback_payload": {
+    "version": "2.18.9",
+    "payload_sha256": "41c19b5707b1298d7c5cdfa7788fd84de17ac5b4e88699eec44a43f74081e1fa",
+    "components": [
+      {
+        "component_id": "hub",
+        "content_sha256": "8885db8cdae2ab938728b98ee567cb9f9cfdc9170904c1e3e008cd9422c4fddb",
+        "entrypoint_sha256": "68ee383025819a9f5f9c8536cb3dfe03a26cacc4fa60b85a751b11d7c892b5d7",
+        "file_count": 1
+      },
+      {
+        "component_id": "installer",
+        "content_sha256": "2d3f9a6e2a428cff6e6eee6599f61f4c12f9b06aacac84b899dfa7a68266d5ef",
+        "entrypoint_sha256": "ad9da66113444cd913cac8b9e176cc6db147ddbdbfeff1c9f361fed2a0d6f76d",
+        "file_count": 1
+      },
+      {
+        "component_id": "workbench",
+        "content_sha256": "9db4b014f1d7432ccbb9e4bb05a37de4ba2cdcdf5db8a1851003667c2a1e3dec",
+        "entrypoint_sha256": "7605cb680ec47ff09338caf58db9e93e6040b288a282a9ac086330300c7f6939",
+        "file_count": 1
+      }
+    ]
+  },
+  "first_activation": {
+    "schema_version": "kyuubiki.desktop-bundle-activation/v1",
+    "generation": 1,
+    "version": "2.18.9",
+    "previous_version": null,
+    "relative_path": "versions/2.18.9",
+    "platform": "linux",
+    "payload_sha256": "41c19b5707b1298d7c5cdfa7788fd84de17ac5b4e88699eec44a43f74081e1fa"
+  },
+  "second_activation": {
+    "schema_version": "kyuubiki.desktop-bundle-activation/v1",
+    "generation": 2,
+    "version": "2.19.0",
+    "previous_version": "2.18.9",
+    "relative_path": "versions/2.19.0",
+    "platform": "linux",
+    "payload_sha256": "f3dd5f1a164d140954d14909e0d0eb36209e6db02dab1eb3622b463e1c4933e2"
+  },
+  "rollback_activation": {
+    "schema_version": "kyuubiki.desktop-bundle-activation/v1",
+    "generation": 3,
+    "version": "2.18.9",
+    "previous_version": "2.19.0",
+    "relative_path": "versions/2.18.9",
+    "platform": "linux",
+    "payload_sha256": "41c19b5707b1298d7c5cdfa7788fd84de17ac5b4e88699eec44a43f74081e1fa"
+  },
+  "active_after_upgrade": "2.19.0",
+  "active_after_rollback": "2.18.9",
+  "installed_versions": [
+    "2.18.9",
+    "2.19.0"
+  ],
+  "probes": [
+    {
+      "phase": "initial-install",
+      "package_version": "2.18.9",
+      "component_id": "hub",
+      "runtime_version": "2.19.0",
+      "executable_sha256": "68ee383025819a9f5f9c8536cb3dfe03a26cacc4fa60b85a751b11d7c892b5d7",
+      "pid": 1168817,
+      "success": true
+    },
+    {
+      "phase": "initial-install",
+      "package_version": "2.18.9",
+      "component_id": "installer",
+      "runtime_version": "2.19.0",
+      "executable_sha256": "ad9da66113444cd913cac8b9e176cc6db147ddbdbfeff1c9f361fed2a0d6f76d",
+      "pid": 1168978,
+      "success": true
+    },
+    {
+      "phase": "initial-install",
+      "package_version": "2.18.9",
+      "component_id": "workbench",
+      "runtime_version": "2.19.0",
+      "executable_sha256": "7605cb680ec47ff09338caf58db9e93e6040b288a282a9ac086330300c7f6939",
+      "pid": 1169185,
+      "success": true
+    },
+    {
+      "phase": "upgraded-install",
+      "package_version": "2.19.0",
+      "component_id": "hub",
+      "runtime_version": "2.19.0",
+      "executable_sha256": "3c59b38717e520e34f53b6be43675bea419b9e4fc6d6e3a847f38a290623f42b",
+      "pid": 1169411,
+      "success": true
+    },
+    {
+      "phase": "upgraded-install",
+      "package_version": "2.19.0",
+      "component_id": "installer",
+      "runtime_version": "2.19.0",
+      "executable_sha256": "8c87f136ff5922fd653efbef98b3e481652f64d005577d8e74f03229853504cd",
+      "pid": 1169591,
+      "success": true
+    },
+    {
+      "phase": "upgraded-install",
+      "package_version": "2.19.0",
+      "component_id": "workbench",
+      "runtime_version": "2.19.0",
+      "executable_sha256": "4a682dca5e8c2f3995d6ce95d9cfab859406f3d950daec68ef2bdee86b87abde",
+      "pid": 1169770,
+      "success": true
+    },
+    {
+      "phase": "rollback",
+      "package_version": "2.18.9",
+      "component_id": "hub",
+      "runtime_version": "2.19.0",
+      "executable_sha256": "68ee383025819a9f5f9c8536cb3dfe03a26cacc4fa60b85a751b11d7c892b5d7",
+      "pid": 1169995,
+      "success": true
+    },
+    {
+      "phase": "rollback",
+      "package_version": "2.18.9",
+      "component_id": "installer",
+      "runtime_version": "2.19.0",
+      "executable_sha256": "ad9da66113444cd913cac8b9e176cc6db147ddbdbfeff1c9f361fed2a0d6f76d",
+      "pid": 1170136,
+      "success": true
+    },
+    {
+      "phase": "rollback",
+      "package_version": "2.18.9",
+      "component_id": "workbench",
+      "runtime_version": "2.19.0",
+      "executable_sha256": "7605cb680ec47ff09338caf58db9e93e6040b288a282a9ac086330300c7f6939",
+      "pid": 1170335,
+      "success": true
+    }
+  ],
+  "checks": [
+    {
+      "id": "initial_activation",
+      "ok": true
+    },
+    {
+      "id": "upgrade_activation",
+      "ok": true
+    },
+    {
+      "id": "rollback_activation",
+      "ok": true
+    },
+    {
+      "id": "active_after_upgrade",
+      "ok": true
+    },
+    {
+      "id": "active_after_rollback",
+      "ok": true
+    },
+    {
+      "id": "monotonic_generations",
+      "ok": true
+    },
+    {
+      "id": "all_component_payloads_changed",
+      "ok": true
+    },
+    {
+      "id": "rollback_payload_restored",
+      "ok": true
+    },
+    {
+      "id": "initial_three_shell_boot",
+      "ok": true
+    },
+    {
+      "id": "upgraded_three_shell_boot",
+      "ok": true
+    },
+    {
+      "id": "rollback_three_shell_boot",
+      "ok": true
+    },
+    {
+      "id": "runtime_version_aligned",
+      "ok": true
+    },
+    {
+      "id": "update_lock_clean",
+      "ok": true
+    },
+    {
+      "id": "staging_clean",
+      "ok": true
+    }
+  ]
+}

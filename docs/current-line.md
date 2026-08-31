@@ -141,6 +141,15 @@ sprawl:
   checkpointed work resumes. Installer journal replay now survives an injected
   partial atomic commit, resumes from the first incomplete step without
   replaying the completed prefix, and rejects digest tampering
+- physical Linux host power-loss qualification now uses a two-phase native
+  protocol around a real reboot. `prepare` durably writes a SHA-256-bound
+  intent, installs a sealed Agent package, runs solver/tamper/recovery preflight,
+  and leaves a loopback sentinel outside the SSH session. `resume` requires the
+  same machine and a changed boot ID, proves the sentinel was interrupted,
+  revalidates the installed payload digest, repeats the solver journey, and
+  removes the qualification state. The retained `2.19.0` report passes 13/13
+  checks with stable numerical output and zero residue, closing only
+  `fault_injection_and_recovery/full-host-power-loss`
 - native two-host control-link qualification now keeps one remote Linux Agent
   process alive while the macOS Orchestra is killed and recreated, observes the
   sanitized degraded state, requires full re-registration plus resumed
@@ -196,9 +205,9 @@ sprawl:
   Request-scoped transport cancellation prevents the old Agent generation from
   cancelling the replacement, both former owners rejoin as standby, and every
   managed process, tunnel, database, port, and work root is removed. Long-running
-  workflow takeover is therefore `operational`; fleet package acquisition,
-  macOS/Windows package execution, full host power loss, and the full
-  cross-platform matrix remain open
+  workflow takeover is therefore `operational`; installed Agent/Orchestra
+  operation on macOS and Windows, installed cross-platform recovery, and the
+  remaining Windows packaged-desktop journeys remain open
 - Installer-managed Agent update qualification now runs an isolated remote
   Linux install, changed-payload upgrade, executable probe, rollback, and second
   executable probe. Its semantic validator requires the rollback activation
@@ -217,10 +226,14 @@ sprawl:
   Installer treats Hub, Installer, and Workbench as one immutable, SHA-256-bound
   bundle set, activates two differently marked and ad-hoc re-signed package
   generations, launches all three shells after install, upgrade, and rollback,
-  and restores the exact initial payload digest. The nine boot probes close the
-  macOS package-switching sub-tier, while Linux and Windows remain open. Both
-  logical package generations use the current `2.17.0` runtime, so historical
-  binary compatibility is not claimed
+  and restores the exact initial payload digest. A matching physical Ubuntu
+  qualification now stages the three installed `2.19.0` binaries from
+  `/usr/bin`, runs nine D-Bus/Xvfb-backed WebView probes across initial install,
+  upgrade, and rollback, and restores the exact `2.18.9`-labelled baseline
+  payload without residue. macOS and Linux package-switching sub-tiers are
+  closed; Windows remains open. Both qualifications use content-distinct
+  generations of their current runtime, so historical binary compatibility is
+  not claimed
 - `create-open-project` now executes a real native bundle round trip. Hub and
   `kyuubiki project create|inspect|validate|normalize|pack|unpack|diff` share
   `workers/rust/crates/project-bundle` instead of maintaining separate storage

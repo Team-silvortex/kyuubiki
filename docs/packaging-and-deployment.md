@@ -100,12 +100,46 @@ Use these commands when building deployable layouts:
   Copies the current host bundles into an isolated qualification root, creates
   two content-distinct package generations, and executes the three-shell
   install, upgrade, and exact rollback journey. macOS variants are ad-hoc
-  re-signed after their qualification marker is added; the source bundles and
-  installed applications are never modified
+  re-signed after their qualification marker is added. Linux variants execute
+  under isolated D-Bus/Xvfb sessions. Source bundles and installed applications
+  are never modified
 - `./scripts/kyuubiki check-desktop-bundle-update-operational-qualification`
   Semantically revalidates a retained report, including all three payloads,
   three monotonic activation records, nine unique boot probes, exact rollback,
   and clean lock/staging state
+
+Current physical Linux evidence is retained at
+`releases/usability-evidence/2.19.0/linux-desktop-bundle-update-operational-qualification.json`.
+Revalidate it without launching the applications again with:
+
+```sh
+./scripts/kyuubiki check-desktop-bundle-update-operational-qualification \
+  --verify-report releases/usability-evidence/2.19.0/linux-desktop-bundle-update-operational-qualification.json \
+  --require-platform linux
+```
+
+Physical Linux host-loss qualification is intentionally two phase. Run
+`prepare` through a managed remote session, reboot the physical host through the
+site's normal administrative policy, then run `resume` after SSH is stable:
+
+```sh
+./scripts/kyuubiki qualify-linux-host-power-loss prepare \
+  --state-root tmp/linux-host-power-loss-state \
+  --agent-binary workers/rust/target/release/kyuubiki-cli \
+  --package-version 2.19.0
+
+./scripts/kyuubiki qualify-linux-host-power-loss resume \
+  --state-root tmp/linux-host-power-loss-state \
+  --out tmp/linux-host-power-loss-operational-qualification.json
+```
+
+`prepare` commits a SHA-256-bound intent and leaves a loopback sentinel; it does
+not reboot the machine. `resume` fails unless the Linux boot identity changed on
+the same machine. Before reboot, `cleanup` safely cancels an abandoned run only
+when the intent, PID executable digest, and listening port still match. Retained
+evidence is checked with `make check-linux-host-power-loss-qualification` and
+contains no host address, account name, credential, or absolute project path.
+
 - `make desktop-release PLATFORM=macos|linux|windows|all`
   Runs `desktop-stage`, host-native desktop bundle builds, and desktop verification
 - `make desktop-verify PLATFORM=macos|linux|windows|all`
@@ -516,10 +550,10 @@ root as `@bundle-root`. Verify retained evidence without launching an app with:
 
 ```sh
 ./scripts/kyuubiki desktop-packaged-smoke \
-  --verify-report releases/usability-evidence/2.18.3/macos-installed-desktop-smoke.json
+  --verify-report releases/usability-evidence/2.19.0/macos-installed-desktop-smoke.json
 
 ./scripts/kyuubiki desktop-packaged-smoke \
-  --verify-report releases/usability-evidence/2.18.3/linux-installed-desktop-smoke.json
+  --verify-report releases/usability-evidence/2.19.0/linux-installed-desktop-smoke.json
 ```
 
 This verifier is host-independent. It checks the report schema, packaged

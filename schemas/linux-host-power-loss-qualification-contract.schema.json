@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/linux-host-power-loss-qualification-contract.schema.json",
+  "title": "Kyuubiki Linux Host Power-Loss Qualification Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "qualification_id",
+    "platform",
+    "execution_host_role",
+    "reboot_identity",
+    "persistent_state",
+    "execution",
+    "retention",
+    "required_checks"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.linux-host-power-loss-qualification-contract/v1"
+    },
+    "qualification_id": {
+      "const": "physical-linux-host-power-loss-recovery"
+    },
+    "platform": { "const": "linux" },
+    "execution_host_role": { "const": "remote-linux-qualification-host" },
+    "reboot_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "boot_id_source",
+        "machine_id_source",
+        "require_changed_boot_id",
+        "require_same_machine"
+      ],
+      "properties": {
+        "boot_id_source": { "const": "/proc/sys/kernel/random/boot_id" },
+        "machine_id_source": { "const": "/etc/machine-id" },
+        "require_changed_boot_id": { "const": true },
+        "require_same_machine": { "const": true }
+      }
+    },
+    "persistent_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "intent_schema",
+        "intent_schema_path",
+        "write_protocol",
+        "delete_policy",
+        "contains_absolute_paths"
+      ],
+      "properties": {
+        "intent_schema": { "const": "kyuubiki.linux-host-power-loss-intent/v1" },
+        "intent_schema_path": { "const": "schemas/linux-host-power-loss-intent.schema.json" },
+        "write_protocol": { "const": "create-sync-rename-directory-sync" },
+        "delete_policy": { "const": "valid-intent-marker-required" },
+        "contains_absolute_paths": { "const": false }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deployment_owner",
+        "execution_owner",
+        "pre_reboot_probe",
+        "post_reboot_probe",
+        "sentinel_bind_scope",
+        "frontend_loaded"
+      ],
+      "properties": {
+        "deployment_owner": { "const": "kyuubiki-installer" },
+        "execution_owner": { "const": "kyuubiki-agent-engine" },
+        "pre_reboot_probe": { "const": "installer-managed-agent-solver-operational" },
+        "post_reboot_probe": { "const": "installer-managed-agent-solver-operational" },
+        "sentinel_bind_scope": { "const": "loopback" },
+        "frontend_loaded": { "const": false }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["report_schema", "report_schema_path", "report_path", "forbidden_content"],
+      "properties": {
+        "report_schema": { "const": "kyuubiki.linux-host-power-loss-qualification/v1" },
+        "report_schema_path": {
+          "const": "schemas/linux-host-power-loss-qualification-report.schema.json"
+        },
+        "report_path": { "type": "string", "pattern": "^releases/usability-evidence/" },
+        "forbidden_content": {
+          "type": "array",
+          "minItems": 6,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "required_checks": {
+      "type": "array",
+      "minItems": 13,
+      "maxItems": 13,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

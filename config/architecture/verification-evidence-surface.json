@@ -29,6 +29,7 @@
       "./scripts/kyuubiki check-agent-rolling-replacement-operational-qualification",
       "./scripts/kyuubiki check-desktop-bundle-update-operational-qualification",
       "./scripts/kyuubiki check-installed-runtime-operational-qualification",
+      "./scripts/kyuubiki check-linux-host-power-loss-qualification",
       "./scripts/kyuubiki check-operator-package-acquisition-operational-qualification",
       "./scripts/kyuubiki check-operator-sdk-multihost-operational-qualification",
       "./scripts/kyuubiki check-operator-sdk-performance-qualification",
@@ -58,6 +59,7 @@
       "tmp/agent-solver-operational-remote.json",
       "tmp/fleet-scheduling-operational-qualification.json",
       "tmp/installed-runtime-operational-qualification.json",
+      "tmp/linux-host-power-loss-operational-qualification.json",
       "tmp/operator-package-acquisition-operational-qualification.json",
       "tmp/operator-sdk-performance-qualification.json",
       "tmp/benchmark-qualification-report.json",
@@ -84,6 +86,14 @@
       "schemas/agent-solver-operational-qualification-report.schema.json",
       "releases/usability-evidence/2.12.5/agent-solver-task-ir-qualification.json",
       "releases/usability-evidence/2.13.8/agent-solver-operational-qualification.json",
+      "config/architecture/linux-host-power-loss-qualification.json",
+      "schemas/linux-host-power-loss-qualification-contract.schema.json",
+      "schemas/linux-host-power-loss-intent.schema.json",
+      "schemas/linux-host-power-loss-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/linux_host_power_loss_qualification.rs",
+      "workers/rust/crates/script-runner/src/linux_host_power_loss_qualification/state.rs",
+      "workers/rust/crates/script-runner/src/linux_host_power_loss_validation.rs",
+      "releases/usability-evidence/2.19.0/linux-host-power-loss-operational-qualification.json",
       "config/architecture/installed-runtime-operational-qualification.json",
       "schemas/installed-runtime-operational-qualification-contract.schema.json",
       "schemas/installed-runtime-operational-qualification-report.schema.json",
@@ -98,6 +108,8 @@
       "kyuubiki.agent-update-package/v1",
       "kyuubiki.agent-update-activation/v1",
       "kyuubiki.agent-solver-operational-qualification/v1",
+      "kyuubiki.linux-host-power-loss-intent/v1",
+      "kyuubiki.linux-host-power-loss-qualification/v1",
       "kyuubiki.installed-runtime-operational-qualification/v1"
     ]
   },
@@ -194,13 +206,20 @@
       "config/architecture/system-security-qualification.json",
       "schemas/system-security-qualification-report.schema.json",
       "workers/rust/crates/script-runner/src/system_security_qualification.rs",
-      "releases/usability-evidence/2.15.0/system-security-qualification.json"
+      "releases/usability-evidence/2.15.0/system-security-qualification.json",
+      "config/architecture/linux-host-power-loss-qualification.json",
+      "schemas/linux-host-power-loss-intent.schema.json",
+      "workers/rust/crates/script-runner/src/linux_host_power_loss_qualification/state.rs",
+      "workers/rust/crates/script-runner/src/linux_host_power_loss_validation.rs",
+      "releases/usability-evidence/2.19.0/linux-host-power-loss-operational-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.protocol-validation-qualification-contract/v2",
       "kyuubiki.protocol-validation-qualification-report/v2",
       "kyuubiki.system-security-qualification-contract/v1",
       "kyuubiki.system-security-qualification-report/v1",
+      "kyuubiki.linux-host-power-loss-intent/v1",
+      "intent_digest_verified",
       "fail_closed"
     ]
   },
@@ -297,12 +316,21 @@
       "workers/rust/crates/installer/src/desktop_bundle_qualification_validation.rs",
       "workers/rust/crates/script-runner/src/desktop_bundle_operational_qualification.rs",
       "releases/usability-evidence/2.17.0/desktop-bundle-update-operational-qualification.json",
+      "releases/usability-evidence/2.19.0/linux-desktop-bundle-update-operational-qualification.json",
       "config/architecture/installed-runtime-operational-qualification.json",
       "schemas/installed-runtime-operational-qualification-contract.schema.json",
       "schemas/installed-runtime-operational-qualification-report.schema.json",
       "workers/rust/crates/desktop-runtime/src/runtime_control.rs",
       "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification.rs",
-      "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
+      "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json",
+      "config/architecture/linux-host-power-loss-qualification.json",
+      "schemas/linux-host-power-loss-qualification-contract.schema.json",
+      "schemas/linux-host-power-loss-intent.schema.json",
+      "schemas/linux-host-power-loss-qualification-report.schema.json",
+      "workers/rust/crates/script-runner/src/linux_host_power_loss_qualification.rs",
+      "workers/rust/crates/script-runner/src/linux_host_power_loss_qualification/state.rs",
+      "workers/rust/crates/script-runner/src/linux_host_power_loss_validation.rs",
+      "releases/usability-evidence/2.19.0/linux-host-power-loss-operational-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.installer-headless-surface/v1",
@@ -319,7 +347,10 @@
       "kyuubiki.desktop-bundle-update-qualification/v1",
       "all_service_entries_executed",
       "rollback_payload_restored",
-      "kyuubiki.installed-runtime-operational-qualification/v1"
+      "kyuubiki.installed-runtime-operational-qualification/v1",
+      "kyuubiki.linux-host-power-loss-qualification/v1",
+      "boot_identity_changed",
+      "state_cleanup_complete"
     ]
   },
   "sdk_headless": {
@@ -363,6 +394,9 @@
       "releases/usability-evidence/2.15.0/operator-sdk-windows-dynamic-smoke.json",
       "releases/usability-evidence/2.15.0/operator-sdk-windows-package-preflight.json",
       "releases/usability-evidence/2.15.0/operator-sdk-windows-installed-agent-operational-qualification.json",
+      "releases/usability-evidence/2.19.0/operator-sdk-windows-dynamic-smoke.json",
+      "releases/usability-evidence/2.19.0/operator-sdk-windows-package-preflight.json",
+      "releases/usability-evidence/2.19.0/operator-sdk-windows-installed-agent-operational-qualification.json",
       "releases/usability-evidence/2.16.4/operator-sdk-macos-agent-qualification.json",
       "releases/usability-evidence/2.16.4/operator-sdk-linux-agent-qualification.json",
       "releases/usability-evidence/2.16.4/operator-sdk-multihost-operational-qualification.json",
