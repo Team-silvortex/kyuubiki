@@ -40,7 +40,7 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
     |> Enum.flat_map(fn record ->
       case repo_record_to_job(record) do
         {:ok, job} -> [job]
-        :error -> []
+        {:error, _reason} -> []
       end
     end)
   end

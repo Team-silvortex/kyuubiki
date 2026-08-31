@@ -371,16 +371,12 @@ defmodule KyuubikiWeb.WorkflowElectrostaticRuntime do
     end
   end
 
-  defp rule_threshold(_rule), do: nil
-
   defp rule_comparison(rule) when is_map(rule) do
     case Map.get(rule, "comparison", "gt") do
       value when value in ["gt", "gte", "lt", "lte"] -> value
       _ -> "gt"
     end
   end
-
-  defp rule_comparison(_rule), do: "gt"
 
   defp normalize_severity("block"), do: "block"
   defp normalize_severity(_severity), do: "warn"
@@ -435,16 +431,12 @@ defmodule KyuubikiWeb.WorkflowElectrostaticRuntime do
     end
   end
 
-  defp benchmark_goal(_criterion), do: "min"
-
   defp benchmark_weight(criterion) when is_map(criterion) do
     case Map.get(criterion, "weight", 1.0) do
       value when is_number(value) and value > 0 -> value * 1.0
       _ -> 1.0
     end
   end
-
-  defp benchmark_weight(_criterion), do: 1.0
 
   defp benchmark_scores(left_value, right_value, goal, weight) do
     cond do

@@ -45,7 +45,6 @@ defmodule KyuubikiWeb.WorkflowDomainDecisionRuntime do
     else
       [] -> {:error, :invalid_domain_guard_rules}
       {:error, reason} -> {:error, reason}
-      _ -> {:error, :invalid_domain_guard_payload}
     end
   end
 
@@ -70,7 +69,6 @@ defmodule KyuubikiWeb.WorkflowDomainDecisionRuntime do
     else
       [] -> {:error, :invalid_domain_benchmark_criteria}
       {:error, reason} -> {:error, reason}
-      _ -> {:error, :invalid_domain_benchmark_pair}
     end
   end
 

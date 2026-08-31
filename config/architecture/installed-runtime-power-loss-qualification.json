@@ -33,7 +33,9 @@
       "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/remote.rs",
       "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/support.rs",
       "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/remote.rs",
-      "workers/rust/crates/script-runner/src/governance_commands.rs"
+      "workers/rust/crates/script-runner/src/governance_commands.rs",
+      "workers/rust/crates/desktop-runtime/src/runtime_control.rs",
+      "workers/rust/crates/desktop-runtime/src/runtime_layout.rs"
     ],
     "required_text": [
       "qualify-installed-runtime-power-loss-remote",
@@ -42,7 +44,12 @@
       "--confirm-physical-reboot",
       "source tree must remain detached",
       "installed Runtime payload changed across reboot",
-      "persisted_job_retrieved"
+      "installed Runtime payload changed during power-loss preparation",
+      "installed Runtime payload changed during post-reboot recovery",
+      "apply_writable_state_env",
+      "KYUUBIKI_DATA_DIR",
+      "persisted_job_retrieved",
+      "mix compile --warnings-as-errors"
     ]
   },
   "retention": {

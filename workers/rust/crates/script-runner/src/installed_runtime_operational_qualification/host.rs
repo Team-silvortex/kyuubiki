@@ -193,16 +193,19 @@ fn capture(options: &Options) -> RunnerResult<()> {
         detached_status.as_bytes(),
     )
     .map_err(|error| format!("failed to write detached status: {error}"))?;
-    fs::write(
-        options.output.join("installed-digests.txt"),
-        render_digests(&installation),
-    )
-    .map_err(|error| format!("failed to write installed digests: {error}"))?;
-
     guard.stop()?;
     if ports.any_listening() || pid_residue(&state_root)? != 0 {
         return Err("installed Runtime cleanup left a process or PID residue".to_string());
     }
+    let post_run_installation = verify_installation(&runtime, &options.package_version)?;
+    if post_run_installation != installation {
+        return Err("installed Runtime payload changed during operational qualification".into());
+    }
+    fs::write(
+        options.output.join("installed-digests.txt"),
+        render_digests(&post_run_installation),
+    )
+    .map_err(|error| format!("failed to write installed digests: {error}"))?;
     Ok(())
 }
 

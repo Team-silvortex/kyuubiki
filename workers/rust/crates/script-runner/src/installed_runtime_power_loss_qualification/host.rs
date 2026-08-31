@@ -183,6 +183,10 @@ fn prepare(options: Options) -> RunnerResult<u8> {
 
     let pids = runtime_pids(&state_root, ports)?;
     let process_identities = process_identities(&pids)?;
+    let prepared_payload_digests = verify_installation(&runtime, &options.package_version)?;
+    if prepared_payload_digests != payload_digests {
+        return Err("installed Runtime payload changed during power-loss preparation".into());
+    }
     let preparation = Preparation {
         qualification_id: QUALIFICATION_ID.to_string(),
         execution_host_role: "remote-linux-qualification-host".to_string(),
@@ -285,6 +289,10 @@ fn resume(options: Options) -> RunnerResult<u8> {
     if residue != 0 || !ports_closed {
         return Err("installed Runtime cleanup left reboot qualification residue".into());
     }
+    let recovered_payload_digests = verify_installation(&runtime, &options.package_version)?;
+    if recovered_payload_digests != payload_digests {
+        return Err("installed Runtime payload changed during post-reboot recovery".into());
+    }
     let capture = HostCapture {
         schema_version: CAPTURE_SCHEMA.to_string(),
         preparation: intent.payload,
@@ -297,7 +305,7 @@ fn resume(options: Options) -> RunnerResult<u8> {
             same_machine: true,
             interrupted_process_count: interrupted as u64,
             pre_reboot_ports_released: true,
-            payload_digests,
+            payload_digests: recovered_payload_digests,
             source_tree_detached: true,
             runtime_policy: "installer-managed".to_string(),
             agent_count: 2,

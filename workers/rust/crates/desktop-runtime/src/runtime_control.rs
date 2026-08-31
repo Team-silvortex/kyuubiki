@@ -231,6 +231,7 @@ fn start_services(requested_mode: &str) -> Result<String, String> {
     let paths = runtime_paths()?;
     ensure_runtime_dirs(&paths)?;
     let mut env = runtime_env(&paths.root);
+    paths.apply_writable_state_env(&mut env)?;
     let mode = resolve_mode(requested_mode, &env)?;
     if mode == "local" {
         env.entry("SQLITE_DATABASE_PATH".to_string())

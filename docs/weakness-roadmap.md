@@ -208,6 +208,9 @@ the native `qualify-installed-runtime-operational-remote` command rather than
 manual `tmp` captures; it verifies installed component hashes against the sealed
 payload before execution. Shutdown closes every qualification port, removes
 managed PID files and the remote experiment root, and leaves zero residue. The
+production OTP release is also compiled on the pinned Linux Elixir `1.20.1`
+toolchain with warnings treated as errors, preventing type-analysis drift from
+being normalized into retained evidence. The
 sanitized current-line evidence is retained at
 `releases/usability-evidence/2.19.0/installed-runtime-operational-qualification.json`
 and is rechecked by
@@ -216,17 +219,20 @@ and is rechecked by
 still requires multi-host package acquisition and installed operation on the
 remaining supported platforms.
 
-The next installed recovery subtier now has an executable protocol rather than
-a design note. `qualify-installed-runtime-power-loss-remote` provisions the
-same sealed production Runtime, removes its source tree, completes a real
-Headless solve, and durably binds the job result, three live process identities,
-ports, machine identity, boot identity, and payload digests. A non-reboot
-physical-Linux rehearsal has passed through `prepare` and validated `cleanup`
-with zero residue. `resume` is fail-closed until a real boot-ID change and then
-must retrieve that exact persisted job from the restarted installed stack.
-This remains a `partial` tensor claim until the disruptive reboot boundary is
-executed and a sanitized retained report exists; it does not yet close
-`fault_injection_and_recovery/installed-cross-platform`.
+The physical-Linux installed recovery subtier is now operational rather than a
+design note. `qualify-installed-runtime-power-loss-remote` provisions the same
+sealed production Runtime, removes its source tree, completes a real Headless
+solve, and durably binds the job result, three live process identities, ports,
+machine identity, boot identity, and payload digests. A real host reboot then
+interrupts all three processes; `resume` proves a changed boot ID on the same
+machine, restarts only from the installed payload, and retrieves the exact job
+with stable displacement and stress. Payload file-set checks run after both the
+pre-reboot and recovered workloads, and cleanup leaves no process, port, PID,
+session, or remote-root residue. The sanitized 16/16 report is retained at
+`releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json`.
+This promotes the Linux tensor cells to `proven/operational`; it does not close
+`fault_injection_and_recovery/installed-cross-platform`, because macOS and
+Windows installed-recovery evidence remains open.
 
 Installer-managed capacity scheduling now has independent remote Linux
 operational evidence. The native runner seals one Release Agent package, installs

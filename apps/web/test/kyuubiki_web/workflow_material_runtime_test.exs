@@ -203,6 +203,15 @@ defmodule KyuubikiWeb.WorkflowMaterialRuntimeTest do
     assert List.last(assessments)["fatigue_status"] == "fail"
   end
 
+  test "rejects nonpositive material fatigue amplitudes without raising" do
+    assert {:error, :invalid_material_fatigue_stress_amplitude} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.estimate_material_fatigue_life",
+               %{"stress_amplitude" => 0.0},
+               %{"fatigue_strength" => 120.0}
+             )
+  end
+
   test "evaluates material thermal shock risk for temperature cycle candidates" do
     assert {:ok, shock} =
              WorkflowOperatorRuntime.run_transform_operator(
@@ -241,6 +250,20 @@ defmodule KyuubikiWeb.WorkflowMaterialRuntimeTest do
     assert List.last(assessments)["candidate_id"] == "ceramic"
     assert List.last(assessments)["thermal_shock_status"] == "fail"
     assert List.last(assessments)["thermal_shock_fracture_index"] > 0.0
+  end
+
+  test "rejects nonpositive material thermal shock properties without raising" do
+    assert {:error, :invalid_material_thermal_shock_property} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.evaluate_material_thermal_shock",
+               %{
+                 "temperature_delta" => 0.0,
+                 "thermal_expansion" => 1.2e-5,
+                 "youngs_modulus" => 70.0e9,
+                 "yield_strength" => 320.0e6
+               },
+               %{}
+             )
   end
 
   test "scores material candidates with weighted optimization criteria" do

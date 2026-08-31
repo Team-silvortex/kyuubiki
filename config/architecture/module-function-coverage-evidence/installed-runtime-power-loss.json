@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Digest-bound installed Runtime physical reboot protocol with exercised Linux preparation and cleanup, while cross-boot resume remains explicitly partial until disruptive operational evidence is retained.",
+  "summary": "Physical Linux evidence proves digest-bound installed Runtime recovery across a real host reboot, while the parent cross-platform recovery tier remains open.",
   "paradigm_contract_evidence": {
     "deployment_update": [
       {
@@ -71,30 +71,33 @@
   "evidence_claims": [
     {
       "id": "installed-runtime-power-loss-deployment-protocol",
-      "status": "partial",
-      "grade": "verified",
+      "status": "proven",
+      "grade": "operational",
       "modules": ["runtime-installer"],
       "paradigms": ["deployment_update"],
       "dimensions": ["execution", "security", "contract", "recovery"],
       "files": [
         "config/architecture/installed-runtime-power-loss-qualification.json",
-        "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/remote.rs"
+        "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/remote.rs",
+        "releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json"
       ],
       "required_text": [
         "qualify-installed-runtime-power-loss-remote",
-        "installed Runtime power-loss remote state removed"
+        "installed Runtime power-loss remote state removed",
+        "managed_remote_root_removed"
       ]
     },
     {
       "id": "installed-runtime-power-loss-solver-continuity",
-      "status": "partial",
-      "grade": "verified",
+      "status": "proven",
+      "grade": "operational",
       "modules": ["runtime-agent-cli", "runtime-engine-solver"],
       "paradigms": ["solver_execution"],
       "dimensions": ["execution", "contract", "numerical_validation", "recovery"],
       "files": [
         "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/model.rs",
-        "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/host.rs"
+        "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/host.rs",
+        "releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json"
       ],
       "required_text": [
         "pre_reboot_headless_solve_passed",
@@ -104,14 +107,15 @@
     },
     {
       "id": "installed-runtime-power-loss-orchestra-continuity",
-      "status": "partial",
-      "grade": "verified",
+      "status": "proven",
+      "grade": "operational",
       "modules": ["orchestra-control-plane"],
       "paradigms": ["workflow_composition"],
       "dimensions": ["execution", "contract", "recovery"],
       "files": [
         "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/host.rs",
-        "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/model.rs"
+        "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/model.rs",
+        "releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json"
       ],
       "required_text": [
         "runtime_restarted_from_installation",
@@ -120,13 +124,14 @@
     },
     {
       "id": "installed-runtime-power-loss-headless-continuity",
-      "status": "partial",
-      "grade": "verified",
+      "status": "proven",
+      "grade": "operational",
       "modules": ["sdk-headless"],
       "paradigms": ["sdk_headless"],
       "dimensions": ["execution", "contract", "recovery"],
       "files": [
-        "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/host.rs"
+        "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/host.rs",
+        "releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json"
       ],
       "required_text": [
         "post-reboot-fetch.json",

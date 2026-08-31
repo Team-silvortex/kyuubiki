@@ -542,7 +542,7 @@ qualify-installed-runtime-operational-remote:
 
 check-installed-runtime-power-loss-qualification:
 	@$(ENTRYPOINT) check-installed-runtime-power-loss-qualification --self-test
-	@if [ -n "$${REPORT:-}" ]; then $(ENTRYPOINT) check-installed-runtime-power-loss-qualification --verify-report "$$REPORT"; fi
+	@$(ENTRYPOINT) check-installed-runtime-power-loss-qualification --verify-report "$${REPORT:-releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json}"
 
 qualify-installed-runtime-power-loss-remote:
 	@$(ENTRYPOINT) qualify-installed-runtime-power-loss-remote $${ACTION:-help} $${ARGS:-}

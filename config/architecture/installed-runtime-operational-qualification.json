@@ -40,7 +40,11 @@
       "qualify-installed-runtime-operational-remote",
       "capture-installed-runtime-operational-host",
       "source tree must be removed before installed capture",
-      "installed Runtime digest drifted from payload"
+      "installed Runtime digest drifted from payload",
+      "installed Runtime payload changed during operational qualification",
+      "apply_writable_state_env",
+      "KYUUBIKI_DATA_DIR",
+      "mix compile --warnings-as-errors"
     ]
   },
   "retention": {

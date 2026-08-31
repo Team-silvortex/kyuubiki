@@ -728,6 +728,6 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
         agent,
         :last_session_transition,
         AgentSessionState.transition(current, agent, source) ||
-          (current && (current[:last_session_transition] || current["last_session_transition"]))
+          current[:last_session_transition] || current["last_session_transition"]
       )
 end

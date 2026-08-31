@@ -156,6 +156,44 @@ impl RuntimePaths {
         }
     }
 
+    pub fn apply_writable_state_env(
+        &self,
+        values: &mut HashMap<String, String>,
+    ) -> Result<(), String> {
+        self.apply_writable_state_env_with_overrides(
+            values,
+            process_path_override("KYUUBIKI_DATA_DIR"),
+            process_path_override("SQLITE_DATABASE_PATH"),
+        )
+    }
+
+    fn apply_writable_state_env_with_overrides(
+        &self,
+        values: &mut HashMap<String, String>,
+        data_override: Option<PathBuf>,
+        sqlite_override: Option<PathBuf>,
+    ) -> Result<(), String> {
+        if self.origin == RuntimeOrigin::Development {
+            return Ok(());
+        }
+        let data = installed_writable_path(
+            &self.root,
+            "KYUUBIKI_DATA_DIR",
+            data_override.unwrap_or_else(|| self.data.clone()),
+        )?;
+        let sqlite = installed_writable_path(
+            &self.root,
+            "SQLITE_DATABASE_PATH",
+            sqlite_override.unwrap_or_else(|| data.join("kyuubiki.sqlite3")),
+        )?;
+        values.insert("KYUUBIKI_DATA_DIR".to_string(), data.display().to_string());
+        values.insert(
+            "SQLITE_DATABASE_PATH".to_string(),
+            sqlite.display().to_string(),
+        );
+        Ok(())
+    }
+
     pub fn service(
         &self,
         id: &str,
@@ -192,6 +230,36 @@ impl RuntimePaths {
             cwd,
         })
     }
+}
+
+fn process_path_override(key: &str) -> Option<PathBuf> {
+    env::var_os(key)
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+}
+
+fn installed_writable_path(root: &Path, key: &str, path: PathBuf) -> Result<PathBuf, String> {
+    if !path.is_absolute() {
+        return Err(format!(
+            "installer-managed {key} must be an absolute path outside the immutable Runtime payload"
+        ));
+    }
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve Runtime payload root: {error}"))?;
+    let existing = path
+        .ancestors()
+        .find(|candidate| candidate.exists())
+        .ok_or_else(|| format!("installer-managed {key} has no existing filesystem ancestor"))?;
+    let canonical_existing = existing
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve installer-managed {key}: {error}"))?;
+    if canonical_existing.starts_with(&canonical_root) {
+        return Err(format!(
+            "installer-managed {key} must stay outside the immutable Runtime payload"
+        ));
+    }
+    Ok(path)
 }
 
 fn source_mode_enabled() -> bool {
@@ -414,9 +482,10 @@ fn command_names(name: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        Platform, checked_relative_path, development_command_dirs, installed_paths,
-        resolve_active_runtime_root, runtime_bin_dirs,
+        Platform, RuntimeOrigin, RuntimePaths, checked_relative_path, development_command_dirs,
+        installed_paths, resolve_active_runtime_root, runtime_bin_dirs,
     };
+    use std::collections::HashMap;
     use std::ffi::OsStr;
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -528,6 +597,83 @@ mod tests {
             root.join("bin/service").canonicalize().unwrap()
         );
         assert_eq!(agent.args, ["agent", "5001"]);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn installed_runtime_replaces_packaged_relative_state_defaults() {
+        let root = fixture_root("immutable-payload");
+        let state = fixture_root("writable-state");
+        fs::create_dir_all(&root).unwrap();
+        let paths = RuntimePaths {
+            root: root.clone(),
+            state: state.clone(),
+            data: state.join("data"),
+            run: state.join("run"),
+            hot: state.join("run/hot"),
+            origin: RuntimeOrigin::Installed,
+            services: HashMap::new(),
+        };
+        let mut values = HashMap::from([
+            ("KYUUBIKI_DATA_DIR".to_string(), "./tmp/data".to_string()),
+            (
+                "SQLITE_DATABASE_PATH".to_string(),
+                "./tmp/data/kyuubiki_dev.sqlite3".to_string(),
+            ),
+        ]);
+        paths
+            .apply_writable_state_env_with_overrides(&mut values, None, None)
+            .unwrap();
+        assert_eq!(
+            values.get("KYUUBIKI_DATA_DIR"),
+            Some(&state.join("data").display().to_string())
+        );
+        assert_eq!(
+            values.get("SQLITE_DATABASE_PATH"),
+            Some(&state.join("data/kyuubiki.sqlite3").display().to_string())
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn installed_runtime_accepts_only_external_absolute_state_overrides() {
+        let root = fixture_root("override-payload");
+        let state = fixture_root("override-state");
+        fs::create_dir_all(&root).unwrap();
+        let paths = RuntimePaths {
+            root: root.clone(),
+            state: state.clone(),
+            data: state.join("data"),
+            run: state.join("run"),
+            hot: state.join("run/hot"),
+            origin: RuntimeOrigin::Installed,
+            services: HashMap::new(),
+        };
+        let external = fixture_root("external-data");
+        let mut values = HashMap::new();
+        paths
+            .apply_writable_state_env_with_overrides(
+                &mut values,
+                Some(external.clone()),
+                Some(external.join("custom.sqlite3")),
+            )
+            .unwrap();
+        assert_eq!(
+            values.get("SQLITE_DATABASE_PATH"),
+            Some(&external.join("custom.sqlite3").display().to_string())
+        );
+        let relative = paths
+            .apply_writable_state_env_with_overrides(
+                &mut values,
+                Some("relative/data".into()),
+                None,
+            )
+            .unwrap_err();
+        assert!(relative.contains("absolute path"));
+        let inside = paths
+            .apply_writable_state_env_with_overrides(&mut values, Some(root.join("data")), None)
+            .unwrap_err();
+        assert!(inside.contains("outside the immutable Runtime payload"));
         fs::remove_dir_all(root).unwrap();
     }
 

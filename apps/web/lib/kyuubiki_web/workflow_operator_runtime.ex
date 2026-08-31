@@ -37,10 +37,8 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
   def run_solve_operator(operator_id, _payload, _node),
     do: {:error, {:unsupported_workflow_solve_operator, operator_id}}
 
-  defp roadmap_operator_tags?(tags) when is_list(tags),
-    do: "partial" in tags or "roadmap" in tags
-
-  defp roadmap_operator_tags?(_tags), do: false
+  defp roadmap_operator_tags?(tags),
+    do: is_list(tags) and ("partial" in tags or "roadmap" in tags)
 
   def run_transform_operator(
         "bridge.temperature_field_to_thermo_quad_2d",

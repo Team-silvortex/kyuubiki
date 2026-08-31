@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.installed-runtime-operational-qualification/v1",
-  "generated_at_unix_ms": 1788169113175,
+  "generated_at_unix_ms": 1788172183695,
   "status": "pass",
   "qualification_id": "remote-linux-installer-managed-runtime-operational",
   "journey": "installed-headless-orchestra-agent-restart",
@@ -15,9 +15,9 @@
     "runtime_policy": "installer-managed",
     "source_tree_detached": true,
     "source_fallback": false,
-    "payload_manifest_sha256": "eedc17e96aca11b5a811ffa099529e166ee74fce145e1c49860f896d148cf31b",
+    "payload_manifest_sha256": "e7d63a2f519aeffaef840fb23bd02f66afdea4c3dc37406e496ece7b74e2ec37",
     "service_manifest_sha256": "a761efe3565a5d0b25e47a477bdea7e461e0df213be8af7de540b32e11e29a58",
-    "runtime_binary_sha256": "446e171067b5f27a819efc2387c50e6de40f96434446735e12729623e3b417f7",
+    "runtime_binary_sha256": "63cd134849d098131c178ee4b273d2dd0a4b8c1e11dd57ee274250a911eb8ff9",
     "headless_binary_sha256": "5d80deee9a1ee67e5ab2ba9d982361b7334e9f867c2bc36c9d1cb25eab4ce2ee",
     "agent_binary_sha256": "3c94fb0b4c7250094765a0aa5eebf91d4a5b517882ed1eeef8305661bf43592a"
   },
@@ -31,7 +31,7 @@
     "workflow_id": "qualification.installed-runtime.bar",
     "mode": "execute:service",
     "status": "completed",
-    "job_id_sha256": "1bfb4b6d3cd8e73c80f0e2bfc4fab46fd2393ad46d6028dc5449d9cac52b51b6",
+    "job_id_sha256": "ef9025f4a2441d9d1be8cd1b144d4c5c710da5e9d378a1166a68856e56fb3506",
     "worker_transport": "rust-agent-rpc",
     "agent_dispatched": true,
     "tip_displacement": 5.714285714285714e-7,
@@ -51,11 +51,11 @@
   },
   "capture_digests": {
     "cleanup_report_sha256": "0a5af41477b72f2419d2d42360e1d41847222b618e1d75a94bc57ca4d7f4571d",
-    "detached_fetch_report_sha256": "821a8611730055c5654be93fc4270f17fc59da3d35f24f4f65b9b5459f77659a",
-    "detached_status_sha256": "eb5986571bf014f7f1cf82868aa97eebcd5ec928d39886103c6ff5f31223e6cf",
-    "installed_digests_sha256": "ff288b0e1e5255daf694111e043f3b088db25831066c22450b7bd24682a2d366",
-    "restart_fetch_report_sha256": "a7f44702b11043ff2fd0766e4f4b5bf681c5a0b081548fe154be28397cc9bffb",
-    "solve_report_sha256": "23608f1874ea99b53ea0fa03e6e4946c7d7ce0bc52c23a6574c4a1e2a34608ca"
+    "detached_fetch_report_sha256": "a013d57a944c410629132b072516e375a1bb58d55712b668c8174dbf765060ad",
+    "detached_status_sha256": "e55376e38f876f88f58597a6630abacaaeab151afbd063804f2461ef99bce90d",
+    "installed_digests_sha256": "cd927b3cdefaf2c533f5745cff532dec54d221bcaaeb796efd9cd5f938eb0e54",
+    "restart_fetch_report_sha256": "ebc39bc6368686acd05a30e1aeedd5d3425dbf0f6828727bfd41aefeb70f9e60",
+    "solve_report_sha256": "2eb79c22b92d77b7707bfeac55adbae43cd372daec4aa17891ebae3e7f40ccfd"
   },
   "checks": [
     {

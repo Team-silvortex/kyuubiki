@@ -383,9 +383,6 @@ defmodule KyuubikiWeb.Router do
             "kind" => kind,
             "id" => entry_id
           })
-
-        {:error, reason} ->
-          unprocessable(conn, reason)
       end
     end)
   end

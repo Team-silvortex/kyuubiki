@@ -848,10 +848,17 @@ It builds one production OTP release and the native binaries, seals and
 activates them through Installer, deletes the synchronized source tree, then
 starts the Runtime with the frontend disabled. Headless submits a real bar
 solve and fetches the same persisted result after each of two managed Runtime
-restarts. The host capture fails closed on payload digest drift, source
-fallback, changed numerical output, missing Agent dispatch, stale PID files,
-open ports, or cleanup residue. Only the compact path-free report is retained;
-the remote run root and local raw captures are removed.
+restarts. Before release assembly, every production Elixir module is compiled
+with `mix compile --warnings-as-errors` on the pinned physical-Linux toolchain;
+type-analysis or compiler warnings therefore fail the qualification rather
+than being hidden in release output. Installed state paths are absolute and
+outside the immutable payload; packaged relative development defaults cannot
+redirect SQLite, JSON persistence, or artifacts into installed program files.
+The host capture verifies the complete payload file set both before startup and
+after shutdown, and fails closed on digest drift, source fallback, changed
+numerical output, missing Agent dispatch, stale PID files, open ports, or
+cleanup residue. Only the compact path-free report is retained; the remote run
+root and local raw captures are removed.
 
 The full installed Runtime reboot lane is a separate two-phase boundary. It
 persists one completed Headless job while the installed Orchestra and two Rust
@@ -871,7 +878,12 @@ does not bypass that guard. An abandoned run is removed with `ACTION=cleanup`.
 Preparation and resume use a digest-bound local session plus a durable remote
 intent, verify every file named by the sealed Runtime payload, keep the source
 tree detached, and reject a resume unless the machine identity is unchanged and
-the boot identity changed. Only the final path-free report is retained.
+the boot identity changed. Payload integrity is checked after pre-reboot work,
+before recovery, and again after the recovered Runtime stops. The retained
+physical-Linux report passes 16/16 checks, including exact persisted-job and
+numerical-result continuity, released ports, removed PID state, and zero remote
+residue. Only the final path-free report is retained; this evidence does not
+claim installed recovery on macOS or Windows.
 
 ## Operational Agent Solver Qualification
 

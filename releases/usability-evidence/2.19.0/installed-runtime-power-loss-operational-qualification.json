@@ -1,0 +1,159 @@
+{
+  "schema_version": "kyuubiki.installed-runtime-power-loss-qualification/v1",
+  "qualification_id": "physical-linux-installed-runtime-power-loss-recovery",
+  "status": "pass",
+  "journey": "installed-headless-orchestra-agent-across-host-reboot",
+  "execution_host_role": "remote-linux-qualification-host",
+  "platform": "linux",
+  "architecture": "x86_64",
+  "runtime_version": "2.19.0",
+  "generated_at_unix_ms": 1788172286472,
+  "preparation": {
+    "qualification_id": "physical-linux-installed-runtime-power-loss-recovery",
+    "execution_host_role": "remote-linux-qualification-host",
+    "platform": "linux",
+    "architecture": "x86_64",
+    "runtime_version": "2.19.0",
+    "prepared_at_unix_ms": 1788172212934,
+    "machine_id_sha256": "473f243f2db200b4e642463868e7bbfeafd0b2aea4542ae6ba9cf0c23bc175b3",
+    "pre_boot_id_sha256": "dac0332726fef0e6bf3c129472e2062a48061e63e97800353d56b3ae6a013a9d",
+    "pre_uptime_seconds": 732,
+    "source_tree_detached": true,
+    "payload_digests": {
+      "kyuubiki-cli": "3c94fb0b4c7250094765a0aa5eebf91d4a5b517882ed1eeef8305661bf43592a",
+      "kyuubiki-headless": "5d80deee9a1ee67e5ab2ba9d982361b7334e9f867c2bc36c9d1cb25eab4ce2ee",
+      "kyuubiki-runtime": "63cd134849d098131c178ee4b273d2dd0a4b8c1e11dd57ee274250a911eb8ff9",
+      "runtime-payload.json": "d57a606f4586dd0a58afecc37697599332038b250411f9651324c788e7ddbef0",
+      "service-launch.json": "a761efe3565a5d0b25e47a477bdea7e461e0df213be8af7de540b32e11e29a58"
+    },
+    "ports": {
+      "orchestrator": 38333,
+      "agent_one": 40139,
+      "agent_two": 38699
+    },
+    "process_identities": [
+      {
+        "role": "agent_one",
+        "process_id": 17550,
+        "executable_sha256": "3c94fb0b4c7250094765a0aa5eebf91d4a5b517882ed1eeef8305661bf43592a"
+      },
+      {
+        "role": "agent_two",
+        "process_id": 17554,
+        "executable_sha256": "3c94fb0b4c7250094765a0aa5eebf91d4a5b517882ed1eeef8305661bf43592a"
+      },
+      {
+        "role": "orchestrator",
+        "process_id": 17558,
+        "executable_sha256": "f846a53ca919ef5537d95f8448c65fe977893d107154ee0b5d97f72231d20625"
+      }
+    ],
+    "workflow_id": "qualification.installed-runtime.bar",
+    "job_id": "8b3e60fb319bbc10",
+    "numerical_result": {
+      "tip_displacement": 5.714285714285714e-7,
+      "max_stress": 120000.0
+    },
+    "runtime_status_verified": true,
+    "agent_count": 2
+  },
+  "intent_sha256": "28c69cb4d5f9f13be2fc753b31e26b1e3f4966b5706a41be5bb59eb544a0ed40",
+  "recovery": {
+    "post_boot_id_sha256": "28b32a602944529b96d63060c506cff0ddbdfe5bf447385b499aa179d1d41839",
+    "post_machine_id_sha256": "473f243f2db200b4e642463868e7bbfeafd0b2aea4542ae6ba9cf0c23bc175b3",
+    "post_uptime_seconds": 24,
+    "boot_identity_changed": true,
+    "same_machine": true,
+    "interrupted_process_count": 3,
+    "pre_reboot_ports_released": true,
+    "payload_digests": {
+      "kyuubiki-cli": "3c94fb0b4c7250094765a0aa5eebf91d4a5b517882ed1eeef8305661bf43592a",
+      "kyuubiki-headless": "5d80deee9a1ee67e5ab2ba9d982361b7334e9f867c2bc36c9d1cb25eab4ce2ee",
+      "kyuubiki-runtime": "63cd134849d098131c178ee4b273d2dd0a4b8c1e11dd57ee274250a911eb8ff9",
+      "runtime-payload.json": "d57a606f4586dd0a58afecc37697599332038b250411f9651324c788e7ddbef0",
+      "service-launch.json": "a761efe3565a5d0b25e47a477bdea7e461e0df213be8af7de540b32e11e29a58"
+    },
+    "source_tree_detached": true,
+    "runtime_policy": "installer-managed",
+    "agent_count": 2,
+    "job_id": "8b3e60fb319bbc10",
+    "job_status": "completed",
+    "numerical_result": {
+      "tip_displacement": 5.714285714285714e-7,
+      "max_stress": 120000.0
+    }
+  },
+  "cleanup": {
+    "runtime_stopped": true,
+    "ports_closed": true,
+    "pid_files_removed": true,
+    "managed_remote_root_removed": true,
+    "residue_count": 0
+  },
+  "checks": [
+    {
+      "id": "remote_linux_host",
+      "status": "pass"
+    },
+    {
+      "id": "source_tree_detached",
+      "status": "pass"
+    },
+    {
+      "id": "installed_payload_verified",
+      "status": "pass"
+    },
+    {
+      "id": "intent_digest_verified",
+      "status": "pass"
+    },
+    {
+      "id": "pre_reboot_runtime_live",
+      "status": "pass"
+    },
+    {
+      "id": "pre_reboot_headless_solve_passed",
+      "status": "pass"
+    },
+    {
+      "id": "same_machine_after_reboot",
+      "status": "pass"
+    },
+    {
+      "id": "boot_identity_changed",
+      "status": "pass"
+    },
+    {
+      "id": "pre_reboot_processes_interrupted",
+      "status": "pass"
+    },
+    {
+      "id": "pre_reboot_ports_released",
+      "status": "pass"
+    },
+    {
+      "id": "installed_payload_persisted",
+      "status": "pass"
+    },
+    {
+      "id": "runtime_restarted_from_installation",
+      "status": "pass"
+    },
+    {
+      "id": "persisted_job_retrieved",
+      "status": "pass"
+    },
+    {
+      "id": "numerical_result_stable",
+      "status": "pass"
+    },
+    {
+      "id": "cleanup_complete",
+      "status": "pass"
+    },
+    {
+      "id": "retention_sanitized",
+      "status": "pass"
+    }
+  ]
+}

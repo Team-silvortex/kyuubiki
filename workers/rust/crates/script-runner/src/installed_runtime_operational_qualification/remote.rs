@@ -236,7 +236,7 @@ export MIX_HOME=\"$HOME/.kyuubiki/toolchains/mix/elixir-{elixir}-otp-{otp}\"; ex
 mkdir -p \"$target_root\" \"$MIX_HOME\" \"$HEX_HOME\" \"$mix_cache\"; cd \"$source_root/workers/rust\"; \
 CARGO_TARGET_DIR=\"$target_root\" cargo +1.88.0 build --release -p kyuubiki-installer -p kyuubiki-script-runner -p kyuubiki-cli -p kyuubiki-desktop-runtime \
 --bin kyuubiki-installer --bin kyuubiki-script-runner --bin kyuubiki-cli --bin kyuubiki-headless --bin kyuubiki-runtime; \
-cd \"$source_root/apps/web\"; mix help hex.info >/dev/null 2>&1 || mix local.hex --force >/dev/null; MIX_ENV=prod mix deps.get; MIX_ENV=prod KYUUBIKI_RELEASE_VERSION={version} mix release kyuubiki_web --overwrite --path \"$release_path\"; \
+cd \"$source_root/apps/web\"; mix help hex.info >/dev/null 2>&1 || mix local.hex --force >/dev/null; MIX_ENV=prod mix deps.get; MIX_ENV=prod mix compile --warnings-as-errors; MIX_ENV=prod KYUUBIKI_RELEASE_VERSION={version} mix release kyuubiki_web --overwrite --path \"$release_path\"; \
 installer=\"$target_root/release/kyuubiki-installer\"; runner=\"$target_root/release/kyuubiki-script-runner\"; export KYUUBIKI_REPO_ROOT=\"$source_root\"; \
 \"$installer\" stage-release linux \"$payload\"; install -m 0755 \"$target_root/release/kyuubiki-cli\" \"$payload/bin/kyuubiki-cli\"; \
 install -m 0755 \"$target_root/release/kyuubiki-runtime\" \"$payload/bin/kyuubiki-runtime\"; install -m 0755 \"$target_root/release/kyuubiki-headless\" \"$payload/bin/kyuubiki-headless\"; \
@@ -434,6 +434,7 @@ mod tests {
         assert!(command.contains("bin/kyuubiki-headless"));
         assert!(command.contains("seal-runtime-payload"));
         assert!(command.contains("capture-installed-runtime-operational-host"));
+        assert!(command.contains("mix compile --warnings-as-errors"));
         assert_eq!(command.matches("cargo +1.88.0 build").count(), 1);
         assert!(!command.contains("node "));
     }
