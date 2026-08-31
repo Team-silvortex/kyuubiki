@@ -31,6 +31,7 @@
     "config/architecture/module-function-coverage-evidence/agent-solver-execution.json",
     "config/architecture/module-function-coverage-evidence/workflow-engine.json",
     "config/architecture/module-function-coverage-evidence/orchestra-workflow-operational.json",
+    "config/architecture/module-function-coverage-evidence/fleet-scheduling-operational.json",
     "config/architecture/module-function-coverage-evidence/installed-runtime-operational.json",
     "config/architecture/module-function-coverage-evidence/persistence-provenance-verification.json"
   ],

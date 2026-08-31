@@ -26,7 +26,8 @@ pub use crate::agent_solver_operational_validation::{
 pub use crate::agent_update_payload::{
     AGENT_UPDATE_ACTIVATION_SCHEMA_VERSION, AGENT_UPDATE_PACKAGE_SCHEMA_VERSION,
     AgentUpdateActivationRecord, AgentUpdatePackageManifest, AgentUpdateStatus,
-    active_agent_binary, agent_update_status, install_agent_update_package, launch_managed_agent,
+    active_agent_binary, active_agent_binary_in, agent_update_status, agent_update_status_in,
+    install_agent_update_package, install_agent_update_package_into, launch_managed_agent,
     prepare_agent_update_package, rollback_agent_update, seal_agent_update_package,
     verify_agent_update_package,
 };

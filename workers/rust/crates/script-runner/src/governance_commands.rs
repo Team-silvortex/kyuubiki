@@ -7,12 +7,13 @@ use crate::{
     desktop_bundle_operational_qualification, desktop_deployment_update_validation,
     desktop_ui_validation, desktop_usability_journeys,
     distributed_task_recovery_operational_qualification, doc_inventory, docs_book,
-    fleet_update_operational_qualification, frontend_checks, gui_runtime_capability_contract,
-    headless_sdk_operational, headless_sdk_validation, headless_workflow_qualification,
-    install_update_disk_hygiene, installation_integrity_docs,
-    installed_runtime_operational_qualification, installer_recovery_fault_injection,
-    language_packs, local_path_audit, make_modules, material_exploration_chain_contract,
-    material_score_contract, material_study_execution_plan_contract, materialization_plan_contract,
+    fleet_scheduling_operational_qualification, fleet_update_operational_qualification,
+    frontend_checks, gui_runtime_capability_contract, headless_sdk_operational,
+    headless_sdk_validation, headless_workflow_qualification, install_update_disk_hygiene,
+    installation_integrity_docs, installed_runtime_operational_qualification,
+    installer_recovery_fault_injection, language_packs, local_path_audit, make_modules,
+    material_exploration_chain_contract, material_score_contract,
+    material_study_execution_plan_contract, materialization_plan_contract,
     minimal_industrial_closure, module_extension_standard, module_function_matrix,
     module_function_tensor, module_topology, module_topology_report, moxi_handoff,
     operator_sdk_multihost_qualification, operator_task_ir_contract,
@@ -237,6 +238,15 @@ pub(crate) fn run_governance_command(
         }
         "check-fleet-update-operational-qualification" => {
             fleet_update_operational_qualification::run_check(root, args)
+        }
+        "check-fleet-scheduling-operational-qualification" => {
+            fleet_scheduling_operational_qualification::run_check(root, args)
+        }
+        "qualify-fleet-scheduling-operational-remote" => {
+            fleet_scheduling_operational_qualification::run_qualify_remote(root, args)
+        }
+        "capture-fleet-scheduling-operational-host" => {
+            fleet_scheduling_operational_qualification::run_capture_host(root, args)
         }
         "check-agent-rolling-replacement-operational-qualification" => {
             agent_rolling_operational_qualification::run_check(root, args)

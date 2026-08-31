@@ -76,6 +76,8 @@ help:
 	@echo "  make check-orchestra-installed-takeover-operational-qualification Recheck retained installed-package takeover evidence"
 	@echo "  make qualify-distributed-task-recovery-operational-remote Kill an in-flight remote Agent and prove replay-safe two-host recovery"
 	@echo "  make check-distributed-task-recovery-operational-qualification Recheck retained in-flight task recovery evidence"
+	@echo "  make qualify-fleet-scheduling-operational-remote Prove Installer-managed capacity scheduling, cooldown, and rejoin on remote Linux"
+	@echo "  make check-fleet-scheduling-operational-qualification Recheck retained fleet scheduling operational evidence"
 	@echo "  make qualify-agent-solver-operational-remote Build, Installer-deploy, solve, restart, recover, and clean on the Linux lab host"
 	@echo "  make check-agent-solver-operational-qualification Recheck retained remote Linux Agent solver operational evidence"
 	@echo "  make qualify-agent-update-operational-remote Exercise Installer-managed Agent upgrade and payload rollback on remote Linux"

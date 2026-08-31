@@ -183,9 +183,24 @@ residue. The sanitized evidence is retained at
 and is rechecked by
 `make check-installed-runtime-operational-qualification`. This closes only
 `remote_agent_orchestra_round_trip/installer-managed-linux`; the parent tier
-still requires multi-host package acquisition, network-loss/rejoin behavior,
-fleet scheduling, and installed operation on the remaining supported
-platforms.
+still requires multi-host package acquisition and installed operation on the
+remaining supported platforms.
+
+Installer-managed capacity scheduling now has independent remote Linux
+operational evidence. The native runner seals one Release Agent package, installs
+it into two isolated stores, and starts capacities 3 and 1. Orchestra's
+`least_utilized_capacity_v1` admission produces the exact 3:1 lease
+distribution, emits per-decision utilization metadata, and executes the same
+closed-form bar solve on both Agents. The runner then stops the high-capacity
+process: Orchestra records a machine-readable unavailable-process receipt,
+falls back to the low Agent, honors cooldown, observes a changed process identity
+after restart, and resumes high-capacity scheduling. Every process, port, install
+root, and remote run directory is removed. Sanitized evidence is retained at
+`releases/usability-evidence/2.19.0/fleet-scheduling-operational-qualification.json`
+and rechecked by
+`make check-fleet-scheduling-operational-qualification`. This closes
+`remote_agent_orchestra_round_trip/fleet-scheduling` only. The two Agents share
+one remote physical host, so multi-host package acquisition remains open.
 
 Agent control-link recovery is now explicit rather than silent. The Rust Agent
 records registration and heartbeat attempts through the shared
@@ -209,8 +224,8 @@ address. Evidence lives at
 `releases/usability-evidence/2.14.7/agent-control-link-operational-qualification.json`
 and is rechecked by `make check-agent-control-link-operational-qualification`.
 This closes control-link network-loss/rejoin, not Installer-managed package
-acquisition, fleet scheduling, or installed operation on every supported
-platform. In-flight process-loss recovery now has its own independent two-host
+acquisition or installed operation on every supported platform. In-flight
+process-loss recovery now has its own independent two-host
 operational qualification rather than being inferred from this link test. That
 qualification uses a visible, default-disabled, exact-job execution barrier,
 requires the remote watchdog to show the job active, then kills the remote Rust
@@ -239,7 +254,7 @@ and is rechecked by
 `make check-orchestra-long-workflow-takeover-operational-qualification`. This
 closes that subtier. The `moxi 2.19.0` source-line rollover reopens macOS and
 Linux installed-desktop qualification until fresh packages are built and run;
-the gate therefore carries eleven explicit release subtiers. The retained
+the gate therefore carries ten explicit release subtiers. The retained
 `2.18.3` reports remain historical evidence rather than current-package proof.
 Full host power loss, Installer-led fleet package acquisition, and the installed
 cross-platform matrix remain among the open work.
@@ -339,8 +354,9 @@ prove numerical equality, capability rejection, digest-tamper rejection,
 watchdog quiescence, and recovery; the qualification work root is removed with
 zero residue. The machine-validated report is retained under
 `releases/usability-evidence/2.13.8/agent-solver-operational-qualification.json`.
-This evidence does not promote Orchestra fleet scheduling or installed
-Headless SDK operation.
+That report alone does not promote Orchestra fleet scheduling or installed
+Headless SDK operation. Fleet scheduling is promoted independently by the
+retained `2.19.0` qualification described above.
 
 The P0 security cluster now meets its `qualified` target for contracts,
 shared desktop UI, Hub, Workbench, all three official Headless SDK bindings,
@@ -756,6 +772,8 @@ Current moxi hardening focus:
 
 - keep agent and orchestra authority modes explicit
 - ensure every agent execution failure reports a machine-readable reason
+- preserve the retained capacity-normalized scheduling, per-Agent utilization,
+  cooldown, rejoin, numerical, and cleanup evidence as the fleet policy evolves
 - continue remote-server tests through Installer-owned paths instead of ad-hoc
   SSH operations
 

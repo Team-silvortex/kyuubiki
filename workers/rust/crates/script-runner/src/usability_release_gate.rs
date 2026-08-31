@@ -362,6 +362,7 @@ fn is_operational_probe(probe: &[String]) -> bool {
         | "check-runtime-recovery-fault-injection" => has("--out"),
         "check-agent-update-operational-qualification"
         | "check-desktop-ui-validation"
+        | "check-fleet-scheduling-operational-qualification"
         | "check-fleet-update-operational-qualification"
         | "check-installed-runtime-operational-qualification"
         | "check-runtime-payload-operational-qualification"

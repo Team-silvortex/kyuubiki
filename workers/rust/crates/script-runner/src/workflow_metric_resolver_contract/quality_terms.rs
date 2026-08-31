@@ -180,11 +180,10 @@ pub(super) fn rust_quality_term_signatures_from_source(
             term.goal = normalize_goal(line);
         }
         if line.starts_with("},") || line.starts_with("})") || line == "}" {
-            if let Some(((mut key_domain, field), signature)) =
+            if let Some(((_parsed_domain, field), signature)) =
                 current.take().and_then(|term| term.finish())
             {
-                key_domain = domain.to_string();
-                signatures.insert((key_domain, field), signature);
+                signatures.insert((domain.to_string(), field), signature);
             }
         }
     }

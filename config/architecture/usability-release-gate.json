@@ -17,6 +17,7 @@
       "fault_injection_and_recovery/long-running-workflow-takeover",
       "fault_injection_and_recovery/installer-journal-replay",
       "remote_agent_orchestra_round_trip/installer-managed-linux",
+      "remote_agent_orchestra_round_trip/fleet-scheduling",
       "upgrade_and_rollback/agent-remote-linux",
       "upgrade_and_rollback/runtime-payload-remote-linux",
       "upgrade_and_rollback/installer-managed-fleet-remote-linux",
@@ -36,7 +37,6 @@
       "fault_injection_and_recovery/full-host-power-loss",
       "fault_injection_and_recovery/installed-cross-platform",
       "remote_agent_orchestra_round_trip/multi-host-package-acquisition",
-      "remote_agent_orchestra_round_trip/fleet-scheduling",
       "remote_agent_orchestra_round_trip/installed-macos",
       "remote_agent_orchestra_round_trip/installed-windows",
       "upgrade_and_rollback/packaged-desktop-set-linux",
@@ -149,6 +149,11 @@
           "check-installed-runtime-operational-qualification",
           "--verify-report",
           "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
+        ],
+        [
+          "check-fleet-scheduling-operational-qualification",
+          "--verify-report",
+          "releases/usability-evidence/2.19.0/fleet-scheduling-operational-qualification.json"
         ],
         [
           "check-operator-validation",

@@ -45,6 +45,7 @@ mod doc_inventory;
 mod docs_book;
 mod docs_book_research;
 mod elixir_self_host;
+mod fleet_scheduling_operational_qualification;
 mod fleet_update_operational_qualification;
 mod frontend_checks;
 mod governance_commands;

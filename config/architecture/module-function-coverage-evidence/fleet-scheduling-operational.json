@@ -1,0 +1,67 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Retained remote Linux evidence for Installer-managed dual-Agent capacity scheduling, numerical execution, process-loss fallback, cooldown isolation, process replacement, rejoin, and residue-free cleanup.",
+  "paradigm_contract_evidence": {
+    "workflow_composition": [
+      {
+        "id": "fleet-scheduling-operational-contract",
+        "modules": [
+          "orchestra-control-plane"
+        ],
+        "files": [
+          "config/architecture/fleet-scheduling-operational-qualification.json",
+          "schemas/fleet-scheduling-operational-qualification-contract.schema.json",
+          "schemas/fleet-scheduling-operational-qualification-report.schema.json",
+          "apps/web/lib/kyuubiki_web/orchestra/fleet_scheduling_operational_probe.ex",
+          "workers/rust/crates/script-runner/src/fleet_scheduling_operational_qualification/mod.rs",
+          "workers/rust/crates/script-runner/src/fleet_scheduling_operational_qualification/report.rs"
+        ],
+        "required_text": [
+          "remote-linux-installer-managed-fleet-scheduling-operational",
+          "orchestra-control-plane",
+          "workflow_composition",
+          "least_utilized_capacity_v1",
+          "check-fleet-scheduling-operational-qualification",
+          "high_capacity_agent_unavailable_before_dispatch"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "fleet-scheduling-remote-linux-operational",
+      "status": "proven",
+      "grade": "operational",
+      "modules": [
+        "orchestra-control-plane"
+      ],
+      "paradigms": [
+        "workflow_composition"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "numerical_validation",
+        "recovery"
+      ],
+      "files": [
+        "releases/usability-evidence/2.19.0/fleet-scheduling-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"journey\": \"installer-managed-agent-fleet-capacity-failover-and-rejoin\"",
+        "\"execution_host_role\": \"remote-linux-qualification-host\"",
+        "\"agent_count\": 2",
+        "\"declared_capacity_slots\": 4",
+        "\"policy\": \"least_utilized_capacity_v1\"",
+        "\"fleet-high-capacity\": 3",
+        "\"fleet-low-capacity\": 1",
+        "\"reason_code\": \"agent_process_unavailable\"",
+        "\"high_agent_process_changed\": true",
+        "\"managed_install_root_removed\": true",
+        "\"id\": \"retention_sanitized\""
+      ]
+    }
+  ]
+}

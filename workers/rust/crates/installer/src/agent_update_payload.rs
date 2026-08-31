@@ -205,7 +205,7 @@ pub fn launch_managed_agent(args: &[String]) -> Result<i32, String> {
     Ok(status.code().unwrap_or(1))
 }
 
-pub(crate) fn install_agent_update_package_into(
+pub fn install_agent_update_package_into(
     package_root: &Path,
     store: &Path,
     platform: Platform,
@@ -256,7 +256,7 @@ pub(crate) fn activate_agent_version_in(
     activate_version(store, &manifest, platform)
 }
 
-pub(crate) fn agent_update_status_in(store: &Path) -> Result<AgentUpdateStatus, String> {
+pub fn agent_update_status_in(store: &Path) -> Result<AgentUpdateStatus, String> {
     let active = latest_activation(store)?;
     let mut installed_versions = fs::read_dir(store.join("versions"))
         .ok()
@@ -275,7 +275,7 @@ pub(crate) fn agent_update_status_in(store: &Path) -> Result<AgentUpdateStatus, 
     })
 }
 
-pub(crate) fn active_agent_binary_in(store: &Path, platform: Platform) -> Result<PathBuf, String> {
+pub fn active_agent_binary_in(store: &Path, platform: Platform) -> Result<PathBuf, String> {
     let active = active_agent_activation_in(store, platform)?;
     let package = store.join(&active.relative_path);
     let manifest = verify_agent_update_package(&package, platform)?;

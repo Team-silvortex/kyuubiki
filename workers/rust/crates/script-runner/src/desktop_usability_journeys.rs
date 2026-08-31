@@ -19,6 +19,7 @@ const NATIVE_PROBES: &[&str] = &[
     "check-desktop-usability-journeys",
     "check-desktop-ui-validation",
     "check-gui-runtime-capability-contract",
+    "check-fleet-scheduling-operational-qualification",
     "check-fleet-update-operational-qualification",
     "check-install-update-disk-hygiene",
     "check-installed-runtime-operational-qualification",

@@ -1,0 +1,85 @@
+{
+  "$schema": "../../schemas/fleet-scheduling-operational-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.fleet-scheduling-operational-qualification-contract/v1",
+  "qualification_id": "remote-linux-installer-managed-fleet-scheduling-operational",
+  "target_coordinate": {
+    "module_id": "orchestra-control-plane",
+    "paradigm": "workflow_composition",
+    "target_grade": "operational"
+  },
+  "ownership": {
+    "control_plane_owner": "orchestra-control-plane",
+    "execution_owner": "runtime-agent-cli",
+    "deployment_owner": "runtime-installer",
+    "evidence_owner": "verification-evidence"
+  },
+  "capture": {
+    "execution_host_role": "remote-linux-qualification-host",
+    "platform": "linux",
+    "build_profile": "release",
+    "agent_count": 2,
+    "high_capacity": 3,
+    "low_capacity": 1,
+    "installer_managed": true,
+    "fault_injection": "high_capacity_agent_unavailable_before_dispatch",
+    "cleanup_required": true
+  },
+  "retention": {
+    "report_schema": "kyuubiki.fleet-scheduling-operational-qualification/v1",
+    "report_schema_path": "schemas/fleet-scheduling-operational-qualification-report.schema.json",
+    "report_path": "releases/usability-evidence/2.19.0/fleet-scheduling-operational-qualification.json",
+    "forbidden_content": [
+      "hostname",
+      "host_address",
+      "username",
+      "credential",
+      "absolute_host_path",
+      "127.0.0.1",
+      "192.168.",
+      "/Users/",
+      "/home/"
+    ]
+  },
+  "source_guard": {
+    "files": [
+      "apps/web/lib/kyuubiki_web/playground/agent_execution_gate.ex",
+      "apps/web/lib/kyuubiki_web/playground/agent_pool.ex",
+      "apps/web/lib/kyuubiki_web/playground/agent_client.ex",
+      "apps/web/lib/kyuubiki_web/orchestra/fleet_scheduling_operational_probe.ex",
+      "workers/rust/crates/installer/src/agent_update_payload.rs",
+      "workers/rust/crates/installer/src/exports.rs",
+      "workers/rust/crates/script-runner/src/fleet_scheduling_operational_qualification/mod.rs",
+      "workers/rust/crates/script-runner/src/fleet_scheduling_operational_qualification/agent_process.rs",
+      "workers/rust/crates/script-runner/src/fleet_scheduling_operational_qualification/probe.rs",
+      "workers/rust/crates/script-runner/src/fleet_scheduling_operational_qualification/report.rs",
+      "workers/rust/crates/script-runner/src/fleet_scheduling_operational_qualification/runtime.rs"
+    ],
+    "required_text": [
+      "least_utilized_capacity_v1",
+      "failure_cooldown_ms",
+      "FleetSchedulingOperationalProbe",
+      "install_agent_update_package_into",
+      "high_capacity_agent_unavailable_before_dispatch",
+      "capture-fleet-scheduling-operational-host"
+    ]
+  },
+  "required_checks": [
+    "installer_packaged_agents",
+    "real_rust_agents",
+    "declared_capacity_visible",
+    "normalized_capacity_distribution",
+    "scheduling_metadata_emitted",
+    "solver_execution_both_agents",
+    "numerical_consistency",
+    "unavailable_agent_fallback",
+    "cooldown_deprioritization",
+    "restarted_agent_rejoined",
+    "scheduling_resumed",
+    "cleanup_complete",
+    "retention_sanitized"
+  ],
+  "commands": {
+    "capture": "make qualify-fleet-scheduling-operational-remote REMOTE=kyuubiki-lab",
+    "verify": "make check-fleet-scheduling-operational-qualification"
+  }
+}

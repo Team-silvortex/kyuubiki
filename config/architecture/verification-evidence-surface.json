@@ -25,6 +25,7 @@
       "./scripts/kyuubiki check-agent-update-operational-qualification",
       "./scripts/kyuubiki check-runtime-payload-operational-qualification",
       "./scripts/kyuubiki check-fleet-update-operational-qualification",
+      "./scripts/kyuubiki check-fleet-scheduling-operational-qualification",
       "./scripts/kyuubiki check-agent-rolling-replacement-operational-qualification",
       "./scripts/kyuubiki check-desktop-bundle-update-operational-qualification",
       "./scripts/kyuubiki check-installed-runtime-operational-qualification",
@@ -53,6 +54,7 @@
       "tmp/orchestra-installed-takeover-operational-qualification.json",
       "tmp/distributed-task-recovery-operational-qualification.json",
       "tmp/agent-solver-operational-remote.json",
+      "tmp/fleet-scheduling-operational-qualification.json",
       "tmp/installed-runtime-operational-qualification.json",
       "tmp/benchmark-qualification-report.json",
       "tmp/orchestra-benchmark-qualification-report.json",
@@ -152,7 +154,14 @@
       "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/installed.rs",
       "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/installed_runtime.rs",
       "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/installed_report.rs",
-      "releases/usability-evidence/2.15.0/orchestra-installed-takeover-operational-qualification.json"
+      "releases/usability-evidence/2.15.0/orchestra-installed-takeover-operational-qualification.json",
+      "config/architecture/fleet-scheduling-operational-qualification.json",
+      "schemas/fleet-scheduling-operational-qualification-contract.schema.json",
+      "schemas/fleet-scheduling-operational-qualification-report.schema.json",
+      "apps/web/lib/kyuubiki_web/orchestra/fleet_scheduling_operational_probe.ex",
+      "workers/rust/crates/script-runner/src/fleet_scheduling_operational_qualification/mod.rs",
+      "workers/rust/crates/script-runner/src/fleet_scheduling_operational_qualification/report.rs",
+      "releases/usability-evidence/2.19.0/fleet-scheduling-operational-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.agent-headless-bridge/v1",
@@ -167,7 +176,8 @@
       "kyuubiki.orchestra-takeover-operational-qualification/v1",
       "kyuubiki.orchestra-network-partition-operational-qualification/v1",
       "kyuubiki.orchestra-long-workflow-takeover-operational-qualification/v1",
-      "kyuubiki.orchestra-installed-takeover-operational-qualification/v1"
+      "kyuubiki.orchestra-installed-takeover-operational-qualification/v1",
+      "kyuubiki.fleet-scheduling-operational-qualification/v1"
     ]
   },
   "security": {

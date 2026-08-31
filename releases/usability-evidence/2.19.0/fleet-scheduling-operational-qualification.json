@@ -1,0 +1,312 @@
+{
+  "schema_version": "kyuubiki.fleet-scheduling-operational-qualification/v1",
+  "generated_at_unix_ms": 1788146545351,
+  "status": "pass",
+  "journey": "installer-managed-agent-fleet-capacity-failover-and-rejoin",
+  "topology": {
+    "execution_host_role": "remote-linux-qualification-host",
+    "platform": "linux",
+    "architecture": "x86_64",
+    "orchestration_runtime": "elixir-orchestra-runtime",
+    "execution_runtime": "installed-rust-agent",
+    "deployment_owner": "kyuubiki-installer",
+    "transport": "loopback-agent-rpc",
+    "build_profile": "release",
+    "agent_count": 2,
+    "declared_capacity_slots": 4
+  },
+  "installation": {
+    "package_schema": "kyuubiki.agent-update-package/v1",
+    "package_version": "2.19.0",
+    "package_platform": "linux",
+    "entrypoint_sha256": "2b14d41d1ec90a925eb2572170f23b06be28060b73d4b094afdf9f1891ff90c2",
+    "entrypoint_size_bytes": 16364512,
+    "activations": [
+      {
+        "agent_id": "fleet-high-capacity",
+        "schema_version": "kyuubiki.agent-update-activation/v1",
+        "generation": 1,
+        "version": "2.19.0",
+        "entrypoint_sha256": "2b14d41d1ec90a925eb2572170f23b06be28060b73d4b094afdf9f1891ff90c2",
+        "active_version": "2.19.0"
+      },
+      {
+        "agent_id": "fleet-low-capacity",
+        "schema_version": "kyuubiki.agent-update-activation/v1",
+        "generation": 1,
+        "version": "2.19.0",
+        "entrypoint_sha256": "2b14d41d1ec90a925eb2572170f23b06be28060b73d4b094afdf9f1891ff90c2",
+        "active_version": "2.19.0"
+      }
+    ]
+  },
+  "agent_descriptors": [
+    {
+      "agent_id": "fleet-high-capacity",
+      "program": "kyuubiki-rust-agent",
+      "role": "solver_agent",
+      "rpc_version": 1
+    },
+    {
+      "agent_id": "fleet-low-capacity",
+      "program": "kyuubiki-rust-agent",
+      "role": "solver_agent",
+      "rpc_version": 1
+    }
+  ],
+  "capacity_distribution": {
+    "decisions": [
+      {
+        "selection_policy": "least_utilized_capacity_v1",
+        "capacity_slots": 3,
+        "selected_agent_id": "fleet-high-capacity",
+        "active_slots_before": 0,
+        "active_slots_after": 1,
+        "utilization_before": 0.0,
+        "utilization_after": 0.333333
+      },
+      {
+        "selection_policy": "least_utilized_capacity_v1",
+        "capacity_slots": 1,
+        "selected_agent_id": "fleet-low-capacity",
+        "active_slots_before": 0,
+        "active_slots_after": 1,
+        "utilization_before": 0.0,
+        "utilization_after": 1.0
+      },
+      {
+        "selection_policy": "least_utilized_capacity_v1",
+        "capacity_slots": 3,
+        "selected_agent_id": "fleet-high-capacity",
+        "active_slots_before": 1,
+        "active_slots_after": 2,
+        "utilization_before": 0.333333,
+        "utilization_after": 0.666667
+      },
+      {
+        "selection_policy": "least_utilized_capacity_v1",
+        "capacity_slots": 3,
+        "selected_agent_id": "fleet-high-capacity",
+        "active_slots_before": 2,
+        "active_slots_after": 3,
+        "utilization_before": 0.666667,
+        "utilization_after": 1.0
+      }
+    ],
+    "declared_capacity": {
+      "fleet-high-capacity": 3,
+      "fleet-low-capacity": 1
+    },
+    "lease_sequence": [
+      "fleet-high-capacity",
+      "fleet-low-capacity",
+      "fleet-high-capacity",
+      "fleet-high-capacity"
+    ],
+    "policy": "least_utilized_capacity_v1",
+    "selected_counts": {
+      "fleet-high-capacity": 3,
+      "fleet-low-capacity": 1
+    },
+    "snapshot": {
+      "active_by_endpoint": {
+        "fleet-high-capacity": 3,
+        "fleet-low-capacity": 1
+      },
+      "active_lease_count": 4,
+      "capacity_slots": 4,
+      "utilization_by_endpoint": {
+        "fleet-high-capacity": 1.0,
+        "fleet-low-capacity": 1.0
+      }
+    }
+  },
+  "solver_runs": [
+    {
+      "job_id": "fleet-baseline-high",
+      "max_stress": 10.000000000000009,
+      "recovery": null,
+      "scheduler_events": [
+        {
+          "active_slots_after": 1,
+          "active_slots_before": 0,
+          "agent_id": "fleet-high-capacity",
+          "capacity_slots": 3,
+          "policy": "least_utilized_capacity_v1",
+          "utilization_after": 0.333333,
+          "utilization_before": 0.0
+        }
+      ],
+      "selected_agent_id": "fleet-high-capacity",
+      "tip_displacement": 0.01
+    },
+    {
+      "job_id": "fleet-baseline-low",
+      "max_stress": 10.000000000000009,
+      "recovery": null,
+      "scheduler_events": [
+        {
+          "active_slots_after": 1,
+          "active_slots_before": 0,
+          "agent_id": "fleet-low-capacity",
+          "capacity_slots": 1,
+          "policy": "least_utilized_capacity_v1",
+          "utilization_after": 1.0,
+          "utilization_before": 0.0
+        }
+      ],
+      "selected_agent_id": "fleet-low-capacity",
+      "tip_displacement": 0.01
+    }
+  ],
+  "failure_recovery": {
+    "fault": "high_capacity_agent_unavailable_before_dispatch",
+    "failover": {
+      "job_id": "fleet-failover",
+      "max_stress": 10.000000000000009,
+      "recovery": {
+        "failure_stage": "connect",
+        "reason_code": "agent_process_unavailable",
+        "process_loss": true,
+        "retry_safety": "idempotent",
+        "retryable": true,
+        "remaining_agent_count": 1,
+        "safe_to_continue_other_tasks": true,
+        "next_action": "retry_next_agent"
+      },
+      "scheduler_events": [
+        {
+          "active_slots_after": 1,
+          "active_slots_before": 0,
+          "agent_id": "fleet-high-capacity",
+          "capacity_slots": 3,
+          "policy": "least_utilized_capacity_v1",
+          "utilization_after": 0.333333,
+          "utilization_before": 0.0
+        },
+        {
+          "active_slots_after": 1,
+          "active_slots_before": 0,
+          "agent_id": "fleet-low-capacity",
+          "capacity_slots": 1,
+          "policy": "least_utilized_capacity_v1",
+          "utilization_after": 1.0,
+          "utilization_before": 0.0
+        }
+      ],
+      "selected_agent_id": "fleet-low-capacity",
+      "tip_displacement": 0.01
+    },
+    "cooldown": {
+      "health": {
+        "cooling_down_count": 1,
+        "failed_agent_cooling_down": true,
+        "failed_agent_failure_count": 1
+      },
+      "job_id": "fleet-cooldown",
+      "max_stress": 10.000000000000009,
+      "recovery": null,
+      "scheduler_events": [
+        {
+          "active_slots_after": 1,
+          "active_slots_before": 0,
+          "agent_id": "fleet-low-capacity",
+          "capacity_slots": 1,
+          "policy": "least_utilized_capacity_v1",
+          "utilization_after": 1.0,
+          "utilization_before": 0.0
+        }
+      ],
+      "selected_agent_id": "fleet-low-capacity",
+      "tip_displacement": 0.01
+    },
+    "recovery": {
+      "health": {
+        "cooling_down_count": 0,
+        "failed_agent_cooling_down": false,
+        "failed_agent_failure_count": 0
+      },
+      "ping_verified": true,
+      "resumed_run": {
+        "job_id": "fleet-resumed",
+        "max_stress": 10.000000000000009,
+        "recovery": null,
+        "scheduler_events": [
+          {
+            "active_slots_after": 1,
+            "active_slots_before": 0,
+            "agent_id": "fleet-high-capacity",
+            "capacity_slots": 3,
+            "policy": "least_utilized_capacity_v1",
+            "utilization_after": 0.333333,
+            "utilization_before": 0.0
+          }
+        ],
+        "selected_agent_id": "fleet-high-capacity",
+        "tip_displacement": 0.01
+      }
+    },
+    "high_agent_process_changed": true
+  },
+  "cleanup": {
+    "high_agent_stopped": true,
+    "low_agent_stopped": true,
+    "high_port_closed": true,
+    "low_port_closed": true,
+    "managed_install_root_removed": true
+  },
+  "checks": [
+    {
+      "id": "installer_packaged_agents",
+      "status": "pass"
+    },
+    {
+      "id": "real_rust_agents",
+      "status": "pass"
+    },
+    {
+      "id": "declared_capacity_visible",
+      "status": "pass"
+    },
+    {
+      "id": "normalized_capacity_distribution",
+      "status": "pass"
+    },
+    {
+      "id": "scheduling_metadata_emitted",
+      "status": "pass"
+    },
+    {
+      "id": "solver_execution_both_agents",
+      "status": "pass"
+    },
+    {
+      "id": "numerical_consistency",
+      "status": "pass"
+    },
+    {
+      "id": "unavailable_agent_fallback",
+      "status": "pass"
+    },
+    {
+      "id": "cooldown_deprioritization",
+      "status": "pass"
+    },
+    {
+      "id": "restarted_agent_rejoined",
+      "status": "pass"
+    },
+    {
+      "id": "scheduling_resumed",
+      "status": "pass"
+    },
+    {
+      "id": "cleanup_complete",
+      "status": "pass"
+    },
+    {
+      "id": "retention_sanitized",
+      "status": "pass"
+    }
+  ]
+}

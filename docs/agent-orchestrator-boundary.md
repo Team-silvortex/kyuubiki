@@ -155,6 +155,27 @@ This means a workflow run can move between scheduling modes without changing the
 core engine model: the scheduling authority changes, but the agent-local engine
 remains the execution boundary.
 
+Within one Orchestra authority, candidate filtering remains capability-,
+placement-, package-runtime-, and authority-aware. Capacity admission then uses
+the deterministic `least_utilized_capacity_v1` policy: it compares active slots
+to declared capacity within one explicit routing tier, chooses the lowest
+normalized utilization, and preserves candidate order when utilization ties.
+An idle compatibility fallback therefore cannot overtake a capability or
+authority match that still has capacity. Every grant exposes the selected Agent,
+pre/post slot counts, capacity, utilization, queue wait, and policy; the watchdog
+exposes the same per-Agent utilization and saturation view. The retained remote
+Linux qualification installs one sealed Release Agent package into two isolated
+Installer stores, starts capacities 3 and 1, and requires the exact normalized
+lease sequence high, low, high, high. Both Agents execute the closed-form solve.
+After the high-capacity process is stopped, Orchestra falls back to the low
+Agent, keeps the failed endpoint in cooldown, observes a new process identity,
+and schedules high capacity again after a successful health probe. The report is
+retained at
+`releases/usability-evidence/2.19.0/fleet-scheduling-operational-qualification.json`.
+This proves installed fleet scheduling and rejoin on one remote Linux physical
+host; multi-host package acquisition and installed macOS/Windows operation remain
+separate qualifications.
+
 ## Operator Description Vs Execution Program
 
 Operator descriptions may be authored, indexed, or served by the Elixir control

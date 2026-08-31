@@ -10,7 +10,7 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
     |> filter_by_constraints(method, opts)
   end
 
-  defp route_by_method(endpoints, nil), do: endpoints
+  defp route_by_method(endpoints, nil), do: annotate_method_tier(endpoints, 0)
 
   defp route_by_method(endpoints, method) when is_binary(method) do
     tags = preferred_tags(method)
@@ -24,10 +24,12 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
             endpoint_tags(endpoint) |> Enum.any?(&(&1 in tags))
           end)
 
-        sort_by_health_capacity(preferred_by_tags) ++ fallback
+        annotate_method_tier(sort_by_health_capacity(preferred_by_tags), 0) ++
+          annotate_method_tier(fallback, 1)
 
       _ ->
-        sort_by_health_capacity(capable) ++ remaining
+        annotate_method_tier(sort_by_health_capacity(capable), 0) ++
+          annotate_method_tier(remaining, 1)
     end
   end
 
@@ -40,7 +42,7 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
 
     if required_capabilities == [] and placement_tags == [] and orchestration == %{} and
          lease == %{} and not package_runtime do
-      endpoints
+      Enum.map(endpoints, &put_scheduler_priority(&1, 0, 0))
     else
       endpoints
       |> Enum.reduce({[], []}, fn endpoint, {typed, legacy} ->
@@ -103,11 +105,30 @@ defmodule KyuubikiWeb.Playground.AgentPoolRouter do
   end
 
   defp order_matches({typed_matches, legacy_fallbacks}) do
-    typed_matches
-    |> Enum.reverse()
-    |> Enum.sort_by(fn {_endpoint, score} -> -score end)
-    |> Enum.map(&elem(&1, 0))
-    |> Kernel.++(Enum.reverse(legacy_fallbacks))
+    typed =
+      typed_matches
+      |> Enum.reverse()
+      |> Enum.sort_by(fn {_endpoint, score} -> -score end)
+      |> Enum.map(fn {endpoint, score} -> put_scheduler_priority(endpoint, 0, -score) end)
+
+    legacy =
+      legacy_fallbacks
+      |> Enum.reverse()
+      |> Enum.map(&put_scheduler_priority(&1, 1, 0))
+
+    typed ++ legacy
+  end
+
+  defp annotate_method_tier(endpoints, tier) do
+    Enum.map(endpoints, &Map.put(&1, :_scheduler_method_tier, tier))
+  end
+
+  defp put_scheduler_priority(endpoint, constraint_tier, score_tier) do
+    method_tier = Map.get(endpoint, :_scheduler_method_tier, 0)
+
+    endpoint
+    |> Map.delete(:_scheduler_method_tier)
+    |> Map.put(:_scheduler_priority, {constraint_tier, score_tier, method_tier})
   end
 
   defp capability_match_status(_endpoint, _method, []), do: :match
