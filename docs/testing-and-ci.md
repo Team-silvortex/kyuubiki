@@ -836,6 +836,23 @@ increment, former-owner fencing, plus zero managed Runtime, container, process,
 port, run-root, or transient evidence residue. Fleet acquisition and non-Linux
 packages remain separate open qualifications.
 
+The installed end-to-end Runtime lane exercises the ordinary standalone path,
+including the installed Rust Headless client and two installed Rust Agents:
+
+```sh
+make qualify-installed-runtime-operational-remote
+make check-installed-runtime-operational-qualification
+```
+
+It builds one production OTP release and the native binaries, seals and
+activates them through Installer, deletes the synchronized source tree, then
+starts the Runtime with the frontend disabled. Headless submits a real bar
+solve and fetches the same persisted result after each of two managed Runtime
+restarts. The host capture fails closed on payload digest drift, source
+fallback, changed numerical output, missing Agent dispatch, stale PID files,
+open ports, or cleanup residue. Only the compact path-free report is retained;
+the remote run root and local raw captures are removed.
+
 ## Operational Agent Solver Qualification
 
 The operational solver lane closes the gap between a source-level TaskIR test

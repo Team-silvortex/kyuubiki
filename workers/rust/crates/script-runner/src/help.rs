@@ -97,6 +97,7 @@ lab remote-ssh-fixture\n  \
   qualify-orchestra-installed-takeover-operational-remote\n  \
   check-orchestra-workflow-operational-qualification\n  \
   check-installed-runtime-operational-qualification\n  \
+  qualify-installed-runtime-operational-remote\n  \
   qualify-linux-host-power-loss prepare|resume|cleanup\n  \
   check-linux-host-power-loss-qualification\n  \
   check-persistence-provenance-qualification\n  \

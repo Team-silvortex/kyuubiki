@@ -13,7 +13,7 @@
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index check-material-research-bundle-index check-material-research-bundle-index-contract
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
-.PHONY: audit-dependencies check-system-security-qualification check-agent-control-link-operational-qualification check-operator-package-acquisition-operational-qualification check-agent-solver-operational-qualification check-orchestra-takeover-operational-qualification check-orchestra-network-partition-operational-qualification check-orchestra-long-workflow-takeover-operational-qualification check-orchestra-installed-takeover-operational-qualification check-orchestra-workflow-operational-qualification check-installed-runtime-operational-qualification check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification check-orchestra-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
+.PHONY: audit-dependencies check-system-security-qualification check-agent-control-link-operational-qualification check-operator-package-acquisition-operational-qualification check-agent-solver-operational-qualification check-orchestra-takeover-operational-qualification check-orchestra-network-partition-operational-qualification check-orchestra-long-workflow-takeover-operational-qualification check-orchestra-installed-takeover-operational-qualification check-orchestra-workflow-operational-qualification check-installed-runtime-operational-qualification qualify-installed-runtime-operational-remote check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification check-orchestra-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
 .PHONY: check-distributed-task-recovery-operational-qualification check-fleet-scheduling-operational-qualification
 
 check-doc-book:
@@ -535,7 +535,10 @@ check-orchestra-workflow-operational-qualification:
 
 check-installed-runtime-operational-qualification:
 	@$(ENTRYPOINT) check-installed-runtime-operational-qualification --self-test
-	@$(ENTRYPOINT) check-installed-runtime-operational-qualification --verify-report releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json
+	@$(ENTRYPOINT) check-installed-runtime-operational-qualification --verify-report releases/usability-evidence/2.19.0/installed-runtime-operational-qualification.json
+
+qualify-installed-runtime-operational-remote:
+	@$(ENTRYPOINT) qualify-installed-runtime-operational-remote
 
 check-persistence-provenance-qualification:
 	@$(ENTRYPOINT) check-persistence-provenance-qualification --self-test

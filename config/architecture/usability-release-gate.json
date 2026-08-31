@@ -148,7 +148,7 @@
         [
           "check-installed-runtime-operational-qualification",
           "--verify-report",
-          "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json"
+          "releases/usability-evidence/2.19.0/installed-runtime-operational-qualification.json"
         ],
         [
           "check-fleet-scheduling-operational-qualification",

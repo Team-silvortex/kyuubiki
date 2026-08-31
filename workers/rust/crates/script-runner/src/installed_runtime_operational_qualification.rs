@@ -11,6 +11,9 @@ use std::path::Path;
 
 type RunnerResult<T> = Result<T, String>;
 
+mod host;
+mod remote;
+
 const CONTRACT_PATH: &str = "config/architecture/installed-runtime-operational-qualification.json";
 const CONTRACT_SCHEMA: &str = "kyuubiki.installed-runtime-operational-qualification-contract/v1";
 const REPORT_SCHEMA: &str = "kyuubiki.installed-runtime-operational-qualification/v1";
@@ -112,6 +115,14 @@ pub(crate) fn run_check_installed_runtime_operational_qualification(
     Ok(0)
 }
 
+pub(crate) fn run_qualify_remote(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
+    remote::run(root, args)
+}
+
+pub(crate) fn run_capture_host(args: Vec<OsString>) -> RunnerResult<u8> {
+    host::run(args)
+}
+
 fn validate_contract(root: &Path, contract: &Contract) -> RunnerResult<()> {
     if contract.schema_version != CONTRACT_SCHEMA || contract.qualification_id != QUALIFICATION_ID {
         return Err("installed Runtime operational contract identity is invalid".into());
@@ -120,7 +131,7 @@ fn validate_contract(root: &Path, contract: &Contract) -> RunnerResult<()> {
     if capture.execution_host_role != "remote-linux-qualification-host"
         || capture.platform != "linux"
         || capture.architecture != "x86_64"
-        || capture.package_version != "2.7.0"
+        || !valid_version(&capture.package_version)
         || capture.workflow_id != "qualification.installed-runtime.bar"
         || capture.minimum_agent_count < 2
         || capture.restart_count < 2
@@ -388,7 +399,10 @@ fn validate_report(contract: &Contract, report: &Value) -> RunnerResult<()> {
         ("/status", "pass"),
         ("/qualification_id", QUALIFICATION_ID),
         ("/journey", JOURNEY),
-        ("/installation/package_version", "2.7.0"),
+        (
+            "/installation/package_version",
+            contract.capture.package_version.as_str(),
+        ),
         ("/installation/runtime_policy", "installer-managed"),
         ("/execution/mode", "execute:service"),
         ("/execution/worker_transport", "rust-agent-rpc"),
@@ -534,4 +548,12 @@ fn valid_digest(value: &str) -> bool {
         && value
             .bytes()
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+fn valid_version(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_'))
 }

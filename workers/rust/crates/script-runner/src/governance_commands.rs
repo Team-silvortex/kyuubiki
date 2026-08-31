@@ -174,6 +174,12 @@ pub(crate) fn run_governance_command(
                 root, args,
             )
         }
+        "qualify-installed-runtime-operational-remote" => {
+            installed_runtime_operational_qualification::run_qualify_remote(root, args)
+        }
+        "capture-installed-runtime-operational-host" => {
+            installed_runtime_operational_qualification::run_capture_host(args)
+        }
         "check-persistence-provenance-qualification" => {
             persistence_provenance_qualification::run_check_persistence_provenance_qualification(
                 root, args,

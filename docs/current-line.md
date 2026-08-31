@@ -150,6 +150,13 @@ sprawl:
   removes the qualification state. The retained `2.19.0` report passes 13/13
   checks with stable numerical output and zero residue, closing only
   `fault_injection_and_recovery/full-host-power-loss`
+- the Installer-managed Linux Runtime journey is now natively reproducible
+  instead of depending on manually prepared capture files. The remote command
+  builds and seals the current Runtime, installs Orchestra, two Rust Agents,
+  the native controller, and Rust Headless, removes the synchronized source
+  tree, executes a real bar solve, and retrieves the same completed job after
+  two managed restarts. The current `2.19.0` report verifies all installed
+  binary digests against the payload and leaves zero remote residue
 - native two-host control-link qualification now keeps one remote Linux Agent
   process alive while the macOS Orchestra is killed and recreated, observes the
   sanitized degraded state, requires full re-registration plus resumed

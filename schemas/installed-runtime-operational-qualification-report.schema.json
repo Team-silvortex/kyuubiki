@@ -56,7 +56,10 @@
         "agent_binary_sha256"
       ],
       "properties": {
-        "package_version": { "const": "2.7.0" },
+        "package_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
         "activation_generation": { "const": 1 },
         "runtime_policy": { "const": "installer-managed" },
         "source_tree_detached": { "const": true },

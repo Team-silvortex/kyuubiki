@@ -89,6 +89,7 @@ help:
 	@echo "  make qualify-orchestra-workflow-operational-remote Run and retain the remote distributed Orchestra workflow restart journey"
 	@echo "  make check-orchestra-workflow-operational-qualification Recheck retained remote Orchestra workflow operational evidence"
 	@echo "  make check-installed-runtime-operational-qualification Recheck the retained Installer-managed Headless-Orchestra-Agent-Engine journey"
+	@echo "  make qualify-installed-runtime-operational-remote Rebuild that journey on the physical Linux qualification host"
 	@echo "  make qualify-persistence-provenance Qualify desktop, Engine, Headless, Orchestra, and Installer provenance"
 	@echo "  make check-persistence-provenance-qualification Recheck retained persistence provenance evidence"
 	@echo "  make qualify-desktop-ui-validation Run the cross-shell GUI qualification and write a retained JSON report"
