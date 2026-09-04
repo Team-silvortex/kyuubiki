@@ -1,0 +1,74 @@
+{
+  "$schema": "../../schemas/installed-runtime-operational-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.installed-runtime-operational-qualification-contract/v1",
+  "qualification_id": "local-macos-installer-managed-runtime-operational",
+  "capture": {
+    "solve_report": "tmp/installed-runtime-macos-operational-prototype/solve.json",
+    "restart_fetch_report": "tmp/installed-runtime-macos-operational-prototype/fetch-report.json",
+    "detached_fetch_report": "tmp/installed-runtime-macos-operational-prototype/detached-fetch-report.json",
+    "detached_status": "tmp/installed-runtime-macos-operational-prototype/detached-status.txt",
+    "cleanup_report": "tmp/installed-runtime-macos-operational-prototype/cleanup.json",
+    "installed_digests": "tmp/installed-runtime-macos-operational-prototype/installed-digests.txt",
+    "execution_host_role": "local-macos-qualification-host",
+    "platform": "macos",
+    "architecture": "aarch64",
+    "package_version": "2.19.0",
+    "workflow_id": "qualification.installed-runtime.bar",
+    "minimum_agent_count": 2,
+    "restart_count": 2
+  },
+  "source_guard": {
+    "files": [
+      "scripts/kyuubiki",
+      "workers/rust/crates/script-runner/src/main.rs",
+      "workers/rust/crates/script-runner/src/governance_commands.rs",
+      "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification.rs",
+      "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/host.rs",
+      "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/local_macos.rs",
+      "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/support.rs",
+      "workers/rust/crates/desktop-runtime/src/runtime_layout.rs",
+      "workers/rust/crates/installer/src/release.rs"
+    ],
+    "required_text": [
+      "KYUUBIKI_REPO_ROOT",
+      "KYUUBIKI_RUNTIME_FRONTEND_DISABLED",
+      "installer-managed",
+      "qualify-installed-runtime-operational-macos",
+      "capture-installed-runtime-operational-host",
+      "local-macos-qualification-host",
+      "source tree must be removed before installed capture",
+      "installed Runtime payload changed during operational qualification",
+      "runtime_env_for_platform",
+      "install-runtime-payload",
+      "warnings-as-errors"
+    ]
+  },
+  "retention": {
+    "report_schema": "kyuubiki.installed-runtime-operational-qualification/v1",
+    "report_schema_path": "schemas/installed-runtime-operational-qualification-report.schema.json",
+    "report_path": "releases/usability-evidence/2.19.0/macos-installed-runtime-operational-qualification.json",
+    "forbidden_content": [
+      "/home/",
+      "/users/",
+      "192.168.",
+      "127.0.0.1",
+      "kyuubiki-lab",
+      "username",
+      "credential"
+    ]
+  },
+  "required_checks": [
+    "installed_payload_activated",
+    "source_tree_detached",
+    "native_runtime_managed",
+    "frontend_omitted",
+    "headless_service_execution",
+    "agent_dispatch_observed",
+    "numerical_result_verified",
+    "orchestra_restart_completed",
+    "result_retained_after_restart",
+    "detached_restart_completed",
+    "cleanup_complete",
+    "retention_sanitized"
+  ]
+}

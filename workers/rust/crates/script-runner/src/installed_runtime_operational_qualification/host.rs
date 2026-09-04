@@ -1,8 +1,8 @@
 use super::support::{
-    RuntimeGuard, WORKFLOW_ID, canonical_dir, ensure_remote_linux, execution_result,
+    RuntimeGuard, WORKFLOW_ID, canonical_dir, ensure_qualification_host, execution_result,
     headless_command, path_text, pid_residue, read_json, render_digests, reserve_ports,
-    run_headless_workflow, run_success, runtime_env, validate_fetch, validate_status,
-    verify_installation, write_json,
+    run_headless_workflow, run_success, runtime_env_for_platform, validate_fetch, validate_status,
+    verify_installation_for_platform, write_json,
 };
 use serde_json::json;
 use std::ffi::OsString;
@@ -13,7 +13,11 @@ type RunnerResult<T> = Result<T, String>;
 
 pub(super) fn run(args: Vec<OsString>) -> RunnerResult<u8> {
     let options = Options::parse(args)?;
-    ensure_remote_linux()?;
+    ensure_qualification_host(
+        &options.platform,
+        &options.architecture,
+        &options.execution_host_role,
+    )?;
     capture(&options)?;
     println!(
         "installed Runtime host capture passed: {}",
@@ -28,6 +32,9 @@ struct Options {
     detached_source_root: PathBuf,
     output: PathBuf,
     package_version: String,
+    platform: String,
+    architecture: String,
+    execution_host_role: String,
 }
 
 impl Options {
@@ -37,6 +44,9 @@ impl Options {
         let mut detached_source_root = None;
         let mut output = None;
         let mut package_version = None;
+        let mut platform = None;
+        let mut architecture = None;
+        let mut execution_host_role = None;
         let mut args = args.into_iter();
         while let Some(arg) = args.next() {
             match arg.to_string_lossy().as_ref() {
@@ -49,6 +59,11 @@ impl Options {
                 "--package-version" => {
                     package_version = Some(next_string(&mut args, "--package-version")?)
                 }
+                "--platform" => platform = Some(next_string(&mut args, "--platform")?),
+                "--architecture" => architecture = Some(next_string(&mut args, "--architecture")?),
+                "--execution-host-role" => {
+                    execution_host_role = Some(next_string(&mut args, "--execution-host-role")?)
+                }
                 other => return Err(format!("unknown installed Runtime host option: {other}")),
             }
         }
@@ -59,6 +74,9 @@ impl Options {
                 .ok_or("--detached-source-root is required")?,
             output: output.ok_or("--out is required")?,
             package_version: package_version.ok_or("--package-version is required")?,
+            platform: platform.ok_or("--platform is required")?,
+            architecture: architecture.ok_or("--architecture is required")?,
+            execution_host_role: execution_host_role.ok_or("--execution-host-role is required")?,
         };
         for (label, path) in [
             ("--managed-root", &options.managed_root),
@@ -100,7 +118,8 @@ fn capture(options: &Options) -> RunnerResult<()> {
     if !canonical_dir(output_parent, "host capture output parent")?.starts_with(&managed) {
         return Err("host capture output must stay inside the managed root".to_string());
     }
-    let installation = verify_installation(&runtime, &options.package_version)?;
+    let installation =
+        verify_installation_for_platform(&runtime, &options.package_version, &options.platform)?;
     let ports = reserve_ports()?;
     let state_root = managed.join("runtime-state");
     let work_root = managed.join("isolated-work");
@@ -112,7 +131,7 @@ fn capture(options: &Options) -> RunnerResult<()> {
 
     let runtime_binary = runtime.join("bin/kyuubiki-runtime");
     let headless_binary = runtime.join("bin/kyuubiki-headless");
-    let env = runtime_env(&runtime, &state_root, &home, ports);
+    let env = runtime_env_for_platform(&runtime, &state_root, &home, ports, &options.platform);
     let mut guard = RuntimeGuard::new(runtime_binary, env.clone(), ports);
     guard.command("start-local")?;
     validate_status(&guard.command("status")?, ports)?;
@@ -197,7 +216,8 @@ fn capture(options: &Options) -> RunnerResult<()> {
     if ports.any_listening() || pid_residue(&state_root)? != 0 {
         return Err("installed Runtime cleanup left a process or PID residue".to_string());
     }
-    let post_run_installation = verify_installation(&runtime, &options.package_version)?;
+    let post_run_installation =
+        verify_installation_for_platform(&runtime, &options.package_version, &options.platform)?;
     if post_run_installation != installation {
         return Err("installed Runtime payload changed during operational qualification".into());
     }
@@ -237,6 +257,12 @@ mod tests {
             "/tmp/output".into(),
             "--package-version".into(),
             "2.19.0".into(),
+            "--platform".into(),
+            "linux".into(),
+            "--architecture".into(),
+            "x86_64".into(),
+            "--execution-host-role".into(),
+            "remote-linux-qualification-host".into(),
         ])
         .err()
         .expect("relative path must fail");

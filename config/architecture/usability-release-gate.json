@@ -17,7 +17,9 @@
       "fault_injection_and_recovery/long-running-workflow-takeover",
       "fault_injection_and_recovery/installer-journal-replay",
       "fault_injection_and_recovery/full-host-power-loss",
+      "fault_injection_and_recovery/installed-linux",
       "remote_agent_orchestra_round_trip/installer-managed-linux",
+      "remote_agent_orchestra_round_trip/installed-macos",
       "remote_agent_orchestra_round_trip/fleet-scheduling",
       "remote_agent_orchestra_round_trip/multi-host-package-acquisition",
       "upgrade_and_rollback/agent-remote-linux",
@@ -37,8 +39,8 @@
     ],
     "open_release_subtiers": [
       "packaged_desktop_round_trip/windows-installed",
-      "fault_injection_and_recovery/installed-cross-platform",
-      "remote_agent_orchestra_round_trip/installed-macos",
+      "fault_injection_and_recovery/installed-macos",
+      "fault_injection_and_recovery/installed-windows",
       "remote_agent_orchestra_round_trip/installed-windows",
       "upgrade_and_rollback/packaged-desktop-set-windows"
     ]
@@ -151,6 +153,11 @@
           "releases/usability-evidence/2.19.0/installed-runtime-operational-qualification.json"
         ],
         [
+          "check-installed-runtime-macos-operational-qualification",
+          "--verify-report",
+          "releases/usability-evidence/2.19.0/macos-installed-runtime-operational-qualification.json"
+        ],
+        [
           "check-fleet-scheduling-operational-qualification",
           "--verify-report",
           "releases/usability-evidence/2.19.0/fleet-scheduling-operational-qualification.json"
@@ -211,6 +218,11 @@
           "check-linux-host-power-loss-qualification",
           "--verify-report",
           "releases/usability-evidence/2.19.0/linux-host-power-loss-operational-qualification.json"
+        ],
+        [
+          "check-installed-runtime-power-loss-qualification",
+          "--verify-report",
+          "releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json"
         ],
         ["check-gui-runtime-capability-contract"],
         ["check-component-integrity-protocol"]

@@ -364,6 +364,7 @@ fn is_operational_probe(probe: &[String]) -> bool {
         | "check-desktop-ui-validation"
         | "check-fleet-scheduling-operational-qualification"
         | "check-fleet-update-operational-qualification"
+        | "check-installed-runtime-macos-operational-qualification"
         | "check-installed-runtime-operational-qualification"
         | "check-runtime-payload-operational-qualification"
         | "desktop-packaged-smoke" => has("--verify-report"),

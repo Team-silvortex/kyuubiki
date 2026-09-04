@@ -13,7 +13,7 @@
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index check-material-research-bundle-index check-material-research-bundle-index-contract
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
-.PHONY: audit-dependencies check-system-security-qualification check-agent-control-link-operational-qualification check-operator-package-acquisition-operational-qualification check-agent-solver-operational-qualification check-orchestra-takeover-operational-qualification check-orchestra-network-partition-operational-qualification check-orchestra-long-workflow-takeover-operational-qualification check-orchestra-installed-takeover-operational-qualification check-orchestra-workflow-operational-qualification check-installed-runtime-operational-qualification qualify-installed-runtime-operational-remote check-installed-runtime-power-loss-qualification qualify-installed-runtime-power-loss-remote check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification check-orchestra-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
+.PHONY: audit-dependencies check-system-security-qualification check-agent-control-link-operational-qualification check-operator-package-acquisition-operational-qualification check-agent-solver-operational-qualification check-orchestra-takeover-operational-qualification check-orchestra-network-partition-operational-qualification check-orchestra-long-workflow-takeover-operational-qualification check-orchestra-installed-takeover-operational-qualification check-orchestra-workflow-operational-qualification check-installed-runtime-operational-qualification qualify-installed-runtime-operational-remote check-installed-runtime-macos-operational-qualification qualify-installed-runtime-operational-macos check-installed-runtime-power-loss-qualification qualify-installed-runtime-power-loss-remote check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification check-orchestra-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
 .PHONY: check-distributed-task-recovery-operational-qualification check-fleet-scheduling-operational-qualification
 
 check-doc-book:
@@ -540,6 +540,13 @@ check-installed-runtime-operational-qualification:
 qualify-installed-runtime-operational-remote:
 	@$(ENTRYPOINT) qualify-installed-runtime-operational-remote
 
+check-installed-runtime-macos-operational-qualification:
+	@$(ENTRYPOINT) check-installed-runtime-macos-operational-qualification --self-test
+	@$(ENTRYPOINT) check-installed-runtime-macos-operational-qualification --verify-report releases/usability-evidence/2.19.0/macos-installed-runtime-operational-qualification.json
+
+qualify-installed-runtime-operational-macos:
+	@$(ENTRYPOINT) qualify-installed-runtime-operational-macos
+
 check-installed-runtime-power-loss-qualification:
 	@$(ENTRYPOINT) check-installed-runtime-power-loss-qualification --self-test
 	@$(ENTRYPOINT) check-installed-runtime-power-loss-qualification --verify-report "$${REPORT:-releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json}"
@@ -634,6 +641,7 @@ architecture-check:
 	@$(MAKE) check-agent-update-operational-qualification
 	@$(MAKE) check-runtime-payload-operational-qualification
 	@$(MAKE) check-installed-runtime-operational-qualification
+	@$(MAKE) check-installed-runtime-macos-operational-qualification
 	@$(MAKE) check-persistence-provenance-qualification
 	@$(MAKE) check-usability-release-gate
 	@$(MAKE) audit-dependencies
@@ -658,6 +666,7 @@ verify:
 	@$(MAKE) check-install-update-disk-hygiene
 	@$(MAKE) check-component-integrity-protocol
 	@$(MAKE) check-installed-runtime-operational-qualification
+	@$(MAKE) check-installed-runtime-macos-operational-qualification
 	@$(MAKE) check-ui-automation-contract
 	@cd apps/web && mix format --check-formatted && mix test
 	@cd workers/rust && cargo fmt --check && cargo test

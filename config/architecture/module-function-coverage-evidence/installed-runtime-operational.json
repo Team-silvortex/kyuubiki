@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Native, repeatable Installer-managed remote Linux operation from an installed Rust Headless client through Orchestra and two Rust Agents into the real Engine, with sealed payload verification, source-detached restart retention, numerical assertions, frontend omission, and residue-free cleanup.",
+  "summary": "Native, repeatable Installer-managed Linux and macOS operation from an installed Rust Headless client through Orchestra and two Rust Agents into the real Engine, with sealed payload verification, source-detached restart retention, numerical assertions, frontend omission, and residue-free cleanup.",
   "paradigm_contract_evidence": {
     "deployment_update": [
       {
@@ -151,6 +151,37 @@
         "\"source_fallback\": false",
         "\"status\": \"completed\"",
         "\"result_retained_after_source_detach\": true"
+      ]
+    },
+    {
+      "id": "installed-runtime-macos-round-trip",
+      "status": "proven",
+      "grade": "operational",
+      "modules": [
+        "runtime-installer",
+        "orchestra-control-plane",
+        "runtime-agent-cli",
+        "runtime-engine-solver",
+        "sdk-headless"
+      ],
+      "paradigms": [
+        "deployment_update",
+        "workflow_composition",
+        "solver_execution",
+        "sdk_headless"
+      ],
+      "dimensions": ["execution", "contract", "numerical_validation", "recovery"],
+      "files": [
+        "config/architecture/installed-runtime-macos-operational-qualification.json",
+        "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/local_macos.rs",
+        "releases/usability-evidence/2.19.0/macos-installed-runtime-operational-qualification.json"
+      ],
+      "required_text": [
+        "local-macos-installer-managed-runtime-operational",
+        "\"os\": \"macos\"",
+        "\"source_fallback\": false",
+        "\"result_retained_after_restart\": true",
+        "\"residue_count\": 0"
       ]
     }
   ]

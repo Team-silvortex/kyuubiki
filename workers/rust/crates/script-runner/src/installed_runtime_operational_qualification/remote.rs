@@ -27,15 +27,20 @@ pub(super) fn run(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
         print_usage();
         return Ok(0);
     }
-    let contract: Contract = super::read_json(root, super::CONTRACT_PATH)?;
-    super::validate_contract(root, &contract)?;
+    let contract = super::load_contract(root, super::LINUX_PROFILE)?;
     let options = Options::parse(root, &contract, args)?;
     prepare_remote(root, &options)?;
     let local_capture = root.join("tmp").join(&options.slug);
     let capture = capture_remote(root, &options, &local_capture);
     let cleanup = cleanup_remote(root, &options);
     let result = match (capture, cleanup) {
-        (Ok(()), Ok(())) => finalize_report(root, &contract, &options, &local_capture),
+        (Ok(()), Ok(())) => finalize_report(
+            root,
+            &contract,
+            super::LINUX_PROFILE,
+            &options.output,
+            &local_capture,
+        ),
         (Err(error), Ok(())) => Err(error),
         (Ok(()), Err(error)) => Err(error),
         (Err(error), Err(cleanup)) => Err(format!("{error}; {cleanup}")),
@@ -204,7 +209,7 @@ fn remote_capture_command(options: &Options) -> String {
     };
     provision_command(
         &provision,
-        "KYUUBIKI_REPO_ROOT=\"$harness\" \"$runner\" capture-installed-runtime-operational-host --managed-root \"$run_root\" --runtime-root \"$runtime\" --detached-source-root \"$source_root\" --out \"$run_root/capture\" --package-version \"$package_version\"",
+        "KYUUBIKI_REPO_ROOT=\"$harness\" \"$runner\" capture-installed-runtime-operational-host --managed-root \"$run_root\" --runtime-root \"$runtime\" --detached-source-root \"$source_root\" --out \"$run_root/capture\" --package-version \"$package_version\" --platform linux --architecture x86_64 --execution-host-role remote-linux-qualification-host",
     )
 }
 
@@ -276,10 +281,11 @@ pub(crate) fn remove_run_root(root: &Path, host: &str, remote_run_root: &str) ->
     Ok(())
 }
 
-fn finalize_report(
+pub(super) fn finalize_report(
     root: &Path,
     contract: &Contract,
-    options: &Options,
+    profile: super::Profile,
+    output: &Path,
     capture_root: &Path,
 ) -> RunnerResult<()> {
     fs::write(
@@ -296,9 +302,9 @@ fn finalize_report(
     let capture = capture_contract(root, capture_root, contract)?;
     let captures = super::load_captures(root, &capture)?;
     super::validate_captures(&capture, &captures)?;
-    let report = super::build_report(contract, &captures)?;
-    super::validate_report(contract, &report)?;
-    promote_report(&options.output, &report)
+    let report = super::build_report(contract, &captures, profile)?;
+    super::validate_report(contract, &report, profile)?;
+    promote_report(output, &report)
 }
 
 fn capture_contract(

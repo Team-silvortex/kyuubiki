@@ -29,6 +29,7 @@
       "./scripts/kyuubiki check-agent-rolling-replacement-operational-qualification",
       "./scripts/kyuubiki check-desktop-bundle-update-operational-qualification",
       "./scripts/kyuubiki check-installed-runtime-operational-qualification",
+      "./scripts/kyuubiki check-installed-runtime-macos-operational-qualification",
       "./scripts/kyuubiki check-linux-host-power-loss-qualification",
       "./scripts/kyuubiki check-operator-package-acquisition-operational-qualification",
       "./scripts/kyuubiki check-operator-sdk-multihost-operational-qualification",
@@ -59,6 +60,7 @@
       "tmp/agent-solver-operational-remote.json",
       "tmp/fleet-scheduling-operational-qualification.json",
       "tmp/installed-runtime-operational-qualification.json",
+      "tmp/installed-runtime-macos-operational-qualification.json",
       "tmp/linux-host-power-loss-operational-qualification.json",
       "tmp/operator-package-acquisition-operational-qualification.json",
       "tmp/operator-sdk-performance-qualification.json",
@@ -100,7 +102,10 @@
       "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification.rs",
       "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/host.rs",
       "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/remote.rs",
-      "releases/usability-evidence/2.19.0/installed-runtime-operational-qualification.json"
+      "releases/usability-evidence/2.19.0/installed-runtime-operational-qualification.json",
+      "config/architecture/installed-runtime-macos-operational-qualification.json",
+      "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/local_macos.rs",
+      "releases/usability-evidence/2.19.0/macos-installed-runtime-operational-qualification.json"
     ],
     "required_receipts": [
       "kyuubiki.engine-solver-provenance/v1",
@@ -140,6 +145,9 @@
       "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/host.rs",
       "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/remote.rs",
       "releases/usability-evidence/2.19.0/installed-runtime-operational-qualification.json",
+      "config/architecture/installed-runtime-macos-operational-qualification.json",
+      "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/local_macos.rs",
+      "releases/usability-evidence/2.19.0/macos-installed-runtime-operational-qualification.json",
       "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
       "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
       "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
@@ -329,6 +337,9 @@
       "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/host.rs",
       "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/remote.rs",
       "releases/usability-evidence/2.19.0/installed-runtime-operational-qualification.json",
+      "config/architecture/installed-runtime-macos-operational-qualification.json",
+      "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/local_macos.rs",
+      "releases/usability-evidence/2.19.0/macos-installed-runtime-operational-qualification.json",
       "config/architecture/linux-host-power-loss-qualification.json",
       "schemas/linux-host-power-loss-qualification-contract.schema.json",
       "schemas/linux-host-power-loss-intent.schema.json",
@@ -375,7 +386,10 @@
       "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification.rs",
       "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/host.rs",
       "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/remote.rs",
-      "releases/usability-evidence/2.19.0/installed-runtime-operational-qualification.json"
+      "releases/usability-evidence/2.19.0/installed-runtime-operational-qualification.json",
+      "config/architecture/installed-runtime-macos-operational-qualification.json",
+      "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/local_macos.rs",
+      "releases/usability-evidence/2.19.0/macos-installed-runtime-operational-qualification.json"
     ],
     "required_surfaces": [
       "kyuubiki.headless-sdk-surface/v1",

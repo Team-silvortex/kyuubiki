@@ -38,9 +38,10 @@ Current moxi baseline:
   external usability release gate
 
 No configured coordinate remains below its current evidence target. This does
-not grant a daji release claim: packaged cross-platform recovery and upgrade
-tiers still remain independently open on the unqualified platforms, and static
-or local evidence cannot close them. The moxi 2.15 recalibration separated the
+not grant a daji release claim: the installed Linux recovery subtier is closed,
+while packaged macOS/Windows recovery and Windows upgrade tiers remain
+independently open; static or local evidence cannot close them. The moxi 2.15
+recalibration separated the
 Rust-only Worker/Operator SDK
 from both Installer and the three-language Headless SDK family, added ABI
 compatibility as an evidence dimension, and promoted security, persistence,
@@ -214,10 +215,19 @@ being normalized into retained evidence. The
 sanitized current-line evidence is retained at
 `releases/usability-evidence/2.19.0/installed-runtime-operational-qualification.json`
 and is rechecked by
-`make check-installed-runtime-operational-qualification`. This closes only
-`remote_agent_orchestra_round_trip/installer-managed-linux`; the parent tier
-still requires multi-host package acquisition and installed operation on the
-remaining supported platforms.
+`make check-installed-runtime-operational-qualification`.
+
+The same contract is now platform-parameterized without weakening the retained
+Linux identity. `qualify-installed-runtime-operational-macos` builds a native
+macOS/aarch64 payload and production OTP release, installs and activates it in
+an isolated application-support root, and repeats the source-detached solve and
+two-restart result-retention journey. Its sanitized 12/12 report is retained at
+`releases/usability-evidence/2.19.0/macos-installed-runtime-operational-qualification.json`
+and rechecked by `make check-installed-runtime-macos-operational-qualification`.
+This closes both `remote_agent_orchestra_round_trip/installer-managed-linux`
+and `remote_agent_orchestra_round_trip/installed-macos`; installed Windows
+operation remains open. It does not close macOS power-loss recovery, which is a
+separate failure boundary.
 
 The physical-Linux installed recovery subtier is now operational rather than a
 design note. `qualify-installed-runtime-power-loss-remote` provisions the same
@@ -230,9 +240,10 @@ with stable displacement and stress. Payload file-set checks run after both the
 pre-reboot and recovered workloads, and cleanup leaves no process, port, PID,
 session, or remote-root residue. The sanitized 16/16 report is retained at
 `releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json`.
-This promotes the Linux tensor cells to `proven/operational`; it does not close
-`fault_injection_and_recovery/installed-cross-platform`, because macOS and
-Windows installed-recovery evidence remains open.
+This promotes the Linux tensor cells to `proven/operational` and closes
+`fault_injection_and_recovery/installed-linux`; the platform-specific
+`fault_injection_and_recovery/installed-macos` and
+`fault_injection_and_recovery/installed-windows` subtiers remain open.
 
 Installer-managed capacity scheduling now has independent remote Linux
 operational evidence. The native runner seals one Release Agent package, installs
@@ -325,10 +336,10 @@ Linux desktop set has also been rebuilt, upgraded through Installer-managed
 Ubuntu packages, and qualified through three real WebView startup receipts;
 its current evidence lives at
 `releases/usability-evidence/2.19.0/linux-installed-desktop-smoke.json`. The
-gate now carries six explicit open release subtiers. Historical `2.18.3`
+gate now carries five explicit open release subtiers. Historical `2.18.3`
 reports remain evidence for their source state rather than current-package
-proof. Full host power loss and the remaining installed cross-platform matrix
-remain open work.
+proof. Ordinary installed macOS operation is closed; macOS installed reboot and
+the remaining Windows package, operation, recovery, and update cells stay open.
 Persisted in-flight workflow state now has a
 separate local qualification: a digest-bound execution envelope survives a
 complete OTP application stop/start, a fresh session claims a higher

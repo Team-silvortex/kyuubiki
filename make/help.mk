@@ -90,6 +90,8 @@ help:
 	@echo "  make check-orchestra-workflow-operational-qualification Recheck retained remote Orchestra workflow operational evidence"
 	@echo "  make check-installed-runtime-operational-qualification Recheck the retained Installer-managed Headless-Orchestra-Agent-Engine journey"
 	@echo "  make qualify-installed-runtime-operational-remote Rebuild that journey on the physical Linux qualification host"
+	@echo "  make check-installed-runtime-macos-operational-qualification Recheck the retained local installed macOS journey"
+	@echo "  make qualify-installed-runtime-operational-macos Build, install, execute, restart, and clean that macOS journey"
 	@echo "  make check-installed-runtime-power-loss-qualification Validate the full installed Runtime reboot protocol and optional REPORT"
 	@echo "  make qualify-installed-runtime-power-loss-remote ACTION=prepare|reboot|resume|cleanup Run the physical Linux reboot protocol"
 	@echo "  make qualify-persistence-provenance Qualify desktop, Engine, Headless, Orchestra, and Installer provenance"

@@ -159,6 +159,16 @@ sprawl:
   binary digests against the payload and leaves zero remote residue. Its pinned
   Linux Elixir `1.20.1` build now treats every compiler warning as an error; all
   157 production modules pass that gate without warnings
+- the same installed Runtime contract now has independent local macOS/aarch64
+  operational evidence. A native qualification command stages and seals the
+  package, installs and activates it through Installer inside an isolated
+  macOS application-support root, then runs Rust Headless through Orchestra and
+  two Rust Agents into the real Engine. The completed bar result survives two
+  source-detached Runtime restarts, the immutable payload is byte-stable before
+  and after execution, and cleanup leaves no process, port, PID, application
+  state, or staging residue. The retained 12/12 report closes only
+  `remote_agent_orchestra_round_trip/installed-macos`; true macOS power-loss
+  recovery remains a separate open qualification
 - a full installed Runtime physical-reboot protocol now extends that journey
   without conflating it with the earlier Agent-only host reboot probe. The
   complete `prepare -> physical reboot -> resume` sequence now passes on remote
@@ -169,8 +179,9 @@ sprawl:
   blocked an SQLite write inside the immutable payload; installed Runtime state
   is now forced into its external state root and rescanned before and after each
   qualification phase. The retained report passes 16/16 checks with zero
-  residue. This closes only the Linux installed-reboot subtier; installed
-  recovery on the remaining supported platforms stays open
+  residue and is now a required `diagnose-recover` release-gate probe. This
+  closes only `fault_injection_and_recovery/installed-linux`; the macOS and
+  Windows installed-reboot subtiers stay independently open
 - native two-host control-link qualification now keeps one remote Linux Agent
   process alive while the macOS Orchestra is killed and recreated, observes the
   sanitized degraded state, requires full re-registration plus resumed

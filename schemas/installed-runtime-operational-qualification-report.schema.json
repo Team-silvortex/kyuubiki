@@ -27,17 +27,25 @@
     "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
     "status": { "const": "pass" },
     "qualification_id": {
-      "const": "remote-linux-installer-managed-runtime-operational"
+      "enum": [
+        "remote-linux-installer-managed-runtime-operational",
+        "local-macos-installer-managed-runtime-operational"
+      ]
     },
     "journey": { "const": "installed-headless-orchestra-agent-restart" },
-    "execution_host_role": { "const": "remote-linux-qualification-host" },
+    "execution_host_role": {
+      "enum": [
+        "remote-linux-qualification-host",
+        "local-macos-qualification-host"
+      ]
+    },
     "platform": {
       "type": "object",
       "additionalProperties": false,
       "required": ["os", "architecture"],
       "properties": {
-        "os": { "const": "linux" },
-        "architecture": { "const": "x86_64" }
+        "os": { "enum": ["linux", "macos"] },
+        "architecture": { "enum": ["x86_64", "aarch64"] }
       }
     },
     "installation": {
@@ -151,6 +159,48 @@
       "items": { "$ref": "#/$defs/check" }
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "qualification_id": {
+            "const": "remote-linux-installer-managed-runtime-operational"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution_host_role": { "const": "remote-linux-qualification-host" },
+          "platform": {
+            "properties": {
+              "os": { "const": "linux" },
+              "architecture": { "const": "x86_64" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "qualification_id": {
+            "const": "local-macos-installer-managed-runtime-operational"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution_host_role": { "const": "local-macos-qualification-host" },
+          "platform": {
+            "properties": {
+              "os": { "const": "macos" },
+              "architecture": { "const": "aarch64" }
+            }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "id": {
       "type": "string",

@@ -842,6 +842,8 @@ including the installed Rust Headless client and two installed Rust Agents:
 ```sh
 make qualify-installed-runtime-operational-remote
 make check-installed-runtime-operational-qualification
+make qualify-installed-runtime-operational-macos
+make check-installed-runtime-macos-operational-qualification
 ```
 
 It builds one production OTP release and the native binaries, seals and
@@ -859,6 +861,14 @@ after shutdown, and fails closed on digest drift, source fallback, changed
 numerical output, missing Agent dispatch, stale PID files, open ports, or
 cleanup residue. Only the compact path-free report is retained; the remote run
 root and local raw captures are removed.
+
+The macOS command drives the same contract locally on Apple Silicon without
+using the source tree as a runtime fallback. It stages, seals, installs, and
+activates the payload under a temporary macOS `HOME`, runs the full installed
+Headless-Orchestra-two-Agent-Engine chain through two restarts, rescans the
+immutable payload, and removes both the application-support store and raw
+captures. This is ordinary installed-operation evidence, not a substitute for
+a physical macOS reboot qualification.
 
 The full installed Runtime reboot lane is a separate two-phase boundary. It
 persists one completed Headless job while the installed Orchestra and two Rust

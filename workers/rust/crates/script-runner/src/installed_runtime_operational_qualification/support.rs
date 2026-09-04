@@ -154,6 +154,16 @@ pub(crate) fn runtime_env(
     home: &Path,
     ports: Ports,
 ) -> BTreeMap<String, String> {
+    runtime_env_for_platform(runtime, state, home, ports, "linux")
+}
+
+pub(crate) fn runtime_env_for_platform(
+    runtime: &Path,
+    state: &Path,
+    home: &Path,
+    ports: Ports,
+    _platform: &str,
+) -> BTreeMap<String, String> {
     BTreeMap::from([
         ("HOME".into(), home.display().to_string()),
         ("LANG".into(), "C.UTF-8".into()),
@@ -254,12 +264,20 @@ pub(crate) fn verify_installation(
     runtime: &Path,
     version: &str,
 ) -> RunnerResult<BTreeMap<String, String>> {
+    verify_installation_for_platform(runtime, version, "linux")
+}
+
+pub(crate) fn verify_installation_for_platform(
+    runtime: &Path,
+    version: &str,
+    platform: &str,
+) -> RunnerResult<BTreeMap<String, String>> {
     let manifest_path = runtime.join("manifests/runtime-payload.json");
     ensure_regular(&manifest_path)?;
     let manifest = read_json(&manifest_path)?;
     require_text(&manifest, "/schema_version", "kyuubiki.runtime-payload/v1")?;
     require_text(&manifest, "/version", version)?;
-    require_text(&manifest, "/platform", "linux")?;
+    require_text(&manifest, "/platform", platform)?;
     let files = manifest
         .get("files")
         .and_then(Value::as_array)
@@ -478,13 +496,37 @@ pub(crate) fn runtime_pids(state: &Path, ports: Ports) -> RunnerResult<BTreeMap<
     Ok(pids)
 }
 
-pub(crate) fn ensure_remote_linux() -> RunnerResult<()> {
-    if std::env::consts::OS != "linux" || std::env::var_os("SSH_CONNECTION").is_none() {
-        return Err(
-            "installed Runtime host capture requires a managed remote Linux session".into(),
-        );
+pub(crate) fn ensure_qualification_host(
+    platform: &str,
+    architecture: &str,
+    role: &str,
+) -> RunnerResult<()> {
+    if std::env::consts::OS != platform || std::env::consts::ARCH != architecture {
+        return Err(format!(
+            "installed Runtime host mismatch: expected {platform}/{architecture}, found {}/{}",
+            std::env::consts::OS,
+            std::env::consts::ARCH
+        ));
     }
-    Ok(())
+    match (platform, role) {
+        ("linux", "remote-linux-qualification-host")
+            if std::env::var_os("SSH_CONNECTION").is_some() =>
+        {
+            Ok(())
+        }
+        ("macos", "local-macos-qualification-host")
+            if std::env::var_os("SSH_CONNECTION").is_none() =>
+        {
+            Ok(())
+        }
+        _ => Err(format!(
+            "installed Runtime host role {role} is invalid for {platform}"
+        )),
+    }
+}
+
+pub(crate) fn ensure_remote_linux() -> RunnerResult<()> {
+    ensure_qualification_host("linux", "x86_64", "remote-linux-qualification-host")
 }
 
 pub(crate) fn canonical_dir(path: &Path, label: &str) -> RunnerResult<PathBuf> {

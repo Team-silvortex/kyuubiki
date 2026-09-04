@@ -12,15 +12,20 @@ use std::path::Path;
 type RunnerResult<T> = Result<T, String>;
 
 mod host;
+mod local_macos;
 pub(crate) mod remote;
 pub(crate) mod support;
 
 const CONTRACT_PATH: &str = "config/architecture/installed-runtime-operational-qualification.json";
+const MACOS_CONTRACT_PATH: &str =
+    "config/architecture/installed-runtime-macos-operational-qualification.json";
+const CONTRACT_SCHEMA_PATH: &str =
+    "schemas/installed-runtime-operational-qualification-contract.schema.json";
 const CONTRACT_SCHEMA: &str = "kyuubiki.installed-runtime-operational-qualification-contract/v1";
 const REPORT_SCHEMA: &str = "kyuubiki.installed-runtime-operational-qualification/v1";
-const QUALIFICATION_ID: &str = "remote-linux-installer-managed-runtime-operational";
 const JOURNEY: &str = "installed-headless-orchestra-agent-restart";
 const DEFAULT_OUT: &str = "tmp/installed-runtime-operational-qualification.json";
+const MACOS_DEFAULT_OUT: &str = "tmp/installed-runtime-macos-operational-qualification.json";
 const REQUIRED_CHECKS: &[&str] = &[
     "installed_payload_activated",
     "source_tree_detached",
@@ -35,6 +40,37 @@ const REQUIRED_CHECKS: &[&str] = &[
     "cleanup_complete",
     "retention_sanitized",
 ];
+
+#[derive(Clone, Copy)]
+struct Profile {
+    contract_path: &'static str,
+    qualification_id: &'static str,
+    execution_host_role: &'static str,
+    platform: &'static str,
+    architecture: &'static str,
+    default_out: &'static str,
+    label: &'static str,
+}
+
+const LINUX_PROFILE: Profile = Profile {
+    contract_path: CONTRACT_PATH,
+    qualification_id: "remote-linux-installer-managed-runtime-operational",
+    execution_host_role: "remote-linux-qualification-host",
+    platform: "linux",
+    architecture: "x86_64",
+    default_out: DEFAULT_OUT,
+    label: "Installed Runtime Linux operational qualification",
+};
+
+const MACOS_PROFILE: Profile = Profile {
+    contract_path: MACOS_CONTRACT_PATH,
+    qualification_id: "local-macos-installer-managed-runtime-operational",
+    execution_host_role: "local-macos-qualification-host",
+    platform: "macos",
+    architecture: "aarch64",
+    default_out: MACOS_DEFAULT_OUT,
+    label: "Installed Runtime macOS operational qualification",
+};
 
 #[derive(Deserialize)]
 struct Contract {
@@ -91,47 +127,69 @@ pub(crate) fn run_check_installed_runtime_operational_qualification(
     root: &Path,
     args: Vec<OsString>,
 ) -> RunnerResult<u8> {
-    let options = parse_options(args, "installed Runtime operational qualification")?;
-    let contract: Contract = read_json(root, CONTRACT_PATH)?;
-    validate_contract(root, &contract)?;
+    run_check(root, args, LINUX_PROFILE)
+}
+
+pub(crate) fn run_check_installed_runtime_macos_operational_qualification(
+    root: &Path,
+    args: Vec<OsString>,
+) -> RunnerResult<u8> {
+    run_check(root, args, MACOS_PROFILE)
+}
+
+fn run_check(root: &Path, args: Vec<OsString>, profile: Profile) -> RunnerResult<u8> {
+    let options = parse_options(args, profile.label)?;
+    let contract = load_contract(root, profile)?;
     if options.self_test {
-        validator_self_test(&contract)?;
-        println!("Installed Runtime operational qualification self-test passed");
+        validator_self_test(root, &contract, profile)?;
+        println!("{} self-test passed", profile.label);
         return Ok(0);
     }
     if let Some(path) = options.verify_report {
         let report: Value = read_json(root, &path)?;
-        validate_report(&contract, &report)?;
-        println!("Installed Runtime operational qualification report passed: {path}");
+        validate_report(&contract, &report, profile)?;
+        println!("{} report passed: {path}", profile.label);
         return Ok(0);
     }
 
     let captures = load_captures(root, &contract.capture)?;
     validate_captures(&contract.capture, &captures)?;
-    let report = build_report(&contract, &captures)?;
-    validate_report(&contract, &report)?;
-    let out = options.out.as_deref().unwrap_or(DEFAULT_OUT);
+    let report = build_report(&contract, &captures, profile)?;
+    validate_report(&contract, &report, profile)?;
+    let out = options.out.as_deref().unwrap_or(profile.default_out);
     write_json(root, out, &report)?;
-    println!("Installed Runtime operational qualification passed: {out}");
+    println!("{} passed: {out}", profile.label);
     Ok(0)
+}
+
+fn load_contract(root: &Path, profile: Profile) -> RunnerResult<Contract> {
+    let contract: Contract = read_json(root, profile.contract_path)?;
+    validate_contract(root, &contract, profile)?;
+    Ok(contract)
 }
 
 pub(crate) fn run_qualify_remote(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
     remote::run(root, args)
 }
 
+pub(crate) fn run_qualify_macos(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
+    local_macos::run(root, args)
+}
+
 pub(crate) fn run_capture_host(args: Vec<OsString>) -> RunnerResult<u8> {
     host::run(args)
 }
 
-fn validate_contract(root: &Path, contract: &Contract) -> RunnerResult<()> {
-    if contract.schema_version != CONTRACT_SCHEMA || contract.qualification_id != QUALIFICATION_ID {
+fn validate_contract(root: &Path, contract: &Contract, profile: Profile) -> RunnerResult<()> {
+    if contract.schema_version != CONTRACT_SCHEMA
+        || contract.qualification_id != profile.qualification_id
+    {
         return Err("installed Runtime operational contract identity is invalid".into());
     }
     let capture = &contract.capture;
-    if capture.execution_host_role != "remote-linux-qualification-host"
-        || capture.platform != "linux"
-        || capture.architecture != "x86_64"
+    if capture.execution_host_role != profile.execution_host_role
+        || capture.platform != profile.platform
+        || capture.architecture != profile.architecture
         || !valid_version(&capture.package_version)
         || capture.workflow_id != "qualification.installed-runtime.bar"
         || capture.minimum_agent_count < 2
@@ -154,11 +212,7 @@ fn validate_contract(root: &Path, contract: &Contract) -> RunnerResult<()> {
     {
         return Err("installed Runtime retention contract is invalid".into());
     }
-    validate_schema_const(
-        root,
-        "schemas/installed-runtime-operational-qualification-contract.schema.json",
-        CONTRACT_SCHEMA,
-    )?;
+    validate_schema_const(root, CONTRACT_SCHEMA_PATH, CONTRACT_SCHEMA)?;
     validate_schema_const(root, &contract.retention.report_schema_path, REPORT_SCHEMA)?;
     validate_source_guard(root, &contract.source_guard)
 }
@@ -330,7 +384,7 @@ fn validate_captures(contract: &CaptureContract, captures: &Captures) -> RunnerR
     Ok(())
 }
 
-fn build_report(contract: &Contract, captures: &Captures) -> RunnerResult<Value> {
+fn build_report(contract: &Contract, captures: &Captures, profile: Profile) -> RunnerResult<Value> {
     let job_id = string_at(&captures.solve, "/execution_summary/job_ids/0")?;
     let tip = number_at(
         &captures.solve,
@@ -345,10 +399,13 @@ fn build_report(contract: &Contract, captures: &Captures) -> RunnerResult<Value>
         "schema_version": REPORT_SCHEMA,
         "generated_at_unix_ms": generated_at_unix_ms()?,
         "status": "pass",
-        "qualification_id": QUALIFICATION_ID,
+        "qualification_id": profile.qualification_id,
         "journey": JOURNEY,
         "execution_host_role": contract.capture.execution_host_role,
-        "platform": {"os": "linux", "architecture": contract.capture.architecture},
+        "platform": {
+            "os": contract.capture.platform,
+            "architecture": contract.capture.architecture
+        },
         "installation": {
             "package_version": contract.capture.package_version,
             "activation_generation": 1,
@@ -394,12 +451,15 @@ fn build_report(contract: &Contract, captures: &Captures) -> RunnerResult<Value>
     }))
 }
 
-fn validate_report(contract: &Contract, report: &Value) -> RunnerResult<()> {
+fn validate_report(contract: &Contract, report: &Value, profile: Profile) -> RunnerResult<()> {
     for (pointer, expected) in [
         ("/schema_version", REPORT_SCHEMA),
         ("/status", "pass"),
-        ("/qualification_id", QUALIFICATION_ID),
+        ("/qualification_id", profile.qualification_id),
         ("/journey", JOURNEY),
+        ("/execution_host_role", profile.execution_host_role),
+        ("/platform/os", profile.platform),
+        ("/platform/architecture", profile.architecture),
         (
             "/installation/package_version",
             contract.capture.package_version.as_str(),
@@ -473,17 +533,17 @@ fn validate_report(contract: &Contract, report: &Value) -> RunnerResult<()> {
     Ok(())
 }
 
-fn validator_self_test(contract: &Contract) -> RunnerResult<()> {
-    let mut report: Value = read_json(
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../..")
-            .as_path(),
-        &contract.retention.report_path,
-    )?;
-    validate_report(contract, &report)?;
+fn validator_self_test(root: &Path, contract: &Contract, profile: Profile) -> RunnerResult<()> {
+    let mut report: Value = read_json(root, &contract.retention.report_path)?;
+    validate_report(contract, &report, profile)?;
     report["runtime"]["frontend_loaded"] = Value::Bool(true);
-    if validate_report(contract, &report).is_ok() {
+    if validate_report(contract, &report, profile).is_ok() {
         return Err("validator accepted a loaded frontend".into());
+    }
+    report["runtime"]["frontend_loaded"] = Value::Bool(false);
+    report["platform"]["os"] = Value::String("other".to_string());
+    if validate_report(contract, &report, profile).is_ok() {
+        return Err("validator accepted a mismatched platform".into());
     }
     Ok(())
 }

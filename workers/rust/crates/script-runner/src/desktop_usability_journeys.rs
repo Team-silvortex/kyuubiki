@@ -22,7 +22,9 @@ const NATIVE_PROBES: &[&str] = &[
     "check-fleet-scheduling-operational-qualification",
     "check-fleet-update-operational-qualification",
     "check-install-update-disk-hygiene",
+    "check-installed-runtime-macos-operational-qualification",
     "check-installed-runtime-operational-qualification",
+    "check-installed-runtime-power-loss-qualification",
     "check-installer-recovery-fault-injection",
     "check-linux-host-power-loss-qualification",
     "check-material-exploration-chain-contract",
@@ -392,6 +394,7 @@ fn validate_required_chains(config: &GateConfig, selected: Option<&str>, issues:
                 "check-orchestra-network-partition-operational-qualification",
                 "check-installer-recovery-fault-injection",
                 "check-linux-host-power-loss-qualification",
+                "check-installed-runtime-power-loss-qualification",
             ] {
                 if !journey
                     .probes
@@ -406,7 +409,11 @@ fn validate_required_chains(config: &GateConfig, selected: Option<&str>, issues:
             for (probe_id, label) in [
                 (
                     "check-installed-runtime-operational-qualification",
-                    "installed Runtime operational evidence",
+                    "installed Linux Runtime operational evidence",
+                ),
+                (
+                    "check-installed-runtime-macos-operational-qualification",
+                    "installed macOS Runtime operational evidence",
                 ),
                 (
                     "check-operator-package-acquisition-operational-qualification",
@@ -584,9 +591,54 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
     validate_required_chains(&missing_runtime, Some("execute-observe"), &mut issues);
     if !issues
         .iter()
-        .any(|issue| issue.contains("installed Runtime operational evidence"))
+        .any(|issue| issue.contains("installed Linux Runtime operational evidence"))
     {
         return Err("self-test expected installed Runtime probe rejection".to_string());
+    }
+
+    let mut missing_macos_runtime: GateConfig = read_json(root, GATE_PATH)?;
+    let journey = missing_macos_runtime
+        .journeys
+        .iter_mut()
+        .find(|journey| journey.id == "execute-observe")
+        .ok_or_else(|| "self-test missing execute-observe journey".to_string())?;
+    journey.probes.retain(|probe| {
+        probe.first().is_none_or(|command| {
+            command != "check-installed-runtime-macos-operational-qualification"
+        })
+    });
+    let mut issues = Vec::new();
+    validate_required_chains(&missing_macos_runtime, Some("execute-observe"), &mut issues);
+    if !issues
+        .iter()
+        .any(|issue| issue.contains("installed macOS Runtime operational evidence"))
+    {
+        return Err("self-test expected installed macOS Runtime probe rejection".to_string());
+    }
+
+    let mut missing_installed_recovery: GateConfig = read_json(root, GATE_PATH)?;
+    let journey = missing_installed_recovery
+        .journeys
+        .iter_mut()
+        .find(|journey| journey.id == "diagnose-recover")
+        .ok_or_else(|| "self-test missing diagnose-recover journey".to_string())?;
+    journey.probes.retain(|probe| {
+        probe
+            .first()
+            .is_none_or(|command| command != "check-installed-runtime-power-loss-qualification")
+    });
+    let mut issues = Vec::new();
+    validate_required_chains(
+        &missing_installed_recovery,
+        Some("diagnose-recover"),
+        &mut issues,
+    );
+    if !issues.iter().any(|issue| {
+        issue.contains(
+            "diagnose-recover must execute check-installed-runtime-power-loss-qualification",
+        )
+    }) {
+        return Err("self-test expected installed Runtime recovery probe rejection".to_string());
     }
 
     let mut missing_package_acquisition: GateConfig = read_json(root, GATE_PATH)?;

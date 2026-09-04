@@ -175,8 +175,16 @@ pub(crate) fn run_governance_command(
                 root, args,
             )
         }
+        "check-installed-runtime-macos-operational-qualification" => {
+            installed_runtime_operational_qualification::run_check_installed_runtime_macos_operational_qualification(
+                root, args,
+            )
+        }
         "qualify-installed-runtime-operational-remote" => {
             installed_runtime_operational_qualification::run_qualify_remote(root, args)
+        }
+        "qualify-installed-runtime-operational-macos" => {
+            installed_runtime_operational_qualification::run_qualify_macos(root, args)
         }
         "capture-installed-runtime-operational-host" => {
             installed_runtime_operational_qualification::run_capture_host(args)
