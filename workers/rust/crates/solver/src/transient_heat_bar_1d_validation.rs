@@ -84,7 +84,21 @@ fn validate_element(
     }
 
     let mass_heat_capacity = element.density * element.specific_heat * element.area * length;
+    let conductance = element.conductivity * element.area / length;
+    if !(mass_heat_capacity.is_finite()
+        && mass_heat_capacity > 0.0
+        && conductance.is_finite()
+        && conductance > 0.0)
+    {
+        return Err(format!(
+            "transient heat bar element {} must produce finite positive capacity and conductance",
+            element.id
+        ));
+    }
     capacity[element.node_i] += 0.5 * mass_heat_capacity;
     capacity[element.node_j] += 0.5 * mass_heat_capacity;
+    if !capacity[element.node_i].is_finite() || !capacity[element.node_j].is_finite() {
+        return Err("transient heat bar assembled capacity must remain finite".to_string());
+    }
     Ok(())
 }

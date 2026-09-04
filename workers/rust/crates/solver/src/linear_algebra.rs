@@ -6,11 +6,16 @@ use crate::linear_spd::solve_spd_compressed;
 use std::time::Instant;
 
 const DENSE_REFINEMENT_TARGET: f64 = 1.0e-12;
+const SPARSE_RESIDUAL_TOLERANCE: f64 = 1.0e-8;
 
 #[path = "linear_ic0.rs"]
 mod linear_ic0;
+#[path = "linear_spd_prepared.rs"]
+mod prepared;
 #[path = "linear_algebra_scaling.rs"]
 mod scaling;
+
+pub(crate) use prepared::PreparedSpdSolver;
 
 #[derive(Debug, Clone)]
 pub(crate) struct SparseMatrix {
@@ -565,7 +570,7 @@ fn refine_dense_solution(
     factor: &DenseLu,
 ) -> Result<Vec<f64>, String> {
     for _ in 0..2 {
-        let validation = sparse_relative_residual(matrix, rhs, &solution);
+        let validation = sparse_relative_residual(matrix, rhs, &solution, DENSE_REFINEMENT_TARGET);
         if validation.relative <= DENSE_REFINEMENT_TARGET {
             return Ok(solution);
         }
@@ -587,11 +592,12 @@ fn validate_spd_solution(
     mut profile: SpdSolveProfile,
 ) -> Result<SpdSolveProfile, String> {
     profile.residual_norm = sparse_residual_norm(matrix, rhs, &profile.solution);
-    let validation = sparse_relative_residual(matrix, rhs, &profile.solution);
+    let validation =
+        sparse_relative_residual(matrix, rhs, &profile.solution, SPARSE_RESIDUAL_TOLERANCE);
     if !profile.residual_norm.is_finite() || !validation.relative.is_finite() {
         return Err("linear system solution produced a non-finite residual".to_string());
     }
-    if validation.relative > 1.0e-8 {
+    if validation.relative > SPARSE_RESIDUAL_TOLERANCE {
         return Err(format!(
             "linear system solution failed residual validation ({:.6e} at row {}, residual={:.6e}, equation_scale={:.6e})",
             validation.relative, validation.row, validation.residual, validation.equation_scale
@@ -626,14 +632,16 @@ fn sparse_residual_vector(matrix: &SparseMatrix, rhs: &[f64], solution: &[f64]) 
         .collect()
 }
 
-fn stable_l2_norm(values: impl IntoIterator<Item = f64>) -> f64 {
+pub(crate) fn stable_l2_norm(values: impl IntoIterator<Item = f64>) -> f64 {
     let mut scale = 0.0;
     let mut sum_squares = 1.0;
-    for value in values
-        .into_iter()
-        .map(f64::abs)
-        .filter(|value| *value > 0.0)
-    {
+    for value in values.into_iter().map(f64::abs) {
+        if !value.is_finite() {
+            return value;
+        }
+        if value == 0.0 {
+            continue;
+        }
         if scale < value {
             sum_squares = 1.0 + sum_squares * (scale / value).powi(2);
             scale = value;
@@ -659,14 +667,11 @@ fn sparse_relative_residual(
     matrix: &SparseMatrix,
     rhs: &[f64],
     solution: &[f64],
+    tolerance: f64,
 ) -> SparseResidualValidation {
-    let mut worst = SparseResidualValidation {
-        relative: 0.0,
-        row: 0,
-        residual: 0.0,
-        equation_scale: 0.0,
-    };
-    for (row_index, (row, expected)) in matrix.rows.iter().zip(rhs).enumerate() {
+    let mut rows = Vec::with_capacity(matrix.size());
+    let mut global_scale = 0.0_f64;
+    for (row, expected) in matrix.rows.iter().zip(rhs) {
         let mut actual = 0.0;
         let mut equation_scale = expected.abs();
         for (column, value) in row {
@@ -675,17 +680,30 @@ fn sparse_relative_residual(
             equation_scale += term.abs();
         }
         let residual = (expected - actual).abs();
-        let relative = if equation_scale == 0.0 {
+        global_scale = global_scale.max(equation_scale);
+        rows.push((residual, equation_scale));
+    }
+
+    let roundoff_floor = global_scale * f64::EPSILON / tolerance;
+    let mut worst = SparseResidualValidation {
+        relative: 0.0,
+        row: 0,
+        residual: 0.0,
+        equation_scale: 0.0,
+    };
+    for (row_index, (residual, equation_scale)) in rows.into_iter().enumerate() {
+        let effective_scale = equation_scale.max(roundoff_floor);
+        let relative = if effective_scale == 0.0 {
             if residual == 0.0 { 0.0 } else { f64::INFINITY }
         } else {
-            residual / equation_scale
+            residual / effective_scale
         };
         if relative > worst.relative {
             worst = SparseResidualValidation {
                 relative,
                 row: row_index,
                 residual,
-                equation_scale,
+                equation_scale: effective_scale,
             };
         }
     }
@@ -709,7 +727,13 @@ pub(crate) fn sparse_to_dense(matrix: &SparseMatrix) -> Vec<Vec<f64>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{SparseMatrix, add_at, solve_tridiagonal_system};
+    use super::{SparseMatrix, add_at, solve_tridiagonal_system, stable_l2_norm};
+
+    #[test]
+    fn stable_norm_propagates_non_finite_values() {
+        assert!(stable_l2_norm([1.0, f64::NAN]).is_nan());
+        assert_eq!(stable_l2_norm([1.0, f64::INFINITY]), f64::INFINITY);
+    }
 
     #[test]
     fn solves_a_tridiagonal_sparse_system_in_linear_time_path() {

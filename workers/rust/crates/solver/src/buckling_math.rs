@@ -1,4 +1,5 @@
-use crate::modal_math::jacobi_eigenpairs;
+use crate::linear_algebra::stable_l2_norm;
+use crate::modal_math::{jacobi_eigenpairs, relative_positive_eigenvalue_floor};
 use kyuubiki_protocol::{
     BUCKLING_MODE_CLUSTER_RELATIVE_TOLERANCE, BucklingModeDirectionAssessment,
 };
@@ -66,15 +67,18 @@ fn uncondensed_generalized_eigenpairs(
         "buckling elastic stiffness is not positive definite after constraints".to_string()
     })?;
     let normalized = symmetric_generalized_operator(geometric, &elastic_lower);
-    let mut pairs = jacobi_eigenpairs(normalized)
+    let raw_pairs = jacobi_eigenpairs(normalized)?;
+    let positive_reciprocal_floor =
+        relative_positive_eigenvalue_floor(raw_pairs.iter().map(|(value, _)| *value));
+    let mut pairs = raw_pairs
         .into_iter()
-        .filter(|(reciprocal, _)| reciprocal.is_finite() && *reciprocal > 1.0e-12)
+        .filter(|(reciprocal, _)| reciprocal.is_finite() && *reciprocal > positive_reciprocal_floor)
         .map(|(reciprocal, normalized_shape)| {
             let eigenvalue = 1.0 / reciprocal;
             let vector = solve_upper_transpose(&elastic_lower, &normalized_shape);
             eigenpair(stiffness, geometric, eigenvalue, vector)
         })
-        .filter(|pair| pair.eigenvalue.is_finite() && pair.eigenvalue > 1.0e-9)
+        .filter(|pair| pair.eigenvalue.is_finite() && pair.eigenvalue > 0.0)
         .collect::<Vec<_>>();
     pairs.sort_by(|left, right| left.eigenvalue.total_cmp(&right.eigenvalue));
     pairs.truncate(mode_count);
@@ -167,6 +171,8 @@ fn validate_matrices(stiffness: &[Vec<f64>], geometric: &[Vec<f64>]) -> Result<(
         || geometric.len() != size
         || stiffness.iter().any(|row| row.len() != size)
         || geometric.iter().any(|row| row.len() != size)
+        || stiffness.iter().flatten().any(|value| !value.is_finite())
+        || geometric.iter().flatten().any(|value| !value.is_finite())
     {
         return Err(
             "buckling generalized eigenproblem matrices must be square and non-empty".into(),
@@ -191,6 +197,15 @@ fn eigenpair(
 
 fn cholesky(matrix: &[Vec<f64>]) -> Result<Vec<Vec<f64>>, String> {
     let size = matrix.len();
+    let matrix_scale = matrix
+        .iter()
+        .flatten()
+        .map(|value| value.abs())
+        .fold(0.0_f64, f64::max);
+    if !(matrix_scale.is_finite() && matrix_scale > 0.0) {
+        return Err("matrix has zero or non-finite scale".to_string());
+    }
+    let pivot_tolerance = 64.0 * f64::EPSILON * matrix_scale;
     let mut lower = vec![vec![0.0; size]; size];
     for row in 0..size {
         for column in 0..=row {
@@ -199,7 +214,7 @@ fn cholesky(matrix: &[Vec<f64>]) -> Result<Vec<Vec<f64>>, String> {
                 .sum::<f64>();
             if row == column {
                 let diagonal = matrix[row][row] - sum;
-                if !(diagonal.is_finite() && diagonal > 1.0e-14) {
+                if !(diagonal.is_finite() && diagonal > pivot_tolerance) {
                     return Err("matrix is not positive definite".to_string());
                 }
                 lower[row][column] = diagonal.sqrt();
@@ -250,7 +265,7 @@ fn solve_upper_transpose(lower: &[Vec<f64>], rhs: &[f64]) -> Vec<f64> {
 
 fn normalize(vector: &mut [f64]) -> Result<(), String> {
     let norm = l2_norm(vector);
-    if !(norm.is_finite() && norm > f64::EPSILON) {
+    if !(norm.is_finite() && norm > 0.0) {
         return Err("buckling eigenvector normalization failed".to_string());
     }
     vector.iter_mut().for_each(|value| *value /= norm);
@@ -262,7 +277,7 @@ fn dot(left: &[f64], right: &[f64]) -> f64 {
 }
 
 fn l2_norm(values: &[f64]) -> f64 {
-    dot(values, values).sqrt()
+    stable_l2_norm(values.iter().copied())
 }
 
 fn generalized_residual(
@@ -271,17 +286,13 @@ fn generalized_residual(
     shape: &[f64],
     factor: f64,
 ) -> f64 {
-    (0..shape.len())
-        .map(|row| {
-            (0..shape.len())
-                .map(|column| {
-                    (stiffness[row][column] - factor * geometric[row][column]) * shape[column]
-                })
-                .sum::<f64>()
-        })
-        .map(|value| value * value)
-        .sum::<f64>()
-        .sqrt()
+    stable_l2_norm((0..shape.len()).map(|row| {
+        (0..shape.len())
+            .map(|column| {
+                (stiffness[row][column] - factor * geometric[row][column]) * shape[column]
+            })
+            .sum::<f64>()
+    }))
 }
 
 #[cfg(test)]
@@ -330,6 +341,33 @@ mod tests {
         assert!((pairs[0].eigenvalue - 1.0).abs() < 1.0e-12);
         assert!((pairs[0].vector[0] - pairs[0].vector[1]).abs() < 1.0e-12);
         assert!(pairs[0].residual_norm < 1.0e-12);
+    }
+
+    #[test]
+    fn common_matrix_scaling_preserves_dense_buckling_factors() {
+        let baseline = generalized_eigenpairs(&diagonal(&[2.0, 5.0]), &diagonal(&[1.0, 0.5]), 2)
+            .expect("baseline dense buckling problem should solve");
+        let scale = 1.0e-24;
+        let tiny = generalized_eigenpairs(
+            &diagonal(&[2.0 * scale, 5.0 * scale]),
+            &diagonal(&[scale, 0.5 * scale]),
+            2,
+        )
+        .expect("tiny dense buckling problem should solve relatively");
+
+        for (baseline, tiny) in baseline.iter().zip(&tiny) {
+            assert!((baseline.eigenvalue / tiny.eigenvalue - 1.0).abs() < 1.0e-12);
+        }
+    }
+
+    #[test]
+    fn dense_buckling_keeps_large_but_resolved_positive_factors() {
+        let pairs =
+            generalized_eigenpairs(&diagonal(&[1.0, 1.0]), &diagonal(&[1.0e-20, 0.5e-20]), 2)
+                .expect("small geometric stiffness should produce finite large factors");
+
+        assert!((pairs[0].eigenvalue / 1.0e20 - 1.0).abs() < 1.0e-12);
+        assert!((pairs[1].eigenvalue / 2.0e20 - 1.0).abs() < 1.0e-12);
     }
 
     fn diagonal(values: &[f64]) -> Vec<Vec<f64>> {

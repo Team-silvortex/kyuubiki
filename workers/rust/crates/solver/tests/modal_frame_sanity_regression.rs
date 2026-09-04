@@ -152,6 +152,42 @@ fn modal_frame_3d_tracks_stiffness_and_density_frequency_scaling() {
     }
 }
 
+#[test]
+fn modal_frames_retain_resolved_spectra_below_the_old_absolute_floor() {
+    let stiffness_factor = 1.0e-20;
+    let baseline_2d = solve_modal_frame_2d(&modal_2d_scaled_request(2.0, 1.0, 1.0))
+        .expect("baseline 2d modal frame");
+    let soft_2d = solve_modal_frame_2d(&modal_2d_scaled_request(2.0, stiffness_factor, 1.0))
+        .expect("very soft 2d modal frame should retain its resolved modes");
+    assert_eq!(soft_2d.modes.len(), baseline_2d.modes.len());
+    for (baseline, soft) in baseline_2d.modes.iter().zip(&soft_2d.modes) {
+        assert!(soft.eigenvalue_rad_s_squared < 1.0e-9);
+        assert!(
+            (soft.eigenvalue_rad_s_squared
+                / (baseline.eigenvalue_rad_s_squared * stiffness_factor)
+                - 1.0)
+                .abs()
+                < 1.0e-8
+        );
+    }
+
+    let baseline_3d = solve_modal_frame_3d(&modal_3d_scaled_request(2.0, 1.0, 1.0))
+        .expect("baseline 3d modal frame");
+    let soft_3d = solve_modal_frame_3d(&modal_3d_scaled_request(2.0, stiffness_factor, 1.0))
+        .expect("very soft 3d modal frame should retain its resolved modes");
+    assert_eq!(soft_3d.modes.len(), baseline_3d.modes.len());
+    for (baseline, soft) in baseline_3d.modes.iter().zip(&soft_3d.modes) {
+        assert!(soft.eigenvalue_rad_s_squared < 1.0e-9);
+        assert!(
+            (soft.eigenvalue_rad_s_squared
+                / (baseline.eigenvalue_rad_s_squared * stiffness_factor)
+                - 1.0)
+                .abs()
+                < 1.0e-8
+        );
+    }
+}
+
 #[derive(Clone, Copy)]
 struct ModalScaleCase {
     stiffness_factor: f64,

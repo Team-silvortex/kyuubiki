@@ -53,6 +53,87 @@ fn harmonic_spring_1d_rejects_invalid_element_and_degenerate_length() {
     );
 }
 
+#[test]
+fn harmonic_spring_1d_is_invariant_to_common_dynamic_scale() {
+    let baseline = solve_harmonic_spring_1d(&harmonic_spring_request())
+        .expect("baseline harmonic system should solve");
+    let baseline_frequency = &baseline.frequencies[0];
+
+    for factor in [1.0e-300, 1.0e300] {
+        let mut request = harmonic_spring_request();
+        for node in &mut request.nodes {
+            node.mass *= factor;
+            node.load_x *= factor;
+        }
+        for element in &mut request.elements {
+            element.stiffness *= factor;
+            element.damping *= factor;
+        }
+        let scaled = solve_harmonic_spring_1d(&request)
+            .expect("commonly scaled harmonic system should remain solvable");
+        let scaled_frequency = &scaled.frequencies[0];
+
+        assert_relative(
+            scaled_frequency.nodes[1].displacement_amplitude,
+            baseline_frequency.nodes[1].displacement_amplitude,
+        );
+        assert_relative(
+            scaled_frequency.nodes[1].velocity_amplitude,
+            baseline_frequency.nodes[1].velocity_amplitude,
+        );
+        assert_relative(
+            scaled_frequency.elements[0].force_amplitude,
+            baseline_frequency.elements[0].force_amplitude * factor,
+        );
+    }
+}
+
+#[test]
+fn harmonic_spring_1d_reports_an_unrestrained_static_mode() {
+    let mut request = harmonic_spring_request();
+    request.nodes[0].fix_x = false;
+    request.frequencies_hz = vec![0.0];
+
+    let error = solve_harmonic_spring_1d(&request)
+        .expect_err("unrestrained zero-frequency system should be singular");
+    assert!(error.contains("dynamic stiffness is singular"));
+}
+
+#[test]
+fn harmonic_spring_1d_rejects_unsafe_dense_allocation_before_solving() {
+    let node_count = 2_050;
+    let request = SolveHarmonicSpring1dRequest {
+        nodes: (0..node_count)
+            .map(|index| {
+                node(
+                    &format!("n{index}"),
+                    index as f64,
+                    index == 0,
+                    (index + 1 == node_count) as u8 as f64,
+                    1.0,
+                    0.0,
+                    0.0,
+                )
+            })
+            .collect(),
+        elements: (0..node_count - 1)
+            .map(|index| TransientSpring1dElementInput {
+                id: format!("s{index}"),
+                node_i: index,
+                node_j: index + 1,
+                stiffness: 1.0,
+                damping: 0.0,
+            })
+            .collect(),
+        frequencies_hz: vec![1.0],
+    };
+
+    let error = solve_harmonic_spring_1d(&request)
+        .expect_err("oversized dense harmonic system should be rejected before allocation");
+    assert!(error.contains("2049 free degrees of freedom"));
+    assert!(error.contains("supports at most 2048"));
+}
+
 fn harmonic_spring_request() -> SolveHarmonicSpring1dRequest {
     SolveHarmonicSpring1dRequest {
         nodes: vec![
@@ -88,4 +169,12 @@ fn node(
         initial_displacement,
         initial_velocity,
     }
+}
+
+fn assert_relative(actual: f64, expected: f64) {
+    let relative = (actual - expected).abs() / expected.abs().max(f64::MIN_POSITIVE);
+    assert!(
+        relative < 1.0e-10,
+        "expected {actual:.16e} to match {expected:.16e} relatively, error={relative:.6e}"
+    );
 }

@@ -61,6 +61,66 @@ fn transient_spring_1d_rejects_invalid_element_connectivity_and_materials() {
     );
 }
 
+#[test]
+fn transient_spring_1d_rejects_non_finite_derived_dynamics() {
+    let mut request = transient_spring_request();
+    request.time_step = f64::MIN_POSITIVE;
+    let error = solve_transient_spring_1d(&request)
+        .expect_err("an overflowing Newmark coefficient should be rejected");
+    assert!(
+        error.contains("non-finite Newmark coefficients"),
+        "unexpected Newmark coefficient error: {error}"
+    );
+
+    let mut request = transient_spring_request();
+    request.nodes[1].mass = f64::MIN_POSITIVE;
+    request.nodes[1].load_x = f64::MAX;
+    let error = solve_transient_spring_1d(&request)
+        .expect_err("an overflowing initial acceleration should be rejected");
+    assert!(
+        error.contains("initial acceleration became non-finite"),
+        "unexpected acceleration error: {error}"
+    );
+}
+
+#[test]
+fn transient_spring_1d_handles_a_large_sparse_chain() {
+    const NODE_COUNT: usize = 10_000;
+    let nodes = (0..NODE_COUNT)
+        .map(|index| {
+            node(
+                &format!("n{index}"),
+                index as f64,
+                index == 0,
+                if index + 1 == NODE_COUNT { 1.0 } else { 0.0 },
+                1.0,
+                0.0,
+                0.0,
+            )
+        })
+        .collect();
+    let elements = (0..NODE_COUNT - 1)
+        .map(|index| TransientSpring1dElementInput {
+            id: format!("e{index}"),
+            node_i: index,
+            node_j: index + 1,
+            stiffness: 10.0,
+            damping: 0.1,
+        })
+        .collect();
+    let result = solve_transient_spring_1d(&SolveTransientSpring1dRequest {
+        nodes,
+        elements,
+        time_step: 0.01,
+        steps: 2,
+    })
+    .expect("large transient chain should stay on the sparse prepared path");
+
+    assert_eq!(result.nodes.len(), NODE_COUNT);
+    assert_eq!(result.history.len(), 3);
+    assert!(result.nodes[NODE_COUNT - 1].ux.is_finite());
+}
+
 fn transient_spring_request() -> SolveTransientSpring1dRequest {
     SolveTransientSpring1dRequest {
         nodes: vec![

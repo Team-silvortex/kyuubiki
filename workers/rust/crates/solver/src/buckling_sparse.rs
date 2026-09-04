@@ -1,9 +1,11 @@
 use crate::buckling_math::{GeneralizedEigenpair, generalized_eigenpairs};
-use crate::linear_algebra::{CompressedSparseMatrix, SparseMatrix, add_at, sparse_to_dense};
+use crate::linear_algebra::{
+    CompressedSparseMatrix, SparseMatrix, add_at, sparse_to_dense, stable_l2_norm,
+};
 use crate::linear_banded::SymmetricBandCholesky;
 use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
 use crate::linear_spd::solve_spd_compressed;
-use crate::modal_math::jacobi_eigenpairs;
+use crate::modal_math::{jacobi_eigenpairs, relative_positive_eigenvalue_floor};
 
 const MAX_SUBSPACE_ITERATIONS: usize = 96;
 const RELATIVE_RESIDUAL_TOLERANCE: f64 = 1.0e-6;
@@ -119,9 +121,12 @@ pub(crate) fn sparse_generalized_eigenpairs(
             .map(|vector| multiply(&geometric, vector))
             .collect::<Vec<_>>();
         let projected = projected_geometric(&basis, &geometric_products);
-        let mut reciprocal_pairs = jacobi_eigenpairs(projected)
+        let raw_pairs = jacobi_eigenpairs(projected)?;
+        let positive_reciprocal_floor =
+            relative_positive_eigenvalue_floor(raw_pairs.iter().map(|(value, _)| *value));
+        let mut reciprocal_pairs = raw_pairs
             .into_iter()
-            .filter(|(value, _)| value.is_finite() && *value > 1.0e-12)
+            .filter(|(value, _)| value.is_finite() && *value > positive_reciprocal_floor)
             .collect::<Vec<_>>();
         reciprocal_pairs.sort_by(|left, right| right.0.total_cmp(&left.0));
         if reciprocal_pairs.len() < requested {
@@ -140,10 +145,14 @@ pub(crate) fn sparse_generalized_eigenpairs(
                 let geometric_product = multiply(&geometric, &vector);
                 let eigenvalue = reciprocal.recip();
                 let residual_norm = residual_norm(&elastic_product, &geometric_product, eigenvalue);
-                let scale = l2_norm(&elastic_product)
-                    .max(eigenvalue.abs() * l2_norm(&geometric_product))
-                    .max(1.0);
-                last_relative_residual = last_relative_residual.max(residual_norm / scale);
+                let scale =
+                    l2_norm(&elastic_product).max(eigenvalue.abs() * l2_norm(&geometric_product));
+                let relative_residual = if scale.is_finite() && scale > 0.0 {
+                    residual_norm / scale
+                } else {
+                    f64::INFINITY
+                };
+                last_relative_residual = last_relative_residual.max(relative_residual);
                 pairs.push(GeneralizedEigenpair {
                     eigenvalue,
                     vector: vector.clone(),
@@ -157,7 +166,10 @@ pub(crate) fn sparse_generalized_eigenpairs(
             factors
                 .iter()
                 .zip(&previous_factors)
-                .map(|(current, previous)| (current - previous).abs() / current.abs().max(1.0))
+                .map(|(current, previous)| {
+                    (current - previous).abs()
+                        / current.abs().max(previous.abs()).max(f64::MIN_POSITIVE)
+                })
                 .fold(0.0, f64::max)
         } else {
             f64::INFINITY
@@ -227,7 +239,7 @@ fn solve_banded_refined(
     rhs: &[f64],
 ) -> Result<Vec<f64>, String> {
     let mut solution = factor.solve(rhs)?;
-    let target = 1.0e-11 * l2_norm(rhs).max(1.0);
+    let target = 1.0e-11 * l2_norm(rhs);
     for _ in 0..4 {
         let product = multiply(matrix, &solution);
         let residual = rhs
@@ -325,13 +337,12 @@ fn add_scaled(target: &mut [f64], source: &[f64], scale: f64) {
 }
 
 fn residual_norm(elastic: &[f64], geometric: &[f64], eigenvalue: f64) -> f64 {
-    elastic
-        .iter()
-        .zip(geometric)
-        .map(|(left, right)| left - eigenvalue * right)
-        .map(|value| value * value)
-        .sum::<f64>()
-        .sqrt()
+    stable_l2_norm(
+        elastic
+            .iter()
+            .zip(geometric)
+            .map(|(left, right)| left - eigenvalue * right),
+    )
 }
 
 fn dot(left: &[f64], right: &[f64]) -> f64 {
@@ -339,12 +350,12 @@ fn dot(left: &[f64], right: &[f64]) -> f64 {
 }
 
 fn l2_norm(values: &[f64]) -> f64 {
-    dot(values, values).sqrt()
+    stable_l2_norm(values.iter().copied())
 }
 
 fn normalize_euclidean(vector: &mut [f64]) -> bool {
     let norm = l2_norm(vector);
-    if !(norm.is_finite() && norm > 1.0e-14) {
+    if !(norm.is_finite() && norm > 0.0) {
         return false;
     }
     vector.iter_mut().for_each(|value| *value /= norm);
@@ -396,5 +407,34 @@ mod tests {
         assert_eq!(pairs.len(), 1);
         assert!((pairs[0].eigenvalue - 1.0).abs() < 1.0e-8);
         assert!(pairs[0].residual_norm < 1.0e-6);
+    }
+
+    #[test]
+    fn common_matrix_scaling_preserves_sparse_buckling_factors() {
+        let baseline = diagonal_problem(600, 1.0);
+        let tiny = diagonal_problem(600, 1.0e-24);
+        let baseline_pairs = sparse_generalized_eigenpairs(&baseline.0, &baseline.1, 2)
+            .expect("baseline sparse buckling problem should converge");
+        let tiny_pairs = sparse_generalized_eigenpairs(&tiny.0, &tiny.1, 2)
+            .expect("tiny sparse buckling problem should converge relatively");
+
+        for (baseline, tiny) in baseline_pairs.iter().zip(&tiny_pairs) {
+            assert!((baseline.eigenvalue / tiny.eigenvalue - 1.0).abs() < 1.0e-8);
+        }
+    }
+
+    fn diagonal_problem(size: usize, scale: f64) -> (SparseMatrix, SparseMatrix) {
+        let mut stiffness = SparseMatrix::new(size);
+        let mut geometric = SparseMatrix::new(size);
+        for index in 0..size {
+            let factor = match index {
+                0 => 2.0,
+                1 => 10.0,
+                _ => 100.0 + index as f64,
+            };
+            add_at(&mut stiffness, index, index, scale);
+            add_at(&mut geometric, index, index, scale / factor);
+        }
+        (stiffness, geometric)
     }
 }

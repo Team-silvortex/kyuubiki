@@ -8,6 +8,107 @@ struct TridiagonalSystem<'a> {
 const MIN_BACKWARD_ERROR_TOLERANCE: f64 = 1.0e-10;
 const MAX_BACKWARD_ERROR_TOLERANCE: f64 = 1.0e-7;
 
+pub(crate) struct PreparedTridiagonal {
+    diagonal: Vec<f64>,
+    lower: Vec<f64>,
+    upper: Vec<f64>,
+    factored_diagonal: Vec<f64>,
+    elimination_factors: Vec<f64>,
+}
+
+impl PreparedTridiagonal {
+    pub(crate) fn factor(diagonal: &[f64], lower: &[f64], upper: &[f64]) -> Result<Self, String> {
+        validate_coefficient_dimensions(diagonal, lower, upper)?;
+        validate_finite(diagonal, lower, upper, &[])?;
+        if diagonal.is_empty() {
+            return Ok(Self {
+                diagonal: Vec::new(),
+                lower: Vec::new(),
+                upper: Vec::new(),
+                factored_diagonal: Vec::new(),
+                elimination_factors: Vec::new(),
+            });
+        }
+
+        let size = diagonal.len();
+        let row_scales = row_scales(diagonal, lower, upper);
+        if row_scales.contains(&0.0) {
+            return Err("tridiagonal system contains a singular row".to_string());
+        }
+        let mut factored_diagonal = diagonal.to_vec();
+        let mut elimination_factors = Vec::with_capacity(size.saturating_sub(1));
+        for row in 1..size {
+            ensure_usable_pivot(factored_diagonal[row - 1], row_scales[row - 1], size)?;
+            let factor = lower[row - 1] / factored_diagonal[row - 1];
+            if !factor.is_finite() {
+                return Err("tridiagonal elimination diverged".to_string());
+            }
+            factored_diagonal[row] = (-factor).mul_add(upper[row - 1], factored_diagonal[row]);
+            if !factored_diagonal[row].is_finite() {
+                return Err("tridiagonal elimination diverged".to_string());
+            }
+            elimination_factors.push(factor);
+        }
+        ensure_usable_pivot(factored_diagonal[size - 1], row_scales[size - 1], size)?;
+
+        Ok(Self {
+            diagonal: diagonal.to_vec(),
+            lower: lower.to_vec(),
+            upper: upper.to_vec(),
+            factored_diagonal,
+            elimination_factors,
+        })
+    }
+
+    pub(crate) fn solve(&self, rhs: &[f64]) -> Result<Vec<f64>, String> {
+        if rhs.len() != self.diagonal.len() {
+            return Err("tridiagonal system dimensions must match".to_string());
+        }
+        if rhs.iter().any(|value| !value.is_finite()) {
+            return Err("tridiagonal system contains a non-finite value".to_string());
+        }
+        if rhs.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let size = rhs.len();
+        let mut rhs_work = rhs.to_vec();
+        for row in 1..size {
+            rhs_work[row] =
+                (-self.elimination_factors[row - 1]).mul_add(rhs_work[row - 1], rhs_work[row]);
+            if !rhs_work[row].is_finite() {
+                return Err("tridiagonal elimination diverged".to_string());
+            }
+        }
+
+        let mut solution = vec![0.0; size];
+        solution[size - 1] = rhs_work[size - 1] / self.factored_diagonal[size - 1];
+        for row in (0..size - 1).rev() {
+            solution[row] = (-self.upper[row]).mul_add(solution[row + 1], rhs_work[row])
+                / self.factored_diagonal[row];
+        }
+        if solution.iter().any(|value| !value.is_finite()) {
+            return Err("tridiagonal back substitution diverged".to_string());
+        }
+
+        let tolerance = backward_error_tolerance(size);
+        let backward_error = maximum_backward_error(
+            &self.diagonal,
+            &self.lower,
+            &self.upper,
+            rhs,
+            &solution,
+            tolerance,
+        );
+        if !backward_error.is_finite() || backward_error > tolerance {
+            return Err(format!(
+                "tridiagonal solution failed backward-error validation ({backward_error:.6e})"
+            ));
+        }
+        Ok(solution)
+    }
+}
+
 pub(crate) fn solve_tridiagonal(
     diagonal: &[f64],
     lower: &[f64],
@@ -15,63 +116,7 @@ pub(crate) fn solve_tridiagonal(
     rhs: &[f64],
 ) -> Result<Vec<f64>, String> {
     validate_dimensions(diagonal, lower, upper, rhs)?;
-    validate_finite(diagonal, lower, upper, rhs)?;
-    if diagonal.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let size = diagonal.len();
-    let row_scales = (0..size)
-        .map(|row| {
-            let mut scale = diagonal[row].abs();
-            if row > 0 {
-                scale = scale.max(lower[row - 1].abs());
-            }
-            if row + 1 < size {
-                scale = scale.max(upper[row].abs());
-            }
-            scale
-        })
-        .collect::<Vec<_>>();
-    if row_scales.contains(&0.0) {
-        return Err("tridiagonal system contains a singular row".to_string());
-    }
-
-    let mut diagonal_work = diagonal.to_vec();
-    let mut rhs_work = rhs.to_vec();
-    for row in 1..size {
-        ensure_usable_pivot(diagonal_work[row - 1], row_scales[row - 1], size)?;
-        let factor = lower[row - 1] / diagonal_work[row - 1];
-        if !factor.is_finite() {
-            return Err("tridiagonal elimination diverged".to_string());
-        }
-        diagonal_work[row] = (-factor).mul_add(upper[row - 1], diagonal_work[row]);
-        rhs_work[row] = (-factor).mul_add(rhs_work[row - 1], rhs_work[row]);
-        if !diagonal_work[row].is_finite() || !rhs_work[row].is_finite() {
-            return Err("tridiagonal elimination diverged".to_string());
-        }
-    }
-
-    ensure_usable_pivot(diagonal_work[size - 1], row_scales[size - 1], size)?;
-    let mut solution = vec![0.0; size];
-    solution[size - 1] = rhs_work[size - 1] / diagonal_work[size - 1];
-    for row in (0..size - 1).rev() {
-        ensure_usable_pivot(diagonal_work[row], row_scales[row], size)?;
-        solution[row] =
-            (-upper[row]).mul_add(solution[row + 1], rhs_work[row]) / diagonal_work[row];
-    }
-    if solution.iter().any(|value| !value.is_finite()) {
-        return Err("tridiagonal back substitution diverged".to_string());
-    }
-
-    let backward_error = maximum_backward_error(diagonal, lower, upper, rhs, &solution);
-    let tolerance = backward_error_tolerance(size);
-    if !backward_error.is_finite() || backward_error > tolerance {
-        return Err(format!(
-            "tridiagonal solution failed backward-error validation ({backward_error:.6e})"
-        ));
-    }
-    Ok(solution)
+    PreparedTridiagonal::factor(diagonal, lower, upper)?.solve(rhs)
 }
 
 pub(crate) fn is_indexed_chain(
@@ -192,14 +237,38 @@ fn validate_dimensions(
     upper: &[f64],
     rhs: &[f64],
 ) -> Result<(), String> {
-    let size = diagonal.len();
-    if lower.len() != size.saturating_sub(1)
-        || upper.len() != size.saturating_sub(1)
-        || rhs.len() != size
-    {
+    validate_coefficient_dimensions(diagonal, lower, upper)?;
+    if rhs.len() != diagonal.len() {
         return Err("tridiagonal system dimensions must match".to_string());
     }
     Ok(())
+}
+
+fn validate_coefficient_dimensions(
+    diagonal: &[f64],
+    lower: &[f64],
+    upper: &[f64],
+) -> Result<(), String> {
+    let size = diagonal.len();
+    if lower.len() != size.saturating_sub(1) || upper.len() != size.saturating_sub(1) {
+        return Err("tridiagonal system dimensions must match".to_string());
+    }
+    Ok(())
+}
+
+fn row_scales(diagonal: &[f64], lower: &[f64], upper: &[f64]) -> Vec<f64> {
+    (0..diagonal.len())
+        .map(|row| {
+            let mut scale = diagonal[row].abs();
+            if row > 0 {
+                scale = scale.max(lower[row - 1].abs());
+            }
+            if row + 1 < diagonal.len() {
+                scale = scale.max(upper[row].abs());
+            }
+            scale
+        })
+        .collect()
 }
 
 fn validate_finite(
@@ -234,8 +303,10 @@ fn maximum_backward_error(
     upper: &[f64],
     rhs: &[f64],
     solution: &[f64],
+    tolerance: f64,
 ) -> f64 {
-    let mut maximum = 0.0_f64;
+    let mut rows = Vec::with_capacity(diagonal.len());
+    let mut global_scale = 0.0_f64;
     for row in 0..diagonal.len() {
         let diagonal_term = diagonal[row] * solution[row];
         let mut actual = diagonal_term;
@@ -251,14 +322,21 @@ fn maximum_backward_error(
             scale += upper_term.abs();
         }
         let residual = (rhs[row] - actual).abs();
-        let relative = if scale == 0.0 {
-            if residual == 0.0 { 0.0 } else { f64::INFINITY }
-        } else {
-            residual / scale
-        };
-        maximum = maximum.max(relative);
+        global_scale = global_scale.max(scale);
+        rows.push((residual, scale));
     }
-    maximum
+
+    let roundoff_floor = global_scale * f64::EPSILON / tolerance;
+    rows.into_iter()
+        .fold(0.0_f64, |maximum, (residual, scale)| {
+            let effective_scale = scale.max(roundoff_floor);
+            let relative = if effective_scale == 0.0 {
+                if residual == 0.0 { 0.0 } else { f64::INFINITY }
+            } else {
+                residual / effective_scale
+            };
+            maximum.max(relative)
+        })
 }
 
 fn backward_error_tolerance(size: usize) -> f64 {

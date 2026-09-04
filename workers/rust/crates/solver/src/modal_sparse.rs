@@ -1,6 +1,6 @@
 use crate::linear_algebra::{
     CompressedSparseMatrix, SparseMatrix, reduce_sparse_system,
-    solve_spd_system_profile_with_options, solve_tridiagonal_system,
+    solve_spd_system_profile_with_options, solve_tridiagonal_system, stable_l2_norm,
 };
 use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
 
@@ -102,7 +102,12 @@ impl SparseMassNormalizedOperator {
                 }
             }
         }
-        if off_diagonal.iter().any(|value| value.abs() <= 1.0e-18) {
+        if diagonal
+            .iter()
+            .chain(&off_diagonal)
+            .any(|value| !value.is_finite())
+            || off_diagonal.contains(&0.0)
+        {
             return None;
         }
         Some(smallest_tridiagonal_eigenpair(
@@ -128,39 +133,58 @@ impl SparseMassNormalizedOperator {
             .iter()
             .map(|value| value.recip().powi(2))
             .collect::<Vec<_>>();
-        let mut stiffness_off_diagonal = vec![0.0; size - 1];
-        let stiffness_slots = stiffness_off_diagonal
-            .iter_mut()
-            .map(Some)
-            .chain(std::iter::once(None));
-        for (row, mut stiffness_slot) in stiffness_slots.enumerate() {
+        let mut diagonal = vec![0.0; size];
+        let mut upper = vec![0.0; size - 1];
+        let mut lower = vec![0.0; size - 1];
+        for row in 0..size {
             for entry in self.stiffness.row_offsets[row]..self.stiffness.row_offsets[row + 1] {
                 let column = self.stiffness.columns[entry];
                 let value = self.stiffness.values[entry];
-                if column == row + 1 {
-                    *stiffness_slot
-                        .as_deref_mut()
-                        .expect("last modal row has no upper off-diagonal") = value;
-                } else if column != row && column + 1 != row {
+                if column == row {
+                    diagonal[row] = value;
+                } else if column == row + 1 {
+                    upper[row] = value;
+                } else if column + 1 == row {
+                    lower[column] = value;
+                } else {
                     return None;
                 }
             }
         }
-        let stiffness = -stiffness_off_diagonal[0];
-        if !stiffness.is_finite()
-            || stiffness <= 0.0
-            || stiffness_off_diagonal
-                .iter()
-                .any(|value| value.abs() <= 1.0e-18)
+        let stiffness = -upper[0];
+        let interior_mass = masses[0];
+        if !(stiffness.is_finite()
+            && stiffness > 0.0
+            && interior_mass.is_finite()
+            && interior_mass > 0.0)
         {
             return None;
         }
-        let interior_mass = masses[0];
-        if !interior_mass.is_finite() || interior_mass <= 0.0 {
+        let relative_tolerance = 1.0e-10;
+        let structure_matches = diagonal.iter().enumerate().all(|(index, value)| {
+            let expected = if index + 1 == size {
+                stiffness
+            } else {
+                2.0 * stiffness
+            };
+            approximately_equal(*value, expected, relative_tolerance)
+        }) && upper
+            .iter()
+            .chain(&lower)
+            .all(|value| approximately_equal(*value, -stiffness, relative_tolerance))
+            && masses.iter().enumerate().all(|(index, value)| {
+                let expected = if index + 1 == size {
+                    0.5 * interior_mass
+                } else {
+                    interior_mass
+                };
+                approximately_equal(*value, expected, relative_tolerance)
+            });
+        if !structure_matches {
             return None;
         }
         let theta = std::f64::consts::PI / (2 * size) as f64;
-        let eigenvalue = 4.0 * stiffness / interior_mass * (theta * 0.5).sin().powi(2);
+        let eigenvalue = 4.0 * (stiffness / interior_mass) * (theta * 0.5).sin().powi(2);
         let mut vector = masses
             .iter()
             .enumerate()
@@ -169,18 +193,20 @@ impl SparseMassNormalizedOperator {
         let norm = l2_norm(&vector);
         vector.iter_mut().for_each(|value| *value /= norm);
         Some(self.apply(&vector).and_then(|applied| {
-            let residual_norm = applied
-                .iter()
-                .zip(&vector)
-                .map(|(value, mode)| value - eigenvalue * mode)
-                .map(|value| value * value)
-                .sum::<f64>()
-                .sqrt();
+            let residual_norm = stable_l2_norm(
+                applied
+                    .iter()
+                    .zip(&vector)
+                    .map(|(value, mode)| value - eigenvalue * mode),
+            );
+            let residual_scale = l2_norm(&applied).max(eigenvalue.abs());
             // The direct sparse residual subtracts O(n^2)-scaled stiffness terms for this
             // million-segment chain. Keep the general tolerance, with a bounded f64 floor
             // that reflects that cancellation instead of rejecting the closed-form mode.
             let relative_floor = 2.0e-4;
-            if residual_norm > tolerance.max(relative_floor) * eigenvalue.abs().max(1.0) {
+            if !(residual_scale.is_finite() && residual_scale > 0.0)
+                || residual_norm > tolerance.max(relative_floor) * residual_scale
+            {
                 return Err(format!(
                     "uniform axial modal residual is too large ({residual_norm:.6e})"
                 ));
@@ -298,21 +324,24 @@ pub(crate) fn inverse_power_iteration(
             return Err("sparse modal operator returned an invalid vector size".to_string());
         }
         let eigenvalue = dot(&vector, &applied);
-        let residual_norm = applied
-            .iter()
-            .zip(&vector)
-            .map(|(value, component)| value - eigenvalue * component)
-            .map(|value| value * value)
-            .sum::<f64>()
-            .sqrt();
+        let residual_norm = stable_l2_norm(
+            applied
+                .iter()
+                .zip(&vector)
+                .map(|(value, component)| value - eigenvalue * component),
+        );
+        let residual_scale = l2_norm(&applied).max(eigenvalue.abs());
         if !eigenvalue.is_finite() || !residual_norm.is_finite() {
             return Err("sparse modal iteration produced a non-finite eigenpair".to_string());
+        }
+        if !(residual_scale.is_finite() && residual_scale > 0.0) {
+            return Err("sparse modal operator has zero or non-finite scale".to_string());
         }
         last_eigenvalue = eigenvalue;
         last_residual_norm = residual_norm;
         // Modal residuals scale with the eigenvalue; an absolute threshold would reject
         // otherwise accurate high-frequency modes solely because their units are larger.
-        if residual_norm <= options.tolerance * eigenvalue.abs().max(1.0) {
+        if residual_norm <= options.tolerance * residual_scale {
             return Ok(SparseEigenpair {
                 eigenvalue,
                 iterations: iteration,
@@ -328,7 +357,7 @@ pub(crate) fn inverse_power_iteration(
             return Err("sparse modal inverse solve returned an invalid vector size".to_string());
         }
         let norm = l2_norm(&next);
-        if !norm.is_finite() || norm <= f64::EPSILON {
+        if !norm.is_finite() || norm <= 0.0 {
             return Err(
                 "sparse modal inverse solve returned a zero or non-finite vector".to_string(),
             );
@@ -346,7 +375,14 @@ fn dot(left: &[f64], right: &[f64]) -> f64 {
 }
 
 fn l2_norm(values: &[f64]) -> f64 {
-    dot(values, values).sqrt()
+    stable_l2_norm(values.iter().copied())
+}
+
+fn approximately_equal(left: f64, right: f64, relative_tolerance: f64) -> bool {
+    left.is_finite()
+        && right.is_finite()
+        && (left - right).abs()
+            <= relative_tolerance * left.abs().max(right.abs()).max(f64::MIN_POSITIVE)
 }
 
 fn smallest_tridiagonal_eigenpair(
@@ -354,6 +390,22 @@ fn smallest_tridiagonal_eigenpair(
     off_diagonal: &[f64],
     tolerance: f64,
 ) -> Result<SparseEigenpair, String> {
+    let operator_scale = diagonal
+        .iter()
+        .chain(off_diagonal)
+        .map(|value| value.abs())
+        .fold(0.0_f64, f64::max);
+    if !(operator_scale.is_finite() && operator_scale > 0.0) {
+        return Err("tridiagonal modal operator has zero or non-finite scale".to_string());
+    }
+    let diagonal = diagonal
+        .iter()
+        .map(|value| value / operator_scale)
+        .collect::<Vec<_>>();
+    let off_diagonal = off_diagonal
+        .iter()
+        .map(|value| value / operator_scale)
+        .collect::<Vec<_>>();
     let mut lower = f64::INFINITY;
     let mut upper = f64::NEG_INFINITY;
     for (index, value) in diagonal.iter().enumerate() {
@@ -368,7 +420,7 @@ fn smallest_tridiagonal_eigenpair(
     }
     for _ in 0..96 {
         let middle = (lower + upper) * 0.5;
-        if sturm_negative_count(diagonal, off_diagonal, middle) == 0 {
+        if sturm_negative_count(&diagonal, &off_diagonal, middle) == 0 {
             lower = middle;
         } else {
             upper = middle;
@@ -378,7 +430,7 @@ fn smallest_tridiagonal_eigenpair(
     let mut vector = vec![0.0; diagonal.len()];
     vector[0] = 1.0;
     for index in 0..off_diagonal.len() {
-        if off_diagonal[index].abs() <= 1.0e-18 {
+        if off_diagonal[index] == 0.0 {
             return Err("tridiagonal modal operator has a disconnected mode".to_string());
         }
         vector[index + 1] = -((diagonal[index] - eigenvalue) * vector[index]
@@ -399,31 +451,38 @@ fn smallest_tridiagonal_eigenpair(
         return Err("tridiagonal modal eigenvector is not finite".to_string());
     }
     vector.iter_mut().for_each(|value| *value /= norm);
-    let residual_norm = diagonal
-        .iter()
-        .enumerate()
-        .map(|(index, value)| {
-            let product = value * vector[index]
-                + index
-                    .checked_sub(1)
-                    .and_then(|left| off_diagonal.get(left))
-                    .unwrap_or(&0.0)
-                    * vector[index.saturating_sub(1)]
-                + off_diagonal.get(index).unwrap_or(&0.0) * vector.get(index + 1).unwrap_or(&0.0);
-            let residual = product - eigenvalue * vector[index];
-            residual * residual
-        })
-        .sum::<f64>()
-        .sqrt();
-    if residual_norm > tolerance * eigenvalue.abs().max(1.0) {
+    let residual_norm = stable_l2_norm(diagonal.iter().enumerate().map(|(index, value)| {
+        let product = value * vector[index]
+            + index
+                .checked_sub(1)
+                .and_then(|left| off_diagonal.get(left))
+                .unwrap_or(&0.0)
+                * vector[index.saturating_sub(1)]
+            + off_diagonal.get(index).unwrap_or(&0.0) * vector.get(index + 1).unwrap_or(&0.0);
+        product - eigenvalue * vector[index]
+    }));
+    let applied_norm = stable_l2_norm(diagonal.iter().enumerate().map(|(index, value)| {
+        value * vector[index]
+            + index
+                .checked_sub(1)
+                .and_then(|left| off_diagonal.get(left))
+                .unwrap_or(&0.0)
+                * vector[index.saturating_sub(1)]
+            + off_diagonal.get(index).unwrap_or(&0.0) * vector.get(index + 1).unwrap_or(&0.0)
+    }));
+    let residual_scale = applied_norm.max(eigenvalue.abs());
+    if !(residual_scale.is_finite() && residual_scale > 0.0)
+        || residual_norm > tolerance * residual_scale
+    {
         return Err(format!(
-            "tridiagonal modal residual is too large ({residual_norm:.6e})"
+            "tridiagonal modal residual is too large ({:.6e})",
+            residual_norm * operator_scale
         ));
     }
     Ok(SparseEigenpair {
-        eigenvalue,
+        eigenvalue: eigenvalue * operator_scale,
         iterations: 0,
-        residual_norm,
+        residual_norm: residual_norm * operator_scale,
         vector,
     })
 }
@@ -435,8 +494,8 @@ fn sturm_negative_count(diagonal: &[f64], off_diagonal: &[f64], shift: f64) -> u
         count += 1;
     }
     for index in 1..diagonal.len() {
-        let safe_pivot = if pivot.abs() < 1.0e-18 {
-            -1.0e-18
+        let safe_pivot = if pivot.abs() < f64::EPSILON {
+            -f64::EPSILON
         } else {
             pivot
         };
@@ -479,6 +538,46 @@ mod tests {
     }
 
     #[test]
+    fn inverse_iteration_does_not_false_converge_on_a_tiny_operator() {
+        let scale = 1.0e-200;
+        let diagonal = [2.0 * scale, 5.0 * scale, 9.0 * scale];
+        let pair = inverse_power_iteration(
+            diagonal.len(),
+            InverseIterationOptions {
+                max_iterations: 128,
+                tolerance: 1.0e-9,
+            },
+            |vector| Ok(vector.iter().zip(diagonal).map(|(x, d)| x * d).collect()),
+            |vector| Ok(vector.iter().zip(diagonal).map(|(x, d)| x / d).collect()),
+        )
+        .expect("tiny diagonal inverse iteration should converge relatively");
+
+        assert!((pair.eigenvalue / scale - 2.0).abs() < 1.0e-8);
+        assert!(pair.residual_norm / pair.eigenvalue < 1.0e-9);
+        assert!(pair.iterations > 0);
+    }
+
+    #[test]
+    fn inverse_iteration_accepts_a_resolved_tiny_inverse_vector() {
+        let scale = 1.0e200;
+        let diagonal = [2.0 * scale, 5.0 * scale, 9.0 * scale];
+        let pair = inverse_power_iteration(
+            diagonal.len(),
+            InverseIterationOptions {
+                max_iterations: 128,
+                tolerance: 1.0e-9,
+            },
+            |vector| Ok(vector.iter().zip(diagonal).map(|(x, d)| x * d).collect()),
+            |vector| Ok(vector.iter().zip(diagonal).map(|(x, d)| x / d).collect()),
+        )
+        .expect("large diagonal inverse iteration should retain its tiny inverse vector");
+
+        assert!((pair.eigenvalue / scale - 2.0).abs() < 1.0e-8);
+        assert!(pair.residual_norm / pair.eigenvalue < 1.0e-9);
+        assert!(pair.iterations > 0);
+    }
+
+    #[test]
     fn mass_normalized_operator_applies_sparse_stiffness() {
         let mut stiffness = SparseMatrix::new(2);
         add_at(&mut stiffness, 0, 0, 4.0);
@@ -513,6 +612,58 @@ mod tests {
         assert!(pair.eigenvalue > 0.0);
         assert!(pair.residual_norm / pair.eigenvalue < 1.0e-9);
         assert_eq!(pair.iterations, 0);
+    }
+
+    #[test]
+    fn uniform_chain_avoids_intermediate_overflow_at_large_common_scale() {
+        let scale = 1.0e200;
+        let mut stiffness = SparseMatrix::new(3);
+        for (row, column, value) in [
+            (0, 0, 4.0 * scale),
+            (0, 1, -2.0 * scale),
+            (1, 0, -2.0 * scale),
+            (1, 1, 4.0 * scale),
+            (1, 2, -2.0 * scale),
+            (2, 1, -2.0 * scale),
+            (2, 2, 2.0 * scale),
+        ] {
+            add_at(&mut stiffness, row, column, value);
+        }
+        let operator = SparseMassNormalizedOperator::new(&stiffness, &[scale, scale, 0.5 * scale])
+            .expect("large uniformly scaled chain should build");
+        let pair = operator
+            .smallest_tridiagonal_eigenpair(1.0e-9)
+            .expect("uniform chain should be recognized")
+            .expect("large uniformly scaled chain should solve without overflow");
+        let theta = std::f64::consts::PI / 6.0;
+        let expected = 8.0 * (theta * 0.5).sin().powi(2);
+
+        assert!((pair.eigenvalue / expected - 1.0).abs() < 1.0e-12);
+        assert!(pair.residual_norm / pair.eigenvalue < 1.0e-9);
+    }
+
+    #[test]
+    fn tiny_nonuniform_chain_uses_the_general_tridiagonal_solver() {
+        let scale = 1.0e-24;
+        let mut stiffness = SparseMatrix::new(2);
+        for (row, column, value) in [
+            (0, 0, 4.0 * scale),
+            (0, 1, -scale),
+            (1, 0, -scale),
+            (1, 1, 2.0 * scale),
+        ] {
+            add_at(&mut stiffness, row, column, value);
+        }
+        let operator = SparseMassNormalizedOperator::new(&stiffness, &[1.0, 1.0])
+            .expect("tiny nonuniform chain should build");
+        let pair = operator
+            .smallest_tridiagonal_eigenpair(1.0e-9)
+            .expect("connected chain should use a tridiagonal solver")
+            .expect("tiny tridiagonal eigenproblem should solve");
+        let expected = 3.0 - 2.0_f64.sqrt();
+
+        assert!((pair.eigenvalue / scale - expected).abs() < 1.0e-9);
+        assert!(pair.residual_norm / pair.eigenvalue < 1.0e-9);
     }
 
     #[test]

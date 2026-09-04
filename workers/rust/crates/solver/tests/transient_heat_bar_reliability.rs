@@ -74,6 +74,68 @@ fn transient_heat_bar_1d_rejects_missing_node_and_unheated_capacity_island() {
     );
 }
 
+#[test]
+fn transient_heat_bar_1d_rejects_non_finite_derived_coefficients() {
+    let mut request = transient_heat_request();
+    request.time_step = f64::MIN_POSITIVE;
+    let error = solve_transient_heat_bar_1d(&request)
+        .expect_err("an overflowing capacity rate should be rejected");
+    assert!(
+        error.contains("non-finite capacity rate"),
+        "unexpected capacity-rate error: {error}"
+    );
+
+    let mut request = transient_heat_request();
+    request.elements[0].density = f64::MAX;
+    request.elements[0].specific_heat = f64::MAX;
+    let error = solve_transient_heat_bar_1d(&request)
+        .expect_err("an overflowing element capacity should be rejected");
+    assert!(
+        error.contains("finite positive capacity and conductance"),
+        "unexpected derived-coefficient error: {error}"
+    );
+}
+
+#[test]
+fn transient_heat_bar_1d_handles_a_large_prepared_chain() {
+    const NODE_COUNT: usize = 10_000;
+    let nodes = (0..NODE_COUNT)
+        .map(|index| {
+            node(
+                &format!("n{index}"),
+                index as f64,
+                index == 0 || index + 1 == NODE_COUNT,
+                if index == 0 { 100.0 } else { 20.0 },
+                0.0,
+            )
+        })
+        .collect();
+    let elements = (0..NODE_COUNT - 1)
+        .map(|index| {
+            element(
+                &format!("e{index}"),
+                index,
+                index + 1,
+                0.01,
+                45.0,
+                7800.0,
+                500.0,
+            )
+        })
+        .collect();
+    let result = solve_transient_heat_bar_1d(&SolveTransientHeatBar1dRequest {
+        nodes,
+        elements,
+        time_step: 0.1,
+        steps: 2,
+    })
+    .expect("large transient heat chain should reuse its prepared system");
+
+    assert_eq!(result.nodes.len(), NODE_COUNT);
+    assert_eq!(result.history.len(), 3);
+    assert!(result.nodes[NODE_COUNT / 2].temperature.is_finite());
+}
+
 fn transient_heat_request() -> SolveTransientHeatBar1dRequest {
     SolveTransientHeatBar1dRequest {
         nodes: vec![
