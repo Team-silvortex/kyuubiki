@@ -14,8 +14,21 @@ pub fn solve_acoustic_bar_1d(
     request: &SolveAcousticBar1dRequest,
 ) -> Result<SolveAcousticBar1dResult, String> {
     validate_request(request)?;
+    solve_validated_acoustic_bar_1d(request.clone())
+}
+
+pub fn solve_acoustic_bar_1d_owned(
+    request: SolveAcousticBar1dRequest,
+) -> Result<SolveAcousticBar1dResult, String> {
+    validate_request(&request)?;
+    solve_validated_acoustic_bar_1d(request)
+}
+
+fn solve_validated_acoustic_bar_1d(
+    request: SolveAcousticBar1dRequest,
+) -> Result<SolveAcousticBar1dResult, String> {
     let omega = 2.0 * std::f64::consts::PI * request.frequency_hz;
-    let pressures = solve_pressures(request, omega)?;
+    let pressures = solve_pressures(&request, omega)?;
 
     let nodes = request
         .nodes
@@ -35,7 +48,7 @@ pub fn solve_acoustic_bar_1d(
         .elements
         .iter()
         .enumerate()
-        .map(|(index, element)| element_result(request, element, index, &pressures, omega))
+        .map(|(index, element)| element_result(&request, element, index, &pressures, omega))
         .collect::<Result<Vec<_>, String>>()?;
 
     let max_pressure = nodes
@@ -56,11 +69,12 @@ pub fn solve_acoustic_bar_1d(
         .fold(0.0_f64, f64::max);
     let total_damping_loss = elements.iter().map(|element| element.damping_loss).sum();
 
+    let frequency_hz = request.frequency_hz;
     Ok(SolveAcousticBar1dResult {
-        input: request.clone(),
+        input: request,
         nodes,
         elements,
-        frequency_hz: request.frequency_hz,
+        frequency_hz,
         angular_frequency: omega,
         max_pressure,
         max_sound_pressure_level_db,

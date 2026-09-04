@@ -56,11 +56,7 @@ pub(crate) fn print_human_report(report: &Value) {
     if !report.get("next_version").unwrap_or(&Value::Null).is_null() {
         let candidates = array(report, "next_candidates");
         println!();
-        println!(
-            "1.7 prep candidates for {}: {} files",
-            field(report, "next_version"),
-            candidates.len()
-        );
+        println!("{}", next_candidates_heading(report, candidates.len()));
         for entry in candidates.iter().take(20) {
             println!("- {}", field(entry, "file"));
         }
@@ -68,6 +64,13 @@ pub(crate) fn print_human_report(report: &Value) {
             println!("- ... {} more files", candidates.len() - 20);
         }
     }
+}
+
+fn next_candidates_heading(report: &Value, candidate_count: usize) -> String {
+    format!(
+        "Next-version candidates for {}: {candidate_count} files",
+        field(report, "next_version")
+    )
 }
 
 fn value_display(value: &Value) -> String {
@@ -88,4 +91,19 @@ fn array<'a>(value: &'a Value, key: &str) -> Vec<&'a Value> {
 
 fn field<'a>(value: &'a Value, key: &str) -> &'a str {
     value.get(key).and_then(Value::as_str).unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::next_candidates_heading;
+    use serde_json::json;
+
+    #[test]
+    fn next_candidates_heading_has_no_legacy_line_label() {
+        let report = json!({"next_version": "2.20.2"});
+        assert_eq!(
+            next_candidates_heading(&report, 134),
+            "Next-version candidates for 2.20.2: 134 files"
+        );
+    }
 }

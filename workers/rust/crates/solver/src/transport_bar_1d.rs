@@ -12,8 +12,20 @@ pub fn solve_advection_diffusion_bar_1d(
     request: &SolveAdvectionDiffusionBar1dRequest,
 ) -> Result<SolveAdvectionDiffusionBar1dResult, String> {
     validate_request(request)?;
+    solve_validated_advection_diffusion_bar_1d(request.clone())
+}
 
-    let concentrations = solve_concentrations(request)?;
+pub fn solve_advection_diffusion_bar_1d_owned(
+    request: SolveAdvectionDiffusionBar1dRequest,
+) -> Result<SolveAdvectionDiffusionBar1dResult, String> {
+    validate_request(&request)?;
+    solve_validated_advection_diffusion_bar_1d(request)
+}
+
+fn solve_validated_advection_diffusion_bar_1d(
+    request: SolveAdvectionDiffusionBar1dRequest,
+) -> Result<SolveAdvectionDiffusionBar1dResult, String> {
+    let concentrations = solve_concentrations(&request)?;
 
     let nodes = request
         .nodes
@@ -75,7 +87,7 @@ pub fn solve_advection_diffusion_bar_1d(
         .fold(0.0_f64, f64::max);
 
     Ok(SolveAdvectionDiffusionBar1dResult {
-        input: request.clone(),
+        input: request,
         nodes,
         elements,
         max_concentration,

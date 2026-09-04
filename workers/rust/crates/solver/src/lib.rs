@@ -120,7 +120,7 @@ mod truss;
 mod truss_summary;
 mod truss_validation;
 
-pub use acoustic_bar_1d::solve_acoustic_bar_1d;
+pub use acoustic_bar_1d::{solve_acoustic_bar_1d, solve_acoustic_bar_1d_owned};
 pub use bar_1d::{
     solve_bar_1d, solve_electrostatic_bar_1d, solve_heat_bar_1d, solve_thermal_bar_1d,
 };
@@ -187,7 +187,9 @@ pub use thermal_truss::{
 pub use torsion_1d::solve_torsion_1d;
 pub use transient_heat_bar_1d::solve_transient_heat_bar_1d;
 pub use transient_spring_1d::solve_transient_spring_1d;
-pub use transport_bar_1d::solve_advection_diffusion_bar_1d;
+pub use transport_bar_1d::{
+    solve_advection_diffusion_bar_1d, solve_advection_diffusion_bar_1d_owned,
+};
 pub use truss::{
     Truss2dProfile, Truss2dProfileStage, profile_truss_2d, profile_truss_2d_with_options,
     solve_truss_2d, solve_truss_3d,

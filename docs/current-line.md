@@ -13,7 +13,7 @@ Use it when you want the shortest answer to:
 `moxi 2.x` is the point where Kyuubiki treats its core contracts as product
 baseline rather than loose prototypes.
 
-The current development point in this line is `moxi 2.19.0`.
+The current development point in this line is `moxi 2.20.1`.
 
 At this checkpoint, the cross-operator contract layer has repeatable positive
 and fault-boundary qualification across workflow datasets, TaskIR, runtime API
@@ -56,11 +56,21 @@ The current rule is:
 - keep GUI convenience separate from runtime authority
 - keep agent/orchestra/mesh behavior protocol-driven
 
-## Current 2.19.0 Checkpoint
+## Current 2.20.1 Checkpoint
 
-`moxi 2.19.x` treats the next trust jump as contract-equivalent ecosystem
-surfaces plus measurable preparation for `daji 3.0.0`, rather than raw feature
-sprawl:
+`moxi 2.20.x` is the final patch-only closure window before `daji 3.0.0`.
+It treats the next trust jump as contract-equivalent ecosystem surfaces,
+measurable release evidence, and removal of remaining scale cliffs rather than
+raw feature sprawl:
+
+- `2.20.1` through `2.20.9` are nine inclusive stabilization positions whose
+  primary change classes are bug fixes and performance optimization
+- security remediation and release-blocker removal remain admissible; unrelated
+  feature expansion waits for the `daji` line
+
+- numbering-independent 1D path and path-forest systems now retain linear
+  storage across static, transient, transport, acoustic, electromagnetic, and
+  harmonic spring routes; genuinely branched fallbacks remain explicitly bounded
 
 - tensor v4 now separates structural completeness from release readiness,
   reports both exact target completion and cumulative evidence progress, and

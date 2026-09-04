@@ -3,9 +3,12 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::Path;
 
+mod cargo_locks;
+mod closure_policy;
 mod inventory;
 mod report;
 
+use cargo_locks::cargo_lock_versions;
 use inventory::{next_version_candidates, search_inventory};
 use report::print_human_report;
 
@@ -193,6 +196,15 @@ fn exact_checks(root: &Path, expected: &str, codename: &str) -> RunnerResult<Vec
                 .unwrap_or(Value::Null),
         ));
     }
+    for package in cargo_lock_versions(root)? {
+        checks.push(check(
+            "cargo_lock_package_version",
+            package.file,
+            &format!("package[{}].version", package.name),
+            expected,
+            Value::String(package.version),
+        ));
+    }
     let channels = read_json(root, "deploy/update-channels.json")?;
     let contract = read_json(root, "deploy/installation-integrity-contract.json")?;
     let release_index = read_json(root, "releases/index.json")?;
@@ -297,6 +309,7 @@ fn exact_checks(root: &Path, expected: &str, codename: &str) -> RunnerResult<Vec
     add_language_pack_checks(root, expected, &mut checks)?;
     checks.extend(markdown_fact_checks(root, &development_version, codename)?);
     checks.extend(version_policy_checks(root, &development_version, codename)?);
+    checks.extend(closure_policy::checks(root)?);
     checks.push(check(
         "release_current_snapshot",
         "releases/index.json",

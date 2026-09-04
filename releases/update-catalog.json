@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-08-30T09:51:42Z",
-  "shipping_version": "2.19.0",
+  "generated_at": "2026-09-04T08:18:07Z",
+  "shipping_version": "2.20.1",
   "default_channel": "stable",
   "line": "moxi 2.x",
   "source": {
@@ -16,14 +16,14 @@
       "aliases": [
         "moxi:latest",
         "moxi:2",
-        "moxi:2.19",
-        "moxi:2.19.0"
+        "moxi:2.20",
+        "moxi:2.20.1"
       ],
       "line": "2.x",
       "status": "current",
-      "version": "2.19.0",
-      "summary": "Moxi 2.19.0 opens the final two minor hardening lines before daji with operational long-workflow Orchestra takeover, generation-scoped Agent cancellation, durable recovery envelopes, and one synchronized release contract across source, desktop, language, documentation, and update surfaces.",
-      "date": "2026-08-30",
+      "version": "2.20.1",
+      "summary": "Moxi 2.20.1 enters the final bug-fix and performance-optimization closure window before daji with numbering-independent linear-memory 1D solver paths, bounded transient result histories, pivot-safe harmonic response, and one synchronized release contract across source, desktop, language, documentation, and update surfaces.",
+      "date": "2026-09-04",
       "notes": [
         "Primary operator-facing update track for the current moxi 2.x line.",
         "Targets standard installs that follow the visible installation contract."
@@ -65,7 +65,7 @@
         "managed_path_policy": "workspace_relative",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/2.19.0.json",
+      "snapshot_path": "releases/snapshots/2.20.1.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
@@ -77,38 +77,38 @@
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "2.19.0",
+          "version": "2.20.1",
           "notes": [
             "Workbench remains a streamed protocol client with stable GUI and Python WASM DSL action contracts.",
             "Workflow, solver, research, and evidence operations remain language-neutral behind the desktop shell."
           ]
         },
         "hub_gui": {
-          "version": "2.19.0",
+          "version": "2.20.1",
           "notes": [
-            "Hub packages synchronized 2.19.0 documentation, brand, and language-pack contracts.",
+            "Hub carries synchronized 2.20.1 documentation, brand, and language-pack contracts.",
             "Project, runtime, release, and diagnostics journeys retain native desktop command boundaries."
           ]
         },
         "workbench_gui": {
-          "version": "2.19.0",
+          "version": "2.20.1",
           "notes": [
             "Workbench packages the complete 30-locale language-pack set and current workflow contracts.",
             "GUI and Python WASM DSL operations continue to share product-owned actions."
           ]
         },
         "installer_gui": {
-          "version": "2.19.0",
+          "version": "2.20.1",
           "notes": [
             "Installer keeps Hub, Workbench, and Installer under one visible integrity and update contract.",
-            "The source line is version-aligned; fresh 2.19.0 installed-package evidence remains a separate packaging qualification."
+            "Source metadata is aligned to 2.20.1; fresh installed-package qualification remains a separate release gate."
           ]
         },
         "web_api": {
-          "version": "2.19.0",
+          "version": "2.20.1",
           "notes": [
-            "Two-Orchestra PostgreSQL takeover now covers idempotent replay and checkpoint-required blocking during exact remote Agent execution.",
-            "Transport cancellation is request-generation scoped so a fenced owner cannot cancel its replacement execution."
+            "Orchestra ownership, recovery, and generation-scoped cancellation remain protocol-controlled.",
+            "The 2.20 patch window prioritizes evidence closure and fault containment over feature breadth."
           ]
         }
       },
@@ -124,7 +124,7 @@
           "product": "hub",
           "kind": "dmg",
           "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_2.19.0_aarch64.dmg",
+          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_2.20.1_aarch64.dmg",
           "exists": false
         },
         {
@@ -138,7 +138,7 @@
           "product": "workbench",
           "kind": "dmg",
           "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_2.19.0_aarch64.dmg",
+          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_2.20.1_aarch64.dmg",
           "exists": false
         },
         {
@@ -152,7 +152,7 @@
           "product": "installer",
           "kind": "dmg",
           "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Installer_2.19.0_aarch64.dmg",
+          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Installer_2.20.1_aarch64.dmg",
           "exists": false
         },
         {
@@ -223,12 +223,12 @@
   ],
   "versions": [
     {
-      "version": "2.19.0",
+      "version": "2.20.1",
       "line": "2.x",
       "status": "current",
-      "date": "2026-08-30",
-      "summary": "Moxi 2.19.0 opens the final two minor hardening lines before daji with operational long-workflow Orchestra takeover, generation-scoped Agent cancellation, durable recovery envelopes, and one synchronized release contract across source, desktop, language, documentation, and update surfaces.",
-      "snapshot_path": "releases/snapshots/2.19.0.json",
+      "date": "2026-09-04",
+      "summary": "Moxi 2.20.1 enters the final bug-fix and performance-optimization closure window before daji with numbering-independent linear-memory 1D solver paths, bounded transient result histories, pivot-safe harmonic response, and one synchronized release contract across source, desktop, language, documentation, and update surfaces.",
+      "snapshot_path": "releases/snapshots/2.20.1.json",
       "channels": [
         "stable"
       ],
@@ -236,9 +236,163 @@
         "moxi:stable",
         "moxi:latest",
         "moxi:2",
-        "moxi:2.19",
-        "moxi:2.19.0"
+        "moxi:2.20",
+        "moxi:2.20.1"
       ],
+      "product_surfaces": {
+        "frontend_workbench": {
+          "version": "2.20.1",
+          "notes": [
+            "Workbench remains a streamed protocol client with stable GUI and Python WASM DSL action contracts.",
+            "Workflow, solver, research, and evidence operations remain language-neutral behind the desktop shell."
+          ]
+        },
+        "hub_gui": {
+          "version": "2.20.1",
+          "notes": [
+            "Hub carries synchronized 2.20.1 documentation, brand, and language-pack contracts.",
+            "Project, runtime, release, and diagnostics journeys retain native desktop command boundaries."
+          ]
+        },
+        "workbench_gui": {
+          "version": "2.20.1",
+          "notes": [
+            "Workbench packages the complete 30-locale language-pack set and current workflow contracts.",
+            "GUI and Python WASM DSL operations continue to share product-owned actions."
+          ]
+        },
+        "installer_gui": {
+          "version": "2.20.1",
+          "notes": [
+            "Installer keeps Hub, Workbench, and Installer under one visible integrity and update contract.",
+            "Source metadata is aligned to 2.20.1; fresh installed-package qualification remains a separate release gate."
+          ]
+        },
+        "web_api": {
+          "version": "2.20.1",
+          "notes": [
+            "Orchestra ownership, recovery, and generation-scoped cancellation remain protocol-controlled.",
+            "The 2.20 patch window prioritizes evidence closure and fault containment over feature breadth."
+          ]
+        }
+      },
+      "desktop_artifacts": [
+        {
+          "product": "hub",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
+          "exists": true
+        },
+        {
+          "product": "hub",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_2.20.1_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
+          "exists": true
+        },
+        {
+          "product": "workbench",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_2.20.1_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
+          "exists": true
+        },
+        {
+          "product": "installer",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Installer_2.20.1_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "manifest",
+          "platform": "macos",
+          "path": "dist/macos/desktop/hub-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "hub",
+          "kind": "manifest",
+          "platform": "linux",
+          "path": "dist/linux/desktop/hub-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "hub",
+          "kind": "manifest",
+          "platform": "windows",
+          "path": "dist/windows/desktop/hub-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "workbench",
+          "kind": "manifest",
+          "platform": "macos",
+          "path": "dist/macos/desktop/workbench-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "workbench",
+          "kind": "manifest",
+          "platform": "linux",
+          "path": "dist/linux/desktop/workbench-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "workbench",
+          "kind": "manifest",
+          "platform": "windows",
+          "path": "dist/windows/desktop/workbench-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "installer",
+          "kind": "manifest",
+          "platform": "macos",
+          "path": "dist/macos/desktop/installer-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "installer",
+          "kind": "manifest",
+          "platform": "linux",
+          "path": "dist/linux/desktop/installer-gui/manifest.json",
+          "exists": true
+        },
+        {
+          "product": "installer",
+          "kind": "manifest",
+          "platform": "windows",
+          "path": "dist/windows/desktop/installer-gui/manifest.json",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "version": "2.19.0",
+      "line": "2.x",
+      "status": "archived",
+      "date": "2026-08-30",
+      "summary": "Moxi 2.19.0 opens the final two minor hardening lines before daji with operational long-workflow Orchestra takeover, generation-scoped Agent cancellation, durable recovery envelopes, and one synchronized release contract across source, desktop, language, documentation, and update surfaces.",
+      "snapshot_path": "releases/snapshots/2.19.0.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {
         "frontend_workbench": {
           "version": "2.19.0",
@@ -444,7 +598,7 @@
           "kind": "dmg",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_2.18.3_aarch64.dmg",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",

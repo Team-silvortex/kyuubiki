@@ -5,8 +5,10 @@ simulation runtime. Its long-term direction is to become a Blender-like
 engineering environment for finite-element research: visual when that helps,
 headless when automation matters, and open at every protocol boundary.
 
-> The active line is `moxi 2.x`, with `moxi 2.19.0` as the current documented
-> development checkpoint. The first planned public release is `daji 3.0.0`.
+> The active line is `moxi 2.x`, with `moxi 2.20.1` as the current documented
+> development checkpoint. The remaining `2.20.1` through `2.20.9` positions
+> are reserved for bug fixes and performance optimization before the first
+> planned public release, `daji 3.0.0`.
 > Until that gate closes, this repository is an internal hardening line rather
 > than a general-availability claim.
 

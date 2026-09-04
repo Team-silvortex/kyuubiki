@@ -1,10 +1,18 @@
 {
   "line": "moxi 2.x",
-  "current_version": "2.19.0",
+  "current_version": "2.20.1",
   "snapshots": [
     {
-      "version": "2.19.0",
+      "version": "2.20.1",
       "status": "current",
+      "date": "2026-09-04",
+      "codename": "moxi",
+      "line": "2.x",
+      "snapshot_path": "snapshots/2.20.1.json"
+    },
+    {
+      "version": "2.19.0",
+      "status": "archived",
       "date": "2026-08-30",
       "codename": "moxi",
       "line": "2.x",

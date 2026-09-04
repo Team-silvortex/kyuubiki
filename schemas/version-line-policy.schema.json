@@ -4,7 +4,13 @@
   "title": "Kyuubiki Version Line Policy",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "cadence", "active_line", "next_line"],
+  "required": [
+    "schema_version",
+    "cadence",
+    "active_line",
+    "closure_window",
+    "next_line"
+  ],
   "properties": {
     "$schema": { "type": "string" },
     "schema_version": {
@@ -20,6 +26,7 @@
       }
     },
     "active_line": { "$ref": "#/$defs/line" },
+    "closure_window": { "$ref": "#/$defs/closure_window" },
     "next_line": {
       "type": "object",
       "additionalProperties": false,
@@ -60,6 +67,42 @@
         "major": { "type": "integer", "minimum": 0 },
         "first_version": { "$ref": "#/$defs/semver" },
         "final_version": { "$ref": "#/$defs/semver" }
+      }
+    },
+    "closure_window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "first_version",
+        "final_version",
+        "patch_range",
+        "mode",
+        "primary_change_classes",
+        "exceptional_change_classes",
+        "prohibited_change_classes"
+      ],
+      "properties": {
+        "first_version": { "$ref": "#/$defs/semver" },
+        "final_version": { "$ref": "#/$defs/semver" },
+        "patch_range": { "$ref": "#/$defs/range" },
+        "mode": { "const": "stabilization_only" },
+        "primary_change_classes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "exceptional_change_classes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "prohibited_change_classes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
       }
     }
   }

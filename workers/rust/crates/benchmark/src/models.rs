@@ -172,7 +172,39 @@ pub(crate) fn select_cases<'a>(
     filter: Option<&str>,
 ) -> Vec<&'a BenchmarkCase> {
     match filter {
-        Some(filter) => cases.iter().filter(|case| case.id == filter).collect(),
+        Some(filter) => cases
+            .iter()
+            .filter(|case| case.id.contains(filter))
+            .collect(),
         None => cases.iter().collect(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{BenchmarkCase, BenchmarkWorkload, select_cases};
+    use kyuubiki_protocol::SolveBarRequest;
+
+    #[test]
+    fn case_filter_matches_documented_substrings() {
+        let cases = [case("axial-bar-10k"), case("axial-bar-100k")];
+
+        assert_eq!(select_cases(&cases, Some("axial-bar")).len(), 2);
+        assert_eq!(select_cases(&cases, Some("100k"))[0].id, "axial-bar-100k");
+        assert!(select_cases(&cases, Some("missing")).is_empty());
+    }
+
+    fn case(id: &str) -> BenchmarkCase {
+        BenchmarkCase {
+            id: id.to_string(),
+            family: "axial_bar_1d",
+            workload: BenchmarkWorkload::AxialBar(SolveBarRequest {
+                length: 1.0,
+                area: 1.0,
+                youngs_modulus: 1.0,
+                elements: 1,
+                tip_force: 1.0,
+            }),
+        }
     }
 }

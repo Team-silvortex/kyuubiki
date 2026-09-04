@@ -596,7 +596,7 @@ fn sync_replacements(
         (
             "apps/hub-gui/ui/docs/current-line.html",
             vec![
-                line_rule(">moxi ", "<", &display_version),
+                line_rule("<h1>moxi ", "</h1>", &display_version),
                 semver_rule("Current ", " checkpoint", shipping_version),
                 line_rule(
                     "The current development point is <code>moxi ",
@@ -779,9 +779,9 @@ mod tests {
         assert_eq!(
             apply(
                 "apps/hub-gui/ui/docs/current-line.html",
-                "<h1>moxi 2.x</h1>The current development point is <code>moxi 2.x</code>."
+                "<h1>moxi 2.x</h1>The current development point is <code>moxi 2.x</code>. The line began at <code>moxi 2.0.0</code>."
             ),
-            "<h1>moxi 2.x</h1>The current development point is <code>moxi 2.2.8</code>."
+            "<h1>moxi 2.x</h1>The current development point is <code>moxi 2.2.8</code>. The line began at <code>moxi 2.0.0</code>."
         );
     }
 

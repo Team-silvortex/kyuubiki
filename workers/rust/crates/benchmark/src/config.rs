@@ -1,5 +1,28 @@
 use serde::{Deserialize, Serialize};
 
+pub(crate) const HELP_TEXT: &str = r#"Kyuubiki benchmark runner
+
+Usage:
+  kyuubiki-benchmark [options]
+
+Options:
+  --matrix <name>                       Benchmark matrix (default: core)
+  --profile <profile>                   medium|large|v2|10k|15k|20k|100k|200k|300k|400k|500k|1m
+  --case <substring>                    Run matching cases only
+  --repeat <count>                      Positive execution count (default: 10)
+  --format <table|json>                 Report format (default: table)
+  --solver-preconditioner <name>        jacobi|sgs|ic0|auto|all|compare (long names accepted)
+  --baseline-out <path>                 Write a baseline report
+  --baseline-compare <path>             Compare against a baseline report
+  --compare-report-out <path>           Write the comparison report
+  --fail-on-median-regression-pct <n>   Reject median-time regression above n
+  --fail-on-rss-regression-pct <n>      Reject RSS regression above n
+  --min-baseline-median-ms <n>          Minimum baseline duration for timing gates
+  --progress                            Stream case progress
+  --dry-run-shapes                      Report workload shapes without execution
+  -h, --help                            Show this help and exit
+"#;
+
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct BenchmarkConfig {
     pub(crate) repeat: usize,
@@ -22,6 +45,33 @@ pub(crate) struct BenchmarkConfig {
 pub(crate) enum OutputFormat {
     Table,
     Json,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum BenchmarkCommand {
+    Run(BenchmarkConfig),
+    Help,
+}
+
+impl Default for BenchmarkConfig {
+    fn default() -> Self {
+        Self {
+            repeat: 10,
+            case_filter: None,
+            matrix: "core".to_string(),
+            format: OutputFormat::Table,
+            profile: BenchmarkProfile::TenK,
+            baseline_out: None,
+            baseline_compare: None,
+            compare_report_out: None,
+            solver_preconditioner: "jacobi".to_string(),
+            progress: false,
+            dry_run_shapes: false,
+            fail_on_median_regression_pct: None,
+            fail_on_rss_regression_pct: None,
+            min_baseline_median_ms: 5.0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -61,76 +111,60 @@ impl BenchmarkProfile {
 }
 
 impl BenchmarkConfig {
-    pub(crate) fn from_env() -> Result<Self, String> {
-        let mut config = Self {
-            repeat: 10,
-            case_filter: None,
-            matrix: "core".to_string(),
-            format: OutputFormat::Table,
-            profile: BenchmarkProfile::TenK,
-            baseline_out: None,
-            baseline_compare: None,
-            compare_report_out: None,
-            solver_preconditioner: "jacobi".to_string(),
-            progress: false,
-            dry_run_shapes: false,
-            fail_on_median_regression_pct: None,
-            fail_on_rss_regression_pct: None,
-            min_baseline_median_ms: 5.0,
-        };
+    pub(crate) fn from_env() -> Result<BenchmarkCommand, String> {
+        Self::from_args(std::env::args().skip(1))
+    }
 
-        let args = std::env::args().skip(1).collect::<Vec<_>>();
-        let mut args = args.iter();
+    pub(crate) fn from_args(
+        args: impl IntoIterator<Item = String>,
+    ) -> Result<BenchmarkCommand, String> {
+        let mut config = Self::default();
+
+        let args = args.into_iter().collect::<Vec<_>>();
+        if args
+            .iter()
+            .any(|arg| matches!(arg.as_str(), "--help" | "-h"))
+        {
+            return Ok(BenchmarkCommand::Help);
+        }
+        let mut args = args.into_iter();
 
         while let Some(arg) = args.next() {
             match arg.as_str() {
                 "--repeat" => {
-                    if let Some(value) = args.next() {
-                        config.repeat = value.parse().unwrap_or(config.repeat).max(1);
-                    }
+                    let value = required_value(&mut args, "--repeat")?;
+                    config.repeat = parse_positive_usize(&value, "--repeat")?;
                 }
                 "--case" => {
-                    if let Some(value) = args.next() {
-                        config.case_filter = Some(value.clone());
-                    }
+                    config.case_filter = Some(required_value(&mut args, "--case")?);
                 }
                 "--matrix" => {
-                    if let Some(value) = args.next() {
-                        config.matrix = value.clone();
-                    }
+                    config.matrix = required_value(&mut args, "--matrix")?;
                 }
                 "--format" => {
-                    if let Some(value) = args.next() {
-                        config.format = match value.as_str() {
-                            "json" => OutputFormat::Json,
-                            _ => OutputFormat::Table,
-                        };
-                    }
+                    config.format = match required_value(&mut args, "--format")?.as_str() {
+                        "table" => OutputFormat::Table,
+                        "json" => OutputFormat::Json,
+                        value => return Err(format!("unsupported benchmark format: {value}")),
+                    };
                 }
                 "--profile" => {
-                    if let Some(value) = args.next() {
-                        config.profile = parse_profile(value)?;
-                    }
+                    config.profile = parse_profile(&required_value(&mut args, "--profile")?)?;
                 }
                 "--baseline-out" => {
-                    if let Some(value) = args.next() {
-                        config.baseline_out = Some(value.clone());
-                    }
+                    config.baseline_out = Some(required_value(&mut args, "--baseline-out")?);
                 }
                 "--baseline-compare" => {
-                    if let Some(value) = args.next() {
-                        config.baseline_compare = Some(value.clone());
-                    }
+                    config.baseline_compare =
+                        Some(required_value(&mut args, "--baseline-compare")?);
                 }
                 "--compare-report-out" => {
-                    if let Some(value) = args.next() {
-                        config.compare_report_out = Some(value.clone());
-                    }
+                    config.compare_report_out =
+                        Some(required_value(&mut args, "--compare-report-out")?);
                 }
                 "--solver-preconditioner" => {
-                    if let Some(value) = args.next() {
-                        config.solver_preconditioner = value.clone();
-                    }
+                    config.solver_preconditioner =
+                        required_value(&mut args, "--solver-preconditioner")?;
                 }
                 "--progress" => {
                     config.progress = true;
@@ -139,28 +173,80 @@ impl BenchmarkConfig {
                     config.dry_run_shapes = true;
                 }
                 "--fail-on-median-regression-pct" => {
-                    if let Some(value) = args.next() {
-                        config.fail_on_median_regression_pct = value.parse().ok();
-                    }
+                    let value = required_value(&mut args, "--fail-on-median-regression-pct")?;
+                    config.fail_on_median_regression_pct = Some(parse_nonnegative_f64(
+                        &value,
+                        "--fail-on-median-regression-pct",
+                    )?);
                 }
                 "--fail-on-rss-regression-pct" => {
-                    if let Some(value) = args.next() {
-                        config.fail_on_rss_regression_pct = value.parse().ok();
-                    }
+                    let value = required_value(&mut args, "--fail-on-rss-regression-pct")?;
+                    config.fail_on_rss_regression_pct = Some(parse_nonnegative_f64(
+                        &value,
+                        "--fail-on-rss-regression-pct",
+                    )?);
                 }
                 "--min-baseline-median-ms" => {
-                    if let Some(value) = args.next() {
-                        config.min_baseline_median_ms =
-                            value.parse().unwrap_or(config.min_baseline_median_ms);
-                    }
+                    let value = required_value(&mut args, "--min-baseline-median-ms")?;
+                    config.min_baseline_median_ms =
+                        parse_nonnegative_f64(&value, "--min-baseline-median-ms")?;
                 }
-                _ => {}
+                other => return Err(format!("unknown benchmark argument: {other}")),
             }
         }
 
         validate_solver_preconditioner(&config.solver_preconditioner)?;
-        Ok(config)
+        validate_comparison_options(&config)?;
+        Ok(BenchmarkCommand::Run(config))
     }
+}
+
+fn validate_comparison_options(config: &BenchmarkConfig) -> Result<(), String> {
+    let comparison_output_requested = config.compare_report_out.is_some()
+        || config.fail_on_median_regression_pct.is_some()
+        || config.fail_on_rss_regression_pct.is_some();
+    if comparison_output_requested && config.baseline_compare.is_none() {
+        return Err(
+            "comparison reports and regression gates require --baseline-compare".to_string(),
+        );
+    }
+
+    let report_option_requested = config.baseline_out.is_some()
+        || config.baseline_compare.is_some()
+        || config.compare_report_out.is_some()
+        || config.fail_on_median_regression_pct.is_some()
+        || config.fail_on_rss_regression_pct.is_some();
+    if config.dry_run_shapes && report_option_requested {
+        return Err(
+            "--dry-run-shapes cannot be combined with benchmark report options".to_string(),
+        );
+    }
+
+    Ok(())
+}
+
+fn required_value(args: &mut impl Iterator<Item = String>, option: &str) -> Result<String, String> {
+    args.next()
+        .filter(|value| !value.is_empty() && !value.starts_with("--"))
+        .ok_or_else(|| format!("{option} requires a value"))
+}
+
+fn parse_positive_usize(value: &str, option: &str) -> Result<usize, String> {
+    value
+        .parse::<usize>()
+        .ok()
+        .filter(|value| *value > 0)
+        .ok_or_else(|| format!("{option} requires a positive integer, received '{value}'"))
+}
+
+fn parse_nonnegative_f64(value: &str, option: &str) -> Result<f64, String> {
+    value
+        .parse::<f64>()
+        .ok()
+        .filter(|value| value.is_finite() && *value >= 0.0)
+        .ok_or_else(|| {
+            format!("{option} requires a finite non-negative number, received '{value}'")
+        })
 }
 
 fn parse_profile(value: &str) -> Result<BenchmarkProfile, String> {
@@ -197,7 +283,72 @@ fn validate_solver_preconditioner(value: &str) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{BenchmarkProfile, parse_profile, validate_solver_preconditioner};
+    use super::{
+        BenchmarkCommand, BenchmarkConfig, BenchmarkProfile, OutputFormat, parse_profile,
+        validate_solver_preconditioner,
+    };
+
+    fn parse(args: &[&str]) -> Result<BenchmarkCommand, String> {
+        BenchmarkConfig::from_args(args.iter().map(|value| value.to_string()))
+    }
+
+    #[test]
+    fn help_short_circuits_without_starting_a_benchmark() {
+        assert_eq!(parse(&["--help"]).unwrap(), BenchmarkCommand::Help);
+        assert_eq!(parse(&["--unknown", "-h"]).unwrap(), BenchmarkCommand::Help);
+    }
+
+    #[test]
+    fn parses_explicit_values_without_silent_fallback() {
+        let BenchmarkCommand::Run(config) =
+            parse(&["--repeat", "3", "--format", "json", "--profile", "1m"]).unwrap()
+        else {
+            panic!("expected runnable benchmark config");
+        };
+        assert_eq!(config.repeat, 3);
+        assert_eq!(config.format, OutputFormat::Json);
+        assert_eq!(config.profile, BenchmarkProfile::OneMillion);
+    }
+
+    #[test]
+    fn rejects_unknown_missing_and_invalid_arguments() {
+        assert_eq!(
+            parse(&["--unknown"]).unwrap_err(),
+            "unknown benchmark argument: --unknown"
+        );
+        assert_eq!(
+            parse(&["--repeat"]).unwrap_err(),
+            "--repeat requires a value"
+        );
+        assert_eq!(
+            parse(&["--repeat", "0"]).unwrap_err(),
+            "--repeat requires a positive integer, received '0'"
+        );
+        assert_eq!(
+            parse(&["--format", "yaml"]).unwrap_err(),
+            "unsupported benchmark format: yaml"
+        );
+        assert!(parse(&["--fail-on-rss-regression-pct", "NaN"]).is_err());
+    }
+
+    #[test]
+    fn comparison_outputs_and_gates_require_a_baseline() {
+        for args in [
+            &["--compare-report-out", "comparison.md"][..],
+            &["--fail-on-median-regression-pct", "5"][..],
+            &["--fail-on-rss-regression-pct", "5"][..],
+        ] {
+            assert!(parse(args).unwrap_err().contains("--baseline-compare"));
+        }
+        assert!(parse(&["--baseline-compare", "baseline.json"]).is_ok());
+    }
+
+    #[test]
+    fn dry_run_rejects_ignored_report_options() {
+        let error = parse(&["--dry-run-shapes", "--baseline-out", "baseline.json"]).unwrap_err();
+
+        assert!(error.contains("cannot be combined"));
+    }
 
     #[test]
     fn rejects_unknown_profiles_without_panicking() {

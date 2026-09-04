@@ -109,8 +109,8 @@ use kyuubiki_protocol::{
     SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
-    solve_acoustic_bar_1d, solve_advection_diffusion_bar_1d, solve_bar_1d, solve_beam_1d,
-    solve_buckling_beam_1d, solve_buckling_frame_2d, solve_cohesive_interface_1d,
+    solve_acoustic_bar_1d_owned, solve_advection_diffusion_bar_1d_owned, solve_bar_1d,
+    solve_beam_1d, solve_buckling_beam_1d, solve_buckling_frame_2d, solve_cohesive_interface_1d,
     solve_cohesive_interface_2d, solve_cohesive_interface_mesh_2d,
     solve_cohesive_interface_mesh_3d, solve_contact_gap_1d,
     solve_electric_conduction_plane_quad_2d, solve_electrostatic_bar_1d,
@@ -187,7 +187,7 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
     match request {
         EngineSolveRequest::Bar1d(request) => solve_bar_1d(&request).map(AnalysisResult::Bar1d),
         EngineSolveRequest::AcousticBar1d(request) => {
-            solve_acoustic_bar_1d(&request).map(AnalysisResult::AcousticBar1d)
+            solve_acoustic_bar_1d_owned(request).map(AnalysisResult::AcousticBar1d)
         }
         EngineSolveRequest::ThermalBar1d(request) => {
             solve_thermal_bar_1d(&request).map(AnalysisResult::ThermalBar1d)
@@ -205,7 +205,8 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
             solve_magnetostatic_bar_1d(&request).map(AnalysisResult::MagnetostaticBar1d)
         }
         EngineSolveRequest::AdvectionDiffusionBar1d(request) => {
-            solve_advection_diffusion_bar_1d(&request).map(AnalysisResult::AdvectionDiffusionBar1d)
+            solve_advection_diffusion_bar_1d_owned(request)
+                .map(AnalysisResult::AdvectionDiffusionBar1d)
         }
         EngineSolveRequest::MagnetostaticPlaneTriangle2d(request) => {
             solve_magnetostatic_plane_triangle_2d(&request)

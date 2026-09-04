@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.update-channels/v1",
-  "shipping_version": "2.19.0",
+  "shipping_version": "2.20.1",
   "default_channel": "stable",
   "line": "moxi 2.x",
   "channels": [
@@ -8,12 +8,12 @@
       "id": "stable",
       "label": "Stable",
       "tag": "moxi:stable",
-      "version": "2.19.0",
+      "version": "2.20.1",
       "aliases": [
         "moxi:latest",
         "moxi:2",
-        "moxi:2.19",
-        "moxi:2.19.0"
+        "moxi:2.20",
+        "moxi:2.20.1"
       ],
       "notes": [
         "Primary operator-facing update track for the current moxi 2.x line.",

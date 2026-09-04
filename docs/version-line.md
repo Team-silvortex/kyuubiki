@@ -9,8 +9,8 @@ For the broader product narrative, release posture, and reading path, use
 
 - codename: `moxi`
 - active line: `2.x`
-- current development point: `moxi 2.19.0`
-- current documentation target: `moxi 2.19.x` line
+- current development point: `moxi 2.20.1`
+- current documentation target: `moxi 2.20.x` line
 - first planned public launch: `daji 3.0.0` on Reddit
 - first 2.x baseline:
   `moxi 2.0.0` is the first formal Kyuubiki 2.x line after the
@@ -30,14 +30,18 @@ For the broader product narrative, release posture, and reading path, use
   patch positions (`0` through `9`)
 - moxi terminal version:
   `moxi 2.20.9`; the next legal line start is `daji 3.0.0`
+- remaining moxi window:
+  `2.20.1` through `2.20.9` contains nine inclusive patch positions reserved
+  for bug fixes and performance optimization; security remediation and release
+  blockers are the only exceptional work, and feature expansion is prohibited
 - current checkpoint:
   repeatable cross-operator contract qualification, Pwdt-driven frontend
   automation, and the coverage tensor's `daji 3.0.0` release-criticality queue
   are the active hardening focus
 - current boundary:
-  Pwdt is not yet fully equivalent to all GUI actions, app shipping metadata
-  may trail the development checkpoint until the next packaged release, and
-  broader independent solver qualification remains active work
+  Pwdt is not yet fully equivalent to all GUI actions, fresh installed-package
+  evidence still trails source-level checkpoints, and broader independent
+  solver qualification remains active work
 
 ## What this page is for
 

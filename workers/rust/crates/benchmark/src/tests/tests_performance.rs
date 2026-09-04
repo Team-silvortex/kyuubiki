@@ -197,7 +197,7 @@ fn one_million_frame_cases_auto_use_ic0() {
 
 #[test]
 #[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
-fn case_selection_uses_exact_ids() {
+fn case_selection_accepts_full_ids_at_scale() {
     let cases = benchmark_cases(BenchmarkProfile::OneMillion, "thermal-structural");
     let selected = select_cases(&cases, Some("frame-2d-1m"));
 

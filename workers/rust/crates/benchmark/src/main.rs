@@ -1,4 +1,4 @@
-use std::{fs, process};
+use std::process;
 
 mod catalog;
 mod catalog_defaults;
@@ -26,9 +26,9 @@ mod workflow_payloads;
 use catalog::benchmark_cases;
 use compare::{
     compare_against_baseline, evaluate_regressions, load_baseline_report, print_table,
-    render_comparison_report,
+    render_comparison_report, write_report,
 };
-use config::{BenchmarkConfig, OutputFormat};
+use config::{BenchmarkCommand, BenchmarkConfig, HELP_TEXT, OutputFormat};
 use headless_cases::{headless_sdk_cases, is_headless_sdk_matrix};
 use models::{BenchmarkReport, select_cases};
 use protocol_cases::{is_protocol_matrix, protocol_cases};
@@ -43,7 +43,13 @@ fn main() {
 }
 
 fn run() -> Result<(), String> {
-    let config = BenchmarkConfig::from_env()?;
+    let config = match BenchmarkConfig::from_env()? {
+        BenchmarkCommand::Help => {
+            print!("{HELP_TEXT}");
+            return Ok(());
+        }
+        BenchmarkCommand::Run(config) => config,
+    };
     let cases = if is_headless_sdk_matrix(&config.matrix) {
         headless_sdk_cases()
     } else if is_protocol_matrix(&config.matrix) {
@@ -66,10 +72,9 @@ fn run() -> Result<(), String> {
         let report = build_shape_report(&selected, config.profile, &config.matrix);
         match config.format {
             OutputFormat::Json => {
-                println!(
-                    "{}",
-                    serde_json::to_string_pretty(&report).expect("shape report should serialize")
-                );
+                let payload = serde_json::to_string_pretty(&report)
+                    .map_err(|error| format!("failed to serialize shape report: {error}"))?;
+                println!("{payload}");
             }
             OutputFormat::Table => print_shape_table(&report),
         }
@@ -95,28 +100,24 @@ fn run() -> Result<(), String> {
         )
     };
 
-    if let Some(path) = &config.baseline_out {
-        let payload = serde_json::to_string_pretty(&report).expect("report should serialize");
-        fs::write(path, payload).expect("baseline snapshot should write");
-    }
-
-    let comparison = config
-        .baseline_compare
-        .as_ref()
-        .and_then(|path| load_baseline_report(path).ok())
-        .map(|baseline| compare_against_baseline(&report, &baseline));
+    let comparison = match &config.baseline_compare {
+        Some(path) => {
+            let baseline = load_baseline_report(path)?;
+            Some(compare_against_baseline(&report, &baseline))
+        }
+        None => None,
+    };
 
     if let (Some(path), Some(comparison)) = (&config.compare_report_out, &comparison) {
         let payload = render_comparison_report(&report, comparison);
-        fs::write(path, payload).expect("comparison report should write");
+        write_report(path, "comparison report", &payload)?;
     }
 
     match config.format {
         OutputFormat::Json => {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&report).expect("report should serialize")
-            );
+            let payload = serde_json::to_string_pretty(&report)
+                .map_err(|error| format!("failed to serialize benchmark report: {error}"))?;
+            println!("{payload}");
         }
         OutputFormat::Table => print_table(
             &report.cases,
@@ -138,7 +139,7 @@ fn run() -> Result<(), String> {
     }
 
     if let Some(comparison) = &comparison {
-        let failures = evaluate_regressions(&config, comparison);
+        let failures = evaluate_regressions(&config, &report, comparison);
         if !failures.is_empty() {
             eprintln!();
             eprintln!("benchmark regression gate failed:");
@@ -147,6 +148,12 @@ fn run() -> Result<(), String> {
             }
             process::exit(1);
         }
+    }
+
+    if let Some(path) = &config.baseline_out {
+        let payload = serde_json::to_string_pretty(&report)
+            .map_err(|error| format!("failed to serialize benchmark report: {error}"))?;
+        write_report(path, "baseline report", &payload)?;
     }
 
     Ok(())
