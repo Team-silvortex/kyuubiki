@@ -5,6 +5,7 @@ pub(crate) struct SymmetricBandCholesky {
     size: usize,
     width: usize,
     lower: Vec<f64>,
+    row_scales: Vec<f64>,
 }
 
 impl SymmetricBandCholesky {
@@ -33,11 +34,32 @@ impl SymmetricBandCholesky {
         if entry_count > max_entries {
             return Ok(None);
         }
+        if (0..size).any(|row| {
+            matrix
+                .row_entries(row)
+                .iter()
+                .any(|(_, value)| !value.is_finite())
+        }) {
+            return Err("banded Cholesky matrix contains a non-finite value".to_string());
+        }
+        let row_scales = (0..size)
+            .map(|row| {
+                matrix
+                    .row_entries(row)
+                    .iter()
+                    .map(|(_, value)| value.abs())
+                    .fold(0.0, f64::max)
+            })
+            .collect::<Vec<_>>();
+        if row_scales.contains(&0.0) {
+            return Err("banded Cholesky matrix contains a singular row".to_string());
+        }
 
         let mut factor = Self {
             size,
             width,
             lower: vec![0.0; entry_count],
+            row_scales,
         };
         for row in 0..size {
             for &(column, value) in matrix.row_entries(row) {
@@ -78,6 +100,7 @@ impl SymmetricBandCholesky {
     }
 
     fn factor_in_place(&mut self) -> Result<(), String> {
+        let relative_floor = (64.0 * f64::EPSILON * self.size.max(1) as f64).min(1.0e-8);
         for row in 0..self.size {
             let row_start = row.saturating_sub(self.width);
             for column in row_start..=row {
@@ -87,14 +110,21 @@ impl SymmetricBandCholesky {
                     .sum::<f64>();
                 let reduced = self.get(row, column) - correction;
                 if row == column {
-                    if !(reduced.is_finite() && reduced > 1.0e-14) {
+                    if !(reduced.is_finite()
+                        && reduced > 0.0
+                        && reduced / self.row_scales[row] > relative_floor)
+                    {
                         return Err(format!(
                             "banded Cholesky matrix is not positive definite at row {row}"
                         ));
                     }
                     self.set(row, column, reduced.sqrt());
                 } else {
-                    self.set(row, column, reduced / self.get(column, column));
+                    let factored = reduced / self.get(column, column);
+                    if !factored.is_finite() {
+                        return Err("banded Cholesky factorization diverged".to_string());
+                    }
+                    self.set(row, column, factored);
                 }
             }
         }
@@ -155,5 +185,27 @@ mod tests {
                 .expect("budget check should not fail")
                 .is_none()
         );
+    }
+
+    #[test]
+    fn factors_a_uniformly_tiny_positive_definite_band() {
+        let mut matrix = SparseMatrix::new(2);
+        for (row, column, value) in [
+            (0, 0, 2.0e-24),
+            (0, 1, -1.0e-24),
+            (1, 0, -1.0e-24),
+            (1, 1, 2.0e-24),
+        ] {
+            add_at(&mut matrix, row, column, value);
+        }
+
+        let factor = SymmetricBandCholesky::try_factor(&matrix, 10)
+            .expect("tiny matrix factorization should be scale invariant")
+            .expect("tiny band should fit the budget");
+        let solution = factor
+            .solve(&[1.0e-24, 0.0])
+            .expect("tiny factored matrix should solve");
+        assert!((solution[0] - 2.0 / 3.0).abs() < 1.0e-12);
+        assert!((solution[1] - 1.0 / 3.0).abs() < 1.0e-12);
     }
 }

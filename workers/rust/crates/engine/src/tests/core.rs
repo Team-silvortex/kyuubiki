@@ -5,8 +5,9 @@ use crate::{
     workflow_solve_executor::{run_solve_operator, verify_solver_result_provenance},
 };
 use kyuubiki_protocol::{
-    AnalysisResult, OperatorKind, ResultChunkKind, ResultChunkRequest, SolidTetra3dElementInput,
-    SolidTetra3dNodeInput, SolveBarRequest, SolveSolidTetra3dRequest,
+    AnalysisResult, ElectrostaticBar1dElementInput, ElectrostaticBar1dNodeInput, OperatorKind,
+    ResultChunkKind, ResultChunkRequest, SolidTetra3dElementInput, SolidTetra3dNodeInput,
+    SolveBarRequest, SolveElectrostaticBar1dRequest, SolveSolidTetra3dRequest,
     SolveStokesFlowPlaneQuad2dRequest, SolveTruss2dRequest, StokesFlowPlaneNodeInput,
     StokesFlowPlaneQuadElementInput, TrussElementInput, TrussNodeInput,
 };
@@ -74,6 +75,45 @@ fn runs_stokes_flow_through_workflow_solve_executor() {
     );
     verify_solver_result_provenance(&result, "solve.stokes_flow_quad_2d")
         .expect("emitted solver provenance should verify");
+}
+
+#[test]
+fn workflow_executor_preserves_low_scale_electrostatic_coefficients() {
+    let payload = serde_json::to_value(SolveElectrostaticBar1dRequest {
+        nodes: vec![
+            ElectrostaticBar1dNodeInput {
+                id: "ground".to_string(),
+                x: 0.0,
+                fix_potential: true,
+                potential: 0.0,
+                charge_density: 0.0,
+            },
+            ElectrostaticBar1dNodeInput {
+                id: "charged".to_string(),
+                x: 2.0,
+                fix_potential: false,
+                potential: 0.0,
+                charge_density: 8.0e-24,
+            },
+        ],
+        elements: vec![ElectrostaticBar1dElementInput {
+            id: "low-permittivity".to_string(),
+            node_i: 0,
+            node_j: 1,
+            area: 0.2,
+            permittivity: 4.0e-27,
+        }],
+    })
+    .expect("electrostatic payload should encode");
+
+    let result = run_solve_operator("solve.electrostatic_bar_1d", payload)
+        .expect("low-scale electrostatic workflow solve should run");
+    let potential = result["nodes"][1]["potential"]
+        .as_f64()
+        .expect("potential should be numeric");
+    assert!((potential - 20_000.0).abs() <= 20_000.0 * 1.0e-10);
+    verify_solver_result_provenance(&result, "solve.electrostatic_bar_1d")
+        .expect("low-scale result provenance should verify");
 }
 
 #[test]

@@ -5,6 +5,75 @@ struct TridiagonalSystem<'a> {
     rhs: &'a [f64],
 }
 
+const MIN_BACKWARD_ERROR_TOLERANCE: f64 = 1.0e-10;
+const MAX_BACKWARD_ERROR_TOLERANCE: f64 = 1.0e-7;
+
+pub(crate) fn solve_tridiagonal(
+    diagonal: &[f64],
+    lower: &[f64],
+    upper: &[f64],
+    rhs: &[f64],
+) -> Result<Vec<f64>, String> {
+    validate_dimensions(diagonal, lower, upper, rhs)?;
+    validate_finite(diagonal, lower, upper, rhs)?;
+    if diagonal.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let size = diagonal.len();
+    let row_scales = (0..size)
+        .map(|row| {
+            let mut scale = diagonal[row].abs();
+            if row > 0 {
+                scale = scale.max(lower[row - 1].abs());
+            }
+            if row + 1 < size {
+                scale = scale.max(upper[row].abs());
+            }
+            scale
+        })
+        .collect::<Vec<_>>();
+    if row_scales.contains(&0.0) {
+        return Err("tridiagonal system contains a singular row".to_string());
+    }
+
+    let mut diagonal_work = diagonal.to_vec();
+    let mut rhs_work = rhs.to_vec();
+    for row in 1..size {
+        ensure_usable_pivot(diagonal_work[row - 1], row_scales[row - 1], size)?;
+        let factor = lower[row - 1] / diagonal_work[row - 1];
+        if !factor.is_finite() {
+            return Err("tridiagonal elimination diverged".to_string());
+        }
+        diagonal_work[row] = (-factor).mul_add(upper[row - 1], diagonal_work[row]);
+        rhs_work[row] = (-factor).mul_add(rhs_work[row - 1], rhs_work[row]);
+        if !diagonal_work[row].is_finite() || !rhs_work[row].is_finite() {
+            return Err("tridiagonal elimination diverged".to_string());
+        }
+    }
+
+    ensure_usable_pivot(diagonal_work[size - 1], row_scales[size - 1], size)?;
+    let mut solution = vec![0.0; size];
+    solution[size - 1] = rhs_work[size - 1] / diagonal_work[size - 1];
+    for row in (0..size - 1).rev() {
+        ensure_usable_pivot(diagonal_work[row], row_scales[row], size)?;
+        solution[row] =
+            (-upper[row]).mul_add(solution[row + 1], rhs_work[row]) / diagonal_work[row];
+    }
+    if solution.iter().any(|value| !value.is_finite()) {
+        return Err("tridiagonal back substitution diverged".to_string());
+    }
+
+    let backward_error = maximum_backward_error(diagonal, lower, upper, rhs, &solution);
+    let tolerance = backward_error_tolerance(size);
+    if !backward_error.is_finite() || backward_error > tolerance {
+        return Err(format!(
+            "tridiagonal solution failed backward-error validation ({backward_error:.6e})"
+        ));
+    }
+    Ok(solution)
+}
+
 pub(crate) fn is_indexed_chain(
     node_count: usize,
     edges: impl IntoIterator<Item = (usize, usize)>,
@@ -38,12 +107,12 @@ pub(crate) fn solve_with_prescribed(
     rhs: &[f64],
     prescribed: &[(usize, f64)],
 ) -> Result<Vec<f64>, String> {
+    validate_dimensions(diagonal, lower, upper, rhs)
+        .map_err(|error| format!("1d chain solver failed: {error}"))?;
+    validate_finite(diagonal, lower, upper, rhs)
+        .map_err(|error| format!("1d chain solver failed: {error}"))?;
     let node_count = diagonal.len();
-    if node_count == 0
-        || lower.len() + 1 != node_count
-        || upper.len() + 1 != node_count
-        || rhs.len() != node_count
-    {
+    if node_count == 0 {
         return Err("1d chain solver received inconsistent tridiagonal dimensions".to_string());
     }
 
@@ -52,6 +121,9 @@ pub(crate) fn solve_with_prescribed(
     for &(index, value) in prescribed {
         if index >= node_count {
             return Err("1d chain solver received an out-of-range prescribed value".to_string());
+        }
+        if !value.is_finite() {
+            return Err("1d chain solver received a non-finite prescribed value".to_string());
         }
         if fixed[index] && (values[index] - value).abs() > 1.0e-12 {
             return Err("1d chain solver received conflicting prescribed values".to_string());
@@ -94,7 +166,6 @@ fn solve_free_segment(
     let start = range.start;
     let end = range.end;
     let count = end - start;
-    let mut diagonal_work = system.diagonal[start..end].to_vec();
     let mut rhs_work = system.rhs[start..end].to_vec();
 
     if start > 0 && fixed[start - 1] {
@@ -104,32 +175,100 @@ fn solve_free_segment(
         rhs_work[count - 1] -= system.upper[end - 1] * values[end];
     }
 
-    for local in 1..count {
-        let global = start + local;
-        let pivot = diagonal_work[local - 1];
-        if pivot.abs() <= 1.0e-18 {
-            return Err("1d chain solver encountered a zero pivot".to_string());
-        }
-        let factor = system.lower[global - 1] / pivot;
-        diagonal_work[local] -= factor * system.upper[global - 1];
-        rhs_work[local] -= factor * rhs_work[local - 1];
-    }
+    let solved = solve_tridiagonal(
+        &system.diagonal[start..end],
+        &system.lower[start..end - 1],
+        &system.upper[start..end - 1],
+        &rhs_work,
+    )
+    .map_err(|error| format!("1d chain solver failed: {error}"))?;
+    values[start..end].copy_from_slice(&solved);
+    Ok(())
+}
 
-    if diagonal_work[count - 1].abs() <= 1.0e-18 {
-        return Err("1d chain solver encountered a zero pivot".to_string());
-    }
-    values[end - 1] = rhs_work[count - 1] / diagonal_work[count - 1];
-    for local in (0..count - 1).rev() {
-        let global = start + local;
-        values[global] =
-            (rhs_work[local] - system.upper[global] * values[global + 1]) / diagonal_work[local];
+fn validate_dimensions(
+    diagonal: &[f64],
+    lower: &[f64],
+    upper: &[f64],
+    rhs: &[f64],
+) -> Result<(), String> {
+    let size = diagonal.len();
+    if lower.len() != size.saturating_sub(1)
+        || upper.len() != size.saturating_sub(1)
+        || rhs.len() != size
+    {
+        return Err("tridiagonal system dimensions must match".to_string());
     }
     Ok(())
 }
 
+fn validate_finite(
+    diagonal: &[f64],
+    lower: &[f64],
+    upper: &[f64],
+    rhs: &[f64],
+) -> Result<(), String> {
+    if diagonal
+        .iter()
+        .chain(lower)
+        .chain(upper)
+        .chain(rhs)
+        .any(|value| !value.is_finite())
+    {
+        return Err("tridiagonal system contains a non-finite value".to_string());
+    }
+    Ok(())
+}
+
+fn ensure_usable_pivot(pivot: f64, row_scale: f64, size: usize) -> Result<(), String> {
+    let relative_floor = (64.0 * f64::EPSILON * size.max(1) as f64).min(1.0e-8);
+    if !pivot.is_finite() || pivot.abs() / row_scale <= relative_floor {
+        return Err("tridiagonal system has a singular pivot".to_string());
+    }
+    Ok(())
+}
+
+fn maximum_backward_error(
+    diagonal: &[f64],
+    lower: &[f64],
+    upper: &[f64],
+    rhs: &[f64],
+    solution: &[f64],
+) -> f64 {
+    let mut maximum = 0.0_f64;
+    for row in 0..diagonal.len() {
+        let diagonal_term = diagonal[row] * solution[row];
+        let mut actual = diagonal_term;
+        let mut scale = rhs[row].abs() + diagonal_term.abs();
+        if row > 0 {
+            let lower_term = lower[row - 1] * solution[row - 1];
+            actual += lower_term;
+            scale += lower_term.abs();
+        }
+        if row + 1 < diagonal.len() {
+            let upper_term = upper[row] * solution[row + 1];
+            actual += upper_term;
+            scale += upper_term.abs();
+        }
+        let residual = (rhs[row] - actual).abs();
+        let relative = if scale == 0.0 {
+            if residual == 0.0 { 0.0 } else { f64::INFINITY }
+        } else {
+            residual / scale
+        };
+        maximum = maximum.max(relative);
+    }
+    maximum
+}
+
+fn backward_error_tolerance(size: usize) -> f64 {
+    (128.0 * f64::EPSILON * size.max(1) as f64)
+        .clamp(MIN_BACKWARD_ERROR_TOLERANCE, MAX_BACKWARD_ERROR_TOLERANCE)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{is_indexed_chain, solve_with_prescribed};
+    use super::{is_indexed_chain, solve_tridiagonal, solve_with_prescribed};
 
     #[test]
     fn recognizes_a_contiguous_chain_only_once_per_span() {
@@ -148,5 +287,32 @@ mod tests {
         )
         .expect("tridiagonal system should solve");
         assert_eq!(values, vec![0.0, 1.0, 2.0, 3.0]);
+    }
+
+    #[test]
+    fn preserves_uniformly_tiny_coefficients() {
+        let solution = solve_tridiagonal(
+            &[2.0e-24, 2.0e-24],
+            &[-1.0e-24],
+            &[-1.0e-24],
+            &[1.0e-24, 0.0],
+        )
+        .expect("uniformly tiny tridiagonal system should solve");
+
+        assert!((solution[0] - 2.0 / 3.0).abs() < 1.0e-12);
+        assert!((solution[1] - 1.0 / 3.0).abs() < 1.0e-12);
+    }
+
+    #[test]
+    fn rejects_scale_relative_rank_loss() {
+        let error = solve_tridiagonal(
+            &[1.0, 1.0 + f64::EPSILON],
+            &[1.0],
+            &[1.0],
+            &[2.0, 2.0 + f64::EPSILON],
+        )
+        .expect_err("rank-deficient tridiagonal system should fail closed");
+
+        assert!(error.contains("singular pivot"));
     }
 }

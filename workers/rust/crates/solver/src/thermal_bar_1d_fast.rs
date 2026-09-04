@@ -3,6 +3,8 @@ use kyuubiki_protocol::{
     ThermalBar1dNodeResult,
 };
 
+use crate::chain_tridiagonal::{is_indexed_chain, solve_with_prescribed};
+
 pub(crate) fn solve_thermal_bar_1d_chain(
     request: &SolveThermalBar1dRequest,
 ) -> Option<Result<SolveThermalBar1dResult, String>> {
@@ -80,24 +82,13 @@ pub(crate) fn build_thermal_bar_1d_result(
 }
 
 fn is_single_span_chain(request: &SolveThermalBar1dRequest) -> bool {
-    if request.elements.len() + 1 != request.nodes.len() {
-        return false;
-    }
-
-    let mut seen_spans = vec![false; request.elements.len()];
-    for element in &request.elements {
-        let (left, right) = if element.node_i < element.node_j {
-            (element.node_i, element.node_j)
-        } else {
-            (element.node_j, element.node_i)
-        };
-        if right != left + 1 || left >= seen_spans.len() || seen_spans[left] {
-            return false;
-        }
-        seen_spans[left] = true;
-    }
-
-    seen_spans.into_iter().all(|seen| seen)
+    is_indexed_chain(
+        request.nodes.len(),
+        request
+            .elements
+            .iter()
+            .map(|element| (element.node_i, element.node_j)),
+    )
 }
 
 fn solve_chain_displacements(request: &SolveThermalBar1dRequest) -> Result<Vec<f64>, String> {
@@ -131,89 +122,13 @@ fn solve_chain_displacements(request: &SolveThermalBar1dRequest) -> Result<Vec<f
         force[element.node_j] += thermal_force;
     }
 
-    solve_fixed_zero_tridiagonal(&diagonal, &lower, &upper, &force, request)
-}
-
-fn solve_fixed_zero_tridiagonal(
-    diagonal: &[f64],
-    lower: &[f64],
-    upper: &[f64],
-    force: &[f64],
-    request: &SolveThermalBar1dRequest,
-) -> Result<Vec<f64>, String> {
-    let mut displacements = vec![0.0; request.nodes.len()];
-    let mut cursor = 0;
-    while cursor < request.nodes.len() {
-        if request.nodes[cursor].fix_x {
-            cursor += 1;
-            continue;
-        }
-        let start = cursor;
-        while cursor < request.nodes.len() && !request.nodes[cursor].fix_x {
-            cursor += 1;
-        }
-        solve_free_segment(
-            start,
-            cursor,
-            diagonal,
-            lower,
-            upper,
-            force,
-            &mut displacements,
-        )?;
-    }
-    Ok(displacements)
-}
-
-fn solve_free_segment(
-    start: usize,
-    end: usize,
-    diagonal: &[f64],
-    lower: &[f64],
-    upper: &[f64],
-    force: &[f64],
-    displacements: &mut [f64],
-) -> Result<(), String> {
-    let count = end - start;
-    if count == 0 {
-        return Ok(());
-    }
-
-    let mut a = vec![0.0; count];
-    let mut b = vec![0.0; count];
-    let mut c = vec![0.0; count];
-    let mut d = vec![0.0; count];
-    for local in 0..count {
-        let global = start + local;
-        b[local] = diagonal[global];
-        d[local] = force[global];
-        if local > 0 {
-            a[local] = lower[global - 1];
-        }
-        if local + 1 < count {
-            c[local] = upper[global];
-        }
-    }
-
-    for index in 1..count {
-        let pivot = b[index - 1];
-        if pivot.abs() <= 1.0e-18 {
-            return Err("1d thermal bar chain solver encountered a zero pivot".to_string());
-        }
-        let factor = a[index] / pivot;
-        b[index] -= factor * c[index - 1];
-        d[index] -= factor * d[index - 1];
-    }
-
-    if b[count - 1].abs() <= 1.0e-18 {
-        return Err("1d thermal bar chain solver encountered a zero pivot".to_string());
-    }
-    displacements[end - 1] = d[count - 1] / b[count - 1];
-    for local in (0..count - 1).rev() {
-        let global = start + local;
-        displacements[global] = (d[local] - c[local] * displacements[global + 1]) / b[local];
-    }
-    Ok(())
+    let prescribed = request
+        .nodes
+        .iter()
+        .enumerate()
+        .filter_map(|(index, node)| node.fix_x.then_some((index, 0.0)))
+        .collect::<Vec<_>>();
+    solve_with_prescribed(&diagonal, &lower, &upper, &force, &prescribed)
 }
 
 fn build_element_result(

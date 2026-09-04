@@ -12,7 +12,7 @@ pub(super) fn diagonal_sparse_scaling(matrix: &SparseMatrix) -> Vec<f64> {
             .find_map(|(column, value)| (*column == index).then_some(*value))
             .unwrap_or(0.0)
             .abs();
-        scaling[index] = if diagonal > 1.0e-12 {
+        scaling[index] = if diagonal > 0.0 {
             diagonal.sqrt().recip()
         } else {
             1.0
