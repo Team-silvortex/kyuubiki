@@ -20,6 +20,7 @@ fn default_templates() -> Vec<CaseTemplateSpec> {
         template("thermal-bar", BenchmarkFamily::ThermalBar1d),
         template("acoustic-bar", BenchmarkFamily::AcousticBar1d),
         template("heat-bar", BenchmarkFamily::HeatBar1d),
+        template("transient-heat-bar", BenchmarkFamily::TransientHeatBar1d),
         template("electrostatic-bar", BenchmarkFamily::ElectrostaticBar1d),
         template("magnetostatic-bar", BenchmarkFamily::MagnetostaticBar1d),
         template(
@@ -28,6 +29,8 @@ fn default_templates() -> Vec<CaseTemplateSpec> {
         ),
         template("torsion-shaft", BenchmarkFamily::Torsion1d),
         template("spring-chain", BenchmarkFamily::Spring1d),
+        template("transient-spring-chain", BenchmarkFamily::TransientSpring1d),
+        template("harmonic-spring-chain", BenchmarkFamily::HarmonicSpring1d),
         template("spring-grid", BenchmarkFamily::Spring2d),
         template("spring-cage", BenchmarkFamily::Spring3d),
         template("nonlinear-spring-chain", BenchmarkFamily::NonlinearSpring1d),
@@ -179,6 +182,15 @@ fn default_matrices() -> Vec<BenchmarkMatrixSpec> {
             vec![],
         ),
         matrix(
+            "dynamic-response",
+            &[
+                "transient-heat-bar",
+                "transient-spring-chain",
+                "harmonic-spring-chain",
+            ],
+            vec![],
+        ),
+        matrix(
             "thermal-structural",
             &[
                 "thermal-bar",
@@ -247,7 +259,6 @@ fn default_matrices() -> Vec<BenchmarkMatrixSpec> {
                 "electrostatic-plane-quad",
                 "magnetostatic-plane-triangle",
                 "magnetostatic-plane-quad",
-                "electric-conduction-plane-quad",
                 "stokes-plane-quad",
                 "stokes-plane-triangle",
             ],

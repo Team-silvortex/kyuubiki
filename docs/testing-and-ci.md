@@ -465,6 +465,9 @@ Use these entrypoints:
 - `cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix structural-extended --repeat 1`
   Run the broad structural smoke matrix for spring, nonlinear/contact, beam,
   thermal beam, and modal frame families.
+- `cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix dynamic-response --repeat 1`
+  Run isolated transient-heat, transient-spring, and harmonic-spring Engine
+  probes without promoting the experimental dynamic lane into qualification.
 - `cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix thermal-structural --repeat 1`
   Run the coupled thermal-structural smoke matrix for thermal bar/truss/plane,
   static frame, and thermal frame families.

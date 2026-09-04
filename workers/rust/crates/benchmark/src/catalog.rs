@@ -11,6 +11,10 @@ use crate::{
         generate_panel_mesh, generate_pratt_truss, generate_quad_panel_mesh,
         generate_space_frame_grid,
     },
+    generators_dynamic::{
+        generate_harmonic_spring_1d_case, generate_transient_heat_bar_case,
+        generate_transient_spring_1d_case,
+    },
     generators_extended::{
         generate_acoustic_bar_case, generate_advection_diffusion_bar_case,
         generate_electric_conduction_quad_panel, generate_electrostatic_bar_case,
@@ -78,11 +82,14 @@ pub(crate) enum BenchmarkFamily {
     ThermalBar1d,
     AcousticBar1d,
     HeatBar1d,
+    TransientHeatBar1d,
     ElectrostaticBar1d,
     MagnetostaticBar1d,
     AdvectionDiffusionBar1d,
     Torsion1d,
     Spring1d,
+    TransientSpring1d,
+    HarmonicSpring1d,
     Spring2d,
     Spring3d,
     NonlinearSpring1d,
@@ -278,6 +285,13 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             family: "heat_bar_1d",
             workload: BenchmarkWorkload::HeatBar1d(generate_heat_bar_case(profile.axial_elements)),
         },
+        BenchmarkFamily::TransientHeatBar1d => BenchmarkCase {
+            id,
+            family: "transient_heat_bar_1d",
+            workload: BenchmarkWorkload::TransientHeatBar1d(generate_transient_heat_bar_case(
+                profile.axial_elements,
+            )),
+        },
         BenchmarkFamily::ElectrostaticBar1d => BenchmarkCase {
             id,
             family: "electrostatic_bar_1d",
@@ -308,6 +322,20 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             id,
             family: "spring_1d",
             workload: BenchmarkWorkload::Spring1d(generate_spring_1d_case(profile.axial_elements)),
+        },
+        BenchmarkFamily::TransientSpring1d => BenchmarkCase {
+            id,
+            family: "transient_spring_1d",
+            workload: BenchmarkWorkload::TransientSpring1d(generate_transient_spring_1d_case(
+                profile.axial_elements,
+            )),
+        },
+        BenchmarkFamily::HarmonicSpring1d => BenchmarkCase {
+            id,
+            family: "harmonic_spring_1d",
+            workload: BenchmarkWorkload::HarmonicSpring1d(generate_harmonic_spring_1d_case(
+                profile.axial_elements,
+            )),
         },
         BenchmarkFamily::Spring2d => BenchmarkCase {
             id,

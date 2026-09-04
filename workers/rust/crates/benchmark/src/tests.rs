@@ -95,7 +95,7 @@ mod tests {
     fn default_catalog_spec_covers_all_profiles() {
         let spec = default_catalog_spec();
 
-        assert_eq!(spec.templates.len(), 45);
+        assert_eq!(spec.templates.len(), 48);
         assert!(spec.matrices.len() >= 10);
         assert_eq!(spec.profiles.len(), 12);
         assert!(spec
@@ -316,7 +316,11 @@ mod tests {
             .filter(|template| !coverage_stems.contains(template.stem.as_str()))
             .map(|template| template.stem.as_str())
             .collect::<HashSet<_>>();
-        let expected_missing = ["stability-screening", "material-integration"]
+        let expected_missing = [
+            "stability-screening",
+            "material-integration",
+            "dynamic-response",
+        ]
             .into_iter()
             .flat_map(|name| {
                 spec.matrices
@@ -327,6 +331,7 @@ mod tests {
                     .iter()
                     .map(String::as_str)
             })
+            .chain(["electric-conduction-plane-quad"])
             .collect::<HashSet<_>>();
         let selected = cases.iter().collect::<Vec<_>>();
         let report = crate::runner::build_report(
@@ -355,10 +360,6 @@ mod tests {
             .cases
             .iter()
             .any(|case| case.family == "magnetostatic_plane_quad_2d"));
-        assert!(report
-            .cases
-            .iter()
-            .any(|case| case.family == "electric_conduction_plane_quad_2d"));
         assert!(report
             .cases
             .iter()

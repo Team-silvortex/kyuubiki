@@ -4,11 +4,14 @@
     { "stem": "thermal-bar", "family": "thermal_bar1d" },
     { "stem": "acoustic-bar", "family": "acoustic_bar1d" },
     { "stem": "heat-bar", "family": "heat_bar1d" },
+    { "stem": "transient-heat-bar", "family": "transient_heat_bar1d" },
     { "stem": "electrostatic-bar", "family": "electrostatic_bar1d" },
     { "stem": "magnetostatic-bar", "family": "magnetostatic_bar1d" },
     { "stem": "advection-diffusion-bar", "family": "advection_diffusion_bar1d" },
     { "stem": "torsion-shaft", "family": "torsion1d" },
     { "stem": "spring-chain", "family": "spring1d" },
+    { "stem": "transient-spring-chain", "family": "transient_spring1d" },
+    { "stem": "harmonic-spring-chain", "family": "harmonic_spring1d" },
     { "stem": "spring-grid", "family": "spring2d" },
     { "stem": "spring-cage", "family": "spring3d" },
     { "stem": "nonlinear-spring-chain", "family": "nonlinear_spring1d" },
@@ -128,6 +131,11 @@
       "owned_templates": []
     },
     {
+      "name": "dynamic-response",
+      "template_stems": ["transient-heat-bar", "transient-spring-chain", "harmonic-spring-chain"],
+      "owned_templates": []
+    },
+    {
       "name": "thermal-structural",
       "template_stems": [
         "thermal-bar",
@@ -191,7 +199,6 @@
         "electrostatic-plane-quad",
         "magnetostatic-plane-triangle",
         "magnetostatic-plane-quad",
-        "electric-conduction-plane-quad",
         "stokes-plane-quad",
         "stokes-plane-triangle"
       ],

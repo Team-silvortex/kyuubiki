@@ -74,6 +74,21 @@ fn exact_case_generation_does_not_materialize_the_rest_of_the_matrix() {
     assert_eq!(cases[0].id, "frame-2d-medium");
 }
 
+#[test]
+fn dynamic_response_matrix_keeps_experimental_cases_out_of_the_release_gate() {
+    let spec = default_catalog_spec();
+    let dynamic = select_matrix_spec(&spec, "dynamic-response");
+    let qualified = select_matrix_spec(&spec, "physics-coverage");
+
+    assert_eq!(dynamic.template_stems.len(), 3);
+    assert!(
+        dynamic
+            .template_stems
+            .iter()
+            .all(|stem| !qualified.template_stems.contains(stem))
+    );
+}
+
 fn catalog_spec(templates: Vec<CaseTemplateSpec>) -> BenchmarkCatalogSpec {
     BenchmarkCatalogSpec {
         templates,

@@ -8,6 +8,9 @@ pub(crate) fn workflow_payload_for_case(case: &BenchmarkCase) -> (&'static str, 
         BenchmarkWorkload::ThermalBar1d(request) => payload("solve.thermal_bar_1d", request),
         BenchmarkWorkload::AcousticBar1d(request) => payload("solve.acoustic_bar_1d", request),
         BenchmarkWorkload::HeatBar1d(request) => payload("solve.heat_bar_1d", request),
+        BenchmarkWorkload::TransientHeatBar1d(request) => {
+            payload("solve.transient_heat_bar_1d", request)
+        }
         BenchmarkWorkload::ElectrostaticBar1d(request) => {
             payload("solve.electrostatic_bar_1d", request)
         }
@@ -19,6 +22,12 @@ pub(crate) fn workflow_payload_for_case(case: &BenchmarkCase) -> (&'static str, 
         }
         BenchmarkWorkload::Torsion1d(request) => payload("solve.torsion_1d", request),
         BenchmarkWorkload::Spring1d(request) => payload("solve.spring_1d", request),
+        BenchmarkWorkload::TransientSpring1d(request) => {
+            payload("solve.transient_spring_1d", request)
+        }
+        BenchmarkWorkload::HarmonicSpring1d(request) => {
+            payload("solve.harmonic_spring_1d", request)
+        }
         BenchmarkWorkload::Spring2d(request) => payload("solve.spring_2d", request),
         BenchmarkWorkload::Spring3d(request) => payload("solve.spring_3d", request),
         BenchmarkWorkload::NonlinearSpring1d(request) => {

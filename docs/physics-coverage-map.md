@@ -205,10 +205,18 @@ dynamic candidate is held. Harmonic response entries can use aliases such as
 The solver-side `dynamic_spring_closed_form.rs` regression now keeps
 single-DOF Newmark and harmonic dynamic-stiffness references promotion-ready,
 including load-scaling, near-resonance damping-scaling, and undamped
-free-vibration time-step refinement checks, but those dynamic spring operators
-remain outside the release-gated 38-operator
-`physics-coverage` qualification manifest until the dynamic line is promoted
-into that matrix.
+free-vibration time-step refinement checks. The dedicated `dynamic-response`
+benchmark matrix adds isolated transient-heat, transient-spring, and
+harmonic-spring Engine scale probes, including a passing remote one-million-node
+smoke. Those operators remain outside the release-gated 38-operator
+`physics-coverage` qualification manifest until the dynamic line completes its
+accuracy and qualification evidence.
+
+The electric-conduction quad solver follows the same honest promotion rule. It
+is executable and benchmarked in `extended-physics`, including contact and
+terminal behavior in solver tests, but remains outside `physics-coverage` until
+its accuracy, review, and retained qualification artifacts form a complete
+evidence chain.
 
 Across domains, `transform.compose_quality_objective` combines these
 single-domain quality scores into one weighted multiphysics objective. That

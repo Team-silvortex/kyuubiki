@@ -16,6 +16,7 @@ use crate::models::{
     BenchmarkCase, BenchmarkMemoryStage, BenchmarkReport, BenchmarkResult, BenchmarkWorkload,
     SHARED_PROCESS_RSS_SCOPE,
 };
+use crate::runner_dynamic::run_dynamic_workload;
 use crate::runner_electromagnetic::run_electromagnetic_workload;
 use crate::runner_hotspot::summarize_hotspot;
 use crate::runner_metrics::{aggregate_memory_stage_runs, apply_metrics};
@@ -120,11 +121,13 @@ pub(crate) fn run_case_with_preconditioner(
 
     for _ in 0..repeat {
         let started = Instant::now();
-        let delegated =
-            run_thermal_structural_workload(&case.workload, solver_preconditioner, progress)
-                .or_else(|| {
-                    run_electromagnetic_workload(&case.workload, solver_preconditioner, progress)
-                });
+        let delegated = run_dynamic_workload(&case.workload)
+            .or_else(|| {
+                run_thermal_structural_workload(&case.workload, solver_preconditioner, progress)
+            })
+            .or_else(|| {
+                run_electromagnetic_workload(&case.workload, solver_preconditioner, progress)
+            });
         let outcome = if let Some(outcome) = delegated {
             outcome.map(|metrics| {
                 apply_metrics(

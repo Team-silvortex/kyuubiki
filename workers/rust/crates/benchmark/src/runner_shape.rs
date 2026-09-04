@@ -20,6 +20,11 @@ pub(crate) fn workload_shape(workload: &BenchmarkWorkload) -> (usize, usize, usi
             request.elements.len(),
             request.nodes.len(),
         ),
+        BenchmarkWorkload::TransientHeatBar1d(request) => (
+            request.nodes.len(),
+            request.elements.len(),
+            request.nodes.len(),
+        ),
         BenchmarkWorkload::ElectrostaticBar1d(request) => (
             request.nodes.len(),
             request.elements.len(),
@@ -41,6 +46,16 @@ pub(crate) fn workload_shape(workload: &BenchmarkWorkload) -> (usize, usize, usi
             request.nodes.len(),
         ),
         BenchmarkWorkload::Spring1d(request) => (
+            request.nodes.len(),
+            request.elements.len(),
+            request.nodes.len(),
+        ),
+        BenchmarkWorkload::TransientSpring1d(request) => (
+            request.nodes.len(),
+            request.elements.len(),
+            request.nodes.len(),
+        ),
+        BenchmarkWorkload::HarmonicSpring1d(request) => (
             request.nodes.len(),
             request.elements.len(),
             request.nodes.len(),
