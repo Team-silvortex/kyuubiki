@@ -3,19 +3,14 @@ use kyuubiki_protocol::{
     ThermalBar1dNodeResult,
 };
 
-use crate::chain_tridiagonal::{is_indexed_chain, solve_with_prescribed};
+use crate::chain_tridiagonal::solve_path_with_prescribed;
 
 pub(crate) fn solve_thermal_bar_1d_chain(
     request: &SolveThermalBar1dRequest,
 ) -> Option<Result<SolveThermalBar1dResult, String>> {
-    if !is_single_span_chain(request) {
-        return None;
-    }
-
-    Some(
-        solve_chain_displacements(request)
-            .map(|displacements| build_thermal_bar_1d_result(request, displacements)),
-    )
+    solve_path_displacements(request).map(|result| {
+        result.map(|displacements| build_thermal_bar_1d_result(request, displacements))
+    })
 }
 
 pub(crate) fn build_thermal_bar_1d_result(
@@ -81,21 +76,10 @@ pub(crate) fn build_thermal_bar_1d_result(
     }
 }
 
-fn is_single_span_chain(request: &SolveThermalBar1dRequest) -> bool {
-    is_indexed_chain(
-        request.nodes.len(),
-        request
-            .elements
-            .iter()
-            .map(|element| (element.node_i, element.node_j)),
-    )
-}
-
-fn solve_chain_displacements(request: &SolveThermalBar1dRequest) -> Result<Vec<f64>, String> {
+fn solve_path_displacements(
+    request: &SolveThermalBar1dRequest,
+) -> Option<Result<Vec<f64>, String>> {
     let node_count = request.nodes.len();
-    let mut diagonal = vec![0.0; node_count];
-    let mut lower = vec![0.0; node_count.saturating_sub(1)];
-    let mut upper = vec![0.0; node_count.saturating_sub(1)];
     let mut force = request
         .nodes
         .iter()
@@ -105,19 +89,12 @@ fn solve_chain_displacements(request: &SolveThermalBar1dRequest) -> Result<Vec<f
     for element in &request.elements {
         let node_i = &request.nodes[element.node_i];
         let node_j = &request.nodes[element.node_j];
-        let length = (node_j.x - node_i.x).abs();
-        let stiffness = element.youngs_modulus * element.area / length;
         let average_temperature_delta = 0.5 * (node_i.temperature_delta + node_j.temperature_delta);
         let thermal_force = element.youngs_modulus
             * element.area
             * element.thermal_expansion
             * average_temperature_delta;
 
-        diagonal[element.node_i] += stiffness;
-        diagonal[element.node_j] += stiffness;
-        let left = element.node_i.min(element.node_j);
-        lower[left] -= stiffness;
-        upper[left] -= stiffness;
         force[element.node_i] -= thermal_force;
         force[element.node_j] += thermal_force;
     }
@@ -128,7 +105,18 @@ fn solve_chain_displacements(request: &SolveThermalBar1dRequest) -> Result<Vec<f
         .enumerate()
         .filter_map(|(index, node)| node.fix_x.then_some((index, 0.0)))
         .collect::<Vec<_>>();
-    solve_with_prescribed(&diagonal, &lower, &upper, &force, &prescribed)
+    solve_path_with_prescribed(
+        node_count,
+        &request.elements,
+        |element| (element.node_i, element.node_j),
+        |element| {
+            let length = (request.nodes[element.node_j].x - request.nodes[element.node_i].x).abs();
+            let stiffness = element.youngs_modulus * element.area / length;
+            Ok([[stiffness, -stiffness], [-stiffness, stiffness]])
+        },
+        &force,
+        &prescribed,
+    )
 }
 
 fn build_element_result(

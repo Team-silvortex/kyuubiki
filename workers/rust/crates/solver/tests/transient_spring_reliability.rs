@@ -25,6 +25,25 @@ fn transient_spring_1d_rejects_non_finite_time_step_and_node_state() {
 }
 
 #[test]
+fn transient_spring_1d_samples_history_without_losing_peak_statistics() {
+    let request = transient_spring_request();
+    let full = solve_transient_spring_1d(&request).expect("full history should solve");
+    let mut sampled_request = request;
+    sampled_request.history_stride = Some(6);
+    let sampled =
+        solve_transient_spring_1d(&sampled_request).expect("sampled history should solve");
+
+    let recorded_steps = sampled
+        .history
+        .iter()
+        .map(|frame| frame.step)
+        .collect::<Vec<_>>();
+    assert_eq!(recorded_steps, vec![0, 6, 10]);
+    assert_eq!(sampled.max_displacement, full.max_displacement);
+    assert_eq!(sampled.max_velocity, full.max_velocity);
+}
+
+#[test]
 fn transient_spring_1d_rejects_invalid_element_connectivity_and_materials() {
     let mut request = transient_spring_request();
     request.elements[0].node_j = 9;
@@ -113,6 +132,7 @@ fn transient_spring_1d_handles_a_large_sparse_chain() {
         elements,
         time_step: 0.01,
         steps: 2,
+        history_stride: None,
     })
     .expect("large transient chain should stay on the sparse prepared path");
 
@@ -136,6 +156,7 @@ fn transient_spring_request() -> SolveTransientSpring1dRequest {
         }],
         time_step: 0.01,
         steps: 10,
+        history_stride: None,
     }
 }
 

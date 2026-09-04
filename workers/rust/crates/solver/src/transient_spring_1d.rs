@@ -1,5 +1,6 @@
 use crate::dynamic_spring_1d_validation::validate_transient_request;
 use crate::linear_algebra::{PreparedSpdSolver, SparseMatrix, add_at, reduce_sparse_system};
+use crate::transient_history::TransientHistoryPlan;
 use kyuubiki_protocol::{
     SolveTransientSpring1dRequest, SolveTransientSpring1dResult, TransientSpring1dElementInput,
     TransientSpring1dElementResult, TransientSpring1dNodeResult, TransientSpring1dStepResult,
@@ -39,6 +40,13 @@ pub fn solve_transient_spring_1d(
     request: &SolveTransientSpring1dRequest,
 ) -> Result<SolveTransientSpring1dResult, String> {
     validate_transient_request(request)?;
+    let history_plan = TransientHistoryPlan::new(
+        "transient spring",
+        request.nodes.len(),
+        request.steps,
+        request.history_stride,
+        2,
+    )?;
     let coefficients = newmark_coefficients(request.time_step)?;
     let count = request.nodes.len();
     let mass = request
@@ -91,15 +99,13 @@ pub fn solve_transient_spring_1d(
         solver: &solver,
     };
 
-    let history_capacity = request
-        .steps
-        .checked_add(1)
-        .ok_or_else(|| "transient spring history size overflows usize".to_string())?;
     let mut history = Vec::new();
     history
-        .try_reserve_exact(history_capacity)
+        .try_reserve_exact(history_plan.frame_count())
         .map_err(|_| "transient spring history allocation is too large".to_string())?;
     history.push(step_result(0, 0.0, request, &u, &v)?);
+    let mut max_displacement = maximum_absolute(&u);
+    let mut max_velocity = maximum_absolute(&v);
     for step in 1..=request.steps {
         (u, v, a) = newmark_step(
             &system,
@@ -109,13 +115,17 @@ pub fn solve_transient_spring_1d(
                 acceleration: &a,
             },
         )?;
-        history.push(step_result(
-            step,
-            checked_time(step, request.time_step)?,
-            request,
-            &u,
-            &v,
-        )?);
+        max_displacement = max_displacement.max(maximum_absolute(&u));
+        max_velocity = max_velocity.max(maximum_absolute(&v));
+        if history_plan.captures(step, request.steps) {
+            history.push(step_result(
+                step,
+                checked_time(step, request.time_step)?,
+                request,
+                &u,
+                &v,
+            )?);
+        }
     }
 
     let nodes = final_nodes(request, &u, &v, &a);
@@ -125,14 +135,8 @@ pub fn solve_transient_spring_1d(
     Ok(SolveTransientSpring1dResult {
         input: request.clone(),
         final_time,
-        max_displacement: history
-            .iter()
-            .map(|step| step.max_displacement)
-            .fold(0.0_f64, f64::max),
-        max_velocity: history
-            .iter()
-            .map(|step| step.max_velocity)
-            .fold(0.0_f64, f64::max),
+        max_displacement,
+        max_velocity,
         max_force: elements
             .iter()
             .map(|element| (element.spring_force + element.damping_force).abs())
@@ -383,13 +387,17 @@ fn step_result(
     Ok(TransientSpring1dStepResult {
         step,
         time,
-        max_displacement: u.iter().map(|value| value.abs()).fold(0.0, f64::max),
-        max_velocity: v.iter().map(|value| value.abs()).fold(0.0, f64::max),
+        max_displacement: maximum_absolute(u),
+        max_velocity: maximum_absolute(v),
         kinetic_energy,
         strain_energy,
         displacements: u.to_vec(),
         velocities: v.to_vec(),
     })
+}
+
+fn maximum_absolute(values: &[f64]) -> f64 {
+    values.iter().map(|value| value.abs()).fold(0.0, f64::max)
 }
 
 fn finite_sum(values: impl IntoIterator<Item = f64>, label: &str) -> Result<f64, String> {

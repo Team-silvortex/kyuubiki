@@ -29,6 +29,7 @@ fn solves_transient_heat_bar_1d_with_implicit_steps() {
         elements: vec![transient_element("e0", 0, 1), transient_element("e1", 1, 2)],
         time_step: 0.1,
         steps: 4,
+        history_stride: None,
     };
 
     let result = solve_transient_heat_bar_1d(&request).expect("transient heat bar should solve");
@@ -74,6 +75,7 @@ fn solves_transient_spring_1d_with_newmark_steps() {
         }],
         time_step: 0.01,
         steps: 10,
+        history_stride: None,
     };
 
     let result = solve_transient_spring_1d(&request).expect("transient spring chain should solve");

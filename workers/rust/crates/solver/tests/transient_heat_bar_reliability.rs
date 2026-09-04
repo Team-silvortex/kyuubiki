@@ -25,6 +25,24 @@ fn transient_heat_bar_1d_rejects_non_finite_time_step_and_node_values() {
 }
 
 #[test]
+fn transient_heat_bar_1d_samples_history_and_rejects_zero_stride() {
+    let mut request = transient_heat_request();
+    request.steps = 5;
+    request.history_stride = Some(2);
+    let result = solve_transient_heat_bar_1d(&request).expect("sampled history should solve");
+    let recorded_steps = result
+        .history
+        .iter()
+        .map(|frame| frame.step)
+        .collect::<Vec<_>>();
+    assert_eq!(recorded_steps, vec![0, 2, 4, 5]);
+
+    request.history_stride = Some(0);
+    let error = solve_transient_heat_bar_1d(&request).expect_err("zero stride should fail");
+    assert!(error.contains("history_stride must be positive"));
+}
+
+#[test]
 fn transient_heat_bar_1d_rejects_invalid_element_geometry_and_materials() {
     let mut request = transient_heat_request();
     request.nodes[1].x = request.nodes[0].x;
@@ -99,23 +117,42 @@ fn transient_heat_bar_1d_rejects_non_finite_derived_coefficients() {
 #[test]
 fn transient_heat_bar_1d_handles_a_large_prepared_chain() {
     const NODE_COUNT: usize = 10_000;
+    let path = (0..NODE_COUNT)
+        .step_by(2)
+        .chain((1..NODE_COUNT).step_by(2))
+        .collect::<Vec<_>>();
+    let mut positions = vec![0_usize; NODE_COUNT];
+    for (position, &node_index) in path.iter().enumerate() {
+        positions[node_index] = position;
+    }
     let nodes = (0..NODE_COUNT)
         .map(|index| {
+            let position = positions[index];
+            let fixed = position == 0 || position == NODE_COUNT / 2 || position + 1 == NODE_COUNT;
+            let temperature = if position == 0 {
+                100.0
+            } else if position == NODE_COUNT / 2 {
+                60.0
+            } else {
+                20.0
+            };
             node(
                 &format!("n{index}"),
-                index as f64,
-                index == 0 || index + 1 == NODE_COUNT,
-                if index == 0 { 100.0 } else { 20.0 },
+                position as f64,
+                fixed,
+                temperature,
                 0.0,
             )
         })
         .collect();
-    let elements = (0..NODE_COUNT - 1)
-        .map(|index| {
+    let elements = path
+        .windows(2)
+        .enumerate()
+        .map(|(index, edge)| {
             element(
                 &format!("e{index}"),
-                index,
-                index + 1,
+                edge[0],
+                edge[1],
                 0.01,
                 45.0,
                 7800.0,
@@ -128,11 +165,15 @@ fn transient_heat_bar_1d_handles_a_large_prepared_chain() {
         elements,
         time_step: 0.1,
         steps: 2,
+        history_stride: None,
     })
     .expect("large transient heat chain should reuse its prepared system");
 
     assert_eq!(result.nodes.len(), NODE_COUNT);
     assert_eq!(result.history.len(), 3);
+    assert_eq!(result.nodes[path[0]].temperature, 100.0);
+    assert_eq!(result.nodes[path[NODE_COUNT / 2]].temperature, 60.0);
+    assert_eq!(result.nodes[*path.last().unwrap()].temperature, 20.0);
     assert!(result.nodes[NODE_COUNT / 2].temperature.is_finite());
 }
 
@@ -149,6 +190,7 @@ fn transient_heat_request() -> SolveTransientHeatBar1dRequest {
         ],
         time_step: 0.1,
         steps: 4,
+        history_stride: None,
     }
 }
 

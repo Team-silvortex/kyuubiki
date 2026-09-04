@@ -446,12 +446,24 @@ harmonic response scope. The transient branch checks Newmark single-step
 response, load scaling, and undamped time-step refinement; every retained
 branch also re-derives history maxima, kinetic energy, strain energy, final
 node state, node id/coordinate passthrough, initial-state history fields,
-contiguous history step numbering, and final spring/damping force diagnostics.
+contiguous default history step numbering, and final spring/damping force
+diagnostics. The optional positive `history_stride` control keeps the initial
+state, every selected interval, and the final state while peak displacement and
+velocity remain evaluated across every computed step. A shared scalar-sample
+budget rejects oversized retained histories before allocation.
 The harmonic branch checks dynamic-stiffness amplitudes, damping response,
 retained input frequency order, harmonic node id passthrough, fixed-node
 zero-amplitude phase, global maxima, peak frequency,
 per-frequency maxima, and velocity/acceleration amplitudes from the
-frequency result fields.
+frequency result fields. Its reduced free-DOF topology is analyzed once per
+frequency sweep. Numbering-independent path forests use a row-scaled,
+partial-pivoted complex tridiagonal solve with linear storage; this includes
+segments split by interior constraints and isolated reduced DOFs. A retained
+10,000-node shuffled-topology regression verifies that route, while a leading
+zero dynamic diagonal regression verifies that a nonsingular undamped system
+is pivoted rather than falsely rejected. True cyclic or branched reduced
+networks keep the pivoted dense fallback, capped at 512 free DOFs before
+allocation.
 
 The CFD-facing Stokes operators remain `screening_only` in scope, but the
 `screening-cfd-boundary` evidence kit is now qualified for that boundary: the
@@ -473,8 +485,10 @@ external-reference or benchmark evidence.
 
 The transient heat 1D bar is now retained for the single-free-node implicit
 Euler lumped-capacity scope. Its closed-form regression checks each history
-step, contiguous step numbering, final time, final node temperatures, element
-length from input coordinates, final heat flux, and thermal energy.
+step, contiguous default step numbering, final time, final node temperatures,
+element length from input coordinates, final heat flux, and thermal energy.
+It shares the positive `history_stride`, mandatory final-frame, and bounded
+history-allocation contract used by transient spring analysis.
 Every retained branch also re-derives history maxima and energies from lumped
 capacity, checks that the last history frame matches final summary fields, and
 recomputes final element average temperature, gradient, and Fourier heat flux.
@@ -533,12 +547,14 @@ element gradient, diffusive flux, and total flux while keeping Peclet and
 advective flux at zero. This is a pure-diffusion refinement and conservation
 proof point; advection-dominant convergence remains separately scoped.
 
-For continuous, index-adjacent 1D chains, the heat, electrostatic,
-magnetostatic, advection-diffusion, and acoustic bar solvers use a constrained
-tridiagonal direct path. Branched, reordered, or otherwise non-chain inputs
-remain on their established sparse or dense fallback paths. This keeps the
-specialization topology-scoped while making million-node chain studies bounded
-by linear storage and solve work rather than iterative convergence.
+For simple 1D path topologies independent of node numbering, the heat,
+electrostatic, magnetostatic, thermal, advection-diffusion, and acoustic bar
+solvers use constrained tridiagonal direct paths. Interior prescribed values
+may split the reduced matrix into a path forest without losing that sparse
+route. Truly branched or cyclic inputs remain on their established bounded
+sparse or dense fallback paths. This keeps the specialization topology-scoped
+while making million-node chain studies bounded by linear storage and solve
+work rather than iterative convergence.
 
 The magnetostatic 1D bar is now qualified for the retained linear single-core
 permeance scope. Its closed-form evidence checks magnetic potential, field

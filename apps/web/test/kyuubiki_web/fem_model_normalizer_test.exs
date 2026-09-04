@@ -8,12 +8,14 @@ defmodule KyuubikiWeb.FemModelNormalizerTest do
       "nodes" => [%{"id" => "fixed"}, %{"id" => "tip"}],
       "elements" => [%{"id" => "s0", "node_i" => 0, "node_j" => 1}],
       "time_step" => 0.01,
-      "steps" => 10
+      "steps" => 10,
+      "history_stride" => 4
     }
 
     assert {:ok, normalized} = FemModelNormalizer.normalize_transient_spring_1d(params)
     assert normalized["time_step"] == 0.01
     assert normalized["steps"] == 10
+    assert normalized["history_stride"] == 4
   end
 
   test "preserves harmonic frequency sweep controls" do

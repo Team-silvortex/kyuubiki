@@ -119,30 +119,176 @@ pub(crate) fn solve_tridiagonal(
     PreparedTridiagonal::factor(diagonal, lower, upper)?.solve(rhs)
 }
 
-pub(crate) fn is_indexed_chain(
+pub(crate) fn solve_path_with_prescribed<Element>(
     node_count: usize,
+    elements: &[Element],
+    endpoints: impl Fn(&Element) -> (usize, usize),
+    local_matrix: impl Fn(&Element) -> Result<[[f64; 2]; 2], String>,
+    rhs: &[f64],
+    prescribed: &[(usize, f64)],
+) -> Option<Result<Vec<f64>, String>> {
+    let order = path_order(node_count, elements.len(), elements.iter().map(&endpoints))?;
+    Some(solve_ordered_path(
+        node_count,
+        elements,
+        &endpoints,
+        local_matrix,
+        rhs,
+        prescribed,
+        &order,
+    ))
+}
+
+pub(crate) fn path_order(
+    node_count: usize,
+    edge_count: usize,
     edges: impl IntoIterator<Item = (usize, usize)>,
-) -> bool {
-    if node_count < 2 {
+) -> Option<Vec<usize>> {
+    if node_count < 2 || edge_count != node_count - 1 {
+        return None;
+    }
+
+    path_forest_order(node_count, edge_count, edges)
+}
+
+pub(crate) fn path_forest_order(
+    node_count: usize,
+    edge_count: usize,
+    edges: impl IntoIterator<Item = (usize, usize)>,
+) -> Option<Vec<usize>> {
+    const MISSING: usize = usize::MAX;
+
+    if node_count == 0 {
+        return (edge_count == 0).then(Vec::new);
+    }
+    if edge_count >= node_count {
+        return None;
+    }
+
+    let mut neighbors = vec![[MISSING; 2]; node_count];
+    let mut observed_edges = 0_usize;
+    for (first, second) in edges {
+        observed_edges = observed_edges.checked_add(1)?;
+        if first >= node_count || second >= node_count || first == second {
+            return None;
+        }
+        if !add_neighbor(&mut neighbors[first], second)
+            || !add_neighbor(&mut neighbors[second], first)
+        {
+            return None;
+        }
+    }
+    if observed_edges != edge_count {
+        return None;
+    }
+
+    let mut order = Vec::with_capacity(node_count);
+    let mut visited = vec![false; node_count];
+    for start in 0..node_count {
+        if visited[start] || neighbors[start][1] != MISSING {
+            continue;
+        }
+
+        let mut previous = MISSING;
+        let mut current = start;
+        loop {
+            if visited[current] {
+                return None;
+            }
+            visited[current] = true;
+            order.push(current);
+
+            let next = neighbors[current]
+                .into_iter()
+                .filter(|&neighbor| neighbor != MISSING)
+                .find(|&neighbor| neighbor != previous);
+            let Some(next) = next else {
+                break;
+            };
+            previous = current;
+            current = next;
+        }
+    }
+
+    (order.len() == node_count).then_some(order)
+}
+
+fn add_neighbor(neighbors: &mut [usize; 2], neighbor: usize) -> bool {
+    const MISSING: usize = usize::MAX;
+
+    if neighbors.contains(&neighbor) {
         return false;
     }
+    if neighbors[0] == MISSING {
+        neighbors[0] = neighbor;
+        true
+    } else if neighbors[1] == MISSING {
+        neighbors[1] = neighbor;
+        true
+    } else {
+        false
+    }
+}
 
-    let mut spans = vec![false; node_count - 1];
-    let mut edge_count = 0;
-    for (first, second) in edges {
-        let (left, right) = if first < second {
-            (first, second)
-        } else {
-            (second, first)
-        };
-        if right != left + 1 || left >= spans.len() || spans[left] {
-            return false;
-        }
-        spans[left] = true;
-        edge_count += 1;
+fn solve_ordered_path<Element>(
+    node_count: usize,
+    elements: &[Element],
+    endpoints: &impl Fn(&Element) -> (usize, usize),
+    local_matrix: impl Fn(&Element) -> Result<[[f64; 2]; 2], String>,
+    rhs: &[f64],
+    prescribed: &[(usize, f64)],
+    order: &[usize],
+) -> Result<Vec<f64>, String> {
+    if rhs.len() != node_count {
+        return Err("1d path solver dimensions must match".to_string());
     }
 
-    edge_count == spans.len() && spans.into_iter().all(|present| present)
+    let mut position = vec![0_usize; node_count];
+    for (path_index, &node_index) in order.iter().enumerate() {
+        position[node_index] = path_index;
+    }
+
+    let mut diagonal = vec![0.0; node_count];
+    let mut lower = vec![0.0; node_count - 1];
+    let mut upper = vec![0.0; node_count - 1];
+    for element in elements {
+        let (node_i, node_j) = endpoints(element);
+        let local = local_matrix(element)?;
+        let map = [position[node_i], position[node_j]];
+        if map[0].abs_diff(map[1]) != 1 {
+            return Err("1d path solver received inconsistent topology".to_string());
+        }
+        for row in 0..2 {
+            for column in 0..2 {
+                let row_index = map[row];
+                let column_index = map[column];
+                if row_index == column_index {
+                    diagonal[row_index] += local[row][column];
+                } else if column_index == row_index + 1 {
+                    upper[row_index] += local[row][column];
+                } else {
+                    lower[column_index] += local[row][column];
+                }
+            }
+        }
+    }
+
+    let ordered_rhs = order.iter().map(|&node| rhs[node]).collect::<Vec<_>>();
+    let mut ordered_prescribed = Vec::with_capacity(prescribed.len());
+    for &(node, value) in prescribed {
+        if node >= node_count {
+            return Err("1d path solver received an out-of-range prescribed value".to_string());
+        }
+        ordered_prescribed.push((position[node], value));
+    }
+    let ordered_values =
+        solve_with_prescribed(&diagonal, &lower, &upper, &ordered_rhs, &ordered_prescribed)?;
+
+    let mut values = vec![0.0; node_count];
+    for (path_index, &node_index) in order.iter().enumerate() {
+        values[node_index] = ordered_values[path_index];
+    }
+    Ok(values)
 }
 
 pub(crate) fn solve_with_prescribed(
@@ -346,12 +492,49 @@ fn backward_error_tolerance(size: usize) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_indexed_chain, solve_tridiagonal, solve_with_prescribed};
+    use super::{
+        path_forest_order, path_order, solve_path_with_prescribed, solve_tridiagonal,
+        solve_with_prescribed,
+    };
 
     #[test]
-    fn recognizes_a_contiguous_chain_only_once_per_span() {
-        assert!(is_indexed_chain(4, [(0, 1), (2, 1), (2, 3)]));
-        assert!(!is_indexed_chain(4, [(0, 1), (1, 2), (1, 2)]));
+    fn recognizes_a_path_independent_of_node_numbering() {
+        assert_eq!(
+            path_order(4, 3, [(2, 1), (0, 2), (1, 3)]),
+            Some(vec![0, 2, 1, 3])
+        );
+        assert_eq!(path_order(4, 3, [(0, 1), (1, 2), (1, 3)]), None);
+        assert_eq!(path_order(4, 3, [(0, 1), (1, 0), (2, 3)]), None);
+    }
+
+    #[test]
+    fn recognizes_disconnected_path_segments_and_isolated_nodes() {
+        assert_eq!(
+            path_forest_order(6, 3, [(0, 3), (3, 1), (2, 5)]),
+            Some(vec![0, 3, 1, 2, 5, 4])
+        );
+        assert_eq!(path_forest_order(4, 3, [(0, 1), (1, 2), (2, 0)]), None);
+        assert_eq!(path_forest_order(4, 3, [(0, 1), (1, 2), (1, 3)]), None);
+    }
+
+    #[test]
+    fn restores_node_order_and_preserves_asymmetric_element_orientation() {
+        let elements = [
+            (2, 1, [[5.0, -2.0], [-4.0, 6.0]]),
+            (0, 2, [[2.0, -1.0], [-3.0, 4.0]]),
+        ];
+        let values = solve_path_with_prescribed(
+            3,
+            &elements,
+            |element| (element.0, element.1),
+            |element| Ok(element.2),
+            &[0.0, 0.0, 0.0],
+            &[(0, 1.0), (1, 3.0)],
+        )
+        .expect("permuted topology should be a path")
+        .expect("permuted path should solve");
+
+        assert_eq!(values, vec![1.0, 3.0, 1.0]);
     }
 
     #[test]

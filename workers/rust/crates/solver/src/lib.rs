@@ -112,6 +112,7 @@ mod torsion_1d;
 mod torsion_1d_validation;
 mod transient_heat_bar_1d;
 mod transient_heat_bar_1d_validation;
+mod transient_history;
 mod transient_spring_1d;
 mod transport_bar_1d;
 mod transport_bar_1d_validation;

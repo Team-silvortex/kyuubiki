@@ -295,6 +295,7 @@ _PAYLOADS = {
         **_DYNAMIC_SPRING_1D,
         "time_step": 0.01,
         "steps": 10,
+        "history_stride": 2,
     },
     "harmonic_spring_1d": {
         **_DYNAMIC_SPRING_1D,
@@ -418,6 +419,7 @@ _PAYLOADS = {
         ],
         "time_step": 0.1,
         "steps": 4,
+        "history_stride": 2,
     },
     "acoustic_bar_1d": {
         "frequency_hz": 100.0,

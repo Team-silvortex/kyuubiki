@@ -35,6 +35,8 @@ class SolverFixturesTest(unittest.TestCase):
 
         self.assertIn("bar_1d", payloads)
         self.assertIn("nodes", payloads["spring_3d"])
+        self.assertEqual(payloads["transient_spring_1d"]["history_stride"], 2)
+        self.assertEqual(payloads["transient_heat_bar_1d"]["history_stride"], 2)
         self.assertGreaterEqual(len(payloads), 40)
 
     def test_material_frame_fixture_exercises_the_fiber_section_contract(self) -> None:

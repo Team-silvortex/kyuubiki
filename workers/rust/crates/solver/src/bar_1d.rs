@@ -2,7 +2,7 @@ use crate::bar_1d_validation::{
     validate_electrostatic_bar_1d_request, validate_heat_bar_1d_request, validate_request,
     validate_thermal_bar_1d_request,
 };
-use crate::chain_tridiagonal::{is_indexed_chain, solve_with_prescribed};
+use crate::chain_tridiagonal::solve_path_with_prescribed;
 use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system, reduce_sparse_system_with_prescribed,
     solve_spd_system,
@@ -301,39 +301,27 @@ fn solve_heat_bar_1d_temperatures(request: &SolveHeatBar1dRequest) -> Result<Vec
         .enumerate()
         .filter_map(|(index, node)| node.fix_temperature.then_some((index, node.temperature)))
         .collect::<Vec<_>>();
-    if is_indexed_chain(
-        node_count,
-        request
-            .elements
-            .iter()
-            .map(|element| (element.node_i, element.node_j)),
-    ) {
-        let mut diagonal = vec![0.0; node_count];
-        let mut lower = vec![0.0; node_count - 1];
-        let mut upper = vec![0.0; node_count - 1];
-        for element in &request.elements {
-            let length = (request.nodes[element.node_j].x - request.nodes[element.node_i].x).abs();
-            let conductance = element.conductivity * element.area / length;
-            let left = element.node_i.min(element.node_j);
-            diagonal[element.node_i] += conductance;
-            diagonal[element.node_j] += conductance;
-            lower[left] -= conductance;
-            upper[left] -= conductance;
-        }
-        let rhs = request
-            .nodes
-            .iter()
-            .map(|node| node.heat_load)
-            .collect::<Vec<_>>();
-        return solve_with_prescribed(&diagonal, &lower, &upper, &rhs, &prescribed);
-    }
-
-    let mut global_stiffness = SparseMatrix::new(node_count);
-    let heat_vector = request
+    let rhs = request
         .nodes
         .iter()
         .map(|node| node.heat_load)
         .collect::<Vec<_>>();
+    if let Some(result) = solve_path_with_prescribed(
+        node_count,
+        &request.elements,
+        |element| (element.node_i, element.node_j),
+        |element| {
+            let length = (request.nodes[element.node_j].x - request.nodes[element.node_i].x).abs();
+            let conductance = element.conductivity * element.area / length;
+            Ok([[conductance, -conductance], [-conductance, conductance]])
+        },
+        &rhs,
+        &prescribed,
+    ) {
+        return result;
+    }
+
+    let mut global_stiffness = SparseMatrix::new(node_count);
     for element in &request.elements {
         let length = (request.nodes[element.node_j].x - request.nodes[element.node_i].x).abs();
         let conductance = element.conductivity * element.area / length;
@@ -347,7 +335,7 @@ fn solve_heat_bar_1d_temperatures(request: &SolveHeatBar1dRequest) -> Result<Vec
         }
     }
     let (reduced_stiffness, reduced_rhs, free) =
-        reduce_sparse_system_with_prescribed(&global_stiffness, &heat_vector, &prescribed);
+        reduce_sparse_system_with_prescribed(&global_stiffness, &rhs, &prescribed);
     let reduced_values = solve_spd_system(&reduced_stiffness, &reduced_rhs)?;
     expand_prescribed_values(node_count, &prescribed, &free, reduced_values)
 }
@@ -362,39 +350,27 @@ fn solve_electrostatic_bar_1d_potentials(
         .enumerate()
         .filter_map(|(index, node)| node.fix_potential.then_some((index, node.potential)))
         .collect::<Vec<_>>();
-    if is_indexed_chain(
-        node_count,
-        request
-            .elements
-            .iter()
-            .map(|element| (element.node_i, element.node_j)),
-    ) {
-        let mut diagonal = vec![0.0; node_count];
-        let mut lower = vec![0.0; node_count - 1];
-        let mut upper = vec![0.0; node_count - 1];
-        for element in &request.elements {
-            let length = (request.nodes[element.node_j].x - request.nodes[element.node_i].x).abs();
-            let conductance = element.permittivity * element.area / length;
-            let left = element.node_i.min(element.node_j);
-            diagonal[element.node_i] += conductance;
-            diagonal[element.node_j] += conductance;
-            lower[left] -= conductance;
-            upper[left] -= conductance;
-        }
-        let rhs = request
-            .nodes
-            .iter()
-            .map(|node| node.charge_density)
-            .collect::<Vec<_>>();
-        return solve_with_prescribed(&diagonal, &lower, &upper, &rhs, &prescribed);
-    }
-
-    let mut global_stiffness = SparseMatrix::new(node_count);
-    let source_vector = request
+    let rhs = request
         .nodes
         .iter()
         .map(|node| node.charge_density)
         .collect::<Vec<_>>();
+    if let Some(result) = solve_path_with_prescribed(
+        node_count,
+        &request.elements,
+        |element| (element.node_i, element.node_j),
+        |element| {
+            let length = (request.nodes[element.node_j].x - request.nodes[element.node_i].x).abs();
+            let conductance = element.permittivity * element.area / length;
+            Ok([[conductance, -conductance], [-conductance, conductance]])
+        },
+        &rhs,
+        &prescribed,
+    ) {
+        return result;
+    }
+
+    let mut global_stiffness = SparseMatrix::new(node_count);
     for element in &request.elements {
         let length = (request.nodes[element.node_j].x - request.nodes[element.node_i].x).abs();
         let conductance = element.permittivity * element.area / length;
@@ -408,7 +384,7 @@ fn solve_electrostatic_bar_1d_potentials(
         }
     }
     let (reduced_stiffness, reduced_rhs, free) =
-        reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed);
+        reduce_sparse_system_with_prescribed(&global_stiffness, &rhs, &prescribed);
     let reduced_values = solve_spd_system(&reduced_stiffness, &reduced_rhs)?;
     expand_prescribed_values(node_count, &prescribed, &free, reduced_values)
 }

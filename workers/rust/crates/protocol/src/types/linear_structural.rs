@@ -112,6 +112,8 @@ pub struct SolveTransientSpring1dRequest {
     pub elements: Vec<TransientSpring1dElementInput>,
     pub time_step: f64,
     pub steps: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history_stride: Option<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -100,8 +100,104 @@ fn harmonic_spring_1d_reports_an_unrestrained_static_mode() {
 }
 
 #[test]
-fn harmonic_spring_1d_rejects_unsafe_dense_allocation_before_solving() {
-    let node_count = 2_050;
+fn harmonic_spring_1d_pivots_when_the_leading_dynamic_diagonal_is_zero() {
+    let request = SolveHarmonicSpring1dRequest {
+        nodes: vec![
+            node("fixed", 0.0, true, 0.0, 1.0, 0.0, 0.0),
+            node("middle", 1.0, false, 0.0, 1.0, 0.0, 0.0),
+            node("tip", 2.0, false, 1.0, 1.0, 0.0, 0.0),
+        ],
+        elements: vec![
+            TransientSpring1dElementInput {
+                id: "s0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                stiffness: 1.0,
+                damping: 0.0,
+            },
+            TransientSpring1dElementInput {
+                id: "s1".to_string(),
+                node_i: 1,
+                node_j: 2,
+                stiffness: 1.0,
+                damping: 0.0,
+            },
+        ],
+        frequencies_hz: vec![2.0_f64.sqrt() / (2.0 * std::f64::consts::PI)],
+    };
+
+    let result = solve_harmonic_spring_1d(&request)
+        .expect("a nonsingular system with a zero leading diagonal should pivot");
+    assert_relative(result.frequencies[0].nodes[1].displacement_amplitude, 1.0);
+    assert!(result.frequencies[0].nodes[2].displacement_amplitude < 1.0e-12);
+}
+
+#[test]
+fn harmonic_spring_1d_solves_a_large_shuffled_path_forest() {
+    let node_count = 10_000;
+    let order = (0..node_count)
+        .step_by(2)
+        .chain((1..node_count).step_by(2))
+        .collect::<Vec<_>>();
+    let mut coordinate = vec![0.0; node_count];
+    for (position, &node_index) in order.iter().enumerate() {
+        coordinate[node_index] = position as f64;
+    }
+    let fixed = [order[0], order[node_count / 2]];
+    let request = SolveHarmonicSpring1dRequest {
+        nodes: (0..node_count)
+            .map(|index| {
+                node(
+                    &format!("n{index}"),
+                    coordinate[index],
+                    fixed.contains(&index),
+                    (index == order[node_count - 1]) as u8 as f64,
+                    1.0,
+                    0.0,
+                    0.0,
+                )
+            })
+            .collect(),
+        elements: order
+            .windows(2)
+            .enumerate()
+            .map(|(index, endpoints)| TransientSpring1dElementInput {
+                id: format!("s{index}"),
+                node_i: endpoints[0],
+                node_j: endpoints[1],
+                stiffness: 100.0,
+                damping: 0.5,
+            })
+            .collect(),
+        frequencies_hz: vec![1.0],
+    };
+
+    let result = solve_harmonic_spring_1d(&request)
+        .expect("large numbering-independent path forest should use the linear-memory solver");
+    assert_eq!(result.frequencies[0].nodes.len(), node_count);
+    assert_eq!(result.frequencies[0].elements.len(), node_count - 1);
+    assert!(result.max_displacement.is_finite());
+}
+
+#[test]
+fn harmonic_spring_1d_rejects_an_oversized_non_path_network_before_allocation() {
+    let node_count = 514;
+    let mut elements = (0..node_count - 1)
+        .map(|index| TransientSpring1dElementInput {
+            id: format!("s{index}"),
+            node_i: index,
+            node_j: index + 1,
+            stiffness: 1.0,
+            damping: 0.0,
+        })
+        .collect::<Vec<_>>();
+    elements.push(TransientSpring1dElementInput {
+        id: "branch".to_string(),
+        node_i: 1,
+        node_j: 3,
+        stiffness: 1.0,
+        damping: 0.0,
+    });
     let request = SolveHarmonicSpring1dRequest {
         nodes: (0..node_count)
             .map(|index| {
@@ -116,22 +212,14 @@ fn harmonic_spring_1d_rejects_unsafe_dense_allocation_before_solving() {
                 )
             })
             .collect(),
-        elements: (0..node_count - 1)
-            .map(|index| TransientSpring1dElementInput {
-                id: format!("s{index}"),
-                node_i: index,
-                node_j: index + 1,
-                stiffness: 1.0,
-                damping: 0.0,
-            })
-            .collect(),
+        elements,
         frequencies_hz: vec![1.0],
     };
 
     let error = solve_harmonic_spring_1d(&request)
-        .expect_err("oversized dense harmonic system should be rejected before allocation");
-    assert!(error.contains("2049 free degrees of freedom"));
-    assert!(error.contains("supports at most 2048"));
+        .expect_err("oversized non-path system should be rejected before dense allocation");
+    assert!(error.contains("non-path network has 513 free degrees of freedom"));
+    assert!(error.contains("supports at most 512"));
 }
 
 fn harmonic_spring_request() -> SolveHarmonicSpring1dRequest {

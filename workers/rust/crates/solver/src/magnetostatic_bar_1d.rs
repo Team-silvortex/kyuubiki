@@ -1,4 +1,4 @@
-use crate::chain_tridiagonal::{is_indexed_chain, solve_with_prescribed};
+use crate::chain_tridiagonal::solve_path_with_prescribed;
 use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system_with_prescribed, solve_spd_system,
 };
@@ -107,26 +107,19 @@ fn solve_magnetic_potentials(request: &SolveMagnetostaticBar1dRequest) -> Result
         .map(|node| node.magnetomotive_source)
         .collect::<Vec<_>>();
 
-    if is_indexed_chain(
+    if let Some(result) = solve_path_with_prescribed(
         node_count,
-        request
-            .elements
-            .iter()
-            .map(|element| (element.node_i, element.node_j)),
-    ) {
-        let mut diagonal = vec![0.0; node_count];
-        let mut lower = vec![0.0; node_count - 1];
-        let mut upper = vec![0.0; node_count - 1];
-        for element in &request.elements {
+        &request.elements,
+        |element| (element.node_i, element.node_j),
+        |element| {
             let length = (request.nodes[element.node_j].x - request.nodes[element.node_i].x).abs();
             let permeance = element.permeability * element.area / length;
-            let left = element.node_i.min(element.node_j);
-            diagonal[element.node_i] += permeance;
-            diagonal[element.node_j] += permeance;
-            lower[left] -= permeance;
-            upper[left] -= permeance;
-        }
-        return solve_with_prescribed(&diagonal, &lower, &upper, &source_vector, &prescribed);
+            Ok([[permeance, -permeance], [-permeance, permeance]])
+        },
+        &source_vector,
+        &prescribed,
+    ) {
+        return result;
     }
 
     let mut global_stiffness = SparseMatrix::new(node_count);

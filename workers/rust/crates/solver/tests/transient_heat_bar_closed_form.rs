@@ -111,6 +111,7 @@ impl HeatTransientCase {
             }],
             time_step: self.time_step,
             steps: self.steps,
+            history_stride: None,
         }
     }
 

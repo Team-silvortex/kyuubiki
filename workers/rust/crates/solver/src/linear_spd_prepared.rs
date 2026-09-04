@@ -1,6 +1,7 @@
 use super::{
-    CompressedSparseMatrix, SparseMatrix, refine_dense_solution, scaling, sparse_to_dense,
-    validate_spd_solution,
+    CompressedSparseMatrix, SparseMatrix, refine_dense_solution, scaling,
+    sparse_path::{SparseTridiagonal, solve_factored_tridiagonal, sparse_tridiagonal_coefficients},
+    sparse_to_dense, validate_spd_solution,
 };
 use crate::chain_tridiagonal::PreparedTridiagonal;
 use crate::linear_dense::DenseLu;
@@ -14,7 +15,10 @@ pub(crate) struct PreparedSpdSolver {
 
 enum PreparedBackend {
     Empty,
-    Tridiagonal(PreparedTridiagonal),
+    Tridiagonal {
+        factor: PreparedTridiagonal,
+        order: Option<Vec<usize>>,
+    },
     Dense(DenseLu),
     Iterative {
         scaling: Vec<f64>,
@@ -30,8 +34,17 @@ impl PreparedSpdSolver {
         let size = matrix.size();
         let backend = if size == 0 {
             PreparedBackend::Empty
-        } else if let Some((diagonal, lower, upper)) = tridiagonal_coefficients(&matrix) {
-            PreparedBackend::Tridiagonal(PreparedTridiagonal::factor(&diagonal, &lower, &upper)?)
+        } else if let Some(SparseTridiagonal {
+            diagonal,
+            lower,
+            upper,
+            order,
+        }) = sparse_tridiagonal_coefficients(&matrix)
+        {
+            PreparedBackend::Tridiagonal {
+                factor: PreparedTridiagonal::factor(&diagonal, &lower, &upper)?,
+                order,
+            }
         } else if size <= 1024 {
             PreparedBackend::Dense(DenseLu::factor(sparse_to_dense(&matrix))?)
         } else {
@@ -64,8 +77,8 @@ impl PreparedSpdSolver {
                 residual_norm: 0.0,
                 stages: Vec::new(),
             },
-            PreparedBackend::Tridiagonal(factor) => SpdSolveProfile {
-                solution: factor.solve(rhs)?,
+            PreparedBackend::Tridiagonal { factor, order } => SpdSolveProfile {
+                solution: solve_factored_tridiagonal(factor, order.as_deref(), rhs)?,
                 iterations: 0,
                 matrix_non_zero_count: self.matrix.non_zero_count(),
                 residual_norm: 0.0,
@@ -132,31 +145,9 @@ impl PreparedSpdSolver {
     }
 }
 
-fn tridiagonal_coefficients(matrix: &SparseMatrix) -> Option<(Vec<f64>, Vec<f64>, Vec<f64>)> {
-    let size = matrix.size();
-    let mut diagonal = vec![0.0; size];
-    let mut lower = vec![0.0; size.saturating_sub(1)];
-    let mut upper = vec![0.0; size.saturating_sub(1)];
-    for (row, entries) in matrix.rows.iter().enumerate() {
-        for &(column, value) in entries {
-            if column + 1 < row || column > row + 1 {
-                return None;
-            }
-            if column == row {
-                diagonal[row] = value;
-            } else if column < row {
-                lower[row - 1] = value;
-            } else {
-                upper[row] = value;
-            }
-        }
-    }
-    Some((diagonal, lower, upper))
-}
-
 #[cfg(test)]
 mod tests {
-    use super::PreparedSpdSolver;
+    use super::{PreparedBackend, PreparedSpdSolver};
     use crate::linear_algebra::{SparseMatrix, add_at};
 
     #[test]
@@ -201,6 +192,29 @@ mod tests {
         let second = solver.solve(&rhs).expect("second iterative solve");
         assert_vector_close(&first, &vec![1.0; SIZE]);
         assert_vector_close(&second, &vec![1.0; SIZE]);
+    }
+
+    #[test]
+    fn reuses_a_numbering_independent_path_factor() {
+        let mut matrix = SparseMatrix::with_uniform_row_capacity(4, 3);
+        for index in 0..4 {
+            add_at(&mut matrix, index, index, 4.0);
+        }
+        for (first, second) in [(0, 2), (2, 1), (1, 3)] {
+            add_at(&mut matrix, first, second, -1.0);
+            add_at(&mut matrix, second, first, -1.0);
+        }
+
+        let solver = PreparedSpdSolver::factor(matrix).expect("permuted path should factor");
+        assert!(matches!(
+            &solver.backend,
+            PreparedBackend::Tridiagonal { order: Some(_), .. }
+        ));
+
+        let first = solver.solve(&[2.0, 6.0, 4.0, 13.0]).expect("first solve");
+        let second = solver.solve(&[3.0, 2.0, 2.0, 3.0]).expect("second solve");
+        assert_vector_close(&first, &[1.0, 3.0, 2.0, 4.0]);
+        assert_vector_close(&second, &[1.0; 4]);
     }
 
     fn assert_vector_close(actual: &[f64], expected: &[f64]) {

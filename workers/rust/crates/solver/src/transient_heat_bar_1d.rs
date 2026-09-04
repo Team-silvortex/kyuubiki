@@ -2,6 +2,7 @@ use crate::linear_algebra::{
     PreparedSpdSolver, SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
 };
 use crate::transient_heat_bar_1d_validation::validate_request;
+use crate::transient_history::TransientHistoryPlan;
 use kyuubiki_protocol::{
     HeatBar1dElementResult, HeatBar1dNodeResult, SolveTransientHeatBar1dRequest,
     SolveTransientHeatBar1dResult, TransientHeatBar1dElementInput, TransientHeatBar1dStepResult,
@@ -11,6 +12,13 @@ pub fn solve_transient_heat_bar_1d(
     request: &SolveTransientHeatBar1dRequest,
 ) -> Result<SolveTransientHeatBar1dResult, String> {
     validate_request(request)?;
+    let history_plan = TransientHistoryPlan::new(
+        "transient heat bar",
+        request.nodes.len(),
+        request.steps,
+        request.history_stride,
+        1,
+    )?;
 
     let capacity = lumped_capacity(request)?;
     let capacity_rate = capacity
@@ -53,13 +61,9 @@ pub fn solve_transient_heat_bar_1d(
         .iter()
         .map(|node| node.temperature)
         .collect::<Vec<_>>();
-    let history_capacity = request
-        .steps
-        .checked_add(1)
-        .ok_or_else(|| "transient heat bar history size overflows usize".to_string())?;
     let mut history = Vec::new();
     history
-        .try_reserve_exact(history_capacity)
+        .try_reserve_exact(history_plan.frame_count())
         .map_err(|_| "transient heat bar history allocation is too large".to_string())?;
     history.push(step_result(0, 0.0, &temperatures, &capacity)?);
     for step in 1..=request.steps {
@@ -80,12 +84,14 @@ pub fn solve_transient_heat_bar_1d(
             temperatures[dof] = value;
         }
 
-        history.push(step_result(
-            step,
-            checked_time(step, request.time_step)?,
-            &temperatures,
-            &capacity,
-        )?);
+        if history_plan.captures(step, request.steps) {
+            history.push(step_result(
+                step,
+                checked_time(step, request.time_step)?,
+                &temperatures,
+                &capacity,
+            )?);
+        }
     }
 
     let nodes = final_nodes(request, &temperatures);

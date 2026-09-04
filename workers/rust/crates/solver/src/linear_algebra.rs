@@ -1,5 +1,4 @@
 use self::linear_ic0::IncompleteCholesky;
-use crate::chain_tridiagonal::solve_tridiagonal;
 use crate::linear_dense::{DenseLu, zero_matrix};
 use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions, SpdSolveProfile};
 use crate::linear_spd::solve_spd_compressed;
@@ -14,8 +13,11 @@ mod linear_ic0;
 mod prepared;
 #[path = "linear_algebra_scaling.rs"]
 mod scaling;
+#[path = "linear_sparse_path.rs"]
+mod sparse_path;
 
 pub(crate) use prepared::PreparedSpdSolver;
+pub(crate) use sparse_path::solve_tridiagonal_system;
 
 #[derive(Debug, Clone)]
 pub(crate) struct SparseMatrix {
@@ -444,41 +446,6 @@ pub(crate) fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec
     solve_spd_system_profile(matrix, rhs).map(|profile| profile.solution)
 }
 
-/// Solves a symmetric tridiagonal system in linear time when its sparse shape
-/// proves it is safe to do so. Callers can retain the generic SPD solver for
-/// arbitrary meshes by treating `None` as "not a chain".
-pub(crate) fn solve_tridiagonal_system(
-    matrix: &SparseMatrix,
-    rhs: &[f64],
-) -> Option<Result<Vec<f64>, String>> {
-    if matrix.size() != rhs.len() {
-        return Some(Err("tridiagonal system dimensions must match".to_string()));
-    }
-    if rhs.is_empty() {
-        return Some(Ok(Vec::new()));
-    }
-
-    let size = rhs.len();
-    let mut lower = vec![0.0; size.saturating_sub(1)];
-    let mut diagonal = vec![0.0; size];
-    let mut upper = vec![0.0; size.saturating_sub(1)];
-    for (row_index, row) in matrix.rows.iter().enumerate() {
-        for &(column, value) in row {
-            if column + 1 < row_index || column > row_index + 1 {
-                return None;
-            }
-            if column == row_index {
-                diagonal[row_index] = value;
-            } else if column < row_index {
-                lower[row_index - 1] = value;
-            } else {
-                upper[row_index] = value;
-            }
-        }
-    }
-    Some(solve_tridiagonal(&diagonal, &lower, &upper, rhs))
-}
-
 pub(crate) fn solve_spd_system_profile(
     matrix: &SparseMatrix,
     rhs: &[f64],
@@ -757,15 +724,36 @@ mod tests {
     }
 
     #[test]
-    fn declines_non_tridiagonal_sparse_systems() {
-        let mut matrix = SparseMatrix::new(3);
-        for row in 0..3 {
-            add_at(&mut matrix, row, row, 2.0);
+    fn solves_a_numbering_independent_sparse_path() {
+        let mut matrix = SparseMatrix::with_uniform_row_capacity(4, 3);
+        for index in 0..4 {
+            add_at(&mut matrix, index, index, 4.0);
         }
-        add_at(&mut matrix, 0, 2, -1.0);
-        add_at(&mut matrix, 2, 0, -1.0);
+        for (first, second) in [(0, 2), (2, 1), (1, 3)] {
+            add_at(&mut matrix, first, second, -1.0);
+            add_at(&mut matrix, second, first, -1.0);
+        }
 
-        assert!(solve_tridiagonal_system(&matrix, &[1.0, 0.0, 1.0]).is_none());
+        let solution = solve_tridiagonal_system(&matrix, &[2.0, 6.0, 4.0, 13.0])
+            .expect("permuted path should use the tridiagonal backend")
+            .expect("permuted tridiagonal system should solve");
+        for (actual, expected) in solution.iter().zip([1.0, 3.0, 2.0, 4.0]) {
+            assert!((actual - expected).abs() < 1.0e-12);
+        }
+    }
+
+    #[test]
+    fn declines_non_tridiagonal_sparse_systems() {
+        let mut matrix = SparseMatrix::new(4);
+        for row in 0..4 {
+            add_at(&mut matrix, row, row, 4.0);
+        }
+        for leaf in 1..4 {
+            add_at(&mut matrix, 0, leaf, -1.0);
+            add_at(&mut matrix, leaf, 0, -1.0);
+        }
+
+        assert!(solve_tridiagonal_system(&matrix, &[1.0; 4]).is_none());
     }
 
     #[test]

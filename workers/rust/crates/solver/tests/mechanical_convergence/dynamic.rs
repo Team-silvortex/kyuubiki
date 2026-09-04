@@ -301,6 +301,7 @@ fn transient_request(case: TransientCase) -> SolveTransientSpring1dRequest {
         }],
         time_step: case.time_step,
         steps: 1,
+        history_stride: None,
     }
 }
 
