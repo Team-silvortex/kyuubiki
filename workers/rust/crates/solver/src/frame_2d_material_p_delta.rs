@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 
 use crate::frame_2d_corotational_element::element_deformation;
 use crate::frame_2d_fiber_damage::{
@@ -161,8 +164,20 @@ impl CompiledFrame2dPointMaterial {
 pub fn solve_frame_2d_material_p_delta(
     request: &SolveFrame2dMaterialPDeltaRequest,
 ) -> Result<SolveFrame2dMaterialPDeltaResult, String> {
-    validate_control_contract(request)?;
-    let compiled = compile_materials(request)?;
+    solve_frame_2d_material_p_delta_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_frame_2d_material_p_delta_owned(
+    request: SolveFrame2dMaterialPDeltaRequest,
+) -> Result<SolveFrame2dMaterialPDeltaResult, String> {
+    solve_frame_2d_material_p_delta_internal(Cow::Owned(request))
+}
+
+fn solve_frame_2d_material_p_delta_internal(
+    request: Cow<'_, SolveFrame2dMaterialPDeltaRequest>,
+) -> Result<SolveFrame2dMaterialPDeltaResult, String> {
+    validate_control_contract(request.as_ref())?;
+    let compiled = compile_materials(request.as_ref())?;
     let (stability_result, committed_states, history_steps) =
         solve_frame_2d_p_delta_with_materials(
             &request.stability,
@@ -214,7 +229,7 @@ pub fn solve_frame_2d_material_p_delta(
         .map(|state| state.equivalent_plastic_strain)
         .fold(0.0_f64, f64::max);
     Ok(SolveFrame2dMaterialPDeltaResult {
-        input: request.clone(),
+        input: request.into_owned(),
         stability_result,
         material_states,
         yielded_element_count,

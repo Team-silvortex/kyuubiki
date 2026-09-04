@@ -11,11 +11,24 @@ use crate::modal_sparse::{
 use kyuubiki_protocol::{
     ModalFrame2dModeResult, SolveModalFrame2dRequest, SolveModalFrame2dResult,
 };
+use std::borrow::Cow;
 
 pub fn solve_modal_frame_2d(
     request: &SolveModalFrame2dRequest,
 ) -> Result<SolveModalFrame2dResult, String> {
-    validate_modal_frame_2d_request(request)?;
+    solve_modal_frame_2d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_modal_frame_2d_owned(
+    request: SolveModalFrame2dRequest,
+) -> Result<SolveModalFrame2dResult, String> {
+    solve_modal_frame_2d_internal(Cow::Owned(request))
+}
+
+fn solve_modal_frame_2d_internal(
+    request: Cow<'_, SolveModalFrame2dRequest>,
+) -> Result<SolveModalFrame2dResult, String> {
+    validate_modal_frame_2d_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 3;
     let mut stiffness = SparseMatrix::new(dof_count);
@@ -62,7 +75,7 @@ pub fn solve_modal_frame_2d(
         }
     }
 
-    let constrained = constrained_dofs(request);
+    let constrained = constrained_dofs(request.as_ref());
     let sparse_system = reduce_sparse_modal_system(&stiffness, &mass, &constrained)?;
     let free_dofs = sparse_system.free_dofs.clone();
     let eigenpairs = if request.mode_count == Some(1) {
@@ -122,7 +135,7 @@ pub fn solve_modal_frame_2d(
         .fold(0.0_f64, f64::max);
 
     Ok(SolveModalFrame2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         modes,
         free_dofs,
         total_mass,

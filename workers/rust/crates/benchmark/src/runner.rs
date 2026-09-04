@@ -14,13 +14,14 @@ use kyuubiki_solver::{
 
 use crate::models::{
     BenchmarkCase, BenchmarkMemoryStage, BenchmarkReport, BenchmarkResult, BenchmarkWorkload,
+    SHARED_PROCESS_RSS_SCOPE,
 };
 use crate::runner_electromagnetic::run_electromagnetic_workload;
 use crate::runner_hotspot::summarize_hotspot;
 use crate::runner_metrics::{aggregate_memory_stage_runs, apply_metrics};
 use crate::runner_preconditioner::{
     effective_preconditioner, parse_preconditioner, preconditioner_comparisons,
-    preconditioner_selection_reason, solver_preconditioners,
+    preconditioner_selection_reason, solver_preconditioners, supports_solver_preconditioner,
 };
 use crate::runner_progress::{print_case_done, print_case_start};
 use crate::runner_shape::workload_shape;
@@ -52,12 +53,12 @@ pub(crate) fn build_report_with_progress(
     solver_preconditioner: &str,
     progress: bool,
 ) -> BenchmarkReport {
-    let preconditioners = solver_preconditioners(solver_preconditioner);
-    let tag_results = preconditioners.len() > 1;
     let cases = selected
         .iter()
         .flat_map(|case| {
-            preconditioners.iter().map(move |preconditioner| {
+            let preconditioners = solver_preconditioners(case, solver_preconditioner);
+            let tag_results = preconditioners.len() > 1;
+            preconditioners.into_iter().map(move |preconditioner| {
                 let effective_preconditioner = effective_preconditioner(case, preconditioner);
                 let selection_reason = preconditioner_selection_reason(case, preconditioner);
                 if progress {
@@ -66,7 +67,12 @@ pub(crate) fn build_report_with_progress(
                 let mut result =
                     run_case_with_preconditioner(case, repeat, effective_preconditioner, progress);
                 result.solver_preconditioner_reason = Some(selection_reason.to_string());
-                if tag_results && result.solver_preconditioner.is_some() {
+                if supports_solver_preconditioner(case) {
+                    result
+                        .solver_preconditioner
+                        .get_or_insert_with(|| effective_preconditioner.to_string());
+                }
+                if tag_results {
                     result.id = format!("{}#{}", result.id, effective_preconditioner);
                 }
                 if progress {
@@ -82,6 +88,7 @@ pub(crate) fn build_report_with_progress(
         profile,
         matrix: matrix.to_string(),
         generated_at_unix_s: unix_timestamp(),
+        rss_scope: SHARED_PROCESS_RSS_SCOPE.to_string(),
         preconditioner_comparisons: preconditioner_comparisons(&cases),
         cases,
     }

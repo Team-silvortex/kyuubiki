@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::frame_2d_math::{
     add_vector_6, frame_local_stiffness, frame_thermal_gradient_vector,
     frame_thermal_uniform_vector, frame_transform, multiply_matrix_vector_6x6, subtract_vector_6,
@@ -8,22 +10,35 @@ use crate::frame_energy::{frame_strain_energy_6, thermal_frame2d_strain_energy};
 use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system, solve_spd_system_profile_with_options,
 };
-use crate::linear_solver_profile::SpdSolveOptions;
+use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
 use kyuubiki_protocol::{
     Frame2dElementResult, Frame2dNodeResult, SolveFrame2dRequest, SolveFrame2dResult,
     SolveThermalFrame2dRequest, SolveThermalFrame2dResult, ThermalFrame2dElementResult,
     ThermalFrame2dNodeResult,
 };
 
+const THERMAL_FRAME_SGS_NODE_THRESHOLD: usize = 90_000;
+
 pub fn solve_frame_2d(request: &SolveFrame2dRequest) -> Result<SolveFrame2dResult, String> {
-    solve_frame_2d_with_options(request, SpdSolveOptions::default())
+    solve_frame_2d_internal(Cow::Borrowed(request), SpdSolveOptions::default())
+}
+
+pub fn solve_frame_2d_owned(request: SolveFrame2dRequest) -> Result<SolveFrame2dResult, String> {
+    solve_frame_2d_internal(Cow::Owned(request), SpdSolveOptions::default())
 }
 
 pub fn solve_frame_2d_with_options(
     request: &SolveFrame2dRequest,
     options: SpdSolveOptions,
 ) -> Result<SolveFrame2dResult, String> {
-    validate_frame_2d_request(request)?;
+    solve_frame_2d_internal(Cow::Borrowed(request), options)
+}
+
+fn solve_frame_2d_internal(
+    request: Cow<'_, SolveFrame2dRequest>,
+    options: SpdSolveOptions,
+) -> Result<SolveFrame2dResult, String> {
+    validate_frame_2d_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 3;
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -192,7 +207,7 @@ pub fn solve_frame_2d_with_options(
     let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveFrame2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         max_displacement,
@@ -206,14 +221,31 @@ pub fn solve_frame_2d_with_options(
 pub fn solve_thermal_frame_2d(
     request: &SolveThermalFrame2dRequest,
 ) -> Result<SolveThermalFrame2dResult, String> {
-    solve_thermal_frame_2d_with_options(request, SpdSolveOptions::default())
+    solve_thermal_frame_2d_internal(
+        Cow::Borrowed(request),
+        default_thermal_frame_options(request.nodes.len()),
+    )
+}
+
+pub fn solve_thermal_frame_2d_owned(
+    request: SolveThermalFrame2dRequest,
+) -> Result<SolveThermalFrame2dResult, String> {
+    let options = default_thermal_frame_options(request.nodes.len());
+    solve_thermal_frame_2d_internal(Cow::Owned(request), options)
 }
 
 pub fn solve_thermal_frame_2d_with_options(
     request: &SolveThermalFrame2dRequest,
     options: SpdSolveOptions,
 ) -> Result<SolveThermalFrame2dResult, String> {
-    validate_thermal_frame_2d_request(request)?;
+    solve_thermal_frame_2d_internal(Cow::Borrowed(request), options)
+}
+
+fn solve_thermal_frame_2d_internal(
+    request: Cow<'_, SolveThermalFrame2dRequest>,
+    options: SpdSolveOptions,
+) -> Result<SolveThermalFrame2dResult, String> {
+    validate_thermal_frame_2d_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 3;
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -453,7 +485,7 @@ pub fn solve_thermal_frame_2d_with_options(
     let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveThermalFrame2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         max_displacement,
@@ -476,4 +508,15 @@ fn frame_dof_map(node_i: usize, node_j: usize) -> [usize; 6] {
         node_j * 3 + 1,
         node_j * 3 + 2,
     ]
+}
+
+fn default_thermal_frame_options(node_count: usize) -> SpdSolveOptions {
+    SpdSolveOptions {
+        preconditioner: if node_count >= THERMAL_FRAME_SGS_NODE_THRESHOLD {
+            SpdPreconditioner::SymmetricGaussSeidel
+        } else {
+            SpdPreconditioner::Jacobi
+        },
+        progress_interval: None,
+    }
 }

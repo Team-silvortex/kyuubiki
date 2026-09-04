@@ -1,14 +1,16 @@
 use kyuubiki_protocol::{
     AcousticBar1dElementInput, AcousticBar1dNodeInput, AdvectionDiffusionBar1dElementInput,
-    AdvectionDiffusionBar1dNodeInput, ElectrostaticBar1dElementInput, ElectrostaticBar1dNodeInput,
-    ElectrostaticPlaneNodeInput, ElectrostaticPlaneQuadElementInput,
+    AdvectionDiffusionBar1dNodeInput, ElectricConductionPlaneNodeInput,
+    ElectricConductionPlaneQuadElementInput, ElectrostaticBar1dElementInput,
+    ElectrostaticBar1dNodeInput, ElectrostaticPlaneNodeInput, ElectrostaticPlaneQuadElementInput,
     ElectrostaticPlaneTriangleElementInput, HeatBar1dElementInput, HeatBar1dNodeInput,
     HeatPlaneNodeInput, HeatPlaneTriangleElementInput, MagnetostaticBar1dElementInput,
     MagnetostaticBar1dNodeInput, MagnetostaticPlaneNodeInput, MagnetostaticPlaneQuadElementInput,
     MagnetostaticPlaneTriangleElementInput, SolveAcousticBar1dRequest,
-    SolveAdvectionDiffusionBar1dRequest, SolveElectrostaticBar1dRequest,
-    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
-    SolveHeatBar1dRequest, SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
+    SolveAdvectionDiffusionBar1dRequest, SolveElectricConductionPlaneQuad2dRequest,
+    SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
+    SolveElectrostaticPlaneTriangle2dRequest, SolveHeatBar1dRequest,
+    SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest,
     SolveMagnetostaticPlaneQuad2dRequest, SolveMagnetostaticPlaneTriangle2dRequest,
     SolveStokesFlowPlaneQuad2dRequest, SolveStokesFlowPlaneTriangle2dRequest,
     SolveTorsion1dRequest, StokesFlowPlaneNodeInput, StokesFlowPlaneQuadElementInput,
@@ -184,6 +186,41 @@ pub(crate) fn generate_electrostatic_quad_panel(
         }
     });
     SolveElectrostaticPlaneQuad2dRequest { nodes, elements }
+}
+
+pub(crate) fn generate_electric_conduction_quad_panel(
+    nx: usize,
+    ny: usize,
+    width: f64,
+    height: f64,
+) -> SolveElectricConductionPlaneQuad2dRequest {
+    let nodes = scalar_plane_nodes(nx, ny, width, height, |index, x, y, left, right, mid| {
+        ElectricConductionPlaneNodeInput {
+            id: format!("ec{index}"),
+            x,
+            y,
+            fix_electric_potential: left || right,
+            electric_potential_v: if left { 12.0 } else { 0.0 },
+            current_source_a: if mid { 1.0e-3 } else { 0.0 },
+        }
+    });
+    let elements = quad_cells(nx, ny, |id, a, b, c, d| {
+        ElectricConductionPlaneQuadElementInput {
+            id,
+            node_i: a,
+            node_j: b,
+            node_k: c,
+            node_l: d,
+            thickness: 0.002,
+            electrical_conductivity_s_m: 5.8e7,
+        }
+    });
+    SolveElectricConductionPlaneQuad2dRequest {
+        nodes,
+        elements,
+        contact_interfaces: Vec::new(),
+        terminals: Vec::new(),
+    }
 }
 
 pub(crate) fn generate_magnetostatic_quad_panel(

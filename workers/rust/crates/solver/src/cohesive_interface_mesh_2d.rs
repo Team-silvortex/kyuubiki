@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 
 use kyuubiki_protocol::{
     CohesiveInterfaceMesh2dElementInput, CohesiveInterfaceMesh2dElementResult,
@@ -30,7 +33,19 @@ const MAX_ELEMENTS: usize = 4096;
 pub fn solve_cohesive_interface_mesh_2d(
     request: &SolveCohesiveInterfaceMesh2dRequest,
 ) -> Result<SolveCohesiveInterfaceMesh2dResult, String> {
-    let model = ValidatedModel::new(request)?;
+    solve_cohesive_interface_mesh_2d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_cohesive_interface_mesh_2d_owned(
+    request: SolveCohesiveInterfaceMesh2dRequest,
+) -> Result<SolveCohesiveInterfaceMesh2dResult, String> {
+    solve_cohesive_interface_mesh_2d_internal(Cow::Owned(request))
+}
+
+fn solve_cohesive_interface_mesh_2d_internal(
+    request: Cow<'_, SolveCohesiveInterfaceMesh2dRequest>,
+) -> Result<SolveCohesiveInterfaceMesh2dResult, String> {
+    let model = ValidatedModel::new(request.as_ref())?;
     let mut displacements = vec![0.0; model.dof_count];
     let mut states = vec![CohesiveInterface2dState::default(); model.elements.len()];
     let mut steps = Vec::with_capacity(model.controls.len());
@@ -82,7 +97,12 @@ pub fn solve_cohesive_interface_mesh_2d(
         completed_load_factor,
         &final_assembly.internal_forces,
     );
-    let nodes = node_results(request, &displacements, &reactions, model.rotation_offset);
+    let nodes = node_results(
+        request.as_ref(),
+        &displacements,
+        &reactions,
+        model.rotation_offset,
+    );
     let elements = element_results(&model, &final_assembly.evaluations);
     let connector_springs = model
         .connector_springs
@@ -215,8 +235,10 @@ pub fn solve_cohesive_interface_mesh_2d(
         }
     }
 
+    drop(model);
+
     Ok(SolveCohesiveInterfaceMesh2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         connector_springs,

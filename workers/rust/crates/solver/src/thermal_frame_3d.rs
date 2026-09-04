@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::frame_3d_math::{
     add_vector_12, frame3d_dof_map, frame3d_local_stiffness, frame3d_rotation_with_local_y,
     frame3d_thermal_gradient_vector, frame3d_thermal_uniform_vector, frame3d_transform,
@@ -5,7 +7,7 @@ use crate::frame_3d_math::{
 };
 use crate::frame_energy::thermal_frame3d_strain_energy;
 use crate::linear_algebra::{SparseMatrix, add_at, solve_spd_system_profile_with_options};
-use crate::linear_solver_profile::SpdSolveOptions;
+use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
 use crate::thermal_frame_3d_constraints::ThermalFrame3dConstraintSystem;
 use crate::thermal_frame_3d_validation::validate_request;
 use kyuubiki_protocol::{
@@ -14,18 +16,37 @@ use kyuubiki_protocol::{
     ThermalFrame3dElementResult, ThermalFrame3dNodeResult,
 };
 
+const THERMAL_FRAME_SGS_NODE_THRESHOLD: usize = 90_000;
+
 pub fn solve_thermal_frame_3d(
     request: &SolveThermalFrame3dRequest,
 ) -> Result<SolveThermalFrame3dResult, String> {
-    solve_thermal_frame_3d_with_options(request, SpdSolveOptions::default())
+    solve_thermal_frame_3d_internal(
+        Cow::Borrowed(request),
+        default_thermal_frame_options(request.nodes.len()),
+    )
+}
+
+pub fn solve_thermal_frame_3d_owned(
+    request: SolveThermalFrame3dRequest,
+) -> Result<SolveThermalFrame3dResult, String> {
+    let options = default_thermal_frame_options(request.nodes.len());
+    solve_thermal_frame_3d_internal(Cow::Owned(request), options)
 }
 
 pub fn solve_thermal_frame_3d_with_options(
     request: &SolveThermalFrame3dRequest,
     options: SpdSolveOptions,
 ) -> Result<SolveThermalFrame3dResult, String> {
-    validate_request(request)?;
-    let constraint_system = ThermalFrame3dConstraintSystem::build(request)?;
+    solve_thermal_frame_3d_internal(Cow::Borrowed(request), options)
+}
+
+fn solve_thermal_frame_3d_internal(
+    request: Cow<'_, SolveThermalFrame3dRequest>,
+    options: SpdSolveOptions,
+) -> Result<SolveThermalFrame3dResult, String> {
+    validate_request(request.as_ref())?;
+    let constraint_system = ThermalFrame3dConstraintSystem::build(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 6;
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -95,13 +116,18 @@ pub fn solve_thermal_frame_3d_with_options(
     };
     let displacements = constraint_system.restore(&reduced_displacements);
 
-    let nodes = build_thermal_frame_3d_nodes(request, &displacements);
-    let elements = build_thermal_frame_3d_elements(request, &displacements);
-    let directional_springs = build_directional_spring_results(request, &displacements);
+    let nodes = build_thermal_frame_3d_nodes(request.as_ref(), &displacements);
+    let elements = build_thermal_frame_3d_elements(request.as_ref(), &displacements);
+    let directional_springs = build_directional_spring_results(request.as_ref(), &displacements);
     let directional_rotational_springs =
-        build_directional_rotational_spring_results(request, &displacements);
+        build_directional_rotational_spring_results(request.as_ref(), &displacements);
     let (directional_constraints, directional_rotational_constraints) = constraint_system
-        .build_results(request, &global_stiffness, &force_vector, &displacements)?;
+        .build_results(
+            request.as_ref(),
+            &global_stiffness,
+            &force_vector,
+            &displacements,
+        )?;
     let total_strain_energy = elements
         .iter()
         .map(|element| element.strain_energy)
@@ -116,7 +142,7 @@ pub fn solve_thermal_frame_3d_with_options(
             .sum::<f64>();
 
     Ok(SolveThermalFrame3dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         max_displacement: nodes
             .iter()
             .map(|node| node.displacement_magnitude)
@@ -421,4 +447,15 @@ fn equivalent_thermal_load(
             ],
         ),
     )
+}
+
+fn default_thermal_frame_options(node_count: usize) -> SpdSolveOptions {
+    SpdSolveOptions {
+        preconditioner: if node_count >= THERMAL_FRAME_SGS_NODE_THRESHOLD {
+            SpdPreconditioner::SymmetricGaussSeidel
+        } else {
+            SpdPreconditioner::Jacobi
+        },
+        progress_interval: None,
+    }
 }

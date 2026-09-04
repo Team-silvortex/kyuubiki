@@ -7,11 +7,24 @@ use kyuubiki_protocol::{
     HeatBar1dElementResult, HeatBar1dNodeResult, SolveTransientHeatBar1dRequest,
     SolveTransientHeatBar1dResult, TransientHeatBar1dElementInput, TransientHeatBar1dStepResult,
 };
+use std::borrow::Cow;
 
 pub fn solve_transient_heat_bar_1d(
     request: &SolveTransientHeatBar1dRequest,
 ) -> Result<SolveTransientHeatBar1dResult, String> {
-    validate_request(request)?;
+    solve_transient_heat_bar_1d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_transient_heat_bar_1d_owned(
+    request: SolveTransientHeatBar1dRequest,
+) -> Result<SolveTransientHeatBar1dResult, String> {
+    solve_transient_heat_bar_1d_internal(Cow::Owned(request))
+}
+
+fn solve_transient_heat_bar_1d_internal(
+    request: Cow<'_, SolveTransientHeatBar1dRequest>,
+) -> Result<SolveTransientHeatBar1dResult, String> {
+    validate_request(request.as_ref())?;
     let history_plan = TransientHistoryPlan::new(
         "transient heat bar",
         request.nodes.len(),
@@ -20,7 +33,7 @@ pub fn solve_transient_heat_bar_1d(
         1,
     )?;
 
-    let capacity = lumped_capacity(request)?;
+    let capacity = lumped_capacity(request.as_ref())?;
     let capacity_rate = capacity
         .iter()
         .enumerate()
@@ -35,7 +48,7 @@ pub fn solve_transient_heat_bar_1d(
             }
         })
         .collect::<Result<Vec<_>, _>>()?;
-    let mut system = assemble_conductance(request)?;
+    let mut system = assemble_conductance(request.as_ref())?;
     for (index, value) in capacity_rate.iter().enumerate() {
         add_at(&mut system, index, index, *value);
     }
@@ -94,22 +107,23 @@ pub fn solve_transient_heat_bar_1d(
         }
     }
 
-    let nodes = final_nodes(request, &temperatures);
-    let elements = final_elements(request, &temperatures)?;
+    let nodes = final_nodes(request.as_ref(), &temperatures);
+    let elements = final_elements(request.as_ref(), &temperatures)?;
     let max_heat_flux = elements
         .iter()
         .map(|element| element.heat_flux.abs())
         .fold(0.0_f64, f64::max);
     let total_thermal_energy = thermal_energy(&temperatures, &capacity)?;
+    let final_time = checked_time(request.steps, request.time_step)?;
 
     Ok(SolveTransientHeatBar1dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         max_temperature: temperatures
             .iter()
             .map(|value| value.abs())
             .fold(0.0, f64::max),
         max_heat_flux,
-        final_time: checked_time(request.steps, request.time_step)?,
+        final_time,
         total_thermal_energy,
         nodes,
         elements,

@@ -5,6 +5,7 @@ use kyuubiki_protocol::{
     SolveTransientSpring1dRequest, SolveTransientSpring1dResult, TransientSpring1dElementInput,
     TransientSpring1dElementResult, TransientSpring1dNodeResult, TransientSpring1dStepResult,
 };
+use std::borrow::Cow;
 
 const BETA: f64 = 0.25;
 const GAMMA: f64 = 0.5;
@@ -39,7 +40,19 @@ struct NewmarkState<'a> {
 pub fn solve_transient_spring_1d(
     request: &SolveTransientSpring1dRequest,
 ) -> Result<SolveTransientSpring1dResult, String> {
-    validate_transient_request(request)?;
+    solve_transient_spring_1d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_transient_spring_1d_owned(
+    request: SolveTransientSpring1dRequest,
+) -> Result<SolveTransientSpring1dResult, String> {
+    solve_transient_spring_1d_internal(Cow::Owned(request))
+}
+
+fn solve_transient_spring_1d_internal(
+    request: Cow<'_, SolveTransientSpring1dRequest>,
+) -> Result<SolveTransientSpring1dResult, String> {
+    validate_transient_request(request.as_ref())?;
     let history_plan = TransientHistoryPlan::new(
         "transient spring",
         request.nodes.len(),
@@ -59,7 +72,7 @@ pub fn solve_transient_spring_1d(
         .iter()
         .map(|node| node.load_x)
         .collect::<Vec<_>>();
-    let constrained = constrained_dofs(request);
+    let constrained = constrained_dofs(request.as_ref());
     let mut u = request
         .nodes
         .iter()
@@ -82,9 +95,9 @@ pub fn solve_transient_spring_1d(
             }
         })
         .collect::<Vec<_>>();
-    let mut a = initial_acceleration(request, &u, &v)?;
+    let mut a = initial_acceleration(request.as_ref(), &u, &v)?;
 
-    let effective = assemble_effective_system(request, coefficients)?;
+    let effective = assemble_effective_system(request.as_ref(), coefficients)?;
     let (reduced_effective, _, free) =
         reduce_sparse_system(&effective, &vec![0.0; count], &constrained);
     let solver = PreparedSpdSolver::factor(reduced_effective)
@@ -103,7 +116,7 @@ pub fn solve_transient_spring_1d(
     history
         .try_reserve_exact(history_plan.frame_count())
         .map_err(|_| "transient spring history allocation is too large".to_string())?;
-    history.push(step_result(0, 0.0, request, &u, &v)?);
+    history.push(step_result(0, 0.0, request.as_ref(), &u, &v)?);
     let mut max_displacement = maximum_absolute(&u);
     let mut max_velocity = maximum_absolute(&v);
     for step in 1..=request.steps {
@@ -121,19 +134,19 @@ pub fn solve_transient_spring_1d(
             history.push(step_result(
                 step,
                 checked_time(step, request.time_step)?,
-                request,
+                request.as_ref(),
                 &u,
                 &v,
             )?);
         }
     }
 
-    let nodes = final_nodes(request, &u, &v, &a);
-    let elements = final_elements(request, &u, &v)?;
+    let nodes = final_nodes(request.as_ref(), &u, &v, &a);
+    let elements = final_elements(request.as_ref(), &u, &v)?;
     let final_time = checked_time(request.steps, request.time_step)?;
 
     Ok(SolveTransientSpring1dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         final_time,
         max_displacement,
         max_velocity,

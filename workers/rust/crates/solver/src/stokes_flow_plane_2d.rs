@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::stokes_flow_plane_2d_results::{
     magnitude, quad_element_result, summarize_quad_flow, summarize_triangle_flow,
     triangle_element_result,
@@ -12,7 +14,19 @@ use kyuubiki_protocol::{
 pub fn solve_stokes_flow_plane_quad_2d(
     request: &SolveStokesFlowPlaneQuad2dRequest,
 ) -> Result<SolveStokesFlowPlaneQuad2dResult, String> {
-    validate_quad_request(request)?;
+    solve_stokes_flow_plane_quad_2d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_stokes_flow_plane_quad_2d_owned(
+    request: SolveStokesFlowPlaneQuad2dRequest,
+) -> Result<SolveStokesFlowPlaneQuad2dResult, String> {
+    solve_stokes_flow_plane_quad_2d_internal(Cow::Owned(request))
+}
+
+fn solve_stokes_flow_plane_quad_2d_internal(
+    request: Cow<'_, SolveStokesFlowPlaneQuad2dRequest>,
+) -> Result<SolveStokesFlowPlaneQuad2dResult, String> {
+    validate_quad_request(request.as_ref())?;
     let local_viscosities = average_node_viscosities(
         request.nodes.len(),
         request.elements.iter().flat_map(|element| {
@@ -73,7 +87,7 @@ pub fn solve_stokes_flow_plane_quad_2d(
 
     let summary = summarize_quad_flow(&nodes, &elements);
     Ok(SolveStokesFlowPlaneQuad2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         max_velocity: summary.max_velocity,
@@ -89,7 +103,19 @@ pub fn solve_stokes_flow_plane_quad_2d(
 pub fn solve_stokes_flow_plane_triangle_2d(
     request: &SolveStokesFlowPlaneTriangle2dRequest,
 ) -> Result<SolveStokesFlowPlaneTriangle2dResult, String> {
-    validate_triangle_request(request)?;
+    solve_stokes_flow_plane_triangle_2d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_stokes_flow_plane_triangle_2d_owned(
+    request: SolveStokesFlowPlaneTriangle2dRequest,
+) -> Result<SolveStokesFlowPlaneTriangle2dResult, String> {
+    solve_stokes_flow_plane_triangle_2d_internal(Cow::Owned(request))
+}
+
+fn solve_stokes_flow_plane_triangle_2d_internal(
+    request: Cow<'_, SolveStokesFlowPlaneTriangle2dRequest>,
+) -> Result<SolveStokesFlowPlaneTriangle2dResult, String> {
+    validate_triangle_request(request.as_ref())?;
     let local_viscosities = average_node_viscosities(
         request.nodes.len(),
         request.elements.iter().flat_map(|element| {
@@ -141,7 +167,7 @@ pub fn solve_stokes_flow_plane_triangle_2d(
         .collect::<Result<Vec<_>, String>>()?;
     let summary = summarize_triangle_flow(&nodes, &elements);
     Ok(SolveStokesFlowPlaneTriangle2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         max_velocity: summary.max_velocity,

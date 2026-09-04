@@ -200,6 +200,11 @@ pub(crate) fn workload_shape(workload: &BenchmarkWorkload) -> (usize, usize, usi
             request.elements.len(),
             request.nodes.len(),
         ),
+        BenchmarkWorkload::ElectricConductionPlaneQuad2d(request) => (
+            request.nodes.len(),
+            request.elements.len(),
+            request.nodes.len(),
+        ),
         BenchmarkWorkload::StokesFlowPlaneTriangle2d(request) => (
             request.nodes.len(),
             request.elements.len(),

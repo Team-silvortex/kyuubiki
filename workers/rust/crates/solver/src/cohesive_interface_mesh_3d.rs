@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 
 use kyuubiki_protocol::{
     CohesiveInterfaceMesh3dElementInput, CohesiveInterfaceMesh3dElementResult,
@@ -28,7 +31,19 @@ const MAX_HOST_TETRAHEDRA: usize = 4096;
 pub fn solve_cohesive_interface_mesh_3d(
     request: &SolveCohesiveInterfaceMesh3dRequest,
 ) -> Result<SolveCohesiveInterfaceMesh3dResult, String> {
-    let model = ValidatedModel::new(request)?;
+    solve_cohesive_interface_mesh_3d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_cohesive_interface_mesh_3d_owned(
+    request: SolveCohesiveInterfaceMesh3dRequest,
+) -> Result<SolveCohesiveInterfaceMesh3dResult, String> {
+    solve_cohesive_interface_mesh_3d_internal(Cow::Owned(request))
+}
+
+fn solve_cohesive_interface_mesh_3d_internal(
+    request: Cow<'_, SolveCohesiveInterfaceMesh3dRequest>,
+) -> Result<SolveCohesiveInterfaceMesh3dResult, String> {
+    let model = ValidatedModel::new(request.as_ref())?;
     let mut displacements = vec![0.0; model.dof_count];
     let mut states = vec![CohesiveInterface3dState::default(); model.elements.len()];
     let mut steps = Vec::with_capacity(model.controls.len());
@@ -73,7 +88,7 @@ pub fn solve_cohesive_interface_mesh_3d(
         completed_load_factor,
         &final_assembly.internal_forces,
     );
-    let nodes = node_results(request, &displacements, &reactions);
+    let nodes = node_results(request.as_ref(), &displacements, &reactions);
     let elements = element_results(&model, &final_assembly.evaluations);
     let host_tetrahedra = model
         .host_tetrahedra
@@ -138,8 +153,10 @@ pub fn solve_cohesive_interface_mesh_3d(
         }
     }
 
+    drop(model);
+
     Ok(SolveCohesiveInterfaceMesh3dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         host_tetrahedra,

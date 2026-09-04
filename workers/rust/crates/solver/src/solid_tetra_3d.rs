@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::linear_algebra::{SparseMatrix, reduce_sparse_system, solve_spd_system};
 use crate::solid_tetra_3d_element::{SolidTetra3dElementKernel, element_dof_map};
 use crate::solid_tetra_3d_validation::{mesh_component_count, validate_request};
@@ -13,12 +15,26 @@ const NEAR_INCOMPRESSIBLE_POISSON_THRESHOLD: f64 = 0.45;
 pub fn solve_solid_tetra_3d(
     request: &SolveSolidTetra3dRequest,
 ) -> Result<SolveSolidTetra3dResult, String> {
-    validate_request(request)?;
+    solve_solid_tetra_3d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_solid_tetra_3d_owned(
+    request: SolveSolidTetra3dRequest,
+) -> Result<SolveSolidTetra3dResult, String> {
+    solve_solid_tetra_3d_internal(Cow::Owned(request))
+}
+
+fn solve_solid_tetra_3d_internal(
+    request: Cow<'_, SolveSolidTetra3dRequest>,
+) -> Result<SolveSolidTetra3dResult, String> {
+    validate_request(request.as_ref())?;
 
     let kernels = request
         .elements
         .iter()
-        .map(|element| SolidTetra3dElementKernel::new(element_points(request, element), element))
+        .map(|element| {
+            SolidTetra3dElementKernel::new(element_points(request.as_ref(), element), element)
+        })
         .collect::<Result<Vec<_>, _>>()?;
     let dof_count = request.nodes.len() * 3;
     let mut stiffness = SparseMatrix::with_uniform_row_capacity(dof_count, 36);
@@ -40,7 +56,7 @@ pub fn solve_solid_tetra_3d(
         );
     }
 
-    let constrained = constrained_dofs(request);
+    let constrained = constrained_dofs(request.as_ref());
     let (reduced_stiffness, reduced_force, free) =
         reduce_sparse_system(&stiffness, &force, &constrained);
     let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
@@ -48,8 +64,13 @@ pub fn solve_solid_tetra_3d(
     for (index, &dof) in free.iter().enumerate() {
         displacements[dof] = reduced_displacements[index];
     }
-    let (reactions, equilibrium) =
-        recover_equilibrium(request, &stiffness, &force, &displacements, &constrained);
+    let (reactions, equilibrium) = recover_equilibrium(
+        request.as_ref(),
+        &stiffness,
+        &force,
+        &displacements,
+        &constrained,
+    );
 
     let nodes = request
         .nodes
@@ -84,10 +105,10 @@ pub fn solve_solid_tetra_3d(
             kernel.result(index, element, &element_dof_map(element), &displacements)
         })
         .collect::<Vec<_>>();
-    let quality = summarize_quality(request, &elements);
+    let quality = summarize_quality(request.as_ref(), &elements);
 
     Ok(SolveSolidTetra3dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         total_volume: elements.iter().map(|element| element.volume).sum(),
         max_displacement: nodes
             .iter()

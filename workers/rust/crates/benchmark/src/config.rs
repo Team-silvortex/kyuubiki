@@ -9,6 +9,8 @@ Options:
   --matrix <name>                       Benchmark matrix (default: core)
   --profile <profile>                   medium|large|v2|10k|15k|20k|100k|200k|300k|400k|500k|1m
   --case <substring>                    Run matching cases only
+  --case-exact <id>                     Run one exact case ID
+  --case-isolation <mode>               process|in-process (default: process)
   --repeat <count>                      Positive execution count (default: 10)
   --format <table|json>                 Report format (default: table)
   --solver-preconditioner <name>        jacobi|sgs|ic0|auto|all|compare (default: auto)
@@ -27,6 +29,8 @@ Options:
 pub(crate) struct BenchmarkConfig {
     pub(crate) repeat: usize,
     pub(crate) case_filter: Option<String>,
+    pub(crate) exact_case_id: Option<String>,
+    pub(crate) case_isolation: CaseIsolation,
     pub(crate) matrix: String,
     pub(crate) format: OutputFormat,
     pub(crate) profile: BenchmarkProfile,
@@ -47,9 +51,15 @@ pub(crate) enum OutputFormat {
     Json,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CaseIsolation {
+    Process,
+    InProcess,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum BenchmarkCommand {
-    Run(BenchmarkConfig),
+    Run(Box<BenchmarkConfig>),
     Help,
 }
 
@@ -58,6 +68,8 @@ impl Default for BenchmarkConfig {
         Self {
             repeat: 10,
             case_filter: None,
+            exact_case_id: None,
+            case_isolation: CaseIsolation::Process,
             matrix: "core".to_string(),
             format: OutputFormat::Table,
             profile: BenchmarkProfile::TenK,
@@ -138,6 +150,13 @@ impl BenchmarkConfig {
                 "--case" => {
                     config.case_filter = Some(required_value(&mut args, "--case")?);
                 }
+                "--case-exact" => {
+                    config.exact_case_id = Some(required_value(&mut args, "--case-exact")?);
+                }
+                "--case-isolation" => {
+                    config.case_isolation =
+                        parse_case_isolation(&required_value(&mut args, "--case-isolation")?)?;
+                }
                 "--matrix" => {
                     config.matrix = required_value(&mut args, "--matrix")?;
                 }
@@ -197,7 +216,10 @@ impl BenchmarkConfig {
 
         validate_solver_preconditioner(&config.solver_preconditioner)?;
         validate_comparison_options(&config)?;
-        Ok(BenchmarkCommand::Run(config))
+        if config.case_filter.is_some() && config.exact_case_id.is_some() {
+            return Err("--case and --case-exact cannot be combined".to_string());
+        }
+        Ok(BenchmarkCommand::Run(Box::new(config)))
     }
 }
 
@@ -267,6 +289,14 @@ fn parse_profile(value: &str) -> Result<BenchmarkProfile, String> {
     }
 }
 
+fn parse_case_isolation(value: &str) -> Result<CaseIsolation, String> {
+    match value {
+        "process" => Ok(CaseIsolation::Process),
+        "in-process" => Ok(CaseIsolation::InProcess),
+        other => Err(format!("unsupported case isolation mode: {other}")),
+    }
+}
+
 fn validate_solver_preconditioner(value: &str) -> Result<(), String> {
     match value {
         "jacobi"
@@ -284,8 +314,8 @@ fn validate_solver_preconditioner(value: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        BenchmarkCommand, BenchmarkConfig, BenchmarkProfile, OutputFormat, parse_profile,
-        validate_solver_preconditioner,
+        BenchmarkCommand, BenchmarkConfig, BenchmarkProfile, CaseIsolation, OutputFormat,
+        parse_profile, validate_solver_preconditioner,
     };
 
     fn parse(args: &[&str]) -> Result<BenchmarkCommand, String> {
@@ -308,6 +338,7 @@ mod tests {
         assert_eq!(config.repeat, 3);
         assert_eq!(config.format, OutputFormat::Json);
         assert_eq!(config.profile, BenchmarkProfile::OneMillion);
+        assert_eq!(config.case_isolation, CaseIsolation::Process);
     }
 
     #[test]
@@ -329,6 +360,23 @@ mod tests {
             "unsupported benchmark format: yaml"
         );
         assert!(parse(&["--fail-on-rss-regression-pct", "NaN"]).is_err());
+        assert!(parse(&["--case-isolation", "thread"]).is_err());
+    }
+
+    #[test]
+    fn parses_case_isolation_and_rejects_ambiguous_filters() {
+        let BenchmarkCommand::Run(config) = parse(&[
+            "--case-exact",
+            "frame-2d-100k",
+            "--case-isolation",
+            "in-process",
+        ])
+        .unwrap() else {
+            panic!("expected runnable benchmark config");
+        };
+        assert_eq!(config.exact_case_id.as_deref(), Some("frame-2d-100k"));
+        assert_eq!(config.case_isolation, CaseIsolation::InProcess);
+        assert!(parse(&["--case", "frame", "--case-exact", "frame-2d-100k"]).is_err());
     }
 
     #[test]

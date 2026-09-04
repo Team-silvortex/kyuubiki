@@ -127,17 +127,18 @@ fn render_solver_strategy_table(lines: &mut Vec<String>, payload: &Value) {
     lines.extend([
         "## Solver strategy summaries".to_string(),
         String::new(),
-        "| Matrix | Profile | Case | Strategy | Reason | Iterations | Latest median ms | Peak RSS MiB |"
+        "| Matrix | Profile | Case | RSS scope | Strategy | Reason | Iterations | Latest median ms | Peak RSS MiB |"
             .to_string(),
-        "| --- | --- | --- | --- | --- | ---: | ---: | ---: |".to_string(),
+        "| --- | --- | --- | --- | --- | --- | ---: | ---: | ---: |".to_string(),
     ]);
     for summary in summaries {
         for strategy in array_field(summary, "strategies") {
             lines.push(format!(
-                "| `{}` | `{}` | `{}` | `{}` | `{}` | `{}` | `{:.3}` | `{:.1}` |",
+                "| `{}` | `{}` | `{}` | `{}` | `{}` | `{}` | `{}` | `{:.3}` | `{:.1}` |",
                 string_field(summary, "matrix"),
                 string_field(summary, "profile"),
                 string_field(summary, "case_id"),
+                string_field(summary, "rss_scope"),
                 string_field(strategy, "preconditioner"),
                 string_field(strategy, "solver_preconditioner_reason"),
                 number_field(strategy, "solver_iterations") as u64,
@@ -188,17 +189,19 @@ fn render_matrix_table(lines: &mut Vec<String>, payload: &Value) {
     lines.extend([
         "## Matrix summaries".to_string(),
         String::new(),
-        "| Matrix | Runs | Cases | Total median ms | Peak RSS MiB | Slowest case |".to_string(),
-        "| --- | ---: | ---: | ---: | ---: | --- |".to_string(),
+        "| Matrix | Runs | Cases | Total median ms | Peak RSS MiB | RSS scopes | Slowest case |"
+            .to_string(),
+        "| --- | ---: | ---: | ---: | ---: | --- | --- |".to_string(),
     ]);
     for entry in array_field(payload, "matrix_summaries") {
         lines.push(format!(
-            "| `{}` | `{}` | `{}` | `{:.3}` | `{:.1}` | `{}` |",
+            "| `{}` | `{}` | `{}` | `{:.3}` | `{:.1}` | `{}` | `{}` |",
             string_field(entry, "matrix"),
             number_field(entry, "run_count") as u64,
             number_field(entry, "case_count") as u64,
             number_field(entry, "total_median_ms"),
             number_field(entry, "peak_rss_mib"),
+            array_strings(entry, "rss_scopes").join(", "),
             string_field(entry, "slowest_case"),
         ));
     }
@@ -250,16 +253,17 @@ fn render_runs_table(lines: &mut Vec<String>, runs: &[Value]) {
     lines.extend([
         "## Runs".to_string(),
         String::new(),
-        "| Slug | Profile | Matrix | Solver | Cases | Total median ms | Peak RSS MiB | Slowest case |"
+        "| Slug | Profile | Matrix | RSS scope | Solver | Cases | Total median ms | Peak RSS MiB | Slowest case |"
             .to_string(),
-        "| --- | --- | --- | --- | ---: | ---: | ---: | --- |".to_string(),
+        "| --- | --- | --- | --- | --- | ---: | ---: | ---: | --- |".to_string(),
     ]);
     for run in runs {
         lines.push(format!(
-            "| `{}` | `{}` | `{}` | `{}` | `{}` | `{:.3}` | `{:.1}` | `{}` |",
+            "| `{}` | `{}` | `{}` | `{}` | `{}` | `{}` | `{:.3}` | `{:.1}` | `{}` |",
             string_field(run, "slug"),
             string_field(run, "profile"),
             string_field(run, "matrix"),
+            string_field(run, "rss_scope"),
             array_strings(run, "solver_preconditioners").join(", "),
             number_field(run, "case_count") as u64,
             number_field(run, "total_median_ms"),

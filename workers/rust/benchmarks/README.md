@@ -64,6 +64,21 @@ make benchmark-profile-index
 These Make targets run the benchmark crate in `--release` mode so checked-in
 baselines and current comparisons stay on the same performance footing.
 
+Benchmark cases now use process isolation by default. The parent enumerates
+case IDs without materializing their workloads, then each exact case runs in a
+fresh child process. `--solver-preconditioner all` and `compare` also isolate
+each supported strategy. This keeps `peak_rss_kib` scoped to one case instead
+of inheriting the process high-water mark from an earlier case, and avoids
+holding an entire large matrix in memory while one case executes.
+
+Use `--case-exact <id>` for an unambiguous single-case run. Use
+`--case-isolation in-process` only for debugger workflows or legacy
+measurements. Reports expose `rss_scope`; an RSS regression gate rejects a
+baseline created with a different scope. Existing baselines without this field
+are treated as legacy shared-process measurements and must be regenerated
+before they can participate in the isolated RSS gate. Timing comparisons can
+still be inspected without enabling the RSS gate.
+
 The `extended-physics` matrix is the first broad-coverage smoke lane for
 modules that were previously only covered by unit or workflow tests. It covers
 1D heat, electrostatic, magnetostatic, acoustic, and torsion cases plus 2D heat

@@ -20,6 +20,7 @@ use kyuubiki_protocol::{
     Frame2dImperfectionSource, Frame2dPDeltaStepResult, Frame2dStabilityKinematics,
     Frame2dStabilityPathControl, SolveFrame2dPDeltaRequest, SolveFrame2dPDeltaResult,
 };
+use std::borrow::Cow;
 
 const DEFAULT_LOAD_STEPS: usize = 10;
 const DEFAULT_MAXIMUM_CRITICAL_FACTOR_RATIO: f64 = 0.8;
@@ -32,7 +33,15 @@ type Frame2dPDeltaMaterialSolve = (
 pub fn solve_frame_2d_p_delta(
     request: &SolveFrame2dPDeltaRequest,
 ) -> Result<SolveFrame2dPDeltaResult, String> {
-    solve_frame_2d_p_delta_with_materials(request, &[], None).map(|(result, _, _)| result)
+    solve_frame_2d_p_delta_with_materials_internal(Cow::Borrowed(request), &[], None)
+        .map(|(result, _, _)| result)
+}
+
+pub fn solve_frame_2d_p_delta_owned(
+    request: SolveFrame2dPDeltaRequest,
+) -> Result<SolveFrame2dPDeltaResult, String> {
+    solve_frame_2d_p_delta_with_materials_internal(Cow::Owned(request), &[], None)
+        .map(|(result, _, _)| result)
 }
 
 pub(crate) fn solve_frame_2d_p_delta_with_materials(
@@ -40,7 +49,19 @@ pub(crate) fn solve_frame_2d_p_delta_with_materials(
     materials: &[Option<CompiledFrame2dMaterial>],
     load_factor_schedule: Option<&[f64]>,
 ) -> Result<Frame2dPDeltaMaterialSolve, String> {
-    validate_request(request)?;
+    solve_frame_2d_p_delta_with_materials_internal(
+        Cow::Borrowed(request),
+        materials,
+        load_factor_schedule,
+    )
+}
+
+fn solve_frame_2d_p_delta_with_materials_internal(
+    request: Cow<'_, SolveFrame2dPDeltaRequest>,
+    materials: &[Option<CompiledFrame2dMaterial>],
+    load_factor_schedule: Option<&[f64]>,
+) -> Result<Frame2dPDeltaMaterialSolve, String> {
+    validate_request(request.as_ref())?;
     let mode_index = request.imperfection_mode_index.unwrap_or(0);
     let mut buckling_request = request.buckling.clone();
     let required_modes = if request.imperfection_shape.is_some() {
@@ -130,7 +151,7 @@ pub(crate) fn solve_frame_2d_p_delta_with_materials(
         )?,
         (Frame2dStabilityKinematics::Corotational, Frame2dStabilityPathControl::LoadControl) => {
             let result = solve_corotational_steps_with_materials(
-                request,
+                request.as_ref(),
                 &system,
                 &initial_imperfection_shape,
                 critical_factor,
@@ -143,7 +164,7 @@ pub(crate) fn solve_frame_2d_p_delta_with_materials(
         }
         (Frame2dStabilityKinematics::Corotational, Frame2dStabilityPathControl::ArcLength) => {
             let result = solve_arc_length_steps(
-                request,
+                request.as_ref(),
                 &system,
                 &initial_imperfection_shape,
                 maximum_load_factor,
@@ -169,13 +190,15 @@ pub(crate) fn solve_frame_2d_p_delta_with_materials(
         .map(|step| step.imperfection_amplification)
         .fold(1.0_f64, f64::max);
     let converged = steps.len() == load_steps && steps.iter().all(|step| step.converged);
+    let kinematics = request.kinematics;
+    let path_control = request.path_control;
     Ok((
         SolveFrame2dPDeltaResult {
-            input: request.clone(),
+            input: request.into_owned(),
             buckling_result,
             imperfection_source,
-            kinematics: request.kinematics,
-            path_control: request.path_control,
+            kinematics,
+            path_control,
             initial_imperfection_shape,
             critical_factor_limit_ratio: FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO,
             steps,

@@ -1,7 +1,9 @@
 use super::{
     BenchmarkCatalogSpec, BenchmarkFamily, BenchmarkMatrixSpec, CaseTemplateSpec,
-    default_catalog_spec, resolve_matrix_templates, select_matrix_spec,
+    benchmark_case_ids, benchmark_cases_for_ids, default_catalog_spec, resolve_matrix_templates,
+    select_matrix_spec,
 };
+use crate::config::BenchmarkProfile;
 
 #[test]
 fn checked_in_catalog_matches_the_rust_fallback() {
@@ -59,6 +61,17 @@ fn matrix_selection_rejects_unknown_name_instead_of_running_core() {
     });
 
     let _ = select_matrix_spec(&spec, "missing");
+}
+
+#[test]
+fn exact_case_generation_does_not_materialize_the_rest_of_the_matrix() {
+    let ids = benchmark_case_ids(BenchmarkProfile::Medium, "thermal-structural");
+    let selected = vec!["frame-2d-medium".to_string()];
+    let cases = benchmark_cases_for_ids(BenchmarkProfile::Medium, "thermal-structural", &selected);
+
+    assert!(ids.len() > cases.len());
+    assert_eq!(cases.len(), 1);
+    assert_eq!(cases[0].id, "frame-2d-medium");
 }
 
 fn catalog_spec(templates: Vec<CaseTemplateSpec>) -> BenchmarkCatalogSpec {

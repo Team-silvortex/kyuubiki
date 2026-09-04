@@ -1,5 +1,6 @@
 use kyuubiki_solver::{
-    SpdSolveOptions, solve_electrostatic_plane_quad_2d_with_options,
+    SpdSolveOptions, solve_electric_conduction_plane_quad_2d_with_options,
+    solve_electrostatic_plane_quad_2d_with_options,
     solve_electrostatic_plane_triangle_2d_with_options,
     solve_magnetostatic_plane_quad_2d_with_options,
     solve_magnetostatic_plane_triangle_2d_with_options,
@@ -63,6 +64,18 @@ pub(crate) fn run_electromagnetic_workload(
                     result.nodes.len(),
                     result.max_vector_potential,
                     result.max_magnetic_field_strength,
+                )
+                .with_preconditioner(solver_preconditioner)
+            })
+        }
+        BenchmarkWorkload::ElectricConductionPlaneQuad2d(request) => {
+            solve_electric_conduction_plane_quad_2d_with_options(request, options).map(|result| {
+                WorkloadMetrics::from_counts(
+                    result.nodes.len(),
+                    result.elements.len(),
+                    result.nodes.len(),
+                    result.max_electric_potential_v,
+                    result.max_current_density_a_m2,
                 )
                 .with_preconditioner(solver_preconditioner)
             })

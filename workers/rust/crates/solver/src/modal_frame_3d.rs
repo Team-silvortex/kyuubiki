@@ -14,11 +14,24 @@ use crate::modal_sparse::{
 use kyuubiki_protocol::{
     ModalFrame3dModeResult, SolveModalFrame3dRequest, SolveModalFrame3dResult,
 };
+use std::borrow::Cow;
 
 pub fn solve_modal_frame_3d(
     request: &SolveModalFrame3dRequest,
 ) -> Result<SolveModalFrame3dResult, String> {
-    validate_modal_frame_3d_request(request)?;
+    solve_modal_frame_3d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_modal_frame_3d_owned(
+    request: SolveModalFrame3dRequest,
+) -> Result<SolveModalFrame3dResult, String> {
+    solve_modal_frame_3d_internal(Cow::Owned(request))
+}
+
+fn solve_modal_frame_3d_internal(
+    request: Cow<'_, SolveModalFrame3dRequest>,
+) -> Result<SolveModalFrame3dResult, String> {
+    validate_modal_frame_3d_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 6;
     let mut stiffness = SparseMatrix::new(dof_count);
@@ -72,7 +85,7 @@ pub fn solve_modal_frame_3d(
         }
     }
 
-    let constrained = constrained_modal_frame_3d_dofs(request);
+    let constrained = constrained_modal_frame_3d_dofs(request.as_ref());
     let sparse_system = reduce_sparse_modal_system(&stiffness, &mass, &constrained)?;
     let free_dofs = sparse_system.free_dofs.clone();
     let eigenpairs = if request.mode_count == Some(1) {
@@ -122,16 +135,19 @@ pub fn solve_modal_frame_3d(
         return Err("modal frame 3d did not produce a positive finite mode".to_string());
     }
 
+    let min_frequency_hz = modes
+        .iter()
+        .map(|mode| mode.natural_frequency_hz)
+        .fold(f64::INFINITY, f64::min);
+    let max_frequency_hz = modes
+        .iter()
+        .map(|mode| mode.natural_frequency_hz)
+        .fold(0.0_f64, f64::max);
+
     Ok(SolveModalFrame3dResult {
-        input: request.clone(),
-        min_frequency_hz: modes
-            .iter()
-            .map(|mode| mode.natural_frequency_hz)
-            .fold(f64::INFINITY, f64::min),
-        max_frequency_hz: modes
-            .iter()
-            .map(|mode| mode.natural_frequency_hz)
-            .fold(0.0_f64, f64::max),
+        input: request.into_owned(),
+        min_frequency_hz,
+        max_frequency_hz,
         modes,
         free_dofs,
         total_mass,

@@ -109,25 +109,27 @@ use kyuubiki_protocol::{
     SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
-    solve_acoustic_bar_1d_owned, solve_advection_diffusion_bar_1d_owned, solve_bar_1d,
-    solve_beam_1d, solve_buckling_beam_1d, solve_buckling_frame_2d, solve_cohesive_interface_1d,
-    solve_cohesive_interface_2d, solve_cohesive_interface_mesh_2d,
-    solve_cohesive_interface_mesh_3d, solve_contact_gap_1d_owned,
-    solve_electric_conduction_plane_quad_2d, solve_electrostatic_bar_1d_owned,
-    solve_electrostatic_plane_quad_2d_owned, solve_electrostatic_plane_triangle_2d_owned,
-    solve_frame_2d, solve_frame_2d_material_p_delta, solve_frame_2d_p_delta,
-    solve_frame_2d_p_delta_path, solve_frame_3d, solve_harmonic_spring_1d, solve_heat_bar_1d_owned,
+    solve_acoustic_bar_1d_owned, solve_advection_diffusion_bar_1d_owned, solve_bar_1d_owned,
+    solve_beam_1d_owned, solve_buckling_beam_1d_owned, solve_buckling_frame_2d_owned,
+    solve_cohesive_interface_1d_owned, solve_cohesive_interface_2d_owned,
+    solve_cohesive_interface_mesh_2d_owned, solve_cohesive_interface_mesh_3d_owned,
+    solve_contact_gap_1d_owned, solve_electric_conduction_plane_quad_2d_owned,
+    solve_electrostatic_bar_1d_owned, solve_electrostatic_plane_quad_2d_owned,
+    solve_electrostatic_plane_triangle_2d_owned, solve_frame_2d_material_p_delta_owned,
+    solve_frame_2d_owned, solve_frame_2d_p_delta_owned, solve_frame_2d_p_delta_path_owned,
+    solve_frame_3d_owned, solve_harmonic_spring_1d_owned, solve_heat_bar_1d_owned,
     solve_heat_plane_quad_2d_owned, solve_heat_plane_triangle_2d_owned,
     solve_magnetostatic_bar_1d_owned, solve_magnetostatic_plane_quad_2d_owned,
-    solve_magnetostatic_plane_triangle_2d_owned, solve_modal_frame_2d, solve_modal_frame_3d,
-    solve_nonlinear_spring_1d_owned, solve_plane_quad_2d_owned, solve_plane_triangle_2d_owned,
-    solve_solid_tetra_3d, solve_spring_1d_owned, solve_spring_2d_owned, solve_spring_3d_owned,
-    solve_stokes_flow_plane_quad_2d, solve_stokes_flow_plane_triangle_2d,
-    solve_thermal_bar_1d_owned, solve_thermal_beam_1d, solve_thermal_frame_2d,
-    solve_thermal_frame_3d, solve_thermal_plane_quad_2d_owned,
-    solve_thermal_plane_triangle_2d_owned, solve_thermal_truss_2d_owned,
-    solve_thermal_truss_3d_owned, solve_torsion_1d_owned, solve_transient_heat_bar_1d,
-    solve_transient_spring_1d, solve_truss_2d_owned, solve_truss_3d_owned,
+    solve_magnetostatic_plane_triangle_2d_owned, solve_modal_frame_2d_owned,
+    solve_modal_frame_3d_owned, solve_nonlinear_spring_1d_owned, solve_plane_quad_2d_owned,
+    solve_plane_triangle_2d_owned, solve_solid_tetra_3d_owned, solve_spring_1d_owned,
+    solve_spring_2d_owned, solve_spring_3d_owned, solve_stokes_flow_plane_quad_2d_owned,
+    solve_stokes_flow_plane_triangle_2d_owned, solve_thermal_bar_1d_owned,
+    solve_thermal_beam_1d_owned, solve_thermal_frame_2d_owned, solve_thermal_frame_3d_owned,
+    solve_thermal_plane_quad_2d_owned, solve_thermal_plane_triangle_2d_owned,
+    solve_thermal_truss_2d_owned, solve_thermal_truss_3d_owned, solve_torsion_1d_owned,
+    solve_transient_heat_bar_1d_owned, solve_transient_spring_1d_owned, solve_truss_2d_owned,
+    solve_truss_3d_owned,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -187,7 +189,9 @@ pub enum EngineSolveRequest {
 
 pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
     match request {
-        EngineSolveRequest::Bar1d(request) => solve_bar_1d(&request).map(AnalysisResult::Bar1d),
+        EngineSolveRequest::Bar1d(request) => {
+            solve_bar_1d_owned(request).map(AnalysisResult::Bar1d)
+        }
         EngineSolveRequest::AcousticBar1d(request) => {
             solve_acoustic_bar_1d_owned(request).map(AnalysisResult::AcousticBar1d)
         }
@@ -198,7 +202,7 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
             solve_heat_bar_1d_owned(request).map(AnalysisResult::HeatBar1d)
         }
         EngineSolveRequest::TransientHeatBar1d(request) => {
-            solve_transient_heat_bar_1d(&request).map(AnalysisResult::TransientHeatBar1d)
+            solve_transient_heat_bar_1d_owned(request).map(AnalysisResult::TransientHeatBar1d)
         }
         EngineSolveRequest::ElectrostaticBar1d(request) => {
             solve_electrostatic_bar_1d_owned(request).map(AnalysisResult::ElectrostaticBar1d)
@@ -227,7 +231,7 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
                 .map(AnalysisResult::ElectrostaticPlaneQuad2d)
         }
         EngineSolveRequest::ElectricConductionPlaneQuad2d(request) => {
-            solve_electric_conduction_plane_quad_2d(&request)
+            solve_electric_conduction_plane_quad_2d_owned(request)
                 .map(AnalysisResult::ElectricConductionPlaneQuad2d)
         }
         EngineSolveRequest::HeatPlaneTriangle2d(request) => {
@@ -237,11 +241,12 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
             solve_heat_plane_quad_2d_owned(request).map(AnalysisResult::HeatPlaneQuad2d)
         }
         EngineSolveRequest::StokesFlowPlaneTriangle2d(request) => {
-            solve_stokes_flow_plane_triangle_2d(&request)
+            solve_stokes_flow_plane_triangle_2d_owned(request)
                 .map(AnalysisResult::StokesFlowPlaneTriangle2d)
         }
         EngineSolveRequest::StokesFlowPlaneQuad2d(request) => {
-            solve_stokes_flow_plane_quad_2d(&request).map(AnalysisResult::StokesFlowPlaneQuad2d)
+            solve_stokes_flow_plane_quad_2d_owned(request)
+                .map(AnalysisResult::StokesFlowPlaneQuad2d)
         }
         EngineSolveRequest::ThermalTruss2d(request) => {
             solve_thermal_truss_2d_owned(request).map(AnalysisResult::ThermalTruss2d)
@@ -253,10 +258,10 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
             solve_spring_1d_owned(request).map(AnalysisResult::Spring1d)
         }
         EngineSolveRequest::TransientSpring1d(request) => {
-            solve_transient_spring_1d(&request).map(AnalysisResult::TransientSpring1d)
+            solve_transient_spring_1d_owned(request).map(AnalysisResult::TransientSpring1d)
         }
         EngineSolveRequest::HarmonicSpring1d(request) => {
-            solve_harmonic_spring_1d(&request).map(AnalysisResult::HarmonicSpring1d)
+            solve_harmonic_spring_1d_owned(request).map(AnalysisResult::HarmonicSpring1d)
         }
         EngineSolveRequest::NonlinearSpring1d(request) => {
             solve_nonlinear_spring_1d_owned(request).map(AnalysisResult::NonlinearSpring1d)
@@ -265,16 +270,18 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
             solve_contact_gap_1d_owned(request).map(AnalysisResult::ContactGap1d)
         }
         EngineSolveRequest::CohesiveInterface1d(request) => {
-            solve_cohesive_interface_1d(&request).map(AnalysisResult::CohesiveInterface1d)
+            solve_cohesive_interface_1d_owned(request).map(AnalysisResult::CohesiveInterface1d)
         }
         EngineSolveRequest::CohesiveInterface2d(request) => {
-            solve_cohesive_interface_2d(&request).map(AnalysisResult::CohesiveInterface2d)
+            solve_cohesive_interface_2d_owned(request).map(AnalysisResult::CohesiveInterface2d)
         }
         EngineSolveRequest::CohesiveInterfaceMesh2d(request) => {
-            solve_cohesive_interface_mesh_2d(&request).map(AnalysisResult::CohesiveInterfaceMesh2d)
+            solve_cohesive_interface_mesh_2d_owned(request)
+                .map(AnalysisResult::CohesiveInterfaceMesh2d)
         }
         EngineSolveRequest::CohesiveInterfaceMesh3d(request) => {
-            solve_cohesive_interface_mesh_3d(&request).map(AnalysisResult::CohesiveInterfaceMesh3d)
+            solve_cohesive_interface_mesh_3d_owned(request)
+                .map(AnalysisResult::CohesiveInterfaceMesh3d)
         }
         EngineSolveRequest::Spring2d(request) => {
             solve_spring_2d_owned(request).map(AnalysisResult::Spring2d)
@@ -282,15 +289,17 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         EngineSolveRequest::Spring3d(request) => {
             solve_spring_3d_owned(request).map(AnalysisResult::Spring3d)
         }
-        EngineSolveRequest::Beam1d(request) => solve_beam_1d(&request).map(AnalysisResult::Beam1d),
+        EngineSolveRequest::Beam1d(request) => {
+            solve_beam_1d_owned(request).map(AnalysisResult::Beam1d)
+        }
         EngineSolveRequest::ThermalBeam1d(request) => {
-            solve_thermal_beam_1d(&request).map(AnalysisResult::ThermalBeam1d)
+            solve_thermal_beam_1d_owned(request).map(AnalysisResult::ThermalBeam1d)
         }
         EngineSolveRequest::ThermalFrame2d(request) => {
-            solve_thermal_frame_2d(&request).map(AnalysisResult::ThermalFrame2d)
+            solve_thermal_frame_2d_owned(request).map(AnalysisResult::ThermalFrame2d)
         }
         EngineSolveRequest::ThermalFrame3d(request) => {
-            solve_thermal_frame_3d(&request).map(AnalysisResult::ThermalFrame3d)
+            solve_thermal_frame_3d_owned(request).map(AnalysisResult::ThermalFrame3d)
         }
         EngineSolveRequest::Torsion1d(request) => {
             solve_torsion_1d_owned(request).map(AnalysisResult::Torsion1d)
@@ -302,31 +311,32 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
             solve_truss_3d_owned(request).map(AnalysisResult::Truss3d)
         }
         EngineSolveRequest::Frame3d(request) => {
-            solve_frame_3d(&request).map(AnalysisResult::Frame3d)
+            solve_frame_3d_owned(request).map(AnalysisResult::Frame3d)
         }
         EngineSolveRequest::SolidTetra3d(request) => {
-            solve_solid_tetra_3d(&request).map(AnalysisResult::SolidTetra3d)
+            solve_solid_tetra_3d_owned(request).map(AnalysisResult::SolidTetra3d)
         }
         EngineSolveRequest::ModalFrame2d(request) => {
-            solve_modal_frame_2d(&request).map(AnalysisResult::ModalFrame2d)
+            solve_modal_frame_2d_owned(request).map(AnalysisResult::ModalFrame2d)
         }
         EngineSolveRequest::BucklingBeam1d(request) => {
-            solve_buckling_beam_1d(&request).map(AnalysisResult::BucklingBeam1d)
+            solve_buckling_beam_1d_owned(request).map(AnalysisResult::BucklingBeam1d)
         }
         EngineSolveRequest::BucklingFrame2d(request) => {
-            solve_buckling_frame_2d(&request).map(AnalysisResult::BucklingFrame2d)
+            solve_buckling_frame_2d_owned(request).map(AnalysisResult::BucklingFrame2d)
         }
         EngineSolveRequest::Frame2dPDelta(request) => {
-            solve_frame_2d_p_delta(&request).map(AnalysisResult::Frame2dPDelta)
+            solve_frame_2d_p_delta_owned(request).map(AnalysisResult::Frame2dPDelta)
         }
         EngineSolveRequest::Frame2dPDeltaPath(request) => {
-            solve_frame_2d_p_delta_path(&request).map(AnalysisResult::Frame2dPDeltaPath)
+            solve_frame_2d_p_delta_path_owned(request).map(AnalysisResult::Frame2dPDeltaPath)
         }
         EngineSolveRequest::Frame2dMaterialPDelta(request) => {
-            solve_frame_2d_material_p_delta(&request).map(AnalysisResult::Frame2dMaterialPDelta)
+            solve_frame_2d_material_p_delta_owned(request)
+                .map(AnalysisResult::Frame2dMaterialPDelta)
         }
         EngineSolveRequest::ModalFrame3d(request) => {
-            solve_modal_frame_3d(&request).map(AnalysisResult::ModalFrame3d)
+            solve_modal_frame_3d_owned(request).map(AnalysisResult::ModalFrame3d)
         }
         EngineSolveRequest::PlaneTriangle2d(request) => {
             solve_plane_triangle_2d_owned(request).map(AnalysisResult::PlaneTriangle2d)
@@ -342,7 +352,7 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
             solve_thermal_plane_quad_2d_owned(request).map(AnalysisResult::ThermalPlaneQuad2d)
         }
         EngineSolveRequest::Frame2d(request) => {
-            solve_frame_2d(&request).map(AnalysisResult::Frame2d)
+            solve_frame_2d_owned(request).map(AnalysisResult::Frame2d)
         }
     }
 }

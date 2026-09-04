@@ -141,6 +141,7 @@
         "magnetostatic-bar-1m",
         "magnetostatic-plane-triangle-1m",
         "magnetostatic-plane-quad-1m",
+        "electric-conduction-plane-quad-1m",
         "stokes-plane-triangle-1m",
         "stokes-plane-quad-1m",
         "torsion-shaft-1m"

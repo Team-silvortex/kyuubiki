@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::frame_3d_math::{
     frame3d_dof_map, frame3d_local_stiffness, frame3d_rotation_with_local_y, frame3d_transform,
     multiply_matrix_vector_12x12, transform_frame3d_stiffness,
@@ -11,14 +13,25 @@ use kyuubiki_protocol::{
 };
 
 pub fn solve_frame_3d(request: &SolveFrame3dRequest) -> Result<SolveFrame3dResult, String> {
-    solve_frame_3d_with_options(request, SpdSolveOptions::default())
+    solve_frame_3d_internal(Cow::Borrowed(request), SpdSolveOptions::default())
+}
+
+pub fn solve_frame_3d_owned(request: SolveFrame3dRequest) -> Result<SolveFrame3dResult, String> {
+    solve_frame_3d_internal(Cow::Owned(request), SpdSolveOptions::default())
 }
 
 pub fn solve_frame_3d_with_options(
     request: &SolveFrame3dRequest,
     options: SpdSolveOptions,
 ) -> Result<SolveFrame3dResult, String> {
-    validate_frame_3d_request(request)?;
+    solve_frame_3d_internal(Cow::Borrowed(request), options)
+}
+
+fn solve_frame_3d_internal(
+    request: Cow<'_, SolveFrame3dRequest>,
+    options: SpdSolveOptions,
+) -> Result<SolveFrame3dResult, String> {
+    validate_frame_3d_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 6;
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -66,7 +79,7 @@ pub fn solve_frame_3d_with_options(
         }
     }
 
-    let constrained = constrained_frame_3d_dofs(request);
+    let constrained = constrained_frame_3d_dofs(request.as_ref());
     let (reduced_stiffness, reduced_force, free) =
         reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
     let reduced_displacements =
@@ -172,7 +185,7 @@ pub fn solve_frame_3d_with_options(
         .collect::<Vec<_>>();
 
     Ok(SolveFrame3dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         max_displacement: nodes
             .iter()
             .map(|node| node.displacement_magnitude)

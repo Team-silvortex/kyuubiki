@@ -41,6 +41,12 @@ fn write_markdown_summary(report: &Value, md_path: &Path) -> RunnerResult<()> {
         .map_err(|error| format!("failed to write markdown: {error}"))?;
     writeln!(output, "- Repeat: `{}`", number_field(report, "repeat"))
         .map_err(|error| format!("failed to write markdown: {error}"))?;
+    writeln!(
+        output,
+        "- Peak RSS scope: `{}`",
+        string_field(report, "rss_scope")
+    )
+    .map_err(|error| format!("failed to write markdown: {error}"))?;
     writeln!(output, "- Case count: `{}`", cases.len())
         .map_err(|error| format!("failed to write markdown: {error}"))?;
     let summary = SummaryStats::from_cases(cases);
@@ -99,10 +105,11 @@ fn write_json_summary(report: &Value, summary_path: &Path) -> RunnerResult<()> {
     })?;
     let summary = SummaryStats::from_cases(cases);
     let payload = json!({
-        "schema_version": "kyuubiki.benchmark-profile-summary/v1",
+        "schema_version": "kyuubiki.benchmark-profile-summary/v2",
         "profile": string_field(report, "profile"),
         "matrix": string_field(report, "matrix"),
         "repeat": report["repeat"].clone(),
+        "rss_scope": report["rss_scope"].clone(),
         "case_count": cases.len(),
         "case_ids": summary.case_ids,
         "solver_case_metrics": summary.solver_case_metrics,

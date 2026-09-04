@@ -16,9 +16,18 @@ use kyuubiki_protocol::{
     SolveElectrostaticBar1dRequest, SolveElectrostaticBar1dResult, SolveHeatBar1dRequest,
     SolveHeatBar1dResult, SolveThermalBar1dRequest, SolveThermalBar1dResult,
 };
+use std::borrow::Cow;
 
 pub fn solve_bar_1d(request: &SolveBarRequest) -> Result<SolveBarResult, String> {
-    validate_request(request)?;
+    solve_bar_1d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_bar_1d_owned(request: SolveBarRequest) -> Result<SolveBarResult, String> {
+    solve_bar_1d_internal(Cow::Owned(request))
+}
+
+fn solve_bar_1d_internal(request: Cow<'_, SolveBarRequest>) -> Result<SolveBarResult, String> {
+    validate_request(request.as_ref())?;
 
     let node_count = request.elements + 1;
     let element_length = request.length / request.elements as f64;
@@ -75,13 +84,14 @@ pub fn solve_bar_1d(request: &SolveBarRequest) -> Result<SolveBarResult, String>
         .iter()
         .map(|element| element.strain_energy_density.abs())
         .fold(0.0_f64, f64::max);
+    let reaction_force = -request.tip_force;
 
     Ok(SolveBarResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         tip_displacement: *displacements.last().unwrap_or(&0.0),
-        reaction_force: -request.tip_force,
+        reaction_force,
         max_displacement,
         max_stress,
         total_strain_energy,

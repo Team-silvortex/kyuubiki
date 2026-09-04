@@ -5,7 +5,7 @@ use kyuubiki_protocol::{
     HarmonicSpring1dElementResponse, HarmonicSpring1dFrequencyResult, HarmonicSpring1dNodeResponse,
     SolveHarmonicSpring1dRequest, SolveHarmonicSpring1dResult,
 };
-use std::{collections::BTreeSet, f64::consts::PI};
+use std::{borrow::Cow, collections::BTreeSet, f64::consts::PI};
 
 const MAX_DENSE_HARMONIC_DOFS: usize = 512;
 const MIN_COMPLEX_BACKWARD_ERROR_TOLERANCE: f64 = 1.0e-12;
@@ -33,14 +33,26 @@ struct ComplexTridiagonalSystem {
 pub fn solve_harmonic_spring_1d(
     request: &SolveHarmonicSpring1dRequest,
 ) -> Result<SolveHarmonicSpring1dResult, String> {
-    validate_harmonic_request(request)?;
+    solve_harmonic_spring_1d_internal(Cow::Borrowed(request))
+}
 
-    let layout = reduced_layout(request)?;
+pub fn solve_harmonic_spring_1d_owned(
+    request: SolveHarmonicSpring1dRequest,
+) -> Result<SolveHarmonicSpring1dResult, String> {
+    solve_harmonic_spring_1d_internal(Cow::Owned(request))
+}
+
+fn solve_harmonic_spring_1d_internal(
+    request: Cow<'_, SolveHarmonicSpring1dRequest>,
+) -> Result<SolveHarmonicSpring1dResult, String> {
+    validate_harmonic_request(request.as_ref())?;
+
+    let layout = reduced_layout(request.as_ref())?;
 
     let frequencies = request
         .frequencies_hz
         .iter()
-        .map(|&frequency_hz| solve_frequency(request, frequency_hz, &layout))
+        .map(|&frequency_hz| solve_frequency(request.as_ref(), frequency_hz, &layout))
         .collect::<Result<Vec<_>, _>>()?;
 
     let peak = frequencies
@@ -49,7 +61,7 @@ pub fn solve_harmonic_spring_1d(
         .ok_or_else(|| "harmonic spring 1d requires at least one frequency".to_string())?;
 
     Ok(SolveHarmonicSpring1dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         max_displacement: frequencies
             .iter()
             .map(|result| result.max_displacement)

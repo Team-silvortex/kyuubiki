@@ -95,7 +95,7 @@ mod tests {
     fn default_catalog_spec_covers_all_profiles() {
         let spec = default_catalog_spec();
 
-        assert_eq!(spec.templates.len(), 44);
+        assert_eq!(spec.templates.len(), 45);
         assert!(spec.matrices.len() >= 10);
         assert_eq!(spec.profiles.len(), 12);
         assert!(spec
@@ -219,7 +219,7 @@ mod tests {
             "jacobi",
         );
 
-        assert_eq!(report.cases.len(), 13);
+        assert_eq!(report.cases.len(), 14);
         assert!(report.cases.iter().all(|case| case.ok));
         assert!(report
             .cases
@@ -237,6 +237,10 @@ mod tests {
             .cases
             .iter()
             .any(|case| case.family == "magnetostatic_plane_quad_2d"));
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "electric_conduction_plane_quad_2d"));
     }
 
     #[test]
@@ -351,6 +355,10 @@ mod tests {
             .cases
             .iter()
             .any(|case| case.family == "magnetostatic_plane_quad_2d"));
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "electric_conduction_plane_quad_2d"));
         assert!(report
             .cases
             .iter()

@@ -13,9 +13,9 @@ use crate::{
     },
     generators_extended::{
         generate_acoustic_bar_case, generate_advection_diffusion_bar_case,
-        generate_electrostatic_bar_case, generate_electrostatic_quad_panel,
-        generate_electrostatic_triangle_panel, generate_heat_bar_case,
-        generate_heat_triangle_panel, generate_magnetostatic_bar_case,
+        generate_electric_conduction_quad_panel, generate_electrostatic_bar_case,
+        generate_electrostatic_quad_panel, generate_electrostatic_triangle_panel,
+        generate_heat_bar_case, generate_heat_triangle_panel, generate_magnetostatic_bar_case,
         generate_magnetostatic_quad_panel, generate_magnetostatic_triangle_panel,
         generate_stokes_quad_panel, generate_stokes_triangle_panel, generate_torsion_case,
     },
@@ -116,6 +116,7 @@ pub(crate) enum BenchmarkFamily {
     ElectrostaticPlaneQuad2d,
     MagnetostaticPlaneTriangle2d,
     MagnetostaticPlaneQuad2d,
+    ElectricConductionPlaneQuad2d,
     StokesFlowPlaneTriangle2d,
     StokesFlowPlaneQuad2d,
 }
@@ -164,6 +165,7 @@ pub(crate) fn load_catalog_spec() -> BenchmarkCatalogSpec {
         .unwrap_or_else(default_catalog_spec)
 }
 
+#[cfg(test)]
 pub(crate) fn benchmark_cases(profile: BenchmarkProfile, matrix: &str) -> Vec<BenchmarkCase> {
     let spec = load_catalog_spec();
     let profile_spec = spec
@@ -177,6 +179,45 @@ pub(crate) fn benchmark_cases(profile: BenchmarkProfile, matrix: &str) -> Vec<Be
         .into_iter()
         .map(|template| build_case(template, profile_spec))
         .collect()
+}
+
+pub(crate) fn benchmark_case_ids(profile: BenchmarkProfile, matrix: &str) -> Vec<String> {
+    let spec = load_catalog_spec();
+    let profile_spec = spec
+        .profiles
+        .iter()
+        .find(|candidate| candidate.profile == profile)
+        .expect("benchmark profile spec should exist");
+    let matrix_spec = select_matrix_spec(&spec, matrix);
+
+    resolve_matrix_templates(&spec, matrix_spec)
+        .into_iter()
+        .map(|template| case_id(template, profile_spec))
+        .collect()
+}
+
+pub(crate) fn benchmark_cases_for_ids(
+    profile: BenchmarkProfile,
+    matrix: &str,
+    selected_ids: &[String],
+) -> Vec<BenchmarkCase> {
+    let spec = load_catalog_spec();
+    let profile_spec = spec
+        .profiles
+        .iter()
+        .find(|candidate| candidate.profile == profile)
+        .expect("benchmark profile spec should exist");
+    let matrix_spec = select_matrix_spec(&spec, matrix);
+
+    resolve_matrix_templates(&spec, matrix_spec)
+        .into_iter()
+        .filter(|template| selected_ids.contains(&case_id(template, profile_spec)))
+        .map(|template| build_case(template, profile_spec))
+        .collect()
+}
+
+fn case_id(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> String {
+    format!("{}-{}", template.stem, profile.suffix)
 }
 
 fn select_matrix_spec<'a>(spec: &'a BenchmarkCatalogSpec, matrix: &str) -> &'a BenchmarkMatrixSpec {
@@ -210,7 +251,7 @@ fn resolve_matrix_templates<'a>(
 }
 
 fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> BenchmarkCase {
-    let id = format!("{}-{}", template.stem, profile.suffix);
+    let id = case_id(template, profile);
 
     match template.family {
         BenchmarkFamily::AxialBar => BenchmarkCase {
@@ -548,6 +589,18 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             family: "magnetostatic_plane_quad_2d",
             workload: BenchmarkWorkload::MagnetostaticPlaneQuad2d(
                 generate_magnetostatic_quad_panel(
+                    profile.plane_quad.nx,
+                    profile.plane_quad.ny,
+                    profile.plane_quad.width,
+                    profile.plane_quad.height,
+                ),
+            ),
+        },
+        BenchmarkFamily::ElectricConductionPlaneQuad2d => BenchmarkCase {
+            id,
+            family: "electric_conduction_plane_quad_2d",
+            workload: BenchmarkWorkload::ElectricConductionPlaneQuad2d(
+                generate_electric_conduction_quad_panel(
                     profile.plane_quad.nx,
                     profile.plane_quad.ny,
                     profile.plane_quad.width,

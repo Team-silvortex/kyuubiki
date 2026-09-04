@@ -3,42 +3,86 @@ use crate::electric_conduction_interfaces::{
     validate_interfaces,
 };
 use crate::heat_plane_2d_element::{
-    HeatPlaneQuadComputed, plane_triangle_scalar_gradient, precompute_heat_plane_quad_element,
+    HeatPlaneQuadComputed, plane_triangle_scalar_gradient,
+    precompute_heat_plane_quad_from_coordinates,
 };
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system_with_prescribed, solve_spd_system,
+    SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
+    solve_spd_system_profile_with_options,
 };
+use crate::linear_solver_profile::SpdSolveOptions;
 use kyuubiki_protocol::{
     ElectricConductionPlaneNodeResult, ElectricConductionPlaneQuadElementInput,
-    ElectricConductionPlaneQuadElementResult, HeatPlaneNodeInput, HeatPlaneQuadElementInput,
-    SolveElectricConductionPlaneQuad2dRequest, SolveElectricConductionPlaneQuad2dResult,
-    SolveHeatPlaneQuad2dRequest,
+    ElectricConductionPlaneQuadElementResult, SolveElectricConductionPlaneQuad2dRequest,
+    SolveElectricConductionPlaneQuad2dResult,
 };
-use std::collections::HashSet;
+use std::{borrow::Cow, collections::HashSet};
 
 pub fn solve_electric_conduction_plane_quad_2d(
     request: &SolveElectricConductionPlaneQuad2dRequest,
 ) -> Result<SolveElectricConductionPlaneQuad2dResult, String> {
-    validate_request(request)?;
-    let assembly_request = heat_assembly_request(request);
-    let computed_elements = assembly_request
+    solve_electric_conduction_plane_quad_2d_internal(
+        Cow::Borrowed(request),
+        SpdSolveOptions::default(),
+    )
+}
+
+pub fn solve_electric_conduction_plane_quad_2d_owned(
+    request: SolveElectricConductionPlaneQuad2dRequest,
+) -> Result<SolveElectricConductionPlaneQuad2dResult, String> {
+    solve_electric_conduction_plane_quad_2d_internal(
+        Cow::Owned(request),
+        SpdSolveOptions::default(),
+    )
+}
+
+pub fn solve_electric_conduction_plane_quad_2d_with_options(
+    request: &SolveElectricConductionPlaneQuad2dRequest,
+    options: SpdSolveOptions,
+) -> Result<SolveElectricConductionPlaneQuad2dResult, String> {
+    solve_electric_conduction_plane_quad_2d_internal(Cow::Borrowed(request), options)
+}
+
+fn solve_electric_conduction_plane_quad_2d_internal(
+    request: Cow<'_, SolveElectricConductionPlaneQuad2dRequest>,
+    options: SpdSolveOptions,
+) -> Result<SolveElectricConductionPlaneQuad2dResult, String> {
+    validate_request(request.as_ref())?;
+    let computed_elements = request
         .elements
         .iter()
-        .map(|element| precompute_heat_plane_quad_element(&assembly_request, element))
+        .map(|element| {
+            precompute_heat_plane_quad_from_coordinates(
+                [
+                    conduction_point(request.as_ref(), element.node_i),
+                    conduction_point(request.as_ref(), element.node_j),
+                    conduction_point(request.as_ref(), element.node_k),
+                    conduction_point(request.as_ref(), element.node_l),
+                ],
+                element.thickness,
+                element.electrical_conductivity_s_m,
+            )
+        })
         .collect::<Result<Vec<_>, String>>()?;
-    let (global_conductance, applied_currents) = assemble_system(request, &computed_elements);
-    let potentials = solve_potentials(request, &global_conductance, &applied_currents)?;
-    let terminals = recover_terminals(request, &potentials);
+    let (global_conductance, applied_currents) =
+        assemble_system(request.as_ref(), &computed_elements);
+    let potentials = solve_potentials(
+        request.as_ref(),
+        &global_conductance,
+        &applied_currents,
+        options,
+    )?;
+    let terminals = recover_terminals(request.as_ref(), &potentials);
     let terminal_currents = terminal_currents_by_node(request.nodes.len(), &terminals);
     let nodes = recover_node_currents(
-        request,
+        request.as_ref(),
         &global_conductance,
         &applied_currents,
         &potentials,
         &terminal_currents,
     );
-    let elements = recover_element_fields(request, &computed_elements, &potentials);
-    let contact_interfaces = recover_contacts(request, &potentials);
+    let elements = recover_element_fields(request.as_ref(), &computed_elements, &potentials);
+    let contact_interfaces = recover_contacts(request.as_ref(), &potentials);
     let total_injected_current_a = nodes
         .iter()
         .map(|node| node.net_injected_current_a.max(0.0))
@@ -94,7 +138,7 @@ pub fn solve_electric_conduction_plane_quad_2d(
         relative_error(total_source_power_w, total_dissipated_power_w);
 
     Ok(SolveElectricConductionPlaneQuad2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         max_electric_potential_v: nodes
             .iter()
             .map(|node| node.electric_potential_v.abs())
@@ -128,36 +172,8 @@ pub fn solve_electric_conduction_plane_quad_2d(
     })
 }
 
-fn heat_assembly_request(
-    request: &SolveElectricConductionPlaneQuad2dRequest,
-) -> SolveHeatPlaneQuad2dRequest {
-    SolveHeatPlaneQuad2dRequest {
-        nodes: request
-            .nodes
-            .iter()
-            .map(|node| HeatPlaneNodeInput {
-                id: node.id.clone(),
-                x: node.x,
-                y: node.y,
-                fix_temperature: node.fix_electric_potential,
-                temperature: node.electric_potential_v,
-                heat_load: node.current_source_a,
-            })
-            .collect(),
-        elements: request
-            .elements
-            .iter()
-            .map(|element| HeatPlaneQuadElementInput {
-                id: element.id.clone(),
-                node_i: element.node_i,
-                node_j: element.node_j,
-                node_k: element.node_k,
-                node_l: element.node_l,
-                thickness: element.thickness,
-                conductivity: element.electrical_conductivity_s_m,
-            })
-            .collect(),
-    }
+fn conduction_point(request: &SolveElectricConductionPlaneQuad2dRequest, node: usize) -> [f64; 2] {
+    [request.nodes[node].x, request.nodes[node].y]
 }
 
 fn assemble_system(
@@ -202,6 +218,7 @@ fn solve_potentials(
     request: &SolveElectricConductionPlaneQuad2dRequest,
     conductance: &SparseMatrix,
     currents: &[f64],
+    options: SpdSolveOptions,
 ) -> Result<Vec<f64>, String> {
     let prescribed = request
         .nodes
@@ -214,8 +231,9 @@ fn solve_potentials(
         .collect::<Vec<_>>();
     let (reduced, reduced_currents, free) =
         reduce_sparse_system_with_prescribed(conductance, currents, &prescribed);
-    let solved = solve_spd_system(&reduced, &reduced_currents)
-        .map_err(|error| format!("electric conduction solve failed: {error}"))?;
+    let solved = solve_spd_system_profile_with_options(&reduced, &reduced_currents, options)
+        .map_err(|error| format!("electric conduction solve failed: {error}"))?
+        .solution;
     let mut potentials = vec![0.0; request.nodes.len()];
     for &(index, value) in &prescribed {
         potentials[index] = value;
