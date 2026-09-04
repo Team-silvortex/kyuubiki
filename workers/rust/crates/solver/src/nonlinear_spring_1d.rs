@@ -12,7 +12,19 @@ pub fn solve_nonlinear_spring_1d(
     request: &SolveNonlinearSpring1dRequest,
 ) -> Result<SolveNonlinearSpring1dResult, String> {
     validate_request(request)?;
+    solve_validated_nonlinear_spring_1d(request.clone())
+}
 
+pub fn solve_nonlinear_spring_1d_owned(
+    request: SolveNonlinearSpring1dRequest,
+) -> Result<SolveNonlinearSpring1dResult, String> {
+    validate_request(&request)?;
+    solve_validated_nonlinear_spring_1d(request)
+}
+
+fn solve_validated_nonlinear_spring_1d(
+    request: SolveNonlinearSpring1dRequest,
+) -> Result<SolveNonlinearSpring1dResult, String> {
     let dof_count = request.nodes.len();
     let constrained = request
         .nodes
@@ -40,7 +52,7 @@ pub fn solve_nonlinear_spring_1d(
 
         for iteration in 1..=max_iterations {
             iterations = iteration;
-            let (tangent, internal_force) = assemble_tangent_and_internal(request, &displacement);
+            let (tangent, internal_force) = assemble_tangent_and_internal(&request, &displacement);
             let residual = external_force
                 .iter()
                 .zip(internal_force.iter())
@@ -125,7 +137,7 @@ pub fn solve_nonlinear_spring_1d(
     let converged = steps.last().is_some_and(|step| step.converged) && steps.len() == load_steps;
 
     Ok(SolveNonlinearSpring1dResult {
-        input: request.clone(),
+        input: request,
         nodes,
         elements,
         steps,
@@ -140,7 +152,19 @@ pub fn solve_contact_gap_1d(
     request: &SolveContactGap1dRequest,
 ) -> Result<SolveContactGap1dResult, String> {
     validate_contact_request(request)?;
+    solve_validated_contact_gap_1d(request.clone())
+}
 
+pub fn solve_contact_gap_1d_owned(
+    request: SolveContactGap1dRequest,
+) -> Result<SolveContactGap1dResult, String> {
+    validate_contact_request(&request)?;
+    solve_validated_contact_gap_1d(request)
+}
+
+fn solve_validated_contact_gap_1d(
+    request: SolveContactGap1dRequest,
+) -> Result<SolveContactGap1dResult, String> {
     let dof_count = request.nodes.len();
     let constrained = request
         .nodes
@@ -169,7 +193,7 @@ pub fn solve_contact_gap_1d(
         for iteration in 1..=max_iterations {
             iterations = iteration;
             let (tangent, internal_force) =
-                assemble_contact_tangent_and_internal(request, &displacement);
+                assemble_contact_tangent_and_internal(&request, &displacement);
             let residual = external_force
                 .iter()
                 .zip(internal_force.iter())
@@ -209,7 +233,7 @@ pub fn solve_contact_gap_1d(
 
     let nodes = nonlinear_nodes(&request.nodes, &displacement);
     let elements = nonlinear_elements(&request.nodes, &request.elements, &displacement);
-    let contacts = contact_results(request, &displacement);
+    let contacts = contact_results(&request, &displacement);
     let max_displacement = nodes
         .iter()
         .map(|node| node.ux.abs())
@@ -227,7 +251,7 @@ pub fn solve_contact_gap_1d(
     let converged = steps.last().is_some_and(|step| step.converged) && steps.len() == load_steps;
 
     Ok(SolveContactGap1dResult {
-        input: request.clone(),
+        input: request,
         nodes,
         elements,
         contacts,

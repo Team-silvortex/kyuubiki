@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::electrostatic_plane_2d_element::{
     plane_triangle_scalar_gradient, precompute_electrostatic_plane_quad_element,
     precompute_electrostatic_plane_triangle_element,
@@ -6,8 +8,10 @@ use crate::electrostatic_plane_2d_validation::{
     validate_electrostatic_plane_quad_request, validate_electrostatic_plane_triangle_request,
 };
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system_with_prescribed, solve_spd_system,
+    SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
+    solve_spd_system_profile_with_options,
 };
+use crate::linear_solver_profile::SpdSolveOptions;
 use kyuubiki_protocol::{
     ElectrostaticPlaneNodeResult, ElectrostaticPlaneQuadElementResult,
     ElectrostaticPlaneTriangleElementResult, SolveElectrostaticPlaneQuad2dRequest,
@@ -18,7 +22,30 @@ use kyuubiki_protocol::{
 pub fn solve_electrostatic_plane_triangle_2d(
     request: &SolveElectrostaticPlaneTriangle2dRequest,
 ) -> Result<SolveElectrostaticPlaneTriangle2dResult, String> {
-    validate_electrostatic_plane_triangle_request(request)?;
+    solve_electrostatic_plane_triangle_2d_internal(
+        Cow::Borrowed(request),
+        SpdSolveOptions::default(),
+    )
+}
+
+pub fn solve_electrostatic_plane_triangle_2d_owned(
+    request: SolveElectrostaticPlaneTriangle2dRequest,
+) -> Result<SolveElectrostaticPlaneTriangle2dResult, String> {
+    solve_electrostatic_plane_triangle_2d_internal(Cow::Owned(request), SpdSolveOptions::default())
+}
+
+pub fn solve_electrostatic_plane_triangle_2d_with_options(
+    request: &SolveElectrostaticPlaneTriangle2dRequest,
+    options: SpdSolveOptions,
+) -> Result<SolveElectrostaticPlaneTriangle2dResult, String> {
+    solve_electrostatic_plane_triangle_2d_internal(Cow::Borrowed(request), options)
+}
+
+fn solve_electrostatic_plane_triangle_2d_internal(
+    request: Cow<'_, SolveElectrostaticPlaneTriangle2dRequest>,
+    options: SpdSolveOptions,
+) -> Result<SolveElectrostaticPlaneTriangle2dResult, String> {
+    validate_electrostatic_plane_triangle_request(request.as_ref())?;
 
     let dof_count = request.nodes.len();
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -26,7 +53,7 @@ pub fn solve_electrostatic_plane_triangle_2d(
     let computed_elements = request
         .elements
         .iter()
-        .map(|element| precompute_electrostatic_plane_triangle_element(request, element))
+        .map(|element| precompute_electrostatic_plane_triangle_element(request.as_ref(), element))
         .collect::<Result<Vec<_>, String>>()?;
 
     for (index, node) in request.nodes.iter().enumerate() {
@@ -56,7 +83,9 @@ pub fn solve_electrostatic_plane_triangle_2d(
 
     let (reduced_stiffness, reduced_source, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed);
-    let reduced_potentials = solve_spd_system(&reduced_stiffness, &reduced_source)?;
+    let reduced_potentials =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_source, options)?
+            .solution;
 
     let mut potentials = vec![0.0; dof_count];
     for &(index, value) in &prescribed {
@@ -151,7 +180,7 @@ pub fn solve_electrostatic_plane_triangle_2d(
         .fold(0.0_f64, f64::max);
 
     Ok(SolveElectrostaticPlaneTriangle2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         max_potential,
@@ -165,7 +194,27 @@ pub fn solve_electrostatic_plane_triangle_2d(
 pub fn solve_electrostatic_plane_quad_2d(
     request: &SolveElectrostaticPlaneQuad2dRequest,
 ) -> Result<SolveElectrostaticPlaneQuad2dResult, String> {
-    validate_electrostatic_plane_quad_request(request)?;
+    solve_electrostatic_plane_quad_2d_internal(Cow::Borrowed(request), SpdSolveOptions::default())
+}
+
+pub fn solve_electrostatic_plane_quad_2d_owned(
+    request: SolveElectrostaticPlaneQuad2dRequest,
+) -> Result<SolveElectrostaticPlaneQuad2dResult, String> {
+    solve_electrostatic_plane_quad_2d_internal(Cow::Owned(request), SpdSolveOptions::default())
+}
+
+pub fn solve_electrostatic_plane_quad_2d_with_options(
+    request: &SolveElectrostaticPlaneQuad2dRequest,
+    options: SpdSolveOptions,
+) -> Result<SolveElectrostaticPlaneQuad2dResult, String> {
+    solve_electrostatic_plane_quad_2d_internal(Cow::Borrowed(request), options)
+}
+
+fn solve_electrostatic_plane_quad_2d_internal(
+    request: Cow<'_, SolveElectrostaticPlaneQuad2dRequest>,
+    options: SpdSolveOptions,
+) -> Result<SolveElectrostaticPlaneQuad2dResult, String> {
+    validate_electrostatic_plane_quad_request(request.as_ref())?;
 
     let dof_count = request.nodes.len();
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -173,7 +222,7 @@ pub fn solve_electrostatic_plane_quad_2d(
     let computed_elements = request
         .elements
         .iter()
-        .map(|element| precompute_electrostatic_plane_quad_element(request, element))
+        .map(|element| precompute_electrostatic_plane_quad_element(request.as_ref(), element))
         .collect::<Result<Vec<_>, String>>()?;
 
     for (index, node) in request.nodes.iter().enumerate() {
@@ -216,7 +265,9 @@ pub fn solve_electrostatic_plane_quad_2d(
 
     let (reduced_stiffness, reduced_source, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed);
-    let reduced_potentials = solve_spd_system(&reduced_stiffness, &reduced_source)?;
+    let reduced_potentials =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_source, options)?
+            .solution;
 
     let mut potentials = vec![0.0; dof_count];
     for &(index, value) in &prescribed {
@@ -332,7 +383,7 @@ pub fn solve_electrostatic_plane_quad_2d(
         .fold(0.0_f64, f64::max);
 
     Ok(SolveElectrostaticPlaneQuad2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         max_potential,

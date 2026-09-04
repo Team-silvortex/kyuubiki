@@ -6,7 +6,7 @@ use crate::heat_plane_2d_validation::{
     validate_heat_plane_quad_request, validate_heat_plane_triangle_request,
 };
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system_with_prescribed, solve_spd_system,
+    SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
     solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
@@ -15,12 +15,35 @@ use kyuubiki_protocol::{
     SolveHeatPlaneQuad2dRequest, SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dRequest,
     SolveHeatPlaneTriangle2dResult,
 };
-use std::time::{Duration, Instant};
+use std::{
+    borrow::Cow,
+    time::{Duration, Instant},
+};
 
 pub fn solve_heat_plane_triangle_2d(
     request: &SolveHeatPlaneTriangle2dRequest,
 ) -> Result<SolveHeatPlaneTriangle2dResult, String> {
-    validate_heat_plane_triangle_request(request)?;
+    solve_heat_plane_triangle_2d_internal(Cow::Borrowed(request), SpdSolveOptions::default())
+}
+
+pub fn solve_heat_plane_triangle_2d_owned(
+    request: SolveHeatPlaneTriangle2dRequest,
+) -> Result<SolveHeatPlaneTriangle2dResult, String> {
+    solve_heat_plane_triangle_2d_internal(Cow::Owned(request), SpdSolveOptions::default())
+}
+
+pub fn solve_heat_plane_triangle_2d_with_options(
+    request: &SolveHeatPlaneTriangle2dRequest,
+    options: SpdSolveOptions,
+) -> Result<SolveHeatPlaneTriangle2dResult, String> {
+    solve_heat_plane_triangle_2d_internal(Cow::Borrowed(request), options)
+}
+
+fn solve_heat_plane_triangle_2d_internal(
+    request: Cow<'_, SolveHeatPlaneTriangle2dRequest>,
+    options: SpdSolveOptions,
+) -> Result<SolveHeatPlaneTriangle2dResult, String> {
+    validate_heat_plane_triangle_request(request.as_ref())?;
 
     let dof_count = request.nodes.len();
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -28,7 +51,7 @@ pub fn solve_heat_plane_triangle_2d(
     let computed_elements = request
         .elements
         .iter()
-        .map(|element| precompute_heat_plane_triangle_element(request, element))
+        .map(|element| precompute_heat_plane_triangle_element(request.as_ref(), element))
         .collect::<Result<Vec<_>, String>>()?;
 
     for (index, node) in request.nodes.iter().enumerate() {
@@ -58,7 +81,8 @@ pub fn solve_heat_plane_triangle_2d(
 
     let (reduced_stiffness, reduced_heat, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &heat_vector, &prescribed);
-    let reduced_temperatures = solve_spd_system(&reduced_stiffness, &reduced_heat)?;
+    let reduced_temperatures =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_heat, options)?.solution;
 
     let mut temperatures = vec![0.0; dof_count];
     for &(index, value) in &prescribed {
@@ -135,7 +159,7 @@ pub fn solve_heat_plane_triangle_2d(
         .sum();
 
     Ok(SolveHeatPlaneTriangle2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         max_temperature,
@@ -147,7 +171,14 @@ pub fn solve_heat_plane_triangle_2d(
 pub fn solve_heat_plane_quad_2d(
     request: &SolveHeatPlaneQuad2dRequest,
 ) -> Result<SolveHeatPlaneQuad2dResult, String> {
-    solve_heat_plane_quad_2d_internal(request, false, SpdSolveOptions::default())
+    solve_heat_plane_quad_2d_internal(Cow::Borrowed(request), false, SpdSolveOptions::default())
+        .map(|profile| profile.result)
+}
+
+pub fn solve_heat_plane_quad_2d_owned(
+    request: SolveHeatPlaneQuad2dRequest,
+) -> Result<SolveHeatPlaneQuad2dResult, String> {
+    solve_heat_plane_quad_2d_internal(Cow::Owned(request), false, SpdSolveOptions::default())
         .map(|profile| profile.result)
 }
 
@@ -177,15 +208,15 @@ pub fn profile_heat_plane_quad_2d_with_options(
     request: &SolveHeatPlaneQuad2dRequest,
     solve_options: SpdSolveOptions,
 ) -> Result<HeatPlaneQuadProfile, String> {
-    solve_heat_plane_quad_2d_internal(request, true, solve_options)
+    solve_heat_plane_quad_2d_internal(Cow::Borrowed(request), true, solve_options)
 }
 
 fn solve_heat_plane_quad_2d_internal(
-    request: &SolveHeatPlaneQuad2dRequest,
+    request: Cow<'_, SolveHeatPlaneQuad2dRequest>,
     collect_memory_stages: bool,
     solve_options: SpdSolveOptions,
 ) -> Result<HeatPlaneQuadProfile, String> {
-    validate_heat_plane_quad_request(request)?;
+    validate_heat_plane_quad_request(request.as_ref())?;
 
     let dof_count = request.nodes.len();
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -195,7 +226,7 @@ fn solve_heat_plane_quad_2d_internal(
     let computed_elements = request
         .elements
         .iter()
-        .map(|element| precompute_heat_plane_quad_element(request, element))
+        .map(|element| precompute_heat_plane_quad_element(request.as_ref(), element))
         .collect::<Result<Vec<_>, String>>()?;
     push_heat_plane_quad_memory_stage(
         &mut memory_stages,
@@ -386,7 +417,7 @@ fn solve_heat_plane_quad_2d_internal(
 
     Ok(HeatPlaneQuadProfile {
         result: SolveHeatPlaneQuad2dResult {
-            input: request.clone(),
+            input: request.into_owned(),
             nodes,
             elements,
             max_temperature,

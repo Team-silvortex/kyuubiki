@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system, solve_spd_system_profile_with_options,
 };
@@ -18,11 +20,24 @@ pub fn solve_thermal_truss_2d(
     solve_thermal_truss_2d_with_options(request, SpdSolveOptions::default())
 }
 
+pub fn solve_thermal_truss_2d_owned(
+    request: SolveThermalTruss2dRequest,
+) -> Result<SolveThermalTruss2dResult, String> {
+    solve_thermal_truss_2d_internal(Cow::Owned(request), SpdSolveOptions::default())
+}
+
 pub fn solve_thermal_truss_2d_with_options(
     request: &SolveThermalTruss2dRequest,
     options: SpdSolveOptions,
 ) -> Result<SolveThermalTruss2dResult, String> {
-    validate_thermal_truss_2d_request(request)?;
+    solve_thermal_truss_2d_internal(Cow::Borrowed(request), options)
+}
+
+fn solve_thermal_truss_2d_internal(
+    request: Cow<'_, SolveThermalTruss2dRequest>,
+    options: SpdSolveOptions,
+) -> Result<SolveThermalTruss2dResult, String> {
+    validate_thermal_truss_2d_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 2;
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -192,10 +207,10 @@ pub fn solve_thermal_truss_2d_with_options(
         .map(|element| element.strain_energy_density.abs())
         .fold(0.0_f64, f64::max);
 
-    validate_small_displacement_thermal_truss_2d(request, max_displacement)?;
+    validate_small_displacement_thermal_truss_2d(request.as_ref(), max_displacement)?;
 
     Ok(SolveThermalTruss2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         max_displacement,
@@ -213,11 +228,24 @@ pub fn solve_thermal_truss_3d(
     solve_thermal_truss_3d_with_options(request, SpdSolveOptions::default())
 }
 
+pub fn solve_thermal_truss_3d_owned(
+    request: SolveThermalTruss3dRequest,
+) -> Result<SolveThermalTruss3dResult, String> {
+    solve_thermal_truss_3d_internal(Cow::Owned(request), SpdSolveOptions::default())
+}
+
 pub fn solve_thermal_truss_3d_with_options(
     request: &SolveThermalTruss3dRequest,
     options: SpdSolveOptions,
 ) -> Result<SolveThermalTruss3dResult, String> {
-    validate_thermal_truss_3d_request(request)?;
+    solve_thermal_truss_3d_internal(Cow::Borrowed(request), options)
+}
+
+fn solve_thermal_truss_3d_internal(
+    request: Cow<'_, SolveThermalTruss3dRequest>,
+    options: SpdSolveOptions,
+) -> Result<SolveThermalTruss3dResult, String> {
+    validate_thermal_truss_3d_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 3;
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -405,10 +433,10 @@ pub fn solve_thermal_truss_3d_with_options(
         .map(|element| element.strain_energy_density.abs())
         .fold(0.0_f64, f64::max);
 
-    validate_small_displacement_thermal_truss_3d(request, max_displacement)?;
+    validate_small_displacement_thermal_truss_3d(request.as_ref(), max_displacement)?;
 
     Ok(SolveThermalTruss3dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         max_displacement,

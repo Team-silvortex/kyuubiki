@@ -12,7 +12,15 @@ use kyuubiki_protocol::{
 
 pub fn solve_spring_1d(request: &SolveSpring1dRequest) -> Result<SolveSpring1dResult, String> {
     validate_spring_1d_request(request)?;
+    solve_validated_spring_1d(request.clone())
+}
 
+pub fn solve_spring_1d_owned(request: SolveSpring1dRequest) -> Result<SolveSpring1dResult, String> {
+    validate_spring_1d_request(&request)?;
+    solve_validated_spring_1d(request)
+}
+
+fn solve_validated_spring_1d(request: SolveSpring1dRequest) -> Result<SolveSpring1dResult, String> {
     let dof_count = request.nodes.len();
     let mut global_stiffness = SparseMatrix::new(dof_count);
     let mut force_vector = vec![0.0; dof_count];
@@ -104,7 +112,7 @@ pub fn solve_spring_1d(request: &SolveSpring1dRequest) -> Result<SolveSpring1dRe
     let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveSpring1dResult {
-        input: request.clone(),
+        input: request,
         nodes,
         elements,
         max_displacement,
@@ -115,7 +123,15 @@ pub fn solve_spring_1d(request: &SolveSpring1dRequest) -> Result<SolveSpring1dRe
 
 pub fn solve_spring_2d(request: &SolveSpring2dRequest) -> Result<SolveSpring2dResult, String> {
     validate_spring_2d_request(request)?;
+    solve_validated_spring_2d(request.clone())
+}
 
+pub fn solve_spring_2d_owned(request: SolveSpring2dRequest) -> Result<SolveSpring2dResult, String> {
+    validate_spring_2d_request(&request)?;
+    solve_validated_spring_2d(request)
+}
+
+fn solve_validated_spring_2d(request: SolveSpring2dRequest) -> Result<SolveSpring2dResult, String> {
     let dof_count = request.nodes.len() * 2;
     let mut global_stiffness = SparseMatrix::new(dof_count);
     let mut force_vector = vec![0.0; dof_count];
@@ -246,7 +262,7 @@ pub fn solve_spring_2d(request: &SolveSpring2dRequest) -> Result<SolveSpring2dRe
     let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveSpring2dResult {
-        input: request.clone(),
+        input: request,
         nodes,
         elements,
         max_displacement,
@@ -257,7 +273,15 @@ pub fn solve_spring_2d(request: &SolveSpring2dRequest) -> Result<SolveSpring2dRe
 
 pub fn solve_spring_3d(request: &SolveSpring3dRequest) -> Result<SolveSpring3dResult, String> {
     validate_spring_3d_request(request)?;
+    solve_validated_spring_3d(request.clone())
+}
 
+pub fn solve_spring_3d_owned(request: SolveSpring3dRequest) -> Result<SolveSpring3dResult, String> {
+    validate_spring_3d_request(&request)?;
+    solve_validated_spring_3d(request)
+}
+
+fn solve_validated_spring_3d(request: SolveSpring3dRequest) -> Result<SolveSpring3dResult, String> {
     let dof_count = request.nodes.len() * 3;
     let mut global_stiffness = SparseMatrix::new(dof_count);
     let mut force_vector = vec![0.0; dof_count];
@@ -404,7 +428,7 @@ pub fn solve_spring_3d(request: &SolveSpring3dRequest) -> Result<SolveSpring3dRe
     let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveSpring3dResult {
-        input: request.clone(),
+        input: request,
         nodes,
         elements,
         max_displacement,

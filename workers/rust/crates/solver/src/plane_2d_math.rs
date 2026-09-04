@@ -38,7 +38,27 @@ pub(super) fn precompute_plane_triangle_element_from_nodes(
     nodes: &[PlaneNodeInput],
     element: &PlaneTriangleElementInput,
 ) -> Result<PlaneTriangleComputed, String> {
-    let (stiffness, area, b_matrix, d_matrix) = triangle_element_data(nodes, element)?;
+    let coordinates = [
+        [nodes[element.node_i].x, nodes[element.node_i].y],
+        [nodes[element.node_j].x, nodes[element.node_j].y],
+        [nodes[element.node_k].x, nodes[element.node_k].y],
+    ];
+    precompute_plane_triangle_element_from_coordinates(
+        coordinates,
+        element.thickness,
+        element.youngs_modulus,
+        element.poisson_ratio,
+    )
+}
+
+pub(super) fn precompute_plane_triangle_element_from_coordinates(
+    coordinates: [[f64; 2]; 3],
+    thickness: f64,
+    youngs_modulus: f64,
+    poisson_ratio: f64,
+) -> Result<PlaneTriangleComputed, String> {
+    let (stiffness, area, b_matrix, d_matrix) =
+        triangle_element_data(coordinates, thickness, youngs_modulus, poisson_ratio)?;
     Ok(PlaneTriangleComputed {
         stiffness,
         area,
@@ -75,30 +95,39 @@ pub(super) fn signed_triangle_area(
     node_j: &PlaneNodeInput,
     node_k: &PlaneNodeInput,
 ) -> f64 {
-    0.5 * ((node_j.x - node_i.x) * (node_k.y - node_i.y)
-        - (node_k.x - node_i.x) * (node_j.y - node_i.y))
+    signed_triangle_area_from_coordinates([
+        [node_i.x, node_i.y],
+        [node_j.x, node_j.y],
+        [node_k.x, node_k.y],
+    ])
+}
+
+pub(super) fn signed_triangle_area_from_coordinates(coordinates: [[f64; 2]; 3]) -> f64 {
+    let [node_i, node_j, node_k] = coordinates;
+    0.5 * ((node_j[0] - node_i[0]) * (node_k[1] - node_i[1])
+        - (node_k[0] - node_i[0]) * (node_j[1] - node_i[1]))
 }
 
 type PlaneTriangleElementData = ([[f64; 6]; 6], f64, [[f64; 6]; 3], [[f64; 3]; 3]);
 
 fn triangle_element_data(
-    nodes: &[PlaneNodeInput],
-    element: &PlaneTriangleElementInput,
+    coordinates: [[f64; 2]; 3],
+    thickness: f64,
+    youngs_modulus: f64,
+    poisson_ratio: f64,
 ) -> Result<PlaneTriangleElementData, String> {
-    let node_i = &nodes[element.node_i];
-    let node_j = &nodes[element.node_j];
-    let node_k = &nodes[element.node_k];
-    let area = signed_triangle_area(node_i, node_j, node_k).abs();
+    let [node_i, node_j, node_k] = coordinates;
+    let area = signed_triangle_area_from_coordinates(coordinates).abs();
     if area <= 1.0e-12 {
         return Err("plane element area must be positive".to_string());
     }
 
-    let b1 = node_j.y - node_k.y;
-    let b2 = node_k.y - node_i.y;
-    let b3 = node_i.y - node_j.y;
-    let c1 = node_k.x - node_j.x;
-    let c2 = node_i.x - node_k.x;
-    let c3 = node_j.x - node_i.x;
+    let b1 = node_j[1] - node_k[1];
+    let b2 = node_k[1] - node_i[1];
+    let b3 = node_i[1] - node_j[1];
+    let c1 = node_k[0] - node_j[0];
+    let c2 = node_i[0] - node_k[0];
+    let c3 = node_j[0] - node_i[0];
     let factor = 1.0 / (2.0 * area);
     let b_matrix = [
         [b1 * factor, 0.0, b2 * factor, 0.0, b3 * factor, 0.0],
@@ -113,12 +142,12 @@ fn triangle_element_data(
         ],
     ];
 
-    let d_matrix = plane_stress_d_matrix(element.youngs_modulus, element.poisson_ratio);
+    let d_matrix = plane_stress_d_matrix(youngs_modulus, poisson_ratio);
 
     let bt = transpose_3x6(&b_matrix);
     let bt_d = multiply_matrix_6x3_3x3(&bt, &d_matrix);
     let mut stiffness = multiply_matrix_6x3_3x6(&bt_d, &b_matrix);
-    let scale = element.thickness * area;
+    let scale = thickness * area;
     for row in &mut stiffness {
         for value in row {
             *value *= scale;

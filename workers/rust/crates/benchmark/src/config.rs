@@ -11,7 +11,7 @@ Options:
   --case <substring>                    Run matching cases only
   --repeat <count>                      Positive execution count (default: 10)
   --format <table|json>                 Report format (default: table)
-  --solver-preconditioner <name>        jacobi|sgs|ic0|auto|all|compare (long names accepted)
+  --solver-preconditioner <name>        jacobi|sgs|ic0|auto|all|compare (default: auto)
   --baseline-out <path>                 Write a baseline report
   --baseline-compare <path>             Compare against a baseline report
   --compare-report-out <path>           Write the comparison report
@@ -64,7 +64,7 @@ impl Default for BenchmarkConfig {
             baseline_out: None,
             baseline_compare: None,
             compare_report_out: None,
-            solver_preconditioner: "jacobi".to_string(),
+            solver_preconditioner: "auto".to_string(),
             progress: false,
             dry_run_shapes: false,
             fail_on_median_regression_pct: None,

@@ -20,25 +20,11 @@ mod tests {
 
     #[test]
     fn exposes_default_benchmark_config() {
-        let config = BenchmarkConfig {
-            repeat: 10,
-            case_filter: None,
-            matrix: "core".to_string(),
-            format: OutputFormat::Table,
-            profile: BenchmarkProfile::TenK,
-            baseline_out: None,
-            baseline_compare: None,
-            compare_report_out: None,
-            solver_preconditioner: "jacobi".to_string(),
-            progress: false,
-            dry_run_shapes: false,
-            fail_on_median_regression_pct: None,
-            fail_on_rss_regression_pct: None,
-            min_baseline_median_ms: 5.0,
-        };
+        let config = BenchmarkConfig::default();
 
         assert_eq!(config.repeat, 10);
         assert!(matches!(config.format, OutputFormat::Table));
+        assert_eq!(config.solver_preconditioner, "auto");
         assert!(!config.dry_run_shapes);
     }
 

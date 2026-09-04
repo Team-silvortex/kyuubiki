@@ -12,6 +12,7 @@ mod headless_cases;
 mod models;
 mod protocol_cases;
 mod runner;
+mod runner_electromagnetic;
 mod runner_hotspot;
 mod runner_metrics;
 mod runner_preconditioner;

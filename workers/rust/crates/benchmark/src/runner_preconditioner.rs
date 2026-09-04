@@ -5,7 +5,10 @@ use crate::models::{
     BenchmarkResult, BenchmarkWorkload,
 };
 
-const LARGE_THERMAL_PLANE_NODE_THRESHOLD: usize = 1_000_000;
+const LARGE_ITERATIVE_NODE_THRESHOLD: usize = 1_000_000;
+const MAGNETOSTATIC_IC0_NODE_THRESHOLD: usize = 90_000;
+const PLANE_IC0_NODE_THRESHOLD: usize = 90_000;
+const THERMAL_TRUSS_3D_IC0_NODE_THRESHOLD: usize = 100_000;
 
 pub(crate) fn parse_preconditioner(value: &str) -> SpdPreconditioner {
     match value {
@@ -32,52 +35,68 @@ pub(crate) fn effective_preconditioner<'a>(case: &BenchmarkCase, requested: &'a 
 
     match case.workload {
         BenchmarkWorkload::ThermalPlaneTriangle2d(_) => "ic0",
+        BenchmarkWorkload::ThermalTruss3d(ref request)
+            if request.nodes.len() >= THERMAL_TRUSS_3D_IC0_NODE_THRESHOLD =>
+        {
+            "ic0"
+        }
+        BenchmarkWorkload::MagnetostaticPlaneTriangle2d(ref request)
+            if request.nodes.len() >= MAGNETOSTATIC_IC0_NODE_THRESHOLD =>
+        {
+            "ic0"
+        }
+        BenchmarkWorkload::MagnetostaticPlaneQuad2d(ref request)
+            if request.nodes.len() >= MAGNETOSTATIC_IC0_NODE_THRESHOLD =>
+        {
+            "ic0"
+        }
         BenchmarkWorkload::Truss2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "ic0"
         }
         BenchmarkWorkload::ThermalTruss2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "ic0"
         }
         BenchmarkWorkload::PlaneTriangle2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= PLANE_IC0_NODE_THRESHOLD =>
         {
             "ic0"
         }
         BenchmarkWorkload::PlaneQuad2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= PLANE_IC0_NODE_THRESHOLD =>
         {
             "ic0"
         }
         BenchmarkWorkload::ThermalPlaneQuad2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= PLANE_IC0_NODE_THRESHOLD =>
         {
             "ic0"
         }
         BenchmarkWorkload::Frame2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "ic0"
         }
         BenchmarkWorkload::Frame3d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "ic0"
         }
         BenchmarkWorkload::ThermalFrame2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "ic0"
         }
         BenchmarkWorkload::ThermalFrame3d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "ic0"
         }
         BenchmarkWorkload::Truss2d(_)
+        | BenchmarkWorkload::ThermalTruss2d(_)
         | BenchmarkWorkload::HeatPlaneQuad2d(_)
         | BenchmarkWorkload::PlaneTriangle2d(_)
         | BenchmarkWorkload::PlaneQuad2d(_)
@@ -95,52 +114,68 @@ pub(crate) fn preconditioner_selection_reason(
     }
     match case.workload {
         BenchmarkWorkload::ThermalPlaneTriangle2d(_) => "auto-thermal-plane-triangle-ic0",
+        BenchmarkWorkload::ThermalTruss3d(ref request)
+            if request.nodes.len() >= THERMAL_TRUSS_3D_IC0_NODE_THRESHOLD =>
+        {
+            "auto-thermal-truss-3d-ic0"
+        }
+        BenchmarkWorkload::MagnetostaticPlaneTriangle2d(ref request)
+            if request.nodes.len() >= MAGNETOSTATIC_IC0_NODE_THRESHOLD =>
+        {
+            "auto-magnetostatic-plane-triangle-ic0"
+        }
+        BenchmarkWorkload::MagnetostaticPlaneQuad2d(ref request)
+            if request.nodes.len() >= MAGNETOSTATIC_IC0_NODE_THRESHOLD =>
+        {
+            "auto-magnetostatic-plane-quad-ic0"
+        }
         BenchmarkWorkload::Truss2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "auto-large-truss-ic0"
         }
         BenchmarkWorkload::ThermalTruss2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "auto-large-thermal-truss-ic0"
         }
         BenchmarkWorkload::PlaneTriangle2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= PLANE_IC0_NODE_THRESHOLD =>
         {
             "auto-large-plane-triangle-ic0"
         }
         BenchmarkWorkload::PlaneQuad2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= PLANE_IC0_NODE_THRESHOLD =>
         {
             "auto-large-plane-quad-ic0"
         }
         BenchmarkWorkload::ThermalPlaneQuad2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= PLANE_IC0_NODE_THRESHOLD =>
         {
             "auto-large-thermal-plane-quad-ic0"
         }
         BenchmarkWorkload::Frame2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "auto-large-frame-2d-ic0"
         }
         BenchmarkWorkload::Frame3d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "auto-large-frame-3d-ic0"
         }
         BenchmarkWorkload::ThermalFrame2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "auto-large-thermal-frame-2d-ic0"
         }
         BenchmarkWorkload::ThermalFrame3d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "auto-large-thermal-frame-3d-ic0"
         }
         BenchmarkWorkload::Truss2d(_)
+        | BenchmarkWorkload::ThermalTruss2d(_)
         | BenchmarkWorkload::HeatPlaneQuad2d(_)
         | BenchmarkWorkload::PlaneTriangle2d(_)
         | BenchmarkWorkload::PlaneQuad2d(_)

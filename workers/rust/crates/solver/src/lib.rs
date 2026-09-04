@@ -122,7 +122,8 @@ mod truss_validation;
 
 pub use acoustic_bar_1d::{solve_acoustic_bar_1d, solve_acoustic_bar_1d_owned};
 pub use bar_1d::{
-    solve_bar_1d, solve_electrostatic_bar_1d, solve_heat_bar_1d, solve_thermal_bar_1d,
+    solve_bar_1d, solve_electrostatic_bar_1d, solve_electrostatic_bar_1d_owned, solve_heat_bar_1d,
+    solve_heat_bar_1d_owned, solve_thermal_bar_1d, solve_thermal_bar_1d_owned,
 };
 pub use beam_1d::{
     solve_beam_1d, solve_beam_1d_with_options, solve_thermal_beam_1d,
@@ -136,7 +137,10 @@ pub use cohesive_interface_mesh_2d::solve_cohesive_interface_mesh_2d;
 pub use cohesive_interface_mesh_3d::solve_cohesive_interface_mesh_3d;
 pub use electric_conduction_plane_2d::solve_electric_conduction_plane_quad_2d;
 pub use electrostatic_plane_2d::{
-    solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d,
+    solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_quad_2d_owned,
+    solve_electrostatic_plane_quad_2d_with_options, solve_electrostatic_plane_triangle_2d,
+    solve_electrostatic_plane_triangle_2d_owned,
+    solve_electrostatic_plane_triangle_2d_with_options,
 };
 pub use frame_2d::{
     solve_frame_2d, solve_frame_2d_with_options, solve_thermal_frame_2d,
@@ -150,41 +154,53 @@ pub use harmonic_spring_1d::solve_harmonic_spring_1d;
 pub use heat_plane_2d::{
     HeatPlaneQuadMemoryStage, HeatPlaneQuadProfile, profile_heat_plane_quad_2d,
     profile_heat_plane_quad_2d_with_options, solve_heat_plane_quad_2d,
-    solve_heat_plane_triangle_2d,
+    solve_heat_plane_quad_2d_owned, solve_heat_plane_triangle_2d,
+    solve_heat_plane_triangle_2d_owned, solve_heat_plane_triangle_2d_with_options,
 };
 pub use linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
-pub use magnetostatic_bar_1d::solve_magnetostatic_bar_1d;
+pub use magnetostatic_bar_1d::{solve_magnetostatic_bar_1d, solve_magnetostatic_bar_1d_owned};
 pub use magnetostatic_plane_2d::{
-    solve_magnetostatic_plane_quad_2d, solve_magnetostatic_plane_triangle_2d,
+    solve_magnetostatic_plane_quad_2d, solve_magnetostatic_plane_quad_2d_owned,
+    solve_magnetostatic_plane_quad_2d_with_options, solve_magnetostatic_plane_triangle_2d,
+    solve_magnetostatic_plane_triangle_2d_owned,
+    solve_magnetostatic_plane_triangle_2d_with_options,
 };
 pub use modal_frame_2d::solve_modal_frame_2d;
 pub use modal_frame_3d::solve_modal_frame_3d;
-pub use nonlinear_spring_1d::{solve_contact_gap_1d, solve_nonlinear_spring_1d};
+pub use nonlinear_spring_1d::{
+    solve_contact_gap_1d, solve_contact_gap_1d_owned, solve_nonlinear_spring_1d,
+    solve_nonlinear_spring_1d_owned,
+};
 pub use plane_2d::{
     profile_plane_quad_2d, profile_plane_quad_2d_with_options,
-    profile_plane_triangle_2d_with_options, solve_plane_quad_2d, solve_plane_triangle_2d,
+    profile_plane_triangle_2d_with_options, solve_plane_quad_2d, solve_plane_quad_2d_owned,
+    solve_plane_triangle_2d, solve_plane_triangle_2d_owned,
 };
 pub use plane_2d_profile::{
     PlaneProfileStage as PlaneQuadProfileStage, PlaneQuadProfile, PlaneTriangleProfile,
 };
 pub use solid_tetra_3d::solve_solid_tetra_3d;
-pub use spring::{solve_spring_1d, solve_spring_2d, solve_spring_3d};
+pub use spring::{
+    solve_spring_1d, solve_spring_1d_owned, solve_spring_2d, solve_spring_2d_owned,
+    solve_spring_3d, solve_spring_3d_owned,
+};
 pub use stokes_flow_plane_2d::{
     solve_stokes_flow_plane_quad_2d, solve_stokes_flow_plane_triangle_2d,
 };
 pub use thermal_frame_3d::{solve_thermal_frame_3d, solve_thermal_frame_3d_with_options};
 pub use thermal_plane_2d::{
     profile_thermal_plane_quad_2d_with_options, profile_thermal_plane_triangle_2d_with_options,
-    solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d,
+    solve_thermal_plane_quad_2d, solve_thermal_plane_quad_2d_owned,
+    solve_thermal_plane_triangle_2d, solve_thermal_plane_triangle_2d_owned,
 };
 pub use thermal_plane_2d_profile::{
     ThermalPlaneProfileStage, ThermalPlaneQuadProfile, ThermalPlaneTriangleProfile,
 };
 pub use thermal_truss::{
-    solve_thermal_truss_2d, solve_thermal_truss_2d_with_options, solve_thermal_truss_3d,
-    solve_thermal_truss_3d_with_options,
+    solve_thermal_truss_2d, solve_thermal_truss_2d_owned, solve_thermal_truss_2d_with_options,
+    solve_thermal_truss_3d, solve_thermal_truss_3d_owned, solve_thermal_truss_3d_with_options,
 };
-pub use torsion_1d::solve_torsion_1d;
+pub use torsion_1d::{solve_torsion_1d, solve_torsion_1d_owned};
 pub use transient_heat_bar_1d::solve_transient_heat_bar_1d;
 pub use transient_spring_1d::solve_transient_spring_1d;
 pub use transport_bar_1d::{
@@ -192,7 +208,7 @@ pub use transport_bar_1d::{
 };
 pub use truss::{
     Truss2dProfile, Truss2dProfileStage, profile_truss_2d, profile_truss_2d_with_options,
-    solve_truss_2d, solve_truss_3d,
+    solve_truss_2d, solve_truss_2d_owned, solve_truss_3d, solve_truss_3d_owned,
 };
 
 pub struct MockSolver {

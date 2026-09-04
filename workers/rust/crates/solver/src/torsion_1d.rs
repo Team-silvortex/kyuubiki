@@ -8,7 +8,19 @@ use kyuubiki_protocol::{
 
 pub fn solve_torsion_1d(request: &SolveTorsion1dRequest) -> Result<SolveTorsion1dResult, String> {
     validate_request(request)?;
+    solve_validated_torsion_1d(request.clone())
+}
 
+pub fn solve_torsion_1d_owned(
+    request: SolveTorsion1dRequest,
+) -> Result<SolveTorsion1dResult, String> {
+    validate_request(&request)?;
+    solve_validated_torsion_1d(request)
+}
+
+fn solve_validated_torsion_1d(
+    request: SolveTorsion1dRequest,
+) -> Result<SolveTorsion1dResult, String> {
     let dof_count = request.nodes.len();
     let mut global_stiffness = SparseMatrix::new(dof_count);
     let mut torque_vector = vec![0.0; dof_count];
@@ -108,7 +120,7 @@ pub fn solve_torsion_1d(request: &SolveTorsion1dRequest) -> Result<SolveTorsion1
     let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveTorsion1dResult {
-        input: request.clone(),
+        input: request,
         nodes,
         elements,
         max_rotation,

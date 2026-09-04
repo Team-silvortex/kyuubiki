@@ -5,16 +5,14 @@ use kyuubiki_protocol::{
 
 use crate::chain_tridiagonal::solve_path_with_prescribed;
 
-pub(crate) fn solve_thermal_bar_1d_chain(
+pub(crate) fn solve_thermal_bar_1d_chain_displacements(
     request: &SolveThermalBar1dRequest,
-) -> Option<Result<SolveThermalBar1dResult, String>> {
-    solve_path_displacements(request).map(|result| {
-        result.map(|displacements| build_thermal_bar_1d_result(request, displacements))
-    })
+) -> Option<Result<Vec<f64>, String>> {
+    solve_path_displacements(request)
 }
 
 pub(crate) fn build_thermal_bar_1d_result(
-    request: &SolveThermalBar1dRequest,
+    request: SolveThermalBar1dRequest,
     displacements: Vec<f64>,
 ) -> SolveThermalBar1dResult {
     let nodes = request
@@ -34,7 +32,7 @@ pub(crate) fn build_thermal_bar_1d_result(
         .elements
         .iter()
         .enumerate()
-        .map(|(index, element)| build_element_result(index, element, request, &displacements))
+        .map(|(index, element)| build_element_result(index, element, &request, &displacements))
         .collect::<Vec<_>>();
 
     let max_displacement = nodes
@@ -64,7 +62,7 @@ pub(crate) fn build_thermal_bar_1d_result(
         .fold(0.0_f64, f64::max);
 
     SolveThermalBar1dResult {
-        input: request.clone(),
+        input: request,
         nodes,
         elements,
         max_displacement,

@@ -112,20 +112,22 @@ use kyuubiki_solver::{
     solve_acoustic_bar_1d_owned, solve_advection_diffusion_bar_1d_owned, solve_bar_1d,
     solve_beam_1d, solve_buckling_beam_1d, solve_buckling_frame_2d, solve_cohesive_interface_1d,
     solve_cohesive_interface_2d, solve_cohesive_interface_mesh_2d,
-    solve_cohesive_interface_mesh_3d, solve_contact_gap_1d,
-    solve_electric_conduction_plane_quad_2d, solve_electrostatic_bar_1d,
-    solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d, solve_frame_2d,
-    solve_frame_2d_material_p_delta, solve_frame_2d_p_delta, solve_frame_2d_p_delta_path,
-    solve_frame_3d, solve_harmonic_spring_1d, solve_heat_bar_1d, solve_heat_plane_quad_2d,
-    solve_heat_plane_triangle_2d, solve_magnetostatic_bar_1d, solve_magnetostatic_plane_quad_2d,
-    solve_magnetostatic_plane_triangle_2d, solve_modal_frame_2d, solve_modal_frame_3d,
-    solve_nonlinear_spring_1d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_solid_tetra_3d,
-    solve_spring_1d, solve_spring_2d, solve_spring_3d, solve_stokes_flow_plane_quad_2d,
-    solve_stokes_flow_plane_triangle_2d, solve_thermal_bar_1d, solve_thermal_beam_1d,
-    solve_thermal_frame_2d, solve_thermal_frame_3d, solve_thermal_plane_quad_2d,
-    solve_thermal_plane_triangle_2d, solve_thermal_truss_2d, solve_thermal_truss_3d,
-    solve_torsion_1d, solve_transient_heat_bar_1d, solve_transient_spring_1d, solve_truss_2d,
-    solve_truss_3d,
+    solve_cohesive_interface_mesh_3d, solve_contact_gap_1d_owned,
+    solve_electric_conduction_plane_quad_2d, solve_electrostatic_bar_1d_owned,
+    solve_electrostatic_plane_quad_2d_owned, solve_electrostatic_plane_triangle_2d_owned,
+    solve_frame_2d, solve_frame_2d_material_p_delta, solve_frame_2d_p_delta,
+    solve_frame_2d_p_delta_path, solve_frame_3d, solve_harmonic_spring_1d, solve_heat_bar_1d_owned,
+    solve_heat_plane_quad_2d_owned, solve_heat_plane_triangle_2d_owned,
+    solve_magnetostatic_bar_1d_owned, solve_magnetostatic_plane_quad_2d_owned,
+    solve_magnetostatic_plane_triangle_2d_owned, solve_modal_frame_2d, solve_modal_frame_3d,
+    solve_nonlinear_spring_1d_owned, solve_plane_quad_2d_owned, solve_plane_triangle_2d_owned,
+    solve_solid_tetra_3d, solve_spring_1d_owned, solve_spring_2d_owned, solve_spring_3d_owned,
+    solve_stokes_flow_plane_quad_2d, solve_stokes_flow_plane_triangle_2d,
+    solve_thermal_bar_1d_owned, solve_thermal_beam_1d, solve_thermal_frame_2d,
+    solve_thermal_frame_3d, solve_thermal_plane_quad_2d_owned,
+    solve_thermal_plane_triangle_2d_owned, solve_thermal_truss_2d_owned,
+    solve_thermal_truss_3d_owned, solve_torsion_1d_owned, solve_transient_heat_bar_1d,
+    solve_transient_spring_1d, solve_truss_2d_owned, solve_truss_3d_owned,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -190,38 +192,38 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
             solve_acoustic_bar_1d_owned(request).map(AnalysisResult::AcousticBar1d)
         }
         EngineSolveRequest::ThermalBar1d(request) => {
-            solve_thermal_bar_1d(&request).map(AnalysisResult::ThermalBar1d)
+            solve_thermal_bar_1d_owned(request).map(AnalysisResult::ThermalBar1d)
         }
         EngineSolveRequest::HeatBar1d(request) => {
-            solve_heat_bar_1d(&request).map(AnalysisResult::HeatBar1d)
+            solve_heat_bar_1d_owned(request).map(AnalysisResult::HeatBar1d)
         }
         EngineSolveRequest::TransientHeatBar1d(request) => {
             solve_transient_heat_bar_1d(&request).map(AnalysisResult::TransientHeatBar1d)
         }
         EngineSolveRequest::ElectrostaticBar1d(request) => {
-            solve_electrostatic_bar_1d(&request).map(AnalysisResult::ElectrostaticBar1d)
+            solve_electrostatic_bar_1d_owned(request).map(AnalysisResult::ElectrostaticBar1d)
         }
         EngineSolveRequest::MagnetostaticBar1d(request) => {
-            solve_magnetostatic_bar_1d(&request).map(AnalysisResult::MagnetostaticBar1d)
+            solve_magnetostatic_bar_1d_owned(request).map(AnalysisResult::MagnetostaticBar1d)
         }
         EngineSolveRequest::AdvectionDiffusionBar1d(request) => {
             solve_advection_diffusion_bar_1d_owned(request)
                 .map(AnalysisResult::AdvectionDiffusionBar1d)
         }
         EngineSolveRequest::MagnetostaticPlaneTriangle2d(request) => {
-            solve_magnetostatic_plane_triangle_2d(&request)
+            solve_magnetostatic_plane_triangle_2d_owned(request)
                 .map(AnalysisResult::MagnetostaticPlaneTriangle2d)
         }
         EngineSolveRequest::MagnetostaticPlaneQuad2d(request) => {
-            solve_magnetostatic_plane_quad_2d(&request)
+            solve_magnetostatic_plane_quad_2d_owned(request)
                 .map(AnalysisResult::MagnetostaticPlaneQuad2d)
         }
         EngineSolveRequest::ElectrostaticPlaneTriangle2d(request) => {
-            solve_electrostatic_plane_triangle_2d(&request)
+            solve_electrostatic_plane_triangle_2d_owned(request)
                 .map(AnalysisResult::ElectrostaticPlaneTriangle2d)
         }
         EngineSolveRequest::ElectrostaticPlaneQuad2d(request) => {
-            solve_electrostatic_plane_quad_2d(&request)
+            solve_electrostatic_plane_quad_2d_owned(request)
                 .map(AnalysisResult::ElectrostaticPlaneQuad2d)
         }
         EngineSolveRequest::ElectricConductionPlaneQuad2d(request) => {
@@ -229,10 +231,10 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
                 .map(AnalysisResult::ElectricConductionPlaneQuad2d)
         }
         EngineSolveRequest::HeatPlaneTriangle2d(request) => {
-            solve_heat_plane_triangle_2d(&request).map(AnalysisResult::HeatPlaneTriangle2d)
+            solve_heat_plane_triangle_2d_owned(request).map(AnalysisResult::HeatPlaneTriangle2d)
         }
         EngineSolveRequest::HeatPlaneQuad2d(request) => {
-            solve_heat_plane_quad_2d(&request).map(AnalysisResult::HeatPlaneQuad2d)
+            solve_heat_plane_quad_2d_owned(request).map(AnalysisResult::HeatPlaneQuad2d)
         }
         EngineSolveRequest::StokesFlowPlaneTriangle2d(request) => {
             solve_stokes_flow_plane_triangle_2d(&request)
@@ -242,13 +244,13 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
             solve_stokes_flow_plane_quad_2d(&request).map(AnalysisResult::StokesFlowPlaneQuad2d)
         }
         EngineSolveRequest::ThermalTruss2d(request) => {
-            solve_thermal_truss_2d(&request).map(AnalysisResult::ThermalTruss2d)
+            solve_thermal_truss_2d_owned(request).map(AnalysisResult::ThermalTruss2d)
         }
         EngineSolveRequest::ThermalTruss3d(request) => {
-            solve_thermal_truss_3d(&request).map(AnalysisResult::ThermalTruss3d)
+            solve_thermal_truss_3d_owned(request).map(AnalysisResult::ThermalTruss3d)
         }
         EngineSolveRequest::Spring1d(request) => {
-            solve_spring_1d(&request).map(AnalysisResult::Spring1d)
+            solve_spring_1d_owned(request).map(AnalysisResult::Spring1d)
         }
         EngineSolveRequest::TransientSpring1d(request) => {
             solve_transient_spring_1d(&request).map(AnalysisResult::TransientSpring1d)
@@ -257,10 +259,10 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
             solve_harmonic_spring_1d(&request).map(AnalysisResult::HarmonicSpring1d)
         }
         EngineSolveRequest::NonlinearSpring1d(request) => {
-            solve_nonlinear_spring_1d(&request).map(AnalysisResult::NonlinearSpring1d)
+            solve_nonlinear_spring_1d_owned(request).map(AnalysisResult::NonlinearSpring1d)
         }
         EngineSolveRequest::ContactGap1d(request) => {
-            solve_contact_gap_1d(&request).map(AnalysisResult::ContactGap1d)
+            solve_contact_gap_1d_owned(request).map(AnalysisResult::ContactGap1d)
         }
         EngineSolveRequest::CohesiveInterface1d(request) => {
             solve_cohesive_interface_1d(&request).map(AnalysisResult::CohesiveInterface1d)
@@ -275,10 +277,10 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
             solve_cohesive_interface_mesh_3d(&request).map(AnalysisResult::CohesiveInterfaceMesh3d)
         }
         EngineSolveRequest::Spring2d(request) => {
-            solve_spring_2d(&request).map(AnalysisResult::Spring2d)
+            solve_spring_2d_owned(request).map(AnalysisResult::Spring2d)
         }
         EngineSolveRequest::Spring3d(request) => {
-            solve_spring_3d(&request).map(AnalysisResult::Spring3d)
+            solve_spring_3d_owned(request).map(AnalysisResult::Spring3d)
         }
         EngineSolveRequest::Beam1d(request) => solve_beam_1d(&request).map(AnalysisResult::Beam1d),
         EngineSolveRequest::ThermalBeam1d(request) => {
@@ -291,13 +293,13 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
             solve_thermal_frame_3d(&request).map(AnalysisResult::ThermalFrame3d)
         }
         EngineSolveRequest::Torsion1d(request) => {
-            solve_torsion_1d(&request).map(AnalysisResult::Torsion1d)
+            solve_torsion_1d_owned(request).map(AnalysisResult::Torsion1d)
         }
         EngineSolveRequest::Truss2d(request) => {
-            solve_truss_2d(&request).map(AnalysisResult::Truss2d)
+            solve_truss_2d_owned(request).map(AnalysisResult::Truss2d)
         }
         EngineSolveRequest::Truss3d(request) => {
-            solve_truss_3d(&request).map(AnalysisResult::Truss3d)
+            solve_truss_3d_owned(request).map(AnalysisResult::Truss3d)
         }
         EngineSolveRequest::Frame3d(request) => {
             solve_frame_3d(&request).map(AnalysisResult::Frame3d)
@@ -327,16 +329,17 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
             solve_modal_frame_3d(&request).map(AnalysisResult::ModalFrame3d)
         }
         EngineSolveRequest::PlaneTriangle2d(request) => {
-            solve_plane_triangle_2d(&request).map(AnalysisResult::PlaneTriangle2d)
+            solve_plane_triangle_2d_owned(request).map(AnalysisResult::PlaneTriangle2d)
         }
         EngineSolveRequest::ThermalPlaneTriangle2d(request) => {
-            solve_thermal_plane_triangle_2d(&request).map(AnalysisResult::ThermalPlaneTriangle2d)
+            solve_thermal_plane_triangle_2d_owned(request)
+                .map(AnalysisResult::ThermalPlaneTriangle2d)
         }
         EngineSolveRequest::PlaneQuad2d(request) => {
-            solve_plane_quad_2d(&request).map(AnalysisResult::PlaneQuad2d)
+            solve_plane_quad_2d_owned(request).map(AnalysisResult::PlaneQuad2d)
         }
         EngineSolveRequest::ThermalPlaneQuad2d(request) => {
-            solve_thermal_plane_quad_2d(&request).map(AnalysisResult::ThermalPlaneQuad2d)
+            solve_thermal_plane_quad_2d_owned(request).map(AnalysisResult::ThermalPlaneQuad2d)
         }
         EngineSolveRequest::Frame2d(request) => {
             solve_frame_2d(&request).map(AnalysisResult::Frame2d)

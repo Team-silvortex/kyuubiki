@@ -12,8 +12,20 @@ pub fn solve_magnetostatic_bar_1d(
     request: &SolveMagnetostaticBar1dRequest,
 ) -> Result<SolveMagnetostaticBar1dResult, String> {
     validate_request(request)?;
+    solve_validated_magnetostatic_bar_1d(request.clone())
+}
 
-    let magnetic_potentials = solve_magnetic_potentials(request)?;
+pub fn solve_magnetostatic_bar_1d_owned(
+    request: SolveMagnetostaticBar1dRequest,
+) -> Result<SolveMagnetostaticBar1dResult, String> {
+    validate_request(&request)?;
+    solve_validated_magnetostatic_bar_1d(request)
+}
+
+fn solve_validated_magnetostatic_bar_1d(
+    request: SolveMagnetostaticBar1dRequest,
+) -> Result<SolveMagnetostaticBar1dResult, String> {
+    let magnetic_potentials = solve_magnetic_potentials(&request)?;
 
     let nodes = request
         .nodes
@@ -80,7 +92,7 @@ pub fn solve_magnetostatic_bar_1d(
     let total_stored_energy = elements.iter().map(|element| element.stored_energy).sum();
 
     Ok(SolveMagnetostaticBar1dResult {
-        input: request.clone(),
+        input: request,
         nodes,
         elements,
         max_magnetic_potential,

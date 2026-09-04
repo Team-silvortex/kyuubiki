@@ -1,8 +1,6 @@
 use std::time::Instant;
 
-use kyuubiki_protocol::{
-    SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest, SolvePlaneTriangle2dResult,
-};
+use kyuubiki_protocol::{PlaneNodeInput, SolvePlaneQuad2dResult, SolvePlaneTriangle2dResult};
 
 use crate::linear_algebra::{
     SparseMatrix, reduce_sparse_system, solve_spd_system_profile_with_options,
@@ -68,12 +66,12 @@ pub(crate) struct PlaneDisplacementProfile {
 }
 
 pub(crate) fn profile_plane_displacements_with_options(
-    request: &SolvePlaneTriangle2dRequest,
+    nodes: &[PlaneNodeInput],
     global_stiffness: &SparseMatrix,
     force_vector: &[f64],
     solve_options: SpdSolveOptions,
 ) -> Result<PlaneDisplacementProfile, String> {
-    let constrained = constrained_plane_dofs(request);
+    let constrained = constrained_plane_dofs(nodes);
     let mut stages = Vec::new();
 
     let started = Instant::now();
@@ -94,7 +92,7 @@ pub(crate) fn profile_plane_displacements_with_options(
     }
 
     let started = Instant::now();
-    let mut displacements = vec![0.0; request.nodes.len() * 2];
+    let mut displacements = vec![0.0; nodes.len() * 2];
     for (index, &dof) in free.iter().enumerate() {
         displacements[dof] = solve_profile.solution[index];
     }
@@ -109,9 +107,8 @@ pub(crate) fn profile_plane_displacements_with_options(
     })
 }
 
-fn constrained_plane_dofs(request: &SolvePlaneTriangle2dRequest) -> Vec<usize> {
-    request
-        .nodes
+fn constrained_plane_dofs(nodes: &[PlaneNodeInput]) -> Vec<usize> {
+    nodes
         .iter()
         .enumerate()
         .flat_map(|(index, node)| {

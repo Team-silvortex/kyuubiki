@@ -1,6 +1,6 @@
-use crate::plane_2d_math::signed_triangle_area;
+use crate::plane_2d_math::signed_triangle_area_from_coordinates;
 use kyuubiki_protocol::{
-    PlaneNodeInput, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
+    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest, ThermalPlaneNodeInput,
     ThermalPlaneQuadElementInput, ThermalPlaneTriangleElementInput,
 };
 
@@ -17,9 +17,8 @@ pub(super) fn validate_thermal_plane_triangle_request(
         return Err("thermal plane model must include at least one support".to_string());
     }
     validate_thermal_plane_nodes(&request.nodes, "thermal plane")?;
-    let plane_nodes = to_plane_nodes(request);
     for element in &request.elements {
-        validate_thermal_triangle_element(request, &plane_nodes, element)?;
+        validate_thermal_triangle_element(request, element)?;
     }
     Ok(())
 }
@@ -37,16 +36,14 @@ pub(super) fn validate_thermal_plane_quad_request(
         return Err("thermal plane quad model must include at least one support".to_string());
     }
     validate_thermal_plane_nodes(&request.nodes, "thermal plane quad")?;
-    let plane_nodes = to_quad_plane_nodes(request);
     for element in &request.elements {
-        validate_thermal_quad_element(request, &plane_nodes, element)?;
+        validate_thermal_quad_element(request, element)?;
     }
     Ok(())
 }
 
 fn validate_thermal_triangle_element(
     request: &SolveThermalPlaneTriangle2dRequest,
-    plane_nodes: &[PlaneNodeInput],
     element: &ThermalPlaneTriangleElementInput,
 ) -> Result<(), String> {
     if element.node_i >= request.nodes.len()
@@ -66,7 +63,7 @@ fn validate_thermal_triangle_element(
         "thermal plane element",
     )?;
     validate_positive_triangle_area(
-        plane_nodes,
+        &request.nodes,
         element.node_i,
         element.node_j,
         element.node_k,
@@ -76,7 +73,6 @@ fn validate_thermal_triangle_element(
 
 fn validate_thermal_quad_element(
     request: &SolveThermalPlaneQuad2dRequest,
-    plane_nodes: &[PlaneNodeInput],
     element: &ThermalPlaneQuadElementInput,
 ) -> Result<(), String> {
     let indices = [
@@ -105,14 +101,14 @@ fn validate_thermal_quad_element(
     )?;
 
     validate_positive_triangle_area(
-        plane_nodes,
+        &request.nodes,
         element.node_i,
         element.node_j,
         element.node_k,
         "thermal plane quad element must decompose into positive-area triangles",
     )?;
     validate_positive_triangle_area(
-        plane_nodes,
+        &request.nodes,
         element.node_i,
         element.node_k,
         element.node_l,
@@ -145,13 +141,18 @@ fn validate_thermal_material(
 }
 
 fn validate_positive_triangle_area(
-    nodes: &[PlaneNodeInput],
+    nodes: &[ThermalPlaneNodeInput],
     node_i: usize,
     node_j: usize,
     node_k: usize,
     message: &str,
 ) -> Result<(), String> {
-    let area = signed_triangle_area(&nodes[node_i], &nodes[node_j], &nodes[node_k]).abs();
+    let area = signed_triangle_area_from_coordinates([
+        [nodes[node_i].x, nodes[node_i].y],
+        [nodes[node_j].x, nodes[node_j].y],
+        [nodes[node_k].x, nodes[node_k].y],
+    ])
+    .abs();
     if !(area.is_finite() && area > 1.0e-12) {
         return Err(message.to_string());
     }
@@ -159,7 +160,7 @@ fn validate_positive_triangle_area(
 }
 
 fn validate_thermal_plane_nodes(
-    nodes: &[kyuubiki_protocol::ThermalPlaneNodeInput],
+    nodes: &[ThermalPlaneNodeInput],
     label: &str,
 ) -> Result<(), String> {
     for (index, node) in nodes.iter().enumerate() {
@@ -183,32 +184,4 @@ fn has_duplicate(indices: &[usize]) -> bool {
         .iter()
         .enumerate()
         .any(|(left, value)| indices[(left + 1)..].contains(value))
-}
-
-fn to_plane_nodes(request: &SolveThermalPlaneTriangle2dRequest) -> Vec<PlaneNodeInput> {
-    request
-        .nodes
-        .iter()
-        .map(thermal_node_to_plane_node)
-        .collect()
-}
-
-fn to_quad_plane_nodes(request: &SolveThermalPlaneQuad2dRequest) -> Vec<PlaneNodeInput> {
-    request
-        .nodes
-        .iter()
-        .map(thermal_node_to_plane_node)
-        .collect()
-}
-
-fn thermal_node_to_plane_node(node: &kyuubiki_protocol::ThermalPlaneNodeInput) -> PlaneNodeInput {
-    PlaneNodeInput {
-        id: node.id.clone(),
-        x: node.x,
-        y: node.y,
-        fix_x: node.fix_x,
-        fix_y: node.fix_y,
-        load_x: node.load_x,
-        load_y: node.load_y,
-    }
 }

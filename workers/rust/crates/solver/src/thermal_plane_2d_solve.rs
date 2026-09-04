@@ -5,7 +5,7 @@ use crate::linear_algebra::{
 };
 use crate::linear_solver_profile::SpdSolveOptions;
 use crate::thermal_plane_2d_profile::{ThermalPlaneProfileStage, push_thermal_plane_stage};
-use kyuubiki_protocol::SolveThermalPlaneTriangle2dRequest;
+use kyuubiki_protocol::ThermalPlaneNodeInput;
 
 pub(crate) struct ThermalPlaneSolvedDisplacements {
     pub(crate) displacements: Vec<f64>,
@@ -16,7 +16,7 @@ pub(crate) struct ThermalPlaneSolvedDisplacements {
 }
 
 pub(crate) fn solve_thermal_plane_displacements(
-    request: &SolveThermalPlaneTriangle2dRequest,
+    nodes: &[ThermalPlaneNodeInput],
     global_stiffness: &SparseMatrix,
     force_vector: &[f64],
     solve_options: SpdSolveOptions,
@@ -24,8 +24,7 @@ pub(crate) fn solve_thermal_plane_displacements(
     collect_stages: bool,
 ) -> Result<ThermalPlaneSolvedDisplacements, String> {
     let mut stage_started = Instant::now();
-    let constrained = request
-        .nodes
+    let constrained = nodes
         .iter()
         .enumerate()
         .flat_map(|(index, node)| {
@@ -64,7 +63,7 @@ pub(crate) fn solve_thermal_plane_displacements(
         stage_started.elapsed(),
     );
 
-    let mut displacements = vec![0.0; request.nodes.len() * 2];
+    let mut displacements = vec![0.0; nodes.len() * 2];
     for (index, &dof) in free.iter().enumerate() {
         displacements[dof] = reduced_displacements[index];
     }

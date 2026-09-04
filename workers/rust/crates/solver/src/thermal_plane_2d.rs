@@ -1,9 +1,9 @@
-use std::time::Instant;
+use std::{borrow::Cow, time::Instant};
 
 use crate::linear_algebra::{SparseMatrix, add_at};
-use crate::linear_solver_profile::SpdSolveOptions;
+use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
 use crate::plane_2d_math::{
-    PlaneTriangleComputed, precompute_plane_triangle_element_from_nodes,
+    PlaneTriangleComputed, precompute_plane_triangle_element_from_coordinates,
     thermal_plane_triangle_equivalent_load,
 };
 use crate::thermal_plane_2d_profile::{
@@ -22,18 +22,19 @@ use crate::thermal_plane_2d_results::{
 };
 use crate::thermal_plane_2d_solve::solve_thermal_plane_displacements;
 use crate::thermal_plane_2d_util::{
-    build_force_vector, build_quad_force_vector, to_plane_nodes, to_triangle_request,
-    triangle_displacements, triangle_dof_map,
+    build_force_vector, build_quad_force_vector, triangle_displacements, triangle_dof_map,
 };
 use crate::thermal_plane_2d_validation::{
     validate_thermal_plane_quad_request, validate_thermal_plane_triangle_request,
 };
 use kyuubiki_protocol::{
-    PlaneTriangleElementInput, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneQuad2dResult,
+    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneQuad2dResult,
     SolveThermalPlaneTriangle2dRequest, SolveThermalPlaneTriangle2dResult,
     ThermalPlaneQuadElementResult, ThermalPlaneTriangleElementInput,
     ThermalPlaneTriangleElementResult,
 };
+
+const THERMAL_PLANE_IC0_NODE_THRESHOLD: usize = 90_000;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ThermalPlaneTriangleComputed {
@@ -47,7 +48,19 @@ pub(crate) struct ThermalPlaneTriangleComputed {
 pub fn solve_thermal_plane_triangle_2d(
     request: &SolveThermalPlaneTriangle2dRequest,
 ) -> Result<SolveThermalPlaneTriangle2dResult, String> {
-    solve_thermal_plane_triangle_2d_internal(request, false, SpdSolveOptions::default())
+    solve_thermal_plane_triangle_2d_internal(
+        Cow::Borrowed(request),
+        false,
+        default_thermal_plane_options(request.nodes.len()),
+    )
+    .map(|profile| profile.result)
+}
+
+pub fn solve_thermal_plane_triangle_2d_owned(
+    request: SolveThermalPlaneTriangle2dRequest,
+) -> Result<SolveThermalPlaneTriangle2dResult, String> {
+    let options = default_thermal_plane_options(request.nodes.len());
+    solve_thermal_plane_triangle_2d_internal(Cow::Owned(request), false, options)
         .map(|profile| profile.result)
 }
 
@@ -55,26 +68,25 @@ pub fn profile_thermal_plane_triangle_2d_with_options(
     request: &SolveThermalPlaneTriangle2dRequest,
     options: SpdSolveOptions,
 ) -> Result<ThermalPlaneTriangleProfile, String> {
-    solve_thermal_plane_triangle_2d_internal(request, true, options)
+    solve_thermal_plane_triangle_2d_internal(Cow::Borrowed(request), true, options)
 }
 
 fn solve_thermal_plane_triangle_2d_internal(
-    request: &SolveThermalPlaneTriangle2dRequest,
+    request: Cow<'_, SolveThermalPlaneTriangle2dRequest>,
     collect_stages: bool,
     solve_options: SpdSolveOptions,
 ) -> Result<ThermalPlaneTriangleProfile, String> {
-    validate_thermal_plane_triangle_request(request)?;
+    validate_thermal_plane_triangle_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 2;
     let mut global_stiffness = SparseMatrix::with_uniform_row_capacity(dof_count, 18);
-    let mut force_vector = build_force_vector(request);
+    let mut force_vector = build_force_vector(request.as_ref());
     let mut stages = Vec::new();
     let mut stage_started = Instant::now();
-    let plane_nodes = to_plane_nodes(request);
     let computed_elements = request
         .elements
         .iter()
-        .map(|element| precompute_thermal_plane_triangle_element(&plane_nodes, request, element))
+        .map(|element| precompute_thermal_plane_triangle_element(request.as_ref(), element))
         .collect::<Result<Vec<_>, String>>()?;
     push_thermal_plane_stage(
         &mut stages,
@@ -96,7 +108,7 @@ fn solve_thermal_plane_triangle_2d_internal(
 
     stage_started = Instant::now();
     let solved = solve_thermal_plane_displacements(
-        request,
+        &request.nodes,
         &global_stiffness,
         &force_vector,
         solve_options,
@@ -112,9 +124,10 @@ fn solve_thermal_plane_triangle_2d_internal(
 
     stage_started = Instant::now();
     let displacements = solved.displacements;
-    let nodes = build_thermal_plane_nodes(request, &displacements);
-    let elements = build_thermal_triangle_elements(request, &computed_elements, &displacements);
-    let total_strain_energy = thermal_triangle_total_strain_energy(request, &elements);
+    let nodes = build_thermal_plane_nodes(&request.nodes, &displacements);
+    let elements =
+        build_thermal_triangle_elements(request.as_ref(), &computed_elements, &displacements);
+    let total_strain_energy = thermal_triangle_total_strain_energy(request.as_ref(), &elements);
     let max_strain_energy_density = max_thermal_triangle_strain_energy_density(&elements);
     push_thermal_plane_stage(
         &mut stages,
@@ -125,7 +138,7 @@ fn solve_thermal_plane_triangle_2d_internal(
 
     Ok(ThermalPlaneTriangleProfile {
         result: SolveThermalPlaneTriangle2dResult {
-            input: request.clone(),
+            input: request.into_owned(),
             max_displacement: max_thermal_plane_displacement(&nodes),
             max_stress: max_thermal_triangle_stress(&elements),
             max_temperature_delta: max_temperature_delta(&nodes),
@@ -145,7 +158,19 @@ fn solve_thermal_plane_triangle_2d_internal(
 pub fn solve_thermal_plane_quad_2d(
     request: &SolveThermalPlaneQuad2dRequest,
 ) -> Result<SolveThermalPlaneQuad2dResult, String> {
-    solve_thermal_plane_quad_2d_internal(request, false, SpdSolveOptions::default())
+    solve_thermal_plane_quad_2d_internal(
+        Cow::Borrowed(request),
+        false,
+        default_thermal_plane_options(request.nodes.len()),
+    )
+    .map(|profile| profile.result)
+}
+
+pub fn solve_thermal_plane_quad_2d_owned(
+    request: SolveThermalPlaneQuad2dRequest,
+) -> Result<SolveThermalPlaneQuad2dResult, String> {
+    let options = default_thermal_plane_options(request.nodes.len());
+    solve_thermal_plane_quad_2d_internal(Cow::Owned(request), false, options)
         .map(|profile| profile.result)
 }
 
@@ -153,26 +178,25 @@ pub fn profile_thermal_plane_quad_2d_with_options(
     request: &SolveThermalPlaneQuad2dRequest,
     options: SpdSolveOptions,
 ) -> Result<ThermalPlaneQuadProfile, String> {
-    solve_thermal_plane_quad_2d_internal(request, true, options)
+    solve_thermal_plane_quad_2d_internal(Cow::Borrowed(request), true, options)
 }
 
 fn solve_thermal_plane_quad_2d_internal(
-    request: &SolveThermalPlaneQuad2dRequest,
+    request: Cow<'_, SolveThermalPlaneQuad2dRequest>,
     collect_stages: bool,
     solve_options: SpdSolveOptions,
 ) -> Result<ThermalPlaneQuadProfile, String> {
-    validate_thermal_plane_quad_request(request)?;
+    validate_thermal_plane_quad_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 2;
     let mut global_stiffness = SparseMatrix::with_uniform_row_capacity(dof_count, 24);
-    let mut force_vector = build_quad_force_vector(request);
+    let mut force_vector = build_quad_force_vector(request.as_ref());
     let mut stages = Vec::new();
     let mut stage_started = Instant::now();
-    let triangle_request = to_triangle_request(request);
     let computed_elements = request
         .elements
         .iter()
-        .map(|element| precompute_thermal_plane_quad_element(request, element))
+        .map(|element| precompute_thermal_plane_quad_element(request.as_ref(), element))
         .collect::<Result<Vec<_>, String>>()?;
     push_thermal_plane_stage(
         &mut stages,
@@ -194,7 +218,7 @@ fn solve_thermal_plane_quad_2d_internal(
 
     stage_started = Instant::now();
     let solved = solve_thermal_plane_displacements(
-        &triangle_request,
+        &request.nodes,
         &global_stiffness,
         &force_vector,
         solve_options,
@@ -210,9 +234,10 @@ fn solve_thermal_plane_quad_2d_internal(
 
     stage_started = Instant::now();
     let displacements = solved.displacements;
-    let nodes = build_thermal_plane_nodes(&triangle_request, &displacements);
-    let elements = build_thermal_quad_elements(request, &computed_elements, &displacements);
-    let total_strain_energy = thermal_quad_total_strain_energy(request, &elements);
+    let nodes = build_thermal_plane_nodes(&request.nodes, &displacements);
+    let elements =
+        build_thermal_quad_elements(request.as_ref(), &computed_elements, &displacements);
+    let total_strain_energy = thermal_quad_total_strain_energy(request.as_ref(), &elements);
     let max_strain_energy_density = max_thermal_quad_strain_energy_density(&elements);
     push_thermal_plane_stage(
         &mut stages,
@@ -223,7 +248,7 @@ fn solve_thermal_plane_quad_2d_internal(
 
     Ok(ThermalPlaneQuadProfile {
         result: SolveThermalPlaneQuad2dResult {
-            input: request.clone(),
+            input: request.into_owned(),
             max_displacement: max_thermal_plane_displacement(&nodes),
             max_stress: max_thermal_quad_stress(&elements),
             max_temperature_delta: max_temperature_delta(&nodes),
@@ -354,25 +379,34 @@ fn build_thermal_quad_elements(
 }
 
 fn precompute_thermal_plane_triangle_element(
-    plane_nodes: &[kyuubiki_protocol::PlaneNodeInput],
     request: &SolveThermalPlaneTriangle2dRequest,
     element: &ThermalPlaneTriangleElementInput,
 ) -> Result<ThermalPlaneTriangleComputed, String> {
-    let plane_element = PlaneTriangleElementInput {
-        id: element.id.clone(),
-        node_i: element.node_i,
-        node_j: element.node_j,
-        node_k: element.node_k,
-        thickness: element.thickness,
-        youngs_modulus: element.youngs_modulus,
-        poisson_ratio: element.poisson_ratio,
-    };
+    let coordinates = [
+        [
+            request.nodes[element.node_i].x,
+            request.nodes[element.node_i].y,
+        ],
+        [
+            request.nodes[element.node_j].x,
+            request.nodes[element.node_j].y,
+        ],
+        [
+            request.nodes[element.node_k].x,
+            request.nodes[element.node_k].y,
+        ],
+    ];
     let PlaneTriangleComputed {
         stiffness,
         area,
         b_matrix,
         d_matrix,
-    } = precompute_plane_triangle_element_from_nodes(plane_nodes, &plane_element)?;
+    } = precompute_plane_triangle_element_from_coordinates(
+        coordinates,
+        element.thickness,
+        element.youngs_modulus,
+        element.poisson_ratio,
+    )?;
     let average_temperature_delta = (request.nodes[element.node_i].temperature_delta
         + request.nodes[element.node_j].temperature_delta
         + request.nodes[element.node_k].temperature_delta)
@@ -385,4 +419,33 @@ fn precompute_thermal_plane_triangle_element(
         d_matrix,
         average_temperature_delta,
     })
+}
+
+fn default_thermal_plane_options(node_count: usize) -> SpdSolveOptions {
+    SpdSolveOptions {
+        preconditioner: if node_count >= THERMAL_PLANE_IC0_NODE_THRESHOLD {
+            SpdPreconditioner::IncompleteCholesky
+        } else {
+            SpdPreconditioner::Jacobi
+        },
+        progress_interval: None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{THERMAL_PLANE_IC0_NODE_THRESHOLD, default_thermal_plane_options};
+    use crate::SpdPreconditioner;
+
+    #[test]
+    fn large_thermal_plane_models_default_to_ic0() {
+        assert_eq!(
+            default_thermal_plane_options(THERMAL_PLANE_IC0_NODE_THRESHOLD).preconditioner,
+            SpdPreconditioner::IncompleteCholesky
+        );
+        assert_eq!(
+            default_thermal_plane_options(THERMAL_PLANE_IC0_NODE_THRESHOLD - 1).preconditioner,
+            SpdPreconditioner::Jacobi
+        );
+    }
 }

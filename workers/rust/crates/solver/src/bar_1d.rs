@@ -7,7 +7,9 @@ use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system, reduce_sparse_system_with_prescribed,
     solve_spd_system,
 };
-use crate::thermal_bar_1d_fast::{build_thermal_bar_1d_result, solve_thermal_bar_1d_chain};
+use crate::thermal_bar_1d_fast::{
+    build_thermal_bar_1d_result, solve_thermal_bar_1d_chain_displacements,
+};
 use kyuubiki_protocol::{
     ElectrostaticBar1dElementResult, ElectrostaticBar1dNodeResult, ElementResult,
     HeatBar1dElementResult, HeatBar1dNodeResult, NodeResult, SolveBarRequest, SolveBarResult,
@@ -91,8 +93,21 @@ pub fn solve_thermal_bar_1d(
     request: &SolveThermalBar1dRequest,
 ) -> Result<SolveThermalBar1dResult, String> {
     validate_thermal_bar_1d_request(request)?;
-    if let Some(result) = solve_thermal_bar_1d_chain(request) {
-        return result;
+    solve_validated_thermal_bar_1d(request.clone())
+}
+
+pub fn solve_thermal_bar_1d_owned(
+    request: SolveThermalBar1dRequest,
+) -> Result<SolveThermalBar1dResult, String> {
+    validate_thermal_bar_1d_request(&request)?;
+    solve_validated_thermal_bar_1d(request)
+}
+
+fn solve_validated_thermal_bar_1d(
+    request: SolveThermalBar1dRequest,
+) -> Result<SolveThermalBar1dResult, String> {
+    if let Some(result) = solve_thermal_bar_1d_chain_displacements(&request) {
+        return result.map(|displacements| build_thermal_bar_1d_result(request, displacements));
     }
 
     let dof_count = request.nodes.len();
@@ -152,8 +167,20 @@ pub fn solve_thermal_bar_1d(
 
 pub fn solve_heat_bar_1d(request: &SolveHeatBar1dRequest) -> Result<SolveHeatBar1dResult, String> {
     validate_heat_bar_1d_request(request)?;
+    solve_validated_heat_bar_1d(request.clone())
+}
 
-    let temperatures = solve_heat_bar_1d_temperatures(request)?;
+pub fn solve_heat_bar_1d_owned(
+    request: SolveHeatBar1dRequest,
+) -> Result<SolveHeatBar1dResult, String> {
+    validate_heat_bar_1d_request(&request)?;
+    solve_validated_heat_bar_1d(request)
+}
+
+fn solve_validated_heat_bar_1d(
+    request: SolveHeatBar1dRequest,
+) -> Result<SolveHeatBar1dResult, String> {
+    let temperatures = solve_heat_bar_1d_temperatures(&request)?;
 
     let nodes = request
         .nodes
@@ -205,7 +232,7 @@ pub fn solve_heat_bar_1d(request: &SolveHeatBar1dRequest) -> Result<SolveHeatBar
         .fold(0.0_f64, f64::max);
 
     Ok(SolveHeatBar1dResult {
-        input: request.clone(),
+        input: request,
         nodes,
         elements,
         max_temperature,
@@ -217,8 +244,20 @@ pub fn solve_electrostatic_bar_1d(
     request: &SolveElectrostaticBar1dRequest,
 ) -> Result<SolveElectrostaticBar1dResult, String> {
     validate_electrostatic_bar_1d_request(request)?;
+    solve_validated_electrostatic_bar_1d(request.clone())
+}
 
-    let potentials = solve_electrostatic_bar_1d_potentials(request)?;
+pub fn solve_electrostatic_bar_1d_owned(
+    request: SolveElectrostaticBar1dRequest,
+) -> Result<SolveElectrostaticBar1dResult, String> {
+    validate_electrostatic_bar_1d_request(&request)?;
+    solve_validated_electrostatic_bar_1d(request)
+}
+
+fn solve_validated_electrostatic_bar_1d(
+    request: SolveElectrostaticBar1dRequest,
+) -> Result<SolveElectrostaticBar1dResult, String> {
+    let potentials = solve_electrostatic_bar_1d_potentials(&request)?;
 
     let nodes = request
         .nodes
@@ -283,7 +322,7 @@ pub fn solve_electrostatic_bar_1d(
     let total_stored_energy = elements.iter().map(|element| element.stored_energy).sum();
 
     Ok(SolveElectrostaticBar1dResult {
-        input: request.clone(),
+        input: request,
         nodes,
         elements,
         max_potential,

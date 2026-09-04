@@ -206,7 +206,7 @@ pub(crate) fn run_thermal_structural_workload(
 }
 
 impl WorkloadMetrics {
-    fn from_counts(
+    pub(crate) fn from_counts(
         node_count: usize,
         element_count: usize,
         dof_count: usize,
@@ -243,7 +243,7 @@ impl WorkloadMetrics {
         self
     }
 
-    fn with_preconditioner(mut self, solver_preconditioner: &str) -> Self {
+    pub(crate) fn with_preconditioner(mut self, solver_preconditioner: &str) -> Self {
         self.solver_preconditioner = Some(solver_preconditioner.to_string());
         self
     }
