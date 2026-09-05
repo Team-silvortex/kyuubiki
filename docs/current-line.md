@@ -14,6 +14,39 @@ This is a product-line transition, not a wholesale protocol version bump.
 Existing TaskIR, workflow, dataset, material, and KCore schema identifiers stay
 unchanged unless their contracts actually change.
 
+## Early Daji Mainline
+
+Early Daji is a hardening phase toward an agent-driven industrial research
+system, not another broad feature-expansion phase. Industrial reliability is
+the acceptance goal, not a status granted by the version number.
+
+Research agents, including external AI callers, use the official Headless SDKs
+to discover capabilities, propose bounded studies, submit work, observe results,
+and prepare subsequent rounds. Rust Agents are separate execution processes:
+they admit language-neutral tasks and run operators through their engines.
+Neither role replaces the other, and neither may bypass caller-owned approval,
+resource limits, or numerical quality gates.
+
+The primary acceptance journey is:
+
+1. Declare a research objective, constraints, metrics, and stopping budget.
+2. Discover the installed runtime and validate a reproducible workflow.
+3. Authorize and execute real operator tasks without a GUI prerequisite.
+4. Observe progress and diagnose, cancel, or resume interrupted work safely.
+5. Validate results before ranking candidates or admitting another round.
+6. Export the research lineage and evidence for replay and human review.
+
+Workbench remains first-class for modeling, inspection, intervention, and
+review of the same backend state. PWDT automates the fixed GUI; it is not a
+mandatory bridge for Headless SDK users. Orchestra and explicit direct/mesh
+control paths keep their distinct, equally supported authority boundaries.
+
+Prioritize blockers in this complete journey over isolated feature counts.
+The [weakness roadmap](weakness-roadmap.md#priority-order) maps that work to
+existing tensor coordinates and retained evidence. New physics or abstractions
+should be added when they remove a demonstrated blocker, not to widen the
+catalog alone.
+
 ## What Carries Forward
 
 - Contract-driven mechanical, thermal, electromagnetic, acoustic, modal,

@@ -11,6 +11,12 @@ headless when automation matters, and open at every protocol boundary.
 > The version transition is a milestone, not a blanket industrial-certification
 > or general-availability claim; public distribution remains evidence-gated.
 
+Early Daji prioritizes hardening an **agent-driven industrial research system**,
+not increasing feature count. Research agents use the Headless SDKs to run
+bounded, reviewable research loops; Rust Agents execute the admitted tasks.
+The GUI remains a first-class modeling, inspection, and human-takeover surface,
+not a prerequisite for automation. See the [early Daji mainline](docs/current-line.md#early-daji-mainline).
+
 ## System Shape
 
 Kyuubiki is a set of cooperating products and runtimes, not one monolithic

@@ -11,11 +11,18 @@ It complements:
 
 ## Roadmap Principle
 
-The goal after `moxi 2.0.0` is not to maximize feature count.
+The early Daji goal is to harden an agent-driven industrial research system,
+not to maximize feature count.
 
 The goal is to make the strongest current capabilities repeatable, explainable,
 recoverable, and honest enough for selected early research and industrial
 partners.
+
+Use the [early Daji mainline](current-line.md#early-daji-mainline) as the
+acceptance journey. Research agents control work through the official Headless
+SDKs; Rust Agents execute admitted tasks. GUI/PWDT, Headless control, and
+Rust-only operator extensions remain distinct surfaces. No model output may
+grant itself approval or substitute for numerical validation.
 
 ## Current Tensor Status
 
@@ -1064,18 +1071,34 @@ retained fault-injection evidence on a managed physical deployment.
 
 ## Priority Order
 
-The recommended order is:
+Early Daji uses one bounded, real Headless research loop as the acceptance
+spine. A retained run must bind its objective, input and package identities,
+runtime posture, metrics, quality decisions, failures, and exported lineage.
+The loop remains screening-only wherever independent numerical evidence is
+missing. More operators or a larger node count cannot compensate for a broken
+research journey.
 
-1. deepen numerical trust beyond compact qualification fixtures
-2. executable TaskIR stability and replay compatibility
-3. operator SDK end-to-end package example
-4. agent/orchestra/mesh recovery
-5. automated material research flagship
-6. security fuzz expansion
-7. Workbench main-loop polish and product-visible limitations
+| Order | Hardening outcome | Existing tensor coordinates |
+| --- | --- | --- |
+| 1 | Repeat a complete research loop on an Installer-managed runtime without mock execution or hidden GUI setup. | `sdk-headless/sdk_headless`, `runtime-agent-cli/solver_execution`, `runtime-installer/deployment_update` |
+| 2 | Reject invalid physics and qualify metrics with independent references and convergence evidence before ranking. | `runtime-engine-solver/solver_execution`, `runtime-engine-solver/validation` |
+| 3 | Diagnose process loss, partitions, and cancellation; resume only authorized work without duplicate results or cascading failure. | `runtime-agent-cli/validation`, `orchestra-control-plane/validation`, `orchestra-control-plane/workflow_composition` |
+| 4 | Preserve TaskIR, operator identities, checkpoints, and KCore lineage across restart and replay. | `runtime-protocol/validation`, `sdk-headless/persistence_provenance`, `runtime-engine-solver/persistence_provenance` |
+| 5 | Make GUI review, PWDT automation, and human intervention consistent with the same persisted backend state. | `workbench-shell/product_surface`, `workbench-shell/runtime_api`, `workbench-shell/persistence_provenance` |
+| 6 | Measure sustained throughput, tail latency, memory, and cancellation cost on the qualified journey before expanding scale. | `runtime-engine-solver/benchmark`, `runtime-agent-cli/benchmark`, `orchestra-control-plane/benchmark`, `sdk-headless/benchmark` |
 
-Workbench polish matters, but it should not outrun the runtime and numerical
-trust foundations.
+Security, approval boundaries, and resource budgets are constraints on every
+row, not a later phase. Critical security defects and data-loss risks preempt
+the order above. Windows installed journeys, macOS/Windows installed recovery,
+and remaining update/rollback gates retain their independent release priority;
+Linux-first research qualification does not waive another platform's gate.
+
+Every closure needs a regression case and retained evidence at the actual
+module/function/evidence coordinate, including its version, platform, and
+execution scope. If a journey exposes a missing coordinate or insufficient
+target, recalibrate the tensor explicitly instead of treating its current
+target percentages as complete industrial coverage. This planning update does
+not promote evidence grades, relabel historical runs, or close release gates.
 
 Current nonlinear-structure progress includes sampled limit-point events and
 bounded symmetric-tangent inertia diagnostics. Nonzero inertia changes outside
