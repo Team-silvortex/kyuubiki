@@ -11,6 +11,7 @@ type CopyShape = {
   immersiveHelp: string;
   enterImmersive: string;
   exitImmersive: string;
+  ready: string;
 };
 
 type WorkbenchViewportHeadActionsProps = {
@@ -120,7 +121,7 @@ export function WorkbenchViewportHeadActions({
           {immersiveViewport ? t.exitImmersive : t.enterImmersive}
         </button>
       ) : null}
-      <span>{jobStatus ?? "idle"}</span>
+      <span>{jobStatus ?? t.ready}</span>
     </>
   );
 }

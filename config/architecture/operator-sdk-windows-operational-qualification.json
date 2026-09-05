@@ -1,7 +1,8 @@
 {
   "$schema": "../../schemas/operator-sdk-windows-operational-qualification-contract.schema.json",
-  "schema_version": "kyuubiki.operator-sdk-windows-operational-qualification-contract/v1",
+  "schema_version": "kyuubiki.operator-sdk-windows-operational-qualification-contract/v2",
   "qualification_id": "operator-sdk-windows-installed-agent-operational",
+  "execution_abi": "kyuubiki.operator-json-c/v1",
   "platform": {
     "os": "windows",
     "arch": "x86_64",
@@ -22,13 +23,21 @@
     "schemas/operator-package-dynamic-smoke.schema.json",
     "schemas/operator-sdk-windows-operational-qualification-contract.schema.json",
     "schemas/operator-sdk-windows-operational-qualification-report.schema.json",
+    "workers/rust/crates/cli/src/operator_package_runtime.rs",
     "workers/rust/crates/cli/tests/operator_package_installer_live.rs",
     "workers/rust/crates/cli/tests/operator_package_live.rs",
     "workers/rust/crates/cli/tests/operator_package_orchestra_fetch_live.rs",
+    "workers/rust/crates/engine/src/operator_sdk_dynamic_abi.rs",
+    "workers/rust/crates/installer/src/operator_package_fetch.rs",
+    "workers/rust/crates/installer/src/operator_package_store.rs",
+    "workers/rust/crates/operator-sdk/src/json_abi.rs",
+    "workers/rust/crates/operator-sdk/src/manifest.rs",
     "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke.rs",
     "workers/rust/crates/script-runner/src/operator_package_dynamic_smoke/check.rs",
     "workers/rust/crates/script-runner/src/operator_sdk_windows_qualification.rs",
-    "workers/rust/crates/script-runner/src/operator_sdk_windows_qualification/validation.rs"
+    "workers/rust/crates/script-runner/src/operator_sdk_windows_qualification/validation.rs",
+    "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",
+    "workers/rust/templates/operator-crate-template/src/lib.rs"
   ],
   "provenance": {
     "allowed_providers": ["github-actions", "self-hosted-windows"],
@@ -41,15 +50,16 @@
     ]
   },
   "report": {
-    "schema_version": "kyuubiki.operator-sdk-windows-operational-qualification/v1",
+    "schema_version": "kyuubiki.operator-sdk-windows-operational-qualification/v2",
     "schema_path": "schemas/operator-sdk-windows-operational-qualification-report.schema.json",
-    "default_path": "releases/usability-evidence/2.15.0/operator-sdk-windows-installed-agent-operational-qualification.json",
+    "default_path": "releases/usability-evidence/2.19.0/operator-sdk-windows-installed-agent-operational-qualification.json",
     "dynamic_smoke_file": "operator-sdk-windows-dynamic-smoke.json",
     "preflight_file": "operator-sdk-windows-package-preflight.json"
   },
   "workflow": {
     "path": ".github/workflows/operator-sdk-windows-qualification.yml",
     "artifact_name": "operator-sdk-windows-operational-evidence",
-    "capture_command": "cargo run --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-script-runner -- qualify-operator-sdk-windows-operational"
+    "capture_command": "cargo run --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-script-runner -- qualify-operator-sdk-windows-operational --out tmp/operator-sdk-windows-current/operator-sdk-windows-installed-agent-operational-qualification.json",
+    "generated_report_path": "tmp/operator-sdk-windows-current/operator-sdk-windows-installed-agent-operational-qualification.json"
   }
 }

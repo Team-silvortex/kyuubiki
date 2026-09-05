@@ -17,6 +17,18 @@ const FIXED_AT = "2026-08-13T00:00:00.000Z";
 const WORKFLOW_ID = "workflow.bar-1d-summary-json";
 const JOB_ID = "qualification-workflow-job";
 
+function qualificationProject(overrides = {}) {
+  return {
+    project_id: "qualification-project",
+    name: "Qualification project",
+    description: "Isolated browser qualification",
+    inserted_at: FIXED_AT,
+    updated_at: FIXED_AT,
+    models: [],
+    ...overrides,
+  };
+}
+
 function job(status, progress, message) {
   return {
     job_id: JOB_ID,
@@ -156,6 +168,12 @@ function createBackendState() {
     jobPolls: 0,
     historyFetches: 0,
     submissionBodies: [],
+    projects: [qualificationProject()],
+    projectMutations: [],
+    adminJobs: [],
+    adminResults: [],
+    jobRecordMutations: [],
+    resultRecordMutations: [],
   };
 }
 
@@ -192,10 +210,10 @@ async function startMockBackend() {
       }
       if (request.method === "GET" && url.pathname === "/api/v1/jobs") {
         state.historyFetches += 1;
-        const jobs = state.catalogSubmissions + state.graphSubmissions > 0
+        const workflowJobs = state.catalogSubmissions + state.graphSubmissions > 0
           ? [job("completed", 1, "bar_1d_model")]
           : [];
-        return respondJson(response, 200, { jobs }, request);
+        return respondJson(response, 200, { jobs: [...state.adminJobs, ...workflowJobs] }, request);
       }
       if (request.method === "GET" && url.pathname === "/api/health") {
         return respondJson(response, 200, { service: "qualification-runtime", status: "ok" }, request);
@@ -210,19 +228,83 @@ async function startMockBackend() {
         }, request);
       }
       if (request.method === "GET" && url.pathname === "/api/v1/results") {
-        return respondJson(response, 200, { results: [] }, request);
+        return respondJson(response, 200, { results: state.adminResults }, request);
       }
       if (request.method === "GET" && url.pathname === "/api/v1/projects") {
-        return respondJson(response, 200, {
-          projects: [{
-            project_id: "qualification-project",
-            name: "Qualification project",
-            description: "Isolated browser qualification",
-            inserted_at: FIXED_AT,
-            updated_at: FIXED_AT,
-            models: [],
-          }],
-        }, request);
+        return respondJson(response, 200, { projects: state.projects }, request);
+      }
+      if (request.method === "POST" && url.pathname === "/api/v1/projects") {
+        const body = await readJsonBody(request);
+        const project = qualificationProject({
+          project_id: `qualification-created-project-${state.projectMutations.length + 1}`,
+          name: typeof body?.name === "string" ? body.name : "Qualification created project",
+          description: typeof body?.description === "string" ? body.description : "",
+        });
+        state.projects.push(project);
+        state.projectMutations.push({ method: "POST", project_id: project.project_id, body });
+        return respondJson(response, 201, { project }, request);
+      }
+      const projectMatch = url.pathname.match(/^\/api\/v1\/projects\/([^/]+)$/u);
+      if (projectMatch && request.method === "PATCH") {
+        const projectId = decodeURIComponent(projectMatch[1]);
+        const index = state.projects.findIndex((entry) => entry.project_id === projectId);
+        if (index < 0) return respondJson(response, 404, { error: "project not found" }, request);
+        const body = await readJsonBody(request);
+        const project = {
+          ...state.projects[index],
+          ...(typeof body?.name === "string" ? { name: body.name } : {}),
+          ...(typeof body?.description === "string" ? { description: body.description } : {}),
+          updated_at: FIXED_AT,
+        };
+        state.projects[index] = project;
+        state.projectMutations.push({ method: "PATCH", project_id: projectId, body });
+        return respondJson(response, 200, { project }, request);
+      }
+      if (projectMatch && request.method === "DELETE") {
+        const projectId = decodeURIComponent(projectMatch[1]);
+        const index = state.projects.findIndex((entry) => entry.project_id === projectId);
+        if (index < 0) return respondJson(response, 404, { error: "project not found" }, request);
+        const [project] = state.projects.splice(index, 1);
+        state.projectMutations.push({ method: "DELETE", project_id: projectId, body: null });
+        return respondJson(response, 200, { project }, request);
+      }
+      const jobRecordMatch = url.pathname.match(/^\/api\/v1\/jobs\/([^/]+)$/u);
+      if (jobRecordMatch && request.method === "PATCH") {
+        const jobId = decodeURIComponent(jobRecordMatch[1]);
+        const index = state.adminJobs.findIndex((entry) => entry.job_id === jobId);
+        if (index < 0) return respondJson(response, 404, { error: "job not found" }, request);
+        const body = await readJsonBody(request);
+        const updated = { ...state.adminJobs[index], ...body, updated_at: FIXED_AT };
+        state.adminJobs[index] = updated;
+        state.jobRecordMutations.push({ method: "PATCH", job_id: jobId, body });
+        return respondJson(response, 200, { job: updated }, request);
+      }
+      if (jobRecordMatch && request.method === "DELETE") {
+        const jobId = decodeURIComponent(jobRecordMatch[1]);
+        const index = state.adminJobs.findIndex((entry) => entry.job_id === jobId);
+        if (index < 0) return respondJson(response, 404, { error: "job not found" }, request);
+        const [deletedJob] = state.adminJobs.splice(index, 1);
+        state.jobRecordMutations.push({ method: "DELETE", job_id: jobId, body: null });
+        return respondJson(response, 200, { deleted: true, job: deletedJob }, request);
+      }
+      const resultRecordMatch = url.pathname.match(/^\/api\/v1\/results\/([^/]+)$/u);
+      if (resultRecordMatch && request.method === "PATCH") {
+        const jobId = decodeURIComponent(resultRecordMatch[1]);
+        const index = state.adminResults.findIndex((entry) => entry.job_id === jobId);
+        if (index < 0) return respondJson(response, 404, { error: "result not found" }, request);
+        const body = await readJsonBody(request);
+        const updated = { ...state.adminResults[index], result: body?.result ?? {}, updated_at: FIXED_AT };
+        state.adminResults[index] = updated;
+        state.resultRecordMutations.push({ method: "PATCH", job_id: jobId, body });
+        return respondJson(response, 200, { job_id: jobId, result: updated.result }, request);
+      }
+      if (resultRecordMatch && request.method === "DELETE") {
+        const jobId = decodeURIComponent(resultRecordMatch[1]);
+        const index = state.adminResults.findIndex((entry) => entry.job_id === jobId);
+        if (index < 0) return respondJson(response, 404, { error: "result not found" }, request);
+        const [deletedResult] = state.adminResults.splice(index, 1);
+        state.resultRecordMutations.push({ method: "DELETE", job_id: jobId, body: null });
+        return respondJson(response, 200, { ...deletedResult, deleted: true }, request);
       }
       if (request.method === "GET" && url.pathname === "/api/v1/security-events") {
         return respondJson(response, 200, { events: [] }, request);

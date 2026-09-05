@@ -1,0 +1,80 @@
+{
+  "schema_version": "kyuubiki.operator-sdk-performance-qualification/v1",
+  "qualification_id": "operator-sdk-dynamic-json-abi-performance",
+  "generated_at_unix_ms": 1788156604065,
+  "status": "pass",
+  "source_tree_sha256": "f432bc10b3073dbaabc19f1271b7848d552ac211621850524a08004124442945",
+  "platform": {
+    "os": "macos",
+    "arch": "aarch64",
+    "build_profile": "release"
+  },
+  "package": {
+    "package_id": "operator.template.summary",
+    "operator_id": "extract.template_summary",
+    "execution_abi": "kyuubiki.operator-json-c/v1"
+  },
+  "measurement": {
+    "resident_activation_iterations": 5,
+    "warmup_iterations": 100,
+    "compact_iterations": 2000,
+    "medium_iterations": 200,
+    "medium_value_count": 4096,
+    "concurrent_workers": 4,
+    "concurrent_iterations_per_worker": 250
+  },
+  "thresholds": {
+    "cold_activation_max_ns": 1000000000,
+    "resident_activation_p95_max_ns": 100000000,
+    "first_dispatch_max_ns": 100000000,
+    "compact_p95_max_ns": 5000000,
+    "medium_p95_max_ns": 50000000,
+    "concurrent_min_dispatches_per_second": 100.0
+  },
+  "metrics": {
+    "activation": {
+      "cold_ns": 429673584,
+      "resident_iterations": 5,
+      "resident_p50_ns": 272708,
+      "resident_p95_ns": 417167,
+      "resident_max_ns": 417167,
+      "resident_mean_ns": 298799.8,
+      "errors": 0
+    },
+    "first_dispatch_ns": 410500,
+    "compact": {
+      "iterations": 2000,
+      "request_bytes": 209,
+      "p50_ns": 7834,
+      "p95_ns": 9208,
+      "max_ns": 67042,
+      "mean_ns": 7950.502,
+      "errors": 0
+    },
+    "medium": {
+      "iterations": 200,
+      "request_bytes": 26457,
+      "p50_ns": 243041,
+      "p95_ns": 366042,
+      "max_ns": 469583,
+      "mean_ns": 256012.305,
+      "errors": 0
+    },
+    "concurrent": {
+      "workers": 4,
+      "total_dispatches": 1000,
+      "elapsed_ns": 1936458,
+      "dispatches_per_second": 516406.7591447891,
+      "errors": 0
+    }
+  },
+  "optimization_contract": {
+    "host_response_copy_bytes_per_dispatch": 0,
+    "registry_initializations_per_library": 1,
+    "response_buffer_release": "same-library-raii"
+  },
+  "limitations": [
+    "This microbenchmark isolates the in-process dynamic operator host and excludes network, scheduler, and solver time.",
+    "Thresholds are regression gates for the current release profile, not cross-hardware ranking claims."
+  ]
+}

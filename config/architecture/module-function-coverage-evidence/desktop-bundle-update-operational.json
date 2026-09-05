@@ -1,0 +1,120 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Installer-managed packaged desktop set update and exact rollback with immutable activation history, fail-closed content verification, and nine real Hub, Installer, and Workbench boot probes on both macOS and Linux.",
+  "paradigm_contract_evidence": {
+    "deployment_update": [
+      {
+        "id": "desktop-bundle-set-update-contract",
+        "modules": [
+          "hub-shell",
+          "installer-shell",
+          "workbench-shell",
+          "runtime-installer"
+        ],
+        "files": [
+          "schemas/desktop-bundle-set.schema.json",
+          "schemas/desktop-bundle-activation.schema.json",
+          "schemas/desktop-bundle-update-qualification-report.schema.json",
+          "workers/rust/crates/installer/src/desktop_bundle_package.rs",
+          "workers/rust/crates/installer/src/desktop_bundle_store.rs",
+          "workers/rust/crates/installer/src/desktop_bundle_qualification.rs",
+          "workers/rust/crates/installer/src/desktop_bundle_qualification_validation.rs",
+          "workers/rust/crates/installer/src/tests/desktop_bundle_set.rs",
+          "workers/rust/crates/script-runner/src/desktop_bundle_operational_qualification.rs",
+          "workers/rust/crates/script-runner/src/governance_commands.rs"
+        ],
+        "required_text": [
+          "kyuubiki.desktop-bundle-set/v1",
+          "kyuubiki.desktop-bundle-activation/v1",
+          "kyuubiki.desktop-bundle-update-qualification/v1",
+          "installer-managed-packaged-desktop-set-upgrade-and-rollback",
+          "qualify-desktop-bundle-update-operational-host",
+          "check-desktop-bundle-update-operational-qualification",
+          "rollback_payload_restored",
+          "update_lock_clean",
+          "staging_clean"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "desktop-bundle-update-macos-operational",
+      "status": "proven",
+      "grade": "operational",
+      "modules": [
+        "hub-shell",
+        "installer-shell",
+        "workbench-shell",
+        "runtime-installer"
+      ],
+      "paradigms": [
+        "deployment_update"
+      ],
+      "dimensions": [
+        "execution",
+        "security",
+        "contract",
+        "recovery"
+      ],
+      "files": [
+        "releases/usability-evidence/2.17.0/desktop-bundle-update-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"execution_host_role\": \"local-macos-qualification-host\"",
+        "\"active_after_upgrade\": \"2.17.0\"",
+        "\"active_after_rollback\": \"2.16.9\"",
+        "\"phase\": \"initial-install\"",
+        "\"phase\": \"upgraded-install\"",
+        "\"phase\": \"rollback\"",
+        "\"component_id\": \"hub\"",
+        "\"component_id\": \"installer\"",
+        "\"component_id\": \"workbench\"",
+        "\"id\": \"rollback_payload_restored\"",
+        "\"id\": \"update_lock_clean\"",
+        "\"id\": \"staging_clean\""
+      ]
+    },
+    {
+      "id": "desktop-bundle-update-linux-operational",
+      "status": "proven",
+      "grade": "operational",
+      "modules": [
+        "hub-shell",
+        "installer-shell",
+        "workbench-shell",
+        "runtime-installer"
+      ],
+      "paradigms": [
+        "deployment_update"
+      ],
+      "dimensions": [
+        "execution",
+        "security",
+        "contract",
+        "recovery"
+      ],
+      "files": [
+        "releases/usability-evidence/2.19.0/linux-desktop-bundle-update-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"execution_host_role\": \"remote-linux-qualification-host\"",
+        "\"runtime_version\": \"2.19.0\"",
+        "\"active_after_upgrade\": \"2.19.0\"",
+        "\"active_after_rollback\": \"2.18.9\"",
+        "\"phase\": \"initial-install\"",
+        "\"phase\": \"upgraded-install\"",
+        "\"phase\": \"rollback\"",
+        "\"component_id\": \"hub\"",
+        "\"component_id\": \"installer\"",
+        "\"component_id\": \"workbench\"",
+        "\"id\": \"rollback_payload_restored\"",
+        "\"id\": \"update_lock_clean\"",
+        "\"id\": \"staging_clean\""
+      ]
+    }
+  ]
+}

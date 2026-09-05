@@ -94,7 +94,7 @@ document is good; it ensures no document is invisible.
 
 ## Moxi Maintenance Posture
 
-During the active `moxi 2.x` line, documentation changes should close one of
+During the active `daji 3.x` line, documentation changes should close one of
 these gaps:
 
 - keep the current shipping point and the `2.0.0` historical baseline distinct

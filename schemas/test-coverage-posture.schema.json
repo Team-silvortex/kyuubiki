@@ -138,9 +138,53 @@
         "status": {
           "enum": ["declared", "instrumented", "thresholded", "enforced"]
         },
+        "enforced_threshold": {
+          "$ref": "#/$defs/thresholds"
+        },
+        "enforcement": {
+          "$ref": "#/$defs/enforcement"
+        },
         "minimum_next_threshold": {
           "$ref": "#/$defs/thresholds"
         }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": ["thresholded", "enforced"]
+              }
+            },
+            "required": ["status"]
+          },
+          "then": {
+            "required": ["enforced_threshold"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "enforced"
+              }
+            },
+            "required": ["status"]
+          },
+          "then": {
+            "required": ["enforcement"]
+          }
+        }
+      ]
+    },
+    "enforcement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workflow", "command", "artifact"],
+      "properties": {
+        "workflow": { "$ref": "#/$defs/repoPath" },
+        "command": { "type": "string", "minLength": 1 },
+        "artifact": { "$ref": "#/$defs/repoPath" }
       }
     },
     "nonCodeGate": {

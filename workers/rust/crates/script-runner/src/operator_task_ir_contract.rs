@@ -366,9 +366,9 @@ fn validate_golden_manifest(root: &Path, tasks_by_path: &Map<String, Value>) -> 
         .get("line")
         .and_then(Value::as_str)
         .unwrap_or_default()
-        != "moxi 2.x"
+        != "daji 3.x"
     {
-        return Err(format!("{GOLDEN_MANIFEST_PATH}: line must be moxi 2.x"));
+        return Err(format!("{GOLDEN_MANIFEST_PATH}: line must be daji 3.x"));
     }
     let Some(examples) = manifest.get("examples").and_then(Value::as_array) else {
         return Err(format!(

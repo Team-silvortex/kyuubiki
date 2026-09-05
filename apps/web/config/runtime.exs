@@ -147,7 +147,15 @@ config :kyuubiki_web, KyuubikiWeb.Jobs.Watchdog,
   stale_job_ms: String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_STALE_JOB_MS", "30000")),
   queue_timeout_ms:
     String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_QUEUE_TIMEOUT_MS", "1800000")),
-  job_timeout_ms: String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_JOB_TIMEOUT_MS", "1800000"))
+  job_timeout_ms:
+    String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_JOB_TIMEOUT_MS", "1800000")),
+  workflow_timeout_ms:
+    String.to_integer(
+      System.get_env(
+        "KYUUBIKI_WORKFLOW_TIMEOUT_MS",
+        System.get_env("KYUUBIKI_WATCHDOG_JOB_TIMEOUT_MS", "1800000")
+      )
+    )
 
 config :kyuubiki_web, KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator,
   max_attempts: String.to_integer(System.get_env("KYUUBIKI_WORKFLOW_RECOVERY_MAX_ATTEMPTS", "3")),

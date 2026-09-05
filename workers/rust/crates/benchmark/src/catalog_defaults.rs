@@ -20,6 +20,7 @@ fn default_templates() -> Vec<CaseTemplateSpec> {
         template("thermal-bar", BenchmarkFamily::ThermalBar1d),
         template("acoustic-bar", BenchmarkFamily::AcousticBar1d),
         template("heat-bar", BenchmarkFamily::HeatBar1d),
+        template("transient-heat-bar", BenchmarkFamily::TransientHeatBar1d),
         template("electrostatic-bar", BenchmarkFamily::ElectrostaticBar1d),
         template("magnetostatic-bar", BenchmarkFamily::MagnetostaticBar1d),
         template(
@@ -28,10 +29,28 @@ fn default_templates() -> Vec<CaseTemplateSpec> {
         ),
         template("torsion-shaft", BenchmarkFamily::Torsion1d),
         template("spring-chain", BenchmarkFamily::Spring1d),
+        template("transient-spring-chain", BenchmarkFamily::TransientSpring1d),
+        template("harmonic-spring-chain", BenchmarkFamily::HarmonicSpring1d),
         template("spring-grid", BenchmarkFamily::Spring2d),
         template("spring-cage", BenchmarkFamily::Spring3d),
         template("nonlinear-spring-chain", BenchmarkFamily::NonlinearSpring1d),
         template("contact-gap-chain", BenchmarkFamily::ContactGap1d),
+        template(
+            "cohesive-interface-1d",
+            BenchmarkFamily::CohesiveInterface1d,
+        ),
+        template(
+            "cohesive-interface-2d",
+            BenchmarkFamily::CohesiveInterface2d,
+        ),
+        template(
+            "cohesive-interface-mesh-2d",
+            BenchmarkFamily::CohesiveInterfaceMesh2d,
+        ),
+        template(
+            "cohesive-interface-mesh-3d",
+            BenchmarkFamily::CohesiveInterfaceMesh3d,
+        ),
         template("beam-line", BenchmarkFamily::Beam1d),
         template("thermal-beam-line", BenchmarkFamily::ThermalBeam1d),
         template("frame-2d", BenchmarkFamily::Frame2d),
@@ -84,6 +103,10 @@ fn default_templates() -> Vec<CaseTemplateSpec> {
         template(
             "magnetostatic-plane-quad",
             BenchmarkFamily::MagnetostaticPlaneQuad2d,
+        ),
+        template(
+            "electric-conduction-plane-quad",
+            BenchmarkFamily::ElectricConductionPlaneQuad2d,
         ),
         template("stokes-plane-quad", BenchmarkFamily::StokesFlowPlaneQuad2d),
         template(
@@ -152,6 +175,7 @@ fn default_matrices() -> Vec<BenchmarkMatrixSpec> {
                 "electrostatic-plane-quad",
                 "magnetostatic-plane-triangle",
                 "magnetostatic-plane-quad",
+                "electric-conduction-plane-quad",
                 "stokes-plane-quad",
                 "stokes-plane-triangle",
             ],
@@ -170,6 +194,25 @@ fn default_matrices() -> Vec<BenchmarkMatrixSpec> {
                 "modal-frame-2d",
                 "modal-frame-3d",
                 "solid-tetra-3d",
+            ],
+            vec![],
+        ),
+        matrix(
+            "dynamic-response",
+            &[
+                "transient-heat-bar",
+                "transient-spring-chain",
+                "harmonic-spring-chain",
+            ],
+            vec![],
+        ),
+        matrix(
+            "cohesive-interface",
+            &[
+                "cohesive-interface-1d",
+                "cohesive-interface-2d",
+                "cohesive-interface-mesh-2d",
+                "cohesive-interface-mesh-3d",
             ],
             vec![],
         ),

@@ -11,6 +11,8 @@ operator-package-preflight\n  \
 operator-package-dynamic-smoke\n  \
   check-operator-package-dynamic-smoke\n  \
   check-operator-package-dynamic-smoke-contract\n  \
+  qualify-operator-sdk-performance\n  \
+  check-operator-sdk-performance-qualification\n  \
   qualify-operator-sdk-windows-operational\n  \
   check-operator-sdk-windows-operational-qualification\n  \
   check-operator-reliability-rules\n  \
@@ -34,9 +36,9 @@ headless templates|suggest|init|inspect|validate|render|plan|run\n  \
 build-frontend build-orchestrator build-agent\n  \
 build-hub-gui build-installer-gui build-workbench-gui\n  \
 sync-desktop-shared check-desktop-shared\n  \
-package-desktop desktop-status desktop-stage desktop-build-host\n  \
+package-desktop desktop-status desktop-stage desktop-build-host [--bundles <bundle-list>]\n  \
 desktop-install-host\n  \
-desktop-packaged-smoke [macos] [--bundle-root <dir>] [--out <report>] [--verify-report <report>]\n  \
+desktop-packaged-smoke [macos|linux|windows] [--bundle-root <dir>] [--install-nsis] [--out <report>] [--verify-report <report>]\n  \
 desktop-release desktop-verify desktop-runtime-payload\n  \
 desktop-linux-remote\n  \
 desktop-upload-remote desktop-release-upload-remote\n  \
@@ -87,10 +89,21 @@ lab remote-ssh-fixture\n  \
   check-orchestra-recovery-fault-injection\n  \
   check-orchestra-takeover-operational-qualification\n  \
   qualify-orchestra-takeover-operational-remote\n  \
+  check-orchestra-network-partition-operational-qualification\n  \
+  qualify-orchestra-network-partition-operational-remote\n  \
+  check-orchestra-long-workflow-takeover-operational-qualification\n  \
+  qualify-orchestra-long-workflow-takeover-operational-remote\n  \
   check-orchestra-installed-takeover-operational-qualification\n  \
   qualify-orchestra-installed-takeover-operational-remote\n  \
   check-orchestra-workflow-operational-qualification\n  \
   check-installed-runtime-operational-qualification\n  \
+  qualify-installed-runtime-operational-remote\n  \
+  check-installed-runtime-macos-operational-qualification\n  \
+  qualify-installed-runtime-operational-macos\n  \
+  check-installed-runtime-power-loss-qualification\n  \
+  qualify-installed-runtime-power-loss-remote prepare|reboot|resume|cleanup\n  \
+  qualify-linux-host-power-loss prepare|resume|cleanup\n  \
+  check-linux-host-power-loss-qualification\n  \
   check-persistence-provenance-qualification\n  \
   check-installer-recovery-fault-injection\n  \
   check-workflow-dataset-contract\n  \
@@ -117,6 +130,8 @@ lab remote-ssh-fixture\n  \
   check-system-security-qualification\n  \
   check-agent-control-link-operational-qualification\n  \
   qualify-agent-control-link-operational-remote\n  \
+  check-operator-package-acquisition-operational-qualification\n  \
+  qualify-operator-package-acquisition-operational-remote\n  \
   check-distributed-task-recovery-operational-qualification\n  \
   qualify-distributed-task-recovery-operational-remote\n  \
   check-agent-solver-operational-qualification\n  \
@@ -125,6 +140,12 @@ lab remote-ssh-fixture\n  \
   qualify-agent-update-operational-remote\n  \
   check-runtime-payload-operational-qualification\n  \
   qualify-runtime-payload-operational-remote\n  \
+  check-fleet-update-operational-qualification\n  \
+  qualify-fleet-update-operational-remote\n  \
+  check-fleet-scheduling-operational-qualification\n  \
+  qualify-fleet-scheduling-operational-remote\n  \
+  check-agent-rolling-replacement-operational-qualification\n  \
+  qualify-agent-rolling-replacement-operational-remote\n  \
   qualify-headless-sdk-operational-remote\n  \
   check-headless-sdk-validation-qualification\n  \
   check-headless-sdk-operational-qualification\n  \
@@ -171,6 +192,8 @@ lab remote-ssh-fixture\n  \
   integration-desktop-gui-node-test\n  \
   check-desktop-ui-validation\n  \
   check-desktop-deployment-update-qualification\n  \
+  qualify-desktop-bundle-update-operational-host\n  \
+  check-desktop-bundle-update-operational-qualification\n  \
   integration-benchmark-profile-index-node-test\n  \
   integration-ui-mechanical-node-test\n  \
   integration-ui-thermal-node-test\n  \

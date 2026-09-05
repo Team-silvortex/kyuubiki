@@ -12,13 +12,17 @@ import {
 } from "@/components/workbench/workbench-notice-state";
 import type { ModelRecord, ModelVersionRecord } from "@/lib/api/project-types";
 import { parsePlaygroundModel } from "@/lib/models/model-import";
-import { parseProjectBundleFile } from "@/lib/projects/project-format";
 import { saveWorkbenchMacroPreset, saveWorkbenchSnippetPreset } from "@/lib/scripting/workbench-script-runtime";
 import { isSensitivePresetSaveError } from "@/lib/scripting/workbench-script-preset-security";
 import {
   persistWorkspaceStoreManifest,
   rewriteWorkspaceStoreManifestProject,
 } from "@/lib/workbench/store-manifest";
+import {
+  runWorkbenchTransitionOperation,
+  workbenchOperationFailure,
+  type WorkbenchOperationResult,
+} from "@/lib/workbench/operation-result";
 
 type PersistedModelEffects = {
   setLoadedModelName: (value: string) => void;
@@ -67,6 +71,7 @@ type PersistedModelControllerDeps = PersistedModelEffects & {
   importedProjectLabel: string;
   importedVersionLabel: string;
   importFailedLabel: string;
+  storeManifestPersistenceFailedLabel: string;
   formatImportNotice: (skippedSensitivePresetCount: number) => WorkbenchNoticeItem;
   setMessage: (value: string) => void;
   setSystemAlerts: Dispatch<SetStateAction<WorkbenchAlertItem[]>>;
@@ -100,7 +105,9 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
 
   try {
     dismissWorkbenchAlert(effects.setSystemAlerts, "project-import-error");
+    dismissWorkbenchAlert(effects.setSystemAlerts, "project-import-store-manifest-warning");
     dismissWorkbenchNotice(effects.setImportNotice);
+    const { parseProjectBundleFile } = await import("@/lib/projects/project-format");
     const bundle = await parseProjectBundleFile(file);
     const createdProject = await effects.createProject({
       name: bundle.project.name,
@@ -176,9 +183,16 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
     }
 
     if (bundle.store_manifest) {
-      persistWorkspaceStoreManifest(
+      const manifestPersisted = persistWorkspaceStoreManifest(
         rewriteWorkspaceStoreManifestProject(bundle.store_manifest, createdProject.project.project_id),
       );
+      if (!manifestPersisted) {
+        upsertWorkbenchAlert(effects.setSystemAlerts, {
+          id: "project-import-store-manifest-warning",
+          message: effects.storeManifestPersistenceFailedLabel,
+          tone: "warning",
+        });
+      }
     }
 
     await effects.refreshProjects();
@@ -221,7 +235,7 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
 }
 
 export function openPersistedWorkbenchModel(model: ModelRecord, effects: PersistedModelControllerDeps) {
-  const run = async () => {
+  const run = async (): Promise<WorkbenchOperationResult> => {
     try {
       dismissWorkbenchAlert(effects.setSystemAlerts, "persisted-model-open-error");
       dismissWorkbenchNotice(effects.setImportNotice);
@@ -233,33 +247,28 @@ export function openPersistedWorkbenchModel(model: ModelRecord, effects: Persist
       effects.setSelectedVersionId(payload.model.latest_version_id ?? null);
       await effects.refreshVersions(payload.model.model_id);
       effects.setMessage(effects.importedModelLabel);
+      return { ok: true };
     } catch (error) {
-      const message = error instanceof Error ? error.message : effects.importFailedLabel;
+      const failure = workbenchOperationFailure(error, effects.importFailedLabel);
       upsertWorkbenchAlert(effects.setSystemAlerts, {
         id: "persisted-model-open-error",
-        message,
+        message: failure.error.message,
         tone: "error",
       });
-      effects.setMessage(message);
+      effects.setMessage(failure.error.message);
+      return failure;
     }
   };
 
-  if (effects.startTransition) {
-    effects.startTransition(() => {
-      void run();
-    });
-    return;
-  }
-
-  void run();
+  return runWorkbenchTransitionOperation(effects.startTransition, run);
 }
 
 export function openPersistedWorkbenchVersion(version: ModelVersionRecord, effects: PersistedModelControllerDeps) {
-  openPersistedWorkbenchVersionById(version.version_id, effects);
+  return openPersistedWorkbenchVersionById(version.version_id, effects);
 }
 
 export function openPersistedWorkbenchVersionById(versionId: string, effects: PersistedModelControllerDeps) {
-  const run = async () => {
+  const run = async (): Promise<WorkbenchOperationResult> => {
     try {
       dismissWorkbenchAlert(effects.setSystemAlerts, "persisted-version-open-error");
       dismissWorkbenchNotice(effects.setImportNotice);
@@ -271,23 +280,18 @@ export function openPersistedWorkbenchVersionById(versionId: string, effects: Pe
       effects.setSelectedVersionId(payload.version.version_id);
       effects.setMessage(effects.importedVersionLabel);
       effects.setSidebarSection?.("model");
+      return { ok: true };
     } catch (error) {
-      const message = error instanceof Error ? error.message : effects.importFailedLabel;
+      const failure = workbenchOperationFailure(error, effects.importFailedLabel);
       upsertWorkbenchAlert(effects.setSystemAlerts, {
         id: "persisted-version-open-error",
-        message,
+        message: failure.error.message,
         tone: "error",
       });
-      effects.setMessage(message);
+      effects.setMessage(failure.error.message);
+      return failure;
     }
   };
 
-  if (effects.startTransition) {
-    effects.startTransition(() => {
-      void run();
-    });
-    return;
-  }
-
-  void run();
+  return runWorkbenchTransitionOperation(effects.startTransition, run);
 }

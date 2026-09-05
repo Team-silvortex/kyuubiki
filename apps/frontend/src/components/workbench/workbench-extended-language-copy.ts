@@ -79,6 +79,7 @@ export type WorkbenchProjectFlowCopy = {
   noResultProject: string;
   selectJobFirst: string;
   missingResultJob: string;
+  storeManifestPersistenceFailed: string;
   skippedSensitivePresets: (count: number) => string;
 };
 
@@ -270,6 +271,7 @@ const projectFlow: Record<string, WorkbenchProjectFlowCopy> = {
     noResultProject: "This result does not have a linked project.",
     selectJobFirst: "Select a job record first.",
     missingResultJob: "Could not find the job record linked to this result.",
+    storeManifestPersistenceFailed: "The project was imported, but its workspace store manifest could not be persisted.",
     skippedSensitivePresets: (count) => `Skipped ${count} sensitive automation preset(s) during project import.`,
   },
   zh: {
@@ -281,6 +283,7 @@ const projectFlow: Record<string, WorkbenchProjectFlowCopy> = {
     noResultProject: "这个结果还没有关联项目。",
     selectJobFirst: "请先选择一条任务记录。",
     missingResultJob: "找不到这条结果对应的任务记录。",
+    storeManifestPersistenceFailed: "项目已导入，但工作区商店 manifest 未能持久化。",
     skippedSensitivePresets: (count) => `项目导入时跳过了 ${count} 个敏感自动化预设。`,
   },
   ja: {
@@ -292,6 +295,7 @@ const projectFlow: Record<string, WorkbenchProjectFlowCopy> = {
     noResultProject: "この結果には関連プロジェクトがまだありません。",
     selectJobFirst: "先にジョブレコードを選択してください。",
     missingResultJob: "この結果に対応するジョブレコードが見つかりませんでした。",
+    storeManifestPersistenceFailed: "プロジェクトは取り込みましたが、workspace store manifest を保存できませんでした。",
     skippedSensitivePresets: (count) => `プロジェクトの取り込み時に機微な automation preset を ${count} 件スキップしました。`,
   },
   es: {
@@ -303,6 +307,7 @@ const projectFlow: Record<string, WorkbenchProjectFlowCopy> = {
     noResultProject: "Este resultado no tiene un proyecto enlazado.",
     selectJobFirst: "Selecciona primero un registro de tarea.",
     missingResultJob: "No se encontró la tarea enlazada a este resultado.",
+    storeManifestPersistenceFailed: "El proyecto se importó, pero no se pudo guardar su manifiesto de la tienda del espacio de trabajo.",
     skippedSensitivePresets: (count) => `Se omitieron ${count} presets sensibles durante la importación del proyecto.`,
   },
   fr: {
@@ -314,6 +319,7 @@ const projectFlow: Record<string, WorkbenchProjectFlowCopy> = {
     noResultProject: "Ce résultat n'a pas de projet lié.",
     selectJobFirst: "Sélectionnez d'abord un enregistrement de tâche.",
     missingResultJob: "Tâche liée à ce résultat introuvable.",
+    storeManifestPersistenceFailed: "Le projet a été importé, mais son manifeste de boutique d'espace de travail n'a pas pu être enregistré.",
     skippedSensitivePresets: (count) => `${count} presets sensibles ignorés pendant l'import du projet.`,
   },
   "zh-tw": {
@@ -325,6 +331,7 @@ const projectFlow: Record<string, WorkbenchProjectFlowCopy> = {
     noResultProject: "這個結果尚未關聯專案。",
     selectJobFirst: "請先選擇一筆任務記錄。",
     missingResultJob: "找不到這筆結果對應的任務記錄。",
+    storeManifestPersistenceFailed: "專案已匯入，但工作區商店 manifest 無法持久化。",
     skippedSensitivePresets: (count) => `專案匯入時跳過了 ${count} 個敏感自動化預設。`,
   },
 };
@@ -491,6 +498,7 @@ export function getWorkbenchProjectFlowCopy(language?: string): WorkbenchProject
     noResultProject: auditCopy.failed,
     selectJobFirst: auditCopy.prompted,
     missingResultJob: auditCopy.failed,
+    storeManifestPersistenceFailed: auditCopy.failed,
     skippedSensitivePresets: (count) => `${auditCopy.sensitive}: ${count}`,
   };
 }

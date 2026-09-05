@@ -1,6 +1,7 @@
 "use client";
 
 import type { JobState, ProjectRecord, ResultRecord } from "@/lib/api";
+import type { WorkbenchOperationResult } from "@/lib/workbench/operation-result";
 
 type AdminContextLabels = {
   noJobVersion: string;
@@ -22,7 +23,7 @@ type BuildAdminContextEffectsArgs = {
   jobHistory: JobState[];
   projects: ProjectRecord[];
   refreshVersions: (modelId: string) => Promise<void>;
-  openModelVersionById: (versionId: string) => void;
+  openModelVersionById: (versionId: string) => Promise<WorkbenchOperationResult>;
   setAdminFilterProjectId: (value: string) => void;
   setAdminFilterModelVersionId: (value: string) => void;
   setAdminJobCaseId: (value: string) => void;

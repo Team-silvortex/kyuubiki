@@ -143,11 +143,9 @@ pub fn material_validation_quality_gate(validation_payload: &Value) -> Option<Ma
         .get("validation_fail_on_missing")
         .and_then(Value::as_bool)
         .unwrap_or(true);
-    let passed = validation_payload
-        .get("validation_passed")
-        .and_then(Value::as_bool)
-        .unwrap_or(failed_count == 0 && (!fail_on_missing || missing_count == 0));
-    let blocking_count = failed_count + if fail_on_missing { missing_count } else { 0 };
+    let passed = validation_payload_passes(validation_payload);
+    let blocking_count =
+        failed_count.saturating_add(if fail_on_missing { missing_count } else { 0 });
 
     Some(material_quality_gate(
         "gate.summary_tolerance_validation",
@@ -169,10 +167,7 @@ pub fn material_validation_repair_hint(validation_payload: &Value) -> Option<Mat
         .get("validation_contract")
         .and_then(Value::as_str)
         != Some(SUMMARY_TOLERANCE_VALIDATION_CONTRACT)
-        || validation_payload
-            .get("validation_passed")
-            .and_then(Value::as_bool)
-            .unwrap_or(false)
+        || validation_payload_passes(validation_payload)
     {
         return None;
     }
@@ -205,6 +200,29 @@ pub fn material_validation_repair_hint(validation_payload: &Value) -> Option<Mat
         blocking_gate_id: "gate.summary_tolerance_validation".to_string(),
         reason,
     })
+}
+
+fn validation_payload_passes(payload: &Value) -> bool {
+    let fail_on_missing = match payload.get("validation_fail_on_missing") {
+        None => Some(true),
+        Some(value) => value.as_bool(),
+    };
+    payload.get("validation_passed").and_then(Value::as_bool) == Some(true)
+        && payload
+            .get("validation_checked_field_count")
+            .and_then(Value::as_u64)
+            .is_some_and(|count| count > 0)
+        && payload
+            .get("validation_failed_field_count")
+            .and_then(Value::as_u64)
+            == Some(0)
+        && payload
+            .get("validation_failures")
+            .is_none_or(|value| value.as_array().is_some_and(Vec::is_empty))
+        && payload
+            .get("validation_missing_field_count")
+            .and_then(Value::as_u64)
+            .is_some_and(|count| fail_on_missing.is_some_and(|required| !required || count == 0))
 }
 
 pub fn gate_status(value: Option<f64>, operator: &str, limit: f64) -> String {

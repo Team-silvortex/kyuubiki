@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tutorial · Rust Headless Research</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">Tutorial 04 · Rust Headless SDK</div>
+        <h1>Run a material screen without the frontend</h1>
+        <p class="docs-copy">
+          This tutorial uses the repository CLI as a thin example over the Rust
+          Headless SDK. It proves inspect -> validate -> plan -> mock -> service
+          execution while keeping every durable artifact outside the source tree.
+        </p>
+        <div class="docs-meta">
+          <span class="docs-chip">Template: heat spreader screening</span>
+          <span class="docs-chip">Three candidates</span>
+          <span class="docs-chip">Mock first, service second</span>
+          <span class="docs-chip">Reports retained</span>
+        </div>
+        <div class="docs-links">
+          <a class="docs-link" href="./tutorials.html">Tutorial center</a>
+          <a class="docs-link" href="./headless-sdks.md">Headless SDK reference</a>
+          <a class="docs-link" href="./automated-material-research-example.md">Material research example</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 1</div>
+        <h2>Discover, do not guess</h2>
+        <pre class="docs-code">./scripts/kyuubiki headless templates --category materials --json
+./scripts/kyuubiki headless suggest "thermal material screening" --json</pre>
+        <p class="docs-copy">Select the exact template id <code>material_heat_spreader_screening</code>. Template titles are for people; ids are the automation contract.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 2</div>
+        <h2>Initialize and inspect the batch</h2>
+        <pre class="docs-code">./scripts/kyuubiki headless init \
+  --template material_heat_spreader_screening \
+  --workflow-id tutorial.material-heat-spreader \
+  --out tmp/tutorial-material-heat-spreader.json \
+  --json
+
+./scripts/kyuubiki headless inspect \
+  tmp/tutorial-material-heat-spreader.json \
+  --json</pre>
+        <p class="docs-checkpoint"><strong>Checkpoint:</strong> the summary reports nine service steps: three solve, wait, and result-fetch groups for three named candidates.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 3</div>
+        <h2>Validate and retain the plan</h2>
+        <pre class="docs-code">./scripts/kyuubiki headless validate \
+  tmp/tutorial-material-heat-spreader.json \
+  --json
+
+./scripts/kyuubiki headless plan \
+  tmp/tutorial-material-heat-spreader.json \
+  --out tmp/tutorial-material-heat-spreader.plan.json \
+  --json</pre>
+        <ul class="docs-list">
+          <li>Validation must report <code>ok: true</code> and zero unresolved issues.</li>
+          <li>The plan must identify a service-only runtime and an explicitly compatible executor.</li>
+          <li>Review confirmation requirements before adding <code>--execute</code>.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 4</div>
+        <h2>Prove orchestration with mock execution</h2>
+        <pre class="docs-code">./scripts/kyuubiki headless run \
+  tmp/tutorial-material-heat-spreader.json \
+  --execute --executor mock \
+  --material-report material_heat_spreader_screening \
+  --material-report-out tmp/tutorial-material-report.mock.json \
+  --report-out tmp/tutorial-run-report.mock.json \
+  --json</pre>
+        <p class="docs-note">A mock run proves validation, ordering, bindings, reporting, and failure plumbing. It does not produce solver evidence and must never be presented as material research.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <div class="docs-kicker">Step 5</div>
+        <h2>Execute against a live service</h2>
+        <pre class="docs-code">./scripts/kyuubiki headless run \
+  tmp/tutorial-material-heat-spreader.json \
+  --execute --executor service \
+  --execution-posture research \
+  --api-base-url http://127.0.0.1:4000 \
+  --job-wait-timeout-ms 1200000 \
+  --material-report material_heat_spreader_screening \
+  --material-report-out tmp/tutorial-material-report.service.json \
+  --report-out tmp/tutorial-run-report.service.json \
+  --json</pre>
+        <ul class="docs-list">
+          <li>Use the configured control-plane address for your environment; the loopback value is only the local example.</li>
+          <li>Keep API credentials in the caller-owned secure credential path, not in workflow JSON, source files, or shell history.</li>
+          <li>Research posture accepts the service executor and rejects mock-capable research claims.</li>
+          <li>A timeout override changes this client wait budget, not server execution policy or the source workflow.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Completion contract</h2>
+        <table class="docs-table">
+          <thead><tr><th>Artifact</th><th>Required proof</th></tr></thead>
+          <tbody>
+            <tr><td>Input batch</td><td>Stable workflow/template ids and reviewed candidate payloads</td></tr>
+            <tr><td>Validation</td><td>No unresolved issue and explicit runtime policy</td></tr>
+            <tr><td>Plan</td><td>Reviewed actions, bindings, executor compatibility, and confirmations</td></tr>
+            <tr><td>Run report</td><td>Service mode, terminal steps, job ids, and any failure receipt</td></tr>
+            <tr><td>Material report</td><td>Numeric candidate metrics, ranking inputs, units, versions, and limitations</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Move from CLI example to Rust embedding</h2>
+        <p class="docs-copy">Use the official Rust package and examples once the command path is understood. The CLI is an example adapter, not the upper limit of Headless integration.</p>
+        <div class="docs-links">
+          <a class="docs-link" href="../sdks/rust/README.md">Rust SDK README</a>
+          <a class="docs-link" href="../sdks/rust/examples/run_material_envelope.rs">Material envelope example</a>
+          <a class="docs-link" href="./model-collaboration-sdk.html">Model collaboration boundary</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

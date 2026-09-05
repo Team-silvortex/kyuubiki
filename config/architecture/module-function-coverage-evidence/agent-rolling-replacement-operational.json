@@ -1,0 +1,79 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Operational two-Agent rolling replacement with explicit admission draining, exact in-flight execution accounting, process-instance fencing, peer continuity probes, changed binary payloads, and retained remote Linux evidence.",
+  "paradigm_contract_evidence": {
+    "deployment_update": [
+      {
+        "id": "agent-rolling-replacement-contract",
+        "modules": [
+          "runtime-agent-cli",
+          "runtime-installer"
+        ],
+        "files": [
+          "schemas/agent-rolling-replacement-qualification-report.schema.json",
+          "workers/rust/crates/protocol/src/agent_lifecycle.rs",
+          "workers/rust/crates/protocol/src/types/rpc.rs",
+          "workers/rust/crates/cli/src/agent_lifecycle.rs",
+          "workers/rust/crates/cli/src/agent_lifecycle_rpc.rs",
+          "workers/rust/crates/cli/src/rpc.rs",
+          "workers/rust/crates/cli/src/tests/config_and_transport.rs",
+          "workers/rust/crates/installer/src/agent_lifecycle_control.rs",
+          "workers/rust/crates/installer/src/agent_replacement.rs",
+          "workers/rust/crates/installer/src/agent_rolling_qualification.rs",
+          "workers/rust/crates/installer/src/agent_rolling_qualification_validation.rs",
+          "workers/rust/crates/script-runner/src/agent_rolling_operational_qualification.rs"
+        ],
+        "required_text": [
+          "kyuubiki.agent-lifecycle/v1",
+          "begin_agent_drain",
+          "describe_agent_lifecycle",
+          "resume_agent_admission",
+          "agent_draining",
+          "agent_lifecycle_control_requires_loopback",
+          "host_loopback",
+          "stale_agent_drain_generation",
+          "kyuubiki.agent-replacement-receipt/v1",
+          "replace_agent_with_drain",
+          "kyuubiki.agent-rolling-replacement-qualification/v1",
+          "qualify-agent-rolling-replacement-operational-remote",
+          "check-agent-rolling-replacement-operational-qualification"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "agent-rolling-replacement-remote-linux-operational",
+      "status": "proven",
+      "grade": "operational",
+      "modules": [
+        "runtime-agent-cli",
+        "runtime-installer"
+      ],
+      "paradigms": [
+        "deployment_update"
+      ],
+      "dimensions": [
+        "execution",
+        "security",
+        "contract",
+        "recovery"
+      ],
+      "files": [
+        "releases/usability-evidence/2.17.0/agent-rolling-replacement-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"status\": \"pass\"",
+        "\"journey\": \"installer-managed-two-agent-live-rolling-replacement\"",
+        "\"execution_host_role\": \"remote-linux-qualification-host\"",
+        "\"agent_count\": 2",
+        "\"schema_version\": \"kyuubiki.agent-replacement-receipt/v1\"",
+        "\"phase\": \"during-agent-01-replacement\"",
+        "\"phase\": \"during-agent-02-replacement\"",
+        "\"id\": \"binary_payload_changed\"",
+        "\"id\": \"work_root_cleaned\""
+      ]
+    }
+  ]
+}

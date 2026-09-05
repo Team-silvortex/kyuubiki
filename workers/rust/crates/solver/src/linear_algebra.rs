@@ -1,13 +1,23 @@
 use self::linear_ic0::IncompleteCholesky;
-use crate::linear_dense::{solve_linear_system, zero_matrix};
+use crate::linear_dense::{DenseLu, zero_matrix};
 use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions, SpdSolveProfile};
 use crate::linear_spd::solve_spd_compressed;
 use std::time::Instant;
 
+const DENSE_REFINEMENT_TARGET: f64 = 1.0e-12;
+const SPARSE_RESIDUAL_TOLERANCE: f64 = 1.0e-8;
+
 #[path = "linear_ic0.rs"]
 mod linear_ic0;
+#[path = "linear_spd_prepared.rs"]
+mod prepared;
 #[path = "linear_algebra_scaling.rs"]
 mod scaling;
+#[path = "linear_sparse_path.rs"]
+mod sparse_path;
+
+pub(crate) use prepared::PreparedSpdSolver;
+pub(crate) use sparse_path::solve_tridiagonal_system;
 
 #[derive(Debug, Clone)]
 pub(crate) struct SparseMatrix {
@@ -59,7 +69,7 @@ impl SparseMatrix {
     }
 
     fn add_at(&mut self, row: usize, column: usize, value: f64) {
-        if value.abs() <= 1.0e-18 {
+        if value == 0.0 {
             return;
         }
 
@@ -72,7 +82,7 @@ impl SparseMatrix {
         if let Some((last_column, last_value)) = row_entries.last_mut() {
             if *last_column == column {
                 *last_value += value;
-                if last_value.abs() <= 1.0e-18 {
+                if *last_value == 0.0 {
                     row_entries.pop();
                 }
                 return;
@@ -87,7 +97,7 @@ impl SparseMatrix {
         match row_entries.binary_search_by_key(&column, |(entry_column, _)| *entry_column) {
             Ok(index) => {
                 row_entries[index].1 += value;
-                if row_entries[index].1.abs() <= 1.0e-18 {
+                if row_entries[index].1 == 0.0 {
                     row_entries.remove(index);
                 }
             }
@@ -96,7 +106,7 @@ impl SparseMatrix {
     }
 
     fn push_sorted_entry(&mut self, row: usize, column: usize, value: f64) {
-        if value.abs() <= 1.0e-18 {
+        if value == 0.0 {
             return;
         }
 
@@ -108,7 +118,7 @@ impl SparseMatrix {
             );
             if *last_column == column {
                 *last_value += value;
-                if last_value.abs() <= 1.0e-18 {
+                if *last_value == 0.0 {
                     row_entries.pop();
                 }
                 return;
@@ -436,63 +446,6 @@ pub(crate) fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec
     solve_spd_system_profile(matrix, rhs).map(|profile| profile.solution)
 }
 
-/// Solves a symmetric tridiagonal system in linear time when its sparse shape
-/// proves it is safe to do so. Callers can retain the generic SPD solver for
-/// arbitrary meshes by treating `None` as "not a chain".
-pub(crate) fn solve_tridiagonal_system(
-    matrix: &SparseMatrix,
-    rhs: &[f64],
-) -> Option<Result<Vec<f64>, String>> {
-    if matrix.size() != rhs.len() {
-        return Some(Err("tridiagonal system dimensions must match".to_string()));
-    }
-    if rhs.is_empty() {
-        return Some(Ok(Vec::new()));
-    }
-
-    let size = rhs.len();
-    let mut lower = vec![0.0; size];
-    let mut diagonal = vec![0.0; size];
-    let mut upper = vec![0.0; size];
-    for (row_index, row) in matrix.rows.iter().enumerate() {
-        for &(column, value) in row {
-            if column + 1 < row_index || column > row_index + 1 {
-                return None;
-            }
-            if column == row_index {
-                diagonal[row_index] = value;
-            } else if column < row_index {
-                lower[row_index] = value;
-            } else {
-                upper[row_index] = value;
-            }
-        }
-        if !diagonal[row_index].is_finite() || diagonal[row_index].abs() <= 1.0e-18 {
-            return Some(Err("tridiagonal system has a singular diagonal".to_string()));
-        }
-    }
-
-    let mut reduced_upper = vec![0.0; size];
-    let mut reduced_rhs = vec![0.0; size];
-    reduced_upper[0] = upper[0] / diagonal[0];
-    reduced_rhs[0] = rhs[0] / diagonal[0];
-    for row in 1..size {
-        let pivot = diagonal[row] - lower[row] * reduced_upper[row - 1];
-        if !pivot.is_finite() || pivot.abs() <= 1.0e-18 {
-            return Some(Err("tridiagonal system has a singular pivot".to_string()));
-        }
-        reduced_upper[row] = upper[row] / pivot;
-        reduced_rhs[row] = (rhs[row] - lower[row] * reduced_rhs[row - 1]) / pivot;
-    }
-
-    let mut solution = vec![0.0; size];
-    solution[size - 1] = reduced_rhs[size - 1];
-    for row in (0..size - 1).rev() {
-        solution[row] = reduced_rhs[row] - reduced_upper[row] * solution[row + 1];
-    }
-    Some(Ok(solution))
-}
-
 pub(crate) fn solve_spd_system_profile(
     matrix: &SparseMatrix,
     rhs: &[f64],
@@ -520,16 +473,20 @@ pub(crate) fn solve_spd_system_profile_with_options(
         });
     }
     if size <= 1024 {
-        return solve_linear_system(sparse_to_dense(matrix), rhs.to_vec()).map(|solution| {
-            let residual_norm = sparse_residual_norm(matrix, rhs, &solution);
+        let factor = DenseLu::factor(sparse_to_dense(matrix))?;
+        let solution = factor.solve(rhs)?;
+        let solution = refine_dense_solution(matrix, rhs, solution, &factor)?;
+        return validate_spd_solution(
+            matrix,
+            rhs,
             SpdSolveProfile {
                 solution,
                 iterations: 0,
                 matrix_non_zero_count: matrix.non_zero_count(),
-                residual_norm,
+                residual_norm: 0.0,
                 stages: Vec::new(),
-            }
-        });
+            },
+        );
     }
     let scaling = scaling::diagonal_sparse_scaling(matrix);
     let scaled_rhs = scaling::scale_sparse_rhs(rhs, &scaling);
@@ -538,10 +495,11 @@ pub(crate) fn solve_spd_system_profile_with_options(
     let compressed = matrix.compress_scaled(&scaling, options.preconditioner);
     let setup_elapsed_ms = setup_started.elapsed().as_secs_f64() * 1000.0;
 
-    match solve_spd_compressed(&compressed, &scaled_rhs, matrix, &options) {
-        Ok(profile) => Ok(profile),
+    let scaled_profile = match solve_spd_compressed(&compressed, &scaled_rhs, matrix, &options) {
+        Ok(profile) => profile,
         Err(error) => {
             let scaled_matrix = scaling::scale_sparse_matrix(matrix, &scaling);
+            let mut recovered = None;
 
             for factor in [1.0e-10, 1.0e-8, 1.0e-6] {
                 let regularized =
@@ -554,47 +512,173 @@ pub(crate) fn solve_spd_system_profile_with_options(
                     &regularized,
                     &options,
                 ) {
-                    return Ok(scaling::unscale_profile(profile, &scaling));
+                    recovered = Some(profile);
+                    break;
                 }
             }
 
-            Err(error)
+            recovered.ok_or(error)?
         }
-    }
-    .map(|mut profile| {
-        profile.residual_norm = sparse_residual_norm(matrix, rhs, &profile.solution);
-        profile
-            .stages
-            .push(crate::linear_solver_profile::SpdSolveStage {
-                label: "solve_spd_preconditioner_setup",
-                elapsed_ms: setup_elapsed_ms,
-            });
-        scaling::unscale_profile(profile, &scaling)
-    })
+    };
+    let mut profile = scaling::unscale_profile(scaled_profile, &scaling);
+    profile
+        .stages
+        .push(crate::linear_solver_profile::SpdSolveStage {
+            label: "solve_spd_preconditioner_setup",
+            elapsed_ms: setup_elapsed_ms,
+        });
+    validate_spd_solution(matrix, rhs, profile)
 }
 
-fn sparse_residual_norm(matrix: &SparseMatrix, rhs: &[f64], solution: &[f64]) -> f64 {
+fn refine_dense_solution(
+    matrix: &SparseMatrix,
+    rhs: &[f64],
+    mut solution: Vec<f64>,
+    factor: &DenseLu,
+) -> Result<Vec<f64>, String> {
+    for _ in 0..2 {
+        let validation = sparse_relative_residual(matrix, rhs, &solution, DENSE_REFINEMENT_TARGET);
+        if validation.relative <= DENSE_REFINEMENT_TARGET {
+            return Ok(solution);
+        }
+        let residual = sparse_residual_vector(matrix, rhs, &solution);
+        let correction = factor.solve(&residual)?;
+        for (value, correction) in solution.iter_mut().zip(correction) {
+            *value += correction;
+            if !value.is_finite() {
+                return Err("dense linear refinement diverged".to_string());
+            }
+        }
+    }
+    Ok(solution)
+}
+
+fn validate_spd_solution(
+    matrix: &SparseMatrix,
+    rhs: &[f64],
+    mut profile: SpdSolveProfile,
+) -> Result<SpdSolveProfile, String> {
+    profile.residual_norm = sparse_residual_norm(matrix, rhs, &profile.solution);
+    let validation =
+        sparse_relative_residual(matrix, rhs, &profile.solution, SPARSE_RESIDUAL_TOLERANCE);
+    if !profile.residual_norm.is_finite() || !validation.relative.is_finite() {
+        return Err("linear system solution produced a non-finite residual".to_string());
+    }
+    if validation.relative > SPARSE_RESIDUAL_TOLERANCE {
+        return Err(format!(
+            "linear system solution failed residual validation ({:.6e} at row {}, residual={:.6e}, equation_scale={:.6e})",
+            validation.relative, validation.row, validation.residual, validation.equation_scale
+        ));
+    }
+    Ok(profile)
+}
+
+pub(crate) fn sparse_residual_norm(matrix: &SparseMatrix, rhs: &[f64], solution: &[f64]) -> f64 {
+    let residuals = matrix.rows.iter().zip(rhs).map(|(row, expected)| {
+        expected
+            - row
+                .iter()
+                .map(|(column, value)| value * solution[*column])
+                .sum::<f64>()
+    });
+    stable_l2_norm(residuals)
+}
+
+fn sparse_residual_vector(matrix: &SparseMatrix, rhs: &[f64], solution: &[f64]) -> Vec<f64> {
     matrix
         .rows
         .iter()
         .zip(rhs)
         .map(|(row, expected)| {
-            let actual = row
-                .iter()
-                .map(|(column, value)| value * solution[*column])
-                .sum::<f64>();
-            (expected - actual).powi(2)
+            expected
+                - row
+                    .iter()
+                    .map(|(column, value)| value * solution[*column])
+                    .sum::<f64>()
         })
-        .sum::<f64>()
-        .sqrt()
+        .collect()
+}
+
+pub(crate) fn stable_l2_norm(values: impl IntoIterator<Item = f64>) -> f64 {
+    let mut scale = 0.0;
+    let mut sum_squares = 1.0;
+    for value in values.into_iter().map(f64::abs) {
+        if !value.is_finite() {
+            return value;
+        }
+        if value == 0.0 {
+            continue;
+        }
+        if scale < value {
+            sum_squares = 1.0 + sum_squares * (scale / value).powi(2);
+            scale = value;
+        } else {
+            sum_squares += (value / scale).powi(2);
+        }
+    }
+    if scale == 0.0 {
+        0.0
+    } else {
+        scale * sum_squares.sqrt()
+    }
+}
+
+struct SparseResidualValidation {
+    relative: f64,
+    row: usize,
+    residual: f64,
+    equation_scale: f64,
+}
+
+fn sparse_relative_residual(
+    matrix: &SparseMatrix,
+    rhs: &[f64],
+    solution: &[f64],
+    tolerance: f64,
+) -> SparseResidualValidation {
+    let mut rows = Vec::with_capacity(matrix.size());
+    let mut global_scale = 0.0_f64;
+    for (row, expected) in matrix.rows.iter().zip(rhs) {
+        let mut actual = 0.0;
+        let mut equation_scale = expected.abs();
+        for (column, value) in row {
+            let term = value * solution[*column];
+            actual += term;
+            equation_scale += term.abs();
+        }
+        let residual = (expected - actual).abs();
+        global_scale = global_scale.max(equation_scale);
+        rows.push((residual, equation_scale));
+    }
+
+    let roundoff_floor = global_scale * f64::EPSILON / tolerance;
+    let mut worst = SparseResidualValidation {
+        relative: 0.0,
+        row: 0,
+        residual: 0.0,
+        equation_scale: 0.0,
+    };
+    for (row_index, (residual, equation_scale)) in rows.into_iter().enumerate() {
+        let effective_scale = equation_scale.max(roundoff_floor);
+        let relative = if effective_scale == 0.0 {
+            if residual == 0.0 { 0.0 } else { f64::INFINITY }
+        } else {
+            residual / effective_scale
+        };
+        if relative > worst.relative {
+            worst = SparseResidualValidation {
+                relative,
+                row: row_index,
+                residual,
+                equation_scale: effective_scale,
+            };
+        }
+    }
+    worst
 }
 
 pub(crate) fn safe_diagonal(value: f64) -> f64 {
-    if value.abs() < 1.0e-12 {
-        1.0e-12
-    } else {
-        value
-    }
+    if value == 0.0 { 1.0 } else { value }
 }
 
 pub(crate) fn sparse_to_dense(matrix: &SparseMatrix) -> Vec<Vec<f64>> {
@@ -610,7 +694,13 @@ pub(crate) fn sparse_to_dense(matrix: &SparseMatrix) -> Vec<Vec<f64>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{SparseMatrix, add_at, solve_tridiagonal_system};
+    use super::{SparseMatrix, add_at, solve_tridiagonal_system, stable_l2_norm};
+
+    #[test]
+    fn stable_norm_propagates_non_finite_values() {
+        assert!(stable_l2_norm([1.0, f64::NAN]).is_nan());
+        assert_eq!(stable_l2_norm([1.0, f64::INFINITY]), f64::INFINITY);
+    }
 
     #[test]
     fn solves_a_tridiagonal_sparse_system_in_linear_time_path() {
@@ -634,14 +724,55 @@ mod tests {
     }
 
     #[test]
-    fn declines_non_tridiagonal_sparse_systems() {
-        let mut matrix = SparseMatrix::new(3);
-        for row in 0..3 {
-            add_at(&mut matrix, row, row, 2.0);
+    fn solves_a_numbering_independent_sparse_path() {
+        let mut matrix = SparseMatrix::with_uniform_row_capacity(4, 3);
+        for index in 0..4 {
+            add_at(&mut matrix, index, index, 4.0);
         }
-        add_at(&mut matrix, 0, 2, -1.0);
-        add_at(&mut matrix, 2, 0, -1.0);
+        for (first, second) in [(0, 2), (2, 1), (1, 3)] {
+            add_at(&mut matrix, first, second, -1.0);
+            add_at(&mut matrix, second, first, -1.0);
+        }
 
-        assert!(solve_tridiagonal_system(&matrix, &[1.0, 0.0, 1.0]).is_none());
+        let solution = solve_tridiagonal_system(&matrix, &[2.0, 6.0, 4.0, 13.0])
+            .expect("permuted path should use the tridiagonal backend")
+            .expect("permuted tridiagonal system should solve");
+        for (actual, expected) in solution.iter().zip([1.0, 3.0, 2.0, 4.0]) {
+            assert!((actual - expected).abs() < 1.0e-12);
+        }
+    }
+
+    #[test]
+    fn declines_non_tridiagonal_sparse_systems() {
+        let mut matrix = SparseMatrix::new(4);
+        for row in 0..4 {
+            add_at(&mut matrix, row, row, 4.0);
+        }
+        for leaf in 1..4 {
+            add_at(&mut matrix, 0, leaf, -1.0);
+            add_at(&mut matrix, leaf, 0, -1.0);
+        }
+
+        assert!(solve_tridiagonal_system(&matrix, &[1.0; 4]).is_none());
+    }
+
+    #[test]
+    fn retains_and_solves_uniformly_tiny_sparse_coefficients() {
+        let mut matrix = SparseMatrix::new(2);
+        for (row, column, value) in [
+            (0, 0, 2.0e-24),
+            (0, 1, -1.0e-24),
+            (1, 0, -1.0e-24),
+            (1, 1, 2.0e-24),
+        ] {
+            add_at(&mut matrix, row, column, value);
+        }
+
+        assert_eq!(matrix.non_zero_count(), 4);
+        let solution = solve_tridiagonal_system(&matrix, &[1.0e-24, 0.0])
+            .expect("tiny matrix should retain its tridiagonal shape")
+            .expect("tiny tridiagonal system should solve");
+        assert!((solution[0] - 2.0 / 3.0).abs() < 1.0e-12);
+        assert!((solution[1] - 1.0 / 3.0).abs() < 1.0e-12);
     }
 }

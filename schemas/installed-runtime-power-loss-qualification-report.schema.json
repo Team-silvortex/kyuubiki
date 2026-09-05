@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/installed-runtime-power-loss-qualification-report.schema.json",
+  "title": "Kyuubiki Installed Runtime Power-Loss Qualification Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "qualification_id",
+    "status",
+    "journey",
+    "execution_host_role",
+    "platform",
+    "architecture",
+    "runtime_version",
+    "generated_at_unix_ms",
+    "preparation",
+    "intent_sha256",
+    "recovery",
+    "cleanup",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": { "const": "kyuubiki.installed-runtime-power-loss-qualification/v1" },
+    "qualification_id": { "const": "physical-linux-installed-runtime-power-loss-recovery" },
+    "status": { "const": "pass" },
+    "journey": { "const": "installed-headless-orchestra-agent-across-host-reboot" },
+    "execution_host_role": { "const": "remote-linux-qualification-host" },
+    "platform": { "const": "linux" },
+    "architecture": { "type": "string", "minLength": 1 },
+    "runtime_version": { "type": "string", "minLength": 1 },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "preparation": {
+      "$ref": "installed-runtime-power-loss-intent.schema.json#/$defs/preparation"
+    },
+    "intent_sha256": { "$ref": "#/$defs/sha256" },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "post_boot_id_sha256",
+        "post_machine_id_sha256",
+        "post_uptime_seconds",
+        "boot_identity_changed",
+        "same_machine",
+        "interrupted_process_count",
+        "pre_reboot_ports_released",
+        "payload_digests",
+        "source_tree_detached",
+        "runtime_policy",
+        "agent_count",
+        "job_id",
+        "job_status",
+        "numerical_result"
+      ],
+      "properties": {
+        "post_boot_id_sha256": { "$ref": "#/$defs/sha256" },
+        "post_machine_id_sha256": { "$ref": "#/$defs/sha256" },
+        "post_uptime_seconds": { "type": "integer", "minimum": 0 },
+        "boot_identity_changed": { "const": true },
+        "same_machine": { "const": true },
+        "interrupted_process_count": { "const": 3 },
+        "pre_reboot_ports_released": { "const": true },
+        "payload_digests": {
+          "$ref": "installed-runtime-power-loss-intent.schema.json#/$defs/digest_map"
+        },
+        "source_tree_detached": { "const": true },
+        "runtime_policy": { "const": "installer-managed" },
+        "agent_count": { "type": "integer", "minimum": 2 },
+        "job_id": { "type": "string", "minLength": 1 },
+        "job_status": { "const": "completed" },
+        "numerical_result": {
+          "$ref": "installed-runtime-power-loss-intent.schema.json#/$defs/result"
+        }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime_stopped",
+        "ports_closed",
+        "pid_files_removed",
+        "managed_remote_root_removed",
+        "residue_count"
+      ],
+      "properties": {
+        "runtime_stopped": { "const": true },
+        "ports_closed": { "const": true },
+        "pid_files_removed": { "const": true },
+        "managed_remote_root_removed": { "const": true },
+        "residue_count": { "const": 0 }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 16,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "status": { "const": "pass" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

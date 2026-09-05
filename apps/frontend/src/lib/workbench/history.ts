@@ -100,6 +100,8 @@ export type AssistantTransactionEntry = {
   executedActions: string[];
 };
 
+let assistantTransactionSequence = 0;
+
 type SnapshotSetters = {
   setStudyKind: Dispatch<SetStateAction<WorkbenchStudyKind>>;
   setAxialForm: Dispatch<SetStateAction<WorkbenchAxialFormState>>;
@@ -176,7 +178,11 @@ export function pushHistoryEntry(
   snapshot: WorkbenchSnapshot,
   maxEntries = 40,
 ) {
-  return [...current.slice(-(maxEntries - 1)), { label, snapshot }];
+  const capacity = Number.isFinite(maxEntries) ? Math.max(0, Math.floor(maxEntries)) : 40;
+  if (capacity === 0) return [];
+  const entry = { label, snapshot: buildWorkbenchSnapshot(snapshot) };
+  if (capacity === 1) return [entry];
+  return [...current.slice(-(capacity - 1)), entry];
 }
 
 export function stepHistory(
@@ -206,11 +212,12 @@ export function createAssistantTransactionEntry(
   executedActions: string[],
   snapshot: WorkbenchSnapshot,
 ): AssistantTransactionEntry {
+  assistantTransactionSequence = (assistantTransactionSequence + 1) % Number.MAX_SAFE_INTEGER;
   return {
-    id: `assistant-${Date.now()}`,
+    id: `assistant-${Date.now()}-${assistantTransactionSequence.toString(36)}`,
     summary,
     createdAt: new Date().toISOString(),
-    snapshot,
-    executedActions,
+    snapshot: buildWorkbenchSnapshot(snapshot),
+    executedActions: [...executedActions],
   };
 }

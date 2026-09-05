@@ -8,6 +8,9 @@ pub(crate) fn workflow_payload_for_case(case: &BenchmarkCase) -> (&'static str, 
         BenchmarkWorkload::ThermalBar1d(request) => payload("solve.thermal_bar_1d", request),
         BenchmarkWorkload::AcousticBar1d(request) => payload("solve.acoustic_bar_1d", request),
         BenchmarkWorkload::HeatBar1d(request) => payload("solve.heat_bar_1d", request),
+        BenchmarkWorkload::TransientHeatBar1d(request) => {
+            payload("solve.transient_heat_bar_1d", request)
+        }
         BenchmarkWorkload::ElectrostaticBar1d(request) => {
             payload("solve.electrostatic_bar_1d", request)
         }
@@ -19,12 +22,30 @@ pub(crate) fn workflow_payload_for_case(case: &BenchmarkCase) -> (&'static str, 
         }
         BenchmarkWorkload::Torsion1d(request) => payload("solve.torsion_1d", request),
         BenchmarkWorkload::Spring1d(request) => payload("solve.spring_1d", request),
+        BenchmarkWorkload::TransientSpring1d(request) => {
+            payload("solve.transient_spring_1d", request)
+        }
+        BenchmarkWorkload::HarmonicSpring1d(request) => {
+            payload("solve.harmonic_spring_1d", request)
+        }
         BenchmarkWorkload::Spring2d(request) => payload("solve.spring_2d", request),
         BenchmarkWorkload::Spring3d(request) => payload("solve.spring_3d", request),
         BenchmarkWorkload::NonlinearSpring1d(request) => {
             payload("solve.nonlinear_spring_1d", request)
         }
         BenchmarkWorkload::ContactGap1d(request) => payload("solve.contact_gap_1d", request),
+        BenchmarkWorkload::CohesiveInterface1d(request) => {
+            payload("solve.cohesive_interface_1d", request)
+        }
+        BenchmarkWorkload::CohesiveInterface2d(request) => {
+            payload("solve.cohesive_interface_2d", request)
+        }
+        BenchmarkWorkload::CohesiveInterfaceMesh2d(request) => {
+            payload("solve.cohesive_interface_mesh_2d", request)
+        }
+        BenchmarkWorkload::CohesiveInterfaceMesh3d(request) => {
+            payload("solve.cohesive_interface_mesh_3d", request)
+        }
         BenchmarkWorkload::Beam1d(request) => payload("solve.beam_1d", request),
         BenchmarkWorkload::ThermalBeam1d(request) => payload("solve.thermal_beam_1d", request),
         BenchmarkWorkload::Frame2d(request) => payload("solve.frame_2d", request),
@@ -67,6 +88,9 @@ pub(crate) fn workflow_payload_for_case(case: &BenchmarkCase) -> (&'static str, 
         }
         BenchmarkWorkload::MagnetostaticPlaneQuad2d(request) => {
             payload("solve.magnetostatic_plane_quad_2d", request)
+        }
+        BenchmarkWorkload::ElectricConductionPlaneQuad2d(request) => {
+            payload("solve.electric_conduction_plane_quad_2d", request)
         }
         BenchmarkWorkload::StokesFlowPlaneTriangle2d(request) => {
             payload("solve.stokes_flow_triangle_2d", request)

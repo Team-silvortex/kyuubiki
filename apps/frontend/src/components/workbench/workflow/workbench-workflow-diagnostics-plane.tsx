@@ -69,6 +69,7 @@ type WorkflowDiagnosticsFocusTarget =
   | "packageImportDataset"
   | "packageImportPackage"
   | "activity";
+type WorkflowDiagnosticsPanel = "validation" | "bridge" | "integrity" | "package" | "import" | "activity";
 
 function workflowDiagnosticsFocusRing(active: boolean) {
   return active
@@ -107,6 +108,7 @@ export function WorkbenchWorkflowDiagnosticsPlane({
   auditFocusHint,
 }: WorkbenchWorkflowDiagnosticsPlaneProps) {
   const [activeFocusTarget, setActiveFocusTarget] = useState<WorkflowDiagnosticsFocusTarget | null>(null);
+  const [activePanel, setActivePanel] = useState<WorkflowDiagnosticsPanel>("validation");
   const validationRef = useRef<HTMLDivElement | null>(null);
   const integrityRef = useRef<HTMLDivElement | null>(null);
   const bridgeRef = useRef<HTMLDivElement | null>(null);
@@ -152,7 +154,32 @@ export function WorkbenchWorkflowDiagnosticsPlane({
   }, [activeFocusTarget, focusTargetRefMap]);
 
   function focusDiagnosticsTarget(target: WorkflowDiagnosticsFocusTarget) {
+    setActivePanel(
+      target.startsWith("validation")
+        ? "validation"
+        : target.startsWith("bridge")
+          ? "bridge"
+          : target === "integrity"
+            ? "integrity"
+            : target.startsWith("packageResiduals")
+              ? "package"
+              : target.startsWith("packageImport")
+                ? "import"
+                : "activity",
+    );
     setActiveFocusTarget((current) => (current === target ? null : target));
+  }
+  function openDiagnosticsPanel(panel: WorkflowDiagnosticsPanel) {
+    const defaultTarget: Record<WorkflowDiagnosticsPanel, WorkflowDiagnosticsFocusTarget> = {
+      validation: "validationAll",
+      bridge: "bridge",
+      integrity: "integrity",
+      package: "packageResidualsAll",
+      import: "packageImportAll",
+      activity: "activity",
+    };
+    setActivePanel(panel);
+    setActiveFocusTarget(defaultTarget[panel]);
   }
   const activeBridgeStatusFilter =
     activeFocusTarget === "bridgeAligned"
@@ -189,101 +216,57 @@ export function WorkbenchWorkflowDiagnosticsPlane({
         : activeFocusTarget === "packageImportPackage"
           ? "package"
           : "all";
+  const bridgeRuntimeCount = latestRun?.result
+    ? bridgeRuntimeSummary.aligned + bridgeRuntimeSummary.drift + bridgeRuntimeSummary["missing-runtime"]
+    : "--";
+  const diagnosticsPanels: Array<{ id: WorkflowDiagnosticsPanel; label: string; count: number | string }> = [
+    { id: "validation", label: labels.validationTitle, count: validationIssues.length },
+    { id: "integrity", label: "Component integrity", count: integrityReport.issues.length },
+    { id: "bridge", label: "Bridge runtime", count: bridgeRuntimeCount },
+    { id: "package", label: labels.packageInstallRulesResidualsLabel, count: packageResiduals.length },
+    { id: "import", label: "Package import diagnostics", count: importDiagnostics.length },
+    { id: "activity", label: "Activity log", count: activityLogEntries.length },
+  ];
   return (
-    <section className="workflow-diagnostics-plane">
-      <div className="workflow-diagnostics-plane__summary sidebar-list">
-        <div className="sidebar-list__row">
-          <span>{labels.validationTitle}</span>
-          <strong>
-            <span style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-              <button onClick={() => focusDiagnosticsTarget("validationAll")} type="button">
-                {`${labels.validationSummaryAllLabel} ${validationIssues.length}`}
-              </button>
-              <button onClick={() => focusDiagnosticsTarget("validationFixable")} type="button">
-                {`${labels.validationSummaryFixableLabel} ${validationFixableCount}`}
-              </button>
-              <button onClick={() => focusDiagnosticsTarget("validationReview")} type="button">
-                {`${labels.validationSummaryReviewLabel} ${validationReviewCount}`}
-              </button>
-            </span>
-          </strong>
+    <section className="workflow-diagnostics-plane" data-workflow-diagnostics-panel={activePanel}>
+      <nav aria-label={labels.validationTitle} className="workflow-diagnostics-plane__tabs">
+        {diagnosticsPanels.map((panel) => (
+          <button aria-pressed={activePanel === panel.id} className={activePanel === panel.id ? "workflow-diagnostics-plane__tab workflow-diagnostics-plane__tab--active" : "workflow-diagnostics-plane__tab"} data-workflow-diagnostics-panel-target={panel.id} key={panel.id} onClick={() => openDiagnosticsPanel(panel.id)} title={panel.label} type="button">
+            <span>{panel.label}</span><strong>{panel.count}</strong>
+          </button>
+        ))}
+      </nav>
+      {activePanel === "validation" ? (
+        <div className="workflow-diagnostics-plane__filters" data-workflow-diagnostics-filter="validation">
+          <button aria-pressed={activeValidationFilter === "all"} onClick={() => focusDiagnosticsTarget("validationAll")} type="button">{`${labels.validationSummaryAllLabel} ${validationIssues.length}`}</button>
+          <button aria-pressed={activeValidationFilter === "fixable"} onClick={() => focusDiagnosticsTarget("validationFixable")} type="button">{`${labels.validationSummaryFixableLabel} ${validationFixableCount}`}</button>
+          <button aria-pressed={activeValidationFilter === "review"} onClick={() => focusDiagnosticsTarget("validationReview")} type="button">{`${labels.validationSummaryReviewLabel} ${validationReviewCount}`}</button>
         </div>
-        <div className="sidebar-list__row">
-          <span>Component integrity</span>
-          <strong>
-            <button onClick={() => focusDiagnosticsTarget("integrity")} type="button">
-              {integrityReport.issues.length}
-            </button>
-          </strong>
+      ) : null}
+      {activePanel === "bridge" && latestRun?.result ? (
+        <div className="workflow-diagnostics-plane__filters" data-workflow-diagnostics-filter="bridge">
+          <button aria-pressed={activeBridgeStatusFilter === "aligned"} onClick={() => focusDiagnosticsTarget("bridgeAligned")} type="button">{bridgeRuntimeSummary.aligned}</button>
+          <button aria-pressed={activeBridgeStatusFilter === "drift"} onClick={() => focusDiagnosticsTarget("bridgeDrift")} type="button">{bridgeRuntimeSummary.drift}</button>
+          <button aria-pressed={activeBridgeStatusFilter === "missing-runtime"} onClick={() => focusDiagnosticsTarget("bridgeMissingRuntime")} type="button">{bridgeRuntimeSummary["missing-runtime"]}</button>
         </div>
-        <div className="sidebar-list__row">
-          <span>Bridge runtime</span>
-          <strong>
-            {latestRun?.result ? (
-              <span style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-                <button onClick={() => focusDiagnosticsTarget("bridgeAligned")} type="button">
-                  {bridgeRuntimeSummary.aligned}
-                </button>
-                <button onClick={() => focusDiagnosticsTarget("bridgeDrift")} type="button">
-                  {bridgeRuntimeSummary.drift}
-                </button>
-                <button onClick={() => focusDiagnosticsTarget("bridgeMissingRuntime")} type="button">
-                  {bridgeRuntimeSummary["missing-runtime"]}
-                </button>
-              </span>
-            ) : (
-              <button onClick={() => focusDiagnosticsTarget("bridge")} type="button">
-                --
-              </button>
-            )}
-          </strong>
+      ) : null}
+      {activePanel === "package" ? (
+        <div className="workflow-diagnostics-plane__filters" data-workflow-diagnostics-filter="package">
+          <button aria-pressed={activePackageResidualFilter === "all"} onClick={() => focusDiagnosticsTarget("packageResidualsAll")} type="button">{`${labels.validationSummaryAllLabel} ${packageResiduals.length}`}</button>
+          <button aria-pressed={activePackageResidualFilter === "auto"} onClick={() => focusDiagnosticsTarget("packageResidualsAuto")} type="button">{`${labels.packageInstallRulesAutoLabel} ${packageResidualAutoCount}`}</button>
+          <button aria-pressed={activePackageResidualFilter === "manual"} onClick={() => focusDiagnosticsTarget("packageResidualsManual")} type="button">{`${labels.packageInstallRulesManualLabel} ${packageResidualManualCount}`}</button>
         </div>
-        <div className="sidebar-list__row">
-          <span>{labels.packageInstallRulesResidualsLabel}</span>
-          <strong>
-            <span style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-              <button onClick={() => focusDiagnosticsTarget("packageResidualsAll")} type="button">
-                {`${labels.validationSummaryAllLabel} ${packageResiduals.length}`}
-              </button>
-              <button onClick={() => focusDiagnosticsTarget("packageResidualsAuto")} type="button">
-                {`${labels.packageInstallRulesAutoLabel} ${packageResidualAutoCount}`}
-              </button>
-              <button onClick={() => focusDiagnosticsTarget("packageResidualsManual")} type="button">
-                {`${labels.packageInstallRulesManualLabel} ${packageResidualManualCount}`}
-              </button>
-            </span>
-          </strong>
+      ) : null}
+      {activePanel === "import" ? (
+        <div className="workflow-diagnostics-plane__filters" data-workflow-diagnostics-filter="import">
+          <button aria-pressed={activePackageImportFilter === "all"} onClick={() => focusDiagnosticsTarget("packageImportAll")} type="button">{`${labels.validationSummaryAllLabel} ${importDiagnostics.length}`}</button>
+          <button aria-pressed={activePackageImportFilter === "node"} onClick={() => focusDiagnosticsTarget("packageImportNode")} type="button">{`${labels.packageDiagnosticsNodeLabel} ${packageImportNodeCount}`}</button>
+          <button aria-pressed={activePackageImportFilter === "dataset"} onClick={() => focusDiagnosticsTarget("packageImportDataset")} type="button">{`${labels.packageDiagnosticsDatasetLabel} ${packageImportDatasetCount}`}</button>
+          <button aria-pressed={activePackageImportFilter === "package"} onClick={() => focusDiagnosticsTarget("packageImportPackage")} type="button">{`${labels.packageDiagnosticsPackageLabel} ${packageImportPackageCount}`}</button>
         </div>
-        <div className="sidebar-list__row">
-          <span>Package import diagnostics</span>
-          <strong>
-            <span style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-              <button onClick={() => focusDiagnosticsTarget("packageImportAll")} type="button">
-                {`${labels.validationSummaryAllLabel} ${importDiagnostics.length}`}
-              </button>
-              <button onClick={() => focusDiagnosticsTarget("packageImportNode")} type="button">
-                {`${labels.packageDiagnosticsNodeLabel} ${packageImportNodeCount}`}
-              </button>
-              <button onClick={() => focusDiagnosticsTarget("packageImportDataset")} type="button">
-                {`${labels.packageDiagnosticsDatasetLabel} ${packageImportDatasetCount}`}
-              </button>
-              <button onClick={() => focusDiagnosticsTarget("packageImportPackage")} type="button">
-                {`${labels.packageDiagnosticsPackageLabel} ${packageImportPackageCount}`}
-              </button>
-            </span>
-          </strong>
-        </div>
-        <div className="sidebar-list__row">
-          <span>Activity log</span>
-          <strong>
-            <button onClick={() => focusDiagnosticsTarget("activity")} type="button">
-              {activityLogEntries.length}
-            </button>
-          </strong>
-        </div>
-      </div>
+      ) : null}
       <div className="workflow-diagnostics-plane__cards">
-        <div
+        {activePanel === "validation" ? <div
           ref={validationRef}
           style={workflowDiagnosticsFocusRing(
             activeFocusTarget === "validation" ||
@@ -301,8 +284,8 @@ export function WorkbenchWorkflowDiagnosticsPlane({
             recentFixSummary={recentFixSummary}
             validationIssues={validationIssues}
           />
-        </div>
-        <div
+        </div> : null}
+        {activePanel === "bridge" ? <div
           ref={bridgeRef}
           style={workflowDiagnosticsFocusRing(
             activeFocusTarget === "bridge" ||
@@ -317,12 +300,11 @@ export function WorkbenchWorkflowDiagnosticsPlane({
             onLocateIssue={onLocateBridgeRuntimeIssue}
             result={latestRun?.result ?? null}
           />
-        </div>
-        <div ref={integrityRef} style={workflowDiagnosticsFocusRing(activeFocusTarget === "integrity")}>
+        </div> : null}
+        {activePanel === "integrity" ? <div ref={integrityRef} style={workflowDiagnosticsFocusRing(activeFocusTarget === "integrity")}>
           <WorkbenchWorkflowIntegrityCard onLocateIssue={onLocateIntegrityIssue} report={integrityReport} />
-        </div>
-        <WorkbenchWorkflowControlFlowHistoryCard entries={controlFlowHistoryEntries} onLocateTarget={onLocateAuditTarget} onReplayEntry={onReplayAuditEntry} />
-        <div
+        </div> : null}
+        {activePanel === "package" ? <div
           ref={packageResidualsRef}
           style={workflowDiagnosticsFocusRing(
             activeFocusTarget === "packageResiduals" ||
@@ -344,8 +326,8 @@ export function WorkbenchWorkflowDiagnosticsPlane({
             summaryOnlySnapshotCount={integrityReport.summaryOnlySnapshotCount}
             workflow={workflow}
           />
-        </div>
-        <div
+        </div> : null}
+        {activePanel === "import" ? <div
           ref={packageImportRef}
           style={workflowDiagnosticsFocusRing(
             activeFocusTarget === "packageImport" ||
@@ -361,10 +343,15 @@ export function WorkbenchWorkflowDiagnosticsPlane({
             labels={labels}
             onLocateDiagnostic={onLocateImportDiagnostic}
           />
-        </div>
-        <div ref={activityRef} style={workflowDiagnosticsFocusRing(activeFocusTarget === "activity")}>
-          <WorkbenchWorkflowActivityLogCard auditFocusHint={auditFocusHint} entries={activityLogEntries} onLocateTarget={onLocateAuditTarget} protocolAgents={protocolAgents} workflowId={workflow.id} />
-        </div>
+        </div> : null}
+        {activePanel === "activity" ? (
+          <>
+            <WorkbenchWorkflowControlFlowHistoryCard entries={controlFlowHistoryEntries} onLocateTarget={onLocateAuditTarget} onReplayEntry={onReplayAuditEntry} />
+            <div ref={activityRef} style={workflowDiagnosticsFocusRing(activeFocusTarget === "activity")}>
+              <WorkbenchWorkflowActivityLogCard auditFocusHint={auditFocusHint} entries={activityLogEntries} onLocateTarget={onLocateAuditTarget} protocolAgents={protocolAgents} workflowId={workflow.id} />
+            </div>
+          </>
+        ) : null}
       </div>
     </section>
   );

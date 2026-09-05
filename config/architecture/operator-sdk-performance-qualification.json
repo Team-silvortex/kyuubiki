@@ -1,0 +1,50 @@
+{
+  "$schema": "../../schemas/operator-sdk-performance-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.operator-sdk-performance-qualification-contract/v1",
+  "qualification_id": "operator-sdk-dynamic-json-abi-performance",
+  "execution_abi": "kyuubiki.operator-json-c/v1",
+  "source_files": [
+    "config/architecture/operator-sdk-performance-qualification.json",
+    "schemas/operator-sdk-performance-qualification-contract.schema.json",
+    "schemas/operator-sdk-performance-qualification-report.schema.json",
+    "workers/rust/Cargo.lock",
+    "workers/rust/Cargo.toml",
+    "workers/rust/crates/engine/Cargo.toml",
+    "workers/rust/crates/engine/src/operator_sdk_dynamic_abi.rs",
+    "workers/rust/crates/engine/src/operator_sdk_host.rs",
+    "workers/rust/crates/engine/src/operator_sdk_runtime.rs",
+    "workers/rust/crates/operator-sdk/Cargo.toml",
+    "workers/rust/crates/operator-sdk/src/json_abi.rs",
+    "workers/rust/crates/protocol/Cargo.toml",
+    "workers/rust/crates/script-runner/Cargo.toml",
+    "workers/rust/crates/script-runner/src/operator_sdk_performance_qualification/mod.rs",
+    "workers/rust/crates/script-runner/src/operator_sdk_performance_qualification/validation.rs",
+    "workers/rust/templates/operator-crate-template/Cargo.lock",
+    "workers/rust/templates/operator-crate-template/Cargo.toml",
+    "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",
+    "workers/rust/templates/operator-crate-template/src/lib.rs"
+  ],
+  "measurement": {
+    "resident_activation_iterations": 5,
+    "warmup_iterations": 100,
+    "compact_iterations": 2000,
+    "medium_iterations": 200,
+    "medium_value_count": 4096,
+    "concurrent_workers": 4,
+    "concurrent_iterations_per_worker": 250
+  },
+  "thresholds": {
+    "cold_activation_max_ns": 1000000000,
+    "resident_activation_p95_max_ns": 100000000,
+    "first_dispatch_max_ns": 100000000,
+    "compact_p95_max_ns": 5000000,
+    "medium_p95_max_ns": 50000000,
+    "concurrent_min_dispatches_per_second": 100.0
+  },
+  "report": {
+    "schema_version": "kyuubiki.operator-sdk-performance-qualification/v1",
+    "schema_path": "schemas/operator-sdk-performance-qualification-report.schema.json",
+    "default_output": "tmp/operator-sdk-performance-qualification.json",
+    "retained_path": "releases/usability-evidence/2.19.0/operator-sdk-performance-qualification.json"
+  }
+}

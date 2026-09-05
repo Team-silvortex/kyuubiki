@@ -32,6 +32,8 @@ import { clearWorkflowBuilderAlert, clearWorkflowBuilderNotice, flashWorkflowBui
 import { EMPTY_PROTOCOL_AGENTS, type WorkbenchWorkflowBuilderCardProps } from "@/components/workbench/workflow/workbench-workflow-builder-card-types";
 import { useWorkflowBuilderDeferredPanels } from "@/components/workbench/workflow/workbench-workflow-builder-deferred-panels";
 import { WorkbenchWorkflowBuilderDeferredPanelStack } from "@/components/workbench/workflow/workbench-workflow-builder-deferred-panel-stack"; const EMPTY_LIST: never[] = [];
+type WorkflowBuilderStage = "topology" | "control" | "contracts" | "validation";
+type WorkflowContractView = "inputs" | "dataset" | "entry" | "output" | "storage";
 export function WorkbenchWorkflowBuilderCard({
   labels,
   selectedWorkflow,
@@ -62,6 +64,8 @@ export function WorkbenchWorkflowBuilderCard({
   const activeFocusTarget = useWorkflowBuilderFocus(builderRootRef);
   const { policyFeedback, setPolicyFeedback } = useWorkflowPolicyFeedback();
   const showDeferredPanels = useWorkflowBuilderDeferredPanels(selectedWorkflow?.id);
+  const [builderStage, setBuilderStage] = useState<WorkflowBuilderStage>("topology");
+  const [contractView, setContractView] = useState<WorkflowContractView>("inputs");
   const clearBuilderAlert = (alertId: string) =>
     clearWorkflowBuilderAlert(setSystemAlerts, alertId);
   const pushBuilderAlert = (
@@ -75,6 +79,19 @@ export function WorkbenchWorkflowBuilderCard({
     message: string,
     tone: WorkbenchNoticeItem["tone"] = "info",
   ) => showWorkflowBuilderNotice(setImportNotice, id, message, tone);
+  const confirmWorkflowStorageWrite = (succeeded: boolean) => {
+    if (succeeded) {
+      clearBuilderAlert("workflow-builder-storage-write-failed");
+      return true;
+    }
+    pushBuilderAlert(
+      "workflow-builder-storage-write-failed",
+      labels.storageWriteFailedLabel,
+      "warning",
+    );
+    clearBuilderNotice();
+    return false;
+  };
   const resetBuilderFocus = () =>
     resetWorkflowBuilderFocus({
       setFocusedNodeId,
@@ -91,6 +108,10 @@ export function WorkbenchWorkflowBuilderCard({
     flashWorkflowBuilderHighlightedEdges(edgeIds, setHighlightedEdgeIds);
   function flashValidationHighlights(graph: WorkflowGraphDefinition | null, issues: typeof validationIssues) {
     const plan = buildWorkflowValidationHighlightPlan(graph, issues, operatorDescriptors ?? []);
+    setBuilderStage(plan.datasetValueId || plan.highlightDatasetEditor || plan.firstArtifactKey ? "contracts" : "topology");
+    if (plan.datasetValueId || plan.highlightDatasetEditor) setContractView("dataset");
+    else if (plan.firstArtifactKey?.startsWith("output:")) setContractView("output");
+    else if (plan.firstArtifactKey) setContractView("entry");
     if (plan.firstNodeId) setFocusedNodeId(plan.firstNodeId);
     if (plan.firstEdgeId) setFocusedEdgeId(plan.firstEdgeId);
     if (plan.firstArtifactKey) setFocusedArtifactKey(plan.firstArtifactKey);
@@ -101,7 +122,7 @@ export function WorkbenchWorkflowBuilderCard({
     setHighlightedArtifactKeys(plan.artifactKeys);
     setHighlightedPortKeys([]);
     setHighlightDatasetEditor(plan.highlightDatasetEditor);
-    queueMicrotask(() => {
+    window.requestAnimationFrame(() => {
       const root = builderRootRef.current;
       const target = plan.firstNodeId
         ? root?.querySelector<HTMLElement>(`[data-workflow-node-id="${plan.firstNodeId}"]`)
@@ -123,17 +144,19 @@ export function WorkbenchWorkflowBuilderCard({
     }, 2200);
   }
   const flashFixReceiptHighlights = (summary: WorkflowValidationFixSummaryEntry[]) =>
-    flashWorkflowBuilderFixReceiptHighlights({
-      builderRootRef,
-      summary,
-      setFocusedNodeId,
-      setFocusedEdgeId,
-      setFocusedArtifactKey,
-      setHighlightedNodeIds,
-      setHighlightedEdgeIds,
-      setHighlightedPortKeys,
-      setHighlightedArtifactKeys,
-    });
+    window.requestAnimationFrame(() =>
+      flashWorkflowBuilderFixReceiptHighlights({
+        builderRootRef,
+        summary,
+        setFocusedNodeId,
+        setFocusedEdgeId,
+        setFocusedArtifactKey,
+        setHighlightedNodeIds,
+        setHighlightedEdgeIds,
+        setHighlightedPortKeys,
+        setHighlightedArtifactKeys,
+      }),
+    );
   useEffect(() => {
     const normalizedSelectedGraph = normalizeImportedWorkflowGraph(
       cloneWorkflowGraph(selectedWorkflow?.graph ?? null),
@@ -163,20 +186,25 @@ export function WorkbenchWorkflowBuilderCard({
     setImportedPackage(null);
     setRecentFixSummary([]);
     setPolicyFeedback(null);
+    setBuilderStage("topology");
+    setContractView("inputs");
     resetBuilderFocus();
     setSavedDrafts(selectedWorkflow ? listStoredWorkflowDrafts(selectedWorkflow.id) : []);
     setSavedSnapshots(selectedWorkflow ? listStoredWorkflowSnapshots(selectedWorkflow.id) : []);
   }, [operatorDescriptors, selectedWorkflow]);
-  useEffect(() => { if (!traceFocusNodeId) return; setFocusedNodeId(traceFocusNodeId); setFocusedEdgeId(null); setHighlightedNodeIds([traceFocusNodeId]); queueMicrotask(() => builderRootRef.current?.querySelector<HTMLElement>(`[data-workflow-node-id="${traceFocusNodeId}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" })); window.setTimeout(() => setHighlightedNodeIds((current) => (current[0] === traceFocusNodeId ? [] : current)), 2200); }, [traceFocusNodeId, traceFocusToken]);
-  useEffect(() => { if (!traceFocusBranchNodeId || !traceFocusBranchOutputId) return; const graph = draftGraph; const branchEdges = (graph?.edges ?? []).filter((edge) => edge.from.node === traceFocusBranchNodeId && edge.from.port === traceFocusBranchOutputId); const mergeNode = branchEdges.map((edge) => graph?.nodes.find((node) => node.id === edge.to.node && node.operator_id === "transform.first_available") ?? null).find(Boolean) ?? null; const downstreamEdgeIds = mergeNode ? (graph?.edges ?? []).filter((edge) => edge.from.node === mergeNode.id && edge.from.port === "merged").map((edge) => edge.id) : []; setFocusedNodeId(traceFocusBranchNodeId); setHighlightedNodeIds(mergeNode ? [traceFocusBranchNodeId, mergeNode.id] : [traceFocusBranchNodeId]); if (branchEdges.length + downstreamEdgeIds.length > 0) flashHighlightedEdges([...branchEdges.map((edge) => edge.id), ...downstreamEdgeIds]); }, [draftGraph, traceFocusBranchNodeId, traceFocusBranchOutputId, traceFocusBranchToken]);
-  useEffect(() => { if (!traceFocusDatasetNodeId || !traceFocusDatasetPortId) return; const valueId = draftGraph?.nodes.find((node) => node.id === traceFocusDatasetNodeId)?.outputs?.find((port) => port.id === traceFocusDatasetPortId)?.dataset_value ?? null; if (!valueId) return; const nodeIds = (draftGraph?.nodes ?? []).filter((node) => [...(node.inputs ?? []), ...(node.outputs ?? [])].some((port) => port.dataset_value === valueId)).map((node) => node.id); const edgeIds = (draftGraph?.edges ?? []).filter((edge) => edge.dataset_value === valueId).map((edge) => edge.id); setSelectedDatasetValueId(valueId); setFocusedDatasetValueId(valueId); setHighlightDatasetEditor(true); setHighlightedNodeIds(nodeIds); if (edgeIds.length > 0) setHighlightedEdgeIds(edgeIds); queueMicrotask(() => builderRootRef.current?.querySelector<HTMLElement>('[data-workflow-dataset-editor="editor"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" })); window.setTimeout(() => { setHighlightDatasetEditor((current) => (current ? false : current)); setHighlightedNodeIds((current) => (current.join(",") === nodeIds.join(",") ? [] : current)); setHighlightedEdgeIds((current) => (current.join(",") === edgeIds.join(",") ? [] : current)); }, 2200); }, [draftGraph, traceFocusDatasetNodeId, traceFocusDatasetPortId, traceFocusDatasetToken]);
+  useEffect(() => { if (!traceFocusNodeId) return; setBuilderStage("topology"); setFocusedNodeId(traceFocusNodeId); setFocusedEdgeId(null); setHighlightedNodeIds([traceFocusNodeId]); window.requestAnimationFrame(() => builderRootRef.current?.querySelector<HTMLElement>(`[data-workflow-node-id="${traceFocusNodeId}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" })); window.setTimeout(() => setHighlightedNodeIds((current) => (current[0] === traceFocusNodeId ? [] : current)), 2200); }, [traceFocusNodeId, traceFocusToken]);
+  useEffect(() => { if (!traceFocusBranchNodeId || !traceFocusBranchOutputId) return; setBuilderStage("control"); const graph = draftGraph; const branchEdges = (graph?.edges ?? []).filter((edge) => edge.from.node === traceFocusBranchNodeId && edge.from.port === traceFocusBranchOutputId); const mergeNode = branchEdges.map((edge) => graph?.nodes.find((node) => node.id === edge.to.node && node.operator_id === "transform.first_available") ?? null).find(Boolean) ?? null; const downstreamEdgeIds = mergeNode ? (graph?.edges ?? []).filter((edge) => edge.from.node === mergeNode.id && edge.from.port === "merged").map((edge) => edge.id) : []; setFocusedNodeId(traceFocusBranchNodeId); setHighlightedNodeIds(mergeNode ? [traceFocusBranchNodeId, mergeNode.id] : [traceFocusBranchNodeId]); if (branchEdges.length + downstreamEdgeIds.length > 0) flashHighlightedEdges([...branchEdges.map((edge) => edge.id), ...downstreamEdgeIds]); }, [draftGraph, traceFocusBranchNodeId, traceFocusBranchOutputId, traceFocusBranchToken]);
+  useEffect(() => { if (!traceFocusDatasetNodeId || !traceFocusDatasetPortId) return; const valueId = draftGraph?.nodes.find((node) => node.id === traceFocusDatasetNodeId)?.outputs?.find((port) => port.id === traceFocusDatasetPortId)?.dataset_value ?? null; if (!valueId) return; setBuilderStage("contracts"); setContractView("dataset"); const nodeIds = (draftGraph?.nodes ?? []).filter((node) => [...(node.inputs ?? []), ...(node.outputs ?? [])].some((port) => port.dataset_value === valueId)).map((node) => node.id); const edgeIds = (draftGraph?.edges ?? []).filter((edge) => edge.dataset_value === valueId).map((edge) => edge.id); setSelectedDatasetValueId(valueId); setFocusedDatasetValueId(valueId); setHighlightDatasetEditor(true); setHighlightedNodeIds(nodeIds); if (edgeIds.length > 0) setHighlightedEdgeIds(edgeIds); window.requestAnimationFrame(() => builderRootRef.current?.querySelector<HTMLElement>('[data-workflow-dataset-editor="editor"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" })); window.setTimeout(() => { setHighlightDatasetEditor((current) => (current ? false : current)); setHighlightedNodeIds((current) => (current.join(",") === nodeIds.join(",") ? [] : current)); setHighlightedEdgeIds((current) => (current.join(",") === edgeIds.join(",") ? [] : current)); }, 2200); }, [draftGraph, traceFocusDatasetNodeId, traceFocusDatasetPortId, traceFocusDatasetToken]);
   const selectedGraph = draftGraph;
   const selectedNodes = selectedGraph?.nodes ?? EMPTY_LIST, selectedEdges = selectedGraph?.edges ?? EMPTY_LIST, selectedEntryInputs = selectedGraph?.entry_inputs ?? EMPTY_LIST, selectedOutputArtifacts = selectedGraph?.output_artifacts ?? EMPTY_LIST, selectedDatasetContract = selectedGraph?.dataset_contract ?? null, selectedDatasetValues = selectedDatasetContract?.values ?? EMPTY_LIST;
   const parsedDraftInputs = useMemo(() => parseWorkflowInputArtifactTexts(draftInputTexts), [draftInputTexts]);
   const inputArtifactWarnings = useMemo(() => collectWorkflowInputArtifactContractWarnings({ entryInputs: selectedEntryInputs, inputArtifactTexts: draftInputTexts }), [selectedEntryInputs, draftInputTexts]);
   const inputArtifactWarningCount = useMemo(() => countWorkflowContractWarnings(inputArtifactWarnings), [inputArtifactWarnings]);
   const validationIssues = useMemo(() => validateWorkflowGraphDefinition(selectedGraph, selectedEntryInputs, selectedOutputArtifacts, operatorDescriptors ?? []), [operatorDescriptors, selectedGraph, selectedEntryInputs, selectedOutputArtifacts]);
-  const integrityReport = useMemo(() => buildWorkflowIntegrityReport(selectedWorkflow, operatorDescriptors ?? []), [operatorDescriptors, selectedWorkflow]);
+  const integrityReport = useMemo(
+    () => buildWorkflowIntegrityReport(selectedWorkflow, operatorDescriptors ?? [], selectedGraph),
+    [operatorDescriptors, selectedGraph, selectedWorkflow],
+  );
   const packageResiduals = useMemo(() => selectedWorkflow ? scanWorkflowPackageResiduals({ workflow: selectedWorkflow, importedPackage, integrityReport }) : [], [importedPackage, integrityReport, selectedWorkflow]);
   const draftBlockingIssueCount = validationIssues.length + parsedDraftInputs.invalidKeys.length, canRunDraft = Boolean(selectedGraph) && draftBlockingIssueCount === 0;
   const selectedDatasetValue = useMemo(() => selectedDatasetValues.find((value) => value.id === selectedDatasetValueId) ?? selectedDatasetValues[0] ?? null, [selectedDatasetValueId, selectedDatasetValues]);
@@ -270,7 +298,7 @@ export function WorkbenchWorkflowBuilderCard({
     const nextGraph = applyWorkflowValidationFix(selectedGraph, issue, operatorDescriptors ?? []);
     if (selectedWorkflow && nextGraph) {
       const summary = buildWorkflowValidationFixSummary([issue], selectedGraph, operatorDescriptors ?? []);
-      saveStoredWorkflowSnapshot({ workflowId: selectedWorkflow.id, workflowName: selectedWorkflow.name, reason: "single validation fix", graph: nextGraph, inputArtifactTexts: draftInputTexts, summary: [...summary.map((entry) => entry.title), snapshotContractSummary, buildWorkflowActivityCountSummary(countWorkflowBridgeNormalizationAdjustments(nextGraph), "bridge auto-fixes")] }); appendWorkflowActivityLogEntry({ workflowId: selectedWorkflow.id, kind: "validation_fix_applied", message: "Applied single workflow validation fix.", detail: issue.message, count: 1, context: buildWorkflowAuditContextFromValidationIssue(issue, selectedGraph) });
+      confirmWorkflowStorageWrite(saveStoredWorkflowSnapshot({ workflowId: selectedWorkflow.id, workflowName: selectedWorkflow.name, reason: "single validation fix", graph: nextGraph, inputArtifactTexts: draftInputTexts, summary: [...summary.map((entry) => entry.title), snapshotContractSummary, buildWorkflowActivityCountSummary(countWorkflowBridgeNormalizationAdjustments(nextGraph), "bridge auto-fixes")] }) !== null); appendWorkflowActivityLogEntry({ workflowId: selectedWorkflow.id, kind: "validation_fix_applied", message: "Applied single workflow validation fix.", detail: issue.message, count: 1, context: buildWorkflowAuditContextFromValidationIssue(issue, selectedGraph) });
       setSavedSnapshots(listStoredWorkflowSnapshots(selectedWorkflow.id));
       setRecentFixSummary(summary);
       flashFixReceiptHighlights(summary);
@@ -288,7 +316,7 @@ export function WorkbenchWorkflowBuilderCard({
     if (appliedCount === 0) return;
     const summary = buildWorkflowValidationFixSummary(appliedIssues, selectedGraph, operatorDescriptors ?? []);
     if (selectedWorkflow && graph) {
-      saveStoredWorkflowSnapshot({ workflowId: selectedWorkflow.id, workflowName: selectedWorkflow.name, reason: "batch validation fixes", graph, inputArtifactTexts: draftInputTexts, summary: [...summary.map((entry) => entry.title), snapshotContractSummary, buildWorkflowActivityCountSummary(countWorkflowBridgeNormalizationAdjustments(graph), "bridge auto-fixes")] }); appendWorkflowActivityLogEntry({ workflowId: selectedWorkflow.id, kind: "validation_fix_applied", message: "Applied batch workflow validation fixes.", count: appliedIssues.length, context: buildWorkflowAuditContextFromValidationIssue(appliedIssues[0]!, selectedGraph) });
+      confirmWorkflowStorageWrite(saveStoredWorkflowSnapshot({ workflowId: selectedWorkflow.id, workflowName: selectedWorkflow.name, reason: "batch validation fixes", graph, inputArtifactTexts: draftInputTexts, summary: [...summary.map((entry) => entry.title), snapshotContractSummary, buildWorkflowActivityCountSummary(countWorkflowBridgeNormalizationAdjustments(graph), "bridge auto-fixes")] }) !== null); appendWorkflowActivityLogEntry({ workflowId: selectedWorkflow.id, kind: "validation_fix_applied", message: "Applied batch workflow validation fixes.", count: appliedIssues.length, context: buildWorkflowAuditContextFromValidationIssue(appliedIssues[0]!, selectedGraph) });
       setSavedSnapshots(listStoredWorkflowSnapshots(selectedWorkflow.id));
     }
     setDraftGraph(graph);
@@ -300,14 +328,24 @@ export function WorkbenchWorkflowBuilderCard({
   }
   function locateValidationIssue(issueId: string) { const issue = validationIssues.find((entry) => entry.id === issueId); if (issue?.locate) locateBuilderIssue(issue.locate); }
   function locateIntegrityIssue(issue: WorkflowIntegrityIssue) { if (issue.locate) locateBuilderIssue(issue.locate); }
-  function locateBridgeRuntimeIssue(issue: import("@/components/workbench/workflow/workbench-workflow-bridge-runtime-validation").WorkflowBridgeRuntimeValidationIssue) { locateWorkflowBridgeRuntimeIssue({ issue, builderRootRef, resetBuilderFocus, setFocusedNodeId, setFocusedEdgeId, setHighlightedNodeIds, flashHighlightedEdges }); }
+  function locateBridgeRuntimeIssue(issue: import("@/components/workbench/workflow/workbench-workflow-bridge-runtime-validation").WorkflowBridgeRuntimeValidationIssue) { setBuilderStage("topology"); window.requestAnimationFrame(() => locateWorkflowBridgeRuntimeIssue({ issue, builderRootRef, resetBuilderFocus, setFocusedNodeId, setFocusedEdgeId, setHighlightedNodeIds, flashHighlightedEdges })); }
   function locateAuditTarget(target: WorkflowAuditNavigationTarget) { if (target.kind === "run") { onLocateAuditTarget?.(target); return; } locateBuilderIssue(target.kind === "node" ? { kind: "node", nodeId: target.nodeId } : { kind: "dataset", datasetValueId: target.datasetValueId }); }
-  function replayAuditEntry(entry: import("@/lib/workbench/workbench-audit-timeline").WorkbenchAuditTimelineEntry) { replayWorkflowBuilderAuditEntry({ entry, setFocusedNodeId, setFocusedEdgeId, setHighlightedNodeIds, flashHighlightedEdges }); }
+  function replayAuditEntry(entry: import("@/lib/workbench/workbench-audit-timeline").WorkbenchAuditTimelineEntry) { setBuilderStage("topology"); window.requestAnimationFrame(() => replayWorkflowBuilderAuditEntry({ entry, setFocusedNodeId, setFocusedEdgeId, setHighlightedNodeIds, flashHighlightedEdges })); }
   function appendControlFlowAudit(payload: ReturnType<typeof buildControlFlowEdgeAuditPayload> | ReturnType<typeof buildControlFlowNodeAddAuditPayload> | ReturnType<typeof buildControlFlowPlaneInsertAuditPayload>) { if (!selectedWorkflow) return; appendWorkflowActivityLogEntry({ workflowId: selectedWorkflow.id, kind: payload.kind, message: payload.message, detail: payload.detail, context: payload.context }); }
   function addControlFlowNode(kind: "condition" | "merge") { topologyActions.addNode(kind === "condition" ? { kind: "condition" } : { kind: "transform", operatorId: "transform.first_available" }); appendControlFlowAudit(buildControlFlowNodeAddAuditPayload(kind)); }
   function insertControlFlowPlaneWithAudit(sourceNodeId?: string | null) { topologyActions.insertControlFlowPlane(sourceNodeId); appendControlFlowAudit(buildControlFlowPlaneInsertAuditPayload(sourceNodeId)); }
   function setControlFlowEdgeWithAudit(mode: "outgoing" | "incoming", nodeId: string, portId: string, target: string) { topologyActions.setControlFlowEdge(mode, nodeId, portId, target); appendControlFlowAudit(buildControlFlowEdgeAuditPayload({ graph: selectedGraph, mode, nodeId, portId, target })); }
-  function locateBuilderIssue(locate: WorkflowBuilderLocateTarget) { locateWorkflowBuilderIssue({ locate, builderRootRef, selectedDatasetValues, selectedEntryInputs, selectedOutputArtifacts, resetBuilderFocus, setFocusedNodeId, setFocusedEdgeId, setSelectedDatasetValueId, setFocusedDatasetValueId, setHighlightDatasetEditor, setFocusedArtifactKey }); }
+  function locateBuilderIssue(locate: WorkflowBuilderLocateTarget) {
+    const nextStage: WorkflowBuilderStage = locate.kind === "node" || locate.kind === "edge"
+      ? "topology"
+      : locate.kind === "dataset" || locate.kind === "artifact"
+        ? "contracts"
+        : "validation";
+    setBuilderStage(nextStage);
+    if (locate.kind === "dataset") setContractView("dataset");
+    if (locate.kind === "artifact") setContractView(locate.mode === "output" ? "output" : "entry");
+    window.requestAnimationFrame(() => locateWorkflowBuilderIssue({ locate, builderRootRef, selectedDatasetValues, selectedEntryInputs, selectedOutputArtifacts, resetBuilderFocus, setFocusedNodeId, setFocusedEdgeId, setSelectedDatasetValueId, setFocusedDatasetValueId, setHighlightDatasetEditor, setFocusedArtifactKey }));
+  }
   function addDatasetValue() {
     setDraftGraph((current) => {
       if (!current) return current;
@@ -385,13 +423,14 @@ export function WorkbenchWorkflowBuilderCard({
   }
   function saveCurrentDraft() {
     if (!selectedWorkflow || !selectedWorkflow.id || !selectedGraph) return;
-    saveStoredWorkflowDraft({
+    const saved = saveStoredWorkflowDraft({
       workflowId: selectedWorkflow.id,
       workflowName: selectedWorkflow.name,
       graph: selectedGraph,
       inputArtifactTexts: draftInputTexts,
       templateChainPreferences: readWorkflowTemplateChainPreferences(),
     });
+    if (!confirmWorkflowStorageWrite(saved !== null)) return;
     setSavedDrafts(listStoredWorkflowDrafts(selectedWorkflow.id));
     showBuilderNotice("workflow-builder-draft-saved", labels.draftSavedLabel, "info");
   }
@@ -422,7 +461,7 @@ export function WorkbenchWorkflowBuilderCard({
   }
   function promoteCurrentDraft() {
     if (!selectedWorkflow || !selectedGraph) return;
-    saveStoredLocalWorkflow(
+    const saved = saveStoredLocalWorkflow(
       buildPromotedWorkflowParams({
         workflow: selectedWorkflow,
         graph: selectedGraph,
@@ -430,6 +469,7 @@ export function WorkbenchWorkflowBuilderCard({
         importedPackage,
       }),
     );
+    if (!confirmWorkflowStorageWrite(saved !== null)) return;
     onRefreshWorkflowCatalog();
     showBuilderNotice("workflow-builder-local-promoted", labels.localWorkflowPromotedLabel, "info");
   }
@@ -437,15 +477,34 @@ export function WorkbenchWorkflowBuilderCard({
     if (!selectedWorkflow?.local) return;
     const nextName = window.prompt(labels.localWorkflowRenamePrompt, selectedWorkflow.name);
     if (!nextName?.trim()) return;
-    renameStoredLocalWorkflow(selectedWorkflow.local.storage_id, nextName);
+    if (!confirmWorkflowStorageWrite(
+      renameStoredLocalWorkflow(selectedWorkflow.local.storage_id, nextName),
+    )) return;
     onRefreshWorkflowCatalog();
     showBuilderNotice("workflow-builder-local-renamed", `${labels.localWorkflowBadgeLabel}: ${nextName.trim()}`, "info");
   }
-  function duplicateCurrentLocalWorkflow() { if (!selectedWorkflow?.local) return; duplicateStoredLocalWorkflow(selectedWorkflow.local.storage_id); onRefreshWorkflowCatalog(); showBuilderNotice("workflow-builder-local-duplicated", labels.localWorkflowDuplicatedLabel, "info"); }
-  function deleteCurrentLocalWorkflow() { if (!selectedWorkflow?.local) return; removeStoredWorkflowSnapshotsByWorkflowId(selectedWorkflow.id); removeStoredLocalWorkflow(selectedWorkflow.local.storage_id); onRefreshWorkflowCatalog(); showBuilderNotice("workflow-builder-local-deleted", labels.localWorkflowDeletedLabel, "info"); }
+  function duplicateCurrentLocalWorkflow() {
+    if (!selectedWorkflow?.local) return;
+    const duplicated = duplicateStoredLocalWorkflow(selectedWorkflow.local.storage_id);
+    if (!confirmWorkflowStorageWrite(duplicated !== null)) return;
+    onRefreshWorkflowCatalog();
+    showBuilderNotice("workflow-builder-local-duplicated", labels.localWorkflowDuplicatedLabel, "info");
+  }
+  function deleteCurrentLocalWorkflow() {
+    if (!selectedWorkflow?.local) return;
+    if (!confirmWorkflowStorageWrite(
+      removeStoredLocalWorkflow(selectedWorkflow.local.storage_id),
+    )) return;
+    const snapshotsRemoved = removeStoredWorkflowSnapshotsByWorkflowId(selectedWorkflow.id);
+    onRefreshWorkflowCatalog();
+    if (!confirmWorkflowStorageWrite(snapshotsRemoved)) return;
+    showBuilderNotice("workflow-builder-local-deleted", labels.localWorkflowDeletedLabel, "info");
+  }
   function saveCurrentLocalWorkflowMetadata(summary: string, notes: string) {
     if (!selectedWorkflow?.local) return;
-    updateStoredLocalWorkflowMetadata(selectedWorkflow.local.storage_id, { notes, summary });
+    if (!confirmWorkflowStorageWrite(
+      updateStoredLocalWorkflowMetadata(selectedWorkflow.local.storage_id, { notes, summary }),
+    )) return;
     onRefreshWorkflowCatalog();
     showBuilderNotice("workflow-builder-local-metadata-saved", labels.localWorkflowMetadataSavedLabel, "info");
   }
@@ -462,14 +521,21 @@ export function WorkbenchWorkflowBuilderCard({
         ),
     );
     if (draft.templateChainPreferences) {
-      writeWorkflowTemplateChainPreferences(draft.templateChainPreferences);
+      confirmWorkflowStorageWrite(
+        writeWorkflowTemplateChainPreferences(draft.templateChainPreferences),
+      );
     }
     setImportedPackage(null);
     setSelectedDatasetValueId(nextGraph?.dataset_contract?.values?.[0]?.id ?? null);
     resetBuilderFocus();
     showBuilderNotice("workflow-builder-draft-loaded", labels.draftLoadedLabel, "info");
   }
-  function deleteSavedDraft(draftId: string) { if (!selectedWorkflow) return; removeStoredWorkflowDraft(draftId); setSavedDrafts(listStoredWorkflowDrafts(selectedWorkflow.id)); showBuilderNotice("workflow-builder-draft-deleted", labels.draftDeletedLabel, "info"); }
+  function deleteSavedDraft(draftId: string) {
+    if (!selectedWorkflow) return;
+    if (!confirmWorkflowStorageWrite(removeStoredWorkflowDraft(draftId))) return;
+    setSavedDrafts(listStoredWorkflowDrafts(selectedWorkflow.id));
+    showBuilderNotice("workflow-builder-draft-deleted", labels.draftDeletedLabel, "info");
+  }
   function restoreSnapshot(snapshotId: string) {
     const snapshot = loadStoredWorkflowSnapshot(snapshotId);
     if (!snapshot) {
@@ -486,13 +552,13 @@ export function WorkbenchWorkflowBuilderCard({
     showBuilderNotice("workflow-builder-snapshot-restored", (() => { const parse = (summary?: string[]) => Number(summary?.find((entry) => entry.startsWith("contract warnings:"))?.split(":")[1]?.trim() ?? ""); const nextCount = parse(snapshot.summary), currentCount = parse(savedSnapshots[0]?.summary); const health = Number.isFinite(nextCount) && Number.isFinite(currentCount) && snapshot.id !== savedSnapshots[0]?.id ? nextCount > currentCount ? "restoring to a dirtier contract state" : nextCount < currentCount ? "restoring to a cleaner contract state" : "restoring to an equivalent contract state" : null; return Number.isFinite(nextCount) ? `${snapshot.reason} (${health ? `${health}; ` : ""}contract warnings: ${nextCount})` : snapshot.reason; })(), "info");
     resetBuilderFocus();
   }
-  function deleteSnapshot(snapshotId: string) { if (!selectedWorkflow) return; removeStoredWorkflowSnapshot(snapshotId); setSavedSnapshots(listStoredWorkflowSnapshots(selectedWorkflow.id)); }
+  function deleteSnapshot(snapshotId: string) { if (!selectedWorkflow) return; if (!confirmWorkflowStorageWrite(removeStoredWorkflowSnapshot(snapshotId))) return; setSavedSnapshots(listStoredWorkflowSnapshots(selectedWorkflow.id)); }
   function exportDraftDatasetContract() { if (!selectedDatasetContract) return; downloadJsonArtifact(`${slugifyWorkflowAssetName(selectedDatasetContract.id)}.workflow-dataset.json`, selectedDatasetContract); }
   function exportPackageInstallReport(maintenanceHistory: Array<{ at: string; kind: "scan" | "repair"; lines: string[] }>) { if (!selectedWorkflow) return; downloadJsonArtifact(`${slugifyWorkflowAssetName(selectedWorkflow.id)}.workflow-package-install-report.json`, buildWorkflowPackageInstallReport({ workflow: selectedWorkflow, importedPackage, integrityReport, recentRunStatus, protocolAgents, frontendRuntimeMode, maintenanceHistory })); showBuilderNotice("workflow-builder-package-report-exported", labels.packageInstallRulesReportExportedLabel, "info"); }
   function scanPackageResiduals() { const receipt = packageResiduals.length > 0 ? packageResiduals.map((entry) => entry.message) : [labels.packageInstallRulesResidualsCleanLabel]; if (selectedWorkflow) appendWorkflowActivityLogEntry({ workflowId: selectedWorkflow.id, kind: "package_residual_scanned", message: "Scanned workflow package residuals.", count: packageResiduals.length, detail: receipt[0] }); showBuilderNotice("workflow-builder-package-residual-scanned", receipt[0], packageResiduals.length > 0 ? "warning" : "info"); return receipt; }
   function locatePackageResidual(residualId: string) { const residual = packageResiduals.find((entry) => entry.id === residualId); if (!residual) return; if (residual.locate === "snapshot") return queueMicrotask(() => builderRootRef.current?.querySelector<HTMLElement>('[data-workflow-snapshot-card="card"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" })); if (residual.locate === "local") return queueMicrotask(() => builderRootRef.current?.querySelector<HTMLElement>('[data-workflow-local-card="card"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" })); queueMicrotask(() => builderRootRef.current?.querySelector<HTMLElement>('[data-workflow-package-card="card"], [data-workflow-package-policy-card="card"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" })); }
   function locateImportDiagnostic(diagnostic: WorkflowPackageImportDiagnostic) { locateWorkflowPackageImportDiagnostic(builderRootRef.current, diagnostic, setSelectedDatasetValueId); }
-  function applyResidualRepair(kind: (typeof packageResiduals)[number]["kind"]) { if (!selectedWorkflow) return [] as string[]; if (kind === "orphan_snapshots") { removeStoredWorkflowSnapshotsByWorkflowId(selectedWorkflow.id); setSavedSnapshots(listStoredWorkflowSnapshots(selectedWorkflow.id)); return ["Removed orphan workflow snapshots for the current workflow."]; } if (kind === "summary_only_snapshots") { removeStoredWorkflowSummaryOnlySnapshots(selectedWorkflow.id); setSavedSnapshots(listStoredWorkflowSnapshots(selectedWorkflow.id)); return ["Removed summary-only snapshots that could not be restored."]; } if (kind === "package_override") { const nextGraph = cloneWorkflowGraph(selectedWorkflow.graph ?? null); setDraftGraph(nextGraph); setDraftInputTexts(selectedWorkflow.local?.input_artifact_texts ?? buildWorkflowInputArtifactTexts(nextGraph?.entry_inputs ?? [], builtInWorkflowSampleInputArtifacts(selectedWorkflow.local?.source_workflow_id ?? selectedWorkflow.id))); setImportedPackage(null); setSelectedDatasetValueId(nextGraph?.dataset_contract?.values?.[0]?.id ?? null); resetBuilderFocus(); return ["Discarded the draft package override and restored the mounted workflow state."]; } return []; }
+  function applyResidualRepair(kind: (typeof packageResiduals)[number]["kind"]) { if (!selectedWorkflow) return [] as string[]; if (kind === "orphan_snapshots") { if (!confirmWorkflowStorageWrite(removeStoredWorkflowSnapshotsByWorkflowId(selectedWorkflow.id))) return []; setSavedSnapshots(listStoredWorkflowSnapshots(selectedWorkflow.id)); return ["Removed orphan workflow snapshots for the current workflow."]; } if (kind === "summary_only_snapshots") { if (!confirmWorkflowStorageWrite(removeStoredWorkflowSummaryOnlySnapshots(selectedWorkflow.id))) return []; setSavedSnapshots(listStoredWorkflowSnapshots(selectedWorkflow.id)); return ["Removed summary-only snapshots that could not be restored."]; } if (kind === "package_override") { const nextGraph = cloneWorkflowGraph(selectedWorkflow.graph ?? null); setDraftGraph(nextGraph); setDraftInputTexts(selectedWorkflow.local?.input_artifact_texts ?? buildWorkflowInputArtifactTexts(nextGraph?.entry_inputs ?? [], builtInWorkflowSampleInputArtifacts(selectedWorkflow.local?.source_workflow_id ?? selectedWorkflow.id))); setImportedPackage(null); setSelectedDatasetValueId(nextGraph?.dataset_contract?.values?.[0]?.id ?? null); resetBuilderFocus(); return ["Discarded the draft package override and restored the mounted workflow state."]; } return []; }
   function repairPackageResidual(residualId: string) { const residual = packageResiduals.find((entry) => entry.id === residualId); if (!residual?.auto_fixable) { showBuilderNotice("workflow-builder-package-repair-unavailable", labels.packageInstallRulesRepairUnavailableLabel, "warning"); return []; } const receipt = applyResidualRepair(residual.kind); if (receipt.length > 0) { if (selectedWorkflow) appendWorkflowActivityLogEntry({ workflowId: selectedWorkflow.id, kind: "package_residual_repaired", message: "Applied workflow package residual repair.", detail: residual.message, count: 1 }); showBuilderNotice("workflow-builder-package-repaired", labels.packageInstallRulesRepairedLabel, "info"); } return receipt; }
   async function importWorkflowGraphFile(file: File) {
     try {
@@ -525,7 +591,9 @@ export function WorkbenchWorkflowBuilderCard({
           ),
       );
       if (templateChainPreferences) {
-        writeWorkflowTemplateChainPreferences(templateChainPreferences);
+        confirmWorkflowStorageWrite(
+          writeWorkflowTemplateChainPreferences(templateChainPreferences),
+        );
       }
       setImportDiagnostics([...(importedPayload.diagnostics ?? []), ...imported.diagnostics]);
       setImportedPackage(nextImportedPackage);
@@ -568,21 +636,66 @@ export function WorkbenchWorkflowBuilderCard({
     event.target.value = "";
   }
   function updateDraftInputText(nodeId: string, value: string) { setDraftInputTexts((current) => ({ ...current, [nodeId]: value })); }
+  const builderStages: Array<{ id: WorkflowBuilderStage; label: string }> = [
+    { id: "topology", label: labels.topologyEditorTitle },
+    { id: "control", label: labels.controlFlowPlaneTitle },
+    { id: "contracts", label: labels.inputArtifactsTitle },
+    { id: "validation", label: labels.validationTitle },
+  ];
+  const contractViews: Array<{ id: WorkflowContractView; label: string }> = [
+    { id: "inputs", label: labels.inputArtifactsTitle },
+    { id: "dataset", label: labels.datasetContractTitle },
+    { id: "entry", label: labels.entryInputsTitle },
+    { id: "output", label: labels.outputArtifactsTitle },
+    { id: "storage", label: labels.savedDraftsTitle },
+  ];
   if (!selectedWorkflow) return <section className="sidebar-card sidebar-card--compact"><p className="card-copy">{labels.noSelectionLabel}</p></section>;
   return (
-    <section className="sidebar-card sidebar-card--compact workflow-builder-shell" data-workflow-builder-shell="builder" ref={builderRootRef}>
+    <section className="sidebar-card sidebar-card--compact workflow-builder-shell" data-workflow-builder-shell="builder" data-workflow-builder-stage={builderStage} ref={builderRootRef}>
       <WorkbenchWorkflowFocusStrip activeTarget={activeFocusTarget} feedback={policyFeedback} labels={labels} />
       <WorkbenchWorkflowBuilderToolbar canExportDataset={Boolean(selectedDatasetContract)} canRunDraft={canRunDraft} draftBlockingIssueCount={draftBlockingIssueCount} datasetInputRef={datasetInputRef} graphInputRef={graphInputRef} importNotice={importNotice} setImportNotice={setImportNotice} labels={labels} onDatasetFileChange={handleDatasetFileChange} onExportDataset={exportDraftDatasetContract} onDuplicateLocalWorkflow={duplicateCurrentLocalWorkflow} onExportGraph={exportDraftWorkflowGraph} onDeleteLocalWorkflow={deleteCurrentLocalWorkflow} onGraphFileChange={handleGraphFileChange} onPromoteDraft={promoteCurrentDraft} onRenameLocalWorkflow={renameCurrentLocalWorkflow} onRunCatalog={() => { const workflowId = selectedWorkflow?.id; if (!workflowId) return; onRunWorkflowCatalog(workflowId); }} onRunDraft={runCurrentDraft} onSaveDraft={saveCurrentDraft} selectedWorkflow={selectedWorkflow} />
-      <WorkbenchWorkflowDraftCard drafts={savedDrafts} labels={labels} onDeleteDraft={deleteSavedDraft} onLoadDraft={loadSavedDraft} onSaveDraft={saveCurrentDraft} />
-      <WorkbenchWorkflowPackageManifestCard importedPackage={importedPackage} labels={labels} recentRunStatus={recentRunStatus} workflow={selectedWorkflow} />
-      <WorkbenchWorkflowInputArtifactsCard entryInputs={selectedEntryInputs} inputTexts={draftInputTexts} invalidKeys={parsedDraftInputs.invalidKeys} labels={labels} onChangeInputText={updateDraftInputText} selectedNodes={selectedNodes} />
-      <WorkbenchWorkflowControlFlowPlaneCard labels={labels} operatorDescriptors={operatorDescriptors} selectedEdges={selectedEdges} selectedNodes={selectedNodes} validationIssues={validationIssues} invalidInputCount={parsedDraftInputs.invalidKeys.length} traceFocusBranchNodeId={traceFocusBranchNodeId} traceFocusBranchOutputId={traceFocusBranchOutputId} traceFocusBranchToken={traceFocusBranchToken} onAddConditionNode={() => addControlFlowNode("condition")} onAddMergeNode={() => addControlFlowNode("merge")} onAddNode={topologyActions.addNode} onSyncNodeTemplate={topologyActions.syncNodeTemplate} onInsertControlFlowPlane={insertControlFlowPlaneWithAudit} onSetControlFlowEdge={setControlFlowEdgeWithAudit} />
-      <WorkbenchWorkflowTopologyCard bridgeRuntimeResult={latestRun?.result ?? null} currentHeatPlaneModel={currentHeatPlaneModel} currentPlaneModel={currentPlaneModel} currentStudyKind={currentStudyKind} focusedEdgeId={focusedEdgeId} focusedNodeId={focusedNodeId} highlightedNodeIds={highlightedNodeIds} highlightedPortKeys={highlightedPortKeys} labels={labels} operatorDescriptors={operatorDescriptors} onAddEdge={topologyActions.addEdge} onAddConnectedNode={topologyActions.addConnectedNode} onInsertTemplateChain={topologyActions.insertTemplateChain} onAddNode={topologyActions.addNode} onAddNodePort={topologyActions.addNodePort} onRemoveEdge={topologyActions.removeEdge} onRemoveNode={topologyActions.removeNode} onRemoveNodePort={topologyActions.removeNodePort} onSyncNodeTemplate={topologyActions.syncNodeTemplate} onUpdateEdge={topologyActions.updateEdge} onUpdateNode={topologyActions.updateNode} onUpdateNodePort={topologyActions.updateNodePort} highlightedEdgeIds={highlightedEdgeIds} selectedEdges={selectedEdges} selectedNodes={selectedNodes} setSystemAlerts={setSystemAlerts} />
-      {showDeferredPanels ? (
+      <nav aria-label={labels.builderPageLabel} className="workflow-builder-stage-tabs">
+        {builderStages.map((stage, index) => (
+          <button
+            aria-pressed={builderStage === stage.id}
+            className={builderStage === stage.id ? "workflow-builder-stage-tab workflow-builder-stage-tab--active" : "workflow-builder-stage-tab"}
+            data-workflow-builder-stage-target={stage.id}
+            key={stage.id}
+            onClick={() => setBuilderStage(stage.id)}
+            type="button"
+          >
+            <span>{index + 1}</span>
+            <strong>{stage.label}</strong>
+          </button>
+        ))}
+      </nav>
+      {builderStage === "topology" ? (
+        <WorkbenchWorkflowTopologyCard bridgeRuntimeResult={latestRun?.result ?? null} currentHeatPlaneModel={currentHeatPlaneModel} currentPlaneModel={currentPlaneModel} currentStudyKind={currentStudyKind} focusedEdgeId={focusedEdgeId} focusedNodeId={focusedNodeId} highlightedNodeIds={highlightedNodeIds} highlightedPortKeys={highlightedPortKeys} labels={labels} operatorDescriptors={operatorDescriptors} onAddEdge={topologyActions.addEdge} onAddConnectedNode={topologyActions.addConnectedNode} onInsertTemplateChain={topologyActions.insertTemplateChain} onAddNode={topologyActions.addNode} onAddNodePort={topologyActions.addNodePort} onRemoveEdge={topologyActions.removeEdge} onRemoveNode={topologyActions.removeNode} onRemoveNodePort={topologyActions.removeNodePort} onSyncNodeTemplate={topologyActions.syncNodeTemplate} onUpdateEdge={topologyActions.updateEdge} onUpdateNode={topologyActions.updateNode} onUpdateNodePort={topologyActions.updateNodePort} highlightedEdgeIds={highlightedEdgeIds} selectedEdges={selectedEdges} selectedNodes={selectedNodes} setSystemAlerts={setSystemAlerts} />
+      ) : null}
+      {builderStage === "control" ? <WorkbenchWorkflowControlFlowPlaneCard labels={labels} operatorDescriptors={operatorDescriptors} selectedEdges={selectedEdges} selectedNodes={selectedNodes} validationIssues={validationIssues} invalidInputCount={parsedDraftInputs.invalidKeys.length} traceFocusBranchNodeId={traceFocusBranchNodeId} traceFocusBranchOutputId={traceFocusBranchOutputId} traceFocusBranchToken={traceFocusBranchToken} onAddConditionNode={() => addControlFlowNode("condition")} onAddMergeNode={() => addControlFlowNode("merge")} onAddNode={topologyActions.addNode} onSyncNodeTemplate={topologyActions.syncNodeTemplate} onInsertControlFlowPlane={insertControlFlowPlaneWithAudit} onSetControlFlowEdge={setControlFlowEdgeWithAudit} /> : null}
+      {builderStage === "contracts" ? (
+        <>
+          <nav aria-label={labels.inputArtifactsTitle} className="workflow-contract-view-tabs" data-workflow-contract-view={contractView}>
+            {contractViews.map((view) => (
+              <button className={contractView === view.id ? "workflow-contract-view-tab workflow-contract-view-tab--active" : "workflow-contract-view-tab"} data-workflow-contract-view-target={view.id} key={view.id} onClick={() => setContractView(view.id)} title={view.label} type="button">{view.label}</button>
+            ))}
+          </nav>
+          {contractView === "inputs" ? <WorkbenchWorkflowInputArtifactsCard entryInputs={selectedEntryInputs} inputTexts={draftInputTexts} invalidKeys={parsedDraftInputs.invalidKeys} labels={labels} onChangeInputText={updateDraftInputText} selectedNodes={selectedNodes} /> : null}
+          {contractView === "storage" ? (
+            <>
+              <WorkbenchWorkflowDraftCard drafts={savedDrafts} labels={labels} onDeleteDraft={deleteSavedDraft} onLoadDraft={loadSavedDraft} onSaveDraft={saveCurrentDraft} />
+              <WorkbenchWorkflowPackageManifestCard importedPackage={importedPackage} labels={labels} recentRunStatus={recentRunStatus} workflow={selectedWorkflow} />
+            </>
+          ) : null}
+        </>
+      ) : null}
+      {showDeferredPanels && (builderStage === "validation" || (builderStage === "contracts" && contractView !== "inputs" && contractView !== "storage")) ? (
         <WorkbenchWorkflowBuilderDeferredPanelStack
+          mode={builderStage}
+          contractView={contractView}
           addArtifact={addArtifact} addDatasetAxis={addDatasetAxis} addDatasetValue={addDatasetValue} frontendRuntimeMode={frontendRuntimeMode} labels={labels} latestRun={latestRun}
           focusedArtifactKey={focusedArtifactKey} focusedDatasetValueId={focusedDatasetValueId} focusedEdgeId={focusedEdgeId} focusedNodeId={focusedNodeId} highlightDatasetEditor={highlightDatasetEditor}
-          highlightedArtifactKeys={highlightedArtifactKeys} highlightedEdgeIds={highlightedEdgeIds} highlightedNodeIds={highlightedNodeIds} importDiagnostics={importDiagnostics} importedPackage={importedPackage} integrityReport={integrityReport}
+          highlightedArtifactKeys={highlightedArtifactKeys} importDiagnostics={importDiagnostics} importedPackage={importedPackage} integrityReport={integrityReport}
           onApplyAllValidationFixes={applyAllValidationFixes} onApplyValidationFix={applyValidationFix} onDeleteSnapshot={deleteSnapshot} onExportPackageInstallReport={exportPackageInstallReport}
           onLocateAuditTarget={locateAuditTarget} onLocateBridgeRuntimeIssue={locateBridgeRuntimeIssue} onLocateImportDiagnostic={locateImportDiagnostic} onLocateIntegrityIssue={locateIntegrityIssue}
           onLocatePackageResidual={locatePackageResidual} onLocateValidationIssue={locateValidationIssue} onReplayAuditEntry={replayAuditEntry} onRepairPackageResidual={repairPackageResidual}

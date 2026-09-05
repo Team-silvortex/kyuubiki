@@ -571,6 +571,7 @@ fn transient_request_with_steps(
         elements: vec![dynamic_element(case.stiffness, case.damping)],
         time_step: case.time_step,
         steps,
+        history_stride: None,
     }
 }
 

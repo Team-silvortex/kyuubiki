@@ -91,7 +91,7 @@ const SECTION_CHUNKS: Record<SidebarSection, WorkbenchUiChunkId> = {
 
 const SECTION_PREFETCH: Record<SidebarSection, WorkbenchUiChunkId[]> = {
   study: ["section.model", "workspace.inspector"],
-  model: ["renderer.truss3d", "section.study", "workspace.inspector"],
+  model: ["section.library", "renderer.truss3d", "section.study", "workspace.inspector"],
   workflow: ["runtime.wasm-python", "workspace.console"],
   store: ["section.workflow", "workspace.console"],
   library: ["section.workflow", "workspace.console"],

@@ -111,7 +111,7 @@ function validateGraphStructure(graph: WorkflowGraphDefinition) {
       });
     }
   }
-  if (!graph.schema_version.trim()) {
+  if (!graph.schema_version?.trim()) {
     issues.push({
       id: "graph:missing-schema-version",
       scope: "graph",
@@ -184,6 +184,7 @@ function validateDatasetIntegrity(graph: WorkflowGraphDefinition) {
 
 function validateOperatorIntegrity(graph: WorkflowGraphDefinition, operatorDescriptors: WorkflowOperatorDescriptor[]) {
   const issues: WorkflowIntegrityIssue[] = [];
+  if (operatorDescriptors.length === 0) return issues;
   const descriptorIds = new Set(operatorDescriptors.map((descriptor) => descriptor.id));
   for (const node of graph.nodes) {
     if (!node.operator_id) continue;
@@ -244,8 +245,10 @@ function validateSnapshots(
 export function buildWorkflowIntegrityReport(
   workflow?: WorkflowCatalogEntry | null,
   operatorDescriptors: WorkflowOperatorDescriptor[] = [],
+  graphOverride?: WorkflowGraphDefinition | null,
 ): WorkflowIntegrityReport {
-  if (!workflow?.graph) {
+  const graph = graphOverride === undefined ? workflow?.graph : graphOverride;
+  if (!workflow || !graph) {
     const issues: WorkflowIntegrityIssue[] = [
       {
         id: "graph:missing",
@@ -262,7 +265,6 @@ export function buildWorkflowIntegrityReport(
       localWorkflowFound: false,
     };
   }
-  const graph = workflow.graph;
   const localLifecycle = validateLocalLifecycle(workflow);
   const snapshotState = validateSnapshots(workflow.id);
   return {

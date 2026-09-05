@@ -1,0 +1,167 @@
+{
+  "schema_version": "kyuubiki.operator-package-acquisition-operational-qualification/v1",
+  "generated_at_unix_ms": 1788152231298,
+  "status": "pass",
+  "qualification_id": "two-host-installer-managed-orchestra-package-acquisition",
+  "journey": "orchestra-dispatch-fetch-execute-evict-refetch",
+  "topology": {
+    "orchestrator_host_role": "local-macos-qualification-host",
+    "agent_host_role": "remote-linux-qualification-host",
+    "orchestrator_platform": "macos",
+    "agent_platform": "linux",
+    "agent_architecture": "x86_64",
+    "transport": "lan-http-plus-agent-rpc",
+    "control_plane_runtime": "elixir-orchestra",
+    "execution_runtime": "installer-managed-rust-agent",
+    "deployment_owner": "kyuubiki-installer",
+    "build_profile": "release"
+  },
+  "installation": {
+    "schema_version": "kyuubiki.operator-package-acquisition-host-setup/v1",
+    "installer_owner": "kyuubiki-installer",
+    "package_schema": "kyuubiki.agent-update-package/v1",
+    "activation_schema": "kyuubiki.agent-update-activation/v1",
+    "package_version": "2.19.0",
+    "platform": "linux",
+    "entrypoint_sha256": "fcd47913b75bd2fc3609dd0d252e881c0444e64413cc2e47ba10dcfff2c09473",
+    "entrypoint_size_bytes": 16543880,
+    "activation_generation": 1,
+    "active_version": "2.19.0",
+    "installed_version_count": 1,
+    "operator_cache_initially_empty": true
+  },
+  "distribution": {
+    "package_id": "extract.template_summary",
+    "package_version": "0.1.0",
+    "target": "linux-x86_64",
+    "sdk_api_version": "kyuubiki.operator-sdk/v1",
+    "execution_abi": "kyuubiki.operator-json-c/v1",
+    "entrypoint_sha256": "690492c644cb09926cd0acb39188deb70b4da3f8450b259b6fe408953ca26bed",
+    "entrypoint_size_bytes": 654632,
+    "manifest_sha256": "69f1fd94185411b67611ffc3ce84f96d379a048f0744a4afe7a7ee74531dbb80",
+    "distribution_sha256": "1473c7267d5956c9e416f7b5bf3b314df51aad14464aa34faa5b833c11f77e84",
+    "authority_mode": "bound_orchestra",
+    "source_copy_count": 1
+  },
+  "remote_operator_artifact_absent": true,
+  "initial_agent": {
+    "program": "kyuubiki-rust-agent",
+    "package_runtime_ready": true,
+    "activated_package_count": 0,
+    "control_link_state": "registered",
+    "successful_registration_count": 1
+  },
+  "final_agent": {
+    "program": "kyuubiki-rust-agent",
+    "package_runtime_ready": true,
+    "activated_package_count": 0,
+    "control_link_state": "registered",
+    "successful_registration_count": 1
+  },
+  "executions": [
+    {
+      "task_id": "operator-package-acquisition-first",
+      "status": "executed",
+      "origin": "bound_orchestra_fetch",
+      "cache_status": "fetched_and_activated",
+      "package_id": "extract.template_summary",
+      "package_version": "0.1.0",
+      "entrypoint_sha256": "690492c644cb09926cd0acb39188deb70b4da3f8450b259b6fe408953ca26bed",
+      "integrity_verified": true,
+      "result_sum": 14.0,
+      "eviction_disposition": "evicted_after_execution",
+      "remaining_activated_package_count": 0
+    },
+    {
+      "task_id": "operator-package-acquisition-second",
+      "status": "executed",
+      "origin": "bound_orchestra_fetch",
+      "cache_status": "fetched_and_activated",
+      "package_id": "extract.template_summary",
+      "package_version": "0.1.0",
+      "entrypoint_sha256": "690492c644cb09926cd0acb39188deb70b4da3f8450b259b6fe408953ca26bed",
+      "integrity_verified": true,
+      "result_sum": 14.0,
+      "eviction_disposition": "evicted_after_execution",
+      "remaining_activated_package_count": 0
+    }
+  ],
+  "central_requests": {
+    "resolution_count": 2,
+    "manifest_count": 2,
+    "entrypoint_count": 2,
+    "successful_sequence_count": 2,
+    "protected_reads": true
+  },
+  "cleanup": {
+    "local_orchestra_stopped": true,
+    "remote_agent_stopped": true,
+    "local_port_closed": true,
+    "remote_port_closed": true,
+    "managed_remote_root_removed": true,
+    "local_work_root_removed": true,
+    "secret_files_removed": true
+  },
+  "checks": [
+    {
+      "id": "two_physical_hosts",
+      "status": "pass"
+    },
+    {
+      "id": "real_elixir_orchestra",
+      "status": "pass"
+    },
+    {
+      "id": "installer_managed_rust_agent",
+      "status": "pass"
+    },
+    {
+      "id": "central_single_source_copy",
+      "status": "pass"
+    },
+    {
+      "id": "remote_build_artifact_removed",
+      "status": "pass"
+    },
+    {
+      "id": "empty_agent_cache_before_dispatch",
+      "status": "pass"
+    },
+    {
+      "id": "orchestra_http_task_dispatch",
+      "status": "pass"
+    },
+    {
+      "id": "authenticated_resolution_download",
+      "status": "pass"
+    },
+    {
+      "id": "manifest_and_entrypoint_integrity",
+      "status": "pass"
+    },
+    {
+      "id": "dynamic_operator_execution",
+      "status": "pass"
+    },
+    {
+      "id": "disposable_cache_eviction",
+      "status": "pass"
+    },
+    {
+      "id": "second_dispatch_refetched",
+      "status": "pass"
+    },
+    {
+      "id": "zero_active_packages_after_execution",
+      "status": "pass"
+    },
+    {
+      "id": "cleanup_complete",
+      "status": "pass"
+    },
+    {
+      "id": "retention_sanitized",
+      "status": "pass"
+    }
+  ]
+}

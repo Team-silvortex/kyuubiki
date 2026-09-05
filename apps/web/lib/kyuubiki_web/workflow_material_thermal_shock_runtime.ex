@@ -99,7 +99,7 @@ defmodule KyuubikiWeb.WorkflowMaterialThermalShockRuntime do
        }}
     else
       nil -> {:error, :missing_material_thermal_shock_property}
-      false -> {:error, :invalid_material_thermal_shock_property}
+      property when is_number(property) -> {:error, :invalid_material_thermal_shock_property}
     end
   end
 

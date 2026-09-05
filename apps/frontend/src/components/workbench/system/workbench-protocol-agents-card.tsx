@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { WorkbenchSystemOverviewCard } from "@/components/workbench/system/workbench-system-overview-card";
 
 type ProtocolAgentMetric = {
@@ -21,6 +21,9 @@ type ProtocolAgentCardRow = {
   endpoint: string;
   metrics: ProtocolAgentMetric[];
   chips: ProtocolAgentChip[];
+  chipPreviewLimit?: number;
+  showMoreLabel: string;
+  showLessLabel: string;
   error?: string;
 };
 
@@ -30,6 +33,37 @@ type WorkbenchProtocolAgentsCardProps = {
   emptyLabel: string;
   agents: ProtocolAgentCardRow[];
 };
+
+function ProtocolAgentChips({ agent }: { agent: ProtocolAgentCardRow }) {
+  const [expanded, setExpanded] = useState(false);
+  const previewLimit = agent.chipPreviewLimit ?? 10;
+  const visibleChips = expanded ? agent.chips : agent.chips.slice(0, previewLimit);
+  const hiddenCount = Math.max(0, agent.chips.length - previewLimit);
+
+  return (
+    <div className="protocol-chip-row">
+      {visibleChips.map((chip) => (
+        <span
+          className={`protocol-chip${chip.tone ? ` protocol-chip--${chip.tone}` : ""}`}
+          key={chip.key}
+          title={chip.title}
+        >
+          {chip.label}
+        </span>
+      ))}
+      {hiddenCount > 0 ? (
+        <button
+          aria-expanded={expanded}
+          className="protocol-agent-card__chip-toggle"
+          onClick={() => setExpanded((current) => !current)}
+          type="button"
+        >
+          {expanded ? agent.showLessLabel : `${agent.showMoreLabel} +${hiddenCount}`}
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 export const WorkbenchProtocolAgentsCard = memo(function WorkbenchProtocolAgentsCard({
   title,
@@ -64,17 +98,7 @@ export const WorkbenchProtocolAgentsCard = memo(function WorkbenchProtocolAgents
                 ))}
               </div>
               {agent.chips.length > 0 ? (
-                <div className="protocol-chip-row">
-                  {agent.chips.map((chip) => (
-                    <span
-                      className={`protocol-chip${chip.tone ? ` protocol-chip--${chip.tone}` : ""}`}
-                      key={chip.key}
-                      title={chip.title}
-                    >
-                      {chip.label}
-                    </span>
-                  ))}
-                </div>
+                <ProtocolAgentChips agent={agent} />
               ) : agent.error ? (
                 <p className="card-copy">{agent.error}</p>
               ) : null}

@@ -10,6 +10,7 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
 
   @default_queue_timeout_ms 120_000
   @max_lease_id_bytes 128
+  @selection_policy "least_utilized_capacity_v1"
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
@@ -57,9 +58,9 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
         {:reply, {:error, {:duplicate_execution_lease, lease_id}}, state}
 
       true ->
-        case available_endpoint(endpoints, state.leases) do
+        case select_endpoint(endpoints, state.leases) do
           nil -> queue_waiter(state, from, pid, endpoints, lease_id, timeout_ms)
-          endpoint -> grant_immediately(state, from, pid, endpoint, lease_id)
+          selection -> grant_immediately(state, from, pid, selection, lease_id)
         end
     end
   end
@@ -81,15 +82,25 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
   def handle_call({:snapshot, endpoints}, _from, state) do
     state = refresh_snapshot_endpoints(state, normalize_endpoints(endpoints))
     capacities = Map.new(state.seen_endpoints, fn {id, endpoint} -> {id, capacity(endpoint)} end)
+    active = active_counts(state.leases)
+
+    utilizations =
+      Map.new(capacities, fn {id, slots} ->
+        {id, utilization(Map.get(active, id, 0), slots)}
+      end)
 
     {:reply,
      %{
+       selection_policy: @selection_policy,
        active_lease_count: map_size(state.leases),
        queued_request_count: length(state.waiters),
        known_endpoint_count: map_size(state.seen_endpoints),
        capacity_slots: capacities |> Map.values() |> Enum.sum(),
-       active_by_endpoint: active_counts(state.leases),
-       capacity_by_endpoint: capacities
+       saturated_endpoint_count:
+         Enum.count(capacities, fn {id, slots} -> Map.get(active, id, 0) >= slots end),
+       active_by_endpoint: active,
+       capacity_by_endpoint: capacities,
+       utilization_by_endpoint: utilizations
      }, state}
   end
 
@@ -129,11 +140,11 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
     {:noreply, dispatch_waiters(state)}
   end
 
-  defp grant_immediately(state, _from, pid, endpoint, lease_id) do
+  defp grant_immediately(state, _from, pid, {endpoint, scheduling}, lease_id) do
     monitor_ref = Process.monitor(pid)
     lease = lease(endpoint, lease_id, pid, monitor_ref)
     next_state = put_in(state, [:leases, lease_id], lease)
-    {:reply, {:ok, endpoint, queue_metadata(0, 0)}, next_state}
+    {:reply, {:ok, endpoint, queue_metadata(0, 0, scheduling)}, next_state}
   end
 
   defp queue_waiter(state, from, pid, endpoints, lease_id, timeout_ms) do
@@ -161,15 +172,20 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
   defp dispatch_waiters(state) do
     {state, pending} =
       Enum.reduce(state.waiters, {%{state | waiters: []}, []}, fn waiter, {acc, pending} ->
-        case available_endpoint(waiter.endpoints, acc.leases) do
+        case select_endpoint(waiter.endpoints, acc.leases) do
           nil ->
             {acc, pending ++ [waiter]}
 
-          endpoint ->
+          {endpoint, scheduling} ->
             Process.cancel_timer(waiter.timer_ref)
             waited_ms = System.monotonic_time(:millisecond) - waiter.enqueued_at_ms
             lease = lease(endpoint, waiter.lease_id, waiter.pid, waiter.monitor_ref)
-            GenServer.reply(waiter.from, {:ok, endpoint, queue_metadata(waited_ms, 0)})
+
+            GenServer.reply(
+              waiter.from,
+              {:ok, endpoint, queue_metadata(waited_ms, waiter.queue_position, scheduling)}
+            )
+
             {put_in(acc, [:leases, waiter.lease_id], lease), pending}
         end
       end)
@@ -188,9 +204,40 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
     end
   end
 
-  defp available_endpoint(endpoints, leases) do
+  defp select_endpoint(endpoints, leases) do
     counts = active_counts(leases)
-    Enum.find(endpoints, &(Map.get(counts, &1.id, 0) < capacity(&1)))
+
+    endpoints
+    |> Enum.with_index()
+    |> Enum.filter(fn {endpoint, _index} ->
+      Map.get(counts, endpoint.id, 0) < capacity(endpoint)
+    end)
+    |> case do
+      [] ->
+        nil
+
+      candidates ->
+        {endpoint, _index} =
+          Enum.min_by(candidates, fn {candidate, index} ->
+            active = Map.get(counts, candidate.id, 0)
+            {routing_priority(candidate), utilization(active, capacity(candidate)), index}
+          end)
+
+        endpoint = Map.delete(endpoint, :_scheduler_priority)
+        active = Map.get(counts, endpoint.id, 0)
+        slots = capacity(endpoint)
+
+        {endpoint,
+         %{
+           selection_policy: @selection_policy,
+           selected_agent_id: endpoint.id,
+           active_slots_before: active,
+           active_slots_after: active + 1,
+           capacity_slots: slots,
+           utilization_before: utilization(active, slots),
+           utilization_after: utilization(active + 1, slots)
+         }}
+    end
   end
 
   defp lease_id_in_use?(state, lease_id) do
@@ -215,9 +262,22 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
     %{endpoint: endpoint, lease_id: lease_id, pid: pid, monitor_ref: monitor_ref}
   end
 
-  defp queue_metadata(waited_ms, queue_position) do
-    %{waited_ms: max(waited_ms, 0), queue_position: queue_position}
+  defp queue_metadata(waited_ms, queue_position, scheduling) do
+    Map.merge(
+      %{waited_ms: max(waited_ms, 0), queue_position: queue_position},
+      scheduling
+    )
   end
+
+  defp utilization(_active, 0), do: 0.0
+  defp utilization(active, slots), do: Float.round(active / slots, 6)
+
+  defp routing_priority(%{_scheduler_priority: {availability, constraint, score, method}})
+       when is_integer(availability) and is_integer(constraint) and is_integer(score) and
+              is_integer(method),
+       do: {availability, constraint, score, method}
+
+  defp routing_priority(_endpoint), do: {0, 0, 0, 0}
 
   defp normalize_endpoints(endpoints) do
     endpoints

@@ -11,6 +11,7 @@
     "coverage_manifest",
     "direct_mesh_baseline",
     "source_files",
+    "source_roots",
     "current_runs",
     "profile_requirements",
     "one_million_node_threshold",
@@ -22,7 +23,7 @@
   "properties": {
     "$schema": { "type": "string" },
     "schema_version": {
-      "const": "kyuubiki.benchmark-qualification-contract/v2"
+      "const": "kyuubiki.benchmark-qualification-contract/v3"
     },
     "report_schema": {
       "const": "kyuubiki.benchmark-qualification-report/v2"
@@ -39,6 +40,12 @@
     "source_files": {
       "type": "array",
       "minItems": 6,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/repoPath" }
+    },
+    "source_roots": {
+      "type": "array",
+      "minItems": 5,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/repoPath" }
     },

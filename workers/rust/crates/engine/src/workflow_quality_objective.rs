@@ -1,7 +1,7 @@
 use crate::workflow_quality_terms::{
     CandidateRank, QualityTerm, candidate_entries, composite_blocking_terms, composite_grade,
-    config_number, dominant_composite_term, next_round_action, quality_entries,
-    quality_iteration_hint, quality_term,
+    config_number, dominant_composite_term, finite_quality_value, next_round_action,
+    quality_entries, quality_iteration_hint, quality_term, validate_quality_config,
 };
 use serde_json::Value;
 
@@ -10,9 +10,10 @@ pub fn compose_quality_objective(payload: Value, config: Value) -> Result<Value,
         "transform.compose_quality_objective expects an object payload".to_string()
     })?;
     let entries = quality_entries(object)?;
-    let missing_metric_penalty = config_number(&config, "missing_metric_penalty", 5.0);
-    let not_ready_penalty = config_number(&config, "not_ready_penalty", 25.0);
-    let max_ready_score = config_number(&config, "max_ready_score", 12.0);
+    validate_quality_config(&config)?;
+    let missing_metric_penalty = config_number(&config, "missing_metric_penalty", 5.0)?;
+    let not_ready_penalty = config_number(&config, "not_ready_penalty", 25.0)?;
+    let max_ready_score = config_number(&config, "max_ready_score", 12.0)?;
 
     let mut terms = Vec::new();
     let mut total = 0.0;
@@ -27,9 +28,21 @@ pub fn compose_quality_objective(payload: Value, config: Value) -> Result<Value,
             missing_metric_penalty,
             not_ready_penalty,
         )?;
-        total += term.contribution;
-        missing_metric_count += term.missing_metric_count;
-        watch_count += term.watch_count;
+        total = finite_quality_value(
+            total + term.contribution,
+            source_id,
+            "composite_quality_score",
+        )?;
+        missing_metric_count = missing_metric_count
+            .checked_add(term.missing_metric_count)
+            .ok_or_else(|| {
+                format!(
+                    "quality source {source_id} composite_quality_missing_metric_count overflow"
+                )
+            })?;
+        watch_count = watch_count.checked_add(term.watch_count).ok_or_else(|| {
+            format!("quality source {source_id} composite_quality_watch_count overflow")
+        })?;
         if !term.ready {
             blocked_term_count += 1;
         }
@@ -72,19 +85,28 @@ pub fn rank_quality_candidates(payload: Value, config: Value) -> Result<Value, S
     let object = payload
         .as_object()
         .ok_or_else(|| "transform.rank_quality_candidates expects an object payload".to_string())?;
+    validate_quality_config(&config)?;
     let objective_config = config.get("objective").cloned().unwrap_or(config);
+    validate_quality_config(&objective_config)?;
     let mut ranking = Vec::new();
+    let mut rejected_candidates = Vec::new();
+    let entries = candidate_entries(object)?;
+    let input_candidate_count = entries.len();
 
-    for (candidate_id, candidate_payload) in candidate_entries(object) {
-        let Ok(objective) =
-            compose_quality_objective(candidate_payload.clone(), objective_config.clone())
-        else {
-            continue;
-        };
+    for (candidate_id, candidate_payload) in entries {
+        let objective =
+            match compose_quality_objective(candidate_payload.clone(), objective_config.clone()) {
+                Ok(objective) => objective,
+                Err(error) => {
+                    rejected_candidates
+                        .push(serde_json::json!({"candidate_id": candidate_id, "error": error}));
+                    continue;
+                }
+            };
         let score = objective
             .get("composite_quality_score")
             .and_then(Value::as_f64)
-            .unwrap_or(f64::INFINITY);
+            .ok_or_else(|| format!("quality candidate {candidate_id} has no finite score"))?;
         let ready = objective
             .get("composite_quality_ready")
             .and_then(Value::as_bool)
@@ -106,6 +128,16 @@ pub fn rank_quality_candidates(payload: Value, config: Value) -> Result<Value, S
     }
 
     if ranking.is_empty() {
+        if let Some(first) = rejected_candidates.first() {
+            return Err(format!(
+                "transform.rank_quality_candidates rejected all {} candidates; {}: {}",
+                rejected_candidates.len(),
+                first["candidate_id"].as_str().unwrap_or("unknown"),
+                first["error"]
+                    .as_str()
+                    .unwrap_or("invalid quality evidence"),
+            ));
+        }
         return Err(
             "transform.rank_quality_candidates did not find quality candidates".to_string(),
         );
@@ -132,19 +164,31 @@ pub fn rank_quality_candidates(payload: Value, config: Value) -> Result<Value, S
     Ok(serde_json::json!({
         "quality_candidate_ranking_contract": "kyuubiki.quality_candidate_ranking/v1",
         "candidate_count": ranking_values.len(),
+        "input_candidate_count": input_candidate_count,
+        "rejected_candidate_count": rejected_candidates.len(),
+        "ranking_complete": rejected_candidates.is_empty(),
+        "rejected_candidates": rejected_candidates,
         "ready_candidate_count": ready_candidate_count,
         "best_candidate_id": best_candidate_id.clone(),
         "best_candidate_ready": best_candidate_ready,
         "best_candidate_score": best_candidate_score,
         "ranking": ranking_values,
         "ranking_summary": format!(
-            "Best quality candidate {}: score={}, ready={}.",
-            best_candidate_id, best_candidate_score, best_candidate_ready
+            "Ranked {}/{} candidates; rejected {}. Best quality candidate {}: score={}, ready={}.",
+            ranking_values.len(), input_candidate_count, rejected_candidates.len(),
+            best_candidate_id, best_candidate_score, best_candidate_ready,
         ),
     }))
 }
 
 pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Result<Value, String> {
+    validate_quality_config(&config)?;
+    if config
+        .get("require_ready")
+        .is_some_and(|value| !value.is_boolean())
+    {
+        return Err("quality config.require_ready must be a boolean".to_string());
+    }
     let selected = payload
         .get("ranking")
         .and_then(Value::as_array)
@@ -162,8 +206,8 @@ pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Resu
         .get("score")
         .or_else(|| payload.get("best_candidate_score"))
         .and_then(Value::as_f64)
-        .filter(|value| value.is_finite())
-        .unwrap_or(0.0);
+        .ok_or_else(|| "quality next round selected score must be numeric".to_string())?;
+    let score = finite_quality_value(score, candidate_id, "selected score")?;
     let ready = selected
         .get("ready")
         .or_else(|| payload.get("best_candidate_ready"))
@@ -187,10 +231,17 @@ pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Resu
         })
         .cloned()
         .unwrap_or_else(|| Value::Array(Vec::new()));
+    let has_blockers = !selected_blocking_terms
+        .as_array()
+        .ok_or_else(|| "quality next round blocking_terms must be an array".to_string())?
+        .is_empty();
+    let ready = ready && !has_blockers;
     let selected_coupled_readiness = selected_coupled_readiness(&payload, selected);
-    let target_score = config_number(&config, "target_score", 3.0);
-    let action = if coupled_readiness_blocks(&selected_coupled_readiness)
-        || has_validation_blocking_term(&selected_blocking_terms)
+    let (ranking_complete, rejected_candidates) = ranking_completeness(&payload)?;
+    let target_score = config_number(&config, "target_score", 3.0)?;
+    let action = if !ranking_complete
+        || coupled_readiness_blocks(&selected_coupled_readiness)
+        || has_blockers
     {
         "replan"
     } else if coupled_readiness_requires_review(&selected_coupled_readiness) {
@@ -199,10 +250,18 @@ pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Resu
         next_round_action(ready, score, target_score, &config)
     };
     let selected_candidate_metadata = selected.get("metadata").cloned().unwrap_or(Value::Null);
-    let iteration_hint = coupled_readiness_iteration_hint(&selected_coupled_readiness)
-        .unwrap_or_else(|| {
+    let iteration_hint = if !ranking_complete {
+        serde_json::json!({
+            "action": "repair_rejected_candidates",
+            "focus_source": rejected_candidates.first().and_then(|entry| entry.get("candidate_id")),
+            "blocking_count": rejected_candidates.len(),
+            "reason": "Complete failed candidate evaluations before accepting the research ranking.",
+        })
+    } else {
+        coupled_readiness_iteration_hint(&selected_coupled_readiness).unwrap_or_else(|| {
             quality_iteration_hint(&selected_dominant_term, &selected_blocking_terms)
-        });
+        })
+    };
 
     Ok(serde_json::json!({
         "quality_next_round_contract": "kyuubiki.quality_next_round_request/v1",
@@ -220,6 +279,8 @@ pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Resu
         "coupled_readiness_recommendation": selected_coupled_readiness.get("coupled_readiness_recommendation").cloned().unwrap_or(Value::Null),
         "target_score": target_score,
         "source_ranking_contract": payload.get("quality_candidate_ranking_contract").cloned().unwrap_or(Value::Null),
+        "source_ranking_complete": ranking_complete,
+        "source_rejected_candidates": rejected_candidates,
         "request_payload": {
             "seed_candidate_id": candidate_id,
             "seed_objective": selected.get("objective").cloned().unwrap_or(Value::Null),
@@ -228,12 +289,60 @@ pub fn prepare_quality_next_round_request(payload: Value, config: Value) -> Resu
             "coupled_readiness": selected_coupled_readiness,
             "constraints": config.get("constraints").cloned().unwrap_or_else(|| serde_json::json!({})),
             "search_space": config.get("search_space").cloned().unwrap_or_else(|| serde_json::json!({})),
-            "max_candidates": config_number(&config, "max_candidates", 8.0),
+            "max_candidates": config_number(&config, "max_candidates", 8.0)?,
         },
         "next_round_summary": format!(
             "Quality exploration {action}: selected={candidate_id}, score={score}, target={target_score}."
         ),
     }))
+}
+
+fn ranking_completeness(payload: &Value) -> Result<(bool, Vec<Value>), String> {
+    let rejected = match payload.get("rejected_candidates") {
+        None => Vec::new(),
+        Some(value) => value
+            .as_array()
+            .ok_or_else(|| "quality ranking rejected_candidates must be an array".to_string())?
+            .clone(),
+    };
+    let ranked_count = payload
+        .get("ranking")
+        .and_then(Value::as_array)
+        .map_or(0, Vec::len);
+    let input_count = ranked_count
+        .checked_add(rejected.len())
+        .ok_or_else(|| "quality ranking candidate count overflow".to_string())?;
+    for (field, actual) in [
+        ("candidate_count", ranked_count),
+        ("input_candidate_count", input_count),
+    ] {
+        if payload
+            .get(field)
+            .is_some_and(|value| value.as_u64() != Some(actual as u64))
+        {
+            return Err(format!(
+                "quality ranking {field} disagrees with candidate details"
+            ));
+        }
+    }
+    if let Some(count) = payload.get("rejected_candidate_count") {
+        if count.as_u64() != Some(rejected.len() as u64) {
+            return Err(
+                "quality ranking rejected_candidate_count disagrees with rejection details"
+                    .to_string(),
+            );
+        }
+    }
+    let complete = match payload.get("ranking_complete") {
+        None => rejected.is_empty(),
+        Some(value) => value
+            .as_bool()
+            .ok_or_else(|| "quality ranking ranking_complete must be a boolean".to_string())?,
+    };
+    if complete && !rejected.is_empty() {
+        return Err("quality ranking cannot be complete with rejected candidates".to_string());
+    }
+    Ok((complete, rejected))
 }
 
 fn selected_coupled_readiness(payload: &Value, selected: &serde_json::Map<String, Value>) -> Value {
@@ -318,12 +427,4 @@ fn coupled_readiness_iteration_hint(readiness: &Value) -> Option<Value> {
         "recommendation": recommendation,
         "readiness_state": object.get("coupled_readiness_state").cloned().unwrap_or(Value::Null),
     }))
-}
-
-fn has_validation_blocking_term(blocking_terms: &Value) -> bool {
-    blocking_terms.as_array().is_some_and(|terms| {
-        terms
-            .iter()
-            .any(|term| term.get("domain").and_then(Value::as_str) == Some("validation"))
-    })
 }

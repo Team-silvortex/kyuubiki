@@ -316,6 +316,13 @@ pub(crate) fn dynamic_smoke_errors(root: &Path, report: &Value, context: &str) -
             &mut errors,
         );
     }
+    if let Some(execution_abi) = report.get("execution_abi")
+        && execution_abi.as_str() != Some("kyuubiki.operator-json-c/v1")
+    {
+        errors.push(format!(
+            "{context}.execution_abi must be kyuubiki.operator-json-c/v1 when present"
+        ));
+    }
     match report.get("operator_ids").and_then(Value::as_array) {
         Some(ids) if !ids.is_empty() => {
             for (index, operator_id) in ids.iter().enumerate() {
@@ -400,6 +407,7 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
         "operator_ids": ["extract.template_summary"],
         "host_version": "1.20.0",
         "sdk_api_version": "kyuubiki.operator-sdk/v1",
+        "execution_abi": "kyuubiki.operator-json-c/v1",
         "template_manifest": "workers/rust/templates/operator-crate-template/Cargo.toml",
         "package_manifest": "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",
         "preflight_report": "tmp/operator-package-dynamic-preflight.json",

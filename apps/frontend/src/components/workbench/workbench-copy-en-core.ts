@@ -203,6 +203,7 @@ export const copyEnCore = {
     workflowDraftSavedLabel: "Saved local workflow draft.",
     workflowDraftLoadedLabel: "Loaded local workflow draft.",
     workflowDraftDeletedLabel: "Deleted local workflow draft.",
+    workflowStorageWriteFailedLabel: "Could not save local workflow data. Check available storage and try again.",
     workflowLocalWorkflowPromotedLabel: "Promoted draft to local workflow library.",
     workflowLocalWorkflowDeleteLabel: "Delete local workflow",
     workflowLocalWorkflowDeletedLabel: "Deleted local workflow.",

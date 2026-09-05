@@ -3,7 +3,7 @@
 This roadmap tracks what Kyuubiki still needs before material research
 workflows can be called reliable rather than merely runnable.
 
-The current `moxi 2.x` baseline already has useful pieces:
+The current `daji 3.x` baseline already has useful pieces:
 
 - Rust solver coverage across structural, thermal, electrostatic,
   magnetostatic, acoustic, simplified CFD, modal, contact, and nonlinear
@@ -52,7 +52,7 @@ qualification readiness.
 ## Phase 1. Screening Studies Become Honest
 
 Status:
-active for `moxi 2.x`.
+active for `daji 3.x`.
 
 Primary objective:
 make existing material studies transparent about their limits.

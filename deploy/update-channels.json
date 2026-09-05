@@ -1,22 +1,22 @@
 {
   "schema_version": "kyuubiki.update-channels/v1",
-  "shipping_version": "2.17.0",
+  "shipping_version": "3.0.0",
   "default_channel": "stable",
-  "line": "moxi 2.x",
+  "line": "daji 3.x",
   "channels": [
     {
       "id": "stable",
       "label": "Stable",
-      "tag": "moxi:stable",
-      "version": "2.17.0",
+      "tag": "daji:stable",
+      "version": "3.0.0",
       "aliases": [
-        "moxi:latest",
-        "moxi:2",
-        "moxi:2.17",
-        "moxi:2.17.0"
+        "daji:latest",
+        "daji:3",
+        "daji:3.0",
+        "daji:3.0.0"
       ],
       "notes": [
-        "Primary operator-facing update track for the current moxi 2.x line.",
+        "Primary operator-facing update track for the current daji 3.x line.",
         "Targets standard installs that follow the visible installation contract."
       ],
       "visible_rules": [

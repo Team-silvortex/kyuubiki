@@ -135,7 +135,10 @@ fn linux_desktop_dependency_plan_declares_tauri_ubuntu_prerequisites() {
         plan.schema_version,
         "kyuubiki.linux-desktop-dependencies/v1"
     );
-    assert!(plan.frontend_build_node.contains("node-v20.19.2-linux-x64"));
+    assert_eq!(
+        plan.frontend_build_node,
+        "~/.kyuubiki-toolchains/node-v20.19.2-linux-x64"
+    );
     assert!(
         plan.apt_packages
             .iter()

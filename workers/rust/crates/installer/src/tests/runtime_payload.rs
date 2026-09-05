@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::runtime_payload::{
-    install_runtime_payload_into, rollback_runtime_payload_in, runtime_payload_content_digest_in,
-    runtime_payload_status_in,
+    active_runtime_activation_in, install_runtime_payload_into, rollback_runtime_payload_in,
+    runtime_payload_content_digest_in, runtime_payload_status_in,
 };
 use crate::{Platform, seal_runtime_payload};
 
@@ -141,6 +141,25 @@ fn rollback_rejects_a_rewritten_runtime_identity() {
 
     let error = rollback_runtime_payload_in(&store, Platform::Macos).unwrap_err();
     assert!(error.contains("activation identity mismatch"), "{error}");
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn active_runtime_resolver_rejects_an_activation_for_another_platform() {
+    let root = fixture_root("activation-platform");
+    let payload = root.join("payload");
+    let store = root.join("store");
+    write_payload(&payload, "2.7.0");
+    let activation = install_runtime_payload_into(&payload, &store, Platform::Macos).unwrap();
+    let path = store
+        .join("activations")
+        .join(format!("{:020}.json", activation.generation));
+    let mut value: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    value["platform"] = "linux".into();
+    fs::write(path, serde_json::to_vec_pretty(&value).unwrap()).unwrap();
+
+    let error = active_runtime_activation_in(&store, Platform::Macos).unwrap_err();
+    assert!(error.contains("targets another platform"), "{error}");
     fs::remove_dir_all(root).unwrap();
 }
 

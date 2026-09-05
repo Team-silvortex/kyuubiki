@@ -4,6 +4,7 @@ use kyuubiki_protocol::{
     SolveFrame2dPDeltaPathRequest, SolveFrame2dPDeltaPathResult, SolveFrame2dPDeltaRequest,
     SolveFrame2dPDeltaResult,
 };
+use std::borrow::Cow;
 
 const DEFAULT_MAX_SUBDIVISIONS: usize = 4;
 const DEFAULT_MINIMUM_STEP_FRACTION: f64 = 1.0 / 256.0;
@@ -25,14 +26,20 @@ struct PathControls {
 pub fn solve_frame_2d_p_delta_path(
     request: &SolveFrame2dPDeltaPathRequest,
 ) -> Result<SolveFrame2dPDeltaPathResult, String> {
-    solve_path_with(request, &mut solve_frame_2d_p_delta)
+    solve_path_with(Cow::Borrowed(request), &mut solve_frame_2d_p_delta)
+}
+
+pub fn solve_frame_2d_p_delta_path_owned(
+    request: SolveFrame2dPDeltaPathRequest,
+) -> Result<SolveFrame2dPDeltaPathResult, String> {
+    solve_path_with(Cow::Owned(request), &mut solve_frame_2d_p_delta)
 }
 
 fn solve_path_with(
-    request: &SolveFrame2dPDeltaPathRequest,
+    request: Cow<'_, SolveFrame2dPDeltaPathRequest>,
     solve_point: &mut impl FnMut(&SolveFrame2dPDeltaRequest) -> Result<SolveFrame2dPDeltaResult, String>,
 ) -> Result<SolveFrame2dPDeltaPathResult, String> {
-    let controls = validate_path_request(request)?;
+    let controls = validate_path_request(request.as_ref())?;
     let mut attempts = Vec::new();
     let first_request = request.points[0].clone();
     let first = match solve_point(&first_request) {
@@ -526,7 +533,7 @@ fn failed_attempt(
 }
 
 fn path_result(
-    request: &SolveFrame2dPDeltaPathRequest,
+    request: Cow<'_, SolveFrame2dPDeltaPathRequest>,
     attempts: Vec<Frame2dPDeltaPathAttemptResult>,
     completed_point_count: usize,
 ) -> SolveFrame2dPDeltaPathResult {
@@ -534,12 +541,13 @@ fn path_result(
         .iter()
         .filter(|attempt| attempt.inserted && attempt.converged)
         .count();
+    let converged = completed_point_count == request.points.len();
     SolveFrame2dPDeltaPathResult {
-        input: request.clone(),
+        input: request.into_owned(),
         attempts,
         completed_point_count,
         adaptive_insertion_count,
-        converged: completed_point_count == request.points.len(),
+        converged,
     }
 }
 
@@ -637,7 +645,7 @@ mod tests {
             Ok(result)
         };
 
-        let result = solve_path_with(&request, &mut solve_point).unwrap();
+        let result = solve_path_with(Cow::Borrowed(&request), &mut solve_point).unwrap();
 
         assert!(result.converged);
         assert_eq!(result.completed_point_count, 2);

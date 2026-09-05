@@ -1,4 +1,7 @@
+use super::partition_fixture::stale_owner_write_probe;
+use super::partition_report::{PartitionJourneyEvidence, PartitionedOwnerPhase};
 use super::report::{CleanupEvidence, JourneyEvidence, LeasePhase};
+use super::runtime_http::{get_json as http_get_json, post_json as http_post_json};
 use crate::operational_agent_support::{
     available_local_port, remove_local_work_root, wait_endpoint_closed,
 };
@@ -7,7 +10,6 @@ use crate::remote_host::{shell_escape, ssh_output, ssh_status, ssh_success_quiet
 use getrandom::fill as fill_random;
 use serde_json::Value;
 use std::fs::{self, File};
-use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -19,7 +21,6 @@ type RunnerResult<T> = Result<T, String>;
 pub(super) const LEASE_TTL_MS: u64 = 1_500;
 pub(super) const HEARTBEAT_MS: u64 = 400;
 pub(super) const RETRY_MS: u64 = 200;
-const MAX_HTTP_BYTES: u64 = 4 * 1024 * 1024;
 
 pub(crate) fn capture(
     root: &Path,
@@ -38,8 +39,25 @@ pub(crate) fn capture(
     }
 }
 
+pub(crate) fn capture_partition(
+    root: &Path,
+    host: &str,
+    postgres_image: &str,
+    timeout: Duration,
+) -> RunnerResult<(PartitionJourneyEvidence, CleanupEvidence)> {
+    let mut session = Session::new(root, host, postgres_image, timeout)?;
+    let journey = session.run_partition();
+    let cleanup = session.cleanup();
+    match (journey, cleanup) {
+        (Ok(journey), Ok(cleanup)) => Ok((journey, cleanup)),
+        (Err(error), Ok(_)) => Err(error),
+        (Ok(_), Err(cleanup_error)) => Err(cleanup_error),
+        (Err(error), Err(cleanup_error)) => Err(format!("{error}; cleanup: {cleanup_error}")),
+    }
+}
+
 #[derive(Clone, Copy)]
-enum ProcessRole {
+pub(super) enum ProcessRole {
     Primary,
     Standby,
 }
@@ -50,23 +68,26 @@ pub(super) struct LeaseObservation {
     pub(super) fencing_token: u64,
 }
 
-struct Session {
+pub(super) struct Session {
     root: PathBuf,
     host: String,
     postgres_image: String,
     timeout: Duration,
-    work_root: PathBuf,
+    pub(super) work_root: PathBuf,
     container_name: String,
     lease_name: String,
-    primary_id: String,
-    standby_id: String,
-    token: String,
-    database_architecture: String,
+    pub(super) primary_id: String,
+    pub(super) standby_id: String,
+    pub(super) token: String,
+    pub(super) database_architecture: String,
+    pub(super) agent_endpoints: String,
     remote_database_port: Option<u16>,
-    tunnel_port: u16,
-    primary_port: u16,
-    standby_port: u16,
-    tunnel: Option<Child>,
+    primary_tunnel_port: u16,
+    standby_tunnel_port: u16,
+    pub(super) primary_port: u16,
+    pub(super) standby_port: u16,
+    primary_tunnel: Option<Child>,
+    standby_tunnel: Option<Child>,
     primary: Option<Child>,
     standby: Option<Child>,
     remote_database_started: bool,
@@ -74,7 +95,12 @@ struct Session {
 }
 
 impl Session {
-    fn new(root: &Path, host: &str, postgres_image: &str, timeout: Duration) -> RunnerResult<Self> {
+    pub(super) fn new(
+        root: &Path,
+        host: &str,
+        postgres_image: &str,
+        timeout: Duration,
+    ) -> RunnerResult<Self> {
         if !cfg!(unix) {
             return Err(
                 "SIGKILL takeover capture requires a Unix Orchestra qualification host".to_string(),
@@ -85,9 +111,11 @@ impl Session {
         let work_root = root.join(format!("tmp/orchestra-takeover-{suffix}"));
         fs::create_dir_all(&work_root)
             .map_err(|error| format!("failed to create takeover work root: {error}"))?;
-        let tunnel_port = available_local_port()?;
-        let primary_port = distinct_port(&[tunnel_port])?;
-        let standby_port = distinct_port(&[tunnel_port, primary_port])?;
+        let primary_tunnel_port = available_local_port()?;
+        let standby_tunnel_port = distinct_port(&[primary_tunnel_port])?;
+        let primary_port = distinct_port(&[primary_tunnel_port, standby_tunnel_port])?;
+        let standby_port =
+            distinct_port(&[primary_tunnel_port, standby_tunnel_port, primary_port])?;
         Ok(Self {
             root: root.to_path_buf(),
             host: host.to_string(),
@@ -100,11 +128,14 @@ impl Session {
             standby_id: format!("qualification-standby-{suffix}"),
             token: random_token()?,
             database_architecture: String::new(),
+            agent_endpoints: String::new(),
             remote_database_port: None,
-            tunnel_port,
+            primary_tunnel_port,
+            standby_tunnel_port,
             primary_port,
             standby_port,
-            tunnel: None,
+            primary_tunnel: None,
+            standby_tunnel: None,
             primary: None,
             standby: None,
             remote_database_started: false,
@@ -113,19 +144,8 @@ impl Session {
     }
 
     fn run(&mut self) -> RunnerResult<JourneyEvidence> {
-        let primary_id = self.primary_id.clone();
         let standby_id = self.standby_id.clone();
-        self.compile_web()?;
-        self.prepare_remote_database()?;
-        self.start_tunnel()?;
-
-        self.start_orchestra(ProcessRole::Primary, false)?;
-        let initial_owner = self.wait_for_lease(ProcessRole::Primary, "owner", &primary_id)?;
-        self.start_orchestra(ProcessRole::Standby, false)?;
-        let initial_standby = self.wait_for_lease(ProcessRole::Standby, "standby", &primary_id)?;
-        if initial_standby.fencing_token != initial_owner.fencing_token {
-            return Err("standby did not observe the primary fencing token".to_string());
-        }
+        let (initial_owner, initial_standby) = self.initialize_cluster()?;
 
         self.crash(ProcessRole::Primary)?;
         wait_endpoint_closed(local_address(self.primary_port), self.timeout)?;
@@ -152,6 +172,80 @@ impl Session {
             former_owner_rejoin: self.phase("former-owner", former_owner_rejoin)?,
             takeover_elapsed_ms,
             primary_endpoint_closed: true,
+        })
+    }
+
+    pub(super) fn initialize_cluster(
+        &mut self,
+    ) -> RunnerResult<(LeaseObservation, LeaseObservation)> {
+        let primary_id = self.primary_id.clone();
+        self.compile_web()?;
+        self.prepare_remote_database()?;
+        self.start_tunnels()?;
+
+        self.start_orchestra(ProcessRole::Primary, false)?;
+        let initial_owner = self.wait_for_lease(ProcessRole::Primary, "owner", &primary_id)?;
+        self.start_orchestra(ProcessRole::Standby, false)?;
+        let initial_standby = self.wait_for_lease(ProcessRole::Standby, "standby", &primary_id)?;
+        if initial_standby.fencing_token != initial_owner.fencing_token {
+            return Err("standby did not observe the primary fencing token".to_string());
+        }
+        Ok((initial_owner, initial_standby))
+    }
+
+    fn run_partition(&mut self) -> RunnerResult<PartitionJourneyEvidence> {
+        let standby_id = self.standby_id.clone();
+        let (initial_owner, initial_standby) = self.initialize_cluster()?;
+        let started = Instant::now();
+        stop_child(
+            &mut self.primary_tunnel,
+            "partitioned primary PostgreSQL SSH tunnel",
+        )?;
+        wait_endpoint_closed(
+            local_address(self.primary_tunnel_port),
+            Duration::from_secs(5),
+        )?;
+        let partitioned_owner = self.wait_for_partitioned_owner()?;
+        let partition_to_fail_closed_elapsed_ms = started.elapsed().as_millis();
+        self.ensure_orchestra_alive(ProcessRole::Primary)?;
+        let standby_tunnel_remained_open = TcpStream::connect_timeout(
+            &local_address(self.standby_tunnel_port),
+            Duration::from_millis(500),
+        )
+        .is_ok();
+        if !standby_tunnel_remained_open {
+            return Err("standby database tunnel failed during primary partition".to_string());
+        }
+        let takeover = self.wait_for_lease(ProcessRole::Standby, "owner", &standby_id)?;
+        let takeover_elapsed_ms = started.elapsed().as_millis();
+        if takeover.fencing_token <= initial_owner.fencing_token {
+            return Err("partition takeover did not increment the fencing token".to_string());
+        }
+
+        self.start_tunnel(ProcessRole::Primary)?;
+        let former_owner_rejoin =
+            self.wait_for_lease(ProcessRole::Primary, "standby", &standby_id)?;
+        if former_owner_rejoin.fencing_token != takeover.fencing_token {
+            return Err("partitioned owner did not observe the new fencing token".to_string());
+        }
+        let stale_owner_submission_rejected = self.probe_stale_owner_submission()?;
+        self.ensure_orchestra_alive(ProcessRole::Primary)?;
+
+        Ok(PartitionJourneyEvidence {
+            database_architecture: self.database_architecture.clone(),
+            orchestra_platform: std::env::consts::OS.to_string(),
+            initial_owner: self.phase("primary", initial_owner)?,
+            initial_standby: self.phase("standby", initial_standby)?,
+            partitioned_owner,
+            takeover: self.phase("standby", takeover)?,
+            former_owner_rejoin: self.phase("former-owner", former_owner_rejoin)?,
+            partition_to_fail_closed_elapsed_ms,
+            takeover_elapsed_ms,
+            primary_process_survived: true,
+            primary_endpoint_remained_open: true,
+            isolated_tunnel_closed: true,
+            standby_tunnel_remained_open,
+            stale_owner_submission_rejected,
         })
     }
 
@@ -214,16 +308,28 @@ impl Session {
         Ok(())
     }
 
-    fn start_tunnel(&mut self) -> RunnerResult<()> {
+    fn start_tunnels(&mut self) -> RunnerResult<()> {
+        self.start_tunnel(ProcessRole::Primary)?;
+        self.start_tunnel(ProcessRole::Standby)
+    }
+
+    fn start_tunnel(&mut self, role: ProcessRole) -> RunnerResult<()> {
         let remote_port = self
             .remote_database_port
             .ok_or("remote PostgreSQL port is unavailable")?;
-        let log = File::create(self.work_root.join("ssh-tunnel.log"))
-            .map_err(|error| format!("failed to create tunnel log: {error}"))?;
+        let (local_port, label) = match role {
+            ProcessRole::Primary => (self.primary_tunnel_port, "primary"),
+            ProcessRole::Standby => (self.standby_tunnel_port, "standby"),
+        };
+        if self.tunnel_mut(role).is_some() {
+            return Err(format!("{label} PostgreSQL SSH tunnel is already running"));
+        }
+        let log = File::create(self.work_root.join(format!("ssh-tunnel-{label}.log")))
+            .map_err(|error| format!("failed to create {label} tunnel log: {error}"))?;
         let stderr = log
             .try_clone()
-            .map_err(|error| format!("failed to clone tunnel log: {error}"))?;
-        let forward = format!("127.0.0.1:{}:127.0.0.1:{remote_port}", self.tunnel_port);
+            .map_err(|error| format!("failed to clone {label} tunnel log: {error}"))?;
+        let forward = format!("127.0.0.1:{local_port}:127.0.0.1:{remote_port}");
         let child = Command::new("ssh")
             .args([
                 "-N",
@@ -246,29 +352,30 @@ impl Session {
             .stdout(Stdio::from(log))
             .stderr(Stdio::from(stderr))
             .spawn()
-            .map_err(|error| format!("failed to start PostgreSQL SSH tunnel: {error}"))?;
-        self.tunnel = Some(child);
-        self.wait_tunnel()
+            .map_err(|error| format!("failed to start {label} PostgreSQL SSH tunnel: {error}"))?;
+        *self.tunnel_mut(role) = Some(child);
+        self.wait_tunnel(role)
     }
 
-    fn wait_tunnel(&mut self) -> RunnerResult<()> {
+    fn wait_tunnel(&mut self, role: ProcessRole) -> RunnerResult<()> {
+        let (port, label) = match role {
+            ProcessRole::Primary => (self.primary_tunnel_port, "primary PostgreSQL SSH tunnel"),
+            ProcessRole::Standby => (self.standby_tunnel_port, "standby PostgreSQL SSH tunnel"),
+        };
         let deadline = Instant::now() + Duration::from_secs(10);
         while Instant::now() < deadline {
-            ensure_child_alive(&mut self.tunnel, "PostgreSQL SSH tunnel")?;
-            if TcpStream::connect_timeout(
-                &local_address(self.tunnel_port),
-                Duration::from_millis(250),
-            )
-            .is_ok()
+            ensure_child_alive(self.tunnel_mut(role), label)?;
+            if TcpStream::connect_timeout(&local_address(port), Duration::from_millis(250)).is_ok()
             {
                 return Ok(());
             }
             thread::sleep(Duration::from_millis(100));
         }
-        Err("PostgreSQL SSH tunnel readiness timed out".to_string())
+        Err(format!("{label} readiness timed out"))
     }
 
-    fn start_orchestra(&mut self, role: ProcessRole, rejoin: bool) -> RunnerResult<()> {
+    pub(super) fn start_orchestra(&mut self, role: ProcessRole, rejoin: bool) -> RunnerResult<()> {
+        let database_port = self.tunnel_port(role);
         let (port, instance_id, slot, label) = match role {
             ProcessRole::Primary => (
                 self.primary_port,
@@ -291,7 +398,7 @@ impl Session {
         let stderr = log
             .try_clone()
             .map_err(|error| format!("failed to clone Orchestra {label} log: {error}"))?;
-        let database_url = format!("ecto://postgres@127.0.0.1:{}/postgres", self.tunnel_port);
+        let database_url = format!("ecto://postgres@127.0.0.1:{database_port}/postgres");
         let child = Command::new("mix")
             .args(["run", "--no-halt", "--no-compile"])
             .current_dir(self.root.join("apps/web"))
@@ -303,7 +410,7 @@ impl Session {
             .env("DATABASE_URL", database_url)
             .env("POOL_SIZE", "3")
             .env("KYUUBIKI_AGENT_DISCOVERY", "static")
-            .env("KYUUBIKI_AGENT_ENDPOINTS", "")
+            .env("KYUUBIKI_AGENT_ENDPOINTS", &self.agent_endpoints)
             .env("KYUUBIKI_API_TOKEN", &self.token)
             .env("KYUUBIKI_CLUSTER_API_TOKEN", &self.token)
             .env("KYUUBIKI_PROTECT_READS", "true")
@@ -324,7 +431,7 @@ impl Session {
         Ok(())
     }
 
-    fn wait_for_lease(
+    pub(super) fn wait_for_lease(
         &mut self,
         role: ProcessRole,
         expected_status: &str,
@@ -335,7 +442,8 @@ impl Session {
         let mut last = "no health response".to_string();
         while Instant::now() < deadline {
             self.ensure_orchestra_alive(role)?;
-            match http_get_json(port, "/api/health", &self.token).and_then(parse_lease) {
+            match http_get_json(port, "/api/v1/orchestra/lease", &self.token).and_then(parse_lease)
+            {
                 Ok(observation) => {
                     last = format!(
                         "status={} owner={} fencing={}",
@@ -360,6 +468,69 @@ impl Session {
         Err(format!("Orchestra lease phase timed out ({last})"))
     }
 
+    fn wait_for_partitioned_owner(&mut self) -> RunnerResult<PartitionedOwnerPhase> {
+        let deadline = Instant::now() + self.timeout;
+        let mut last = "no health response".to_string();
+        while Instant::now() < deadline {
+            self.ensure_orchestra_alive(ProcessRole::Primary)?;
+            match http_get_json(self.primary_port, "/api/v1/orchestra/lease", &self.token) {
+                Ok(value) => {
+                    let lease = value
+                        .pointer("/lease")
+                        .ok_or("health response misses workflow recovery lease")?;
+                    let status = lease
+                        .get("status")
+                        .and_then(Value::as_str)
+                        .unwrap_or("unknown");
+                    let owner = lease.get("owner_instance_id").and_then(Value::as_str);
+                    let fencing_token = lease.get("fencing_token").and_then(Value::as_u64);
+                    let last_error = lease.get("last_error").and_then(Value::as_str);
+                    last = format!(
+                        "status={status} owner={} fencing={fencing_token:?} error={last_error:?}",
+                        owner.unwrap_or("none")
+                    );
+                    if status == "standby"
+                        && owner.is_none()
+                        && fencing_token.is_none()
+                        && last_error == Some("orchestra_lease_store_unavailable")
+                    {
+                        return Ok(PartitionedOwnerPhase {
+                            process_role: "partitioned-owner".to_string(),
+                            lease_status: status.to_string(),
+                            observed_owner_role: "none".to_string(),
+                            visible_fencing_token: fencing_token,
+                            last_error: last_error.unwrap_or_default().to_string(),
+                        });
+                    }
+                }
+                Err(error) => last = error,
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+        Err(format!(
+            "partitioned Orchestra did not fail closed ({last})"
+        ))
+    }
+
+    fn probe_stale_owner_submission(&self) -> RunnerResult<bool> {
+        let request = stale_owner_write_probe();
+        let response = http_post_json(
+            self.primary_port,
+            "/api/v1/workflows/graph/jobs",
+            &self.token,
+            &request,
+        )?;
+        if response.status != 422
+            || response.body.get("error").and_then(Value::as_str) != Some(":orchestra_standby")
+        {
+            return Err(format!(
+                "former owner accepted or misreported a fenced write: status={} body={}",
+                response.status, response.body
+            ));
+        }
+        Ok(true)
+    }
+
     fn phase(&self, process_role: &str, observation: LeaseObservation) -> RunnerResult<LeasePhase> {
         let observed_owner_role = owner_role(
             &observation.owner_instance_id,
@@ -377,21 +548,35 @@ impl Session {
         })
     }
 
-    fn ensure_orchestra_alive(&mut self, role: ProcessRole) -> RunnerResult<()> {
+    pub(super) fn ensure_orchestra_alive(&mut self, role: ProcessRole) -> RunnerResult<()> {
         match role {
             ProcessRole::Primary => ensure_child_alive(&mut self.primary, "primary Orchestra"),
             ProcessRole::Standby => ensure_child_alive(&mut self.standby, "standby Orchestra"),
         }
     }
 
-    fn port(&self, role: ProcessRole) -> u16 {
+    pub(super) fn port(&self, role: ProcessRole) -> u16 {
         match role {
             ProcessRole::Primary => self.primary_port,
             ProcessRole::Standby => self.standby_port,
         }
     }
 
-    fn crash(&mut self, role: ProcessRole) -> RunnerResult<()> {
+    fn tunnel_port(&self, role: ProcessRole) -> u16 {
+        match role {
+            ProcessRole::Primary => self.primary_tunnel_port,
+            ProcessRole::Standby => self.standby_tunnel_port,
+        }
+    }
+
+    fn tunnel_mut(&mut self, role: ProcessRole) -> &mut Option<Child> {
+        match role {
+            ProcessRole::Primary => &mut self.primary_tunnel,
+            ProcessRole::Standby => &mut self.standby_tunnel,
+        }
+    }
+
+    pub(super) fn crash(&mut self, role: ProcessRole) -> RunnerResult<()> {
         let slot = match role {
             ProcessRole::Primary => &mut self.primary,
             ProcessRole::Standby => &mut self.standby,
@@ -399,18 +584,24 @@ impl Session {
         stop_child(slot, "Orchestra crash target")
     }
 
-    fn cleanup(&mut self) -> RunnerResult<CleanupEvidence> {
+    pub(super) fn cleanup(&mut self) -> RunnerResult<CleanupEvidence> {
         if self.cleaned {
             return Err("takeover qualification session was already cleaned".to_string());
         }
         let mut errors = Vec::new();
-        let orchestra_processes_stopped = stop_child(&mut self.primary, "primary Orchestra")
-            .and_then(|_| stop_child(&mut self.standby, "standby Orchestra"))
-            .map(|_| true)
-            .unwrap_or_else(|error| {
-                errors.push(error);
-                false
-            });
+        let orchestra_stop_results = [
+            (&mut self.primary, "primary Orchestra"),
+            (&mut self.standby, "standby Orchestra"),
+        ]
+        .map(|(process, label)| {
+            stop_child(process, label)
+                .map(|_| true)
+                .unwrap_or_else(|error| {
+                    errors.push(error);
+                    false
+                })
+        });
+        let orchestra_processes_stopped = orchestra_stop_results.into_iter().all(|stopped| stopped);
         let orchestra_ports_closed =
             [self.primary_port, self.standby_port]
                 .into_iter()
@@ -422,19 +613,29 @@ impl Session {
                             false
                         })
                 });
-        let ssh_tunnel_stopped = stop_child(&mut self.tunnel, "PostgreSQL SSH tunnel")
-            .map(|_| true)
-            .unwrap_or_else(|error| {
-                errors.push(error);
-                false
-            });
-        let tunnel_port_closed =
-            wait_endpoint_closed(local_address(self.tunnel_port), Duration::from_secs(5))
+        let tunnel_stop_results = [
+            (&mut self.primary_tunnel, "primary PostgreSQL SSH tunnel"),
+            (&mut self.standby_tunnel, "standby PostgreSQL SSH tunnel"),
+        ]
+        .map(|(tunnel, label)| {
+            stop_child(tunnel, label)
                 .map(|_| true)
                 .unwrap_or_else(|error| {
                     errors.push(error);
                     false
-                });
+                })
+        });
+        let ssh_tunnel_stopped = tunnel_stop_results.into_iter().all(|stopped| stopped);
+        let tunnel_port_results =
+            [self.primary_tunnel_port, self.standby_tunnel_port].map(|port| {
+                wait_endpoint_closed(local_address(port), Duration::from_secs(5))
+                    .map(|_| true)
+                    .unwrap_or_else(|error| {
+                        errors.push(error);
+                        false
+                    })
+            });
+        let tunnel_port_closed = tunnel_port_results.into_iter().all(|closed| closed);
         let remote_database_removed = self.remove_remote_database().unwrap_or_else(|error| {
             errors.push(error);
             false
@@ -548,6 +749,7 @@ pub(super) fn stop_child(child: &mut Option<Child>, label: &str) -> RunnerResult
 pub(super) fn parse_lease(value: Value) -> RunnerResult<LeaseObservation> {
     let lease = value
         .pointer("/workflow_recovery/lease")
+        .or_else(|| value.pointer("/lease"))
         .ok_or("health response misses workflow recovery lease")?;
     let status = lease
         .get("status")
@@ -575,69 +777,6 @@ pub(super) fn owner_role(owner: &str, primary: &str, standby: &str) -> &'static 
         "standby"
     } else {
         "unknown"
-    }
-}
-
-pub(super) fn http_get_json(port: u16, path: &str, token: &str) -> RunnerResult<Value> {
-    let address = local_address(port);
-    let mut stream = TcpStream::connect_timeout(&address, Duration::from_millis(500))
-        .map_err(|error| format!("Orchestra HTTP unavailable: {error}"))?;
-    stream
-        .set_read_timeout(Some(Duration::from_secs(2)))
-        .map_err(|error| format!("failed to configure Orchestra HTTP timeout: {error}"))?;
-    let request = format!(
-        "GET {path} HTTP/1.1\r\nHost: 127.0.0.1\r\nAuthorization: Bearer {token}\r\nConnection: close\r\n\r\n"
-    );
-    stream
-        .write_all(request.as_bytes())
-        .map_err(|error| format!("failed to write Orchestra HTTP request: {error}"))?;
-    let mut response = Vec::new();
-    stream
-        .take(MAX_HTTP_BYTES + 1)
-        .read_to_end(&mut response)
-        .map_err(|error| format!("failed to read Orchestra HTTP response: {error}"))?;
-    if response.len() as u64 > MAX_HTTP_BYTES {
-        return Err("Orchestra HTTP response exceeded 4 MiB".to_string());
-    }
-    let separator = response
-        .windows(4)
-        .position(|window| window == b"\r\n\r\n")
-        .ok_or("Orchestra returned invalid HTTP")?;
-    let headers = String::from_utf8_lossy(&response[..separator]);
-    if !(headers.starts_with("HTTP/1.1 2") || headers.starts_with("HTTP/1.0 2")) {
-        return Err("Orchestra returned a non-success HTTP status".to_string());
-    }
-    let body = if headers.lines().any(|line| {
-        line.to_ascii_lowercase()
-            .starts_with("transfer-encoding: chunked")
-    }) {
-        decode_chunked(&response[(separator + 4)..])?
-    } else {
-        response[(separator + 4)..].to_vec()
-    };
-    serde_json::from_slice(&body).map_err(|error| format!("invalid Orchestra JSON: {error}"))
-}
-
-fn decode_chunked(mut bytes: &[u8]) -> RunnerResult<Vec<u8>> {
-    let mut decoded = Vec::new();
-    loop {
-        let line_end = bytes
-            .windows(2)
-            .position(|window| window == b"\r\n")
-            .ok_or("invalid chunked HTTP length")?;
-        let length_text = std::str::from_utf8(&bytes[..line_end])
-            .map_err(|_| "invalid chunked HTTP length encoding")?;
-        let length = usize::from_str_radix(length_text.split(';').next().unwrap_or(""), 16)
-            .map_err(|_| "invalid chunked HTTP length value")?;
-        bytes = &bytes[(line_end + 2)..];
-        if length == 0 {
-            return Ok(decoded);
-        }
-        if bytes.len() < length + 2 || &bytes[length..(length + 2)] != b"\r\n" {
-            return Err("truncated chunked HTTP body".to_string());
-        }
-        decoded.extend_from_slice(&bytes[..length]);
-        bytes = &bytes[(length + 2)..];
     }
 }
 

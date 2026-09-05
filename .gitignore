@@ -47,6 +47,7 @@ yarn-error.log*
 target/
 Cargo.lock
 !workers/rust/Cargo.lock
+!workers/rust/templates/operator-crate-template/Cargo.lock
 !sdks/rust/Cargo.lock
 !apps/*/src-tauri/Cargo.lock
 

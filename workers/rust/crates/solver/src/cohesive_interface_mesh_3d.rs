@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 
 use kyuubiki_protocol::{
     CohesiveInterfaceMesh3dElementInput, CohesiveInterfaceMesh3dElementResult,
@@ -15,6 +18,7 @@ use crate::cohesive_interface_mesh_3d_control::{
 };
 use crate::cohesive_interface_mesh_3d_newton::solve_load_step;
 use crate::cohesive_interface_mesh_3d_solid::HostTetra;
+use crate::cohesive_interface_mesh_3d_topology::validate_topology_and_restraints;
 use crate::linear_algebra::{SparseMatrix, add_at};
 
 const DEFAULT_MAX_ITERATIONS: usize = 30;
@@ -28,7 +32,19 @@ const MAX_HOST_TETRAHEDRA: usize = 4096;
 pub fn solve_cohesive_interface_mesh_3d(
     request: &SolveCohesiveInterfaceMesh3dRequest,
 ) -> Result<SolveCohesiveInterfaceMesh3dResult, String> {
-    let model = ValidatedModel::new(request)?;
+    solve_cohesive_interface_mesh_3d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_cohesive_interface_mesh_3d_owned(
+    request: SolveCohesiveInterfaceMesh3dRequest,
+) -> Result<SolveCohesiveInterfaceMesh3dResult, String> {
+    solve_cohesive_interface_mesh_3d_internal(Cow::Owned(request))
+}
+
+fn solve_cohesive_interface_mesh_3d_internal(
+    request: Cow<'_, SolveCohesiveInterfaceMesh3dRequest>,
+) -> Result<SolveCohesiveInterfaceMesh3dResult, String> {
+    let model = ValidatedModel::new(request.as_ref())?;
     let mut displacements = vec![0.0; model.dof_count];
     let mut states = vec![CohesiveInterface3dState::default(); model.elements.len()];
     let mut steps = Vec::with_capacity(model.controls.len());
@@ -40,7 +56,17 @@ pub fn solve_cohesive_interface_mesh_3d(
         let outcome = solve_load_step(&model, control, &displacements, &states);
         residual_norm = outcome.residual_norm;
         let summary_assembly = assemble(&model, &outcome.displacements, &outcome.states);
-        let summary = step_summary(&model, control, &outcome.displacements, &summary_assembly);
+        let summary_load_factor = if outcome.converged {
+            control.load_factor
+        } else {
+            completed_load_factor
+        };
+        let summary = step_summary(
+            &model,
+            summary_load_factor,
+            &outcome.displacements,
+            &summary_assembly,
+        );
         steps.push(CohesiveInterfaceMesh3dLoadStepResult {
             step: step_index,
             load_factor: control.load_factor,
@@ -73,7 +99,7 @@ pub fn solve_cohesive_interface_mesh_3d(
         completed_load_factor,
         &final_assembly.internal_forces,
     );
-    let nodes = node_results(request, &displacements, &reactions);
+    let nodes = node_results(request.as_ref(), &displacements, &reactions);
     let elements = element_results(&model, &final_assembly.evaluations);
     let host_tetrahedra = model
         .host_tetrahedra
@@ -138,8 +164,10 @@ pub fn solve_cohesive_interface_mesh_3d(
         }
     }
 
+    drop(model);
+
     Ok(SolveCohesiveInterfaceMesh3dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         host_tetrahedra,
@@ -255,6 +283,7 @@ impl<'a> ValidatedModel<'a> {
         if fixed_dofs.is_empty() {
             return Err("cohesive interface mesh 3d requires constrained dofs".to_string());
         }
+        validate_topology_and_restraints(request)?;
         let controls = build_controls(request, &free_dofs, &prescribed_displacements)?;
         let free_load_norm = restricted_norm(&external_loads, &free_dofs);
         if !controls.iter().any(|control| {
@@ -439,11 +468,11 @@ struct StepSummary {
 
 fn step_summary(
     model: &ValidatedModel<'_>,
-    control: &ControlStep,
+    load_factor: f64,
     displacements: &[f64],
     assembly: &Assembly,
 ) -> StepSummary {
-    let reactions = reactions(model, control.load_factor, &assembly.internal_forces);
+    let reactions = reactions(model, load_factor, &assembly.internal_forces);
     StepSummary {
         max_displacement: (0..model.node_count)
             .map(|node| {
@@ -549,5 +578,5 @@ fn max_step_or(
 }
 
 fn norm(vector: [f64; 3]) -> f64 {
-    vector.iter().map(|value| value * value).sum::<f64>().sqrt()
+    vector_norm(&vector)
 }

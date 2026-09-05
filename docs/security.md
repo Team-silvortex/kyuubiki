@@ -320,6 +320,7 @@ Behavior:
 Protected read routes now include:
 
 - `/api/health`
+- `/api/v1/orchestra/lease`
 - `/api/v1/protocol*`
 - `/api/v1/agents`
 - `/api/v1/jobs*`
@@ -344,6 +345,22 @@ tracked runners and retries election instead of continuing with cached owner
 state. `KYUUBIKI_ORCHESTRA_INSTANCE_ID` is an identity, not a credential; it
 must be unique per concurrently running Orchestra but does not replace API,
 cluster, database, or transport authentication.
+
+The retained network-partition qualification gives primary and standby
+independent database tunnels, removes only the primary path, and proves that the
+still-running primary exposes no cached owner token. Standby takes a higher
+token, and after reconnection the former owner remains standby and rejects a
+valid workflow submission. `/api/v1/orchestra/lease` exposes only the local
+Coordinator snapshot so fencing can be diagnosed while broader health
+components are blocked on the unavailable database.
+
+Long-running takeover uses request-generation-scoped Agent cancellation for
+transport loss. A broken heartbeat from the fenced owner can cancel only its
+own execution request, not a replacement request carrying the same workflow job
+ID. Explicit operator cancellation remains job-scoped. Persisted workflow
+envelopes also canonicalize numerically integral JSON floats before hashing so
+PostgreSQL JSONB normalization cannot create a false digest-tamper result;
+non-integral values retain their original numeric value.
 
 ### Direct mesh GUI
 

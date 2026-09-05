@@ -144,3 +144,45 @@ pub fn desktop_preferences_dir(app_name: &str) -> Result<PathBuf, String> {
         }
     }
 }
+
+#[cfg(unix)]
+pub fn process_is_alive(pid: u32) -> bool {
+    if pid == 0 {
+        return false;
+    }
+    let result = unsafe { libc::kill(pid as i32, 0) };
+    result == 0 || std::io::Error::last_os_error().raw_os_error() == Some(libc::EPERM)
+}
+
+#[cfg(windows)]
+pub fn process_is_alive(pid: u32) -> bool {
+    use windows_sys::Win32::Foundation::{
+        CloseHandle, ERROR_ACCESS_DENIED, GetLastError, STILL_ACTIVE,
+    };
+    use windows_sys::Win32::System::Threading::{
+        GetExitCodeProcess, OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION,
+    };
+
+    if pid == 0 {
+        return false;
+    }
+    let handle = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
+    if handle == 0 {
+        return unsafe { GetLastError() } == ERROR_ACCESS_DENIED;
+    }
+    let mut exit_code = 0;
+    let queried = unsafe { GetExitCodeProcess(handle, &mut exit_code) } != 0;
+    unsafe { CloseHandle(handle) };
+    queried && exit_code == STILL_ACTIVE as u32
+}
+
+#[cfg(test)]
+mod process_tests {
+    use super::process_is_alive;
+
+    #[test]
+    fn current_process_is_alive_and_zero_is_not() {
+        assert!(process_is_alive(std::process::id()));
+        assert!(!process_is_alive(0));
+    }
+}

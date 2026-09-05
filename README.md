@@ -5,10 +5,17 @@ simulation runtime. Its long-term direction is to become a Blender-like
 engineering environment for finite-element research: visual when that helps,
 headless when automation matters, and open at every protocol boundary.
 
-> The active line is `moxi 2.x`, with `moxi 2.17.0` as the current documented
-> development checkpoint. The first planned public release is `daji 3.0.0`.
-> Until that gate closes, this repository is an internal hardening line rather
-> than a general-availability claim.
+> The active line is **daji 3.x**, starting at **daji 3.0.0**.
+> Desktop applications, runtimes, official SDKs, language packs, and release
+> contracts share this version. Historical moxi evidence remains unchanged.
+> The version transition is a milestone, not a blanket industrial-certification
+> or general-availability claim; public distribution remains evidence-gated.
+
+Early Daji prioritizes hardening an **agent-driven industrial research system**,
+not increasing feature count. Research agents use the Headless SDKs to run
+bounded, reviewable research loops; Rust Agents execute the admitted tasks.
+The GUI remains a first-class modeling, inspection, and human-takeover surface,
+not a prerequisite for automation. See the [early Daji mainline](docs/current-line.md#early-daji-mainline).
 
 ## System Shape
 
@@ -175,7 +182,7 @@ the reliability documents:
 - [Weakness roadmap](docs/weakness-roadmap.md)
 - [Testing and CI](docs/testing-and-ci.md)
 
-The remaining `daji 3.0.0` work is dominated by external numerical
+The remaining Daji readiness work is dominated by external numerical
 correlation, packaged cross-platform GUI/update journeys, deeper distributed
 failure testing, and end-to-end usability evidence. Current passing smoke or
 benchmark evidence must not be presented as broader certification.
@@ -185,7 +192,8 @@ benchmark evidence must not be presented as broader certification.
 Use the HTML book for the whole-system reading path:
 
 - [Kyuubiki book](docs/book.html)
-- [Current moxi line](docs/current-line.md)
+- [Current Daji line](docs/current-line.md)
+- [Daji 3.0.0 release notes](docs/daji-3.0.0.md)
 - [Documentation index](docs/README.md)
 - [Navigation matrix](docs/navigation-matrix.html)
 - [Minimal industrial closure](docs/minimal-industrial-closure.md)

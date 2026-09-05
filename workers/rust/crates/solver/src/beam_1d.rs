@@ -8,16 +8,28 @@ use kyuubiki_protocol::{
     SolveThermalBeam1dRequest, SolveThermalBeam1dResult, ThermalBeam1dElementResult,
     ThermalBeam1dNodeResult,
 };
+use std::borrow::Cow;
 
 pub fn solve_beam_1d(request: &SolveBeam1dRequest) -> Result<SolveBeam1dResult, String> {
-    solve_beam_1d_with_options(request, SpdSolveOptions::default())
+    solve_beam_1d_internal(Cow::Borrowed(request), SpdSolveOptions::default())
+}
+
+pub fn solve_beam_1d_owned(request: SolveBeam1dRequest) -> Result<SolveBeam1dResult, String> {
+    solve_beam_1d_internal(Cow::Owned(request), SpdSolveOptions::default())
 }
 
 pub fn solve_beam_1d_with_options(
     request: &SolveBeam1dRequest,
     options: SpdSolveOptions,
 ) -> Result<SolveBeam1dResult, String> {
-    validate_beam_1d_request(request)?;
+    solve_beam_1d_internal(Cow::Borrowed(request), options)
+}
+
+fn solve_beam_1d_internal(
+    request: Cow<'_, SolveBeam1dRequest>,
+    options: SpdSolveOptions,
+) -> Result<SolveBeam1dResult, String> {
+    validate_beam_1d_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 2;
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -164,7 +176,7 @@ pub fn solve_beam_1d_with_options(
     let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveBeam1dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         max_displacement,
@@ -178,14 +190,27 @@ pub fn solve_beam_1d_with_options(
 pub fn solve_thermal_beam_1d(
     request: &SolveThermalBeam1dRequest,
 ) -> Result<SolveThermalBeam1dResult, String> {
-    solve_thermal_beam_1d_with_options(request, SpdSolveOptions::default())
+    solve_thermal_beam_1d_internal(Cow::Borrowed(request), SpdSolveOptions::default())
+}
+
+pub fn solve_thermal_beam_1d_owned(
+    request: SolveThermalBeam1dRequest,
+) -> Result<SolveThermalBeam1dResult, String> {
+    solve_thermal_beam_1d_internal(Cow::Owned(request), SpdSolveOptions::default())
 }
 
 pub fn solve_thermal_beam_1d_with_options(
     request: &SolveThermalBeam1dRequest,
     options: SpdSolveOptions,
 ) -> Result<SolveThermalBeam1dResult, String> {
-    validate_thermal_beam_1d_request(request)?;
+    solve_thermal_beam_1d_internal(Cow::Borrowed(request), options)
+}
+
+fn solve_thermal_beam_1d_internal(
+    request: Cow<'_, SolveThermalBeam1dRequest>,
+    options: SpdSolveOptions,
+) -> Result<SolveThermalBeam1dResult, String> {
+    validate_thermal_beam_1d_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 2;
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -357,7 +382,7 @@ pub fn solve_thermal_beam_1d_with_options(
     let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
 
     Ok(SolveThermalBeam1dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         max_displacement,

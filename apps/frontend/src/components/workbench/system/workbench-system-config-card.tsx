@@ -31,7 +31,6 @@ type WorkbenchSystemConfigCardProps = {
   languagePackRemoveLabel: string;
   languagePackCatalogTitle: string;
   languagePackCatalogHint: string;
-  languagePackCatalogActionLabel: string;
   frontendModeLabel: string;
   backendTargetLabel: string;
   backendTargetHelp: string;
@@ -97,7 +96,7 @@ type WorkbenchSystemConfigCardProps = {
   onExportInstalledLanguagePack: () => void;
   onImportLanguagePack: (file: File) => void;
   onRemoveLanguagePack: (packId: string) => void;
-  onInstallCatalogLanguagePack: (packId: string) => void;
+  onInstallCatalogLanguagePack: (packId: string) => Promise<void>;
   onFrontendRuntimeModeChange: (value: FrontendRuntimeMode) => void;
   onBackendApiBaseUrlChange: (value: string) => void;
   onDirectMeshSelectionModeChange: (value: DirectMeshSelectionMode) => void;
@@ -133,7 +132,6 @@ export function WorkbenchSystemConfigCard({
   languagePackRemoveLabel,
   languagePackCatalogTitle,
   languagePackCatalogHint,
-  languagePackCatalogActionLabel,
   frontendModeLabel,
   backendTargetLabel,
   backendTargetHelp,
@@ -200,6 +198,25 @@ export function WorkbenchSystemConfigCard({
   onExportDatabase,
 }: WorkbenchSystemConfigCardProps) {
   const [page, setPage] = useState<ConfigPage>("workspace");
+  const [installingLanguagePackId, setInstallingLanguagePackId] = useState<string | null>(null);
+  const [languagePackCatalogFilter, setLanguagePackCatalogFilter] = useState("");
+  const normalizedLanguagePackFilter = languagePackCatalogFilter.trim().toLocaleLowerCase();
+  const filteredCatalogLanguagePacks = normalizedLanguagePackFilter
+    ? catalogLanguagePacks.filter((pack) =>
+        `${pack.language} ${pack.name}`.toLocaleLowerCase().includes(normalizedLanguagePackFilter),
+      )
+    : catalogLanguagePacks;
+  const installedLanguagePackIds = new Set(installedLanguagePacks.map((pack) => pack.id));
+
+  const handleInstallCatalogLanguagePack = async (packId: string) => {
+    if (installingLanguagePackId) return;
+    setInstallingLanguagePackId(packId);
+    try {
+      await onInstallCatalogLanguagePack(packId);
+    } finally {
+      setInstallingLanguagePackId(null);
+    }
+  };
 
   return (
     <section className="sidebar-card sidebar-card--compact">
@@ -393,25 +410,50 @@ export function WorkbenchSystemConfigCard({
               ))}
             </div>
           )}
-          <div className="card-copy">
-            <strong>{languagePackCatalogTitle}</strong>
-            <p>{languagePackCatalogHint}</p>
-          </div>
-          <div className="sidebar-list">
-            {catalogLanguagePacks.map((pack) => (
-              <article className="history-item" key={pack.id}>
-                <div>
-                  <strong>{pack.language.toUpperCase()} · {pack.name}</strong>
-                  <p className="history-meta">{pack.status}</p>
-                </div>
-                <div className="history-actions">
-                  <button className="ghost-button ghost-button--compact" onClick={() => onInstallCatalogLanguagePack(pack.id)} type="button">
-                    {languagePackCatalogActionLabel}
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
+          <details className="language-pack-catalog">
+            <summary>
+              <strong>{languagePackCatalogTitle}</strong>
+              <span>{catalogLanguagePacks.length}</span>
+            </summary>
+            <div className="language-pack-catalog__content">
+              <p className="card-copy">{languagePackCatalogHint}</p>
+              <label className="language-pack-catalog__filter">
+                <span>{languagePackNameLabel}</span>
+                <input
+                  aria-label={`${languagePackCatalogTitle} · ${languagePackNameLabel}`}
+                  onChange={(event) => setLanguagePackCatalogFilter(event.target.value)}
+                  placeholder={languagePackNameLabel}
+                  type="search"
+                  value={languagePackCatalogFilter}
+                />
+              </label>
+              <div className="sidebar-list">
+                {filteredCatalogLanguagePacks.map((pack) => {
+                  const installed = installedLanguagePackIds.has(pack.id);
+                  return (
+                    <article className="history-item" data-workbench-language-pack-id={pack.id} key={pack.id}>
+                      <div>
+                        <strong>{pack.language.toUpperCase()} · {pack.name}</strong>
+                      </div>
+                      <div className="history-actions">
+                        <button
+                          aria-busy={installingLanguagePackId === pack.id}
+                          className="ghost-button ghost-button--compact"
+                          data-workbench-language-pack-install={pack.id}
+                          disabled={installed || installingLanguagePackId !== null}
+                          onClick={() => void handleInstallCatalogLanguagePack(pack.id)}
+                          type="button"
+                        >
+                          {installed ? languagePackSourceDownloadedLabel : languagePackImportLabel}
+                          {installingLanguagePackId === pack.id ? "…" : ""}
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          </details>
         </div>
       ) : null}
       <p className="card-copy">{browserLimitsNote}</p>

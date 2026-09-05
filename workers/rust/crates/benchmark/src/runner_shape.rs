@@ -20,6 +20,11 @@ pub(crate) fn workload_shape(workload: &BenchmarkWorkload) -> (usize, usize, usi
             request.elements.len(),
             request.nodes.len(),
         ),
+        BenchmarkWorkload::TransientHeatBar1d(request) => (
+            request.nodes.len(),
+            request.elements.len(),
+            request.nodes.len(),
+        ),
         BenchmarkWorkload::ElectrostaticBar1d(request) => (
             request.nodes.len(),
             request.elements.len(),
@@ -45,6 +50,16 @@ pub(crate) fn workload_shape(workload: &BenchmarkWorkload) -> (usize, usize, usi
             request.elements.len(),
             request.nodes.len(),
         ),
+        BenchmarkWorkload::TransientSpring1d(request) => (
+            request.nodes.len(),
+            request.elements.len(),
+            request.nodes.len(),
+        ),
+        BenchmarkWorkload::HarmonicSpring1d(request) => (
+            request.nodes.len(),
+            request.elements.len(),
+            request.nodes.len(),
+        ),
         BenchmarkWorkload::Spring2d(request) => (
             request.nodes.len(),
             request.elements.len(),
@@ -64,6 +79,20 @@ pub(crate) fn workload_shape(workload: &BenchmarkWorkload) -> (usize, usize, usi
             request.nodes.len(),
             request.elements.len(),
             request.nodes.len(),
+        ),
+        BenchmarkWorkload::CohesiveInterface1d(_) => (2, 1, 1),
+        BenchmarkWorkload::CohesiveInterface2d(request) => {
+            (request.nodes.len(), 1, request.nodes.len() * 2)
+        }
+        BenchmarkWorkload::CohesiveInterfaceMesh2d(request) => (
+            request.nodes.len(),
+            request.elements.len(),
+            request.nodes.len() * 2,
+        ),
+        BenchmarkWorkload::CohesiveInterfaceMesh3d(request) => (
+            request.nodes.len(),
+            request.elements.len(),
+            request.nodes.len() * 3,
         ),
         BenchmarkWorkload::Beam1d(request) => (
             request.nodes.len(),
@@ -196,6 +225,11 @@ pub(crate) fn workload_shape(workload: &BenchmarkWorkload) -> (usize, usize, usi
             request.nodes.len(),
         ),
         BenchmarkWorkload::MagnetostaticPlaneQuad2d(request) => (
+            request.nodes.len(),
+            request.elements.len(),
+            request.nodes.len(),
+        ),
+        BenchmarkWorkload::ElectricConductionPlaneQuad2d(request) => (
             request.nodes.len(),
             request.elements.len(),
             request.nodes.len(),

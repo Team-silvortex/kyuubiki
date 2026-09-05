@@ -5,25 +5,31 @@ export const RESULT_WINDOW_BASE_SIZE = 240;
 export const RESULT_WINDOW_CACHE_LIMIT = 24;
 
 export function computeResultWindowSize(totalItems: number, viewportWidth = 980) {
+  const safeTotalItems = Number.isFinite(totalItems) ? Math.max(0, Math.floor(totalItems)) : 0;
+  const safeViewportWidth = Number.isFinite(viewportWidth) && viewportWidth > 0 ? viewportWidth : 980;
   const base =
-    totalItems >= 20_000
+    safeTotalItems >= 20_000
       ? 720
-      : totalItems >= 15_000
+      : safeTotalItems >= 15_000
         ? 600
-        : totalItems >= 10_000
+        : safeTotalItems >= 10_000
           ? 480
-          : totalItems >= 4_000
+          : safeTotalItems >= 4_000
             ? 360
             : RESULT_WINDOW_BASE_SIZE;
 
-  const widthFactor = Math.min(1.8, Math.max(0.85, viewportWidth / 980));
+  const widthFactor = Math.min(1.8, Math.max(0.85, safeViewportWidth / 980));
   const scaled = Math.round((base * widthFactor) / 60) * 60;
   return Math.max(RESULT_WINDOW_BASE_SIZE, scaled);
 }
 
 export function clampChunkOffset(offset: number, totalItems: number, limit: number) {
-  const maxOffset = Math.max(0, totalItems - limit);
-  const snapped = Math.round(Math.max(0, offset) / limit) * limit;
+  if (!Number.isFinite(limit) || limit <= 0) return 0;
+  const safeLimit = Math.max(1, Math.floor(limit));
+  const safeTotalItems = Number.isFinite(totalItems) ? Math.max(0, Math.floor(totalItems)) : 0;
+  const safeOffset = Number.isFinite(offset) ? Math.max(0, offset) : 0;
+  const maxOffset = Math.max(0, safeTotalItems - safeLimit);
+  const snapped = Math.round(safeOffset / safeLimit) * safeLimit;
   return Math.min(maxOffset, snapped);
 }
 
@@ -34,6 +40,7 @@ export function computeVisibleResultWindowOffset(
   scrollLeft: number,
   scrollWidth: number,
 ) {
+  if (!Number.isFinite(limit) || limit <= 0) return 0;
   if (totalItems <= limit || scrollWidth <= viewportWidth + 1) {
     return 0;
   }
@@ -55,7 +62,7 @@ export function chunkCacheKey(
   offset: number,
   limit: number,
 ) {
-  return `${backendId}:${jobId}:${kind}:${offset}:${limit}`;
+  return JSON.stringify([backendId, jobId, kind, offset, limit]);
 }
 
 export function readChunkCache(
@@ -81,8 +88,8 @@ export function writeChunkCache(
   cache.set(key, value);
 
   while (cache.size > RESULT_WINDOW_CACHE_LIMIT) {
-    const oldestKey = cache.keys().next().value;
-    if (!oldestKey) break;
-    cache.delete(oldestKey);
+    const oldest = cache.keys().next();
+    if (oldest.done) break;
+    cache.delete(oldest.value);
   }
 }

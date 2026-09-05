@@ -4,9 +4,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 use std::time::SystemTime;
-
 mod agent_control_link_operational_qualification;
 mod agent_registry_sync;
+mod agent_rolling_operational_qualification;
 mod agent_solver_operational_qualification;
 mod agent_update_operational_qualification;
 mod beam_frame_release_evidence;
@@ -25,6 +25,7 @@ mod contracts_runtime_api_surface;
 mod contracts_validation_qualification;
 mod dependency_audit;
 mod desktop;
+mod desktop_bundle_operational_qualification;
 mod desktop_deployment_update_validation;
 mod desktop_distribution;
 mod desktop_icon_variants;
@@ -43,6 +44,8 @@ mod doc_inventory;
 mod docs_book;
 mod docs_book_research;
 mod elixir_self_host;
+mod fleet_scheduling_operational_qualification;
+mod fleet_update_operational_qualification;
 mod frontend_checks;
 mod governance_commands;
 mod gui_runtime_capability_contract;
@@ -54,6 +57,7 @@ mod help;
 mod install_update_disk_hygiene;
 mod installation_integrity_docs;
 mod installed_runtime_operational_qualification;
+mod installed_runtime_power_loss_qualification;
 mod installer_recovery_fault_injection;
 mod kcore_cli;
 mod lab;
@@ -61,6 +65,8 @@ mod language_packs;
 mod line_field_baseline;
 mod line_field_provenance;
 mod line_field_release_evidence;
+mod linux_host_power_loss_qualification;
+mod linux_host_power_loss_validation;
 mod local_path_audit;
 mod macro_cli;
 mod make_modules;
@@ -91,6 +97,7 @@ mod native_time;
 mod nightly_artifact_overview;
 mod node_tests;
 mod operational_agent_support;
+mod operator_package_acquisition_operational_qualification;
 mod operator_package_dynamic_smoke;
 mod operator_qualification_evidence_kits;
 mod operator_qualification_readiness;
@@ -99,6 +106,7 @@ mod operator_reliability;
 mod operator_reliability_rules;
 mod operator_reliability_schemas;
 mod operator_sdk_multihost_qualification;
+mod operator_sdk_performance_qualification;
 mod operator_sdk_windows_qualification;
 mod operator_task_ir_contract;
 mod operator_validation;
@@ -359,7 +367,7 @@ fn run() -> RunnerResult<u8> {
         "package-desktop" => run_package_desktop(&paths, rest),
         "desktop-status" => run_desktop_status(&paths, rest),
         "desktop-stage" => run_desktop_stage(&paths, rest),
-        "desktop-build-host" => run_desktop_build_host(&paths),
+        "desktop-build-host" => run_desktop_build_host(&paths, rest),
         "desktop-install-host" => desktop_install::run_desktop_install_host(&paths.root, rest),
         "desktop-packaged-smoke" => {
             packaged_desktop_smoke::run_packaged_desktop_smoke(&paths.root, rest)
@@ -389,6 +397,10 @@ fn run() -> RunnerResult<u8> {
         "qualify-orchestra-takeover-operational-remote" => {
             orchestra_takeover_operational_qualification::run_qualify_remote(&paths.root, rest)
         }
+        "qualify-orchestra-network-partition-operational-remote" => {
+            orchestra_takeover_operational_qualification::run_qualify_partition_remote(&paths.root, rest)
+        }
+        "qualify-orchestra-long-workflow-takeover-operational-remote" => orchestra_takeover_operational_qualification::run_qualify_long_workflow_remote(&paths.root, rest),
         "qualify-orchestra-installed-takeover-operational-remote" => {
             orchestra_takeover_operational_qualification::run_qualify_installed_remote(
                 &paths.root,
@@ -415,6 +427,12 @@ fn run() -> RunnerResult<u8> {
                 &paths.root,
                 rest,
             )
+        }
+        "qualify-fleet-update-operational-remote" => {
+            fleet_update_operational_qualification::run_qualify_remote(&paths.root, rest)
+        }
+        "qualify-agent-rolling-replacement-operational-remote" => {
+            agent_rolling_operational_qualification::run_qualify_remote(&paths.root, rest)
         }
         "qualify-headless-sdk-operational-remote" => {
             headless_sdk_operational::run_qualify_headless_sdk_operational_remote(&paths.root, rest)

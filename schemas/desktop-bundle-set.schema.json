@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/desktop-bundle-set.schema.json",
+  "title": "Kyuubiki Managed Desktop Bundle Set",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "version",
+    "platform",
+    "payload_sha256",
+    "components",
+    "files"
+  ],
+  "properties": {
+    "schema_version": { "const": "kyuubiki.desktop-bundle-set/v1" },
+    "version": { "$ref": "#/$defs/version" },
+    "platform": { "enum": ["macos", "linux", "windows"] },
+    "payload_sha256": { "$ref": "#/$defs/sha256" },
+    "components": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/component" }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/file" }
+    }
+  },
+  "$defs": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "payloadPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))payload/.+"
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "bundle_path",
+        "entrypoint",
+        "content_sha256",
+        "file_count"
+      ],
+      "properties": {
+        "id": { "enum": ["hub", "installer", "workbench"] },
+        "bundle_path": { "$ref": "#/$defs/payloadPath" },
+        "entrypoint": { "$ref": "#/$defs/payloadPath" },
+        "content_sha256": { "$ref": "#/$defs/sha256" },
+        "file_count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "size_bytes", "executable"],
+      "properties": {
+        "path": { "$ref": "#/$defs/payloadPath" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "executable": { "type": "boolean" }
+      }
+    }
+  }
+}

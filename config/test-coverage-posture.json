@@ -1,7 +1,7 @@
 {
   "$schema": "../schemas/test-coverage-posture.schema.json",
   "schema_version": "kyuubiki.test-coverage-posture/v1",
-  "release_line": "moxi 2.x",
+  "release_line": "daji 3.x",
   "truthfulness_policy": {
     "code_coverage_claim": "not-100-percent-until-artifacts-and-thresholds-exist",
     "separate_from": [
@@ -52,11 +52,21 @@
       "test_command": "npm --prefix apps/frontend run test:unit",
       "planned_tool": "node --experimental-test-coverage",
       "planned_command": "make coverage-frontend",
-      "planned_artifact": "tmp/coverage/frontend/v8",
-      "status": "instrumented",
+      "planned_artifact": "tmp/coverage/frontend/v8/summary.json",
+      "status": "enforced",
+      "enforced_threshold": {
+        "lines": 50,
+        "branches": 60,
+        "functions": 55
+      },
+      "enforcement": {
+        "workflow": ".github/workflows/ci.yml",
+        "command": "npm run test:unit:coverage",
+        "artifact": "tmp/coverage/frontend/v8/summary.json"
+      },
       "minimum_next_threshold": {
         "lines": 70,
-        "branches": 50,
+        "branches": 70,
         "functions": 65
       }
     },

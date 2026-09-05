@@ -1,13 +1,6 @@
 "use client";
 
 import {
-  downloadWorkbenchFrameForceSummary,
-  downloadWorkbenchFrameHotspotSummary,
-  downloadWorkbenchPlaneHotspotSummary,
-  downloadWorkbenchResultCsv,
-  downloadWorkbenchResultJson,
-} from "@/components/workbench/workbench-result-export-controller";
-import {
   useWorkbenchResultWindowController,
 } from "@/components/workbench/workbench-result-window-controller";
 import {
@@ -32,6 +25,7 @@ import {
   isSpring3dResult,
   isThermalBar1dResult,
   isThermalBeam1dResult,
+  isThermalFrame2dResult,
   isThermalTruss2dResult,
   isThermalTruss3dResult,
   isTorsion1dResult,
@@ -53,6 +47,7 @@ import {
 import {
   workbenchAdminDataBackendService,
 } from "@/lib/workbench/admin-data-backend-service";
+import { workbenchStoreBackendService } from "@/lib/workbench/store-backend-service";
 
 export function useWorkbenchCoreComposition(props: Record<string, any>) {
   const { rootState } = props;
@@ -76,6 +71,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
       isHeatPlaneTriangle2dResult,
       isThermalBar1dResult,
       isThermalBeam1dResult,
+      isThermalFrame2dResult,
       isThermalTruss2dResult,
       isThermalTruss3dResult,
       isTruss3dResult,
@@ -230,7 +226,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
         rootState.spring2dModel,
         rootState.spring3dModel,
         rootState.parametric,
-        props.round,
+        round,
       ),
   });
 
@@ -319,11 +315,36 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
   const resultDerivedBindings = bindWorkbenchStudyResultDerived(studyResultDerived);
 
   const resultExportEffects = resultDerivedBindings.resultExportEffects;
-  const downloadResultJson = () => downloadWorkbenchResultJson(resultExportEffects);
-  const downloadResultCsv = () => downloadWorkbenchResultCsv(resultExportEffects);
-  const downloadPlaneHotspotSummary = () => downloadWorkbenchPlaneHotspotSummary(resultExportEffects);
-  const downloadFrameHotspotSummary = () => downloadWorkbenchFrameHotspotSummary(resultExportEffects);
-  const downloadFrameForceSummary = () => downloadWorkbenchFrameForceSummary(resultExportEffects);
+  const downloadResultJson = async () => {
+    const { downloadWorkbenchResultJson } = await import(
+      "@/components/workbench/workbench-result-export-controller"
+    );
+    downloadWorkbenchResultJson(resultExportEffects);
+  };
+  const downloadResultCsv = async () => {
+    const { downloadWorkbenchResultCsv } = await import(
+      "@/components/workbench/workbench-result-export-controller"
+    );
+    downloadWorkbenchResultCsv(resultExportEffects);
+  };
+  const downloadPlaneHotspotSummary = async () => {
+    const { downloadWorkbenchPlaneHotspotSummary } = await import(
+      "@/components/workbench/workbench-result-export-controller"
+    );
+    downloadWorkbenchPlaneHotspotSummary(resultExportEffects);
+  };
+  const downloadFrameHotspotSummary = async () => {
+    const { downloadWorkbenchFrameHotspotSummary } = await import(
+      "@/components/workbench/workbench-result-export-controller"
+    );
+    downloadWorkbenchFrameHotspotSummary(resultExportEffects);
+  };
+  const downloadFrameForceSummary = async () => {
+    const { downloadWorkbenchFrameForceSummary } = await import(
+      "@/components/workbench/workbench-result-export-controller"
+    );
+    downloadWorkbenchFrameForceSummary(resultExportEffects);
+  };
 
   const railItems = [
     { key: "model", label: rootState.t.rail.model, symbol: "M" },
@@ -346,6 +367,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     deferredJobHistory,
     deferredResultRecords,
     resultWindowMaxTotal,
+    round,
     handleCanvasStageScroll,
     refreshHealth,
     refreshProjects,
@@ -395,6 +417,8 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     jobPollTokenRef: rootState.jobPollTokenRef,
     adminDataBackendService:
       props.adminDataBackendService ?? workbenchAdminDataBackendService,
+    storeBackendService:
+      props.storeBackendService ?? workbenchStoreBackendService,
     downloadTextFile: props.downloadTextFile,
     resetActiveResult: () => resetActiveResult(rootState.setResult, rootState.setJob),
     projectLibraryBackendService:

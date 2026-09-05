@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 
-use crate::agent_watchdog;
+use crate::agent_lifecycle;
 
 const HOLD_ENV: &str = "KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_FILE";
 const MAX_HOLD: Duration = Duration::from_secs(120);
@@ -22,7 +22,7 @@ pub(crate) fn configure_from_env() -> Result<(), String> {
 }
 
 pub(crate) fn wait_for_release(
-    execution_guard: &agent_watchdog::ExecutionGuard,
+    execution_guard: &agent_lifecycle::ExecutionGuard,
     job_id: Option<&str>,
 ) {
     let path = hold_path().lock().ok().and_then(|path| path.clone());
@@ -31,7 +31,7 @@ pub(crate) fn wait_for_release(
     };
     let deadline = Instant::now() + MAX_HOLD;
     while marker_matches(&path, job_id) && Instant::now() < deadline {
-        let _ = agent_watchdog::mark_progress(execution_guard);
+        let _ = agent_lifecycle::mark_progress(execution_guard);
         thread::sleep(Duration::from_millis(10));
     }
 }

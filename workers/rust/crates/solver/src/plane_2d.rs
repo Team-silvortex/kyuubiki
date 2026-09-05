@@ -1,7 +1,7 @@
-use std::time::Instant;
+use std::{borrow::Cow, time::Instant};
 
 use crate::linear_algebra::{SparseMatrix, add_at};
-use crate::linear_solver_profile::SpdSolveOptions;
+use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
 use crate::plane_2d_math::{plane_triangle_state, precompute_plane_triangle_element};
 use crate::plane_2d_profile::{
     PlaneProfileStage, PlaneQuadProfile, PlaneTriangleProfile,
@@ -15,14 +15,29 @@ use crate::plane_2d_summary::{
 };
 use crate::plane_2d_validation::{validate_plane_quad_request, validate_plane_request};
 use kyuubiki_protocol::{
-    PlaneNodeResult, PlaneQuadElementResult, PlaneTriangleElementResult, SolvePlaneQuad2dRequest,
-    SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest, SolvePlaneTriangle2dResult,
+    PlaneNodeInput, PlaneNodeResult, PlaneQuadElementResult, PlaneTriangleElementResult,
+    SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest,
+    SolvePlaneTriangle2dResult,
 };
+
+const PLANE_IC0_NODE_THRESHOLD: usize = 90_000;
 
 pub fn solve_plane_triangle_2d(
     request: &SolvePlaneTriangle2dRequest,
 ) -> Result<SolvePlaneTriangle2dResult, String> {
-    solve_plane_triangle_2d_internal(request, false, SpdSolveOptions::default())
+    solve_plane_triangle_2d_internal(
+        Cow::Borrowed(request),
+        false,
+        default_plane_options(request.nodes.len()),
+    )
+    .map(|profile| profile.result)
+}
+
+pub fn solve_plane_triangle_2d_owned(
+    request: SolvePlaneTriangle2dRequest,
+) -> Result<SolvePlaneTriangle2dResult, String> {
+    let options = default_plane_options(request.nodes.len());
+    solve_plane_triangle_2d_internal(Cow::Owned(request), false, options)
         .map(|profile| profile.result)
 }
 
@@ -30,15 +45,15 @@ pub fn profile_plane_triangle_2d_with_options(
     request: &SolvePlaneTriangle2dRequest,
     solve_options: SpdSolveOptions,
 ) -> Result<PlaneTriangleProfile, String> {
-    solve_plane_triangle_2d_internal(request, true, solve_options)
+    solve_plane_triangle_2d_internal(Cow::Borrowed(request), true, solve_options)
 }
 
 fn solve_plane_triangle_2d_internal(
-    request: &SolvePlaneTriangle2dRequest,
+    request: Cow<'_, SolvePlaneTriangle2dRequest>,
     collect_stages: bool,
     solve_options: SpdSolveOptions,
 ) -> Result<PlaneTriangleProfile, String> {
-    validate_plane_request(request)?;
+    validate_plane_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 2;
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -48,7 +63,7 @@ fn solve_plane_triangle_2d_internal(
     let computed_elements = request
         .elements
         .iter()
-        .map(|element| precompute_plane_triangle_element(request, element))
+        .map(|element| precompute_plane_triangle_element(request.as_ref(), element))
         .collect::<Result<Vec<_>, String>>()?;
     push_plane_profile_stage(&mut stages, collect_stages, "precompute", stage_started);
 
@@ -80,7 +95,7 @@ fn solve_plane_triangle_2d_internal(
 
     stage_started = Instant::now();
     let displacement_profile = profile_plane_displacements_with_options(
-        request,
+        &request.nodes,
         &global_stiffness,
         &force_vector,
         solve_options,
@@ -101,7 +116,7 @@ fn solve_plane_triangle_2d_internal(
     }
 
     stage_started = Instant::now();
-    let nodes = build_plane_nodes(request, &displacements);
+    let nodes = build_plane_nodes(&request.nodes, &displacements);
     let elements = request
         .elements
         .iter()
@@ -143,7 +158,7 @@ fn solve_plane_triangle_2d_internal(
 
     Ok(PlaneTriangleProfile {
         result: SolvePlaneTriangle2dResult {
-            input: request.clone(),
+            input: request.into_owned(),
             max_displacement: max_plane_displacement(&nodes),
             max_stress: max_triangle_stress(&elements),
             total_strain_energy,
@@ -161,29 +176,40 @@ fn solve_plane_triangle_2d_internal(
 pub fn solve_plane_quad_2d(
     request: &SolvePlaneQuad2dRequest,
 ) -> Result<SolvePlaneQuad2dResult, String> {
-    solve_plane_quad_2d_internal(request, false, SpdSolveOptions::default())
-        .map(|profile| profile.result)
+    solve_plane_quad_2d_internal(
+        Cow::Borrowed(request),
+        false,
+        default_plane_options(request.nodes.len()),
+    )
+    .map(|profile| profile.result)
+}
+
+pub fn solve_plane_quad_2d_owned(
+    request: SolvePlaneQuad2dRequest,
+) -> Result<SolvePlaneQuad2dResult, String> {
+    let options = default_plane_options(request.nodes.len());
+    solve_plane_quad_2d_internal(Cow::Owned(request), false, options).map(|profile| profile.result)
 }
 
 pub fn profile_plane_quad_2d(
     request: &SolvePlaneQuad2dRequest,
 ) -> Result<PlaneQuadProfile, String> {
-    profile_plane_quad_2d_with_options(request, SpdSolveOptions::default())
+    profile_plane_quad_2d_with_options(request, default_plane_options(request.nodes.len()))
 }
 
 pub fn profile_plane_quad_2d_with_options(
     request: &SolvePlaneQuad2dRequest,
     solve_options: SpdSolveOptions,
 ) -> Result<PlaneQuadProfile, String> {
-    solve_plane_quad_2d_internal(request, true, solve_options)
+    solve_plane_quad_2d_internal(Cow::Borrowed(request), true, solve_options)
 }
 
 fn solve_plane_quad_2d_internal(
-    request: &SolvePlaneQuad2dRequest,
+    request: Cow<'_, SolvePlaneQuad2dRequest>,
     collect_stages: bool,
     solve_options: SpdSolveOptions,
 ) -> Result<PlaneQuadProfile, String> {
-    validate_plane_quad_request(request)?;
+    validate_plane_quad_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 2;
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -193,7 +219,7 @@ fn solve_plane_quad_2d_internal(
     let computed_elements = request
         .elements
         .iter()
-        .map(|element| precompute_plane_quad_element(request, element))
+        .map(|element| precompute_plane_quad_element(request.as_ref(), element))
         .collect::<Result<Vec<_>, String>>()?;
     push_plane_profile_stage(&mut stages, collect_stages, "precompute", stage_started);
 
@@ -228,10 +254,9 @@ fn solve_plane_quad_2d_internal(
         stage_started,
     );
 
-    let triangle_request = to_triangle_request(request);
     stage_started = Instant::now();
     let displacement_profile = profile_plane_displacements_with_options(
-        &triangle_request,
+        &request.nodes,
         &global_stiffness,
         &force_vector,
         solve_options,
@@ -252,15 +277,15 @@ fn solve_plane_quad_2d_internal(
     }
 
     stage_started = Instant::now();
-    let nodes = build_plane_nodes(&triangle_request, &displacements);
-    let elements = build_plane_quad_elements(request, &computed_elements, &displacements);
+    let nodes = build_plane_nodes(&request.nodes, &displacements);
+    let elements = build_plane_quad_elements(request.as_ref(), &computed_elements, &displacements);
     let total_strain_energy = quad_total_strain_energy(&elements, &request.elements);
     let max_strain_energy_density = max_quad_strain_energy_density(&elements);
     push_plane_profile_stage(&mut stages, collect_stages, "assemble", stage_started);
 
     Ok(PlaneQuadProfile {
         result: SolvePlaneQuad2dResult {
-            input: request.clone(),
+            input: request.into_owned(),
             max_displacement: max_plane_displacement(&nodes),
             max_stress: max_quad_stress(&elements),
             total_strain_energy,
@@ -321,12 +346,8 @@ fn build_plane_quad_elements(
         .collect()
 }
 
-fn build_plane_nodes(
-    request: &SolvePlaneTriangle2dRequest,
-    displacements: &[f64],
-) -> Vec<PlaneNodeResult> {
-    request
-        .nodes
+fn build_plane_nodes(nodes: &[PlaneNodeInput], displacements: &[f64]) -> Vec<PlaneNodeResult> {
+    nodes
         .iter()
         .enumerate()
         .map(|(index, node)| {
@@ -343,13 +364,6 @@ fn build_plane_nodes(
             }
         })
         .collect()
-}
-
-fn to_triangle_request(request: &SolvePlaneQuad2dRequest) -> SolvePlaneTriangle2dRequest {
-    SolvePlaneTriangle2dRequest {
-        nodes: request.nodes.clone(),
-        elements: vec![],
-    }
 }
 
 fn triangle_dof_map(node_i: usize, node_j: usize, node_k: usize) -> [usize; 6] {
@@ -395,4 +409,33 @@ fn quad_displacements(
 ) -> [f64; 8] {
     let map = quad_dof_map(node_i, node_j, node_k, node_l);
     std::array::from_fn(|index| displacements[map[index]])
+}
+
+fn default_plane_options(node_count: usize) -> SpdSolveOptions {
+    SpdSolveOptions {
+        preconditioner: if node_count >= PLANE_IC0_NODE_THRESHOLD {
+            SpdPreconditioner::IncompleteCholesky
+        } else {
+            SpdPreconditioner::Jacobi
+        },
+        progress_interval: None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{PLANE_IC0_NODE_THRESHOLD, default_plane_options};
+    use crate::SpdPreconditioner;
+
+    #[test]
+    fn large_plane_models_default_to_ic0() {
+        assert_eq!(
+            default_plane_options(PLANE_IC0_NODE_THRESHOLD).preconditioner,
+            SpdPreconditioner::IncompleteCholesky
+        );
+        assert_eq!(
+            default_plane_options(PLANE_IC0_NODE_THRESHOLD - 1).preconditioner,
+            SpdPreconditioner::Jacobi
+        );
+    }
 }

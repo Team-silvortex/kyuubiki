@@ -3,6 +3,7 @@ use kyuubiki_protocol::{
     CohesiveInterface2dStepResult, CohesiveTractionRegime, SolveCohesiveInterface2dRequest,
     SolveCohesiveInterface2dResult,
 };
+use std::borrow::Cow;
 
 use crate::cohesive_interface_1d::validate_id;
 use crate::cohesive_law::{CohesiveHistory, CohesiveLaw};
@@ -14,12 +15,24 @@ const GAUSS_POINTS: [f64; 2] = [-0.577_350_269_189_625_8, 0.577_350_269_189_625_
 pub fn solve_cohesive_interface_2d(
     request: &SolveCohesiveInterface2dRequest,
 ) -> Result<SolveCohesiveInterface2dResult, String> {
-    let kernel = validate_request(request)?;
+    solve_cohesive_interface_2d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_cohesive_interface_2d_owned(
+    request: SolveCohesiveInterface2dRequest,
+) -> Result<SolveCohesiveInterface2dResult, String> {
+    solve_cohesive_interface_2d_internal(Cow::Owned(request))
+}
+
+fn solve_cohesive_interface_2d_internal(
+    request: Cow<'_, SolveCohesiveInterface2dRequest>,
+) -> Result<SolveCohesiveInterface2dResult, String> {
+    let kernel = validate_request(request.as_ref())?;
 
     let mut state = CohesiveInterface2dState::default();
     let mut steps = Vec::with_capacity(request.displacement_history.len());
     for (step, input) in request.displacement_history.iter().enumerate() {
-        let displacements = local_displacements(request, &input.nodal_displacements);
+        let displacements = local_displacements(request.as_ref(), &input.nodal_displacements);
         let evaluation = kernel.trial(step, displacements, &state);
         state = evaluation.state;
         steps.push(evaluation.step);
@@ -39,7 +52,7 @@ pub fn solve_cohesive_interface_2d(
         .fold(0.0_f64, f64::max);
 
     Ok(SolveCohesiveInterface2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         interface_length: kernel.geometry.length,
         interface_area: kernel.geometry.area,
         local_tangent_direction: kernel.geometry.tangent,

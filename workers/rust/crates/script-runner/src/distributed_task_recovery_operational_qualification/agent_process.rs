@@ -1,6 +1,6 @@
 use crate::operational_agent_support::available_local_port;
 use crate::remote_host::{
-    remote_shell_path, rsync_to, shell_escape, ssh_status, ssh_success_quiet,
+    remote_shell_path, rsync_to, shell_escape, ssh_output, ssh_status, ssh_success_quiet,
 };
 use std::fs::File;
 use std::net::{Ipv4Addr, SocketAddr};
@@ -55,6 +55,11 @@ impl ManagedAgents {
         self.start_local()?;
         self.start_remote_with_port_selection(port_seed)?;
         Ok(())
+    }
+
+    pub(crate) fn prepare_remote_only(&mut self, port_seed: u16) -> RunnerResult<()> {
+        self.prepare_remote()?;
+        self.start_remote_with_port_selection(port_seed)
     }
 
     pub(crate) fn local_address(&self) -> SocketAddr {
@@ -140,6 +145,28 @@ impl ManagedAgents {
                 "failed to release remote execution hold: status {status}"
             ))
         }
+    }
+
+    pub(crate) fn pause_remote(&self) -> RunnerResult<()> {
+        self.signal_remote("STOP", true)
+    }
+
+    pub(crate) fn resume_remote(&self) -> RunnerResult<()> {
+        self.signal_remote("CONT", false)
+    }
+
+    pub(crate) fn remote_log_tail(&self) -> RunnerResult<String> {
+        if !self.remote_prepared {
+            return Ok("remote Agent was not prepared".to_string());
+        }
+        let run_root = remote_shell_path(&self.run_root);
+        ssh_output(
+            &self.root,
+            &self.host,
+            format!(
+                "set -eu; run_root={run_root}; for file in \"$run_root\"/agent-*.log; do test -f \"$file\" || continue; printf '== %s ==\\n' \"$(basename \"$file\")\"; tail -n 40 \"$file\"; done"
+            ),
+        )
     }
 
     pub(crate) fn restart_remote(&mut self) -> RunnerResult<()> {
@@ -282,15 +309,23 @@ impl ManagedAgents {
 
     fn start_remote_with_port_selection(&mut self, seed: u16) -> RunnerResult<()> {
         let first_port = 46_000 + seed % 12_000;
+        let mut last_error = "no remote Agent start attempt completed".to_string();
         for offset in 0..8_u16 {
             let port = first_port + offset;
-            if self.start_remote(port).is_ok() {
-                self.remote_port = Some(port);
-                return Ok(());
+            match self.start_remote(port) {
+                Ok(()) => {
+                    self.remote_port = Some(port);
+                    return Ok(());
+                }
+                Err(error) => last_error = error,
             }
-            let _ = self.stop_remote();
+            self.stop_remote().map_err(|cleanup| {
+                format!("{last_error}; failed to clean partial Agent start: {cleanup}")
+            })?;
         }
-        Err("could not allocate an isolated remote Agent port".to_string())
+        Err(format!(
+            "could not allocate an isolated remote Agent port: {last_error}"
+        ))
     }
 
     fn start_remote(&mut self, port: u16) -> RunnerResult<()> {
@@ -307,6 +342,24 @@ impl ManagedAgents {
         self.remote_started = true;
         Ok(())
     }
+
+    fn signal_remote(&self, signal: &str, expect_stopped: bool) -> RunnerResult<()> {
+        if !self.remote_started {
+            return Err("remote primary Agent is not running".to_string());
+        }
+        let status = ssh_status(
+            &self.root,
+            &self.host,
+            remote_signal_command(&self.run_root, signal, expect_stopped),
+        )?;
+        if status == 0 {
+            Ok(())
+        } else {
+            Err(format!(
+                "failed to send SIG{signal} to remote Agent: status {status}"
+            ))
+        }
+    }
 }
 
 fn remote_build_command(run_root: &str) -> String {
@@ -320,7 +373,7 @@ fn remote_start_command(run_root: &str, remote_ip: Ipv4Addr, port: u16, generati
     let run_root = remote_shell_path(run_root);
     let advertise_host = shell_escape(&remote_ip.to_string());
     format!(
-        "set -eu; umask 077; run_root={run_root}; test -x \"$run_root/kyuubiki-agent\"; rm -f \"$run_root/agent.pid\"; KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_FILE=\"$run_root/execution.hold\" nohup \"$run_root/kyuubiki-agent\" agent --host 0.0.0.0 --port {port} --agent-id {REMOTE_AGENT_ID} --advertise-host {advertise_host} --watchdog-scan-interval-ms 250 --watchdog-stale-execution-ms 10000 >\"$run_root/agent-{generation}.log\" 2>&1 </dev/null & pid=$!; printf '%s\\n' \"$pid\" >\"$run_root/agent.pid\"; sleep 1; kill -0 \"$pid\"; test \"$(readlink -f \"/proc/$pid/exe\")\" = \"$run_root/kyuubiki-agent\""
+        "set -eu; umask 077; run_root={run_root}; run_root=$(readlink -f \"$run_root\"); test -x \"$run_root/kyuubiki-agent\"; rm -f \"$run_root/agent.pid\"; KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_FILE=\"$run_root/execution.hold\" nohup \"$run_root/kyuubiki-agent\" agent --host 0.0.0.0 --port {port} --agent-id {REMOTE_AGENT_ID} --advertise-host {advertise_host} --watchdog-scan-interval-ms 250 --watchdog-stale-execution-ms 10000 >\"$run_root/agent-{generation}.log\" 2>&1 </dev/null & pid=$!; printf '%s\\n' \"$pid\" >\"$run_root/agent.pid\"; sleep 1; kill -0 \"$pid\"; test \"$(readlink -f \"/proc/$pid/exe\")\" = \"$run_root/kyuubiki-agent\""
     )
 }
 
@@ -335,7 +388,7 @@ fn remote_hold_command(run_root: &str, job_id: &str) -> String {
 fn remote_alive_command(run_root: &str) -> String {
     let run_root = remote_shell_path(run_root);
     format!(
-        "set -eu; run_root={run_root}; pid=$(cat \"$run_root/agent.pid\"); case \"$pid\" in ''|*[!0-9]*) exit 2 ;; esac; kill -0 \"$pid\"; test \"$(readlink -f \"/proc/$pid/exe\")\" = \"$run_root/kyuubiki-agent\""
+        "set -eu; run_root={run_root}; run_root=$(readlink -f \"$run_root\"); pid=$(cat \"$run_root/agent.pid\"); case \"$pid\" in ''|*[!0-9]*) exit 2 ;; esac; kill -0 \"$pid\"; test \"$(readlink -f \"/proc/$pid/exe\")\" = \"$run_root/kyuubiki-agent\""
     )
 }
 
@@ -343,7 +396,19 @@ fn remote_stop_command(run_root: &str, require_running: bool) -> String {
     let run_root = remote_shell_path(run_root);
     let missing_status = if require_running { "exit 3" } else { "exit 0" };
     format!(
-        "set -eu; run_root={run_root}; if test ! -f \"$run_root/agent.pid\"; then {missing_status}; fi; pid=$(cat \"$run_root/agent.pid\"); case \"$pid\" in ''|*[!0-9]*) exit 2 ;; esac; if ! kill -0 \"$pid\" 2>/dev/null; then rm -f \"$run_root/agent.pid\"; {missing_status}; fi; actual=$(readlink -f \"/proc/$pid/exe\" || true); test \"$actual\" = \"$run_root/kyuubiki-agent\"; kill \"$pid\"; count=0; while kill -0 \"$pid\" 2>/dev/null && test \"$count\" -lt 50; do sleep 0.1; count=$((count + 1)); done; if kill -0 \"$pid\" 2>/dev/null; then kill -9 \"$pid\"; fi; rm -f \"$run_root/agent.pid\""
+        "set -eu; run_root={run_root}; run_root=$(readlink -f \"$run_root\"); if test ! -f \"$run_root/agent.pid\"; then {missing_status}; fi; pid=$(cat \"$run_root/agent.pid\"); case \"$pid\" in ''|*[!0-9]*) exit 2 ;; esac; if ! kill -0 \"$pid\" 2>/dev/null; then rm -f \"$run_root/agent.pid\"; {missing_status}; fi; actual=$(readlink -f \"/proc/$pid/exe\" || true); test \"$actual\" = \"$run_root/kyuubiki-agent\"; kill \"$pid\"; count=0; while kill -0 \"$pid\" 2>/dev/null && test \"$count\" -lt 50; do sleep 0.1; count=$((count + 1)); done; if kill -0 \"$pid\" 2>/dev/null; then kill -9 \"$pid\"; fi; rm -f \"$run_root/agent.pid\""
+    )
+}
+
+fn remote_signal_command(run_root: &str, signal: &str, expect_stopped: bool) -> String {
+    let run_root = remote_shell_path(run_root);
+    let expected = if expect_stopped {
+        "test \"$state\" = T -o \"$state\" = t"
+    } else {
+        "test \"$state\" != T -a \"$state\" != t"
+    };
+    format!(
+        "set -eu; run_root={run_root}; run_root=$(readlink -f \"$run_root\"); pid=$(cat \"$run_root/agent.pid\"); case \"$pid\" in ''|*[!0-9]*) exit 2 ;; esac; test \"$(readlink -f \"/proc/$pid/exe\")\" = \"$run_root/kyuubiki-agent\"; kill -{signal} \"$pid\"; count=0; while test \"$count\" -lt 50; do state=$(awk '/^State:/ {{print $2}}' \"/proc/$pid/status\"); if {expected}; then exit 0; fi; sleep 0.02; count=$((count + 1)); done; exit 3"
     )
 }
 
@@ -355,6 +420,7 @@ mod tests {
     fn cleanup_is_scoped_to_managed_remote_root() {
         let command = remote_stop_command("~/.kyuubiki/lab-runs/recovery-test", false);
         assert!(command.contains("readlink -f"));
+        assert!(command.contains("run_root=$(readlink -f"));
         assert!(command.contains("$run_root/kyuubiki-agent"));
         assert!(!command.contains("pkill"));
         let hold = remote_hold_command(
@@ -363,5 +429,9 @@ mod tests {
         );
         assert!(hold.contains("execution.hold"));
         assert!(!hold.contains("pkill"));
+        let pause = remote_signal_command("~/.kyuubiki/lab-runs/recovery-test", "STOP", true);
+        assert!(pause.contains("readlink -f"));
+        assert!(pause.contains("kill -STOP"));
+        assert!(!pause.contains("pkill"));
     }
 }

@@ -7,10 +7,10 @@ import { promisify } from "node:util";
 import test from "node:test";
 
 const execFileAsync = promisify(execFile);
-const scriptPath = path.resolve("scripts/build-benchmark-profile-index.mjs");
+const entrypointPath = path.resolve("scripts/kyuubiki");
 
 async function runIndex(root) {
-  await execFileAsync(process.execPath, [scriptPath, "--root", root], {
+  await execFileAsync(entrypointPath, ["build-benchmark-profile-index", "--root", root], {
     cwd: path.resolve("."),
   });
   return JSON.parse(await readFile(path.join(root, "index.json"), "utf8"));
@@ -18,8 +18,8 @@ async function runIndex(root) {
 
 async function runIndexWithCoverage(root, coverageTargets) {
   await execFileAsync(
-    process.execPath,
-    [scriptPath, "--root", root, "--coverage-targets", coverageTargets],
+    entrypointPath,
+    ["build-benchmark-profile-index", "--root", root, "--coverage-targets", coverageTargets],
     { cwd: path.resolve(".") },
   );
   return JSON.parse(await readFile(path.join(root, "index.json"), "utf8"));
@@ -28,8 +28,8 @@ async function runIndexWithCoverage(root, coverageTargets) {
 async function runIndexExpectFailure(root, coverageTargets) {
   await assert.rejects(
     execFileAsync(
-      process.execPath,
-      [scriptPath, "--root", root, "--coverage-targets", coverageTargets],
+      entrypointPath,
+      ["build-benchmark-profile-index", "--root", root, "--coverage-targets", coverageTargets],
       { cwd: path.resolve(".") },
     ),
   );
@@ -49,6 +49,17 @@ test("benchmark profile index reports pass for a valid retained summary", async 
       total_median_ms: 121496.497537,
       peak_rss_mib: 1625.7890625,
       slowest_case: "thermal-plane-triangle-400k",
+      case_ids: [
+        "thermal-bar-400k",
+        "thermal-truss-2d-400k",
+        "thermal-truss-3d-400k",
+        "thermal-plane-triangle-400k",
+        "thermal-plane-quad-400k",
+        "frame-2d-400k",
+        "frame-3d-400k",
+        "thermal-frame-2d-400k",
+        "thermal-frame-3d-400k",
+      ],
     })}\n`,
   );
 
@@ -295,7 +306,8 @@ test("benchmark profile index accepts a custom coverage manifest", async () => {
 
   const index = await runIndexWithCoverage(root, manifestPath);
 
-  assert.equal(index.coverage_targets_manifest, path.relative(path.resolve("."), manifestPath));
+  assert.equal(index.coverage_targets_manifest, manifestPath);
+  assert.equal(path.isAbsolute(index.coverage_targets_manifest), true);
   assert.equal(index.coverage_summaries[0].matrix, "fluid-core");
   assert.equal(index.coverage_summaries[0].covered_case_count, 1);
   assert.deepEqual(index.coverage_summaries[0].missing_cases, ["pipe-flow-400k"]);

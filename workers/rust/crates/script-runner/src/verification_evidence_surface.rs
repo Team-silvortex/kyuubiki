@@ -136,7 +136,27 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
     )?;
     assert_includes(
         &string_array_at(surface, "/runtime_api/stable_commands"),
+        "./scripts/kyuubiki check-fleet-scheduling-operational-qualification",
+        "stable command",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/stable_commands"),
+        "./scripts/kyuubiki check-agent-rolling-replacement-operational-qualification",
+        "stable command",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/stable_commands"),
         "./scripts/kyuubiki check-installed-runtime-operational-qualification",
+        "stable command",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/stable_commands"),
+        "./scripts/kyuubiki check-installed-runtime-macos-operational-qualification",
+        "stable command",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/stable_commands"),
+        "./scripts/kyuubiki check-linux-host-power-loss-qualification",
         "stable command",
     )?;
     assert_includes(
@@ -201,7 +221,22 @@ fn assert_surface(root: &Path, surface: &Value) -> RunnerResult<()> {
     )?;
     assert_includes(
         &string_array_at(surface, "/runtime_api/generated_artifacts"),
+        "tmp/fleet-scheduling-operational-qualification.json",
+        "generated artifact",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/generated_artifacts"),
         "tmp/installed-runtime-operational-qualification.json",
+        "generated artifact",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/generated_artifacts"),
+        "tmp/installed-runtime-macos-operational-qualification.json",
+        "generated artifact",
+    )?;
+    assert_includes(
+        &string_array_at(surface, "/runtime_api/generated_artifacts"),
+        "tmp/linux-host-power-loss-operational-qualification.json",
         "generated artifact",
     )?;
     assert_includes(

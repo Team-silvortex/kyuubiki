@@ -1,20 +1,58 @@
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system_with_prescribed, solve_spd_system,
+    PreparedSpdSolver, SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
 };
 use crate::transient_heat_bar_1d_validation::validate_request;
+use crate::transient_history::TransientHistoryPlan;
 use kyuubiki_protocol::{
     HeatBar1dElementResult, HeatBar1dNodeResult, SolveTransientHeatBar1dRequest,
     SolveTransientHeatBar1dResult, TransientHeatBar1dElementInput, TransientHeatBar1dStepResult,
 };
+use std::borrow::Cow;
 
 pub fn solve_transient_heat_bar_1d(
     request: &SolveTransientHeatBar1dRequest,
 ) -> Result<SolveTransientHeatBar1dResult, String> {
-    validate_request(request)?;
+    solve_transient_heat_bar_1d_internal(Cow::Borrowed(request))
+}
 
-    let node_count = request.nodes.len();
-    let conductance = assemble_conductance(request);
-    let capacity = lumped_capacity(request);
+pub fn solve_transient_heat_bar_1d_owned(
+    request: SolveTransientHeatBar1dRequest,
+) -> Result<SolveTransientHeatBar1dResult, String> {
+    solve_transient_heat_bar_1d_internal(Cow::Owned(request))
+}
+
+fn solve_transient_heat_bar_1d_internal(
+    request: Cow<'_, SolveTransientHeatBar1dRequest>,
+) -> Result<SolveTransientHeatBar1dResult, String> {
+    validate_request(request.as_ref())?;
+    let history_plan = TransientHistoryPlan::new(
+        "transient heat bar",
+        request.nodes.len(),
+        request.steps,
+        request.history_stride,
+        1,
+    )?;
+
+    let capacity = lumped_capacity(request.as_ref())?;
+    let capacity_rate = capacity
+        .iter()
+        .enumerate()
+        .map(|(index, value)| {
+            let rate = value / request.time_step;
+            if rate.is_finite() {
+                Ok(rate)
+            } else {
+                Err(format!(
+                    "transient heat bar node {index} produces non-finite capacity rate"
+                ))
+            }
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut system = assemble_conductance(request.as_ref())?;
+    for (index, value) in capacity_rate.iter().enumerate() {
+        add_at(&mut system, index, index, *value);
+    }
+
     let heat_load = request
         .nodes
         .iter()
@@ -26,31 +64,32 @@ pub fn solve_transient_heat_bar_1d(
         .enumerate()
         .filter_map(|(index, node)| node.fix_temperature.then_some((index, node.temperature)))
         .collect::<Vec<_>>();
+    let (reduced_system, reduced_base_rhs, free) =
+        reduce_sparse_system_with_prescribed(&system, &heat_load, &prescribed);
+    let solver = PreparedSpdSolver::factor(reduced_system)
+        .map_err(|error| format!("transient heat bar effective system failed: {error}"))?;
+
     let mut temperatures = request
         .nodes
         .iter()
         .map(|node| node.temperature)
         .collect::<Vec<_>>();
-    let mut history = Vec::with_capacity(request.steps + 1);
-
-    history.push(step_result(0, 0.0, &temperatures, &capacity));
+    let mut history = Vec::new();
+    history
+        .try_reserve_exact(history_plan.frame_count())
+        .map_err(|_| "transient heat bar history allocation is too large".to_string())?;
+    history.push(step_result(0, 0.0, &temperatures, &capacity)?);
     for step in 1..=request.steps {
-        let mut system = SparseMatrix::new(node_count);
-        let mut rhs = vec![0.0; node_count];
-
-        for row in 0..node_count {
-            add_at(&mut system, row, row, capacity[row] / request.time_step);
-            rhs[row] = capacity[row] * temperatures[row] / request.time_step + heat_load[row];
+        let mut rhs = reduced_base_rhs.clone();
+        for (reduced_index, &dof) in free.iter().enumerate() {
+            rhs[reduced_index] += capacity_rate[dof] * temperatures[dof];
         }
-        for (row, row_conductance) in conductance.iter().enumerate() {
-            for &(column, value) in row_conductance {
-                add_at(&mut system, row, column, value);
-            }
+        if rhs.iter().any(|value| !value.is_finite()) {
+            return Err("transient heat bar right-hand side became non-finite".to_string());
         }
-
-        let (reduced_system, reduced_rhs, free) =
-            reduce_sparse_system_with_prescribed(&system, &rhs, &prescribed);
-        let solution = solve_spd_system(&reduced_system, &reduced_rhs)?;
+        let solution = solver
+            .solve(&rhs)
+            .map_err(|error| format!("transient heat bar implicit solve failed: {error}"))?;
         for (index, &dof) in free.iter().enumerate() {
             temperatures[dof] = solution[index];
         }
@@ -58,30 +97,33 @@ pub fn solve_transient_heat_bar_1d(
             temperatures[dof] = value;
         }
 
-        history.push(step_result(
-            step,
-            step as f64 * request.time_step,
-            &temperatures,
-            &capacity,
-        ));
+        if history_plan.captures(step, request.steps) {
+            history.push(step_result(
+                step,
+                checked_time(step, request.time_step)?,
+                &temperatures,
+                &capacity,
+            )?);
+        }
     }
 
-    let nodes = final_nodes(request, &temperatures);
-    let elements = final_elements(request, &temperatures);
+    let nodes = final_nodes(request.as_ref(), &temperatures);
+    let elements = final_elements(request.as_ref(), &temperatures)?;
     let max_heat_flux = elements
         .iter()
         .map(|element| element.heat_flux.abs())
         .fold(0.0_f64, f64::max);
-    let total_thermal_energy = thermal_energy(&temperatures, &capacity);
+    let total_thermal_energy = thermal_energy(&temperatures, &capacity)?;
+    let final_time = checked_time(request.steps, request.time_step)?;
 
     Ok(SolveTransientHeatBar1dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         max_temperature: temperatures
             .iter()
             .map(|value| value.abs())
             .fold(0.0, f64::max),
         max_heat_flux,
-        final_time: request.steps as f64 * request.time_step,
+        final_time,
         total_thermal_energy,
         nodes,
         elements,
@@ -89,28 +131,47 @@ pub fn solve_transient_heat_bar_1d(
     })
 }
 
-fn assemble_conductance(request: &SolveTransientHeatBar1dRequest) -> Vec<Vec<(usize, f64)>> {
-    let mut rows = vec![Vec::<(usize, f64)>::new(); request.nodes.len()];
+fn assemble_conductance(request: &SolveTransientHeatBar1dRequest) -> Result<SparseMatrix, String> {
+    let mut matrix = SparseMatrix::with_uniform_row_capacity(request.nodes.len(), 3);
     for element in &request.elements {
         let length = element_length(request, element);
         let value = element.conductivity * element.area / length;
-        add_dense_entry(&mut rows, element.node_i, element.node_i, value);
-        add_dense_entry(&mut rows, element.node_i, element.node_j, -value);
-        add_dense_entry(&mut rows, element.node_j, element.node_i, -value);
-        add_dense_entry(&mut rows, element.node_j, element.node_j, value);
+        if !value.is_finite() {
+            return Err(format!(
+                "transient heat bar element {} produces non-finite conductance",
+                element.id
+            ));
+        }
+        add_two_node_matrix(&mut matrix, element.node_i, element.node_j, value);
     }
-    rows
+    Ok(matrix)
 }
 
-fn lumped_capacity(request: &SolveTransientHeatBar1dRequest) -> Vec<f64> {
+fn add_two_node_matrix(matrix: &mut SparseMatrix, node_i: usize, node_j: usize, value: f64) {
+    add_at(matrix, node_i, node_i, value);
+    add_at(matrix, node_i, node_j, -value);
+    add_at(matrix, node_j, node_i, -value);
+    add_at(matrix, node_j, node_j, value);
+}
+
+fn lumped_capacity(request: &SolveTransientHeatBar1dRequest) -> Result<Vec<f64>, String> {
     let mut capacity = vec![0.0; request.nodes.len()];
     for element in &request.elements {
         let length = element_length(request, element);
-        let mass_heat_capacity = element.density * element.specific_heat * element.area * length;
-        capacity[element.node_i] += 0.5 * mass_heat_capacity;
-        capacity[element.node_j] += 0.5 * mass_heat_capacity;
+        let value = 0.5 * element.density * element.specific_heat * element.area * length;
+        if !(value.is_finite() && value > 0.0) {
+            return Err(format!(
+                "transient heat bar element {} produces invalid lumped capacity",
+                element.id
+            ));
+        }
+        capacity[element.node_i] += value;
+        capacity[element.node_j] += value;
     }
-    capacity
+    if capacity.iter().any(|value| !value.is_finite()) {
+        return Err("transient heat bar assembled capacity became non-finite".to_string());
+    }
+    Ok(capacity)
 }
 
 fn final_nodes(
@@ -134,7 +195,7 @@ fn final_nodes(
 fn final_elements(
     request: &SolveTransientHeatBar1dRequest,
     temperatures: &[f64],
-) -> Vec<HeatBar1dElementResult> {
+) -> Result<Vec<HeatBar1dElementResult>, String> {
     request
         .elements
         .iter()
@@ -143,17 +204,28 @@ fn final_elements(
             let length = element_length(request, element);
             let ti = temperatures[element.node_i];
             let tj = temperatures[element.node_j];
-            let gradient = (tj - ti) / length;
-            HeatBar1dElementResult {
+            let average_temperature = 0.5 * (ti + tj);
+            let temperature_gradient = (tj - ti) / length;
+            let heat_flux = -element.conductivity * temperature_gradient;
+            if [average_temperature, temperature_gradient, heat_flux]
+                .iter()
+                .any(|value| !value.is_finite())
+            {
+                return Err(format!(
+                    "transient heat bar element {} produced a non-finite result",
+                    element.id
+                ));
+            }
+            Ok(HeatBar1dElementResult {
                 index,
                 id: element.id.clone(),
                 node_i: element.node_i,
                 node_j: element.node_j,
                 length,
-                average_temperature: 0.5 * (ti + tj),
-                temperature_gradient: gradient,
-                heat_flux: -element.conductivity * gradient,
-            }
+                average_temperature,
+                temperature_gradient,
+                heat_flux,
+            })
         })
         .collect()
 }
@@ -163,36 +235,28 @@ fn step_result(
     time: f64,
     temperatures: &[f64],
     capacity: &[f64],
-) -> TransientHeatBar1dStepResult {
-    TransientHeatBar1dStepResult {
+) -> Result<TransientHeatBar1dStepResult, String> {
+    Ok(TransientHeatBar1dStepResult {
         step,
         time,
         max_temperature: temperatures
             .iter()
             .map(|value| value.abs())
             .fold(0.0, f64::max),
-        total_thermal_energy: thermal_energy(temperatures, capacity),
+        total_thermal_energy: thermal_energy(temperatures, capacity)?,
         nodal_temperatures: temperatures.to_vec(),
-    }
+    })
 }
 
-fn thermal_energy(temperatures: &[f64], capacity: &[f64]) -> f64 {
-    temperatures
-        .iter()
-        .zip(capacity.iter())
-        .map(|(temperature, heat_capacity)| heat_capacity * temperature)
-        .sum()
-}
-
-fn add_dense_entry(rows: &mut [Vec<(usize, f64)>], row: usize, column: usize, value: f64) {
-    if let Some(entry) = rows[row]
-        .iter_mut()
-        .find(|(entry_column, _)| *entry_column == column)
-    {
-        entry.1 += value;
-    } else {
-        rows[row].push((column, value));
+fn thermal_energy(temperatures: &[f64], capacity: &[f64]) -> Result<f64, String> {
+    let mut energy = 0.0;
+    for (temperature, heat_capacity) in temperatures.iter().zip(capacity) {
+        energy += heat_capacity * temperature;
+        if !energy.is_finite() {
+            return Err("transient heat bar thermal energy became non-finite".to_string());
+        }
     }
+    Ok(energy)
 }
 
 fn element_length(
@@ -200,4 +264,13 @@ fn element_length(
     element: &TransientHeatBar1dElementInput,
 ) -> f64 {
     (request.nodes[element.node_j].x - request.nodes[element.node_i].x).abs()
+}
+
+fn checked_time(step: usize, time_step: f64) -> Result<f64, String> {
+    let time = step as f64 * time_step;
+    if time.is_finite() {
+        Ok(time)
+    } else {
+        Err("transient heat bar simulation time became non-finite".to_string())
+    }
 }

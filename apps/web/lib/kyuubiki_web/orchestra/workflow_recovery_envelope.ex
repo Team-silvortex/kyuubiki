@@ -26,13 +26,15 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
   def new(graph, input_artifacts, orchestration_context, response_options)
       when is_map(graph) and is_map(input_artifacts) and is_map(orchestration_context) and
              is_map(response_options) do
-    envelope = %{
-      "schema_version" => @envelope_schema,
-      "graph" => graph,
-      "input_artifacts" => input_artifacts,
-      "orchestration_context" => orchestration_context,
-      "response_options" => response_options
-    }
+    envelope =
+      %{
+        "schema_version" => @envelope_schema,
+        "graph" => graph,
+        "input_artifacts" => input_artifacts,
+        "orchestration_context" => orchestration_context,
+        "response_options" => response_options
+      }
+      |> normalize_json_numbers()
 
     {retry_safety, checkpoint} = recovery_policy(graph)
     now = timestamp()
@@ -345,6 +347,22 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
     do: Enum.map(value, &canonical_json_value/1)
 
   defp canonical_json_value(value), do: value
+
+  # PostgreSQL jsonb treats integral floats and integers as the same JSON number.
+  # Normalize before hashing so a durable round trip cannot invalidate the envelope.
+  defp normalize_json_numbers(value) when is_map(value) do
+    Map.new(value, fn {key, nested} -> {key, normalize_json_numbers(nested)} end)
+  end
+
+  defp normalize_json_numbers(value) when is_list(value),
+    do: Enum.map(value, &normalize_json_numbers/1)
+
+  defp normalize_json_numbers(value) when is_float(value) do
+    integer = trunc(value)
+    if value == integer, do: integer, else: value
+  end
+
+  defp normalize_json_numbers(value), do: value
 
   defp valid_digest?(digest), do: Regex.match?(~r/\A[0-9a-f]{64}\z/, digest)
   defp timestamp, do: DateTime.utc_now(:second) |> DateTime.to_iso8601()

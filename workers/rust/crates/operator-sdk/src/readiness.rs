@@ -1,4 +1,7 @@
-use crate::{OPERATOR_PACKAGE_SCHEMA_VERSION, OPERATOR_SDK_API_VERSION, OperatorPackageManifest};
+use crate::{
+    OPERATOR_JSON_ABI_SCHEMA_VERSION, OPERATOR_PACKAGE_SCHEMA_VERSION, OPERATOR_SDK_API_VERSION,
+    OperatorPackageManifest,
+};
 use kyuubiki_protocol::{
     OperatorDescriptor, OperatorKind, OperatorPortDescriptor, OperatorValidationStatus,
 };
@@ -120,6 +123,17 @@ pub fn operator_package_manifest_readiness(
             format!(
                 "expected sdk_api_version {} but found {}",
                 OPERATOR_SDK_API_VERSION, manifest.sdk_api_version
+            ),
+        );
+    }
+    if manifest.execution_abi != OPERATOR_JSON_ABI_SCHEMA_VERSION {
+        push_error(
+            &mut issues,
+            "execution_abi_mismatch",
+            "manifest.execution_abi",
+            format!(
+                "expected execution_abi {} but found {}",
+                OPERATOR_JSON_ABI_SCHEMA_VERSION, manifest.execution_abi
             ),
         );
     }
@@ -441,9 +455,10 @@ mod tests {
         operator_package_descriptor_readiness, operator_package_manifest_readiness,
     };
     use crate::{
-        OPERATOR_PACKAGE_SCHEMA_VERSION, OPERATOR_SDK_API_VERSION, OperatorDescriptorBuilder,
-        OperatorPackageManifest, OperatorPackageOperatorEntry, operator_port,
-        operator_port_with_dataset, verified_validation,
+        OPERATOR_JSON_ABI_SCHEMA_VERSION, OPERATOR_PACKAGE_SCHEMA_VERSION,
+        OPERATOR_SDK_API_VERSION, OperatorDescriptorBuilder, OperatorPackageManifest,
+        OperatorPackageOperatorEntry, operator_port, operator_port_with_dataset,
+        verified_validation,
     };
     use kyuubiki_protocol::{OperatorKind, OperatorValidationStatus};
 
@@ -530,6 +545,7 @@ mod tests {
         OperatorPackageManifest {
             schema_version: OPERATOR_PACKAGE_SCHEMA_VERSION.to_string(),
             sdk_api_version: OPERATOR_SDK_API_VERSION.to_string(),
+            execution_abi: OPERATOR_JSON_ABI_SCHEMA_VERSION.to_string(),
             package_id: "operator.example.temperature_peak".to_string(),
             package_version: "0.1.0".to_string(),
             minimum_host_version: "1.15.0".to_string(),
@@ -540,7 +556,7 @@ mod tests {
             operators: vec![OperatorPackageOperatorEntry {
                 operator_id: "extract.temperature_peak".to_string(),
                 kind: "extract".to_string(),
-                entry_symbol: "register_operator".to_string(),
+                entry_symbol: "run_operator_json".to_string(),
             }],
         }
     }

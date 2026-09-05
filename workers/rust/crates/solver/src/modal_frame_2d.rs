@@ -1,18 +1,34 @@
 use crate::frame_2d_math::{frame_local_stiffness, frame_transform, transform_frame_stiffness};
 use crate::linear_algebra::{SparseMatrix, add_at};
 use crate::modal_frame_validation::validate_modal_frame_2d_request;
-use crate::modal_math::{ensure_dense_modal_size, expand_mode_shape, jacobi_eigenpairs};
+use crate::modal_math::{
+    ensure_dense_modal_size, expand_mode_shape, jacobi_eigenpairs,
+    relative_positive_eigenvalue_floor,
+};
 use crate::modal_sparse::{
     InverseIterationOptions, inverse_power_iteration, reduce_sparse_modal_system,
 };
 use kyuubiki_protocol::{
     ModalFrame2dModeResult, SolveModalFrame2dRequest, SolveModalFrame2dResult,
 };
+use std::borrow::Cow;
 
 pub fn solve_modal_frame_2d(
     request: &SolveModalFrame2dRequest,
 ) -> Result<SolveModalFrame2dResult, String> {
-    validate_modal_frame_2d_request(request)?;
+    solve_modal_frame_2d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_modal_frame_2d_owned(
+    request: SolveModalFrame2dRequest,
+) -> Result<SolveModalFrame2dResult, String> {
+    solve_modal_frame_2d_internal(Cow::Owned(request))
+}
+
+fn solve_modal_frame_2d_internal(
+    request: Cow<'_, SolveModalFrame2dRequest>,
+) -> Result<SolveModalFrame2dResult, String> {
+    validate_modal_frame_2d_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 3;
     let mut stiffness = SparseMatrix::new(dof_count);
@@ -59,7 +75,7 @@ pub fn solve_modal_frame_2d(
         }
     }
 
-    let constrained = constrained_dofs(request);
+    let constrained = constrained_dofs(request.as_ref());
     let sparse_system = reduce_sparse_modal_system(&stiffness, &mass, &constrained)?;
     let free_dofs = sparse_system.free_dofs.clone();
     let eigenpairs = if request.mode_count == Some(1) {
@@ -78,13 +94,15 @@ pub fn solve_modal_frame_2d(
         vec![(pair.eigenvalue, pair.vector)]
     } else {
         ensure_dense_modal_size(dof_count, "modal frame 2d")?;
-        jacobi_eigenpairs(sparse_system.operator.dense_fallback_matrix()?)
+        jacobi_eigenpairs(sparse_system.operator.dense_fallback_matrix()?)?
     };
     let mode_limit = request.mode_count.unwrap_or(6).max(1).min(eigenpairs.len());
+    let positive_eigenvalue_floor =
+        relative_positive_eigenvalue_floor(eigenpairs.iter().map(|(value, _)| *value));
 
     let modes = eigenpairs
         .into_iter()
-        .filter(|(eigenvalue, _)| eigenvalue.is_finite() && *eigenvalue > 1.0e-9)
+        .filter(|(eigenvalue, _)| eigenvalue.is_finite() && *eigenvalue > positive_eigenvalue_floor)
         .take(mode_limit)
         .enumerate()
         .map(|(index, (eigenvalue, vector))| {
@@ -117,7 +135,7 @@ pub fn solve_modal_frame_2d(
         .fold(0.0_f64, f64::max);
 
     Ok(SolveModalFrame2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         modes,
         free_dofs,
         total_mass,

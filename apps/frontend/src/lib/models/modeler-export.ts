@@ -35,8 +35,10 @@ import type { WorkspaceStoreManifest } from "@/lib/workbench/store-manifest";
 import {
   PROJECT_SCHEMA_VERSION,
   defaultProjectFileManifest,
-  type ProjectAssetMetaRecord,
-  type ProjectAssetReferenceRecord,
+} from "@/lib/projects/project-format-contract";
+import type {
+  ProjectAssetMetaRecord,
+  ProjectAssetReferenceRecord,
 } from "@/lib/projects/project-format";
 import { buildAnalysisMetadata } from "@/lib/models/modeler-analysis";
 import { MODEL_SCHEMA_VERSION, type StudyKind } from "@/lib/models/modeler-types";

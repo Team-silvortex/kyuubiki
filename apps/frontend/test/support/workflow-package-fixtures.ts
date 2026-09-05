@@ -30,7 +30,26 @@ export function buildImportedWorkflowPackage() {
         "transform.evaluate_diagnostics_bundle_guard",
       ],
       sample_input_node_ids: ["electrostatic_input"],
+      included_input_text_node_ids: [],
       bridge_seed_summaries: [],
+      operator_fetch_plan: [
+        {
+          operator_id: "transform.compose_diagnostics_bundle",
+          execution_mode: "orchestra_fetch",
+          source_ref: "orchestra://operator/transform.compose_diagnostics_bundle",
+          placement_tags: [],
+          required_capabilities: [],
+          cache_scope: "job",
+        },
+        {
+          operator_id: "transform.evaluate_diagnostics_bundle_guard",
+          execution_mode: "orchestra_fetch",
+          source_ref: "orchestra://operator/transform.evaluate_diagnostics_bundle_guard",
+          placement_tags: [],
+          required_capabilities: [],
+          cache_scope: "job",
+        },
+      ],
     },
     contract_manifest: {
       dataset_contract_id: "workflow.test.dataset",
@@ -51,6 +70,7 @@ export function buildImportedWorkflowPackage() {
       ],
     },
     workflow: {
+      id: "workflow.test",
       input_artifact_contract_warnings: {},
     },
   };

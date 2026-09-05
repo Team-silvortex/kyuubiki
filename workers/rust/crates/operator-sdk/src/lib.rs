@@ -1,5 +1,6 @@
 mod builder;
 mod distribution;
+mod json_abi;
 mod loader;
 mod manifest;
 #[cfg(test)]
@@ -24,6 +25,12 @@ pub use distribution::{
     OperatorDistributionError, OperatorPackageDistributionArtifact,
     OperatorPackageDistributionManifest, operator_distribution_artifact_for_target,
     read_operator_package_distribution, validate_operator_package_distribution,
+};
+pub use json_abi::{
+    MAX_OPERATOR_JSON_ABI_BYTES, OPERATOR_JSON_ABI_ERROR, OPERATOR_JSON_ABI_FREE_SYMBOL,
+    OPERATOR_JSON_ABI_INVALID_OUTPUT, OPERATOR_JSON_ABI_OK, OPERATOR_JSON_ABI_SCHEMA_VERSION,
+    OperatorJsonAbiBuffer, OperatorJsonEntrypoint, OperatorJsonFreeEntrypoint,
+    decode_operator_json_abi_response, execute_operator_json_abi, free_operator_json_abi_buffer,
 };
 pub use kyuubiki_platform::{
     LIB_EXTENSION_PLACEHOLDER, LIB_PREFIX_PLACEHOLDER, current_platform_library_extension,
@@ -55,9 +62,6 @@ pub use surface::{
     OPERATOR_SDK_SURFACE_SCHEMA_VERSION, OperatorSdkSurfaceArea, OperatorSdkSurfaceManifest,
     find_operator_sdk_surface_area, operator_sdk_surface_areas, operator_sdk_surface_manifest,
 };
-
-pub type OperatorRegistrationEntrypoint =
-    unsafe fn(&mut OperatorRegistry) -> Result<(), OperatorSdkError>;
 
 pub trait OperatorHandler: Send + Sync {
     fn descriptor(&self) -> &OperatorDescriptor;
@@ -95,13 +99,39 @@ where
     }
 
     fn run(&self, request: OperatorRunRequest) -> Result<OperatorRunResult, OperatorSdkError> {
+        let input_shape = operator_input_shape(&request.input);
         let decoded = serde_json::from_value::<T::Input>(request.input).map_err(|error| {
             OperatorSdkError::DecodeInput {
                 operator_id: request.operator_id.clone(),
-                message: error.to_string(),
+                message: format!("{error}; input_shape={input_shape}"),
             }
         })?;
         self.inner.run_typed(decoded, &request.context)
+    }
+}
+
+fn operator_input_shape(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::Object(entries) => format!(
+            "object(key_count={},payload={},config={})",
+            entries.len(),
+            json_value_kind(entries.get("payload")),
+            json_value_kind(entries.get("config"))
+        ),
+        serde_json::Value::Array(entries) => format!("array(length={})", entries.len()),
+        other => json_value_kind(Some(other)).to_string(),
+    }
+}
+
+fn json_value_kind(value: Option<&serde_json::Value>) -> &'static str {
+    match value {
+        None => "missing",
+        Some(serde_json::Value::Null) => "null",
+        Some(serde_json::Value::Bool(_)) => "boolean",
+        Some(serde_json::Value::Number(_)) => "number",
+        Some(serde_json::Value::String(_)) => "string",
+        Some(serde_json::Value::Array(_)) => "array",
+        Some(serde_json::Value::Object(_)) => "object",
     }
 }
 
@@ -365,8 +395,15 @@ mod tests {
             .expect_err("invalid input should fail");
 
         match error {
-            OperatorSdkError::DecodeInput { operator_id, .. } => {
+            OperatorSdkError::DecodeInput {
+                operator_id,
+                message,
+            } => {
                 assert_eq!(operator_id, "transform.echo_integer");
+                assert!(
+                    message
+                        .contains("input_shape=object(key_count=1,payload=missing,config=missing)")
+                );
             }
             other => panic!("unexpected error: {other}"),
         }

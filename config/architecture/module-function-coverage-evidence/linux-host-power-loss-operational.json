@@ -1,0 +1,141 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Two-phase physical Linux host reboot qualification proving durable intent, Installer-managed Agent package persistence, deterministic solver recovery, fail-closed resume, and residue-free cleanup.",
+  "paradigm_contract_evidence": {
+    "deployment_update": [
+      {
+        "id": "linux-host-power-loss-recovery-contract",
+        "modules": [
+          "runtime-installer",
+          "runtime-agent-cli",
+          "verification-evidence"
+        ],
+        "files": [
+          "config/architecture/linux-host-power-loss-qualification.json",
+          "schemas/linux-host-power-loss-qualification-contract.schema.json",
+          "schemas/linux-host-power-loss-intent.schema.json",
+          "schemas/linux-host-power-loss-qualification-report.schema.json",
+          "workers/rust/crates/installer/src/agent_solver_operational.rs",
+          "workers/rust/crates/script-runner/src/linux_host_power_loss_qualification.rs",
+          "workers/rust/crates/script-runner/src/linux_host_power_loss_qualification/state.rs",
+          "workers/rust/crates/script-runner/src/linux_host_power_loss_validation.rs",
+          "config/architecture/usability-release-gate.json"
+        ],
+        "required_text": [
+          "physical-linux-host-power-loss-recovery",
+          "create-sync-rename-directory-sync",
+          "valid-intent-marker-required",
+          "qualify-linux-host-power-loss",
+          "check-linux-host-power-loss-qualification",
+          "fault_injection_and_recovery/full-host-power-loss"
+        ]
+      }
+    ],
+    "solver_execution": [
+      {
+        "id": "linux-host-reboot-solver-continuity-contract",
+        "modules": [
+          "runtime-engine-solver",
+          "runtime-agent-cli",
+          "verification-evidence"
+        ],
+        "files": [
+          "config/architecture/linux-host-power-loss-qualification.json",
+          "schemas/linux-host-power-loss-qualification-report.schema.json",
+          "workers/rust/crates/installer/src/agent_solver_operational.rs",
+          "workers/rust/crates/script-runner/src/linux_host_power_loss_validation.rs"
+        ],
+        "required_text": [
+          "installer-managed-agent-solver-operational",
+          "pre_reboot_solver_passed",
+          "post_reboot_solver_passed",
+          "solver_result_stable",
+          "tamper_recovery_stable",
+          "watchdog_quiescent"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "physical-linux-host-power-loss-recovery",
+      "status": "proven",
+      "grade": "operational",
+      "modules": [
+        "runtime-installer",
+        "runtime-agent-cli",
+        "verification-evidence"
+      ],
+      "paradigms": [
+        "runtime_api",
+        "validation",
+        "security",
+        "deployment_update"
+      ],
+      "dimensions": [
+        "execution",
+        "security",
+        "contract",
+        "recovery"
+      ],
+      "files": [
+        "config/architecture/linux-host-power-loss-qualification.json",
+        "schemas/linux-host-power-loss-qualification-contract.schema.json",
+        "schemas/linux-host-power-loss-intent.schema.json",
+        "schemas/linux-host-power-loss-qualification-report.schema.json",
+        "workers/rust/crates/script-runner/src/linux_host_power_loss_qualification.rs",
+        "workers/rust/crates/script-runner/src/linux_host_power_loss_qualification/state.rs",
+        "workers/rust/crates/script-runner/src/linux_host_power_loss_validation.rs",
+        "releases/usability-evidence/2.19.0/linux-host-power-loss-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"status\":\"pass\"",
+        "\"journey\":\"installer-managed-agent-engine-across-host-reboot\"",
+        "\"id\":\"intent_digest_verified\"",
+        "\"boot_identity_changed\":true",
+        "\"same_machine\":true",
+        "\"sentinel_port_free_before_resume\":true",
+        "\"state_root_removed\":true",
+        "\"residue_count\":0"
+      ]
+    },
+    {
+      "id": "physical-linux-reboot-solver-continuity",
+      "status": "proven",
+      "grade": "operational",
+      "modules": [
+        "runtime-engine-solver",
+        "runtime-agent-cli",
+        "verification-evidence"
+      ],
+      "paradigms": [
+        "solver_execution"
+      ],
+      "dimensions": [
+        "execution",
+        "contract",
+        "numerical_validation",
+        "recovery",
+        "security"
+      ],
+      "files": [
+        "config/architecture/linux-host-power-loss-qualification.json",
+        "schemas/linux-host-power-loss-qualification-report.schema.json",
+        "workers/rust/crates/installer/src/agent_solver_operational.rs",
+        "workers/rust/crates/script-runner/src/linux_host_power_loss_validation.rs",
+        "releases/usability-evidence/2.19.0/linux-host-power-loss-operational-qualification.json"
+      ],
+      "required_text": [
+        "\"id\":\"pre_reboot_solver_passed\"",
+        "\"id\":\"post_reboot_solver_passed\"",
+        "\"id\":\"solver_result_stable\"",
+        "\"id\":\"tamper_recovery_stable\"",
+        "\"id\":\"watchdog_quiescent\"",
+        "\"absolute_error\":0.0",
+        "\"reason_code\":\"operator_task_digest_mismatch\"",
+        "\"active_execution_count\":0"
+      ]
+    }
+  ]
+}

@@ -52,6 +52,9 @@
       "type": "string",
       "minLength": 1
     },
+    "execution_abi": {
+      "const": "kyuubiki.operator-json-c/v1"
+    },
     "template_manifest": {
       "$ref": "#/$defs/repoPath"
     },

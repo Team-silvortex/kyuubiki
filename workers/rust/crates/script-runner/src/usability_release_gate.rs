@@ -13,6 +13,7 @@ const CONFIG_SCHEMA: &str = "kyuubiki.usability-release-gate/v1";
 const CAPABILITY_SCHEMA: &str = "kyuubiki.desktop-capability-closure/v1";
 const REPORT_SCHEMA: &str = "kyuubiki.usability-readiness-report/v1";
 const DEFAULT_OUT: &str = "tmp/usability-readiness-report.json";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Deserialize)]
 struct GateConfig {
@@ -34,6 +35,7 @@ struct Policy {
     release_claim_allowed: bool,
     closed_release_subtiers: Vec<String>,
     unclosed_release_tiers: Vec<String>,
+    open_release_subtiers: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -82,6 +84,7 @@ struct ReadinessReport {
     release_claim_allowed: bool,
     closed_release_subtiers: Vec<String>,
     unclosed_release_tiers: Vec<String>,
+    open_release_subtiers: Vec<String>,
     executed: bool,
     status: String,
     summary: Summary,
@@ -97,6 +100,7 @@ struct Summary {
     planned_count: usize,
     unique_probe_count: usize,
     unique_operational_probe_count: usize,
+    open_release_subtier_count: usize,
 }
 
 #[derive(Default)]
@@ -171,8 +175,19 @@ fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
     if config.schema_version != CONFIG_SCHEMA {
         return Err(format!("schema_version must be {CONFIG_SCHEMA}"));
     }
-    if config.baseline_release != "moxi 2.15.x" || config.target_release != "daji 3.0.0" {
-        return Err("usability gate must describe the moxi 2.15.x to daji 3.0.0 line".to_string());
+    let brand: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(root.join("assets/brand/brand.json"))
+            .map_err(|error| format!("failed to read product brand: {error}"))?,
+    )
+    .map_err(|error| format!("invalid product brand: {error}"))?;
+    let codename = brand["releaseCodename"]
+        .as_str()
+        .ok_or("missing releaseCodename")?;
+    let expected_baseline = baseline_release_for(VERSION, codename)?;
+    if config.baseline_release != expected_baseline || config.target_release != "daji 3.0.0" {
+        return Err(format!(
+            "usability gate must describe the {expected_baseline} to daji 3.0.0 line"
+        ));
     }
     if !config.policy.all_blocking_journeys_must_pass
         || !config.policy.planned_or_static_only_is_not_release_evidence
@@ -183,12 +198,7 @@ fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
     if config.policy.gate_scope.trim().is_empty() {
         return Err("usability gate scope must be explicit".to_string());
     }
-    if config.policy.release_claim_allowed != config.policy.unclosed_release_tiers.is_empty() {
-        return Err(
-            "release_claim_allowed must be true only when no release tiers remain unclosed"
-                .to_string(),
-        );
-    }
+    validate_release_tier_policy(&config.policy)?;
     if config.policy.closed_release_subtiers.is_empty()
         || config
             .policy
@@ -244,6 +254,7 @@ fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
             if probe.is_empty() || probe[0].trim().is_empty() {
                 return Err(format!("journey {} contains an empty probe", journey.id));
             }
+            validate_retained_probe(root, &journey.id, probe)?;
         }
         if config.policy.planned_or_static_only_is_not_release_evidence
             && !journey
@@ -260,6 +271,91 @@ fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
     validate_source_guards(root, &config.source_guards)
 }
 
+fn validate_release_tier_policy(policy: &Policy) -> RunnerResult<()> {
+    let unclosed = policy
+        .unclosed_release_tiers
+        .iter()
+        .map(String::as_str)
+        .collect::<BTreeSet<_>>();
+    let closed = policy
+        .closed_release_subtiers
+        .iter()
+        .map(String::as_str)
+        .collect::<BTreeSet<_>>();
+    let open = policy
+        .open_release_subtiers
+        .iter()
+        .map(String::as_str)
+        .collect::<BTreeSet<_>>();
+    if unclosed.len() != policy.unclosed_release_tiers.len()
+        || closed.len() != policy.closed_release_subtiers.len()
+        || open.len() != policy.open_release_subtiers.len()
+    {
+        return Err("release tier ids must be unique".to_string());
+    }
+    if policy.release_claim_allowed != (unclosed.is_empty() && open.is_empty()) {
+        return Err(
+            "release_claim_allowed must be true only when no release tiers or subtiers remain open"
+                .to_string(),
+        );
+    }
+    if !closed.is_disjoint(&open) {
+        return Err("release subtiers cannot be both closed and open".to_string());
+    }
+    let mut represented_parents = BTreeSet::new();
+    for subtier in &open {
+        let (parent, child) = subtier
+            .split_once('/')
+            .ok_or_else(|| format!("open release subtier must use parent/child: {subtier}"))?;
+        if parent.is_empty() || child.is_empty() || !unclosed.contains(parent) {
+            return Err(format!(
+                "open release subtier {subtier} must belong to an unclosed parent tier"
+            ));
+        }
+        represented_parents.insert(parent);
+    }
+    if represented_parents != unclosed {
+        return Err(
+            "every unclosed release tier must expose at least one open subtier".to_string(),
+        );
+    }
+    Ok(())
+}
+
+fn baseline_release_for(version: &str, codename: &str) -> RunnerResult<String> {
+    let (minor_line, patch) = version
+        .rsplit_once('.')
+        .ok_or_else(|| format!("package version must use major.minor.patch: {version}"))?;
+    if patch.is_empty()
+        || minor_line.split('.').count() != 2
+        || minor_line.split('.').any(|part| part.is_empty())
+    {
+        return Err(format!(
+            "package version must use major.minor.patch: {version}"
+        ));
+    }
+    Ok(format!("{codename} {minor_line}.x"))
+}
+
+fn validate_retained_probe(root: &Path, journey_id: &str, probe: &[String]) -> RunnerResult<()> {
+    if probe.first().map(String::as_str) != Some("desktop-packaged-smoke") {
+        return Ok(());
+    }
+    let Some(index) = probe
+        .iter()
+        .position(|argument| argument == "--verify-report")
+    else {
+        return Ok(());
+    };
+    let relative = probe
+        .get(index + 1)
+        .ok_or_else(|| format!("journey {journey_id} --verify-report requires a path"))?;
+    let path = repo_path(root, relative)?;
+    crate::packaged_desktop_smoke::verify_retained_report(&path).map_err(|error| {
+        format!("journey {journey_id} retained packaged desktop evidence is invalid: {error}")
+    })
+}
+
 fn is_operational_probe(probe: &[String]) -> bool {
     let Some(command) = probe.first().map(String::as_str) else {
         return false;
@@ -274,6 +370,9 @@ fn is_operational_probe(probe: &[String]) -> bool {
         | "check-runtime-recovery-fault-injection" => has("--out"),
         "check-agent-update-operational-qualification"
         | "check-desktop-ui-validation"
+        | "check-fleet-scheduling-operational-qualification"
+        | "check-fleet-update-operational-qualification"
+        | "check-installed-runtime-macos-operational-qualification"
         | "check-installed-runtime-operational-qualification"
         | "check-runtime-payload-operational-qualification"
         | "desktop-packaged-smoke" => has("--verify-report"),
@@ -386,6 +485,7 @@ fn build_report(config: &GateConfig, execute: bool) -> RunnerResult<ReadinessRep
         release_claim_allowed: config.policy.release_claim_allowed,
         closed_release_subtiers: config.policy.closed_release_subtiers.clone(),
         unclosed_release_tiers: config.policy.unclosed_release_tiers.clone(),
+        open_release_subtiers: config.policy.open_release_subtiers.clone(),
         executed: execute,
         status: status.to_string(),
         summary: Summary {
@@ -413,6 +513,7 @@ fn build_report(config: &GateConfig, execute: bool) -> RunnerResult<ReadinessRep
                 .map(|probe| probe.join("\u{1f}"))
                 .collect::<BTreeSet<_>>()
                 .len(),
+            open_release_subtier_count: config.policy.open_release_subtiers.len(),
         },
         journeys,
     })
@@ -539,7 +640,30 @@ fn run_self_test() -> RunnerResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{JourneyResult, count_status, is_operational_probe, truncate};
+    use std::path::Path;
+
+    use super::{
+        JourneyResult, Policy, baseline_release_for, count_status, is_operational_probe, truncate,
+        validate_release_tier_policy, validate_retained_probe,
+    };
+
+    fn release_policy(
+        release_claim_allowed: bool,
+        closed: &[&str],
+        unclosed: &[&str],
+        open: &[&str],
+    ) -> Policy {
+        Policy {
+            all_blocking_journeys_must_pass: true,
+            planned_or_static_only_is_not_release_evidence: true,
+            production_runtime_must_be_native: true,
+            gate_scope: "test".to_string(),
+            release_claim_allowed,
+            closed_release_subtiers: closed.iter().map(|value| value.to_string()).collect(),
+            unclosed_release_tiers: unclosed.iter().map(|value| value.to_string()).collect(),
+            open_release_subtiers: open.iter().map(|value| value.to_string()).collect(),
+        }
+    }
 
     #[test]
     fn counts_planned_journeys() {
@@ -574,5 +698,68 @@ mod tests {
             "--profile".to_string(),
             "line-field-closed-form".to_string(),
         ]));
+    }
+
+    #[test]
+    fn rejects_retained_desktop_probe_without_report_path() {
+        let error = validate_retained_probe(
+            Path::new("/repo"),
+            "create-open-project",
+            &[
+                "desktop-packaged-smoke".to_string(),
+                "--verify-report".to_string(),
+            ],
+        )
+        .expect_err("missing retained report path should fail");
+        assert!(error.contains("--verify-report requires a path"));
+    }
+
+    #[test]
+    fn derives_current_minor_release_baseline() {
+        assert_eq!(
+            baseline_release_for("3.0.0", "daji").expect("valid version"),
+            "daji 3.0.x"
+        );
+        assert!(baseline_release_for("3.0", "daji").is_err());
+    }
+
+    #[test]
+    fn accepts_open_subtiers_that_cover_every_unclosed_parent() {
+        let policy = release_policy(
+            false,
+            &["desktop/macos"],
+            &["desktop", "recovery"],
+            &["desktop/windows", "recovery/power-loss"],
+        );
+        validate_release_tier_policy(&policy).expect("well-formed policy should pass");
+    }
+
+    #[test]
+    fn rejects_open_subtiers_without_an_unclosed_parent() {
+        let policy = release_policy(false, &[], &["desktop"], &["recovery/power-loss"]);
+        let error = validate_release_tier_policy(&policy)
+            .expect_err("orphaned open subtier should fail validation");
+        assert!(error.contains("must belong to an unclosed parent tier"));
+    }
+
+    #[test]
+    fn rejects_unclosed_parents_without_a_concrete_open_subtier() {
+        let policy = release_policy(false, &[], &["desktop", "recovery"], &["desktop/windows"]);
+        let error = validate_release_tier_policy(&policy)
+            .expect_err("every unclosed parent should expose concrete work");
+        assert!(error.contains("every unclosed release tier"));
+    }
+
+    #[test]
+    fn rejects_subtiers_marked_open_and_closed() {
+        let policy = release_policy(
+            false,
+            &["desktop/windows"],
+            &["desktop"],
+            &["desktop/windows"],
+        );
+        let error = validate_release_tier_policy(&policy)
+            .expect_err("a subtier cannot be open and closed simultaneously");
+        assert!(error.contains("both closed and open"));
     }
 }

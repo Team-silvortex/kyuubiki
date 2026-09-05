@@ -5,19 +5,38 @@ use crate::{
     build_material_exploration_next_round_plan, material_reliability_summary,
     material_validation_quality_gate, validate_material_research_bundle,
 };
-use serde_json::json;
+use serde_json::{Value, json};
 
 #[test]
 fn validation_gate_drives_next_round_plan_and_bundle_consistency() {
     let validation = json!({
         "validation_contract": "kyuubiki.summary_tolerance_validation/v1",
         "validation_passed": false,
+        "validation_checked_field_count": 1,
         "validation_failed_field_count": 1,
         "validation_missing_field_count": 0,
         "validation_fail_on_missing": true,
         "validation_failures": [{ "field": "peak_temperature_c" }],
         "validation_missing_fields": []
     });
+    assert_validation_repair_flow(validation);
+}
+
+#[test]
+fn unverifiable_success_routes_to_repair_instead_of_advancing_research() {
+    for (checked, failed) in [(0, 0), (1, 1)] {
+        assert_validation_repair_flow(json!({
+            "validation_contract": "kyuubiki.summary_tolerance_validation/v1",
+            "validation_passed": true,
+            "validation_checked_field_count": checked,
+            "validation_failed_field_count": failed,
+            "validation_missing_field_count": 0,
+            "validation_fail_on_missing": false,
+        }));
+    }
+}
+
+fn assert_validation_repair_flow(validation: Value) {
     let validation_gate = material_validation_quality_gate(&validation).expect("validation gate");
     let quality_gates = vec![validation_gate];
     let reliability_summary = material_reliability_summary(&quality_gates);

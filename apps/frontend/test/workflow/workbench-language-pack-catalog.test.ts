@@ -5,7 +5,7 @@ import path from "node:path";
 
 import {
   buildWorkbenchLanguagePackCatalogRows,
-  getBuiltinWorkbenchLanguagePack,
+  loadBuiltinWorkbenchLanguagePack,
   WORKBENCH_MAINSTREAM_LANGUAGE_PACK_LOCALES,
 } from "../../src/components/workbench/workbench-language-pack-catalog.ts";
 import {
@@ -93,21 +93,36 @@ test("workbench language pack catalog localizes readiness labels", () => {
   assert.match(buildWorkbenchLanguagePackCatalogRows("en")[0]?.status ?? "", /local import/);
 });
 
-test("workbench built-in support packs expose installable downloaded payloads", () => {
-  const french = getBuiltinWorkbenchLanguagePack("workbench-fr-core-2.0");
-  const korean = getBuiltinWorkbenchLanguagePack("workbench-ko-core-2.0");
-  const traditionalChinese = getBuiltinWorkbenchLanguagePack("workbench-zh-tw-core-2.0");
+test("workbench built-in support packs expose installable downloaded payloads", async () => {
+  const french = await loadBuiltinWorkbenchLanguagePack("workbench-fr-core-2.0");
+  const korean = await loadBuiltinWorkbenchLanguagePack("workbench-ko-core-2.0");
+  const traditionalChinese = await loadBuiltinWorkbenchLanguagePack("workbench-zh-tw-core-2.0");
 
   assert.equal(french?.source, "downloaded");
   assert.equal(french?.targetSurface, "workbench");
   assert.equal(french?.overrides.workflowCatalogTitle, "Catalogue de workflows");
+  assert.equal(
+    french?.overrides.workflowStorageWriteFailedLabel,
+    "Impossible d’enregistrer les données locales du workflow. Vérifiez l’espace de stockage et réessayez.",
+  );
   assert.equal(korean?.source, "downloaded");
   assert.equal(korean?.targetSurface, "workbench");
   assert.equal(korean?.overrides.workflowCatalogTitle, "워크플로 카탈로그");
+  assert.equal(korean?.overrides.roleLabel, "작업 공간");
+  assert.equal(korean?.overrides.initialLoaded, "준비됨");
   assert.equal(traditionalChinese?.source, "downloaded");
   assert.equal(traditionalChinese?.targetSurface, "workbench");
   assert.equal(traditionalChinese?.language, "zh-TW");
-  assert.equal(getBuiltinWorkbenchLanguagePack("missing"), null);
+  assert.equal(await loadBuiltinWorkbenchLanguagePack("missing"), null);
+});
+
+test("workbench storage failure feedback covers every mainstream language pack", async () => {
+  for (const locale of WORKBENCH_MAINSTREAM_LANGUAGE_PACK_LOCALES) {
+    const pack = await loadBuiltinWorkbenchLanguagePack(`workbench-${locale.language.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-core-2.0`);
+    const message = pack?.overrides.workflowStorageWriteFailedLabel;
+    assert.equal(typeof message, "string", locale.language);
+    assert.ok((message as string).trim().length > 0, locale.language);
+  }
 });
 
 test("workbench language pack system copy covers mainstream feedback without English fallback", () => {
@@ -227,6 +242,7 @@ test("workbench extended UI copy covers guardrails, audit, and material labels",
     assert.ok(protocolAgent.countLabel(2, 1, 1).trim(), locale.language);
     assert.ok(auditEmpty.trim(), locale.language);
     assert.ok(projectFlow.noJobVersion.trim(), locale.language);
+    assert.ok(projectFlow.storeManifestPersistenceFailed.trim(), locale.language);
     assert.ok(projectFlow.skippedSensitivePresets(2).trim(), locale.language);
     assert.ok(assistantAudit.manualRecording.trim(), locale.language);
     assert.ok(assistantAudit.governanceDriftDetected("drift").trim(), locale.language);

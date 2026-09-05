@@ -5,7 +5,11 @@ use crate::models::{
     BenchmarkResult, BenchmarkWorkload,
 };
 
-const LARGE_THERMAL_PLANE_NODE_THRESHOLD: usize = 1_000_000;
+const LARGE_ITERATIVE_NODE_THRESHOLD: usize = 1_000_000;
+const MAGNETOSTATIC_IC0_NODE_THRESHOLD: usize = 90_000;
+const PLANE_IC0_NODE_THRESHOLD: usize = 90_000;
+const THERMAL_FRAME_SGS_NODE_THRESHOLD: usize = 90_000;
+const THERMAL_TRUSS_3D_IC0_NODE_THRESHOLD: usize = 100_000;
 
 pub(crate) fn parse_preconditioner(value: &str) -> SpdPreconditioner {
     match value {
@@ -15,7 +19,10 @@ pub(crate) fn parse_preconditioner(value: &str) -> SpdPreconditioner {
     }
 }
 
-pub(crate) fn solver_preconditioners(value: &str) -> Vec<&'static str> {
+pub(crate) fn solver_preconditioners(case: &BenchmarkCase, value: &str) -> Vec<&'static str> {
+    if !supports_solver_preconditioner(case) {
+        return vec!["none"];
+    }
     match value {
         "all" | "compare" => vec!["jacobi", "symmetric-gauss-seidel", "ic0"],
         "auto" => vec!["auto"],
@@ -25,59 +32,94 @@ pub(crate) fn solver_preconditioners(value: &str) -> Vec<&'static str> {
     }
 }
 
+pub(crate) fn supports_solver_preconditioner(case: &BenchmarkCase) -> bool {
+    matches!(
+        case.workload,
+        BenchmarkWorkload::Beam1d(_)
+            | BenchmarkWorkload::ThermalBeam1d(_)
+            | BenchmarkWorkload::Frame2d(_)
+            | BenchmarkWorkload::Frame3d(_)
+            | BenchmarkWorkload::ThermalFrame2d(_)
+            | BenchmarkWorkload::ThermalFrame3d(_)
+            | BenchmarkWorkload::Truss2d(_)
+            | BenchmarkWorkload::ThermalTruss2d(_)
+            | BenchmarkWorkload::ThermalTruss3d(_)
+            | BenchmarkWorkload::PlaneTriangle2d(_)
+            | BenchmarkWorkload::PlaneQuad2d(_)
+            | BenchmarkWorkload::ThermalPlaneTriangle2d(_)
+            | BenchmarkWorkload::ThermalPlaneQuad2d(_)
+            | BenchmarkWorkload::HeatPlaneTriangle2d(_)
+            | BenchmarkWorkload::HeatPlaneQuad2d(_)
+            | BenchmarkWorkload::ElectrostaticPlaneTriangle2d(_)
+            | BenchmarkWorkload::ElectrostaticPlaneQuad2d(_)
+            | BenchmarkWorkload::MagnetostaticPlaneTriangle2d(_)
+            | BenchmarkWorkload::MagnetostaticPlaneQuad2d(_)
+            | BenchmarkWorkload::ElectricConductionPlaneQuad2d(_)
+    )
+}
+
 pub(crate) fn effective_preconditioner<'a>(case: &BenchmarkCase, requested: &'a str) -> &'a str {
+    if !supports_solver_preconditioner(case) {
+        return "none";
+    }
     if requested != "auto" {
         return requested;
     }
 
     match case.workload {
         BenchmarkWorkload::ThermalPlaneTriangle2d(_) => "ic0",
+        BenchmarkWorkload::ThermalTruss3d(ref request)
+            if request.nodes.len() >= THERMAL_TRUSS_3D_IC0_NODE_THRESHOLD =>
+        {
+            "ic0"
+        }
+        BenchmarkWorkload::MagnetostaticPlaneTriangle2d(ref request)
+            if request.nodes.len() >= MAGNETOSTATIC_IC0_NODE_THRESHOLD =>
+        {
+            "ic0"
+        }
+        BenchmarkWorkload::MagnetostaticPlaneQuad2d(ref request)
+            if request.nodes.len() >= MAGNETOSTATIC_IC0_NODE_THRESHOLD =>
+        {
+            "ic0"
+        }
         BenchmarkWorkload::Truss2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "ic0"
         }
         BenchmarkWorkload::ThermalTruss2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "ic0"
         }
         BenchmarkWorkload::PlaneTriangle2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= PLANE_IC0_NODE_THRESHOLD =>
         {
             "ic0"
         }
         BenchmarkWorkload::PlaneQuad2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= PLANE_IC0_NODE_THRESHOLD =>
         {
             "ic0"
         }
         BenchmarkWorkload::ThermalPlaneQuad2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
-        {
-            "ic0"
-        }
-        BenchmarkWorkload::Frame2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
-        {
-            "ic0"
-        }
-        BenchmarkWorkload::Frame3d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= PLANE_IC0_NODE_THRESHOLD =>
         {
             "ic0"
         }
         BenchmarkWorkload::ThermalFrame2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= THERMAL_FRAME_SGS_NODE_THRESHOLD =>
         {
-            "ic0"
+            "symmetric-gauss-seidel"
         }
         BenchmarkWorkload::ThermalFrame3d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= THERMAL_FRAME_SGS_NODE_THRESHOLD =>
         {
-            "ic0"
+            "symmetric-gauss-seidel"
         }
         BenchmarkWorkload::Truss2d(_)
+        | BenchmarkWorkload::ThermalTruss2d(_)
         | BenchmarkWorkload::HeatPlaneQuad2d(_)
         | BenchmarkWorkload::PlaneTriangle2d(_)
         | BenchmarkWorkload::PlaneQuad2d(_)
@@ -90,57 +132,66 @@ pub(crate) fn preconditioner_selection_reason(
     case: &BenchmarkCase,
     requested: &str,
 ) -> &'static str {
+    if !supports_solver_preconditioner(case) {
+        return "not-applicable";
+    }
     if requested != "auto" {
         return "explicit-request";
     }
     match case.workload {
         BenchmarkWorkload::ThermalPlaneTriangle2d(_) => "auto-thermal-plane-triangle-ic0",
+        BenchmarkWorkload::ThermalTruss3d(ref request)
+            if request.nodes.len() >= THERMAL_TRUSS_3D_IC0_NODE_THRESHOLD =>
+        {
+            "auto-thermal-truss-3d-ic0"
+        }
+        BenchmarkWorkload::MagnetostaticPlaneTriangle2d(ref request)
+            if request.nodes.len() >= MAGNETOSTATIC_IC0_NODE_THRESHOLD =>
+        {
+            "auto-magnetostatic-plane-triangle-ic0"
+        }
+        BenchmarkWorkload::MagnetostaticPlaneQuad2d(ref request)
+            if request.nodes.len() >= MAGNETOSTATIC_IC0_NODE_THRESHOLD =>
+        {
+            "auto-magnetostatic-plane-quad-ic0"
+        }
         BenchmarkWorkload::Truss2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "auto-large-truss-ic0"
         }
         BenchmarkWorkload::ThermalTruss2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= LARGE_ITERATIVE_NODE_THRESHOLD =>
         {
             "auto-large-thermal-truss-ic0"
         }
         BenchmarkWorkload::PlaneTriangle2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= PLANE_IC0_NODE_THRESHOLD =>
         {
             "auto-large-plane-triangle-ic0"
         }
         BenchmarkWorkload::PlaneQuad2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= PLANE_IC0_NODE_THRESHOLD =>
         {
             "auto-large-plane-quad-ic0"
         }
         BenchmarkWorkload::ThermalPlaneQuad2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= PLANE_IC0_NODE_THRESHOLD =>
         {
             "auto-large-thermal-plane-quad-ic0"
         }
-        BenchmarkWorkload::Frame2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
-        {
-            "auto-large-frame-2d-ic0"
-        }
-        BenchmarkWorkload::Frame3d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
-        {
-            "auto-large-frame-3d-ic0"
-        }
         BenchmarkWorkload::ThermalFrame2d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= THERMAL_FRAME_SGS_NODE_THRESHOLD =>
         {
-            "auto-large-thermal-frame-2d-ic0"
+            "auto-large-thermal-frame-2d-sgs"
         }
         BenchmarkWorkload::ThermalFrame3d(ref request)
-            if request.nodes.len() >= LARGE_THERMAL_PLANE_NODE_THRESHOLD =>
+            if request.nodes.len() >= THERMAL_FRAME_SGS_NODE_THRESHOLD =>
         {
-            "auto-large-thermal-frame-3d-ic0"
+            "auto-large-thermal-frame-3d-sgs"
         }
         BenchmarkWorkload::Truss2d(_)
+        | BenchmarkWorkload::ThermalTruss2d(_)
         | BenchmarkWorkload::HeatPlaneQuad2d(_)
         | BenchmarkWorkload::PlaneTriangle2d(_)
         | BenchmarkWorkload::PlaneQuad2d(_)

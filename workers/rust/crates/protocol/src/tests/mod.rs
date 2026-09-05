@@ -1,4 +1,5 @@
 mod advanced_rpc;
+mod agent_lifecycle_rpc;
 mod agent_solver_qualification;
 mod buckling_rpc;
 mod cohesive_mesh_3d_rpc;

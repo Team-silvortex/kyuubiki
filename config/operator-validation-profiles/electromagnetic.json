@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.operator-validation-profiles/v1",
-  "version_line": "moxi 2.0.x",
+  "version_line": "daji 3.0.x",
   "profiles": [
     {
       "profile_id": "magnetostatic-bar-closed-form",
@@ -197,6 +197,78 @@
           "id": "magnetostatic-plane-input-reliability",
           "kind": "boundary_regression",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test magnetostatic_plane_input_reliability -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "electric-conduction-plane-quad-screening",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "electric-conduction-plane-quad",
+      "trust_goal": "screening_validation",
+      "operators": [
+        "solve.electric_conduction_plane_quad_2d"
+      ],
+      "validation_methods": [
+        "rotated_ohmic_rectangle_closed_form",
+        "manufactured_linear_potential_refinement",
+        "current_and_power_balance",
+        "contact_and_terminal_power_partition",
+        "invalid_quad_topology_rejection",
+        "rpc_and_workflow_contract"
+      ],
+      "formal_invariants": [
+        "electric_field_is_negative_potential_gradient",
+        "current_density_scales_with_conductivity",
+        "bulk_joule_power_equals_voltage_times_current",
+        "rigid_coordinate_rotation_preserves_field_magnitude_current_and_power",
+        "mesh_refinement_preserves_linear_potential_field_current_and_power",
+        "free_node_current_residual_remains_bounded",
+        "contact_and_terminal_losses_close_source_power_balance",
+        "degenerate_repeated_and_self_intersecting_quads_fail_before_assembly",
+        "every_connected_component_is_anchored_by_fixed_potential_or_finite_impedance_terminal"
+      ],
+      "evidence_paths": [
+        "docs/operator-reliability.md",
+        "evidence/operator-screening/electric-conduction-plane-quad-2d.md",
+        "workers/rust/crates/solver/src/electric_conduction_plane_2d.rs",
+        "workers/rust/crates/solver/src/electric_conduction_topology.rs",
+        "workers/rust/crates/solver/tests/electric_conduction_plane_quad_2d_review.rs",
+        "workers/rust/crates/solver/tests/electric_conduction_plane_mesh_refinement.rs",
+        "workers/rust/crates/solver/tests/electric_conduction_plane_input_reliability.rs",
+        "workers/rust/crates/cli/src/tests/electric_conduction_rpc.rs",
+        "workers/rust/crates/engine/tests/electric_conduction_operator.rs",
+        "workers/rust/crates/headless-sdk/src/contract_tests.rs"
+      ],
+      "commands": [
+        {
+          "id": "electric-conduction-closed-form-review",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electric_conduction_plane_quad_2d_review -- --nocapture"
+        },
+        {
+          "id": "electric-conduction-mesh-refinement",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electric_conduction_plane_mesh_refinement -- --nocapture"
+        },
+        {
+          "id": "electric-conduction-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electric_conduction_plane_input_reliability -- --nocapture"
+        },
+        {
+          "id": "electric-conduction-agent-rpc",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli handles_electric_conduction_plane_quad_2d_rpc_requests -- --nocapture"
+        },
+        {
+          "id": "electric-conduction-engine-workflow",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test electric_conduction_operator -- --nocapture"
+        },
+        {
+          "id": "electric-conduction-headless-contract",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-headless-sdk direct_fem -- --nocapture"
         }
       ]
     }

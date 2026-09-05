@@ -14,6 +14,10 @@ function matchesArtifactNode(
   );
 }
 
+function uniqueStrings(values: string[]) {
+  return [...new Set(values)];
+}
+
 export function validateImportedWorkflowPackage(
   importedPackage: WorkflowPackage,
   graph: WorkflowGraphDefinition,
@@ -32,6 +36,13 @@ export function validateImportedWorkflowPackage(
   const outputArtifacts = graph.output_artifacts ?? [];
   const diagnostics: WorkflowPackageImportDiagnostic[] = [];
 
+  if (importedPackage.workflow.id !== graph.id) {
+    diagnostics.push({
+      message: `Workflow id mismatch: expected ${importedPackage.workflow.id}, got ${graph.id}`,
+      locate: { kind: "package" },
+    });
+  }
+
   const missingOperators = runtimeManifest.required_operator_ids.filter(
     (operatorId: string) => !operatorIds.has(operatorId),
   );
@@ -42,6 +53,40 @@ export function validateImportedWorkflowPackage(
     })));
   }
 
+  const declaredOperatorIds = new Set(runtimeManifest.required_operator_ids);
+  for (const operatorId of operatorIds) {
+    if (declaredOperatorIds.has(operatorId)) continue;
+    diagnostics.push({
+      message: `Undeclared workflow operator: ${operatorId}`,
+      locate: { kind: "package" },
+    });
+  }
+
+  const fetchPlanCounts = new Map<string, number>();
+  for (const entry of runtimeManifest.operator_fetch_plan) {
+    fetchPlanCounts.set(entry.operator_id, (fetchPlanCounts.get(entry.operator_id) ?? 0) + 1);
+    if (!declaredOperatorIds.has(entry.operator_id)) {
+      diagnostics.push({
+        message: `Unexpected operator fetch plan entry: ${entry.operator_id}`,
+        locate: { kind: "package" },
+      });
+    }
+  }
+  for (const operatorId of uniqueStrings(runtimeManifest.required_operator_ids)) {
+    const count = fetchPlanCounts.get(operatorId) ?? 0;
+    if (count === 0) {
+      diagnostics.push({
+        message: `Missing operator fetch plan: ${operatorId}`,
+        locate: { kind: "package" },
+      });
+    } else if (count > 1) {
+      diagnostics.push({
+        message: `Duplicate operator fetch plan: ${operatorId}`,
+        locate: { kind: "package" },
+      });
+    }
+  }
+
   const missingSampleInputs = runtimeManifest.sample_input_node_ids.filter(
     (nodeId: string) => !entryInputs.some((artifact) => artifact.node_id === nodeId),
   );
@@ -50,6 +95,15 @@ export function validateImportedWorkflowPackage(
       message: `Missing sample input entry node: ${nodeId}`,
       locate: { kind: "package" as const },
     })));
+  }
+
+  const declaredSampleInputIds = new Set(runtimeManifest.sample_input_node_ids);
+  for (const nodeId of uniqueStrings(entryInputs.map((artifact) => artifact.node_id))) {
+    if (declaredSampleInputIds.has(nodeId)) continue;
+    diagnostics.push({
+      message: `Undeclared sample input entry node: ${nodeId}`,
+      locate: { kind: "node", nodeId },
+    });
   }
 
   const invalidBridgeSeed = runtimeManifest.bridge_seed_summaries.find(
@@ -70,11 +124,7 @@ export function validateImportedWorkflowPackage(
     });
   }
 
-  if (
-    contractManifest.dataset_contract_id &&
-    graph.dataset_contract?.id &&
-    contractManifest.dataset_contract_id !== graph.dataset_contract.id
-  ) {
+  if (graph.dataset_contract?.id && contractManifest.dataset_contract_id !== graph.dataset_contract.id) {
     diagnostics.push({
       message: `Dataset contract id mismatch: expected ${contractManifest.dataset_contract_id}, got ${graph.dataset_contract.id}`,
       locate: { kind: "dataset" },
@@ -91,6 +141,15 @@ export function validateImportedWorkflowPackage(
     })));
   }
 
+  const declaredDatasetValueIds = new Set(contractManifest.dataset_value_ids);
+  for (const valueId of datasetValueIds) {
+    if (declaredDatasetValueIds.has(valueId)) continue;
+    diagnostics.push({
+      message: `Undeclared dataset value: ${valueId}`,
+      locate: { kind: "dataset", datasetValueId: valueId },
+    });
+  }
+
   const invalidEntryContract = contractManifest.entry_contracts.find(
     (entry: WorkflowPackage["contract_manifest"]["entry_contracts"][number]) =>
       !matchesArtifactNode(entryInputs, entry.node_id, entry.artifact_type) ||
@@ -103,6 +162,14 @@ export function validateImportedWorkflowPackage(
     });
   }
 
+  for (const entry of entryInputs) {
+    if (matchesArtifactNode(contractManifest.entry_contracts, entry.node_id, entry.artifact_type)) continue;
+    diagnostics.push({
+      message: `Missing entry contract declaration at ${entry.node_id}:${entry.artifact_type}`,
+      locate: { kind: "node", nodeId: entry.node_id },
+    });
+  }
+
   const invalidOutputContract = contractManifest.output_contracts.find(
     (entry: WorkflowPackage["contract_manifest"]["output_contracts"][number]) =>
       !matchesArtifactNode(outputArtifacts, entry.node_id, entry.artifact_type) ||
@@ -112,6 +179,14 @@ export function validateImportedWorkflowPackage(
     diagnostics.push({
       message: `Output contract mismatch at ${invalidOutputContract.node_id}:${invalidOutputContract.artifact_type}`,
       locate: { kind: "node", nodeId: invalidOutputContract.node_id },
+    });
+  }
+
+  for (const entry of outputArtifacts) {
+    if (matchesArtifactNode(contractManifest.output_contracts, entry.node_id, entry.artifact_type)) continue;
+    diagnostics.push({
+      message: `Missing output contract declaration at ${entry.node_id}:${entry.artifact_type}`,
+      locate: { kind: "node", nodeId: entry.node_id },
     });
   }
 

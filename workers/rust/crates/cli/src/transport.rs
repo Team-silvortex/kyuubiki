@@ -7,8 +7,8 @@ use std::time::Duration;
 
 use kyuubiki_protocol::{JobStatus, ProgressEvent, RpcProgress, RpcResponse};
 
-use crate::agent_state::register_cancel;
-use crate::agent_watchdog;
+use crate::agent_lifecycle;
+use crate::agent_state::register_execution_cancel;
 
 pub(crate) enum FrameReadError {
     ConnectionClosed,
@@ -99,7 +99,7 @@ impl HeartbeatHandle {
         writer: Arc<Mutex<TcpStream>>,
         request_id: String,
         job_id: String,
-        execution_guard: agent_watchdog::ExecutionGuard,
+        execution_guard: agent_lifecycle::ExecutionGuard,
     ) -> Self {
         let running = Arc::new(AtomicBool::new(true));
         let running_clone = running.clone();
@@ -112,7 +112,7 @@ impl HeartbeatHandle {
                     break;
                 }
 
-                let _ = agent_watchdog::mark_progress(&execution_guard);
+                let _ = agent_lifecycle::mark_progress(&execution_guard);
 
                 let heartbeat = RpcProgress::heartbeat(
                     request_id.clone(),
@@ -128,7 +128,7 @@ impl HeartbeatHandle {
                 );
 
                 if write_json_frame(&writer, &heartbeat).is_err() {
-                    register_cancel(job_id.clone());
+                    register_execution_cancel(request_id.clone());
                     break;
                 }
             }

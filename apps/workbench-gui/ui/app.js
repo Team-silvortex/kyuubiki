@@ -588,6 +588,7 @@ window.addEventListener("keydown", async (event) => {
 });
 
 async function boot() {
+  void reportPackagedBootReady();
   const brand = await loadDesktopBrand();
   state.language = await loadDesktopLanguagePreference();
   await ensureShellLanguage(state.language);
@@ -628,7 +629,6 @@ async function boot() {
   renderConsoleTabs();
   renderLogServiceTabs();
   await refreshStatus();
-  await reportPackagedBootReady();
   window.setInterval(async () => {
     if (document.visibilityState === "hidden") {
       return;

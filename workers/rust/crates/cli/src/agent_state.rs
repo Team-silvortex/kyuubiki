@@ -16,7 +16,7 @@ use crate::operator_task_runtime::{
     operator_package_runtime_snapshot, operator_package_runtime_snapshot_for_config,
     operator_task_execution_reliability_snapshot,
 };
-use crate::{agent_fault_injection, agent_watchdog};
+use crate::{agent_fault_injection, agent_lifecycle, agent_watchdog};
 
 pub(crate) fn agent_descriptor() -> AgentDescriptor {
     runtime_descriptor()
@@ -159,6 +159,7 @@ pub(crate) fn registration_payload(config: &AgentConfig) -> serde_json::Value {
         "deployment_readiness": build_agent_deployment_readiness_for_config(config),
         "health_score": descriptor.runtime.health_score,
         "watchdog": agent_watchdog::snapshot(),
+        "lifecycle": agent_lifecycle::snapshot(),
         "fault_injection": agent_fault_injection::snapshot(),
         "control_plane_link": agent_control_link::snapshot()
     })
@@ -187,6 +188,11 @@ pub(crate) fn agent_descriptor_payload() -> serde_json::Value {
             "watchdog".to_string(),
             serde_json::to_value(agent_watchdog::snapshot())
                 .expect("agent watchdog snapshot should serialize"),
+        );
+        object.insert(
+            "lifecycle".to_string(),
+            serde_json::to_value(agent_lifecycle::snapshot())
+                .expect("agent lifecycle snapshot should serialize"),
         );
         object.insert(
             "fault_injection".to_string(),
@@ -292,6 +298,11 @@ fn cancellation_registry() -> &'static Mutex<HashSet<String>> {
     REGISTRY.get_or_init(|| Mutex::new(HashSet::new()))
 }
 
+fn execution_cancellation_registry() -> &'static Mutex<HashSet<String>> {
+    static REGISTRY: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+    REGISTRY.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
 pub(crate) fn register_cancel(job_id: String) {
     if let Ok(mut registry) = cancellation_registry().lock() {
         registry.insert(job_id);
@@ -306,10 +317,35 @@ pub(crate) fn take_cancelled(job_id: &str) -> bool {
     false
 }
 
+pub(crate) fn register_execution_cancel(request_id: String) {
+    if let Ok(mut registry) = execution_cancellation_registry().lock() {
+        registry.insert(request_id);
+    }
+}
+
+pub(crate) fn take_execution_cancelled(request_id: &str) -> bool {
+    execution_cancellation_registry()
+        .lock()
+        .is_ok_and(|mut registry| registry.remove(request_id))
+}
+
 pub(crate) fn extract_job_id(params: &serde_json::Value) -> Option<String> {
     params
         .as_object()
         .and_then(|value| value.get("job_id"))
         .and_then(|value| value.as_str())
         .map(|value| value.to_string())
+}
+
+#[cfg(test)]
+mod cancellation_tests {
+    use super::*;
+
+    #[test]
+    fn transport_cancellation_is_scoped_to_one_request_generation() {
+        register_execution_cancel("request-generation-one".to_string());
+        assert!(take_execution_cancelled("request-generation-one"));
+        assert!(!take_execution_cancelled("request-generation-two"));
+        assert!(!take_cancelled("shared-job"));
+    }
 }

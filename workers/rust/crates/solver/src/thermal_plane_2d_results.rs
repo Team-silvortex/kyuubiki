@@ -4,8 +4,8 @@ use crate::plane_2d_math::{
 };
 use crate::thermal_plane_2d::ThermalPlaneTriangleComputed;
 use kyuubiki_protocol::{
-    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest, ThermalPlaneNodeResult,
-    ThermalPlaneQuadElementResult, ThermalPlaneTriangleElementResult,
+    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest, ThermalPlaneNodeInput,
+    ThermalPlaneNodeResult, ThermalPlaneQuadElementResult, ThermalPlaneTriangleElementResult,
 };
 
 #[derive(Debug, Clone)]
@@ -47,11 +47,10 @@ pub(crate) fn thermal_plane_triangle_state(
 }
 
 pub(crate) fn build_thermal_plane_nodes(
-    request: &SolveThermalPlaneTriangle2dRequest,
+    nodes: &[ThermalPlaneNodeInput],
     displacements: &[f64],
 ) -> Vec<ThermalPlaneNodeResult> {
-    request
-        .nodes
+    nodes
         .iter()
         .enumerate()
         .map(|(index, node)| {

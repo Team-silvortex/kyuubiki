@@ -52,14 +52,29 @@ test("runtime API client factory serializes workflow graph submissions", async (
 test("runtime API client factory serializes direct mesh solves", async () => {
   const { client, seen } = createRecordingClient();
 
-  await client.createDirectMeshSolve("truss_3d", { nodes: [] }, ["127.0.0.1:5001"], "healthiest");
+  await client.createDirectMeshSolve(
+    "truss_3d",
+    { nodes: [], elements: [] },
+    ["127.0.0.1:5001"],
+    "healthiest",
+  );
 
   assert.equal(seen[0]?.url, "/api/direct-mesh/solve");
   assert.equal(seen[0]?.method, "POST");
   assert.deepEqual(seen[0]?.body, {
     study_kind: "truss_3d",
-    input: { nodes: [] },
+    input: { nodes: [], elements: [] },
     endpoints: ["127.0.0.1:5001"],
     selection_mode: "healthiest",
   });
+});
+
+test("runtime API client rejects incomplete direct mesh inputs before transport", () => {
+  const { client, seen } = createRecordingClient();
+
+  assert.throws(
+    () => client.createDirectMeshSolve("truss_3d", { nodes: [] }, ["127.0.0.1:5001"], "healthiest"),
+    /direct mesh truss_3d input field elements must be an array/,
+  );
+  assert.deepEqual(seen, []);
 });

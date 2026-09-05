@@ -86,7 +86,7 @@ The first validation profiles cover:
 - `heat-plane-patch`: triangle/quad temperature-gradient and heat-flux patch
   checks
 
-For `moxi 2.x`, the manifest also declares
+For `daji 3.x`, the manifest also declares
 `minimum_coverage_level: qualification`. `make check-operator-reliability`
 treats this as a release gate, so future edits cannot silently downgrade a
 covered operator back to `review`, `baseline`, or `smoke`. The Make target runs
@@ -125,7 +125,7 @@ Each roadmap candidate also carries a machine-readable qualification posture:
 
 - `target_level`
   the trust level the candidate is trying to reach. Release-gated roadmap
-  candidates for `moxi 2.x` target `qualification`; screening-only or
+  candidates for `daji 3.x` target `qualification`; screening-only or
   exploratory families should stay outside this release candidate queue until
   they have a qualification path.
 - `evidence_phase`
@@ -330,7 +330,7 @@ boundary coverage, material-parameter provenance, and mesh/refinement
 equivalence. Its validation profile executes the heat and thermoelastic
 triangle/quad review fixtures together, then checks that a two-triangle split
 matches the quad patch response for heat flow and restrained thermal stress.
-On the current moxi 2.x line, `solve.thermal_plane_quad_2d` is a native
+On the current daji 3.x line, `solve.thermal_plane_quad_2d` is a native
 bilinear isoparametric Q4 rather than a pair of constant-strain triangles. It
 uses full 2x2 Gauss integration for stiffness, nodal-temperature interpolation,
 thermal equivalent loads, stress recovery, and strain-energy recovery.
@@ -425,7 +425,7 @@ current modal evidence lives at
 
 ## Current State
 
-The current `moxi 2.x` manifest covers all 38 solve operators in the
+The current `daji 3.x` manifest covers all 38 solve operators in the
 `physics-coverage` benchmark matrix, with a release gate requiring
 `qualification` evidence for every covered operator.
 
@@ -446,12 +446,24 @@ harmonic response scope. The transient branch checks Newmark single-step
 response, load scaling, and undamped time-step refinement; every retained
 branch also re-derives history maxima, kinetic energy, strain energy, final
 node state, node id/coordinate passthrough, initial-state history fields,
-contiguous history step numbering, and final spring/damping force diagnostics.
+contiguous default history step numbering, and final spring/damping force
+diagnostics. The optional positive `history_stride` control keeps the initial
+state, every selected interval, and the final state while peak displacement and
+velocity remain evaluated across every computed step. A shared scalar-sample
+budget rejects oversized retained histories before allocation.
 The harmonic branch checks dynamic-stiffness amplitudes, damping response,
 retained input frequency order, harmonic node id passthrough, fixed-node
 zero-amplitude phase, global maxima, peak frequency,
 per-frequency maxima, and velocity/acceleration amplitudes from the
-frequency result fields.
+frequency result fields. Its reduced free-DOF topology is analyzed once per
+frequency sweep. Numbering-independent path forests use a row-scaled,
+partial-pivoted complex tridiagonal solve with linear storage; this includes
+segments split by interior constraints and isolated reduced DOFs. A retained
+10,000-node shuffled-topology regression verifies that route, while a leading
+zero dynamic diagonal regression verifies that a nonsingular undamped system
+is pivoted rather than falsely rejected. True cyclic or branched reduced
+networks keep the pivoted dense fallback, capped at 512 free DOFs before
+allocation.
 
 The CFD-facing Stokes operators remain `screening_only` in scope, but the
 `screening-cfd-boundary` evidence kit is now qualified for that boundary: the
@@ -473,8 +485,10 @@ external-reference or benchmark evidence.
 
 The transient heat 1D bar is now retained for the single-free-node implicit
 Euler lumped-capacity scope. Its closed-form regression checks each history
-step, contiguous step numbering, final time, final node temperatures, element
-length from input coordinates, final heat flux, and thermal energy.
+step, contiguous default step numbering, final time, final node temperatures,
+element length from input coordinates, final heat flux, and thermal energy.
+It shares the positive `history_stride`, mandatory final-frame, and bounded
+history-allocation contract used by transient spring analysis.
 Every retained branch also re-derives history maxima and energies from lumped
 capacity, checks that the last history frame matches final summary fields, and
 recomputes final element average temperature, gradient, and Fourier heat flux.
@@ -533,12 +547,14 @@ element gradient, diffusive flux, and total flux while keeping Peclet and
 advective flux at zero. This is a pure-diffusion refinement and conservation
 proof point; advection-dominant convergence remains separately scoped.
 
-For continuous, index-adjacent 1D chains, the heat, electrostatic,
-magnetostatic, advection-diffusion, and acoustic bar solvers use a constrained
-tridiagonal direct path. Branched, reordered, or otherwise non-chain inputs
-remain on their established sparse or dense fallback paths. This keeps the
-specialization topology-scoped while making million-node chain studies bounded
-by linear storage and solve work rather than iterative convergence.
+For simple 1D path topologies independent of node numbering, the heat,
+electrostatic, magnetostatic, thermal, advection-diffusion, and acoustic bar
+solvers use constrained tridiagonal direct paths. Interior prescribed values
+may split the reduced matrix into a path forest without losing that sparse
+route. Truly branched or cyclic inputs remain on their established bounded
+sparse or dense fallback paths. This keeps the specialization topology-scoped
+while making million-node chain studies bounded by linear storage and solve
+work rather than iterative convergence.
 
 The magnetostatic 1D bar is now qualified for the retained linear single-core
 permeance scope. Its closed-form evidence checks magnetic potential, field
@@ -1024,6 +1040,21 @@ profile rather than the release-gated reliability manifest. That manifest only
 accepts physics-coverage operators with retained qualification evidence; adding
 a new ad hoc `screening` coverage level would weaken the gate instead of
 describing the current claim honestly.
+Their separate `cohesive-interface` benchmark matrix now exercises all four
+native Engine and workflow paths with bounded constitutive histories and the
+retained 2D/3D sparse shapes. It supplies repeatable performance visibility,
+but does not promote these component claims into release qualification.
+
+`solve.electric_conduction_plane_quad_2d` now has an explicit component
+validation profile rather than relying on scattered implementation tests. The
+profile retains a rotated Ohmic rectangle closed form, four mesh-refinement
+levels, current and power conservation, malformed quad rejection, Agent RPC,
+Engine Workflow, and Rust headless discovery. Its quad preflight rejects
+repeated connectivity, degenerate triangles, and inconsistent split-triangle
+orientation before assembly. This is screening evidence only; nonlinear,
+anisotropic, transient, induction/skin-effect, and coupled thermal feedback
+claims remain outside the operator, and release promotion still requires
+versioned provenance plus reviewer-approved retained evidence.
 
 `solve.frame_3d` is now qualified for the current single-member cantilever
 scope. The retained evidence derives the Euler-Bernoulli displacement, slope,

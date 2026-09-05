@@ -254,7 +254,25 @@ fn validate_code_surface(
     if !STATUS_ORDER.contains(&status) {
         issues.push(format!("{context}.status has unknown value: {status}"));
     }
-    validate_thresholds(issues, surface.get("minimum_next_threshold"), &context);
+    let threshold_required = status_index(status)
+        .zip(status_index("thresholded"))
+        .is_some_and(|(current, thresholded)| current >= thresholded);
+    validate_thresholds(
+        issues,
+        surface.get("enforced_threshold"),
+        &context,
+        "enforced_threshold",
+        threshold_required,
+    );
+    validate_thresholds(
+        issues,
+        surface.get("minimum_next_threshold"),
+        &context,
+        "minimum_next_threshold",
+        true,
+    );
+    validate_threshold_progression(issues, surface, &context);
+    validate_enforcement(root, issues, surface, &context, status == "enforced");
 }
 
 fn validate_gate(issues: &mut Vec<String>, gate: &Value, index: usize) {
@@ -264,25 +282,128 @@ fn validate_gate(issues: &mut Vec<String>, gate: &Value, index: usize) {
     }
 }
 
-fn validate_thresholds(issues: &mut Vec<String>, thresholds: Option<&Value>, context: &str) {
+fn validate_thresholds(
+    issues: &mut Vec<String>,
+    thresholds: Option<&Value>,
+    context: &str,
+    field_name: &str,
+    required: bool,
+) {
     let Some(thresholds) = thresholds else {
-        issues.push(format!("{context}.minimum_next_threshold is required"));
+        if required {
+            issues.push(format!("{context}.{field_name} is required"));
+        }
         return;
     };
     let Some(object) = thresholds.as_object() else {
-        issues.push(format!(
-            "{context}.minimum_next_threshold must be an object"
-        ));
+        issues.push(format!("{context}.{field_name} must be an object"));
         return;
     };
     for field in ["lines", "branches", "functions"] {
         match object.get(field).and_then(Value::as_u64) {
             Some(value) if value <= 100 => {}
-            _ => issues.push(format!(
-                "{context}.minimum_next_threshold.{field} must be 0..100"
-            )),
+            _ => issues.push(format!("{context}.{field_name}.{field} must be 0..100")),
         }
     }
+}
+
+fn validate_threshold_progression(issues: &mut Vec<String>, surface: &Value, context: &str) {
+    let Some(enforced) = surface.get("enforced_threshold") else {
+        return;
+    };
+    let Some(next) = surface.get("minimum_next_threshold") else {
+        return;
+    };
+    for field in ["lines", "branches", "functions"] {
+        let Some(enforced_value) = enforced.get(field).and_then(Value::as_u64) else {
+            continue;
+        };
+        let Some(next_value) = next.get(field).and_then(Value::as_u64) else {
+            continue;
+        };
+        if enforced_value > next_value {
+            issues.push(format!(
+                "{context}.enforced_threshold.{field} must not exceed minimum_next_threshold.{field}"
+            ));
+        }
+    }
+}
+
+fn validate_enforcement(
+    root: &Path,
+    issues: &mut Vec<String>,
+    surface: &Value,
+    context: &str,
+    required: bool,
+) {
+    let Some(enforcement) = surface.get("enforcement") else {
+        if required {
+            issues.push(format!("{context}.enforcement is required"));
+        }
+        return;
+    };
+    let Some(enforcement) = enforcement.as_object() else {
+        issues.push(format!("{context}.enforcement must be an object"));
+        return;
+    };
+    let value = Value::Object(enforcement.clone());
+    let workflow = required_string(
+        issues,
+        &value,
+        "workflow",
+        &format!("{context}.enforcement"),
+    );
+    let command = required_string(issues, &value, "command", &format!("{context}.enforcement"));
+    let artifact = required_string(
+        issues,
+        &value,
+        "artifact",
+        &format!("{context}.enforcement"),
+    );
+    if let Some(workflow) = workflow {
+        validate_relative_path(issues, workflow, &format!("{context}.enforcement.workflow"));
+    }
+    if let Some(artifact) = artifact {
+        validate_relative_path(issues, artifact, &format!("{context}.enforcement.artifact"));
+        if Some(artifact) != string_value(surface, "planned_artifact") {
+            issues.push(format!(
+                "{context}.enforcement.artifact must match planned_artifact"
+            ));
+        }
+    }
+    let (Some(workflow), Some(command), Some(artifact)) = (workflow, command, artifact) else {
+        return;
+    };
+    let workflow_path = root.join(workflow);
+    let workflow_text = match fs::read_to_string(&workflow_path) {
+        Ok(text) => text,
+        Err(error) => {
+            issues.push(format!(
+                "{context}.enforcement.workflow cannot be read: {workflow}: {error}"
+            ));
+            return;
+        }
+    };
+    if !workflow_declares_scalar(&workflow_text, "run", command) {
+        issues.push(format!(
+            "{context}.enforcement.command is not declared by {workflow}: {command}"
+        ));
+    }
+    if !workflow_declares_scalar(&workflow_text, "path", artifact) {
+        issues.push(format!(
+            "{context}.enforcement.artifact is not uploaded by {workflow}: {artifact}"
+        ));
+    }
+}
+
+fn workflow_declares_scalar(workflow: &str, key: &str, expected: &str) -> bool {
+    workflow.lines().any(|line| {
+        let line = line.trim().strip_prefix("- ").unwrap_or(line.trim());
+        line.strip_prefix(key)
+            .and_then(|value| value.strip_prefix(':'))
+            .map(str::trim)
+            == Some(expected)
+    })
 }
 
 fn validate_relative_path(issues: &mut Vec<String>, value: &str, context: &str) {
@@ -327,6 +448,8 @@ fn build_report(root: &Path, contract: &Value) -> RunnerResult<Value> {
                 "planned_artifact": artifact,
                 "artifact_exists": !artifact.is_empty() && root.join(artifact).exists(),
                 "status": status,
+                "enforced_threshold": surface.get("enforced_threshold").cloned().unwrap_or(Value::Null),
+                "enforcement": surface.get("enforcement").cloned().unwrap_or(Value::Null),
                 "minimum_next_threshold": surface.get("minimum_next_threshold").cloned().unwrap_or(Value::Null),
             })
         })
@@ -548,6 +671,20 @@ fn run_self_test() -> RunnerResult<()> {
     let report = build_report(Path::new("."), &valid)?;
     if all_code_surfaces_enforced(&report) {
         return Err("declared-only fixture must not be enforced".to_string());
+    }
+
+    let mut false_enforced = valid.clone();
+    false_enforced["code_surfaces"][0]["status"] = Value::String("enforced".into());
+    let false_enforced_issues = validate_contract(Path::new("."), &false_enforced)?;
+    for needle in ["enforced_threshold is required", "enforcement is required"] {
+        if !false_enforced_issues
+            .iter()
+            .any(|issue| issue.contains(needle))
+        {
+            return Err(format!(
+                "false enforced fixture did not report {needle}: {false_enforced_issues:?}"
+            ));
+        }
     }
 
     let mut invalid = valid.clone();

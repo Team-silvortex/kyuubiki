@@ -1,7 +1,7 @@
 use crate::cohesive_interface_2d::CohesiveInterface2dState;
 use crate::cohesive_interface_mesh_2d::{ValidatedModel, assemble};
-use crate::cohesive_interface_mesh_2d_control::{ControlStep, restricted_norm, vector_norm};
-use crate::linear_algebra::reduce_sparse_system;
+use crate::cohesive_interface_mesh_2d_control::{ControlStep, restricted_norm};
+use crate::linear_algebra::{reduce_sparse_system, stable_l2_norm};
 use crate::linear_symmetric_tangent::{DENSE_PIVOTED_FALLBACK, solve_symmetric_tangent};
 
 const MAX_DENSE_FALLBACK_DOFS: usize = 1_536;
@@ -59,7 +59,13 @@ pub(crate) fn solve_load_step(
     for &dof in &model.fixed_dofs {
         trial_displacements[dof] = control.prescribed_displacements[dof];
     }
-    let load_scale = vector_norm(&model.external_loads).max(1.0);
+    let mut load_scale = stable_l2_norm(
+        model
+            .free_dofs
+            .iter()
+            .map(|&dof| control.load_factor * model.external_loads[dof]),
+    )
+    .max(1.0);
     let mut last_norm = f64::INFINITY;
     let mut diagnostics = StepLinearDiagnostics::new();
 
@@ -73,7 +79,27 @@ pub(crate) fn solve_load_step(
             .map(|(external, internal)| control.load_factor * external - internal)
             .collect::<Vec<_>>();
         last_norm = restricted_norm(&residual, &model.free_dofs);
-        if last_norm <= model.tolerance * load_scale {
+        if !load_scale.is_finite()
+            || !last_norm.is_finite()
+            || residual.iter().any(|value| !value.is_finite())
+        {
+            return failed_step(
+                committed_displacements,
+                committed_states,
+                iteration,
+                last_norm,
+                format!(
+                    "load step {} produced a non-finite force residual or load norm",
+                    step + 1
+                ),
+                diagnostics,
+            );
+        }
+        // Prescribed motion can drive equilibrium with no external free-DOF load.
+        if iteration == 1 {
+            load_scale = load_scale.max(last_norm);
+        }
+        if last_norm / load_scale <= model.tolerance {
             let states = assembly
                 .evaluations
                 .into_iter()
@@ -157,7 +183,12 @@ fn failed_step(
         displacements: displacements.to_vec(),
         states: states.to_vec(),
         iterations,
-        residual_norm,
+        // Failed-step reports must remain JSON-serializable; the reason records overflow.
+        residual_norm: if residual_norm.is_finite() {
+            residual_norm
+        } else {
+            f64::MAX
+        },
         converged: false,
         failure_reason: Some(reason),
         tangent_non_zero_count: diagnostics.tangent_non_zero_count,

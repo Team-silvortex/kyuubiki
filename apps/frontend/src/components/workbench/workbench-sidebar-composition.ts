@@ -3,8 +3,16 @@
 import { createElement } from "react";
 import { buildWorkbenchSidebarMountProps } from "@/components/workbench/workbench-sidebar-mount-props";
 import { WorkbenchRuntimeRecoveryCard } from "@/components/workbench/system/workbench-runtime-recovery-card";
+import type { ModelToolsPage } from "@/components/workbench/model/workbench-model-sidebar";
+import type { WorkbenchSystemSidebarMountProps } from "@/components/workbench/workbench-system-sidebar-mount-types";
 
-export function buildWorkbenchSidebarComposition(props: Record<string, any>) {
+type WorkbenchSidebarCompositionProps = Record<string, any> &
+  Pick<WorkbenchSystemSidebarMountProps, "jobHistory" | "protocolAgents"> & {
+    handleLanguageChange: (language: string) => void;
+    handleModelToolsPageChange: (page: ModelToolsPage) => void;
+  };
+
+export function buildWorkbenchSidebarComposition(props: WorkbenchSidebarCompositionProps) {
   const { shellState, workspaceState, studyResultDerived, interactionControllers, flowControllers, workflowController } =
     props;
   const { topLevelActions, assistantAudit, uiActionController } = interactionControllers;
@@ -66,6 +74,7 @@ export function buildWorkbenchSidebarComposition(props: Record<string, any>) {
     librarySampleRows: studyResultDerived.librarySampleRows,
     projects: workspaceState.projects,
     selectedProjectId: workspaceState.selectedProjectId,
+    storeBackendService: props.storeBackendService,
     setSelectedProjectId: workspaceState.setSelectedProjectId,
     setSelectedModelId: workspaceState.setSelectedModelId,
     projectNameDraft: workspaceState.projectNameDraft,
@@ -102,7 +111,7 @@ export function buildWorkbenchSidebarComposition(props: Record<string, any>) {
     setSidebarSection: workspaceState.setSidebarSection,
     health: props.health,
     runtimeRecoveryCard: createElement(WorkbenchRuntimeRecoveryCard, {
-      language: shellState.language,
+      copy: shellState.t,
       recovery: props.runtimeRecovery,
       onRetryAll: () => void props.retryRuntimeRecovery(),
       onRetryHealth: () => void props.refreshHealth(),

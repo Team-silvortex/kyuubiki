@@ -3,9 +3,9 @@
 .PHONY: test-hub-gui test-installer-gui test-workbench-gui
 .PHONY: test-integration test-integration-api test-integration-cluster
 .PHONY: test-integration-direct-mesh test-integration-desktop-gui qualify-desktop-ui-validation qualify-protocol-validation qualify-contracts-validation qualify-workbench-validation
-.PHONY: qualify-headless-sdk-validation qualify-runtime-api-verification qualify-benchmark qualify-orchestra-benchmark qualify-headless-sdk-operational-remote check-headless-sdk-operational-qualification qualify-desktop-deployment-update qualify-system-security qualify-agent-control-link-operational-remote qualify-orchestra-takeover-operational-remote qualify-orchestra-installed-takeover-operational-remote qualify-agent-solver-operational-remote qualify-agent-update-operational-remote check-agent-update-operational-qualification qualify-runtime-payload-operational-remote check-runtime-payload-operational-qualification qualify-orchestra-workflow-operational-remote qualify-persistence-provenance
-.PHONY: qualify-distributed-task-recovery-operational-remote qualify-operator-sdk-multihost-operational-remote check-operator-sdk-multihost-operational-qualification
-.PHONY: qualify-operator-sdk-windows-operational check-operator-sdk-windows-operational-qualification
+.PHONY: qualify-headless-sdk-validation qualify-runtime-api-verification qualify-benchmark qualify-orchestra-benchmark qualify-headless-sdk-operational-remote check-headless-sdk-operational-qualification qualify-desktop-deployment-update qualify-system-security qualify-agent-control-link-operational-remote qualify-orchestra-takeover-operational-remote qualify-orchestra-network-partition-operational-remote qualify-orchestra-long-workflow-takeover-operational-remote qualify-orchestra-installed-takeover-operational-remote qualify-agent-solver-operational-remote qualify-agent-update-operational-remote check-agent-update-operational-qualification qualify-runtime-payload-operational-remote check-runtime-payload-operational-qualification qualify-orchestra-workflow-operational-remote qualify-persistence-provenance
+.PHONY: qualify-distributed-task-recovery-operational-remote qualify-fleet-scheduling-operational-remote qualify-operator-package-acquisition-operational-remote qualify-operator-sdk-multihost-operational-remote check-operator-sdk-multihost-operational-qualification
+.PHONY: qualify-operator-sdk-performance check-operator-sdk-performance-qualification qualify-operator-sdk-windows-operational check-operator-sdk-windows-operational-qualification
 .PHONY: test-integration-benchmark-profile-index
 .PHONY: test-integration-direct-mesh-docker test-integration-remote-ssh-fixture test-central-database-smoke remote-central-database-smoke
 .PHONY: test-integration-direct-mesh-docker-compare
@@ -38,7 +38,7 @@ workflow-preflight:
 test-runtime-surfaces:
 	@cd apps/frontend && npm run test:unit -- hub-runtime-surface installer-runtime-surface workbench-workflow-benchmark-surface
 	@cd apps/web && mix test test/kyuubiki_web/orchestra/control_plane_surface_test.exs
-	@cd workers/rust && cargo test -p kyuubiki-protocol protocol_benchmark_surface -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-protocol --lib protocol_benchmark_surface -- --nocapture
 
 test-sdk:
 	@$(ENTRYPOINT) sdk-smoke
@@ -59,7 +59,7 @@ test-installer-gui:
 test-workbench-gui:
 	@cd apps/workbench-gui && npm run test:smoke
 
-test-integration: test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-benchmark-profile-index test-integration-ui-mechanical test-integration-ui-thermal
+test-integration: test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-benchmark-profile-index test-integration-ui-workflow test-integration-ui-mechanical test-integration-ui-thermal
 
 test-integration-api:
 	@$(ENTRYPOINT) integration-api-node-test
@@ -95,14 +95,26 @@ qualify-agent-solver-operational-remote:
 qualify-agent-control-link-operational-remote:
 	@$(ENTRYPOINT) qualify-agent-control-link-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/agent-control-link-operational-qualification.json} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}
 
+qualify-operator-package-acquisition-operational-remote:
+	@$(ENTRYPOINT) qualify-operator-package-acquisition-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/operator-package-acquisition-operational-qualification.json} $${PACKAGE_VERSION:+--package-version $${PACKAGE_VERSION}} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}
+
 qualify-orchestra-takeover-operational-remote:
 	@$(ENTRYPOINT) qualify-orchestra-takeover-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/orchestra-takeover-operational-qualification.json} $${POSTGRES_IMAGE:+--postgres-image $${POSTGRES_IMAGE}} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}
+
+qualify-orchestra-network-partition-operational-remote:
+	@$(ENTRYPOINT) qualify-orchestra-network-partition-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/orchestra-network-partition-operational-qualification.json} $${POSTGRES_IMAGE:+--postgres-image $${POSTGRES_IMAGE}} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}
+
+qualify-orchestra-long-workflow-takeover-operational-remote:
+	@$(ENTRYPOINT) qualify-orchestra-long-workflow-takeover-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/orchestra-long-workflow-takeover-operational-qualification.json} $${POSTGRES_IMAGE:+--postgres-image $${POSTGRES_IMAGE}} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}
 
 qualify-orchestra-installed-takeover-operational-remote:
 	@$(ENTRYPOINT) qualify-orchestra-installed-takeover-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/orchestra-installed-takeover-operational-qualification.json} $${POSTGRES_IMAGE:+--postgres-image $${POSTGRES_IMAGE}} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}
 
 qualify-distributed-task-recovery-operational-remote:
 	@$(ENTRYPOINT) qualify-distributed-task-recovery-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/distributed-task-recovery-operational-qualification.json} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}
+
+qualify-fleet-scheduling-operational-remote:
+	@$(ENTRYPOINT) qualify-fleet-scheduling-operational-remote --host $${REMOTE:-kyuubiki-lab} --out $${OUTPUT:-tmp/fleet-scheduling-operational-qualification.json} $${TIMEOUT_SECONDS:+--timeout-secs $${TIMEOUT_SECONDS}}
 
 qualify-agent-update-operational-remote:
 	@$(ENTRYPOINT) qualify-agent-update-operational-remote --host $${REMOTE:-kyuubiki-lab} $${OUTPUT:+--out $${OUTPUT}}
@@ -148,6 +160,12 @@ qualify-operator-sdk-multihost-operational-remote:
 
 check-operator-sdk-multihost-operational-qualification:
 	@$(ENTRYPOINT) check-operator-sdk-multihost-operational-qualification --self-test --verify-report $${REPORT:-releases/usability-evidence/2.16.4/operator-sdk-multihost-operational-qualification.json}
+
+qualify-operator-sdk-performance:
+	@cargo run --release --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-script-runner -- qualify-operator-sdk-performance --out $${OUTPUT:-tmp/operator-sdk-performance-qualification.json}
+
+check-operator-sdk-performance-qualification:
+	@$(ENTRYPOINT) check-operator-sdk-performance-qualification --self-test $${REPORT:+--verify-report $${REPORT}}
 
 qualify-operator-sdk-windows-operational:
 	@$(ENTRYPOINT) qualify-operator-sdk-windows-operational $${OUTPUT:+--out $${OUTPUT}}

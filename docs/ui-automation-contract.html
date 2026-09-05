@@ -79,7 +79,7 @@
   <body>
     <main>
       <section class="hero">
-        <div class="eyebrow">moxi 2.17.x</div>
+        <div class="eyebrow">daji 3.0.x</div>
         <h1>Kyuubiki Workbench UI Automation Contract</h1>
         <p>
           This contract defines the stable product-owned DOM anchors for the built-in
@@ -88,7 +88,7 @@
           visual styling, or user-customized layout.
         </p>
         <div class="meta">
-          <span>Contract version: 1</span>
+          <span>Contract version: 2</span>
           <span>Product-owned shell: yes</span>
           <span>User-extensible UI shell: no</span>
         </div>
@@ -128,28 +128,59 @@
           </thead>
           <tbody>
             <tr><td>shell</td><td><code>[data-workbench-shell="root"]</code></td></tr>
+            <tr><td>uiChunk(chunkId)</td><td><code>[data-workbench-ui-chunk="${chunkId}"]</code></td></tr>
             <tr><td>sidebar</td><td><code>[data-workbench-panel="sidebar"]</code></td></tr>
             <tr><td>sidebarSection(section)</td><td><code>[data-workbench-sidebar-section="${section}"]</code></td></tr>
-            <tr><td>railButton(section)</td><td><code>workbench-rail:${section}</code></td></tr>
+            <tr><td>railButton(section)</td><td><code>[aria-label="workbench-rail:${section}"]</code></td></tr>
             <tr><td>inspector</td><td><code>[data-workbench-panel="inspector"]</code></td></tr>
             <tr><td>console</td><td><code>[data-workbench-panel="console"]</code></td></tr>
             <tr><td>viewportPanel</td><td><code>[data-workbench-panel="viewport"]</code></td></tr>
             <tr><td>viewportStage</td><td><code>[data-workbench-viewport="stage"]</code></td></tr>
             <tr><td>loadedModelState</td><td><code>[data-workbench-state="loaded-model"]</code></td></tr>
-            <tr><td>libraryTab(tab)</td><td><code>workbench-library-tab:${tab}</code></td></tr>
-            <tr><td>sampleDomain(domain)</td><td><code>workbench-sample-domain:${domain}</code></td></tr>
-            <tr><td>sample(sampleId)</td><td><code>workbench-sample:${sampleId}</code></td></tr>
+            <tr><td>modelPanel</td><td><code>[data-workbench-model="panel"]</code></td></tr>
+            <tr><td>modelTab(tab)</td><td><code>[data-workbench-model-tab="${tab}"]</code></td></tr>
+            <tr><td>modelToolsPage(page)</td><td><code>[data-workbench-model-tools-page="${page}"]</code></td></tr>
+            <tr><td>modelStudyPanel</td><td><code>[data-workbench-model-study="panel"]</code></td></tr>
+            <tr><td>modelStudyDomain(domain)</td><td><code>[data-workbench-model-study-domain="${domain}"]</code></td></tr>
+            <tr><td>modelStudyKind</td><td><code>[data-workbench-model-study-kind="select"]</code></td></tr>
+            <tr><td>modelStudyRun</td><td><code>[data-workbench-model-study-run="true"]</code></td></tr>
+            <tr><td>libraryTab(tab)</td><td><code>[data-workbench-library-tab="${tab}"]</code></td></tr>
+            <tr><td>librarySamplePage(page)</td><td><code>[data-workbench-library-sample-page="${page}"]</code></td></tr>
+            <tr><td>libraryProjectPage(page)</td><td><code>[data-workbench-library-project-page="${page}"]</code></td></tr>
+            <tr><td>libraryModelPage(page)</td><td><code>[data-workbench-library-model-page="${page}"]</code></td></tr>
+            <tr><td>sampleDomain(domain)</td><td><code>[aria-label="workbench-sample-domain:${domain}"]</code></td></tr>
+            <tr><td>sample(sampleId)</td><td><code>[aria-label="workbench-sample:${sampleId}"]</code></td></tr>
             <tr><td>workflowSurface</td><td><code>[data-workbench-workflow-surface]</code></td></tr>
             <tr><td>workflowSurfaceTab(tab)</td><td><code>[data-workflow-surface-tab="${tab}"]</code></td></tr>
             <tr><td>workflowCatalogSearch</td><td><code>[data-workflow-catalog-search="query"]</code></td></tr>
+            <tr><td>workflowCatalogEntry(workflowId)</td><td><code>[data-workflow-catalog-id="${workflowId}"]</code></td></tr>
             <tr><td>workflowCatalogAction(action)</td><td><code>[data-workflow-catalog-action="${action}"]</code></td></tr>
             <tr><td>workflowBuilder</td><td><code>[data-workflow-builder-shell="builder"]</code></td></tr>
             <tr><td>workflowBuilderAction(action)</td><td><code>[data-workflow-builder-action="${action}"]</code></td></tr>
             <tr><td>workflowOperatorSearch</td><td><code>[data-workflow-operator-search="query"]</code></td></tr>
             <tr><td>workflowOperatorAction(action)</td><td><code>[data-workflow-operator-action="${action}"]</code></td></tr>
+            <tr><td>workflowTopologyKind</td><td><code>[data-workflow-topology-kind="select"]</code></td></tr>
+            <tr><td>workflowInputArtifact(nodeId)</td><td><code>[data-workflow-input-artifact="${nodeId}"]</code></td></tr>
+            <tr><td>workflowRun(jobId)</td><td><code>[data-workflow-run-id="${jobId}"]</code></td></tr>
+            <tr><td>workflowRunStatus(status)</td><td><code>[data-workflow-run-status="${status}"]</code></td></tr>
+            <tr><td>workflowRunWorkflow(workflowId)</td><td><code>[data-workflow-run-workflow-id="${workflowId}"]</code></td></tr>
             <tr><td>runtimePanel</td><td><code>[data-workbench-runtime="panel"]</code></td></tr>
+            <tr><td>systemSidebar</td><td><code>[data-workbench-system-sidebar="root"]</code></td></tr>
+            <tr><td>systemSurfaceTab(tab)</td><td><code>[data-workbench-system-surface-tab="${tab}"]</code></td></tr>
+            <tr><td>systemSettingsPage(page)</td><td><code>[data-workbench-system-settings-page="${page}"]</code></td></tr>
             <tr><td>runtimeTabs</td><td><code>[data-workbench-runtime="tabs"]</code></td></tr>
             <tr><td>runtimeTab(page)</td><td><code>[data-workbench-runtime-tab="${page}"]</code></td></tr>
+            <tr><td>dataAdminPanel</td><td><code>[data-workbench-data-admin="panel"]</code></td></tr>
+            <tr><td>dataTab(tab)</td><td><code>[data-workbench-data-tab="${tab}"]</code></td></tr>
+            <tr><td>dataPage(page)</td><td><code>[data-workbench-data-page="${page}"]</code></td></tr>
+            <tr><td>libraryPanel</td><td><code>[data-workbench-library="panel"]</code></td></tr>
+            <tr><td>storePanel</td><td><code>[data-workbench-store-panel="true"]</code></td></tr>
+            <tr><td>storeKind(kind)</td><td><code>[data-workbench-store-kind="${kind}"]</code></td></tr>
+            <tr><td>storeSearch</td><td><code>[data-workbench-store-search="query"]</code></td></tr>
+            <tr><td>storeEntry(entryId)</td><td><code>[data-workbench-store-entry-id="${entryId}"]</code></td></tr>
+            <tr><td>storeEntryAction(action)</td><td><code>[data-workbench-store-entry-action="${action}"]</code></td></tr>
+            <tr><td>storeManifestEntry(entryId)</td><td><code>[data-workbench-store-manifest-entry-id="${entryId}"]</code></td></tr>
+            <tr><td>storeManifestAction(action)</td><td><code>[data-workbench-store-manifest-action="${action}"]</code></td></tr>
             <tr><td>controlWindow</td><td><code>[data-workbench-control-window="root"]</code></td></tr>
             <tr><td>controlWindowTabs</td><td><code>[data-workbench-control-window="tabs"]</code></td></tr>
             <tr><td>controlWindowTab(mode)</td><td><code>[data-workbench-control-mode-tab="${mode}"]</code></td></tr>

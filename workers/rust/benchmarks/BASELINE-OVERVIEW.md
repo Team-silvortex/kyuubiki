@@ -3,6 +3,12 @@
 This page tracks the first standardized performance-baseline ladder for the
 `1.9.*` cycle.
 
+The retained files on this historical page predate per-case process isolation.
+Their timing evidence remains useful, but their peak RSS values use the legacy
+shared-process high-water scope and must not be compared against isolated RSS
+results. Refresh a baseline with the current runner before enabling an RSS
+regression gate.
+
 ## Standard matrices
 
 - `mechanical-core`

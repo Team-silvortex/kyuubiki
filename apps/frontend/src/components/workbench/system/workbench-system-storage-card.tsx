@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
 import { WorkbenchSystemOverviewCard } from "@/components/workbench/system/workbench-system-overview-card";
 
 import {
@@ -23,7 +24,11 @@ function formatPercent(usageBytes: number | null, quotaBytes: number | null) {
   return `${((usageBytes / quotaBytes) * 100).toFixed(1)}%`;
 }
 
-export function WorkbenchSystemStorageCard() {
+type WorkbenchSystemStorageCardProps = {
+  copy: WorkbenchCopy;
+};
+
+export function WorkbenchSystemStorageCard({ copy }: WorkbenchSystemStorageCardProps) {
   const [snapshot, setSnapshot] = useState<WorkbenchStorageSnapshot | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [page, setPage] = useState<"overview" | "details">("overview");
@@ -53,7 +58,7 @@ export function WorkbenchSystemStorageCard() {
     <WorkbenchSystemOverviewCard
       className="runtime-overview-card"
       status={formatBytes(snapshot?.totalBytes ?? null)}
-      title="Disk usage"
+      title={copy.workflowPackageInstallRulesStorageLabel}
     >
       <div className="panel-tabs">
         <button
@@ -61,21 +66,21 @@ export function WorkbenchSystemStorageCard() {
           onClick={() => setPage("overview")}
           type="button"
         >
-          Overview
+          {copy.overview}
         </button>
         <button
           className={`panel-tab${page === "details" ? " panel-tab--active" : ""}`}
           onClick={() => setPage("details")}
           type="button"
         >
-          Details
+          {copy.details}
         </button>
       </div>
       {page === "overview" ? (
         <>
       <div className="sidebar-list sidebar-list--metrics">
         <div className="sidebar-list__row">
-          <span>browser storage</span>
+          <span>{copy.workflowPackageInstallRulesStorageScopeLabel}</span>
           <strong>{formatBytes(snapshot?.usageBytes ?? null)}</strong>
         </div>
         <div className="sidebar-list__row">
@@ -83,15 +88,15 @@ export function WorkbenchSystemStorageCard() {
           <strong>{formatBytes(snapshot?.quotaBytes ?? null)}</strong>
         </div>
         <div className="sidebar-list__row">
-          <span>quota usage</span>
+          <span>quota %</span>
           <strong>{formatPercent(snapshot?.usageBytes ?? null, snapshot?.quotaBytes ?? null)}</strong>
         </div>
         <div className="sidebar-list__row">
-          <span>local storage keys</span>
+          <span>localStorage keys</span>
           <strong>{snapshot?.localStorageKeys ?? "--"}</strong>
         </div>
         <div className="sidebar-list__row">
-          <span>unregistered keys</span>
+          <span>{copy.workflowPackageInstallRulesResidualsLabel}</span>
           <strong>{snapshot ? `${snapshot.unknownKeys} / ${formatBytes(snapshot.unknownBytes)}` : "--"}</strong>
         </div>
       </div>
@@ -101,15 +106,15 @@ export function WorkbenchSystemStorageCard() {
           {largestBuckets.map((bucket) => (
             <div key={bucket.id} style={{ display: "grid", gap: "0.2rem" }}>
               <div className="sidebar-list__row">
-                <span>{bucket.label}</span>
+                <span>{storageBucketLabel(bucket.id, copy)}</span>
                 <strong>{formatBytes(bucket.bytes)}</strong>
               </div>
                   <div className="sidebar-list__row">
-                    <span>entries</span>
+                    <span>{copy.databaseRecordCount}</span>
                     <strong>{bucket.entries}</strong>
                   </div>
                   <div className="sidebar-list__row">
-                    <span>class</span>
+                    <span>{copy.data}</span>
                     <strong>{bucket.dataClass}</strong>
                   </div>
               {bucket.mode === "safe" ? (
@@ -119,7 +124,7 @@ export function WorkbenchSystemStorageCard() {
                     onClick={() => void runAction(bucket.id, () => clearWorkbenchStorageBucket(bucket.id))}
                     type="button"
                   >
-                    {busyAction === bucket.id ? "Cleaning..." : `Clear ${bucket.label}`}
+                    {busyAction === bucket.id ? copy.running : copy.workflowPackageInstallRulesRepairItemLabel}
                   </button>
                 </div>
               ) : null}
@@ -128,24 +133,24 @@ export function WorkbenchSystemStorageCard() {
         </div>
       ) : (
         <p className="card-copy" style={{ marginTop: "0.75rem" }}>
-          No measurable workbench storage buckets are active yet.
+          {copy.workflowPackageInstallRulesResidualsCleanLabel}
         </p>
       )}
 
       <div className="button-row" style={{ marginTop: "0.75rem" }}>
         <button disabled={busyAction !== null} onClick={() => void refresh()} type="button">
-          Refresh
+          {copy.refresh}
         </button>
         <button
           disabled={busyAction !== null}
           onClick={() => void runAction("safe_cleanup", clearWorkbenchSafeStorage)}
           type="button"
         >
-          {busyAction === "safe_cleanup" ? "Cleaning..." : "Clean safe caches"}
+          {busyAction === "safe_cleanup" ? copy.running : copy.workflowPackageInstallRulesRepairLabel}
         </button>
       </div>
       <p className="card-copy" style={{ marginTop: "0.75rem" }}>
-        Safe cleanup only removes snapshots, drafts, and temporary runtime cache. Local workflow assets and presets stay untouched.
+        {copy.settingsInstallPolicyUpdateValue}
       </p>
         </>
       ) : null}
@@ -153,19 +158,19 @@ export function WorkbenchSystemStorageCard() {
         <div style={{ display: "grid", gap: "0.75rem" }}>
           <div className="sidebar-list sidebar-list--metrics">
             <div className="sidebar-list__row">
-              <span>storage scope</span>
-              <strong>browser localStorage / per-user workspace profile</strong>
+              <span>{copy.workflowPackageInstallRulesStorageScopeLabel}</span>
+              <strong>browser.localStorage</strong>
             </div>
             <div className="sidebar-list__row">
-              <span>cleanup mode</span>
-              <strong>visible, selective, policy-bound</strong>
+              <span>{copy.workflowPackageInstallRulesCleanupLabel}</span>
+              <strong>{copy.workflowPackageInstallRulesReadonlyLabel}</strong>
             </div>
             <div className="sidebar-list__row">
-              <span>read-only rules</span>
-              <strong>careful buckets are inspect-first</strong>
+              <span>{copy.workflowPackageInstallRulesReadonlyLabel}</span>
+              <strong>{copy.settingsInstallPolicyIntegrityValue}</strong>
             </div>
             <div className="sidebar-list__row">
-              <span>unregistered local keys</span>
+              <span>{copy.workflowPackageInstallRulesResidualsLabel}</span>
               <strong>{snapshot ? `${snapshot.unknownKeys} / ${formatBytes(snapshot.unknownBytes)}` : "--"}</strong>
             </div>
           </div>
@@ -175,26 +180,25 @@ export function WorkbenchSystemStorageCard() {
               return (
                 <div key={rule.id} style={{ display: "grid", gap: "0.25rem" }}>
                   <div className="sidebar-list__row">
-                    <span>{rule.label}</span>
+                    <span>{storageBucketLabel(rule.id, copy)}</span>
                     <strong>{formatBytes(usage?.bytes ?? 0)}</strong>
                   </div>
                   <div className="sidebar-list__row">
-                    <span>policy</span>
-                    <strong>{rule.cleanupLabel}</strong>
+                    <span>{copy.settingsInstallPolicyTitle}</span>
+                    <strong>{rule.mode === "safe" ? copy.workflowPackageInstallRulesAutoLabel : copy.workflowPackageInstallRulesManualLabel}</strong>
                   </div>
                   <div className="sidebar-list__row">
-                    <span>authority</span>
+                    <span>{copy.access}</span>
                     <strong>{rule.authority}</strong>
                   </div>
                   <div className="sidebar-list__row">
-                    <span>data class</span>
+                    <span>{copy.data}</span>
                     <strong>{rule.dataClass}</strong>
                   </div>
                   <div className="sidebar-list__row">
-                    <span>portable</span>
-                    <strong>{rule.portable ? "yes" : "no"}</strong>
+                    <span>{copy.workflowPackageInstallRulesPortabilityLabel}</span>
+                    <strong>{rule.portable ? copy.yes : copy.no}</strong>
                   </div>
-                  <span className="card-copy">{rule.detail}</span>
                   {rule.keyPrefixes.map((prefix) => (
                     <span className="card-copy" key={`${rule.id}-${prefix}`}>{prefix}</span>
                   ))}
@@ -205,7 +209,7 @@ export function WorkbenchSystemStorageCard() {
                         onClick={() => void runAction(rule.id, () => clearWorkbenchStorageBucket(rule.id))}
                         type="button"
                       >
-                        {busyAction === rule.id ? "Cleaning..." : `Clear ${rule.label}`}
+                        {busyAction === rule.id ? copy.running : copy.workflowPackageInstallRulesRepairItemLabel}
                       </button>
                     </div>
                   ) : null}
@@ -217,4 +221,19 @@ export function WorkbenchSystemStorageCard() {
       ) : null}
     </WorkbenchSystemOverviewCard>
   );
+}
+
+function storageBucketLabel(bucketId: string, copy: WorkbenchCopy) {
+  const labels: Record<string, string> = {
+    workflow_snapshots: copy.workflowPackageInstallRulesSnapshotLabel,
+    workflow_drafts: copy.workflowSavedDraftsTitle,
+    runtime_temp: copy.runtime,
+    local_workflows: copy.workflowLocalWorkflowBadgeLabel,
+    workflow_template_library: copy.workflowTemplateChainLibraryLabel,
+    workspace_store_manifests: copy.rail.store,
+    script_presets: copy.scripts,
+    workflow_favorites: copy.workflowTemplateChainPinnedLabel,
+    settings: copy.settings,
+  };
+  return labels[bucketId] ?? bucketId;
 }

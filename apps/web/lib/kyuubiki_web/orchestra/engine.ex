@@ -43,7 +43,8 @@ defmodule KyuubikiWeb.Orchestra.Engine do
          response_options <-
            WorkflowGraphResponse.resolve_options(graph, Map.get(normalized, "response_options")),
          %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
-         {:ok, result} <- execute_workflow_graph(graph, input_artifacts, %{}, nil, response_options) do
+         {:ok, result} <-
+           execute_workflow_graph(graph, input_artifacts, %{}, nil, response_options) do
       {:ok, WorkflowGraphResponse.shape(graph, result, response_options)}
     else
       nil -> {:error, :invalid_workflow_graph_request}

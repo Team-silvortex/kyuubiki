@@ -28,25 +28,31 @@ pub(super) fn precompute_heat_plane_quad_element(
     request: &SolveHeatPlaneQuad2dRequest,
     element: &HeatPlaneQuadElementInput,
 ) -> Result<HeatPlaneQuadComputed, String> {
-    let first = HeatPlaneTriangleElementInput {
-        id: format!("{}#0", element.id),
-        node_i: element.node_i,
-        node_j: element.node_j,
-        node_k: element.node_k,
-        thickness: element.thickness,
-        conductivity: element.conductivity,
-    };
-    let second = HeatPlaneTriangleElementInput {
-        id: format!("{}#1", element.id),
-        node_i: element.node_i,
-        node_j: element.node_k,
-        node_k: element.node_l,
-        thickness: element.thickness,
-        conductivity: element.conductivity,
-    };
+    let points = [
+        point(&request.nodes[element.node_i]),
+        point(&request.nodes[element.node_j]),
+        point(&request.nodes[element.node_k]),
+        point(&request.nodes[element.node_l]),
+    ];
+    precompute_heat_plane_quad_from_coordinates(points, element.thickness, element.conductivity)
+}
+
+pub(super) fn precompute_heat_plane_quad_from_coordinates(
+    points: [[f64; 2]; 4],
+    thickness: f64,
+    conductivity: f64,
+) -> Result<HeatPlaneQuadComputed, String> {
     Ok(HeatPlaneQuadComputed {
-        first: precompute_heat_plane_triangle_element_from_nodes(&request.nodes, &first)?,
-        second: precompute_heat_plane_triangle_element_from_nodes(&request.nodes, &second)?,
+        first: precompute_heat_plane_triangle_from_coordinates(
+            [points[0], points[1], points[2]],
+            thickness,
+            conductivity,
+        )?,
+        second: precompute_heat_plane_triangle_from_coordinates(
+            [points[0], points[2], points[3]],
+            thickness,
+            conductivity,
+        )?,
     })
 }
 
@@ -69,12 +75,26 @@ fn precompute_heat_plane_triangle_element_from_nodes(
     nodes: &[HeatPlaneNodeInput],
     element: &HeatPlaneTriangleElementInput,
 ) -> Result<HeatPlaneTriangleComputed, String> {
-    let node_i = &nodes[element.node_i];
-    let node_j = &nodes[element.node_j];
-    let node_k = &nodes[element.node_k];
+    precompute_heat_plane_triangle_from_coordinates(
+        [
+            point(&nodes[element.node_i]),
+            point(&nodes[element.node_j]),
+            point(&nodes[element.node_k]),
+        ],
+        element.thickness,
+        element.conductivity,
+    )
+}
+
+fn precompute_heat_plane_triangle_from_coordinates(
+    points: [[f64; 2]; 3],
+    thickness: f64,
+    conductivity: f64,
+) -> Result<HeatPlaneTriangleComputed, String> {
+    let [node_i, node_j, node_k] = points;
     let signed_area = 0.5
-        * ((node_j.x - node_i.x) * (node_k.y - node_i.y)
-            - (node_k.x - node_i.x) * (node_j.y - node_i.y));
+        * ((node_j[0] - node_i[0]) * (node_k[1] - node_i[1])
+            - (node_k[0] - node_i[0]) * (node_j[1] - node_i[1]));
     let area = signed_area.abs();
     if area <= 1.0e-12 {
         return Err("heat plane triangle element area must be positive".to_string());
@@ -82,17 +102,17 @@ fn precompute_heat_plane_triangle_element_from_nodes(
 
     let twice_area = signed_area * 2.0;
     let gradient_x = [
-        (node_j.y - node_k.y) / twice_area,
-        (node_k.y - node_i.y) / twice_area,
-        (node_i.y - node_j.y) / twice_area,
+        (node_j[1] - node_k[1]) / twice_area,
+        (node_k[1] - node_i[1]) / twice_area,
+        (node_i[1] - node_j[1]) / twice_area,
     ];
     let gradient_y = [
-        (node_k.x - node_j.x) / twice_area,
-        (node_i.x - node_k.x) / twice_area,
-        (node_j.x - node_i.x) / twice_area,
+        (node_k[0] - node_j[0]) / twice_area,
+        (node_i[0] - node_k[0]) / twice_area,
+        (node_j[0] - node_i[0]) / twice_area,
     ];
 
-    let scale = element.conductivity * element.thickness * area;
+    let scale = conductivity * thickness * area;
     let mut stiffness = [[0.0; 3]; 3];
     for row in 0..3 {
         for column in 0..3 {
@@ -107,4 +127,8 @@ fn precompute_heat_plane_triangle_element_from_nodes(
         gradient_x,
         gradient_y,
     })
+}
+
+fn point(node: &HeatPlaneNodeInput) -> [f64; 2] {
+    [node.x, node.y]
 }

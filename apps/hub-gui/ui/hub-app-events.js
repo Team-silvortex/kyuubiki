@@ -391,8 +391,8 @@ export function bindHubAppEvents({
                   ? "language pack missing, using built-in copy"
                   : "built-in copy applied"
               : status === "missing"
-                ? "◇ moxi 2.x"
-                : "✓ moxi 2.x";
+                ? "◇ daji 3.x"
+                : "✓ daji 3.x";
     const refreshHint =
       state.language === "zh"
         ? "如已打开其他桌面外壳且未刷新，请重启。"

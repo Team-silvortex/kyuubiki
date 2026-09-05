@@ -1,6 +1,6 @@
 # Project Architecture Organization
 
-This document is the working organization map for the active `moxi 2.x`
+This document is the working organization map for the active `daji 3.x`
 architecture line. It exists to keep feature work, protocol work, and cleanup
 moving in the same direction after the `tamamono 1.x` bridge became historical
 preparation context.

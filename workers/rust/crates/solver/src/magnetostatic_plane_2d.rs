@@ -1,6 +1,10 @@
+use std::borrow::Cow;
+
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system_with_prescribed, solve_spd_system,
+    SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
+    solve_spd_system_profile_with_options,
 };
+use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
 use crate::magnetostatic_plane_2d_element::{
     precompute_quad_element, precompute_triangle_element, scalar_gradient,
 };
@@ -14,10 +18,36 @@ use kyuubiki_protocol::{
     SolveMagnetostaticPlaneTriangle2dResult,
 };
 
+const MAGNETOSTATIC_IC0_NODE_THRESHOLD: usize = 90_000;
+
 pub fn solve_magnetostatic_plane_triangle_2d(
     request: &SolveMagnetostaticPlaneTriangle2dRequest,
 ) -> Result<SolveMagnetostaticPlaneTriangle2dResult, String> {
-    validate_magnetostatic_plane_triangle_request(request)?;
+    solve_magnetostatic_plane_triangle_2d_internal(
+        Cow::Borrowed(request),
+        default_magnetostatic_options(request.nodes.len()),
+    )
+}
+
+pub fn solve_magnetostatic_plane_triangle_2d_owned(
+    request: SolveMagnetostaticPlaneTriangle2dRequest,
+) -> Result<SolveMagnetostaticPlaneTriangle2dResult, String> {
+    let options = default_magnetostatic_options(request.nodes.len());
+    solve_magnetostatic_plane_triangle_2d_internal(Cow::Owned(request), options)
+}
+
+pub fn solve_magnetostatic_plane_triangle_2d_with_options(
+    request: &SolveMagnetostaticPlaneTriangle2dRequest,
+    options: SpdSolveOptions,
+) -> Result<SolveMagnetostaticPlaneTriangle2dResult, String> {
+    solve_magnetostatic_plane_triangle_2d_internal(Cow::Borrowed(request), options)
+}
+
+fn solve_magnetostatic_plane_triangle_2d_internal(
+    request: Cow<'_, SolveMagnetostaticPlaneTriangle2dRequest>,
+    options: SpdSolveOptions,
+) -> Result<SolveMagnetostaticPlaneTriangle2dResult, String> {
+    validate_magnetostatic_plane_triangle_request(request.as_ref())?;
 
     let dof_count = request.nodes.len();
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -25,7 +55,7 @@ pub fn solve_magnetostatic_plane_triangle_2d(
     let computed_elements = request
         .elements
         .iter()
-        .map(|element| precompute_triangle_element(request, element))
+        .map(|element| precompute_triangle_element(request.as_ref(), element))
         .collect::<Result<Vec<_>, String>>()?;
 
     for (index, node) in request.nodes.iter().enumerate() {
@@ -58,7 +88,9 @@ pub fn solve_magnetostatic_plane_triangle_2d(
 
     let (reduced_stiffness, reduced_source, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed);
-    let reduced_potentials = solve_spd_system(&reduced_stiffness, &reduced_source)?;
+    let reduced_potentials =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_source, options)?
+            .solution;
 
     let mut vector_potentials = vec![0.0; dof_count];
     for &(index, value) in &prescribed {
@@ -137,7 +169,7 @@ pub fn solve_magnetostatic_plane_triangle_2d(
         .collect::<Vec<_>>();
 
     Ok(SolveMagnetostaticPlaneTriangle2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         max_vector_potential: nodes
             .iter()
             .map(|node| node.vector_potential.abs())
@@ -163,7 +195,31 @@ pub fn solve_magnetostatic_plane_triangle_2d(
 pub fn solve_magnetostatic_plane_quad_2d(
     request: &SolveMagnetostaticPlaneQuad2dRequest,
 ) -> Result<SolveMagnetostaticPlaneQuad2dResult, String> {
-    validate_magnetostatic_plane_quad_request(request)?;
+    solve_magnetostatic_plane_quad_2d_internal(
+        Cow::Borrowed(request),
+        default_magnetostatic_options(request.nodes.len()),
+    )
+}
+
+pub fn solve_magnetostatic_plane_quad_2d_owned(
+    request: SolveMagnetostaticPlaneQuad2dRequest,
+) -> Result<SolveMagnetostaticPlaneQuad2dResult, String> {
+    let options = default_magnetostatic_options(request.nodes.len());
+    solve_magnetostatic_plane_quad_2d_internal(Cow::Owned(request), options)
+}
+
+pub fn solve_magnetostatic_plane_quad_2d_with_options(
+    request: &SolveMagnetostaticPlaneQuad2dRequest,
+    options: SpdSolveOptions,
+) -> Result<SolveMagnetostaticPlaneQuad2dResult, String> {
+    solve_magnetostatic_plane_quad_2d_internal(Cow::Borrowed(request), options)
+}
+
+fn solve_magnetostatic_plane_quad_2d_internal(
+    request: Cow<'_, SolveMagnetostaticPlaneQuad2dRequest>,
+    options: SpdSolveOptions,
+) -> Result<SolveMagnetostaticPlaneQuad2dResult, String> {
+    validate_magnetostatic_plane_quad_request(request.as_ref())?;
 
     let dof_count = request.nodes.len();
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -171,7 +227,7 @@ pub fn solve_magnetostatic_plane_quad_2d(
     let computed_elements = request
         .elements
         .iter()
-        .map(|element| precompute_quad_element(request, element))
+        .map(|element| precompute_quad_element(request.as_ref(), element))
         .collect::<Result<Vec<_>, String>>()?;
 
     for (index, node) in request.nodes.iter().enumerate() {
@@ -213,7 +269,9 @@ pub fn solve_magnetostatic_plane_quad_2d(
         .collect::<Vec<_>>();
     let (reduced_stiffness, reduced_source, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed);
-    let reduced_potentials = solve_spd_system(&reduced_stiffness, &reduced_source)?;
+    let reduced_potentials =
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_source, options)?
+            .solution;
 
     let mut vector_potentials = vec![0.0; dof_count];
     for &(index, value) in &prescribed {
@@ -302,7 +360,7 @@ pub fn solve_magnetostatic_plane_quad_2d(
         .collect::<Vec<_>>();
 
     Ok(SolveMagnetostaticPlaneQuad2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         max_vector_potential: nodes
             .iter()
             .map(|node| node.vector_potential.abs())
@@ -340,4 +398,33 @@ fn build_node_results<'a>(
             current_density: node.current_density,
         })
         .collect()
+}
+
+fn default_magnetostatic_options(node_count: usize) -> SpdSolveOptions {
+    SpdSolveOptions {
+        preconditioner: if node_count >= MAGNETOSTATIC_IC0_NODE_THRESHOLD {
+            SpdPreconditioner::IncompleteCholesky
+        } else {
+            SpdPreconditioner::Jacobi
+        },
+        progress_interval: None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{MAGNETOSTATIC_IC0_NODE_THRESHOLD, default_magnetostatic_options};
+    use crate::SpdPreconditioner;
+
+    #[test]
+    fn large_magnetostatic_planes_default_to_ic0() {
+        assert_eq!(
+            default_magnetostatic_options(MAGNETOSTATIC_IC0_NODE_THRESHOLD).preconditioner,
+            SpdPreconditioner::IncompleteCholesky
+        );
+        assert_eq!(
+            default_magnetostatic_options(MAGNETOSTATIC_IC0_NODE_THRESHOLD - 1).preconditioner,
+            SpdPreconditioner::Jacobi
+        );
+    }
 }

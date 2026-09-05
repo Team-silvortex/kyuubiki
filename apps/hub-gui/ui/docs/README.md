@@ -28,6 +28,9 @@ This directory is the desktop-facing HTML docs shelf used by the Hub shell.
 - `index.html`
   Desktop dispatch page that links both the short Hub mirrors and the
   repository-level chapter pages of the centralized book.
+- `../../../../docs/tutorials.html`
+  Central task-oriented tutorial entry for the first GUI loop, composite
+  workflow authoring, PWDT, Rust Headless, Rust Operator SDK, and recovery.
 - `../../../../docs/navigation-matrix.html`
   Central role-and-lane matrix for routing readers between book chapters,
   verification, Installer remote control, mesh posture, and headless SDK

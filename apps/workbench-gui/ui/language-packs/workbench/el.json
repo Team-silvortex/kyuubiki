@@ -4,9 +4,9 @@
   "language": "el",
   "targetSurface": "workbench",
   "name": "Greek Workbench Core",
-  "version": "2.17.0",
-  "versionLine": "moxi 2.x",
-  "targetAppVersion": "2.17.0",
+  "version": "3.0.0",
+  "versionLine": "daji 3.x",
+  "targetAppVersion": "3.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-20T12:02:53.192Z",
   "description": "Greek UI translations for Workbench navigation, workflow, store, and system surfaces.",
@@ -29,6 +29,7 @@
     }
   ],
   "overrides": {
+    "workflowStorageWriteFailedLabel": "Δεν ήταν δυνατή η αποθήκευση των τοπικών δεδομένων ροής εργασίας. Ελέγξτε τον διαθέσιμο χώρο αποθήκευσης και δοκιμάστε ξανά.",
     "title": "Kyuubiki Workbench · Ελληνικά",
     "subtitle": "Χώρος εργασίας για προσομοίωση, ροές και agents.",
     "rail": {

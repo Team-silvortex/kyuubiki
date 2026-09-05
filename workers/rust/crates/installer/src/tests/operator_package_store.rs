@@ -210,6 +210,7 @@ fn write_package(root: &Path, package_id: &str, version: &str, payload: &[u8]) {
         serde_json::json!({
             "schema_version": kyuubiki_operator_sdk::OPERATOR_PACKAGE_SCHEMA_VERSION,
             "sdk_api_version": kyuubiki_operator_sdk::OPERATOR_SDK_API_VERSION,
+            "execution_abi": kyuubiki_operator_sdk::OPERATOR_JSON_ABI_SCHEMA_VERSION,
             "package_id": package_id,
             "package_version": version,
             "minimum_host_version": "1.15.0",
@@ -220,7 +221,7 @@ fn write_package(root: &Path, package_id: &str, version: &str, payload: &[u8]) {
             "operators": [{
                 "operator_id": "extract.managed_operator",
                 "kind": "extract",
-                "entry_symbol": "register_managed_operator"
+                "entry_symbol": "run_managed_operator_json"
             }]
         })
         .to_string(),

@@ -39,17 +39,12 @@ defmodule KyuubikiWeb.WorkflowParameterSweepRuntime do
             result when is_map(result) ->
               summary = extract_join_summary(result, summary_field)
 
-              if is_nil(summary) do
-                {[Map.put(case_payload, "result_status", "missing") | joined],
-                 [case_id | missing], count}
-              else
-                next_case =
-                  case_payload
-                  |> Map.put(output_field, summary)
-                  |> Map.put("result_status", Map.get(result, "status", "joined"))
+              next_case =
+                case_payload
+                |> Map.put(output_field, summary)
+                |> Map.put("result_status", Map.get(result, "status", "joined"))
 
-                {[next_case | joined], missing, count + 1}
-              end
+              {[next_case | joined], missing, count + 1}
 
             _ ->
               {[Map.put(case_payload, "result_status", "missing") | joined], [case_id | missing],
@@ -417,6 +412,4 @@ defmodule KyuubikiWeb.WorkflowParameterSweepRuntime do
     maximum_ok = !is_number(objective["max_allowed"]) or value <= objective["max_allowed"]
     minimum_ok and maximum_ok
   end
-
-  defp objective_limit_allows?(_objective, _value), do: false
 end

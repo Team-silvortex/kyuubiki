@@ -1,5 +1,5 @@
 use crate::acoustic_bar_1d_validation::validate_request;
-use crate::chain_tridiagonal::{is_indexed_chain, solve_with_prescribed};
+use crate::chain_tridiagonal::solve_path_with_prescribed;
 use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system_with_prescribed, solve_spd_system,
 };
@@ -14,8 +14,21 @@ pub fn solve_acoustic_bar_1d(
     request: &SolveAcousticBar1dRequest,
 ) -> Result<SolveAcousticBar1dResult, String> {
     validate_request(request)?;
+    solve_validated_acoustic_bar_1d(request.clone())
+}
+
+pub fn solve_acoustic_bar_1d_owned(
+    request: SolveAcousticBar1dRequest,
+) -> Result<SolveAcousticBar1dResult, String> {
+    validate_request(&request)?;
+    solve_validated_acoustic_bar_1d(request)
+}
+
+fn solve_validated_acoustic_bar_1d(
+    request: SolveAcousticBar1dRequest,
+) -> Result<SolveAcousticBar1dResult, String> {
     let omega = 2.0 * std::f64::consts::PI * request.frequency_hz;
-    let pressures = solve_pressures(request, omega)?;
+    let pressures = solve_pressures(&request, omega)?;
 
     let nodes = request
         .nodes
@@ -35,7 +48,7 @@ pub fn solve_acoustic_bar_1d(
         .elements
         .iter()
         .enumerate()
-        .map(|(index, element)| element_result(request, element, index, &pressures, omega))
+        .map(|(index, element)| element_result(&request, element, index, &pressures, omega))
         .collect::<Result<Vec<_>, String>>()?;
 
     let max_pressure = nodes
@@ -56,11 +69,12 @@ pub fn solve_acoustic_bar_1d(
         .fold(0.0_f64, f64::max);
     let total_damping_loss = elements.iter().map(|element| element.damping_loss).sum();
 
+    let frequency_hz = request.frequency_hz;
     Ok(SolveAcousticBar1dResult {
-        input: request.clone(),
+        input: request,
         nodes,
         elements,
-        frequency_hz: request.frequency_hz,
+        frequency_hz,
         angular_frequency: omega,
         max_pressure,
         max_sound_pressure_level_db,
@@ -84,37 +98,15 @@ fn solve_pressures(request: &SolveAcousticBar1dRequest, omega: f64) -> Result<Ve
         .filter_map(|(index, node)| node.fix_pressure.then_some((index, node.pressure)))
         .collect::<Vec<_>>();
 
-    if is_indexed_chain(
+    if let Some(result) = solve_path_with_prescribed(
         dof_count,
-        request
-            .elements
-            .iter()
-            .map(|element| (element.node_i, element.node_j)),
+        &request.elements,
+        |element| (element.node_i, element.node_j),
+        |element| acoustic_local_matrix(request, element, omega),
+        &rhs,
+        &prescribed,
     ) {
-        let mut diagonal = vec![0.0; dof_count];
-        let mut lower = vec![0.0; dof_count - 1];
-        let mut upper = vec![0.0; dof_count - 1];
-        for element in &request.elements {
-            let local = acoustic_local_matrix(request, element, omega)?;
-            let map = [element.node_i, element.node_j];
-            for row in 0..2 {
-                for column in 0..2 {
-                    let row_index = map[row];
-                    let column_index = map[column];
-                    if row_index == column_index {
-                        diagonal[row_index] += local[row][column];
-                    } else {
-                        let left = row_index.min(column_index);
-                        if row_index == left {
-                            upper[left] += local[row][column];
-                        } else {
-                            lower[left] += local[row][column];
-                        }
-                    }
-                }
-            }
-        }
-        return solve_with_prescribed(&diagonal, &lower, &upper, &rhs, &prescribed);
+        return result;
     }
 
     let mut system = SparseMatrix::new(dof_count);

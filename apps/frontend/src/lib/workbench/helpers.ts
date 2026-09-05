@@ -1,4 +1,5 @@
 import { buildStudyModelPayload } from "@/lib/models/modeler";
+import { KYUUBIKI_PRODUCT_VERSION } from "@/lib/product-version";
 import {
   buildWorkbenchGovernanceConfig,
   normalizeWorkbenchGovernanceRuntime,
@@ -42,8 +43,8 @@ import type {
 export const WORKBENCH_SETTINGS_KEY = "kyuubiki-workbench-settings";
 export const WORKBENCH_LANGUAGE_PACKS_KEY = "kyuubiki-workbench-language-packs";
 export const WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION = "kyuubiki.language-pack/v1";
-export const WORKBENCH_LANGUAGE_PACK_VERSION_LINE = "moxi 2.x";
-export const WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION = "2.0.0";
+export const WORKBENCH_LANGUAGE_PACK_VERSION_LINE = "daji 3.x";
+export const WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION = KYUUBIKI_PRODUCT_VERSION;
 
 export type WorkbenchLanguagePackCompatibility = "exact" | "line" | "unscoped" | "mismatch";
 export { mergeLanguagePack };
@@ -117,6 +118,72 @@ export type WorkbenchSettingsInput = {
   assistantModel: string;
 };
 
+export type WorkbenchSettingsReadResult = {
+  settings: StoredWorkbenchSettings;
+  readable: boolean;
+};
+
+export type WorkbenchLanguagePacksReadResult = {
+  packs: WorkbenchLanguagePack[];
+  readable: boolean;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function parseStoredWorkbenchSettings(value: unknown): StoredWorkbenchSettings | null {
+  if (!isRecord(value)) return null;
+
+  const parsed: StoredWorkbenchSettings = {};
+  const copyString = (key: keyof StoredWorkbenchSettings) => {
+    if (typeof value[key] === "string") parsed[key] = value[key] as never;
+  };
+
+  copyString("theme");
+  copyString("language");
+  copyString("directMeshEndpointsText");
+  copyString("assistantApiBaseUrl");
+  copyString("assistantModel");
+  copyString("controlPlaneApiToken");
+  copyString("clusterApiToken");
+  copyString("directMeshApiToken");
+  copyString("assistantApiKey");
+  if (typeof value.showShortcutHints === "boolean") {
+    parsed.showShortcutHints = value.showShortcutHints;
+  }
+  if (typeof value.immersiveGuardrails === "boolean") {
+    parsed.immersiveGuardrails = value.immersiveGuardrails;
+  }
+  if (value.frontendRuntimeMode === "orchestrated_gui" || value.frontendRuntimeMode === "direct_mesh_gui") {
+    parsed.frontendRuntimeMode = value.frontendRuntimeMode;
+  }
+  if (value.directMeshSelectionMode === "healthiest" || value.directMeshSelectionMode === "first_reachable") {
+    parsed.directMeshSelectionMode = value.directMeshSelectionMode;
+  }
+  if (value.assistantMode === "local" || value.assistantMode === "llm") {
+    parsed.assistantMode = value.assistantMode;
+  }
+  if (isRecord(value.governanceConfig)) {
+    parsed.governanceConfig = value.governanceConfig as WorkbenchGovernanceConfig;
+  }
+  return parsed;
+}
+
+function parseStoredWorkbenchSecrets(value: unknown): StoredWorkbenchSecrets {
+  if (!isRecord(value)) return {};
+  return {
+    ...(typeof value.controlPlaneApiToken === "string"
+      ? { controlPlaneApiToken: value.controlPlaneApiToken }
+      : {}),
+    ...(typeof value.clusterApiToken === "string" ? { clusterApiToken: value.clusterApiToken } : {}),
+    ...(typeof value.directMeshApiToken === "string"
+      ? { directMeshApiToken: value.directMeshApiToken }
+      : {}),
+    ...(typeof value.assistantApiKey === "string" ? { assistantApiKey: value.assistantApiKey } : {}),
+  };
+}
+
 function sanitizeStoredSettings(input: StoredWorkbenchSettings): PersistedWorkbenchSettings {
   return {
     theme: input.theme,
@@ -147,14 +214,37 @@ type ParametricLike = {
   youngsModulusGpa: number;
 };
 
-export function safeStorageGet(): StoredWorkbenchSettings {
-  if (typeof window === "undefined") return {};
+export function safeStorageGetResult(): WorkbenchSettingsReadResult {
+  if (typeof window === "undefined") return { settings: {}, readable: false };
 
+  const unreadableResult = (): WorkbenchSettingsReadResult => ({
+    settings: { ...readInMemoryWorkbenchSecrets() },
+    readable: false,
+  });
+
+  let parsedSettings: StoredWorkbenchSettings;
   try {
     const rawSettings = window.localStorage.getItem(WORKBENCH_SETTINGS_KEY);
-    const parsedSettings = rawSettings ? (JSON.parse(rawSettings) as StoredWorkbenchSettings) : {};
+    const parsed = rawSettings === null ? {} : JSON.parse(rawSettings);
+    const normalized = parseStoredWorkbenchSettings(parsed);
+    if (!normalized) return unreadableResult();
+    parsedSettings = normalized;
+  } catch {
+    return unreadableResult();
+  }
+
+  let persistedSessionSecrets: StoredWorkbenchSecrets = {};
+  try {
     const rawSecrets = window.sessionStorage.getItem(WORKBENCH_SECRETS_KEY);
-    const persistedSessionSecrets = rawSecrets ? (JSON.parse(rawSecrets) as StoredWorkbenchSecrets) : {};
+    persistedSessionSecrets = rawSecrets === null
+      ? {}
+      : parseStoredWorkbenchSecrets(JSON.parse(rawSecrets));
+  } catch {
+    persistedSessionSecrets = {};
+  }
+
+  let readable = true;
+  try {
 
     const legacySecrets: StoredWorkbenchSecrets = {
       ...(parsedSettings.controlPlaneApiToken ? { controlPlaneApiToken: parsedSettings.controlPlaneApiToken } : {}),
@@ -171,23 +261,34 @@ export function safeStorageGet(): StoredWorkbenchSettings {
       writeInMemoryWorkbenchSecrets(legacySecrets);
       window.localStorage.setItem(WORKBENCH_SETTINGS_KEY, JSON.stringify(sanitizeStoredSettings(parsedSettings)));
     }
+  } catch {
+    readable = false;
+  }
 
+  try {
     scrubPersistedWorkbenchSecrets();
+  } catch {
+    // Settings remain usable when unavailable legacy session storage cannot be scrubbed.
+  }
 
-    const normalized = normalizeWorkbenchGovernanceRuntime({
-      frontendRuntimeMode: parsedSettings.frontendRuntimeMode ?? "orchestrated_gui",
-      directMeshEndpointsText: parsedSettings.directMeshEndpointsText ?? "",
-    });
+  const normalized = normalizeWorkbenchGovernanceRuntime({
+    frontendRuntimeMode: parsedSettings.frontendRuntimeMode ?? "orchestrated_gui",
+    directMeshEndpointsText: parsedSettings.directMeshEndpointsText ?? "",
+  });
 
-    return {
+  return {
+    settings: {
       ...sanitizeStoredSettings(parsedSettings),
       frontendRuntimeMode: normalized.frontendRuntimeMode,
       directMeshEndpointsText: normalized.directMeshEndpointsText,
       ...readInMemoryWorkbenchSecrets(),
-    };
-  } catch {
-    return {};
-  }
+    },
+    readable,
+  };
+}
+
+export function safeStorageGet(): StoredWorkbenchSettings {
+  return safeStorageGetResult().settings;
 }
 
 export function sanitizeWorkbenchSettings(input: WorkbenchSettingsInput): PersistedWorkbenchSettings {
@@ -230,52 +331,66 @@ export function sanitizeWorkbenchSecrets(input: WorkbenchSettingsInput): StoredW
   };
 }
 
-export function persistWorkbenchSettings(input: WorkbenchSettingsInput) {
-  if (typeof window === "undefined") return;
-
-  window.localStorage.setItem(
-    WORKBENCH_SETTINGS_KEY,
-    JSON.stringify(sanitizeWorkbenchSettings(input)),
-  );
-  writeInMemoryWorkbenchSecrets(sanitizeWorkbenchSecrets(input));
-  scrubPersistedWorkbenchSecrets();
-}
-
-export function readWorkbenchLanguagePacks(): WorkbenchLanguagePack[] {
-  if (typeof window === "undefined") return [];
+export function persistWorkbenchSettings(input: WorkbenchSettingsInput): boolean {
+  if (typeof window === "undefined") return false;
 
   try {
-    const raw = window.localStorage.getItem(WORKBENCH_LANGUAGE_PACKS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((entry): entry is WorkbenchLanguagePack => {
-      return (
-        entry &&
-        typeof entry === "object" &&
-        typeof entry.id === "string" &&
-        typeof entry.schema_version === "string" &&
-        typeof entry.language === "string" &&
-        (entry.targetSurface === undefined || entry.targetSurface === "workbench") &&
-        typeof entry.name === "string" &&
-        typeof entry.version === "string" &&
-        (entry.versionLine === undefined || typeof entry.versionLine === "string") &&
-        (entry.targetAppVersion === undefined || typeof entry.targetAppVersion === "string") &&
-        (entry.source === "imported" || entry.source === "downloaded") &&
-        typeof entry.updatedAt === "string" &&
-        entry.overrides &&
-        typeof entry.overrides === "object" &&
-        !Array.isArray(entry.overrides)
-      );
-    });
+    window.localStorage.setItem(
+      WORKBENCH_SETTINGS_KEY,
+      JSON.stringify(sanitizeWorkbenchSettings(input)),
+    );
+    writeInMemoryWorkbenchSecrets(sanitizeWorkbenchSecrets(input));
+    scrubPersistedWorkbenchSecrets();
+    return true;
   } catch {
-    return [];
+    return false;
   }
 }
 
-export function persistWorkbenchLanguagePacks(packs: WorkbenchLanguagePack[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(WORKBENCH_LANGUAGE_PACKS_KEY, JSON.stringify(packs));
+function isWorkbenchLanguagePack(entry: unknown): entry is WorkbenchLanguagePack {
+  return (
+    isRecord(entry) &&
+    typeof entry.id === "string" &&
+    typeof entry.schema_version === "string" &&
+    typeof entry.language === "string" &&
+    (entry.targetSurface === undefined || entry.targetSurface === "workbench") &&
+    typeof entry.name === "string" &&
+    typeof entry.version === "string" &&
+    (entry.versionLine === undefined || typeof entry.versionLine === "string") &&
+    (entry.targetAppVersion === undefined || typeof entry.targetAppVersion === "string") &&
+    (entry.source === "imported" || entry.source === "downloaded") &&
+    typeof entry.updatedAt === "string" &&
+    isRecord(entry.overrides)
+  );
+}
+
+export function readWorkbenchLanguagePacksResult(): WorkbenchLanguagePacksReadResult {
+  if (typeof window === "undefined") return { packs: [], readable: false };
+
+  try {
+    const raw = window.localStorage.getItem(WORKBENCH_LANGUAGE_PACKS_KEY);
+    if (raw === null) return { packs: [], readable: true };
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return { packs: [], readable: false };
+    const packs = parsed.filter(isWorkbenchLanguagePack);
+    return { packs, readable: packs.length === parsed.length };
+  } catch {
+    return { packs: [], readable: false };
+  }
+}
+
+export function readWorkbenchLanguagePacks(): WorkbenchLanguagePack[] {
+  return readWorkbenchLanguagePacksResult().packs;
+}
+
+export function persistWorkbenchLanguagePacks(packs: WorkbenchLanguagePack[]): boolean {
+  if (typeof window === "undefined" || !packs.every(isWorkbenchLanguagePack)) return false;
+  try {
+    window.localStorage.setItem(WORKBENCH_LANGUAGE_PACKS_KEY, JSON.stringify(packs));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function getWorkbenchLanguagePackCompatibility(

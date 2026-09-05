@@ -80,6 +80,7 @@ fn package_manifest(
     serde_json::json!({
         "schema_version": kyuubiki_operator_sdk::OPERATOR_PACKAGE_SCHEMA_VERSION,
         "sdk_api_version": kyuubiki_operator_sdk::OPERATOR_SDK_API_VERSION,
+        "execution_abi": kyuubiki_operator_sdk::OPERATOR_JSON_ABI_SCHEMA_VERSION,
         "package_id": package_id,
         "package_version": "0.1.0",
         "minimum_host_version": "1.15.0",
@@ -165,6 +166,18 @@ fn loads_external_local_package_into_built_in_registry() {
         Some("operator.alpha")
     );
     assert_eq!(result.summary["source"].as_str(), Some("external_local"));
+
+    let empty_packages_root = temp_dir("external-host-cache-isolation");
+    let (fresh_registry, fresh_report) = built_in_registry_with_external_packages(
+        &ExternalOperatorHostConfig::new(
+            BuiltInOperatorRegistryKind::Extract,
+            &empty_packages_root,
+        ),
+        &TestActivator,
+    )
+    .expect("cached built-in registry should clone cleanly");
+    assert!(fresh_report.activated_packages.is_empty());
+    assert!(fresh_registry.describe("extract.alpha").is_none());
 }
 
 #[test]
@@ -492,7 +505,7 @@ fn loads_prebuilt_template_cdylib_through_dynamic_host() {
             "extract.template_summary",
             "rust_crate",
             &template_dylib,
-            "register_template_operator",
+            "run_template_operator_json",
         )
         .to_string(),
     )

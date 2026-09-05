@@ -18,13 +18,15 @@
           "schemas/benchmark-qualification-contract.schema.json",
           "schemas/benchmark-qualification-report.schema.json",
           "workers/rust/crates/script-runner/src/benchmark_qualification.rs",
-          "workers/rust/crates/script-runner/src/benchmark_qualification/validation.rs"
+          "workers/rust/crates/script-runner/src/benchmark_qualification/validation.rs",
+          "workers/rust/crates/script-runner/src/benchmark_qualification/source_tree.rs"
         ],
         "required_text": [
-          "kyuubiki.benchmark-qualification-contract/v2",
+          "kyuubiki.benchmark-qualification-contract/v3",
           "kyuubiki.benchmark-qualification-report/v2",
           "benchmark-release",
           "one_million_node_threshold",
+          "source_roots",
           "min_resolved_failures",
           "validate_scale_archive",
           "direct mesh comparator self-check"

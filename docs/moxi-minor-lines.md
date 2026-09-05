@@ -1,6 +1,8 @@
 # moxi 2.x Minor Lines
 
-Use this document as the durable roadmap for the active `moxi 2.x` line.
+Historical roadmap for the completed `moxi 2.x` development line.
+Current planning lives in [current-line.md](current-line.md) and the coverage
+tensor. These groupings describe prior intent, not proof every patch shipped.
 
 `moxi 2.0.0` is the first formal Kyuubiki 2.x baseline after the
 `tamamono 1.x` industrialization bridge. The old `tamamono` roadmap is kept as
@@ -114,13 +116,13 @@ When in doubt, new `moxi 2.x` work should answer three questions:
 2. Is the contract visible to headless SDKs and not only to GUI code?
 3. Can the coverage tensor, benchmark lane, or integrity checker observe it?
 
-## Current checkpoint: `2.13.x`
+## Current checkpoint: `2.18.x`
 
-The repository has entered the `2.13` to `2.16` ecosystem-surface window. The
-research-workflow and distributed-reliability work stays in the baseline, but
+The repository has entered the final `2.17` to `2.20` moxi hardening window.
+Research-workflow and distributed-reliability work stays in the baseline, while
 the current line-level question is whether every supported control surface can
-reach the same contract-governed study without hidden UI-only meaning,
-machine-local tooling, or dead-end controls.
+finish, retain, and recover the same contract-governed study without hidden
+UI-only meaning, machine-local tooling, or dead-end controls.
 
 - GUI actions, Hub/Workbench/Installer entrypoints, and backend calls must be
   mapped as complete recoverable journeys
@@ -129,9 +131,9 @@ machine-local tooling, or dead-end controls.
   legacy Node test shims as release evidence
 - Pwdt becomes the preferred frontend automation control plane for product-owned
   shells, while headless SDKs stay focused on backend/runtime freedom
-- tensor v4 separates structural completeness, evidence progress, exact target
-  completion, release criticality, and external release gates; its `daji`
-  profile is advisory now and is scheduled to become enforceable at `2.17.0`
+- the coverage tensor separates structural completeness, evidence progress,
+  exact target completion, release criticality, and external release gates;
+  current work should close its weakest release-relevant coordinates
 - component integrity, language packs, update visibility, and documentation
   mirrors must advance with the same current-line language
 - contract checkers and protocol files should continue being split into small

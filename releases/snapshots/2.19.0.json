@@ -1,0 +1,116 @@
+{
+  "version": "2.19.0",
+  "codename": "moxi",
+  "line": "2.x",
+  "status": "archived",
+  "date": "2026-08-30",
+  "git_commit": "b8b05f0d9b79477ab73e95e9025005026eb15c23",
+  "summary": "Moxi 2.19.0 opens the final two minor hardening lines before daji with operational long-workflow Orchestra takeover, generation-scoped Agent cancellation, durable recovery envelopes, and one synchronized release contract across source, desktop, language, documentation, and update surfaces.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md",
+    "operator_sdk": "docs/operator-sdk.md",
+    "workflow_graph": "docs/workflow-graph.md",
+    "workflow_dataset": "docs/workflow-dataset.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": {
+      "version": "2.19.0",
+      "notes": [
+        "Workbench remains a streamed protocol client with stable GUI and Python WASM DSL action contracts.",
+        "Workflow, solver, research, and evidence operations remain language-neutral behind the desktop shell."
+      ]
+    },
+    "hub_gui": {
+      "version": "2.19.0",
+      "notes": [
+        "Hub packages synchronized 2.19.0 documentation, brand, and language-pack contracts.",
+        "Project, runtime, release, and diagnostics journeys retain native desktop command boundaries."
+      ]
+    },
+    "workbench_gui": {
+      "version": "2.19.0",
+      "notes": [
+        "Workbench packages the complete 30-locale language-pack set and current workflow contracts.",
+        "GUI and Python WASM DSL operations continue to share product-owned actions."
+      ]
+    },
+    "installer_gui": {
+      "version": "2.19.0",
+      "notes": [
+        "Installer keeps Hub, Workbench, and Installer under one visible integrity and update contract.",
+        "The source line is version-aligned; fresh 2.19.0 installed-package evidence remains a separate packaging qualification."
+      ]
+    },
+    "web_api": {
+      "version": "2.19.0",
+      "notes": [
+        "Two-Orchestra PostgreSQL takeover now covers idempotent replay and checkpoint-required blocking during exact remote Agent execution.",
+        "Transport cancellation is request-generation scoped so a fenced owner cannot cancel its replacement execution."
+      ]
+    }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": [
+      "ONNX-like workflow datasets and versioned graph contracts",
+      "mixed-physics operator composition through TaskIR and engine protocols",
+      "restart-safe orchestration with persisted outcomes and bounded recovery"
+    ]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": [
+      "Rust-only worker/operator extension SDK remains distinct from headless control SDKs",
+      "operator descriptors, package preflight, TaskIR, and reliability evidence remain release-gated",
+      "solver execution remains language-neutral across direct, Agent RPC, and workflow paths"
+    ]
+  },
+  "desktop_artifacts": {
+    "hub_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
+    "hub_dmg": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_2.19.0_aarch64.dmg",
+    "workbench_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
+    "workbench_dmg": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_2.19.0_aarch64.dmg",
+    "installer_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
+    "installer_dmg": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Installer_2.19.0_aarch64.dmg",
+    "hub_macos_manifest": "dist/macos/desktop/hub-gui/manifest.json",
+    "hub_linux_manifest": "dist/linux/desktop/hub-gui/manifest.json",
+    "hub_windows_manifest": "dist/windows/desktop/hub-gui/manifest.json",
+    "workbench_macos_manifest": "dist/macos/desktop/workbench-gui/manifest.json",
+    "workbench_linux_manifest": "dist/linux/desktop/workbench-gui/manifest.json",
+    "workbench_windows_manifest": "dist/windows/desktop/workbench-gui/manifest.json",
+    "installer_macos_manifest": "dist/macos/desktop/installer-gui/manifest.json",
+    "installer_linux_manifest": "dist/linux/desktop/installer-gui/manifest.json",
+    "installer_windows_manifest": "dist/windows/desktop/installer-gui/manifest.json"
+  },
+  "verification": {
+    "desktop_bundle_versions": {
+      "hub": "2.19.0",
+      "workbench": "2.19.0",
+      "installer": "2.19.0"
+    },
+    "inherited_installed_desktop_evidence": {
+      "macos": "releases/usability-evidence/2.18.3/macos-installed-desktop-smoke.json",
+      "linux": "releases/usability-evidence/2.18.3/linux-installed-desktop-smoke.json",
+      "desktop_ui": "releases/usability-evidence/2.18.3/desktop-ui-validation-qualification.json"
+    },
+    "current_recovery_evidence": {
+      "long_workflow_takeover": "releases/usability-evidence/2.18.3/orchestra-long-workflow-takeover-operational-qualification.json"
+    },
+    "frontend_checks": [
+      "npm run typecheck",
+      "npm run build",
+      "npm run check:workflow-preflight"
+    ],
+    "repo_checks": [
+      "git diff --check",
+      "make check-version-line",
+      "make audit-project-organization",
+      "make check-ui-automation-contract",
+      "make check-language-packs",
+      "make check-usability-release-gate"
+    ]
+  }
+}

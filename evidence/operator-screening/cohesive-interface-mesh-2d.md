@@ -55,6 +55,18 @@ satisfies the configured tolerance. A singular tangent, non-finite update, or
 iteration-limit failure returns the last converged state and a visible failure
 reason.
 
+The relative residual scale is frozen at the start of each load step as the
+maximum of one, the norm of the actual `load_factor * external_load` on free
+DOFs, and the initial free-DOF residual. The initial residual supplies the scale
+for prescribed motion and unloading. Support loads cannot loosen this test.
+Norms use scaled sum-of-squares accumulation, and convergence compares the
+residual-to-scale ratio without multiplying the tolerance by a large load.
+Non-finite force residuals, including on constrained DOFs, fail the step before
+history commit. An unrepresentable failed residual norm is reported as
+`f64::MAX` with a non-finite failure reason so the report remains serializable.
+Failed-step state summaries, including reactions, use the last accepted load
+factor; the step's control fields still identify the attempted command.
+
 ## Retained checks
 
 - one interface under uniform elastic opening matches `traction / stiffness`
@@ -90,6 +102,14 @@ reason.
   convergence, including its maximum connector force
 - an underconstrained rigid mode is detected as a singular reduced tangent
 - the singular step leaves displacement and damage at the committed zero state
+- support loads up to `1e180` leave the free opening and traction unchanged
+- equivalent base-load/factor parameterizations from `1e-180` to `1e180`
+  recover the same elastic equilibrium; changing force units by `1e160`
+  preserves both force-driven and partially constrained displacement-driven
+  solutions without overflowing the retained norms
+- an overflowing later free or support load preserves the accepted
+  displacement, reactions, and damaged history; its failure report round-trips
+  through JSON without null numeric fields
 - unknown materials, duplicate IDs, invalid connectivity, non-finite inputs,
   mutually active control modes, free-DOF prescriptions, unbounded controls,
   and invalid connector IDs, nodes, or component stiffness are rejected

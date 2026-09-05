@@ -1,528 +1,158 @@
 "use client";
 
-import { memo, useMemo, useState } from "react";
+import { lazy, memo, Suspense, useState } from "react";
 
-import { HistoryWorkspaceCard } from "@/components/workbench/library/workbench-history-workspace-card";
 import type {
-  JobRow,
-  LibraryLabels,
   LibraryPanelTab,
   ModelPage,
-  ModelRow,
   ProjectPage,
   SamplePage,
-  SampleRow,
-  VersionRow,
   WorkbenchLibrarySidebarProps,
 } from "@/components/workbench/library/workbench-library-sidebar-types";
-import { VirtualList } from "@/components/ui/virtual-list";
 import type { StudyDomainKey } from "@/lib/workbench/view-models";
 
-export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
-  libraryTab,
-  onLibraryTabChange,
-  labels,
-  sampleRows,
-  workflowCatalogEntries,
-  workflowCatalogBusy,
-  projects,
-  selectedProjectId,
-  onSelectedProjectChange,
-  projectNameDraft,
-  onProjectNameDraftChange,
-  projectDescriptionDraft,
-  onProjectDescriptionDraftChange,
-  onCreateProject,
-  onUpdateProject,
-  onDeleteProject,
-  onExportProjectJson,
-  onExportProjectZip,
-  onImportProjectBundle,
-  selectedProjectModelCount,
-  modelRows,
-  selectedModelId,
-  loadedModelName,
-  onLoadedModelNameChange,
-  onSaveModel,
-  onDeleteSavedModel,
-  onOpenSavedModel,
-  versionRows,
-  modelVersionCount,
-  selectedVersionId,
-  onRenameSelectedVersion,
-  onDeleteSelectedVersion,
-  onOpenSavedVersion,
-  jobRows,
-  jobCount,
-  activeJobId,
-  onOpenHistoryJob,
-  onOpenSample,
-  onRefreshWorkflowCatalog,
-  onRunWorkflowCatalog,
-  onRefresh,
-  onImportModel,
-}: WorkbenchLibrarySidebarProps) {
+const WorkbenchLibraryHistoryPanel = lazy(() =>
+  import("@/components/workbench/library/workbench-library-history-panel").then((module) => ({
+    default: module.WorkbenchLibraryHistoryPanel,
+  })),
+);
+const WorkbenchLibraryModelsPanel = lazy(() =>
+  import("@/components/workbench/library/workbench-library-models-panel").then((module) => ({
+    default: module.WorkbenchLibraryModelsPanel,
+  })),
+);
+const WorkbenchLibraryProjectsPanel = lazy(() =>
+  import("@/components/workbench/library/workbench-library-projects-panel").then((module) => ({
+    default: module.WorkbenchLibraryProjectsPanel,
+  })),
+);
+const WorkbenchLibrarySamplesPanel = lazy(() =>
+  import("@/components/workbench/library/workbench-library-samples-panel").then((module) => ({
+    default: module.WorkbenchLibrarySamplesPanel,
+  })),
+);
+
+const TAB_GLYPHS: Record<LibraryPanelTab, string> = {
+  jobs: "J",
+  results: "R",
+  models: "M",
+  projects: "P",
+  samples: "S",
+};
+
+function LoadingPanel({ label, tab }: { label: string; tab: LibraryPanelTab }) {
+  return (
+    <section
+      aria-busy="true"
+      aria-live="polite"
+      className="sidebar-card"
+      data-workbench-library-loading={tab}
+    >
+      <div className="card-head">
+        <h2>{label}</h2>
+        <span>...</span>
+      </div>
+    </section>
+  );
+}
+
+export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar(
+  props: WorkbenchLibrarySidebarProps,
+) {
+  const { labels, libraryTab, onLibraryTabChange } = props;
   const [selectedSampleDomain, setSelectedSampleDomain] = useState<StudyDomainKey>("mechanical");
   const [samplePage, setSamplePage] = useState<SamplePage>("catalog");
   const [projectPage, setProjectPage] = useState<ProjectPage>("manage");
   const [modelPage, setModelPage] = useState<ModelPage>("saved");
-  const groupedSampleRows = useMemo(() => {
-    const groups = new Map<string, { label: string; rows: SampleRow[] }>();
-    for (const sample of sampleRows.filter((entry) => entry.domainKey === selectedSampleDomain)) {
-      const existing = groups.get(sample.familyKey);
-      if (existing) {
-        existing.rows.push(sample);
-        continue;
-      }
-      groups.set(sample.familyKey, { label: sample.familyLabel, rows: [sample] });
-    }
-    return Array.from(groups.values());
-  }, [sampleRows, selectedSampleDomain]);
-
-  const sampleDomainOptions = useMemo(
-    () =>
-      [
-        { key: "mechanical" as const, label: sampleRows.find((entry) => entry.domainKey === "mechanical")?.domainLabel ?? "Mechanical" },
-        { key: "thermal" as const, label: sampleRows.find((entry) => entry.domainKey === "thermal")?.domainLabel ?? "Thermal" },
-        {
-          key: "thermoMechanical" as const,
-          label: sampleRows.find((entry) => entry.domainKey === "thermoMechanical")?.domainLabel ?? "Thermo-mechanical",
-        },
-      ] satisfies Array<{ key: StudyDomainKey; label: string }>,
-    [sampleRows],
-  );
-  const resultRows = useMemo(() => jobRows.filter((row) => row.hasResult === labels.yes), [jobRows, labels.yes]);
-  const latestJobRow = jobRows[0] ?? null;
-  const latestResultRow = resultRows[0] ?? null;
-  const latestModelRow = modelRows[0] ?? null;
-  const waitingJobsCount = useMemo(() => jobRows.filter((row) => row.hasResult === labels.no).length, [jobRows, labels.no]);
+  const tabs = Object.keys(TAB_GLYPHS) as LibraryPanelTab[];
 
   return (
-    <div className="sidebar-stack panel-scroll-window">
-      <div className="panel-tabs panel-tabs--wide">
-        <button aria-label="workbench-library-tab:jobs" className={`panel-tab panel-tab--icon${libraryTab === "jobs" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("jobs")} type="button"><span className="panel-tab__glyph">J</span><span>{labels.tabs.jobs}</span></button>
-        <button aria-label="workbench-library-tab:results" className={`panel-tab panel-tab--icon${libraryTab === "results" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("results")} type="button"><span className="panel-tab__glyph">R</span><span>{labels.tabs.results}</span></button>
-        <button aria-label="workbench-library-tab:models" className={`panel-tab panel-tab--icon${libraryTab === "models" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("models")} type="button"><span className="panel-tab__glyph">M</span><span>{labels.tabs.models}</span></button>
-        <button aria-label="workbench-library-tab:projects" className={`panel-tab panel-tab--icon${libraryTab === "projects" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("projects")} type="button"><span className="panel-tab__glyph">P</span><span>{labels.tabs.projects}</span></button>
-        <button aria-label="workbench-library-tab:samples" className={`panel-tab panel-tab--icon${libraryTab === "samples" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("samples")} type="button"><span className="panel-tab__glyph">S</span><span>{labels.tabs.samples}</span></button>
+    <div className="sidebar-stack panel-scroll-window" data-workbench-library="panel">
+      <div className="panel-tabs panel-tabs--wide panel-tabs--library">
+        {tabs.map((tab) => (
+          <button
+            key={tab}
+            aria-label={`workbench-library-tab:${tab}`}
+            className={`panel-tab panel-tab--icon${libraryTab === tab ? " panel-tab--active" : ""}`}
+            data-workbench-library-tab={tab}
+            onClick={() => onLibraryTabChange(tab)}
+            type="button"
+          >
+            <span className="panel-tab__glyph">{TAB_GLYPHS[tab]}</span>
+            <span>{labels.tabs[tab]}</span>
+          </button>
+        ))}
       </div>
 
-      {libraryTab === "jobs" ? (
-        <>
-          <HistoryWorkspaceCard
-            title={labels.jobWorkspaceTitle}
-            hint={labels.jobWorkspaceHint}
-            actionLabel={labels.openLatestJob}
-            actionDisabled={!latestJobRow}
-            onAction={() => latestJobRow && onOpenHistoryJob(latestJobRow.id)}
-            metrics={[
-              { label: labels.tabs.jobs, value: jobCount },
-              { label: labels.waitingJobs, value: waitingJobsCount },
-            ]}
+      <Suspense fallback={<LoadingPanel label={labels.tabs[libraryTab]} tab={libraryTab} />}>
+        {libraryTab === "jobs" || libraryTab === "results" ? (
+          <WorkbenchLibraryHistoryPanel
+            activeJobId={props.activeJobId}
+            jobCount={props.jobCount}
+            jobRows={props.jobRows}
+            labels={labels}
+            mode={libraryTab}
+            onOpenHistoryJob={props.onOpenHistoryJob}
           />
-          <section className="sidebar-card">
-          <div className="card-head">
-            <h2>{labels.tabs.jobs}</h2>
-            <span>{jobCount}</span>
-          </div>
-          <VirtualList
-            className="history-list"
-            items={jobRows}
-            itemHeight={112}
-            maxHeight={360}
-            emptyState={<p className="card-copy">{labels.historyEmpty}</p>}
-            itemKey={(historyJob) => historyJob.id}
-            renderItem={(historyJob) => (
-              <button
-                className={`history-item${activeJobId === historyJob.id ? " history-item--active" : ""}`}
-                onClick={() => onOpenHistoryJob(historyJob.id)}
-                type="button"
-              >
-                <strong>{historyJob.shortId}</strong>
-                <span>{historyJob.status}</span>
-                {historyJob.statusDetail ? <small>{historyJob.statusDetail}</small> : null}
-                <small>
-                  {labels.updatedAt}: {historyJob.updatedAt}
-                </small>
-                <small>
-                  {labels.hasResult}: {historyJob.hasResult}
-                </small>
-              </button>
-            )}
+        ) : null}
+        {libraryTab === "samples" ? (
+          <WorkbenchLibrarySamplesPanel
+            labels={labels}
+            onImportModel={props.onImportModel}
+            onOpenSample={props.onOpenSample}
+            onRefreshWorkflowCatalog={props.onRefreshWorkflowCatalog}
+            onRunWorkflowCatalog={props.onRunWorkflowCatalog}
+            samplePage={samplePage}
+            sampleRows={props.sampleRows}
+            selectedSampleDomain={selectedSampleDomain}
+            setSamplePage={setSamplePage}
+            setSelectedSampleDomain={setSelectedSampleDomain}
+            workflowCatalogBusy={props.workflowCatalogBusy}
+            workflowCatalogEntries={props.workflowCatalogEntries}
           />
-          </section>
-        </>
-      ) : null}
-
-      {libraryTab === "results" ? (
-        <>
-          <HistoryWorkspaceCard
-            title={labels.resultWorkspaceTitle}
-            hint={labels.resultWorkspaceHint}
-            actionLabel={labels.openLatestResult}
-            actionDisabled={!latestResultRow}
-            onAction={() => latestResultRow && onOpenHistoryJob(latestResultRow.id)}
-            metrics={[
-              { label: labels.readyResults, value: resultRows.length },
-              { label: labels.tabs.jobs, value: jobCount },
-            ]}
+        ) : null}
+        {libraryTab === "projects" ? (
+          <WorkbenchLibraryProjectsPanel
+            labels={labels}
+            onCreateProject={props.onCreateProject}
+            onDeleteProject={props.onDeleteProject}
+            onExportProjectJson={props.onExportProjectJson}
+            onExportProjectZip={props.onExportProjectZip}
+            onImportProjectBundle={props.onImportProjectBundle}
+            onProjectDescriptionDraftChange={props.onProjectDescriptionDraftChange}
+            onProjectNameDraftChange={props.onProjectNameDraftChange}
+            onSelectedProjectChange={props.onSelectedProjectChange}
+            onUpdateProject={props.onUpdateProject}
+            projectDescriptionDraft={props.projectDescriptionDraft}
+            projectNameDraft={props.projectNameDraft}
+            projectPage={projectPage}
+            projects={props.projects}
+            selectedProjectId={props.selectedProjectId}
+            setProjectPage={setProjectPage}
           />
-          <section className="sidebar-card">
-          <div className="card-head">
-            <h2>{labels.tabs.results}</h2>
-            <span>{resultRows.length}</span>
-          </div>
-          <VirtualList
-            className="history-list"
-            items={resultRows}
-            itemHeight={112}
-            maxHeight={360}
-            emptyState={<p className="card-copy">{labels.historyEmpty}</p>}
-            itemKey={(historyJob) => historyJob.id}
-            renderItem={(historyJob) => (
-              <button
-                className={`history-item${activeJobId === historyJob.id ? " history-item--active" : ""}`}
-                onClick={() => onOpenHistoryJob(historyJob.id)}
-                type="button"
-              >
-                <strong>{historyJob.shortId}</strong>
-                <span>{historyJob.status}</span>
-                {historyJob.statusDetail ? <small>{historyJob.statusDetail}</small> : null}
-                <small>
-                  {labels.updatedAt}: {historyJob.updatedAt}
-                </small>
-                <small>
-                  {labels.hasResult}: {historyJob.hasResult}
-                </small>
-              </button>
-            )}
+        ) : null}
+        {libraryTab === "models" ? (
+          <WorkbenchLibraryModelsPanel
+            labels={labels}
+            loadedModelName={props.loadedModelName}
+            modelPage={modelPage}
+            modelRows={props.modelRows}
+            modelVersionCount={props.modelVersionCount}
+            onDeleteSavedModel={props.onDeleteSavedModel}
+            onDeleteSelectedVersion={props.onDeleteSelectedVersion}
+            onLoadedModelNameChange={props.onLoadedModelNameChange}
+            onOpenSavedModel={props.onOpenSavedModel}
+            onOpenSavedVersion={props.onOpenSavedVersion}
+            onRenameSelectedVersion={props.onRenameSelectedVersion}
+            onSaveModel={props.onSaveModel}
+            selectedModelId={props.selectedModelId}
+            selectedProjectModelCount={props.selectedProjectModelCount}
+            selectedVersionId={props.selectedVersionId}
+            setModelPage={setModelPage}
+            versionRows={props.versionRows}
           />
-          </section>
-        </>
-      ) : null}
-
-      {libraryTab === "samples" ? (
-        <section className="sidebar-card">
-          <div className="card-head">
-            <h2>{labels.sampleLibrary}</h2>
-            <button className="link-button" onClick={onRefresh} type="button">
-              {labels.refresh}
-            </button>
-          </div>
-          <div className="panel-tabs panel-tabs--wide">
-            <button
-              className={`panel-tab${samplePage === "catalog" ? " panel-tab--active" : ""}`}
-              onClick={() => setSamplePage("catalog")}
-              type="button"
-            >
-              {labels.sampleCatalogPage}
-            </button>
-            <button
-              className={`panel-tab${samplePage === "import" ? " panel-tab--active" : ""}`}
-              onClick={() => setSamplePage("import")}
-              type="button"
-            >
-              {labels.sampleImportPage}
-            </button>
-          </div>
-          {samplePage === "catalog" ? (
-            <>
-              <p className="card-copy">{labels.historyHint}</p>
-              <div className="sample-group">
-                <div className="sample-group__head">
-                  <strong>{labels.workflowCatalogTitle}</strong>
-                  <button className="link-button" disabled={workflowCatalogBusy} onClick={onRefreshWorkflowCatalog} type="button">
-                    {labels.workflowCatalogRefresh}
-                  </button>
-                </div>
-                <p className="card-copy">{labels.workflowCatalogHint}</p>
-                <div className="sample-group__items">
-                  {workflowCatalogEntries.length === 0 ? (
-                    <p className="card-copy">{workflowCatalogBusy ? labels.workflowCatalogRefresh : labels.workflowCatalogEmpty}</p>
-                  ) : null}
-                  {workflowCatalogEntries.map((workflow) => (
-                    <div key={workflow.id} className="history-item">
-                      <strong>{workflow.name}</strong>
-                      <span>{workflow.version}</span>
-                      <small>{workflow.summary}</small>
-                      <div className="button-row">
-                        <button
-                          className="ghost-button ghost-button--compact"
-                          disabled={workflowCatalogBusy}
-                          onClick={() => onRunWorkflowCatalog(workflow.id)}
-                          type="button"
-                        >
-                          {labels.workflowCatalogRun}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="form-grid compact">
-                <label>
-                  <span>{labels.studyDomain}</span>
-                  <div className="button-row">
-                    {sampleDomainOptions.map((option) => (
-                      <button
-                        key={option.key}
-                        aria-label={`workbench-sample-domain:${option.key}`}
-                        className={`ghost-button ghost-button--compact${selectedSampleDomain === option.key ? " ghost-button--active" : ""}`}
-                        onClick={() => setSelectedSampleDomain(option.key)}
-                        type="button"
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </label>
-              </div>
-              <div className="history-list sample-group-list">
-                {groupedSampleRows.length === 0 ? <p className="card-copy">{labels.noDomainStudies}</p> : null}
-                {groupedSampleRows.map((group) => (
-                  <div key={group.label} className="sample-group">
-                    <div className="sample-group__head">
-                      <strong>{group.label}</strong>
-                      <span>{group.rows.length}</span>
-                    </div>
-                    <div className="sample-group__items">
-                      {group.rows.map((sample) => (
-                        <button
-                          key={sample.id}
-                          aria-label={`workbench-sample:${sample.id}`}
-                          className="history-item"
-                          onClick={() => onOpenSample(sample.href)}
-                          type="button"
-                        >
-                          <strong>{sample.name}</strong>
-                          <span>{sample.kindLabel}</span>
-                          <small>{sample.summary}</small>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : null}
-          {samplePage === "import" ? (
-            <label className="import-box">
-              <span>{labels.importModel}</span>
-              <small>{labels.importHint}</small>
-              <input
-                type="file"
-                accept=".json,application/json"
-                onChange={(event) => onImportModel(event.target.files?.[0])}
-              />
-            </label>
-          ) : null}
-        </section>
-      ) : null}
-
-      {libraryTab === "projects" ? (
-        <section className="sidebar-card">
-          <div className="card-head">
-            <h2>{labels.projectLibrary}</h2>
-            <span>{projects.length}</span>
-          </div>
-          <div className="panel-tabs panel-tabs--wide">
-            <button
-              className={`panel-tab${projectPage === "manage" ? " panel-tab--active" : ""}`}
-              onClick={() => setProjectPage("manage")}
-              type="button"
-            >
-              {labels.projectManagePage}
-            </button>
-            <button
-              className={`panel-tab${projectPage === "exchange" ? " panel-tab--active" : ""}`}
-              onClick={() => setProjectPage("exchange")}
-              type="button"
-            >
-              {labels.projectExchangePage}
-            </button>
-          </div>
-          {projectPage === "manage" ? (
-            <>
-              <div className="form-grid compact">
-                <label>
-                  <span>{labels.projectNameField}</span>
-                  <input value={projectNameDraft} onChange={(event) => onProjectNameDraftChange(event.target.value)} />
-                </label>
-                <label>
-                  <span>{labels.projectDescriptionField}</span>
-                  <input value={projectDescriptionDraft} onChange={(event) => onProjectDescriptionDraftChange(event.target.value)} />
-                </label>
-                <label>
-                  <span>{labels.projectLibrary}</span>
-                  <select
-                    value={selectedProjectId ?? ""}
-                    onChange={(event) => onSelectedProjectChange(event.target.value || null)}
-                  >
-                    <option value="">{labels.none}</option>
-                    {projects.map((project) => (
-                      <option key={project.project_id} value={project.project_id}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="button-row">
-                <button className="ghost-button" onClick={onCreateProject} type="button">
-                  {labels.createProject}
-                </button>
-                <button className="ghost-button" disabled={!selectedProjectId} onClick={onUpdateProject} type="button">
-                  {labels.updateProject}
-                </button>
-                <button className="ghost-button" disabled={!selectedProjectId} onClick={onDeleteProject} type="button">
-                  {labels.deleteProject}
-                </button>
-              </div>
-              {projects.length === 0 ? <p className="card-copy">{labels.projectEmpty}</p> : null}
-            </>
-          ) : null}
-          {projectPage === "exchange" ? (
-            <>
-              <div className="button-row">
-                <button className="ghost-button" disabled={!selectedProjectId} onClick={onExportProjectJson} type="button">
-                  {labels.exportProjectJson}
-                </button>
-                <button className="ghost-button" disabled={!selectedProjectId} onClick={onExportProjectZip} type="button">
-                  {labels.exportProjectZip}
-                </button>
-              </div>
-              <label className="import-box">
-                <span>{labels.importProject}</span>
-                <small>{labels.importProjectHint}</small>
-                <input
-                  type="file"
-                  accept=".kyuubiki,.kyuubiki.json,application/json,application/zip"
-                  onChange={(event) => void onImportProjectBundle(event.target.files?.[0])}
-                />
-              </label>
-            </>
-          ) : null}
-        </section>
-      ) : null}
-
-      {libraryTab === "models" ? (
-        <>
-          <HistoryWorkspaceCard
-            title={labels.modelWorkspaceTitle}
-            hint={labels.modelWorkspaceHint}
-            actionLabel={labels.openLatestModel}
-            actionDisabled={!latestModelRow}
-            onAction={() => latestModelRow && onOpenSavedModel(latestModelRow.id)}
-            metrics={[
-              { label: labels.savedCount, value: modelRows.length },
-              { label: labels.versionCount, value: modelVersionCount },
-            ]}
-          />
-          <section className="sidebar-card">
-          <div className="card-head">
-            <h2>{labels.savedModels}</h2>
-            <span>{selectedProjectModelCount}</span>
-          </div>
-          <div className="panel-tabs panel-tabs--wide">
-            <button
-              className={`panel-tab${modelPage === "saved" ? " panel-tab--active" : ""}`}
-              onClick={() => setModelPage("saved")}
-              type="button"
-            >
-              {labels.modelSavedPage}
-            </button>
-            <button
-              className={`panel-tab${modelPage === "versions" ? " panel-tab--active" : ""}`}
-              onClick={() => setModelPage("versions")}
-              type="button"
-            >
-              {labels.modelVersionsPage}
-            </button>
-          </div>
-          {modelPage === "saved" ? (
-            <>
-              <div className="form-grid compact">
-                <label>
-                  <span>{labels.modelName}</span>
-                  <input value={loadedModelName} onChange={(event) => onLoadedModelNameChange(event.target.value)} />
-                </label>
-              </div>
-              <div className="button-row">
-                <button className="ghost-button" onClick={() => onSaveModel(false)} type="button">
-                  {labels.save}
-                </button>
-                <button className="ghost-button" onClick={() => onSaveModel(true)} type="button">
-                  {labels.saveAs}
-                </button>
-                <button className="ghost-button" disabled={!selectedModelId} onClick={onDeleteSavedModel} type="button">
-                  {labels.deleteSavedModel}
-                </button>
-              </div>
-              <VirtualList
-                className="history-list"
-                items={modelRows}
-                itemHeight={112}
-                maxHeight={344}
-                emptyState={<p className="card-copy">{labels.noSavedModels}</p>}
-                itemKey={(model) => model.id}
-                renderItem={(model) => (
-                  <button
-                    className={`history-item${selectedModelId === model.id ? " history-item--active" : ""}`}
-                    onClick={() => onOpenSavedModel(model.id)}
-                    type="button"
-                  >
-                    <strong>{model.name}</strong>
-                    <span>{model.kindLabel}</span>
-                    <small>
-                      {labels.updatedAt}: {model.updatedAt}
-                    </small>
-                    <small>{model.versionLabel}</small>
-                  </button>
-                )}
-              />
-            </>
-          ) : null}
-          {modelPage === "versions" ? (
-            <>
-              <div className="card-head">
-                <h2>{labels.versions}</h2>
-                <span>{modelVersionCount}</span>
-              </div>
-              <div className="button-row">
-                <button className="ghost-button" disabled={!selectedVersionId} onClick={onRenameSelectedVersion} type="button">
-                  {labels.renameVersion}
-                </button>
-                <button className="ghost-button" disabled={!selectedVersionId} onClick={onDeleteSelectedVersion} type="button">
-                  {labels.deleteVersion}
-                </button>
-              </div>
-              <VirtualList
-                className="history-list"
-                items={versionRows}
-                itemHeight={100}
-                maxHeight={320}
-                emptyState={<p className="card-copy">{labels.noVersions}</p>}
-                itemKey={(version) => version.id}
-                renderItem={(version) => (
-                  <button
-                    className={`history-item${selectedVersionId === version.id ? " history-item--active" : ""}`}
-                    onClick={() => onOpenSavedVersion(version.id)}
-                    type="button"
-                  >
-                    <strong>{version.name}</strong>
-                    <span>{version.versionLabel}</span>
-                    <small>
-                      {labels.updatedAt}: {version.updatedAt}
-                    </small>
-                  </button>
-                )}
-              />
-            </>
-          ) : null}
-          </section>
-        </>
-      ) : null}
-
+        ) : null}
+      </Suspense>
     </div>
   );
 });

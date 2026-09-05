@@ -28,6 +28,19 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
     assert payload["transport"]["solver_agent_tcp"] > 0
   end
 
+  test "exposes a database-independent local Orchestra lease snapshot" do
+    conn =
+      :get
+      |> conn("/api/v1/orchestra/lease")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["lease"]["status"] == "owner"
+    assert is_integer(payload["lease"]["fencing_token"])
+    assert is_binary(payload["lease"]["owner_instance_id"])
+  end
+
   test "exposes decoupled protocol descriptors for control plane and solver rpc" do
     conn =
       :get
@@ -44,6 +57,7 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
     assert payload["authority"]["authority_mode"] == "single_orchestrator"
     assert payload["authority"]["session_state"] == "orch_bound_pending_session"
     assert payload["authority"]["accepts_multi_orchestrator_binding"] == false
+    assert payload["protocol"]["resources"]["orchestra_lease"] == "/api/v1/orchestra/lease"
 
     conn =
       :get

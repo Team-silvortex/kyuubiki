@@ -1,6 +1,14 @@
 "use client";
 
-export function buildWorkbenchFlowControllerProps(props: Record<string, any>) {
+import type { WorkbenchSecurityAuditEntry } from "@/lib/workbench/security-audit";
+import type { WorkbenchScriptActionLogEntry } from "@/lib/scripting/workbench-script-runtime";
+
+type WorkbenchFlowControllerPropsSource = Record<string, any> & {
+  appendScriptActionLog: (entry: Omit<WorkbenchScriptActionLogEntry, "id" | "at">) => void;
+  recordSecurityAuditEvent: (entry: Omit<WorkbenchSecurityAuditEntry, "id" | "at">) => void;
+};
+
+export function buildWorkbenchFlowControllerProps(props: WorkbenchFlowControllerPropsSource) {
   return {
     t: props.t,
     setMessage: props.setMessage,
@@ -10,6 +18,7 @@ export function buildWorkbenchFlowControllerProps(props: Record<string, any>) {
     setPanelParametric: props.setPanelParametric,
     startTransition: props.startTransition,
     adminDataBackendService: props.adminDataBackendService,
+    storeBackendService: props.storeBackendService,
     resultRefreshSeqRef: props.resultRefreshSeqRef,
     setResultRecords: props.setResultRecords,
     setSelectedAdminResultJobId: props.setSelectedAdminResultJobId,
@@ -87,6 +96,7 @@ export function buildWorkbenchFlowControllerProps(props: Record<string, any>) {
     adminJobProjectId: props.adminJobProjectId,
     adminJobModelVersionId: props.adminJobModelVersionId,
     adminJobCaseId: props.adminJobCaseId,
+    selectedAdminResultJobId: props.selectedAdminResultJobId,
     adminResultDraft: props.adminResultDraft,
     downloadTextFile: props.downloadTextFile,
     adminDataEffects: props.adminDataEffects,
@@ -161,5 +171,7 @@ export function buildWorkbenchFlowControllerProps(props: Record<string, any>) {
     openProjectContextById: props.openProjectContextById,
     applyJobContextToWorkbench: props.applyJobContextToWorkbench,
     downloadDatabaseSnapshot: props.downloadDatabaseSnapshot,
+    recordSecurityAuditEvent: props.recordSecurityAuditEvent,
+    appendScriptActionLog: props.appendScriptActionLog,
   };
 }

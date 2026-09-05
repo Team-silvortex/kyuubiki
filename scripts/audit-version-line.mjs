@@ -7,11 +7,11 @@ import { markdownFactChecks } from "./version-line-markdown-facts.mjs";
 
 function usage() {
   console.log(`Usage:
-  node ./scripts/audit-version-line.mjs [--expected 2.0.0] [--next 2.0.1] [--codename moxi] [--json]
+  node ./scripts/audit-version-line.mjs [--expected 3.0.0] [--next 3.0.1] [--codename daji] [--json]
 
 Examples:
   node ./scripts/audit-version-line.mjs
-  node ./scripts/audit-version-line.mjs --expected 2.0.0 --next 2.0.1
+  node ./scripts/audit-version-line.mjs --expected 2.0.0 --next 3.0.1
   node ./scripts/audit-version-line.mjs --expected 2.0.0 --json
 `);
 }
@@ -20,7 +20,7 @@ function parseArgs(argv) {
   const options = {
     expected: null,
     next: null,
-    codename: "moxi",
+    codename: readJson("assets/brand/brand.json").releaseCodename,
     json: false,
     selfTest: false,
   };

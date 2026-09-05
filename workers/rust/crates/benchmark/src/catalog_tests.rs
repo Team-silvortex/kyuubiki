@@ -1,7 +1,9 @@
 use super::{
     BenchmarkCatalogSpec, BenchmarkFamily, BenchmarkMatrixSpec, CaseTemplateSpec,
-    default_catalog_spec, resolve_matrix_templates, select_matrix_spec,
+    benchmark_case_ids, benchmark_cases_for_ids, default_catalog_spec, resolve_matrix_templates,
+    select_matrix_spec,
 };
+use crate::config::BenchmarkProfile;
 
 #[test]
 fn checked_in_catalog_matches_the_rust_fallback() {
@@ -59,6 +61,47 @@ fn matrix_selection_rejects_unknown_name_instead_of_running_core() {
     });
 
     let _ = select_matrix_spec(&spec, "missing");
+}
+
+#[test]
+fn exact_case_generation_does_not_materialize_the_rest_of_the_matrix() {
+    let ids = benchmark_case_ids(BenchmarkProfile::Medium, "thermal-structural");
+    let selected = vec!["frame-2d-medium".to_string()];
+    let cases = benchmark_cases_for_ids(BenchmarkProfile::Medium, "thermal-structural", &selected);
+
+    assert!(ids.len() > cases.len());
+    assert_eq!(cases.len(), 1);
+    assert_eq!(cases[0].id, "frame-2d-medium");
+}
+
+#[test]
+fn dynamic_response_matrix_keeps_experimental_cases_out_of_the_release_gate() {
+    let spec = default_catalog_spec();
+    let dynamic = select_matrix_spec(&spec, "dynamic-response");
+    let qualified = select_matrix_spec(&spec, "physics-coverage");
+
+    assert_eq!(dynamic.template_stems.len(), 3);
+    assert!(
+        dynamic
+            .template_stems
+            .iter()
+            .all(|stem| !qualified.template_stems.contains(stem))
+    );
+}
+
+#[test]
+fn cohesive_interface_matrix_keeps_bounded_cases_out_of_the_release_gate() {
+    let spec = default_catalog_spec();
+    let interface = select_matrix_spec(&spec, "cohesive-interface");
+    let qualified = select_matrix_spec(&spec, "physics-coverage");
+
+    assert_eq!(interface.template_stems.len(), 4);
+    assert!(
+        interface
+            .template_stems
+            .iter()
+            .all(|stem| !qualified.template_stems.contains(stem))
+    );
 }
 
 fn catalog_spec(templates: Vec<CaseTemplateSpec>) -> BenchmarkCatalogSpec {

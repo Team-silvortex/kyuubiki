@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    borrow::Cow,
+    collections::{HashMap, HashSet},
+};
 
 use kyuubiki_protocol::{
     CohesiveInterfaceMesh2dElementInput, CohesiveInterfaceMesh2dElementResult,
@@ -30,7 +33,19 @@ const MAX_ELEMENTS: usize = 4096;
 pub fn solve_cohesive_interface_mesh_2d(
     request: &SolveCohesiveInterfaceMesh2dRequest,
 ) -> Result<SolveCohesiveInterfaceMesh2dResult, String> {
-    let model = ValidatedModel::new(request)?;
+    solve_cohesive_interface_mesh_2d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_cohesive_interface_mesh_2d_owned(
+    request: SolveCohesiveInterfaceMesh2dRequest,
+) -> Result<SolveCohesiveInterfaceMesh2dResult, String> {
+    solve_cohesive_interface_mesh_2d_internal(Cow::Owned(request))
+}
+
+fn solve_cohesive_interface_mesh_2d_internal(
+    request: Cow<'_, SolveCohesiveInterfaceMesh2dRequest>,
+) -> Result<SolveCohesiveInterfaceMesh2dResult, String> {
+    let model = ValidatedModel::new(request.as_ref())?;
     let mut displacements = vec![0.0; model.dof_count];
     let mut states = vec![CohesiveInterface2dState::default(); model.elements.len()];
     let mut steps = Vec::with_capacity(model.controls.len());
@@ -43,7 +58,17 @@ pub fn solve_cohesive_interface_mesh_2d(
         residual_norm = outcome.residual_norm;
         let summary_assembly =
             assemble(&model, step_index, &outcome.displacements, &outcome.states);
-        let summary = step_summary(&model, control, &outcome.displacements, &summary_assembly);
+        let summary_load_factor = if outcome.converged {
+            control.load_factor
+        } else {
+            completed_load_factor
+        };
+        let summary = step_summary(
+            &model,
+            summary_load_factor,
+            &outcome.displacements,
+            &summary_assembly,
+        );
         steps.push(CohesiveInterfaceMesh2dLoadStepResult {
             step: step_index,
             load_factor: control.load_factor,
@@ -82,7 +107,12 @@ pub fn solve_cohesive_interface_mesh_2d(
         completed_load_factor,
         &final_assembly.internal_forces,
     );
-    let nodes = node_results(request, &displacements, &reactions, model.rotation_offset);
+    let nodes = node_results(
+        request.as_ref(),
+        &displacements,
+        &reactions,
+        model.rotation_offset,
+    );
     let elements = element_results(&model, &final_assembly.evaluations);
     let connector_springs = model
         .connector_springs
@@ -215,8 +245,10 @@ pub fn solve_cohesive_interface_mesh_2d(
         }
     }
 
+    drop(model);
+
     Ok(SolveCohesiveInterfaceMesh2dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         connector_springs,
@@ -541,11 +573,11 @@ struct StepSummary {
 
 fn step_summary(
     model: &ValidatedModel<'_>,
-    control: &ControlStep,
+    load_factor: f64,
     displacements: &[f64],
     assembly: &Assembly,
 ) -> StepSummary {
-    let reactions = reactions(model, control.load_factor, &assembly.internal_forces);
+    let reactions = reactions(model, load_factor, &assembly.internal_forces);
     let max_resultant_traction = assembly
         .evaluations
         .iter()

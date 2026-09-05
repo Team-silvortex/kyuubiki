@@ -12,14 +12,16 @@ use std::path::Path;
 use std::process::Command;
 use std::time::Instant;
 
+mod source_tree;
 mod validation;
 
+use source_tree::source_tree_digest;
 use validation::{validate_contract, validate_report};
 
 type RunnerResult<T> = Result<T, String>;
 
 const CONTRACT_PATH: &str = "config/architecture/benchmark-qualification.json";
-const CONTRACT_SCHEMA: &str = "kyuubiki.benchmark-qualification-contract/v2";
+const CONTRACT_SCHEMA: &str = "kyuubiki.benchmark-qualification-contract/v3";
 const REPORT_SCHEMA: &str = "kyuubiki.benchmark-qualification-report/v2";
 const RETAINED_REPORT_SCHEMA: &str = "kyuubiki.benchmark-qualification-report/v1";
 const REPORT_SCHEMA_PATH: &str = "schemas/benchmark-qualification-report.schema.json";
@@ -40,6 +42,7 @@ struct QualificationContract {
     coverage_manifest: String,
     direct_mesh_baseline: String,
     source_files: Vec<String>,
+    source_roots: Vec<String>,
     current_runs: Vec<CurrentRunSpec>,
     profile_requirements: Vec<ProfileRequirement>,
     one_million_node_threshold: usize,
@@ -287,7 +290,11 @@ fn execute_qualification(
             os: std::env::consts::OS.into(),
             arch: std::env::consts::ARCH.into(),
         },
-        source_tree_sha256: source_tree_digest(root, &contract.source_files)?,
+        source_tree_sha256: source_tree_digest(
+            root,
+            &contract.source_files,
+            &contract.source_roots,
+        )?,
         current_runs,
         scale_archive,
         direct_mesh,
@@ -592,7 +599,11 @@ fn run_self_test(
             os: "self-test".into(),
             arch: "self-test".into(),
         },
-        source_tree_sha256: source_tree_digest(root, &contract.source_files)?,
+        source_tree_sha256: source_tree_digest(
+            root,
+            &contract.source_files,
+            &contract.source_roots,
+        )?,
         current_runs,
         scale_archive,
         direct_mesh,
@@ -611,22 +622,6 @@ fn run_self_test(
         return Err("self-test accepted a below-threshold 1M case".into());
     }
     Ok(())
-}
-
-fn source_tree_digest(root: &Path, paths: &[String]) -> RunnerResult<String> {
-    let mut paths = paths.to_vec();
-    paths.sort();
-    let mut hasher = Sha256::new();
-    for relative in paths {
-        hasher.update(relative.as_bytes());
-        hasher.update([0]);
-        hasher.update(
-            fs::read(repo_path(root, &relative)?)
-                .map_err(|error| format!("failed to hash {relative}: {error}"))?,
-        );
-        hasher.update([0]);
-    }
-    Ok(format!("{:x}", hasher.finalize()))
 }
 
 fn sha256_file(root: &Path, relative: &str) -> RunnerResult<String> {

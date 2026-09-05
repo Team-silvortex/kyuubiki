@@ -8,6 +8,11 @@ import {
 import type {
   WorkbenchJobHistoryBackendService,
 } from "@/lib/workbench/job-history-backend-service-core";
+import {
+  runWorkbenchTransitionOperation,
+  workbenchOperationFailure,
+  type WorkbenchOperationResult,
+} from "@/lib/workbench/operation-result";
 
 type JobHistoryControllerLabels = {
   jobCancelled: string;
@@ -25,6 +30,43 @@ type UseWorkbenchJobHistoryControllerArgs = {
   setMessage: Dispatch<SetStateAction<string>>;
   startTransition: TransitionStartFunction;
 };
+
+type CancelWorkbenchJobArgs = {
+  jobId: string;
+  jobHistoryBackendService: WorkbenchJobHistoryBackendService;
+  jobPollTokenRef: MutableRefObject<number>;
+  labels: JobHistoryControllerLabels;
+  refreshJobHistory: () => Promise<void>;
+  setJob: Dispatch<SetStateAction<JobEnvelope["job"] | null>>;
+  setMessage: Dispatch<SetStateAction<string>>;
+};
+
+export async function cancelWorkbenchJob({
+  jobId,
+  jobHistoryBackendService,
+  jobPollTokenRef,
+  labels,
+  refreshJobHistory,
+  setJob,
+  setMessage,
+}: CancelWorkbenchJobArgs): Promise<WorkbenchOperationResult<{ jobId: string }>> {
+  try {
+    const payload = await jobHistoryBackendService.cancelJob(jobId);
+    jobPollTokenRef.current += 1;
+    setJob(payload.job);
+    setMessage(labels.jobCancelled);
+    await refreshJobHistory();
+    return { ok: true, jobId };
+  } catch (error) {
+    const message = error instanceof Error
+      ? error.message.startsWith("request timed out:")
+        ? labels.requestTimedOut
+        : error.message
+      : labels.initialFailed;
+    setMessage(message);
+    return workbenchOperationFailure(new Error(message), labels.initialFailed);
+  }
+}
 
 export function useWorkbenchJobHistoryController({
   labels,
@@ -57,26 +99,24 @@ export function useWorkbenchJobHistoryController({
     }
   }, [jobHistoryBackendService]);
 
-  const cancelCurrentJob = useCallback(() => {
-    if (!job?.job_id || !jobIsActive) return;
-    jobPollTokenRef.current += 1;
+  const cancelCurrentJob = useCallback((): Promise<WorkbenchOperationResult<{ jobId: string }>> => {
+    if (!job?.job_id || !jobIsActive) {
+      return Promise.resolve(workbenchOperationFailure(
+        new Error("No active job is available to cancel."),
+        labels.initialFailed,
+      ));
+    }
+    const jobId = job.job_id;
 
-    startTransition(async () => {
-      try {
-        const payload = await jobHistoryBackendService.cancelJob(job.job_id);
-        setJob(payload.job);
-        setMessage(labels.jobCancelled);
-        await refreshJobHistory();
-      } catch (error) {
-        setMessage(
-          error instanceof Error
-            ? error.message.startsWith("request timed out:")
-              ? labels.requestTimedOut
-              : error.message
-            : labels.initialFailed,
-        );
-      }
-    });
+    return runWorkbenchTransitionOperation(startTransition, () => cancelWorkbenchJob({
+      jobId,
+      jobHistoryBackendService,
+      jobPollTokenRef,
+      labels,
+      refreshJobHistory,
+      setJob,
+      setMessage,
+    }));
   }, [
     job,
     jobHistoryBackendService,

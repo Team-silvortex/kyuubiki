@@ -84,3 +84,28 @@ test("script invocation records a failed action when UX guardrails block executi
   assert.equal(logs[0]?.status, "failed");
   assert.equal(logs[0]?.note, "backend-offline");
 });
+
+test("script invocation records download execution failures without a false completion", async () => {
+  const audits: Array<Record<string, unknown>> = [];
+  const logs: Array<Record<string, unknown>> = [];
+  const failure = new Error("project bundle download failed");
+
+  await assert.rejects(
+    invokeWorkbenchScriptAction({
+      action: "project/exportJson",
+      appendScriptActionLog: (entry: Record<string, unknown>) => logs.push(entry),
+      handleWorkbenchScriptNavAction: async () => null,
+      handleWorkbenchScriptProjectModelAction: async () => { throw failure; },
+      language: "en",
+      navArgs: {},
+      payload: {},
+      projectModelArgs: {},
+      recordSecurityAuditEvent: (entry: Record<string, unknown>) => audits.push(entry),
+      source: "script",
+    }),
+    failure,
+  );
+
+  assert.deepEqual(logs.map((entry) => entry.status), ["started", "failed"]);
+  assert.deepEqual(audits.map((entry) => entry.status), ["prompted", "failed"]);
+});

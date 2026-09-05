@@ -16,6 +16,7 @@ pub(crate) struct WorkloadMetrics {
     pub(crate) node_count: usize,
     pub(crate) element_count: usize,
     pub(crate) dof_count: usize,
+    pub(crate) history_step_count: Option<usize>,
     pub(crate) max_displacement: f64,
     pub(crate) max_stress: f64,
     pub(crate) memory_stages: Vec<BenchmarkMemoryStage>,
@@ -206,7 +207,7 @@ pub(crate) fn run_thermal_structural_workload(
 }
 
 impl WorkloadMetrics {
-    fn from_counts(
+    pub(crate) fn from_counts(
         node_count: usize,
         element_count: usize,
         dof_count: usize,
@@ -217,6 +218,7 @@ impl WorkloadMetrics {
             node_count,
             element_count,
             dof_count,
+            history_step_count: None,
             max_displacement,
             max_stress,
             memory_stages: Vec::new(),
@@ -243,7 +245,7 @@ impl WorkloadMetrics {
         self
     }
 
-    fn with_preconditioner(mut self, solver_preconditioner: &str) -> Self {
+    pub(crate) fn with_preconditioner(mut self, solver_preconditioner: &str) -> Self {
         self.solver_preconditioner = Some(solver_preconditioner.to_string());
         self
     }

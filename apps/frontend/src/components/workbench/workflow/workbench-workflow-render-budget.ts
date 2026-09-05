@@ -50,6 +50,9 @@ export function scheduleWorkflowDeferredRender(
   let idleHandle: number | null = null;
   let editRetryHandle: number | null = null;
   let disposed = false;
+  const renderIfActive = () => {
+    if (!disposed) callback();
+  };
   const runWhenSafe = () => {
     if (disposed) return;
     if (isWorkflowInputEditingActive()) {
@@ -58,12 +61,12 @@ export function scheduleWorkflowDeferredRender(
     }
     if (typeof window.requestIdleCallback === "function") {
       idleHandle = window.requestIdleCallback(
-        callback,
+        renderIfActive,
         { timeout: WORKFLOW_DEFERRED_IDLE_TIMEOUT_MS },
       );
       return;
     }
-    frameHandle = window.requestAnimationFrame(() => callback());
+    frameHandle = window.requestAnimationFrame(renderIfActive);
   };
   const timeoutHandle = window.setTimeout(runWhenSafe, delayMs);
 

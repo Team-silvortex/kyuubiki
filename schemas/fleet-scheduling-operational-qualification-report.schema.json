@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/fleet-scheduling-operational-qualification-report.schema.json",
+  "title": "Kyuubiki Installer-managed Fleet Scheduling Operational Qualification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "status",
+    "journey",
+    "topology",
+    "installation",
+    "agent_descriptors",
+    "capacity_distribution",
+    "solver_runs",
+    "failure_recovery",
+    "cleanup",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.fleet-scheduling-operational-qualification/v1"
+    },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "status": { "const": "pass" },
+    "journey": {
+      "const": "installer-managed-agent-fleet-capacity-failover-and-rejoin"
+    },
+    "topology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execution_host_role",
+        "platform",
+        "architecture",
+        "orchestration_runtime",
+        "execution_runtime",
+        "deployment_owner",
+        "transport",
+        "build_profile",
+        "agent_count",
+        "declared_capacity_slots"
+      ],
+      "properties": {
+        "execution_host_role": { "const": "remote-linux-qualification-host" },
+        "platform": { "const": "linux" },
+        "architecture": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "orchestration_runtime": { "const": "elixir-orchestra-runtime" },
+        "execution_runtime": { "const": "installed-rust-agent" },
+        "deployment_owner": { "const": "kyuubiki-installer" },
+        "transport": { "const": "loopback-agent-rpc" },
+        "build_profile": { "const": "release" },
+        "agent_count": { "const": 2 },
+        "declared_capacity_slots": { "const": 4 }
+      }
+    },
+    "installation": { "type": "object" },
+    "agent_descriptors": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "capacity_distribution": { "type": "object" },
+    "solver_runs": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "failure_recovery": { "type": "object" },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "high_agent_stopped",
+        "low_agent_stopped",
+        "high_port_closed",
+        "low_port_closed",
+        "managed_install_root_removed"
+      ],
+      "properties": {
+        "high_agent_stopped": { "const": true },
+        "low_agent_stopped": { "const": true },
+        "high_port_closed": { "const": true },
+        "low_port_closed": { "const": true },
+        "managed_install_root_removed": { "const": true }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 13,
+      "maxItems": 13,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "status": { "const": "pass" }
+        }
+      }
+    }
+  }
+}

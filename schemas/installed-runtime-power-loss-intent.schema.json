@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/installed-runtime-power-loss-intent.schema.json",
+  "title": "Kyuubiki Installed Runtime Power-Loss Intent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "payload", "intent_sha256"],
+  "properties": {
+    "schema_version": { "const": "kyuubiki.installed-runtime-power-loss-intent/v1" },
+    "intent_sha256": { "$ref": "#/$defs/sha256" },
+    "payload": { "$ref": "#/$defs/preparation" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "version": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$" },
+    "digest_map": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/sha256" },
+      "required": [
+        "kyuubiki-cli",
+        "kyuubiki-headless",
+        "kyuubiki-runtime",
+        "runtime-payload.json",
+        "service-launch.json"
+      ],
+      "minProperties": 5,
+      "maxProperties": 5
+    },
+    "ports": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["orchestrator", "agent_one", "agent_two"],
+      "properties": {
+        "orchestrator": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "agent_one": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "agent_two": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+    "process_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "process_id", "executable_sha256"],
+      "properties": {
+        "role": { "enum": ["orchestrator", "agent_one", "agent_two"] },
+        "process_id": { "type": "integer", "minimum": 1 },
+        "executable_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tip_displacement", "max_stress"],
+      "properties": {
+        "tip_displacement": { "type": "number", "exclusiveMinimum": 0 },
+        "max_stress": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "preparation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "qualification_id",
+        "execution_host_role",
+        "platform",
+        "architecture",
+        "runtime_version",
+        "prepared_at_unix_ms",
+        "machine_id_sha256",
+        "pre_boot_id_sha256",
+        "pre_uptime_seconds",
+        "source_tree_detached",
+        "payload_digests",
+        "ports",
+        "process_identities",
+        "workflow_id",
+        "job_id",
+        "numerical_result",
+        "runtime_status_verified",
+        "agent_count"
+      ],
+      "properties": {
+        "qualification_id": { "const": "physical-linux-installed-runtime-power-loss-recovery" },
+        "execution_host_role": { "const": "remote-linux-qualification-host" },
+        "platform": { "const": "linux" },
+        "architecture": { "type": "string", "minLength": 1 },
+        "runtime_version": { "$ref": "#/$defs/version" },
+        "prepared_at_unix_ms": { "type": "integer", "minimum": 1 },
+        "machine_id_sha256": { "$ref": "#/$defs/sha256" },
+        "pre_boot_id_sha256": { "$ref": "#/$defs/sha256" },
+        "pre_uptime_seconds": { "type": "integer", "minimum": 0 },
+        "source_tree_detached": { "const": true },
+        "payload_digests": { "$ref": "#/$defs/digest_map" },
+        "ports": { "$ref": "#/$defs/ports" },
+        "process_identities": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/process_identity" }
+        },
+        "workflow_id": { "const": "qualification.installed-runtime.bar" },
+        "job_id": { "type": "string", "minLength": 1 },
+        "numerical_result": { "$ref": "#/$defs/result" },
+        "runtime_status_verified": { "const": true },
+        "agent_count": { "type": "integer", "minimum": 2 }
+      }
+    }
+  }
+}

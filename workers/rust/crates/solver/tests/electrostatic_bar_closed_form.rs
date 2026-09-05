@@ -119,6 +119,33 @@ fn electrostatic_bar_1d_tracks_charge_and_permittivity_scaling() {
     );
 }
 
+#[test]
+fn electrostatic_bar_1d_preserves_low_permittivity_physics_scale() {
+    let baseline = ElectrostaticCase {
+        length: 2.0,
+        area: 0.2,
+        permittivity: 4.0e-9,
+        charge: 8.0e-6,
+    };
+    let scale = 1.0e-18;
+    let low_scale = ElectrostaticCase {
+        permittivity: baseline.permittivity * scale,
+        charge: baseline.charge * scale,
+        ..baseline
+    };
+
+    let result = solve_electrostatic_bar_1d(&low_scale.request())
+        .expect("low-permittivity electrostatic bar should remain solvable");
+    let expected = low_scale.expected();
+    assert_response(&result, expected);
+    assert_relative(result.nodes[1].potential, baseline.expected().potential);
+    assert_relative(
+        result.elements[0].electric_flux_density,
+        expected.electric_flux_density,
+    );
+    assert_relative(result.total_stored_energy, expected.stored_energy);
+}
+
 #[derive(Clone, Copy)]
 struct ElectrostaticCase {
     length: f64,
@@ -162,6 +189,7 @@ impl ElectrostaticCase {
     }
 }
 
+#[derive(Clone, Copy)]
 struct ExpectedElectrostaticResponse {
     potential: f64,
     potential_gradient: f64,
@@ -294,5 +322,13 @@ fn assert_close(actual: f64, expected: f64) {
     assert!(
         (actual - expected).abs() <= TOL * scale,
         "expected {actual} to be close to {expected}",
+    );
+}
+
+fn assert_relative(actual: f64, expected: f64) {
+    let scale = actual.abs().max(expected.abs()).max(f64::MIN_POSITIVE);
+    assert!(
+        (actual - expected).abs() <= TOL * scale,
+        "expected {actual} to be relatively close to {expected}",
     );
 }

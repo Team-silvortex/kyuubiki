@@ -4,9 +4,15 @@ import { buildWorkbenchAdminDataEffects } from "@/components/workbench/workbench
 import { getWorkbenchProjectFlowCopy } from "@/components/workbench/workbench-extended-language-copy";
 import { createWorkbenchProjectStorageController } from "@/components/workbench/workbench-project-storage-controller";
 import type { WorkbenchNoticeItem } from "@/components/workbench/workbench-notice-state";
+import {
+  workbenchOperationFailure,
+  type WorkbenchOperationResult,
+} from "@/lib/workbench/operation-result";
 
 export function buildWorkbenchProjectFlows(props: Record<string, any>) {
-  let projectStorageControllerRef: { openModelVersionById?: (versionId: string) => void } | null = null;
+  let projectStorageControllerRef: {
+    openModelVersionById?: (versionId: string) => Promise<WorkbenchOperationResult>;
+  } | null = null;
   const projectFlowCopy = getWorkbenchProjectFlowCopy(props.language);
 
   const adminDataEffects = buildWorkbenchAdminDataEffects({
@@ -16,7 +22,12 @@ export function buildWorkbenchProjectFlows(props: Record<string, any>) {
     jobHistory: props.jobHistory,
     projects: props.projects,
     refreshVersions: props.refreshVersions,
-    openModelVersionById: (versionId: string) => projectStorageControllerRef?.openModelVersionById?.(versionId),
+    openModelVersionById: (versionId: string) =>
+      projectStorageControllerRef?.openModelVersionById?.(versionId) ??
+      Promise.resolve(workbenchOperationFailure(
+        new Error("project storage controller is unavailable"),
+        "project storage controller is unavailable",
+      )),
     setAdminFilterProjectId: props.setAdminFilterProjectId,
     setAdminFilterModelVersionId: props.setAdminFilterModelVersionId,
     setAdminJobCaseId: props.setAdminJobCaseId,
@@ -60,6 +71,7 @@ export function buildWorkbenchProjectFlows(props: Record<string, any>) {
     importedProjectLabel: props.t.projectImported,
     importedVersionLabel: props.t.versionLoaded,
     importFailedLabel: props.t.importFailed,
+    storeManifestPersistenceFailedLabel: projectFlowCopy.storeManifestPersistenceFailed,
     formatImportNotice: (skippedSensitivePresetCount: number): WorkbenchNoticeItem => ({
       id: "project-import-notice",
       tone: "warning",

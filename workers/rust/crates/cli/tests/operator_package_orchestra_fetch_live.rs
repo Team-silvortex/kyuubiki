@@ -492,6 +492,7 @@ impl CentralFixture {
                 let manifest = serde_json::to_vec(&json!({
             "schema_version": "kyuubiki.operator-package/v1",
             "sdk_api_version": "kyuubiki.operator-sdk/v1",
+            "execution_abi": "kyuubiki.operator-json-c/v1",
             "package_id": PACKAGE_ID,
             "package_version": version,
             "minimum_host_version": "1.15.0",
@@ -502,7 +503,7 @@ impl CentralFixture {
             "operators": [{
                 "operator_id": PACKAGE_ID,
                 "kind": "extract",
-                "entry_symbol": "register_template_operator"
+                "entry_symbol": "run_template_operator_json"
             }]
         }))
         .expect("encode central fixture manifest");
@@ -514,6 +515,7 @@ impl CentralFixture {
                     "package_id": PACKAGE_ID,
                     "package_version": version,
                     "sdk_api_version": "kyuubiki.operator-sdk/v1",
+                    "execution_abi": "kyuubiki.operator-json-c/v1",
                     "target": target,
                     "authority_mode": "bound_orchestra",
                     "cache_scope": "task_required_disposable",

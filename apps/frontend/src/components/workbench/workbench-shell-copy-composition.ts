@@ -159,6 +159,7 @@ export function buildWorkbenchWorkflowLabels(t: Record<string, any>) {
     draftSavedLabel: t.workflowDraftSavedLabel,
     draftLoadedLabel: t.workflowDraftLoadedLabel,
     draftDeletedLabel: t.workflowDraftDeletedLabel,
+    storageWriteFailedLabel: t.workflowStorageWriteFailedLabel,
     localWorkflowPromotedLabel: t.workflowLocalWorkflowPromotedLabel,
     localWorkflowDeleteLabel: t.workflowLocalWorkflowDeleteLabel,
     localWorkflowDeletedLabel: t.workflowLocalWorkflowDeletedLabel,

@@ -115,6 +115,7 @@ fn serializes_transient_spring_1d_rpc_round_trip() {
             }],
             time_step: 0.01,
             steps: 10,
+            history_stride: Some(3),
         })
         .expect("request params should serialize"),
     };
@@ -124,6 +125,9 @@ fn serializes_transient_spring_1d_rpc_round_trip() {
 
     assert_eq!(decoded.method, RpcMethod::SolveTransientSpring1d);
     assert_eq!(decoded.id, "rpc-transient-spring-1d");
+    let params: SolveTransientSpring1dRequest =
+        serde_json::from_value(decoded.params).expect("params should decode");
+    assert_eq!(params.history_stride, Some(3));
 }
 
 #[test]

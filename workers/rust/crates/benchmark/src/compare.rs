@@ -6,14 +6,21 @@ use crate::{
 };
 
 pub(crate) fn load_baseline_report(path: &str) -> Result<BenchmarkReport, String> {
-    let content = fs::read_to_string(path).map_err(|error| error.to_string())?;
-    serde_json::from_str(&content).map_err(|error| error.to_string())
+    let content = fs::read_to_string(path)
+        .map_err(|error| format!("failed to read baseline report '{path}': {error}"))?;
+    serde_json::from_str(&content)
+        .map_err(|error| format!("failed to parse baseline report '{path}': {error}"))
+}
+
+pub(crate) fn write_report(path: &str, kind: &str, payload: &str) -> Result<(), String> {
+    fs::write(path, payload).map_err(|error| format!("failed to write {kind} '{path}': {error}"))
 }
 
 pub(crate) fn compare_against_baseline(
     current: &BenchmarkReport,
     baseline: &BenchmarkReport,
 ) -> BenchmarkComparison {
+    let peak_rss_comparable = current.rss_scope == baseline.rss_scope;
     let cases = current
         .cases
         .iter()
@@ -21,7 +28,7 @@ pub(crate) fn compare_against_baseline(
             baseline
                 .cases
                 .iter()
-                .find(|baseline_case| baseline_case.id == current_case.id)
+                .find(|baseline_case| baseline_case.id == current_case.id && baseline_case.ok)
                 .map(|baseline_case| BenchmarkComparisonCase {
                     id: current_case.id.clone(),
                     baseline_median_ms: baseline_case.median_ms,
@@ -39,15 +46,47 @@ pub(crate) fn compare_against_baseline(
 
     BenchmarkComparison {
         baseline_generated_at_unix_s: baseline.generated_at_unix_s,
+        baseline_rss_scope: baseline.rss_scope.clone(),
+        current_rss_scope: current.rss_scope.clone(),
+        peak_rss_comparable,
         cases,
     }
 }
 
 pub(crate) fn evaluate_regressions(
     config: &BenchmarkConfig,
+    current: &BenchmarkReport,
     comparison: &BenchmarkComparison,
 ) -> Vec<String> {
     let mut failures = Vec::new();
+
+    if config.fail_on_rss_regression_pct.is_some() && !comparison.peak_rss_comparable {
+        failures.push(format!(
+            "peak RSS scopes differ (baseline={}, current={}); regenerate the baseline with the same case isolation mode",
+            comparison.baseline_rss_scope, comparison.current_rss_scope
+        ));
+    }
+
+    if config.fail_on_median_regression_pct.is_some() || config.fail_on_rss_regression_pct.is_some()
+    {
+        failures.extend(
+            current
+                .cases
+                .iter()
+                .filter(|current_case| {
+                    !comparison
+                        .cases
+                        .iter()
+                        .any(|baseline_case| baseline_case.id == current_case.id)
+                })
+                .map(|current_case| {
+                    format!(
+                        "{} is missing from the baseline; regression gate cannot evaluate it",
+                        current_case.id
+                    )
+                }),
+        );
+    }
 
     for case in &comparison.cases {
         if case.baseline_median_ms < config.min_baseline_median_ms {
@@ -63,7 +102,8 @@ pub(crate) fn evaluate_regressions(
             ));
         }
 
-        if let Some(threshold) = config.fail_on_rss_regression_pct
+        if comparison.peak_rss_comparable
+            && let Some(threshold) = config.fail_on_rss_regression_pct
             && case.peak_rss_delta_pct > threshold
         {
             failures.push(format!(
@@ -87,9 +127,14 @@ pub(crate) fn render_comparison_report(
         format!("- Matrix: `{}`", report.matrix),
         format!("- Repeat count: `{}`", report.repeat),
         format!("- Generated at (unix): `{}`", report.generated_at_unix_s),
+        format!("- Peak RSS scope: `{}`", report.rss_scope),
         format!(
             "- Baseline generated at (unix): `{}`",
             comparison.baseline_generated_at_unix_s
+        ),
+        format!(
+            "- Baseline peak RSS scope: `{}`",
+            comparison.baseline_rss_scope
         ),
         String::new(),
         "| Case | Status | Median ms | Delta | Peak RSS | Delta |".to_string(),
@@ -97,17 +142,22 @@ pub(crate) fn render_comparison_report(
     ];
 
     for result in &report.cases {
-        let (median_delta, rss_delta) = comparison
+        let median_delta = comparison
             .cases
             .iter()
             .find(|case| case.id == result.id)
-            .map(|case| {
-                (
-                    format!("{:+.2}%", case.median_delta_pct),
-                    format!("{:+.2}%", case.peak_rss_delta_pct),
-                )
-            })
-            .unwrap_or_else(|| ("n/a".to_string(), "n/a".to_string()));
+            .map(|case| format!("{:+.2}%", case.median_delta_pct))
+            .unwrap_or_else(|| "n/a".to_string());
+        let rss_delta = if comparison.peak_rss_comparable {
+            comparison
+                .cases
+                .iter()
+                .find(|case| case.id == result.id)
+                .map(|case| format!("{:+.2}%", case.peak_rss_delta_pct))
+                .unwrap_or_else(|| "n/a".to_string())
+        } else {
+            "n/a (scope mismatch)".to_string()
+        };
 
         lines.push(format!(
             "| `{}` | {} | {:.4} | {} | {} MiB | {} |",
@@ -140,11 +190,12 @@ pub(crate) fn print_table(
     repeat: usize,
     profile: BenchmarkProfile,
     matrix: &str,
+    rss_scope: &str,
     comparison: Option<&BenchmarkComparison>,
 ) {
     println!(
         "{}",
-        render_table(results, repeat, profile, matrix, comparison)
+        render_table(results, repeat, profile, matrix, rss_scope, comparison)
     );
 }
 
@@ -153,6 +204,7 @@ pub(crate) fn render_table(
     repeat: usize,
     profile: BenchmarkProfile,
     matrix: &str,
+    rss_scope: &str,
     comparison: Option<&BenchmarkComparison>,
 ) -> String {
     let mut lines = vec![
@@ -160,6 +212,7 @@ pub(crate) fn render_table(
         format!("profile: {}", profile.as_str()),
         format!("matrix: {matrix}"),
         format!("repeat count: {repeat}"),
+        format!("peak rss scope: {rss_scope}"),
     ];
     if let Some(comparison) = comparison {
         lines.push(format!(
@@ -232,9 +285,19 @@ pub(crate) fn render_table(
         if let Some(delta) = comparison
             .and_then(|comparison| comparison.cases.iter().find(|case| case.id == result.id))
         {
+            let rss_delta = comparison.map_or_else(
+                || "n/a".to_string(),
+                |comparison| {
+                    if comparison.peak_rss_comparable {
+                        format!("{:+.2}%", delta.peak_rss_delta_pct)
+                    } else {
+                        "n/a (scope mismatch)".to_string()
+                    }
+                },
+            );
             lines.push(format!(
-                "  vs baseline: median {:+.2}% | peak rss {:+.2}%",
-                delta.median_delta_pct, delta.peak_rss_delta_pct
+                "  vs baseline: median {:+.2}% | peak rss {rss_delta}",
+                delta.median_delta_pct
             ));
         }
     }
@@ -280,8 +343,15 @@ fn format_memory_stages(result: &BenchmarkResult) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{BenchmarkProfile, render_table};
-    use crate::models::BenchmarkResult;
+    use super::{
+        BenchmarkProfile, compare_against_baseline, evaluate_regressions, load_baseline_report,
+        render_table, write_report,
+    };
+    use crate::{
+        config::BenchmarkConfig,
+        models::{BenchmarkReport, BenchmarkResult},
+    };
+    use std::{fs, path::PathBuf};
 
     #[test]
     fn table_renderer_keeps_status_column_aligned_for_long_case_names() {
@@ -293,6 +363,7 @@ mod tests {
             1,
             BenchmarkProfile::Medium,
             "thermal-structural",
+            "shared_process_high_water_mark",
             None,
         );
         let lines = rendered.lines().collect::<Vec<_>>();
@@ -312,6 +383,91 @@ mod tests {
         );
     }
 
+    #[test]
+    fn missing_and_malformed_baselines_fail_with_path_context() {
+        let missing = unique_temp_path("missing");
+        let malformed = unique_temp_path("malformed");
+        fs::write(&malformed, "not-json").expect("malformed fixture should write");
+
+        let missing_error = load_baseline_report(path(&missing)).unwrap_err();
+        let malformed_error = load_baseline_report(path(&malformed)).unwrap_err();
+
+        assert!(missing_error.contains(path(&missing)));
+        assert!(malformed_error.contains(path(&malformed)));
+        let _ = fs::remove_file(malformed);
+    }
+
+    #[test]
+    fn report_write_failures_return_errors_instead_of_panicking() {
+        let directory = unique_temp_path("directory");
+        fs::create_dir(&directory).expect("fixture directory should create");
+
+        let error = write_report(path(&directory), "benchmark report", "{}").unwrap_err();
+
+        assert!(error.contains(path(&directory)));
+        let _ = fs::remove_dir(directory);
+    }
+
+    #[test]
+    fn regression_gate_rejects_cases_missing_from_the_baseline() {
+        let current = report(vec![result("new-case", "frame_2d")]);
+        let baseline = report(Vec::new());
+        let comparison = compare_against_baseline(&current, &baseline);
+        let config = BenchmarkConfig {
+            fail_on_median_regression_pct: Some(5.0),
+            ..BenchmarkConfig::default()
+        };
+
+        let failures = evaluate_regressions(&config, &current, &comparison);
+
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("new-case is missing"));
+    }
+
+    #[test]
+    fn rss_gate_rejects_incompatible_measurement_scopes() {
+        let mut current = report(vec![result("frame", "frame_2d")]);
+        current.rss_scope = "isolated_case_process_high_water_mark".to_string();
+        let baseline = report(vec![result("frame", "frame_2d")]);
+        let comparison = compare_against_baseline(&current, &baseline);
+        let config = BenchmarkConfig {
+            fail_on_rss_regression_pct: Some(5.0),
+            ..BenchmarkConfig::default()
+        };
+
+        let failures = evaluate_regressions(&config, &current, &comparison);
+
+        assert_eq!(failures.len(), 1);
+        assert!(failures[0].contains("RSS scopes differ"));
+    }
+
+    fn unique_temp_path(label: &str) -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "kyuubiki-benchmark-{label}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("clock should follow unix epoch")
+                .as_nanos()
+        ))
+    }
+
+    fn path(path: &std::path::Path) -> &str {
+        path.to_str().expect("temporary path should be utf-8")
+    }
+
+    fn report(cases: Vec<BenchmarkResult>) -> BenchmarkReport {
+        BenchmarkReport {
+            repeat: 1,
+            profile: BenchmarkProfile::Medium,
+            matrix: "core".to_string(),
+            generated_at_unix_s: 1,
+            rss_scope: "shared_process_high_water_mark".to_string(),
+            cases,
+            preconditioner_comparisons: Vec::new(),
+        }
+    }
+
     fn result(id: &str, family: &str) -> BenchmarkResult {
         BenchmarkResult {
             id: id.to_string(),
@@ -327,6 +483,7 @@ mod tests {
             dof_count: 1,
             node_count: 1,
             element_count: 1,
+            history_step_count: None,
             peak_rss_kib: 1024,
             memory_stages: Vec::new(),
             solver_iterations: None,

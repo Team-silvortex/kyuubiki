@@ -5,6 +5,10 @@ mod tests {
         catalog_spec_path_candidates, default_catalog_spec, BenchmarkCatalogSpec,
     };
     use crate::config::BenchmarkProfile;
+    use crate::generators_structural::{
+        generate_buckling_beam_1d_case, generate_buckling_frame_2d_case,
+        generate_frame_2d_corotational_case, generate_frame_2d_p_delta_case,
+    };
     use crate::models::{BenchmarkCase, BenchmarkWorkload};
     use crate::runner::run_case;
     use serde::Deserialize;
@@ -16,25 +20,11 @@ mod tests {
 
     #[test]
     fn exposes_default_benchmark_config() {
-        let config = BenchmarkConfig {
-            repeat: 10,
-            case_filter: None,
-            matrix: "core".to_string(),
-            format: OutputFormat::Table,
-            profile: BenchmarkProfile::TenK,
-            baseline_out: None,
-            baseline_compare: None,
-            compare_report_out: None,
-            solver_preconditioner: "jacobi".to_string(),
-            progress: false,
-            dry_run_shapes: false,
-            fail_on_median_regression_pct: None,
-            fail_on_rss_regression_pct: None,
-            min_baseline_median_ms: 5.0,
-        };
+        let config = BenchmarkConfig::default();
 
         assert_eq!(config.repeat, 10);
         assert!(matches!(config.format, OutputFormat::Table));
+        assert_eq!(config.solver_preconditioner, "auto");
         assert!(!config.dry_run_shapes);
     }
 
@@ -105,7 +95,7 @@ mod tests {
     fn default_catalog_spec_covers_all_profiles() {
         let spec = default_catalog_spec();
 
-        assert_eq!(spec.templates.len(), 44);
+        assert_eq!(spec.templates.len(), 52);
         assert!(spec.matrices.len() >= 10);
         assert_eq!(spec.profiles.len(), 12);
         assert!(spec
@@ -229,7 +219,7 @@ mod tests {
             "jacobi",
         );
 
-        assert_eq!(report.cases.len(), 13);
+        assert_eq!(report.cases.len(), 14);
         assert!(report.cases.iter().all(|case| case.ok));
         assert!(report
             .cases
@@ -247,6 +237,10 @@ mod tests {
             .cases
             .iter()
             .any(|case| case.family == "magnetostatic_plane_quad_2d"));
+        assert!(report
+            .cases
+            .iter()
+            .any(|case| case.family == "electric_conduction_plane_quad_2d"));
     }
 
     #[test]
@@ -322,7 +316,12 @@ mod tests {
             .filter(|template| !coverage_stems.contains(template.stem.as_str()))
             .map(|template| template.stem.as_str())
             .collect::<HashSet<_>>();
-        let expected_missing = ["stability-screening", "material-integration"]
+        let expected_missing = [
+            "stability-screening",
+            "material-integration",
+            "dynamic-response",
+            "cohesive-interface",
+        ]
             .into_iter()
             .flat_map(|name| {
                 spec.matrices
@@ -333,6 +332,7 @@ mod tests {
                     .iter()
                     .map(String::as_str)
             })
+            .chain(["electric-conduction-plane-quad"])
             .collect::<HashSet<_>>();
         let selected = cases.iter().collect::<Vec<_>>();
         let report = crate::runner::build_report(
@@ -376,8 +376,28 @@ mod tests {
     }
 
     #[test]
-    fn stability_screening_matrix_runs_buckling_templates() {
-        let cases = benchmark_cases(BenchmarkProfile::Medium, "stability-screening");
+    fn stability_screening_matrix_runs_smoke_scale_buckling_templates() {
+        let cases = benchmark_cases(BenchmarkProfile::Medium, "stability-screening")
+            .into_iter()
+            .map(|case| {
+                let workload = match case.family {
+                    "buckling_beam_1d" => BenchmarkWorkload::BucklingBeam1d(
+                        generate_buckling_beam_1d_case(12, 8.0),
+                    ),
+                    "buckling_frame_2d" => BenchmarkWorkload::BucklingFrame2d(
+                        generate_buckling_frame_2d_case(12, 8.0),
+                    ),
+                    "frame_2d_p_delta" => BenchmarkWorkload::Frame2dPDelta(
+                        generate_frame_2d_p_delta_case(12, 8.0),
+                    ),
+                    "frame_2d_corotational" => BenchmarkWorkload::Frame2dPDelta(
+                        generate_frame_2d_corotational_case(12, 8.0),
+                    ),
+                    family => panic!("unexpected stability screening family: {family}"),
+                };
+                BenchmarkCase { workload, ..case }
+            })
+            .collect::<Vec<_>>();
         let selected = cases.iter().collect::<Vec<_>>();
         let report = crate::runner::build_report(
             &selected,

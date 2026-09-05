@@ -4,8 +4,10 @@ import type { WorkflowCatalogEntry, WorkflowGraphDefinition } from "@/lib/api";
 import { asWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-import";
 import { summarizeWorkflowInputArtifactContractHealth } from "@/components/workbench/workflow/workbench-workflow-fem-validation";
 import { buildWorkflowPackageSearchIndex } from "@/components/workbench/workflow/workbench-workflow-package";
+import { KYUUBIKI_PRODUCT_VERSION_LABEL } from "@/lib/product-version";
 
 export const WORKBENCH_LOCAL_WORKFLOWS_KEY = "kyuubiki.workbench.workflowLibrary.v1";
+export const WORKBENCH_LOCAL_WORKFLOW_LIMIT = 40;
 
 export type StoredLocalWorkflow = {
   id: string;
@@ -25,22 +27,83 @@ export type StoredLocalWorkflow = {
   importedFromPackageVersion?: string;
 };
 
+let localWorkflowIdSequence = 0;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function asStringRecord(value: unknown): Record<string, string> | undefined {
-  if (!isRecord(value)) return undefined;
-  return Object.fromEntries(
-    Object.entries(value).filter(
-      ([key, entryValue]) => typeof key === "string" && typeof entryValue === "string",
-    ),
-  ) as Record<string, string>;
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function normalizeTimestamp(value: unknown): string | null {
+  if (!isNonEmptyString(value)) return null;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
 }
 
 function stripLegacyLocalWorkflowInputs(records: StoredLocalWorkflow[]) {
   const sanitized = records.map(({ inputArtifactTexts: _inputArtifactTexts, ...entry }) => entry);
   return sanitized as StoredLocalWorkflow[];
+}
+
+function asStoredLocalWorkflow(value: unknown): StoredLocalWorkflow | null {
+  if (!isRecord(value)) return null;
+  if (
+    !isNonEmptyString(value.id) ||
+    !isNonEmptyString(value.sourceWorkflowId) ||
+    !isNonEmptyString(value.name) ||
+    typeof value.summary !== "string" ||
+    !isNonEmptyString(value.version)
+  ) {
+    return null;
+  }
+  const promotedAt = normalizeTimestamp(value.promotedAt);
+  const graph = asWorkflowGraphDefinition(value.graph);
+  if (!promotedAt || !graph || graph.id !== value.id) return null;
+  return {
+    id: value.id,
+    sourceWorkflowId: value.sourceWorkflowId,
+    sourceWorkflowName:
+      typeof value.sourceWorkflowName === "string" ? value.sourceWorkflowName : undefined,
+    name: value.name,
+    summary: value.summary,
+    notes: typeof value.notes === "string" ? value.notes : undefined,
+    version: value.version,
+    promotedAt,
+    variantOfWorkflowId:
+      typeof value.variantOfWorkflowId === "string" ? value.variantOfWorkflowId : undefined,
+    variantOfWorkflowName:
+      typeof value.variantOfWorkflowName === "string" ? value.variantOfWorkflowName : undefined,
+    graph,
+    tags:
+      Array.isArray(value.tags) && value.tags.every((entry) => typeof entry === "string")
+        ? (value.tags as string[])
+        : undefined,
+    importedFromPackageId:
+      typeof value.importedFromPackageId === "string" ? value.importedFromPackageId : undefined,
+    importedFromPackageVersion:
+      typeof value.importedFromPackageVersion === "string"
+        ? value.importedFromPackageVersion
+        : undefined,
+  };
+}
+
+function normalizeStoredLocalWorkflows(values: unknown[]): StoredLocalWorkflow[] {
+  const candidates = values
+    .map(asStoredLocalWorkflow)
+    .filter((entry): entry is StoredLocalWorkflow => entry !== null)
+    .sort((left, right) => right.promotedAt.localeCompare(left.promotedAt));
+  const seenIds = new Set<string>();
+  const records: StoredLocalWorkflow[] = [];
+  for (const entry of candidates) {
+    if (seenIds.has(entry.id)) continue;
+    seenIds.add(entry.id);
+    records.push(entry);
+    if (records.length === WORKBENCH_LOCAL_WORKFLOW_LIMIT) break;
+  }
+  return records;
 }
 
 function readStoredLocalWorkflows(): StoredLocalWorkflow[] {
@@ -50,55 +113,10 @@ function readStoredLocalWorkflows(): StoredLocalWorkflow[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    let hadLegacyInputs = false;
-    const records = parsed.flatMap((entry) => {
-      if (!isRecord(entry)) return [];
-      if (
-        typeof entry.id !== "string" ||
-        typeof entry.sourceWorkflowId !== "string" ||
-        typeof entry.name !== "string" ||
-        typeof entry.summary !== "string" ||
-        typeof entry.version !== "string" ||
-        typeof entry.promotedAt !== "string"
-      ) {
-        return [];
-      }
-      const graph = asWorkflowGraphDefinition(entry.graph);
-      if (!graph) return [];
-      if (asStringRecord(entry.inputArtifactTexts)) {
-        hadLegacyInputs = true;
-      }
-      return [
-        {
-          id: entry.id,
-          sourceWorkflowId: entry.sourceWorkflowId,
-          sourceWorkflowName: typeof entry.sourceWorkflowName === "string" ? entry.sourceWorkflowName : undefined,
-          name: entry.name,
-          summary: entry.summary,
-          notes: typeof entry.notes === "string" ? entry.notes : undefined,
-          version: entry.version,
-          promotedAt: entry.promotedAt,
-          variantOfWorkflowId:
-            typeof entry.variantOfWorkflowId === "string" ? entry.variantOfWorkflowId : undefined,
-          variantOfWorkflowName:
-            typeof entry.variantOfWorkflowName === "string" ? entry.variantOfWorkflowName : undefined,
-          graph,
-          tags:
-            Array.isArray(entry.tags) && entry.tags.every((value) => typeof value === "string")
-              ? (entry.tags as string[])
-              : undefined,
-          importedFromPackageId:
-            typeof entry.importedFromPackageId === "string"
-              ? entry.importedFromPackageId
-              : undefined,
-          importedFromPackageVersion:
-            typeof entry.importedFromPackageVersion === "string"
-              ? entry.importedFromPackageVersion
-              : undefined,
-        },
-      ];
-    });
-    if (hadLegacyInputs) {
+    const records = normalizeStoredLocalWorkflows(parsed);
+    const normalized = JSON.stringify(stripLegacyLocalWorkflowInputs(records));
+    if (raw !== normalized) {
+      // Normalization is best effort; recoverable records remain usable in memory.
       writeStoredLocalWorkflows(records);
     }
     return records;
@@ -107,12 +125,17 @@ function readStoredLocalWorkflows(): StoredLocalWorkflow[] {
   }
 }
 
-function writeStoredLocalWorkflows(records: StoredLocalWorkflow[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    WORKBENCH_LOCAL_WORKFLOWS_KEY,
-    JSON.stringify(stripLegacyLocalWorkflowInputs(records)),
-  );
+function writeStoredLocalWorkflows(records: StoredLocalWorkflow[]): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    window.localStorage.setItem(
+      WORKBENCH_LOCAL_WORKFLOWS_KEY,
+      JSON.stringify(stripLegacyLocalWorkflowInputs(records)),
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function buildLocalWorkflowId(baseName: string) {
@@ -121,7 +144,8 @@ function buildLocalWorkflowId(baseName: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || "workflow";
-  return `workflow.local.${slug}.${Date.now()}`;
+  localWorkflowIdSequence = (localWorkflowIdSequence + 1) % Number.MAX_SAFE_INTEGER;
+  return `workflow.local.${slug}.${Date.now()}.${localWorkflowIdSequence.toString(36)}`;
 }
 
 function cloneWorkflowGraph(graph: WorkflowGraphDefinition): WorkflowGraphDefinition {
@@ -145,13 +169,13 @@ export function saveStoredLocalWorkflow(params: {
   sourceWorkflowName?: string;
   variantOfWorkflowId?: string;
   variantOfWorkflowName?: string;
-}): StoredLocalWorkflow {
+}): StoredLocalWorkflow | null {
   const baseName = params.graph.name?.trim() || params.workflowName.trim() || params.graph.id;
   const nextId = buildLocalWorkflowId(baseName);
   const nextGraph = cloneWorkflowGraph(params.graph);
   nextGraph.id = nextId;
   nextGraph.name = `${baseName} Local`;
-  nextGraph.version = "moxi 2.0.0 local";
+  nextGraph.version = `${KYUUBIKI_PRODUCT_VERSION_LABEL} local`;
 
   const nextRecord: StoredLocalWorkflow = {
     id: nextId,
@@ -169,20 +193,26 @@ export function saveStoredLocalWorkflow(params: {
     importedFromPackageId: params.importedFromPackageId,
     importedFromPackageVersion: params.importedFromPackageVersion,
   };
-  const next = [nextRecord, ...readStoredLocalWorkflows()].slice(0, 40);
-  writeStoredLocalWorkflows(next);
-  return nextRecord;
+  const next = [nextRecord, ...readStoredLocalWorkflows()].slice(
+    0,
+    WORKBENCH_LOCAL_WORKFLOW_LIMIT,
+  );
+  return writeStoredLocalWorkflows(next) ? nextRecord : null;
 }
 
-export function removeStoredLocalWorkflow(workflowId: string) {
-  writeStoredLocalWorkflows(readStoredLocalWorkflows().filter((entry) => entry.id !== workflowId));
+export function removeStoredLocalWorkflow(workflowId: string): boolean {
+  const current = readStoredLocalWorkflows();
+  if (!current.some((entry) => entry.id === workflowId)) return false;
+  return writeStoredLocalWorkflows(current.filter((entry) => entry.id !== workflowId));
 }
 
-export function renameStoredLocalWorkflow(workflowId: string, nextName: string) {
+export function renameStoredLocalWorkflow(workflowId: string, nextName: string): boolean {
   const trimmedName = nextName.trim();
-  if (!trimmedName) return;
-  writeStoredLocalWorkflows(
-    readStoredLocalWorkflows().map((entry) => {
+  if (!trimmedName) return false;
+  const current = readStoredLocalWorkflows();
+  if (!current.some((entry) => entry.id === workflowId)) return false;
+  return writeStoredLocalWorkflows(
+    current.map((entry) => {
       if (entry.id !== workflowId) return entry;
       const nextGraph = cloneWorkflowGraph(entry.graph);
       nextGraph.name = trimmedName;
@@ -198,9 +228,11 @@ export function renameStoredLocalWorkflow(workflowId: string, nextName: string) 
 export function updateStoredLocalWorkflowMetadata(
   workflowId: string,
   params: { summary: string; notes: string },
-) {
-  writeStoredLocalWorkflows(
-    readStoredLocalWorkflows().map((entry) =>
+): boolean {
+  const current = readStoredLocalWorkflows();
+  if (!current.some((entry) => entry.id === workflowId)) return false;
+  return writeStoredLocalWorkflows(
+    current.map((entry) =>
       entry.id === workflowId
         ? {
             ...entry,
@@ -220,7 +252,7 @@ export function duplicateStoredLocalWorkflow(workflowId: string): StoredLocalWor
   const nextGraph = cloneWorkflowGraph(current.graph);
   nextGraph.id = nextId;
   nextGraph.name = baseName;
-  nextGraph.version = "moxi 2.0.0 local";
+  nextGraph.version = `${KYUUBIKI_PRODUCT_VERSION_LABEL} local`;
   const nextRecord: StoredLocalWorkflow = {
     id: nextId,
     sourceWorkflowId: current.sourceWorkflowId,
@@ -237,9 +269,11 @@ export function duplicateStoredLocalWorkflow(workflowId: string): StoredLocalWor
     importedFromPackageId: current.importedFromPackageId,
     importedFromPackageVersion: current.importedFromPackageVersion,
   };
-  const next = [nextRecord, ...readStoredLocalWorkflows()].slice(0, 40);
-  writeStoredLocalWorkflows(next);
-  return nextRecord;
+  const next = [nextRecord, ...readStoredLocalWorkflows()].slice(
+    0,
+    WORKBENCH_LOCAL_WORKFLOW_LIMIT,
+  );
+  return writeStoredLocalWorkflows(next) ? nextRecord : null;
 }
 
 export function findStoredLocalWorkflow(workflowId: string): StoredLocalWorkflow | null {

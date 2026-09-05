@@ -1,5 +1,5 @@
 import { chromium } from "playwright";
-import { isRestrictedPlaywrightLaunchError, reportRestrictedPlaywrightSkip } from "./playwright-runtime-guard.mjs";
+import { isRestrictedPlaywrightLaunchError, launchPlaywrightChromium, reportRestrictedPlaywrightSkip } from "./playwright-runtime-guard.mjs";
 
 const baseUrl = process.env.WORKFLOW_BENCHMARK_URL || "http://127.0.0.1:3000/workflow-benchmark";
 
@@ -26,6 +26,21 @@ async function setInputValue(page, selector, value) {
   await waitForDoublePaint(page);
 }
 
+async function openTopologyView(page, view) {
+  const target = page.locator(`[data-workflow-topology-view-target="${view}"]`);
+  await target.waitFor({ state: "visible", timeout: 10_000 });
+  await target.click();
+  await page.locator(`[data-workflow-topology-view="${view}"]`).waitFor({ state: "visible", timeout: 10_000 });
+  await waitForDoublePaint(page);
+}
+
+async function selectTopologyEntry(page, selector, value) {
+  const target = page.locator(selector);
+  await target.waitFor({ state: "visible", timeout: 10_000 });
+  await target.selectOption(value);
+  await waitForDoublePaint(page);
+}
+
 async function getInputValue(page, selector) {
   return page.locator(selector).inputValue();
 }
@@ -37,7 +52,7 @@ async function getSelectValue(page, selector) {
 async function run() {
   let browser;
   try {
-    browser = await chromium.launch({ headless: true });
+    browser = await launchPlaywrightChromium(chromium, { headless: true });
   } catch (error) {
     if (isRestrictedPlaywrightLaunchError(error)) {
       reportRestrictedPlaywrightSkip("Workflow topology regression check", error);
@@ -57,13 +72,20 @@ async function run() {
     const renamedPortId = "summary_regression_port";
     const renamedArtifactType = "workflow.summary.regression";
 
+    await selectTopologyEntry(page, '[data-workflow-topology-node-select="active"]', "extract.summary");
     await setInputValue(page, outputPortIdField, renamedPortId);
+    await openTopologyView(page, "edges");
+    await selectTopologyEntry(page, '[data-workflow-topology-edge-select="active"]', "edge.extract.transform");
     const syncedSourcePort = await getSelectValue(page, edgeSourcePortSelect);
     if (syncedSourcePort !== renamedPortId) {
       throw new Error(`Expected edge source port to sync to "${renamedPortId}", received "${syncedSourcePort}"`);
     }
 
+    await openTopologyView(page, "nodes");
+    await selectTopologyEntry(page, '[data-workflow-topology-node-select="active"]', "extract.summary");
     await setInputValue(page, outputPortTypeField, renamedArtifactType);
+    await openTopologyView(page, "edges");
+    await selectTopologyEntry(page, '[data-workflow-topology-edge-select="active"]', "edge.extract.transform");
     const syncedArtifactType = await getInputValue(page, edgeArtifactTypeField);
     if (syncedArtifactType !== renamedArtifactType) {
       throw new Error(`Expected edge artifact type to sync to "${renamedArtifactType}", received "${syncedArtifactType}"`);

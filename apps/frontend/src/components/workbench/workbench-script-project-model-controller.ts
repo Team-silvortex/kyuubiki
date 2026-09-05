@@ -4,6 +4,7 @@ import type {
   WorkbenchModelCreateInput,
   WorkbenchProjectLibraryBackendService,
 } from "@/lib/workbench/project-library-backend-service-core";
+import type { WorkbenchDownloadResult } from "@/components/workbench/workbench-export-controller";
 
 type ScriptProjectModelControllerDeps = {
   action: string;
@@ -24,10 +25,10 @@ type ScriptProjectModelControllerDeps = {
   setModelVersions: (value: any[]) => void;
   setLoadedModelName: (value: string) => void;
   setActiveMaterial: (value: string) => void;
-  refreshProjects: () => Promise<void>;
+  refreshProjects: (bootstrap?: boolean, preferredProjectId?: string | null) => Promise<void>;
   refreshVersions: (modelId: string) => Promise<void>;
-  downloadProjectBundleJson: () => Promise<void>;
-  downloadProjectBundleZip: () => Promise<void>;
+  downloadProjectBundleJson: () => Promise<WorkbenchDownloadResult>;
+  downloadProjectBundleZip: () => Promise<WorkbenchDownloadResult>;
   generateModel: () => void;
   generatePanelModel: () => void;
   serializeCurrentModel: () => Record<string, unknown>;
@@ -96,7 +97,7 @@ export async function handleWorkbenchScriptProjectModelAction({
       setSelectedProjectId(created.project.project_id);
       setProjectNameDraft(created.project.name);
       setProjectDescriptionDraft(created.project.description ?? "");
-      await refreshProjects();
+      await refreshProjects(false, created.project.project_id);
       setMessage(projectCreatedLabel);
       return { ok: true, action, projectId: created.project.project_id };
     }
@@ -133,12 +134,14 @@ export async function handleWorkbenchScriptProjectModelAction({
       return { ok: true, action };
     }
     case "project/exportJson": {
-      await downloadProjectBundleJson();
-      return { ok: true, action };
+      const download = await downloadProjectBundleJson();
+      if (!download.ok) throw download.error;
+      return { ok: true, action, partial: download.partial ?? false };
     }
     case "project/exportZip": {
-      await downloadProjectBundleZip();
-      return { ok: true, action };
+      const download = await downloadProjectBundleZip();
+      if (!download.ok) throw download.error;
+      return { ok: true, action, partial: download.partial ?? false };
     }
     case "model/generateTruss": {
       generateModel();

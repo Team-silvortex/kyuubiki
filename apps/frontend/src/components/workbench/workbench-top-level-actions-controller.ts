@@ -23,6 +23,7 @@ import {
   type WorkbenchSnapshot,
 } from "@/lib/workbench/history";
 import type { WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
+import { readWorkspaceStoreManifestResult } from "@/lib/workbench/store-manifest";
 
 type TopLevelActionsArgs = {
   language: any;
@@ -43,6 +44,8 @@ type TopLevelActionsArgs = {
   sidebarSection: any;
   studyTab: any;
   modelTab: any;
+  modelToolsPage: any;
+  workflowPanelTab: any;
   libraryTab: any;
   systemPanelTab: any;
   systemDataTab: any;
@@ -125,12 +128,15 @@ type TopLevelActionsArgs = {
 };
 
 export function createWorkbenchTopLevelActionsController(args: TopLevelActionsArgs) {
-  const buildScriptSnapshot = (): WorkbenchScriptSnapshot =>
-    buildWorkbenchScriptSnapshot({
+  const buildScriptSnapshot = (): WorkbenchScriptSnapshot => {
+    const storeManifest = readWorkspaceStoreManifestResult(args.selectedProjectId);
+    return buildWorkbenchScriptSnapshot({
       studyKind: args.studyKind,
       sidebarSection: args.sidebarSection,
       studyTab: args.studyTab,
       modelTab: args.modelTab,
+      modelToolsPage: args.modelToolsPage,
+      workflowPanelTab: args.workflowPanelTab,
       libraryTab: args.libraryTab,
       systemPanelTab: args.systemPanelTab,
       systemDataTab: args.systemDataTab,
@@ -165,7 +171,10 @@ export function createWorkbenchTopLevelActionsController(args: TopLevelActionsAr
       protocolAgents: args.protocolAgents,
       health: args.health,
       message: args.message,
+      storeManifestEntryCount: storeManifest.manifest.entries.length,
+      storeManifestReadable: storeManifest.readable,
     });
+  };
 
   const buildSnapshot = (): WorkbenchSnapshot =>
     buildWorkbenchUiSnapshot({
@@ -284,8 +293,8 @@ export function createWorkbenchTopLevelActionsController(args: TopLevelActionsAr
     });
   };
 
-  const handleInstallCatalogLanguagePack = (packId: string) => {
-    installBuiltinWorkbenchLanguagePack({
+  const handleInstallCatalogLanguagePack = async (packId: string) => {
+    await installBuiltinWorkbenchLanguagePack({
       packId,
       language: args.language,
       setLanguagePacks: args.setLanguagePacks,

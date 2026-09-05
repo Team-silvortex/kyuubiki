@@ -1,7 +1,7 @@
-# Weakness Roadmap For Moxi 2.x
+# Weakness Roadmap For Daji 3.x
 
 This document turns the current weak spots into a concrete roadmap for the
-remaining `moxi 2.x` hardening line.
+active `daji 3.x` product line.
 
 It complements:
 
@@ -11,11 +11,18 @@ It complements:
 
 ## Roadmap Principle
 
-The goal after `moxi 2.0.0` is not to maximize feature count.
+The early Daji goal is to harden an agent-driven industrial research system,
+not to maximize feature count.
 
 The goal is to make the strongest current capabilities repeatable, explainable,
 recoverable, and honest enough for selected early research and industrial
 partners.
+
+Use the [early Daji mainline](current-line.md#early-daji-mainline) as the
+acceptance journey. Research agents control work through the official Headless
+SDKs; Rust Agents execute admitted tasks. GUI/PWDT, Headless control, and
+Rust-only operator extensions remain distinct surfaces. No model output may
+grant itself approval or substitute for numerical validation.
 
 ## Current Tensor Status
 
@@ -23,30 +30,33 @@ The module/function/evidence tensor is now the first navigation gate for this
 roadmap. Run `make check-module-function-coverage-tensor` before claiming a
 roadmap area is closed.
 
-Current moxi baseline:
+Current Daji baseline:
 
 - `gap_count`: `0`
 - `blocking_gap_count`: `0`
 - `maturity_gap_count`: `0`
 - `thin_evidence_count`: `0`
-- `evidence_grade_gap_count`: `4`
-- required cells meeting their grade target: `73 / 77` (`94.8%`)
-- evidence progress toward configured targets: `98.7%`
-- release-critical P0 cells meeting target: `51 / 55` (`92.7%`)
+- `evidence_grade_gap_count`: `0`
+- required cells meeting their grade target: `77 / 77` (`100.0%`)
+- evidence progress toward configured targets: `100.0%`
+- release-critical P0 cells meeting target: `55 / 55` (`100.0%`)
 - release-profile P1 cells meeting target: `22 / 22` (`100.0%`)
-- `daji 3.0.0` release state: `blocked` by `4` P0 coordinates plus the
-  independently controlled external usability release gate
+- `daji 3.0.0` release state: `blocked` solely by the independently controlled
+  external usability release gate
 
-No required coordinate is structurally missing, but the previous `50 / 50`
-view excluded important capabilities from the release denominator. The moxi
-2.15 recalibration separates the Rust-only Worker/Operator SDK from both
-Installer and the three-language Headless SDK family, adds ABI compatibility as
-an evidence dimension, and promotes security, persistence, validation, and
-benchmark coordinates that were previously marked covered but optional.
+No configured coordinate remains below its current evidence target. This does
+not grant a daji release claim: the installed Linux recovery subtier is closed,
+while packaged macOS/Windows recovery and Windows upgrade tiers remain
+independently open; static or local evidence cannot close them. The moxi 2.15
+recalibration separated the
+Rust-only Worker/Operator SDK
+from both Installer and the three-language Headless SDK family, added ABI
+compatibility as an evidence dimension, and promoted security, persistence,
+validation, and benchmark coordinates that were previously optional.
 
-The resulting queue is intentionally non-empty. Agent package execution is now
-qualified on native macOS aarch64 and physical Linux x86_64, while the P0 group
-has converged on Windows installed external-package operation across SDK,
+The remaining release queue is now external rather than coordinate-local.
+Agent package execution is qualified on native macOS aarch64 and physical
+Linux x86_64, while Windows installed external-package operation spans SDK,
 Engine, Agent, and Installer. Workbench, Engine, and Headless
 persistence/provenance now meet their local `verified` targets, while Workbench
 and Headless security meet the local `qualified` target. Headless manifest
@@ -101,8 +111,8 @@ managed run root. The semantic validator intentionally rejects the older
 The accepted evidence is
 `releases/usability-evidence/2.14.3/agent-update-operational-qualification.json`
 and is rechecked by `make check-agent-update-operational-qualification`. The
-parent release tier remains open until desktop/runtime update rollback is
-proven across the required packaged platforms.
+parent release tier remains open until packaged desktop update rollback is
+proven across the remaining required platforms.
 
 The Runtime payload portion now also has remote Linux operational evidence.
 Installer seals distinct Debug and Release native payloads, installs them into
@@ -114,23 +124,166 @@ clock values. The accepted report is
 `releases/usability-evidence/2.14.3/runtime-payload-operational-qualification.json`
 and is rechecked by `make check-runtime-payload-operational-qualification`.
 This closes only `upgrade_and_rollback/runtime-payload-remote-linux`; packaged
-desktop update and rollback on macOS, Linux, and Windows remain open.
+desktop update and rollback are tracked by their own platform qualifications.
+
+The coordinated fleet portion now has retained remote Linux evidence as well.
+Installer applies one Runtime payload and two Agent packages as a single
+aligned-version transaction. It rejects aliased or overlapping component
+stores, serializes controllers with a fleet-level lock, injects a failure before
+the second Agent switch, compensates the Runtime and first Agent, executes every
+component after compensation, completes a clean upgrade, and then rolls the
+entire fleet back.
+The Release-built Installer keeps repeated SHA-256 verification fast, and the
+successful qualification removes its 451 MB temporary payload tree before the
+small report is retained. Evidence lives at
+`releases/usability-evidence/2.17.0/fleet-update-operational-qualification.json`
+and is rechecked by
+`./scripts/kyuubiki check-fleet-update-operational-qualification --verify-report releases/usability-evidence/2.17.0/fleet-update-operational-qualification.json --require-remote-linux`.
+This closes `upgrade_and_rollback/installer-managed-fleet-remote-linux`, not the
+parent tier: packaged desktop rollback still requires every target platform.
+
+Live workload continuity during Agent replacement now has its own retained
+remote Linux qualification. Each Rust Agent exposes a fenced admission lifecycle
+with an exact active-execution count and immutable process-instance identity.
+Lifecycle mutation is fail-closed to an operating-system-confirmed loopback
+peer; remote callers may inspect state but cannot drain or resume an Agent over
+the unauthenticated solver socket. Installer therefore executes the replacement
+controller on the target host through the managed SSH boundary.
+Installer drains one of two Agents to quiescence, replaces its binary, requires
+a new accepting process identity, and repeats for the peer. During both
+replacement windows the other Agent completes a real bar solve; initial and
+final probes prove the complete two-node fleet remains executable. The run also
+requires changed payload digests and removes its isolated remote work root.
+Evidence lives at
+`releases/usability-evidence/2.17.0/agent-rolling-replacement-operational-qualification.json`
+and is rechecked by
+`./scripts/kyuubiki check-agent-rolling-replacement-operational-qualification --verify-report releases/usability-evidence/2.17.0/agent-rolling-replacement-operational-qualification.json --require-remote-linux`.
+This closes only
+`upgrade_and_rollback/live-agent-rolling-replacement-remote-linux`; the parent
+upgrade tier remains open until packaged desktop update and rollback are proven
+on Windows as well.
+
+The packaged desktop set now has its first operational update/rollback tier on
+macOS. Installer hashes every file in Hub, Installer, and Workbench, stores the
+three shells as one immutable versioned unit, records monotonic atomic
+activations, rejects content drift and unmanaged files, and rolls back to the
+exact original aggregate and component digests. The host qualification makes
+two differently marked and ad-hoc re-signed variants from the current release
+bundles, then launches all three shells after initial install, upgrade, and
+rollback. All nine boot-receipt probes pass, and the isolated store, staging
+tree, update lock, and GUI processes are removed afterward. Evidence lives at
+`releases/usability-evidence/2.17.0/desktop-bundle-update-operational-qualification.json`
+and is rechecked by
+`./scripts/kyuubiki check-desktop-bundle-update-operational-qualification --verify-report releases/usability-evidence/2.17.0/desktop-bundle-update-operational-qualification.json --require-platform macos`.
+The `2.16.9` and `2.17.0` labels identify the two qualification package
+generations; both contain the current `2.17.0` runtime, so this proves package
+switching and exact rollback rather than historical binary compatibility.
+
+The same protocol now has physical Ubuntu evidence. Installer stages the three
+installed `2.19.0` binaries from `/usr/bin` into two content-distinct package
+generations, performs an atomic `2.18.9 -> 2.19.0 -> 2.18.9` activation journey,
+and launches Hub, Installer, and Workbench under isolated D-Bus/Xvfb sessions
+after every transition. All nine WebView receipts and fourteen semantic checks
+pass, the original aggregate and component digests are restored, and the run
+leaves no managed store, staging tree, lock, or GUI process behind. Evidence
+lives at
+`releases/usability-evidence/2.19.0/linux-desktop-bundle-update-operational-qualification.json`
+and is rechecked with `--require-platform linux`. This closes both
+`upgrade_and_rollback/packaged-desktop-set-macos` and
+`upgrade_and_rollback/packaged-desktop-set-linux`; Windows remains open.
+
+Physical Linux host loss now has a separate two-phase operational qualification.
+The native `prepare` phase installs and activates a sealed Agent through
+Installer, executes the complete solver/tamper/recovery probe, starts a
+loopback-only sentinel, and commits a digest-bound intent with file and directory
+sync. After a real physical reboot, `resume` requires a changed Linux boot ID on
+the same machine, proves the old process and port disappeared, verifies the
+installed payload digest, and repeats the numerical and watchdog checks. The
+retained report passes all thirteen checks and removes the managed state root
+with zero residue. Evidence lives at
+`releases/usability-evidence/2.19.0/linux-host-power-loss-operational-qualification.json`
+and is rechecked by `make check-linux-host-power-loss-qualification`. This
+closes `fault_injection_and_recovery/full-host-power-loss`; installed recovery
+on the remaining supported platforms is still open.
 
 The first Installer-managed end-to-end runtime subtier is now operational on
 remote Linux. A sealed installed payload starts Orchestra and two Rust Agents
 without loading the frontend; an installed Rust Headless client submits a real
 bar solve, observes `rust-agent-rpc` dispatch, and verifies displacement and
 stress. The completed result survives two managed restarts, including one after
-the synchronized source tree is removed. Shutdown closes every qualification
-port, removes managed PID files and the remote experiment root, and leaves zero
-residue. The sanitized evidence is retained at
-`releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json`
+the synchronized source tree is removed. The qualification is now generated by
+the native `qualify-installed-runtime-operational-remote` command rather than
+manual `tmp` captures; it verifies installed component hashes against the sealed
+payload before execution. Shutdown closes every qualification port, removes
+managed PID files and the remote experiment root, and leaves zero residue. The
+production OTP release is also compiled on the pinned Linux Elixir `1.20.1`
+toolchain with warnings treated as errors, preventing type-analysis drift from
+being normalized into retained evidence. The
+sanitized current-line evidence is retained at
+`releases/usability-evidence/2.19.0/installed-runtime-operational-qualification.json`
 and is rechecked by
-`make check-installed-runtime-operational-qualification`. This closes only
-`remote_agent_orchestra_round_trip/installer-managed-linux`; the parent tier
-still requires multi-host package acquisition, network-loss/rejoin behavior,
-fleet scheduling, and installed operation on the remaining supported
-platforms.
+`make check-installed-runtime-operational-qualification`.
+
+The same contract is now platform-parameterized without weakening the retained
+Linux identity. `qualify-installed-runtime-operational-macos` builds a native
+macOS/aarch64 payload and production OTP release, installs and activates it in
+an isolated application-support root, and repeats the source-detached solve and
+two-restart result-retention journey. Its sanitized 12/12 report is retained at
+`releases/usability-evidence/2.19.0/macos-installed-runtime-operational-qualification.json`
+and rechecked by `make check-installed-runtime-macos-operational-qualification`.
+This closes both `remote_agent_orchestra_round_trip/installer-managed-linux`
+and `remote_agent_orchestra_round_trip/installed-macos`; installed Windows
+operation remains open. It does not close macOS power-loss recovery, which is a
+separate failure boundary.
+
+The physical-Linux installed recovery subtier is now operational rather than a
+design note. `qualify-installed-runtime-power-loss-remote` provisions the same
+sealed production Runtime, removes its source tree, completes a real Headless
+solve, and durably binds the job result, three live process identities, ports,
+machine identity, boot identity, and payload digests. A real host reboot then
+interrupts all three processes; `resume` proves a changed boot ID on the same
+machine, restarts only from the installed payload, and retrieves the exact job
+with stable displacement and stress. Payload file-set checks run after both the
+pre-reboot and recovered workloads, and cleanup leaves no process, port, PID,
+session, or remote-root residue. The sanitized 16/16 report is retained at
+`releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json`.
+This promotes the Linux tensor cells to `proven/operational` and closes
+`fault_injection_and_recovery/installed-linux`; the platform-specific
+`fault_injection_and_recovery/installed-macos` and
+`fault_injection_and_recovery/installed-windows` subtiers remain open.
+
+Installer-managed capacity scheduling now has independent remote Linux
+operational evidence. The native runner seals one Release Agent package, installs
+it into two isolated stores, and starts capacities 3 and 1. Orchestra's
+`least_utilized_capacity_v1` admission produces the exact 3:1 lease
+distribution, emits per-decision utilization metadata, and executes the same
+closed-form bar solve on both Agents. The runner then stops the high-capacity
+process: Orchestra records a machine-readable unavailable-process receipt,
+falls back to the low Agent, honors cooldown, observes a changed process identity
+after restart, and resumes high-capacity scheduling. Every process, port, install
+root, and remote run directory is removed. Sanitized evidence is retained at
+`releases/usability-evidence/2.19.0/fleet-scheduling-operational-qualification.json`
+and rechecked by
+`make check-fleet-scheduling-operational-qualification`. This closes
+`remote_agent_orchestra_round_trip/fleet-scheduling` only. The two Agents share
+one remote physical host, so that report alone does not prove multi-host package
+acquisition.
+
+Multi-host package acquisition now has separate operational evidence. A real
+Elixir Orchestra on macOS owns the only Linux operator package copy and submits
+two concrete TaskIRs to an Installer-managed release Agent on physical Linux.
+Both tasks independently resolve, download, integrity-check, dynamically execute,
+and immediately evict the package; the second task therefore proves refetch
+rather than cache reuse. The package uses `kyuubiki.operator-json-c/v1`, so host
+and plugin exchange JSON bytes rather than Rust values even though their locked
+dependency versions differ. The remote build artifact is removed before Agent
+startup, every final package count is zero, and all ports, processes, credentials,
+and managed roots are cleaned. Sanitized evidence is retained at
+`releases/usability-evidence/2.19.0/operator-package-acquisition-operational-qualification.json`
+and rechecked by
+`make check-operator-package-acquisition-operational-qualification`. This closes
+`remote_agent_orchestra_round_trip/multi-host-package-acquisition`; installed
+macOS and Windows round trips remain open.
 
 Agent control-link recovery is now explicit rather than silent. The Rust Agent
 records registration and heartbeat attempts through the shared
@@ -154,8 +307,8 @@ address. Evidence lives at
 `releases/usability-evidence/2.14.7/agent-control-link-operational-qualification.json`
 and is rechecked by `make check-agent-control-link-operational-qualification`.
 This closes control-link network-loss/rejoin, not Installer-managed package
-acquisition, fleet scheduling, or installed operation on every supported
-platform. In-flight process-loss recovery now has its own independent two-host
+acquisition or installed operation on every supported platform. In-flight
+process-loss recovery now has its own independent two-host
 operational qualification rather than being inferred from this link test. That
 qualification uses a visible, default-disabled, exact-job execution barrier,
 requires the remote watchdog to show the job active, then kills the remote Rust
@@ -168,9 +321,33 @@ and is rechecked by
 `make check-distributed-task-recovery-operational-qualification`. Shared
 PostgreSQL Orchestra process-crash takeover is now independently retained for
 both source runtime and a source-detached Installer-managed Linux production
-release. Full host power loss, network-partition fencing, Installer-led fleet
-package acquisition, long-running workflow takeover, and the installed
-cross-platform matrix remain open. Persisted in-flight workflow state now has a
+release. Network-partition fencing now has separate physical-database evidence:
+the owner remains alive but loses only its database tunnel, fails closed, the
+standby takes token 2, and the former owner rejects writes after rejoining.
+Long-running workflow takeover is now independently operational as well. An
+exact remote Agent barrier holds generation-one work while the active Orchestra
+is lost: idempotent work is claimed as generation two, dispatches exactly
+twice, and commits one verified result; uncheckpointed `checkpoint_required`
+work remains generation one, is blocked without redispatch, and ignores the
+orphan completion. Both former owners rejoin as standby and the retained run
+leaves no managed process, port, tunnel, database, or work-root residue.
+Evidence lives at
+`releases/usability-evidence/2.18.3/orchestra-long-workflow-takeover-operational-qualification.json`
+and is rechecked by
+`make check-orchestra-long-workflow-takeover-operational-qualification`. This
+closes that subtier. The `moxi 2.19.0` macOS desktop set has now been rebuilt,
+atomically installed into `/Applications`, and qualified through three
+interactive startup receipts; current evidence lives at
+`releases/usability-evidence/2.19.0/macos-installed-desktop-smoke.json`. The
+Linux desktop set has also been rebuilt, upgraded through Installer-managed
+Ubuntu packages, and qualified through three real WebView startup receipts;
+its current evidence lives at
+`releases/usability-evidence/2.19.0/linux-installed-desktop-smoke.json`. The
+gate now carries five explicit open release subtiers. Historical `2.18.3`
+reports remain evidence for their source state rather than current-package
+proof. Ordinary installed macOS operation is closed; macOS installed reboot and
+the remaining Windows package, operation, recovery, and update cells stay open.
+Persisted in-flight workflow state now has a
 separate local qualification: a digest-bound execution envelope survives a
 complete OTP application stop/start, a fresh session claims a higher
 generation, stale writers are fenced, idempotent work resumes, uncheckpointed
@@ -266,8 +443,9 @@ prove numerical equality, capability rejection, digest-tamper rejection,
 watchdog quiescence, and recovery; the qualification work root is removed with
 zero residue. The machine-validated report is retained under
 `releases/usability-evidence/2.13.8/agent-solver-operational-qualification.json`.
-This evidence does not promote Orchestra fleet scheduling or installed
-Headless SDK operation.
+That report alone does not promote Orchestra fleet scheduling or installed
+Headless SDK operation. Fleet scheduling is promoted independently by the
+retained `2.19.0` qualification described above.
 
 The P0 security cluster now meets its `qualified` target for contracts,
 shared desktop UI, Hub, Workbench, all three official Headless SDK bindings,
@@ -344,22 +522,24 @@ Installer security without independent retained evidence for those surfaces.
 
 The former leading coordinate, `desktop-shared-ui/validation`, now meets its
 `qualified` target. The native qualification runner executes the cross-shell
-browser suite, requires all 21 tests to pass, preserves Hub, Installer, and
+browser suite, requires all 33 tests to pass, preserves Hub, Installer, and
 Workbench action counts, and verifies UI-to-native closure, PWDT parity,
-workspace-dominant layouts, reversible navigation, and regression panels. The
-machine-validated result is retained under
-`releases/usability-evidence/2.12.6`; installed-package and cross-platform proof
-remain separate operational tiers rather than being implied by this result.
+workspace-dominant layouts, reversible navigation, regression panels, live
+Workbench chunk mounting, controlled Model/Study, System, and Library deep-page
+round trips, Store request ownership, shared GUI/PWDT Store manifest mutation,
+no-click PWDT Store/Workflow navigation, and Pwdt session recovery. The machine-validated
+result is refreshed under `releases/usability-evidence/2.18.3`; installed-package
+and cross-platform proof remain separate operational tiers.
 
 The former leading coordinate, `installer-shell/validation`, now also meets
 its `qualified` target without inventing a parallel validation framework. The
 current cross-shell contract is explicitly mapped back to Installer and its
-retained moxi 2.15 report reruns all 21 browser/call-chain tests, observes 53
+retained moxi 2.18.3 report reruns all 27 browser/call-chain tests, observes 53
 Installer actions with zero missing or failed actions, and preserves four
 intentional fail-closed guards. Deployment/update handoff, capability routing,
 workspace priority, reversible navigation, and regression-critical panels are
 all asserted. The report is retained at
-`releases/usability-evidence/2.15.0/desktop-ui-validation-qualification.json`
+`releases/usability-evidence/2.18.3/desktop-ui-validation-qualification.json`
 and is now rechecked by `make check-desktop-ui-validation` as part of
 `architecture-check`.
 
@@ -443,7 +623,7 @@ Current weak point:
 - some limitations are documented in evidence packets, but they still need to
   become more product-visible in workflow previews and reports
 
-Current moxi hardening focus:
+Current Daji hardening focus:
 
 - keep every release-gated physics family at `qualification` without lowering
   the manifest minimum
@@ -617,16 +797,27 @@ Current weak point:
 - the same six-stage package journey now passes on native macOS aarch64 and
   physical Linux x86_64, with content-bound smoke/preflight attachments and
   residue-free cleanup
-- the remaining third-party gap is native Windows installed-package operation;
-  macOS/Linux evidence does not imply Windows ABI compatibility
-- the native Windows contract, strict validator, and `windows-latest` artifact
-  workflow now exist; the gap remains open until a real report is retained
+- native Windows installed-package operation now has current-line retained v2
+  evidence for the stable JSON C ABI, including MSVC dynamic loading, Agent RPC
+  dispatch, bound-Orchestra rotation, tamper recovery, Installer lifecycle,
+  residue cleanup, current sources, and SHA-256-bound attachments
+- real two-host central acquisition now passes through macOS Orchestra and an
+  Installer-managed physical Linux Agent with refetch and residue-free cleanup
+- release qualification now measures the actual dynamic ABI path rather than
+  borrowing solver throughput: compact p95 is 9.208 microseconds, the 4096-value
+  p95 is 366.042 microseconds, and four-worker throughput is about 516,407
+  dispatches per second with zero errors; cold activation is 429.674 ms and the
+  cached resident activation p95 is 0.417 ms
+- the remaining third-party gap is forward compatibility across future operator
+  SDK API and ABI revisions
 
-Current moxi hardening focus:
+Current Daji hardening focus:
 
 - keep the operator crate template green with descriptor readiness tests
 - expose package readiness in Installer preflight JSON and CI gates
 - keep TaskIR package identity and entrypoint digest checks fail-closed
+- reduce dynamic package activation cost while preserving package discovery,
+  admission, library ownership, and source-bound performance evidence
 - document the separation between operator SDK and headless SDK everywhere it matters
 
 Qualification focus:
@@ -639,10 +830,14 @@ Qualification focus:
   including shared ownership and cancellation
 - retain the macOS/Linux multihost report and its four SHA-256-bound child
   attachments under `releases/usability-evidence/2.16.4/`
-- promote the same package journey through native Windows installed-package
-  evidence rather than inheriting macOS/Linux dynamic-smoke results; use
-  `make qualify-operator-sdk-windows-operational` on Windows and retain the
-  uploaded three-file evidence set
+- preserve the historical Windows report under
+  `releases/usability-evidence/2.15.0/` and the current stable JSON C ABI v2
+  report plus bound attachments under `releases/usability-evidence/2.19.0/`
+- retain the two-host central acquisition report under
+  `releases/usability-evidence/2.19.0/` and recheck both fetch sequences,
+  eviction, refetch, stable ABI, and zero residue
+- retain and recheck the source-bound operator SDK performance report under the
+  same release evidence directory
 - add operator package compatibility fixtures for future SDK API changes
 
 Moxi readiness standard:
@@ -677,10 +872,12 @@ Current weak point:
   Installer-managed packages, then add long-running workflows and explicit
   database-network disruption
 
-Current moxi hardening focus:
+Current Daji hardening focus:
 
 - keep agent and orchestra authority modes explicit
 - ensure every agent execution failure reports a machine-readable reason
+- preserve the retained capacity-normalized scheduling, per-Agent utilization,
+  cooldown, rejoin, numerical, and cleanup evidence as the fleet policy evolves
 - continue remote-server tests through Installer-owned paths instead of ad-hoc
   SSH operations
 
@@ -712,7 +909,7 @@ Current weak point:
   reaches agent engines must be language-neutral
 - the TaskIR surface still needs more golden examples and compatibility gates
 
-Current moxi hardening focus:
+Current Daji hardening focus:
 
 - keep TaskIR independent of UI, Phoenix, React, and Elixir-only runtime state
 - make package fetch, readiness, dispatch, and result serialization visible in
@@ -743,7 +940,7 @@ Current weak point:
   backend capabilities, but experience parity is not fully proven
 - Workbench still needs an obvious main workflow loop for serious users
 
-Current moxi hardening focus:
+Current Daji hardening focus:
 
 - keep GUI actions, headless flows, and Installer preflight aligned around the
   same backend reports
@@ -775,7 +972,7 @@ Current weak point:
   systematic around manifests, TaskIR, workflow datasets, credentials, and
   package loading
 
-Current moxi hardening focus:
+Current Daji hardening focus:
 
 - keep dynamic library loading behind explicit host policy
 - keep credential storage sandboxed and visible
@@ -808,7 +1005,7 @@ Current weak point:
 - optimization metrics and reports need to feel like product primitives, not
   demo notes
 
-Current moxi hardening focus:
+Current Daji hardening focus:
 
 - keep the heat-spreader example reproducible
 - expand score contracts and feasibility explanations
@@ -874,18 +1071,34 @@ retained fault-injection evidence on a managed physical deployment.
 
 ## Priority Order
 
-The recommended order is:
+Early Daji uses one bounded, real Headless research loop as the acceptance
+spine. A retained run must bind its objective, input and package identities,
+runtime posture, metrics, quality decisions, failures, and exported lineage.
+The loop remains screening-only wherever independent numerical evidence is
+missing. More operators or a larger node count cannot compensate for a broken
+research journey.
 
-1. deepen numerical trust beyond compact qualification fixtures
-2. executable TaskIR stability and replay compatibility
-3. operator SDK end-to-end package example
-4. agent/orchestra/mesh recovery
-5. automated material research flagship
-6. security fuzz expansion
-7. Workbench main-loop polish and product-visible limitations
+| Order | Hardening outcome | Existing tensor coordinates |
+| --- | --- | --- |
+| 1 | Repeat a complete research loop on an Installer-managed runtime without mock execution or hidden GUI setup. | `sdk-headless/sdk_headless`, `runtime-agent-cli/solver_execution`, `runtime-installer/deployment_update` |
+| 2 | Reject invalid physics and qualify metrics with independent references and convergence evidence before ranking. | `runtime-engine-solver/solver_execution`, `runtime-engine-solver/validation` |
+| 3 | Diagnose process loss, partitions, and cancellation; resume only authorized work without duplicate results or cascading failure. | `runtime-agent-cli/validation`, `orchestra-control-plane/validation`, `orchestra-control-plane/workflow_composition` |
+| 4 | Preserve TaskIR, operator identities, checkpoints, and KCore lineage across restart and replay. | `runtime-protocol/validation`, `sdk-headless/persistence_provenance`, `runtime-engine-solver/persistence_provenance` |
+| 5 | Make GUI review, PWDT automation, and human intervention consistent with the same persisted backend state. | `workbench-shell/product_surface`, `workbench-shell/runtime_api`, `workbench-shell/persistence_provenance` |
+| 6 | Measure sustained throughput, tail latency, memory, and cancellation cost on the qualified journey before expanding scale. | `runtime-engine-solver/benchmark`, `runtime-agent-cli/benchmark`, `orchestra-control-plane/benchmark`, `sdk-headless/benchmark` |
 
-Workbench polish matters, but it should not outrun the runtime and numerical
-trust foundations.
+Security, approval boundaries, and resource budgets are constraints on every
+row, not a later phase. Critical security defects and data-loss risks preempt
+the order above. Windows installed journeys, macOS/Windows installed recovery,
+and remaining update/rollback gates retain their independent release priority;
+Linux-first research qualification does not waive another platform's gate.
+
+Every closure needs a regression case and retained evidence at the actual
+module/function/evidence coordinate, including its version, platform, and
+execution scope. If a journey exposes a missing coordinate or insufficient
+target, recalibrate the tensor explicitly instead of treating its current
+target percentages as complete industrial coverage. This planning update does
+not promote evidence grades, relabel historical runs, or close release gates.
 
 Current nonlinear-structure progress includes sampled limit-point events and
 bounded symmetric-tangent inertia diagnostics. Nonzero inertia changes outside
@@ -1123,5 +1336,5 @@ observability limits, not arc-length solver size limits.
 ## 2.0 Boundary Rule
 
 If a capability cannot be made repeatable, inspectable, and honestly scoped
-before `moxi 2.0.0`, it should ship as an experimental or deferred `2.x`
+for the Daji readiness gate, it should remain an experimental or deferred
 capability rather than weakening the first trust line.

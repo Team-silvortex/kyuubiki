@@ -10,9 +10,14 @@ import { ELECTROMAGNETIC_TEMPLATE_CHAINS } from "@/components/workbench/workflow
 import { HOTSPOT_TEMPLATE_CHAINS } from "@/components/workbench/workflow/workbench-workflow-template-chain-hotspot-presets";
 import { MATERIAL_DECISION_TEMPLATE_CHAINS } from "@/components/workbench/workflow/workbench-workflow-template-chain-material-presets";
 import { STATISTICS_TEMPLATE_CHAINS } from "@/components/workbench/workflow/workbench-workflow-template-chain-statistics-presets";
+import {
+  asWorkflowTemplateChainConnections,
+  asWorkflowTemplateChainSelections,
+} from "@/components/workbench/workflow/workbench-workflow-template-chain-contract";
 
-const WORKFLOW_TEMPLATE_CHAIN_LIBRARY_KEY =
+export const WORKFLOW_TEMPLATE_CHAIN_LIBRARY_KEY =
   "kyuubiki.workflow.templateChainLibrary.v1";
+export const WORKFLOW_TEMPLATE_CHAIN_LIBRARY_LIMIT = 40;
 
 export type WorkflowTemplateChainDefinition = {
   id: string;
@@ -252,21 +257,23 @@ const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
   },
 ];
 
+const BUILT_IN_TEMPLATE_CHAIN_IDS = new Set(
+  BUILT_IN_TEMPLATE_CHAINS.map((chain) => chain.id),
+);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function asTemplateSelections(
-  value: unknown,
-): WorkflowNodeTemplateSelection[] | null {
-  if (!Array.isArray(value)) return null;
-  const templates = value.filter(
-    (entry): entry is WorkflowNodeTemplateSelection =>
-      isRecord(entry) &&
-      typeof entry.kind === "string" &&
-      (typeof entry.operatorId === "string" || entry.operatorId === undefined),
-  );
-  return templates.length === value.length ? templates : null;
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function normalizeOptionalTimestamp(value: unknown): string | undefined | null {
+  if (value === undefined) return undefined;
+  if (!isNonEmptyString(value)) return null;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
 }
 
 function asStringArray(value: unknown): string[] | undefined {
@@ -279,9 +286,19 @@ function asImportedTemplateChain(
   value: unknown,
 ): WorkflowTemplateChainDefinition | null {
   if (!isRecord(value)) return null;
-  if (typeof value.id !== "string" || typeof value.label !== "string") return null;
-  const templates = asTemplateSelections(value.templates);
+  if (
+    !isNonEmptyString(value.id) ||
+    !isNonEmptyString(value.label) ||
+    BUILT_IN_TEMPLATE_CHAIN_IDS.has(value.id)
+  ) {
+    return null;
+  }
+  const templates = asWorkflowTemplateChainSelections(value.templates);
   if (!templates) return null;
+  const connections = asWorkflowTemplateChainConnections(value.connections, templates.length);
+  if (connections === null) return null;
+  const updatedAt = normalizeOptionalTimestamp(value.updatedAt);
+  if (updatedAt === null) return null;
   return {
     id: value.id,
     label: value.label,
@@ -289,33 +306,67 @@ function asImportedTemplateChain(
     summary: typeof value.summary === "string" ? value.summary : undefined,
     version: typeof value.version === "string" ? value.version : undefined,
     tags: asStringArray(value.tags),
-    updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : undefined,
+    updatedAt,
+    connections: connections as WorkflowTemplateChainConnection[] | undefined,
     source: "imported",
   };
 }
 
-function readImportedTemplateChains(): WorkflowTemplateChainDefinition[] {
-  if (typeof window === "undefined") return [];
+function normalizeImportedTemplateChains(values: unknown[]): WorkflowTemplateChainDefinition[] {
+  const candidates = values
+    .map(asImportedTemplateChain)
+    .filter((chain): chain is WorkflowTemplateChainDefinition => chain !== null)
+    .sort((left, right) =>
+      (right.updatedAt ?? "").localeCompare(left.updatedAt ?? "") ||
+      left.label.localeCompare(right.label),
+    );
+  const seenIds = new Set<string>();
+  const chains: WorkflowTemplateChainDefinition[] = [];
+  for (const chain of candidates) {
+    if (seenIds.has(chain.id)) continue;
+    seenIds.add(chain.id);
+    chains.push(chain);
+    if (chains.length === WORKFLOW_TEMPLATE_CHAIN_LIBRARY_LIMIT) break;
+  }
+  return chains;
+}
+
+type ImportedTemplateChainReadResult = {
+  chains: WorkflowTemplateChainDefinition[];
+  readable: boolean;
+};
+
+function readImportedTemplateChainState(): ImportedTemplateChainReadResult {
+  if (typeof window === "undefined") return { chains: [], readable: false };
   try {
     const raw = window.localStorage.getItem(WORKFLOW_TEMPLATE_CHAIN_LIBRARY_KEY);
-    if (!raw) return [];
+    if (!raw) return { chains: [], readable: true };
     const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.flatMap((entry) => {
-      const chain = asImportedTemplateChain(entry);
-      return chain ? [chain] : [];
-    });
+    if (!Array.isArray(parsed)) return { chains: [], readable: false };
+    const chains = normalizeImportedTemplateChains(parsed);
+    const normalized = JSON.stringify(chains);
+    if (raw !== normalized) writeImportedTemplateChains(chains);
+    return { chains, readable: true };
   } catch {
-    return [];
+    return { chains: [], readable: false };
   }
 }
 
-function writeImportedTemplateChains(chains: WorkflowTemplateChainDefinition[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(
-    WORKFLOW_TEMPLATE_CHAIN_LIBRARY_KEY,
-    JSON.stringify(chains.filter((chain) => chain.source === "imported")),
-  );
+function readImportedTemplateChains(): WorkflowTemplateChainDefinition[] {
+  return readImportedTemplateChainState().chains;
+}
+
+function writeImportedTemplateChains(chains: WorkflowTemplateChainDefinition[]): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    window.localStorage.setItem(
+      WORKFLOW_TEMPLATE_CHAIN_LIBRARY_KEY,
+      JSON.stringify(chains.filter((chain) => chain.source === "imported")),
+    );
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function listBuiltInWorkflowTemplateChains() {
@@ -336,22 +387,29 @@ export function listAllWorkflowTemplateChains() {
 
 export function saveImportedWorkflowTemplateChain(
   chain: Omit<WorkflowTemplateChainDefinition, "source">,
-) {
-  const imported = listStoredWorkflowTemplateChains();
-  const nextChain: WorkflowTemplateChainDefinition = {
+): WorkflowTemplateChainDefinition | null {
+  const stored = readImportedTemplateChainState();
+  if (!stored.readable) return null;
+  const imported = stored.chains;
+  const nextChain = asImportedTemplateChain({
     ...chain,
     updatedAt: new Date().toISOString(),
     source: "imported",
-  };
-  const next = [nextChain, ...imported.filter((entry) => entry.id !== chain.id)].slice(0, 40);
-  writeImportedTemplateChains(next);
-  return nextChain;
+  });
+  if (!nextChain) return null;
+  const next = [nextChain, ...imported.filter((entry) => entry.id !== chain.id)].slice(
+    0,
+    WORKFLOW_TEMPLATE_CHAIN_LIBRARY_LIMIT,
+  );
+  return writeImportedTemplateChains(next) ? nextChain : null;
 }
 
-export function removeImportedWorkflowTemplateChain(chainId: string) {
-  writeImportedTemplateChains(
-    listStoredWorkflowTemplateChains().filter((entry) => entry.id !== chainId),
-  );
+export function removeImportedWorkflowTemplateChain(chainId: string): boolean {
+  const stored = readImportedTemplateChainState();
+  if (!stored.readable) return false;
+  const current = stored.chains;
+  if (!current.some((entry) => entry.id === chainId)) return true;
+  return writeImportedTemplateChains(current.filter((entry) => entry.id !== chainId));
 }
 
 export function updateImportedWorkflowTemplateChain(
@@ -359,16 +417,21 @@ export function updateImportedWorkflowTemplateChain(
   updater: (
     chain: Omit<WorkflowTemplateChainDefinition, "source">,
   ) => Omit<WorkflowTemplateChainDefinition, "source">,
-) {
-  writeImportedTemplateChains(
-    listStoredWorkflowTemplateChains().map((entry) =>
-      entry.id === chainId
-        ? {
-            ...updater(entry),
-            updatedAt: new Date().toISOString(),
-            source: "imported",
-          }
-        : entry,
-    ),
+): boolean {
+  const stored = readImportedTemplateChainState();
+  if (!stored.readable) return false;
+  const current = stored.chains;
+  const existing = current.find((entry) => entry.id === chainId);
+  if (!existing) return false;
+  const { source: _source, ...editable } = existing;
+  const updated = asImportedTemplateChain({
+    ...updater(editable),
+    id: chainId,
+    updatedAt: new Date().toISOString(),
+    source: "imported",
+  });
+  if (!updated) return false;
+  return writeImportedTemplateChains(
+    current.map((entry) => entry.id === chainId ? updated : entry),
   );
 }

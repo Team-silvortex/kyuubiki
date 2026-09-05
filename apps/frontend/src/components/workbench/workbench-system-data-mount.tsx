@@ -145,7 +145,7 @@ export function WorkbenchSystemDataMount({
   deleteAdminJobRecord,
   selectedAdminResultJobId,
   handleSelectAdminResult,
-  jobHistory,
+  jobHistory = [],
   adminResultDraft,
   setAdminResultDraft,
   saveAdminResultRecord,

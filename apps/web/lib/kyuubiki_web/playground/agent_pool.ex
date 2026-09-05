@@ -128,9 +128,26 @@ defmodule KyuubikiWeb.Playground.AgentPool do
       end)
 
     case available do
-      [] -> endpoints
-      _ -> available ++ cooling
+      [] ->
+        Enum.map(endpoints, &put_scheduler_availability(&1, 0))
+
+      _ ->
+        Enum.map(available, &put_scheduler_availability(&1, 0)) ++
+          Enum.map(cooling, &put_scheduler_availability(&1, 1))
     end
+  end
+
+  defp put_scheduler_availability(endpoint, availability_tier) do
+    priority =
+      case Map.get(endpoint, :_scheduler_priority) do
+        {constraint, score, method} ->
+          {availability_tier, constraint, score, method}
+
+        _other ->
+          {availability_tier, 0, 0, 0}
+      end
+
+    Map.put(endpoint, :_scheduler_priority, priority)
   end
 
   defp configured_endpoints do

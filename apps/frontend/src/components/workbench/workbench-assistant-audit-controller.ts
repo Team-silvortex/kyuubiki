@@ -74,6 +74,7 @@ export function useWorkbenchAssistantAuditController({
   const assistantAuditCopy = getWorkbenchAssistantAuditCopy(language);
   const [scriptActionLog, setScriptActionLog] = useState<WorkbenchScriptActionLogEntry[]>([]);
   const [assistantTransactions, setAssistantTransactions] = useState<AssistantTransactionEntry[]>([]);
+  const assistantTransactionsRef = useRef<AssistantTransactionEntry[]>([]);
   const [securityAuditLog, setSecurityAuditLog] = useState<WorkbenchSecurityAuditEntry[]>([]);
   const governanceAuditSignatureRef = useRef<string | null>(null);
 
@@ -202,15 +203,19 @@ export function useWorkbenchAssistantAuditController({
       executedActions,
       buildWorkbenchSnapshot(),
     );
-    setAssistantTransactions((current) => [entry, ...current].slice(0, 12));
+    const next = [entry, ...assistantTransactionsRef.current].slice(0, 12);
+    assistantTransactionsRef.current = next;
+    setAssistantTransactions(next);
     return entry.id;
   };
 
   const rollbackAssistantTransaction = (transactionId: string) => {
-    const entry = assistantTransactions.find((transaction) => transaction.id === transactionId);
+    const entry = assistantTransactionsRef.current.find((transaction) => transaction.id === transactionId);
     if (!entry) return;
     restoreWorkbenchSnapshot(entry.snapshot);
-    setAssistantTransactions((current) => current.filter((transaction) => transaction.id !== transactionId));
+    const next = assistantTransactionsRef.current.filter((transaction) => transaction.id !== transactionId);
+    assistantTransactionsRef.current = next;
+    setAssistantTransactions(next);
     setMessage(assistantAuditCopy.transactionRolledBack);
   };
 

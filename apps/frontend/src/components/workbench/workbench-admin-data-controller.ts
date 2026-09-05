@@ -1,6 +1,10 @@
 "use client";
 
 import type { JobState, ProjectRecord } from "@/lib/api";
+import {
+  workbenchOperationFailure,
+  type WorkbenchOperationResult,
+} from "@/lib/workbench/operation-result";
 
 type AdminDataControllerDeps = {
   selectedAdminJob: JobState | null;
@@ -9,7 +13,7 @@ type AdminDataControllerDeps = {
   jobHistory: JobState[];
   projects: ProjectRecord[];
   refreshVersions: (modelId: string) => Promise<void>;
-  openModelVersionById: (versionId: string) => void;
+  openModelVersionById: (versionId: string) => Promise<WorkbenchOperationResult>;
   setAdminFilterProjectId: (value: string) => void;
   setAdminFilterModelVersionId: (value: string) => void;
   setAdminJobCaseId: (value: string) => void;
@@ -34,12 +38,18 @@ type AdminDataControllerDeps = {
   };
 };
 
-export function openProjectContextById(projectId: string, deps: AdminDataControllerDeps) {
+export async function openProjectContextById(
+  projectId: string,
+  deps: AdminDataControllerDeps,
+): Promise<WorkbenchOperationResult> {
   const project = deps.projects.find((entry) => entry.project_id === projectId);
 
   if (!project) {
     deps.setMessage(deps.labels.linkedProjectMissing);
-    return;
+    return workbenchOperationFailure(
+      new Error(deps.labels.linkedProjectMissing),
+      deps.labels.linkedProjectMissing,
+    );
   }
 
   const firstModelId = project.models?.[0]?.model_id ?? null;
@@ -50,32 +60,44 @@ export function openProjectContextById(projectId: string, deps: AdminDataControl
   deps.setSelectedVersionId(firstVersionId);
   deps.setSidebarSection("library");
 
-  if (firstModelId) {
-    void deps.refreshVersions(firstModelId);
-  } else {
-    deps.setModelVersions([]);
+  try {
+    if (firstModelId) {
+      await deps.refreshVersions(firstModelId);
+    } else {
+      deps.setModelVersions([]);
+    }
+  } catch (error) {
+    const failure = workbenchOperationFailure(error, deps.labels.linkedProjectMissing);
+    deps.setMessage(failure.error.message);
+    return failure;
   }
 
   deps.setMessage(deps.labels.linkedProjectOpened);
+  return { ok: true };
 }
 
-export function applyJobContextToWorkbench(entry: JobState, deps: AdminDataControllerDeps) {
+export async function applyJobContextToWorkbench(
+  entry: JobState,
+  deps: AdminDataControllerDeps,
+): Promise<WorkbenchOperationResult> {
   deps.setAdminFilterProjectId(entry.project_id ?? "");
   deps.setAdminFilterModelVersionId(entry.model_version_id ?? "");
   deps.setAdminJobCaseId(entry.simulation_case_id ?? "");
   deps.setLibraryTab("projects");
 
   if (entry.model_version_id) {
-    deps.openModelVersionById(entry.model_version_id);
-    return;
+    return deps.openModelVersionById(entry.model_version_id);
   }
 
   if (entry.project_id) {
-    openProjectContextById(entry.project_id, deps);
-    return;
+    return openProjectContextById(entry.project_id, deps);
   }
 
   deps.setMessage(deps.labels.noRecordContext);
+  return workbenchOperationFailure(
+    new Error(deps.labels.noRecordContext),
+    deps.labels.noRecordContext,
+  );
 }
 
 export function openSelectedAdminJobVersion(deps: AdminDataControllerDeps) {
@@ -84,7 +106,7 @@ export function openSelectedAdminJobVersion(deps: AdminDataControllerDeps) {
     return;
   }
 
-  deps.openModelVersionById(deps.selectedAdminJob.model_version_id);
+  void deps.openModelVersionById(deps.selectedAdminJob.model_version_id);
 }
 
 export function openSelectedAdminResultVersion(deps: AdminDataControllerDeps) {
@@ -95,7 +117,7 @@ export function openSelectedAdminResultVersion(deps: AdminDataControllerDeps) {
     return;
   }
 
-  deps.openModelVersionById(linkedJob.model_version_id);
+  void deps.openModelVersionById(linkedJob.model_version_id);
 }
 
 export function openSelectedAdminJobProject(deps: AdminDataControllerDeps) {
@@ -104,7 +126,7 @@ export function openSelectedAdminJobProject(deps: AdminDataControllerDeps) {
     return;
   }
 
-  openProjectContextById(deps.selectedAdminJob.project_id, deps);
+  void openProjectContextById(deps.selectedAdminJob.project_id, deps);
 }
 
 export function openSelectedAdminResultProject(deps: AdminDataControllerDeps) {
@@ -115,23 +137,21 @@ export function openSelectedAdminResultProject(deps: AdminDataControllerDeps) {
     return;
   }
 
-  openProjectContextById(linkedJob.project_id, deps);
+  void openProjectContextById(linkedJob.project_id, deps);
 }
 
-export function applySelectedAdminJobContext(deps: AdminDataControllerDeps) {
+export async function applySelectedAdminJobContext(deps: AdminDataControllerDeps) {
   if (!deps.selectedAdminJob) {
     deps.setMessage(deps.labels.selectJobFirst);
     return;
   }
 
-  applyJobContextToWorkbench(deps.selectedAdminJob, deps);
-  if (!deps.selectedAdminJob.model_version_id && !deps.selectedAdminJob.project_id) {
-    return;
-  }
+  const result = await applyJobContextToWorkbench(deps.selectedAdminJob, deps);
+  if (!result.ok) return;
   deps.setMessage(deps.labels.recordContextApplied);
 }
 
-export function applySelectedAdminResultContext(deps: AdminDataControllerDeps) {
+export async function applySelectedAdminResultContext(deps: AdminDataControllerDeps) {
   const linkedJob = deps.jobHistory.find((entry) => entry.job_id === deps.selectedAdminResultJobId);
 
   if (!linkedJob) {
@@ -139,10 +159,8 @@ export function applySelectedAdminResultContext(deps: AdminDataControllerDeps) {
     return;
   }
 
-  applyJobContextToWorkbench(linkedJob, deps);
-  if (!linkedJob.model_version_id && !linkedJob.project_id) {
-    return;
-  }
+  const result = await applyJobContextToWorkbench(linkedJob, deps);
+  if (!result.ok) return;
   deps.setMessage(deps.labels.recordContextApplied);
 }
 

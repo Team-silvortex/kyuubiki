@@ -30,6 +30,7 @@ jobs:
           key: ${{ runner.os }}-beam-web-${{ hashFiles('apps/web/mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-beam-web-
+      - run: mix deps.get
       - run: mix format --check-formatted
       - run: mix test
 
@@ -43,6 +44,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.19.5"
+          otp-version: "28.0"
+      - name: Install live-service dependencies
+        working-directory: apps/web
+        run: mix deps.get
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
@@ -66,11 +74,23 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: apps/frontend/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: workers/rust
       - run: npm ci
       - run: npm run typecheck
+      - run: npm run test:unit:coverage
+      - name: Upload frontend coverage summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-${{ github.run_attempt }}
+          path: tmp/coverage/frontend/v8/summary.json
+          if-no-files-found: warn
       - run: npm run build
 
   dependency-audit:
@@ -88,6 +108,10 @@ jobs:
             apps/hub-gui/package-lock.json
             apps/installer-gui/package-lock.json
             apps/workbench-gui/package-lock.json
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.19.5"
+          otp-version: "28.0"
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
@@ -125,6 +149,7 @@ jobs:
       - run: make check-material-research-bundle-contract
       - run: make check-toolchains
       - run: make check-doc-book
+      - run: make test-integration-benchmark-profile-index
 
   workflow-preflight:
     name: workflow-preflight
@@ -313,6 +338,9 @@ jobs:
           cache-dependency-path: ${{ matrix.cache_path }}
       - working-directory: ${{ matrix.working_directory }}
         run: npm ci
+      - if: matrix.target == 'hub'
+        working-directory: apps/frontend
+        run: npm ci
       - working-directory: ${{ matrix.working_directory }}
         run: npm run test:smoke
 
@@ -332,8 +360,8 @@ jobs:
         run: npm ci
       - working-directory: apps/frontend
         run: npx playwright install --with-deps chromium
-      - name: Run desktop GUI regression gate
-        run: make test-integration-desktop-gui
+      - name: Run desktop and Workbench UI invocation regression gates
+        run: make test-integration-ui-invocation
       - name: Upload desktop GUI regression artifacts
         if: failure()
         uses: actions/upload-artifact@v4

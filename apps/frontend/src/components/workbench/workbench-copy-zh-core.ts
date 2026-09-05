@@ -207,6 +207,7 @@ export const copyZhCore = {
     workflowDraftSavedLabel: "已经保存本地工作流草稿。",
     workflowDraftLoadedLabel: "已经载入本地工作流草稿。",
     workflowDraftDeletedLabel: "已经删除本地工作流草稿。",
+    workflowStorageWriteFailedLabel: "无法保存本地工作流数据。请检查可用存储空间后重试。",
     workflowLocalWorkflowPromotedLabel: "已经把草稿提升到本地工作流库。",
     workflowLocalWorkflowDeleteLabel: "删除本地工作流",
     workflowLocalWorkflowDeletedLabel: "已经删除本地工作流。",

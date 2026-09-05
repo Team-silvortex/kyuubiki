@@ -1,14 +1,15 @@
 use std::ffi::OsString;
-use std::fs;
 use std::path::{Path, PathBuf};
-#[cfg(target_os = "macos")]
 use std::process::Command;
+
+#[path = "desktop_bundle_staging.rs"]
+pub(crate) mod bundle_staging;
 
 use crate::desktop_distribution::{
     distribution_preflight, distribution_readiness, runtime_payload_readiness,
     verify_distribution_artifacts, verify_runtime_payload,
 };
-use crate::{RepoPaths, RunnerResult, run_installer, run_with_env};
+use crate::{RepoPaths, RunnerResult, run_installer};
 
 #[derive(Clone, Copy)]
 pub enum DesktopApp {
@@ -35,7 +36,7 @@ pub fn run_desktop_dev(paths: &RepoPaths, app: DesktopApp) -> RunnerResult<u8> {
         paths,
         app,
         desktop_app_dir(paths, app),
-        "npm",
+        npm_program(),
         ["run", "tauri:dev"].map(OsString::from),
     )
 }
@@ -48,12 +49,12 @@ pub fn run_desktop_build(
     let platform = parse_desktop_platform(rest.first())?;
     let Some(platform) = platform else {
         prepare_desktop_assets(paths)?;
-        return run_host_desktop_build_unprepared(paths, app);
+        return run_host_desktop_build_unprepared(paths, app, &[]);
     };
 
     if platform == host_platform() {
         prepare_desktop_assets(paths)?;
-        run_host_desktop_build_unprepared(paths, app)
+        run_host_desktop_build_unprepared(paths, app, &[])
     } else {
         println!(
             "{} native bundle build is host-bound; staging {} release manifests instead.",
@@ -77,7 +78,7 @@ pub fn run_package_desktop(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResu
                     return Ok(stage);
                 }
             }
-            run_desktop_build_host(paths)
+            run_desktop_build_host(paths, Vec::new())
         }
         DesktopTarget::Platform(platform) => {
             let stage = stage_desktop_platform(paths, platform)?;
@@ -85,7 +86,7 @@ pub fn run_package_desktop(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResu
                 return Ok(stage);
             }
             if platform == host_platform() {
-                run_desktop_build_host(paths)
+                run_desktop_build_host(paths, Vec::new())
             } else {
                 println!(
                     "{} desktop release staged; native bundles must be built on a {} host.",
@@ -113,27 +114,44 @@ pub fn run_desktop_stage(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResult
     }
 }
 
-pub fn run_desktop_build_host(paths: &RepoPaths) -> RunnerResult<u8> {
+pub fn run_desktop_build_host(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResult<u8> {
+    let build_args = host_build_args(rest)?;
+    let started = std::time::Instant::now();
     prepare_desktop_assets(paths)?;
-    let snapshots = desktop_artifact_snapshot_root(paths);
-    remove_dir_if_present(&snapshots)?;
-
-    for app in desktop_apps() {
-        // Tauri shares one Cargo target directory across the shells. Clear only
-        // the bundle output so each snapshot contains the current shell.
-        remove_dir_if_present(&desktop_bundle_root(paths))?;
-        let status = run_host_desktop_build_unprepared(paths, app)?;
-        if status != 0 {
-            remove_dir_if_present(&snapshots)?;
-            return Ok(status);
+    let mut staging = bundle_staging::BundleStaging::begin(
+        desktop_bundle_root(paths),
+        desktop_artifact_snapshot_root(paths),
+    )?;
+    let result = (|| {
+        for app in desktop_apps() {
+            let app_started = std::time::Instant::now();
+            let status = run_host_desktop_build_unprepared(paths, app, &build_args)?;
+            if status != 0 {
+                return Ok(status);
+            }
+            staging.capture(desktop_app_name(app))?;
+            println!(
+                "{} build and packaging: {:.2}s",
+                desktop_app_name(app),
+                app_started.elapsed().as_secs_f64()
+            );
         }
-        snapshot_desktop_bundle(paths, app, &snapshots)?;
+        staging.commit()?;
+        Ok(0)
+    })();
+    if !matches!(result, Ok(0)) {
+        if let Err(recovery) = staging.rollback() {
+            return Err(format!("desktop build failed ({result:?}); {recovery}"));
+        }
+        return result;
     }
-
-    remove_dir_if_present(&desktop_bundle_root(paths))?;
-    restore_desktop_bundles(paths, &snapshots)?;
-    remove_dir_if_present(&snapshots)?;
-    unregister_macos_build_apps()?;
+    if let Err(error) = unregister_macos_build_apps() {
+        eprintln!("desktop bundles published; LaunchServices cleanup warning: {error}");
+    }
+    println!(
+        "all desktop shells built in {:.2}s",
+        started.elapsed().as_secs_f64()
+    );
     Ok(0)
 }
 
@@ -144,7 +162,7 @@ pub fn run_desktop_release(paths: &RepoPaths, rest: Vec<OsString>) -> RunnerResu
     if stage != 0 {
         return Ok(stage);
     }
-    let build = run_desktop_build_host(paths)?;
+    let build = run_desktop_build_host(paths, Vec::new())?;
     if build != 0 {
         return Ok(build);
     }
@@ -237,14 +255,59 @@ fn prepare_desktop_assets(paths: &RepoPaths) -> RunnerResult<()> {
     Ok(())
 }
 
-fn run_host_desktop_build_unprepared(paths: &RepoPaths, app: DesktopApp) -> RunnerResult<u8> {
-    run_desktop_tauri_command(
-        paths,
-        app,
-        desktop_app_dir(paths, app),
-        "npm",
-        ["run", "tauri:build"].map(OsString::from),
-    )
+fn run_host_desktop_build_unprepared(
+    paths: &RepoPaths,
+    app: DesktopApp,
+    extra_args: &[OsString],
+) -> RunnerResult<u8> {
+    verify_desktop_cargo_lock(desktop_app_dir(paths, app))?;
+    let args = [OsString::from("run"), OsString::from("tauri:build")]
+        .into_iter()
+        .chain(extra_args.iter().cloned());
+    run_desktop_tauri_command(paths, app, desktop_app_dir(paths, app), npm_program(), args)
+}
+
+fn host_build_args(rest: Vec<OsString>) -> RunnerResult<Vec<OsString>> {
+    match rest.as_slice() {
+        [] => Ok(Vec::new()),
+        [flag, bundles] if flag == "--bundles" && !bundles.is_empty() => Ok(vec![
+            OsString::from("--"),
+            OsString::from("--bundles"),
+            bundles.clone(),
+        ]),
+        _ => Err("desktop-build-host accepts only --bundles <bundle-list>".to_string()),
+    }
+}
+
+fn npm_program() -> &'static str {
+    if cfg!(windows) { "npm.cmd" } else { "npm" }
+}
+
+fn verify_desktop_cargo_lock(cwd: &Path) -> RunnerResult<()> {
+    let manifest = cwd.join("src-tauri/Cargo.toml");
+    let mut command = Command::new("cargo");
+    clear_parent_cargo_context(&mut command, std::env::vars_os().map(|(key, _)| key));
+    let output = command
+        .current_dir(cwd)
+        .args([
+            "metadata",
+            "--locked",
+            "--no-deps",
+            "--format-version",
+            "1",
+            "--manifest-path",
+        ])
+        .arg(&manifest)
+        .output()
+        .map_err(|error| format!("failed to verify {}: {error}", manifest.display()))?;
+    if output.status.success() {
+        return Ok(());
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    Err(format!(
+        "desktop Cargo lock is stale for {}: {stderr}",
+        manifest.display()
+    ))
 }
 
 fn run_desktop_tauri_command<I>(
@@ -268,7 +331,37 @@ where
         host_platform().as_str(),
         target_dir.display()
     );
-    run_with_env(cwd, program, args, &[("CARGO_TARGET_DIR", target_dir_text)])
+    let mut command = Command::new(program);
+    clear_parent_cargo_context(&mut command, std::env::vars_os().map(|(key, _)| key));
+    let status = command
+        .args(args)
+        .current_dir(cwd)
+        .env("CARGO_TARGET_DIR", target_dir_text)
+        .status()
+        .map_err(|error| format!("failed to run {program}: {error}"))?;
+    Ok(status.code().unwrap_or(1) as u8)
+}
+
+fn clear_parent_cargo_context(command: &mut Command, keys: impl IntoIterator<Item = OsString>) {
+    // `cargo run` injects package context. Let the child Cargo supply its own
+    // context so rerun-if-env-changed checks do not depend on how we were launched.
+    for key in keys {
+        let Some(name) = key.to_str() else { continue };
+        let name = name.to_ascii_uppercase();
+        if name.starts_with("CARGO_PKG_")
+            || matches!(
+                name.as_str(),
+                "CARGO_MANIFEST_DIR"
+                    | "CARGO_MANIFEST_PATH"
+                    | "CARGO_CRATE_NAME"
+                    | "CARGO_BIN_NAME"
+                    | "CARGO_PRIMARY_PACKAGE"
+                    | "OUT_DIR"
+            )
+        {
+            command.env_remove(key);
+        }
+    }
 }
 
 fn desktop_artifact_snapshot_root(paths: &RepoPaths) -> PathBuf {
@@ -283,86 +376,6 @@ fn desktop_bundle_root(paths: &RepoPaths) -> PathBuf {
     desktop_target_cache_dir(&paths.root, host_platform())
         .join("release")
         .join("bundle")
-}
-
-fn snapshot_desktop_bundle(
-    paths: &RepoPaths,
-    app: DesktopApp,
-    snapshots: &Path,
-) -> RunnerResult<()> {
-    let source = desktop_bundle_root(paths);
-    if !source.is_dir() {
-        return Err(format!(
-            "desktop build did not produce a bundle directory: {}",
-            source.display()
-        ));
-    }
-
-    let target = snapshots.join(desktop_app_name(app));
-    remove_dir_if_present(&target)?;
-    copy_dir_tree(&source, &target)?;
-    println!(
-        "preserved {} desktop bundle artifacts at {}",
-        desktop_app_name(app),
-        target.display()
-    );
-    Ok(())
-}
-
-fn restore_desktop_bundles(paths: &RepoPaths, snapshots: &Path) -> RunnerResult<()> {
-    let target = desktop_bundle_root(paths);
-    for app in desktop_apps() {
-        let source = snapshots.join(desktop_app_name(app));
-        if !source.is_dir() {
-            return Err(format!(
-                "missing preserved desktop bundle for {}: {}",
-                desktop_app_name(app),
-                source.display()
-            ));
-        }
-        copy_dir_tree(&source, &target)?;
-    }
-    println!(
-        "restored all desktop bundle artifacts to {}",
-        target.display()
-    );
-    Ok(())
-}
-
-fn remove_dir_if_present(path: &Path) -> RunnerResult<()> {
-    if path.exists() {
-        fs::remove_dir_all(path)
-            .map_err(|error| format!("failed to remove {}: {error}", path.display()))?;
-    }
-    Ok(())
-}
-
-fn copy_dir_tree(source: &Path, target: &Path) -> RunnerResult<()> {
-    fs::create_dir_all(target)
-        .map_err(|error| format!("failed to create {}: {error}", target.display()))?;
-    for entry in fs::read_dir(source)
-        .map_err(|error| format!("failed to read {}: {error}", source.display()))?
-    {
-        let entry =
-            entry.map_err(|error| format!("failed to read {} entry: {error}", source.display()))?;
-        let source_path = entry.path();
-        let target_path = target.join(entry.file_name());
-        let file_type = entry
-            .file_type()
-            .map_err(|error| format!("failed to inspect {}: {error}", source_path.display()))?;
-        if file_type.is_dir() {
-            copy_dir_tree(&source_path, &target_path)?;
-        } else if file_type.is_file() {
-            fs::copy(&source_path, &target_path).map_err(|error| {
-                format!(
-                    "failed to copy {} to {}: {error}",
-                    source_path.display(),
-                    target_path.display()
-                )
-            })?;
-        }
-    }
-    Ok(())
 }
 
 #[cfg(target_os = "macos")]
@@ -406,6 +419,7 @@ fn unregister_macos_build_apps() -> RunnerResult<()> {
     Ok(())
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn launch_services_bundle_path(line: &str) -> Option<PathBuf> {
     let value = line.strip_prefix("path:")?.trim();
     let value = value.rsplit_once(" (0x")?.0;
@@ -624,7 +638,65 @@ fn distribution_platform(value: Option<&OsString>) -> RunnerResult<Platform> {
 mod tests {
     use std::path::PathBuf;
 
-    use super::launch_services_bundle_path;
+    use super::{clear_parent_cargo_context, host_build_args, launch_services_bundle_path};
+
+    #[test]
+    fn child_build_drops_parent_package_context_but_preserves_build_configuration() {
+        let removed = [
+            "CARGO_MANIFEST_DIR",
+            "CARGO_MANIFEST_PATH",
+            "CARGO_PKG_NAME",
+            "CARGO_PKG_VERSION",
+            "OUT_DIR",
+            "CARGO_CRATE_NAME",
+            "CARGO_BIN_NAME",
+            "CARGO_PRIMARY_PACKAGE",
+        ];
+        let kept = [
+            "CARGO_HOME",
+            "CARGO_TARGET_DIR",
+            "CARGO_BUILD_JOBS",
+            "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER",
+            "RUSTUP_TOOLCHAIN",
+            "RUSTFLAGS",
+            "RUSTC_WRAPPER",
+            "CARGO_ENCODED_RUSTFLAGS",
+            "CARGO_LOG",
+            "PATH",
+        ];
+        let mut command = std::process::Command::new("cargo");
+        for key in removed.iter().chain(&kept) {
+            command.env(key, "test-value");
+        }
+        clear_parent_cargo_context(
+            &mut command,
+            removed
+                .iter()
+                .chain(&kept)
+                .map(|key| std::ffi::OsString::from(*key)),
+        );
+        let configured: std::collections::BTreeMap<_, _> = command.get_envs().collect();
+        for key in removed {
+            assert_eq!(configured[std::ffi::OsStr::new(key)], None);
+        }
+        for key in kept {
+            assert_eq!(
+                configured[std::ffi::OsStr::new(key)],
+                Some(std::ffi::OsStr::new("test-value"))
+            );
+        }
+    }
+
+    #[test]
+    fn scopes_host_build_to_requested_bundle_kind() {
+        let args = host_build_args(vec!["--bundles".into(), "nsis".into()])
+            .expect("bundle filter should parse");
+        assert_eq!(
+            args,
+            ["--", "--bundles", "nsis"].map(std::ffi::OsString::from)
+        );
+        assert!(host_build_args(vec!["--unknown".into()]).is_err());
+    }
 
     #[test]
     fn parses_kyuubiki_launch_services_bundle_paths() {

@@ -42,7 +42,7 @@ test("result backend service forwards chunk requests through transport", async (
 test("result chunk cache keys are backend-id based, not hard-wired to runtime modes", () => {
   assert.equal(
     chunkCacheKey("mobile-remote-orch", "job-1", "nodes", 0, 100),
-    "mobile-remote-orch:job-1:nodes:0:100",
+    '["mobile-remote-orch","job-1","nodes",0,100]',
   );
   assert.notEqual(
     chunkCacheKey("mobile-remote-orch", "job-1", "nodes", 0, 100),

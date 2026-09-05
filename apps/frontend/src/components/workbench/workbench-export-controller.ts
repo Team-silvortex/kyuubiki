@@ -12,7 +12,12 @@ import {
 import type { JobResultRecord } from "@/lib/api/fem-shared";
 import type { ProjectRecord } from "@/lib/api/project-types";
 import type { WorkbenchSecurityAuditRisk, WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
-import { exportProjectBundleZip } from "@/lib/projects/project-format";
+import {
+  workbenchOperationFailure,
+  type WorkbenchOperationResult,
+} from "@/lib/workbench/operation-result";
+
+export type WorkbenchDownloadResult = WorkbenchOperationResult<{ partial?: boolean }>;
 
 export async function downloadWorkbenchProjectBundleJson(params: {
   selectedProject: ProjectRecord | null;
@@ -25,8 +30,11 @@ export async function downloadWorkbenchProjectBundleJson(params: {
     const { bundle, partial } = await buildBundle();
     downloadTextFile(`${selectedProject?.name || "kyuubiki-project"}.kyuubiki.json`, bundle);
     setMessage(partial ? labels.projectExportedPartial : labels.projectExported);
+    return { ok: true, partial } satisfies WorkbenchDownloadResult;
   } catch (error) {
-    setMessage(error instanceof Error ? error.message : labels.initialFailed);
+    const failure = workbenchOperationFailure(error, labels.initialFailed);
+    setMessage(failure.error.message);
+    return failure;
   }
 }
 
@@ -39,11 +47,15 @@ export async function downloadWorkbenchProjectBundleZip(params: {
   const { selectedProject, buildBundle, setMessage, labels } = params;
   try {
     const { bundle, partial } = await buildBundle();
+    const { exportProjectBundleZip } = await import("@/lib/projects/project-format");
     const blob = await exportProjectBundleZip(bundle);
     downloadBlobFile(`${selectedProject?.name || "kyuubiki-project"}.kyuubiki`, blob);
     setMessage(partial ? labels.projectExportedPartial : labels.projectExported);
+    return { ok: true, partial } satisfies WorkbenchDownloadResult;
   } catch (error) {
-    setMessage(error instanceof Error ? error.message : labels.initialFailed);
+    const failure = workbenchOperationFailure(error, labels.initialFailed);
+    setMessage(failure.error.message);
+    return failure;
   }
 }
 
@@ -57,8 +69,11 @@ export async function downloadWorkbenchDatabaseSnapshot(params: {
     const timestamp = snapshot.exported_at.replaceAll(":", "-");
     downloadTextFile(`kyuubiki-database-${timestamp}.json`, JSON.stringify(snapshot, null, 2));
     setMessage(labels.databaseExported);
+    return { ok: true } satisfies WorkbenchDownloadResult;
   } catch (error) {
-    setMessage(error instanceof Error ? error.message : labels.initialFailed);
+    const failure = workbenchOperationFailure(error, labels.initialFailed);
+    setMessage(failure.error.message);
+    return failure;
   }
 }
 

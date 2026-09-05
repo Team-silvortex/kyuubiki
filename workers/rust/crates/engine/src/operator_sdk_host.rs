@@ -1,17 +1,15 @@
-use crate::operator_sdk_runtime::{BuiltInOperatorRegistryKind, built_in_operator_registry};
+pub use crate::operator_sdk_dynamic_abi::DynamicLibraryOperatorActivator;
+use crate::operator_sdk_runtime::{BuiltInOperatorRegistryKind, built_in_operator_registry_ref};
 use kyuubiki_operator_sdk::{
     OperatorPackageActivator, OperatorPackageLoadError, OperatorPackageLoadPlan,
-    OperatorPackageLoadSummary, OperatorRegistrationEntrypoint, OperatorRegistry,
-    OperatorSdkReadinessIssue, operator_package_manifest_readiness,
+    OperatorPackageLoadSummary, OperatorRegistry, OperatorSdkReadinessIssue,
+    operator_package_manifest_readiness,
 };
 use kyuubiki_protocol::{OperatorRunRequest, OperatorRunResult};
 use libloading::Library;
-use std::any::Any;
 use std::collections::BTreeSet;
 use std::fmt::{Display, Formatter};
-use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Component, Path, PathBuf};
-use std::sync::Mutex;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExternalOperatorHostConfig {
@@ -151,7 +149,7 @@ pub fn built_in_registry_with_external_packages(
     config: &ExternalOperatorHostConfig,
     activator: &impl OperatorPackageActivator,
 ) -> Result<(OperatorRegistry, ExternalOperatorLoadReport), ExternalOperatorHostError> {
-    let mut registry = built_in_operator_registry(config.registry_kind);
+    let mut registry = built_in_operator_registry_ref(config.registry_kind).clone();
     let activated_packages =
         discover_activate_and_validate_operator_packages(config, activator, &mut registry)?;
     Ok((
@@ -492,92 +490,6 @@ impl DynamicOperatorHostSession {
             .run(request)
             .map_err(|error| error.to_string())
     }
-}
-
-#[derive(Default)]
-pub struct DynamicLibraryOperatorActivator {
-    loaded_libraries: Mutex<Vec<Library>>,
-}
-
-impl DynamicLibraryOperatorActivator {
-    pub fn into_loaded_libraries(self) -> Vec<Library> {
-        self.loaded_libraries
-            .into_inner()
-            .expect("dynamic library activator lock should not be poisoned")
-    }
-}
-
-impl OperatorPackageActivator for DynamicLibraryOperatorActivator {
-    fn activate_package(
-        &self,
-        plan: &OperatorPackageLoadPlan,
-        registry: &mut OperatorRegistry,
-    ) -> Result<(), OperatorPackageLoadError> {
-        let library = unsafe { Library::new(&plan.entrypoint_path) }.map_err(|error| {
-            OperatorPackageLoadError::Activation {
-                package_id: plan.manifest.package_id.clone(),
-                message: format!(
-                    "failed to open dynamic library {}: {}",
-                    plan.entrypoint_path.display(),
-                    error
-                ),
-            }
-        })?;
-
-        let activation = catch_unwind(AssertUnwindSafe(|| {
-            registry.try_transaction(|staged_registry| {
-                for operator in &plan.manifest.operators {
-                    let entry_symbol = operator.entry_symbol.as_bytes();
-                    let register =
-                        unsafe { library.get::<OperatorRegistrationEntrypoint>(entry_symbol) }
-                            .map_err(|error| OperatorPackageLoadError::Activation {
-                                package_id: plan.manifest.package_id.clone(),
-                                message: format!(
-                                    "failed to resolve symbol {} in {}: {}",
-                                    operator.entry_symbol,
-                                    plan.entrypoint_path.display(),
-                                    error
-                                ),
-                            })?;
-                    unsafe { register(staged_registry) }.map_err(|error| {
-                        OperatorPackageLoadError::Activation {
-                            package_id: plan.manifest.package_id.clone(),
-                            message: error.to_string(),
-                        }
-                    })?;
-                }
-                Ok::<(), OperatorPackageLoadError>(())
-            })
-        }));
-        match activation {
-            Ok(result) => result?,
-            Err(payload) => {
-                return Err(OperatorPackageLoadError::Activation {
-                    package_id: plan.manifest.package_id.clone(),
-                    message: format!(
-                        "operator registration panicked: {}",
-                        operator_activation_panic_message(payload.as_ref())
-                    ),
-                });
-            }
-        }
-
-        self.loaded_libraries
-            .lock()
-            .expect("dynamic library activator lock should not be poisoned")
-            .push(library);
-        Ok(())
-    }
-}
-
-fn operator_activation_panic_message(payload: &(dyn Any + Send)) -> String {
-    if let Some(message) = payload.downcast_ref::<&str>() {
-        return (*message).to_string();
-    }
-    if let Some(message) = payload.downcast_ref::<String>() {
-        return message.clone();
-    }
-    "unknown panic payload".to_string()
 }
 
 #[derive(Debug, Default, Clone, Copy)]

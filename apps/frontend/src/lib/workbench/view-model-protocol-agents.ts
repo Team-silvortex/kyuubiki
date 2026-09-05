@@ -39,6 +39,8 @@ export function buildProtocolAgentCards({
     leaseAgeChip: string;
     leaseJobChip: string;
     leaseMethodChip: string;
+    showMore: string;
+    showLess: string;
   };
   clusterHealthTone: (score: number | null | undefined) => string;
   peerStatusLabel: (status: string | undefined) => string;
@@ -55,7 +57,10 @@ export function buildProtocolAgentCards({
       { label: labels.clusterSize, value: agent.descriptor?.runtime?.cluster_size ?? 1 },
       {
         label: labels.clusterHealth,
-        value: agent.descriptor?.runtime?.health_score ?? "--",
+        value:
+          typeof agent.descriptor?.runtime?.health_score === "number"
+            ? `${agent.descriptor.runtime.health_score}%`
+            : "--",
         tone: clusterHealthTone(agent.descriptor?.runtime?.health_score),
       },
       { label: labels.peers, value: agent.mesh?.peer_count ?? agent.descriptor?.runtime?.peers?.length ?? 0 },
@@ -80,15 +85,23 @@ export function buildProtocolAgentCards({
     chips: [
       ...buildMeshChips(agent, labels),
       ...buildLeaseChips(agent, labels),
-      ...(agent.descriptor?.capabilities?.flatMap((capability) =>
-        capability.tags.slice(0, 3).map((tag) => ({
-          key: `${agent.id}-${capability.id}-${tag}`,
-          label: tag,
-        })),
-      ) ?? []),
+      ...buildCapabilityChips(agent),
       ...buildPeerChips(agent, labels, clusterHealthTone, peerStatusLabel),
     ],
+    chipPreviewLimit: 10,
+    showMoreLabel: labels.showMore,
+    showLessLabel: labels.showLess,
     error: agent.descriptor_error,
+  }));
+}
+
+function buildCapabilityChips(agent: ProtocolAgentDescriptor) {
+  const tags = new Set(
+    agent.descriptor?.capabilities?.flatMap((capability) => capability.tags.slice(0, 3)) ?? [],
+  );
+  return [...tags].map((tag) => ({
+    key: `${agent.id}-capability-${tag}`,
+    label: tag,
   }));
 }
 

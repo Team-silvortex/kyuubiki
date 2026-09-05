@@ -41,6 +41,12 @@ fn write_markdown_summary(report: &Value, md_path: &Path) -> RunnerResult<()> {
         .map_err(|error| format!("failed to write markdown: {error}"))?;
     writeln!(output, "- Repeat: `{}`", number_field(report, "repeat"))
         .map_err(|error| format!("failed to write markdown: {error}"))?;
+    writeln!(
+        output,
+        "- Peak RSS scope: `{}`",
+        string_field(report, "rss_scope")
+    )
+    .map_err(|error| format!("failed to write markdown: {error}"))?;
     writeln!(output, "- Case count: `{}`", cases.len())
         .map_err(|error| format!("failed to write markdown: {error}"))?;
     let summary = SummaryStats::from_cases(cases);
@@ -66,18 +72,19 @@ fn write_markdown_summary(report: &Value, md_path: &Path) -> RunnerResult<()> {
 fn write_case_table(output: &mut File, cases: &[Value]) -> RunnerResult<()> {
     writeln!(
         output,
-        "| Case | Nodes | Elements | Median ms | Peak RSS MiB | Solver | Solver reason | Iterations | Residual |"
+        "| Case | Nodes | Elements | History steps | Median ms | Peak RSS MiB | Solver | Solver reason | Iterations | Residual |"
     )
     .map_err(|error| format!("failed to write markdown: {error}"))?;
-    writeln!(output, "|---|---:|---:|---:|---:|---|---|---:|---:|")
+    writeln!(output, "|---|---:|---:|---:|---:|---:|---|---|---:|---:|")
         .map_err(|error| format!("failed to write markdown: {error}"))?;
     for entry in cases {
         writeln!(
             output,
-            "| `{}` | {} | {} | {:.3} | {} | `{}` | `{}` | {} | {} |",
+            "| `{}` | {} | {} | {} | {:.3} | {} | `{}` | `{}` | {} | {} |",
             string_field(entry, "id"),
             number_field(entry, "node_count"),
             number_field(entry, "element_count"),
+            number_field(entry, "history_step_count"),
             entry["median_ms"].as_f64().unwrap_or(0.0),
             rss_mib_field(entry),
             string_field(entry, "solver_preconditioner"),
@@ -99,10 +106,11 @@ fn write_json_summary(report: &Value, summary_path: &Path) -> RunnerResult<()> {
     })?;
     let summary = SummaryStats::from_cases(cases);
     let payload = json!({
-        "schema_version": "kyuubiki.benchmark-profile-summary/v1",
+        "schema_version": "kyuubiki.benchmark-profile-summary/v2",
         "profile": string_field(report, "profile"),
         "matrix": string_field(report, "matrix"),
         "repeat": report["repeat"].clone(),
+        "rss_scope": report["rss_scope"].clone(),
         "case_count": cases.len(),
         "case_ids": summary.case_ids,
         "solver_case_metrics": summary.solver_case_metrics,

@@ -73,6 +73,11 @@ fn manifest_fixture(rng: &mut FuzzRng, case_index: usize) -> Value {
         } else {
             OPERATOR_SDK_API_VERSION.to_string()
         },
+        "execution_abi": if rng.one_in(8) {
+            fuzz_text(rng, 64)
+        } else {
+            crate::OPERATOR_JSON_ABI_SCHEMA_VERSION.to_string()
+        },
         "package_id": format!("operator.fuzz.{case_index}"),
         "package_version": "0.1.0",
         "minimum_host_version": "1.20.0",
@@ -84,7 +89,7 @@ fn manifest_fixture(rng: &mut FuzzRng, case_index: usize) -> Value {
             {
                 "operator_id": format!("transform.fuzz.{case_index}"),
                 "kind": "transform",
-                "entry_symbol": "register_operator"
+                "entry_symbol": "run_operator_json"
             }
         ]
     })
@@ -157,6 +162,7 @@ fn pick_manifest_field(rng: &mut FuzzRng) -> &'static str {
     const FIELDS: &[&str] = &[
         "schema_version",
         "sdk_api_version",
+        "execution_abi",
         "package_id",
         "package_version",
         "minimum_host_version",

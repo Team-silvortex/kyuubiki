@@ -229,6 +229,20 @@ pub(crate) fn rollback_runtime_payload_in(
     activate_version(store, &previous, platform)
 }
 
+pub(crate) fn activate_runtime_version_in(
+    store: &Path,
+    version: &str,
+    platform: Platform,
+) -> Result<RuntimeActivationRecord, String> {
+    validate_version(version)?;
+    ensure_store(store)?;
+    let _lock = RuntimeUpdateLock::acquire(store)?;
+    let version_root = store.join("versions").join(version);
+    reject_symlink(&version_root, "runtime payload activation target")?;
+    verify_installed_payload(&version_root, platform)?;
+    activate_version(store, version, platform)
+}
+
 pub(crate) fn runtime_payload_status_in(store: &Path) -> Result<RuntimePayloadStatus, String> {
     let active = latest_activation(store)?;
     let mut installed_versions = fs::read_dir(store.join("versions"))
@@ -246,6 +260,30 @@ pub(crate) fn runtime_payload_status_in(store: &Path) -> Result<RuntimePayloadSt
         previous_version: active.and_then(|record| record.previous_version),
         installed_versions,
     })
+}
+
+pub(crate) fn active_runtime_activation_in(
+    store: &Path,
+    platform: Platform,
+) -> Result<RuntimeActivationRecord, String> {
+    let active = latest_activation(store)?
+        .ok_or_else(|| "no active installer-managed runtime is available".to_string())?;
+    if active.platform != platform.as_str() {
+        return Err("active runtime activation targets another platform".into());
+    }
+    let root = store.join(&active.relative_path);
+    let manifest = verify_installed_payload(&root, platform)?;
+    if manifest.version != active.version {
+        return Err("active runtime activation does not match its verified payload".to_string());
+    }
+    Ok(active)
+}
+
+pub(crate) fn verified_runtime_payload_version_in(
+    source: &Path,
+    platform: Platform,
+) -> Result<String, String> {
+    verify_payload(source, Some(platform)).map(|manifest| manifest.version)
 }
 
 fn runtime_store_root() -> Result<PathBuf, String> {

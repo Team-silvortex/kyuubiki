@@ -1,7 +1,7 @@
 # Workflow Graph
 
 This document defines the intended multi-operator workflow model for
-`moxi 2.x`.
+`daji 3.x`.
 
 The target is closer to a shader-style graph than to a pile of disconnected
 buttons:
@@ -74,7 +74,7 @@ The first useful node kinds are:
 - `output`
   explicit graph exitpoint
 
-`moxi 2.x` should probably avoid a large branching/control-flow language
+`daji 3.x` should probably avoid a large branching/control-flow language
 at first. Linear and lightly branched graphs are enough to start.
 
 ## Typed ports
@@ -413,7 +413,7 @@ The current execution-hint split is:
 
 ## 1.x delivery order
 
-Suggested order for `moxi 2.x`:
+Suggested order for `daji 3.x`:
 
 1. define operator descriptors and typed run contract
 2. define minimal workflow schema

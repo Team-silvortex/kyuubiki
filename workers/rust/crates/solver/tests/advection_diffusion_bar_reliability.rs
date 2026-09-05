@@ -142,6 +142,97 @@ fn advection_diffusion_bar_1d_rejects_invalid_transport_materials() {
     );
 }
 
+#[test]
+fn advection_diffusion_bar_1d_solves_large_numbering_independent_path() {
+    let node_count = 10_000;
+    let path = (0..node_count)
+        .step_by(2)
+        .chain((1..node_count).step_by(2))
+        .collect::<Vec<_>>();
+    let mut positions = vec![0_usize; node_count];
+    for (position, &node) in path.iter().enumerate() {
+        positions[node] = position;
+    }
+
+    let nodes = positions
+        .iter()
+        .enumerate()
+        .map(|(index, &position)| AdvectionDiffusionBar1dNodeInput {
+            id: format!("node-{index}"),
+            x: position as f64 / (node_count - 1) as f64,
+            fix_concentration: position == 0 || position + 1 == node_count,
+            concentration: if position == 0 { 1.0 } else { 0.0 },
+            source: 0.0,
+        })
+        .collect::<Vec<_>>();
+    let elements = path
+        .windows(2)
+        .enumerate()
+        .map(|(index, edge)| AdvectionDiffusionBar1dElementInput {
+            id: format!("element-{index}"),
+            node_i: edge[0],
+            node_j: edge[1],
+            area: 1.0,
+            diffusivity: 1.0,
+            velocity: 0.01,
+        })
+        .collect::<Vec<_>>();
+
+    let result =
+        solve_advection_diffusion_bar_1d(&SolveAdvectionDiffusionBar1dRequest { nodes, elements })
+            .expect("large permuted path should use the linear-memory solver");
+
+    assert_eq!(result.nodes.len(), node_count);
+    assert_eq!(result.nodes[path[0]].concentration, 1.0);
+    assert_eq!(result.nodes[*path.last().unwrap()].concentration, 0.0);
+    assert!(result.nodes.iter().all(|node| {
+        node.concentration.is_finite()
+            && node.concentration >= -1.0e-10
+            && node.concentration <= 1.0 + 1.0e-10
+    }));
+}
+
+#[test]
+fn advection_diffusion_bar_1d_bounds_dense_non_path_fallback() {
+    let node_count = 513;
+    let nodes = (0..node_count)
+        .map(|index| AdvectionDiffusionBar1dNodeInput {
+            id: format!("node-{index}"),
+            x: index as f64,
+            fix_concentration: index == 0,
+            concentration: 1.0,
+            source: 0.0,
+        })
+        .collect::<Vec<_>>();
+    let mut elements = (0..node_count - 2)
+        .map(|index| AdvectionDiffusionBar1dElementInput {
+            id: format!("element-{index}"),
+            node_i: index,
+            node_j: index + 1,
+            area: 1.0,
+            diffusivity: 1.0,
+            velocity: 0.01,
+        })
+        .collect::<Vec<_>>();
+    elements.push(AdvectionDiffusionBar1dElementInput {
+        id: "branch".to_string(),
+        node_i: 1,
+        node_j: node_count - 1,
+        area: 1.0,
+        diffusivity: 1.0,
+        velocity: 0.01,
+    });
+
+    let error =
+        solve_advection_diffusion_bar_1d(&SolveAdvectionDiffusionBar1dRequest { nodes, elements })
+            .expect_err("oversized dense fallback should fail before allocating its matrix");
+
+    assert!(
+        error.contains("dense fallback supports at most 512"),
+        "unexpected dense fallback error: {error}"
+    );
+}
+
 fn transport_request() -> SolveAdvectionDiffusionBar1dRequest {
     SolveAdvectionDiffusionBar1dRequest {
         nodes: vec![

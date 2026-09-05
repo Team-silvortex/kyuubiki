@@ -1,0 +1,41 @@
+const STORAGE_WRITE_FAILED_BY_LANGUAGE: Record<string, string> = {
+  en: "Could not save local workflow data. Check available storage and try again.",
+  zh: "无法保存本地工作流数据。请检查可用存储空间后重试。",
+  ja: "ローカルワークフローデータを保存できませんでした。空き容量を確認して再試行してください。",
+  es: "No se pudieron guardar los datos locales del flujo. Comprueba el almacenamiento y vuelve a intentarlo.",
+  ar: "تعذر حفظ بيانات سير العمل المحلية. تحقق من مساحة التخزين وحاول مرة أخرى.",
+  bn: "স্থানীয় ওয়ার্কফ্লো ডেটা সংরক্ষণ করা যায়নি। উপলভ্য স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।",
+  cs: "Místní data workflow se nepodařilo uložit. Zkontrolujte dostupné úložiště a zkuste to znovu.",
+  da: "Lokale workflowdata kunne ikke gemmes. Kontrollér lagerpladsen, og prøv igen.",
+  de: "Lokale Workflow-Daten konnten nicht gespeichert werden. Prüfen Sie den Speicherplatz und versuchen Sie es erneut.",
+  el: "Δεν ήταν δυνατή η αποθήκευση των τοπικών δεδομένων ροής εργασίας. Ελέγξτε τον διαθέσιμο χώρο και δοκιμάστε ξανά.",
+  fa: "داده‌های محلی گردش کار ذخیره نشد. فضای ذخیره‌سازی موجود را بررسی و دوباره تلاش کنید.",
+  fi: "Paikallisia työnkulun tietoja ei voitu tallentaa. Tarkista tallennustila ja yritä uudelleen.",
+  fr: "Impossible d’enregistrer les données locales du workflow. Vérifiez l’espace de stockage et réessayez.",
+  he: "לא ניתן לשמור את נתוני זרימת העבודה המקומיים. בדקו את שטח האחסון ונסו שוב.",
+  hi: "स्थानीय वर्कफ़्लो डेटा सहेजा नहीं जा सका। उपलब्ध स्टोरेज जाँचें और फिर प्रयास करें।",
+  id: "Data workflow lokal tidak dapat disimpan. Periksa ruang penyimpanan lalu coba lagi.",
+  it: "Impossibile salvare i dati locali del workflow. Controlla lo spazio disponibile e riprova.",
+  ko: "로컬 워크플로 데이터를 저장할 수 없습니다. 저장 공간을 확인한 후 다시 시도하세요.",
+  ms: "Data aliran kerja setempat tidak dapat disimpan. Semak ruang storan dan cuba lagi.",
+  nl: "Lokale workflowgegevens konden niet worden opgeslagen. Controleer de opslagruimte en probeer opnieuw.",
+  no: "Lokale arbeidsflytdata kunne ikke lagres. Kontroller lagringsplassen og prøv igjen.",
+  pl: "Nie udało się zapisać lokalnych danych workflow. Sprawdź dostępne miejsce i spróbuj ponownie.",
+  "pt-br": "Não foi possível salvar os dados locais do fluxo. Verifique o armazenamento e tente novamente.",
+  ro: "Datele locale ale fluxului nu au putut fi salvate. Verificați spațiul disponibil și încercați din nou.",
+  ru: "Не удалось сохранить локальные данные workflow. Проверьте свободное место и повторите попытку.",
+  sv: "Lokala arbetsflödesdata kunde inte sparas. Kontrollera lagringsutrymmet och försök igen.",
+  sw: "Imeshindikana kuhifadhi data ya mtiririko wa kazi. Kagua nafasi ya hifadhi kisha ujaribu tena.",
+  ta: "உள்ளூர் பணிப்பாய்வு தரவைச் சேமிக்க முடியவில்லை. சேமிப்பிடத்தைச் சரிபார்த்து மீண்டும் முயலவும்.",
+  th: "ไม่สามารถบันทึกข้อมูลเวิร์กโฟลว์ในเครื่องได้ โปรดตรวจสอบพื้นที่จัดเก็บแล้วลองอีกครั้ง",
+  tr: "Yerel iş akışı verileri kaydedilemedi. Kullanılabilir depolamayı kontrol edip yeniden deneyin.",
+  uk: "Не вдалося зберегти локальні дані workflow. Перевірте вільне місце та повторіть спробу.",
+  ur: "مقامی ورک فلو ڈیٹا محفوظ نہیں ہو سکا۔ دستیاب اسٹوریج چیک کر کے دوبارہ کوشش کریں۔",
+  vi: "Không thể lưu dữ liệu quy trình cục bộ. Hãy kiểm tra dung lượng lưu trữ rồi thử lại.",
+  "zh-tw": "無法儲存本機工作流資料。請檢查可用儲存空間後再試一次。",
+};
+
+export function getWorkbenchWorkflowStorageWriteFailedLabel(language: string): string {
+  return STORAGE_WRITE_FAILED_BY_LANGUAGE[language.toLowerCase()]
+    ?? STORAGE_WRITE_FAILED_BY_LANGUAGE.en;
+}

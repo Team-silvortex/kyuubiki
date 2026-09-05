@@ -161,7 +161,7 @@ defmodule KyuubikiWeb.ContentArtifactStore do
         {:error, 413, oversize_payload(kind, next_received)}
 
       true ->
-        case IO.binwrite(io, chunk) do
+        case :file.write(io, chunk) do
           :ok ->
             {:ok, next_received, :crypto.hash_update(hash, chunk)}
 

@@ -1,0 +1,87 @@
+{
+  "$schema": "../../schemas/installed-runtime-power-loss-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.installed-runtime-power-loss-qualification-contract/v1",
+  "qualification_id": "physical-linux-installed-runtime-power-loss-recovery",
+  "reboot_identity": {
+    "boot_id_source": "/proc/sys/kernel/random/boot_id",
+    "machine_id_source": "/etc/machine-id",
+    "require_changed_boot_id": true,
+    "require_same_machine": true
+  },
+  "persistent_state": {
+    "intent_schema": "kyuubiki.installed-runtime-power-loss-intent/v1",
+    "intent_schema_path": "schemas/installed-runtime-power-loss-intent.schema.json",
+    "write_protocol": "create-sync-rename-directory-sync",
+    "cleanup_policy": "validated-session-and-intent-only",
+    "contains_absolute_paths": false
+  },
+  "execution": {
+    "execution_host_role": "remote-linux-qualification-host",
+    "platform": "linux",
+    "architecture": "x86_64",
+    "package_version": "2.19.0",
+    "workflow_id": "qualification.installed-runtime.bar",
+    "minimum_agent_count": 2,
+    "frontend_loaded": false,
+    "source_tree_detached": true
+  },
+  "source_guard": {
+    "files": [
+      "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification.rs",
+      "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/model.rs",
+      "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/host.rs",
+      "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/remote.rs",
+      "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/support.rs",
+      "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/remote.rs",
+      "workers/rust/crates/script-runner/src/governance_commands.rs",
+      "workers/rust/crates/desktop-runtime/src/runtime_control.rs",
+      "workers/rust/crates/desktop-runtime/src/runtime_layout.rs"
+    ],
+    "required_text": [
+      "qualify-installed-runtime-power-loss-remote",
+      "check-installed-runtime-power-loss-qualification",
+      "installed-runtime-power-loss-host",
+      "--confirm-physical-reboot",
+      "source tree must remain detached",
+      "installed Runtime payload changed across reboot",
+      "installed Runtime payload changed during power-loss preparation",
+      "installed Runtime payload changed during post-reboot recovery",
+      "apply_writable_state_env",
+      "KYUUBIKI_DATA_DIR",
+      "persisted_job_retrieved",
+      "mix compile --warnings-as-errors"
+    ]
+  },
+  "retention": {
+    "report_schema": "kyuubiki.installed-runtime-power-loss-qualification/v1",
+    "report_schema_path": "schemas/installed-runtime-power-loss-qualification-report.schema.json",
+    "report_path": "releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json",
+    "forbidden_content": [
+      "/home/",
+      "/Users/",
+      "192.168.",
+      "kyuubiki-lab",
+      "username",
+      "credential",
+      "SSH_CONNECTION"
+    ]
+  },
+  "required_checks": [
+    "remote_linux_host",
+    "source_tree_detached",
+    "installed_payload_verified",
+    "intent_digest_verified",
+    "pre_reboot_runtime_live",
+    "pre_reboot_headless_solve_passed",
+    "same_machine_after_reboot",
+    "boot_identity_changed",
+    "pre_reboot_processes_interrupted",
+    "pre_reboot_ports_released",
+    "installed_payload_persisted",
+    "runtime_restarted_from_installation",
+    "persisted_job_retrieved",
+    "numerical_result_stable",
+    "cleanup_complete",
+    "retention_sanitized"
+  ]
+}

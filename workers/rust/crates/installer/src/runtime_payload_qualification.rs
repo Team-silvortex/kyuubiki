@@ -175,7 +175,7 @@ pub fn write_runtime_payload_qualification_report(
     fs::write(path, payload).map_err(|error| format!("failed to write {}: {error}", path.display()))
 }
 
-fn prepare_runtime_payload(
+pub(crate) fn prepare_runtime_payload(
     binary: &Path,
     payload: &Path,
     version: &str,

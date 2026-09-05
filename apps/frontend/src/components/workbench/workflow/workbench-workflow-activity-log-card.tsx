@@ -27,6 +27,14 @@ function formatActivityTimestamp(value: string) {
   }
 }
 
+function formatActivitySource(value: WorkbenchAuditTimelineEntry["source"]) {
+  return value === "workflow" ? "flow" : value;
+}
+
+function formatActivityClass(value: WorkbenchAuditTimelineEntry["class"]) {
+  return value === "runtime_snapshot" ? "snapshot" : value;
+}
+
 function escapeCsvField(value: string | number | undefined) {
   const text = String(value ?? "");
   return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
@@ -75,6 +83,7 @@ export function WorkbenchWorkflowActivityLogCard({
   const [kindQuery, setKindQuery] = useState("");
   const [contextQuery, setContextQuery] = useState("");
   const [focusEntryId, setFocusEntryId] = useState<string | null>(null);
+  const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
   const [builderFocusOnly, setBuilderFocusOnly] = useState(false);
   const baseFilteredEntries = useMemo(
     () => {
@@ -251,40 +260,50 @@ export function WorkbenchWorkflowActivityLogCard({
           </div>
         </div>
       ) : null}
-      <div className="button-row">
-        <button onClick={() => setSourceFilter("all")} type="button">{sourceFilter === "all" ? "Source: all" : "All sources"}</button>
-        <button onClick={() => setSourceFilter(sourceFilter === "workflow" ? "all" : "workflow")} type="button">Workflow</button>
-        <button onClick={() => setSourceFilter(sourceFilter === "security" ? "all" : "security")} type="button">Security</button>
-        <button onClick={() => setToneFilter(toneFilter === "risk" ? "all" : "risk")} type="button">Risk</button>
-        <button onClick={() => setClassFilter(classFilter === "runtime_snapshot" ? "all" : "runtime_snapshot")} type="button">Runtime</button>
-        <button onClick={() => setClassFilter(classFilter === "persistent" ? "all" : "persistent")} type="button">Persistent</button>
-        <button onClick={() => setTimeFilter(timeFilter === "15m" ? "all" : "15m")} type="button">15m</button>
-        <button onClick={() => setTimeFilter(timeFilter === "1h" ? "all" : "1h")} type="button">1h</button>
-        <button onClick={() => setTimeFilter(timeFilter === "24h" ? "all" : "24h")} type="button">24h</button>
-        {auditFocusHint?.nodeId || auditFocusHint?.branchNodeId || auditFocusHint?.edgeId || auditFocusHint?.artifactNodeId || auditFocusHint?.datasetValueId ? (
-          <button onClick={() => setBuilderFocusOnly((current) => !current)} type="button">{builderFocusOnly ? "All events" : "Builder focus"}</button>
-        ) : null}
-        <button onClick={copyCurrentFilters} type="button">Copy filters</button>
-        <button onClick={exportTimelineJson} type="button">Export JSON</button>
-        <button onClick={exportTimelineCsv} type="button">Export CSV</button>
-      </div>
-      <label style={{ display: "grid", gap: "0.35rem" }}>
-        <span className="card-copy">Kind search</span>
-        <input onChange={(event) => setKindQuery(event.target.value)} placeholder="lease, governance, import..." value={kindQuery} />
-      </label>
-      <label style={{ display: "grid", gap: "0.35rem" }}>
-        <span className="card-copy">Context search</span>
-        <input onChange={(event) => setContextQuery(event.target.value)} placeholder="job id, agent id, runtime mode..." value={contextQuery} />
-      </label>
+      <details className="workflow-audit-controls" data-workflow-audit-controls="filters">
+        <summary>{`Filters · ${filteredEntries.length}/${entries.length}`}</summary>
+        <div className="button-row">
+          <button onClick={() => setSourceFilter("all")} type="button">{sourceFilter === "all" ? "Source: all" : "All sources"}</button>
+          <button onClick={() => setSourceFilter(sourceFilter === "workflow" ? "all" : "workflow")} type="button">Workflow</button>
+          <button onClick={() => setSourceFilter(sourceFilter === "security" ? "all" : "security")} type="button">Security</button>
+          <button onClick={() => setToneFilter(toneFilter === "risk" ? "all" : "risk")} type="button">Risk</button>
+          <button onClick={() => setClassFilter(classFilter === "runtime_snapshot" ? "all" : "runtime_snapshot")} type="button">Runtime</button>
+          <button onClick={() => setClassFilter(classFilter === "persistent" ? "all" : "persistent")} type="button">Persistent</button>
+          <button onClick={() => setTimeFilter(timeFilter === "15m" ? "all" : "15m")} type="button">15m</button>
+          <button onClick={() => setTimeFilter(timeFilter === "1h" ? "all" : "1h")} type="button">1h</button>
+          <button onClick={() => setTimeFilter(timeFilter === "24h" ? "all" : "24h")} type="button">24h</button>
+          {auditFocusHint?.nodeId || auditFocusHint?.branchNodeId || auditFocusHint?.edgeId || auditFocusHint?.artifactNodeId || auditFocusHint?.datasetValueId ? (
+            <button onClick={() => setBuilderFocusOnly((current) => !current)} type="button">{builderFocusOnly ? "All events" : "Builder focus"}</button>
+          ) : null}
+          <button onClick={copyCurrentFilters} type="button">Copy filters</button>
+          <button onClick={exportTimelineJson} type="button">Export JSON</button>
+          <button onClick={exportTimelineCsv} type="button">Export CSV</button>
+        </div>
+        <label style={{ display: "grid", gap: "0.35rem" }}>
+          <span className="card-copy">Kind search</span>
+          <input onChange={(event) => setKindQuery(event.target.value)} placeholder="lease, governance, import..." value={kindQuery} />
+        </label>
+        <label style={{ display: "grid", gap: "0.35rem" }}>
+          <span className="card-copy">Context search</span>
+          <input onChange={(event) => setContextQuery(event.target.value)} placeholder="job id, agent id, runtime mode..." value={contextQuery} />
+        </label>
+      </details>
       {filteredEntries.length > 0 ? (
         <div className="sidebar-stack">
           {filteredEntries.map((entry) => (
-            <div className="sidebar-card sidebar-card--compact" key={entry.id}>
-              <div className="sidebar-list">
-                <div className="sidebar-list__row">
-                  <span>{entry.title}</span>
-                  <strong>{formatActivityTimestamp(entry.at)}</strong>
-                </div>
+            <article className="sidebar-card sidebar-card--compact workflow-audit-entry" data-workflow-audit-entry={entry.id} key={entry.id}>
+              <div className="sidebar-list__row">
+                <span>{entry.title}</span>
+                <strong>{formatActivityTimestamp(entry.at)}</strong>
+              </div>
+              <div className="workflow-audit-entry__summary">
+                <span className={`status-pill status-pill--${entry.tone}`} title={entry.source}>{formatActivitySource(entry.source)}</span>
+                <span className="status-pill status-pill--watch" title={entry.class}>{formatActivityClass(entry.class)}</span>
+                <span className="workflow-audit-entry__kind">{entry.kind}</span>
+                <button aria-expanded={expandedEntryId === entry.id} data-workflow-audit-entry-details={entry.id} onClick={() => setExpandedEntryId((current) => current === entry.id ? null : entry.id)} type="button">{expandedEntryId === entry.id ? "Close" : "Details"}</button>
+              </div>
+              {expandedEntryId === entry.id ? (
+                <div className="sidebar-list" data-workflow-audit-entry-detail-panel={entry.id}>
                 <div className="sidebar-list__row">
                   <span>trace</span>
                   <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -298,18 +317,6 @@ export function WorkbenchWorkflowActivityLogCard({
                       <button onClick={() => onLocateTarget(resolveWorkflowAuditNavigationTarget(entry)!)} type="button">Open target</button>
                     ) : null}
                   </div>
-                </div>
-                <div className="sidebar-list__row">
-                  <span>source</span>
-                  <strong>{matchesWorkflowAuditFocusHint(entry, auditFocusHint) ? `${entry.source} · linked` : entry.source}</strong>
-                </div>
-                <div className="sidebar-list__row">
-                  <span>class</span>
-                  <strong>{entry.class}</strong>
-                </div>
-                <div className="sidebar-list__row">
-                  <span>kind</span>
-                  <strong>{entry.kind}</strong>
                 </div>
                 {entry.count !== undefined ? (
                   <div className="sidebar-list__row">
@@ -336,7 +343,8 @@ export function WorkbenchWorkflowActivityLogCard({
                   </div>
                 ) : null}
               </div>
-            </div>
+              ) : null}
+            </article>
           ))}
         </div>
       ) : (

@@ -12,7 +12,20 @@ const LINUX_DESKTOP_APT_PACKAGES: &[&str] = &[
     "patchelf",
 ];
 
+const REMOTE_SYNC_EXCLUDES: &[&str] = &[
+    ".git/",
+    "node_modules/",
+    "target/",
+    "dist/",
+    "tmp/",
+    ".next/",
+    "out/",
+    "_build/",
+    "deps/",
+];
+
 struct Options {
+    frontend_node_dir: String,
     remote_build_command: String,
     remote_dir: String,
     remote_host: String,
@@ -75,22 +88,28 @@ impl RemoteLinuxAction {
 impl Options {
     fn from_env() -> Self {
         Self {
-            remote_build_command: env::var("REMOTE_BUILD_COMMAND").unwrap_or_else(|_| {
-                [
-                    "npm ci --prefix apps/hub-gui",
-                    "npm ci --prefix apps/installer-gui",
-                    "npm ci --prefix apps/workbench-gui",
-                    "make package-desktop PLATFORM=linux",
-                    "make desktop-verify PLATFORM=linux",
-                ]
-                .join(" && ")
-            }),
+            frontend_node_dir: env::var("KYUUBIKI_LAB_NODE_DIR")
+                .unwrap_or_else(|_| "~/.kyuubiki-toolchains/node-v20.19.2-linux-x64".to_string()),
+            remote_build_command: env::var("REMOTE_BUILD_COMMAND")
+                .unwrap_or_else(|_| default_remote_build_command()),
             remote_dir: env::var("KYUUBIKI_LAB_DESKTOP_DIR")
                 .unwrap_or_else(|_| "~/kyuubiki-desktop".to_string()),
             remote_host: env::var("KYUUBIKI_LAB_HOST").unwrap_or_else(|_| "kyuubiki-lab".into()),
             sync_to_remote: env::var("SYNC_TO_REMOTE").unwrap_or_else(|_| "1".into()) == "1",
         }
     }
+}
+
+fn default_remote_build_command() -> String {
+    [
+        "npm ci --prefix apps/frontend",
+        "npm ci --prefix apps/hub-gui",
+        "npm ci --prefix apps/installer-gui",
+        "npm ci --prefix apps/workbench-gui",
+        "make package-desktop PLATFORM=linux",
+        "make desktop-verify PLATFORM=linux",
+    ]
+    .join(" && ")
 }
 
 fn sync_repo(root: &Path, options: &Options) -> RunnerResult<()> {
@@ -105,12 +124,7 @@ fn sync_repo(root: &Path, options: &Options) -> RunnerResult<()> {
 
     let source = root.join(".");
     let destination = format!("{}:{}/", options.remote_host, options.remote_dir);
-    let status = rsync_to(
-        root,
-        &[".git/", "node_modules/", "target/", "dist/", "tmp/"],
-        &[source],
-        &destination,
-    )?;
+    let status = rsync_to(root, REMOTE_SYNC_EXCLUDES, &[source], &destination)?;
     if status != 0 {
         return Err(format!("rsync failed with status {status}"));
     }
@@ -118,7 +132,7 @@ fn sync_repo(root: &Path, options: &Options) -> RunnerResult<()> {
 }
 
 fn remote_build_command(options: &Options) -> String {
-    let env_prefix = remote_env_prefix();
+    let env_prefix = remote_env_prefix(options);
     format!(
         "cd {} && {}{}",
         remote_shell_path(&options.remote_dir),
@@ -129,7 +143,7 @@ fn remote_build_command(options: &Options) -> String {
 
 fn remote_preflight_command(options: &Options) -> String {
     let required_packages = LINUX_DESKTOP_APT_PACKAGES.join(" ");
-    let env_prefix = remote_env_prefix();
+    let env_prefix = remote_env_prefix(options);
     format!(
         "cd {} && \
 {}\
@@ -156,11 +170,12 @@ fn remote_install_deps_command(options: &Options) -> String {
     )
 }
 
-fn remote_env_prefix() -> String {
+fn remote_env_prefix(options: &Options) -> String {
     let mut exports = Vec::new();
-    exports.push(
-        "export PATH=$HOME/.local/kyuubiki-runtimes/node-v20.19.2-linux-x64/bin:$PATH".to_string(),
-    );
+    exports.push(format!(
+        "export PATH={}/bin:$PATH",
+        remote_shell_path(&options.frontend_node_dir)
+    ));
     for key in [
         "HTTP_PROXY",
         "HTTPS_PROXY",
@@ -178,7 +193,7 @@ fn remote_env_prefix() -> String {
     if exports.is_empty() {
         String::new()
     } else {
-        format!("{}; ", exports.join("; "))
+        format!("{} && ", exports.join(" && "))
     }
 }
 
@@ -191,8 +206,65 @@ Build Linux desktop packages on the Ubuntu lab host.\n\n\
 Environment:\n  \
 KYUUBIKI_LAB_HOST              SSH host alias, default kyuubiki-lab\n  \
 KYUUBIKI_LAB_DESKTOP_DIR       remote checkout, default ~/kyuubiki-desktop\n  \
+KYUUBIKI_LAB_NODE_DIR          remote Node 20.19.2 root, default ~/.kyuubiki-toolchains/node-v20.19.2-linux-x64\n  \
 REMOTE_BUILD_COMMAND           remote command, defaults to npm ci for desktop apps plus Linux package/verify\n  \
 SYNC_TO_REMOTE                 1 to rsync before building, 0 to reuse remote checkout\n  \
 HTTP_PROXY / HTTPS_PROXY / NO_PROXY are forwarded when present\n"
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        Options, REMOTE_SYNC_EXCLUDES, default_remote_build_command, remote_build_command,
+        remote_preflight_command,
+    };
+
+    fn options() -> Options {
+        Options {
+            frontend_node_dir: "~/.kyuubiki-toolchains/node-v20.19.2-linux-x64".to_string(),
+            remote_build_command: "echo build".to_string(),
+            remote_dir: "~/kyuubiki-desktop".to_string(),
+            remote_host: "kyuubiki-lab".to_string(),
+            sync_to_remote: true,
+        }
+    }
+
+    #[test]
+    fn remote_commands_preserve_failure_short_circuiting() {
+        for command in [
+            remote_build_command(&options()),
+            remote_preflight_command(&options()),
+        ] {
+            assert!(command.contains("&& export PATH="));
+            assert!(!command.contains("; echo"));
+            assert!(!command.contains("; npm"));
+        }
+    }
+
+    #[test]
+    fn default_build_installs_shared_frontend_before_packaging() {
+        let command = default_remote_build_command();
+        let frontend = command
+            .find("npm ci --prefix apps/frontend")
+            .expect("shared frontend install");
+        let package = command
+            .find("make package-desktop PLATFORM=linux")
+            .expect("desktop package command");
+        assert!(frontend < package);
+    }
+
+    #[test]
+    fn remote_sync_excludes_generated_dependency_and_build_trees() {
+        for generated in [
+            "node_modules/",
+            "target/",
+            ".next/",
+            "out/",
+            "_build/",
+            "deps/",
+        ] {
+            assert!(REMOTE_SYNC_EXCLUDES.contains(&generated), "{generated}");
+        }
+    }
 }

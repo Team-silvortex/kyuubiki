@@ -1,6 +1,7 @@
 use kyuubiki_protocol::{
     CohesiveInterface1dStepResult, SolveCohesiveInterface1dRequest, SolveCohesiveInterface1dResult,
 };
+use std::borrow::Cow;
 
 use crate::cohesive_law::{CohesiveHistory, CohesiveLaw};
 
@@ -9,7 +10,19 @@ const MAX_HISTORY_STEPS: usize = 4096;
 pub fn solve_cohesive_interface_1d(
     request: &SolveCohesiveInterface1dRequest,
 ) -> Result<SolveCohesiveInterface1dResult, String> {
-    validate_request(request)?;
+    solve_cohesive_interface_1d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_cohesive_interface_1d_owned(
+    request: SolveCohesiveInterface1dRequest,
+) -> Result<SolveCohesiveInterface1dResult, String> {
+    solve_cohesive_interface_1d_internal(Cow::Owned(request))
+}
+
+fn solve_cohesive_interface_1d_internal(
+    request: Cow<'_, SolveCohesiveInterface1dRequest>,
+) -> Result<SolveCohesiveInterface1dResult, String> {
+    validate_request(request.as_ref())?;
     let law = CohesiveLaw::new(
         request.initial_stiffness,
         request.peak_traction,
@@ -46,7 +59,7 @@ pub fn solve_cohesive_interface_1d(
     let max_damage = steps.iter().map(|step| step.damage).fold(0.0_f64, f64::max);
 
     Ok(SolveCohesiveInterface1dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         onset_separation: law.onset_separation(),
         fracture_energy: law.fracture_energy(),
         steps,

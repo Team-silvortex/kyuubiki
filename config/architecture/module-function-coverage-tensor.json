@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.module-function-coverage-tensor/v4",
-  "version_line": "moxi 2.17.x -> daji 3.0.0",
+  "version_line": "daji 3.0.x",
   "topology": "config/architecture/module-topology.json",
   "matrix": "config/architecture/module-function-coverage-matrix.json",
   "runtime_api_client_contract": "config/architecture/contracts-runtime-api-surface.json",
@@ -20,15 +20,21 @@
     "config/architecture/module-function-coverage-evidence/desktop-usability.json",
     "config/architecture/module-function-coverage-evidence/desktop-ui-validation.json",
     "config/architecture/module-function-coverage-evidence/desktop-deployment-update.json",
+    "config/architecture/module-function-coverage-evidence/desktop-bundle-update-operational.json",
     "config/architecture/module-function-coverage-evidence/agent-update-operational.json",
+    "config/architecture/module-function-coverage-evidence/fleet-update-operational.json",
+    "config/architecture/module-function-coverage-evidence/agent-rolling-replacement-operational.json",
     "config/architecture/module-function-coverage-evidence/system-security.json",
     "config/architecture/module-function-coverage-evidence/protocol-validation.json",
     "config/architecture/module-function-coverage-evidence/runtime-recovery.json",
+    "config/architecture/module-function-coverage-evidence/linux-host-power-loss-operational.json",
     "config/architecture/module-function-coverage-evidence/agent-control-link.json",
     "config/architecture/module-function-coverage-evidence/agent-solver-execution.json",
     "config/architecture/module-function-coverage-evidence/workflow-engine.json",
     "config/architecture/module-function-coverage-evidence/orchestra-workflow-operational.json",
+    "config/architecture/module-function-coverage-evidence/fleet-scheduling-operational.json",
     "config/architecture/module-function-coverage-evidence/installed-runtime-operational.json",
+    "config/architecture/module-function-coverage-evidence/installed-runtime-power-loss.json",
     "config/architecture/module-function-coverage-evidence/persistence-provenance-verification.json"
   ],
   "depth_axes": {
@@ -45,7 +51,7 @@
   },
   "release_profile": {
     "id": "daji-3-0-0",
-    "current_checkpoint": "moxi 2.17.0",
+    "current_checkpoint": "daji 3.0.0",
     "target_release": "daji 3.0.0",
     "gate_mode": "advisory",
     "enforce_from": "moxi 2.17.0",

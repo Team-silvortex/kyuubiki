@@ -1,7 +1,7 @@
 # Kyuubiki Language Packs
 
 This directory contains distributable UI language support packs for the
-`moxi 2.x` line. The catalog currently ships 30 mainstream packs for both
+`daji 3.x` line. The catalog currently ships 30 mainstream packs for both
 Workbench and Hub, so the pack contract is exercised across desktop, webview,
 and future remote-store delivery paths.
 

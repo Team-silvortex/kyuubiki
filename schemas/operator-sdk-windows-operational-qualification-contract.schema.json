@@ -7,6 +7,7 @@
   "required": [
     "schema_version",
     "qualification_id",
+    "execution_abi",
     "platform",
     "required_stages",
     "source_files",
@@ -17,11 +18,12 @@
   "properties": {
     "$schema": { "type": "string" },
     "schema_version": {
-      "const": "kyuubiki.operator-sdk-windows-operational-qualification-contract/v1"
+      "const": "kyuubiki.operator-sdk-windows-operational-qualification-contract/v2"
     },
     "qualification_id": {
       "const": "operator-sdk-windows-installed-agent-operational"
     },
+    "execution_abi": { "const": "kyuubiki.operator-json-c/v1" },
     "platform": {
       "type": "object",
       "additionalProperties": false,
@@ -49,7 +51,7 @@
     },
     "source_files": {
       "type": "array",
-      "minItems": 12,
+      "minItems": 20,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/repoPath" }
     },
@@ -88,7 +90,7 @@
       ],
       "properties": {
         "schema_version": {
-          "const": "kyuubiki.operator-sdk-windows-operational-qualification/v1"
+          "const": "kyuubiki.operator-sdk-windows-operational-qualification/v2"
         },
         "schema_path": { "$ref": "#/$defs/repoPath" },
         "default_path": { "$ref": "#/$defs/repoPath" },
@@ -99,11 +101,12 @@
     "workflow": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "artifact_name", "capture_command"],
+      "required": ["path", "artifact_name", "capture_command", "generated_report_path"],
       "properties": {
         "path": { "$ref": "#/$defs/repoPath" },
         "artifact_name": { "const": "operator-sdk-windows-operational-evidence" },
-        "capture_command": { "type": "string", "minLength": 1 }
+        "capture_command": { "type": "string", "minLength": 1 },
+        "generated_report_path": { "$ref": "#/$defs/repoPath" }
       }
     }
   },

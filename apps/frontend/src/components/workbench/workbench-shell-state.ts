@@ -1,17 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import type { DirectMeshSelectionMode, FrontendRuntimeMode } from "@/lib/api";
 import {
   mergeLanguagePack,
   persistWorkbenchLanguagePacks,
   persistWorkbenchSettings,
-  readWorkbenchLanguagePacks,
-  safeStorageGet,
+  readWorkbenchLanguagePacksResult,
+  safeStorageGetResult,
   type WorkbenchLanguagePack,
 } from "@/lib/workbench/helpers";
 import {
   copyByLanguage,
+  isBuiltInWorkbenchLanguage,
   resolveWorkbenchBaseCopy,
   type WorkbenchCopy,
 } from "@/components/workbench/workbench-copy";
@@ -22,19 +31,32 @@ import type {
   Theme,
 } from "@/components/workbench/workbench-types";
 import type { DirectMeshExecutionState } from "@/components/workbench/workbench-defaults";
-import { buildWorkbenchLanguagePackCatalogRows } from "@/components/workbench/workbench-language-pack-catalog";
+import {
+  buildWorkbenchLanguagePackCatalogRows,
+  loadBuiltinWorkbenchLanguagePackForLanguage,
+} from "@/components/workbench/workbench-language-pack-catalog";
+import { getWorkbenchLanguagePackSystemCopy } from "@/components/workbench/workbench-language-pack-system-copy";
 
 type UseWorkbenchShellStateArgs = {
   setLoadedModelName: (value: string | ((current: string) => string)) => void;
   setMessage: (value: string) => void;
 };
 
+type StorageHydrationStatus = "loading" | "ready" | "blocked";
+
 export function useWorkbenchShellState({
   setLoadedModelName,
   setMessage,
 }: UseWorkbenchShellStateArgs) {
   const [language, setLanguage] = useState<Language>("en");
-  const [languagePacks, setLanguagePacks] = useState<WorkbenchLanguagePack[]>([]);
+  const [languagePacks, setLanguagePacksState] = useState<WorkbenchLanguagePack[]>([]);
+  const [catalogLanguagePack, setCatalogLanguagePack] = useState<WorkbenchLanguagePack | null>(null);
+  const languagePacksRef = useRef<WorkbenchLanguagePack[]>([]);
+  const languageLoadRequestRef = useRef(0);
+  const defaultModelNamesRef = useRef(new Set(Object.values(copyByLanguage).map((copy) => copy.defaultModel)));
+  const storageBootstrappedRef = useRef(false);
+  const [settingsStorageStatus, setSettingsStorageStatus] = useState<StorageHydrationStatus>("loading");
+  const [languagePackStorageStatus, setLanguagePackStorageStatus] = useState<StorageHydrationStatus>("loading");
   const [theme, setTheme] = useState<Theme>("graphite");
   const [frontendRuntimeMode, setFrontendRuntimeMode] = useState<FrontendRuntimeMode>("orchestrated_gui");
   const [directMeshEndpointsText, setDirectMeshEndpointsText] = useState("127.0.0.1:5001,127.0.0.1:5002");
@@ -67,31 +89,86 @@ export function useWorkbenchShellState({
   const [truss3dBatchLoadY, setTruss3dBatchLoadY] = useState(0);
   const [truss3dBatchLoadZ, setTruss3dBatchLoadZ] = useState(0);
 
-  const applyLanguagePreference = (nextLanguage: Language) => {
-    const nextCopy = resolveWorkbenchBaseCopy(nextLanguage);
-    setLanguage(nextLanguage);
+  const setLanguagePacks: Dispatch<SetStateAction<WorkbenchLanguagePack[]>> = useCallback(
+    (updater) => {
+      if (languagePackStorageStatus !== "ready") {
+        setMessage(resolveWorkbenchBaseCopy(language).workflowStorageWriteFailedLabel);
+        return;
+      }
+      const current = languagePacksRef.current;
+      const next = typeof updater === "function" ? updater(current) : updater;
+      if (!persistWorkbenchLanguagePacks(next)) {
+        setMessage(resolveWorkbenchBaseCopy(language).workflowStorageWriteFailedLabel);
+        return;
+      }
+      languagePacksRef.current = next;
+      setLanguagePacksState(next);
+    },
+    [language, languagePackStorageStatus, setMessage],
+  );
+
+  const applyLanguagePreference = useCallback(async (nextLanguage: Language): Promise<WorkbenchCopy | null> => {
+    const requestId = languageLoadRequestRef.current + 1;
+    languageLoadRequestRef.current = requestId;
+    let nextCatalogPack: WorkbenchLanguagePack | null = null;
+    if (!isBuiltInWorkbenchLanguage(nextLanguage)) {
+      try {
+        nextCatalogPack = await loadBuiltinWorkbenchLanguagePackForLanguage(nextLanguage);
+      } catch {
+        if (languageLoadRequestRef.current === requestId) {
+          setMessage(getWorkbenchLanguagePackSystemCopy(nextLanguage).notFound);
+        }
+        return null;
+      }
+      if (!nextCatalogPack) {
+        if (languageLoadRequestRef.current === requestId) {
+          setMessage(getWorkbenchLanguagePackSystemCopy(nextLanguage).notFound);
+        }
+        return null;
+      }
+    }
+    if (languageLoadRequestRef.current !== requestId) return null;
+
+    const resolvedLanguage = nextCatalogPack?.language ?? nextLanguage;
+    const nextCopy = mergeLanguagePack<WorkbenchCopy>(
+      resolveWorkbenchBaseCopy(resolvedLanguage),
+      nextCatalogPack?.overrides ?? null,
+    );
+    setCatalogLanguagePack(nextCatalogPack);
+    setLanguage(resolvedLanguage);
     setLoadedModelName((current) =>
-      Object.values(copyByLanguage).some((copy) => copy.defaultModel === current)
+      defaultModelNamesRef.current.has(current)
         ? nextCopy.defaultModel
         : current,
     );
-  };
+    defaultModelNamesRef.current.add(nextCopy.defaultModel);
+    setMessage(nextCopy.initialLoaded);
+    return nextCopy;
+  }, [setLoadedModelName, setMessage]);
 
   const activeLanguagePack = useMemo(
     () => languagePacks.find((pack) => pack.language === language) ?? null,
     [language, languagePacks],
   );
-  const t = useMemo(
-    () => mergeLanguagePack<WorkbenchCopy>(resolveWorkbenchBaseCopy(language), activeLanguagePack?.overrides ?? null),
-    [activeLanguagePack?.overrides, language],
-  );
+  const t = useMemo(() => {
+    const base = mergeLanguagePack<WorkbenchCopy>(
+      resolveWorkbenchBaseCopy(language),
+      catalogLanguagePack?.language === language ? catalogLanguagePack.overrides : null,
+    );
+    return mergeLanguagePack<WorkbenchCopy>(base, activeLanguagePack?.overrides ?? null);
+  }, [activeLanguagePack?.overrides, catalogLanguagePack, language]);
   const languagePackCatalogRows = useMemo(
     () => buildWorkbenchLanguagePackCatalogRows(language),
     [language],
   );
 
   useEffect(() => {
-    const stored = safeStorageGet();
+    if (storageBootstrappedRef.current) return;
+    storageBootstrappedRef.current = true;
+
+    const settingsRead = safeStorageGetResult();
+    const languagePacksRead = readWorkbenchLanguagePacksResult();
+    const stored = settingsRead.settings;
     const desktopLanguage =
       typeof window !== "undefined"
         ? new URLSearchParams(window.location.search).get("desktopLanguage")
@@ -127,11 +204,18 @@ export function useWorkbenchShellState({
           : null;
 
     if (bootLanguage) {
-      applyLanguagePreference(bootLanguage);
-      setMessage(resolveWorkbenchBaseCopy(bootLanguage).initialLoaded);
+      void applyLanguagePreference(bootLanguage);
     }
-    setLanguagePacks(readWorkbenchLanguagePacks());
-  }, [setLoadedModelName, setMessage]);
+    languagePacksRef.current = languagePacksRead.packs;
+    setLanguagePacksState(languagePacksRead.packs);
+    setSettingsStorageStatus(settingsRead.readable ? "ready" : "blocked");
+    setLanguagePackStorageStatus(languagePacksRead.readable ? "ready" : "blocked");
+    if (!settingsRead.readable || !languagePacksRead.readable) {
+      setMessage(
+        resolveWorkbenchBaseCopy(bootLanguage ?? "en").workflowStorageWriteFailedLabel,
+      );
+    }
+  }, [applyLanguagePreference, setMessage]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -140,7 +224,7 @@ export function useWorkbenchShellState({
       if (event.data?.type !== "kyuubiki:set-language") return;
       const nextLanguage = event.data.language;
       if (typeof nextLanguage === "string" && nextLanguage.trim()) {
-        applyLanguagePreference(nextLanguage.trim());
+        void applyLanguagePreference(nextLanguage.trim());
       }
     };
 
@@ -148,13 +232,14 @@ export function useWorkbenchShellState({
     return () => {
       window.removeEventListener("message", handleDesktopLanguage);
     };
-  }, []);
+  }, [applyLanguagePreference]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     if (typeof window !== "undefined") {
       window.parent?.postMessage({ type: "kyuubiki:language-changed", language }, "*");
-      persistWorkbenchSettings({
+      if (settingsStorageStatus !== "ready") return;
+      const persisted = persistWorkbenchSettings({
         theme,
         language,
         showShortcutHints,
@@ -170,6 +255,9 @@ export function useWorkbenchShellState({
         assistantApiKey,
         assistantModel,
       });
+      if (!persisted) {
+        setMessage(resolveWorkbenchBaseCopy(language).workflowStorageWriteFailedLabel);
+      }
     }
   }, [
     assistantApiBaseUrl,
@@ -184,19 +272,19 @@ export function useWorkbenchShellState({
     frontendRuntimeMode,
     immersiveGuardrails,
     language,
+    setMessage,
+    settingsStorageStatus,
     showShortcutHints,
     theme,
   ]);
-
-  useEffect(() => {
-    persistWorkbenchLanguagePacks(languagePacks);
-  }, [languagePacks]);
 
   return {
     language,
     setLanguage,
     languagePacks,
     setLanguagePacks,
+    settingsStorageStatus,
+    languagePackStorageStatus,
     theme,
     setTheme,
     frontendRuntimeMode,

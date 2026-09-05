@@ -1,0 +1,214 @@
+{
+  "schema_version": "kyuubiki.orchestra-long-workflow-takeover-operational-qualification/v1",
+  "generated_at_unix_ms": 1788081577733,
+  "status": "pass",
+  "journey": "inflight-idempotent-resume-and-checkpoint-required-replay-block",
+  "topology": {
+    "orchestra_host_role": "local-orchestra-qualification-host",
+    "database_host_role": "remote-linux-qualification-host",
+    "agent_host_role": "remote-linux-qualification-host",
+    "orchestra_platform": "macos",
+    "database_platform": "linux",
+    "agent_platform": "linux",
+    "orchestra_process_count": 2,
+    "database": "postgresql",
+    "database_ephemeral": true,
+    "database_loopback_only": true,
+    "agent_runtime": "kyuubiki-rust-agent",
+    "workflow_operator": "solve.bar_1d",
+    "transport": "independent-ssh-database-tunnels-plus-agent-tcp",
+    "build_profile": "release-agent-development-orchestra"
+  },
+  "lease_policy": {
+    "lease_ttl_ms": 1500,
+    "heartbeat_ms": 400,
+    "retry_ms": 200,
+    "max_workflow_attempts": 3
+  },
+  "evidence": {
+    "orchestra_platform": "macos",
+    "database_architecture": "x86_64",
+    "agent_architecture": "x86_64",
+    "initial_fencing_token": 1,
+    "first_takeover_fencing_token": 2,
+    "second_takeover_fencing_token": 3,
+    "former_primary_rejoined_standby": true,
+    "former_standby_rejoined_standby": true,
+    "idempotent": {
+      "before_loss": {
+        "job_status": "solving",
+        "recovery_state": "running",
+        "retry_safety": "idempotent",
+        "generation": 1,
+        "attempt": 1
+      },
+      "after_takeover": {
+        "job_status": "solving",
+        "recovery_state": "running",
+        "retry_safety": "idempotent",
+        "generation": 2,
+        "attempt": 2
+      },
+      "terminal": {
+        "job_status": "completed",
+        "recovery_state": "completed",
+        "retry_safety": "idempotent",
+        "generation": 2,
+        "attempt": 2
+      },
+      "takeover_elapsed_ms": 2101,
+      "takeover_fencing_token": 2,
+      "agent_counters_before": {
+        "started": 0,
+        "completed": 0,
+        "failed": 0,
+        "active": 0
+      },
+      "agent_counters_after": {
+        "started": 2,
+        "completed": 1,
+        "failed": 1,
+        "active": 0
+      },
+      "active_execution_count_before_loss": 1,
+      "active_execution_count_after_takeover": 2,
+      "agent_started_delta": 2,
+      "initial_claim_seen": true,
+      "restart_claim_seen": true,
+      "completed_history_count": 1,
+      "result_verified": true,
+      "terminal_state_stable": true
+    },
+    "checkpoint_required": {
+      "before_loss": {
+        "job_status": "solving",
+        "recovery_state": "running",
+        "retry_safety": "checkpoint_required",
+        "generation": 1,
+        "attempt": 1
+      },
+      "after_takeover": {
+        "job_status": "failed",
+        "recovery_state": "recovery_blocked",
+        "retry_safety": "checkpoint_required",
+        "generation": 1,
+        "attempt": 1
+      },
+      "takeover_elapsed_ms": 1932,
+      "takeover_fencing_token": 3,
+      "agent_counters_before": {
+        "started": 2,
+        "completed": 1,
+        "failed": 1,
+        "active": 0
+      },
+      "agent_counters_at_block": {
+        "started": 3,
+        "completed": 1,
+        "failed": 1,
+        "active": 1
+      },
+      "agent_counters_after_release": {
+        "started": 3,
+        "completed": 1,
+        "failed": 2,
+        "active": 0
+      },
+      "active_execution_count_before_loss": 1,
+      "active_execution_count_at_block": 1,
+      "agent_started_delta_at_block": 1,
+      "recovery_block_reason_retained": true,
+      "no_recovery_redispatch": true,
+      "remained_blocked_after_orphan_completion": true
+    },
+    "followup_solver_verified": true
+  },
+  "cleanup": {
+    "orchestra": {
+      "orchestra_processes_stopped": true,
+      "orchestra_ports_closed": true,
+      "ssh_tunnel_stopped": true,
+      "tunnel_port_closed": true,
+      "remote_database_removed": true,
+      "local_work_root_removed": true
+    },
+    "remote_agent_stopped": true,
+    "remote_agent_port_closed": true,
+    "managed_remote_agent_root_removed": true,
+    "local_agent_work_root_removed": true
+  },
+  "checks": [
+    {
+      "id": "real_rust_agent",
+      "status": "pass"
+    },
+    {
+      "id": "real_remote_postgresql",
+      "status": "pass"
+    },
+    {
+      "id": "two_live_orchestra_instances",
+      "status": "pass"
+    },
+    {
+      "id": "exact_job_pause_barrier",
+      "status": "pass"
+    },
+    {
+      "id": "idempotent_inflight_observed",
+      "status": "pass"
+    },
+    {
+      "id": "first_takeover_fenced",
+      "status": "pass"
+    },
+    {
+      "id": "idempotent_replay_claimed",
+      "status": "pass"
+    },
+    {
+      "id": "single_terminal_commit",
+      "status": "pass"
+    },
+    {
+      "id": "solver_result_verified",
+      "status": "pass"
+    },
+    {
+      "id": "checkpoint_required_inflight_observed",
+      "status": "pass"
+    },
+    {
+      "id": "second_takeover_fenced",
+      "status": "pass"
+    },
+    {
+      "id": "unsafe_replay_blocked",
+      "status": "pass"
+    },
+    {
+      "id": "no_checkpoint_redispatch",
+      "status": "pass"
+    },
+    {
+      "id": "orphan_completion_did_not_mutate",
+      "status": "pass"
+    },
+    {
+      "id": "former_owners_rejoined",
+      "status": "pass"
+    },
+    {
+      "id": "followup_solver_verified",
+      "status": "pass"
+    },
+    {
+      "id": "cleanup_complete",
+      "status": "pass"
+    },
+    {
+      "id": "retention_sanitized",
+      "status": "pass"
+    }
+  ]
+}

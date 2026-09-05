@@ -9,7 +9,7 @@ type RunnerResult<T> = Result<T, String>;
 const STANDARD_PATH: &str = "config/architecture/module-extension-standard.json";
 const SCHEMA_PATH: &str = "schemas/module-extension-standard.schema.json";
 const SCHEMA_VERSION: &str = "kyuubiki.module-extension-standard/v1";
-const VERSION_LINE: &str = "moxi 2.0.x";
+const VERSION_LINE: &str = "daji 3.0.x";
 const REQUIRED_TYPES: &[&str] = &[
     "module",
     "function_paradigm",

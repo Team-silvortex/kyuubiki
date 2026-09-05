@@ -60,6 +60,7 @@ export function WorkbenchShellFrame({
       data-workbench-automation-contract="v1"
       data-workbench-shell="root"
       data-workbench-shell-extensible="false"
+      data-workbench-section={sidebarSection}
       data-workbench-window-mode={resolution.windowMode}
       data-workbench-viewport-profile={resolution.profile}
       data-workbench-compact-chrome={resolution.shouldCompactChrome ? "true" : "false"}

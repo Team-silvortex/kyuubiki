@@ -613,6 +613,7 @@ watchDesktopLanguagePreference({
 });
 window.__kyuubikiHubAppReadyAt = Date.now();
 setEventMessage("Hub app module ready.", "app:ready");
+void reportPackagedBootReady();
 
 void runHubStartupPhases({
   applyAssistantSettings, applyBrand, elements, enhanceHubAccessibility,
@@ -622,4 +623,4 @@ void runHubStartupPhases({
   refreshRuntimeStatus, renderAssistantPanel, renderHotRuntimeLogServiceLabel,
   renderHubDensityToggles, renderHubRecents, renderPanelPages, rerenderLocalizedHubShell,
   setBusy, setEventMessage, setSection, state, syncDesktopStates,
-}).then(() => reportPackagedBootReady());
+});

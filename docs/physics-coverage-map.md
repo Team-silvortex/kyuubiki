@@ -1,13 +1,13 @@
 # Physics Coverage Map
 
-This document defines the active `moxi 2.x` physics-coverage baseline.
+This document defines the active `daji 3.x` physics-coverage baseline.
 
 The goal is breadth with honest limits, not final numerical authority. The
-coverage carried forward from `tamamono 1.x` now prepares the `moxi 2.x` work
+coverage carried forward from `tamamono 1.x` now prepares the `daji 3.x` work
 on engine boundaries, executable task files, operator descriptors, and durable
 workflow contracts.
 
-## moxi 2.x Rule
+## daji 3.x Rule
 
 Every major simulation family should have at least one runnable path through
 the Rust solver and benchmark stack.
@@ -30,7 +30,7 @@ work. The reliability evidence index for that matrix starts at
 `config/operator-reliability/`, and is guarded by
 `make check-operator-reliability`.
 
-For `moxi 2.x`, every covered solve operator now carries `qualification`
+For `daji 3.x`, every covered solve operator now carries `qualification`
 evidence. The manifest's `minimum_coverage_level` is `qualification`, so the
 guard fails if a covered solver is accidentally downgraded to `review`,
 `baseline`, or `smoke`.
@@ -205,10 +205,32 @@ dynamic candidate is held. Harmonic response entries can use aliases such as
 The solver-side `dynamic_spring_closed_form.rs` regression now keeps
 single-DOF Newmark and harmonic dynamic-stiffness references promotion-ready,
 including load-scaling, near-resonance damping-scaling, and undamped
-free-vibration time-step refinement checks, but those dynamic spring operators
-remain outside the release-gated 38-operator
-`physics-coverage` qualification manifest until the dynamic line is promoted
-into that matrix.
+free-vibration time-step refinement checks. The dedicated `dynamic-response`
+benchmark matrix adds isolated transient-heat, transient-spring, and
+harmonic-spring Engine scale probes, including a passing remote one-million-node
+smoke. Those operators remain outside the release-gated 38-operator
+`physics-coverage` qualification manifest until the dynamic line completes its
+accuracy and qualification evidence.
+
+The cohesive line now has its own `cohesive-interface` benchmark matrix. It
+executes the scalar history law, the four-node line kernel, and the assembled
+2D/3D sparse Newton paths through both Engine and workflow contracts. The
+history cases cap at 4096 contract steps, while the mesh cases cap at the
+retained 96-element 2D and 80-element 3D shapes under the current 512-node
+solver boundary. This closes the execution/performance blind spot without
+pretending that a `1m` profile suffix means a one-million-node interface mesh;
+the family remains outside release qualification until scalable continuation,
+mixed-mode laws, and retained promotion evidence are complete.
+
+The electric-conduction quad solver follows the same honest promotion rule. It
+is executable and benchmarked in `extended-physics`, and now has a dedicated
+`electric-conduction-plane-quad-screening` component profile. Its independent
+regressions retain a rotated Ohmic rectangle reference, `1 x 1` through
+`8 x 8` manufactured-field refinement, current/Joule/source-power balance,
+malformed topology rejection, Agent RPC, Engine Workflow, and Rust headless
+discovery. It remains outside `physics-coverage`: the component evidence has
+not yet acquired versioned tolerance/material provenance, retained release
+evidence, or reviewer approval.
 
 Across domains, `transform.compose_quality_objective` combines these
 single-domain quality scores into one weighted multiphysics objective. That

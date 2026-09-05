@@ -7,6 +7,32 @@ const PLAYWRIGHT_RESTRICTED_HINTS = [
 
 const RESTRICTED_PLAYWRIGHT_MESSAGE = "Playwright browser launch is restricted in this environment.";
 
+function isMissingPlaywrightExecutable(error) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return message.includes("Executable doesn't exist");
+}
+
+export async function launchPlaywrightChromium(chromium, options = { headless: true }) {
+  const executablePath = process.env.KYUUBIKI_PLAYWRIGHT_EXECUTABLE_PATH?.trim();
+  if (executablePath) return chromium.launch({ ...options, executablePath });
+
+  try {
+    return await chromium.launch(options);
+  } catch (error) {
+    if (!isMissingPlaywrightExecutable(error)) throw error;
+  }
+
+  let lastError;
+  for (const channel of ["chrome", "msedge"]) {
+    try {
+      return await chromium.launch({ ...options, channel });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError ?? new Error("No compatible Playwright Chromium executable was found.");
+}
+
 export function isRestrictedPlaywrightLaunchError(error) {
   const message = error instanceof Error ? error.message : String(error ?? "");
   const stack = error instanceof Error ? error.stack ?? "" : "";

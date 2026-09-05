@@ -1,0 +1,160 @@
+{
+  "version": "3.0.0",
+  "codename": "daji",
+  "line": "3.x",
+  "status": "current",
+  "date": "2026-09-05",
+  "git_commit": "85f4b02c01efbdbbddd487e5e4e81732e37a9677",
+  "summary": "Daji 3.0.0 begins the 3.x product line with aligned desktop, runtime, SDK, language-pack, installer, and documentation metadata. It carries forward the moxi contract and reliability baseline without relabeling historical qualification as fresh 3.0 evidence.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "release_notes": "docs/daji-3.0.0.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md",
+    "operator_sdk": "docs/operator-sdk.md",
+    "workflow_graph": "docs/workflow-graph.md",
+    "workflow_dataset": "docs/workflow-dataset.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": {
+      "version": "3.0.0",
+      "notes": [
+        "Aligned to daji 3.0.0; qualification scope remains explicit."
+      ]
+    },
+    "hub_gui": {
+      "version": "3.0.0",
+      "notes": [
+        "Aligned to daji 3.0.0; qualification scope remains explicit."
+      ]
+    },
+    "workbench_gui": {
+      "version": "3.0.0",
+      "notes": [
+        "Aligned to daji 3.0.0; qualification scope remains explicit."
+      ]
+    },
+    "installer_gui": {
+      "version": "3.0.0",
+      "notes": [
+        "Aligned to daji 3.0.0; qualification scope remains explicit."
+      ]
+    },
+    "web_api": {
+      "version": "3.0.0",
+      "notes": [
+        "Aligned to daji 3.0.0; qualification scope remains explicit."
+      ]
+    },
+    "rust_headless_sdk": {
+      "version": "3.0.0",
+      "notes": [
+        "Backend control SDK; distinct from Rust worker extensions and frontend PWDT."
+      ]
+    },
+    "python_headless_sdk": {
+      "version": "3.0.0",
+      "notes": [
+        "Backend control SDK; distinct from Rust worker extensions and frontend PWDT."
+      ]
+    },
+    "elixir_headless_sdk": {
+      "version": "3.0.0",
+      "notes": [
+        "Backend control SDK; distinct from Rust worker extensions and frontend PWDT."
+      ]
+    },
+    "rust_worker_sdk": {
+      "version": "3.0.0",
+      "notes": [
+        "Aligned to daji 3.0.0; qualification scope remains explicit."
+      ]
+    }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": [
+      "Versioned graphs and typed workflow datasets",
+      "Language-neutral TaskIR and engine execution",
+      "Persisted outcomes, lineage, and bounded recovery"
+    ]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": [
+      "Rust-only operator extensions, separate from Headless SDKs",
+      "Integrity-checked package admission and scoped numerical qualification"
+    ]
+  },
+  "desktop_artifacts": {
+    "hub_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
+    "hub_dmg": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_3.0.0_aarch64.dmg",
+    "hub_macos_manifest": "dist/macos/desktop/hub-gui/manifest.json",
+    "hub_linux_manifest": "dist/linux/desktop/hub-gui/manifest.json",
+    "hub_windows_manifest": "dist/windows/desktop/hub-gui/manifest.json",
+    "workbench_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
+    "workbench_dmg": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_3.0.0_aarch64.dmg",
+    "workbench_macos_manifest": "dist/macos/desktop/workbench-gui/manifest.json",
+    "workbench_linux_manifest": "dist/linux/desktop/workbench-gui/manifest.json",
+    "workbench_windows_manifest": "dist/windows/desktop/workbench-gui/manifest.json",
+    "installer_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
+    "installer_dmg": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Installer_3.0.0_aarch64.dmg",
+    "installer_macos_manifest": "dist/macos/desktop/installer-gui/manifest.json",
+    "installer_linux_manifest": "dist/linux/desktop/installer-gui/manifest.json",
+    "installer_windows_manifest": "dist/windows/desktop/installer-gui/manifest.json"
+  },
+  "verification": {
+    "source_revision_role": "Parent commit of the uncommitted 3.0.0 transition; not a signed release tag.",
+    "metadata_checks": {
+      "status": "passed",
+      "version_contracts": 222,
+      "mismatches": 0,
+      "language_packs": 60,
+      "docs_book": "passed",
+      "docs_inventory": "passed",
+      "organization": "passed",
+      "coverage_tensor_structure": "passed"
+    },
+    "desktop_packaging": {
+      "platform": "macos-aarch64",
+      "kind": "app",
+      "surfaces": [
+        "hub",
+        "installer",
+        "workbench"
+      ],
+      "version": "3.0.0",
+      "signature_integrity": "passed; ad-hoc signing",
+      "packaged_interactive_boot": {
+        "passed": 3,
+        "failed": 0
+      },
+      "local_report": "tmp/qualification/daji-3.0.0-macos-packaged-smoke.json",
+      "installed_in_applications": false,
+      "notarized": false,
+      "linux_and_windows": "metadata aligned; native builds not run in this transition"
+    },
+    "public_distribution": "not performed",
+    "qualification": "Historical evidence retains its original version and scope. The Daji readiness gate is not waived by this version transition.",
+    "repo_checks": [
+      "make check-version-line",
+      "make check-doc-book",
+      "make check-doc-inventory",
+      "make check-language-packs",
+      "make check-module-function-coverage-tensor",
+      "make audit-project-organization"
+    ],
+    "rust_tests": {
+      "package": "kyuubiki-script-runner",
+      "passed": 359,
+      "failed": 0,
+      "clippy": "passed with -D warnings"
+    },
+    "frontend": {
+      "production_build": "passed",
+      "typecheck": "passed",
+      "product_identity_test": "passed"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 use super::benchmark_cases;
 use crate::config::BenchmarkProfile;
-use crate::models::select_cases;
+use crate::models::{BenchmarkWorkload, select_cases};
 use crate::runner_preconditioner::{effective_preconditioner, preconditioner_selection_reason};
 
 #[test]
@@ -40,9 +40,64 @@ fn solver_preconditioner_all_expands_truss_cases() {
 }
 
 #[test]
+fn solver_preconditioner_all_runs_non_configurable_cases_once() {
+    let cases = benchmark_cases(BenchmarkProfile::Medium, "extended-physics");
+    let selected = cases
+        .iter()
+        .filter(|case| case.id == "stokes-plane-quad-medium")
+        .collect::<Vec<_>>();
+    let report = crate::runner::build_report(
+        &selected,
+        1,
+        BenchmarkProfile::Medium,
+        "extended-physics",
+        "all",
+    );
+
+    assert_eq!(report.cases.len(), 1);
+    assert_eq!(report.cases[0].id, "stokes-plane-quad-medium");
+    assert_eq!(report.cases[0].solver_preconditioner, None);
+    assert_eq!(
+        report.cases[0].solver_preconditioner_reason.as_deref(),
+        Some("not-applicable")
+    );
+}
+
+#[test]
+fn failed_preconditioner_variants_keep_their_identity() {
+    let cases = benchmark_cases(BenchmarkProfile::Medium, "extended-physics");
+    let mut case = cases
+        .into_iter()
+        .find(|case| case.id == "heat-plane-triangle-medium")
+        .expect("heat plane triangle case should exist");
+    let BenchmarkWorkload::HeatPlaneTriangle2d(request) = &mut case.workload else {
+        unreachable!("selected case should carry a heat triangle request")
+    };
+    request.nodes.clear();
+    let report = crate::runner::build_report(
+        &[&case],
+        1,
+        BenchmarkProfile::Medium,
+        "extended-physics",
+        "all",
+    );
+
+    assert_eq!(report.cases.len(), 3);
+    assert!(report.cases.iter().all(|result| !result.ok));
+    assert!(report.cases.iter().all(|result| result.id.contains('#')));
+    assert!(
+        report
+            .cases
+            .iter()
+            .all(|result| result.solver_preconditioner.is_some())
+    );
+}
+
+#[test]
 fn solver_preconditioner_auto_uses_evidence_backed_iterative_strategies() {
     for (matrix, case_id) in [
         ("thermal-structural", "thermal-plane-quad-medium"),
+        ("thermal-structural", "thermal-truss-2d-medium"),
         ("thermal-core", "heat-plane-quad-medium"),
         ("mechanical-core", "truss-roof-medium"),
         ("mechanical-core", "plane-panel-medium"),
@@ -84,8 +139,30 @@ fn solver_preconditioner_auto_uses_evidence_backed_iterative_strategies() {
 }
 
 #[test]
+fn heat_triangle_benchmark_honors_explicit_preconditioner() {
+    let cases = benchmark_cases(BenchmarkProfile::Medium, "extended-physics");
+    let selected = cases
+        .iter()
+        .filter(|case| case.id == "heat-plane-triangle-medium")
+        .collect::<Vec<_>>();
+    let report = crate::runner::build_report(
+        &selected,
+        1,
+        BenchmarkProfile::Medium,
+        "extended-physics",
+        "ic0",
+    );
+
+    assert_eq!(report.cases.len(), 1);
+    assert_eq!(
+        report.cases[0].solver_preconditioner.as_deref(),
+        Some("ic0")
+    );
+}
+
+#[test]
 #[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
-fn thermal_quad_auto_uses_ic0_only_at_the_validated_scale() {
+fn thermal_quad_auto_uses_ic0_at_the_validated_scale() {
     let medium = benchmark_cases(BenchmarkProfile::Medium, "thermal-structural");
     let medium_quad = medium
         .iter()
@@ -100,11 +177,11 @@ fn thermal_quad_auto_uses_ic0_only_at_the_validated_scale() {
         "auto-iterative-sgs"
     );
 
-    let one_million = benchmark_cases(BenchmarkProfile::OneMillion, "thermal-structural");
-    let large_quad = one_million
+    let hundred_thousand = benchmark_cases(BenchmarkProfile::HundredK, "thermal-structural");
+    let large_quad = hundred_thousand
         .iter()
-        .find(|case| case.id == "thermal-plane-quad-1m")
-        .expect("one-million thermal-plane quad case");
+        .find(|case| case.id == "thermal-plane-quad-100k")
+        .expect("hundred-thousand thermal-plane quad case");
     assert_eq!(effective_preconditioner(large_quad, "auto"), "ic0");
     assert_eq!(
         preconditioner_selection_reason(large_quad, "auto"),
@@ -178,13 +255,41 @@ fn one_million_thermal_truss_auto_uses_ic0() {
 
 #[test]
 #[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
-fn one_million_frame_cases_auto_use_ic0() {
-    let cases = benchmark_cases(BenchmarkProfile::OneMillion, "thermal-structural");
-    for (case_id, reason) in [
-        ("frame-2d-1m", "auto-large-frame-2d-ic0"),
-        ("frame-3d-1m", "auto-large-frame-3d-ic0"),
-        ("thermal-frame-2d-1m", "auto-large-thermal-frame-2d-ic0"),
-        ("thermal-frame-3d-1m", "auto-large-thermal-frame-3d-ic0"),
+fn hundred_thousand_thermal_truss_3d_auto_uses_ic0() {
+    let cases = benchmark_cases(BenchmarkProfile::HundredK, "thermal-structural");
+    let truss = cases
+        .iter()
+        .find(|case| case.id == "thermal-truss-3d-100k")
+        .expect("hundred-thousand thermal 3d truss case");
+
+    assert_eq!(effective_preconditioner(truss, "auto"), "ic0");
+    assert_eq!(
+        preconditioner_selection_reason(truss, "auto"),
+        "auto-thermal-truss-3d-ic0"
+    );
+}
+
+#[test]
+#[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
+fn hundred_thousand_plane_cases_auto_use_ic0() {
+    let mechanical = benchmark_cases(BenchmarkProfile::HundredK, "mechanical-core");
+    let thermal = benchmark_cases(BenchmarkProfile::HundredK, "thermal-structural");
+    for (cases, case_id, reason) in [
+        (
+            &mechanical,
+            "plane-panel-100k",
+            "auto-large-plane-triangle-ic0",
+        ),
+        (
+            &mechanical,
+            "plane-quad-panel-100k",
+            "auto-large-plane-quad-ic0",
+        ),
+        (
+            &thermal,
+            "thermal-plane-quad-100k",
+            "auto-large-thermal-plane-quad-ic0",
+        ),
     ] {
         let case = cases
             .iter()
@@ -197,7 +302,64 @@ fn one_million_frame_cases_auto_use_ic0() {
 
 #[test]
 #[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
-fn case_selection_uses_exact_ids() {
+fn hundred_thousand_electromagnetic_planes_use_validated_preconditioners() {
+    let cases = benchmark_cases(BenchmarkProfile::HundredK, "extended-physics");
+    for (case_id, reason) in [
+        (
+            "magnetostatic-plane-triangle-100k",
+            "auto-magnetostatic-plane-triangle-ic0",
+        ),
+        (
+            "magnetostatic-plane-quad-100k",
+            "auto-magnetostatic-plane-quad-ic0",
+        ),
+    ] {
+        let case = cases
+            .iter()
+            .find(|case| case.id == case_id)
+            .unwrap_or_else(|| panic!("{case_id} should exist"));
+        assert_eq!(effective_preconditioner(case, "auto"), "ic0");
+        assert_eq!(preconditioner_selection_reason(case, "auto"), reason);
+    }
+
+    let electric = cases
+        .iter()
+        .find(|case| case.id == "electric-conduction-plane-quad-100k")
+        .expect("electric conduction case should exist");
+    assert_eq!(effective_preconditioner(electric, "auto"), "jacobi");
+    assert_eq!(preconditioner_selection_reason(electric, "auto"), "auto-jacobi");
+}
+
+#[test]
+#[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
+fn one_million_frame_cases_use_validated_preconditioners() {
+    let cases = benchmark_cases(BenchmarkProfile::OneMillion, "thermal-structural");
+    for (case_id, preconditioner, reason) in [
+        ("frame-2d-1m", "jacobi", "auto-jacobi"),
+        ("frame-3d-1m", "jacobi", "auto-jacobi"),
+        (
+            "thermal-frame-2d-1m",
+            "symmetric-gauss-seidel",
+            "auto-large-thermal-frame-2d-sgs",
+        ),
+        (
+            "thermal-frame-3d-1m",
+            "symmetric-gauss-seidel",
+            "auto-large-thermal-frame-3d-sgs",
+        ),
+    ] {
+        let case = cases
+            .iter()
+            .find(|case| case.id == case_id)
+            .unwrap_or_else(|| panic!("{case_id} should exist"));
+        assert_eq!(effective_preconditioner(case, "auto"), preconditioner);
+        assert_eq!(preconditioner_selection_reason(case, "auto"), reason);
+    }
+}
+
+#[test]
+#[ignore = "large-scale workload generation runs in test-rust-scale-profiles"]
+fn case_selection_accepts_full_ids_at_scale() {
     let cases = benchmark_cases(BenchmarkProfile::OneMillion, "thermal-structural");
     let selected = select_cases(&cases, Some("frame-2d-1m"));
 

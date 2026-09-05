@@ -50,9 +50,9 @@ fn audit(root: &Path) -> RunnerResult<Vec<String>> {
             "UI automation contract must remain product-owned and non-user-extensible".to_string(),
         );
     }
-    if contract.get("contractVersion").and_then(Value::as_i64) != Some(1) {
+    if contract.get("contractVersion").and_then(Value::as_i64) != Some(2) {
         issues.push(format!(
-            "expected contractVersion 1, got {}",
+            "expected contractVersion 2, got {}",
             contract
                 .get("contractVersion")
                 .cloned()
@@ -82,7 +82,7 @@ fn audit(root: &Path) -> RunnerResult<Vec<String>> {
         &mut issues,
         TS_CONTRACT_PATH,
         &ts_contract,
-        "WORKBENCH_UI_AUTOMATION_CONTRACT_VERSION = 1",
+        "WORKBENCH_UI_AUTOMATION_CONTRACT_VERSION = 2",
         "matching contract version",
     );
 
@@ -133,7 +133,7 @@ fn run_self_test() -> RunnerResult<()> {
         "name": "Kyuubiki Workbench UI Automation Contract",
         "productOwned": true,
         "userExtensible": false,
-        "contractVersion": 1,
+        "contractVersion": 2,
         "selectors": selectors,
         "rules": [
             "Automation must target stable data-* selectors.",
@@ -143,7 +143,7 @@ fn run_self_test() -> RunnerResult<()> {
     if contract
         .pointer("/selectors/railButton(section)")
         .and_then(Value::as_str)
-        != Some("workbench-rail:${section}")
+        != Some("[aria-label=\"workbench-rail:${section}\"]")
     {
         return Err("self-test selector lookup failed".to_string());
     }
@@ -181,7 +181,7 @@ fn required_selectors() -> Vec<RequiredSelector> {
         ),
         RequiredSelector::with_ts(
             "railButton(section)",
-            "workbench-rail:${section}",
+            "[aria-label=\"workbench-rail:${section}\"]",
             "workbench-rail:",
             &["apps/frontend/src/components/workbench/workbench-app-rail.tsx"],
             "workbench-rail:",
@@ -192,25 +192,70 @@ fn required_selectors() -> Vec<RequiredSelector> {
             &["apps/frontend/src/components/workbench/workbench-main-shell-mount.tsx"],
             "data-workbench-state=\"loaded-model\"",
         ),
+        RequiredSelector::new(
+            "modelPanel",
+            "[data-workbench-model=\"panel\"]",
+            &["apps/frontend/src/components/workbench/model/workbench-model-sidebar.tsx"],
+            "data-workbench-model=\"panel\"",
+        ),
+        RequiredSelector::with_ts(
+            "modelTab(tab)",
+            "[data-workbench-model-tab=\"${tab}\"]",
+            "modelTab:",
+            &["apps/frontend/src/components/workbench/model/workbench-model-sidebar.tsx"],
+            "data-workbench-model-tab",
+        ),
+        RequiredSelector::with_ts(
+            "modelToolsPage(page)",
+            "[data-workbench-model-tools-page=\"${page}\"]",
+            "modelToolsPage:",
+            &["apps/frontend/src/components/workbench/model/workbench-model-sidebar.tsx"],
+            "data-workbench-model-tools-page",
+        ),
+        RequiredSelector::new(
+            "modelStudyPanel",
+            "[data-workbench-model-study=\"panel\"]",
+            &["apps/frontend/src/components/workbench/workbench-model-content.tsx"],
+            "data-workbench-model-study=\"panel\"",
+        ),
+        RequiredSelector::with_ts(
+            "modelStudyDomain(domain)",
+            "[data-workbench-model-study-domain=\"${domain}\"]",
+            "modelStudyDomain:",
+            &["apps/frontend/src/components/workbench/workbench-model-content.tsx"],
+            "data-workbench-model-study-domain",
+        ),
+        RequiredSelector::new(
+            "modelStudyKind",
+            "[data-workbench-model-study-kind=\"select\"]",
+            &["apps/frontend/src/components/workbench/workbench-model-content.tsx"],
+            "data-workbench-model-study-kind=\"select\"",
+        ),
+        RequiredSelector::new(
+            "modelStudyRun",
+            "[data-workbench-model-study-run=\"true\"]",
+            &["apps/frontend/src/components/workbench/workbench-model-content.tsx"],
+            "data-workbench-model-study-run=\"true\"",
+        ),
         RequiredSelector::with_ts(
             "libraryTab(tab)",
-            "workbench-library-tab:${tab}",
-            "workbench-library-tab:",
+            "[data-workbench-library-tab=\"${tab}\"]",
+            "libraryTab:",
             &["apps/frontend/src/components/workbench/library/workbench-library-sidebar.tsx"],
-            "workbench-library-tab:",
+            "data-workbench-library-tab",
         ),
         RequiredSelector::with_ts(
             "sampleDomain(domain)",
-            "workbench-sample-domain:${domain}",
+            "[aria-label=\"workbench-sample-domain:${domain}\"]",
             "workbench-sample-domain:",
-            &["apps/frontend/src/components/workbench/library/workbench-library-sidebar.tsx"],
+            &["apps/frontend/src/components/workbench/library/workbench-library-samples-panel.tsx"],
             "workbench-sample-domain:",
         ),
         RequiredSelector::with_ts(
             "sample(sampleId)",
-            "workbench-sample:${sampleId}",
+            "[aria-label=\"workbench-sample:${sampleId}\"]",
             "workbench-sample:",
-            &["apps/frontend/src/components/workbench/library/workbench-library-sidebar.tsx"],
+            &["apps/frontend/src/components/workbench/library/workbench-library-samples-panel.tsx"],
             "workbench-sample:",
         ),
         RequiredSelector::with_ts(

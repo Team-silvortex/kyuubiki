@@ -1,13 +1,14 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Cross-shell desktop UI qualification evidence covering observable actions, capability routing, PWDT parity, layout priority, reversible navigation, and regression panels.",
+  "summary": "Cross-shell desktop UI qualification evidence covering observable actions, capability routing, PWDT parity, layout priority, reversible navigation, live Workbench chunk mounting, controlled Model, System, and Library navigation, stateful Library project and Data record lifecycles, topology snapshot round trips, direct Store GUI command closure, Workflow catalog and graph execution, topology mutation, no-click PWDT navigation, and persisted-session recovery.",
   "paradigm_contract_evidence": {
     "validation": [
       {
         "id": "desktop-ui-validation-contract",
         "modules": [
-          "desktop-shared-ui"
+          "desktop-shared-ui",
+          "workbench-shell"
         ],
         "files": [
           "config/architecture/desktop-ui-validation.json",
@@ -20,6 +21,10 @@
           "tests/integration/desktop-gui-layout-priority.test.mjs",
           "tests/integration/desktop-gui-navigation-closure.test.mjs",
           "tests/integration/desktop-shell-regression.test.mjs",
+          "tests/integration/workbench-ui-data-library-actions.test.mjs",
+          "tests/integration/workbench-ui-functional-closure.test.mjs",
+          "tests/integration/workbench-ui-workflow-builder-actions.test.mjs",
+          "tests/integration/workbench-ui-workflow-invocation.test.mjs",
           "tests/integration/workbench-shell-regression.test.mjs"
         ],
         "required_text": [
@@ -31,7 +36,22 @@
           "every required desktop capability closes UI, route, native, and result layers",
           "capabilities that promise PWDT parity are catalogued and executable",
           "desktop shell layout keeps operational workspaces dominant",
-          "desktop primary navigation forms a reversible non-empty loop"
+          "desktop primary navigation forms a reversible non-empty loop",
+          "Workbench rail mounts every declared sidebar chunk without client errors",
+          "Workbench Library GUI creates, updates, exports, and deletes a project",
+          "Workbench Data GUI updates, exports, and deletes Job and Result records",
+          "Workbench System exports, imports, inspects, and resets a topology snapshot",
+          "Workbench Store GUI stages, exports, removes, and restores an asset action",
+          "Workbench workflow catalog runs a visible entry directly to completion",
+          "Workbench isolated workflow UI promotes and runs a valid graph draft",
+          "Workbench workflow builder mutates topology and inserts a control-flow plane",
+          "Workbench Model navigation and Pwdt study alias preserve the complete workspace path",
+          "Workbench System navigation preserves controlled state across deep page round trips",
+          "Workbench Library navigation mounts every primary and secondary page without client errors",
+          "Workbench Store ignores stale responses after the active kind changes",
+          "Workbench Pwdt stages, exports, and removes Store assets through shared commands",
+          "Workbench Pwdt opens Store and round-trips every Workflow surface without DOM clicks",
+          "Workbench Pwdt preserves hydrated script and DSL sessions"
         ]
       },
       {
@@ -48,7 +68,8 @@
           "tests/integration/desktop-gui-capability-closure.test.mjs",
           "tests/integration/desktop-gui-layout-priority.test.mjs",
           "tests/integration/desktop-gui-navigation-closure.test.mjs",
-          "tests/integration/desktop-shell-regression.test.mjs"
+          "tests/integration/desktop-shell-regression.test.mjs",
+          "tests/integration/workbench-ui-workflow-invocation.test.mjs"
         ],
         "required_text": [
           "kyuubiki.desktop-ui-validation-contract/v1",
@@ -69,7 +90,8 @@
       "status": "proven",
       "grade": "qualified",
       "modules": [
-        "desktop-shared-ui"
+        "desktop-shared-ui",
+        "workbench-shell"
       ],
       "paradigms": [
         "validation"
@@ -80,20 +102,35 @@
         "ux_closure"
       ],
       "files": [
-        "releases/usability-evidence/2.12.6/desktop-ui-validation-qualification.json"
+        "releases/usability-evidence/2.18.3/desktop-ui-validation-qualification.json"
       ],
       "required_text": [
         "\"status\": \"pass\"",
-        "\"tests\": 21",
-        "\"passed\": 21",
+        "\"tests\": 40",
+        "\"passed\": 40",
         "\"failed_actions\": 0",
         "\"missing_actions\": 0",
         "\"actions\": 43",
-        "\"actions\": 52",
+        "\"actions\": 53",
         "\"actions\": 7",
         "\"id\": \"deployment-update-closure\"",
         "\"id\": \"pwdt-parity\"",
-        "\"id\": \"navigation-closure\""
+        "\"id\": \"navigation-closure\"",
+        "\"id\": \"workbench-interaction-closure\"",
+        "\"id\": \"workbench-library-project-lifecycle-closure\"",
+        "\"id\": \"workbench-data-record-lifecycle-closure\"",
+        "\"id\": \"workbench-system-snapshot-closure\"",
+        "\"id\": \"workbench-store-gui-command-closure\"",
+        "\"id\": \"workbench-workflow-catalog-run-closure\"",
+        "\"id\": \"workbench-workflow-graph-run-closure\"",
+        "\"id\": \"workbench-workflow-topology-mutation-closure\"",
+        "\"id\": \"workbench-model-navigation-closure\"",
+        "\"id\": \"workbench-system-navigation-closure\"",
+        "\"id\": \"workbench-library-navigation-closure\"",
+        "\"id\": \"workbench-store-request-ownership\"",
+        "\"id\": \"workbench-pwdt-store-command-closure\"",
+        "\"id\": \"workbench-pwdt-store-workflow-navigation-closure\"",
+        "\"id\": \"workbench-pwdt-session-recovery\""
       ]
     },
     {
@@ -119,7 +156,8 @@
         "tests/integration/desktop-gui-layout-priority.test.mjs",
         "tests/integration/desktop-gui-navigation-closure.test.mjs",
         "tests/integration/desktop-shell-regression.test.mjs",
-        "releases/usability-evidence/2.15.0/desktop-ui-validation-qualification.json"
+        "tests/integration/workbench-ui-workflow-invocation.test.mjs",
+        "releases/usability-evidence/2.18.3/desktop-ui-validation-qualification.json"
       ],
       "required_text": [
         "\"status\": \"pass\"",

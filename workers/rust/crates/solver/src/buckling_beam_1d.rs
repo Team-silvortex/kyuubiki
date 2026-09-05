@@ -5,12 +5,24 @@ use kyuubiki_protocol::{
     BUCKLING_MODE_CLUSTER_RELATIVE_TOLERANCE, BucklingBeam1dModeResult, SolveBucklingBeam1dRequest,
     SolveBucklingBeam1dResult,
 };
-use std::collections::HashSet;
+use std::{borrow::Cow, collections::HashSet};
 
 pub fn solve_buckling_beam_1d(
     request: &SolveBucklingBeam1dRequest,
 ) -> Result<SolveBucklingBeam1dResult, String> {
-    validate(request)?;
+    solve_buckling_beam_1d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_buckling_beam_1d_owned(
+    request: SolveBucklingBeam1dRequest,
+) -> Result<SolveBucklingBeam1dResult, String> {
+    solve_buckling_beam_1d_internal(Cow::Owned(request))
+}
+
+fn solve_buckling_beam_1d_internal(
+    request: Cow<'_, SolveBucklingBeam1dRequest>,
+) -> Result<SolveBucklingBeam1dResult, String> {
+    validate(request.as_ref())?;
     let dof_count = request.nodes.len() * 2;
     let mut elastic = SparseMatrix::new(dof_count);
     let mut geometric = SparseMatrix::new(dof_count);
@@ -44,7 +56,7 @@ pub fn solve_buckling_beam_1d(
         }
     }
 
-    let constrained = constrained_dofs(request);
+    let constrained = constrained_dofs(request.as_ref());
     let zero_rhs = vec![0.0; dof_count];
     let (reduced_elastic, _, free_dofs) = reduce_sparse_system(&elastic, &zero_rhs, &constrained);
     let (reduced_geometric, _, geometric_free_dofs) =
@@ -79,7 +91,7 @@ pub fn solve_buckling_beam_1d(
         return Err("buckling beam 1d did not produce a positive finite mode".to_string());
     }
     Ok(SolveBucklingBeam1dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         minimum_load_factor: modes[0].load_factor,
         modes,
         free_dofs,

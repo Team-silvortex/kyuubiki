@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
+import { KYUUBIKI_PRODUCT_VERSION_LABEL } from "@/lib/product-version";
 
 export const metadata: Metadata = {
-  title: "Workbench Window Protection | moxi 2.0.0",
-  description: "Responsive protection rules for the built-in moxi workbench shell.",
+  title: `Workbench Window Protection | ${KYUUBIKI_PRODUCT_VERSION_LABEL}`,
+  description: "Responsive protection rules for the built-in daji workbench shell.",
 };
 
 const LAYERS = [
@@ -95,12 +96,12 @@ export default function WorkbenchWindowProtectionPage() {
   return (
     <main style={mainStyle}>
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
-        <p style={eyebrowStyle}>moxi 2.0.0</p>
+        <p style={eyebrowStyle}>{KYUUBIKI_PRODUCT_VERSION_LABEL}</p>
         <h1 style={{ fontSize: "clamp(2rem, 4vw, 3.4rem)", margin: "0 0 12px" }}>
           Workbench Window Protection
         </h1>
         <p style={copyStyle}>
-          The moxi workbench now treats narrow layouts as a first-class architectural concern.
+          The daji workbench now treats narrow layouts as a first-class architectural concern.
           The goal is not merely to avoid overlap. The goal is to preserve the built-in automation-safe
           UI while the window shrinks, panels reflow, and low-priority information yields in a
           predictable order.

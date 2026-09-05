@@ -31,7 +31,7 @@ export function mountIntegrityPanel() {
           <ul class="integrity-policy-list">
             <li>All platforms use the same repo-local runtime roots: \`tmp/\`, \`dist/\`, and \`releases/\`.</li>
             <li>User data and environment config are preserved during repair; only removable residue is cleaned.</li>
-            <li>Desktop shells, release manifests, and runtime layout must stay version-aligned to \`moxi 2.0.0\`.</li>
+            <li>Desktop shells, release manifests, and runtime layout must stay aligned to the active release contract.</li>
           </ul>
           <p id="integrity-policy-copy">Repair only clears known cache noise and stale runtime artifacts, so the install surface stays deterministic.</p>
         </article>
@@ -246,7 +246,7 @@ export function renderIntegrityReport(report, brandConfig = null) {
 
   const headline =
     issues.length === 0
-      ? `Standard install contract is healthy for moxi ${releaseVersion}.`
+      ? `Standard install contract is healthy for daji ${releaseVersion}.`
       : `${issues.length} integrity issue${issues.length === 1 ? "" : "s"} need attention.`;
 
   const policyText =

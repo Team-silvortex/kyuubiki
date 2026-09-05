@@ -18,8 +18,24 @@ function createFakeRuntimeClient(calls: string[]): RuntimeApiClient {
       calls.push(`delete:${jobId}`);
       return { deleted: true, job: { id: jobId } } as never;
     },
-    fetchAssetStore: async () => ({ entries: [] }) as never,
-    fetchAssetStoreEntry: async () => ({ entry: null }) as never,
+    fetchAssetStore: async (query) => {
+      calls.push(`store:${query?.kind ?? "all"}`);
+      return { entries: [], sources: [], summary: { entry_count: 0, kinds: {}, sources: {} } } as never;
+    },
+    fetchAssetStoreEntry: async (kind, entryId) => {
+      calls.push(`store-entry:${kind}:${entryId}`);
+      return {
+        entry: {
+          id: entryId,
+          kind,
+          title: "Store entry",
+          source_id: "test",
+          source_kind: "builtin",
+          tags: [],
+          install: { mode: "stage", requires_download: false },
+        },
+      } as never;
+    },
     fetchAssetStoreSources: async () => ({ sources: [] }) as never,
     fetchDirectMeshAgents: async () => ({ agents: [], discovery: "test", endpoint_count: 0 }) as never,
     fetchHealth: async () => {
@@ -64,9 +80,20 @@ test("runtime-backed service composer routes services through one runtime client
   });
   await services.jobHistory.fetchHistory();
   await services.workflow.fetchCatalog();
+  await services.store.fetchCatalog({ kind: "operator" });
+  await services.store.fetchEntry("operator", "solve.bar_1d");
   await services.workflow.submitWorkflow({ workflowId: "wf-a", inputArtifacts: {} });
   await services.adminData.fetchJob("job-a");
   await services.studyRun.fetchJob("job-b");
 
-  assert.deepEqual(calls, ["health", "history", "catalog", "workflow:wf-a", "job:job-a", "job:job-b"]);
+  assert.deepEqual(calls, [
+    "health",
+    "history",
+    "catalog",
+    "store:operator",
+    "store-entry:operator:solve.bar_1d",
+    "workflow:wf-a",
+    "job:job-a",
+    "job:job-b",
+  ]);
 });

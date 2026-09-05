@@ -8,17 +8,22 @@ use kyuubiki_protocol::{
 };
 use kyuubiki_solver::{
     SpdSolveOptions, profile_heat_plane_quad_2d_with_options, profile_truss_2d_with_options,
-    solve_beam_1d_with_options, solve_thermal_beam_1d_with_options,
+    solve_beam_1d_with_options, solve_heat_plane_triangle_2d_with_options,
+    solve_thermal_beam_1d_with_options,
 };
 
 use crate::models::{
     BenchmarkCase, BenchmarkMemoryStage, BenchmarkReport, BenchmarkResult, BenchmarkWorkload,
+    SHARED_PROCESS_RSS_SCOPE,
 };
+use crate::runner_dynamic::run_dynamic_workload;
+use crate::runner_electromagnetic::run_electromagnetic_workload;
 use crate::runner_hotspot::summarize_hotspot;
-use crate::runner_metrics::apply_metrics;
+use crate::runner_interface::run_interface_workload;
+use crate::runner_metrics::{aggregate_memory_stage_runs, apply_metrics};
 use crate::runner_preconditioner::{
     effective_preconditioner, parse_preconditioner, preconditioner_comparisons,
-    preconditioner_selection_reason, solver_preconditioners,
+    preconditioner_selection_reason, solver_preconditioners, supports_solver_preconditioner,
 };
 use crate::runner_progress::{print_case_done, print_case_start};
 use crate::runner_shape::workload_shape;
@@ -50,12 +55,12 @@ pub(crate) fn build_report_with_progress(
     solver_preconditioner: &str,
     progress: bool,
 ) -> BenchmarkReport {
-    let preconditioners = solver_preconditioners(solver_preconditioner);
-    let tag_results = preconditioners.len() > 1;
     let cases = selected
         .iter()
         .flat_map(|case| {
-            preconditioners.iter().map(move |preconditioner| {
+            let preconditioners = solver_preconditioners(case, solver_preconditioner);
+            let tag_results = preconditioners.len() > 1;
+            preconditioners.into_iter().map(move |preconditioner| {
                 let effective_preconditioner = effective_preconditioner(case, preconditioner);
                 let selection_reason = preconditioner_selection_reason(case, preconditioner);
                 if progress {
@@ -64,7 +69,12 @@ pub(crate) fn build_report_with_progress(
                 let mut result =
                     run_case_with_preconditioner(case, repeat, effective_preconditioner, progress);
                 result.solver_preconditioner_reason = Some(selection_reason.to_string());
-                if tag_results && result.solver_preconditioner.is_some() {
+                if supports_solver_preconditioner(case) {
+                    result
+                        .solver_preconditioner
+                        .get_or_insert_with(|| effective_preconditioner.to_string());
+                }
+                if tag_results {
                     result.id = format!("{}#{}", result.id, effective_preconditioner);
                 }
                 if progress {
@@ -80,6 +90,7 @@ pub(crate) fn build_report_with_progress(
         profile,
         matrix: matrix.to_string(),
         generated_at_unix_s: unix_timestamp(),
+        rss_scope: SHARED_PROCESS_RSS_SCOPE.to_string(),
         preconditioner_comparisons: preconditioner_comparisons(&cases),
         cases,
     }
@@ -98,10 +109,12 @@ pub(crate) fn run_case_with_preconditioner(
 ) -> BenchmarkResult {
     let mut durations = Vec::with_capacity(repeat);
     let (mut node_count, mut element_count, mut dof_count) = workload_shape(&case.workload);
+    let mut history_step_count = None;
     let mut max_displacement = 0.0;
     let mut max_stress = 0.0;
     let mut peak_rss_kib = current_peak_rss_kib();
     let mut memory_stages = Vec::new();
+    let mut memory_stage_runs = Vec::with_capacity(repeat);
     let mut solver_iterations = None;
     let mut solver_matrix_non_zero_count = None;
     let mut solver_residual_norm = None;
@@ -110,15 +123,22 @@ pub(crate) fn run_case_with_preconditioner(
 
     for _ in 0..repeat {
         let started = Instant::now();
-        let outcome = if let Some(outcome) =
-            run_thermal_structural_workload(&case.workload, solver_preconditioner, progress)
-        {
+        let delegated = run_interface_workload(&case.workload)
+            .or_else(|| run_dynamic_workload(&case.workload))
+            .or_else(|| {
+                run_thermal_structural_workload(&case.workload, solver_preconditioner, progress)
+            })
+            .or_else(|| {
+                run_electromagnetic_workload(&case.workload, solver_preconditioner, progress)
+            });
+        let outcome = if let Some(outcome) = delegated {
             outcome.map(|metrics| {
                 apply_metrics(
                     metrics,
                     &mut node_count,
                     &mut element_count,
                     &mut dof_count,
+                    &mut history_step_count,
                     &mut max_displacement,
                     &mut max_stress,
                     &mut memory_stages,
@@ -528,73 +548,19 @@ pub(crate) fn run_case_with_preconditioner(
                     })
                 }
                 BenchmarkWorkload::HeatPlaneTriangle2d(request) => {
-                    solve(EngineSolveRequest::HeatPlaneTriangle2d(request.clone())).map(|result| {
-                        let AnalysisResult::HeatPlaneTriangle2d(result) = result else {
-                            unreachable!("heat triangle solve should return heat result")
-                        };
+                    let options = SpdSolveOptions {
+                        preconditioner: parse_preconditioner(solver_preconditioner),
+                        progress_interval: progress.then_some(256),
+                    };
+                    solve_heat_plane_triangle_2d_with_options(request, options).map(|result| {
                         node_count = result.nodes.len();
                         element_count = result.elements.len();
                         dof_count = result.nodes.len();
                         max_displacement = result.max_temperature;
                         max_stress = result.max_heat_flux;
+                        solver_preconditioner_name = Some(solver_preconditioner.to_string());
                     })
                 }
-                BenchmarkWorkload::ElectrostaticPlaneTriangle2d(request) => solve(
-                    EngineSolveRequest::ElectrostaticPlaneTriangle2d(request.clone()),
-                )
-                .map(|result| {
-                    let AnalysisResult::ElectrostaticPlaneTriangle2d(result) = result else {
-                        unreachable!(
-                            "electrostatic triangle solve should return electrostatic result"
-                        )
-                    };
-                    node_count = result.nodes.len();
-                    element_count = result.elements.len();
-                    dof_count = result.nodes.len();
-                    max_displacement = result.max_potential;
-                    max_stress = result.max_electric_field;
-                }),
-                BenchmarkWorkload::ElectrostaticPlaneQuad2d(request) => solve(
-                    EngineSolveRequest::ElectrostaticPlaneQuad2d(request.clone()),
-                )
-                .map(|result| {
-                    let AnalysisResult::ElectrostaticPlaneQuad2d(result) = result else {
-                        unreachable!("electrostatic quad solve should return electrostatic result")
-                    };
-                    node_count = result.nodes.len();
-                    element_count = result.elements.len();
-                    dof_count = result.nodes.len();
-                    max_displacement = result.max_potential;
-                    max_stress = result.max_electric_field;
-                }),
-                BenchmarkWorkload::MagnetostaticPlaneTriangle2d(request) => solve(
-                    EngineSolveRequest::MagnetostaticPlaneTriangle2d(request.clone()),
-                )
-                .map(|result| {
-                    let AnalysisResult::MagnetostaticPlaneTriangle2d(result) = result else {
-                        unreachable!(
-                            "magnetostatic triangle solve should return magnetostatic result"
-                        )
-                    };
-                    node_count = result.nodes.len();
-                    element_count = result.elements.len();
-                    dof_count = result.nodes.len();
-                    max_displacement = result.max_vector_potential;
-                    max_stress = result.max_magnetic_field_strength;
-                }),
-                BenchmarkWorkload::MagnetostaticPlaneQuad2d(request) => solve(
-                    EngineSolveRequest::MagnetostaticPlaneQuad2d(request.clone()),
-                )
-                .map(|result| {
-                    let AnalysisResult::MagnetostaticPlaneQuad2d(result) = result else {
-                        unreachable!("magnetostatic quad solve should return magnetostatic result")
-                    };
-                    node_count = result.nodes.len();
-                    element_count = result.elements.len();
-                    dof_count = result.nodes.len();
-                    max_displacement = result.max_vector_potential;
-                    max_stress = result.max_magnetic_field_strength;
-                }),
                 BenchmarkWorkload::StokesFlowPlaneQuad2d(request) => solve(
                     EngineSolveRequest::StokesFlowPlaneQuad2d(request.clone()),
                 )
@@ -707,7 +673,7 @@ pub(crate) fn run_case_with_preconditioner(
                             Ok(())
                         })
                 }
-                _ => unreachable!("thermal structural workloads are handled before main dispatch"),
+                _ => unreachable!("delegated workloads are handled before main dispatch"),
             }
         };
 
@@ -717,6 +683,8 @@ pub(crate) fn run_case_with_preconditioner(
         if let Err(message) = outcome {
             error = Some(message);
             break;
+        } else if !memory_stages.is_empty() {
+            memory_stage_runs.push(std::mem::take(&mut memory_stages));
         }
     }
 
@@ -731,6 +699,7 @@ pub(crate) fn run_case_with_preconditioner(
         durations.iter().copied().sum::<f64>() / durations.len() as f64
     };
     let median_ms = percentile(&sorted, 0.5);
+    let memory_stages = aggregate_memory_stage_runs(&memory_stage_runs);
     let hotspot = summarize_hotspot(&memory_stages, median_ms);
 
     BenchmarkResult {
@@ -747,6 +716,7 @@ pub(crate) fn run_case_with_preconditioner(
         dof_count,
         node_count,
         element_count,
+        history_step_count,
         peak_rss_kib,
         memory_stages,
         solver_iterations,

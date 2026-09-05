@@ -1,14 +1,15 @@
 defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
   @moduledoc """
-  Local executor for the operator task IR contract.
+  Orchestra executor for the operator task IR contract.
 
-  Rust agents can implement the same dispatch contract behind
-  `run_operator_task_ir`; this module keeps Elixir-side tests executable.
+  Locally implemented operators remain in-process, while centrally managed
+  packages cross the Rust Agent `run_operator_task_ir` boundary.
   """
 
   alias KyuubikiWeb.Orchestra.OperatorTaskBatchRun
   alias KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary
   alias KyuubikiWeb.Orchestra.OperatorTaskReadiness
+  alias KyuubikiWeb.Playground.AgentClient
   alias KyuubikiWeb.WorkflowOperatorRuntime
 
   @schema_version "kyuubiki.operator-task-ir/v1"
@@ -20,15 +21,35 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
   @spec execute(map()) :: {:ok, map()} | {:error, term()}
   def execute(%{"schema_version" => @schema_version} = task_ir) do
     with :ok <- OperatorTaskExecutionSummary.validate_digest(task_ir),
-         {:ok, summary} <- OperatorTaskExecutionSummary.build(task_ir),
-         {:ok, input} <- input_artifact(task_ir),
+         {:ok, summary} <- OperatorTaskExecutionSummary.build(task_ir) do
+      execute_verified(task_ir, summary)
+    end
+  end
+
+  def execute(_task_ir), do: {:error, :invalid_operator_task_ir}
+
+  defp execute_verified(
+         task_ir,
+         %{
+           "execution_mode" => "orchestra_fetch",
+           "agent_fetchable" => true,
+           "package_version" => package_version
+         }
+       )
+       when package_version not in [nil, "", "library-managed"] do
+    AgentClient.run_operator_task_ir(task_ir,
+      mode: :execute,
+      job_id: Map.get(task_ir, "task_id")
+    )
+  end
+
+  defp execute_verified(task_ir, summary) do
+    with {:ok, input} <- input_artifact(task_ir),
          config <- config(task_ir),
          node <- execution_node(task_ir, summary["operator_id"]) do
       dispatch(summary["operator_kind"], summary["operator_id"], input, config, node)
     end
   end
-
-  def execute(_task_ir), do: {:error, :invalid_operator_task_ir}
 
   @spec execute_batch(map(), keyword()) :: {:ok, map()} | {:error, term()}
   def execute_batch(batch, opts \\ [])

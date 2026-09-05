@@ -1,6 +1,8 @@
 use std::fs;
 use std::path::Path;
 
+use kyuubiki_platform::process_is_alive;
+
 use crate::{
     IntegrityContract, Platform, component_integrity_protocol_report, contract_path,
     integrity_versions::{collect_version_checks, current_release_version},
@@ -281,11 +283,13 @@ fn collect_layout_issues(layout: &[InstallationIntegrityEntry]) -> Vec<String> {
 
 fn collect_residue_candidates(root: &Path, contract: &IntegrityContract) -> Vec<ResidueCandidate> {
     let mut residues = Vec::new();
+    let live_runtime_owner = runtime_dir_has_live_owner(&root.join("tmp/run"));
     scan_for_residue_patterns(
         root,
         root,
         &contract.removable_patterns,
         &contract.protected_paths,
+        live_runtime_owner,
         &mut residues,
     );
     collect_dist_layout_drift(root, &contract.allowed_dist_children, &mut residues);
@@ -298,6 +302,7 @@ fn scan_for_residue_patterns(
     current: &Path,
     removable_patterns: &[String],
     protected_paths: &[String],
+    live_runtime_owner: bool,
     residues: &mut Vec<ResidueCandidate>,
 ) {
     let Ok(entries) = fs::read_dir(current) else {
@@ -319,18 +324,81 @@ fn scan_for_residue_patterns(
         }
 
         if entry.file_type().map(|kind| kind.is_dir()).unwrap_or(false) {
-            scan_for_residue_patterns(root, &path, removable_patterns, protected_paths, residues);
+            scan_for_residue_patterns(
+                root,
+                &path,
+                removable_patterns,
+                protected_paths,
+                live_runtime_owner,
+                residues,
+            );
             continue;
         }
 
         if matches_residue_pattern(&relative_path, &file_name, removable_patterns) {
+            if runtime_artifact_is_active(&path, &relative_path, live_runtime_owner) {
+                continue;
+            }
             residues.push(ResidueCandidate {
+                reason: if is_runtime_artifact(&relative_path) {
+                    "stale runtime process state".to_string()
+                } else {
+                    "platform cache file".to_string()
+                },
                 relative_path,
-                reason: "platform cache file".to_string(),
                 removable: true,
             });
         }
     }
+}
+
+fn is_runtime_artifact(relative_path: &str) -> bool {
+    relative_path
+        .strip_prefix("tmp/run/")
+        .is_some_and(|name| !name.contains('/'))
+}
+
+fn runtime_artifact_is_active(path: &Path, relative_path: &str, live_owner: bool) -> bool {
+    if !is_runtime_artifact(relative_path) {
+        return false;
+    }
+    match path.extension().and_then(|extension| extension.to_str()) {
+        Some("pid") => runtime_state_owner_pid(path).is_some_and(process_is_alive),
+        Some("lock") => runtime_state_owner_pid(path).is_some_and(process_is_alive) || live_owner,
+        Some("sock" | "tmp") => live_owner,
+        _ => false,
+    }
+}
+
+fn runtime_dir_has_live_owner(run_dir: &Path) -> bool {
+    fs::read_dir(run_dir)
+        .ok()
+        .into_iter()
+        .flatten()
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| {
+            matches!(
+                path.extension().and_then(|extension| extension.to_str()),
+                Some("pid" | "lock")
+            )
+        })
+        .any(|path| runtime_state_owner_pid(&path).is_some_and(process_is_alive))
+}
+
+fn runtime_state_owner_pid(path: &Path) -> Option<u32> {
+    let contents = fs::read_to_string(path).ok()?;
+    contents
+        .trim()
+        .parse()
+        .ok()
+        .or_else(|| {
+            serde_json::from_str::<serde_json::Value>(&contents).ok()?["pid"]
+                .as_u64()?
+                .try_into()
+                .ok()
+        })
+        .filter(|pid| *pid > 0)
 }
 
 fn collect_dist_layout_drift(
@@ -364,7 +432,7 @@ fn collect_dist_layout_drift(
 fn fallback_contract(platform: Platform, current_version: &str) -> IntegrityContract {
     IntegrityContract {
         schema_version: "kyuubiki.installation-contract/v1".to_string(),
-        product_line: "moxi 2.x".to_string(),
+        product_line: format!("Kyuubiki {}.x", current_version.split('.').next().unwrap_or("unknown")),
         shipping_version: current_version.to_string(),
         required_layout: vec![
             fallback_layout_rule("workspace root", ".", true),
@@ -495,4 +563,80 @@ fn relative_display(root: &Path, path: &Path) -> String {
         .unwrap_or(path)
         .display()
         .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{runtime_dir_has_live_owner, scan_for_residue_patterns};
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    const RUNTIME_PATTERNS: &[&str] = &[
+        "tmp/run/*.pid",
+        "tmp/run/*.sock",
+        "tmp/run/*.lock",
+        "tmp/run/*.tmp",
+    ];
+
+    fn fixture_root(name: &str) -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "kyuubiki-integrity-{name}-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ))
+    }
+
+    fn runtime_residues(root: &Path) -> Vec<super::ResidueCandidate> {
+        let mut residues = Vec::new();
+        let patterns = RUNTIME_PATTERNS
+            .iter()
+            .map(|pattern| pattern.to_string())
+            .collect::<Vec<_>>();
+        scan_for_residue_patterns(
+            root,
+            root,
+            &patterns,
+            &[],
+            runtime_dir_has_live_owner(&root.join("tmp/run")),
+            &mut residues,
+        );
+        residues
+    }
+
+    #[test]
+    fn live_runtime_state_is_not_removable_residue() {
+        let root = fixture_root("live");
+        let run = root.join("tmp/run");
+        fs::create_dir_all(&run).unwrap();
+        fs::write(run.join("frontend.pid"), std::process::id().to_string()).unwrap();
+        fs::write(run.join("integration.lock"), r#"{"pid":0}"#).unwrap();
+        fs::write(run.join("frontend.sock"), "active").unwrap();
+        fs::write(run.join("frontend.tmp"), "active").unwrap();
+
+        assert!(runtime_residues(&root).is_empty());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn stale_runtime_state_remains_removable() {
+        let root = fixture_root("stale");
+        let run = root.join("tmp/run");
+        fs::create_dir_all(&run).unwrap();
+        fs::write(run.join("frontend.pid"), "0").unwrap();
+        fs::write(run.join("integration.lock"), r#"{"pid":0}"#).unwrap();
+        fs::write(run.join("frontend.sock"), "stale").unwrap();
+        fs::write(run.join("frontend.tmp"), "stale").unwrap();
+
+        let residues = runtime_residues(&root);
+        assert_eq!(residues.len(), 4);
+        assert!(
+            residues
+                .iter()
+                .all(|item| item.reason == "stale runtime process state")
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
 }

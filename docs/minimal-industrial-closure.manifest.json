@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.minimal-industrial-closure/v1",
-  "release_line": "moxi 2.x",
+  "release_line": "daji 3.x",
   "posture": "minimum bounded industrial workflow closure",
   "exit_statement": "A bounded FEM workflow can be installed, prepared, executed on local or agent-backed runtimes, audited, repeated, updated, and cleaned without hidden UI state or private operational knowledge.",
   "state_values": [

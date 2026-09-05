@@ -128,8 +128,8 @@ export function WorkbenchWorkflowRunTraceCard({
         <div style={{ display: "flex", gap: "0.45rem", alignItems: "center", flexWrap: "wrap" }}>
           <button onClick={exportTraceReport} type="button">export audit</button>
           {run.pollingState === "detached" ? <span className="status-pill status-pill--watch">detached</span> : null}
-          {renderStatusPill(run.status, resolveWorkflowRunStatusTone(run.status, run.pollingState))}
-          {resolveJobStatusDetailLabel(run.statusDetail) ? renderStatusPill(resolveJobStatusDetailLabel(run.statusDetail) ?? "--", resolveJobStatusDetailTone(run.statusDetail)) : null}
+          {renderStatusPill(run.status, resolveWorkflowRunStatusTone(run.status, run.pollingState, run.statusDetail))}
+          {resolveJobStatusDetailLabel(run.statusDetail) ? renderStatusPill(resolveJobStatusDetailLabel(run.statusDetail) ?? "--", resolveJobStatusDetailTone(run.statusDetail, run.status)) : null}
           <span className="status-pill status-pill--watch">trace</span>
           {renderStatusPill(
             headerHealthLabel,

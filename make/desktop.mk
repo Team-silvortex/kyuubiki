@@ -21,7 +21,7 @@ desktop-stage:
 	@$(ENTRYPOINT) desktop-stage $(PLATFORM)
 
 desktop-build-host:
-	@$(ENTRYPOINT) desktop-build-host
+	@$(ENTRYPOINT) desktop-build-host $(if $(BUNDLES),--bundles "$(BUNDLES)")
 
 desktop-install-host:
 	@$(ENTRYPOINT) desktop-install-host

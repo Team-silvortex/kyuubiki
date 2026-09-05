@@ -3,12 +3,15 @@ import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
 import type { SecurityEventWindow } from "@/components/workbench/workbench-types";
 import type { WorkflowSurfaceTab } from "@/components/workbench/workflow/workbench-workflow-types";
 import type { WorkbenchScriptActionLogEntry, WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
+import type { WorkbenchDownloadResult } from "@/components/workbench/workbench-export-controller";
 import type { WorkbenchSecurityAuditRisk, WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
+
+import type { ProtocolAgentDescriptor } from "@/lib/api";
 
 export type WorkbenchSystemSidebarMountProps = {
   t: WorkbenchCopy;
-  systemPanelTab: "config" | "scripts" | "runtime" | "data";
-  handleSystemPanelTabChange: (tab: "config" | "scripts" | "runtime" | "data") => void;
+  systemPanelTab: "overview" | "config" | "scripts" | "runtime" | "data";
+  handleSystemPanelTabChange: (tab: "overview" | "config" | "scripts" | "runtime" | "data") => void;
   setSidebarSection: (section: "study" | "model" | "workflow" | "library" | "system") => void;
   handleWorkflowPanelTabChange: (tab: WorkflowSurfaceTab) => void;
   runtimeRecoveryCard?: ReactNode;
@@ -42,12 +45,15 @@ export type WorkbenchSystemSidebarMountProps = {
   downloadSecurityEventExport: () => Promise<void>;
   downloadSecurityEventCsvExport: () => Promise<void>;
   runtimeAuditEntries: Array<{ id: string; at: string; action: string; source: string; risk: string; status: string; note: string }>;
-  protocolAgents: Array<unknown>;
+  protocolAgents: ProtocolAgentDescriptor[];
   protocolAgentCards: Array<{
     id: string;
     endpoint: string;
     metrics: Array<{ label: string; value: string | number; tone?: string }>;
     chips: Array<{ key: string; label: string; tone?: string; title?: string }>;
+    chipPreviewLimit?: number;
+    showMoreLabel: string;
+    showLessLabel: string;
     error?: string;
   }>;
   runtimeWatchdogRows: Array<{ label: string; value: ReactNode }>;
@@ -79,7 +85,7 @@ export type WorkbenchSystemSidebarMountProps = {
   handleExportInstalledLanguagePack: () => void;
   handleImportLanguagePack: (file: File) => Promise<void>;
   handleRemoveLanguagePack: (packId: string) => void;
-  handleInstallCatalogLanguagePack: (packId: string) => void;
+  handleInstallCatalogLanguagePack: (packId: string) => Promise<void>;
   setFrontendRuntimeMode: (value: "orchestrated_gui" | "direct_mesh_gui") => void;
   setDirectMeshSelectionMode: (value: "healthiest" | "first_reachable") => void;
   setDirectMeshEndpointsText: (value: string) => void;
@@ -88,7 +94,7 @@ export type WorkbenchSystemSidebarMountProps = {
   setDirectMeshApiToken: (value: string) => void;
   setShowShortcutHints: (value: boolean) => void;
   setImmersiveGuardrails: (value: boolean) => void;
-  downloadDatabaseSnapshot: () => Promise<void>;
+  downloadDatabaseSnapshot: () => Promise<WorkbenchDownloadResult>;
   scriptActionLog: WorkbenchScriptActionLogEntry[];
   getScriptSnapshot: () => WorkbenchScriptSnapshot;
   scriptRecordingMode: boolean;

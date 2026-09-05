@@ -1,54 +1,31 @@
-import JSZip from "jszip";
 import type { WorkbenchMacroPresetRecord, WorkbenchScriptSnippetPresetRecord } from "@/lib/scripting/workbench-script-runtime";
 import type { JobResultRecord, ModelRecord, ModelVersionRecord, ProjectRecord } from "@/lib/api";
 import { extractAnalysisMetadata } from "@/lib/projects/project-format-analysis";
 import { buildProjectBundleReadme } from "@/lib/projects/project-bundle-readme";
 import type { WorkspaceStoreManifest } from "@/lib/workbench/store-manifest";
+import {
+  LEGACY_PROJECT_SCHEMA_VERSION,
+  PROJECT_FORMAT_PATHS,
+  PROJECT_SCHEMA_VERSION,
+  defaultProjectFileManifest,
+  type ProjectFileManifest,
+} from "@/lib/projects/project-format-contract";
 
-export const PROJECT_SCHEMA_VERSION = "kyuubiki.project/v2";
-export const LEGACY_PROJECT_SCHEMA_VERSION = "kyuubiki.project/v1";
-export const PROJECT_FILE_LAYOUT_VERSION = "kyuubiki.project-layout/v1";
-const PROJECT_MANIFEST_PATH = "project.json";
-const PROJECT_ENGINE_MANIFEST_PATH = ".kyuubiki/project.json";
-const PROJECT_RECORD_PATH = "project/project.json";
-const STANDARD_PROJECT_RECORD_PATH = "Assets/project/project.json";
-const STANDARD_MODELS_DIRECTORY = "Assets/models";
-const STANDARD_VERSIONS_DIRECTORY = "Assets/versions";
-const STANDARD_PROJECT_SETTINGS_DIRECTORY = "ProjectSettings";
-const STANDARD_WORKSPACE_DIRECTORY = "Workspace";
-const STANDARD_ANALYSIS_DIRECTORY = "Analysis";
-const STANDARD_JOBS_DIRECTORY = `${STANDARD_ANALYSIS_DIRECTORY}/jobs`;
-const STANDARD_RESULTS_DIRECTORY = `${STANDARD_ANALYSIS_DIRECTORY}/results`;
-const WORKSPACE_SNAPSHOT_PATH = "workspace/current-model.json";
-const STANDARD_WORKSPACE_SNAPSHOT_PATH = `${STANDARD_WORKSPACE_DIRECTORY}/current-model.json`;
-const STANDARD_WORKSPACE_SETTINGS_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/workspace.json`;
-const STANDARD_AUTOMATION_PRESETS_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/automation-presets.json`;
-const STANDARD_SNIPPET_PRESETS_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/snippet-presets.json`;
-const STANDARD_STORE_MANIFEST_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/store-manifest.json`;
-const STANDARD_ASSET_CATALOG_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/asset-catalog.json`;
-const STANDARD_ASSET_REFERENCES_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/asset-references.json`;
-const JOBS_INDEX_PATH = "jobs/jobs.json";
-const STANDARD_JOBS_INDEX_PATH = `${STANDARD_JOBS_DIRECTORY}/index.json`;
-const RESULTS_INDEX_PATH = "results/results.json";
-const STANDARD_RESULTS_INDEX_PATH = `${STANDARD_RESULTS_DIRECTORY}/index.json`;
+export {
+  LEGACY_PROJECT_SCHEMA_VERSION,
+  PROJECT_FILE_LAYOUT_VERSION,
+  PROJECT_SCHEMA_VERSION,
+  defaultProjectFileManifest,
+} from "@/lib/projects/project-format-contract";
+export type { ProjectFileManifest } from "@/lib/projects/project-format-contract";
 
-export type ProjectFileManifest = {
-  layout_version: string;
-  engine_manifest_path: string;
-  root_manifest_path: string;
-  project_record_path: string;
-  workspace_settings_path: string;
-  workspace_snapshot_path: string;
-  automation_presets_path: string;
-  snippet_presets_path: string;
-  store_manifest_path: string;
-  asset_catalog_path: string;
-  asset_references_path: string;
-  model_directory: string;
-  version_directory: string;
-  job_directory: string;
-  result_directory: string;
-};
+const PROJECT_MANIFEST_PATH = PROJECT_FORMAT_PATHS.projectManifest;
+const PROJECT_ENGINE_MANIFEST_PATH = PROJECT_FORMAT_PATHS.projectEngineManifest;
+const PROJECT_RECORD_PATH = PROJECT_FORMAT_PATHS.legacyProjectRecord;
+const WORKSPACE_SNAPSHOT_PATH = PROJECT_FORMAT_PATHS.legacyWorkspaceSnapshot;
+const STANDARD_ASSET_REFERENCES_PATH = PROJECT_FORMAT_PATHS.assetReferences;
+const JOBS_INDEX_PATH = PROJECT_FORMAT_PATHS.legacyJobsIndex;
+const RESULTS_INDEX_PATH = PROJECT_FORMAT_PATHS.legacyResultsIndex;
 
 export type ProjectAssetMetaRecord = {
   guid: string;
@@ -109,26 +86,6 @@ export type ProjectBundle = {
   jobs?: Array<Record<string, unknown>>;
   results?: JobResultRecord[];
 };
-
-export function defaultProjectFileManifest(): ProjectFileManifest {
-  return {
-    layout_version: PROJECT_FILE_LAYOUT_VERSION,
-    engine_manifest_path: PROJECT_ENGINE_MANIFEST_PATH,
-    root_manifest_path: PROJECT_MANIFEST_PATH,
-    project_record_path: STANDARD_PROJECT_RECORD_PATH,
-    workspace_settings_path: STANDARD_WORKSPACE_SETTINGS_PATH,
-    workspace_snapshot_path: STANDARD_WORKSPACE_SNAPSHOT_PATH,
-    automation_presets_path: STANDARD_AUTOMATION_PRESETS_PATH,
-    snippet_presets_path: STANDARD_SNIPPET_PRESETS_PATH,
-    store_manifest_path: STANDARD_STORE_MANIFEST_PATH,
-    asset_catalog_path: STANDARD_ASSET_CATALOG_PATH,
-    asset_references_path: STANDARD_ASSET_REFERENCES_PATH,
-    model_directory: STANDARD_MODELS_DIRECTORY,
-    version_directory: STANDARD_VERSIONS_DIRECTORY,
-    job_directory: STANDARD_JOBS_DIRECTORY,
-    result_directory: STANDARD_RESULTS_DIRECTORY,
-  };
-}
 
 function normalizeBundle(raw: Partial<ProjectBundle>): ProjectBundle {
   if (raw.project_schema_version !== PROJECT_SCHEMA_VERSION && raw.project_schema_version !== LEGACY_PROJECT_SCHEMA_VERSION) {
@@ -400,6 +357,7 @@ export function parseProjectBundleJson(text: string): ProjectBundle {
 
 export async function parseProjectBundleFile(file: File): Promise<ProjectBundle> {
   if (file.name.endsWith(".kyuubiki")) {
+    const { default: JSZip } = await import("jszip");
     const zip = await JSZip.loadAsync(await file.arrayBuffer());
     const manifest = zip.file(PROJECT_MANIFEST_PATH) ?? zip.file(PROJECT_RECORD_PATH);
 
@@ -469,6 +427,7 @@ export async function parseProjectBundleFile(file: File): Promise<ProjectBundle>
 
 export async function exportProjectBundleZip(bundleJson: string): Promise<Blob> {
   const bundle = parseProjectBundleJson(bundleJson);
+  const { default: JSZip } = await import("jszip");
   const fileManifest = bundle.project_file_manifest ?? defaultProjectFileManifest();
   const assetCatalog = bundle.asset_catalog?.length ? bundle.asset_catalog : buildProjectAssetCatalog(bundle, fileManifest);
   const assetReferences = bundle.asset_references?.length ? bundle.asset_references : buildProjectAssetReferences(bundle, assetCatalog);

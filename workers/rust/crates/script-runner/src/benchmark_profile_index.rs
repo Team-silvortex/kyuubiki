@@ -302,6 +302,7 @@ fn run_row(
         "generated_at_unix_s": modified,
         "profile": string_field(summary, "profile").if_empty("unknown"),
         "matrix": string_field(summary, "matrix").if_empty("unknown"),
+        "rss_scope": string_field(summary, "rss_scope").if_empty("legacy_shared_process_high_water_mark"),
         "case_count": summary.get("case_count").cloned().unwrap_or_else(|| json!(0)),
         "case_ids": summary.get("case_ids").and_then(Value::as_array).map(|items| {
             items.iter().filter_map(Value::as_str).map(Value::from).collect::<Vec<_>>()

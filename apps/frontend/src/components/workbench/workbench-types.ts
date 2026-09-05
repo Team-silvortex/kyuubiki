@@ -93,7 +93,7 @@ export type LibraryPanelTab = "jobs" | "results" | "models" | "projects" | "samp
 export type WorkflowPanelTab = WorkflowSurfaceTab;
 export type ImmersiveToolTab = "node" | "props";
 export type SystemDataTab = "jobs" | "results";
-export type SystemPanelTab = "config" | "assistant" | "scripts" | "runtime" | "data";
+export type SystemPanelTab = "overview" | "config" | "assistant" | "scripts" | "runtime" | "data";
 export type AssistantMode = "local" | "llm";
 export type SecurityEventWindow = "" | "1h" | "24h" | "7d" | "30d";
 

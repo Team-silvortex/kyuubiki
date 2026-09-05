@@ -69,6 +69,13 @@ defmodule KyuubikiWeb.Router do
     end)
   end
 
+  get "/api/v1/orchestra/lease" do
+    with_auth(conn, :read, fn conn ->
+      recovery = WorkflowRecoveryCoordinator.snapshot()
+      respond_json(conn, 200, %{"lease" => recovery["lease"]})
+    end)
+  end
+
   get "/api/v1/protocol" do
     with_auth(conn, :read, fn conn -> respond_json(conn, 200, Protocol.descriptor()) end)
   end
@@ -376,9 +383,6 @@ defmodule KyuubikiWeb.Router do
             "kind" => kind,
             "id" => entry_id
           })
-
-        {:error, reason} ->
-          unprocessable(conn, reason)
       end
     end)
   end

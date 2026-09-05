@@ -1,9 +1,10 @@
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
+import { KYUUBIKI_PRODUCT_VERSION_LABEL } from "@/lib/product-version";
 import { WORKFLOW_SUMMARY_ARTIFACT_CONTRACT } from "@/lib/workbench/workflow-summary-contract";
 
 export const metadata: Metadata = {
-  title: "Workflow Summary Contracts | moxi 2.0.0",
+  title: `Workflow Summary Contracts | ${KYUUBIKI_PRODUCT_VERSION_LABEL}`,
   description: "Summary artifact contract reference for cross-operator workflow extracts and transforms.",
 };
 
@@ -35,7 +36,7 @@ export default function WorkflowSummaryContractsPage() {
   return (
     <main style={mainStyle}>
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
-        <p style={eyebrowStyle}>moxi 2.0.0</p>
+        <p style={eyebrowStyle}>{KYUUBIKI_PRODUCT_VERSION_LABEL}</p>
         <h1 style={{ fontSize: "clamp(2rem, 4vw, 3.4rem)", margin: "0 0 12px" }}>
           Workflow Summary Contracts
         </h1>

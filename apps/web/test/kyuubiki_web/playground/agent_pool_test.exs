@@ -2,6 +2,7 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
   use ExUnit.Case, async: false
 
   alias KyuubikiWeb.Playground.AgentPool
+  alias KyuubikiWeb.Playground.AgentExecutionGate
 
   setup do
     original_config = Application.get_env(:kyuubiki_web, AgentPool, [])
@@ -50,6 +51,29 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
              "local-fallback",
              "remote-primary"
            ]
+  end
+
+  test "routes a package-ready endpoint whose optional capacity is nil" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "package-agent",
+          host: "127.0.0.1",
+          port: 5104,
+          capacity: nil,
+          methods: ["run_operator_task_ir"],
+          operator_package_runtime: %{"ready" => true, "status" => "attached"}
+        }
+      ]
+    )
+
+    assert :ok = AgentPool.reload()
+
+    assert [%{id: "package-agent"}] =
+             AgentPool.checkout_endpoints("run_operator_task_ir",
+               execution_lease: %{lease_id: "package-lease"},
+               requires_operator_package_runtime: true
+             )
   end
 
   test "loads remote agents from a manifest file in distributed mode" do
@@ -145,6 +169,37 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
              "truss-low",
              "general"
            ]
+  end
+
+  test "balances within a routing tier without overtaking an explicit method match" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "method-capable",
+          host: "127.0.0.1",
+          port: 5111,
+          methods: ["solve_truss_2d"],
+          capacity: 2
+        },
+        %{id: "legacy-fallback", host: "127.0.0.1", port: 5112, capacity: 8}
+      ]
+    )
+
+    assert :ok = AgentPool.reload()
+    endpoints = AgentPool.checkout_endpoints("solve_truss_2d")
+
+    assert {:ok, %{id: "method-capable"}, _metadata} =
+             AgentExecutionGate.acquire(endpoints, "route-tier-a", 500)
+
+    assert {:ok, %{id: "method-capable"}, _metadata} =
+             AgentExecutionGate.acquire(endpoints, "route-tier-b", 500)
+
+    assert {:ok, %{id: "legacy-fallback"}, _metadata} =
+             AgentExecutionGate.acquire(endpoints, "route-tier-c", 500)
+
+    assert :ok = AgentExecutionGate.release("route-tier-a")
+    assert :ok = AgentExecutionGate.release("route-tier-b")
+    assert :ok = AgentExecutionGate.release("route-tier-c")
   end
 
   test "prefers method-capable and healthier endpoints before tag-only fallbacks" do
@@ -473,6 +528,37 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
 
     assert AgentPool.deployment_info().cooling_down_count == 1
     assert AgentPool.deployment_info().ready_endpoint_count == 2
+  end
+
+  test "does not let routing preference bypass endpoint cooldown" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "cooling-method-match",
+          host: "127.0.0.1",
+          port: 5121,
+          methods: ["solve_truss_2d"],
+          capacity: 4
+        },
+        %{id: "healthy-fallback", host: "127.0.0.1", port: 5122, capacity: 1}
+      ],
+      failure_cooldown_ms: 60_000
+    )
+
+    assert :ok = AgentPool.reload()
+
+    assert :ok =
+             AgentPool.report_failure(
+               %{id: "cooling-method-match", host: "127.0.0.1", port: 5121},
+               :transport_failure
+             )
+
+    endpoints = AgentPool.checkout_endpoints("solve_truss_2d")
+
+    assert {:ok, %{id: "healthy-fallback"}, _metadata} =
+             AgentExecutionGate.acquire(endpoints, "cooldown-tier-a", 500)
+
+    assert :ok = AgentExecutionGate.release("cooldown-tier-a")
   end
 
   test "does not carry cooldown state across a reused id on a new endpoint address" do

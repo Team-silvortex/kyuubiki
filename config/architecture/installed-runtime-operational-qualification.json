@@ -12,7 +12,7 @@
     "execution_host_role": "remote-linux-qualification-host",
     "platform": "linux",
     "architecture": "x86_64",
-    "package_version": "2.7.0",
+    "package_version": "2.19.0",
     "workflow_id": "qualification.installed-runtime.bar",
     "minimum_agent_count": 2,
     "restart_count": 2
@@ -21,7 +21,12 @@
     "files": [
       "scripts/kyuubiki",
       "workers/rust/crates/script-runner/src/main.rs",
-      "workers/rust/crates/desktop-runtime/src/runtime_control.rs",
+      "workers/rust/crates/script-runner/src/governance_commands.rs",
+    "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification.rs",
+    "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/host.rs",
+    "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/remote.rs",
+    "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/support.rs",
+    "workers/rust/crates/desktop-runtime/src/runtime_control.rs",
       "workers/rust/crates/desktop-runtime/src/runtime_layout.rs",
       "workers/rust/crates/desktop-runtime/src/runtime_options.rs",
       "workers/rust/crates/installer/src/release.rs"
@@ -31,13 +36,21 @@
       "KYUUBIKI_RUNTIME_FRONTEND_DISABLED",
       "startup rollback",
       "installer-managed",
-      "[\"start\"]"
+      "[\"start\"]",
+      "qualify-installed-runtime-operational-remote",
+      "capture-installed-runtime-operational-host",
+      "source tree must be removed before installed capture",
+      "installed Runtime digest drifted from payload",
+      "installed Runtime payload changed during operational qualification",
+      "apply_writable_state_env",
+      "KYUUBIKI_DATA_DIR",
+      "mix compile --warnings-as-errors"
     ]
   },
   "retention": {
     "report_schema": "kyuubiki.installed-runtime-operational-qualification/v1",
     "report_schema_path": "schemas/installed-runtime-operational-qualification-report.schema.json",
-    "report_path": "releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json",
+    "report_path": "releases/usability-evidence/2.19.0/installed-runtime-operational-qualification.json",
     "forbidden_content": [
       "/home/",
       "/users/",

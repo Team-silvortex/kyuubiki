@@ -11,6 +11,8 @@ mod agent_deployment;
 mod agent_fault_injection;
 mod agent_headless_bridge;
 mod agent_http;
+mod agent_lifecycle;
+mod agent_lifecycle_rpc;
 mod agent_mesh;
 mod agent_result_artifact;
 mod agent_state;
@@ -47,7 +49,9 @@ use agent_watchdog_runtime::AgentWatchdogRuntimeHandle;
 use config::{AgentConfig, Command};
 use operator_package_fetch_runtime::configure_operator_package_fetch_runtime;
 use operator_package_runtime::initialize_operator_package_runtime;
+#[cfg(test)]
 use rpc::handle_request;
+use rpc::handle_request_from_peer;
 use transport::{AgentReply, FrameReadError, read_frame, write_agent_reply};
 use worker::run_worker;
 
@@ -114,6 +118,10 @@ fn run_agent(config: &AgentConfig) -> Result<(), String> {
 }
 
 fn handle_connection(mut stream: TcpStream) -> Result<(), String> {
+    let peer_is_loopback = stream
+        .peer_addr()
+        .map(|address| address.ip().is_loopback())
+        .unwrap_or(false);
     loop {
         let payload = match read_frame(&mut stream) {
             Ok(payload) => payload,
@@ -130,7 +138,9 @@ fn handle_connection(mut stream: TcpStream) -> Result<(), String> {
         ));
 
         let response = match decode_rpc_request(&payload) {
-            Ok(request) => handle_request(request, Some(writer.clone())),
+            Ok(request) => {
+                handle_request_from_peer(request, Some(writer.clone()), peer_is_loopback)
+            }
             Err(error) => AgentReply::Stream(
                 Vec::new(),
                 RpcResponse::error("unknown", "invalid_json", error.to_string()),

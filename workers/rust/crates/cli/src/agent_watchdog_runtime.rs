@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 
-use crate::agent_state::register_cancel;
+use crate::agent_state::register_execution_cancel;
 use crate::agent_watchdog;
 use crate::config::AgentConfig;
 
@@ -54,9 +54,9 @@ impl AgentWatchdogRuntimeHandle {
 fn submit_timeout_cancellations(failures: Vec<agent_watchdog::FailureReport>) -> usize {
     failures
         .into_iter()
-        .filter_map(|failure| failure.job_id)
-        .map(|job_id| {
-            register_cancel(job_id);
+        .filter(|failure| failure.job_id.is_some())
+        .map(|failure| {
+            register_execution_cancel(failure.request_id);
             1_usize
         })
         .sum()
@@ -65,14 +65,15 @@ fn submit_timeout_cancellations(failures: Vec<agent_watchdog::FailureReport>) ->
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent_state::take_cancelled;
+    use crate::agent_state::{take_cancelled, take_execution_cancelled};
 
     #[test]
     fn timeout_bridge_submits_only_job_bound_cancellations() {
         let failures = vec![failure(Some("watchdog-runtime-job")), failure(None)];
 
         assert_eq!(submit_timeout_cancellations(failures), 1);
-        assert!(take_cancelled("watchdog-runtime-job"));
+        assert!(take_execution_cancelled("watchdog-runtime-request"));
+        assert!(!take_cancelled("watchdog-runtime-job"));
     }
 
     fn failure(job_id: Option<&str>) -> agent_watchdog::FailureReport {

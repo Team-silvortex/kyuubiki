@@ -1,0 +1,114 @@
+{
+  "version": "2.18.3",
+  "codename": "moxi",
+  "line": "2.x",
+  "status": "archived",
+  "date": "2026-08-28",
+  "git_commit": "4d7b7043a90ba36dadae2eaaaaab9825685f293c",
+  "summary": "Moxi 2.18.3 consolidates immutable desktop bundle updates, exact rollback, installed macOS and Linux startup evidence, distributed Agent replacement safety, and release evidence into one version-aligned operational contract.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md",
+    "operator_sdk": "docs/operator-sdk.md",
+    "workflow_graph": "docs/workflow-graph.md",
+    "workflow_dataset": "docs/workflow-dataset.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": {
+      "version": "2.18.3",
+      "notes": [
+        "Workbench remains a streamed protocol client with stable GUI and Python WASM DSL action contracts.",
+        "Workflow, solver, research, and evidence operations remain language-neutral behind the desktop shell."
+      ]
+    },
+    "hub_gui": {
+      "version": "2.18.3",
+      "notes": [
+        "Hub packages the synchronized 2.18.3 documentation, brand, and language-pack contracts.",
+        "Project, runtime, release, and diagnostics journeys retain native desktop command boundaries."
+      ]
+    },
+    "workbench_gui": {
+      "version": "2.18.3",
+      "notes": [
+        "Workbench packages the complete 30-locale language-pack set and current workflow contracts.",
+        "GUI and Python WASM DSL operations continue to share product-owned actions."
+      ]
+    },
+    "installer_gui": {
+      "version": "2.18.3",
+      "notes": [
+        "Installer treats Hub, Workbench, and Installer as one immutable SHA-256-bound desktop bundle set.",
+        "Activation history, tamper detection, atomic updates, and exact rollback are visible and testable.",
+        "Ubuntu host installation validates one current-version package per shell, installs through fail-closed apt privileges, and verifies all /usr/bin entrypoints."
+      ]
+    },
+    "web_api": {
+      "version": "2.18.3",
+      "notes": [
+        "Headless and distributed control paths remain decoupled from all desktop shells.",
+        "Agent lifecycle generations fence stale controllers, executions, and replacement events."
+      ]
+    }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": [
+      "ONNX-like workflow datasets and versioned graph contracts",
+      "mixed-physics operator composition through TaskIR and engine protocols",
+      "restart-safe orchestration with persisted outcomes and bounded recovery"
+    ]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": [
+      "Rust-only worker/operator extension SDK remains distinct from headless control SDKs",
+      "operator descriptors, package preflight, TaskIR, and reliability evidence remain release-gated",
+      "solver execution remains language-neutral across direct, Agent RPC, and workflow paths"
+    ]
+  },
+  "desktop_artifacts": {
+    "hub_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
+    "hub_dmg": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_2.18.3_aarch64.dmg",
+    "workbench_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
+    "workbench_dmg": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_2.18.3_aarch64.dmg",
+    "installer_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
+    "installer_dmg": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Installer_2.18.3_aarch64.dmg",
+    "hub_macos_manifest": "dist/macos/desktop/hub-gui/manifest.json",
+    "hub_linux_manifest": "dist/linux/desktop/hub-gui/manifest.json",
+    "hub_windows_manifest": "dist/windows/desktop/hub-gui/manifest.json",
+    "workbench_macos_manifest": "dist/macos/desktop/workbench-gui/manifest.json",
+    "workbench_linux_manifest": "dist/linux/desktop/workbench-gui/manifest.json",
+    "workbench_windows_manifest": "dist/windows/desktop/workbench-gui/manifest.json",
+    "installer_macos_manifest": "dist/macos/desktop/installer-gui/manifest.json",
+    "installer_linux_manifest": "dist/linux/desktop/installer-gui/manifest.json",
+    "installer_windows_manifest": "dist/windows/desktop/installer-gui/manifest.json"
+  },
+  "verification": {
+    "desktop_bundle_versions": {
+      "hub": "2.18.3",
+      "workbench": "2.18.3",
+      "installer": "2.18.3"
+    },
+    "installed_desktop_evidence": {
+      "macos": "releases/usability-evidence/2.18.3/macos-installed-desktop-smoke.json",
+      "linux": "releases/usability-evidence/2.18.3/linux-installed-desktop-smoke.json",
+      "desktop_ui": "releases/usability-evidence/2.18.3/desktop-ui-validation-qualification.json"
+    },
+    "frontend_checks": [
+      "npm run typecheck",
+      "npm run build",
+      "npm run check:workflow-preflight"
+    ],
+    "repo_checks": [
+      "git diff --check",
+      "make check-version-line",
+      "make audit-project-organization",
+      "make check-ui-automation-contract",
+      "make check-language-packs",
+      "make check-usability-release-gate"
+    ]
+  }
+}

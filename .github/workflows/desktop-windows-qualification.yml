@@ -1,0 +1,103 @@
+name: Desktop Windows Qualification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/desktop-windows-qualification.yml"
+      - "apps/desktop-shared/**"
+      - "apps/frontend/package-lock.json"
+      - "apps/hub-gui/**"
+      - "apps/installer-gui/**"
+      - "apps/workbench-gui/**"
+      - "assets/brand/**"
+      - "config/toolchains.json"
+      - "language-packs/**"
+      - "workers/rust/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    name: windows-installed-desktop-round-trip
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.19.2"
+          cache: "npm"
+          cache-dependency-path: |
+            apps/frontend/package-lock.json
+            apps/hub-gui/package-lock.json
+            apps/installer-gui/package-lock.json
+            apps/workbench-gui/package-lock.json
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            workers/rust
+            apps/hub-gui/src-tauri
+            apps/installer-gui/src-tauri
+            apps/workbench-gui/src-tauri
+      - name: Restore shared desktop Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: target/desktop-cache/windows
+          key: desktop-windows-${{ hashFiles('workers/rust/Cargo.lock', 'apps/*-gui/src-tauri/Cargo.lock') }}
+          restore-keys: |
+            desktop-windows-
+      - name: Install shared frontend compiler
+        working-directory: apps/frontend
+        run: npm ci
+      - name: Install Hub packaging tools
+        working-directory: apps/hub-gui
+        run: npm ci
+      - name: Install Installer packaging tools
+        working-directory: apps/installer-gui
+        run: npm ci
+      - name: Install Workbench packaging tools
+        working-directory: apps/workbench-gui
+        run: npm ci
+      - name: Test incremental assets and desktop bundle recovery
+        run: >-
+          cargo test --locked --manifest-path workers/rust/Cargo.toml
+          -p kyuubiki-script-runner desktop_
+      - name: Build all Windows desktop packages
+        run: >-
+          cargo run --locked --manifest-path workers/rust/Cargo.toml
+          -p kyuubiki-script-runner -- desktop-build-host --bundles nsis
+      - name: Install, launch, verify, and remove all desktop packages
+        run: >-
+          cargo run --locked --manifest-path workers/rust/Cargo.toml
+          -p kyuubiki-script-runner -- desktop-packaged-smoke windows
+          --install-nsis
+          --out tmp/windows-installed-desktop-smoke.json
+      - name: Verify portable qualification evidence
+        run: >-
+          cargo run --locked --manifest-path workers/rust/Cargo.toml
+          -p kyuubiki-script-runner -- desktop-packaged-smoke
+          --verify-report tmp/windows-installed-desktop-smoke.json
+      - name: Promote immutable qualification evidence
+        run: >-
+          cargo run --locked --manifest-path workers/rust/Cargo.toml
+          -p kyuubiki-script-runner -- desktop-packaged-smoke
+          --retain-report tmp/windows-installed-desktop-smoke.json
+      - name: Upload Windows desktop qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installed-desktop-evidence-${{ github.run_attempt }}
+          path: |
+            tmp/windows-installed-desktop-smoke.json
+            tmp/packaged-desktop-smoke/*.log
+            releases/usability-evidence/*/windows-installed-desktop-smoke.json
+          if-no-files-found: warn
+          retention-days: 30

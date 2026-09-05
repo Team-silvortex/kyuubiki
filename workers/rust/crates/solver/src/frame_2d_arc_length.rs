@@ -447,12 +447,7 @@ fn extract_critical_modes(
     let (reduced, _, current_free) =
         reduce_sparse_system(&tangent, &system.reference_force, &system.constrained_dofs);
     debug_assert_eq!(current_free, free);
-    Ok(extract_symmetric_critical_modes(
-        &reduced,
-        free,
-        displacement.len(),
-        mode_count,
-    ))
+    extract_symmetric_critical_modes(&reduced, free, displacement.len(), mode_count)
 }
 
 fn cutback_detail(

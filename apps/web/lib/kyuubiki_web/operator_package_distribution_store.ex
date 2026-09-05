@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.OperatorPackageDistributionStore do
   @distribution_schema "kyuubiki.operator-package-distribution/v1"
   @package_schema "kyuubiki.operator-package/v1"
   @sdk_api "kyuubiki.operator-sdk/v1"
+  @execution_abi "kyuubiki.operator-json-c/v1"
   @digest_pattern ~r/\A[0-9a-f]{64}\z/
   @token_pattern ~r/\A(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9._-]{0,126}[A-Za-z0-9])\z/
   @version_pattern ~r/\A(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9._-]{0,126}[A-Za-z0-9])\z/
@@ -34,6 +35,7 @@ defmodule KyuubikiWeb.OperatorPackageDistributionStore do
          "package_id" => package_id,
          "package_version" => package_version,
          "sdk_api_version" => @sdk_api,
+         "execution_abi" => @execution_abi,
          "target" => target,
          "authority_mode" => "bound_orchestra",
          "cache_scope" => "task_required_disposable",
@@ -103,6 +105,9 @@ defmodule KyuubikiWeb.OperatorPackageDistributionStore do
 
       distribution["sdk_api_version"] != @sdk_api ->
         {:error, :unsupported_operator_sdk_api}
+
+      distribution["execution_abi"] != @execution_abi ->
+        {:error, :unsupported_operator_execution_abi}
 
       distribution["package_id"] != package_id or
           distribution["package_version"] != package_version ->
@@ -216,6 +221,7 @@ defmodule KyuubikiWeb.OperatorPackageDistributionStore do
          {:ok, manifest} <- Jason.decode(bytes),
          true <- manifest["schema_version"] == @package_schema,
          true <- manifest["sdk_api_version"] == @sdk_api,
+         true <- manifest["execution_abi"] == @execution_abi,
          true <- manifest["package_id"] == package_id,
          true <- manifest["package_version"] == package_version,
          entrypoint when is_binary(entrypoint) <- manifest["entrypoint"],

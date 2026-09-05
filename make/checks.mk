@@ -1,6 +1,6 @@
 .PHONY: check-doc-book check-doc-inventory sync-doc-book-version check-toolchains check-elixir-self-host check-commercial-readiness check-moxi-handoff check-install-update-disk-hygiene check-component-integrity-protocol
 .PHONY: check-make-modules check-module-topology check-module-function-matrix check-module-function-coverage-tensor check-test-coverage-posture coverage coverage-rust coverage-frontend check-module-extension-standard check-contracts-runtime-api-surface check-contracts-validation-qualification check-desktop-ui-validation check-workbench-validation-qualification check-verification-evidence-surface check-central-store-contract check-central-database-readiness build-central-readiness-report check-central-readiness-report build-module-topology-report check-native-script-audit
-.PHONY: check-language-packs report-full-language-pack-coverage plan-language-pack-translations next-language-pack-translation check-full-language-pack-coverage check-language-pack-coverage export-language-pack-translation-batch apply-language-pack-translation-batch check-ui-automation-contract check-gui-runtime-capability-contract check-desktop-usability-journeys check-usability-release-gate build-usability-readiness-report check-runtime-recovery-fault-injection check-orchestra-recovery-fault-injection check-installer-recovery-fault-injection check-version-line
+.PHONY: check-language-packs report-full-language-pack-coverage plan-language-pack-translations next-language-pack-translation check-full-language-pack-coverage check-language-pack-coverage export-language-pack-translation-batch apply-language-pack-translation-batch check-ui-automation-contract check-gui-runtime-capability-contract check-desktop-usability-journeys check-usability-release-gate build-usability-readiness-report check-runtime-recovery-fault-injection check-orchestra-recovery-fault-injection check-installer-recovery-fault-injection check-linux-host-power-loss-qualification check-version-line
 .PHONY: check-workflow-dataset-contract check-workflow-metric-resolver-contract check-material-card-contract check-material-score-contract check-materialization-plan-contract check-material-study-execution-plan-contract check-material-exploration-chain-contract check-material-research-bundle-contract check-material-study-sdk-examples check-operator-task-ir-contract check-operator-package-dynamic-smoke-contract
 .PHONY: build-operator-qualification-readiness check-operator-qualification-readiness
 .PHONY: check-operator-qualification-release-records check-operator-qualification-review-decision
@@ -13,8 +13,8 @@
 .PHONY: build-material-research-bundle check-material-research-bundle verify-material-research-bundle material-research-bundle-index check-material-research-bundle-index check-material-research-bundle-index-contract
 .PHONY: remote-material-research-example remote-material-research-summary
 .PHONY: check-operator-reliability audit-rust-lines audit-project-organization
-.PHONY: audit-dependencies check-system-security-qualification check-agent-control-link-operational-qualification check-agent-solver-operational-qualification check-orchestra-takeover-operational-qualification check-orchestra-installed-takeover-operational-qualification check-orchestra-workflow-operational-qualification check-installed-runtime-operational-qualification check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification check-orchestra-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
-.PHONY: check-distributed-task-recovery-operational-qualification
+.PHONY: audit-dependencies check-system-security-qualification check-agent-control-link-operational-qualification check-operator-package-acquisition-operational-qualification check-agent-solver-operational-qualification check-orchestra-takeover-operational-qualification check-orchestra-network-partition-operational-qualification check-orchestra-long-workflow-takeover-operational-qualification check-orchestra-installed-takeover-operational-qualification check-orchestra-workflow-operational-qualification check-installed-runtime-operational-qualification qualify-installed-runtime-operational-remote check-installed-runtime-macos-operational-qualification qualify-installed-runtime-operational-macos check-installed-runtime-power-loss-qualification qualify-installed-runtime-power-loss-remote check-persistence-provenance-qualification check-runtime-api-verification check-benchmark-qualification check-orchestra-benchmark-qualification fuzz-smoke check-minimal-industrial-closure architecture-check verify
+.PHONY: check-distributed-task-recovery-operational-qualification check-fleet-scheduling-operational-qualification
 
 check-doc-book:
 	@$(ENTRYPOINT) check-doc-book
@@ -71,7 +71,7 @@ coverage-rust:
 	@$(ENTRYPOINT) rust-coverage $${PACKAGE:+--package "$$PACKAGE"} $${TEST_FILTER:+--test-filter "$$TEST_FILTER"} --out $${OUT:-tmp/coverage/rust/lcov.info}
 
 coverage-frontend:
-	@$(ENTRYPOINT) frontend-unit-coverage-test --out-dir $${OUT_DIR:-tmp/coverage/frontend/v8} $${FILTER:+$$FILTER}
+	@$(ENTRYPOINT) frontend-unit-coverage-test --out-dir $${OUT_DIR:-tmp/coverage/frontend/v8} --lines $${LINES:-50} --branches $${BRANCHES:-60} --functions $${FUNCTIONS:-55} $${FILTER:+$$FILTER}
 
 check-module-extension-standard:
 	@$(ENTRYPOINT) check-module-extension-standard --self-test
@@ -167,6 +167,10 @@ check-orchestra-recovery-fault-injection:
 check-installer-recovery-fault-injection:
 	@$(ENTRYPOINT) check-installer-recovery-fault-injection --self-test
 	@$(ENTRYPOINT) check-installer-recovery-fault-injection --out $${OUT:-tmp/installer-journal-replay-fault-injection.json}
+
+check-linux-host-power-loss-qualification:
+	@$(ENTRYPOINT) check-linux-host-power-loss-qualification --self-test
+	@$(ENTRYPOINT) check-linux-host-power-loss-qualification --verify-report $${REPORT:-releases/usability-evidence/2.19.0/linux-host-power-loss-operational-qualification.json}
 
 check-version-line:
 	@$(ENTRYPOINT) create-release-snapshot --self-test
@@ -483,7 +487,7 @@ check-contracts-validation-qualification:
 
 check-desktop-ui-validation:
 	@$(ENTRYPOINT) check-desktop-ui-validation --self-test
-	@$(ENTRYPOINT) check-desktop-ui-validation --verify-report releases/usability-evidence/2.15.0/desktop-ui-validation-qualification.json
+	@$(ENTRYPOINT) check-desktop-ui-validation --verify-report releases/usability-evidence/2.18.3/desktop-ui-validation-qualification.json
 
 check-workbench-validation-qualification:
 	@$(ENTRYPOINT) check-workbench-validation-qualification --self-test
@@ -497,9 +501,21 @@ check-agent-control-link-operational-qualification:
 	@$(ENTRYPOINT) check-agent-control-link-operational-qualification --self-test
 	@$(ENTRYPOINT) check-agent-control-link-operational-qualification --verify-report releases/usability-evidence/2.14.7/agent-control-link-operational-qualification.json
 
+check-operator-package-acquisition-operational-qualification:
+	@$(ENTRYPOINT) check-operator-package-acquisition-operational-qualification --self-test
+	@$(ENTRYPOINT) check-operator-package-acquisition-operational-qualification --verify-report $${REPORT:-releases/usability-evidence/2.19.0/operator-package-acquisition-operational-qualification.json}
+
 check-orchestra-takeover-operational-qualification:
 	@$(ENTRYPOINT) check-orchestra-takeover-operational-qualification --self-test
 	@$(ENTRYPOINT) check-orchestra-takeover-operational-qualification --verify-report releases/usability-evidence/2.15.0/orchestra-takeover-operational-qualification.json
+
+check-orchestra-network-partition-operational-qualification:
+	@$(ENTRYPOINT) check-orchestra-network-partition-operational-qualification --self-test
+	@$(ENTRYPOINT) check-orchestra-network-partition-operational-qualification --verify-report releases/usability-evidence/2.18.3/orchestra-network-partition-operational-qualification.json
+
+check-orchestra-long-workflow-takeover-operational-qualification:
+	@$(ENTRYPOINT) check-orchestra-long-workflow-takeover-operational-qualification --self-test
+	@$(ENTRYPOINT) check-orchestra-long-workflow-takeover-operational-qualification --verify-report releases/usability-evidence/2.18.3/orchestra-long-workflow-takeover-operational-qualification.json
 
 check-orchestra-installed-takeover-operational-qualification:
 	@$(ENTRYPOINT) check-orchestra-installed-takeover-operational-qualification --self-test
@@ -509,13 +525,34 @@ check-distributed-task-recovery-operational-qualification:
 	@$(ENTRYPOINT) check-distributed-task-recovery-operational-qualification --self-test
 	@$(ENTRYPOINT) check-distributed-task-recovery-operational-qualification --verify-report releases/usability-evidence/2.14.8/distributed-task-recovery-operational-qualification.json
 
+check-fleet-scheduling-operational-qualification:
+	@$(ENTRYPOINT) check-fleet-scheduling-operational-qualification --self-test
+	@$(ENTRYPOINT) check-fleet-scheduling-operational-qualification --verify-report releases/usability-evidence/2.19.0/fleet-scheduling-operational-qualification.json
+
 check-orchestra-workflow-operational-qualification:
 	@$(ENTRYPOINT) check-orchestra-workflow-operational-qualification --self-test
 	@$(ENTRYPOINT) check-orchestra-workflow-operational-qualification --verify-report releases/usability-evidence/2.14.1/orchestra-workflow-operational-qualification.json
 
 check-installed-runtime-operational-qualification:
 	@$(ENTRYPOINT) check-installed-runtime-operational-qualification --self-test
-	@$(ENTRYPOINT) check-installed-runtime-operational-qualification --verify-report releases/usability-evidence/2.14.6/installed-runtime-operational-qualification.json
+	@$(ENTRYPOINT) check-installed-runtime-operational-qualification --verify-report releases/usability-evidence/2.19.0/installed-runtime-operational-qualification.json
+
+qualify-installed-runtime-operational-remote:
+	@$(ENTRYPOINT) qualify-installed-runtime-operational-remote
+
+check-installed-runtime-macos-operational-qualification:
+	@$(ENTRYPOINT) check-installed-runtime-macos-operational-qualification --self-test
+	@$(ENTRYPOINT) check-installed-runtime-macos-operational-qualification --verify-report releases/usability-evidence/2.19.0/macos-installed-runtime-operational-qualification.json
+
+qualify-installed-runtime-operational-macos:
+	@$(ENTRYPOINT) qualify-installed-runtime-operational-macos
+
+check-installed-runtime-power-loss-qualification:
+	@$(ENTRYPOINT) check-installed-runtime-power-loss-qualification --self-test
+	@$(ENTRYPOINT) check-installed-runtime-power-loss-qualification --verify-report "$${REPORT:-releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json}"
+
+qualify-installed-runtime-power-loss-remote:
+	@$(ENTRYPOINT) qualify-installed-runtime-power-loss-remote $${ACTION:-help} $${ARGS:-}
 
 check-persistence-provenance-qualification:
 	@$(ENTRYPOINT) check-persistence-provenance-qualification --self-test
@@ -539,19 +576,19 @@ check-minimal-industrial-closure:
 	@$(ENTRYPOINT) validate-minimal-industrial-closure
 
 fuzz-smoke:
-	@cd workers/rust && cargo test -p kyuubiki-engine workflow_security_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-protocol operator_task_ir_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-protocol rpc_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-operator-sdk operator_package_manifest_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-installer installer_update_catalog_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-installer remote_artifact_manifest_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-installer credential_storage_contract_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-installer remote_host_trust_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-installer remote_ssh_fixture_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-installer remote_deployment_metadata_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-script-runner central_store_contract_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-script-runner central_readiness_report_fuzz_smoke -- --nocapture
-	@cd workers/rust && cargo test -p kyuubiki-script-runner language_pack_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_security_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-protocol --lib operator_task_ir_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-protocol --lib rpc_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-operator-sdk --lib operator_package_manifest_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer --lib installer_update_catalog_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer --lib remote_artifact_manifest_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer --lib credential_storage_contract_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer --lib remote_host_trust_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer --lib remote_ssh_fixture_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-installer --lib remote_deployment_metadata_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-script-runner --bin kyuubiki-script-runner central_store_contract_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-script-runner --bin kyuubiki-script-runner central_readiness_report_fuzz_smoke -- --nocapture
+	@cd workers/rust && cargo test -p kyuubiki-script-runner --bin kyuubiki-script-runner language_pack_fuzz_smoke -- --nocapture
 
 architecture-check:
 	@$(MAKE) audit-project-organization
@@ -582,6 +619,7 @@ architecture-check:
 	@$(MAKE) check-material-study-sdk-examples
 	@$(MAKE) check-operator-task-ir-contract
 	@$(MAKE) check-operator-package-dynamic-smoke-contract
+	@$(MAKE) check-operator-sdk-performance-qualification
 	@$(MAKE) check-operator-sdk-windows-operational-qualification
 	@$(MAKE) check-operator-reliability
 	@$(MAKE) check-operator-validation
@@ -595,6 +633,7 @@ architecture-check:
 	@$(MAKE) check-workbench-validation-qualification
 	@$(MAKE) check-system-security-qualification
 	@$(MAKE) check-agent-control-link-operational-qualification
+	@$(MAKE) check-operator-package-acquisition-operational-qualification
 	@$(MAKE) check-orchestra-takeover-operational-qualification
 	@$(MAKE) check-orchestra-installed-takeover-operational-qualification
 	@$(MAKE) check-distributed-task-recovery-operational-qualification
@@ -602,6 +641,7 @@ architecture-check:
 	@$(MAKE) check-agent-update-operational-qualification
 	@$(MAKE) check-runtime-payload-operational-qualification
 	@$(MAKE) check-installed-runtime-operational-qualification
+	@$(MAKE) check-installed-runtime-macos-operational-qualification
 	@$(MAKE) check-persistence-provenance-qualification
 	@$(MAKE) check-usability-release-gate
 	@$(MAKE) audit-dependencies
@@ -610,7 +650,7 @@ architecture-check:
 	@jq empty docs/book-manifest.json
 	@$(MAKE) check-minimal-industrial-closure
 	@cd apps/web && mix test test/kyuubiki_web/api/operator_task_api_test.exs test/kyuubiki_web/orchestra/operator_task_executor_test.exs test/kyuubiki_web/orchestra/operator_task_ir_test.exs
-	@cd workers/rust && cargo test -p kyuubiki-cli operator_task_ir_rpc
+	@cd workers/rust && cargo test -p kyuubiki-cli --bin kyuubiki-cli operator_task_ir_rpc
 	@cd workers/rust && cargo test -p kyuubiki-cli --test operator_task_live
 
 verify:
@@ -626,6 +666,7 @@ verify:
 	@$(MAKE) check-install-update-disk-hygiene
 	@$(MAKE) check-component-integrity-protocol
 	@$(MAKE) check-installed-runtime-operational-qualification
+	@$(MAKE) check-installed-runtime-macos-operational-qualification
 	@$(MAKE) check-ui-automation-contract
 	@cd apps/web && mix format --check-formatted && mix test
 	@cd workers/rust && cargo fmt --check && cargo test

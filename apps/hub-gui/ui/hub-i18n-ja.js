@@ -296,7 +296,7 @@ export const HUB_I18N_JA = {
       operationsCopy: "runtime、stack、operator path を一つの流れとして理解したいときに使います。",
       troubleshootingCopy: "完全なログや packaging 出力へ潜る前に、最短の失敗経路を使います。",
       accuracyTitle: "信頼の筋道を読む",
-      accuracyCopy: "これらの文書は、現在のバージョンラインが何を検証しようとしているのか、そしてそれが moxi の前に重要である理由を説明します。",
+      accuracyCopy: "これらの文書は、現在のバージョンラインが何を検証しようとしているのか、そしてそれが daji の前に重要である理由を説明します。",
       accuracyPlanTitle: "Accuracy plan",
       accuracyPlanCopy: "verified baseline、benchmark 拡張、solver trust の長期計画を確認します。",
       accuracyBaselinesTitle: "Accuracy baselines",

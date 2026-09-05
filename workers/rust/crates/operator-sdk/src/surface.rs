@@ -1,5 +1,6 @@
 use crate::{
-    OPERATOR_PACKAGE_MANIFEST_FILE, OPERATOR_PACKAGE_SCHEMA_VERSION, OPERATOR_SDK_API_VERSION,
+    OPERATOR_JSON_ABI_SCHEMA_VERSION, OPERATOR_PACKAGE_MANIFEST_FILE,
+    OPERATOR_PACKAGE_SCHEMA_VERSION, OPERATOR_SDK_API_VERSION,
 };
 use serde::Serialize;
 
@@ -11,6 +12,7 @@ pub struct OperatorSdkSurfaceManifest {
     pub package: &'static str,
     pub crate_name: &'static str,
     pub sdk_api_version: &'static str,
+    pub execution_abi: &'static str,
     pub language: &'static str,
     pub purpose: &'static str,
     pub manifest_file: &'static str,
@@ -33,6 +35,7 @@ pub fn operator_sdk_surface_manifest() -> OperatorSdkSurfaceManifest {
         package: "workers/rust/crates/operator-sdk",
         crate_name: "kyuubiki-operator-sdk",
         sdk_api_version: OPERATOR_SDK_API_VERSION,
+        execution_abi: OPERATOR_JSON_ABI_SCHEMA_VERSION,
         language: "rust",
         purpose: "author_and_package_extension_operators",
         manifest_file: OPERATOR_PACKAGE_MANIFEST_FILE,
@@ -120,10 +123,12 @@ pub fn operator_sdk_surface_areas() -> Vec<OperatorSdkSurfaceArea> {
         },
         OperatorSdkSurfaceArea {
             id: "platform_abi",
-            title: "Cross-platform library ABI naming",
-            role: "Portable dynamic library filename helpers for template manifests and installer preflight.",
-            modules: &["kyuubiki-platform"],
+            title: "Stable cross-platform execution ABI",
+            role: "JSON C ABI plus portable dynamic-library naming without sharing Rust objects across host and package builds.",
+            modules: &["json_abi", "kyuubiki-platform"],
             anchor_exports: &[
+                "execute_operator_json_abi",
+                "OPERATOR_JSON_ABI_SCHEMA_VERSION",
                 "expand_platform_library_template",
                 "current_platform_library_file_name",
                 "current_platform_library_path",
@@ -150,6 +155,10 @@ mod tests {
         assert_eq!(manifest.package, "workers/rust/crates/operator-sdk");
         assert_eq!(manifest.crate_name, "kyuubiki-operator-sdk");
         assert_eq!(manifest.sdk_api_version, OPERATOR_SDK_API_VERSION);
+        assert_eq!(
+            manifest.execution_abi,
+            crate::OPERATOR_JSON_ABI_SCHEMA_VERSION
+        );
         assert_eq!(manifest.language, "rust");
         assert_eq!(manifest.manifest_file, OPERATOR_PACKAGE_MANIFEST_FILE);
         assert_eq!(

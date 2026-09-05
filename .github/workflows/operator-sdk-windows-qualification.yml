@@ -34,17 +34,20 @@ jobs:
           cargo run --locked --manifest-path workers/rust/Cargo.toml
           -p kyuubiki-script-runner --
           qualify-operator-sdk-windows-operational
-      - name: Verify retained evidence
+          --out tmp/operator-sdk-windows-current/operator-sdk-windows-installed-agent-operational-qualification.json
+      - name: Verify freshly captured evidence
         run: >-
           cargo run --locked --manifest-path workers/rust/Cargo.toml
           -p kyuubiki-script-runner --
           check-operator-sdk-windows-operational-qualification
-          --verify-report
-          releases/usability-evidence/2.15.0/operator-sdk-windows-installed-agent-operational-qualification.json
+          --verify-report tmp/operator-sdk-windows-current/operator-sdk-windows-installed-agent-operational-qualification.json
       - name: Upload qualification evidence
         uses: actions/upload-artifact@v4
         with:
           name: operator-sdk-windows-operational-evidence
-          path: releases/usability-evidence/2.15.0/operator-sdk-windows-*.json
+          path: |
+            tmp/operator-sdk-windows-current/operator-sdk-windows-installed-agent-operational-qualification.json
+            tmp/operator-sdk-windows-current/operator-sdk-windows-dynamic-smoke.json
+            tmp/operator-sdk-windows-current/operator-sdk-windows-package-preflight.json
           if-no-files-found: error
           retention-days: 30

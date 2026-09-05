@@ -2,7 +2,15 @@ use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use self::asset_io::{SyncStats, copy_changed, mirror_tree, prune_entries, write_changed};
 use crate::RunnerResult;
+
+#[path = "desktop_asset_io.rs"]
+mod asset_io;
+
+#[cfg(test)]
+#[path = "desktop_build_tests.rs"]
+mod tests;
 
 const DESKTOP_APPS: [(&str, &str); 3] = [
     ("hub-gui", "hub"),
@@ -21,15 +29,26 @@ const SHARED_UI_FILES: [&str; 7] = [
 const INSTALLER_PRIMARY_BUTTON_CSS: &str = "\n.desktop-shell-button-primary {\n  background: linear-gradient(180deg, rgba(255, 174, 72, 0.28), rgba(79, 84, 93, 0.96));\n  border-color: rgba(255, 174, 72, 0.34);\n}\n";
 
 pub(crate) fn run_sync_desktop_shared(root: &Path) -> RunnerResult<u8> {
-    compile_desktop_shared_typescript(root, None)?;
-    sync_shared_assets(root)?;
+    let stats = with_generated_ui(root, |generated| {
+        let mut stats = SyncStats::default();
+        let canonical = root.join("apps/desktop-shared/ui");
+        for file in SHARED_UI_FILES.iter().filter(|file| file.ends_with(".js")) {
+            copy_changed(&generated.join(file), &canonical.join(file), &mut stats)?;
+        }
+        remove_if_exists(&canonical.join("runtime-status-types.js"))?;
+        sync_shared_assets(root, &mut stats)?;
+        Ok(stats)
+    })?;
     println!(
-        "synced desktop shared assets to {}",
+        "synced desktop shared assets to {} ({} checked, {} written, {} stale entries removed)",
         DESKTOP_APPS
             .iter()
             .map(|(app, surface)| format!("{app}:{surface}"))
             .collect::<Vec<_>>()
-            .join(", ")
+            .join(", "),
+        stats.checked,
+        stats.written,
+        stats.removed
     );
     Ok(0)
 }
@@ -39,41 +58,52 @@ pub(crate) fn run_check_desktop_shared(root: &Path, args: Vec<OsString>) -> Runn
         return Err("check-desktop-shared does not accept arguments".to_string());
     }
 
-    let temporary_ui_dir = root
-        .join("tmp")
-        .join(format!("desktop-shared-check-{}", std::process::id()));
-    remove_dir_if_exists(&temporary_ui_dir)?;
-    let result = (|| {
-        compile_desktop_shared_typescript(root, Some(&temporary_ui_dir))?;
-        verify_shared_assets(root, &temporary_ui_dir)
-    })();
-    let cleanup = remove_dir_if_exists(&temporary_ui_dir);
-    result?;
-    cleanup?;
+    with_generated_ui(root, |generated| verify_shared_assets(root, generated))?;
     println!("desktop shared asset synchronization check passed");
     Ok(0)
 }
 
-fn compile_desktop_shared_typescript(root: &Path, out_dir: Option<&Path>) -> RunnerResult<()> {
+fn with_generated_ui<T>(
+    root: &Path,
+    action: impl FnOnce(&Path) -> RunnerResult<T>,
+) -> RunnerResult<T> {
+    let temporary_ui_dir = root.join("tmp").join(format!(
+        "desktop-shared-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|error| error.to_string())?
+            .as_nanos()
+    ));
+    asset_io::ensure_directory(&root.join("tmp"))?;
+    fs::create_dir(&temporary_ui_dir)
+        .map_err(|error| format!("create {}: {error}", temporary_ui_dir.display()))?;
+    let result = (|| {
+        compile_desktop_shared_typescript(root, &temporary_ui_dir)?;
+        action(&temporary_ui_dir)
+    })();
+    let cleanup = remove_dir_if_exists(&temporary_ui_dir);
+    let value = result?;
+    cleanup?;
+    Ok(value)
+}
+
+fn compile_desktop_shared_typescript(root: &Path, out_dir: &Path) -> RunnerResult<()> {
     let desktop_shared_dir = root.join("apps/desktop-shared");
     let tsc = tsc_bin(root);
-    let mut args = vec![
+    let args = vec![
         OsString::from("-p"),
         desktop_shared_dir.join("tsconfig.json").into_os_string(),
+        OsString::from("--outDir"),
+        out_dir.into(),
     ];
-    if let Some(out_dir) = out_dir {
-        args.push(OsString::from("--outDir"));
-        args.push(out_dir.into());
-    }
     let status = crate::run_command(&desktop_shared_dir, tsc.to_string_lossy().as_ref(), args)?;
     if status != 0 {
         return Err(format!(
             "desktop shared TypeScript compile failed with status {status}"
         ));
     }
-    let canonical_ui_dir = desktop_shared_dir.join("ui");
-    let generated_dir = out_dir.unwrap_or(&canonical_ui_dir);
-    remove_if_exists(&generated_dir.join("runtime-status-types.js"))?;
+    remove_if_exists(&out_dir.join("runtime-status-types.js"))?;
     Ok(())
 }
 
@@ -144,47 +174,62 @@ fn verify_language_pack_mirror(root: &Path, app: &str, surface: &str) -> RunnerR
     )
 }
 
-fn sync_shared_assets(root: &Path) -> RunnerResult<()> {
+fn sync_shared_assets(root: &Path, stats: &mut SyncStats) -> RunnerResult<()> {
     let brand_source = root.join("assets/brand/brand.json");
     let shared_ui_dir = root.join("apps/desktop-shared/ui");
     for (app, language_surface) in DESKTOP_APPS {
         let shared_target_dir = root.join("apps").join(app).join("ui/shared");
         for file in SHARED_UI_FILES {
-            copy_file(
-                &shared_ui_dir.join(file),
-                &shared_target_dir.join(file),
-                "shared desktop UI asset",
-            )?;
+            if app == "installer-gui" && file == "desktop-shell.css" {
+                let mut bytes = fs::read(shared_ui_dir.join(file))
+                    .map_err(|error| format!("read shared stylesheet: {error}"))?;
+                bytes.extend_from_slice(INSTALLER_PRIMARY_BUTTON_CSS.as_bytes());
+                write_changed(&shared_target_dir.join(file), &bytes, stats)?;
+            } else {
+                copy_changed(
+                    &shared_ui_dir.join(file),
+                    &shared_target_dir.join(file),
+                    stats,
+                )?;
+            }
         }
-        if app == "installer-gui" {
-            append_file(
-                &shared_target_dir.join("desktop-shell.css"),
-                INSTALLER_PRIMARY_BUTTON_CSS,
-            )?;
-        }
-        copy_file(
+        prune_entries(
+            &shared_target_dir,
+            &SHARED_UI_FILES.map(OsString::from),
+            stats,
+        )?;
+        copy_changed(
             &brand_source,
             &root.join("apps").join(app).join("ui/assets/brand.json"),
-            "desktop brand asset",
+            stats,
         )?;
-        sync_language_packs(root, app, language_surface)?;
+        sync_language_packs(root, app, language_surface, stats)?;
     }
     Ok(())
 }
 
-fn sync_language_packs(root: &Path, app: &str, surface: &str) -> RunnerResult<()> {
+fn sync_language_packs(
+    root: &Path,
+    app: &str,
+    surface: &str,
+    stats: &mut SyncStats,
+) -> RunnerResult<()> {
     let source_root = root.join("language-packs");
     let target_root = root.join("apps").join(app).join("ui/language-packs");
-    remove_dir_if_exists(&target_root)?;
-    copy_file(
+    copy_changed(
         &source_root.join("catalog.json"),
         &target_root.join("catalog.json"),
-        "desktop language pack catalog",
+        stats,
     )?;
-    copy_dir(
+    mirror_tree(
         &source_root.join(surface),
         &target_root.join(surface),
-        "desktop language pack surface",
+        stats,
+    )?;
+    prune_entries(
+        &target_root,
+        &["catalog.json".into(), surface.into()],
+        stats,
     )
 }
 
@@ -278,54 +323,6 @@ fn files_in_tree(root: &Path) -> RunnerResult<Vec<PathBuf>> {
     collect(root, root, &mut files)?;
     files.sort();
     Ok(files)
-}
-
-fn copy_file(source: &Path, target: &Path, label: &str) -> RunnerResult<()> {
-    let parent = target
-        .parent()
-        .ok_or_else(|| format!("{label} target has no parent: {}", target.display()))?;
-    fs::create_dir_all(parent)
-        .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
-    fs::copy(source, target).map_err(|error| {
-        format!(
-            "failed to copy {label} from {} to {}: {error}",
-            source.display(),
-            target.display()
-        )
-    })?;
-    Ok(())
-}
-
-fn append_file(target: &Path, contents: &str) -> RunnerResult<()> {
-    use std::io::Write;
-
-    let mut file = fs::OpenOptions::new()
-        .append(true)
-        .open(target)
-        .map_err(|error| format!("failed to open {} for append: {error}", target.display()))?;
-    file.write_all(contents.as_bytes())
-        .map_err(|error| format!("failed to append {}: {error}", target.display()))
-}
-
-fn copy_dir(source: &Path, target: &Path, label: &str) -> RunnerResult<()> {
-    fs::create_dir_all(target)
-        .map_err(|error| format!("failed to create {}: {error}", target.display()))?;
-    for entry in fs::read_dir(source)
-        .map_err(|error| format!("failed to read {label} {}: {error}", source.display()))?
-    {
-        let entry = entry.map_err(|error| format!("failed to read {label} entry: {error}"))?;
-        let source_path = entry.path();
-        let target_path = target.join(entry.file_name());
-        let file_type = entry
-            .file_type()
-            .map_err(|error| format!("failed to inspect {}: {error}", source_path.display()))?;
-        if file_type.is_dir() {
-            copy_dir(&source_path, &target_path, label)?;
-        } else if file_type.is_file() {
-            copy_file(&source_path, &target_path, label)?;
-        }
-    }
-    Ok(())
 }
 
 fn remove_if_exists(target: &Path) -> RunnerResult<()> {

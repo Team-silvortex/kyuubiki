@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
+import { KYUUBIKI_PRODUCT_VERSION_LABEL } from "@/lib/product-version";
 import {
   createElectrostaticToHeatBridgeContract,
   createHeatToThermoBridgeContract,
@@ -8,7 +9,7 @@ import {
 } from "@/lib/workbench/workflow-bridge-contract";
 
 export const metadata: Metadata = {
-  title: "Workflow Bridge Contracts | moxi 2.0.0",
+  title: `Workflow Bridge Contracts | ${KYUUBIKI_PRODUCT_VERSION_LABEL}`,
   description: "Bridge contract reference for cross-operator workflow transforms.",
 };
 
@@ -30,7 +31,7 @@ export default function WorkflowBridgeContractsPage() {
     >
       <div style={{ maxWidth: 980, margin: "0 auto" }}>
         <p style={{ color: "#7fb3ff", letterSpacing: "0.12em", textTransform: "uppercase" }}>
-          moxi 2.0.0
+          {KYUUBIKI_PRODUCT_VERSION_LABEL}
         </p>
         <h1 style={{ fontSize: "clamp(2rem, 4vw, 3.4rem)", margin: "0 0 12px" }}>
           Workflow Bridge Contracts

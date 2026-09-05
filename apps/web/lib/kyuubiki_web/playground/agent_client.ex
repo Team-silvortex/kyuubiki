@@ -581,9 +581,6 @@ defmodule KyuubikiWeb.Playground.AgentClient do
 
   defp maybe_put_lease_value(lease, _key, nil), do: lease
 
-  defp maybe_put_lease_value(lease, key, value) when is_binary(value),
-    do: Map.put(lease, key, value)
-
   defp maybe_put_lease_value(lease, key, value) when is_binary(key) and is_binary(value),
     do: Map.put(lease, key, value)
 
@@ -651,9 +648,20 @@ defmodule KyuubikiWeb.Playground.AgentClient do
       AgentRpcTransport.emit_progress(on_progress, %{
         "stage" => "preprocessing",
         "progress" => 0.01,
+        "scheduler" => %{
+          "policy" => queue_metadata.selection_policy,
+          "agent_id" => queue_metadata.selected_agent_id,
+          "active_slots_before" => queue_metadata.active_slots_before,
+          "active_slots_after" => queue_metadata.active_slots_after,
+          "capacity_slots" => queue_metadata.capacity_slots,
+          "utilization_before" => queue_metadata.utilization_before,
+          "utilization_after" => queue_metadata.utilization_after
+        },
         "message" =>
           "agent capacity acquired; agent_id=#{endpoint.id}; " <>
             "queue_wait_ms=#{queue_metadata.waited_ms}; " <>
+            "scheduler=#{queue_metadata.selection_policy}; " <>
+            "utilization=#{queue_metadata.utilization_after}; " <>
             "execution_timeout_ms=#{request_timeout_value(opts)}"
       })
     else

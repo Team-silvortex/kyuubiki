@@ -53,10 +53,13 @@ struct SmokeReport {
 }
 
 struct SmokeOptions {
+    platform: Platform,
     timeout_secs: u64,
     output_path: PathBuf,
     bundle_root: PathBuf,
+    install_nsis: bool,
     verify_report: Option<PathBuf>,
+    retain_report: Option<PathBuf>,
 }
 
 struct ChildGuard(Option<Child>);
@@ -92,15 +95,31 @@ pub(crate) fn run_packaged_desktop_smoke(root: &Path, args: Vec<OsString>) -> Ru
         );
         return Ok(0);
     }
-    if host_platform() != Platform::Macos {
-        return Err(
-            "desktop-packaged-smoke currently requires a macOS host; Linux and Windows host probes remain release blockers"
-                .to_string(),
+    if let Some(report_path) = &options.retain_report {
+        let retained_path = retain_qualified_report(root, report_path)?;
+        println!(
+            "packaged desktop smoke report retained: {}",
+            retained_path.display()
         );
+        return Ok(0);
+    }
+    if host_platform() != options.platform {
+        return Err(format!(
+            "desktop-packaged-smoke requested {} on a {} host",
+            options.platform.as_str(),
+            host_platform().as_str()
+        ));
     }
     let log_root = root.join("tmp/packaged-desktop-smoke");
     fs::create_dir_all(&log_root)
         .map_err(|error| format!("failed to create {}: {error}", log_root.display()))?;
+    if options.install_nsis && options.platform != Platform::Windows {
+        return Err("--install-nsis is only valid for Windows smoke runs".to_string());
+    }
+    let mut installed = options
+        .install_nsis
+        .then(|| windows::install_nsis_packages(root, &options.bundle_root, &surface_definitions()))
+        .transpose()?;
 
     let mut surfaces = Vec::new();
     for definition in surface_definitions() {
@@ -109,6 +128,7 @@ pub(crate) fn run_packaged_desktop_smoke(root: &Path, args: Vec<OsString>) -> Ru
             &options.bundle_root,
             &log_root,
             definition,
+            options.platform,
             options.timeout_secs,
         ));
     }
@@ -121,8 +141,8 @@ pub(crate) fn run_packaged_desktop_smoke(root: &Path, args: Vec<OsString>) -> Ru
     let report = SmokeReport {
         schema_version: REPORT_SCHEMA,
         generated_at: utc_iso_timestamp(),
-        platform: "macos",
-        bundle_root: portable_path(root, &options.bundle_root),
+        platform: options.platform.as_str(),
+        bundle_root: portable_bundle_root(root, &options.bundle_root, options.platform),
         expected_version: VERSION,
         timeout_secs: options.timeout_secs,
         status: if failed == 0 { "pass" } else { "fail" },
@@ -131,6 +151,9 @@ pub(crate) fn run_packaged_desktop_smoke(root: &Path, args: Vec<OsString>) -> Ru
         surfaces,
     };
     write_report(&options.output_path, &report)?;
+    if let Some(packages) = installed.as_mut() {
+        packages.cleanup()?;
+    }
     println!(
         "packaged desktop smoke: {} passed, {} failed; report {}",
         passed,
@@ -167,23 +190,61 @@ fn surface_definitions() -> [SurfaceDefinition; 3] {
     ]
 }
 
+fn surface_paths(
+    bundle_root: &Path,
+    definition: SurfaceDefinition,
+    platform: Platform,
+) -> (PathBuf, PathBuf) {
+    match platform {
+        Platform::Macos => {
+            let app = bundle_root.join(format!("{}.app", definition.product_name));
+            let executable = app.join("Contents/MacOS").join(definition.executable_name);
+            (app, executable)
+        }
+        Platform::Linux => {
+            let executable = bundle_root.join(definition.executable_name);
+            (executable.clone(), executable)
+        }
+        Platform::Windows => {
+            let executable = bundle_root
+                .join(definition.product_name)
+                .join(format!("{}.exe", definition.executable_name));
+            (executable.clone(), executable)
+        }
+    }
+}
+
+fn launch_command(executable_path: &Path, platform: Platform) -> Command {
+    if platform == Platform::Linux {
+        let mut command = Command::new("dbus-run-session");
+        command
+            .args(["--", "xvfb-run", "-a"])
+            .arg(executable_path)
+            .env("GDK_BACKEND", "x11")
+            .env("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
+            .env("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        command
+    } else {
+        Command::new(executable_path)
+    }
+}
+
 fn run_surface(
     root: &Path,
     bundle_root: &Path,
     log_root: &Path,
     definition: SurfaceDefinition,
+    platform: Platform,
     timeout_secs: u64,
 ) -> SurfaceResult {
-    let app_path = bundle_root.join(format!("{}.app", definition.product_name));
-    let executable_path = app_path
-        .join("Contents/MacOS")
-        .join(definition.executable_name);
+    let (app_path, executable_path) = surface_paths(bundle_root, definition, platform);
     let log_path = log_root.join(format!("{}.log", definition.surface));
     let started = Instant::now();
     let outcome = run_surface_inner(
         &executable_path,
         &log_path,
         definition.surface,
+        platform,
         timeout_secs,
     );
     let (status, pid, detail) = match outcome {
@@ -217,6 +278,7 @@ fn run_surface_inner(
     executable_path: &Path,
     log_path: &Path,
     surface: &str,
+    platform: Platform,
     timeout_secs: u64,
 ) -> RunnerResult<BootReceipt> {
     if !executable_path.is_file() {
@@ -232,6 +294,7 @@ fn run_surface_inner(
         log_path,
         &receipt_path,
         surface,
+        platform,
         timeout_secs,
     );
     let _ = fs::remove_dir_all(&receipt_dir);
@@ -243,6 +306,7 @@ fn launch_and_wait(
     log_path: &Path,
     receipt_path: &Path,
     surface: &str,
+    platform: Platform,
     timeout_secs: u64,
 ) -> RunnerResult<BootReceipt> {
     let log = File::create(log_path)
@@ -250,7 +314,8 @@ fn launch_and_wait(
     let stderr = log
         .try_clone()
         .map_err(|error| format!("failed to clone {}: {error}", log_path.display()))?;
-    let child = Command::new(executable_path)
+    let mut command = launch_command(executable_path, platform);
+    let child = command
         .env(RECEIPT_ENV, receipt_path)
         .stdin(Stdio::null())
         .stdout(Stdio::from(log))
@@ -263,7 +328,8 @@ fn launch_and_wait(
 
     loop {
         if receipt_path.is_file() {
-            let receipt = read_and_validate_receipt(receipt_path, surface, spawned_pid)?;
+            let expected_pid = (platform != Platform::Linux).then_some(spawned_pid);
+            let receipt = read_and_validate_receipt(receipt_path, surface, expected_pid)?;
             guard.stop();
             return Ok(receipt);
         }
@@ -290,7 +356,7 @@ fn launch_and_wait(
 fn read_and_validate_receipt(
     path: &Path,
     expected_surface: &str,
-    spawned_pid: u32,
+    expected_pid: Option<u32>,
 ) -> RunnerResult<BootReceipt> {
     let bytes =
         fs::read(path).map_err(|error| format!("failed to read {}: {error}", path.display()))?;
@@ -314,9 +380,12 @@ fn read_and_validate_receipt(
             receipt.version
         ));
     }
-    if receipt.pid != spawned_pid {
+    if receipt.pid == 0 || expected_pid.is_some_and(|pid| receipt.pid != pid) {
         return Err(format!(
-            "boot receipt pid mismatch: expected {spawned_pid}, got {}",
+            "boot receipt pid mismatch: expected {}, got {}",
+            expected_pid
+                .map(|pid| pid.to_string())
+                .unwrap_or_else(|| "a nonzero child pid".to_string()),
             receipt.pid
         ));
     }
@@ -348,12 +417,16 @@ fn parse_options(root: &Path, args: Vec<OsString>) -> RunnerResult<SmokeOptions>
         .collect::<RunnerResult<Vec<_>>>()?;
     let mut timeout_secs = DEFAULT_TIMEOUT_SECS;
     let mut output_path = root.join("tmp/packaged-desktop-smoke.json");
-    let mut bundle_root = root.join("target/desktop-cache/macos/release/bundle/macos");
+    let mut install_nsis = false;
     let mut verify_report = None;
-    let mut index = 0;
-    if args.first().is_some_and(|value| value == "macos") {
-        index += 1;
-    }
+    let mut retain_report = None;
+    let (platform, mut index) = match args.first().map(String::as_str) {
+        Some("macos") => (Platform::Macos, 1),
+        Some("linux") => (Platform::Linux, 1),
+        Some("windows") => (Platform::Windows, 1),
+        _ => (host_platform(), 0),
+    };
+    let mut bundle_root = default_bundle_root(root, platform);
     while index < args.len() {
         match args[index].as_str() {
             "--timeout-secs" => {
@@ -403,6 +476,19 @@ fn parse_options(root: &Path, args: Vec<OsString>) -> RunnerResult<SmokeOptions>
                     root.join(path)
                 });
             }
+            "--retain-report" => {
+                index += 1;
+                let value = args
+                    .get(index)
+                    .ok_or_else(|| "--retain-report requires a path".to_string())?;
+                let path = PathBuf::from(value);
+                retain_report = Some(if path.is_absolute() {
+                    path
+                } else {
+                    root.join(path)
+                });
+            }
+            "--install-nsis" => install_nsis = true,
             argument => {
                 return Err(format!(
                     "unknown desktop-packaged-smoke argument: {argument}"
@@ -412,14 +498,28 @@ fn parse_options(root: &Path, args: Vec<OsString>) -> RunnerResult<SmokeOptions>
         index += 1;
     }
     Ok(SmokeOptions {
+        platform,
         timeout_secs,
         output_path,
         bundle_root,
+        install_nsis,
         verify_report,
+        retain_report,
     })
 }
 
-fn verify_retained_report(path: &Path) -> RunnerResult<()> {
+fn default_bundle_root(root: &Path, platform: Platform) -> PathBuf {
+    match platform {
+        Platform::Macos => root.join("target/desktop-cache/macos/release/bundle/macos"),
+        Platform::Linux => PathBuf::from("/usr/bin"),
+        Platform::Windows if cfg!(target_os = "windows") => std::env::var_os("LOCALAPPDATA")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| root.join("target/desktop-cache/windows/release")),
+        Platform::Windows => root.join("target/desktop-cache/windows/release"),
+    }
+}
+
+pub(crate) fn verify_retained_report(path: &Path) -> RunnerResult<()> {
     let bytes = fs::read(path)
         .map_err(|error| format!("failed to read retained report {}: {error}", path.display()))?;
     let report: Value = serde_json::from_slice(&bytes)
@@ -427,10 +527,60 @@ fn verify_retained_report(path: &Path) -> RunnerResult<()> {
     validate_retained_report(&report)
 }
 
+fn retain_qualified_report(root: &Path, candidate_path: &Path) -> RunnerResult<PathBuf> {
+    let bytes = fs::read(candidate_path).map_err(|error| {
+        format!(
+            "failed to read desktop qualification candidate {}: {error}",
+            candidate_path.display()
+        )
+    })?;
+    let report: Value = serde_json::from_slice(&bytes).map_err(|error| {
+        format!(
+            "invalid desktop qualification candidate {}: {error}",
+            candidate_path.display()
+        )
+    })?;
+    validate_retained_report(&report)?;
+    let platform = report
+        .get("platform")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "desktop qualification candidate misses platform".to_string())?;
+    let target = root
+        .join("releases/usability-evidence")
+        .join(VERSION)
+        .join(format!("{platform}-installed-desktop-smoke.json"));
+    let mut canonical = serde_json::to_vec_pretty(&report)
+        .map_err(|error| format!("failed to serialize desktop qualification report: {error}"))?;
+    canonical.push(b'\n');
+    if target.is_file() {
+        let existing = fs::read(&target)
+            .map_err(|error| format!("failed to read {}: {error}", target.display()))?;
+        if existing == canonical {
+            return Ok(target);
+        }
+        return Err(format!(
+            "refusing to replace different retained evidence {}; review it explicitly",
+            target.display()
+        ));
+    }
+    let parent = target
+        .parent()
+        .ok_or_else(|| "retained desktop report has no parent directory".to_string())?;
+    fs::create_dir_all(parent)
+        .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+    let temporary = parent.join(format!(".desktop-smoke-{}.tmp", std::process::id()));
+    fs::write(&temporary, canonical)
+        .map_err(|error| format!("failed to write {}: {error}", temporary.display()))?;
+    fs::rename(&temporary, &target).map_err(|error| {
+        let _ = fs::remove_file(&temporary);
+        format!("failed to retain {}: {error}", target.display())
+    })?;
+    Ok(target)
+}
+
 fn validate_retained_report(report: &Value) -> RunnerResult<()> {
     for (pointer, expected) in [
         ("/schema_version", REPORT_SCHEMA),
-        ("/platform", "macos"),
         ("/expected_version", VERSION),
         ("/status", "pass"),
     ] {
@@ -440,6 +590,17 @@ fn validate_retained_report(report: &Value) -> RunnerResult<()> {
             ));
         }
     }
+    let platform = match report.pointer("/platform").and_then(Value::as_str) {
+        Some("macos") => Platform::Macos,
+        Some("linux") => Platform::Linux,
+        Some("windows") => Platform::Windows,
+        Some(value) => {
+            return Err(format!(
+                "retained packaged desktop report /platform is unsupported: {value}"
+            ));
+        }
+        None => return Err("retained packaged desktop report misses /platform".to_string()),
+    };
     if report.get("passed").and_then(Value::as_u64) != Some(3)
         || report.get("failed").and_then(Value::as_u64) != Some(0)
     {
@@ -447,7 +608,12 @@ fn validate_retained_report(report: &Value) -> RunnerResult<()> {
             "retained packaged desktop report must record 3 passed and 0 failed".to_string(),
         );
     }
-    validate_report_path(report, "/bundle_root", "@external/Applications")?;
+    let bundle_root = match platform {
+        Platform::Macos => "@external/Applications",
+        Platform::Linux => "@external/bin",
+        Platform::Windows => "@external/LocalAppData",
+    };
+    validate_report_path(report, "/bundle_root", bundle_root)?;
     let surfaces = report
         .get("surfaces")
         .and_then(Value::as_array)
@@ -474,8 +640,7 @@ fn validate_retained_report(report: &Value) -> RunnerResult<()> {
             .into_iter()
             .find(|definition| definition.surface == id)
             .ok_or_else(|| format!("unexpected retained packaged desktop surface {id}"))?;
-        let app_path = format!("@bundle-root/{}.app", definition.product_name);
-        let executable_path = format!("{app_path}/Contents/MacOS/{}", definition.executable_name);
+        let (app_path, executable_path) = retained_surface_paths(definition, platform);
         let log_path = format!("tmp/packaged-desktop-smoke/{id}.log");
         let detail = format!("interactive startup receipt accepted for {id} {VERSION}");
         validate_report_path(surface, "/app_path", &app_path)?;
@@ -494,6 +659,27 @@ fn validate_retained_report(report: &Value) -> RunnerResult<()> {
         );
     }
     Ok(())
+}
+
+fn retained_surface_paths(definition: SurfaceDefinition, platform: Platform) -> (String, String) {
+    match platform {
+        Platform::Macos => {
+            let app = format!("@bundle-root/{}.app", definition.product_name);
+            let executable = format!("{app}/Contents/MacOS/{}", definition.executable_name);
+            (app, executable)
+        }
+        Platform::Linux => {
+            let executable = format!("@bundle-root/{}", definition.executable_name);
+            (executable.clone(), executable)
+        }
+        Platform::Windows => {
+            let executable = format!(
+                "@bundle-root/{}/{}.exe",
+                definition.product_name, definition.executable_name
+            );
+            (executable.clone(), executable)
+        }
+    }
 }
 
 fn validate_report_path(value: &Value, pointer: &str, expected: &str) -> RunnerResult<()> {
@@ -542,6 +728,14 @@ fn portable_path(root: &Path, path: &Path) -> String {
     )
 }
 
+fn portable_bundle_root(root: &Path, path: &Path, platform: Platform) -> String {
+    if platform == Platform::Windows && path.strip_prefix(root).is_err() {
+        "@external/LocalAppData".to_string()
+    } else {
+        portable_path(root, path)
+    }
+}
+
 fn portable_bundle_path(root: &Path, bundle_root: &Path, path: &Path) -> String {
     if let Ok(relative) = path.strip_prefix(root) {
         return relative.to_string_lossy().replace('\\', "/");
@@ -561,118 +755,7 @@ fn portable_detail(root: &Path, bundle_root: &Path, detail: &str) -> String {
         .replace(&bundle_root.to_string_lossy().to_string(), "@bundle-root")
 }
 
+mod windows;
+
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parses_smoke_options() {
-        let root = Path::new("/tmp/repo");
-        let options = parse_options(
-            root,
-            [
-                OsString::from("macos"),
-                OsString::from("--timeout-secs"),
-                OsString::from("40"),
-                OsString::from("--out"),
-                OsString::from("tmp/report.json"),
-            ]
-            .to_vec(),
-        )
-        .expect("options should parse");
-        assert_eq!(options.timeout_secs, 40);
-        assert_eq!(options.output_path, root.join("tmp/report.json"));
-        assert_eq!(
-            options.bundle_root,
-            root.join("target/desktop-cache/macos/release/bundle/macos")
-        );
-        assert!(options.verify_report.is_none());
-    }
-
-    #[test]
-    fn rejects_invalid_timeout() {
-        let error = parse_options(
-            Path::new("/tmp/repo"),
-            [OsString::from("--timeout-secs"), OsString::from("0")].to_vec(),
-        )
-        .err()
-        .expect("zero timeout should fail");
-        assert!(error.contains("between 1 and 300"));
-    }
-
-    #[test]
-    fn report_paths_are_portable() {
-        let root = Path::new("/tmp/repo");
-        assert_eq!(
-            portable_path(root, &root.join("tmp/report.json")),
-            "tmp/report.json"
-        );
-        assert_eq!(
-            portable_path(root, Path::new("/Applications")),
-            "@external/Applications"
-        );
-        assert_eq!(
-            portable_bundle_path(
-                root,
-                Path::new("/Applications"),
-                Path::new("/Applications/Kyuubiki Hub.app/Contents/MacOS/kyuubiki-hub-gui")
-            ),
-            "@bundle-root/Kyuubiki Hub.app/Contents/MacOS/kyuubiki-hub-gui"
-        );
-        assert_eq!(
-            portable_detail(
-                root,
-                Path::new("/Applications"),
-                "failed at /tmp/repo/target/app"
-            ),
-            "failed at ./target/app"
-        );
-    }
-
-    #[test]
-    fn validates_portable_retained_report() {
-        let mut report = serde_json::json!({
-            "schema_version": REPORT_SCHEMA,
-            "platform": "macos",
-            "bundle_root": "@external/Applications",
-            "expected_version": VERSION,
-            "status": "pass",
-            "passed": 3,
-            "failed": 0,
-            "surfaces": [
-                retained_surface("hub", 1),
-                retained_surface("installer", 2),
-                retained_surface("workbench", 3)
-            ]
-        });
-        validate_retained_report(&report).expect("portable report should pass");
-        report["surfaces"][0]["detail"] = Value::String("startup assumed".to_string());
-        let error = validate_retained_report(&report).expect_err("invalid receipt should fail");
-        assert!(error.contains("/detail"));
-        report["surfaces"][0] = retained_surface("hub", 1);
-        report["surfaces"][0]["app_path"] = Value::String("/Applications/Hub.app".to_string());
-        let error = validate_retained_report(&report).expect_err("absolute path should fail");
-        assert!(error.contains("must be portable"));
-    }
-
-    fn retained_surface(surface: &str, pid: u64) -> Value {
-        let definition = surface_definitions()
-            .into_iter()
-            .find(|definition| definition.surface == surface)
-            .expect("fixture surface should exist");
-        let app_path = format!("@bundle-root/{}.app", definition.product_name);
-        serde_json::json!({
-            "surface": surface,
-            "app_path": app_path,
-            "executable_path": format!(
-                "@bundle-root/{}.app/Contents/MacOS/{}",
-                definition.product_name,
-                definition.executable_name
-            ),
-            "log_path": format!("tmp/packaged-desktop-smoke/{surface}.log"),
-            "status": "pass",
-            "pid": pid,
-            "detail": format!("interactive startup receipt accepted for {surface} {VERSION}")
-        })
-    }
-}
+mod tests;

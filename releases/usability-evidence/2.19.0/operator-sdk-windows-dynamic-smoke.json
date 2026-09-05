@@ -1,0 +1,124 @@
+{
+  "schema_version": "kyuubiki.operator-package-dynamic-smoke/v3",
+  "generated_at": "2026-08-31T06:24:05Z",
+  "ok": true,
+  "package_id": "operator.template.summary",
+  "operator_ids": [
+    "extract.template_summary"
+  ],
+  "host_version": "2.19.0",
+  "sdk_api_version": "kyuubiki.operator-sdk/v1",
+  "execution_abi": "kyuubiki.operator-json-c/v1",
+  "template_manifest": "workers/rust/templates/operator-crate-template/Cargo.toml",
+  "package_manifest": "workers/rust/templates/operator-crate-template/kyuubiki-operator.json",
+  "preflight_report": "releases/usability-evidence/2.19.0/operator-sdk-windows-package-preflight.json",
+  "dynamic_library": "workers/rust/templates/operator-crate-template/target/debug/kyuubiki_operator_template.dll",
+  "stages": [
+    {
+      "id": "template_tests",
+      "description": "Run template operator crate tests and descriptor readiness checks.",
+      "cwd": ".",
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "workers/rust/templates/operator-crate-template/Cargo.toml",
+        "--lib",
+        "--",
+        "--nocapture"
+      ],
+      "status": 0,
+      "ok": true
+    },
+    {
+      "id": "strict_preflight",
+      "description": "Run strict read-only package preflight with rejection and readiness-warning gates.",
+      "cwd": "workers/rust",
+      "command": [
+        "cargo",
+        "run",
+        "-p",
+        "kyuubiki-installer",
+        "--",
+        "operator-package-preflight",
+        "templates",
+        "--out",
+        "../../tmp/operator-sdk-windows-qualification-5748/operator-package-dynamic-preflight.json",
+        "--fail-on-rejected",
+        "--fail-on-readiness-warnings"
+      ],
+      "status": 0,
+      "ok": true
+    },
+    {
+      "id": "template_cdylib_build",
+      "description": "Build the template operator dynamic library for host loading.",
+      "cwd": ".",
+      "command": [
+        "cargo",
+        "build",
+        "--manifest-path",
+        "workers/rust/templates/operator-crate-template/Cargo.toml",
+        "--lib"
+      ],
+      "status": 0,
+      "ok": true
+    },
+    {
+      "id": "engine_dynamic_host_load",
+      "description": "Run the engine dynamic host test that loads and dispatches the template operator.",
+      "cwd": "workers/rust",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "kyuubiki-engine",
+        "--lib",
+        "loads_prebuilt_template_cdylib_through_dynamic_host",
+        "--",
+        "--ignored",
+        "--nocapture"
+      ],
+      "status": 0,
+      "ok": true
+    },
+    {
+      "id": "agent_dynamic_host_dispatch",
+      "description": "Run local-package and bound-Orchestra Agent RPC dispatch, including fetch, cache reuse, safe version rotation, crash-restart stale-session cleanup, tamper rejection, and recovery.",
+      "cwd": "workers/rust",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "kyuubiki-cli",
+        "--test",
+        "operator_package_live",
+        "--test",
+        "operator_package_orchestra_fetch_live",
+        "--",
+        "--ignored",
+        "--nocapture"
+      ],
+      "status": 0,
+      "ok": true
+    },
+    {
+      "id": "installer_managed_agent_lifecycle",
+      "description": "Install into the managed store, execute through Agent RPC, reject tamper, recover, uninstall, and prune residue.",
+      "cwd": "workers/rust",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "kyuubiki-cli",
+        "--test",
+        "operator_package_installer_live",
+        "--",
+        "--ignored",
+        "--nocapture"
+      ],
+      "status": 0,
+      "ok": true
+    }
+  ]
+}

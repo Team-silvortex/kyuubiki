@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.kyuubiki.local/orchestra-long-workflow-takeover-operational-qualification-report.schema.json",
+  "title": "Kyuubiki Orchestra Long Workflow Takeover Operational Qualification Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "status",
+    "journey",
+    "topology",
+    "lease_policy",
+    "evidence",
+    "cleanup",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.orchestra-long-workflow-takeover-operational-qualification/v1"
+    },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "status": { "const": "pass" },
+    "journey": {
+      "const": "inflight-idempotent-resume-and-checkpoint-required-replay-block"
+    },
+    "topology": { "$ref": "#/$defs/topology" },
+    "lease_policy": { "$ref": "#/$defs/lease_policy" },
+    "evidence": { "$ref": "#/$defs/journey_evidence" },
+    "cleanup": { "$ref": "#/$defs/cleanup" },
+    "checks": {
+      "type": "array",
+      "minItems": 18,
+      "maxItems": 18,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "status": { "const": "pass" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "topology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "orchestra_host_role",
+        "database_host_role",
+        "agent_host_role",
+        "orchestra_platform",
+        "database_platform",
+        "agent_platform",
+        "orchestra_process_count",
+        "database",
+        "database_ephemeral",
+        "database_loopback_only",
+        "agent_runtime",
+        "workflow_operator",
+        "transport",
+        "build_profile"
+      ],
+      "properties": {
+        "orchestra_host_role": { "const": "local-orchestra-qualification-host" },
+        "database_host_role": { "const": "remote-linux-qualification-host" },
+        "agent_host_role": { "const": "remote-linux-qualification-host" },
+        "orchestra_platform": { "enum": ["macos", "linux"] },
+        "database_platform": { "const": "linux" },
+        "agent_platform": { "const": "linux" },
+        "orchestra_process_count": { "type": "integer", "minimum": 2 },
+        "database": { "const": "postgresql" },
+        "database_ephemeral": { "const": true },
+        "database_loopback_only": { "const": true },
+        "agent_runtime": { "const": "kyuubiki-rust-agent" },
+        "workflow_operator": { "const": "solve.bar_1d" },
+        "transport": { "const": "independent-ssh-database-tunnels-plus-agent-tcp" },
+        "build_profile": { "const": "release-agent-development-orchestra" }
+      }
+    },
+    "lease_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lease_ttl_ms", "heartbeat_ms", "retry_ms", "max_workflow_attempts"],
+      "properties": {
+        "lease_ttl_ms": { "type": "integer", "minimum": 1, "maximum": 2000 },
+        "heartbeat_ms": { "type": "integer", "minimum": 1 },
+        "retry_ms": { "type": "integer", "minimum": 1 },
+        "max_workflow_attempts": { "type": "integer", "minimum": 2 }
+      }
+    },
+    "workflow_observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["job_status", "recovery_state", "retry_safety", "generation", "attempt"],
+      "properties": {
+        "job_status": { "enum": ["solving", "completed", "failed"] },
+        "recovery_state": { "enum": ["running", "completed", "recovery_blocked"] },
+        "retry_safety": { "enum": ["idempotent", "checkpoint_required"] },
+        "generation": { "type": "integer", "minimum": 1 },
+        "attempt": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "agent_counters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["started", "completed", "failed", "active"],
+      "properties": {
+        "started": { "type": "integer", "minimum": 0 },
+        "completed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "active": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "idempotent_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "before_loss",
+        "after_takeover",
+        "terminal",
+        "takeover_elapsed_ms",
+        "takeover_fencing_token",
+        "agent_counters_before",
+        "agent_counters_after",
+        "active_execution_count_before_loss",
+        "active_execution_count_after_takeover",
+        "agent_started_delta",
+        "initial_claim_seen",
+        "restart_claim_seen",
+        "completed_history_count",
+        "result_verified",
+        "terminal_state_stable"
+      ],
+      "properties": {
+        "before_loss": { "$ref": "#/$defs/workflow_observation" },
+        "after_takeover": { "$ref": "#/$defs/workflow_observation" },
+        "terminal": { "$ref": "#/$defs/workflow_observation" },
+        "takeover_elapsed_ms": { "type": "integer", "minimum": 1, "maximum": 30000 },
+        "takeover_fencing_token": { "type": "integer", "minimum": 2 },
+        "agent_counters_before": { "$ref": "#/$defs/agent_counters" },
+        "agent_counters_after": { "$ref": "#/$defs/agent_counters" },
+        "active_execution_count_before_loss": { "const": 1 },
+        "active_execution_count_after_takeover": { "const": 2 },
+        "agent_started_delta": { "const": 2 },
+        "initial_claim_seen": { "const": true },
+        "restart_claim_seen": { "const": true },
+        "completed_history_count": { "const": 1 },
+        "result_verified": { "const": true },
+        "terminal_state_stable": { "const": true }
+      }
+    },
+    "checkpoint_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "before_loss",
+        "after_takeover",
+        "takeover_elapsed_ms",
+        "takeover_fencing_token",
+        "agent_counters_before",
+        "agent_counters_at_block",
+        "agent_counters_after_release",
+        "active_execution_count_before_loss",
+        "active_execution_count_at_block",
+        "agent_started_delta_at_block",
+        "recovery_block_reason_retained",
+        "no_recovery_redispatch",
+        "remained_blocked_after_orphan_completion"
+      ],
+      "properties": {
+        "before_loss": { "$ref": "#/$defs/workflow_observation" },
+        "after_takeover": { "$ref": "#/$defs/workflow_observation" },
+        "takeover_elapsed_ms": { "type": "integer", "minimum": 1, "maximum": 30000 },
+        "takeover_fencing_token": { "type": "integer", "minimum": 3 },
+        "agent_counters_before": { "$ref": "#/$defs/agent_counters" },
+        "agent_counters_at_block": { "$ref": "#/$defs/agent_counters" },
+        "agent_counters_after_release": { "$ref": "#/$defs/agent_counters" },
+        "active_execution_count_before_loss": { "const": 1 },
+        "active_execution_count_at_block": { "const": 1 },
+        "agent_started_delta_at_block": { "const": 1 },
+        "recovery_block_reason_retained": { "const": true },
+        "no_recovery_redispatch": { "const": true },
+        "remained_blocked_after_orphan_completion": { "const": true }
+      }
+    },
+    "journey_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "orchestra_platform",
+        "database_architecture",
+        "agent_architecture",
+        "initial_fencing_token",
+        "first_takeover_fencing_token",
+        "second_takeover_fencing_token",
+        "former_primary_rejoined_standby",
+        "former_standby_rejoined_standby",
+        "idempotent",
+        "checkpoint_required",
+        "followup_solver_verified"
+      ],
+      "properties": {
+        "orchestra_platform": { "enum": ["macos", "linux"] },
+        "database_architecture": { "type": "string", "minLength": 1 },
+        "agent_architecture": { "type": "string", "minLength": 1 },
+        "initial_fencing_token": { "type": "integer", "minimum": 1 },
+        "first_takeover_fencing_token": { "type": "integer", "minimum": 2 },
+        "second_takeover_fencing_token": { "type": "integer", "minimum": 3 },
+        "former_primary_rejoined_standby": { "const": true },
+        "former_standby_rejoined_standby": { "const": true },
+        "idempotent": { "$ref": "#/$defs/idempotent_evidence" },
+        "checkpoint_required": { "$ref": "#/$defs/checkpoint_evidence" },
+        "followup_solver_verified": { "const": true }
+      }
+    },
+    "orchestra_cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "orchestra_processes_stopped",
+        "orchestra_ports_closed",
+        "ssh_tunnel_stopped",
+        "tunnel_port_closed",
+        "remote_database_removed",
+        "local_work_root_removed"
+      ],
+      "properties": {
+        "orchestra_processes_stopped": { "const": true },
+        "orchestra_ports_closed": { "const": true },
+        "ssh_tunnel_stopped": { "const": true },
+        "tunnel_port_closed": { "const": true },
+        "remote_database_removed": { "const": true },
+        "local_work_root_removed": { "const": true }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "orchestra",
+        "remote_agent_stopped",
+        "remote_agent_port_closed",
+        "managed_remote_agent_root_removed",
+        "local_agent_work_root_removed"
+      ],
+      "properties": {
+        "orchestra": { "$ref": "#/$defs/orchestra_cleanup" },
+        "remote_agent_stopped": { "const": true },
+        "remote_agent_port_closed": { "const": true },
+        "managed_remote_agent_root_removed": { "const": true },
+        "local_agent_work_root_removed": { "const": true }
+      }
+    }
+  }
+}

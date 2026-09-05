@@ -4,9 +4,9 @@
   "language": "ko",
   "targetSurface": "workbench",
   "name": "Korean Workbench Core",
-  "version": "2.17.0",
-  "versionLine": "moxi 2.x",
-  "targetAppVersion": "2.17.0",
+  "version": "3.0.0",
+  "versionLine": "daji 3.x",
+  "targetAppVersion": "3.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-22T02:52:29.868Z",
   "description": "Korean UI translations for Workbench navigation, workflow, store, and system surfaces.",
@@ -29,6 +29,7 @@
     }
   ],
   "overrides": {
+    "workflowStorageWriteFailedLabel": "로컬 워크플로 데이터를 저장할 수 없습니다. 사용 가능한 저장 공간을 확인한 후 다시 시도하세요.",
     "title": "Kyuubiki Workbench · 한국어",
     "subtitle": "시뮬레이션, 워크플로, 에이전트를 위한 작업 공간입니다.",
     "rail": {

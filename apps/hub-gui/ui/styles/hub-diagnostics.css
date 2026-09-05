@@ -47,6 +47,13 @@
   contain-intrinsic-size: 1px 640px;
 }
 
+@media (max-width: 860px) {
+  .hub-event-bar {
+    grid-column: 1;
+    grid-row: 3;
+  }
+}
+
 @media (max-width: 720px) {
   .hub-event-bar {
     grid-template-columns: 1fr;

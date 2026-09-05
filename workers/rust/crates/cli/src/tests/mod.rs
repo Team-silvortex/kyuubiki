@@ -6,6 +6,7 @@ use super::{
 use crate::agent_state::{registration_payload, registration_payload_for_session};
 use crate::agent_watchdog;
 use crate::config::{AgentConfig, Command, WorkerConfig};
+use crate::rpc::handle_request_from_peer;
 use crate::transport::AgentReply;
 use crate::worker::format_event;
 use kyuubiki_protocol::{

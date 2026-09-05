@@ -1,0 +1,110 @@
+{
+  "schema_version": "kyuubiki.installed-runtime-operational-qualification/v1",
+  "generated_at_unix_ms": 1788172183695,
+  "status": "pass",
+  "qualification_id": "remote-linux-installer-managed-runtime-operational",
+  "journey": "installed-headless-orchestra-agent-restart",
+  "execution_host_role": "remote-linux-qualification-host",
+  "platform": {
+    "os": "linux",
+    "architecture": "x86_64"
+  },
+  "installation": {
+    "package_version": "2.19.0",
+    "activation_generation": 1,
+    "runtime_policy": "installer-managed",
+    "source_tree_detached": true,
+    "source_fallback": false,
+    "payload_manifest_sha256": "e7d63a2f519aeffaef840fb23bd02f66afdea4c3dc37406e496ece7b74e2ec37",
+    "service_manifest_sha256": "a761efe3565a5d0b25e47a477bdea7e461e0df213be8af7de540b32e11e29a58",
+    "runtime_binary_sha256": "63cd134849d098131c178ee4b273d2dd0a4b8c1e11dd57ee274250a911eb8ff9",
+    "headless_binary_sha256": "5d80deee9a1ee67e5ab2ba9d982361b7334e9f867c2bc36c9d1cb25eab4ce2ee",
+    "agent_binary_sha256": "3c94fb0b4c7250094765a0aa5eebf91d4a5b517882ed1eeef8305661bf43592a"
+  },
+  "runtime": {
+    "control_mode": "standalone",
+    "agent_count": 2,
+    "orchestrator_managed": true,
+    "frontend_loaded": false
+  },
+  "execution": {
+    "workflow_id": "qualification.installed-runtime.bar",
+    "mode": "execute:service",
+    "status": "completed",
+    "job_id_sha256": "ef9025f4a2441d9d1be8cd1b144d4c5c710da5e9d378a1166a68856e56fb3506",
+    "worker_transport": "rust-agent-rpc",
+    "agent_dispatched": true,
+    "tip_displacement": 5.714285714285714e-7,
+    "max_stress": 120000.0
+  },
+  "restart_recovery": {
+    "restart_count": 2,
+    "result_retained_after_restart": true,
+    "result_retained_after_source_detach": true,
+    "numerical_result_unchanged": true
+  },
+  "cleanup": {
+    "runtime_ports_closed": true,
+    "managed_pid_files_removed": true,
+    "managed_remote_root_removed": true,
+    "residue_count": 0
+  },
+  "capture_digests": {
+    "cleanup_report_sha256": "0a5af41477b72f2419d2d42360e1d41847222b618e1d75a94bc57ca4d7f4571d",
+    "detached_fetch_report_sha256": "a013d57a944c410629132b072516e375a1bb58d55712b668c8174dbf765060ad",
+    "detached_status_sha256": "e55376e38f876f88f58597a6630abacaaeab151afbd063804f2461ef99bce90d",
+    "installed_digests_sha256": "cd927b3cdefaf2c533f5745cff532dec54d221bcaaeb796efd9cd5f938eb0e54",
+    "restart_fetch_report_sha256": "ebc39bc6368686acd05a30e1aeedd5d3425dbf0f6828727bfd41aefeb70f9e60",
+    "solve_report_sha256": "2eb79c22b92d77b7707bfeac55adbae43cd372daec4aa17891ebae3e7f40ccfd"
+  },
+  "checks": [
+    {
+      "id": "installed_payload_activated",
+      "status": "pass"
+    },
+    {
+      "id": "source_tree_detached",
+      "status": "pass"
+    },
+    {
+      "id": "native_runtime_managed",
+      "status": "pass"
+    },
+    {
+      "id": "frontend_omitted",
+      "status": "pass"
+    },
+    {
+      "id": "headless_service_execution",
+      "status": "pass"
+    },
+    {
+      "id": "agent_dispatch_observed",
+      "status": "pass"
+    },
+    {
+      "id": "numerical_result_verified",
+      "status": "pass"
+    },
+    {
+      "id": "orchestra_restart_completed",
+      "status": "pass"
+    },
+    {
+      "id": "result_retained_after_restart",
+      "status": "pass"
+    },
+    {
+      "id": "detached_restart_completed",
+      "status": "pass"
+    },
+    {
+      "id": "cleanup_complete",
+      "status": "pass"
+    },
+    {
+      "id": "retention_sanitized",
+      "status": "pass"
+    }
+  ]
+}

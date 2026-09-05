@@ -5,7 +5,12 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_ROOT = path.join(ROOT, "test");
-const COVERAGE_DIR = process.env.KYUUBIKI_FRONTEND_COVERAGE_DIR?.trim();
+const COVERAGE_ENABLED = process.env.KYUUBIKI_FRONTEND_COVERAGE === "1";
+const COVERAGE_THRESHOLDS = {
+  lines: process.env.KYUUBIKI_FRONTEND_COVERAGE_LINES ?? "50",
+  branches: process.env.KYUUBIKI_FRONTEND_COVERAGE_BRANCHES ?? "60",
+  functions: process.env.KYUUBIKI_FRONTEND_COVERAGE_FUNCTIONS ?? "55",
+};
 const DOMAIN_FILTERS = process.argv
   .slice(2)
   .map((filter) => filter.trim().toLowerCase())
@@ -49,12 +54,15 @@ if (testFiles.length === 0) {
 const nodeArgs = [
   "--import",
   "./test/support/register-alias-loader.mjs",
-  ...(COVERAGE_DIR
+  ...(COVERAGE_ENABLED
     ? [
         "--experimental-test-coverage",
         "--test-coverage-include=src/**/*.ts",
         "--test-coverage-include=src/**/*.tsx",
         "--test-coverage-exclude=src/**/*.d.ts",
+        `--test-coverage-lines=${COVERAGE_THRESHOLDS.lines}`,
+        `--test-coverage-branches=${COVERAGE_THRESHOLDS.branches}`,
+        `--test-coverage-functions=${COVERAGE_THRESHOLDS.functions}`,
       ]
     : []),
   "--test",
@@ -67,10 +75,7 @@ const result = spawnSync(
   {
     cwd: ROOT,
     stdio: "inherit",
-    env: {
-      ...process.env,
-      ...(COVERAGE_DIR ? { NODE_V8_COVERAGE: path.resolve(ROOT, COVERAGE_DIR) } : {}),
-    },
+    env: process.env,
   },
 );
 

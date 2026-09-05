@@ -195,6 +195,7 @@ export type WorkflowSidebarLabels = {
   draftSavedLabel: string;
   draftLoadedLabel: string;
   draftDeletedLabel: string;
+  storageWriteFailedLabel: string;
   localWorkflowPromotedLabel: string;
   localWorkflowDeleteLabel: string;
   localWorkflowDeletedLabel: string;

@@ -3,6 +3,7 @@ import { copyEnExtended } from "@/components/workbench/workbench-copy-en-extende
 import { copyJa } from "@/components/workbench/workbench-copy-ja";
 import { copyZhCore } from "@/components/workbench/workbench-copy-zh-core";
 import { copyZhExtended } from "@/components/workbench/workbench-copy-zh-extended";
+import { getWorkbenchWorkflowStorageWriteFailedLabel } from "@/components/workbench/workbench-workflow-storage-copy";
 import {
   isBuiltInWorkbenchLanguage,
   type BuiltInWorkbenchLanguage,
@@ -42,6 +43,7 @@ export const copyByLanguage: Record<BuiltInWorkbenchLanguage, WorkbenchCopy> = {
   es: {
     ...copyEn,
     language: "Idioma",
+    workflowStorageWriteFailedLabel: getWorkbenchWorkflowStorageWriteFailedLabel("es"),
     languages: {
       ...copyEn.languages,
       es: "Español",

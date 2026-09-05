@@ -1,6 +1,6 @@
 # Packaging And Deployment
 
-This document is the packaging map for `kyuubiki moxi 2.x`.
+This document is the packaging map for `kyuubiki daji 3.x`.
 
 Use it when you need to answer:
 
@@ -84,13 +84,62 @@ Use these commands when building deployable layouts:
   Stages the release scaffold and desktop manifests under `dist/<platform>`
 - `make desktop-build-host`
   Builds the `hub-gui`, `installer-gui`, and `workbench-gui` bundles for the current host using
-  one shared, platform-scoped Cargo cache
+one shared, platform-scoped Cargo cache
 - `make desktop-install-host`
-  Stages, validates, and atomically replaces the three fixed macOS application
-  bundles, restoring the previous bundle if activation fails
-- `make desktop-packaged-smoke PLATFORM=macos`
-  Launches all three packaged macOS binaries, waits for their interactive UI
-  startup receipts, validates version/surface/PID identity, and retains logs
+  Installs the current three-shell set on the host. macOS stages, validates,
+  and atomically replaces the fixed application bundles, restoring the prior
+  bundle if activation fails. Ubuntu validates exactly three current-version
+  `.deb` packages and their architecture, installs them through non-interactive
+  `sudo -n apt-get`, then verifies package versions and `/usr/bin` entrypoints
+- `make desktop-packaged-smoke PLATFORM=macos|linux|windows`
+  Launches all three packaged desktop binaries, waits for their interactive UI
+  startup receipts, validates version/surface/PID identity, and retains logs.
+  Linux uses an isolated D-Bus session plus Xvfb for the WebKitGTK shells;
+  Windows installed-package qualification additionally uses `--install-nsis`
+- `./scripts/kyuubiki qualify-desktop-bundle-update-operational-host`
+  Copies the current host bundles into an isolated qualification root, creates
+  two content-distinct package generations, and executes the three-shell
+  install, upgrade, and exact rollback journey. macOS variants are ad-hoc
+  re-signed after their qualification marker is added. Linux variants execute
+  under isolated D-Bus/Xvfb sessions. Source bundles and installed applications
+  are never modified
+- `./scripts/kyuubiki check-desktop-bundle-update-operational-qualification`
+  Semantically revalidates a retained report, including all three payloads,
+  three monotonic activation records, nine unique boot probes, exact rollback,
+  and clean lock/staging state
+
+Current physical Linux evidence is retained at
+`releases/usability-evidence/2.19.0/linux-desktop-bundle-update-operational-qualification.json`.
+Revalidate it without launching the applications again with:
+
+```sh
+./scripts/kyuubiki check-desktop-bundle-update-operational-qualification \
+  --verify-report releases/usability-evidence/2.19.0/linux-desktop-bundle-update-operational-qualification.json \
+  --require-platform linux
+```
+
+Physical Linux host-loss qualification is intentionally two phase. Run
+`prepare` through a managed remote session, reboot the physical host through the
+site's normal administrative policy, then run `resume` after SSH is stable:
+
+```sh
+./scripts/kyuubiki qualify-linux-host-power-loss prepare \
+  --state-root tmp/linux-host-power-loss-state \
+  --agent-binary workers/rust/target/release/kyuubiki-cli \
+  --package-version 2.19.0
+
+./scripts/kyuubiki qualify-linux-host-power-loss resume \
+  --state-root tmp/linux-host-power-loss-state \
+  --out tmp/linux-host-power-loss-operational-qualification.json
+```
+
+`prepare` commits a SHA-256-bound intent and leaves a loopback sentinel; it does
+not reboot the machine. `resume` fails unless the Linux boot identity changed on
+the same machine. Before reboot, `cleanup` safely cancels an abandoned run only
+when the intent, PID executable digest, and listening port still match. Retained
+evidence is checked with `make check-linux-host-power-loss-qualification` and
+contains no host address, account name, credential, or absolute project path.
+
 - `make desktop-release PLATFORM=macos|linux|windows|all`
   Runs `desktop-stage`, host-native desktop bundle builds, and desktop verification
 - `make desktop-verify PLATFORM=macos|linux|windows|all`
@@ -108,7 +157,7 @@ Use these commands when building deployable layouts:
   bundle build.
 
 The Linux remote preflight currently expects these Ubuntu packages to be
-installer-managed on `kyuubiki-lab`:
+installer-managed on the configured Ubuntu qualification host:
 
 - `libwebkit2gtk-4.1-dev`
 - `libgtk-3-dev`
@@ -124,9 +173,11 @@ copied into an installed Kyuubiki runtime.
 - `./scripts/kyuubiki desktop-upload-remote macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-status macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-stage macos|linux|windows|all`
-- `./scripts/kyuubiki desktop-build-host`
+- `./scripts/kyuubiki desktop-build-host [--bundles <bundle-list>]`
 - `./scripts/kyuubiki desktop-install-host`
-- `./scripts/kyuubiki desktop-packaged-smoke macos`
+- `./scripts/kyuubiki desktop-packaged-smoke macos|linux|windows`
+- `./scripts/kyuubiki qualify-desktop-bundle-update-operational-host`
+- `./scripts/kyuubiki check-desktop-bundle-update-operational-qualification`
 - `./scripts/kyuubiki desktop-release macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-verify macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-linux-remote`
@@ -135,6 +186,15 @@ copied into an installed Kyuubiki runtime.
 
 `make package-runtime` is the cleanest entry point when you want a portable
 runtime layout that keeps component outputs organized in one generated tree.
+
+The managed desktop bundle format is
+`kyuubiki.desktop-bundle-set/v1`. Its manifest binds the platform, package
+version, exact three-component inventory, entrypoints, executable bits, file
+sizes, per-file SHA-256 values, per-component digests, and aggregate payload
+digest. Installer stores verified versions immutably and changes the active set
+only by appending a `kyuubiki.desktop-bundle-activation/v1` record. Rollback is
+therefore another atomic activation of a previously verified complete set, not
+a best-effort overwrite of three unrelated applications.
 
 Current staged runtime layout:
 
@@ -302,7 +362,7 @@ Unified updates now follow the same source-of-truth posture:
 
 This gives the project a Docker-like update model:
 
-- human-facing tags such as `moxi:stable`
+- human-facing tags such as `daji:stable`
 - concrete immutable shipped versions such as `2.0.0`
 - visible rollout rules instead of hidden cleanup or migration behavior
 - one shared update description for CLI, installer GUI, and docs surfaces
@@ -401,6 +461,59 @@ They share only Rust compilation intermediates at
 and Windows artifacts from contaminating one another, while the shared cache
 avoids compiling common Tauri and Kyuubiki crates three times on the same host.
 
+### Incremental assets and bundle staging
+
+Desktop child builds remove inherited Cargo package context such as
+`CARGO_MANIFEST_DIR`, `CARGO_PKG_*`, and `OUT_DIR`. Cargo supplies the child
+package's own values; launching the runner through `cargo run` or directly no
+longer invalidates native dependency build scripts just because the parent
+package context differs. Toolchain, linker, `RUSTFLAGS`, wrapper, job-count,
+and Cargo-home settings remain available. The desktop target directory remains
+the explicit platform-scoped shared cache.
+
+Shared TypeScript is still compiled and checked on every preparation pass, into
+a temporary directory. Generated JavaScript, shared styles, brand metadata,
+and surface-scoped language packs are compared by content before writing their
+canonical or shell mirrors. An unchanged file keeps its modification time;
+the language-pack trees are no longer deleted and copied back wholesale.
+Installer's accent stylesheet is composed before comparison, not appended on
+each run. Obsolete mirror entries are pruned, and modified mirrors are repaired
+even when their sizes or timestamps match. Sync output reports checked files,
+actual writes, and removed stale entries.
+
+`desktop-build-host` keeps the previous successful bundle set at
+`target/desktop-artifacts/<platform>/previous` while building the three shells.
+Each shell's output is moved into that staging directory, then combined and
+published at `target/desktop-cache/<platform>/release/bundle`. Moves are on the
+same filesystem: no second full copy, no rewritten binaries, and no discarded
+framework symlinks or executable permissions. Identical shared bundler helpers
+can coexist; conflicting same-name artifacts fail rather than overwrite.
+
+A returned build error or nonzero exit restores the previous bundle set and
+removes the incomplete set. If interrupted by process termination or power
+loss, an existing staging directory is preserved and a later build refuses to
+erase it. Inspect that directory and its `previous` set before recovery; it
+may also belong to an active build. Do not run individual shell builds in
+parallel with a full-set build against the same target directory. Source
+compilation caches are never cleared by this transaction. Cleanup failures
+after successful publication are reported with the remaining staging path.
+
+For local iteration, build only the native package format you need:
+
+```sh
+# macOS: native .app bundles without generating DMG images
+make desktop-build-host BUNDLES=app
+# Linux: .deb only; Windows: NSIS installers only (run on the matching host)
+make desktop-build-host BUNDLES=deb
+make desktop-build-host BUNDLES=nsis
+```
+
+Omit `BUNDLES` to retain all configured host formats. The direct equivalent is
+`./scripts/kyuubiki desktop-build-host --bundles <format>`. Per-shell and total
+elapsed times are printed. Release optimization, lockfile preflight, signing,
+and verification requirements are unchanged. These local iteration shortcuts
+are not a substitute for `desktop-release` or installed-package qualification.
+
 ## Recommended operator flow
 
 When packaging desktop deliverables, the smoothest path is now:
@@ -414,10 +527,11 @@ When packaging desktop deliverables, the smoothest path is now:
    `make desktop-stage PLATFORM=all`
 4. build host-native desktop bundles:
    `make desktop-build-host`
-5. prove that every packaged macOS shell reaches its interactive startup point:
-   `make desktop-packaged-smoke PLATFORM=macos`
-6. run the integrated release pass for the current host:
-   `make desktop-release`
+5. prove that every packaged host shell reaches its interactive startup point:
+   `make desktop-packaged-smoke PLATFORM=macos|linux|windows`
+6. for a distributable release, use `make desktop-release` as the build entry
+   instead of steps 3-4; it enforces distribution signing and verification.
+   Still perform the packaged startup probe in step 5 against that release build
 7. re-check descriptors and icon coverage:
    `make desktop-verify PLATFORM=all`
 
@@ -438,18 +552,68 @@ After installing the bundles, run the same probe against the installed copy:
 This prevents a source bundle pass from hiding a stale application under the
 system application directory.
 
+For an installed Linux package set, run the native executables under the
+desktop smoke runner. The runner creates the required D-Bus and Xvfb session;
+calling an installed WebKitGTK binary under Xvfb alone is not equivalent.
+
+```sh
+./scripts/kyuubiki desktop-packaged-smoke linux \
+  --bundle-root /usr/bin \
+  --out tmp/linux-installed-desktop-smoke.json
+```
+
+On Windows, the native runner can qualify the complete NSIS lifecycle without
+embedding PowerShell deployment logic in CI. It discovers the three packages,
+installs them silently for the current user, launches each installed WebView2
+shell, verifies its receipt, writes the portable report, and uninstalls all
+three packages before returning:
+
+```text
+cargo run --locked --manifest-path workers/rust/Cargo.toml \
+  -p kyuubiki-script-runner -- desktop-build-host --bundles nsis
+
+cargo run --locked --manifest-path workers/rust/Cargo.toml \
+  -p kyuubiki-script-runner -- desktop-packaged-smoke windows \
+  --install-nsis --out tmp/windows-installed-desktop-smoke.json
+```
+
+The canonical automation is
+`.github/workflows/desktop-windows-qualification.yml`. It uploads both the raw
+qualification candidate and the native validator's canonical retained-report
+layout. The artifact still has to be reviewed and merged into release evidence
+before closing
+`packaged_desktop_round_trip/windows-installed` in the usability release gate.
+
+After downloading the candidate into `tmp/`, retain it through the native
+validator rather than copying it by hand:
+
+```text
+./scripts/kyuubiki desktop-packaged-smoke \
+  --retain-report tmp/windows-installed-desktop-smoke.json
+```
+
+The command rejects failed, stale-version, incomplete, or path-bearing reports
+before atomically writing
+`releases/usability-evidence/<version>/windows-installed-desktop-smoke.json`.
+It is idempotent for identical evidence and refuses to overwrite a different
+report for the same release without explicit review.
+
 Retained reports must not contain host absolute paths. The native smoke runner
 encodes external locations as `@external` and paths below the selected bundle
 root as `@bundle-root`. Verify retained evidence without launching an app with:
 
 ```sh
 ./scripts/kyuubiki desktop-packaged-smoke \
-  --verify-report releases/usability-evidence/2.15.0/macos-installed-desktop-smoke.json
+  --verify-report releases/usability-evidence/2.19.0/macos-installed-desktop-smoke.json
+
+./scripts/kyuubiki desktop-packaged-smoke \
+  --verify-report releases/usability-evidence/2.19.0/linux-installed-desktop-smoke.json
 ```
 
 This verifier is host-independent. It checks the report schema, packaged
 version, all three desktop surfaces, successful startup receipts, and portable
-paths. It does not turn macOS evidence into Linux or Windows release evidence.
+paths. Evidence remains platform-specific: macOS evidence does not prove Linux
+or Windows, and Linux evidence does not prove macOS or Windows.
 
 `desktop-status` is intentionally the first stop. It gives operators one place
 to see:
@@ -515,7 +679,7 @@ but the disk-image step could not run to completion. In headless, restricted,
 or sandboxed macOS sessions, `hdiutil` itself may be unavailable for full DMG
 creation even when `.app` bundling succeeds.
 
-For moxi 2.x, treat these as two different validation modes:
+For daji 3.x, treat these as two different validation modes:
 
 - `automated session result`
   the packaging command was run from an automated, sandboxed, or otherwise

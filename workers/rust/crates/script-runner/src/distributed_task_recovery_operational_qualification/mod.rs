@@ -1,4 +1,4 @@
-mod agent_process;
+pub(crate) mod agent_process;
 mod probe;
 mod report;
 mod runtime;

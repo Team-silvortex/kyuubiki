@@ -4,7 +4,8 @@ import {
   WORKBENCH_LANGUAGE_PACK_VERSION_LINE,
   type WorkbenchLanguagePack,
 } from "@/lib/workbench/helpers";
-import { WORKBENCH_TRANSLATED_LANGUAGE_PACK_OVERRIDES } from "@/components/workbench/workbench-language-pack-catalog-data";
+import { loadWorkbenchTranslatedLanguagePackOverrides } from "@/components/workbench/workbench-language-pack-catalog-data";
+import { getWorkbenchWorkflowStorageWriteFailedLabel } from "@/components/workbench/workbench-workflow-storage-copy";
 
 export type WorkbenchLanguagePackCatalogEntry = {
   id: string;
@@ -96,9 +97,13 @@ export function findWorkbenchLanguagePackCatalogEntry(packId: string): Workbench
   return WORKBENCH_LANGUAGE_PACK_CATALOG.find((entry) => entry.id === packId) ?? null;
 }
 
-export function getBuiltinWorkbenchLanguagePack(packId: string): WorkbenchLanguagePack | null {
-  const locale = WORKBENCH_MAINSTREAM_LANGUAGE_PACK_LOCALES.find((entry) => workbenchPackId(entry.language) === packId);
+async function loadLanguagePack(
+  locale: MainstreamLanguagePackLocale | undefined,
+): Promise<WorkbenchLanguagePack | null> {
   if (!locale) return null;
+  const overrides = await loadWorkbenchTranslatedLanguagePackOverrides(locale.language);
+  if (!overrides) return null;
+  const shellOverrides = completeShellOverrides(overrides);
 
   return {
     schema_version: WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION,
@@ -112,6 +117,50 @@ export function getBuiltinWorkbenchLanguagePack(packId: string): WorkbenchLangua
     source: "downloaded",
     updatedAt: UPDATED_AT,
     description: `${locale.englishName} UI translations for Workbench navigation, workflow, store, and system surfaces.`,
-    overrides: WORKBENCH_TRANSLATED_LANGUAGE_PACK_OVERRIDES[locale.language] ?? {},
+    overrides: {
+      ...shellOverrides,
+      workflowStorageWriteFailedLabel:
+        getWorkbenchWorkflowStorageWriteFailedLabel(locale.language),
+    },
   };
+}
+
+function completeShellOverrides(overrides: Record<string, unknown>): Record<string, unknown> {
+  const sections = isRecord(overrides.sections) ? overrides.sections : null;
+  const roleLabel = typeof overrides.roleLabel === "string"
+    ? overrides.roleLabel
+    : typeof sections?.model === "string"
+      ? sections.model
+      : undefined;
+  const initialLoaded = typeof overrides.initialLoaded === "string"
+    ? overrides.initialLoaded
+    : typeof overrides.ready === "string"
+      ? overrides.ready
+      : undefined;
+  return {
+    ...overrides,
+    ...(roleLabel ? { roleLabel } : {}),
+    ...(initialLoaded ? { initialLoaded } : {}),
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+export function loadBuiltinWorkbenchLanguagePack(packId: string): Promise<WorkbenchLanguagePack | null> {
+  return loadLanguagePack(
+    WORKBENCH_MAINSTREAM_LANGUAGE_PACK_LOCALES.find((entry) => workbenchPackId(entry.language) === packId),
+  );
+}
+
+export function loadBuiltinWorkbenchLanguagePackForLanguage(
+  language: string,
+): Promise<WorkbenchLanguagePack | null> {
+  const normalized = language.toLowerCase();
+  return loadLanguagePack(
+    WORKBENCH_MAINSTREAM_LANGUAGE_PACK_LOCALES.find(
+      (entry) => entry.language.toLowerCase() === normalized,
+    ),
+  );
 }

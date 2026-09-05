@@ -1,0 +1,142 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Physical Linux evidence proves digest-bound installed Runtime recovery across a real host reboot, while the parent cross-platform recovery tier remains open.",
+  "paradigm_contract_evidence": {
+    "deployment_update": [
+      {
+        "id": "installed-runtime-power-loss-deployment-contract",
+        "modules": ["runtime-installer"],
+        "files": [
+          "config/architecture/installed-runtime-power-loss-qualification.json",
+          "schemas/installed-runtime-power-loss-qualification-contract.schema.json",
+          "schemas/installed-runtime-power-loss-intent.schema.json",
+          "schemas/installed-runtime-power-loss-qualification-report.schema.json",
+          "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/remote.rs"
+        ],
+        "required_text": [
+          "physical-linux-installed-runtime-power-loss-recovery",
+          "create-sync-rename-directory-sync",
+          "validated-session-and-intent-only",
+          "--confirm-physical-reboot"
+        ]
+      }
+    ],
+    "solver_execution": [
+      {
+        "id": "installed-runtime-power-loss-solver-contract",
+        "modules": ["runtime-agent-cli", "runtime-engine-solver"],
+        "files": [
+          "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/model.rs",
+          "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/host.rs"
+        ],
+        "required_text": [
+          "pre_reboot_headless_solve_passed",
+          "persisted_job_retrieved",
+          "numerical_result_stable"
+        ]
+      }
+    ],
+    "workflow_composition": [
+      {
+        "id": "installed-runtime-power-loss-orchestra-contract",
+        "modules": ["orchestra-control-plane"],
+        "files": [
+          "config/architecture/installed-runtime-power-loss-qualification.json",
+          "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/host.rs"
+        ],
+        "required_text": [
+          "qualification.installed-runtime.bar",
+          "runtime_restarted_from_installation",
+          "installed Runtime payload changed across reboot"
+        ]
+      }
+    ],
+    "sdk_headless": [
+      {
+        "id": "installed-runtime-power-loss-headless-contract",
+        "modules": ["sdk-headless"],
+        "files": [
+          "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/host.rs",
+          "workers/rust/crates/script-runner/src/installed_runtime_operational_qualification/support.rs"
+        ],
+        "required_text": [
+          "execute installed Headless service workflow",
+          "result_fetch",
+          "source tree must remain detached"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "installed-runtime-power-loss-deployment-protocol",
+      "status": "proven",
+      "grade": "operational",
+      "modules": ["runtime-installer"],
+      "paradigms": ["deployment_update"],
+      "dimensions": ["execution", "security", "contract", "recovery"],
+      "files": [
+        "config/architecture/installed-runtime-power-loss-qualification.json",
+        "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/remote.rs",
+        "releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json"
+      ],
+      "required_text": [
+        "qualify-installed-runtime-power-loss-remote",
+        "installed Runtime power-loss remote state removed",
+        "managed_remote_root_removed"
+      ]
+    },
+    {
+      "id": "installed-runtime-power-loss-solver-continuity",
+      "status": "proven",
+      "grade": "operational",
+      "modules": ["runtime-agent-cli", "runtime-engine-solver"],
+      "paradigms": ["solver_execution"],
+      "dimensions": ["execution", "contract", "numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/model.rs",
+        "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/host.rs",
+        "releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json"
+      ],
+      "required_text": [
+        "pre_reboot_headless_solve_passed",
+        "installed Runtime power-loss qualification prepared",
+        "numerical_result_stable"
+      ]
+    },
+    {
+      "id": "installed-runtime-power-loss-orchestra-continuity",
+      "status": "proven",
+      "grade": "operational",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/host.rs",
+        "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/model.rs",
+        "releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json"
+      ],
+      "required_text": [
+        "runtime_restarted_from_installation",
+        "persisted_job_retrieved"
+      ]
+    },
+    {
+      "id": "installed-runtime-power-loss-headless-continuity",
+      "status": "proven",
+      "grade": "operational",
+      "modules": ["sdk-headless"],
+      "paradigms": ["sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/script-runner/src/installed_runtime_power_loss_qualification/host.rs",
+        "releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json"
+      ],
+      "required_text": [
+        "post-reboot-fetch.json",
+        "result_fetch"
+      ]
+    }
+  ]
+}

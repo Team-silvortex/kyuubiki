@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/operator-package-acquisition-operational-qualification-report.schema.json",
+  "title": "Kyuubiki Two-host Operator Package Acquisition Operational Qualification",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at_unix_ms",
+    "status",
+    "qualification_id",
+    "journey",
+    "topology",
+    "installation",
+    "distribution",
+    "remote_operator_artifact_absent",
+    "initial_agent",
+    "final_agent",
+    "executions",
+    "central_requests",
+    "cleanup",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "kyuubiki.operator-package-acquisition-operational-qualification/v1"
+    },
+    "generated_at_unix_ms": { "type": "integer", "minimum": 1 },
+    "status": { "const": "pass" },
+    "qualification_id": {
+      "const": "two-host-installer-managed-orchestra-package-acquisition"
+    },
+    "journey": { "const": "orchestra-dispatch-fetch-execute-evict-refetch" },
+    "topology": { "$ref": "#/$defs/topology" },
+    "installation": { "$ref": "#/$defs/installation" },
+    "distribution": { "$ref": "#/$defs/distribution" },
+    "remote_operator_artifact_absent": { "const": true },
+    "initial_agent": { "$ref": "#/$defs/agent" },
+    "final_agent": { "$ref": "#/$defs/agent" },
+    "executions": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "$ref": "#/$defs/execution" }
+    },
+    "central_requests": { "$ref": "#/$defs/centralRequests" },
+    "cleanup": { "$ref": "#/$defs/cleanup" },
+    "checks": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 15,
+      "items": { "$ref": "#/$defs/check" }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "topology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "orchestrator_host_role",
+        "agent_host_role",
+        "orchestrator_platform",
+        "agent_platform",
+        "agent_architecture",
+        "transport",
+        "control_plane_runtime",
+        "execution_runtime",
+        "deployment_owner",
+        "build_profile"
+      ],
+      "properties": {
+        "orchestrator_host_role": { "const": "local-macos-qualification-host" },
+        "agent_host_role": { "const": "remote-linux-qualification-host" },
+        "orchestrator_platform": { "const": "macos" },
+        "agent_platform": { "const": "linux" },
+        "agent_architecture": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "transport": { "const": "lan-http-plus-agent-rpc" },
+        "control_plane_runtime": { "const": "elixir-orchestra" },
+        "execution_runtime": { "const": "installer-managed-rust-agent" },
+        "deployment_owner": { "const": "kyuubiki-installer" },
+        "build_profile": { "const": "release" }
+      }
+    },
+    "installation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "installer_owner",
+        "package_schema",
+        "activation_schema",
+        "package_version",
+        "platform",
+        "entrypoint_sha256",
+        "entrypoint_size_bytes",
+        "activation_generation",
+        "active_version",
+        "installed_version_count",
+        "operator_cache_initially_empty"
+      ],
+      "properties": {
+        "schema_version": { "const": "kyuubiki.operator-package-acquisition-host-setup/v1" },
+        "installer_owner": { "const": "kyuubiki-installer" },
+        "package_schema": { "type": "string", "minLength": 1 },
+        "activation_schema": { "type": "string", "minLength": 1 },
+        "package_version": { "type": "string", "minLength": 1 },
+        "platform": { "const": "linux" },
+        "entrypoint_sha256": { "$ref": "#/$defs/digest" },
+        "entrypoint_size_bytes": { "type": "integer", "minimum": 1 },
+        "activation_generation": { "type": "integer", "minimum": 1 },
+        "active_version": { "type": "string", "minLength": 1 },
+        "installed_version_count": { "const": 1 },
+        "operator_cache_initially_empty": { "const": true }
+      }
+    },
+    "distribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package_id",
+        "package_version",
+        "target",
+        "sdk_api_version",
+        "execution_abi",
+        "entrypoint_sha256",
+        "entrypoint_size_bytes",
+        "manifest_sha256",
+        "distribution_sha256",
+        "authority_mode",
+        "source_copy_count"
+      ],
+      "properties": {
+        "package_id": { "const": "extract.template_summary" },
+        "package_version": { "const": "0.1.0" },
+        "target": { "const": "linux-x86_64" },
+        "sdk_api_version": { "const": "kyuubiki.operator-sdk/v1" },
+        "execution_abi": { "const": "kyuubiki.operator-json-c/v1" },
+        "entrypoint_sha256": { "$ref": "#/$defs/digest" },
+        "entrypoint_size_bytes": { "type": "integer", "minimum": 1 },
+        "manifest_sha256": { "$ref": "#/$defs/digest" },
+        "distribution_sha256": { "$ref": "#/$defs/digest" },
+        "authority_mode": { "const": "bound_orchestra" },
+        "source_copy_count": { "const": 1 }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "program",
+        "package_runtime_ready",
+        "activated_package_count",
+        "control_link_state",
+        "successful_registration_count"
+      ],
+      "properties": {
+        "program": { "const": "kyuubiki-rust-agent" },
+        "package_runtime_ready": { "const": true },
+        "activated_package_count": { "const": 0 },
+        "control_link_state": { "const": "registered" },
+        "successful_registration_count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "status",
+        "origin",
+        "cache_status",
+        "package_id",
+        "package_version",
+        "entrypoint_sha256",
+        "integrity_verified",
+        "result_sum",
+        "eviction_disposition",
+        "remaining_activated_package_count"
+      ],
+      "properties": {
+        "task_id": { "type": "string", "minLength": 1 },
+        "status": { "const": "executed" },
+        "origin": { "const": "bound_orchestra_fetch" },
+        "cache_status": { "const": "fetched_and_activated" },
+        "package_id": { "const": "extract.template_summary" },
+        "package_version": { "const": "0.1.0" },
+        "entrypoint_sha256": { "$ref": "#/$defs/digest" },
+        "integrity_verified": { "const": true },
+        "result_sum": { "const": 14.0 },
+        "eviction_disposition": { "const": "evicted_after_execution" },
+        "remaining_activated_package_count": { "const": 0 }
+      }
+    },
+    "centralRequests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resolution_count",
+        "manifest_count",
+        "entrypoint_count",
+        "successful_sequence_count",
+        "protected_reads"
+      ],
+      "properties": {
+        "resolution_count": { "const": 2 },
+        "manifest_count": { "const": 2 },
+        "entrypoint_count": { "const": 2 },
+        "successful_sequence_count": { "const": 2 },
+        "protected_reads": { "const": true }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "local_orchestra_stopped",
+        "remote_agent_stopped",
+        "local_port_closed",
+        "remote_port_closed",
+        "managed_remote_root_removed",
+        "local_work_root_removed",
+        "secret_files_removed"
+      ],
+      "properties": {
+        "local_orchestra_stopped": { "const": true },
+        "remote_agent_stopped": { "const": true },
+        "local_port_closed": { "const": true },
+        "remote_port_closed": { "const": true },
+        "managed_remote_root_removed": { "const": true },
+        "local_work_root_removed": { "const": true },
+        "secret_files_removed": { "const": true }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": { "const": "pass" }
+      }
+    }
+  }
+}

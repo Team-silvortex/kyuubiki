@@ -1,8 +1,41 @@
 "use client";
 
 import { applyStudyKindSelection, isWorkbenchStudyKind } from "@/components/workbench/workbench-study-kind-controller";
+import type { SidebarSection, WorkflowPanelTab } from "@/components/workbench/workbench-types";
 import type { WorkbenchStudyKind } from "@/lib/workbench/history";
 import { applyWorkbenchGovernancePatch } from "@/lib/workbench/governance";
+
+const SIDEBAR_SECTIONS = ["study", "model", "workflow", "store", "library", "system"] as const;
+const STUDY_TABS = ["summary", "controls"] as const;
+const MODEL_TABS = ["tools", "tree"] as const;
+const MODEL_TOOLS_PAGES = ["overview", "study", "studio", "materials", "generate"] as const;
+const WORKFLOW_PANEL_TABS = ["overview", "catalog", "builder", "runs"] as const;
+const LIBRARY_TABS = ["results", "samples", "projects", "models", "jobs"] as const;
+const SYSTEM_PANEL_TABS = ["overview", "config", "assistant", "scripts", "runtime", "data"] as const;
+const SYSTEM_DATA_TABS = ["jobs", "results"] as const;
+
+function requiredChoice<const T extends readonly string[]>(
+  payload: Record<string, unknown>,
+  key: string,
+  choices: T,
+): T[number] {
+  const value = optionalChoice(payload, key, choices);
+  if (value === undefined) throw new Error(`${key} is required.`);
+  return value;
+}
+
+function optionalChoice<const T extends readonly string[]>(
+  payload: Record<string, unknown>,
+  key: string,
+  choices: T,
+): T[number] | undefined {
+  if (!(key in payload)) return undefined;
+  const value = payload[key];
+  if (typeof value !== "string" || !(choices as readonly string[]).includes(value)) {
+    throw new Error(`Invalid ${key}: ${String(value)}`);
+  }
+  return value as T[number];
+}
 
 type ScriptNavControllerDeps = {
   action: string;
@@ -10,14 +43,15 @@ type ScriptNavControllerDeps = {
   studyKind: WorkbenchStudyKind;
   studyKindResetHandlers: Partial<Record<WorkbenchStudyKind, () => void>>;
   setStudyKind: (value: WorkbenchStudyKind) => void;
-  handleSidebarSectionChange: (section: "study" | "model" | "workflow" | "library" | "system") => void;
+  handleSidebarSectionChange: (section: SidebarSection) => void;
   recordHistory: (label: string) => void;
   changeStudyTypeLabel: string;
   setStudyTab: (value: "summary" | "controls") => void;
   setModelTab: (value: "tools" | "tree") => void;
   setModelToolsPage: (value: "overview" | "study" | "studio" | "materials" | "generate") => void;
   setLibraryTab: (value: "results" | "samples" | "projects" | "models" | "jobs") => void;
-  setSystemPanelTab: (value: "config" | "scripts" | "runtime" | "data") => void;
+  setWorkflowPanelTab: (value: WorkflowPanelTab) => void;
+  setSystemPanelTab: (value: "overview" | "config" | "scripts" | "runtime" | "data") => void;
   setAssistantWindowOpen: (value: boolean) => void;
   setSystemDataTab: (value: "jobs" | "results") => void;
   handleLanguageChange: (value: string) => void;
@@ -47,6 +81,7 @@ export async function handleWorkbenchScriptNavAction({
   setModelTab,
   setModelToolsPage,
   setLibraryTab,
+  setWorkflowPanelTab,
   setSystemPanelTab,
   setAssistantWindowOpen,
   setSystemDataTab,
@@ -65,68 +100,52 @@ export async function handleWorkbenchScriptNavAction({
 }: ScriptNavControllerDeps): Promise<Record<string, unknown> | null> {
   switch (action) {
     case "nav/setSidebarSection": {
-      const section = payload.section;
-      if (section === "study" || section === "model" || section === "workflow" || section === "library" || section === "system") {
-        handleSidebarSectionChange(section);
-      }
+      const section = requiredChoice(payload, "section", SIDEBAR_SECTIONS);
+      handleSidebarSectionChange(section);
       return { ok: true, action, section };
     }
     case "nav/setStudyKind": {
       const nextStudyKind = payload.studyKind;
-      if (isWorkbenchStudyKind(nextStudyKind)) {
-        recordHistory(changeStudyTypeLabel);
-        applyStudyKindSelection({
-          currentStudyKind: studyKind,
-          nextStudyKind,
-          setStudyKind,
-          resetHandlers: studyKindResetHandlers,
-        });
+      if (!isWorkbenchStudyKind(nextStudyKind)) {
+        throw new Error(`Invalid studyKind: ${String(nextStudyKind)}`);
       }
+      recordHistory(changeStudyTypeLabel);
+      applyStudyKindSelection({
+        currentStudyKind: studyKind,
+        nextStudyKind,
+        setStudyKind,
+        resetHandlers: studyKindResetHandlers,
+      });
       return { ok: true, action, studyKind: nextStudyKind };
     }
     case "nav/setTabs": {
-      if (payload.studyTab === "summary" || payload.studyTab === "controls") {
-        setStudyTab(payload.studyTab);
+      const studyTab = optionalChoice(payload, "studyTab", STUDY_TABS);
+      const modelTab = optionalChoice(payload, "modelTab", MODEL_TABS);
+      const modelToolsPage = optionalChoice(payload, "modelToolsPage", MODEL_TOOLS_PAGES);
+      const workflowPanelTab = optionalChoice(payload, "workflowPanelTab", WORKFLOW_PANEL_TABS);
+      const libraryTab = optionalChoice(payload, "libraryTab", LIBRARY_TABS);
+      const systemPanelTab = optionalChoice(payload, "systemPanelTab", SYSTEM_PANEL_TABS);
+      const systemDataTab = optionalChoice(payload, "systemDataTab", SYSTEM_DATA_TABS);
+      const tabs = { studyTab, modelTab, modelToolsPage, workflowPanelTab, libraryTab, systemPanelTab, systemDataTab };
+      if (Object.values(tabs).every((value) => value === undefined)) {
+        throw new Error("nav/setTabs requires at least one supported tab value.");
       }
-      if (payload.modelTab === "tools" || payload.modelTab === "tree") {
-        setModelTab(payload.modelTab);
-      }
-      if (
-        payload.modelToolsPage === "overview" ||
-        payload.modelToolsPage === "study" ||
-        payload.modelToolsPage === "studio" ||
-        payload.modelToolsPage === "materials" ||
-        payload.modelToolsPage === "generate"
-      ) {
-        setModelToolsPage(payload.modelToolsPage);
-      }
-      if (
-        payload.libraryTab === "results" ||
-        payload.libraryTab === "samples" ||
-        payload.libraryTab === "projects" ||
-        payload.libraryTab === "models" ||
-        payload.libraryTab === "jobs"
-      ) {
-        setLibraryTab(payload.libraryTab);
-      }
-      if (
-        payload.systemPanelTab === "config" ||
-        payload.systemPanelTab === "assistant" ||
-        payload.systemPanelTab === "scripts" ||
-        payload.systemPanelTab === "runtime" ||
-        payload.systemPanelTab === "data"
-      ) {
-        if (payload.systemPanelTab === "assistant") {
+
+      if (studyTab) setStudyTab(studyTab);
+      if (modelTab) setModelTab(modelTab);
+      if (modelToolsPage) setModelToolsPage(modelToolsPage);
+      if (workflowPanelTab) setWorkflowPanelTab(workflowPanelTab);
+      if (libraryTab) setLibraryTab(libraryTab);
+      if (systemPanelTab) {
+        if (systemPanelTab === "assistant") {
           setAssistantWindowOpen(true);
           setSystemPanelTab("config");
         } else {
-          setSystemPanelTab(payload.systemPanelTab);
+          setSystemPanelTab(systemPanelTab);
         }
       }
-      if (payload.systemDataTab === "jobs" || payload.systemDataTab === "results") {
-        setSystemDataTab(payload.systemDataTab);
-      }
-      return { ok: true, action };
+      if (systemDataTab) setSystemDataTab(systemDataTab);
+      return { ok: true, action, tabs };
     }
     case "settings/patch": {
       if (typeof payload.language === "string" && payload.language.trim()) {

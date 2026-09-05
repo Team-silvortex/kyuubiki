@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  isWorkflowJobStatusContractValid,
   isWorkflowRunTerminalStatus,
   resolveJobStatusDetailLabel,
 } from "@/lib/api/job-status";
@@ -90,8 +91,15 @@ async function waitForJob(
     const envelope = await runtimeClient.fetchJobStatus(jobId);
     const detailLabel = resolveJobStatusDetailLabel(envelope.job.status_detail);
     onEvent?.({ message: `[job_wait] ${jobId} -> ${envelope.job.status}${detailLabel ? ` (${detailLabel})` : ""}` });
+    if (!isWorkflowJobStatusContractValid({
+      status: envelope.job.status,
+      progress: envelope.job.progress,
+      statusDetail: envelope.job.status_detail,
+    })) {
+      throw new Error(`Unexpected job status contract for ${jobId}: ${String(envelope.job.status)}.`);
+    }
     if (isWorkflowRunTerminalStatus(envelope.job.status)) return envelope;
-    await new Promise((resolve) => window.setTimeout(resolve, intervalMs));
+    await new Promise((resolve) => globalThis.setTimeout(resolve, intervalMs));
   }
   throw new Error(`Timed out while waiting for job ${jobId}.`);
 }

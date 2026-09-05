@@ -105,7 +105,9 @@ defmodule KyuubikiWeb.TestSupport.WorkflowLargeGraphBenchmark do
       when is_map(payload) and is_integer(pass_through_count) and is_map(response_options) do
     expected_completed_count = pass_through_count + 5
     tail_key = tail_artifact_key(pass_through_count)
-    options = WorkflowGraphResponse.resolve_options(build_graph(pass_through_count), response_options)
+
+    options =
+      WorkflowGraphResponse.resolve_options(build_graph(pass_through_count), response_options)
 
     unless length(payload["completed_nodes"]) == expected_completed_count do
       raise "unexpected completed node count for #{pass_through_count}"

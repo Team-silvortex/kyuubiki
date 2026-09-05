@@ -6,6 +6,7 @@ import { controlGroupsFromMeshClusters, summarizeWorkbenchDirectGroups, summariz
 import type { WorkbenchMeshClusterSummary } from "@/components/workbench/system/workbench-system-mesh-topology-helpers";
 import { summarizeWorkbenchMeshClusters } from "@/components/workbench/system/workbench-system-mesh-topology-helpers";
 import { controlWindowModeForAuthority, countWorkbenchControlEndpoints, countWorkbenchControlPeers, formatWorkbenchControlAgeLabel, pickWorkbenchControlEntryAgentId, summarizeWorkbenchPeerHealth, summarizeWorkbenchPeerObservability } from "@/components/workbench/system/workbench-system-control-runtime-helpers";
+import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
 import {
   buildWorkbenchGovernanceEnforcementPlan,
   buildWorkbenchGovernanceRuntimeDiagnostics,
@@ -18,6 +19,15 @@ type ControlLanguage = string;
 export type WorkbenchSystemControlModeCopy = {
   pageLabel: string;
   title: string;
+  sourceLabel: string;
+  derivedRuntimeSourceLabel: string;
+  importedSnapshotSourceLabel: string;
+  importSnapshotLabel: string;
+  liveSnapshotLabel: string;
+  agentUnitLabel: string;
+  peerUnitLabel: string;
+  healthyUnitLabel: string;
+  failureUnitLabel: string;
   modeLabel: string;
   exportSnapshotLabel: string;
   snapshotVersionLabel: string;
@@ -155,10 +165,84 @@ function localizedRecord<T>(language: ControlLanguage, values: { zh: T; ja: T; e
   return values.en;
 }
 
+function buildLanguagePackControlModeCopy(
+  copy: WorkbenchCopy,
+  frontendRuntimeMode: FrontendRuntimeMode,
+): WorkbenchSystemControlModeCopy {
+  const runtimeLabels = copy.frontendModes;
+  const runtimeModeLabel = runtimeLabels[frontendRuntimeMode];
+
+  return {
+    pageLabel: `${copy.controls} · ${copy.runtime}`,
+    title: `${copy.controls} · ${copy.runtimeMode}`,
+    sourceLabel: copy.auditSource,
+    derivedRuntimeSourceLabel: `${copy.frontendMode} · ${copy.runtime}`,
+    importedSnapshotSourceLabel: `${copy.importedModel} · ${copy.mesh}`,
+    importSnapshotLabel: `${copy.load} · ${copy.mesh}`,
+    liveSnapshotLabel: `${copy.runtime} · ${copy.refresh}`,
+    agentUnitLabel: copy.agents,
+    peerUnitLabel: copy.peers,
+    healthyUnitLabel: copy.heartbeatHealthy,
+    failureUnitLabel: copy.offline,
+    modeLabel: copy.runtimeMode,
+    exportSnapshotLabel: `${copy.exportData} · ${copy.mesh}`,
+    snapshotVersionLabel: copy.versions,
+    snapshotObservedAtLabel: copy.updatedAt,
+    activeRuntimeModeLabel: runtimeModeLabel,
+    topologyWindowLabel: `${copy.mesh} · ${copy.overview}`,
+    topologyWindowHint: copy.assistantConfigureDirectMeshHint,
+    tabs: {
+      orchestrated: runtimeLabels.orchestrated_gui,
+      direct: runtimeLabels.direct_mesh_gui,
+      mesh: copy.mesh,
+    },
+    windows: {
+      orchestrated: { title: runtimeLabels.orchestrated_gui, hint: copy.assistantRefreshRuntimeHint },
+      direct: { title: runtimeLabels.direct_mesh_gui, hint: copy.directMeshEndpointsHelp },
+      mesh: { title: copy.mesh, hint: copy.assistantConfigureDirectMeshHint },
+    },
+    rows: {
+      currentRuntimeLabel: copy.runtimeMode,
+      directStrategyLabel: copy.directMeshStrategy,
+      endpointCountLabel: copy.directMeshEndpoints,
+      agentCountLabel: copy.reachableAgents,
+      auditCountLabel: copy.audit,
+      protocolStatusLabel: copy.protocols,
+      securityStatusLabel: copy.security,
+      meshEntryLabel: `${copy.mesh} · ${copy.solverAgent}`,
+      meshEntryHealthLabel: copy.clusterHealth,
+      meshPeersLabel: copy.peers,
+      meshGraphLabel: `${copy.mesh} · ${copy.summary}`,
+      meshClusterCountLabel: copy.clusterSize,
+      meshRelayCandidateCountLabel: `${copy.mesh} · relay`,
+      meshUnclusteredCountLabel: `${copy.cluster} · ${copy.offline}`,
+      groupCountLabel: `${copy.controls} · ${copy.cluster}`,
+      groupSummaryLabel: copy.summary,
+      groupEntryLabel: copy.runtime,
+      groupSessionsLabel: copy.historyPanel,
+      meshRouteTraceLabel: copy.routing,
+      meshLastSeenLabel: copy.lastHeartbeat,
+      meshHopLabel: `${copy.routing} · hop`,
+      meshRoutingLabel: copy.routing,
+      meshFallbackLabel: `${copy.routing} · ${copy.renderFallbackModeLabel}`,
+      meshFailoverReasonLabel: copy.failureReason,
+      safeModeLabel: `${copy.security} · ${copy.status}`,
+      downgradeReasonLabel: copy.failureReason,
+    },
+    meshPlannedHint: copy.assistantConfigureDirectMeshHint,
+    statuses: { online: copy.online, offline: copy.offline, ready: copy.ready, open: copy.no },
+    runtimeLabels,
+    directStrategyLabels: copy.directMeshStrategies,
+  };
+}
+
 export function buildWorkbenchSystemControlModeCopy(
   language: ControlLanguage,
   frontendRuntimeMode: FrontendRuntimeMode,
+  copy?: WorkbenchCopy,
 ): WorkbenchSystemControlModeCopy {
+  if (copy) return buildLanguagePackControlModeCopy(copy, frontendRuntimeMode);
+
   const runtimeLabels = {
     orchestrated_gui: localizedRecord(language, { zh: "中心调度 GUI", ja: "オーケストレーション GUI", en: "Orchestrated GUI" }),
     direct_mesh_gui: localizedRecord(language, { zh: "直连 Mesh GUI", ja: "ダイレクト mesh GUI", en: "Direct mesh GUI" }),
@@ -167,6 +251,15 @@ export function buildWorkbenchSystemControlModeCopy(
   return {
     pageLabel: localizedRecord(language, { zh: "控制窗", ja: "制御ウィンドウ", en: "Control windows" }),
     title: localizedRecord(language, { zh: "控制模式窗口", ja: "制御モードウィンドウ", en: "Control mode windows" }),
+    sourceLabel: localizedRecord(language, { zh: "来源", ja: "ソース", en: "Source" }),
+    derivedRuntimeSourceLabel: localizedRecord(language, { zh: "前端运行时推导", ja: "フロントエンド実行時から導出", en: "Derived frontend runtime" }),
+    importedSnapshotSourceLabel: localizedRecord(language, { zh: "导入快照", ja: "読み込み済みスナップショット", en: "Imported snapshot" }),
+    importSnapshotLabel: localizedRecord(language, { zh: "载入快照", ja: "スナップショットを読み込む", en: "Load snapshot" }),
+    liveSnapshotLabel: localizedRecord(language, { zh: "使用实时推导", ja: "ライブ導出を使用", en: "Use live derived" }),
+    agentUnitLabel: localizedRecord(language, { zh: "agents", ja: "agents", en: "agents" }),
+    peerUnitLabel: localizedRecord(language, { zh: "peers", ja: "peers", en: "peers" }),
+    healthyUnitLabel: localizedRecord(language, { zh: "健康", ja: "正常", en: "healthy" }),
+    failureUnitLabel: localizedRecord(language, { zh: "失败", ja: "失敗", en: "failures" }),
     modeLabel: localizedRecord(language, { zh: "控制模式", ja: "制御モード", en: "Control mode" }),
     exportSnapshotLabel: localizedRecord(language, { zh: "导出拓扑快照", ja: "トポロジースナップショットを書き出す", en: "Export topology snapshot" }),
     snapshotVersionLabel: localizedRecord(language, { zh: "快照版本", ja: "スナップショット版", en: "Snapshot version" }),
@@ -237,7 +330,7 @@ export function buildWorkbenchSystemControlModeCopy(
       online: localizedRecord(language, { zh: "在线", ja: "オンライン", en: "online" }),
       offline: localizedRecord(language, { zh: "离线", ja: "オフライン", en: "offline" }),
       ready: localizedRecord(language, { zh: "就绪", ja: "準備完了", en: "ready" }),
-      open: localizedRecord(language, { zh: "开放", ja: "オープン", en: "open" }),
+      open: localizedRecord(language, { zh: "否", ja: "いいえ", en: "no" }),
     },
     runtimeLabels,
     directStrategyLabels: {
@@ -290,31 +383,28 @@ export function buildWorkbenchSystemControlTopologySummary(input: {
   const directGroups = summarizeWorkbenchDirectGroups(input.protocolAgents, input.frontendRuntimeMode);
   const meshGroups = controlGroupsFromMeshClusters(meshSummary.clusters);
   const estimatedHopCount = peerCount > 0 ? Math.min(3, Math.max(1, Math.ceil(peerCount / Math.max(input.protocolAgents.length || 1, 1)))) : 0;
-  const graphSummaryLabel = `${peerHealth.healthy}/${peerCount || 0} healthy · ${peerObservability.totalFailureCount} failures`;
+  const graphSummaryLabel = `${peerHealth.healthy}/${peerCount || 0} ${input.copy.healthyUnitLabel} · ${peerObservability.totalFailureCount} ${input.copy.failureUnitLabel}`;
   const routeTraceLabel =
     peerCount === 0
-      ? `${entryAgentId} -> isolated`
+      ? `${entryAgentId} -> ${input.copy.statuses.offline}`
       : estimatedHopCount <= 1
-        ? `${entryAgentId} -> peers`
-        : `${entryAgentId} -> relay -> peers`;
+        ? `${entryAgentId} -> ${input.copy.peerUnitLabel}`
+        : `${entryAgentId} -> relay -> ${input.copy.peerUnitLabel}`;
   const failoverReason =
     !input.protocolOnline
       ? input.copy.statuses.offline
       : input.protocolAgents.length === 0
         ? input.copy.tabs.direct
         : peerObservability.totalFailureCount > 0
-          ? `${peerObservability.totalFailureCount} peer failures`
-        : entryHealthScore !== null && entryHealthScore < 0.5
+          ? `${peerObservability.totalFailureCount} ${input.copy.failureUnitLabel}`
+        : entryHealthScore !== null && entryHealthScore < 50
           ? input.copy.directStrategyLabels.healthiest
           : input.copy.tabs.orchestrated;
   return {
     mode,
     authorityMode,
     entryAgentId,
-    entryHealthLabel:
-      entryHealthScore === null
-        ? "--"
-        : `${Math.round(entryHealthScore * 100)}%`,
+    entryHealthLabel: formatWorkbenchHealthScore(entryHealthScore),
     peerCount,
     meshClusterCount: meshSummary.clusterCount,
     meshRelayCandidateCount: meshSummary.relayCandidateCount,
@@ -342,7 +432,10 @@ export function buildWorkbenchSystemControlTopologySummary(input: {
           : input.copy.tabs.direct,
     failoverReason,
     safeModeActive: governanceEnforcement.shouldDowngrade,
-    downgradeReason: governanceEnforcement.reason ?? governanceDiagnostics.driftLabel,
+    downgradeReason:
+      (governanceEnforcement.reason ?? governanceDiagnostics.driftLabel) === "aligned"
+        ? input.copy.statuses.ready
+        : governanceEnforcement.reason ?? governanceDiagnostics.driftLabel,
     runtimeLabel: input.copy.runtimeLabels[input.frontendRuntimeMode],
     directStrategyLabel: input.copy.directStrategyLabels[input.directMeshSelectionMode],
     meshClusters: meshSummary.clusters,
@@ -425,6 +518,11 @@ export function buildWorkbenchSystemTopologySnapshot(input: {
       };
     }),
   };
+}
+
+export function formatWorkbenchHealthScore(score: number | null) {
+  if (score === null || !Number.isFinite(score)) return "--";
+  return `${Math.round(Math.max(0, Math.min(100, score)))}%`;
 }
 
 export function parseWorkbenchSystemTopologySnapshot(value: unknown): WorkbenchSystemTopologySnapshot | null {
@@ -514,7 +612,7 @@ export function buildControlTopologySummaryFromSnapshot(
     mode: snapshot.control_mode,
     authorityMode: snapshot.control_mode === "orchestrated" ? "single_orchestrator" : "offline_mesh",
     entryAgentId: snapshot.entry_agent_id,
-    entryHealthLabel: snapshot.entry_health_score === null ? "--" : `${Math.round(snapshot.entry_health_score * 100)}%`,
+    entryHealthLabel: formatWorkbenchHealthScore(snapshot.entry_health_score),
     peerCount: snapshot.peer_count,
     graphSummaryLabel: snapshot.graph_summary,
     routeTraceLabel: snapshot.route_trace,

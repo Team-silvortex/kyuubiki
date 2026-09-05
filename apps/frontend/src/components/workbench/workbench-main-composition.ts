@@ -14,8 +14,14 @@ import {
 } from "@/components/workbench/workbench-shell-copy-composition";
 import { applyStudyKindSelection } from "@/components/workbench/workbench-study-kind-controller";
 import { useWorkbenchStudyShellController } from "@/components/workbench/workbench-study-shell-controller";
+import type { WorkbenchSystemSidebarMountProps } from "@/components/workbench/workbench-system-sidebar-mount-types";
 
-export function useWorkbenchMainComposition(props: Record<string, any>) {
+type WorkbenchMainCompositionProps = Record<string, any> & {
+  deferredJobHistory: WorkbenchSystemSidebarMountProps["jobHistory"];
+  round: (value: number) => number;
+};
+
+export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps) {
   const {
     createProjectRecord,
     deleteProjectRecord,
@@ -107,12 +113,13 @@ export function useWorkbenchMainComposition(props: Record<string, any>) {
     immersiveToolDrawerOpen: props.immersiveToolDrawerOpen,
     immersiveViewport: props.immersiveViewport,
     job: props.job,
-    jobHistory: props.jobHistory,
+    jobHistory: props.deferredJobHistory,
     language: props.language,
     libraryTab: props.libraryTab,
     loadedModelName: props.loadedModelName,
     memberDraftNodes: props.memberDraftNodes,
     modelTab: props.modelTab,
+    modelToolsPage: props.modelToolsPage,
     panelParametric: props.panelParametric,
     planeModel: props.planeModel,
     projects: props.projects,
@@ -177,6 +184,7 @@ export function useWorkbenchMainComposition(props: Record<string, any>) {
     viewportPanelRef: props.viewportPanelRef,
     workflowCatalog: props.workflowController.workflowCatalog,
     workflowCatalogBusy: props.workflowController.workflowCatalogBusy,
+    workflowPanelTab: props.workflowController.workflowPanelTab,
     setUndoStack: props.setUndoStack,
     setRedoStack: props.setRedoStack,
     setAssistantWindowOpen: props.setAssistantWindowOpen,
@@ -305,6 +313,7 @@ export function useWorkbenchMainComposition(props: Record<string, any>) {
       recordHistory,
       startTransition: props.startTransition,
       adminDataBackendService: props.adminDataBackendService,
+      storeBackendService: props.storeBackendService,
       resultRefreshSeqRef: props.resultRefreshSeqRef,
       setSelectedAdminResultJobId: props.setSelectedAdminResultJobId,
       jobPollTokenRef: props.jobPollTokenRef,
@@ -332,6 +341,13 @@ export function useWorkbenchMainComposition(props: Record<string, any>) {
       setAdminFilterProjectId: props.setAdminFilterProjectId,
       setAdminFilterModelVersionId: props.setAdminFilterModelVersionId,
       setSelectedAdminJobId: props.setSelectedAdminJobId,
+      selectedAdminJobId: props.selectedAdminJobId,
+      adminJobMessage: props.adminJobMessage,
+      adminJobProjectId: props.adminJobProjectId,
+      adminJobModelVersionId: props.adminJobModelVersionId,
+      adminJobCaseId: props.adminJobCaseId,
+      selectedAdminResultJobId: props.selectedAdminResultJobId,
+      adminResultDraft: props.adminResultDraft,
       downloadDatabaseSnapshot,
       round: props.round,
       applyTrussSuggestion: editControllers.applyTrussSuggestion,
@@ -378,6 +394,7 @@ export function useWorkbenchMainComposition(props: Record<string, any>) {
     interactionControllers,
     flowControllers,
     workflowController: props.workflowController,
+    storeBackendService: props.storeBackendService,
     railItems: props.railItems,
     studyDomainOptions,
     studyKindOptionGroups,
@@ -391,6 +408,8 @@ export function useWorkbenchMainComposition(props: Record<string, any>) {
     modelMaterialsContent,
     modelGenerateContent,
     modelTreeContent,
+    handleLanguageChange,
+    handleModelToolsPageChange,
     workflowLabels: buildWorkbenchWorkflowLabels(props.t),
     createProjectRecord,
     updateProjectRecord,
@@ -399,6 +418,7 @@ export function useWorkbenchMainComposition(props: Record<string, any>) {
     downloadProjectBundleZip,
     importProjectBundle,
     selectedProjectModels: props.selectedProjectModels,
+    jobHistory: props.deferredJobHistory,
     saveModelVersion,
     deleteSavedModelRecord,
     openSavedModel,
@@ -410,6 +430,7 @@ export function useWorkbenchMainComposition(props: Record<string, any>) {
     refreshProjects: props.refreshProjects,
     retryRuntimeRecovery: props.retryRuntimeRecovery,
     health: props.health,
+    protocolAgents: props.protocolAgents,
     runtimeRecovery: props.runtimeRecovery,
     securityEventRecords: props.securityEventRecords,
     securityEventWindowFilter: props.securityEventWindowFilter,
@@ -504,6 +525,7 @@ export function useWorkbenchMainComposition(props: Record<string, any>) {
     assistantAudit,
     uiActionController,
     toggleImmersiveViewport,
+    refreshResults: primaryActionsController.refreshResults,
     recordHistory,
     selectStudyKind,
     handleLanguageChange,

@@ -47,7 +47,7 @@ pub fn linux_desktop_dependency_plan() -> LinuxDesktopDependencyPlan {
     LinuxDesktopDependencyPlan {
         schema_version: LINUX_DESKTOP_DEPS_SCHEMA_VERSION.to_string(),
         target: "Ubuntu lab host for Tauri Linux desktop bundles".to_string(),
-        frontend_build_node: "~/.local/kyuubiki-runtimes/node-v20.19.2-linux-x64".to_string(),
+        frontend_build_node: "~/.kyuubiki-toolchains/node-v20.19.2-linux-x64".to_string(),
         preflight_command: "make desktop-linux-remote-preflight".to_string(),
         install_command: format!(
             "sudo apt-get update && sudo apt-get install -y {}",

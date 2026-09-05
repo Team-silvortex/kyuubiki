@@ -108,8 +108,8 @@ function baseArgs(calls: string[]) {
     activeMaterial: "steel",
     defaultProjectLabel: "Default Project",
     deleteModelVersion: async () => {},
-    downloadProjectBundleJson: async () => {},
-    downloadProjectBundleZip: async () => {},
+    downloadProjectBundleJson: async () => ({ ok: true as const }),
+    downloadProjectBundleZip: async () => ({ ok: true as const }),
     generateModel: () => {},
     generatePanelModel: () => {},
     loadedModelName: "model-a",
@@ -194,4 +194,18 @@ test("script model save creates models through project library service", async (
     "refresh-versions:model-created",
     "message:model created",
   ]);
+});
+
+test("script project exports propagate download failures instead of reporting false success", async () => {
+  const calls: string[] = [];
+  const failure = new Error("project bundle download failed");
+
+  await assert.rejects(
+    handleWorkbenchScriptProjectModelAction({
+      ...baseArgs(calls),
+      action: "project/exportJson",
+      downloadProjectBundleJson: async () => ({ ok: false, error: failure }),
+    }),
+    failure,
+  );
 });

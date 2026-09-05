@@ -1,7 +1,7 @@
 # Testing And CI
 
 This document is the quick map for how Kyuubiki currently validates itself in
-the `moxi 2.x` line.
+the `daji 3.x` line.
 
 ## Why the test stack is layered
 
@@ -35,7 +35,7 @@ The repository now keeps validation split by responsibility.
   installer `tests.rs` as a module index. The Make target runs the audit
   script self-test before scanning the repository.
 - `make architecture-check`
-  Lightweight architecture guard for the `moxi 2.x` line. It runs the
+  Lightweight architecture guard for the `daji 3.x` line. It runs the
   organization audit self-test and scan, version-line checks, UI automation
   contract checks, materialization plan contract checks, material exploration
   chain contract checks, retained material research bundle and bundle-index
@@ -78,7 +78,7 @@ The repository now keeps validation split by responsibility.
   solve operator has a machine-readable manifest shard entry with benchmark
   coverage, headless workflow support, evidence files, trust level, and visible
   limits. It also runs a checker self-test and enforces the manifest's
-  `minimum_coverage_level`, currently `qualification` for the `moxi 2.x`
+  `minimum_coverage_level`, currently `qualification` for the `daji 3.x`
   physics-coverage gate.
 - `make check-test-coverage-posture`
   Traditional code-coverage posture guard. It validates
@@ -161,12 +161,33 @@ Installer crate tests are split by installer responsibility instead of growing
 - `make check-operator-package-dynamic-smoke`
 - `make qualify-operator-sdk-multihost-operational-remote REMOTE=kyuubiki-lab`
 - `make check-operator-sdk-multihost-operational-qualification`
+- `make qualify-operator-package-acquisition-operational-remote REMOTE=kyuubiki-lab`
+- `make check-operator-package-acquisition-operational-qualification`
+- `make qualify-operator-sdk-performance`
+- `make check-operator-sdk-performance-qualification REPORT=releases/usability-evidence/2.19.0/operator-sdk-performance-qualification.json`
+- `make qualify-operator-sdk-windows-operational` on native x86_64 MSVC Windows
+- `make check-operator-sdk-windows-operational-qualification`
 
 This runs:
 
 - Python SDK smoke tests
 - Elixir SDK smoke tests
 - Rust SDK smoke tests
+
+The package-acquisition qualification is a separate two-physical-host release
+lane. It starts a real Elixir Orchestra on macOS, deploys the remote Linux Agent
+through Installer-owned activation, publishes one Linux operator package only
+to Orchestra, and dispatches two disposable TaskIR executions. Passing evidence
+requires two authenticated resolve/manifest/entrypoint download sequences,
+dynamic execution, post-execution eviction, a later refetch, zero active
+packages at both observation boundaries, and complete removal of temporary
+credentials and managed test roots. Retained evidence never contains host
+addresses, SSH aliases, usernames, credentials, or absolute host paths.
+The package manifest, distribution index, resolved response, Installer receipt,
+and execution report must all agree on `kyuubiki.operator-json-c/v1`. The
+qualification deliberately builds the Agent workspace and operator template
+with their independent dependency locks to prove that no Rust object layout or
+allocator ownership crosses the dynamic-library boundary.
 
 The operator package preflight is a separate read-only admission check for the
 external Rust operator template. It emits `kyuubiki.operator-package-preflight/v1`
@@ -202,11 +223,41 @@ remote staging, and retains only normalized evidence under
 for attachment tampering and false Windows completion. Passing this target does
 not promote Windows or mark the release complete.
 
+The Windows qualification v2 lane is native rather than cross-compiled. It
+binds the six-stage report to `kyuubiki.operator-json-c/v1`, verifies the ABI in
+both the dynamic smoke and Installer preflight attachments, and hashes the
+actual SDK, Engine, Installer, Agent CLI, template, and qualification sources.
+GitHub Actions validates the report generated in the current run before
+uploading it; repository-retained historical evidence is never used as the CI
+pass condition.
+
+The operator SDK performance qualification is a release-only in-process dynamic
+ABI lane. It rejects empty package discovery, verifies package/operator
+traceability, warms the loaded library, and records activation, first dispatch,
+compact and 4096-value p50/p95/max latency, plus four-worker throughput. Its
+checker binds the report to the measured sources and rejects response-copy,
+latency, throughput, or dispatch-error regressions without rerunning the heavy
+measurement in every architecture check.
+
 These tests use small local loopback fixtures and focus on:
 
 - `AgentClient.run_study`
 - result fetch
 - chunk browsing
+
+### Recovery qualification checks
+
+- `make check-linux-host-power-loss-qualification`
+
+The retained Linux host-loss lane is a physical, two-phase qualification rather
+than a simulated process restart. Its checker reruns contract and negative
+self-tests, validates the SHA-256-bound reboot intent semantics, and verifies
+the retained `2.19.0` report. Passing requires a changed boot identity on the
+same machine, interruption of the pre-reboot Agent sentinel, unchanged
+Installer-managed payload, stable solver result and TaskIR recovery behavior,
+quiescent watchdog state, and zero qualification residue. The heavy capture is
+run manually on the managed Linux host; ordinary CI only revalidates the
+portable retained evidence.
 
 ### Cross-process integration checks
 
@@ -414,11 +465,25 @@ Use these entrypoints:
 - `cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix structural-extended --repeat 1`
   Run the broad structural smoke matrix for spring, nonlinear/contact, beam,
   thermal beam, and modal frame families.
+- `cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix dynamic-response --repeat 1`
+  Run isolated transient-heat, transient-spring, and harmonic-spring Engine
+  probes without promoting the experimental dynamic lane into qualification.
+- `cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix cohesive-interface --repeat 1`
+  Run the 1D/2D constitutive and 2D/3D assembled cohesive-interface paths
+  through isolated native Engine processes. History workloads cap at 4096
+  steps; mesh workloads retain their actual bounded 512-node contract rather
+  than inheriting a misleading profile-scale node claim. JSON reports expose
+  the executed count as `history_step_count`.
+- `cd workers/rust && cargo run -q -p kyuubiki-script-runner -- check-operator-validation --execute --profile electric-conduction-plane-quad-screening`
+  Execute the electric-conduction component dossier: rotated closed form, mesh
+  refinement, malformed topology, Agent RPC, Engine Workflow, and Rust
+  headless-contract checks. Passing this profile does not add the operator to
+  the release-qualified `physics-coverage` matrix.
 - `cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix thermal-structural --repeat 1`
   Run the coupled thermal-structural smoke matrix for thermal bar/truss/plane,
   static frame, and thermal frame families.
 - `make benchmark-physics-coverage`
-  Run the `moxi 2.x` broad physics smoke matrix across every built-in benchmark
+  Run the `daji 3.x` broad physics smoke matrix across every built-in benchmark
   template. This is the quickest product-level check that the main physics
   families still have real solver execution paths while engine and TaskIR
   contracts harden.
@@ -558,7 +623,7 @@ Baseline and report surfaces:
   `400k` and `500k` matrix contracts: `mechanical-core`, `thermal-core`,
   `compound-core`, and `thermal-structural`. Coverage targets live in
   `config/benchmark-profile-coverage.json`; use
-  `./scripts/build-benchmark-profile-index.mjs --coverage-targets <manifest>`
+  `./scripts/kyuubiki build-benchmark-profile-index --coverage-targets <manifest>`
   for experimental matrix contracts. When an older summary lacks
   `solver_preconditioners`, the index reads that run's retained raw report to
   recover `cases[].solver_preconditioner`; the manifest is validated strictly,
@@ -738,6 +803,37 @@ removal of both BEAM processes, all local ports and logs, the tunnel, and the
 remote container. The retained report contains roles and timings only, never a
 host address, account, database URL, or credential.
 
+The database-partition lane keeps both Orchestra processes alive and gives each
+one an independent SSH loopback tunnel to the same PostgreSQL instance:
+
+```sh
+make qualify-orchestra-network-partition-operational-remote REMOTE=kyuubiki-lab
+make check-orchestra-network-partition-operational-qualification
+```
+
+It removes only the current owner's tunnel, requires that owner to demote with
+`orchestra_lease_store_unavailable`, proves the standby path remains available,
+then observes a higher fencing token. After restoring the old owner's network,
+the lane requires it to rejoin as standby and rejects a valid workflow write
+with `orchestra_standby`. The lease-only introspection route avoids depending
+on unrelated database-backed health components during the partition.
+
+The long-workflow lane pauses an exact remote Agent execution while two local
+Orchestra processes share the remote PostgreSQL recovery store:
+
+```sh
+make qualify-orchestra-long-workflow-takeover-operational-remote REMOTE=kyuubiki-lab
+make check-orchestra-long-workflow-takeover-operational-qualification
+```
+
+It proves that an idempotent workflow advances from generation one to two,
+dispatches exactly twice, and produces one verified terminal commit. A separate
+`checkpoint_required` workflow stays on generation one, enters
+`recovery_blocked`, is not redispatched, and cannot be mutated by the orphaned
+completion. Both former owners must rejoin as standby, a follow-up solve must
+succeed, and all Agent, Orchestra, tunnel, database, port, and work-root state
+must be removed. The retained report is host-identity and credential free.
+
 This is source-runtime operational evidence. The separate installed-package
 lane builds and activates a production OTP release on the remote Linux host,
 deletes the synchronized source tree, and then repeats the same takeover:
@@ -751,9 +847,67 @@ Both installed Orchestra instances share one digest-verified immutable Runtime
 payload while keeping independent writable release state. Success requires an
 Installer activation record, source fallback disabled, owner crash and token
 increment, former-owner fencing, plus zero managed Runtime, container, process,
-port, run-root, or transient evidence residue. Long-running workflow takeover,
-database-network disruption, fleet acquisition, and non-Linux packages remain
-separate open qualifications.
+port, run-root, or transient evidence residue. Fleet acquisition and non-Linux
+packages remain separate open qualifications.
+
+The installed end-to-end Runtime lane exercises the ordinary standalone path,
+including the installed Rust Headless client and two installed Rust Agents:
+
+```sh
+make qualify-installed-runtime-operational-remote
+make check-installed-runtime-operational-qualification
+make qualify-installed-runtime-operational-macos
+make check-installed-runtime-macos-operational-qualification
+```
+
+It builds one production OTP release and the native binaries, seals and
+activates them through Installer, deletes the synchronized source tree, then
+starts the Runtime with the frontend disabled. Headless submits a real bar
+solve and fetches the same persisted result after each of two managed Runtime
+restarts. Before release assembly, every production Elixir module is compiled
+with `mix compile --warnings-as-errors` on the pinned physical-Linux toolchain;
+type-analysis or compiler warnings therefore fail the qualification rather
+than being hidden in release output. Installed state paths are absolute and
+outside the immutable payload; packaged relative development defaults cannot
+redirect SQLite, JSON persistence, or artifacts into installed program files.
+The host capture verifies the complete payload file set both before startup and
+after shutdown, and fails closed on digest drift, source fallback, changed
+numerical output, missing Agent dispatch, stale PID files, open ports, or
+cleanup residue. Only the compact path-free report is retained; the remote run
+root and local raw captures are removed.
+
+The macOS command drives the same contract locally on Apple Silicon without
+using the source tree as a runtime fallback. It stages, seals, installs, and
+activates the payload under a temporary macOS `HOME`, runs the full installed
+Headless-Orchestra-two-Agent-Engine chain through two restarts, rescans the
+immutable payload, and removes both the application-support store and raw
+captures. This is ordinary installed-operation evidence, not a substitute for
+a physical macOS reboot qualification.
+
+The full installed Runtime reboot lane is a separate two-phase boundary. It
+persists one completed Headless job while the installed Orchestra and two Rust
+Agents are still running, then requires a physical Linux reboot before the same
+job can be fetched again:
+
+```sh
+make qualify-installed-runtime-power-loss-remote ACTION=prepare
+make qualify-installed-runtime-power-loss-remote ACTION=reboot ARGS=--confirm-physical-reboot
+make qualify-installed-runtime-power-loss-remote ACTION=resume
+make check-installed-runtime-power-loss-qualification \
+  REPORT=releases/usability-evidence/2.19.0/installed-runtime-power-loss-operational-qualification.json
+```
+
+The native command itself requires `--confirm-physical-reboot`; the Make target
+does not bypass that guard. An abandoned run is removed with `ACTION=cleanup`.
+Preparation and resume use a digest-bound local session plus a durable remote
+intent, verify every file named by the sealed Runtime payload, keep the source
+tree detached, and reject a resume unless the machine identity is unchanged and
+the boot identity changed. Payload integrity is checked after pre-reboot work,
+before recovery, and again after the recovered Runtime stops. The retained
+physical-Linux report passes 16/16 checks, including exact persisted-job and
+numerical-result continuity, released ports, removed PID state, and zero remote
+residue. Only the final path-free report is retained; this evidence does not
+claim installed recovery on macOS or Windows.
 
 ## Operational Agent Solver Qualification
 

@@ -253,7 +253,7 @@ export function buildWorkbenchResultDerivedData(props: Record<string, any>) {
   const selectedNodeIssues =
     selectedNode !== null && trussDiagnostics ? trussDiagnostics.nodeIssues[selectedNode] ?? [] : [];
 
-  const securityUi = buildWorkbenchSecurityUi(language);
+  const securityUi = buildWorkbenchSecurityUi(t);
 
   return {
     planeResultFieldMax,

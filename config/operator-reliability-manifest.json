@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.operator-reliability-manifest/v1",
-  "version_line": "moxi 2.0.x",
+  "version_line": "daji 3.0.x",
   "coverage_matrix": "physics-coverage",
   "minimum_coverage_level": "qualification",
   "levels": [

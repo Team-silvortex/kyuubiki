@@ -117,6 +117,7 @@ fn serializes_transient_heat_bar_1d_rpc_round_trip() {
             }],
             time_step: 0.1,
             steps: 2,
+            history_stride: None,
         })
         .expect("request params should serialize"),
     };
@@ -126,6 +127,9 @@ fn serializes_transient_heat_bar_1d_rpc_round_trip() {
 
     assert_eq!(decoded.method, RpcMethod::SolveTransientHeatBar1d);
     assert_eq!(decoded.id, "rpc-transient-heat-bar");
+    let params: SolveTransientHeatBar1dRequest =
+        serde_json::from_value(decoded.params).expect("params should decode");
+    assert_eq!(params.history_stride, None);
 }
 
 #[test]

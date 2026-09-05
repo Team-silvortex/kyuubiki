@@ -2,10 +2,12 @@ import type { MutableRefObject } from "react";
 import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import { dismissWorkbenchAlert, upsertWorkbenchAlert } from "@/components/workbench/workbench-alert-state";
 import {
+  isWorkflowRunFailureStatus,
   isWorkflowRunTerminalStatus,
   type DirectMeshSelectionMode,
   type FrontendRuntimeMode,
   type JobEnvelope,
+  type JobState,
   type Torsion1dJobInput,
   type Truss2dJobInput,
   type Truss3dJobInput,
@@ -40,6 +42,22 @@ import type {
   WorkbenchStudyResult,
   WorkbenchStudyRunBackendService,
 } from "@/lib/workbench/study-run-backend-service-core";
+import {
+  workbenchOperationFailure,
+  type WorkbenchOperationResult,
+} from "@/lib/workbench/operation-result";
+
+export type WorkbenchRunOperationResult = WorkbenchOperationResult<{
+  backend: "direct_mesh" | "orchestrated";
+  completion: "detached" | "terminal";
+  jobId: string;
+  status: JobState["status"];
+}>;
+
+type WorkbenchPollOutcome =
+  | { state: "detached" }
+  | { state: "superseded" }
+  | { state: "terminal"; hasResult: boolean; job: JobState };
 
 type WorkbenchRunLabels = Pick<
   WorkbenchCopy,
@@ -111,17 +129,17 @@ async function pollWorkbenchJob({
   setResult: (value: WorkbenchStudyResult | null) => void;
   copy: WorkbenchCopy;
   labels: Pick<WorkbenchCopy, "pollingDetached">;
-}) {
+}): Promise<WorkbenchPollOutcome> {
   const pollToken = ++jobPollTokenRef.current;
   let consecutiveErrors = 0;
 
   for (let attempt = 0; attempt < 40; attempt += 1) {
-    if (pollToken !== jobPollTokenRef.current) return;
+    if (pollToken !== jobPollTokenRef.current) return { state: "superseded" };
 
     try {
       const payload = await runBackendService.fetchJob(jobId);
 
-      if (pollToken !== jobPollTokenRef.current) return;
+      if (pollToken !== jobPollTokenRef.current) return { state: "superseded" };
 
       consecutiveErrors = 0;
       setJob(payload.job);
@@ -134,10 +152,10 @@ async function pollWorkbenchJob({
 
       if (isWorkflowRunTerminalStatus(payload.job.status)) {
         await refreshJobHistory();
-        return;
+        return { state: "terminal", hasResult: payload.result !== undefined, job: payload.job };
       }
     } catch (error) {
-      if (pollToken !== jobPollTokenRef.current) return;
+      if (pollToken !== jobPollTokenRef.current) return { state: "superseded" };
 
       consecutiveErrors += 1;
       if (consecutiveErrors >= 3) {
@@ -155,6 +173,7 @@ async function pollWorkbenchJob({
     setMessage(labels.pollingDetached);
     await refreshJobHistory();
   }
+  return { state: "detached" };
 }
 
 export async function runWorkbenchAnalysis({
@@ -192,7 +211,7 @@ export async function runWorkbenchAnalysis({
   truss3dModel,
   trussDiagnostics,
   trussModel,
-}: RunWorkbenchAnalysisArgs) {
+}: RunWorkbenchAnalysisArgs): Promise<WorkbenchRunOperationResult> {
   const precheckErrors = trussDiagnostics?.blockingMessages ?? [];
   if (precheckErrors.length > 0) {
     const precheckMessage = `${labels.precheckPrefix}: ${precheckErrors[0]}`;
@@ -204,7 +223,7 @@ export async function runWorkbenchAnalysis({
     setMessage(precheckMessage);
     setResult(null);
     setJob(null);
-    return;
+    return workbenchOperationFailure(new Error(precheckMessage), precheckMessage);
   }
 
   dismissWorkbenchAlert(setSystemAlerts, "precheck-blocking");
@@ -256,11 +275,26 @@ export async function runWorkbenchAnalysis({
       at: new Date().toISOString(),
     });
     setMessage(`${labels.directMeshCompleted}: ${created.envelope.job.worker_id ?? "direct-mesh"}`);
-    return;
+    if (!isWorkflowRunTerminalStatus(created.envelope.job.status)) {
+      throw new Error(`Direct-mesh run did not return a terminal status: ${created.envelope.job.status}`);
+    }
+    if (isWorkflowRunFailureStatus(created.envelope.job.status)) {
+      throw new Error(created.envelope.job.message ?? `${created.envelope.job.job_id} ${created.envelope.job.status}`);
+    }
+    if (created.envelope.result === undefined) {
+      throw new Error(`Completed job did not include a result: ${created.envelope.job.job_id}`);
+    }
+    return {
+      ok: true,
+      backend: "direct_mesh",
+      completion: "terminal",
+      jobId: created.envelope.job.job_id,
+      status: created.envelope.job.status,
+    };
   }
 
   await refreshJobHistory();
-  await pollWorkbenchJob({
+  const outcome = await pollWorkbenchJob({
     jobId: created.envelope.job.job_id,
     kind: studyKind,
     jobPollTokenRef,
@@ -272,4 +306,20 @@ export async function runWorkbenchAnalysis({
     copy,
     labels,
   });
+  if (outcome.state === "superseded") {
+    throw new Error(`Job observation was superseded: ${created.envelope.job.job_id}`);
+  }
+  if (outcome.state === "terminal" && isWorkflowRunFailureStatus(outcome.job.status)) {
+    throw new Error(outcome.job.message ?? `${outcome.job.job_id} ${outcome.job.status}`);
+  }
+  if (outcome.state === "terminal" && outcome.job.status === "completed" && !outcome.hasResult) {
+    throw new Error(`Completed job did not include a result: ${outcome.job.job_id}`);
+  }
+  return {
+    ok: true,
+    backend: "orchestrated",
+    completion: outcome.state,
+    jobId: created.envelope.job.job_id,
+    status: outcome.state === "terminal" ? outcome.job.status : created.envelope.job.status,
+  };
 }

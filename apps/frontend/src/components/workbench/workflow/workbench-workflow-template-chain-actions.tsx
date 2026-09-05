@@ -49,6 +49,9 @@ type WorkbenchWorkflowTemplateChainActionsProps = {
   setSystemAlerts: Dispatch<SetStateAction<WorkbenchAlertItem[]>>;
 };
 
+const TEMPLATE_CHAIN_STORAGE_ALERT_ID = "workflow-template-chain-storage-write-failed";
+const TEMPLATE_CHAIN_PAGE_SIZE = 5;
+
 function sortChainsByPriority(
   chains: WorkflowTemplateChainDefinition[],
   favoriteChainIds: string[],
@@ -70,11 +73,6 @@ function sortChainsByPriority(
   });
 }
 
-function isDiagnosticsTemplateChain(chain: WorkflowTemplateChainDefinition) {
-  const tags = chain.tags ?? [];
-  return tags.includes("diagnostics") || chain.id.includes("diagnostics");
-}
-
 export function WorkbenchWorkflowTemplateChainActions({
   labels,
   selectedSourceNodeId,
@@ -87,6 +85,8 @@ export function WorkbenchWorkflowTemplateChainActions({
   const [importedChains, setImportedChains] = useState<WorkflowTemplateChainDefinition[]>([]);
   const [notice, setNotice] = useState<WorkbenchNoticeItem | null>(null);
   const [query, setQuery] = useState("");
+  const [builtInPage, setBuiltInPage] = useState(0);
+  const [expandedChainCardId, setExpandedChainCardId] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const builtInChains = useMemo(() => listBuiltInWorkflowTemplateChains(), []);
   const availableChains = useMemo(
@@ -121,8 +121,9 @@ export function WorkbenchWorkflowTemplateChainActions({
       favoriteChainIds
         .map((chainId) => availableChains.find((entry) => entry.id === chainId))
         .filter(Boolean)
-        .slice(0, 6) as WorkflowTemplateChainDefinition[],
-    [availableChains, favoriteChainIds],
+        .filter((chain) => filteredChains.some((entry) => entry.id === chain?.id))
+        .slice(0, 3) as WorkflowTemplateChainDefinition[],
+    [availableChains, favoriteChainIds, filteredChains],
   );
   const pinnedFavoriteChains = useMemo(
     () => sortChainsByPriority(favoriteChains, favoriteChainIds),
@@ -144,22 +145,62 @@ export function WorkbenchWorkflowTemplateChainActions({
       ),
     [favoriteChainIds, filteredChains],
   );
-  const groupedBuiltInChains = useMemo(
-    () => groupTemplateChainsByDomain(filteredBuiltInChains),
-    [filteredBuiltInChains],
+  const catalogBuiltInChains = useMemo(
+    () => filteredBuiltInChains.filter((chain) => !favoriteChainIds.includes(chain.id)),
+    [favoriteChainIds, filteredBuiltInChains],
   );
-  const featuredDiagnosticsChains = useMemo(
-    () => filteredBuiltInChains.filter(isDiagnosticsTemplateChain).slice(0, 4),
-    [filteredBuiltInChains],
+  const builtInPageCount = Math.max(1, Math.ceil(catalogBuiltInChains.length / TEMPLATE_CHAIN_PAGE_SIZE));
+  const visibleBuiltInChains = useMemo(
+    () => catalogBuiltInChains.slice(
+      builtInPage * TEMPLATE_CHAIN_PAGE_SIZE,
+      (builtInPage + 1) * TEMPLATE_CHAIN_PAGE_SIZE,
+    ),
+    [builtInPage, catalogBuiltInChains],
+  );
+  const groupedBuiltInChains = useMemo(
+    () => groupTemplateChainsByDomain(visibleBuiltInChains),
+    [visibleBuiltInChains],
   );
 
+  useEffect(() => setBuiltInPage(0), [query]);
+  useEffect(() => {
+    setBuiltInPage((current) => Math.min(current, builtInPageCount - 1));
+  }, [builtInPageCount]);
+
+  function toggleChainCardDetails(instanceId: string) {
+    setExpandedChainCardId((current) => current === instanceId ? null : instanceId);
+  }
+
+  function reportStorageWriteFailure() {
+    upsertWorkbenchAlert(setSystemAlerts, {
+      id: TEMPLATE_CHAIN_STORAGE_ALERT_ID,
+      message: labels.storageWriteFailedLabel,
+      tone: "warning",
+    });
+    showWorkbenchNotice(setNotice, {
+      id: TEMPLATE_CHAIN_STORAGE_ALERT_ID,
+      message: labels.storageWriteFailedLabel,
+      tone: "warning",
+    });
+  }
+
+  function clearStorageWriteFailure() {
+    dismissWorkbenchAlert(setSystemAlerts, TEMPLATE_CHAIN_STORAGE_ALERT_ID);
+  }
+
   function writePreferences(nextIds: string[], nextAliases = favoriteChainAliases) {
-    setFavoriteChainIds(nextIds);
-    setFavoriteChainAliases(nextAliases);
-    writeWorkflowTemplateChainPreferences({
+    const persisted = writeWorkflowTemplateChainPreferences({
       favoriteChainIds: nextIds,
       favoriteChainAliases: nextAliases,
     });
+    if (persisted) {
+      setFavoriteChainIds(nextIds);
+      setFavoriteChainAliases(nextAliases);
+      clearStorageWriteFailure();
+    } else {
+      reportStorageWriteFailure();
+    }
+    return persisted;
   }
 
   function insertChain(chain: WorkflowTemplateChainDefinition) {
@@ -182,7 +223,11 @@ export function WorkbenchWorkflowTemplateChainActions({
   }
 
   function deleteImportedChain(chainId: string) {
-    removeImportedWorkflowTemplateChain(chainId);
+    if (!removeImportedWorkflowTemplateChain(chainId)) {
+      reportStorageWriteFailure();
+      return;
+    }
+    clearStorageWriteFailure();
     setImportedChains(listStoredWorkflowTemplateChains());
     writePreferences(
       favoriteChainIds.filter((value) => value !== chainId),
@@ -209,8 +254,15 @@ export function WorkbenchWorkflowTemplateChainActions({
         });
         return;
       }
-      saveImportedWorkflowTemplateChain(packageToWorkflowTemplateChainDefinition(pkg));
+      const saved = saveImportedWorkflowTemplateChain(
+        packageToWorkflowTemplateChainDefinition(pkg),
+      );
+      if (!saved) {
+        reportStorageWriteFailure();
+        return;
+      }
       setImportedChains(listStoredWorkflowTemplateChains());
+      clearStorageWriteFailure();
       dismissWorkbenchAlert(setSystemAlerts, "workflow-template-chain-import-error");
       showWorkbenchNotice(setNotice, {
         id: "workflow-template-chain-import-success",
@@ -279,10 +331,15 @@ export function WorkbenchWorkflowTemplateChainActions({
       buildSuggestedTemplateChainLabel(selectedNodes),
     )?.trim();
     if (!nextLabel) return;
-    saveImportedWorkflowTemplateChain(
+    const saved = saveImportedWorkflowTemplateChain(
       buildImportedTemplateChainFromNodes({ label: nextLabel, nodes: selectedNodes }),
     );
+    if (!saved) {
+      reportStorageWriteFailure();
+      return;
+    }
     setImportedChains(listStoredWorkflowTemplateChains());
+    clearStorageWriteFailure();
     showWorkbenchNotice(setNotice, {
       id: "workflow-template-chain-save-selection-success",
       message: labels.templateChainSaveSelectionSuccessLabel,
@@ -293,21 +350,31 @@ export function WorkbenchWorkflowTemplateChainActions({
   function renameImportedChain(chain: WorkflowTemplateChainDefinition) {
     const nextLabel = window.prompt(labels.templateChainRenamePrompt, chain.label)?.trim();
     if (!nextLabel) return;
-    updateImportedWorkflowTemplateChain(chain.id, (current) => ({
+    const updated = updateImportedWorkflowTemplateChain(chain.id, (current) => ({
       ...current,
       label: nextLabel,
     }));
+    if (!updated) {
+      reportStorageWriteFailure();
+      return;
+    }
     setImportedChains(listStoredWorkflowTemplateChains());
+    clearStorageWriteFailure();
   }
 
   function editImportedChainSummary(chain: WorkflowTemplateChainDefinition) {
     const nextSummary = window.prompt(labels.templateChainSummaryPrompt, chain.summary ?? "");
     if (nextSummary === null) return;
-    updateImportedWorkflowTemplateChain(chain.id, (current) => ({
+    const updated = updateImportedWorkflowTemplateChain(chain.id, (current) => ({
       ...current,
       summary: nextSummary.trim() || undefined,
     }));
+    if (!updated) {
+      reportStorageWriteFailure();
+      return;
+    }
     setImportedChains(listStoredWorkflowTemplateChains());
+    clearStorageWriteFailure();
   }
 
   function selectTag(tag: string) {
@@ -363,41 +430,18 @@ export function WorkbenchWorkflowTemplateChainActions({
               <WorkbenchWorkflowTemplateChainCard
                 activeQuery={query}
                 chain={chain}
+                detailActions={[
+                  { id: "export", label: labels.templateChainExportLabel, onClick: () => exportChainPackage(chain) },
+                  { id: "rename", label: labels.templateChainRenameLabel, onClick: () => renameFavorite(chain.id) },
+                ]}
+                detailsOpen={expandedChainCardId === `pinned:${chain.id}`}
+                instanceId={`pinned:${chain.id}`}
                 key={`favorite-chain:${chain.id}`}
                 labels={labels}
-                onExport={() => exportChainPackage(chain)}
                 onInsert={() => insertChain(chain)}
-                onPrimaryAction={() => renameFavorite(chain.id)}
                 onPrimaryLabel={chainDisplayLabel(chain)}
                 onSelectTag={selectTag}
-              />
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {featuredDiagnosticsChains.length > 0 ? (
-        <div className="sidebar-list">
-          <div className="sidebar-list__row">
-            <span>diagnostics workflows</span>
-            <strong>{featuredDiagnosticsChains.length}</strong>
-          </div>
-          <p className="card-copy">
-            Bundle multi-domain diagnostics, evaluate guard rules, and export a review-ready report.
-          </p>
-          <div className="button-row button-row--adaptive">
-            {featuredDiagnosticsChains.map((chain) => (
-              <WorkbenchWorkflowTemplateChainCard
-                activeQuery={query}
-                chain={chain}
-                favorite={favoriteChainIds.includes(chain.id)}
-                key={`featured-diagnostics:${chain.id}`}
-                labels={labels}
-                onExport={() => exportChainPackage(chain)}
-                onInsert={() => insertChain(chain)}
-                onPrimaryAction={() => toggleFavorite(chain.id)}
-                onPrimaryLabel={chainInsertLabel(chain)}
-                onSelectTag={selectTag}
+                onToggleDetails={() => toggleChainCardDetails(`pinned:${chain.id}`)}
               />
             ))}
           </div>
@@ -407,7 +451,7 @@ export function WorkbenchWorkflowTemplateChainActions({
       <div className="sidebar-list">
         <div className="sidebar-list__row">
           <span>{labels.templateChainBuiltInLabel}</span>
-          <strong>{filteredBuiltInChains.length}</strong>
+          <strong>{catalogBuiltInChains.length}</strong>
         </div>
         {groupedBuiltInChains.map((group) => (
           <div className="sidebar-stack" key={group.key}>
@@ -420,19 +464,48 @@ export function WorkbenchWorkflowTemplateChainActions({
                 <WorkbenchWorkflowTemplateChainCard
                   activeQuery={query}
                   chain={chain}
-                  favorite={favoriteChainIds.includes(chain.id)}
+                  detailActions={[
+                    { id: "export", label: labels.templateChainExportLabel, onClick: () => exportChainPackage(chain) },
+                    {
+                      id: "favorite",
+                      label: favoriteChainIds.includes(chain.id) ? labels.templateChainFavoriteRemoveLabel : labels.templateChainFavoriteAddLabel,
+                      onClick: () => toggleFavorite(chain.id),
+                    },
+                  ]}
+                  detailsOpen={expandedChainCardId === `built-in:${chain.id}`}
+                  instanceId={`built-in:${chain.id}`}
                   key={chain.id}
                   labels={labels}
-                  onExport={() => exportChainPackage(chain)}
                   onInsert={() => insertChain(chain)}
-                  onPrimaryAction={() => toggleFavorite(chain.id)}
                   onPrimaryLabel={chainInsertLabel(chain)}
                   onSelectTag={selectTag}
+                  onToggleDetails={() => toggleChainCardDetails(`built-in:${chain.id}`)}
                 />
               ))}
             </div>
           </div>
         ))}
+        <div className="workflow-template-chain-pager" data-workflow-template-chain-page={builtInPage + 1}>
+          <button
+            aria-label={`${labels.templateChainBuiltInLabel} ${builtInPage}`}
+            data-workflow-template-chain-page-action="previous"
+            disabled={builtInPage === 0}
+            onClick={() => setBuiltInPage((current) => Math.max(0, current - 1))}
+            type="button"
+          >
+            ←
+          </button>
+          <strong>{builtInPage + 1}/{builtInPageCount}</strong>
+          <button
+            aria-label={`${labels.templateChainBuiltInLabel} ${builtInPage + 2}`}
+            data-workflow-template-chain-page-action="next"
+            disabled={builtInPage + 1 >= builtInPageCount}
+            onClick={() => setBuiltInPage((current) => Math.min(builtInPageCount - 1, current + 1))}
+            type="button"
+          >
+            →
+          </button>
+        </div>
       </div>
 
       <div className="sidebar-list">
@@ -444,30 +517,24 @@ export function WorkbenchWorkflowTemplateChainActions({
 
       <div className="button-row button-row--adaptive">
         {filteredImportedChains.map((chain) => (
-          <div key={chain.id} className="sidebar-card sidebar-card--compact">
-            <div className="sidebar-list__row">
-              <span>{chainInsertLabel(chain)}</span>
-              <strong>{chain.templates.length}</strong>
-            </div>
-            {chain.summary ? <p className="card-copy">{chain.summary}</p> : null}
-            <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-              <button onClick={() => insertChain(chain)} type="button">
-                {chainInsertLabel(chain)}
-              </button>
-              <button onClick={() => exportChainPackage(chain)} type="button">
-                {labels.templateChainExportLabel}
-              </button>
-              <button onClick={() => renameImportedChain(chain)} type="button">
-                {labels.templateChainRenameTemplateLabel}
-              </button>
-              <button onClick={() => editImportedChainSummary(chain)} type="button">
-                {labels.templateChainSummaryEditLabel}
-              </button>
-              <button onClick={() => deleteImportedChain(chain.id)} type="button">
-                {labels.templateChainDeleteImportedLabel}
-              </button>
-            </div>
-          </div>
+          <WorkbenchWorkflowTemplateChainCard
+            activeQuery={query}
+            chain={chain}
+            detailActions={[
+              { id: "export", label: labels.templateChainExportLabel, onClick: () => exportChainPackage(chain) },
+              { id: "rename", label: labels.templateChainRenameTemplateLabel, onClick: () => renameImportedChain(chain) },
+              { id: "summary", label: labels.templateChainSummaryEditLabel, onClick: () => editImportedChainSummary(chain) },
+              { id: "delete", label: labels.templateChainDeleteImportedLabel, onClick: () => deleteImportedChain(chain.id) },
+            ]}
+            detailsOpen={expandedChainCardId === `imported:${chain.id}`}
+            instanceId={`imported:${chain.id}`}
+            key={chain.id}
+            labels={labels}
+            onInsert={() => insertChain(chain)}
+            onPrimaryLabel={chainInsertLabel(chain)}
+            onSelectTag={selectTag}
+            onToggleDetails={() => toggleChainCardDetails(`imported:${chain.id}`)}
+          />
         ))}
       </div>
     </div>

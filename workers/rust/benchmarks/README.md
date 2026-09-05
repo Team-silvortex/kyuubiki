@@ -39,6 +39,8 @@ cargo run --release -q -p kyuubiki-benchmark -- --profile 10k --matrix thermal -
 cargo run --release -q -p kyuubiki-benchmark -- --profile 10k --matrix compound --repeat 1
 cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix extended-physics --repeat 1
 cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix structural-extended --repeat 1
+cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix dynamic-response --repeat 1
+cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix cohesive-interface --repeat 1
 cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix thermal-structural --repeat 1
 cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix physics-coverage --repeat 1
 make benchmark-baseline PROFILE=10k MATRIX=thermal REPEAT=3
@@ -64,16 +66,69 @@ make benchmark-profile-index
 These Make targets run the benchmark crate in `--release` mode so checked-in
 baselines and current comparisons stay on the same performance footing.
 
+Benchmark cases now use process isolation by default. The parent enumerates
+case IDs without materializing their workloads, then each exact case runs in a
+fresh child process. `--solver-preconditioner all` and `compare` also isolate
+each supported strategy. This keeps `peak_rss_kib` scoped to one case instead
+of inheriting the process high-water mark from an earlier case, and avoids
+holding an entire large matrix in memory while one case executes.
+
+Use `--case-exact <id>` for an unambiguous single-case run. Use
+`--case-isolation in-process` only for debugger workflows or legacy
+measurements. Reports expose `rss_scope`; an RSS regression gate rejects a
+baseline created with a different scope. Existing baselines without this field
+are treated as legacy shared-process measurements and must be regenerated
+before they can participate in the isolated RSS gate. Timing comparisons can
+still be inspected without enabling the RSS gate.
+
 The `extended-physics` matrix is the first broad-coverage smoke lane for
 modules that were previously only covered by unit or workflow tests. It covers
 1D heat, electrostatic, magnetostatic, acoustic, and torsion cases plus 2D heat
 triangle, electrostatic triangle/quad, magnetostatic triangle/quad, and Stokes
-quad cases. It also includes a 1D advection-diffusion transport case for
-concentration-field smoke coverage.
+quad cases. It also includes electric-conduction quad and a 1D
+advection-diffusion transport case for experimental field coverage; electric
+conduction remains outside `physics-coverage` until its qualification evidence
+is complete.
 
 The `structural-extended` matrix covers structural modules outside the standard
 mechanical trio: spring 1D/2D/3D, nonlinear spring, contact gap, beam, thermal
 beam, and modal frame 2D/3D cases.
+
+The `dynamic-response` matrix covers transient heat, transient spring, and
+harmonic spring execution through the native Engine. Transient fixtures retain
+only the initial and final history frames, so scale runs measure the solver
+without allocating one full nodal frame per time step. This is an experimental
+performance lane and is intentionally separate from the release-gated
+`physics-coverage` matrix until dynamic qualification evidence is complete.
+
+The first isolated remote `1m` smoke passed all three cases on
+`kyuubiki-lab`: transient heat completed in `718.185 ms` at `828.4 MiB`,
+transient spring in `766.748 ms` at `851.3 MiB`, and harmonic spring in
+`523.208 ms` at `614.8 MiB`. These are host-specific observations, not portable
+performance guarantees. Reproduce the lane with:
+
+```bash
+PROFILE=1m MATRIX=dynamic-response REPEAT=1 \
+  OUTPUT_SLUG=dynamic-response-1m-isolated make benchmark-profile-remote
+```
+
+The `cohesive-interface` matrix closes the benchmark blind spot across the
+scalar 1D traction-separation law, the four-node 2D constitutive kernel, and
+the assembled 2D/3D interface meshes. Constitutive histories scale with the
+selected profile but stop at the solver contract limit of 4096 steps. Mesh
+cases stop at the retained sparse-regression shapes of 96 2D elements/768 DOF
+and 80 3D elements/1440 DOF because both mesh solvers currently accept at most
+512 nodes. Case suffixes identify the requested profile tier; report
+`node_count`, `element_count`, `dof_count`, and `history_step_count` remain the
+authoritative actual shape. This matrix is an isolated performance and
+execution lane, not a 1M mesh claim, and remains outside `physics-coverage`
+qualification.
+
+The first process-isolated Linux lab run of the `1m` budget tier completed all
+four bounded cases in `6.492 ms` total median time with `8.5 MiB` peak RSS. The
+2D and 3D mesh cases retained two Newton iterations, `3072`/`8640` tangent
+nonzeros, and residuals below `8e-16`. These are host-specific smoke
+observations, not portable guarantees or million-node interface evidence.
 
 The `thermal-structural` matrix covers coupled thermal deformation and static
 frame families that need continuous performance visibility: thermal bar,

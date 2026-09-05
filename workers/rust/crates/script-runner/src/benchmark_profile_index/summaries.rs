@@ -1,6 +1,6 @@
 use super::{Value, array_strings, normalize_case_id, number_field, string_field};
 use serde_json::json;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 pub(super) fn matrix_summaries(runs: &[Value]) -> Vec<Value> {
     let mut groups = BTreeMap::<String, MatrixSummary>::new();
@@ -17,7 +17,7 @@ pub(super) fn matrix_summaries(runs: &[Value]) -> Vec<Value> {
 }
 
 pub(super) fn solver_strategy_summaries(runs: &[Value]) -> Vec<Value> {
-    let mut groups = BTreeMap::<(String, String, String), BTreeMap<String, Value>>::new();
+    let mut groups = BTreeMap::<(String, String, String, String), BTreeMap<String, Value>>::new();
     for run in runs {
         if number_field(run, "case_count") != 1.0 {
             continue;
@@ -31,6 +31,7 @@ pub(super) fn solver_strategy_summaries(runs: &[Value]) -> Vec<Value> {
             string_field(run, "matrix"),
             string_field(run, "profile"),
             normalize_case_id(&case_ids[0]),
+            rss_scope(run),
         );
         let preconditioner = preconditioners[0].clone();
         let metrics = case_solver_metrics(run, &case_ids[0], &preconditioner);
@@ -52,11 +53,12 @@ pub(super) fn solver_strategy_summaries(runs: &[Value]) -> Vec<Value> {
     groups
         .into_iter()
         .filter(|(_, strategies)| strategies.len() > 1)
-        .map(|((matrix, profile, case_id), strategies)| {
+        .map(|((matrix, profile, case_id, rss_scope), strategies)| {
             json!({
                 "matrix": matrix,
                 "profile": profile,
                 "case_id": case_id,
+                "rss_scope": rss_scope,
                 "strategies": strategies.into_iter().map(|(preconditioner, result)| json!({
                     "preconditioner": preconditioner,
                     "slug": string_field(&result, "slug"),
@@ -88,6 +90,7 @@ struct MatrixSummary {
     case_count: f64,
     matrix: String,
     peak_rss_mib: f64,
+    rss_scopes: BTreeSet<String>,
     run_count: f64,
     slowest_case: String,
     slowest_case_median_ms: f64,
@@ -100,6 +103,7 @@ impl MatrixSummary {
             case_count: 0.0,
             matrix: string_field(run, "matrix"),
             peak_rss_mib: 0.0,
+            rss_scopes: BTreeSet::new(),
             run_count: 0.0,
             slowest_case: "--".to_string(),
             slowest_case_median_ms: 0.0,
@@ -112,6 +116,7 @@ impl MatrixSummary {
         self.case_count += number_field(run, "case_count");
         self.total_median_ms += number_field(run, "total_median_ms");
         self.peak_rss_mib = self.peak_rss_mib.max(number_field(run, "peak_rss_mib"));
+        self.rss_scopes.insert(rss_scope(run));
         if number_field(run, "total_median_ms") > self.slowest_case_median_ms {
             self.slowest_case = string_field(run, "slowest_case");
             self.slowest_case_median_ms = number_field(run, "total_median_ms");
@@ -119,6 +124,15 @@ impl MatrixSummary {
     }
 
     fn into_value(self) -> Value {
-        json!({ "matrix": self.matrix, "run_count": self.run_count as u64, "case_count": self.case_count as u64, "total_median_ms": self.total_median_ms, "peak_rss_mib": self.peak_rss_mib, "slowest_case": self.slowest_case, "slowest_case_median_ms": self.slowest_case_median_ms })
+        json!({ "matrix": self.matrix, "run_count": self.run_count as u64, "case_count": self.case_count as u64, "total_median_ms": self.total_median_ms, "peak_rss_mib": self.peak_rss_mib, "rss_scopes": self.rss_scopes, "slowest_case": self.slowest_case, "slowest_case_median_ms": self.slowest_case_median_ms })
+    }
+}
+
+fn rss_scope(run: &Value) -> String {
+    let scope = string_field(run, "rss_scope");
+    if scope.is_empty() {
+        "legacy_shared_process_high_water_mark".to_string()
+    } else {
+        scope
     }
 }

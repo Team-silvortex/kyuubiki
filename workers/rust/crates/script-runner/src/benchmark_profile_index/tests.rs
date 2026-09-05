@@ -61,6 +61,16 @@ fn strategy_summary_keeps_the_latest_single_case_result_per_preconditioner() {
 }
 
 #[test]
+fn strategy_summary_does_not_compare_different_rss_scopes() {
+    let summaries = solver_strategy_summaries(&[
+        strategy_run("jacobi", "shared_process_high_water_mark"),
+        strategy_run("ic0", "isolated_case_process_high_water_mark"),
+    ]);
+
+    assert!(summaries.is_empty());
+}
+
+#[test]
 fn reads_preconditioners_from_legacy_raw_reports() {
     let report = json!({
         "cases": [
@@ -77,6 +87,20 @@ fn reads_preconditioners_from_legacy_raw_reports() {
             "symmetric-gauss-seidel".to_string(),
         ]
     );
+}
+
+fn strategy_run(preconditioner: &str, rss_scope: &str) -> serde_json::Value {
+    json!({
+        "slug": preconditioner,
+        "matrix": "thermal-core",
+        "profile": "100k",
+        "rss_scope": rss_scope,
+        "case_count": 1,
+        "case_ids": ["heat-plane-quad-100k"],
+        "solver_preconditioners": [preconditioner],
+        "total_median_ms": 10.0,
+        "peak_rss_mib": 100.0,
+    })
 }
 
 #[test]
@@ -261,4 +285,8 @@ fn matrix_summary_groups_runs() {
     assert_eq!(rows[0]["run_count"], 2);
     assert_eq!(rows[0]["case_count"], 3);
     assert_eq!(rows[0]["slowest_case"], "b");
+    assert_eq!(
+        rows[0]["rss_scopes"][0],
+        "legacy_shared_process_high_water_mark"
+    );
 }

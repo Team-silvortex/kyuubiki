@@ -10,12 +10,12 @@ type WorkbenchSidebarPanelProps = {
   title: string;
   subtitle: string;
   sidebarSection: SidebarSection;
-  studySection?: ReactNode;
-  modelSection?: ReactNode;
-  workflowSection?: ReactNode;
-  storeSection?: ReactNode;
-  librarySection?: ReactNode;
-  systemSection?: ReactNode;
+  studySection: ReactNode;
+  modelSection: ReactNode;
+  workflowSection: ReactNode;
+  storeSection: ReactNode;
+  librarySection: ReactNode;
+  systemSection: ReactNode;
 };
 
 export function WorkbenchSidebarPanel({

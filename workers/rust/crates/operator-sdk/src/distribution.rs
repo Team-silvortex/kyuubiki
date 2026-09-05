@@ -1,4 +1,6 @@
-use crate::{OPERATOR_PACKAGE_MANIFEST_FILE, OPERATOR_SDK_API_VERSION};
+use crate::{
+    OPERATOR_JSON_ABI_SCHEMA_VERSION, OPERATOR_PACKAGE_MANIFEST_FILE, OPERATOR_SDK_API_VERSION,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use std::fmt::{Display, Formatter};
@@ -13,6 +15,7 @@ pub const OPERATOR_PACKAGE_DISTRIBUTION_FILE: &str = "kyuubiki-operator-distribu
 pub struct OperatorPackageDistributionManifest {
     pub schema_version: String,
     pub sdk_api_version: String,
+    pub execution_abi: String,
     pub package_id: String,
     pub package_version: String,
     pub artifacts: Vec<OperatorPackageDistributionArtifact>,
@@ -85,6 +88,9 @@ pub fn validate_operator_package_distribution(
     }
     if manifest.sdk_api_version != OPERATOR_SDK_API_VERSION {
         return invalid(path, "unsupported sdk_api_version");
+    }
+    if manifest.execution_abi != OPERATOR_JSON_ABI_SCHEMA_VERSION {
+        return invalid(path, "unsupported execution_abi");
     }
     validate_token(path, &manifest.package_id, "package_id")?;
     validate_token(path, &manifest.package_version, "package_version")?;
@@ -243,6 +249,7 @@ mod tests {
         OperatorPackageDistributionManifest {
             schema_version: OPERATOR_PACKAGE_DISTRIBUTION_SCHEMA_VERSION.to_string(),
             sdk_api_version: OPERATOR_SDK_API_VERSION.to_string(),
+            execution_abi: OPERATOR_JSON_ABI_SCHEMA_VERSION.to_string(),
             package_id: "operator.example.peak_field".to_string(),
             package_version: "0.1.0".to_string(),
             artifacts: vec![OperatorPackageDistributionArtifact {

@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.operator-validation-profiles/v1",
-  "version_line": "moxi 2.0.x",
+  "version_line": "daji 3.0.x",
   "domain": "structural",
   "profiles": [
     {
@@ -49,6 +49,7 @@
         "config/operator-reliability/structural-solid.json",
         "docs/operator-reliability.md",
         "evidence/operator-qualification/solid-tetra-3d-closed-form.md",
+        "workers/rust/crates/solver/src/rigid_body_restraints_3d.rs",
         "workers/rust/crates/solver/tests/solid_tetra_3d_review.rs",
         "workers/rust/crates/solver/tests/solid_tetra_3d_closed_form.rs",
         "workers/rust/crates/solver/tests/solid_tetra_input_reliability.rs",

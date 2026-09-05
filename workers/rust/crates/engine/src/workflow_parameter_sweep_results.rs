@@ -1,90 +1,13 @@
 use serde_json::{Map, Value};
 
-pub fn join_parameter_sweep_results(payload: Value, config: Value) -> Result<Value, String> {
-    let cases = payload
-        .get("cases")
-        .and_then(Value::as_array)
-        .ok_or_else(|| {
-            "transform.join_parameter_sweep_results requires payload.cases".to_string()
-        })?;
-    if cases.is_empty() {
-        return Err("transform.join_parameter_sweep_results cases must not be empty".to_string());
-    }
-    let results = payload
-        .get("summaries")
-        .or_else(|| payload.get("results"))
-        .and_then(Value::as_array)
-        .ok_or_else(|| {
-            "transform.join_parameter_sweep_results requires payload.summaries or payload.results"
-                .to_string()
-        })?;
-    let summary_field = config
-        .get("summary_field")
-        .and_then(Value::as_str)
-        .unwrap_or("summary");
-    let output_field = config
-        .get("output_field")
-        .and_then(Value::as_str)
-        .unwrap_or("summary");
-    let strict = config
-        .get("strict")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
-
-    let mut joined = Vec::with_capacity(cases.len());
-    let mut joined_count = 0usize;
-    let mut missing = Vec::new();
-    for (index, case) in cases.iter().enumerate() {
-        let case_object = case.as_object().ok_or_else(|| {
-            format!("transform.join_parameter_sweep_results case {index} must be an object")
-        })?;
-        let case_id = case_object
-            .get("id")
-            .and_then(Value::as_str)
-            .map(str::to_string)
-            .unwrap_or_else(|| format!("case_{index}"));
-        let mut next_case = case_object.clone();
-        match find_case_result(results, &case_id, index).and_then(|result| {
-            extract_join_summary(result, summary_field).map(|summary| (summary, result))
-        }) {
-            Some((summary, result)) => {
-                joined_count += 1;
-                next_case.insert(output_field.to_string(), summary);
-                next_case.insert(
-                    "result_status".to_string(),
-                    result
-                        .get("status")
-                        .cloned()
-                        .unwrap_or_else(|| Value::String("joined".to_string())),
-                );
-            }
-            None => {
-                missing.push(Value::String(case_id));
-                next_case.insert(
-                    "result_status".to_string(),
-                    Value::String("missing".to_string()),
-                );
-            }
-        }
-        joined.push(Value::Object(next_case));
-    }
-    if strict && !missing.is_empty() {
-        return Err(format!(
-            "transform.join_parameter_sweep_results missing summaries for {} case(s)",
-            missing.len()
-        ));
-    }
-
-    Ok(serde_json::json!({
-        "cases": joined,
-        "case_count": cases.len(),
-        "joined_summary_count": joined_count,
-        "missing_summary_count": missing.len(),
-        "missing_case_ids": missing,
-    }))
-}
+pub use crate::workflow_sweep_join::join_parameter_sweep_results;
 
 pub fn score_parameter_sweep(payload: Value, config: Value) -> Result<Value, String> {
+    crate::workflow_sweep_contract::require_complete(
+        &payload,
+        "summary_complete",
+        &[("missing_field_count", "missing_fields")],
+    )?;
     let rows = payload
         .get("rows")
         .and_then(Value::as_array)
@@ -92,6 +15,7 @@ pub fn score_parameter_sweep(payload: Value, config: Value) -> Result<Value, Str
     if rows.is_empty() {
         return Err("transform.score_parameter_sweep rows must not be empty".to_string());
     }
+    crate::workflow_sweep_contract::require_count(&payload, "row_count", rows.len())?;
     let objectives = config
         .get("objectives")
         .and_then(Value::as_array)
@@ -291,32 +215,6 @@ fn sweep_quality_dominant_term(object: &Map<String, Value>) -> Value {
                 },
             })
         })
-}
-
-fn find_case_result<'a>(results: &'a [Value], case_id: &str, index: usize) -> Option<&'a Value> {
-    results
-        .iter()
-        .find(|result| result_matches_case(result, case_id))
-        .or_else(|| results.get(index))
-}
-
-fn result_matches_case(result: &Value, case_id: &str) -> bool {
-    result.as_object().is_some_and(|object| {
-        ["case_id", "id", "caseId"]
-            .iter()
-            .filter_map(|field| object.get(*field).and_then(Value::as_str))
-            .any(|value| value == case_id)
-    })
-}
-
-fn extract_join_summary(result: &Value, summary_field: &str) -> Option<Value> {
-    let object = result.as_object()?;
-    object
-        .get(summary_field)
-        .or_else(|| object.get("summary"))
-        .or_else(|| object.get("result"))
-        .cloned()
-        .or_else(|| Some(Value::Object(object.clone())))
 }
 
 fn score_sweep_row(

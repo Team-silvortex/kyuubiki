@@ -153,9 +153,9 @@ function WorkbenchInspectorInner({
       </div>
       <div className="inspector-stack panel-scroll-window">
         <div className="panel-tabs panel-tabs--wide">
-          <button className={`panel-tab${inspectorTab === "status" ? " panel-tab--active" : ""}`} onClick={() => setInspectorTab("status")} type="button">{t.status}</button>
-          <button className={`panel-tab${inspectorTab === "result" ? " panel-tab--active" : ""}`} onClick={() => setInspectorTab("result")} type="button">{t.result}</button>
-          <button className={`panel-tab${inspectorTab === "actions" ? " panel-tab--active" : ""}`} onClick={() => setInspectorTab("actions")} type="button">{t.actions}</button>
+          <button className={`panel-tab${inspectorTab === "status" ? " panel-tab--active" : ""}`} data-workbench-inspector-tab-target="status" onClick={() => setInspectorTab("status")} type="button">{t.status}</button>
+          <button className={`panel-tab${inspectorTab === "result" ? " panel-tab--active" : ""}`} data-workbench-inspector-tab-target="result" onClick={() => setInspectorTab("result")} type="button">{t.result}</button>
+          <button className={`panel-tab${inspectorTab === "actions" ? " panel-tab--active" : ""}`} data-workbench-inspector-tab-target="actions" onClick={() => setInspectorTab("actions")} type="button">{t.actions}</button>
         </div>
         <WorkbenchInspectorTabChrome
           t={t}
@@ -500,54 +500,56 @@ function WorkbenchInspectorInner({
           />
         ) : null}
 
-        <WorkbenchInspectorActionsExportPanel
-          t={t}
-          actionsPage={actionsPage}
-          studyKind={studyKind}
-          job={job}
-          tipDisplacement={tipDisplacement}
-          maxStressValue={maxStressValue}
-          frameMaxAxialForceValue={frameMaxAxialForceValue}
-          frameMaxShearForceValue={frameMaxShearForceValue}
-          reactionValue={reactionValue}
-          frameMaxRotationValue={frameMaxRotationValue}
-          thermalFrameMaxTemperatureDeltaValue={thermalFrameMaxTemperatureDeltaValue}
-          thermalFrameMaxTemperatureGradientValue={thermalFrameMaxTemperatureGradientValue}
-          thermalBeamMaxTemperatureGradientValue={thermalBeamMaxTemperatureGradientValue}
-          thermalPlaneMaxTemperatureDeltaValue={thermalPlaneMaxTemperatureDeltaValue}
-          reportScopeLabel={reportScopeLabel}
-          reportScopeHint={reportScopeHint}
-          createdAtValue={createdAtValue}
-          updatedAtValue={updatedAtValue}
-          heartbeatStatusValue={heartbeatStatusValue}
-          heartbeatTone={heartbeatTone}
-          failureReasonValue={failureReasonValue}
-          canCancelJob={canCancelJob}
-          onCancelJob={onCancelJob}
-          onDownloadJson={onDownloadJson}
-          onDownloadCsv={onDownloadCsv}
-          canProjectHeatToThermo={canProjectHeatToThermo}
-          projectHeatToThermoLabel={projectHeatToThermoLabel}
-          onProjectHeatToThermo={onProjectHeatToThermo}
-          planeHotspotFieldLabel={planeHotspotFieldLabel}
-          planeHotspotElements={planeHotspotElements}
-          planeThermalRows={planeThermalRows}
-          frameHotspotFieldLabel={frameHotspotFieldLabel}
-          frameHotspotElements={frameHotspotElements}
-          frameForceRows={frameForceRows}
-          planeHotspotLimit={planeHotspotLimit}
-          onDownloadPlaneHotspots={onDownloadPlaneHotspots}
-          onDownloadFrameHotspots={onDownloadFrameHotspots}
-          onDownloadFrameForces={onDownloadFrameForces}
-          onSelectPlaneHotspot={onSelectPlaneHotspot}
-          onSelectFrameHotspot={onSelectFrameHotspot}
-          onPlaneHotspotLimitChange={onPlaneHotspotLimitChange}
-          selectedFrameElementData={selectedFrameElementData}
-          frameForceSort={frameForceSort}
-          onFrameForceSortChange={setFrameForceSort}
-          planeHeatSort={planeHeatSort}
-          onPlaneHeatSortChange={setPlaneHeatSort}
-        />
+        {inspectorTab === "actions" && actionsPage === "exports" ? (
+          <WorkbenchInspectorActionsExportPanel
+            t={t}
+            actionsPage={actionsPage}
+            studyKind={studyKind}
+            job={job}
+            tipDisplacement={tipDisplacement}
+            maxStressValue={maxStressValue}
+            frameMaxAxialForceValue={frameMaxAxialForceValue}
+            frameMaxShearForceValue={frameMaxShearForceValue}
+            reactionValue={reactionValue}
+            frameMaxRotationValue={frameMaxRotationValue}
+            thermalFrameMaxTemperatureDeltaValue={thermalFrameMaxTemperatureDeltaValue}
+            thermalFrameMaxTemperatureGradientValue={thermalFrameMaxTemperatureGradientValue}
+            thermalBeamMaxTemperatureGradientValue={thermalBeamMaxTemperatureGradientValue}
+            thermalPlaneMaxTemperatureDeltaValue={thermalPlaneMaxTemperatureDeltaValue}
+            reportScopeLabel={reportScopeLabel}
+            reportScopeHint={reportScopeHint}
+            createdAtValue={createdAtValue}
+            updatedAtValue={updatedAtValue}
+            heartbeatStatusValue={heartbeatStatusValue}
+            heartbeatTone={heartbeatTone}
+            failureReasonValue={failureReasonValue}
+            canCancelJob={canCancelJob}
+            onCancelJob={onCancelJob}
+            onDownloadJson={onDownloadJson}
+            onDownloadCsv={onDownloadCsv}
+            canProjectHeatToThermo={canProjectHeatToThermo}
+            projectHeatToThermoLabel={projectHeatToThermoLabel}
+            onProjectHeatToThermo={onProjectHeatToThermo}
+            planeHotspotFieldLabel={planeHotspotFieldLabel}
+            planeHotspotElements={planeHotspotElements}
+            planeThermalRows={planeThermalRows}
+            frameHotspotFieldLabel={frameHotspotFieldLabel}
+            frameHotspotElements={frameHotspotElements}
+            frameForceRows={frameForceRows}
+            planeHotspotLimit={planeHotspotLimit}
+            onDownloadPlaneHotspots={onDownloadPlaneHotspots}
+            onDownloadFrameHotspots={onDownloadFrameHotspots}
+            onDownloadFrameForces={onDownloadFrameForces}
+            onSelectPlaneHotspot={onSelectPlaneHotspot}
+            onSelectFrameHotspot={onSelectFrameHotspot}
+            onPlaneHotspotLimitChange={onPlaneHotspotLimitChange}
+            selectedFrameElementData={selectedFrameElementData}
+            frameForceSort={frameForceSort}
+            onFrameForceSortChange={setFrameForceSort}
+            planeHeatSort={planeHeatSort}
+            onPlaneHeatSortChange={setPlaneHeatSort}
+          />
+        ) : null}
       </div>
     </aside>
   );

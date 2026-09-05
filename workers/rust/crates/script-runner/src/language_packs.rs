@@ -9,7 +9,7 @@ type RunnerResult<T> = Result<T, String>;
 const PACK_SCHEMA: &str = "kyuubiki.language-pack/v1";
 const CATALOG_SCHEMA: &str = "kyuubiki.language-pack-catalog/v1";
 const LOCALE_TARGET_SCHEMA: &str = "kyuubiki.localization-mainstream-locales/v1";
-const VERSION_LINE: &str = "moxi 2.x";
+const VERSION_LINE: &str = "daji 3.x";
 const SURFACES: &[&str] = &["workbench", "hub"];
 const HUB_REQUIRED_OVERRIDE_PATHS: &[&str] = &[
     "nav.projects",
@@ -423,9 +423,9 @@ impl<'a> Validator<'a> {
         };
         for token in [
             "WORKBENCH_MAINSTREAM_LANGUAGE_PACK_LOCALES",
-            "WORKBENCH_TRANSLATED_LANGUAGE_PACK_OVERRIDES",
+            "loadWorkbenchTranslatedLanguagePackOverrides",
             "buildWorkbenchLanguagePackCatalogRows",
-            "getBuiltinWorkbenchLanguagePack",
+            "loadBuiltinWorkbenchLanguagePack",
         ] {
             if !catalog.contains(token) {
                 self.fail(format!(

@@ -2,8 +2,9 @@ use super::installed_report::{CleanupEvidence, InstallationEvidence, JourneyEvid
 use super::report::LeasePhase;
 use super::runtime::{
     HEARTBEAT_MS, LEASE_TTL_MS, LeaseObservation, RETRY_MS, distinct_port, ensure_child_alive,
-    http_get_json, local_address, owner_role, parse_lease, random_token, stop_child,
+    local_address, owner_role, parse_lease, random_token, stop_child,
 };
+use super::runtime_http::get_json as http_get_json;
 use crate::operational_agent_support::{available_local_port, wait_endpoint_closed};
 use crate::qualification_support::generated_at_unix_ms;
 use serde::Deserialize;

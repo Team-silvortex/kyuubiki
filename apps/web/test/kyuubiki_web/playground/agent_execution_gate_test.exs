@@ -40,6 +40,51 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGateTest do
     assert :ok = AgentExecutionGate.release("lease-d")
   end
 
+  test "balances fleet leases by normalized capacity and exposes the decision" do
+    high = %{id: "fleet-high", host: "127.0.0.1", port: 5011, capacity: 4}
+    low = %{id: "fleet-low", host: "127.0.0.1", port: 5012, capacity: 1}
+
+    assert {:ok, ^high, first} =
+             AgentExecutionGate.acquire([high, low], "fleet-lease-a", 500)
+
+    assert first == %{
+             active_slots_after: 1,
+             active_slots_before: 0,
+             capacity_slots: 4,
+             queue_position: 0,
+             selected_agent_id: "fleet-high",
+             selection_policy: "least_utilized_capacity_v1",
+             utilization_after: 0.25,
+             utilization_before: 0.0,
+             waited_ms: 0
+           }
+
+    assert {:ok, ^low, second} =
+             AgentExecutionGate.acquire([high, low], "fleet-lease-b", 500)
+
+    assert second.selected_agent_id == "fleet-low"
+    assert second.utilization_after == 1.0
+
+    assert {:ok, ^high, third} =
+             AgentExecutionGate.acquire([high, low], "fleet-lease-c", 500)
+
+    assert third.active_slots_before == 1
+    assert third.utilization_after == 0.5
+
+    assert %{
+             selection_policy: "least_utilized_capacity_v1",
+             active_lease_count: 3,
+             saturated_endpoint_count: 1,
+             active_by_endpoint: %{"fleet-high" => 2, "fleet-low" => 1},
+             capacity_by_endpoint: %{"fleet-high" => 4, "fleet-low" => 1},
+             utilization_by_endpoint: %{"fleet-high" => 0.5, "fleet-low" => 1.0}
+           } = AgentExecutionGate.snapshot([high, low])
+
+    assert :ok = AgentExecutionGate.release("fleet-lease-a")
+    assert :ok = AgentExecutionGate.release("fleet-lease-b")
+    assert :ok = AgentExecutionGate.release("fleet-lease-c")
+  end
+
   test "returns an observable queue timeout instead of opening another connection" do
     endpoint = %{id: "static-agent-timeout", host: "127.0.0.1", port: 5003}
 

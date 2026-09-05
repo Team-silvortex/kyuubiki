@@ -21,7 +21,10 @@
       "const": "kyuubiki.installed-runtime-operational-qualification-contract/v1"
     },
     "qualification_id": {
-      "const": "remote-linux-installer-managed-runtime-operational"
+      "enum": [
+        "remote-linux-installer-managed-runtime-operational",
+        "local-macos-installer-managed-runtime-operational"
+      ]
     },
     "capture": {
       "type": "object",
@@ -48,10 +51,18 @@
         "detached_status": { "$ref": "#/$defs/repoPath" },
         "cleanup_report": { "$ref": "#/$defs/repoPath" },
         "installed_digests": { "$ref": "#/$defs/repoPath" },
-        "execution_host_role": { "const": "remote-linux-qualification-host" },
-        "platform": { "const": "linux" },
-        "architecture": { "const": "x86_64" },
-        "package_version": { "const": "2.7.0" },
+        "execution_host_role": {
+          "enum": [
+            "remote-linux-qualification-host",
+            "local-macos-qualification-host"
+          ]
+        },
+        "platform": { "enum": ["linux", "macos"] },
+        "architecture": { "enum": ["x86_64", "aarch64"] },
+        "package_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
         "workflow_id": { "const": "qualification.installed-runtime.bar" },
         "minimum_agent_count": { "type": "integer", "minimum": 2 },
         "restart_count": { "type": "integer", "minimum": 2 }
@@ -104,6 +115,48 @@
       "items": { "$ref": "#/$defs/id" }
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "qualification_id": {
+            "const": "remote-linux-installer-managed-runtime-operational"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "capture": {
+            "properties": {
+              "execution_host_role": { "const": "remote-linux-qualification-host" },
+              "platform": { "const": "linux" },
+              "architecture": { "const": "x86_64" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "qualification_id": {
+            "const": "local-macos-installer-managed-runtime-operational"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "capture": {
+            "properties": {
+              "execution_host_role": { "const": "local-macos-qualification-host" },
+              "platform": { "const": "macos" },
+              "architecture": { "const": "aarch64" }
+            }
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "id": {
       "type": "string",

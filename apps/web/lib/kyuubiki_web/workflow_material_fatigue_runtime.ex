@@ -98,7 +98,7 @@ defmodule KyuubikiWeb.WorkflowMaterialFatigueRuntime do
        }}
     else
       nil -> {:error, :missing_material_fatigue_stress_amplitude}
-      false -> {:error, :invalid_material_fatigue_stress_amplitude}
+      amplitude when is_number(amplitude) -> {:error, :invalid_material_fatigue_stress_amplitude}
       {:error, _reason} = error -> error
     end
   end

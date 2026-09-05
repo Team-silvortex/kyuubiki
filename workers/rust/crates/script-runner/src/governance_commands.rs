@@ -1,19 +1,24 @@
 use crate::{
-    agent_control_link_operational_qualification, agent_solver_operational_qualification,
-    agent_update_operational_qualification, benchmark_qualification, central_database_readiness,
-    central_readiness_report, central_store_contract, commercial_readiness,
-    component_integrity_protocol, contracts_runtime_api_surface,
-    contracts_validation_qualification, dependency_audit, desktop_deployment_update_validation,
+    agent_control_link_operational_qualification, agent_rolling_operational_qualification,
+    agent_solver_operational_qualification, agent_update_operational_qualification,
+    benchmark_qualification, central_database_readiness, central_readiness_report,
+    central_store_contract, commercial_readiness, component_integrity_protocol,
+    contracts_runtime_api_surface, contracts_validation_qualification, dependency_audit,
+    desktop_bundle_operational_qualification, desktop_deployment_update_validation,
     desktop_ui_validation, desktop_usability_journeys,
-    distributed_task_recovery_operational_qualification, doc_inventory, docs_book, frontend_checks,
-    gui_runtime_capability_contract, headless_sdk_operational, headless_sdk_validation,
-    headless_workflow_qualification, install_update_disk_hygiene, installation_integrity_docs,
-    installed_runtime_operational_qualification, installer_recovery_fault_injection,
-    language_packs, local_path_audit, make_modules, material_exploration_chain_contract,
-    material_score_contract, material_study_execution_plan_contract, materialization_plan_contract,
+    distributed_task_recovery_operational_qualification, doc_inventory, docs_book,
+    fleet_scheduling_operational_qualification, fleet_update_operational_qualification,
+    frontend_checks, gui_runtime_capability_contract, headless_sdk_operational,
+    headless_sdk_validation, headless_workflow_qualification, install_update_disk_hygiene,
+    installation_integrity_docs, installed_runtime_operational_qualification,
+    installed_runtime_power_loss_qualification, installer_recovery_fault_injection, language_packs,
+    linux_host_power_loss_qualification, local_path_audit, make_modules,
+    material_exploration_chain_contract, material_score_contract,
+    material_study_execution_plan_contract, materialization_plan_contract,
     minimal_industrial_closure, module_extension_standard, module_function_matrix,
     module_function_tensor, module_topology, module_topology_report, moxi_handoff,
-    operator_sdk_multihost_qualification, operator_task_ir_contract,
+    operator_package_acquisition_operational_qualification, operator_sdk_multihost_qualification,
+    operator_sdk_performance_qualification, operator_task_ir_contract,
     orchestra_benchmark_qualification, orchestra_recovery_fault_injection,
     orchestra_takeover_operational_qualification, orchestra_workflow_operational_qualification,
     persistence_provenance_qualification, project_organization_audit,
@@ -131,6 +136,12 @@ pub(crate) fn run_governance_command(
                 root, args,
             )
         }
+        "qualify-desktop-bundle-update-operational-host" => {
+            desktop_bundle_operational_qualification::run_qualify_host(root, args)
+        }
+        "check-desktop-bundle-update-operational-qualification" => {
+            desktop_bundle_operational_qualification::run_check(root, args)
+        }
         "check-usability-release-gate" => {
             usability_release_gate::run_check_usability_release_gate(root, args)
         }
@@ -145,6 +156,12 @@ pub(crate) fn run_governance_command(
         "check-orchestra-takeover-operational-qualification" => {
             orchestra_takeover_operational_qualification::run_check(root, args)
         }
+        "check-orchestra-network-partition-operational-qualification" => {
+            orchestra_takeover_operational_qualification::run_check_partition(root, args)
+        }
+        "check-orchestra-long-workflow-takeover-operational-qualification" => {
+            orchestra_takeover_operational_qualification::run_check_long_workflow(root, args)
+        }
         "check-orchestra-installed-takeover-operational-qualification" => {
             orchestra_takeover_operational_qualification::run_check_installed(root, args)
         }
@@ -158,6 +175,29 @@ pub(crate) fn run_governance_command(
                 root, args,
             )
         }
+        "check-installed-runtime-macos-operational-qualification" => {
+            installed_runtime_operational_qualification::run_check_installed_runtime_macos_operational_qualification(
+                root, args,
+            )
+        }
+        "qualify-installed-runtime-operational-remote" => {
+            installed_runtime_operational_qualification::run_qualify_remote(root, args)
+        }
+        "qualify-installed-runtime-operational-macos" => {
+            installed_runtime_operational_qualification::run_qualify_macos(root, args)
+        }
+        "capture-installed-runtime-operational-host" => {
+            installed_runtime_operational_qualification::run_capture_host(args)
+        }
+        "check-installed-runtime-power-loss-qualification" => {
+            installed_runtime_power_loss_qualification::run_check(root, args)
+        }
+        "qualify-installed-runtime-power-loss-remote" => {
+            installed_runtime_power_loss_qualification::run_remote(root, args)
+        }
+        "installed-runtime-power-loss-host" => {
+            installed_runtime_power_loss_qualification::run_host(args)
+        }
         "check-persistence-provenance-qualification" => {
             persistence_provenance_qualification::run_check_persistence_provenance_qualification(
                 root, args,
@@ -167,6 +207,12 @@ pub(crate) fn run_governance_command(
             installer_recovery_fault_injection::run_check_installer_recovery_fault_injection(
                 root, args,
             )
+        }
+        "qualify-linux-host-power-loss" => {
+            linux_host_power_loss_qualification::run_qualify(root, args)
+        }
+        "check-linux-host-power-loss-qualification" => {
+            linux_host_power_loss_qualification::run_check(root, args)
         }
         "check-workflow-dataset-contract" => {
             workflow_dataset_contract::run_check_workflow_dataset_contract(root, args)
@@ -208,6 +254,15 @@ pub(crate) fn run_governance_command(
         "check-agent-control-link-operational-qualification" => {
             agent_control_link_operational_qualification::run_check(root, args)
         }
+        "check-operator-package-acquisition-operational-qualification" => {
+            operator_package_acquisition_operational_qualification::run_check(root, args)
+        }
+        "qualify-operator-package-acquisition-operational-remote" => {
+            operator_package_acquisition_operational_qualification::run_qualify_remote(root, args)
+        }
+        "prepare-operator-package-acquisition-host" => {
+            operator_package_acquisition_operational_qualification::run_prepare_host(args)
+        }
         "check-distributed-task-recovery-operational-qualification" => {
             distributed_task_recovery_operational_qualification::run_check(root, args)
         }
@@ -221,6 +276,21 @@ pub(crate) fn run_governance_command(
                 root, args,
             )
         }
+        "check-fleet-update-operational-qualification" => {
+            fleet_update_operational_qualification::run_check(root, args)
+        }
+        "check-fleet-scheduling-operational-qualification" => {
+            fleet_scheduling_operational_qualification::run_check(root, args)
+        }
+        "qualify-fleet-scheduling-operational-remote" => {
+            fleet_scheduling_operational_qualification::run_qualify_remote(root, args)
+        }
+        "capture-fleet-scheduling-operational-host" => {
+            fleet_scheduling_operational_qualification::run_capture_host(root, args)
+        }
+        "check-agent-rolling-replacement-operational-qualification" => {
+            agent_rolling_operational_qualification::run_check(root, args)
+        }
         "check-headless-sdk-validation-qualification" => {
             headless_sdk_validation::run_check_headless_sdk_validation(root, args)
         }
@@ -229,6 +299,12 @@ pub(crate) fn run_governance_command(
         }
         "check-operator-sdk-multihost-operational-qualification" => {
             operator_sdk_multihost_qualification::run_check(root, args)
+        }
+        "qualify-operator-sdk-performance" => {
+            operator_sdk_performance_qualification::run_qualify(root, args)
+        }
+        "check-operator-sdk-performance-qualification" => {
+            operator_sdk_performance_qualification::run_check(root, args)
         }
         "check-headless-workflow-qualification" => {
             headless_workflow_qualification::run_check_headless_workflow_qualification(root, args)

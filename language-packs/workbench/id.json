@@ -4,9 +4,9 @@
   "language": "id",
   "targetSurface": "workbench",
   "name": "Indonesian Workbench Core",
-  "version": "2.17.0",
-  "versionLine": "moxi 2.x",
-  "targetAppVersion": "2.17.0",
+  "version": "3.0.0",
+  "versionLine": "daji 3.x",
+  "targetAppVersion": "3.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-21T04:18:21.522Z",
   "description": "Indonesian UI translations for Workbench navigation, workflow, store, and system surfaces.",
@@ -29,6 +29,7 @@
     }
   ],
   "overrides": {
+    "workflowStorageWriteFailedLabel": "Data alur kerja lokal tidak dapat disimpan. Periksa penyimpanan yang tersedia lalu coba lagi.",
     "title": "Kyuubiki Workbench · Bahasa Indonesia",
     "subtitle": "Ruang kerja untuk simulasi, workflow, dan agen.",
     "rail": {

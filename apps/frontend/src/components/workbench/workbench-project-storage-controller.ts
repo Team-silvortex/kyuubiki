@@ -62,7 +62,7 @@ type ProjectStorageControllerDeps = {
   setModelVersions: (value: any[]) => void;
   adminDataBackendService: WorkbenchAdminDataBackendService;
   projectLibraryBackendService: WorkbenchProjectLibraryBackendService;
-  refreshProjects: () => Promise<void>;
+  refreshProjects: (bootstrap?: boolean, preferredProjectId?: string | null) => Promise<void>;
   refreshVersions: (modelId: string) => Promise<void>;
   serializeCurrentModel: () => Record<string, unknown>;
   getPersistedModelEffects: () => any;
@@ -185,7 +185,7 @@ export function createWorkbenchProjectStorageController({
 
   const downloadProjectBundleJson = async () => {
     const selectedProject = getSelectedProject();
-    await downloadWorkbenchProjectBundleJson({
+    return downloadWorkbenchProjectBundleJson({
       selectedProject,
       buildBundle: buildProjectBundleJson,
       setMessage,
@@ -199,7 +199,7 @@ export function createWorkbenchProjectStorageController({
 
   const downloadProjectBundleZip = async () => {
     const selectedProject = getSelectedProject();
-    await downloadWorkbenchProjectBundleZip({
+    return downloadWorkbenchProjectBundleZip({
       selectedProject,
       buildBundle: buildProjectBundleJson,
       setMessage,
@@ -212,7 +212,7 @@ export function createWorkbenchProjectStorageController({
   };
 
   const downloadDatabaseSnapshot = async () => {
-    await downloadWorkbenchDatabaseSnapshot({
+    return downloadWorkbenchDatabaseSnapshot({
       setMessage,
       labels: {
         databaseExported: t.databaseExported,
@@ -233,7 +233,7 @@ export function createWorkbenchProjectStorageController({
           description: projectDescriptionDraft,
         });
         setSelectedProjectId(payload.project.project_id);
-        await refreshProjects();
+        await refreshProjects(false, payload.project.project_id);
         setMessage(t.projectCreated);
       } catch (error) {
         setMessage(error instanceof Error ? error.message : t.initialFailed);
@@ -317,15 +317,15 @@ export function createWorkbenchProjectStorageController({
   };
 
   const openSavedModel = (model: any) => {
-    openPersistedWorkbenchModel(model, getPersistedModelEffects());
+    return openPersistedWorkbenchModel(model, getPersistedModelEffects());
   };
 
   const openSavedVersion = (version: any) => {
-    openPersistedWorkbenchVersion(version, getPersistedModelEffects());
+    return openPersistedWorkbenchVersion(version, getPersistedModelEffects());
   };
 
   const openModelVersionById = (versionId: string) => {
-    openPersistedWorkbenchVersionById(versionId, getPersistedModelEffects());
+    return openPersistedWorkbenchVersionById(versionId, getPersistedModelEffects());
   };
 
   const renameSelectedVersion = () => {

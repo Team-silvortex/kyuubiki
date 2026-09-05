@@ -205,7 +205,7 @@ pub fn launch_managed_agent(args: &[String]) -> Result<i32, String> {
     Ok(status.code().unwrap_or(1))
 }
 
-pub(crate) fn install_agent_update_package_into(
+pub fn install_agent_update_package_into(
     package_root: &Path,
     store: &Path,
     platform: Platform,
@@ -244,7 +244,19 @@ pub(crate) fn rollback_agent_update_in(
     activate_version(store, &manifest, platform)
 }
 
-pub(crate) fn agent_update_status_in(store: &Path) -> Result<AgentUpdateStatus, String> {
+pub(crate) fn activate_agent_version_in(
+    store: &Path,
+    version: &str,
+    platform: Platform,
+) -> Result<AgentUpdateActivationRecord, String> {
+    validate_version(version)?;
+    ensure_store(store)?;
+    let _lock = AgentUpdateLock::acquire(store)?;
+    let manifest = verify_agent_update_package(&store.join("versions").join(version), platform)?;
+    activate_version(store, &manifest, platform)
+}
+
+pub fn agent_update_status_in(store: &Path) -> Result<AgentUpdateStatus, String> {
     let active = latest_activation(store)?;
     let mut installed_versions = fs::read_dir(store.join("versions"))
         .ok()
@@ -263,7 +275,21 @@ pub(crate) fn agent_update_status_in(store: &Path) -> Result<AgentUpdateStatus, 
     })
 }
 
-pub(crate) fn active_agent_binary_in(store: &Path, platform: Platform) -> Result<PathBuf, String> {
+pub fn active_agent_binary_in(store: &Path, platform: Platform) -> Result<PathBuf, String> {
+    let active = active_agent_activation_in(store, platform)?;
+    let package = store.join(&active.relative_path);
+    let manifest = verify_agent_update_package(&package, platform)?;
+    if manifest.version != active.version || manifest.entrypoint_sha256 != active.entrypoint_sha256
+    {
+        return Err("active agent activation does not match its verified package".to_string());
+    }
+    Ok(package.join(manifest.entrypoint))
+}
+
+pub(crate) fn active_agent_activation_in(
+    store: &Path,
+    platform: Platform,
+) -> Result<AgentUpdateActivationRecord, String> {
     let active = latest_activation(store)?
         .ok_or_else(|| "no active installer-managed agent is available".to_string())?;
     validate_activation_record(&active, platform)?;
@@ -273,7 +299,7 @@ pub(crate) fn active_agent_binary_in(store: &Path, platform: Platform) -> Result
     {
         return Err("active agent activation does not match its verified package".to_string());
     }
-    Ok(package.join(manifest.entrypoint))
+    Ok(active)
 }
 
 fn install_new_version(

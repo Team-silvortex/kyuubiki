@@ -53,7 +53,11 @@ function installStorageFixture() {
 test("workbench storage manifest classifies persisted buckets", async () => {
   const localStorage = installStorageFixture();
   localStorage.setItem("kyuubiki.workbench.workflowLibrary.v1", JSON.stringify([{ id: "workflow-a" }]));
+  localStorage.setItem("kyuubiki.workflow.templateChainLibrary.v1", JSON.stringify([{ id: "chain-a" }]));
+  localStorage.setItem("kyuubiki-workbench-store-manifests", JSON.stringify({ "project-a": { entries: [] } }));
   localStorage.setItem("kyuubiki.workbench.workflowSnapshots.index.v1", JSON.stringify([{ id: "snap-a" }]));
+  localStorage.setItem("kyuubiki.workflow.recentOperators", JSON.stringify(["solve.bar_1d"]));
+  localStorage.setItem("kyuubiki.workflow.favoriteOperators", JSON.stringify(["solve.bar_1d"]));
   localStorage.setItem("kyuubiki.unregistered.debug", "leftover");
 
   const snapshot = await inspectWorkbenchStorage();
@@ -62,6 +66,9 @@ test("workbench storage manifest classifies persisted buckets", async () => {
 
   const manifest = await buildWorkbenchStorageManifest();
   const localWorkflows = manifest.find((entry) => entry.id === "local_workflows");
+  const templateLibrary = manifest.find((entry) => entry.id === "workflow_template_library");
+  const storeManifests = manifest.find((entry) => entry.id === "workspace_store_manifests");
+  const workflowFavorites = manifest.find((entry) => entry.id === "workflow_favorites");
   const snapshots = manifest.find((entry) => entry.id === "workflow_snapshots");
 
   assert.equal(localWorkflows?.authority, "workbench");
@@ -69,6 +76,14 @@ test("workbench storage manifest classifies persisted buckets", async () => {
   assert.equal(localWorkflows?.portable, true);
   assert.equal(localWorkflows?.mode, "careful");
   assert.equal(localWorkflows?.entries, 1);
+  assert.equal(templateLibrary?.dataClass, "source_of_truth");
+  assert.equal(templateLibrary?.mode, "careful");
+  assert.equal(templateLibrary?.entries, 1);
+  assert.equal(storeManifests?.dataClass, "source_of_truth");
+  assert.equal(storeManifests?.mode, "careful");
+  assert.equal(storeManifests?.portable, true);
+  assert.equal(storeManifests?.entries, 1);
+  assert.equal(workflowFavorites?.entries, 2);
   assert.equal(snapshots?.dataClass, "cache");
   assert.equal(snapshots?.mode, "safe");
 });
@@ -76,12 +91,16 @@ test("workbench storage manifest classifies persisted buckets", async () => {
 test("safe storage cleanup preserves careful source-of-truth buckets", async () => {
   const localStorage = installStorageFixture();
   localStorage.setItem("kyuubiki.workbench.workflowLibrary.v1", "authoritative");
+  localStorage.setItem("kyuubiki.workflow.templateChainLibrary.v1", "authoritative-template");
+  localStorage.setItem("kyuubiki-workbench-store-manifests", "authoritative-store-manifest");
   localStorage.setItem("kyuubiki.workbench.workflowSnapshots.index.v1", "cache");
   localStorage.setItem("kyuubiki.workbench.workflowPackageMaintenanceLog.v1", "receipt");
 
   clearWorkbenchSafeStorage();
 
   assert.equal(localStorage.getItem("kyuubiki.workbench.workflowLibrary.v1"), "authoritative");
+  assert.equal(localStorage.getItem("kyuubiki.workflow.templateChainLibrary.v1"), "authoritative-template");
+  assert.equal(localStorage.getItem("kyuubiki-workbench-store-manifests"), "authoritative-store-manifest");
   assert.equal(localStorage.getItem("kyuubiki.workbench.workflowSnapshots.index.v1"), null);
   assert.equal(localStorage.getItem("kyuubiki.workbench.workflowPackageMaintenanceLog.v1"), null);
 

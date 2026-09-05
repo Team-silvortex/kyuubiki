@@ -1,0 +1,81 @@
+{
+  "$schema": "../../schemas/orchestra-long-workflow-takeover-operational-qualification-contract.schema.json",
+  "schema_version": "kyuubiki.orchestra-long-workflow-takeover-operational-qualification-contract/v1",
+  "qualification_id": "two-orchestra-postgresql-long-workflow-takeover-operational",
+  "target_coordinate": {
+    "module_id": "orchestra-control-plane",
+    "paradigm": "fault_injection_and_recovery",
+    "target_grade": "operational"
+  },
+  "capture": {
+    "required_scenarios": [
+      "idempotent_resume",
+      "checkpoint_required_block"
+    ],
+    "orchestra_processes_minimum": 2,
+    "lease_ttl_ms_maximum": 2000,
+    "takeover_ms_maximum": 30000,
+    "idempotent_agent_dispatches": 2,
+    "checkpoint_required_agent_dispatches": 1,
+    "cleanup_required": true
+  },
+  "retention": {
+    "report_schema": "kyuubiki.orchestra-long-workflow-takeover-operational-qualification/v1",
+    "report_schema_path": "schemas/orchestra-long-workflow-takeover-operational-qualification-report.schema.json",
+    "report_path": "releases/usability-evidence/2.18.3/orchestra-long-workflow-takeover-operational-qualification.json",
+    "forbidden_content": [
+      "hostname",
+      "host_address",
+      "job_id",
+      "credential",
+      "authorization: bearer",
+      "192.168.",
+      "/Users/",
+      "/home/",
+      "kyuubiki-dev"
+    ]
+  },
+  "source_guard": {
+    "files": [
+      "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+      "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+      "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_ownership.ex",
+      "workers/rust/crates/cli/src/agent_fault_injection.rs",
+      "workers/rust/crates/script-runner/src/distributed_task_recovery_operational_qualification/agent_process.rs",
+      "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/long_workflow_fixture.rs",
+      "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/long_workflow_runtime.rs",
+      "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/long_workflow_report.rs",
+      "workers/rust/crates/script-runner/src/orchestra_takeover_operational_qualification/long_workflow_validation.rs"
+    ],
+    "required_text": [
+      "WorkflowRecoveryEnvelope.claim",
+      "LeaseStore.with_lease",
+      "checkpoint_required",
+      "process_restart",
+      "pause_remote",
+      "KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_FILE",
+      "active_execution_count_after_takeover",
+      "completed_history_count"
+    ]
+  },
+  "required_checks": [
+    "real_rust_agent",
+    "real_remote_postgresql",
+    "two_live_orchestra_instances",
+    "exact_job_pause_barrier",
+    "idempotent_inflight_observed",
+    "first_takeover_fenced",
+    "idempotent_replay_claimed",
+    "single_terminal_commit",
+    "solver_result_verified",
+    "checkpoint_required_inflight_observed",
+    "second_takeover_fenced",
+    "unsafe_replay_blocked",
+    "no_checkpoint_redispatch",
+    "orphan_completion_did_not_mutate",
+    "former_owners_rejoined",
+    "followup_solver_verified",
+    "cleanup_complete",
+    "retention_sanitized"
+  ]
+}

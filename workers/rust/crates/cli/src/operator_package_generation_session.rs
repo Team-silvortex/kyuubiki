@@ -246,12 +246,19 @@ fn try_reap_session(
             })?;
             Ok(SessionReapOutcome::Removed)
         }
-        Err(error) if error.kind() == ErrorKind::WouldBlock => Ok(SessionReapOutcome::Active),
+        Err(error) if is_lock_contention(&error) => Ok(SessionReapOutcome::Active),
         Err(error) => Err(format!(
             "failed to inspect operator package session lease {}: {error}",
             lease_path.display()
         )),
     }
+}
+
+fn is_lock_contention(error: &std::io::Error) -> bool {
+    error.kind() == ErrorKind::WouldBlock
+        || error
+            .raw_os_error()
+            .is_some_and(|code| fs2::lock_contended_error().raw_os_error() == Some(code))
 }
 
 fn session_identity_matches(root: &Path, expected: &SessionMarker) -> Result<bool, String> {
@@ -377,6 +384,17 @@ mod tests {
         drop(second);
         drop(first);
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn lock_contention_classification_preserves_real_io_failures() {
+        assert!(is_lock_contention(&std::io::Error::from(
+            ErrorKind::WouldBlock
+        )));
+        assert!(is_lock_contention(&fs2::lock_contended_error()));
+        assert!(!is_lock_contention(&std::io::Error::from(
+            ErrorKind::PermissionDenied
+        )));
     }
 
     #[test]

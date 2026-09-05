@@ -354,6 +354,29 @@ All three SDKs expose the same conceptual split:
 - `solve_plane_triangle_2d`
 - `cancel_job`
 
+### Summary cross-check gates
+
+The Rust functions `material_validation_quality_gate` and
+`material_validation_repair_hint` consume
+`kyuubiki.summary_tolerance_validation/v1` reports. A pass requires an explicit
+`validation_passed: true`, a positive `validation_checked_field_count`, a zero
+`validation_failed_field_count`, and a valid `validation_missing_field_count`
+consistent with `validation_fail_on_missing` (default: true). If failure details
+are supplied, they must be an empty array for a pass. Missing or malformed
+success metadata is not inferred as success.
+
+Recognized reports that fail these checks produce a violating gate and a repair
+hint, even if their raw pass flag is true. Oversized blocking counts saturate
+rather than overflowing. The resulting reliability summary drives
+`repair_validation` in the next-round plan instead of advancing the research.
+A different report contract returns `None`, which is not evidence of a pass.
+
+The producer requires at least one actual numeric comparison even when missing
+fields are optional. See the
+[book's summary cross-check contract](./book-ch05-workflow-and-operators.html#summary-validation)
+for field selection, tolerance defaults, non-finite failures, and explicit
+workflow recovery. Summary agreement alone does not certify physical accuracy.
+
 ### Large model and result artifacts
 
 Large service submissions do not expand a complete FEM model into the Elixir

@@ -183,6 +183,15 @@ class _KyuubikiBridge:
     async def refresh_all(self):
         return await self.invoke("runtime/refreshAll")
 
+    async def stage_store_entry(self, kind, entry_id):
+        return await self.invoke("store/stageEntry", {"kind": kind, "entryId": entry_id})
+
+    async def remove_store_entry(self, kind, entry_id):
+        return await self.invoke("store/removeEntry", {"kind": kind, "entryId": entry_id})
+
+    async def export_store_manifest(self):
+        return await self.invoke("store/exportManifest")
+
     async def create_project(self, name, description=""):
         result = await self.invoke("project/create", {"name": name, "description": description})
         return result.get("projectId")

@@ -6,10 +6,38 @@ import {
   buildWorkbenchSystemControlModeCopy,
   buildWorkbenchSystemControlTopologySummary,
   buildWorkbenchSystemTopologySnapshot,
+  formatWorkbenchHealthScore,
   parseWorkbenchSystemTopologySnapshot,
 } from "../../src/components/workbench/system/workbench-system-control-mode-contract.ts";
+import { buildWorkbenchSecurityUi } from "../../src/components/workbench/workbench-inspector-derived.ts";
+import { copyByLanguage } from "../../src/components/workbench/workbench-copy.ts";
 
 const COPY = buildWorkbenchSystemControlModeCopy("en", "direct_mesh_gui");
+
+test("runtime control and security presentation consume the active language pack", () => {
+  const translated = {
+    ...copyByLanguage.en,
+    access: "접근",
+    cluster: "클러스터",
+    controls: "제어 항목",
+    mesh: "메시",
+    no: "아니요",
+    ready: "준비됨",
+    runtime: "런타임",
+    runtimeMode: "런타임 모드",
+    security: "보안",
+    yes: "예",
+    frontendModes: { orchestrated_gui: "오케스트레이션 GUI", direct_mesh_gui: "직접 메시 GUI" },
+  };
+  const control = buildWorkbenchSystemControlModeCopy("ko", "direct_mesh_gui", translated);
+  const security = buildWorkbenchSecurityUi(translated);
+
+  assert.equal(control.pageLabel, "제어 항목 · 런타임");
+  assert.equal(control.activeRuntimeModeLabel, "직접 메시 GUI");
+  assert.equal(control.rows.securityStatusLabel, "보안");
+  assert.equal(security.security, "보안");
+  assert.equal(security.notConfigured, "아니요");
+});
 
 const AGENTS = [
   {
@@ -29,7 +57,7 @@ const AGENTS = [
         runtime_mode: "direct_mesh_gui",
         headless: true,
         cluster_id: "mesh-alpha",
-        health_score: 0.92,
+        health_score: 92,
         peers: [{ address: "10.0.0.2:5001", status: "healthy", failure_count: 0, last_seen_unix_s: 995 }],
       },
     },
@@ -51,7 +79,7 @@ const AGENTS = [
         runtime_mode: "direct_mesh_gui",
         headless: true,
         cluster_id: "mesh-alpha",
-        health_score: 0.8,
+        health_score: 80,
         peers: [{ address: "10.0.0.1:5001", status: "healthy", failure_count: 0, last_seen_unix_s: 990 }],
       },
     },
@@ -73,7 +101,7 @@ const AGENTS = [
         runtime_mode: "direct_mesh_gui",
         headless: true,
         cluster_id: "mesh-beta",
-        health_score: 0.61,
+        health_score: 61,
         peers: [],
       },
     },
@@ -92,7 +120,7 @@ const AGENTS = [
       runtime: {
         runtime_mode: "direct_mesh_gui",
         headless: true,
-        health_score: 0.49,
+        health_score: 49,
         peers: [],
       },
     },
@@ -127,6 +155,13 @@ test("buildWorkbenchSystemControlTopologySummary reports mesh cluster overview",
   assert.equal(summary.controlGroups[0]?.kind, "mesh");
 });
 
+test("health scores follow the protocol 0 to 100 scale", () => {
+  assert.equal(formatWorkbenchHealthScore(100), "100%");
+  assert.equal(formatWorkbenchHealthScore(92), "92%");
+  assert.equal(formatWorkbenchHealthScore(140), "100%");
+  assert.equal(formatWorkbenchHealthScore(Number.NaN), "--");
+});
+
 test("buildWorkbenchSystemControlTopologySummary keeps orchestrated groups first-class", () => {
   const summary = buildWorkbenchSystemControlTopologySummary({
     frontendRuntimeMode: "orchestrated_gui",
@@ -140,7 +175,7 @@ test("buildWorkbenchSystemControlTopologySummary keeps orchestrated groups first
         control_mode: "orch_managed",
         orch_id: "orch-alpha",
         orch_session_id: "s1",
-        descriptor: { authority: { control_mode: "orch_managed", orchestrator_id: "orch-alpha", orchestrator_session_id: "s1" }, runtime: { runtime_mode: "orchestrated_gui", headless: true, health_score: 0.75, peers: [{ address: "127.0.0.2:5001" }] } },
+        descriptor: { authority: { control_mode: "orch_managed", orchestrator_id: "orch-alpha", orchestrator_session_id: "s1" }, runtime: { runtime_mode: "orchestrated_gui", headless: true, health_score: 75, peers: [{ address: "127.0.0.2:5001" }] } },
       },
       {
         id: "orch-a2",
@@ -149,7 +184,7 @@ test("buildWorkbenchSystemControlTopologySummary keeps orchestrated groups first
         control_mode: "orch_managed",
         orch_id: "orch-alpha",
         orch_session_id: "s2",
-        descriptor: { authority: { control_mode: "orch_managed", orchestrator_id: "orch-alpha", orchestrator_session_id: "s2" }, runtime: { runtime_mode: "orchestrated_gui", headless: true, health_score: 0.55, peers: [] } },
+        descriptor: { authority: { control_mode: "orch_managed", orchestrator_id: "orch-alpha", orchestrator_session_id: "s2" }, runtime: { runtime_mode: "orchestrated_gui", headless: true, health_score: 55, peers: [] } },
       },
       {
         id: "orch-b1",
@@ -158,7 +193,7 @@ test("buildWorkbenchSystemControlTopologySummary keeps orchestrated groups first
         control_mode: "orch_managed",
         orch_id: "orch-beta",
         orch_session_id: "s3",
-        descriptor: { authority: { control_mode: "orch_managed", orchestrator_id: "orch-beta", orchestrator_session_id: "s3" }, runtime: { runtime_mode: "orchestrated_gui", headless: true, health_score: 0.9, peers: [] } },
+        descriptor: { authority: { control_mode: "orch_managed", orchestrator_id: "orch-beta", orchestrator_session_id: "s3" }, runtime: { runtime_mode: "orchestrated_gui", headless: true, health_score: 90, peers: [] } },
       },
     ] as any,
     controlPlaneApiToken: "cp",

@@ -85,6 +85,20 @@ test("Pwdt browser bridge runs macros and action steps through the same action b
   assert.equal(stepResults.length, 2);
 });
 
+test("Pwdt browser bridge exposes Store manifest commands without DOM clicks", async () => {
+  const calls: string[] = [];
+  const bridge = makeBridge(calls);
+
+  await bridge.stageStoreEntry("operator", "solve.bar_1d");
+  await bridge.exportStoreManifest();
+  await bridge.removeStoreEntry("operator", "solve.bar_1d");
+
+  assert.deepEqual(
+    calls.map((entry) => entry.split(":")[1]),
+    ["store/stageEntry", "store/exportManifest", "store/removeEntry"],
+  );
+});
+
 test("Pwdt browser bridge resolves UI contract selectors for stable automation", () => {
   const previousDocument = (globalThis as any).document;
   (globalThis as any).document = {
@@ -95,9 +109,33 @@ test("Pwdt browser bridge resolves UI contract selectors for stable automation",
   try {
     const bridge = makeBridge();
 
+    assert.equal(bridge.uiContract().contractVersion, 2);
+    assert.equal(bridge.uiSelector("railButton", "library"), '[aria-label="workbench-rail:library"]');
+    assert.equal(bridge.uiSelector("modelTab", "tree"), '[data-workbench-model-tab="tree"]');
+    assert.equal(bridge.uiSelector("modelToolsPage", "study"), '[data-workbench-model-tools-page="study"]');
+    assert.equal(bridge.uiSelector("modelStudyDomain", "thermal"), '[data-workbench-model-study-domain="thermal"]');
+    assert.equal(bridge.uiSelector("modelStudyKind"), '[data-workbench-model-study-kind="select"]');
     assert.equal(bridge.uiSelector("runtimeTab", "control"), '[data-workbench-runtime-tab="control"]');
+    assert.equal(bridge.uiSelector("libraryTab", "models"), '[data-workbench-library-tab="models"]');
+    assert.equal(bridge.uiSelector("libraryModelPage", "versions"), '[data-workbench-library-model-page="versions"]');
+    assert.equal(bridge.uiSelector("storeKind", "operator"), '[data-workbench-store-kind="operator"]');
+    assert.equal(bridge.uiSelector("storeEntryAction", "stage"), '[data-workbench-store-entry-action="stage"]');
+    assert.equal(bridge.uiSelector("storeManifestEntry", "solve.bar_1d"), '[data-workbench-store-manifest-entry-id="solve.bar_1d"]');
+    assert.equal(bridge.uiSelector("storeManifestAction", "remove"), '[data-workbench-store-manifest-action="remove"]');
+    assert.equal(bridge.uiSelector("systemSettingsPage", "overview"), '[data-workbench-system-settings-page="overview"]');
+    assert.equal(bridge.uiSelector("libraryProjectsPanel"), '[data-workbench-library-projects="panel"]');
+    assert.equal(bridge.uiSelector("libraryProjectAction", "create"), '[data-workbench-library-project-action="create"]');
+    assert.equal(bridge.uiSelector("libraryProjectField", "name"), '[data-workbench-library-project-field="name"]');
+    assert.equal(bridge.uiSelector("dataAction", "save-result"), '[data-workbench-data-action="save-result"]');
+    assert.equal(bridge.uiSelector("dataField", "result-payload"), '[data-workbench-data-field="result-payload"]');
+    assert.equal(bridge.uiSelector("dataRecord", "job-42"), '[data-workbench-data-record-id="job-42"]');
+    assert.equal(bridge.uiSelector("dataRecordKind", "result"), '[data-workbench-data-record-kind="result"]');
     assert.equal(bridge.uiSelector("workflowCatalogEntry", "solve.bar_1d"), '[data-workflow-catalog-id="solve.bar_1d"]');
+    assert.equal(bridge.uiSelector("workflowBuilderSecondaryTools"), '[data-workflow-builder-tools="secondary"]');
     assert.equal(bridge.uiSelector("workflowTopologyKind"), '[data-workflow-topology-kind="select"]');
+    assert.equal(bridge.uiSelector("workflowTopologyAction", "add-edge"), '[data-workflow-topology-action="add-edge"]');
+    assert.equal(bridge.uiSelector("workflowControlNode", "condition_2"), '[data-workflow-control-node-id="condition_2"]');
+    assert.equal(bridge.uiSelector("workflowControlEmptyAction"), '[data-workflow-control-empty-action="insert"]');
     assert.equal(bridge.uiSelector("workflowInputArtifact", "load-input"), '[data-workflow-input-artifact="load-input"]');
     assert.equal(bridge.uiSelector("workflowRun", "job-42"), '[data-workflow-run-id="job-42"]');
     assert.equal(bridge.uiSelector("workflowRunStatus", "completed"), '[data-workflow-run-status="completed"]');

@@ -1,7 +1,7 @@
 # Workflow Dataset Contract
 
 This document defines the storage philosophy for workflow-carried data in
-`moxi 2.x`.
+`daji 3.x`.
 
 The goal is intentionally close to the ONNX idea:
 
@@ -257,7 +257,7 @@ It should be possible to store this contract:
 - alongside a workflow definition
 - or inside future workflow catalog and project bundle artifacts
 
-## `moxi 2.x` priorities
+## `daji 3.x` priorities
 
 The current line should keep this contract narrow and useful:
 

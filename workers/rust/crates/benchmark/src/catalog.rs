@@ -11,13 +11,21 @@ use crate::{
         generate_panel_mesh, generate_pratt_truss, generate_quad_panel_mesh,
         generate_space_frame_grid,
     },
+    generators_dynamic::{
+        generate_harmonic_spring_1d_case, generate_transient_heat_bar_case,
+        generate_transient_spring_1d_case,
+    },
     generators_extended::{
         generate_acoustic_bar_case, generate_advection_diffusion_bar_case,
-        generate_electrostatic_bar_case, generate_electrostatic_quad_panel,
-        generate_electrostatic_triangle_panel, generate_heat_bar_case,
-        generate_heat_triangle_panel, generate_magnetostatic_bar_case,
+        generate_electric_conduction_quad_panel, generate_electrostatic_bar_case,
+        generate_electrostatic_quad_panel, generate_electrostatic_triangle_panel,
+        generate_heat_bar_case, generate_heat_triangle_panel, generate_magnetostatic_bar_case,
         generate_magnetostatic_quad_panel, generate_magnetostatic_triangle_panel,
         generate_stokes_quad_panel, generate_stokes_triangle_panel, generate_torsion_case,
+    },
+    generators_interface::{
+        generate_cohesive_interface_1d_case, generate_cohesive_interface_2d_case,
+        generate_cohesive_interface_mesh_2d_case, generate_cohesive_interface_mesh_3d_case,
     },
     generators_structural::{
         generate_beam_1d_case, generate_buckling_beam_1d_case, generate_buckling_frame_2d_case,
@@ -78,15 +86,22 @@ pub(crate) enum BenchmarkFamily {
     ThermalBar1d,
     AcousticBar1d,
     HeatBar1d,
+    TransientHeatBar1d,
     ElectrostaticBar1d,
     MagnetostaticBar1d,
     AdvectionDiffusionBar1d,
     Torsion1d,
     Spring1d,
+    TransientSpring1d,
+    HarmonicSpring1d,
     Spring2d,
     Spring3d,
     NonlinearSpring1d,
     ContactGap1d,
+    CohesiveInterface1d,
+    CohesiveInterface2d,
+    CohesiveInterfaceMesh2d,
+    CohesiveInterfaceMesh3d,
     Beam1d,
     ThermalBeam1d,
     Frame2d,
@@ -116,6 +131,7 @@ pub(crate) enum BenchmarkFamily {
     ElectrostaticPlaneQuad2d,
     MagnetostaticPlaneTriangle2d,
     MagnetostaticPlaneQuad2d,
+    ElectricConductionPlaneQuad2d,
     StokesFlowPlaneTriangle2d,
     StokesFlowPlaneQuad2d,
 }
@@ -164,6 +180,7 @@ pub(crate) fn load_catalog_spec() -> BenchmarkCatalogSpec {
         .unwrap_or_else(default_catalog_spec)
 }
 
+#[cfg(test)]
 pub(crate) fn benchmark_cases(profile: BenchmarkProfile, matrix: &str) -> Vec<BenchmarkCase> {
     let spec = load_catalog_spec();
     let profile_spec = spec
@@ -177,6 +194,45 @@ pub(crate) fn benchmark_cases(profile: BenchmarkProfile, matrix: &str) -> Vec<Be
         .into_iter()
         .map(|template| build_case(template, profile_spec))
         .collect()
+}
+
+pub(crate) fn benchmark_case_ids(profile: BenchmarkProfile, matrix: &str) -> Vec<String> {
+    let spec = load_catalog_spec();
+    let profile_spec = spec
+        .profiles
+        .iter()
+        .find(|candidate| candidate.profile == profile)
+        .expect("benchmark profile spec should exist");
+    let matrix_spec = select_matrix_spec(&spec, matrix);
+
+    resolve_matrix_templates(&spec, matrix_spec)
+        .into_iter()
+        .map(|template| case_id(template, profile_spec))
+        .collect()
+}
+
+pub(crate) fn benchmark_cases_for_ids(
+    profile: BenchmarkProfile,
+    matrix: &str,
+    selected_ids: &[String],
+) -> Vec<BenchmarkCase> {
+    let spec = load_catalog_spec();
+    let profile_spec = spec
+        .profiles
+        .iter()
+        .find(|candidate| candidate.profile == profile)
+        .expect("benchmark profile spec should exist");
+    let matrix_spec = select_matrix_spec(&spec, matrix);
+
+    resolve_matrix_templates(&spec, matrix_spec)
+        .into_iter()
+        .filter(|template| selected_ids.contains(&case_id(template, profile_spec)))
+        .map(|template| build_case(template, profile_spec))
+        .collect()
+}
+
+fn case_id(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> String {
+    format!("{}-{}", template.stem, profile.suffix)
 }
 
 fn select_matrix_spec<'a>(spec: &'a BenchmarkCatalogSpec, matrix: &str) -> &'a BenchmarkMatrixSpec {
@@ -210,7 +266,7 @@ fn resolve_matrix_templates<'a>(
 }
 
 fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> BenchmarkCase {
-    let id = format!("{}-{}", template.stem, profile.suffix);
+    let id = case_id(template, profile);
 
     match template.family {
         BenchmarkFamily::AxialBar => BenchmarkCase {
@@ -236,6 +292,13 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             id,
             family: "heat_bar_1d",
             workload: BenchmarkWorkload::HeatBar1d(generate_heat_bar_case(profile.axial_elements)),
+        },
+        BenchmarkFamily::TransientHeatBar1d => BenchmarkCase {
+            id,
+            family: "transient_heat_bar_1d",
+            workload: BenchmarkWorkload::TransientHeatBar1d(generate_transient_heat_bar_case(
+                profile.axial_elements,
+            )),
         },
         BenchmarkFamily::ElectrostaticBar1d => BenchmarkCase {
             id,
@@ -268,6 +331,20 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             family: "spring_1d",
             workload: BenchmarkWorkload::Spring1d(generate_spring_1d_case(profile.axial_elements)),
         },
+        BenchmarkFamily::TransientSpring1d => BenchmarkCase {
+            id,
+            family: "transient_spring_1d",
+            workload: BenchmarkWorkload::TransientSpring1d(generate_transient_spring_1d_case(
+                profile.axial_elements,
+            )),
+        },
+        BenchmarkFamily::HarmonicSpring1d => BenchmarkCase {
+            id,
+            family: "harmonic_spring_1d",
+            workload: BenchmarkWorkload::HarmonicSpring1d(generate_harmonic_spring_1d_case(
+                profile.axial_elements,
+            )),
+        },
         BenchmarkFamily::Spring2d => BenchmarkCase {
             id,
             family: "spring_2d",
@@ -295,6 +372,34 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             workload: BenchmarkWorkload::ContactGap1d(generate_contact_gap_1d_case(
                 profile.axial_elements,
             )),
+        },
+        BenchmarkFamily::CohesiveInterface1d => BenchmarkCase {
+            id,
+            family: "cohesive_interface_1d",
+            workload: BenchmarkWorkload::CohesiveInterface1d(generate_cohesive_interface_1d_case(
+                profile.axial_elements,
+            )),
+        },
+        BenchmarkFamily::CohesiveInterface2d => BenchmarkCase {
+            id,
+            family: "cohesive_interface_2d",
+            workload: BenchmarkWorkload::CohesiveInterface2d(generate_cohesive_interface_2d_case(
+                profile.axial_elements,
+            )),
+        },
+        BenchmarkFamily::CohesiveInterfaceMesh2d => BenchmarkCase {
+            id,
+            family: "cohesive_interface_mesh_2d",
+            workload: BenchmarkWorkload::CohesiveInterfaceMesh2d(
+                generate_cohesive_interface_mesh_2d_case(profile.axial_elements),
+            ),
+        },
+        BenchmarkFamily::CohesiveInterfaceMesh3d => BenchmarkCase {
+            id,
+            family: "cohesive_interface_mesh_3d",
+            workload: BenchmarkWorkload::CohesiveInterfaceMesh3d(
+                generate_cohesive_interface_mesh_3d_case(profile.axial_elements),
+            ),
         },
         BenchmarkFamily::Beam1d => BenchmarkCase {
             id,
@@ -548,6 +653,18 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             family: "magnetostatic_plane_quad_2d",
             workload: BenchmarkWorkload::MagnetostaticPlaneQuad2d(
                 generate_magnetostatic_quad_panel(
+                    profile.plane_quad.nx,
+                    profile.plane_quad.ny,
+                    profile.plane_quad.width,
+                    profile.plane_quad.height,
+                ),
+            ),
+        },
+        BenchmarkFamily::ElectricConductionPlaneQuad2d => BenchmarkCase {
+            id,
+            family: "electric_conduction_plane_quad_2d",
+            workload: BenchmarkWorkload::ElectricConductionPlaneQuad2d(
+                generate_electric_conduction_quad_panel(
                     profile.plane_quad.nx,
                     profile.plane_quad.ny,
                     profile.plane_quad.width,

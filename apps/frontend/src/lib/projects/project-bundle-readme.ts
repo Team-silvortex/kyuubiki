@@ -1,4 +1,4 @@
-import type { ProjectFileManifest } from "@/lib/projects/project-format";
+import type { ProjectFileManifest } from "@/lib/projects/project-format-contract";
 
 export function buildProjectBundleReadme(params: {
   projectSchemaVersion: string;

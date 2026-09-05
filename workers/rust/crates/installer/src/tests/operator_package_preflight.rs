@@ -188,6 +188,7 @@ fn write_operator_package_manifest_with_status(
         r#"{{
   "schema_version": "kyuubiki.operator-package/v1",
   "sdk_api_version": "kyuubiki.operator-sdk/v1",
+  "execution_abi": "kyuubiki.operator-json-c/v1",
   "package_id": "{package_id}",
   "package_version": "0.1.0",
   "minimum_host_version": "{minimum_host_version}",
@@ -199,7 +200,7 @@ fn write_operator_package_manifest_with_status(
     {{
       "operator_id": "{package_id}.solve",
       "kind": "solver",
-      "entry_symbol": "register_operator"
+      "entry_symbol": "run_operator_json"
     }}
   ]
 }}"#

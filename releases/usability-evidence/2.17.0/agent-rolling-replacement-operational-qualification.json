@@ -1,0 +1,152 @@
+{
+  "schema_version": "kyuubiki.agent-rolling-replacement-qualification/v1",
+  "status": "pass",
+  "journey": "installer-managed-two-agent-live-rolling-replacement",
+  "execution_host_role": "remote-linux-qualification-host",
+  "platform": "linux",
+  "first_version": "2.16.9",
+  "second_version": "2.17.0",
+  "first_binary_sha256": "2ed1dbfff7c590a64a1e5cbd8a77413064e3ce88461ca63844fb16e8a3ca8b65",
+  "second_binary_sha256": "31e831a2a31bc6315eae34662445bb01b4d0b70360bb35c0eafa237cc9c56a3d",
+  "agent_count": 2,
+  "initial_instances": [
+    {
+      "node_id": "agent-01",
+      "process_instance_id": "agent-instance-912917-1787908705600-1",
+      "binary_sha256": "2ed1dbfff7c590a64a1e5cbd8a77413064e3ce88461ca63844fb16e8a3ca8b65",
+      "accepting_new_work": true
+    },
+    {
+      "node_id": "agent-02",
+      "process_instance_id": "agent-instance-912920-1787908705600-1",
+      "binary_sha256": "2ed1dbfff7c590a64a1e5cbd8a77413064e3ce88461ca63844fb16e8a3ca8b65",
+      "accepting_new_work": true
+    }
+  ],
+  "replacements": [
+    {
+      "schema_version": "kyuubiki.agent-replacement-receipt/v1",
+      "node_id": "agent-01",
+      "controller_id": "installer-rolling-qualification",
+      "drain_generation": 1,
+      "previous_process_instance_id": "agent-instance-912917-1787908705600-1",
+      "active_process_instance_id": "agent-instance-912962-1787908708632-1",
+      "quiescent_observed": true,
+      "replacement_verified": true
+    },
+    {
+      "schema_version": "kyuubiki.agent-replacement-receipt/v1",
+      "node_id": "agent-02",
+      "controller_id": "installer-rolling-qualification",
+      "drain_generation": 1,
+      "previous_process_instance_id": "agent-instance-912920-1787908705600-1",
+      "active_process_instance_id": "agent-instance-912971-1787908709662-1",
+      "quiescent_observed": true,
+      "replacement_verified": true
+    }
+  ],
+  "final_instances": [
+    {
+      "node_id": "agent-01",
+      "process_instance_id": "agent-instance-912962-1787908708632-1",
+      "binary_sha256": "31e831a2a31bc6315eae34662445bb01b4d0b70360bb35c0eafa237cc9c56a3d",
+      "accepting_new_work": true
+    },
+    {
+      "node_id": "agent-02",
+      "process_instance_id": "agent-instance-912971-1787908709662-1",
+      "binary_sha256": "31e831a2a31bc6315eae34662445bb01b4d0b70360bb35c0eafa237cc9c56a3d",
+      "accepting_new_work": true
+    }
+  ],
+  "execution_probes": [
+    {
+      "phase": "initial",
+      "node_id": "agent-01",
+      "success": true,
+      "max_stress": 10.0,
+      "tip_displacement": 0.01
+    },
+    {
+      "phase": "initial",
+      "node_id": "agent-02",
+      "success": true,
+      "max_stress": 10.0,
+      "tip_displacement": 0.01
+    },
+    {
+      "phase": "during-agent-01-replacement",
+      "node_id": "agent-02",
+      "success": true,
+      "max_stress": 10.0,
+      "tip_displacement": 0.01
+    },
+    {
+      "phase": "during-agent-02-replacement",
+      "node_id": "agent-01",
+      "success": true,
+      "max_stress": 10.0,
+      "tip_displacement": 0.01
+    },
+    {
+      "phase": "final",
+      "node_id": "agent-01",
+      "success": true,
+      "max_stress": 10.0,
+      "tip_displacement": 0.01
+    },
+    {
+      "phase": "final",
+      "node_id": "agent-02",
+      "success": true,
+      "max_stress": 10.0,
+      "tip_displacement": 0.01
+    }
+  ],
+  "checks": [
+    {
+      "id": "initial_two_agents_accepting",
+      "ok": true
+    },
+    {
+      "id": "initial_fleet_executable",
+      "ok": true
+    },
+    {
+      "id": "first_agent_quiesced",
+      "ok": true
+    },
+    {
+      "id": "second_agent_served_during_first_replacement",
+      "ok": true
+    },
+    {
+      "id": "first_agent_instance_replaced",
+      "ok": true
+    },
+    {
+      "id": "second_agent_quiesced",
+      "ok": true
+    },
+    {
+      "id": "first_agent_served_during_second_replacement",
+      "ok": true
+    },
+    {
+      "id": "second_agent_instance_replaced",
+      "ok": true
+    },
+    {
+      "id": "final_fleet_executable",
+      "ok": true
+    },
+    {
+      "id": "binary_payload_changed",
+      "ok": true
+    },
+    {
+      "id": "work_root_cleaned",
+      "ok": true
+    }
+  ]
+}

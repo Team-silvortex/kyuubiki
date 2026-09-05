@@ -1,0 +1,5 @@
+# Keep qualification inputs byte-stable across Unix and Windows checkouts.
+*.json text eol=lf
+*.rs text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf

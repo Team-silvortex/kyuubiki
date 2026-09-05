@@ -64,6 +64,268 @@ fn node_failure_without_recovery_policy_still_fails_fast() {
     assert!(error.contains("unsupported condition operator"));
 }
 
+#[test]
+fn nonfinite_validation_error_preserves_independent_work_and_diagnostics() {
+    for recover in [false, true] {
+        let mut graph = recovery_graph(recover);
+        let validation = graph
+            .nodes
+            .iter_mut()
+            .find(|node| node.id == "recoverable_condition")
+            .unwrap();
+        validation.kind = WorkflowNodeKind::Transform;
+        validation.operator_id = Some("transform.validate_summary_tolerance".to_string());
+        validation.config = Some(if recover {
+            serde_json::json!({"on_error": "skip"})
+        } else {
+            serde_json::json!({})
+        });
+        validation.inputs = vec![port("left"), port("right")];
+        validation.outputs = vec![port("result")];
+        graph.edges[1].to.port = "left".to_string();
+        graph.edges[2].from.port = "result".to_string();
+        graph.nodes.push(input_node("reference_input"));
+        graph.entry_nodes.push("reference_input".to_string());
+        graph.edges.push(edge(
+            "reference-validation",
+            "reference_input",
+            "value",
+            "recoverable_condition",
+            "right",
+        ));
+        let result = run_workflow_graph(WorkflowGraphRunRequest {
+            graph,
+            input_artifacts: BTreeMap::from([
+                ("main_input".to_string(), serde_json::json!({"value": 7})),
+                (
+                    "bad_input".to_string(),
+                    serde_json::json!({"stress": -1.0e308}),
+                ),
+                (
+                    "reference_input".to_string(),
+                    serde_json::json!({"stress": 1.0e308}),
+                ),
+            ]),
+        });
+        if !recover {
+            let error = result.expect_err("default validation errors fail the workflow");
+            assert!(
+                error.contains("stress") && error.contains("non-finite"),
+                "{error}"
+            );
+            continue;
+        }
+        let run = result.expect("opt-in recovery must preserve the independent branch");
+        assert_eq!(run.failed_nodes, vec!["recoverable_condition"]);
+        assert_eq!(run.skipped_nodes, vec!["skipped_output"]);
+        assert_eq!(
+            run.artifacts["main_output.result"],
+            serde_json::json!({"value": 7})
+        );
+        assert!(!run.artifacts.contains_key("recoverable_condition.result"));
+        let trace = run
+            .node_runs
+            .iter()
+            .find(|trace| trace.node_id == "recoverable_condition")
+            .unwrap();
+        assert_eq!(trace.status, WorkflowNodeRunStatus::Failed);
+        let error = trace.error_message.as_deref().expect("failure diagnostic");
+        assert!(
+            error.contains("stress") && error.contains("non-finite"),
+            "{error}"
+        );
+    }
+}
+
+#[test]
+fn sweep_count_overflow_preserves_independent_work_with_explicit_recovery() {
+    for recover in [false, true] {
+        let mut graph = recovery_graph(recover);
+        let sweep = graph
+            .nodes
+            .iter_mut()
+            .find(|node| node.id == "recoverable_condition")
+            .unwrap();
+        sweep.kind = WorkflowNodeKind::Transform;
+        sweep.operator_id = Some("transform.build_quality_parameter_sweep_plan".to_string());
+        sweep.config = Some(if recover {
+            serde_json::json!({"on_error": "skip"})
+        } else {
+            serde_json::json!({})
+        });
+        sweep.outputs = vec![port("result")];
+        graph.edges[2].from.port = "result".to_string();
+        let space: serde_json::Map<String, serde_json::Value> = (0..65)
+            .map(|i| (format!("model.p{i}"), serde_json::json!([0, 1])))
+            .collect();
+        let result = run_workflow_graph(WorkflowGraphRunRequest {
+            graph,
+            input_artifacts: BTreeMap::from([
+                ("main_input".to_string(), serde_json::json!({"value": 7})),
+                (
+                    "bad_input".to_string(),
+                    serde_json::json!({"request_payload": {"search_space": space}}),
+                ),
+            ]),
+        });
+        if !recover {
+            let error = result.expect_err("the default policy must not hide a rejected plan");
+            assert!(error.contains("overflow"), "{error}");
+            assert!(!error.contains("panicked"), "{error}");
+            continue;
+        }
+        let run = result.expect("explicit recovery should retain independent results");
+        assert_eq!(run.failed_nodes, vec!["recoverable_condition"]);
+        assert_eq!(run.skipped_nodes, vec!["skipped_output"]);
+        assert_eq!(
+            run.artifacts["main_output.result"],
+            serde_json::json!({"value": 7})
+        );
+        let error = run
+            .node_runs
+            .iter()
+            .find(|trace| trace.node_id == "recoverable_condition")
+            .unwrap()
+            .error_message
+            .as_deref()
+            .unwrap();
+        assert!(error.contains("overflow"), "{error}");
+        assert!(!error.contains("panicked"), "{error}");
+    }
+}
+
+#[test]
+fn conflicting_sweep_targets_do_not_emit_cases_or_break_independent_work() {
+    for recover in [false, true] {
+        let mut graph = recovery_graph(recover);
+        let sweep = graph
+            .nodes
+            .iter_mut()
+            .find(|node| node.id == "recoverable_condition")
+            .unwrap();
+        sweep.kind = WorkflowNodeKind::Transform;
+        sweep.operator_id = Some("transform.expand_parameter_sweep".to_string());
+        sweep.config = Some(if recover {
+            serde_json::json!({"on_error": "skip"})
+        } else {
+            serde_json::json!({})
+        });
+        sweep.outputs = vec![port("result")];
+        graph.edges[2].from.port = "result".to_string();
+        let result = run_workflow_graph(WorkflowGraphRunRequest {
+            graph,
+            input_artifacts: BTreeMap::from([
+                ("main_input".to_string(), serde_json::json!({"value": 7})),
+                (
+                    "bad_input".to_string(),
+                    serde_json::json!({"base": {}, "axes": [
+                        {"label": "left", "path": "x", "values": [1]},
+                        {"label": "right", "path": "x", "values": [2]}
+                    ]}),
+                ),
+            ]),
+        });
+        if !recover {
+            let error = result.expect_err("default policy must reject ambiguous assignments");
+            assert!(error.contains("overlap"), "{error}");
+            continue;
+        }
+        let run = result.expect("explicit recovery must retain independent work");
+        assert_eq!(run.failed_nodes, vec!["recoverable_condition"]);
+        assert_eq!(run.skipped_nodes, vec!["skipped_output"]);
+        assert!(!run.artifacts.contains_key("recoverable_condition.result"));
+        assert_eq!(
+            run.artifacts["main_output.result"],
+            serde_json::json!({"value": 7})
+        );
+        let error = run
+            .node_runs
+            .iter()
+            .find(|trace| trace.node_id == "recoverable_condition")
+            .unwrap()
+            .error_message
+            .as_deref()
+            .unwrap();
+        assert!(
+            error.contains("overlap") && error.contains("axis") && error.contains('x'),
+            "{error}"
+        );
+    }
+}
+
+#[test]
+fn rejected_sweep_summaries_preserve_independent_work_and_failure_reasons() {
+    for (payload, reason) in [
+        (
+            serde_json::json!({"cases": [
+                {"id": "a", "summary": {"mass": 1.0e308}},
+                {"id": "b", "summary": {"mass": 1.0e308}}
+            ]}),
+            "non-finite",
+        ),
+        (
+            serde_json::json!({"cases": [
+                {"id": "a", "summary": {"mass": 0}, "result_status": "failed"}
+            ]}),
+            "not successful",
+        ),
+        (
+            serde_json::json!({"cases": [
+                {"id": "a", "summary": {"mass": 1}},
+                {"id": "b", "summary": {}}
+            ]}),
+            "missing",
+        ),
+    ] {
+        for recover in [false, true] {
+            let mut graph = recovery_graph(recover);
+            let node = graph
+                .nodes
+                .iter_mut()
+                .find(|node| node.id == "recoverable_condition")
+                .unwrap();
+            node.kind = WorkflowNodeKind::Transform;
+            node.operator_id = Some("transform.summarize_parameter_sweep".into());
+            node.config = Some(if recover {
+                serde_json::json!({"on_error": "skip"})
+            } else {
+                serde_json::json!({})
+            });
+            node.outputs = vec![port("result")];
+            graph.edges[2].from.port = "result".into();
+            let result = run_workflow_graph(WorkflowGraphRunRequest {
+                graph,
+                input_artifacts: BTreeMap::from([
+                    ("main_input".into(), serde_json::json!({"value": 7})),
+                    ("bad_input".into(), payload.clone()),
+                ]),
+            });
+            if !recover {
+                let error = result.expect_err("default policy must reject unusable summaries");
+                assert!(error.contains(reason), "{error}");
+                continue;
+            }
+            let run = result.expect("explicit recovery should retain independent results");
+            assert_eq!(run.failed_nodes, vec!["recoverable_condition"]);
+            assert_eq!(run.skipped_nodes, vec!["skipped_output"]);
+            assert_eq!(
+                run.artifacts["main_output.result"],
+                serde_json::json!({"value": 7})
+            );
+            assert!(!run.artifacts.contains_key("recoverable_condition.result"));
+            let trace = run
+                .node_runs
+                .iter()
+                .find(|trace| trace.node_id == "recoverable_condition")
+                .unwrap();
+            assert_eq!(trace.status, WorkflowNodeRunStatus::Failed);
+            let error = trace.error_message.as_deref().expect("failure diagnostic");
+            assert!(error.contains(reason) && error.contains("case"), "{error}");
+            assert!(!error.contains("panicked"), "{error}");
+        }
+    }
+}
+
 fn recovery_graph(recover_condition: bool) -> WorkflowGraph {
     WorkflowGraph {
         schema_version: "kyuubiki.workflow-graph/v1".to_string(),

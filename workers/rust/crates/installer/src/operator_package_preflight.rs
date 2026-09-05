@@ -82,6 +82,7 @@ pub fn operator_package_preflight(
                 "package_id": package.package_id,
                 "package_version": package.package_version,
                 "sdk_api_version": package.sdk_api_version,
+                "execution_abi": package.execution_abi,
                 "minimum_host_version": package.minimum_host_version,
                 "validation_status": validation_status_value(package.validation_status),
                 "validation_notes": package.validation_notes,

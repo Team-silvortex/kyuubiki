@@ -5,6 +5,8 @@ use kyuubiki_protocol::{
     ThermalFrame3dElementInput, ThermalFrame3dNodeInput,
 };
 
+const FRAME_SUPPORT_INTERVAL: usize = 64;
+
 pub(crate) fn generate_frame_2d_case(segments: usize, length: f64) -> SolveFrame2dRequest {
     let segments = segments.max(1);
     let dx = length / segments as f64;
@@ -14,7 +16,7 @@ pub(crate) fn generate_frame_2d_case(segments: usize, length: f64) -> SolveFrame
                 &format!("f2n{index}"),
                 index as f64 * dx,
                 0.02 * (index % 3) as f64,
-                index == 0,
+                is_frame_support(index, segments),
                 0.0,
                 if index == segments { -1000.0 } else { 0.0 },
                 0.0,
@@ -44,7 +46,7 @@ pub(crate) fn generate_frame_3d_case(segments: usize, length: f64) -> SolveFrame
             frame_3d_node(
                 &format!("f3n{index}"),
                 index as f64 * dx,
-                index == 0,
+                is_frame_support(index, segments),
                 0.0,
                 if index == segments { -1000.0 } else { 0.0 },
                 0.0,
@@ -82,7 +84,7 @@ pub(crate) fn generate_thermal_frame_2d_case(
             thermal_frame_2d_node(
                 &format!("tf2n{index}"),
                 index as f64 * dx,
-                index == 0 || index == segments,
+                is_frame_support(index, segments),
                 20.0 + 30.0 * index as f64 / segments as f64,
             )
         })
@@ -116,7 +118,7 @@ pub(crate) fn generate_thermal_frame_3d_case(
             thermal_frame_3d_node(
                 &format!("tf3n{index}"),
                 index as f64 * dx,
-                index == 0 || index == segments,
+                is_frame_support(index, segments),
                 20.0 + 30.0 * index as f64 / segments as f64,
             )
         })
@@ -151,6 +153,10 @@ pub(crate) fn generate_thermal_frame_3d_case(
         directional_constraints: Vec::new(),
         directional_rotational_constraints: Vec::new(),
     }
+}
+
+fn is_frame_support(index: usize, segments: usize) -> bool {
+    index == 0 || (index < segments && index.is_multiple_of(FRAME_SUPPORT_INTERVAL))
 }
 
 fn frame_2d_node(
@@ -247,5 +253,24 @@ fn thermal_frame_3d_node(
         moment_y: 0.0,
         moment_z: 0.0,
         temperature_delta,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{FRAME_SUPPORT_INTERVAL, generate_frame_2d_case, generate_thermal_frame_3d_case};
+
+    #[test]
+    fn large_frame_fixtures_bound_each_span_without_pinching_the_loaded_tip() {
+        let segments = FRAME_SUPPORT_INTERVAL * 2;
+        let frame = generate_frame_2d_case(segments, 10.0);
+        assert!(frame.nodes[0].fix_x);
+        assert!(frame.nodes[FRAME_SUPPORT_INTERVAL].fix_x);
+        assert!(!frame.nodes[segments].fix_x);
+        assert_eq!(frame.nodes[segments].load_y, -1000.0);
+
+        let thermal = generate_thermal_frame_3d_case(segments, 10.0);
+        assert!(thermal.nodes[FRAME_SUPPORT_INTERVAL].fix_x);
+        assert!(!thermal.nodes[segments].fix_x);
     }
 }

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tutorial · Failure Recovery</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">Tutorial 06 · Recovery</div>
+        <h1>Recover without hiding partial work</h1>
+        <p class="docs-copy">
+          Recovery starts by locating the failed stage and retaining its receipt.
+          Do not restart the whole stack, delete local state, or resubmit a job
+          until ownership and terminal state are known.
+        </p>
+        <div class="docs-meta">
+          <span class="docs-chip">Classify first</span>
+          <span class="docs-chip">Retain evidence</span>
+          <span class="docs-chip">Retry one bounded stage</span>
+          <span class="docs-chip">No destructive cleanup by default</span>
+        </div>
+        <div class="docs-links">
+          <a class="docs-link" href="./tutorials.html">Tutorial center</a>
+          <a class="docs-link" href="./security.md">Security policy</a>
+          <a class="docs-link" href="./operations.md">Operations guide</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Five-stage recovery map</h2>
+        <table class="docs-table">
+          <thead><tr><th>Stage</th><th>Typical signal</th><th>Retain</th><th>Bounded next action</th></tr></thead>
+          <tbody>
+            <tr><td>Project/model storage</td><td>Create, save, reopen, or import fails</td><td>Project/model id, storage error, active path policy</td><td>Inspect storage ownership and retry only the failed write/read</td></tr>
+            <tr><td>Graph/parameter validation</td><td>Run is rejected before dispatch</td><td>Input, validation report, parameter-patch receipt</td><td>Correct the named contract issue and validate again</td></tr>
+            <tr><td>Dispatch/authority</td><td>No accepted job id or authorization rejection</td><td>Plan digest, target, authority/confirmation result</td><td>Resolve target or authority; do not pretend a job exists</td></tr>
+            <tr><td>Runtime execution</td><td>Queued/running job times out, cancels, or fails</td><td>Job id, worker, phase, watchdog reason, timestamps</td><td>Query terminal state; resume or retry only if policy permits</td></tr>
+            <tr><td>Result/evidence</td><td>Job completed but result/report/export is missing</td><td>Job id, result-fetch error, run report, expected artifact id</td><td>Repeat result retrieval or export without rerunning the solve</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>GUI recovery sequence</h2>
+        <ol class="docs-list">
+          <li>Read the bottom event bar and copy the exact action and message.</li>
+          <li>Confirm the active project and model before changing sections.</li>
+          <li>Open Runtime health and the run/history view; distinguish no dispatch from a failed job.</li>
+          <li>If a workflow draft failed validation, restore a full correction snapshot or fix the located item. Summary-only snapshots are not restorable.</li>
+          <li>If the solve completed, retry result retrieval rather than submitting a duplicate solve.</li>
+        </ol>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>PWDT recovery sequence</h2>
+        <ol class="docs-list">
+          <li>Capture <code>state</code>, the action timeline, and the failing action id.</li>
+          <li>Use the parity report to confirm that the action still exists in the current UI contract.</li>
+          <li>Wait for terminal state; do not infer completion from a toast or a fixed delay.</li>
+          <li>Replay only an idempotent step or a product recipe that explicitly supports resume.</li>
+          <li>Keep high-risk confirmation and authority checks outside replay loops.</li>
+        </ol>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Headless recovery sequence</h2>
+        <pre class="docs-code">./scripts/kyuubiki headless inspect tmp/workflow.json --json
+./scripts/kyuubiki headless validate tmp/workflow.json --json
+./scripts/kyuubiki headless plan tmp/workflow.json --out tmp/workflow.plan.json --json</pre>
+        <ul class="docs-list">
+          <li>If validation fails, no executor should be invoked.</li>
+          <li>If dispatch fails before a job id, fix authority or target configuration and retain the failure report.</li>
+          <li>If a job id exists, query or wait on that job before creating another.</li>
+          <li>If a research round is partial, keep its evidence as partial and require contiguous prior evidence before the next qualified round.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Escalation packet</h2>
+        <p class="docs-copy">When bounded recovery does not work, collect one small packet instead of a whole machine dump.</p>
+        <ul class="docs-list">
+          <li>Product version and platform.</li>
+          <li>Surface: GUI, PWDT, Headless, Operator SDK, orchestrated runtime, or direct mesh.</li>
+          <li>Project/workflow/model/job ids that are safe to disclose.</li>
+          <li>Validation, plan, run, watchdog, or package-preflight receipt for the failed stage.</li>
+          <li>Exact first failure and the bounded recovery already attempted.</li>
+          <li>Explicit note that credentials, local absolute paths, and unrelated user data were removed.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Stop conditions</h2>
+        <ul class="docs-list">
+          <li>Stop immediately on suspected authority drift, credential exposure, signature failure, or component-integrity mismatch.</li>
+          <li>Stop repeated execution when a deterministic validation or numerical failure recurs unchanged.</li>
+          <li>Do not clean install roots, project storage, caches, or remote state unless the Installer exposes and previews the exact cleanup action.</li>
+          <li>Never convert a mock, partial, stale, or recovered result into a successful research claim without requalification.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

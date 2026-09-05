@@ -1,6 +1,8 @@
 "use client";
 
 import { memo, useState, type ReactNode } from "react";
+import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
+import { WorkbenchRouteJourney } from "@/components/workbench/workbench-route-journey";
 
 import { WorkbenchSystemControlModeWindow } from "@/components/workbench/system/workbench-system-control-mode-window";
 import type {
@@ -41,10 +43,14 @@ type ProtocolAgentCardRow = {
   endpoint: string;
   metrics: ProtocolAgentMetric[];
   chips: ProtocolAgentChip[];
+  chipPreviewLimit?: number;
+  showMoreLabel: string;
+  showLessLabel: string;
   error?: string;
 };
 
 type WorkbenchSystemRuntimePanelProps = {
+  storageCopy: WorkbenchCopy;
   overviewTabLabel: string;
   stackTabLabel: string;
   securityTabLabel: string;
@@ -131,6 +137,7 @@ type WorkbenchSystemRuntimePanelProps = {
 };
 
 export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimePanel({
+  storageCopy,
   overviewTabLabel,
   stackTabLabel,
   securityTabLabel,
@@ -211,8 +218,8 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
     ? buildControlTopologySummaryFromSnapshot(snapshotOverride, controlWindow.copy)
     : controlWindow.topology;
   const snapshotSource: WorkbenchSystemTopologySnapshotSource = snapshotOverride
-    ? { kind: "imported_snapshot", label: "Imported snapshot", observedAt: snapshotOverride.observed_at }
-    : { kind: "derived_frontend", label: "Derived frontend runtime" };
+    ? { kind: "imported_snapshot", label: controlWindow.copy.importedSnapshotSourceLabel, observedAt: snapshotOverride.observed_at }
+    : { kind: "derived_frontend", label: controlWindow.copy.derivedRuntimeSourceLabel };
 
   function handleImportSnapshot(file: File) {
     const reader = new FileReader();
@@ -233,171 +240,71 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
       data-workbench-runtime="panel"
       data-workbench-surface="built-in"
     >
-      <div className="panel-tabs panel-tabs--wide" data-workbench-runtime="tabs">
-        <button className={`panel-tab${page === "overview" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="overview" onClick={() => setPage("overview")} type="button">
-          {overviewTabLabel}
-        </button>
-        <button className={`panel-tab${page === "control" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="control" onClick={() => setPage("control")} type="button">
-          {controlWindow.copy.pageLabel}
-        </button>
-        <button className={`panel-tab${page === "stack" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="stack" onClick={() => setPage("stack")} type="button">
-          {stackTabLabel}
-        </button>
-        <button className={`panel-tab${page === "security" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="security" onClick={() => setPage("security")} type="button">
-          {securityTabLabel}
-        </button>
-        <button className={`panel-tab${page === "agents" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="agents" onClick={() => setPage("agents")} type="button">
-          {agentsTabLabel}
-        </button>
-        <button className={`panel-tab${page === "audit" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="audit" onClick={() => setPage("audit")} type="button">
-          {auditTabLabel}
-        </button>
-        <button className={`panel-tab${page === "watchdog" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="watchdog" onClick={() => setPage("watchdog")} type="button">
-          {watchdogTabLabel}
-        </button>
-      </div>
       {page === "overview" ? (
-        <div className="runtime-overview-grid">
-          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-            <div className="card-head">
-              <h2>{stackTabLabel}</h2>
-              <span>{backendStatus}</span>
-            </div>
-            <div className="sidebar-list sidebar-list--metrics">
-              {backendRows.slice(0, 3).map((row) => (
-                <div className="sidebar-list__row" key={`backend-${row.label}`}>
-                  <span>{row.label}</span>
-                  <strong>{row.value}</strong>
-                </div>
-              ))}
-            </div>
-            <div className="button-row">
-              <button onClick={() => setPage("stack")} type="button">
-                {stackTabLabel}
-              </button>
-            </div>
-          </section>
-
-          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-            <div className="card-head">
-              <h2>{securityTabLabel}</h2>
-              <span>{securityStatus}</span>
-            </div>
-            <div className="sidebar-list sidebar-list--metrics">
-              {securityRows.slice(0, 3).map((row) => (
-                <div className="sidebar-list__row" key={`security-${row.label}`}>
-                  <span>{row.label}</span>
-                  <strong>{row.value}</strong>
-                </div>
-              ))}
-            </div>
-            <div className="button-row">
-              <button onClick={() => setPage("security")} type="button">
-                {securityTabLabel}
-              </button>
-            </div>
-          </section>
-
-          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-            <div className="card-head">
-              <h2>{controlWindow.copy.pageLabel}</h2>
-              <span>{controlWindow.copy.activeRuntimeModeLabel}</span>
-            </div>
-            <div className="sidebar-list sidebar-list--metrics">
-              <div className="sidebar-list__row">
-                <span>{controlWindow.copy.rows.currentRuntimeLabel}</span>
-                <strong>{effectiveTopology.runtimeLabel}</strong>
-              </div>
-              <div className="sidebar-list__row">
-                <span>{controlWindow.copy.rows.agentCountLabel}</span>
-                <strong>{effectiveTopology.visibleAgentCount}</strong>
-              </div>
-              <div className="sidebar-list__row">
-                <span>{controlWindow.copy.rows.endpointCountLabel}</span>
-                <strong>{effectiveTopology.endpointCount}</strong>
-              </div>
-            </div>
-            <div className="button-row">
-              <button onClick={() => setPage("control")} type="button">
-                {controlWindow.copy.pageLabel}
-              </button>
-            </div>
-          </section>
-
-          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-            <div className="card-head">
-              <h2>{agentsTabLabel}</h2>
-              <span>{protocolAgentsCountLabel}</span>
-            </div>
-            {protocolAgents.length > 0 ? (
-              <div className="sidebar-list sidebar-list--metrics">
-                {protocolAgentSummaryRows.map((row) => (
-                  <div className="sidebar-list__row" key={`agent-summary-${row.label}`}>
-                    <span>{row.label}</span>
-                    <strong>{row.value}</strong>
-                  </div>
-                ))}
-                {protocolAgents.slice(0, 2).map((agent) => (
-                  <div className="sidebar-list__row" key={`agent-${agent.id}`}>
-                    <span>{agent.id}</span>
-                    <strong>{agent.endpoint}</strong>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="card-copy">{protocolAgentsEmptyLabel}</p>
-            )}
-            <div className="button-row">
-              <button onClick={() => setPage("agents")} type="button">
-                {agentsTabLabel}
-              </button>
-            </div>
-          </section>
-
-          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-            <div className="card-head">
-              <h2>{auditTabLabel}</h2>
-              <span>{auditCountLabel}</span>
-            </div>
-            <div className="sidebar-list sidebar-list--metrics">
-              {auditSummaryRows.slice(0, 3).map((row) => (
-                <div className="sidebar-list__row" key={`audit-${row.label}`}>
-                  <span>{row.label}</span>
-                  <strong>{row.value}</strong>
-                </div>
-              ))}
-            </div>
-            <div className="button-row">
-              <button onClick={() => setPage("audit")} type="button">
-                {auditTabLabel}
-              </button>
-            </div>
-          </section>
-
-          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-            <div className="card-head">
-              <h2>{watchdogTabLabel}</h2>
-              <span>{watchdogStatus}</span>
-            </div>
-            <div className="sidebar-list sidebar-list--metrics">
-              {watchdogRows.slice(0, 3).map((row) => (
-                <div className="sidebar-list__row" key={`watchdog-${row.label}`}>
-                  <span>{row.label}</span>
-                  <strong>{row.value}</strong>
-                </div>
-              ))}
-            </div>
-            <div className="button-row">
-              <button onClick={() => setPage("watchdog")} type="button">
-                {watchdogTabLabel}
-              </button>
-            </div>
-          </section>
-
-          {recoveryCard}
-          <WorkbenchSystemStorageCard />
+        <>
+          <div className="panel-tabs panel-tabs--overview" data-workbench-runtime="tabs">
+            <button className="panel-tab panel-tab--active" data-workbench-runtime-tab="overview" onClick={() => setPage("overview")} type="button">
+              {overviewTabLabel}
+            </button>
+          </div>
+          <WorkbenchRouteJourney
+            steps={[
+              {
+                id: "control",
+                title: controlWindow.copy.pageLabel,
+                status: controlWindow.copy.activeRuntimeModeLabel,
+                automation: { "data-workbench-runtime-tab": "control" },
+                onOpen: () => setPage("control"),
+              },
+              {
+                id: "stack",
+                title: stackTabLabel,
+                status: backendStatus,
+                automation: { "data-workbench-runtime-tab": "stack" },
+                onOpen: () => setPage("stack"),
+              },
+              {
+                id: "security",
+                title: securityTabLabel,
+                status: securityStatus,
+                automation: { "data-workbench-runtime-tab": "security" },
+                onOpen: () => setPage("security"),
+              },
+              {
+                id: "agents",
+                title: agentsTabLabel,
+                status: protocolAgentSummaryRows[0]?.value ?? protocolAgentsCountLabel,
+                automation: { "data-workbench-runtime-tab": "agents" },
+                onOpen: () => setPage("agents"),
+              },
+              {
+                id: "watchdog",
+                title: watchdogTabLabel,
+                status: watchdogStatus,
+                automation: { "data-workbench-runtime-tab": "watchdog" },
+                onOpen: () => setPage("watchdog"),
+              },
+              {
+                id: "audit",
+                title: auditTabLabel,
+                status: auditCountLabel,
+                automation: { "data-workbench-runtime-tab": "audit" },
+                onOpen: () => setPage("audit"),
+              },
+            ]}
+          />
+        </>
+      ) : (
+        <div className="panel-tabs panel-tabs--wide" data-workbench-runtime="tabs">
+          <button className="panel-tab" data-workbench-runtime-tab="overview" onClick={() => setPage("overview")} type="button">{overviewTabLabel}</button>
+          <button className={`panel-tab${page === "control" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="control" onClick={() => setPage("control")} type="button">{controlWindow.copy.pageLabel}</button>
+          <button className={`panel-tab${page === "stack" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="stack" onClick={() => setPage("stack")} type="button">{stackTabLabel}</button>
+          <button className={`panel-tab${page === "security" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="security" onClick={() => setPage("security")} type="button">{securityTabLabel}</button>
+          <button className={`panel-tab${page === "agents" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="agents" onClick={() => setPage("agents")} type="button">{agentsTabLabel}</button>
+          <button className={`panel-tab${page === "audit" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="audit" onClick={() => setPage("audit")} type="button">{auditTabLabel}</button>
+          <button className={`panel-tab${page === "watchdog" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="watchdog" onClick={() => setPage("watchdog")} type="button">{watchdogTabLabel}</button>
         </div>
-      ) : null}
+      )}
       {page === "control" ? (
         <WorkbenchSystemControlModeWindow
           copy={controlWindow.copy}
@@ -427,7 +334,7 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
               ) : null
             }
           />
-          <WorkbenchSystemStorageCard />
+          <WorkbenchSystemStorageCard copy={storageCopy} />
         </>
       ) : null}
       {page === "security" ? (
@@ -494,7 +401,12 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
           agents={protocolAgents}
         />
       ) : null}
-      {page === "watchdog" ? <WorkbenchSystemMetricsCard title={watchdogTitle} status={watchdogStatus} rows={watchdogRows} /> : null}
+      {page === "watchdog" ? (
+        <>
+          <WorkbenchSystemMetricsCard title={watchdogTitle} status={watchdogStatus} rows={watchdogRows} />
+          {recoveryCard}
+        </>
+      ) : null}
     </div>
   );
 });

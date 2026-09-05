@@ -7,11 +7,11 @@ import { readJson, rootDir, updateChannelsPath } from "./release-metadata.mjs";
 function usage() {
   console.log(`Usage:
   node ./scripts/sync-doc-book-version.mjs
-  node ./scripts/sync-doc-book-version.mjs --version 2.0.0 --line "moxi 2.0.0"
+  node ./scripts/sync-doc-book-version.mjs --version 3.0.0 --line "daji 3.0.0"
 
 Defaults:
   --version uses deploy/update-channels.json shipping_version
-  --line uses "moxi <version>"
+  --line uses "daji <version>"
 `);
 }
 
@@ -49,7 +49,7 @@ function parseArgs(argv) {
 
 const args = parseArgs(process.argv.slice(2));
 const shippingVersion = args.version ?? readJson(updateChannelsPath).shipping_version;
-const versionLine = args.line ?? `moxi ${shippingVersion}`;
+const versionLine = args.line ?? `${readJson("assets/brand/brand.json").releaseCodename} ${shippingVersion}`;
 const minorLine = shippingVersion.split(".").slice(0, 2).join(".");
 const codenamePattern = "[a-z][a-z0-9-]*";
 

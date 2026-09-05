@@ -28,12 +28,18 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
     |> maybe_put("branch_decisions", Enum.reverse(state.branch_decisions), result_options)
     |> maybe_put("node_runs", node_runs, result_options)
     |> maybe_put("artifact_lineage", artifact_lineage, result_options)
-    |> maybe_put_lazy("dataset_lineage", fn -> dataset_lineage(graph, artifact_lineage) end, result_options)
+    |> maybe_put_lazy(
+      "dataset_lineage",
+      fn -> dataset_lineage(graph, artifact_lineage) end,
+      result_options
+    )
     |> maybe_put("artifacts", state.artifacts, result_options)
   end
 
   defp maybe_put(payload, key, value, result_options) do
-    if Map.get(result_options, "include_#{key}", true), do: Map.put(payload, key, value), else: payload
+    if Map.get(result_options, "include_#{key}", true),
+      do: Map.put(payload, key, value),
+      else: payload
   end
 
   defp maybe_put_lazy(payload, key, value_fun, result_options) do
@@ -57,12 +63,13 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
         incoming_artifact_keys,
         artifact_key
       ) do
-    run = completed_run(state, node_id, node, incoming, duration_ms, result_options, %{
-      accepts_partial_inputs?: accepts_partial_inputs?,
-      consumed_artifacts_for_node: consumed_artifacts_for_node,
-      incoming_artifact_keys: incoming_artifact_keys,
-      artifact_key: artifact_key
-    })
+    run =
+      completed_run(state, node_id, node, incoming, duration_ms, result_options, %{
+        accepts_partial_inputs?: accepts_partial_inputs?,
+        consumed_artifacts_for_node: consumed_artifacts_for_node,
+        incoming_artifact_keys: incoming_artifact_keys,
+        artifact_key: artifact_key
+      })
 
     %{
       state
@@ -113,7 +120,8 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
             resolvers.consumed_artifacts_for_node,
             resolvers.incoming_artifact_keys
           ),
-        "produced_artifacts" => produced_artifacts_for_run(node, incoming, resolvers.artifact_key),
+        "produced_artifacts" =>
+          produced_artifacts_for_run(node, incoming, resolvers.artifact_key),
         "duration_ms" => duration_ms
       }
       |> maybe_put_task_ir_ref(node)

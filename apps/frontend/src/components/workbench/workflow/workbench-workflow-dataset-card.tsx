@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type {
   WorkflowDatasetAxis,
   WorkflowDatasetContract,
@@ -41,6 +42,8 @@ type WorkbenchWorkflowDatasetCardProps = {
   ) => void;
 };
 
+type WorkflowDatasetView = "summary" | "editor" | "ports" | "edges";
+
 export function WorkbenchWorkflowDatasetCard({
   labels,
   selectedDatasetContract,
@@ -61,10 +64,45 @@ export function WorkbenchWorkflowDatasetCard({
   removeDatasetAxis,
   updateDatasetAxis,
 }: WorkbenchWorkflowDatasetCardProps) {
+  const [datasetView, setDatasetView] = useState<WorkflowDatasetView>("summary");
+  const [activeNodeId, setActiveNodeId] = useState(selectedNodes[0]?.id ?? "");
+  const [activeEdgeId, setActiveEdgeId] = useState(selectedEdges[0]?.id ?? "");
   const activeDatasetValueId = selectedDatasetValue?.id ?? null;
+  const activeNode = selectedNodes.find((node) => node.id === activeNodeId) ?? selectedNodes[0] ?? null;
+  const activeEdge = selectedEdges.find((edge) => edge.id === activeEdgeId) ?? selectedEdges[0] ?? null;
+
+  useEffect(() => {
+    if (highlightDatasetEditor) setDatasetView("editor");
+  }, [highlightDatasetEditor]);
+  useEffect(() => {
+    if (!selectedNodes.some((node) => node.id === activeNodeId)) setActiveNodeId(selectedNodes[0]?.id ?? "");
+  }, [activeNodeId, selectedNodes]);
+  useEffect(() => {
+    if (!selectedEdges.some((edge) => edge.id === activeEdgeId)) setActiveEdgeId(selectedEdges[0]?.id ?? "");
+  }, [activeEdgeId, selectedEdges]);
+
   return (
-    <>
-      <section
+    <div className="workflow-dataset-workspace" data-workflow-dataset-view={datasetView}>
+      <nav aria-label={labels.datasetContractTitle} className="workflow-dataset-view-tabs">
+        {([
+          ["summary", labels.datasetContractTitle],
+          ["editor", labels.datasetEditorTitle],
+          ["ports", labels.datasetPortMappingsTitle],
+          ["edges", labels.datasetEdgeMappingsTitle],
+        ] as Array<[WorkflowDatasetView, string]>).map(([view, label]) => (
+          <button
+            aria-pressed={datasetView === view}
+            className={datasetView === view ? "workflow-dataset-view-tab workflow-dataset-view-tab--active" : "workflow-dataset-view-tab"}
+            data-workflow-dataset-view-target={view}
+            key={view}
+            onClick={() => setDatasetView(view)}
+            type="button"
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+      {datasetView === "summary" ? <section
         className="sidebar-card sidebar-card--compact"
         data-workflow-dataset-editor="summary"
         style={
@@ -94,7 +132,8 @@ export function WorkbenchWorkflowDatasetCard({
               </div>
             </div>
             <div className="sidebar-stack">
-              {selectedDatasetValues.map((value) => {
+              {selectedDatasetValue ? (() => {
+                const value = selectedDatasetValue;
                 const axes = value.shape?.axes ?? [];
                 const schemaLabel = value.schema_ref
                   ? `${value.schema_ref.schema}@${value.schema_ref.version}`
@@ -107,7 +146,6 @@ export function WorkbenchWorkflowDatasetCard({
                   <section
                     className="sidebar-card sidebar-card--compact"
                     data-workflow-dataset-value-id={value.id}
-                    key={value.id}
                     style={
                       focusedDatasetValueId === value.id
                         ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px" }
@@ -156,15 +194,15 @@ export function WorkbenchWorkflowDatasetCard({
                     ) : null}
                   </section>
                 );
-              })}
+              })() : null}
             </div>
           </>
         ) : (
           <p className="card-copy">{labels.datasetNoneLabel}</p>
         )}
-      </section>
+      </section> : null}
 
-      <section
+      {datasetView === "editor" ? <section
         className="sidebar-card sidebar-card--compact"
         data-workflow-dataset-editor="editor"
         style={
@@ -330,29 +368,35 @@ export function WorkbenchWorkflowDatasetCard({
         ) : (
           <p className="card-copy">{labels.datasetNoneLabel}</p>
         )}
-      </section>
+      </section> : null}
 
-      <section className="sidebar-card sidebar-card--compact">
+      {datasetView === "ports" ? <section className="sidebar-card sidebar-card--compact">
         <div className="card-head">
           <h2>{labels.datasetPortMappingsTitle}</h2>
         </div>
         <div className="sidebar-stack">
-          {selectedNodes.map((node) => (
-            <section className="sidebar-card sidebar-card--compact" key={`map:${node.id}`}>
+          <label className="workflow-topology-selection">
+            <span>{labels.nodesTitle}</span>
+            <select onChange={(event) => setActiveNodeId(event.target.value)} value={activeNode?.id ?? ""}>
+              {selectedNodes.map((node) => <option key={node.id} value={node.id}>{node.id}</option>)}
+            </select>
+          </label>
+          {activeNode ? (
+            <section className="sidebar-card sidebar-card--compact" key={`map:${activeNode.id}`}>
               <div className="card-head">
-                <h2>{node.id}</h2>
-                <span className="status-pill status-pill--watch">{node.kind}</span>
+                <h2>{activeNode.id}</h2>
+                <span className="status-pill status-pill--watch">{activeNode.kind}</span>
               </div>
               <div className="form-grid compact">
-                {[...(node.inputs ?? []), ...(node.outputs ?? [])].map((port) => {
-                  const direction = (node.inputs ?? []).some((entry) => entry.id === port.id) ? "inputs" : "outputs";
+                {[...(activeNode.inputs ?? []), ...(activeNode.outputs ?? [])].map((port) => {
+                  const direction = (activeNode.inputs ?? []).some((entry) => entry.id === port.id) ? "inputs" : "outputs";
                   return (
-                    <label key={`${node.id}:${direction}:${port.id}`} style={port.dataset_value && port.dataset_value === activeDatasetValueId ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px", borderRadius: "8px" } : undefined}>
+                    <label key={`${activeNode.id}:${direction}:${port.id}`} style={port.dataset_value && port.dataset_value === activeDatasetValueId ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px", borderRadius: "8px" } : undefined}>
                       <span>
                         {direction === "inputs" ? "in" : "out"} · {port.id} · {port.artifact_type}
                       </span>
                       <select
-                        onChange={(event) => updateNodePortDatasetValue(node.id, port.id, direction, event.target.value)}
+                        onChange={(event) => updateNodePortDatasetValue(activeNode.id, port.id, direction, event.target.value)}
                         value={port.dataset_value ?? ""}
                       >
                         <option value="">{labels.datasetUnassignedLabel}</option>
@@ -367,23 +411,29 @@ export function WorkbenchWorkflowDatasetCard({
                 })}
               </div>
             </section>
-          ))}
+          ) : <p className="card-copy">{labels.noSelectionLabel}</p>}
         </div>
-      </section>
+      </section> : null}
 
-      <section className="sidebar-card sidebar-card--compact">
+      {datasetView === "edges" ? <section className="sidebar-card sidebar-card--compact">
         <div className="card-head">
           <h2>{labels.datasetEdgeMappingsTitle}</h2>
         </div>
         <div className="form-grid compact">
-          {selectedEdges.map((edge) => (
-            <label key={`edge-map:${edge.id}`} style={edge.dataset_value && edge.dataset_value === activeDatasetValueId ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px", borderRadius: "8px" } : undefined}>
+          <label className="workflow-topology-selection">
+            <span>{labels.edgesTitle}</span>
+            <select onChange={(event) => setActiveEdgeId(event.target.value)} value={activeEdge?.id ?? ""}>
+              {selectedEdges.map((edge) => <option key={edge.id} value={edge.id}>{edge.id}</option>)}
+            </select>
+          </label>
+          {activeEdge ? (
+            <label key={`edge-map:${activeEdge.id}`} style={activeEdge.dataset_value && activeEdge.dataset_value === activeDatasetValueId ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px", borderRadius: "8px" } : undefined}>
               <span>
-                {edge.from.node}.{edge.from.port} → {edge.to.node}.{edge.to.port}
+                {activeEdge.from.node}.{activeEdge.from.port} → {activeEdge.to.node}.{activeEdge.to.port}
               </span>
               <select
-                onChange={(event) => updateEdgeDatasetValue(edge.id, event.target.value)}
-                value={edge.dataset_value ?? ""}
+                onChange={(event) => updateEdgeDatasetValue(activeEdge.id, event.target.value)}
+                value={activeEdge.dataset_value ?? ""}
               >
                 <option value="">{labels.datasetUnassignedLabel}</option>
                 {selectedDatasetValues.map((value) => (
@@ -393,9 +443,9 @@ export function WorkbenchWorkflowDatasetCard({
                 ))}
               </select>
             </label>
-          ))}
+          ) : <p className="card-copy">{labels.noSelectionLabel}</p>}
         </div>
-      </section>
-    </>
+      </section> : null}
+    </div>
   );
 }

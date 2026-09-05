@@ -1,4 +1,7 @@
-use std::time::{Duration, Instant};
+use std::{
+    borrow::Cow,
+    time::{Duration, Instant},
+};
 
 use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system, solve_spd_system,
@@ -18,7 +21,12 @@ use kyuubiki_protocol::{
 };
 
 pub fn solve_truss_2d(request: &SolveTruss2dRequest) -> Result<SolveTruss2dResult, String> {
-    solve_truss_2d_internal(request, false, SpdSolveOptions::default())
+    solve_truss_2d_internal(Cow::Borrowed(request), false, SpdSolveOptions::default())
+        .map(|profile| profile.result)
+}
+
+pub fn solve_truss_2d_owned(request: SolveTruss2dRequest) -> Result<SolveTruss2dResult, String> {
+    solve_truss_2d_internal(Cow::Owned(request), false, SpdSolveOptions::default())
         .map(|profile| profile.result)
 }
 
@@ -46,15 +54,15 @@ pub fn profile_truss_2d_with_options(
     request: &SolveTruss2dRequest,
     options: SpdSolveOptions,
 ) -> Result<Truss2dProfile, String> {
-    solve_truss_2d_internal(request, true, options)
+    solve_truss_2d_internal(Cow::Borrowed(request), true, options)
 }
 
 fn solve_truss_2d_internal(
-    request: &SolveTruss2dRequest,
+    request: Cow<'_, SolveTruss2dRequest>,
     collect_stages: bool,
     solve_options: SpdSolveOptions,
 ) -> Result<Truss2dProfile, String> {
-    validate_truss_request(request)?;
+    validate_truss_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 2;
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -216,10 +224,10 @@ fn solve_truss_2d_internal(
 
     let max_displacement = max_truss_2d_displacement(&nodes);
     let max_stress = max_truss_stress(&elements);
-    let total_strain_energy = total_truss_2d_strain_energy(request, &elements);
+    let total_strain_energy = total_truss_2d_strain_energy(request.as_ref(), &elements);
     let max_strain_energy_density = max_truss_strain_energy_density(&elements);
 
-    validate_small_displacement_truss(request, max_displacement)?;
+    validate_small_displacement_truss(request.as_ref(), max_displacement)?;
     push_truss_2d_stage(
         &mut stages,
         collect_stages,
@@ -229,7 +237,7 @@ fn solve_truss_2d_internal(
 
     Ok(Truss2dProfile {
         result: SolveTruss2dResult {
-            input: request.clone(),
+            input: request.into_owned(),
             nodes,
             elements,
             max_displacement,
@@ -290,7 +298,17 @@ fn current_rss_kib() -> u64 {
 }
 
 pub fn solve_truss_3d(request: &SolveTruss3dRequest) -> Result<SolveTruss3dResult, String> {
-    validate_truss_3d_request(request)?;
+    solve_truss_3d_internal(Cow::Borrowed(request))
+}
+
+pub fn solve_truss_3d_owned(request: SolveTruss3dRequest) -> Result<SolveTruss3dResult, String> {
+    solve_truss_3d_internal(Cow::Owned(request))
+}
+
+fn solve_truss_3d_internal(
+    request: Cow<'_, SolveTruss3dRequest>,
+) -> Result<SolveTruss3dResult, String> {
+    validate_truss_3d_request(request.as_ref())?;
 
     let dof_count = request.nodes.len() * 3;
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -430,13 +448,13 @@ pub fn solve_truss_3d(request: &SolveTruss3dRequest) -> Result<SolveTruss3dResul
 
     let max_displacement = max_truss_3d_displacement(&nodes);
     let max_stress = max_truss_3d_stress(&elements);
-    let total_strain_energy = total_truss_3d_strain_energy(request, &elements);
+    let total_strain_energy = total_truss_3d_strain_energy(request.as_ref(), &elements);
     let max_strain_energy_density = max_truss_3d_strain_energy_density(&elements);
 
-    validate_small_displacement_truss_3d(request, max_displacement)?;
+    validate_small_displacement_truss_3d(request.as_ref(), max_displacement)?;
 
     Ok(SolveTruss3dResult {
-        input: request.clone(),
+        input: request.into_owned(),
         nodes,
         elements,
         max_displacement,

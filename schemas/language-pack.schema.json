@@ -43,7 +43,7 @@
     },
     "versionLine": {
       "type": "string",
-      "description": "Optional product line target such as moxi 2.x."
+      "description": "Optional product line target such as daji 3.x."
     },
     "targetAppVersion": {
       "type": "string",

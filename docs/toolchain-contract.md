@@ -11,7 +11,7 @@ The contract separates compatibility from bootstrap defaults:
 - Elixir uses a Mix constraint plus lab defaults because patch/minor releases
   can move while the application contract remains compatible with `~> 1.19`.
   Self-host and container baselines must still satisfy the explicit minimum in
-  `config/toolchains.json`; for `moxi 2.x` that means Elixir/Mix
+  `config/toolchains.json`; for `daji 3.x` that means Elixir/Mix
   `1.19.0+` and OTP `28.0+`.
 - Node uses a compatibility engine range plus a preferred build version so UI
   compilation, tests, and docs tooling remain reproducible. It is not an

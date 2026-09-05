@@ -29,6 +29,13 @@
   .hub-rail {
     grid-column: 1;
     grid-row: 1;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+    max-height: none;
+    padding: 0.75rem 0.85rem;
+    overflow: hidden;
   }
 
   .hub-main {
@@ -59,6 +66,49 @@
 
   .hub-rail {
     position: static;
+  }
+
+  .hub-rail .brand {
+    flex: 0 0 auto;
+  }
+
+  .hub-nav,
+  .hub-nav--grouped {
+    min-width: 0;
+    margin-top: 0;
+    padding-bottom: 2px;
+    flex-direction: row;
+    gap: 0.45rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  .hub-nav-group {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.4rem;
+    border-radius: 12px;
+  }
+
+  .hub-nav-group__copy {
+    display: none;
+  }
+
+  .hub-nav-group__items {
+    flex-direction: row;
+    gap: 0.35rem;
+  }
+
+  .hub-nav__item {
+    width: auto;
+    min-height: 40px;
+    padding: 0.55rem 0.75rem;
+    white-space: nowrap;
   }
 
   .hub-card__intro {
@@ -143,6 +193,21 @@
 
   .hub-assistant-doc-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .hub-rail {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .hub-nav-group__label {
+    display: none;
+  }
+
+  .hub-nav-group {
+    grid-template-columns: auto;
   }
 }
 

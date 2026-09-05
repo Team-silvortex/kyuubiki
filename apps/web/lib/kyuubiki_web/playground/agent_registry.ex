@@ -252,6 +252,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
          capabilities: optional_capabilities(attrs, "capabilities"),
          health_score: optional_health_score(attrs, "health_score"),
          watchdog: optional_map(attrs, "watchdog"),
+         operator_package_runtime: optional_map(attrs, "operator_package_runtime"),
          control_plane_link: optional_map(attrs, "control_plane_link"),
          last_seen_at: now
        }}
@@ -727,6 +728,6 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
         agent,
         :last_session_transition,
         AgentSessionState.transition(current, agent, source) ||
-          (current && (current[:last_session_transition] || current["last_session_transition"]))
+          current[:last_session_transition] || current["last_session_transition"]
       )
 end

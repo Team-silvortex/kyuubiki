@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.operator-task-ir-golden-manifest/v1",
-  "line": "moxi 2.x",
+  "line": "daji 3.x",
   "purpose": "Release-gated manifest for language-neutral executable TaskIR examples.",
   "examples": [
     {

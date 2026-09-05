@@ -169,6 +169,268 @@
         </p>
       </section>
 
+      <section class="docs-card docs-section" id="summary-validation">
+        <h2>Summary cross-check gates</h2>
+        <p class="docs-copy">
+          Connect reference and candidate summary objects to the <code>left</code>
+          and <code>right</code> inputs of
+          <code>transform.validate_summary_tolerance</code>. Its
+          <code>kyuubiki.summary_tolerance_validation/v1</code> report can feed
+          <code>transform.compose_quality_objective</code> or the Rust Headless
+          SDK material quality gate. A completed node is not itself proof of a
+          passed comparison or a physically converged solution.
+        </p>
+        <pre><code>{
+  "fields": ["peak_temperature_c"],
+  "absolute_tolerance": 0.05,
+  "relative_tolerance": 0.001,
+  "fail_on_missing": true
+}</code></pre>
+        <ul class="docs-list">
+          <li>The example is node configuration. Tolerances must be finite and
+            nonnegative; zero is valid. A field passes if either its absolute
+            or relative error is within tolerance. Omitted tolerances default
+            to <code>1e-9</code> absolute and <code>1e-6</code> relative.</li>
+          <li>An explicit field list must be nonempty, with unique nonblank
+            strings. Without it, numeric keys from either summary are selected
+            in sorted order. One-sided numeric fields and numeric/type changes
+            are recorded as missing evidence, not silently excluded.</li>
+          <li>At least one field must actually be compared before the report
+            can pass. <code>fail_on_missing: false</code> allows partial evidence,
+            not an empty comparison. Missing fields block by default.</li>
+          <li>Present null or wrongly typed options are configuration errors;
+            they do not fall back to defaults. An omitted or null whole config
+            uses defaults. An unrepresentable error fails with the field name,
+            rather than producing a null error metric.</li>
+          <li>Quality consumers require an explicit pass, a positive checked
+            count, zero failures, and missing counts consistent with the
+            missing-field policy. Nonempty or malformed failure details also
+            block. Invalid success metadata remains available for repair planning.</li>
+          <li>Invalid configuration and non-finite errors fail the workflow by
+            default. With an explicit <code>on_error: "skip"</code> recovery
+            policy, the failed node retains its diagnostic, dependent work is
+            skipped, and independent branches may finish. That is recovery,
+            not successful validation.</li>
+        </ul>
+        <p class="docs-copy">
+          This gate checks summary agreement, not independent scientific
+          correctness. Model assumptions, convergence, reference quality,
+          and physical validation still need their own evidence.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section" id="quality-ranking-recovery">
+        <h2>Quality ranking and incomplete evaluations</h2>
+        <p class="docs-copy">
+          Quality scores are nonnegative penalties, not arbitrary signed physical
+          quantities. <code>transform.compose_quality_objective</code> rejects
+          non-finite arithmetic, negative scores, malformed configured numbers,
+          and overflowing aggregate counters with the affected source and field.
+          Valid zero weights and large finite values remain supported. Explicit
+          blocking terms override a source's claimed ready flag.
+        </p>
+        <p class="docs-copy">
+          Use an explicit <code>qualities</code> object when a candidate also
+          carries metadata. Every named quality summary must be an object;
+          missing or malformed sources cannot silently disappear. Candidate IDs
+          must remain unique, including automatically assigned array IDs.
+        </p>
+        <ul class="docs-list">
+          <li><code>transform.rank_quality_candidates</code> retains evaluable
+            candidates in <code>ranking</code>. Each rejected evaluation is
+            recorded in <code>rejected_candidates</code> with its
+            <code>candidate_id</code> and <code>error</code>.</li>
+          <li><code>candidate_count</code> counts ranked candidates;
+            <code>input_candidate_count</code> includes rejected candidates.
+            <code>rejected_candidate_count</code> counts the rejection records.
+            <code>ranking_complete</code> is false if any evaluation was rejected.
+            Completeness does not imply that every ranked candidate is ready.</li>
+          <li>If all evaluations are rejected, ranking fails with their count
+            and the first named failure reason. It does not invent a winner.</li>
+          <li><code>transform.prepare_quality_next_round_request</code> refuses
+            missing, malformed, or negative selected scores instead of treating
+            them as zero. Supplied completeness counters must agree with the
+            ranking and rejection arrays.</li>
+          <li>Incomplete evaluation produces <code>replan</code> with a
+            <code>repair_rejected_candidates</code> hint and retained rejection
+            details. Even <code>require_ready: false</code> only permits an
+            unready candidate to continue; it cannot satisfy the stop condition.</li>
+          <li>An incomplete ranking disables downstream quality-sweep planning
+            and expansion. The result contains zero cases, keeps
+            <code>sweep_action: replan</code>, and exposes
+            <code>sweep_blocking_reason: candidate_evaluation_incomplete</code>
+            plus <code>source_rejected_candidates</code>. Repair those inputs
+            and rerun ranking before generating another parameter sweep.</li>
+        </ul>
+        <p class="docs-copy">
+          A disabled sweep awaiting repair is not a converged or completed study.
+          These checks preserve numerical and workflow integrity; they do not
+          replace independent physical validation.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section" id="sweep-budget-boundaries">
+        <h2>Parameter sweep budget boundaries</h2>
+        <p class="docs-copy">
+          Planning, materialization, and expansion share the same count rules.
+          <code>max_cases</code> is a nonnegative whole count; zero allows no
+          cases. <code>samples_per_axis</code> must be at least two and
+          <code>max_axes</code> at least one. Exact floating representations such
+          as <code>4.0</code> are accepted and emitted as integers. Null fields,
+          strings, negative or fractional counts, and out-of-range counts are
+          errors, not requests to use a larger default. Defaults apply only
+          when a field is absent.
+        </p>
+        <ul class="docs-list">
+          <li>The planner validates every search-space axis, selects axes by
+            focus and axis budget, then checks the Cartesian product with
+            overflow detection before allocating range samples. Malformed or
+            empty axes cannot silently shrink the search. Truncated axes remain
+            visible in the budget's usable count and follow-up recommendation.</li>
+          <li>Over-budget plans are diagnostic-only. Their axes contain
+            <code>value_count</code> and <code>values_deferred: true</code>,
+            without a <code>values</code> array. This avoids generating large
+            sample arrays that would immediately be rejected.</li>
+          <li>For an executable plan, materialization and expansion verify the
+            actual axis product against the effective limit. Stale estimates
+            and a claimed ready flag cannot authorize excess cases. Lowering
+            the limit in either stage takes effect before case generation.</li>
+          <li>A quality-sweep budget block returns zero cases with
+            <code>expansion_budget_ready: false</code> and
+            <code>expansion_blocking_reason: case_budget_exceeded</code>.
+            Candidate identity, estimated count, and budget diagnostics remain
+            available. Raising a downstream limit does not release an upstream
+            block: adjust the planning inputs and build a new plan.</li>
+          <li>Direct <code>transform.expand_parameter_sweep</code> requests above
+            their limit return an error. Invalid counts and arithmetic overflow
+            also return errors rather than partial sweeps or wrapped counts.
+            An explicit workflow recovery policy can preserve independent
+            branches while retaining the failed-node diagnostic.</li>
+        </ul>
+        <p class="docs-copy">
+          Billion-sample deferred-plan tests validate rejection without sample
+          allocation; they do not demonstrate billion-case simulation capacity.
+          Range interpolation preserves finite endpoints even when subtracting
+          the two endpoints directly would overflow.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section" id="sweep-target-integrity">
+        <h2>Parameter sweep target integrity</h2>
+        <p class="docs-copy">
+          Active quality-sweep materialization and direct expansion validate
+          labels and resolve every target against the base model before
+          generating cases. Invalid targets return the axis index, full path,
+          and reason. A generated case's <code>parameters</code> must describe
+          the values actually assigned to its <code>model</code>.
+        </p>
+        <ul class="docs-list">
+          <li>Paths use nonempty dot-separated segments, for example
+            <code>nodes.2.load.1</code>. Objects use literal field names, including
+            numeric names. Arrays use bounded, nonnegative decimal indices;
+            final array elements, nested arrays, and root arrays are writable.
+            Negative indices, signs, append markers, and out-of-range indices
+            are rejected.</li>
+          <li>All parent containers must already exist. A final object field
+            may be inserted; missing parents are never created implicitly.
+            An array assignment replaces an existing element without resizing
+            the array. Dot characters within object field names are not escaped
+            by this path syntax.</li>
+          <li>Labels default to the trimmed path only when absent. Supplied
+            labels must be nonblank strings and unique across all axes,
+            including implicit labels. Duplicate labels cannot merge parameter
+            records or substitute another axis's value.</li>
+          <li>Targets must be disjoint. Duplicate targets and ancestor/descendant
+            pairs such as <code>material</code> and
+            <code>material.density</code> are rejected regardless of axis order.
+            Decimal array aliases such as <code>cells.0</code> and
+            <code>cells.00</code> resolve to the same target, while numeric object
+            keys <code>0</code> and <code>00</code> remain distinct.</li>
+          <li>Paths are resolved once per expansion, not reparsed for every
+            case. Iterative Cartesian enumeration preserves last-axis-fastest
+            ordering, case IDs, labels, and metadata without recursive stack
+            growth proportional to axis count.</li>
+        </ul>
+        <p class="docs-copy">
+          Regression evidence includes 8192 single-valued axes, the quality
+          planning/materialization/expansion chain, explicit branch recovery,
+          and array-load cases passed to the cohesive mesh solver. The latter
+          compare against manually constructed inputs and uniform elastic
+          opening values. These bounded checks are not broad solver validation
+          or large-scale simulation throughput measurements.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section" id="sweep-result-evidence">
+        <h2>Sweep result identity and summary evidence</h2>
+        <p class="docs-copy">
+          Joining execution results is an identity boundary, not a best-effort
+          array merge. Every case must receive its own usable result before
+          the batch can be summarized, scored, and used to plan another round.
+          Malformed identities, configuration, and declared counts are errors.
+        </p>
+        <ul class="docs-list">
+          <li>Case and result IDs accept <code>id</code>, <code>case_id</code>,
+            and <code>caseId</code>; supplied aliases must be nonblank strings
+            and agree. Duplicate IDs are rejected. Cases without an ID receive
+            <code>case_&lt;index&gt;</code>, checked for collisions with explicit
+            IDs. Keyed results use one indexed lookup and never fall back to
+            array position when a case's result is missing.</li>
+          <li>Positional matching is permitted only for an entirely unlabelled
+            result batch with exactly one result per case. Mixing keyed and
+            unlabelled results is an error. Positional mode cannot detect
+            reordered results: distributed callers should supply stable case
+            IDs. The output reports <code>matching_mode</code>.</li>
+          <li>A selected summary must be an object. Supplied statuses must be
+            <code>ok</code>, <code>success</code>, <code>succeeded</code>,
+            <code>completed</code>, <code>complete</code>, <code>done</code>, or
+            <code>joined</code>; a non-null error rejects the result even with
+            a successful status. Status-only envelopes are not summaries.
+            Missing or rejected results cannot retain a previous run's
+            <code>summary</code> or <code>result</code> alias.</li>
+          <li>With <code>strict: false</code> (the default), the join preserves
+            diagnostics in <code>missing_case_ids</code>,
+            <code>rejected_results</code>, and <code>unmatched_result_ids</code>,
+            with their counts. Rejected results also count as missing usable
+            summaries. Any missing, rejected, or unmatched result sets
+            <code>join_complete: false</code>. Strict mode returns an error
+            instead. Neither mode authorizes scoring an incomplete batch.</li>
+          <li>An explicit join <code>summary_field</code> selects only that
+            result field, without silently trying other payloads. A custom
+            <code>output_field</code> is recorded as
+            <code>joined_summary_field</code> and inherited by the summarizer;
+            an explicit summarizer selection must agree. Identity, model,
+            parameters, metadata, and result-status fields cannot be used as
+            join output fields.</li>
+          <li>Summary field selections must be nonempty, unique, nonblank
+            strings, or are inferred from the union of summary keys. Metrics
+            cannot replace the row's <code>case_id</code>,
+            <code>parameters</code>, or <code>metadata</code>. Missing and null
+            metrics fail by default. A field numeric in one case cannot
+            silently become text in another and shrink the aggregate sample.</li>
+          <li><code>fail_on_missing: false</code> permits diagnostic rows with
+            <code>summary_complete: false</code>,
+            <code>missing_field_count</code>, and <code>missing_fields</code>.
+            Such rows are not scoreable. Finite signed numeric values and
+            present text fields remain supported. Numeric accumulation checks
+            count and sum overflow; non-finite intermediate sums return an
+            error instead of JSON null or a reset accumulator.</li>
+          <li>Declared case, joined-summary, and row counts must match the
+            actual batch. A claimed complete flag cannot override nonzero
+            missing/rejected/unmatched evidence or contradictory counts.
+            Explicit workflow recovery preserves failed-node diagnostics and
+            independent branches, while dependent scoring and replanning nodes
+            are skipped rather than given synthetic successful results.</li>
+        </ul>
+        <p class="docs-copy">
+          Regression evidence covers 4096 reverse-ordered keyed results,
+          retries, custom summary fields, malformed identities, overflow,
+          diagnostic-only summaries, and the full join-to-replanning chain.
+          These are bounded contract and recovery checks, not a throughput
+          benchmark or independent physical validation of the solver.
+        </p>
+      </section>
+
       <section class="docs-card docs-section">
         <h2>Primary sources</h2>
         <div class="docs-links">

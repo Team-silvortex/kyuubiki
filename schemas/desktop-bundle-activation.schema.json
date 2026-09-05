@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/desktop-bundle-activation.schema.json",
+  "title": "Kyuubiki Managed Desktop Bundle Activation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generation",
+    "version",
+    "previous_version",
+    "relative_path",
+    "platform",
+    "payload_sha256"
+  ],
+  "properties": {
+    "schema_version": { "const": "kyuubiki.desktop-bundle-activation/v1" },
+    "generation": { "type": "integer", "minimum": 1 },
+    "version": { "$ref": "#/$defs/version" },
+    "previous_version": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/version" }]
+    },
+    "relative_path": {
+      "type": "string",
+      "pattern": "^versions/[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "platform": { "enum": ["macos", "linux", "windows"] },
+    "payload_sha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

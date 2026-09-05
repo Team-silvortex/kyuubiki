@@ -4,9 +4,9 @@
   "language": "de",
   "targetSurface": "workbench",
   "name": "German Workbench Core",
-  "version": "2.17.0",
-  "versionLine": "moxi 2.x",
-  "targetAppVersion": "2.17.0",
+  "version": "3.0.0",
+  "versionLine": "daji 3.x",
+  "targetAppVersion": "3.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-20T12:15:09.504Z",
   "description": "German UI translations for Workbench navigation, workflow, store, and system surfaces.",
@@ -29,6 +29,7 @@
     }
   ],
   "overrides": {
+    "workflowStorageWriteFailedLabel": "Lokale Workflow-Daten konnten nicht gespeichert werden. Prüfen Sie den verfügbaren Speicherplatz und versuchen Sie es erneut.",
     "title": "Kyuubiki Workbench · Deutsch",
     "subtitle": "Arbeitsbereich für Simulation, Workflows und Agenten.",
     "rail": {

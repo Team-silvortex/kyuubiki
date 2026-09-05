@@ -161,12 +161,12 @@ fn endpoint_modes(
         &context.system.constrained_dofs,
     );
     debug_assert_eq!(free, context.free_dofs);
-    Ok(extract_symmetric_critical_modes(
+    extract_symmetric_critical_modes(
         &reduced,
         context.free_dofs,
         endpoint.displacement.len(),
         context.mode_count,
-    ))
+    )
 }
 
 fn closest_modes(

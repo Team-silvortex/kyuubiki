@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/fleet-scheduling-operational-qualification-contract.schema.json",
+  "title": "Kyuubiki Fleet Scheduling Operational Qualification Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "qualification_id",
+    "target_coordinate",
+    "ownership",
+    "capture",
+    "retention",
+    "source_guard",
+    "required_checks",
+    "commands"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": {
+      "const": "kyuubiki.fleet-scheduling-operational-qualification-contract/v1"
+    },
+    "qualification_id": {
+      "const": "remote-linux-installer-managed-fleet-scheduling-operational"
+    },
+    "target_coordinate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module_id", "paradigm", "target_grade"],
+      "properties": {
+        "module_id": { "const": "orchestra-control-plane" },
+        "paradigm": { "const": "workflow_composition" },
+        "target_grade": { "const": "operational" }
+      }
+    },
+    "ownership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "control_plane_owner",
+        "execution_owner",
+        "deployment_owner",
+        "evidence_owner"
+      ],
+      "properties": {
+        "control_plane_owner": { "const": "orchestra-control-plane" },
+        "execution_owner": { "const": "runtime-agent-cli" },
+        "deployment_owner": { "const": "runtime-installer" },
+        "evidence_owner": { "const": "verification-evidence" }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execution_host_role",
+        "platform",
+        "build_profile",
+        "agent_count",
+        "high_capacity",
+        "low_capacity",
+        "installer_managed",
+        "fault_injection",
+        "cleanup_required"
+      ],
+      "properties": {
+        "execution_host_role": { "const": "remote-linux-qualification-host" },
+        "platform": { "const": "linux" },
+        "build_profile": { "const": "release" },
+        "agent_count": { "const": 2 },
+        "high_capacity": { "const": 3 },
+        "low_capacity": { "const": 1 },
+        "installer_managed": { "const": true },
+        "fault_injection": {
+          "const": "high_capacity_agent_unavailable_before_dispatch"
+        },
+        "cleanup_required": { "const": true }
+      }
+    },
+    "retention": { "$ref": "#/$defs/retention" },
+    "source_guard": { "$ref": "#/$defs/sourceGuard" },
+    "required_checks": {
+      "type": "array",
+      "minItems": 13,
+      "maxItems": 13,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capture", "verify"],
+      "properties": {
+        "capture": { "type": "string", "minLength": 1 },
+        "verify": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "repoPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["report_schema", "report_schema_path", "report_path", "forbidden_content"],
+      "properties": {
+        "report_schema": {
+          "const": "kyuubiki.fleet-scheduling-operational-qualification/v1"
+        },
+        "report_schema_path": { "$ref": "#/$defs/repoPath" },
+        "report_path": { "$ref": "#/$defs/repoPath" },
+        "forbidden_content": {
+          "type": "array",
+          "minItems": 6,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "sourceGuard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files", "required_text"],
+      "properties": {
+        "files": {
+          "type": "array",
+          "minItems": 6,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/repoPath" }
+        },
+        "required_text": {
+          "type": "array",
+          "minItems": 6,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

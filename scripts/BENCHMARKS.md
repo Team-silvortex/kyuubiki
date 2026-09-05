@@ -101,7 +101,7 @@ Focused reference for benchmark and regression script entry points.
   `hotspot_share_pct`, and `hotspot_hint`. When nested `solve_spd_*` stages are
   present, the hotspot prefers the leaf solver kernel over the outer
   `solve_system` wrapper so large runs point at the actual optimization target.
-- `./scripts/build-benchmark-profile-index.mjs`
+- `./scripts/kyuubiki build-benchmark-profile-index`
   rebuilds the exploratory benchmark profile index from retained
   `summary.json` files and failure receipts under `tmp/benchmark-profile/`.
   Coverage summaries

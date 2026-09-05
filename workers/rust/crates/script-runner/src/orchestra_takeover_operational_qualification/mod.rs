@@ -1,8 +1,16 @@
 mod installed;
 mod installed_report;
 mod installed_runtime;
+mod long_workflow_fixture;
+mod long_workflow_report;
+mod long_workflow_runtime;
+mod long_workflow_validation;
+mod partition_fixture;
+mod partition_report;
+mod partition_validation;
 mod report;
 mod runtime;
+mod runtime_http;
 
 use crate::remote_host::valid_ssh_alias;
 use std::env;
@@ -47,6 +55,55 @@ pub(crate) fn run_qualify_remote(root: &Path, args: Vec<OsString>) -> RunnerResu
     Ok(0)
 }
 
+pub(crate) fn run_qualify_partition_remote(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
+    let options = CaptureOptions::parse_with_default(args, partition_report::DEFAULT_CAPTURE)?;
+    if options.help {
+        print_partition_capture_usage();
+        return Ok(0);
+    }
+    partition_validation::validate_contract(root, false)?;
+    let (journey, cleanup) = runtime::capture_partition(
+        root,
+        &options.host,
+        &options.postgres_image,
+        Duration::from_secs(options.timeout_seconds),
+    )?;
+    let qualification = partition_report::build_report(journey, cleanup)?;
+    partition_validation::validate(root, &qualification)?;
+    partition_report::write(root, &options.output, &qualification)?;
+    println!(
+        "two-Orchestra network-partition qualification passed: {}",
+        options.output
+    );
+    Ok(0)
+}
+
+pub(crate) fn run_qualify_long_workflow_remote(
+    root: &Path,
+    args: Vec<OsString>,
+) -> RunnerResult<u8> {
+    let options = CaptureOptions::parse_with_default(args, long_workflow_report::DEFAULT_CAPTURE)?;
+    if options.help {
+        print_long_workflow_capture_usage();
+        return Ok(0);
+    }
+    long_workflow_validation::validate_contract(root, false)?;
+    let (journey, cleanup) = long_workflow_runtime::capture(
+        root,
+        &options.host,
+        &options.postgres_image,
+        Duration::from_secs(options.timeout_seconds),
+    )?;
+    let qualification = long_workflow_report::build_report(journey, cleanup)?;
+    long_workflow_validation::validate(root, &qualification)?;
+    long_workflow_report::write(root, &options.output, &qualification)?;
+    println!(
+        "two-Orchestra long-workflow takeover qualification passed: {}",
+        options.output
+    );
+    Ok(0)
+}
+
 pub(crate) fn run_check(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
     let options = CheckOptions::parse(args)?;
     if options.help {
@@ -70,6 +127,50 @@ pub(crate) fn run_check(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
     Ok(0)
 }
 
+pub(crate) fn run_check_partition(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
+    let options = CheckOptions::parse(args)?;
+    if options.help {
+        print_partition_check_usage();
+        return Ok(0);
+    }
+    partition_validation::validate_contract(root, false)?;
+    if options.self_test {
+        partition_validation::validator_self_test(root)?;
+        println!("Orchestra network-partition qualification self-test passed");
+        if options.report.is_none() {
+            return Ok(0);
+        }
+    }
+    let report_path = options
+        .report
+        .unwrap_or_else(|| partition_report::DEFAULT_REPORT.to_string());
+    partition_validation::read_and_validate(root, &report_path)?;
+    println!("Orchestra network-partition report passed: {report_path}");
+    Ok(0)
+}
+
+pub(crate) fn run_check_long_workflow(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
+    let options = CheckOptions::parse(args)?;
+    if options.help {
+        print_long_workflow_check_usage();
+        return Ok(0);
+    }
+    long_workflow_validation::validate_contract(root, false)?;
+    if options.self_test {
+        long_workflow_validation::validator_self_test(root)?;
+        println!("Orchestra long-workflow takeover qualification self-test passed");
+        if options.report.is_none() {
+            return Ok(0);
+        }
+    }
+    let report_path = options
+        .report
+        .unwrap_or_else(|| long_workflow_report::DEFAULT_REPORT.to_string());
+    long_workflow_validation::read_and_validate(root, &report_path)?;
+    println!("Orchestra long-workflow takeover report passed: {report_path}");
+    Ok(0)
+}
+
 struct CaptureOptions {
     help: bool,
     host: String,
@@ -80,10 +181,14 @@ struct CaptureOptions {
 
 impl CaptureOptions {
     fn parse(args: Vec<OsString>) -> RunnerResult<Self> {
+        Self::parse_with_default(args, report::DEFAULT_CAPTURE)
+    }
+
+    fn parse_with_default(args: Vec<OsString>, default_output: &str) -> RunnerResult<Self> {
         let mut options = Self {
             help: false,
             host: env::var("KYUUBIKI_LAB_HOST").unwrap_or_else(|_| "kyuubiki-lab".to_string()),
-            output: report::DEFAULT_CAPTURE.to_string(),
+            output: default_output.to_string(),
             postgres_image: env::var("KYUUBIKI_POSTGRES_QUALIFICATION_IMAGE")
                 .unwrap_or_else(|_| "postgres:16-alpine".to_string()),
             timeout_seconds: 120,
@@ -186,6 +291,30 @@ fn print_capture_usage() {
 fn print_check_usage() {
     println!(
         "usage: kyuubiki-script-runner check-orchestra-takeover-operational-qualification [--self-test] [--verify-report path]"
+    );
+}
+
+fn print_partition_capture_usage() {
+    println!(
+        "usage: kyuubiki-script-runner qualify-orchestra-network-partition-operational-remote [--host SSH_ALIAS] [--out path] [--postgres-image image] [--timeout-secs seconds]"
+    );
+}
+
+fn print_partition_check_usage() {
+    println!(
+        "usage: kyuubiki-script-runner check-orchestra-network-partition-operational-qualification [--self-test] [--verify-report path]"
+    );
+}
+
+fn print_long_workflow_capture_usage() {
+    println!(
+        "usage: kyuubiki-script-runner qualify-orchestra-long-workflow-takeover-operational-remote [--host SSH_ALIAS] [--out path] [--postgres-image image] [--timeout-secs seconds]"
+    );
+}
+
+fn print_long_workflow_check_usage() {
+    println!(
+        "usage: kyuubiki-script-runner check-orchestra-long-workflow-takeover-operational-qualification [--self-test] [--verify-report path]"
     );
 }
 

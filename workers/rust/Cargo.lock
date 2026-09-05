@@ -483,7 +483,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-benchmark"
-version = "2.17.0"
+version = "3.0.0"
 dependencies = [
  "kyuubiki-engine",
  "kyuubiki-headless-sdk",
@@ -492,11 +492,12 @@ dependencies = [
  "libc",
  "serde",
  "serde_json",
+ "windows-sys",
 ]
 
 [[package]]
 name = "kyuubiki-cli"
-version = "2.17.0"
+version = "3.0.0"
 dependencies = [
  "fs2",
  "kyuubiki-engine",
@@ -512,14 +513,14 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-deploy-server"
-version = "2.17.0"
+version = "3.0.0"
 dependencies = [
  "serde_json",
 ]
 
 [[package]]
 name = "kyuubiki-desktop-runtime"
-version = "2.17.0"
+version = "3.0.0"
 dependencies = [
  "chrono",
  "kyuubiki-platform",
@@ -531,7 +532,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-engine"
-version = "2.17.0"
+version = "3.0.0"
 dependencies = [
  "kyuubiki-operator-sdk",
  "kyuubiki-protocol",
@@ -544,7 +545,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-headless-sdk"
-version = "2.17.0"
+version = "3.0.0"
 dependencies = [
  "kyuubiki-protocol",
  "serde",
@@ -553,7 +554,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-installer"
-version = "2.17.0"
+version = "3.0.0"
 dependencies = [
  "kyuubiki-engine",
  "kyuubiki-operator-sdk",
@@ -567,7 +568,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-kcore"
-version = "2.17.0"
+version = "3.0.0"
 dependencies = [
  "kyuubiki-headless-sdk",
  "serde",
@@ -578,7 +579,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-operator-sdk"
-version = "2.17.0"
+version = "3.0.0"
 dependencies = [
  "kyuubiki-platform",
  "kyuubiki-protocol",
@@ -588,11 +589,15 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-platform"
-version = "2.17.0"
+version = "3.0.0"
+dependencies = [
+ "libc",
+ "windows-sys",
+]
 
 [[package]]
 name = "kyuubiki-project-automation"
-version = "2.17.0"
+version = "3.0.0"
 dependencies = [
  "chrono",
  "kyuubiki-headless-sdk",
@@ -603,7 +608,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-project-bundle"
-version = "2.17.0"
+version = "3.0.0"
 dependencies = [
  "chrono",
  "serde_json",
@@ -613,7 +618,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-protocol"
-version = "2.17.0"
+version = "3.0.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -622,7 +627,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-script-runner"
-version = "2.17.0"
+version = "3.0.0"
 dependencies = [
  "getrandom 0.4.3",
  "kyuubiki-cli",
@@ -634,6 +639,7 @@ dependencies = [
  "kyuubiki-project-automation",
  "kyuubiki-project-bundle",
  "kyuubiki-protocol",
+ "libc",
  "serde",
  "serde_json",
  "sha2",
@@ -642,7 +648,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-solver"
-version = "2.17.0"
+version = "3.0.0"
 dependencies = [
  "kyuubiki-protocol",
  "libc",

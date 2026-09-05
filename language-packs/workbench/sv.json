@@ -4,9 +4,9 @@
   "language": "sv",
   "targetSurface": "workbench",
   "name": "Swedish Workbench Core",
-  "version": "2.17.0",
-  "versionLine": "moxi 2.x",
-  "targetAppVersion": "2.17.0",
+  "version": "3.0.0",
+  "versionLine": "daji 3.x",
+  "targetAppVersion": "3.0.0",
   "source": "downloaded",
   "updatedAt": "2026-07-22T02:54:58.165Z",
   "description": "Swedish UI translations for Workbench navigation, workflow, store, and system surfaces.",
@@ -29,6 +29,7 @@
     }
   ],
   "overrides": {
+    "workflowStorageWriteFailedLabel": "Det gick inte att spara lokala arbetsflödesdata. Kontrollera tillgängligt lagringsutrymme och försök igen.",
     "title": "Kyuubiki Workbench · Svenska",
     "subtitle": "Arbetsyta för simulering, workflows och agenter.",
     "rail": {

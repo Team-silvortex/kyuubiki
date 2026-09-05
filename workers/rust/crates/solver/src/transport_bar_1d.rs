@@ -1,4 +1,4 @@
-use crate::chain_tridiagonal::{is_indexed_chain, solve_with_prescribed};
+use crate::chain_tridiagonal::solve_path_with_prescribed;
 use crate::linear_dense::{solve_linear_system, zero_matrix};
 use crate::transport_bar_1d_validation::validate_request;
 use kyuubiki_protocol::{
@@ -6,12 +6,26 @@ use kyuubiki_protocol::{
     SolveAdvectionDiffusionBar1dRequest, SolveAdvectionDiffusionBar1dResult,
 };
 
+const MAX_DENSE_NETWORK_NODES: usize = 512;
+
 pub fn solve_advection_diffusion_bar_1d(
     request: &SolveAdvectionDiffusionBar1dRequest,
 ) -> Result<SolveAdvectionDiffusionBar1dResult, String> {
     validate_request(request)?;
+    solve_validated_advection_diffusion_bar_1d(request.clone())
+}
 
-    let concentrations = solve_concentrations(request)?;
+pub fn solve_advection_diffusion_bar_1d_owned(
+    request: SolveAdvectionDiffusionBar1dRequest,
+) -> Result<SolveAdvectionDiffusionBar1dResult, String> {
+    validate_request(&request)?;
+    solve_validated_advection_diffusion_bar_1d(request)
+}
+
+fn solve_validated_advection_diffusion_bar_1d(
+    request: SolveAdvectionDiffusionBar1dRequest,
+) -> Result<SolveAdvectionDiffusionBar1dResult, String> {
+    let concentrations = solve_concentrations(&request)?;
 
     let nodes = request
         .nodes
@@ -73,7 +87,7 @@ pub fn solve_advection_diffusion_bar_1d(
         .fold(0.0_f64, f64::max);
 
     Ok(SolveAdvectionDiffusionBar1dResult {
-        input: request.clone(),
+        input: request,
         nodes,
         elements,
         max_concentration,
@@ -99,45 +113,31 @@ fn solve_concentrations(request: &SolveAdvectionDiffusionBar1dRequest) -> Result
         })
         .collect::<Vec<_>>();
 
-    if is_indexed_chain(
+    if let Some(result) = solve_path_with_prescribed(
         size,
-        request
-            .elements
-            .iter()
-            .map(|element| (element.node_i, element.node_j)),
-    ) {
-        let mut diagonal = vec![0.0; size];
-        let mut lower = vec![0.0; size - 1];
-        let mut upper = vec![0.0; size - 1];
-        for element in &request.elements {
+        &request.elements,
+        |element| (element.node_i, element.node_j),
+        |element| {
             let node_i = &request.nodes[element.node_i];
             let node_j = &request.nodes[element.node_j];
             let length = (node_j.x - node_i.x).abs();
             let diffusion = element.diffusivity * element.area / length;
             let advection = element.velocity * element.area * 0.5;
-            let local = [
+            Ok([
                 [diffusion - advection, -diffusion + advection],
                 [-diffusion - advection, diffusion + advection],
-            ];
-            let map = [element.node_i, element.node_j];
-            for row in 0..2 {
-                for column in 0..2 {
-                    let row_index = map[row];
-                    let column_index = map[column];
-                    if row_index == column_index {
-                        diagonal[row_index] += local[row][column];
-                    } else {
-                        let left = row_index.min(column_index);
-                        if row_index == left {
-                            upper[left] += local[row][column];
-                        } else {
-                            lower[left] += local[row][column];
-                        }
-                    }
-                }
-            }
-        }
-        return solve_with_prescribed(&diagonal, &lower, &upper, &rhs, &prescribed);
+            ])
+        },
+        &rhs,
+        &prescribed,
+    ) {
+        return result;
+    }
+
+    if size > MAX_DENSE_NETWORK_NODES {
+        return Err(format!(
+            "1d advection-diffusion non-path network has {size} nodes; the dense fallback supports at most {MAX_DENSE_NETWORK_NODES}"
+        ));
     }
 
     let mut matrix = zero_matrix(size);
