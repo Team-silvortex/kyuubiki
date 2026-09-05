@@ -2,6 +2,39 @@ use serde_json::{Value, json};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+pub(super) const EXACT_VERSION_FILES: &[&str] = &[
+    "assets/brand/brand.json",
+    "apps/frontend/package.json",
+    "apps/frontend/public/brand.json",
+    "apps/hub-gui/package.json",
+    "apps/hub-gui/src-tauri/Cargo.toml",
+    "apps/hub-gui/src-tauri/tauri.conf.json",
+    "apps/hub-gui/ui/assets/brand.json",
+    "apps/workbench-gui/package.json",
+    "apps/workbench-gui/src-tauri/Cargo.toml",
+    "apps/workbench-gui/src-tauri/tauri.conf.json",
+    "apps/workbench-gui/ui/assets/brand.json",
+    "apps/installer-gui/package.json",
+    "apps/installer-gui/src-tauri/Cargo.toml",
+    "apps/installer-gui/src-tauri/tauri.conf.json",
+    "apps/installer-gui/ui/assets/brand.json",
+    "apps/web/mix.exs",
+    "workers/rust/Cargo.toml",
+    "sdks/rust/Cargo.toml",
+    "sdks/python/pyproject.toml",
+    "sdks/elixir/mix.exs",
+];
+pub(super) const PACKAGE_LOCK_FILES: &[&str] = &[
+    "apps/frontend/package-lock.json",
+    "apps/hub-gui/package-lock.json",
+    "apps/workbench-gui/package-lock.json",
+    "apps/installer-gui/package-lock.json",
+];
+pub(super) const ARCHITECTURE_VERSION_LINE_FILES: &[&str] = &[
+    "config/architecture/module-topology.json",
+    "config/architecture/module-function-coverage-matrix.json",
+];
+
 const SKIP_DIRS: &[&str] = &[".git", "node_modules", "target", ".next", "dist", "build"];
 const SCAN_ROOTS: &[&str] = &[
     "README.md",
