@@ -315,6 +315,122 @@
         </p>
       </section>
 
+      <section class="docs-card docs-section" id="sweep-target-integrity">
+        <h2>Parameter sweep target integrity</h2>
+        <p class="docs-copy">
+          Active quality-sweep materialization and direct expansion validate
+          labels and resolve every target against the base model before
+          generating cases. Invalid targets return the axis index, full path,
+          and reason. A generated case's <code>parameters</code> must describe
+          the values actually assigned to its <code>model</code>.
+        </p>
+        <ul class="docs-list">
+          <li>Paths use nonempty dot-separated segments, for example
+            <code>nodes.2.load.1</code>. Objects use literal field names, including
+            numeric names. Arrays use bounded, nonnegative decimal indices;
+            final array elements, nested arrays, and root arrays are writable.
+            Negative indices, signs, append markers, and out-of-range indices
+            are rejected.</li>
+          <li>All parent containers must already exist. A final object field
+            may be inserted; missing parents are never created implicitly.
+            An array assignment replaces an existing element without resizing
+            the array. Dot characters within object field names are not escaped
+            by this path syntax.</li>
+          <li>Labels default to the trimmed path only when absent. Supplied
+            labels must be nonblank strings and unique across all axes,
+            including implicit labels. Duplicate labels cannot merge parameter
+            records or substitute another axis's value.</li>
+          <li>Targets must be disjoint. Duplicate targets and ancestor/descendant
+            pairs such as <code>material</code> and
+            <code>material.density</code> are rejected regardless of axis order.
+            Decimal array aliases such as <code>cells.0</code> and
+            <code>cells.00</code> resolve to the same target, while numeric object
+            keys <code>0</code> and <code>00</code> remain distinct.</li>
+          <li>Paths are resolved once per expansion, not reparsed for every
+            case. Iterative Cartesian enumeration preserves last-axis-fastest
+            ordering, case IDs, labels, and metadata without recursive stack
+            growth proportional to axis count.</li>
+        </ul>
+        <p class="docs-copy">
+          Regression evidence includes 8192 single-valued axes, the quality
+          planning/materialization/expansion chain, explicit branch recovery,
+          and array-load cases passed to the cohesive mesh solver. The latter
+          compare against manually constructed inputs and uniform elastic
+          opening values. These bounded checks are not broad solver validation
+          or large-scale simulation throughput measurements.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section" id="sweep-result-evidence">
+        <h2>Sweep result identity and summary evidence</h2>
+        <p class="docs-copy">
+          Joining execution results is an identity boundary, not a best-effort
+          array merge. Every case must receive its own usable result before
+          the batch can be summarized, scored, and used to plan another round.
+          Malformed identities, configuration, and declared counts are errors.
+        </p>
+        <ul class="docs-list">
+          <li>Case and result IDs accept <code>id</code>, <code>case_id</code>,
+            and <code>caseId</code>; supplied aliases must be nonblank strings
+            and agree. Duplicate IDs are rejected. Cases without an ID receive
+            <code>case_&lt;index&gt;</code>, checked for collisions with explicit
+            IDs. Keyed results use one indexed lookup and never fall back to
+            array position when a case's result is missing.</li>
+          <li>Positional matching is permitted only for an entirely unlabelled
+            result batch with exactly one result per case. Mixing keyed and
+            unlabelled results is an error. Positional mode cannot detect
+            reordered results: distributed callers should supply stable case
+            IDs. The output reports <code>matching_mode</code>.</li>
+          <li>A selected summary must be an object. Supplied statuses must be
+            <code>ok</code>, <code>success</code>, <code>succeeded</code>,
+            <code>completed</code>, <code>complete</code>, <code>done</code>, or
+            <code>joined</code>; a non-null error rejects the result even with
+            a successful status. Status-only envelopes are not summaries.
+            Missing or rejected results cannot retain a previous run's
+            <code>summary</code> or <code>result</code> alias.</li>
+          <li>With <code>strict: false</code> (the default), the join preserves
+            diagnostics in <code>missing_case_ids</code>,
+            <code>rejected_results</code>, and <code>unmatched_result_ids</code>,
+            with their counts. Rejected results also count as missing usable
+            summaries. Any missing, rejected, or unmatched result sets
+            <code>join_complete: false</code>. Strict mode returns an error
+            instead. Neither mode authorizes scoring an incomplete batch.</li>
+          <li>An explicit join <code>summary_field</code> selects only that
+            result field, without silently trying other payloads. A custom
+            <code>output_field</code> is recorded as
+            <code>joined_summary_field</code> and inherited by the summarizer;
+            an explicit summarizer selection must agree. Identity, model,
+            parameters, metadata, and result-status fields cannot be used as
+            join output fields.</li>
+          <li>Summary field selections must be nonempty, unique, nonblank
+            strings, or are inferred from the union of summary keys. Metrics
+            cannot replace the row's <code>case_id</code>,
+            <code>parameters</code>, or <code>metadata</code>. Missing and null
+            metrics fail by default. A field numeric in one case cannot
+            silently become text in another and shrink the aggregate sample.</li>
+          <li><code>fail_on_missing: false</code> permits diagnostic rows with
+            <code>summary_complete: false</code>,
+            <code>missing_field_count</code>, and <code>missing_fields</code>.
+            Such rows are not scoreable. Finite signed numeric values and
+            present text fields remain supported. Numeric accumulation checks
+            count and sum overflow; non-finite intermediate sums return an
+            error instead of JSON null or a reset accumulator.</li>
+          <li>Declared case, joined-summary, and row counts must match the
+            actual batch. A claimed complete flag cannot override nonzero
+            missing/rejected/unmatched evidence or contradictory counts.
+            Explicit workflow recovery preserves failed-node diagnostics and
+            independent branches, while dependent scoring and replanning nodes
+            are skipped rather than given synthetic successful results.</li>
+        </ul>
+        <p class="docs-copy">
+          Regression evidence covers 4096 reverse-ordered keyed results,
+          retries, custom summary fields, malformed identities, overflow,
+          diagnostic-only summaries, and the full join-to-replanning chain.
+          These are bounded contract and recovery checks, not a throughput
+          benchmark or independent physical validation of the solver.
+        </p>
+      </section>
+
       <section class="docs-card docs-section">
         <h2>Primary sources</h2>
         <div class="docs-links">

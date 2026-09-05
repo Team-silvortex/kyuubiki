@@ -1,5 +1,6 @@
 use serde_json::Value;
 
+use crate::workflow_sweep_axes::prepare_sweep_axes;
 use crate::workflow_sweep_contract::{
     actual_case_count, bool_option, count_option, object_or_null, refreshed_budget,
 };
@@ -60,6 +61,9 @@ pub fn materialize_quality_sweep_expansion(payload: Value, config: Value) -> Res
     };
     let sweep_budget = refreshed_budget(upstream_budget, case_count, max_cases, upstream_blocked);
     let expansion_budget_ready = !upstream_blocked && case_count <= max_cases;
+    if expansion_budget_ready {
+        prepare_sweep_axes(&base, axes)?;
+    }
     let expansion_blocking_reason = if expansion_budget_ready {
         Value::Null
     } else {

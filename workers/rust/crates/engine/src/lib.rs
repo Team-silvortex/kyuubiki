@@ -52,7 +52,10 @@ mod workflow_security;
 mod workflow_solve_executor;
 mod workflow_summary_transforms;
 mod workflow_summary_validation;
+mod workflow_sweep_axes;
 mod workflow_sweep_contract;
+mod workflow_sweep_join;
+mod workflow_sweep_summary;
 mod workflow_topology;
 
 #[cfg(test)]
