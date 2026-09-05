@@ -16,6 +16,10 @@
     { "stem": "spring-cage", "family": "spring3d" },
     { "stem": "nonlinear-spring-chain", "family": "nonlinear_spring1d" },
     { "stem": "contact-gap-chain", "family": "contact_gap1d" },
+    { "stem": "cohesive-interface-1d", "family": "cohesive_interface1d" },
+    { "stem": "cohesive-interface-2d", "family": "cohesive_interface2d" },
+    { "stem": "cohesive-interface-mesh-2d", "family": "cohesive_interface_mesh2d" },
+    { "stem": "cohesive-interface-mesh-3d", "family": "cohesive_interface_mesh3d" },
     { "stem": "beam-line", "family": "beam1d" },
     { "stem": "thermal-beam-line", "family": "thermal_beam1d" },
     { "stem": "frame-2d", "family": "frame2d" },
@@ -133,6 +137,11 @@
     {
       "name": "dynamic-response",
       "template_stems": ["transient-heat-bar", "transient-spring-chain", "harmonic-spring-chain"],
+      "owned_templates": []
+    },
+    {
+      "name": "cohesive-interface",
+      "template_stems": ["cohesive-interface-1d", "cohesive-interface-2d", "cohesive-interface-mesh-2d", "cohesive-interface-mesh-3d"],
       "owned_templates": []
     },
     {

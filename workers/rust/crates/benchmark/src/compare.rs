@@ -483,6 +483,7 @@ mod tests {
             dof_count: 1,
             node_count: 1,
             element_count: 1,
+            history_step_count: None,
             peak_rss_kib: 1024,
             memory_stages: Vec::new(),
             solver_iterations: None,

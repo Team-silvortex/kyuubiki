@@ -80,6 +80,20 @@ pub(crate) fn workload_shape(workload: &BenchmarkWorkload) -> (usize, usize, usi
             request.elements.len(),
             request.nodes.len(),
         ),
+        BenchmarkWorkload::CohesiveInterface1d(_) => (2, 1, 1),
+        BenchmarkWorkload::CohesiveInterface2d(request) => {
+            (request.nodes.len(), 1, request.nodes.len() * 2)
+        }
+        BenchmarkWorkload::CohesiveInterfaceMesh2d(request) => (
+            request.nodes.len(),
+            request.elements.len(),
+            request.nodes.len() * 2,
+        ),
+        BenchmarkWorkload::CohesiveInterfaceMesh3d(request) => (
+            request.nodes.len(),
+            request.elements.len(),
+            request.nodes.len() * 3,
+        ),
         BenchmarkWorkload::Beam1d(request) => (
             request.nodes.len(),
             request.elements.len(),

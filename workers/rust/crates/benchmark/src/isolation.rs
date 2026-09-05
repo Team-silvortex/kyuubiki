@@ -177,6 +177,7 @@ fn failed_child_result(
         dof_count: 0,
         node_count: 0,
         element_count: 0,
+        history_step_count: None,
         peak_rss_kib: 0,
         memory_stages: Vec::new(),
         solver_iterations: None,

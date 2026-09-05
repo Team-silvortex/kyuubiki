@@ -42,6 +42,7 @@ pub(crate) fn apply_metrics(
     node_count: &mut usize,
     element_count: &mut usize,
     dof_count: &mut usize,
+    history_step_count: &mut Option<usize>,
     max_displacement: &mut f64,
     max_stress: &mut f64,
     memory_stages: &mut Vec<BenchmarkMemoryStage>,
@@ -53,6 +54,9 @@ pub(crate) fn apply_metrics(
     *node_count = metrics.node_count;
     *element_count = metrics.element_count;
     *dof_count = metrics.dof_count;
+    if metrics.history_step_count.is_some() {
+        *history_step_count = metrics.history_step_count;
+    }
     *max_displacement = metrics.max_displacement;
     *max_stress = metrics.max_stress;
 

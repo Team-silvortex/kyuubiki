@@ -89,6 +89,21 @@ fn dynamic_response_matrix_keeps_experimental_cases_out_of_the_release_gate() {
     );
 }
 
+#[test]
+fn cohesive_interface_matrix_keeps_bounded_cases_out_of_the_release_gate() {
+    let spec = default_catalog_spec();
+    let interface = select_matrix_spec(&spec, "cohesive-interface");
+    let qualified = select_matrix_spec(&spec, "physics-coverage");
+
+    assert_eq!(interface.template_stems.len(), 4);
+    assert!(
+        interface
+            .template_stems
+            .iter()
+            .all(|stem| !qualified.template_stems.contains(stem))
+    );
+}
+
 fn catalog_spec(templates: Vec<CaseTemplateSpec>) -> BenchmarkCatalogSpec {
     BenchmarkCatalogSpec {
         templates,

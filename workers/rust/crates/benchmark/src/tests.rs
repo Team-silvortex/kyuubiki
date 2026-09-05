@@ -95,7 +95,7 @@ mod tests {
     fn default_catalog_spec_covers_all_profiles() {
         let spec = default_catalog_spec();
 
-        assert_eq!(spec.templates.len(), 48);
+        assert_eq!(spec.templates.len(), 52);
         assert!(spec.matrices.len() >= 10);
         assert_eq!(spec.profiles.len(), 12);
         assert!(spec
@@ -320,6 +320,7 @@ mod tests {
             "stability-screening",
             "material-integration",
             "dynamic-response",
+            "cohesive-interface",
         ]
             .into_iter()
             .flat_map(|name| {

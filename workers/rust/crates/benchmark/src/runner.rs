@@ -19,6 +19,7 @@ use crate::models::{
 use crate::runner_dynamic::run_dynamic_workload;
 use crate::runner_electromagnetic::run_electromagnetic_workload;
 use crate::runner_hotspot::summarize_hotspot;
+use crate::runner_interface::run_interface_workload;
 use crate::runner_metrics::{aggregate_memory_stage_runs, apply_metrics};
 use crate::runner_preconditioner::{
     effective_preconditioner, parse_preconditioner, preconditioner_comparisons,
@@ -108,6 +109,7 @@ pub(crate) fn run_case_with_preconditioner(
 ) -> BenchmarkResult {
     let mut durations = Vec::with_capacity(repeat);
     let (mut node_count, mut element_count, mut dof_count) = workload_shape(&case.workload);
+    let mut history_step_count = None;
     let mut max_displacement = 0.0;
     let mut max_stress = 0.0;
     let mut peak_rss_kib = current_peak_rss_kib();
@@ -121,7 +123,8 @@ pub(crate) fn run_case_with_preconditioner(
 
     for _ in 0..repeat {
         let started = Instant::now();
-        let delegated = run_dynamic_workload(&case.workload)
+        let delegated = run_interface_workload(&case.workload)
+            .or_else(|| run_dynamic_workload(&case.workload))
             .or_else(|| {
                 run_thermal_structural_workload(&case.workload, solver_preconditioner, progress)
             })
@@ -135,6 +138,7 @@ pub(crate) fn run_case_with_preconditioner(
                     &mut node_count,
                     &mut element_count,
                     &mut dof_count,
+                    &mut history_step_count,
                     &mut max_displacement,
                     &mut max_stress,
                     &mut memory_stages,
@@ -712,6 +716,7 @@ pub(crate) fn run_case_with_preconditioner(
         dof_count,
         node_count,
         element_count,
+        history_step_count,
         peak_rss_kib,
         memory_stages,
         solver_iterations,

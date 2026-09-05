@@ -34,6 +34,18 @@ pub(crate) fn workflow_payload_for_case(case: &BenchmarkCase) -> (&'static str, 
             payload("solve.nonlinear_spring_1d", request)
         }
         BenchmarkWorkload::ContactGap1d(request) => payload("solve.contact_gap_1d", request),
+        BenchmarkWorkload::CohesiveInterface1d(request) => {
+            payload("solve.cohesive_interface_1d", request)
+        }
+        BenchmarkWorkload::CohesiveInterface2d(request) => {
+            payload("solve.cohesive_interface_2d", request)
+        }
+        BenchmarkWorkload::CohesiveInterfaceMesh2d(request) => {
+            payload("solve.cohesive_interface_mesh_2d", request)
+        }
+        BenchmarkWorkload::CohesiveInterfaceMesh3d(request) => {
+            payload("solve.cohesive_interface_mesh_3d", request)
+        }
         BenchmarkWorkload::Beam1d(request) => payload("solve.beam_1d", request),
         BenchmarkWorkload::ThermalBeam1d(request) => payload("solve.thermal_beam_1d", request),
         BenchmarkWorkload::Frame2d(request) => payload("solve.frame_2d", request),

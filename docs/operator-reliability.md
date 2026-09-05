@@ -1040,6 +1040,21 @@ profile rather than the release-gated reliability manifest. That manifest only
 accepts physics-coverage operators with retained qualification evidence; adding
 a new ad hoc `screening` coverage level would weaken the gate instead of
 describing the current claim honestly.
+Their separate `cohesive-interface` benchmark matrix now exercises all four
+native Engine and workflow paths with bounded constitutive histories and the
+retained 2D/3D sparse shapes. It supplies repeatable performance visibility,
+but does not promote these component claims into release qualification.
+
+`solve.electric_conduction_plane_quad_2d` now has an explicit component
+validation profile rather than relying on scattered implementation tests. The
+profile retains a rotated Ohmic rectangle closed form, four mesh-refinement
+levels, current and power conservation, malformed quad rejection, Agent RPC,
+Engine Workflow, and Rust headless discovery. Its quad preflight rejects
+repeated connectivity, degenerate triangles, and inconsistent split-triangle
+orientation before assembly. This is screening evidence only; nonlinear,
+anisotropic, transient, induction/skin-effect, and coupled thermal feedback
+claims remain outside the operator, and release promotion still requires
+versioned provenance plus reviewer-approved retained evidence.
 
 `solve.frame_3d` is now qualified for the current single-member cantilever
 scope. The retained evidence derives the Euler-Bernoulli displacement, slope,

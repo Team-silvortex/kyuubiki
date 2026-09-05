@@ -468,6 +468,17 @@ Use these entrypoints:
 - `cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix dynamic-response --repeat 1`
   Run isolated transient-heat, transient-spring, and harmonic-spring Engine
   probes without promoting the experimental dynamic lane into qualification.
+- `cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix cohesive-interface --repeat 1`
+  Run the 1D/2D constitutive and 2D/3D assembled cohesive-interface paths
+  through isolated native Engine processes. History workloads cap at 4096
+  steps; mesh workloads retain their actual bounded 512-node contract rather
+  than inheriting a misleading profile-scale node claim. JSON reports expose
+  the executed count as `history_step_count`.
+- `cd workers/rust && cargo run -q -p kyuubiki-script-runner -- check-operator-validation --execute --profile electric-conduction-plane-quad-screening`
+  Execute the electric-conduction component dossier: rotated closed form, mesh
+  refinement, malformed topology, Agent RPC, Engine Workflow, and Rust
+  headless-contract checks. Passing this profile does not add the operator to
+  the release-qualified `physics-coverage` matrix.
 - `cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix thermal-structural --repeat 1`
   Run the coupled thermal-structural smoke matrix for thermal bar/truss/plane,
   static frame, and thermal frame families.

@@ -400,16 +400,16 @@ fn validate_request(request: &SolveElectricConductionPlaneQuad2dRequest) -> Resu
     let node_count = request.nodes.len();
     let mut element_ids = HashSet::new();
     if request.elements.iter().any(|element| {
+        let node_indices = [
+            element.node_i,
+            element.node_j,
+            element.node_k,
+            element.node_l,
+        ];
         element.id.trim().is_empty()
             || !element_ids.insert(element.id.as_str())
-            || [
-                element.node_i,
-                element.node_j,
-                element.node_k,
-                element.node_l,
-            ]
-            .iter()
-            .any(|index| *index >= node_count)
+            || node_indices.iter().any(|index| *index >= node_count)
+            || !has_unique_quad_nodes(node_indices)
             || !element.thickness.is_finite()
             || element.thickness <= 0.0
             || !element.electrical_conductivity_s_m.is_finite()
@@ -417,8 +417,45 @@ fn validate_request(request: &SolveElectricConductionPlaneQuad2dRequest) -> Resu
     }) {
         return Err("electric conduction element parameters are invalid".to_string());
     }
+    if request
+        .elements
+        .iter()
+        .any(|element| !has_consistent_quad_orientation(request, element))
+    {
+        return Err("electric conduction quad geometry is invalid".to_string());
+    }
     validate_interfaces(request)?;
     Ok(())
+}
+
+fn has_unique_quad_nodes(nodes: [usize; 4]) -> bool {
+    nodes
+        .iter()
+        .enumerate()
+        .all(|(index, node)| !nodes[..index].contains(node))
+}
+
+fn has_consistent_quad_orientation(
+    request: &SolveElectricConductionPlaneQuad2dRequest,
+    element: &ElectricConductionPlaneQuadElementInput,
+) -> bool {
+    let points = [
+        conduction_point(request, element.node_i),
+        conduction_point(request, element.node_j),
+        conduction_point(request, element.node_k),
+        conduction_point(request, element.node_l),
+    ];
+    let first = signed_twice_area(points[0], points[1], points[2]);
+    let second = signed_twice_area(points[0], points[2], points[3]);
+    first.is_finite()
+        && second.is_finite()
+        && first.abs() > 2.0e-12
+        && second.abs() > 2.0e-12
+        && first.signum() == second.signum()
+}
+
+fn signed_twice_area(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> f64 {
+    (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])
 }
 
 #[cfg(test)]

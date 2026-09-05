@@ -1,6 +1,8 @@
 use kyuubiki_protocol::{
     SolveAcousticBar1dRequest, SolveAdvectionDiffusionBar1dRequest, SolveBarRequest,
     SolveBeam1dRequest, SolveBucklingBeam1dRequest, SolveBucklingFrame2dRequest,
+    SolveCohesiveInterface1dRequest, SolveCohesiveInterface2dRequest,
+    SolveCohesiveInterfaceMesh2dRequest, SolveCohesiveInterfaceMesh3dRequest,
     SolveContactGap1dRequest, SolveElectricConductionPlaneQuad2dRequest,
     SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
     SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dMaterialPDeltaRequest,
@@ -50,6 +52,10 @@ pub(crate) enum BenchmarkWorkload {
     Spring3d(SolveSpring3dRequest),
     NonlinearSpring1d(SolveNonlinearSpring1dRequest),
     ContactGap1d(SolveContactGap1dRequest),
+    CohesiveInterface1d(SolveCohesiveInterface1dRequest),
+    CohesiveInterface2d(SolveCohesiveInterface2dRequest),
+    CohesiveInterfaceMesh2d(SolveCohesiveInterfaceMesh2dRequest),
+    CohesiveInterfaceMesh3d(SolveCohesiveInterfaceMesh3dRequest),
     Beam1d(SolveBeam1dRequest),
     ThermalBeam1d(SolveThermalBeam1dRequest),
     Frame2d(SolveFrame2dRequest),
@@ -122,6 +128,8 @@ pub(crate) struct BenchmarkResult {
     pub(crate) dof_count: usize,
     pub(crate) node_count: usize,
     pub(crate) element_count: usize,
+    #[serde(default)]
+    pub(crate) history_step_count: Option<usize>,
     pub(crate) peak_rss_kib: u64,
     #[serde(default)]
     pub(crate) memory_stages: Vec<BenchmarkMemoryStage>,

@@ -35,6 +35,22 @@ fn default_templates() -> Vec<CaseTemplateSpec> {
         template("spring-cage", BenchmarkFamily::Spring3d),
         template("nonlinear-spring-chain", BenchmarkFamily::NonlinearSpring1d),
         template("contact-gap-chain", BenchmarkFamily::ContactGap1d),
+        template(
+            "cohesive-interface-1d",
+            BenchmarkFamily::CohesiveInterface1d,
+        ),
+        template(
+            "cohesive-interface-2d",
+            BenchmarkFamily::CohesiveInterface2d,
+        ),
+        template(
+            "cohesive-interface-mesh-2d",
+            BenchmarkFamily::CohesiveInterfaceMesh2d,
+        ),
+        template(
+            "cohesive-interface-mesh-3d",
+            BenchmarkFamily::CohesiveInterfaceMesh3d,
+        ),
         template("beam-line", BenchmarkFamily::Beam1d),
         template("thermal-beam-line", BenchmarkFamily::ThermalBeam1d),
         template("frame-2d", BenchmarkFamily::Frame2d),
@@ -187,6 +203,16 @@ fn default_matrices() -> Vec<BenchmarkMatrixSpec> {
                 "transient-heat-bar",
                 "transient-spring-chain",
                 "harmonic-spring-chain",
+            ],
+            vec![],
+        ),
+        matrix(
+            "cohesive-interface",
+            &[
+                "cohesive-interface-1d",
+                "cohesive-interface-2d",
+                "cohesive-interface-mesh-2d",
+                "cohesive-interface-mesh-3d",
             ],
             vec![],
         ),

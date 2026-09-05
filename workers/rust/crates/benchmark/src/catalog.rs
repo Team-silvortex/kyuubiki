@@ -23,6 +23,10 @@ use crate::{
         generate_magnetostatic_quad_panel, generate_magnetostatic_triangle_panel,
         generate_stokes_quad_panel, generate_stokes_triangle_panel, generate_torsion_case,
     },
+    generators_interface::{
+        generate_cohesive_interface_1d_case, generate_cohesive_interface_2d_case,
+        generate_cohesive_interface_mesh_2d_case, generate_cohesive_interface_mesh_3d_case,
+    },
     generators_structural::{
         generate_beam_1d_case, generate_buckling_beam_1d_case, generate_buckling_frame_2d_case,
         generate_contact_gap_1d_case, generate_frame_2d_corotational_case,
@@ -94,6 +98,10 @@ pub(crate) enum BenchmarkFamily {
     Spring3d,
     NonlinearSpring1d,
     ContactGap1d,
+    CohesiveInterface1d,
+    CohesiveInterface2d,
+    CohesiveInterfaceMesh2d,
+    CohesiveInterfaceMesh3d,
     Beam1d,
     ThermalBeam1d,
     Frame2d,
@@ -364,6 +372,34 @@ fn build_case(template: &CaseTemplateSpec, profile: &ProfileScaleSpec) -> Benchm
             workload: BenchmarkWorkload::ContactGap1d(generate_contact_gap_1d_case(
                 profile.axial_elements,
             )),
+        },
+        BenchmarkFamily::CohesiveInterface1d => BenchmarkCase {
+            id,
+            family: "cohesive_interface_1d",
+            workload: BenchmarkWorkload::CohesiveInterface1d(generate_cohesive_interface_1d_case(
+                profile.axial_elements,
+            )),
+        },
+        BenchmarkFamily::CohesiveInterface2d => BenchmarkCase {
+            id,
+            family: "cohesive_interface_2d",
+            workload: BenchmarkWorkload::CohesiveInterface2d(generate_cohesive_interface_2d_case(
+                profile.axial_elements,
+            )),
+        },
+        BenchmarkFamily::CohesiveInterfaceMesh2d => BenchmarkCase {
+            id,
+            family: "cohesive_interface_mesh_2d",
+            workload: BenchmarkWorkload::CohesiveInterfaceMesh2d(
+                generate_cohesive_interface_mesh_2d_case(profile.axial_elements),
+            ),
+        },
+        BenchmarkFamily::CohesiveInterfaceMesh3d => BenchmarkCase {
+            id,
+            family: "cohesive_interface_mesh_3d",
+            workload: BenchmarkWorkload::CohesiveInterfaceMesh3d(
+                generate_cohesive_interface_mesh_3d_case(profile.axial_elements),
+            ),
         },
         BenchmarkFamily::Beam1d => BenchmarkCase {
             id,

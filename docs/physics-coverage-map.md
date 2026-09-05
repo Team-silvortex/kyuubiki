@@ -212,11 +212,25 @@ smoke. Those operators remain outside the release-gated 38-operator
 `physics-coverage` qualification manifest until the dynamic line completes its
 accuracy and qualification evidence.
 
+The cohesive line now has its own `cohesive-interface` benchmark matrix. It
+executes the scalar history law, the four-node line kernel, and the assembled
+2D/3D sparse Newton paths through both Engine and workflow contracts. The
+history cases cap at 4096 contract steps, while the mesh cases cap at the
+retained 96-element 2D and 80-element 3D shapes under the current 512-node
+solver boundary. This closes the execution/performance blind spot without
+pretending that a `1m` profile suffix means a one-million-node interface mesh;
+the family remains outside release qualification until scalable continuation,
+mixed-mode laws, and retained promotion evidence are complete.
+
 The electric-conduction quad solver follows the same honest promotion rule. It
-is executable and benchmarked in `extended-physics`, including contact and
-terminal behavior in solver tests, but remains outside `physics-coverage` until
-its accuracy, review, and retained qualification artifacts form a complete
-evidence chain.
+is executable and benchmarked in `extended-physics`, and now has a dedicated
+`electric-conduction-plane-quad-screening` component profile. Its independent
+regressions retain a rotated Ohmic rectangle reference, `1 x 1` through
+`8 x 8` manufactured-field refinement, current/Joule/source-power balance,
+malformed topology rejection, Agent RPC, Engine Workflow, and Rust headless
+discovery. It remains outside `physics-coverage`: the component evidence has
+not yet acquired versioned tolerance/material provenance, retained release
+evidence, or reviewer approval.
 
 Across domains, `transform.compose_quality_objective` combines these
 single-domain quality scores into one weighted multiphysics objective. That

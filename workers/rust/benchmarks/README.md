@@ -40,6 +40,7 @@ cargo run --release -q -p kyuubiki-benchmark -- --profile 10k --matrix compound 
 cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix extended-physics --repeat 1
 cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix structural-extended --repeat 1
 cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix dynamic-response --repeat 1
+cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix cohesive-interface --repeat 1
 cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix thermal-structural --repeat 1
 cargo run --release -q -p kyuubiki-benchmark -- --profile medium --matrix physics-coverage --repeat 1
 make benchmark-baseline PROFILE=10k MATRIX=thermal REPEAT=3
@@ -110,6 +111,24 @@ performance guarantees. Reproduce the lane with:
 PROFILE=1m MATRIX=dynamic-response REPEAT=1 \
   OUTPUT_SLUG=dynamic-response-1m-isolated make benchmark-profile-remote
 ```
+
+The `cohesive-interface` matrix closes the benchmark blind spot across the
+scalar 1D traction-separation law, the four-node 2D constitutive kernel, and
+the assembled 2D/3D interface meshes. Constitutive histories scale with the
+selected profile but stop at the solver contract limit of 4096 steps. Mesh
+cases stop at the retained sparse-regression shapes of 96 2D elements/768 DOF
+and 80 3D elements/1440 DOF because both mesh solvers currently accept at most
+512 nodes. Case suffixes identify the requested profile tier; report
+`node_count`, `element_count`, `dof_count`, and `history_step_count` remain the
+authoritative actual shape. This matrix is an isolated performance and
+execution lane, not a 1M mesh claim, and remains outside `physics-coverage`
+qualification.
+
+The first process-isolated Linux lab run of the `1m` budget tier completed all
+four bounded cases in `6.492 ms` total median time with `8.5 MiB` peak RSS. The
+2D and 3D mesh cases retained two Newton iterations, `3072`/`8640` tangent
+nonzeros, and residuals below `8e-16`. These are host-specific smoke
+observations, not portable guarantees or million-node interface evidence.
 
 The `thermal-structural` matrix covers coupled thermal deformation and static
 frame families that need continuous performance visibility: thermal bar,
