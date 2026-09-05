@@ -14,14 +14,14 @@ fn operator_package_preflight_json_reports_admission_summary() {
         "accepted",
         "lab.accepted",
         "1.15.0",
-        "target/liblab_accepted.dylib",
+        "target/{lib_prefix}lab_accepted.{lib_extension}",
     );
     write_operator_package_manifest(
         &root,
         "future",
         "lab.future",
         "9.0.0",
-        "target/liblab_future.dylib",
+        "target/{lib_prefix}lab_future.{lib_extension}",
     );
 
     let report = operator_package_preflight_json(&root).unwrap();
@@ -39,6 +39,17 @@ fn operator_package_preflight_json_reports_admission_summary() {
     assert_eq!(
         payload["accepted_packages"][0]["package_id"],
         "lab.accepted"
+    );
+    assert_eq!(
+        Path::new(
+            payload["accepted_packages"][0]["entrypoint_path"]
+                .as_str()
+                .unwrap()
+        ),
+        root.join("accepted/target")
+            .join(kyuubiki_platform::current_platform_library_file_name(
+                "lab_accepted"
+            ))
     );
     assert_eq!(
         payload["accepted_packages"][0]["validation_status"],
@@ -71,7 +82,7 @@ fn operator_package_preflight_outcome_can_gate_readiness_warnings() {
         "unverified",
         "lab.unverified",
         "1.15.0",
-        "target/liblab_unverified.dylib",
+        "target/{lib_prefix}lab_unverified.{lib_extension}",
         "unverified",
     );
 
@@ -98,14 +109,14 @@ fn operator_package_preflight_outcome_can_gate_rejected_packages() {
         "accepted",
         "lab.accepted",
         "1.15.0",
-        "target/liblab_accepted.dylib",
+        "target/{lib_prefix}lab_accepted.{lib_extension}",
     );
     write_operator_package_manifest(
         &root,
         "future",
         "lab.future",
         "9.0.0",
-        "target/liblab_future.dylib",
+        "target/{lib_prefix}lab_future.{lib_extension}",
     );
 
     let outcome = operator_package_preflight(&root).unwrap();
@@ -129,7 +140,7 @@ fn operator_package_preflight_json_can_be_written_to_report_file() {
         "accepted",
         "lab.accepted",
         "1.15.0",
-        "target/liblab_accepted.dylib",
+        "target/{lib_prefix}lab_accepted.{lib_extension}",
     );
     let output_path = root.join("reports").join("preflight.json");
 
