@@ -43,6 +43,38 @@
         </p>
       </section>
 
+      <section class="docs-card docs-section" id="incremental-desktop-builds">
+        <h2>Incremental desktop builds</h2>
+        <ul class="docs-list">
+          <li>Hub, Workbench, and Installer remain separate applications. They
+            reuse the platform-scoped Cargo cache without merging their UI,
+            identities, or installation paths.</li>
+          <li>Child builds do not inherit the runner's Cargo package metadata.
+            Switching between <code>cargo run</code> and a directly launched
+            runner does not change that build context. Toolchain, linker, and
+            explicit compilation settings are preserved.</li>
+          <li>Shared TypeScript is checked on every build preparation. Resource
+            mirrors are written only when their content differs; unchanged
+            language packs and styles keep their timestamps. Stale generated
+            mirror files are removed without recreating the whole tree.</li>
+          <li>Full-set packaging moves artifacts into a same-filesystem staging
+            area, preserving executable permissions and framework symlinks.
+            A failed build restores the prior bundle set. An interrupted
+            staging area is retained for inspection, not silently deleted.</li>
+          <li>Local macOS iteration can use
+            <code>make desktop-build-host BUNDLES=app</code> to skip DMG creation.
+            Linux supports <code>BUNDLES=deb</code> and Windows
+            <code>BUNDLES=nsis</code> on their native hosts. Release verification
+            and signing requirements remain unchanged.</li>
+        </ul>
+        <p class="docs-copy">
+          Build output reports actual resource writes and per-shell elapsed
+          times. Unit tests cover content repair, stale-file cleanup, package
+          rollback, collisions, and filesystem metadata preservation. Native
+          installed-package qualification remains a separate requirement.
+        </p>
+      </section>
+
       <section class="docs-card docs-section">
         <h2>Primary sources</h2>
         <div class="docs-links">
@@ -52,6 +84,7 @@
           <a class="docs-link" href="./component-integrity-protocol.html">component-integrity-protocol.html</a>
           <a class="docs-link" href="./installation-integrity-contract.html">installation-integrity-contract.html</a>
           <a class="docs-link" href="./update-catalog.html">update-catalog.html</a>
+          <a class="docs-link" href="./packaging-and-deployment.md">packaging-and-deployment.md</a>
         </div>
       </section>
     </main>

@@ -5,6 +5,30 @@
   "paradigm_contract_evidence": {
     "deployment_update": [
       {
+        "id": "desktop-incremental-build-and-bundle-recovery",
+        "modules": ["hub-shell", "installer-shell", "workbench-shell"],
+        "files": [
+          "workers/rust/crates/script-runner/src/desktop.rs",
+          "workers/rust/crates/script-runner/src/desktop_asset_io.rs",
+          "workers/rust/crates/script-runner/src/desktop_shared_sync.rs",
+          "workers/rust/crates/script-runner/src/desktop_bundle_staging.rs",
+          "workers/rust/crates/script-runner/src/desktop_build_tests.rs",
+          "docs/book-ch07-trust-and-safety.html"
+        ],
+        "required_text": [
+          "child_build_drops_parent_package_context_but_preserves_build_configuration",
+          "unchanged_asset_sync_preserves_every_mirror_timestamp",
+          "changed_language_pack_updates_only_its_two_surface_mirrors",
+          "obsolete_mirrors_are_pruned_without_recreating_current_language_packs",
+          "equal_length_content_changes_are_not_hidden_by_timestamps",
+          "failed_build_restores_previous_packages_after_any_shell",
+          "existing_staging_is_never_deleted_by_another_build",
+          "bundle_collisions_fail_closed_and_previous_set_remains_recoverable",
+          "bundle_moves_preserve_inode_executable_mode_and_relative_symlinks",
+          "Incremental desktop builds"
+        ]
+      },
+      {
         "id": "desktop-deployment-update-qualification-contract",
         "modules": [
           "hub-shell",

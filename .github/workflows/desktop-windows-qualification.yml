@@ -66,6 +66,10 @@ jobs:
       - name: Install Workbench packaging tools
         working-directory: apps/workbench-gui
         run: npm ci
+      - name: Test incremental assets and desktop bundle recovery
+        run: >-
+          cargo test --locked --manifest-path workers/rust/Cargo.toml
+          -p kyuubiki-script-runner desktop_
       - name: Build all Windows desktop packages
         run: >-
           cargo run --locked --manifest-path workers/rust/Cargo.toml

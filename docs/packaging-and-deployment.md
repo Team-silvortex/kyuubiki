@@ -84,7 +84,7 @@ Use these commands when building deployable layouts:
   Stages the release scaffold and desktop manifests under `dist/<platform>`
 - `make desktop-build-host`
   Builds the `hub-gui`, `installer-gui`, and `workbench-gui` bundles for the current host using
-  one shared, platform-scoped Cargo cache
+one shared, platform-scoped Cargo cache
 - `make desktop-install-host`
   Installs the current three-shell set on the host. macOS stages, validates,
   and atomically replaces the fixed application bundles, restoring the prior
@@ -461,6 +461,59 @@ They share only Rust compilation intermediates at
 and Windows artifacts from contaminating one another, while the shared cache
 avoids compiling common Tauri and Kyuubiki crates three times on the same host.
 
+### Incremental assets and bundle staging
+
+Desktop child builds remove inherited Cargo package context such as
+`CARGO_MANIFEST_DIR`, `CARGO_PKG_*`, and `OUT_DIR`. Cargo supplies the child
+package's own values; launching the runner through `cargo run` or directly no
+longer invalidates native dependency build scripts just because the parent
+package context differs. Toolchain, linker, `RUSTFLAGS`, wrapper, job-count,
+and Cargo-home settings remain available. The desktop target directory remains
+the explicit platform-scoped shared cache.
+
+Shared TypeScript is still compiled and checked on every preparation pass, into
+a temporary directory. Generated JavaScript, shared styles, brand metadata,
+and surface-scoped language packs are compared by content before writing their
+canonical or shell mirrors. An unchanged file keeps its modification time;
+the language-pack trees are no longer deleted and copied back wholesale.
+Installer's accent stylesheet is composed before comparison, not appended on
+each run. Obsolete mirror entries are pruned, and modified mirrors are repaired
+even when their sizes or timestamps match. Sync output reports checked files,
+actual writes, and removed stale entries.
+
+`desktop-build-host` keeps the previous successful bundle set at
+`target/desktop-artifacts/<platform>/previous` while building the three shells.
+Each shell's output is moved into that staging directory, then combined and
+published at `target/desktop-cache/<platform>/release/bundle`. Moves are on the
+same filesystem: no second full copy, no rewritten binaries, and no discarded
+framework symlinks or executable permissions. Identical shared bundler helpers
+can coexist; conflicting same-name artifacts fail rather than overwrite.
+
+A returned build error or nonzero exit restores the previous bundle set and
+removes the incomplete set. If interrupted by process termination or power
+loss, an existing staging directory is preserved and a later build refuses to
+erase it. Inspect that directory and its `previous` set before recovery; it
+may also belong to an active build. Do not run individual shell builds in
+parallel with a full-set build against the same target directory. Source
+compilation caches are never cleared by this transaction. Cleanup failures
+after successful publication are reported with the remaining staging path.
+
+For local iteration, build only the native package format you need:
+
+```sh
+# macOS: native .app bundles without generating DMG images
+make desktop-build-host BUNDLES=app
+# Linux: .deb only; Windows: NSIS installers only (run on the matching host)
+make desktop-build-host BUNDLES=deb
+make desktop-build-host BUNDLES=nsis
+```
+
+Omit `BUNDLES` to retain all configured host formats. The direct equivalent is
+`./scripts/kyuubiki desktop-build-host --bundles <format>`. Per-shell and total
+elapsed times are printed. Release optimization, lockfile preflight, signing,
+and verification requirements are unchanged. These local iteration shortcuts
+are not a substitute for `desktop-release` or installed-package qualification.
+
 ## Recommended operator flow
 
 When packaging desktop deliverables, the smoothest path is now:
@@ -476,8 +529,9 @@ When packaging desktop deliverables, the smoothest path is now:
    `make desktop-build-host`
 5. prove that every packaged host shell reaches its interactive startup point:
    `make desktop-packaged-smoke PLATFORM=macos|linux|windows`
-6. run the integrated release pass for the current host:
-   `make desktop-release`
+6. for a distributable release, use `make desktop-release` as the build entry
+   instead of steps 3-4; it enforces distribution signing and verification.
+   Still perform the packaged startup probe in step 5 against that release build
 7. re-check descriptors and icon coverage:
    `make desktop-verify PLATFORM=all`
 
