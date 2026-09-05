@@ -246,7 +246,7 @@ export function renderIntegrityReport(report, brandConfig = null) {
 
   const headline =
     issues.length === 0
-      ? `Standard install contract is healthy for moxi ${releaseVersion}.`
+      ? `Standard install contract is healthy for daji ${releaseVersion}.`
       : `${issues.length} integrity issue${issues.length === 1 ? "" : "s"} need attention.`;
 
   const policyText =

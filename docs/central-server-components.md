@@ -1,6 +1,6 @@
 # Central Server Components
 
-`moxi 2.x` now has a preview contract for the future Kyuubiki central
+`daji 3.x` now has a preview contract for the future Kyuubiki central
 server. The central server is not the solver engine and not the desktop Hub. It
 is the distribution plane that can back self-hosted stores, publisher profiles,
 language-pack delivery, signed downloads, and optional external identity

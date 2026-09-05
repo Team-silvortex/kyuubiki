@@ -1,7 +1,7 @@
-# Weakness Roadmap For Moxi 2.x
+# Weakness Roadmap For Daji 3.x
 
 This document turns the current weak spots into a concrete roadmap for the
-remaining `moxi 2.x` hardening line.
+active `daji 3.x` product line.
 
 It complements:
 
@@ -23,7 +23,7 @@ The module/function/evidence tensor is now the first navigation gate for this
 roadmap. Run `make check-module-function-coverage-tensor` before claiming a
 roadmap area is closed.
 
-Current moxi baseline:
+Current Daji baseline:
 
 - `gap_count`: `0`
 - `blocking_gap_count`: `0`
@@ -616,7 +616,7 @@ Current weak point:
 - some limitations are documented in evidence packets, but they still need to
   become more product-visible in workflow previews and reports
 
-Current moxi hardening focus:
+Current Daji hardening focus:
 
 - keep every release-gated physics family at `qualification` without lowering
   the manifest minimum
@@ -804,7 +804,7 @@ Current weak point:
 - the remaining third-party gap is forward compatibility across future operator
   SDK API and ABI revisions
 
-Current moxi hardening focus:
+Current Daji hardening focus:
 
 - keep the operator crate template green with descriptor readiness tests
 - expose package readiness in Installer preflight JSON and CI gates
@@ -865,7 +865,7 @@ Current weak point:
   Installer-managed packages, then add long-running workflows and explicit
   database-network disruption
 
-Current moxi hardening focus:
+Current Daji hardening focus:
 
 - keep agent and orchestra authority modes explicit
 - ensure every agent execution failure reports a machine-readable reason
@@ -902,7 +902,7 @@ Current weak point:
   reaches agent engines must be language-neutral
 - the TaskIR surface still needs more golden examples and compatibility gates
 
-Current moxi hardening focus:
+Current Daji hardening focus:
 
 - keep TaskIR independent of UI, Phoenix, React, and Elixir-only runtime state
 - make package fetch, readiness, dispatch, and result serialization visible in
@@ -933,7 +933,7 @@ Current weak point:
   backend capabilities, but experience parity is not fully proven
 - Workbench still needs an obvious main workflow loop for serious users
 
-Current moxi hardening focus:
+Current Daji hardening focus:
 
 - keep GUI actions, headless flows, and Installer preflight aligned around the
   same backend reports
@@ -965,7 +965,7 @@ Current weak point:
   systematic around manifests, TaskIR, workflow datasets, credentials, and
   package loading
 
-Current moxi hardening focus:
+Current Daji hardening focus:
 
 - keep dynamic library loading behind explicit host policy
 - keep credential storage sandboxed and visible
@@ -998,7 +998,7 @@ Current weak point:
 - optimization metrics and reports need to feel like product primitives, not
   demo notes
 
-Current moxi hardening focus:
+Current Daji hardening focus:
 
 - keep the heat-spreader example reproducible
 - expand score contracts and feasibility explanations
@@ -1313,5 +1313,5 @@ observability limits, not arc-length solver size limits.
 ## 2.0 Boundary Rule
 
 If a capability cannot be made repeatable, inspectable, and honestly scoped
-before `moxi 2.0.0`, it should ship as an experimental or deferred `2.x`
+for the Daji readiness gate, it should remain an experimental or deferred
 capability rather than weakening the first trust line.

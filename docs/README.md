@@ -45,7 +45,7 @@ For the current `2.18.x` hardening path, keep five threads mentally linked:
 - orchestrated and direct-mesh runtime posture
 - task-oriented tutorials with explicit completion contracts
 
-`2.18.x` sits inside the active `moxi 2.x` hardening line. Documentation changes
+`3.0.0` starts the active `daji 3.x` product line. Documentation changes
 in this window should connect each capability to its contract, evidence,
 runtime owner, automation surface, and explicit limitation.
 
@@ -73,7 +73,7 @@ runtime owner, automation surface, and explicit limitation.
   Chapter pages for the centralized book, so the book can grow by section
   without turning the main entrypoint back into one oversized page.
 - `book-ch01-what-is-kyuubiki.html`
-- `book-ch02-moxi-line.html`
+- `book-ch02-version-line.html`
 - `book-ch03-architecture-boundaries.html`
 - `book-ch04-runtime-modes.html`
 - `book-ch05-workflow-and-operators.html`
@@ -122,7 +122,7 @@ runtime owner, automation surface, and explicit limitation.
 Then branch by intent:
 
 - `moxi-minor-lines.md`
-  Long-range `moxi 2.x` roadmap.
+  Historical Moxi roadmap; not the active Daji plan.
 - `commercial-readiness-2.0.md`
   Trust-gate checklist for deciding whether `2.0` can honestly ship as an
   early-commercial / research-partner line.
@@ -132,7 +132,7 @@ Then branch by intent:
 - `moxi-handoff.md`
   Historical gate that defined the transition into the `moxi 2.x` line.
 - `weakness-roadmap.md`
-  Current `moxi 2.x` weak-spot roadmap covering numerical trust, operator SDK
+  Current `daji 3.x` weak-spot roadmap covering numerical trust, operator SDK
   industrialization, agent/orchestra/mesh reliability, TaskIR stability,
   frontend/runtime consistency, security fuzz coverage, and the flagship
   material research loop.
@@ -143,7 +143,7 @@ Then branch by intent:
   Machine-readable gate map for the final `tamamono -> moxi` handoff checklist,
   validated by `make check-moxi-handoff`.
 - `minimal-industrial-closure.md`
-  Minimum industrial loop checklist carried into `moxi 2.x` as the practical
+  Minimum industrial loop checklist carried into `daji 3.x` as the practical
   closure gate for bounded research and early partner workflows.
 - `module-architecture.md`
   System-wide module map for product shells, control plane, runtime data
@@ -213,7 +213,7 @@ Then branch by intent:
 - `material-score-contract.manifest.json`
   Machine-readable material scoring contract paired with the Markdown note.
 - `physics-coverage-map.md`
-  `moxi 2.x` coverage map for broad solver-family execution coverage and the
+  `daji 3.x` coverage map for broad solver-family execution coverage and the
   reliability gates that protect engine and task-format contracts.
 - `workflow-graph.md`
   Multi-operator composition model for shader-like workflow growth.
@@ -225,7 +225,7 @@ Then branch by intent:
   Normative container, manifest, integrity, role, and evolution contract.
 - `installer-remote-control.md`
   Installer-owned remote deployment, certificate, mesh, and workflow-snapshot
-  control-surface note for the active `moxi 2.x` line.
+  control-surface note for the active `daji 3.x` line.
 - `remote-deployment-roadmap.html`
   Maturity roadmap for moving Installer remote deployment from policy-bounded
   SSH transport to a deployment service with plans, journals, artifact
@@ -243,6 +243,10 @@ Then branch by intent:
 
 ### Understand the system
 
+- `daji-3.0.0.md`
+  Current release-line transition, package identity, and verification limits.
+- `moxi-closeout.md`
+  Retained 2.x checkpoint and evidence scope, not fresh Daji qualification.
 - `current-line.md`
   Single-entry explanation of the current product line, boundaries, and
   release posture.
@@ -284,7 +288,7 @@ Then branch by intent:
 - `browser-storage-security-audit.html`
   Browser storage security review for frontend persistence and local state.
 - `project-architecture-organization.md`
-  Current `moxi 2.x` architecture organization map for Hub, Workbench,
+  Current `daji 3.x` architecture organization map for Hub, Workbench,
   Installer, Orchestra, Agent, SDKs, schemas, TaskIR, and line-limit cleanup
   boundaries.
 - `minimal-industrial-closure.md`
@@ -325,7 +329,7 @@ Then branch by intent:
 ### Verify changes
 
 - `version-line.md`
-  Current version-line note for `moxi 2.x`, including codename and major
+  Current version-line note for `daji 3.x`, including codename and major
   version policy.
 - `release-prep-1.9-to-1.20.md`
   Historical late-`tamamono` industrialization roadmap for the boundary
@@ -340,7 +344,7 @@ Then branch by intent:
   docs readiness before `2.0`.
 - `installer-remote-control.md`
   Source-of-truth note for the Installer remote control surface that now sits
-  inside the `moxi 2.x` trust-hardening and asset-formalization path.
+  inside the `daji 3.x` trust-hardening and asset-formalization path.
 - `component-integrity-protocol.html`
   Protocol page for adding new components without leaving required layout,
   brand metadata, protection, or cleanup behavior outside integrity coverage.

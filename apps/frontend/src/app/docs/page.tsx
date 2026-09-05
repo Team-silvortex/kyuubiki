@@ -5,7 +5,7 @@ import { KYUUBIKI_PRODUCT_VERSION_LABEL } from "@/lib/product-version";
 
 export const metadata: Metadata = {
   title: `Workflow Docs | ${KYUUBIKI_PRODUCT_VERSION_LABEL}`,
-  description: "Task tutorials plus architecture and contract references for the moxi workflow system.",
+  description: "Task tutorials plus architecture and contract references for the daji workflow system.",
 };
 
 const DOCS = [

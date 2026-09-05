@@ -12,29 +12,74 @@
     "next_line"
   ],
   "properties": {
-    "$schema": { "type": "string" },
+    "$schema": {
+      "type": "string"
+    },
     "schema_version": {
       "const": "kyuubiki.version-line-policy/v1"
     },
     "cadence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["minor_range", "patch_range"],
+      "required": [
+        "minor_range",
+        "patch_range"
+      ],
       "properties": {
-        "minor_range": { "$ref": "#/$defs/range" },
-        "patch_range": { "$ref": "#/$defs/range" }
+        "minor_range": {
+          "$ref": "#/$defs/range"
+        },
+        "patch_range": {
+          "$ref": "#/$defs/range"
+        }
       }
     },
-    "active_line": { "$ref": "#/$defs/line" },
-    "closure_window": { "$ref": "#/$defs/closure_window" },
+    "active_line": {
+      "$ref": "#/$defs/line"
+    },
+    "closure_window": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/closure_window"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "next_line": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["codename", "first_version", "public_launch_channel"],
-      "properties": {
-        "codename": { "type": "string", "minLength": 1 },
-        "first_version": { "$ref": "#/$defs/semver" },
-        "public_launch_channel": { "type": "string", "minLength": 1 }
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "codename",
+            "first_version",
+            "public_launch_channel"
+          ],
+          "properties": {
+            "codename": {
+              "type": "string",
+              "minLength": 1
+            },
+            "first_version": {
+              "$ref": "#/$defs/semver"
+            },
+            "public_launch_channel": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "archived_lines": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/line"
       }
     }
   },
@@ -46,11 +91,24 @@
     "range": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["first", "last", "count"],
+      "required": [
+        "first",
+        "last",
+        "count"
+      ],
       "properties": {
-        "first": { "type": "integer", "minimum": 0 },
-        "last": { "type": "integer", "minimum": 0 },
-        "count": { "type": "integer", "minimum": 1 }
+        "first": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "last": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "line": {
@@ -63,10 +121,27 @@
         "final_version"
       ],
       "properties": {
-        "codename": { "type": "string", "minLength": 1 },
-        "major": { "type": "integer", "minimum": 0 },
-        "first_version": { "$ref": "#/$defs/semver" },
-        "final_version": { "$ref": "#/$defs/semver" }
+        "codename": {
+          "type": "string",
+          "minLength": 1
+        },
+        "major": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "first_version": {
+          "$ref": "#/$defs/semver"
+        },
+        "final_version": {
+          "$ref": "#/$defs/semver"
+        },
+        "public_launch_channel": {
+          "type": "string",
+          "minLength": 1
+        },
+        "closure_window": {
+          "$ref": "#/$defs/closure_window"
+        }
       }
     },
     "closure_window": {
@@ -82,26 +157,43 @@
         "prohibited_change_classes"
       ],
       "properties": {
-        "first_version": { "$ref": "#/$defs/semver" },
-        "final_version": { "$ref": "#/$defs/semver" },
-        "patch_range": { "$ref": "#/$defs/range" },
-        "mode": { "const": "stabilization_only" },
+        "first_version": {
+          "$ref": "#/$defs/semver"
+        },
+        "final_version": {
+          "$ref": "#/$defs/semver"
+        },
+        "patch_range": {
+          "$ref": "#/$defs/range"
+        },
+        "mode": {
+          "const": "stabilization_only"
+        },
         "primary_change_classes": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "type": "string", "minLength": 1 }
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "exceptional_change_classes": {
           "type": "array",
           "uniqueItems": true,
-          "items": { "type": "string", "minLength": 1 }
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "prohibited_change_classes": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "type": "string", "minLength": 1 }
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     }

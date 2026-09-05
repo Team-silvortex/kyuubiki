@@ -16,7 +16,7 @@ Those are not the same claim.
 
 ## Hard Statement
 
-In `moxi 2.x`, the intended boundary is:
+In `daji 3.x`, the intended boundary is:
 
 - `solver agent = Rust compute peer`
 - `orchestrator = Elixir control plane`

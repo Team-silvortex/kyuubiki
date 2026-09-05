@@ -43,7 +43,7 @@ import type {
 export const WORKBENCH_SETTINGS_KEY = "kyuubiki-workbench-settings";
 export const WORKBENCH_LANGUAGE_PACKS_KEY = "kyuubiki-workbench-language-packs";
 export const WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION = "kyuubiki.language-pack/v1";
-export const WORKBENCH_LANGUAGE_PACK_VERSION_LINE = "moxi 2.x";
+export const WORKBENCH_LANGUAGE_PACK_VERSION_LINE = "daji 3.x";
 export const WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION = KYUUBIKI_PRODUCT_VERSION;
 
 export type WorkbenchLanguagePackCompatibility = "exact" | "line" | "unscoped" | "mismatch";

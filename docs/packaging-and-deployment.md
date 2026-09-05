@@ -1,6 +1,6 @@
 # Packaging And Deployment
 
-This document is the packaging map for `kyuubiki moxi 2.x`.
+This document is the packaging map for `kyuubiki daji 3.x`.
 
 Use it when you need to answer:
 
@@ -362,7 +362,7 @@ Unified updates now follow the same source-of-truth posture:
 
 This gives the project a Docker-like update model:
 
-- human-facing tags such as `moxi:stable`
+- human-facing tags such as `daji:stable`
 - concrete immutable shipped versions such as `2.0.0`
 - visible rollout rules instead of hidden cleanup or migration behavior
 - one shared update description for CLI, installer GUI, and docs surfaces
@@ -679,7 +679,7 @@ but the disk-image step could not run to completion. In headless, restricted,
 or sandboxed macOS sessions, `hdiutil` itself may be unavailable for full DMG
 creation even when `.app` bundling succeeds.
 
-For moxi 2.x, treat these as two different validation modes:
+For daji 3.x, treat these as two different validation modes:
 
 - `automated session result`
   the packaging command was run from an automated, sandboxed, or otherwise

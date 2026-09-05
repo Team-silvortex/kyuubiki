@@ -13,7 +13,7 @@ const MODEL_RESEARCH_BOOTSTRAP_PATH: &str = "docs/model-research-bootstrap.json"
 const HTML_FILES: &[&str] = &[
     "docs/book.html",
     "docs/book-ch01-what-is-kyuubiki.html",
-    "docs/book-ch02-moxi-line.html",
+    "docs/book-ch02-version-line.html",
     "docs/book-ch03-architecture-boundaries.html",
     "docs/book-ch04-runtime-modes.html",
     "docs/book-ch05-workflow-and-operators.html",
@@ -40,7 +40,7 @@ const HTML_FILES: &[&str] = &[
 
 const CURRENT_VERSION_FILES: &[&str] = &[
     "docs/book.html",
-    "docs/book-ch02-moxi-line.html",
+    "docs/book-ch02-version-line.html",
     "docs/book-manifest.json",
     "docs/model-research-onboarding.html",
     "docs/tutorials.html",
@@ -122,13 +122,12 @@ pub(crate) fn run_sync_doc_book_version(root: &Path, args: Vec<OsString>) -> Run
     let options = SyncOptions::parse(args)?;
     if options.help {
         println!(
-            "Usage:\n  kyuubiki-script-runner sync-doc-book-version\n  kyuubiki-script-runner sync-doc-book-version --version 2.0.0 --line \"moxi 2.0.0\""
+            "Usage:\n  kyuubiki-script-runner sync-doc-book-version\n  kyuubiki-script-runner sync-doc-book-version --version 3.0.0 --line \"daji 3.0.0\""
         );
         return Ok(0);
     }
 
     let channels = read_json(root, UPDATE_CHANNELS_PATH)?;
-    let explicit_version = options.version.is_some();
     let shipping_version = match options.version {
         Some(version) => version,
         None => channels
@@ -140,15 +139,14 @@ pub(crate) fn run_sync_doc_book_version(root: &Path, args: Vec<OsString>) -> Run
             })?
             .to_string(),
     };
-    let version_line = match options.line {
-        Some(line) => line,
-        None if explicit_version => format!("moxi {}.x", semver_major(&shipping_version)?),
-        None => channels
-            .get("line")
-            .and_then(Value::as_str)
-            .map(str::to_string)
-            .unwrap_or_else(|| format!("moxi {shipping_version}")),
-    };
+    let brand = read_json(root, "assets/brand/brand.json")?;
+    let codename = brand
+        .get("releaseCodename")
+        .and_then(Value::as_str)
+        .ok_or("brand metadata must declare releaseCodename")?;
+    let version_line = options
+        .line
+        .unwrap_or_else(|| format!("{codename} {shipping_version}"));
     let minor_line = semver_minor(&shipping_version)?;
 
     let replacements = sync_replacements(&shipping_version, &version_line, &minor_line);
@@ -473,7 +471,7 @@ impl SyncOptions {
 }
 
 struct ReplacementRule {
-    prefix: &'static str,
+    prefix: String,
     suffix: &'static str,
     replacement: String,
     version_kind: VersionKind,
@@ -490,22 +488,22 @@ impl ReplacementRule {
     fn apply(&self, text: &str) -> String {
         let mut output = String::with_capacity(text.len());
         let mut rest = text;
-        while let Some(start) = rest.find(self.prefix) {
+        while let Some(start) = rest.find(&self.prefix) {
             output.push_str(&rest[..start]);
             let after_prefix = &rest[start + self.prefix.len()..];
             let Some(version_len) = version_token_len(after_prefix, self.version_kind) else {
-                output.push_str(self.prefix);
+                output.push_str(&self.prefix);
                 rest = after_prefix;
                 continue;
             };
             let after_version = &after_prefix[version_len..];
             if !after_version.starts_with(self.suffix) {
-                output.push_str(self.prefix);
+                output.push_str(&self.prefix);
                 output.push_str(&after_prefix[..version_len]);
                 rest = after_version;
                 continue;
             }
-            output.push_str(self.prefix);
+            output.push_str(&self.prefix);
             output.push_str(&self.replacement);
             output.push_str(self.suffix);
             rest = &after_version[self.suffix.len()..];
@@ -520,16 +518,13 @@ fn sync_replacements(
     version_line: &str,
     minor_line: &str,
 ) -> Vec<(&'static str, Vec<ReplacementRule>)> {
-    let display_version = version_line
-        .strip_prefix("moxi ")
-        .unwrap_or(version_line)
-        .to_string();
+    let (codename, display_version) = version_line.split_once(' ').unwrap_or(("", version_line));
     vec![
         (
             "docs/book.html",
             vec![
-                line_rule("One book for moxi ", "", &display_version),
-                line_rule("Version line: moxi ", "", &display_version),
+                line_rule(&format!("One book for {codename} "), "", display_version),
+                line_rule(&format!("Version line: {codename} "), "", display_version),
                 semver_rule("Current development: ", "", shipping_version),
                 semver_rule("Shipping version: ", "", shipping_version),
                 minor_rule("Current prep: ", "", &format!("{minor_line}.x")),
@@ -538,7 +533,11 @@ fn sync_replacements(
         (
             "docs/book-manifest.json",
             vec![
-                line_rule("\"version_line\": \"moxi ", "\"", &display_version),
+                line_rule(
+                    &format!("\"version_line\": \"{codename} "),
+                    "\"",
+                    display_version,
+                ),
                 semver_rule(
                     "\"current_development_version\": \"",
                     "\"",
@@ -548,7 +547,7 @@ fn sync_replacements(
             ],
         ),
         (
-            "docs/book-ch02-moxi-line.html",
+            "docs/book-ch02-version-line.html",
             vec![semver_rule(
                 "current checkpoint is ",
                 " inside",
@@ -557,12 +556,20 @@ fn sync_replacements(
         ),
         (
             "docs/model-research-onboarding.html",
-            vec![semver_rule(">moxi ", " -", shipping_version)],
+            vec![semver_rule(
+                &format!(">{codename} "),
+                " -",
+                shipping_version,
+            )],
         ),
         (
             "docs/tutorials.html",
             vec![
-                line_rule("Kyuubiki Tutorials · moxi ", "</div>", &display_version),
+                line_rule(
+                    &format!("Kyuubiki Tutorials · {codename} "),
+                    "</div>",
+                    display_version,
+                ),
                 semver_rule("Current development: ", "", shipping_version),
             ],
         ),
@@ -588,18 +595,22 @@ fn sync_replacements(
         (
             "apps/hub-gui/ui/docs/index.html",
             vec![
-                line_rule("Desktop reading entry for moxi ", "", &display_version),
-                line_rule("Current line: moxi ", "", &display_version),
+                line_rule(
+                    &format!("Desktop reading entry for {codename} "),
+                    "",
+                    display_version,
+                ),
+                line_rule(&format!("Current line: {codename} "), "", display_version),
                 semver_rule("Current development: ", "", shipping_version),
             ],
         ),
         (
             "apps/hub-gui/ui/docs/current-line.html",
             vec![
-                line_rule("<h1>moxi ", "</h1>", &display_version),
+                line_rule(&format!("<h1>{codename} "), "</h1>", display_version),
                 semver_rule("Current ", " checkpoint", shipping_version),
                 line_rule(
-                    "The current development point is <code>moxi ",
+                    &format!("The current development point is <code>{codename} "),
                     "</code>",
                     shipping_version,
                 ),
@@ -619,33 +630,34 @@ fn sync_replacements(
     ]
 }
 
-fn semver_rule(prefix: &'static str, suffix: &'static str, replacement: &str) -> ReplacementRule {
+fn semver_rule(prefix: &str, suffix: &'static str, replacement: &str) -> ReplacementRule {
     ReplacementRule {
-        prefix,
+        prefix: prefix.to_string(),
         suffix,
         replacement: replacement.to_string(),
         version_kind: VersionKind::Semver,
     }
 }
 
-fn line_rule(prefix: &'static str, suffix: &'static str, replacement: &str) -> ReplacementRule {
+fn line_rule(prefix: &str, suffix: &'static str, replacement: &str) -> ReplacementRule {
     ReplacementRule {
-        prefix,
+        prefix: prefix.to_string(),
         suffix,
         replacement: replacement.to_string(),
         version_kind: VersionKind::Line,
     }
 }
 
-fn minor_rule(prefix: &'static str, suffix: &'static str, replacement: &str) -> ReplacementRule {
+fn minor_rule(prefix: &str, suffix: &'static str, replacement: &str) -> ReplacementRule {
     ReplacementRule {
-        prefix,
+        prefix: prefix.to_string(),
         suffix,
         replacement: replacement.to_string(),
         version_kind: VersionKind::MinorX,
     }
 }
 
+#[cfg(test)]
 fn semver_major(version: &str) -> RunnerResult<&str> {
     version
         .split('.')
@@ -700,94 +712,5 @@ fn parse_version_token_len(text: &str, numeric_segments: usize, trailing_x: bool
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{
-        ReplacementRule, VersionKind, extract_local_hrefs, required_snippets, semver_major,
-        semver_minor, sync_replacements,
-    };
-
-    #[test]
-    fn extracts_local_hrefs_like_the_legacy_checker() {
-        let hrefs = extract_local_hrefs(
-            r##"<a href="./book.html">book</a><a href="#local">local</a><a href="https://example.invalid">remote</a>"##,
-        );
-        assert_eq!(hrefs, vec!["./book.html"]);
-    }
-
-    #[test]
-    fn required_snippets_cover_hub_mirrors() {
-        assert!(
-            required_snippets("apps/hub-gui/ui/docs/index.html").contains(&"Open central book")
-        );
-        assert!(required_snippets("docs/book-ch08-reading-paths.html").contains(&"docs/README.md"));
-    }
-
-    #[test]
-    fn replacement_rule_updates_semver_tokens() {
-        let rule = ReplacementRule {
-            prefix: "Current line: moxi ",
-            suffix: "<",
-            replacement: "2.0.0".to_string(),
-            version_kind: VersionKind::Semver,
-        };
-        assert_eq!(
-            rule.apply("Current line: moxi 1.19.0<"),
-            "Current line: moxi 2.0.0<"
-        );
-    }
-
-    #[test]
-    fn replacement_rule_updates_product_line_tokens() {
-        let rule = ReplacementRule {
-            prefix: "Current line: moxi ",
-            suffix: "<",
-            replacement: "3.x".to_string(),
-            version_kind: VersionKind::Line,
-        };
-        assert_eq!(
-            rule.apply("Current line: moxi 2.x<"),
-            "Current line: moxi 3.x<"
-        );
-    }
-
-    #[test]
-    fn sync_rules_update_every_version_surface() {
-        let replacements = sync_replacements("2.2.8", "moxi 2.x", "2.2");
-        let apply = |path: &str, text: &str| {
-            replacements
-                .iter()
-                .find(|(candidate, _)| *candidate == path)
-                .unwrap()
-                .1
-                .iter()
-                .fold(text.to_string(), |next, rule| rule.apply(&next))
-        };
-        assert_eq!(
-            apply(
-                "docs/book.html",
-                "Version line: moxi 2.x; Current development: 2.0.0"
-            ),
-            "Version line: moxi 2.x; Current development: 2.2.8"
-        );
-        assert_eq!(
-            apply(
-                "apps/hub-gui/ui/docs/installation-integrity.html",
-                "Shipping version: 2.0.0"
-            ),
-            "Shipping version: 2.2.8"
-        );
-        assert_eq!(
-            apply(
-                "apps/hub-gui/ui/docs/current-line.html",
-                "<h1>moxi 2.x</h1>The current development point is <code>moxi 2.x</code>. The line began at <code>moxi 2.0.0</code>."
-            ),
-            "<h1>moxi 2.x</h1>The current development point is <code>moxi 2.2.8</code>. The line began at <code>moxi 2.0.0</code>."
-        );
-    }
-
-    #[test]
-    fn semver_minor_keeps_major_and_minor() {
-        assert_eq!(semver_major("2.2.8").unwrap(), "2");
-        assert_eq!(semver_minor("1.20.0").unwrap(), "1.20");
-    }
-}
+#[path = "docs_book_version_tests.rs"]
+mod tests;

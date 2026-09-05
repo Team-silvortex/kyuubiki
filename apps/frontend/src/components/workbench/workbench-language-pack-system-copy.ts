@@ -22,7 +22,7 @@ export type WorkbenchLanguagePackSystemCopy = {
 
 const en: WorkbenchLanguagePackSystemCopy = {
   compatibilityExact: "Compatibility: exact match for the current Workbench version",
-  compatibilityLine: "Compatibility: matches the current moxi version line",
+  compatibilityLine: "Compatibility: matches the current daji version line",
   compatibilityMismatch: "Compatibility: target version does not match the current Workbench",
   compatibilityGeneric: "Compatibility: unscoped pack, applied as a generic override",
   targetPrefix: "Target",
@@ -44,7 +44,7 @@ const SYSTEM_COPY: Record<string, WorkbenchLanguagePackSystemCopy> = {
   en,
   zh: {
     compatibilityExact: "兼容性：与当前 Workbench 版本完全匹配",
-    compatibilityLine: "兼容性：与当前 moxi 版本线匹配",
+    compatibilityLine: "兼容性：与当前 daji 版本线匹配",
     compatibilityMismatch: "兼容性：目标版本与当前 Workbench 不匹配",
     compatibilityGeneric: "兼容性：未声明目标版本，按通用覆盖处理",
     targetPrefix: "目标",
@@ -63,7 +63,7 @@ const SYSTEM_COPY: Record<string, WorkbenchLanguagePackSystemCopy> = {
   },
   ja: {
     compatibilityExact: "互換性: 現在の Workbench バージョンに完全一致",
-    compatibilityLine: "互換性: 現在の moxi 系統に一致",
+    compatibilityLine: "互換性: 現在の daji 系統に一致",
     compatibilityMismatch: "互換性: 対象バージョンが現在の Workbench と不一致",
     compatibilityGeneric: "互換性: 対象バージョン未指定の汎用上書き",
     targetPrefix: "対象",
@@ -82,7 +82,7 @@ const SYSTEM_COPY: Record<string, WorkbenchLanguagePackSystemCopy> = {
   },
   es: {
     compatibilityExact: "Compatibilidad: coincide exactamente con la versión actual de Workbench",
-    compatibilityLine: "Compatibilidad: coincide con la línea moxi actual",
+    compatibilityLine: "Compatibilidad: coincide con la línea daji actual",
     compatibilityMismatch: "Compatibilidad: la versión objetivo no coincide con Workbench",
     compatibilityGeneric: "Compatibilidad: paquete sin alcance, aplicado como cobertura genérica",
     targetPrefix: "Objetivo",
@@ -139,11 +139,11 @@ for (const [language, copy] of Object.entries(translatedCopy)) {
   SYSTEM_COPY[language] = {
     ...en,
     compatibilityExact: `✓ Workbench ${KYUUBIKI_PRODUCT_VERSION}`,
-    compatibilityLine: `✓ moxi 2.x`,
+    compatibilityLine: `✓ daji 3.x`,
     compatibilityMismatch: `⚠ ${targetPrefix}: Workbench`,
-    compatibilityGeneric: `◇ ${targetPrefix}: moxi`,
-    templateDescription: `Workbench · moxi 2.x · ${targetPrefix}`,
-    importedMismatch: `⚠ ${targetPrefix}: Workbench / moxi`,
+    compatibilityGeneric: `◇ ${targetPrefix}: daji`,
+    templateDescription: `Workbench · daji 3.x · ${targetPrefix}`,
+    importedMismatch: `⚠ ${targetPrefix}: Workbench / daji`,
     ...copy,
   };
 }

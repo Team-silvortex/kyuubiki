@@ -1,68 +1,36 @@
-# Version Line: moxi 2.x
+# Version Line: daji 3.x
 
-Use this page as the short formal note for the active Kyuubiki version line.
+The active product identity is defined by the
+[version policy](../config/version-line-policy.json) and
+[brand metadata](../assets/brand/brand.json).
 
-For the broader product narrative, release posture, and reading path, use
-[current-line.md](current-line.md).
+## Formal Line Record
 
-## Formal line record
+- codename: `daji`
+- active line: `3.x`
+- current development point: `daji 3.0.0`
+- current documentation target: `daji 3.0.x` line
+- first version: `3.0.0`
+- terminal version: `3.20.9`
+- cadence: minor positions `0..20`, patch positions `0..9`
+- public launch channel: Reddit, subject to the retained readiness gates
+- next line: not yet declared
 
-- codename: `moxi`
-- active line: `2.x`
-- current development point: `moxi 2.20.1`
-- current documentation target: `moxi 2.20.x` line
-- first planned public launch: `daji 3.0.0` on Reddit
-- first 2.x baseline:
-  `moxi 2.0.0` is the first formal Kyuubiki 2.x line after the
-  `tamamono 1.x` industrialization bridge
-- inherited baseline:
-  operator contracts, workflow contracts, installer integrity, release
-  metadata, and documentation structure are carried forward from the final
-  `tamamono 1.20.x` closeout window
-- line policy:
-  new work should strengthen the 2.x industrial baseline rather than reopen
-  broad pre-release feature sprawl
-- publication policy:
-  `moxi 2.x` remains internal; public debut claims begin only after the
-  `daji 3.0.0` release gate is closed
-- version cadence:
-  each major has 21 minor positions (`0` through `20`), and each minor has 10
-  patch positions (`0` through `9`)
-- moxi terminal version:
-  `moxi 2.20.9`; the next legal line start is `daji 3.0.0`
-- remaining moxi window:
-  `2.20.1` through `2.20.9` contains nine inclusive patch positions reserved
-  for bug fixes and performance optimization; security remediation and release
-  blockers are the only exceptional work, and feature expansion is prohibited
-- current checkpoint:
-  repeatable cross-operator contract qualification, Pwdt-driven frontend
-  automation, and the coverage tensor's `daji 3.0.0` release-criticality queue
-  are the active hardening focus
-- current boundary:
-  Pwdt is not yet fully equivalent to all GUI actions, fresh installed-package
-  evidence still trails source-level checkpoints, and broader independent
-  solver qualification remains active work
+## Transition Rules
 
-## What this page is for
+Moxi 2.x and Tamamono 1.x are historical lines. Moxi's planned final
+stabilization window is retained in `archived_lines`; it no longer constrains
+the active Daji line. This transition does not assert that every planned moxi
+patch was shipped.
 
-- confirming the current formal line name
-- confirming the current development point in that line
-- confirming that the active codename is now `moxi`
-- confirming that `tamamono 1.x` is now historical preparation context
-- checking which documentation window the repo is currently aligned for
+All shipping packages, first-party SDKs, brand mirrors, update channels,
+language-pack targets, and current documentation align on `3.0.0`.
+Protocol/schema versions and persistent storage identifiers do not follow
+product SemVer mechanically.
 
-## What this page is not for
+`make check-version-line` verifies the active policy rather than assuming
+that the major must be 2. Historical snapshots and evidence keep their
+original identity; a source version bump never promotes release readiness.
 
-- release-planning detail
-- roadmap detail
-- operator maturity detail
-- workflow direction detail
-
-## Related docs
-
-- [version-line-policy.json](../config/version-line-policy.json)
-- [current-line.md](current-line.md)
-- [commercial-readiness-2.0.md](commercial-readiness-2.0.md)
-- [minimal-industrial-closure.md](minimal-industrial-closure.md)
-- [accuracy-plan.md](accuracy-plan.md)
-- [accuracy-baselines.md](accuracy-baselines.md)
+See [current-line.md](current-line.md), [daji-3.0.0.md](daji-3.0.0.md),
+and [moxi-closeout.md](moxi-closeout.md).

@@ -1,6 +1,8 @@
 # moxi 2.x Minor Lines
 
-Use this document as the durable roadmap for the active `moxi 2.x` line.
+Historical roadmap for the completed `moxi 2.x` development line.
+Current planning lives in [current-line.md](current-line.md) and the coverage
+tensor. These groupings describe prior intent, not proof every patch shipped.
 
 `moxi 2.0.0` is the first formal Kyuubiki 2.x baseline after the
 `tamamono 1.x` industrialization bridge. The old `tamamono` roadmap is kept as

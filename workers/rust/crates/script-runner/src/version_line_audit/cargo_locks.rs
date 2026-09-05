@@ -3,6 +3,7 @@ use std::path::Path;
 
 const LOCK_FILES: &[&str] = &[
     "workers/rust/Cargo.lock",
+    "sdks/rust/Cargo.lock",
     "apps/hub-gui/src-tauri/Cargo.lock",
     "apps/workbench-gui/src-tauri/Cargo.lock",
     "apps/installer-gui/src-tauri/Cargo.lock",

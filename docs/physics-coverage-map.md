@@ -1,13 +1,13 @@
 # Physics Coverage Map
 
-This document defines the active `moxi 2.x` physics-coverage baseline.
+This document defines the active `daji 3.x` physics-coverage baseline.
 
 The goal is breadth with honest limits, not final numerical authority. The
-coverage carried forward from `tamamono 1.x` now prepares the `moxi 2.x` work
+coverage carried forward from `tamamono 1.x` now prepares the `daji 3.x` work
 on engine boundaries, executable task files, operator descriptors, and durable
 workflow contracts.
 
-## moxi 2.x Rule
+## daji 3.x Rule
 
 Every major simulation family should have at least one runnable path through
 the Rust solver and benchmark stack.
@@ -30,7 +30,7 @@ work. The reliability evidence index for that matrix starts at
 `config/operator-reliability/`, and is guarded by
 `make check-operator-reliability`.
 
-For `moxi 2.x`, every covered solve operator now carries `qualification`
+For `daji 3.x`, every covered solve operator now carries `qualification`
 evidence. The manifest's `minimum_coverage_level` is `qualification`, so the
 guard fails if a covered solver is accidentally downgraded to `review`,
 `baseline`, or `smoke`.

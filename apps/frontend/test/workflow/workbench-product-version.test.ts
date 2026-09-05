@@ -13,6 +13,9 @@ test("frontend product identity follows the package manifest", async () => {
   const metadata = JSON.parse(await readFile(packageUrl, "utf8")) as { version: string };
 
   assert.equal(KYUUBIKI_PRODUCT_VERSION, metadata.version);
-  assert.equal(KYUUBIKI_PRODUCT_VERSION_LABEL, `moxi ${metadata.version}`);
+  const brandUrl = new URL("../../public/brand.json", import.meta.url);
+  const brand = JSON.parse(await readFile(brandUrl, "utf8"));
+  assert.equal(brand.releaseVersion, metadata.version);
+  assert.equal(KYUUBIKI_PRODUCT_VERSION_LABEL, `${brand.releaseCodename} ${metadata.version}`);
   assert.equal(WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION, metadata.version);
 });

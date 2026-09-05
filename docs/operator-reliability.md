@@ -86,7 +86,7 @@ The first validation profiles cover:
 - `heat-plane-patch`: triangle/quad temperature-gradient and heat-flux patch
   checks
 
-For `moxi 2.x`, the manifest also declares
+For `daji 3.x`, the manifest also declares
 `minimum_coverage_level: qualification`. `make check-operator-reliability`
 treats this as a release gate, so future edits cannot silently downgrade a
 covered operator back to `review`, `baseline`, or `smoke`. The Make target runs
@@ -125,7 +125,7 @@ Each roadmap candidate also carries a machine-readable qualification posture:
 
 - `target_level`
   the trust level the candidate is trying to reach. Release-gated roadmap
-  candidates for `moxi 2.x` target `qualification`; screening-only or
+  candidates for `daji 3.x` target `qualification`; screening-only or
   exploratory families should stay outside this release candidate queue until
   they have a qualification path.
 - `evidence_phase`
@@ -330,7 +330,7 @@ boundary coverage, material-parameter provenance, and mesh/refinement
 equivalence. Its validation profile executes the heat and thermoelastic
 triangle/quad review fixtures together, then checks that a two-triangle split
 matches the quad patch response for heat flow and restrained thermal stress.
-On the current moxi 2.x line, `solve.thermal_plane_quad_2d` is a native
+On the current daji 3.x line, `solve.thermal_plane_quad_2d` is a native
 bilinear isoparametric Q4 rather than a pair of constant-strain triangles. It
 uses full 2x2 Gauss integration for stiffness, nodal-temperature interpolation,
 thermal equivalent loads, stress recovery, and strain-energy recovery.
@@ -425,7 +425,7 @@ current modal evidence lives at
 
 ## Current State
 
-The current `moxi 2.x` manifest covers all 38 solve operators in the
+The current `daji 3.x` manifest covers all 38 solve operators in the
 `physics-coverage` benchmark matrix, with a release gate requiring
 `qualification` evidence for every covered operator.
 

@@ -15,8 +15,8 @@ export function mountUpdatePanel() {
           <span>Channel</span>
           <select id="update-channel-select">
             <option value="stable">stable</option>
-            <option value="moxi:stable">moxi:stable</option>
-            <option value="moxi:latest">moxi:latest</option>
+            <option value="daji:stable">daji:stable</option>
+            <option value="daji:latest">daji:latest</option>
           </select>
         </label>
         <button class="primary desktop-shell-button-primary" data-action="refresh-update-plan">Refresh update plan</button>

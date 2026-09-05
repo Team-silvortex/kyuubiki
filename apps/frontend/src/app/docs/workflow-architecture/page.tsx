@@ -5,7 +5,7 @@ import { KYUUBIKI_PRODUCT_VERSION_LABEL } from "@/lib/product-version";
 
 export const metadata: Metadata = {
   title: `Workflow Architecture | ${KYUUBIKI_PRODUCT_VERSION_LABEL}`,
-  description: "Architecture overview for the moxi workflow operator system.",
+  description: "Architecture overview for the daji workflow operator system.",
 };
 
 const LAYERS = [
@@ -80,7 +80,7 @@ const PEAK_DIAGNOSTICS_FLOW = [
   "Peak diagnostics flows are not a separate execution architecture. They are a specialized reporting family built on the same operator descriptors, workflow graph model, dataset contracts, and runtime records as standard diagnostics flows.",
   "The dedicated peak extracts narrow each domain down to a few contract-stable extrema: electrostatic field peak, thermal flux peak, and thermo-mechanical displacement or stress peaks. That makes them better suited for limit review, release checks, and concise operator comparisons.",
   "The bundle, guard, report, and markdown export stages stay shared. What changes is the meaning of the upstream summaries and the ordering of the resulting focus metrics and highlights.",
-  "In practice this gives moxi two complementary inspection lanes: full diagnostics for broader field review, and peak diagnostics for fast threshold-oriented review.",
+  "In practice this gives daji two complementary inspection lanes: full diagnostics for broader field review, and peak diagnostics for fast threshold-oriented review.",
 ];
 
 const PEAK_REFERENCES = [
@@ -125,7 +125,7 @@ export default function WorkflowArchitecturePage() {
           Workflow Architecture
         </h1>
         <p style={copyStyle}>
-          moxi is no longer just a FEM frontend. It is evolving into a contract-driven operator
+          daji is no longer just a FEM frontend. It is evolving into a contract-driven operator
           platform where graphs, artifacts, runtime traces, and inspection surfaces align around a
           shared composition model.
         </p>
@@ -183,7 +183,7 @@ export default function WorkflowArchitecturePage() {
         <section style={{ marginTop: 32 }}>
           <h2>Peak Diagnostics Flow</h2>
           <p style={copyStyle}>
-            Peak diagnostics is now a first-class workflow pattern inside moxi. It exists for
+            Peak diagnostics is now a first-class workflow pattern inside daji. It exists for
             cases where users care more about extrema and guard thresholds than about carrying the
             entire diagnostic field narrative through every surface.
           </p>

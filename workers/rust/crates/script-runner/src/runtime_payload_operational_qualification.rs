@@ -268,15 +268,15 @@ fn previous_version(version: &str) -> RunnerResult<String> {
     let major = parse_part(parts.next(), version)?;
     let minor = parse_part(parts.next(), version)?;
     let patch = parse_part(parts.next(), version)?;
-    if parts.next().is_some() || (minor == 0 && patch == 0) {
-        return Err(format!(
-            "cannot derive previous moxi version from {version}"
-        ));
+    if parts.next().is_some() || (major == 0 && minor == 0 && patch == 0) {
+        return Err(format!("cannot derive previous version from {version}"));
     }
     Ok(if patch > 0 {
         format!("{major}.{minor}.{}", patch - 1)
-    } else {
+    } else if minor > 0 {
         format!("{major}.{}.9", minor - 1)
+    } else {
+        format!("{}.20.9", major - 1)
     })
 }
 
@@ -372,6 +372,8 @@ mod tests {
     fn derives_previous_patch_across_minor_boundaries() {
         assert_eq!(previous_version("2.14.4").unwrap(), "2.14.3");
         assert_eq!(previous_version("2.14.0").unwrap(), "2.13.9");
-        assert!(previous_version("2.0.0").is_err());
+        assert_eq!(previous_version("3.0.0").unwrap(), "2.20.9");
+        assert_eq!(previous_version("3.0.1").unwrap(), "3.0.0");
+        assert!(previous_version("0.0.0").is_err());
     }
 }

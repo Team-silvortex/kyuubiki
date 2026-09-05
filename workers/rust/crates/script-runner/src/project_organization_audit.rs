@@ -44,7 +44,7 @@ const ALLOWED_ROOT_DIRS: &[&str] = &[
 const README_REQUIRED_MARKERS: &[&str] = &[
     "# Kyuubiki\n",
     "[Current architecture map](docs/current-architecture-map.md)",
-    "[Current moxi line](docs/current-line.md)",
+    "[Current Daji line](docs/current-line.md)",
 ];
 const CHECKED_EXTENSIONS: &[&str] = &[
     "css", "ex", "exs", "html", "js", "json", "jsx", "md", "mk", "mjs", "py", "rs", "sh", "swift",

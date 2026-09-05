@@ -1,6 +1,6 @@
 # Minimal Industrial Closure
 
-This document defines the smallest honest industrial loop for the `moxi 2.x`
+This document defines the smallest honest industrial loop for the `daji 3.x`
 hardening line.
 
 It is intentionally narrower than the `2.0` commercial-readiness checklist.
@@ -253,7 +253,7 @@ Evidence:
 
 ## Release-Line Use
 
-Use this file as the `moxi 2.x` industrial hardening bridge:
+Use this file as the `daji 3.x` industrial hardening bridge:
 
 - `2.0`
   preserve the stable contract baseline and close stale 1.x transition docs

@@ -175,7 +175,15 @@ fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
     if config.schema_version != CONFIG_SCHEMA {
         return Err(format!("schema_version must be {CONFIG_SCHEMA}"));
     }
-    let expected_baseline = baseline_release_for(VERSION)?;
+    let brand: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(root.join("assets/brand/brand.json"))
+            .map_err(|error| format!("failed to read product brand: {error}"))?,
+    )
+    .map_err(|error| format!("invalid product brand: {error}"))?;
+    let codename = brand["releaseCodename"]
+        .as_str()
+        .ok_or("missing releaseCodename")?;
+    let expected_baseline = baseline_release_for(VERSION, codename)?;
     if config.baseline_release != expected_baseline || config.target_release != "daji 3.0.0" {
         return Err(format!(
             "usability gate must describe the {expected_baseline} to daji 3.0.0 line"
@@ -314,7 +322,7 @@ fn validate_release_tier_policy(policy: &Policy) -> RunnerResult<()> {
     Ok(())
 }
 
-fn baseline_release_for(version: &str) -> RunnerResult<String> {
+fn baseline_release_for(version: &str, codename: &str) -> RunnerResult<String> {
     let (minor_line, patch) = version
         .rsplit_once('.')
         .ok_or_else(|| format!("package version must use major.minor.patch: {version}"))?;
@@ -326,7 +334,7 @@ fn baseline_release_for(version: &str) -> RunnerResult<String> {
             "package version must use major.minor.patch: {version}"
         ));
     }
-    Ok(format!("moxi {minor_line}.x"))
+    Ok(format!("{codename} {minor_line}.x"))
 }
 
 fn validate_retained_probe(root: &Path, journey_id: &str, probe: &[String]) -> RunnerResult<()> {
@@ -709,10 +717,10 @@ mod tests {
     #[test]
     fn derives_current_minor_release_baseline() {
         assert_eq!(
-            baseline_release_for("2.17.0").expect("valid version"),
-            "moxi 2.17.x"
+            baseline_release_for("3.0.0", "daji").expect("valid version"),
+            "daji 3.0.x"
         );
-        assert!(baseline_release_for("2.17").is_err());
+        assert!(baseline_release_for("3.0", "daji").is_err());
     }
 
     #[test]

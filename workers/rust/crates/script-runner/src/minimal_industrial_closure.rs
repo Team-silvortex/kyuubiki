@@ -8,7 +8,7 @@ const MANIFEST_PATH: &str = "docs/minimal-industrial-closure.manifest.json";
 const MARKDOWN_PATH: &str = "docs/minimal-industrial-closure.md";
 const DOCS_DIR: &str = "docs";
 const SCHEMA_VERSION: &str = "kyuubiki.minimal-industrial-closure/v1";
-const RELEASE_LINE: &str = "moxi 2.x";
+const RELEASE_LINE: &str = "daji 3.x";
 const EXPECTED_GATE_COUNT: usize = 8;
 const STATES: &[&str] = &["present", "partial", "missing", "blocked"];
 
@@ -55,7 +55,7 @@ fn closure_issues(root: &Path, manifest: &Value, markdown: &str) -> Vec<String> 
     }
     if field(manifest, "release_line") != RELEASE_LINE {
         issues.push(format!(
-            "{MANIFEST_PATH}: release_line must stay on the moxi 2.x bridge"
+            "{MANIFEST_PATH}: release_line must stay on the daji 3.x bridge"
         ));
     }
     if string_array(manifest, "state_values") != STATES {
@@ -186,7 +186,7 @@ mod tests {
     fn rejects_state_value_drift() {
         let manifest = json!({
             "schema_version": "kyuubiki.minimal-industrial-closure/v1",
-            "release_line": "moxi 2.x",
+            "release_line": "daji 3.x",
             "state_values": ["present"],
             "exit_statement": "Ship one bounded loop.",
             "gates": []

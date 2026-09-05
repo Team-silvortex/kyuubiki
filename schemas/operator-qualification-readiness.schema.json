@@ -14,7 +14,7 @@
   "additionalProperties": false,
   "properties": {
     "schema_version": { "const": "kyuubiki.operator-qualification-readiness/v2" },
-    "version_line": { "type": "string", "pattern": "^moxi 2\\.0\\.x$" },
+    "version_line": { "type": "string", "pattern": "^[a-z][a-z0-9-]* [0-9]+\\.[0-9]+\\.x$" },
     "generated_at_utc": { "type": "string", "minLength": 10 },
     "summary": {
       "type": "object",

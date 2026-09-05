@@ -1,10 +1,18 @@
 {
-  "line": "moxi 2.x",
-  "current_version": "2.20.1",
+  "line": "daji 3.x",
+  "current_version": "3.0.0",
   "snapshots": [
     {
-      "version": "2.20.1",
+      "version": "3.0.0",
       "status": "current",
+      "date": "2026-09-05",
+      "codename": "daji",
+      "line": "3.x",
+      "snapshot_path": "snapshots/3.0.0.json"
+    },
+    {
+      "version": "2.20.1",
+      "status": "archived",
       "date": "2026-09-04",
       "codename": "moxi",
       "line": "2.x",

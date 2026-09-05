@@ -296,7 +296,7 @@ export const HUB_I18N_ZH = {
       operationsCopy: "当你需要把 runtime、stack 或 operator 路径看成一条完整工作流时，用这份文档。",
       troubleshootingCopy: "先走最短的失败路径，再决定是否深挖完整日志或打包输出。",
       accuracyTitle: "阅读信任路径",
-      accuracyCopy: "这些文档解释当前版本线正在验证什么，以及为什么这在 moxi 之前很重要。",
+      accuracyCopy: "这些文档解释当前版本线正在验证什么，以及为什么这在 daji 之前很重要。",
       accuracyPlanTitle: "精度计划",
       accuracyPlanCopy: "看 verified baselines、benchmark 扩展和 solver 信任链的长期计划。",
       accuracyBaselinesTitle: "精度基线",

@@ -1,7 +1,7 @@
 # Installer Remote Control Surface
 
 Use this page as the source-of-truth note for the Installer remote deployment
-and remote runtime control surface in the active `moxi 2.20.x` line.
+and remote runtime control surface in the active `daji 3.0.x` line.
 
 For maturity tracking, pair this control-surface note with
 [remote-deployment-roadmap.html](remote-deployment-roadmap.html). The current
@@ -253,9 +253,9 @@ Failure advice should prefer:
 
 instead of generic “something failed” messaging.
 
-## Relationship To Moxi 2.x
+## Relationship To Daji 3.x
 
-Inside `moxi 2.x`, this surface remains the installer-owned path for
+Inside `daji 3.x`, this surface remains the installer-owned path for
 trust-hardened remote deployment and runtime recovery. It carries forward the
 old industrialization work without treating ad-hoc SSH as the normal user
 experience:

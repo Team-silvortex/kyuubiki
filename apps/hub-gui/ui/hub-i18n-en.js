@@ -293,7 +293,7 @@ export const HUB_I18N_EN = {
       operationsCopy: "Use this when you need the runtime, stack, or operator path explained as a coherent workflow.",
       troubleshootingCopy: "Use the shortest failure path before you dig into full logs or packaging output.",
       accuracyTitle: "Read the trust story",
-      accuracyCopy: "These are the documents that explain what the current line is trying to verify and why that matters before moxi.",
+      accuracyCopy: "These are the documents that explain what the current line is trying to verify and why that matters before daji.",
       accuracyPlanTitle: "Accuracy plan",
       accuracyPlanCopy: "See the long-line plan for verified baselines, benchmark expansion, and solver trust.",
       accuracyBaselinesTitle: "Accuracy baselines",

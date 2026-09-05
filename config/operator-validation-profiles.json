@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.operator-validation-profiles/v1",
-  "version_line": "moxi 2.0.x",
+  "version_line": "daji 3.0.x",
   "profile_shards": [
     "config/operator-validation-profiles/acoustic.json",
     "config/operator-validation-profiles/cfd.json",

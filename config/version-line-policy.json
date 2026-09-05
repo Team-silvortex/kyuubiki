@@ -14,35 +14,41 @@
     }
   },
   "active_line": {
-    "codename": "moxi",
-    "major": 2,
-    "first_version": "2.0.0",
-    "final_version": "2.20.9"
-  },
-  "closure_window": {
-    "first_version": "2.20.1",
-    "final_version": "2.20.9",
-    "patch_range": {
-      "first": 1,
-      "last": 9,
-      "count": 9
-    },
-    "mode": "stabilization_only",
-    "primary_change_classes": [
-      "bug_fix",
-      "performance_optimization"
-    ],
-    "exceptional_change_classes": [
-      "security_remediation",
-      "release_blocker"
-    ],
-    "prohibited_change_classes": [
-      "feature_expansion"
-    ]
-  },
-  "next_line": {
     "codename": "daji",
+    "major": 3,
     "first_version": "3.0.0",
+    "final_version": "3.20.9",
     "public_launch_channel": "reddit"
-  }
+  },
+  "closure_window": null,
+  "next_line": null,
+  "archived_lines": [
+    {
+      "codename": "moxi",
+      "major": 2,
+      "first_version": "2.0.0",
+      "final_version": "2.20.9",
+      "closure_window": {
+        "first_version": "2.20.1",
+        "final_version": "2.20.9",
+        "patch_range": {
+          "first": 1,
+          "last": 9,
+          "count": 9
+        },
+        "mode": "stabilization_only",
+        "primary_change_classes": [
+          "bug_fix",
+          "performance_optimization"
+        ],
+        "exceptional_change_classes": [
+          "security_remediation",
+          "release_blocker"
+        ],
+        "prohibited_change_classes": [
+          "feature_expansion"
+        ]
+      }
+    }
+  ]
 }

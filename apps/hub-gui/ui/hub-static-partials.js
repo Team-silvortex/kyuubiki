@@ -224,7 +224,7 @@
               </article>
               <article class="hub-overview-card desktop-shell-surface-card">
                 <div class="hub-card__eyebrow" id="guides-overview-current-label">Current line</div>
-                <h2 id="guides-overview-current-title">moxi 2.x</h2>
+                <h2 id="guides-overview-current-title">daji 3.x</h2>
                 <p class="desktop-shell-note" id="guides-overview-current-copy">Read the current product posture, version line, and what this generation is trying to harden.</p>
               </article>
               <article class="hub-overview-card desktop-shell-surface-card">
@@ -250,7 +250,7 @@
                   </button>
                   <button class="hub-cluster-card" data-action="open-current-line-doc" type="button">
                     <strong id="guides-current-title">Current line</strong>
-                    <span class="desktop-shell-note" id="guides-current-copy">Read what moxi 2.x is optimizing for before you make deeper product decisions.</span>
+                    <span class="desktop-shell-note" id="guides-current-copy">Read what daji 3.x is optimizing for before you make deeper product decisions.</span>
                   </button>
                   <button class="hub-cluster-card" data-action="open-operations-doc" type="button">
                     <strong id="guides-operations-title">Operations</strong>
@@ -269,7 +269,7 @@
                     <div class="hub-card__eyebrow" id="guides-accuracy-label">Accuracy and confidence</div>
                     <h2 id="guides-accuracy-title">Read the trust story</h2>
                   </div>
-                  <p class="desktop-shell-note" id="guides-accuracy-copy">These are the documents that explain what the current line is trying to verify and why that matters before moxi.</p>
+                  <p class="desktop-shell-note" id="guides-accuracy-copy">These are the documents that explain what the current line is trying to verify and why that matters before daji.</p>
                 </div>
                 <div class="hub-action-clusters">
                   <button class="hub-cluster-card" data-action="open-accuracy-plan-doc" type="button">
@@ -466,7 +466,7 @@
                 </button>
                 <button class="hub-cluster-card" data-action="open-current-line-doc" type="button">
                   <strong id="assistant-docs-current-title">Current line</strong>
-                  <span class="desktop-shell-note" id="assistant-docs-current-copy">Read the current moxi 2.x posture.</span>
+                  <span class="desktop-shell-note" id="assistant-docs-current-copy">Read the current daji 3.x posture.</span>
                 </button>
                 <button class="hub-cluster-card" data-action="open-operations-doc" type="button">
                   <strong id="assistant-docs-operations-title">Operations</strong>

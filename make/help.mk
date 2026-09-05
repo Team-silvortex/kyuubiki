@@ -141,7 +141,7 @@ help:
 	@echo "  make check-gui-runtime-capability-contract Verify GUI-to-runtime capability manifests stay decoupled from backend implementations"
 	@echo "  make qualify-runtime-api-verification Re-run protocol and three-language Headless SDK runtime API evidence"
 	@echo "  make check-runtime-api-verification Verify retained runtime protocol and Headless SDK API reports"
-	@echo "  make check-desktop-usability-journeys Verify native user-journey closure for moxi usability gates"
+	@echo "  make check-desktop-usability-journeys Verify native user-journey closure for Daji usability gates"
 	@echo "  make check-usability-release-gate Validate the daji 3.0 blocking user-journey contract"
 	@echo "  make build-usability-readiness-report Execute blocking journeys and write OUT=tmp/usability-readiness-report.json"
 	@echo "  make check-runtime-recovery-fault-injection Inject workflow and Agent watchdog recovery faults and retain the report"

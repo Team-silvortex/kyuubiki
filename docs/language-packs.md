@@ -1,6 +1,6 @@
 # Language Packs
 
-Language packs let `moxi 2.x` grow beyond the built-in `en`, `zh`, `ja`,
+Language packs let `daji 3.x` grow beyond the built-in `en`, `zh`, `ja`,
 and `es` copy sets without hard-wiring every future language into the repo first.
 
 This is intentionally a local-first workflow today:
@@ -16,7 +16,7 @@ delivery.
 ## Shipped support packs
 
 The repo now keeps distributable support packs under
-[`language-packs`](../language-packs/). In the current `moxi 2.x` line, the shipped
+[`language-packs`](../language-packs/). In the current `daji 3.x` line, the shipped
 catalog covers 30 mainstream translated core locales for both Workbench and Hub,
 for 60 shipped pack envelopes total:
 
@@ -124,7 +124,7 @@ family:
 - Pwdt is documented as Workbench-first, while Installer only exposes restricted
   diagnostics copy
 
-This keeps the install/update surface localized enough for `moxi 2.x` while
+This keeps the install/update surface localized enough for `daji 3.x` while
 leaving room to add true `targetSurface: "installer"` packs later if Installer
 copy grows beyond shell-level setup and diagnostics.
 
@@ -162,7 +162,7 @@ to replace the keys it cares about.
   "targetSurface": "workbench",
   "name": "French custom pack",
   "version": "2.0.0",
-  "versionLine": "moxi 2.x",
+  "versionLine": "daji 3.x",
   "targetAppVersion": "2.0.0",
   "source": "imported",
   "updatedAt": "2026-05-21T00:00:00.000Z",
@@ -212,7 +212,7 @@ in.
 
 ## Recommended packaging posture
 
-- keep `versionLine` aligned with the active line such as `moxi 2.x`
+- keep `versionLine` aligned with the active line such as `daji 3.x`
 - set `targetSurface` to `workbench` or `hub` for every newly generated pack
 - set `targetAppVersion` when a pack is prepared against a specific shipped UI
   build such as `2.0.0`
