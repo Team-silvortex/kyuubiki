@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -43,7 +46,7 @@ jobs:
         working-directory: workers/rust
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.88.0
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: "1.19.5"
@@ -57,7 +60,7 @@ jobs:
             workers/rust
             sdks/rust
       - run: cargo fmt --check
-      - run: cargo test
+      - run: cargo test --locked
       - name: Audit Rust source line counts
         working-directory: .
         run: ./scripts/kyuubiki rust-line-audit --max 800
@@ -77,7 +80,7 @@ jobs:
           node-version: "24"
           cache: "npm"
           cache-dependency-path: apps/frontend/package-lock.json
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.88.0
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: workers/rust
@@ -112,7 +115,10 @@ jobs:
         with:
           elixir-version: "1.19.5"
           otp-version: "28.0"
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Hex audit dependencies
+        working-directory: apps/web
+        run: mix deps.get
+      - uses: dtolnay/rust-toolchain@1.88.0
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
@@ -139,7 +145,10 @@ jobs:
         with:
           elixir-version: "1.19.5"
           otp-version: "28.0"
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: workers/rust
       - run: make audit-project-organization
       - run: make check-ui-automation-contract
       - run: make check-language-packs
@@ -165,6 +174,10 @@ jobs:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: apps/frontend/package-lock.json
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: workers/rust
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Start frontend dev server
@@ -210,12 +223,16 @@ jobs:
           key: ${{ runner.os }}-beam-sdk-${{ hashFiles('sdks/elixir/mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-beam-sdk-
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Elixir SDK dependencies
+        working-directory: sdks/elixir
+        run: mix deps.get
+      - uses: dtolnay/rust-toolchain@1.88.0
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
+            workers/rust
             sdks/rust
-      - run: zsh ./scripts/kyuubiki sdk-smoke
+      - run: ./scripts/kyuubiki sdk-smoke
 
   integration-smoke:
     name: integration-smoke-${{ matrix.target }}
@@ -245,7 +262,10 @@ jobs:
           key: ${{ runner.os }}-beam-web-${{ hashFiles('apps/web/mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-beam-web-
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Install live-service dependencies
+        working-directory: apps/web
+        run: mix deps.get
+      - uses: dtolnay/rust-toolchain@1.88.0
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
@@ -336,6 +356,10 @@ jobs:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: ${{ matrix.cache_path }}
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: workers/rust
       - working-directory: ${{ matrix.working_directory }}
         run: npm ci
       - if: matrix.target == 'hub'
@@ -356,6 +380,17 @@ jobs:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: apps/frontend/package-lock.json
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: workers/rust
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.19.5"
+          otp-version: "28.0"
+      - name: Install live-service dependencies
+        working-directory: apps/web
+        run: mix deps.get
       - working-directory: apps/frontend
         run: npm ci
       - working-directory: apps/frontend
@@ -367,7 +402,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: desktop-gui-regression-artifacts-${{ github.run_attempt }}
-          path: tmp/desktop-gui-regression-artifacts
+          path: |
+            tmp/desktop-gui-regression-artifacts
+            tmp/run
           if-no-files-found: ignore
       - name: Summarize desktop GUI regression artifacts
         if: failure()

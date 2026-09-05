@@ -68,23 +68,9 @@ fn validate_records(root: &Path, records: &Value, records_path: &str) -> RunnerR
     )?;
     let snapshot_path = field(records, "snapshot_path");
     let snapshot = read_json(root, snapshot_path)?;
-    assert_eq(
-        field(&snapshot, "version"),
-        field(records, "release_version"),
-        "snapshot version",
-    )?;
     let roadmap = read_json(root, ROADMAP_PATH)?;
     let kits = load_qualification_evidence_kits(root)?;
-    assert_eq(
-        field(&roadmap, "version_line"),
-        field(records, "version_line"),
-        "roadmap version_line",
-    )?;
-    assert_eq(
-        field(&kits, "version_line"),
-        field(records, "version_line"),
-        "evidence kit version_line",
-    )?;
+    validate_version_lines(records, &snapshot, &roadmap, &kits)?;
     let candidates = array(&roadmap, "candidates")
         .into_iter()
         .map(|candidate| {
@@ -119,6 +105,47 @@ fn validate_records(root: &Path, records: &Value, records_path: &str) -> RunnerR
         }
     }
     Ok(())
+}
+
+fn validate_version_lines(
+    records: &Value,
+    snapshot: &Value,
+    roadmap: &Value,
+    kits: &Value,
+) -> RunnerResult<()> {
+    let version = field(snapshot, "version");
+    assert_eq(
+        version,
+        field(records, "release_version"),
+        "snapshot version",
+    )?;
+    let parts = version.split('.').collect::<Vec<_>>();
+    if parts.len() != 3
+        || parts
+            .iter()
+            .any(|part| part.is_empty() || !part.bytes().all(|byte| byte.is_ascii_digit()))
+    {
+        return Err("snapshot version must be a numeric major.minor.patch".to_string());
+    }
+    let codename = field(snapshot, "codename");
+    if codename.trim().is_empty() {
+        return Err("snapshot codename must be non-empty".to_string());
+    }
+    // Historical evidence belongs to its snapshot, not the active roadmap line.
+    assert_eq(
+        field(records, "version_line"),
+        &format!("{codename} {}.{}.x", parts[0], parts[1]),
+        "release record version_line",
+    )?;
+    let active_line = field(roadmap, "version_line");
+    if active_line.trim().is_empty() {
+        return Err("roadmap version_line must be non-empty".to_string());
+    }
+    assert_eq(
+        field(kits, "version_line"),
+        active_line,
+        "evidence kit version_line",
+    )
 }
 
 fn validate_record(
@@ -395,8 +422,79 @@ fn sorted(mut values: Vec<String>) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{CandidateGate, validate_approved_promotion_summary};
+    use super::{CandidateGate, validate_approved_promotion_summary, validate_version_lines};
     use serde_json::json;
+
+    #[test]
+    fn archived_records_keep_their_snapshot_line_after_a_major_upgrade() {
+        validate_version_lines(
+            &json!({"release_version": "2.0.0", "version_line": "moxi 2.0.x"}),
+            &json!({"version": "2.0.0", "codename": "moxi"}),
+            &json!({"version_line": "daji 3.0.x"}),
+            &json!({"version_line": "daji 3.0.x"}),
+        )
+        .expect("historical evidence can be rechecked without relabeling it");
+    }
+
+    #[test]
+    fn current_records_match_their_own_snapshot() {
+        validate_version_lines(
+            &json!({"release_version": "3.0.0", "version_line": "daji 3.0.x"}),
+            &json!({"version": "3.0.0", "codename": "daji"}),
+            &json!({"version_line": "daji 3.0.x"}),
+            &json!({"version_line": "daji 3.0.x"}),
+        )
+        .expect("current evidence keeps its exact snapshot identity");
+    }
+
+    #[test]
+    fn relabeled_historical_records_and_mismatched_versions_are_rejected() {
+        for records in [
+            json!({"release_version": "2.0.0", "version_line": "daji 3.0.x"}),
+            json!({"release_version": "3.0.0", "version_line": "moxi 2.0.x"}),
+        ] {
+            assert!(
+                validate_version_lines(
+                    &records,
+                    &json!({"version": "2.0.0", "codename": "moxi"}),
+                    &json!({"version_line": "daji 3.0.x"}),
+                    &json!({"version_line": "daji 3.0.x"}),
+                )
+                .is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn active_roadmap_and_evidence_kits_must_still_agree() {
+        let error = validate_version_lines(
+            &json!({"release_version": "2.0.0", "version_line": "moxi 2.0.x"}),
+            &json!({"version": "2.0.0", "codename": "moxi"}),
+            &json!({"version_line": "daji 3.0.x"}),
+            &json!({"version_line": "moxi 2.0.x"}),
+        )
+        .expect_err("active configuration drift must fail");
+        assert!(error.contains("evidence kit version_line"));
+    }
+
+    #[test]
+    fn malformed_snapshot_identity_is_rejected() {
+        for snapshot in [
+            json!({"version": "2.0.0"}),
+            json!({"version": "2.0", "codename": "moxi"}),
+            json!({"version": "2.a.0", "codename": "moxi"}),
+        ] {
+            assert!(
+                validate_version_lines(
+                    &json!({"release_version": snapshot["version"], "version_line": "moxi 2.0.x"}),
+                    &snapshot,
+                    &json!({"version_line": "daji 3.0.x"}),
+                    &json!({"version_line": "daji 3.0.x"}),
+                )
+                .is_err()
+            );
+        }
+    }
 
     fn qualification_candidate() -> CandidateGate {
         CandidateGate {

@@ -614,6 +614,22 @@ mod tests {
     }
 
     #[test]
+    fn installation_scan_collects_regular_files() {
+        let root = std::env::temp_dir().join(format!(
+            "kyuubiki-installed-runtime-files-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join("bin")).expect("root");
+        fs::write(root.join("bin/runtime"), b"payload").expect("payload");
+        let mut files = BTreeSet::new();
+        collect_installation_files(&root, &root, &mut files).expect("scan regular files");
+        assert_eq!(files, BTreeSet::from(["bin/runtime".to_string()]));
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    #[cfg(unix)]
     fn installation_scan_rejects_symlinks() {
         let root = std::env::temp_dir().join(format!(
             "kyuubiki-installed-runtime-scan-{}",
@@ -621,10 +637,8 @@ mod tests {
         ));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(root.join("bin")).expect("root");
-        #[cfg(unix)]
         std::os::unix::fs::symlink("/tmp", root.join("bin/escape")).expect("symlink");
         let mut files = BTreeSet::new();
-        #[cfg(unix)]
         assert!(collect_installation_files(&root, &root, &mut files).is_err());
         let _ = fs::remove_dir_all(root);
     }

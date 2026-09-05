@@ -291,6 +291,18 @@ fn exact_checks(root: &Path, expected: &str, codename: &str) -> RunnerResult<Vec
             json_field(root, file, "version_line")?,
         ));
     }
+    for file in [
+        "docs/model-research-bootstrap.json",
+        "schemas/examples.model-research-readiness-report.json",
+    ] {
+        checks.push(check(
+            "sdk_bootstrap_version_line",
+            file,
+            "version_line",
+            &architecture_line,
+            json_field(root, file, "version_line")?,
+        ));
+    }
     let formal_release_target =
         json_field(root, "docs/book-manifest.json", "formal_release_target")?;
     let target = formal_release_target.as_str().unwrap_or_default();

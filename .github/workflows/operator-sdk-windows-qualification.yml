@@ -9,6 +9,8 @@ on:
       - "config/architecture/operator-sdk-windows-operational-qualification.json"
       - "schemas/operator-package-dynamic-smoke.schema.json"
       - "schemas/operator-sdk-windows-operational-qualification-*.schema.json"
+      - "config/toolchains.json"
+      - "rust-toolchain.toml"
       - "workers/rust/**"
 
 permissions:
@@ -25,7 +27,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.88.0
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: workers/rust

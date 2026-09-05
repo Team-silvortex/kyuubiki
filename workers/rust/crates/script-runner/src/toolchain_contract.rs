@@ -12,6 +12,11 @@ const PACKAGE_FILES: &[&str] = &[
     "apps/workbench-gui/package.json",
     "apps/installer-gui/package.json",
 ];
+const CI_WORKFLOWS: &[&str] = &[
+    ".github/workflows/ci.yml",
+    ".github/workflows/desktop-windows-qualification.yml",
+    ".github/workflows/operator-sdk-windows-qualification.yml",
+];
 
 pub(crate) fn run_check_toolchain_contract(root: &Path, args: Vec<OsString>) -> RunnerResult<u8> {
     if wants_help(&args) {
@@ -66,6 +71,14 @@ fn validate_toolchain_contract(root: &Path, contract: &Value) -> RunnerResult<Ve
             &rust_toolchain,
             &format!("\"{component}\""),
             &format!("Rust component {component}"),
+        );
+    }
+    for file in CI_WORKFLOWS {
+        require_ci_rust_channel(
+            &mut issues,
+            file,
+            &read_text(root, file)?,
+            required_str(rust, "channel")?,
         );
     }
 
@@ -294,6 +307,27 @@ fn require_contains(issues: &mut Vec<String>, file: &str, text: &str, expected: 
     }
 }
 
+fn require_ci_rust_channel(issues: &mut Vec<String>, file: &str, text: &str, expected: &str) {
+    let channels = text
+        .lines()
+        .filter_map(|line| {
+            line.trim()
+                .strip_prefix("- uses: dtolnay/rust-toolchain@")
+                .and_then(|value| value.split_whitespace().next())
+        })
+        .collect::<Vec<_>>();
+    if channels.is_empty() {
+        issues.push(format!("{file}: missing pinned CI Rust toolchain"));
+    }
+    for actual in channels {
+        if actual != expected {
+            issues.push(format!(
+                "{file}: CI Rust channel is {actual:?}, expected {expected:?}"
+            ));
+        }
+    }
+}
+
 fn require_package_engine(issues: &mut Vec<String>, file: &str, manifest: &Value, expected: &str) {
     let actual = manifest
         .pointer("/engines/node")
@@ -363,8 +397,33 @@ fn wants_help(args: &[OsString]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_version, require_contains, require_minimum_version, require_package_engine};
+    use super::{
+        parse_version, require_ci_rust_channel, require_contains, require_minimum_version,
+        require_package_engine,
+    };
     use serde_json::json;
+
+    #[test]
+    fn ci_toolchains_cannot_float_or_hide_behind_a_commented_pin() {
+        for text in [
+            "- uses: dtolnay/rust-toolchain@stable",
+            "- uses: dtolnay/rust-toolchain@1.87.0",
+            "# - uses: dtolnay/rust-toolchain@1.88.0",
+            "- uses: dtolnay/rust-toolchain@1.88.0\n- uses: dtolnay/rust-toolchain@stable",
+        ] {
+            let mut issues = Vec::new();
+            require_ci_rust_channel(&mut issues, "ci.yml", text, "1.88.0");
+            assert!(!issues.is_empty(), "{text}");
+        }
+        let mut issues = Vec::new();
+        require_ci_rust_channel(
+            &mut issues,
+            "ci.yml",
+            "  - uses: dtolnay/rust-toolchain@1.88.0 # contract-owned\r\n",
+            "1.88.0",
+        );
+        assert!(issues.is_empty());
+    }
 
     #[test]
     fn reports_missing_contract_tokens() {

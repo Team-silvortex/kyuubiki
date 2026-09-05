@@ -52,16 +52,28 @@ async function openBenchmarkPage(page, viewportName, failures) {
   }
 }
 
-async function clickSurfaceTab(page, label, viewportName, failures) {
-  const tab = page.locator(".panel-tabs--editor").getByRole("button", { name: label });
+async function clickSurfaceTab(page, surface, viewportName, failures) {
+  const tab = page.locator(`[data-workflow-surface-tab="${surface}"]`);
   const count = await tab.count();
   if (count !== 1) {
-    failures.push(formatIssue(viewportName, `expected exactly one surface tab "${label}", received ${count}`));
+    failures.push(formatIssue(viewportName, `expected exactly one surface action "${surface}", received ${count}`));
     return false;
   }
   await tab.click();
+  await page.locator(`[data-workbench-workflow-surface="${surface}"]`).waitFor({ state: "visible" });
   await waitForDoublePaint(page);
   return true;
+}
+
+async function openBuilderView(page, attribute, view) {
+  const target = page.locator(`[${attribute}-target="${view}"]`);
+  await target.waitFor({ state: "visible", timeout: 10_000 });
+  if ((await target.count()) !== 1) {
+    throw new Error(`expected exactly one ${attribute} action "${view}"`);
+  }
+  await target.click();
+  await page.locator(`[${attribute}="${view}"]`).waitFor({ state: "visible", timeout: 10_000 });
+  await waitForDoublePaint(page);
 }
 
 async function fillCatalogSearch(page, query, viewportName, failures) {
@@ -348,13 +360,14 @@ async function auditWorkflowSearchLayout(browser, viewport, failures) {
   try {
     if (!(await openBenchmarkPage(page, viewport.name, failures))) return;
 
-    if (await clickSurfaceTab(page, "目录", viewport.name, failures)) {
+    if (await clickSurfaceTab(page, "catalog", viewport.name, failures)) {
       if (await fillCatalogSearch(page, "bridge thermal export", `${viewport.name} catalog`, failures)) {
         pushAuditFailures(failures, `${viewport.name} catalog`, await auditLayout(page));
       }
     }
 
-    if (await clickSurfaceTab(page, "搭建", viewport.name, failures)) {
+    if (await clickSurfaceTab(page, "builder", viewport.name, failures)) {
+      await openBuilderView(page, "data-workflow-topology-view", "add");
       if (await fillBuilderSearch(page, "thermal bridge", `${viewport.name} builder`, failures)) {
         pushAuditFailures(failures, `${viewport.name} builder`, await auditLayout(page));
         pushScopedAuditFailures(
@@ -364,6 +377,7 @@ async function auditWorkflowSearchLayout(browser, viewport, failures) {
           await auditScopedLayout(page, '[data-workflow-builder-toolbar="actions"]'),
         );
       }
+      await openBuilderView(page, "data-workflow-topology-view", "templates");
       if (
         await fillTemplateChainSearch(
           page,
@@ -378,7 +392,10 @@ async function auditWorkflowSearchLayout(browser, viewport, failures) {
           await auditLayout(page),
         );
       }
+      await openBuilderView(page, "data-workflow-builder-stage", "contracts");
+      await openBuilderView(page, "data-workflow-contract-view", "dataset");
       if (await waitForDeferredBuilderPanels(page, `${viewport.name} builder-deferred`, failures)) {
+        await openBuilderView(page, "data-workflow-dataset-view", "editor");
         if (
           await focusScopedContainer(
             page,
@@ -394,66 +411,37 @@ async function auditWorkflowSearchLayout(browser, viewport, failures) {
             await auditScopedLayout(page, '[data-workflow-dataset-editor="editor"]'),
           );
         }
+      }
+      await openBuilderView(page, "data-workflow-builder-stage", "validation");
+      for (const [panel, selector, label] of [
+        ["validation", '[data-workflow-validation-card="card"]', "diagnostics-validation"],
+        ["package", '[data-workflow-package-policy-card="card"]', "diagnostics-rules"],
+        ["integrity", '[data-workflow-integrity-card="card"]', "diagnostics-integrity"],
+      ]) {
+        await openBuilderView(page, "data-workflow-diagnostics-panel", panel);
         if (
           await focusScopedContainer(
             page,
-            '[data-workflow-validation-card="card"]',
-            `${viewport.name} diagnostics-validation`,
+            selector,
+            `${viewport.name} ${label}`,
             failures,
           )
         ) {
           pushScopedAuditFailures(
             failures,
-            `${viewport.name} diagnostics-validation`,
-            '[data-workflow-validation-card="card"]',
-            await auditScopedLayout(page, '[data-workflow-validation-card="card"]'),
+            `${viewport.name} ${label}`,
+            selector,
+            await auditScopedLayout(page, selector),
           );
         }
-        if (
-          await focusScopedContainer(
-            page,
-            '[data-workflow-package-policy-card="card"]',
-            `${viewport.name} diagnostics-rules`,
-            failures,
-          )
-        ) {
-          pushScopedAuditFailures(
-            failures,
-            `${viewport.name} diagnostics-rules`,
-            '[data-workflow-package-policy-card="card"]',
-            await auditScopedLayout(page, '[data-workflow-package-policy-card="card"]'),
-          );
-        }
-        if (
-          await focusScopedContainer(
-            page,
-            '[data-workflow-snapshot-card="card"]',
-            `${viewport.name} diagnostics-snapshots`,
-            failures,
-          )
-        ) {
-          pushScopedAuditFailures(
-            failures,
-            `${viewport.name} diagnostics-snapshots`,
-            '[data-workflow-snapshot-card="card"]',
-            await auditScopedLayout(page, '[data-workflow-snapshot-card="card"]'),
-          );
-        }
-        if (
-          await focusScopedContainer(
-            page,
-            '[data-workflow-integrity-card="card"]',
-            `${viewport.name} diagnostics-integrity`,
-            failures,
-          )
-        ) {
-          pushScopedAuditFailures(
-            failures,
-            `${viewport.name} diagnostics-integrity`,
-            '[data-workflow-integrity-card="card"]',
-            await auditScopedLayout(page, '[data-workflow-integrity-card="card"]'),
-          );
-        }
+      }
+      if (await focusScopedContainer(page, '[data-workflow-snapshot-card="card"]', `${viewport.name} diagnostics-snapshots`, failures)) {
+        pushScopedAuditFailures(
+          failures,
+          `${viewport.name} diagnostics-snapshots`,
+          '[data-workflow-snapshot-card="card"]',
+          await auditScopedLayout(page, '[data-workflow-snapshot-card="card"]'),
+        );
       }
       if (
         await injectLongImportMessage(page, `${viewport.name} import-message`, failures)
@@ -467,7 +455,7 @@ async function auditWorkflowSearchLayout(browser, viewport, failures) {
       }
     }
 
-    if (await clickSurfaceTab(page, "运行", viewport.name, failures)) {
+    if (await clickSurfaceTab(page, "runs", viewport.name, failures)) {
       pushAuditFailures(failures, `${viewport.name} runs`, await auditLayout(page));
       pushScopedAuditFailures(
         failures,

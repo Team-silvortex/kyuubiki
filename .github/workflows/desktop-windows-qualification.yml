@@ -13,6 +13,7 @@ on:
       - "apps/workbench-gui/**"
       - "assets/brand/**"
       - "config/toolchains.json"
+      - "rust-toolchain.toml"
       - "language-packs/**"
       - "workers/rust/**"
 

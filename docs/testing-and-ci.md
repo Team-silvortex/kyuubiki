@@ -379,6 +379,21 @@ exercise real HTTP execution instead of dry-run-only fixtures.
 
 ## CI structure
 
+CI installs the Rust channel declared in `config/toolchains.json` and
+`rust-toolchain.toml`; `make check-toolchains` rejects floating or mismatched
+Rust setup actions in the main and Windows qualification workflows. Rust tests
+use the committed lockfile. Jobs are isolated: Hex audit, SDK, integration, and
+live desktop regression explicitly fetch their Elixir dependencies even after
+a cache restore. Live GUI tests install BEAM rather than assuming another
+job's environment is available.
+
+Workflow layout preflight follows stable automation selectors through overview,
+topology, contract/dataset, and diagnostic views before testing each mounted
+panel. It must not depend on translated captions, the old editor layout, or
+eager mounting. Historical operator qualification records are checked against
+their own release snapshot; the active roadmap and evidence kits must still
+agree with each other. Upgrading the product line does not relabel old evidence.
+
 Current GitHub Actions jobs are intentionally separated:
 
 - `web-test`
@@ -389,6 +404,11 @@ Current GitHub Actions jobs are intentionally separated:
   Should run `make audit-dependencies` when dependency or lockfile surfaces
   change, and before release branches are cut.
 - `frontend-test`
+- `architecture-contracts`
+- `workflow-preflight`
+- `desktop-gui-regression`
+  Runs the complete UI invocation gate with a real local runtime and retains
+  failure screenshots, DOM state, and runtime logs.
 - `sdk-smoke`
 - `integration-smoke-api`
 - `integration-smoke-cluster`
