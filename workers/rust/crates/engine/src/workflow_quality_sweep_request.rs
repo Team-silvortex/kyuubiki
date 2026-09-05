@@ -1,11 +1,37 @@
 use serde_json::{Map, Value};
 
+use crate::workflow_sweep_contract::{checked_case_count, count_option, object_or_null};
+
 pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Result<Value, String> {
-    let request = payload
-        .get("request_payload")
-        .and_then(Value::as_object)
+    object_or_null(&config, "quality sweep config")?;
+    let request = payload.get("request_payload").unwrap_or(&Value::Null);
+    object_or_null(request, "quality sweep request_payload")?;
+
+    let optimization_hint = request
+        .get("optimization_hint")
+        .or_else(|| payload.get("selected_iteration_hint"))
         .cloned()
-        .unwrap_or_default();
+        .unwrap_or(Value::Null);
+    if payload
+        .get("source_ranking_complete")
+        .and_then(Value::as_bool)
+        == Some(false)
+        || optimization_hint.get("action").and_then(Value::as_str)
+            == Some("repair_rejected_candidates")
+    {
+        return Ok(serde_json::json!({
+            "quality_parameter_sweep_plan_contract": "kyuubiki.quality_parameter_sweep_plan/v1",
+            "sweep_enabled": false,
+            "sweep_action": "replan",
+            "sweep_blocking_reason": "candidate_evaluation_incomplete",
+            "source_rejected_candidates": payload.get("source_rejected_candidates").cloned().unwrap_or_else(|| serde_json::json!([])),
+            "optimization_hint": optimization_hint,
+            "case_count_estimate": 0,
+            "axes": [],
+            "base": config.get("base").cloned().unwrap_or_else(|| serde_json::json!({})),
+            "plan_summary": "Repair incomplete candidate evaluations before planning another quality sweep.",
+        }));
+    }
 
     if payload.get("action").and_then(Value::as_str) == Some("stop") {
         return Ok(serde_json::json!({
@@ -32,17 +58,12 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
         .or_else(|| request.get("base"))
         .cloned()
         .unwrap_or_else(|| serde_json::json!({}));
-    let samples = config_number(&config, "samples_per_axis", 3.0).round() as usize;
+    let samples = count_option(config.get("samples_per_axis"), "samples_per_axis", 3, 2)?;
     let focus_field = request
         .get("optimization_hint")
         .or_else(|| payload.get("selected_iteration_hint"))
         .and_then(|hint| hint.get("focus_field"))
         .and_then(Value::as_str);
-    let optimization_hint = request
-        .get("optimization_hint")
-        .or_else(|| payload.get("selected_iteration_hint"))
-        .cloned()
-        .unwrap_or(Value::Null);
     let focus_domain = optimization_hint
         .get("focus_domain")
         .and_then(Value::as_str);
@@ -53,36 +74,35 @@ pub fn build_quality_parameter_sweep_plan(payload: Value, config: Value) -> Resu
         .cloned()
         .unwrap_or(Value::Null);
     let repair_strategy = repair_strategy_from_hint(&optimization_hint);
-    let max_axes = config
-        .get("max_axes")
-        .and_then(Value::as_u64)
-        .map(|value| value as usize);
-    let max_cases = config_number(
-        &config,
+    let max_axes = count_option(config.get("max_axes"), "max_axes", search_space.len(), 1)?;
+    let max_cases = count_option(
+        config
+            .get("max_cases")
+            .or_else(|| request.get("max_candidates")),
         "max_cases",
-        request
-            .get("max_candidates")
-            .and_then(Value::as_f64)
-            .unwrap_or(64.0),
-    );
-    let usable_axis_count = usable_search_space_axis_count(search_space, samples);
-    let axes =
-        prioritized_search_space_axes(search_space, samples, focus_field, focus_domain, max_axes);
-    if axes.is_empty() {
+        64,
+        0,
+    )?;
+    let mut planned_axes = search_space_axes(search_space, samples)?;
+    if planned_axes.is_empty() {
         return Err(
             "transform.build_quality_parameter_sweep_plan requires usable search_space axes"
                 .to_string(),
         );
     }
-    let case_count_estimate = axes
+    let usable_axis_count = planned_axes.len();
+    planned_axes.sort_by(|left, right| {
+        focus_rank(left.path, focus_field, focus_domain)
+            .cmp(&focus_rank(right.path, focus_field, focus_domain))
+            .then_with(|| left.path.cmp(right.path))
+    });
+    planned_axes.truncate(max_axes);
+    let case_count_estimate = checked_case_count(planned_axes.iter().map(PlannedAxis::len))?;
+    // A blocked plan is diagnostic-only: do not allocate samples just to reject them.
+    let axes = planned_axes
         .iter()
-        .map(|axis| {
-            axis.get("values")
-                .and_then(Value::as_array)
-                .map(Vec::len)
-                .unwrap_or(0)
-        })
-        .product::<usize>();
+        .map(|axis| axis.materialize(case_count_estimate > max_cases))
+        .collect::<Result<Vec<_>, _>>()?;
 
     let budget_summary =
         sweep_budget_summary(usable_axis_count, &axes, case_count_estimate, max_cases);
@@ -152,56 +172,49 @@ fn repair_strategy_from_hint(optimization_hint: &Value) -> &'static str {
     }
 }
 
-fn usable_search_space_axis_count(search_space: &Map<String, Value>, samples: usize) -> usize {
-    search_space
-        .values()
-        .filter(|spec| !axis_values(spec, samples).is_empty())
-        .count()
-}
-
-fn prioritized_search_space_axes(
+fn search_space_axes(
     search_space: &Map<String, Value>,
     samples: usize,
-    focus_field: Option<&str>,
-    focus_domain: Option<&str>,
-    max_axes: Option<usize>,
-) -> Vec<Value> {
-    let mut axes = search_space
+) -> Result<Vec<PlannedAxis<'_>>, String> {
+    search_space
         .iter()
-        .filter_map(|(path, spec)| {
-            let values = axis_values(spec, samples);
-            if values.is_empty() {
-                None
-            } else {
-                Some(serde_json::json!({
-                    "label": path,
-                    "path": path,
-                    "values": values,
-                }))
+        .map(|(path, spec)| {
+            if path.trim().is_empty() {
+                return Err("search_space axis path must not be empty".to_string());
             }
+            let values = if spec.is_array() || spec.get("values").is_some() {
+                let values = spec
+                    .as_array()
+                    .or_else(|| spec.get("values")?.as_array())
+                    .filter(|values| !values.is_empty())
+                    .ok_or_else(|| format!("search_space axis {path} requires nonempty values"))?;
+                PlannedValues::Explicit(values)
+            } else {
+                let endpoint = |field| {
+                    spec.get(field)
+                        .and_then(Value::as_f64)
+                        .filter(|number| number.is_finite())
+                        .ok_or_else(|| format!("search_space axis {path} requires finite {field}"))
+                };
+                PlannedValues::Range {
+                    min: endpoint("min")?,
+                    max: endpoint("max")?,
+                    samples,
+                }
+            };
+            Ok(PlannedAxis { path, values })
         })
-        .collect::<Vec<_>>();
-    axes.sort_by(|left, right| {
-        let left_path = left.get("path").and_then(Value::as_str).unwrap_or("");
-        let right_path = right.get("path").and_then(Value::as_str).unwrap_or("");
-        focus_rank(left_path, focus_field, focus_domain)
-            .cmp(&focus_rank(right_path, focus_field, focus_domain))
-            .then_with(|| left_path.cmp(right_path))
-    });
-    if let Some(max_axes) = max_axes {
-        axes.truncate(max_axes.max(1));
-    }
-    axes
+        .collect()
 }
 
 fn sweep_budget_summary(
     usable_axis_count: usize,
     axes: &[Value],
     case_count_estimate: usize,
-    max_cases: f64,
+    max_cases: usize,
 ) -> Value {
     let planned_axis_count = axes.len();
-    let case_budget_exceeded = max_cases.is_finite() && case_count_estimate as f64 > max_cases;
+    let case_budget_exceeded = case_count_estimate > max_cases;
     let axis_budget_truncated = planned_axis_count < usable_axis_count;
     let planned_axis_paths = axes
         .iter()
@@ -215,7 +228,12 @@ fn sweep_budget_summary(
     } else {
         "ok"
     };
-    let recommendation = if case_budget_exceeded && recommended_axis_count < planned_axis_count {
+    let recommendation = if max_cases == 0 {
+        "increase_case_budget"
+    } else if case_budget_exceeded
+        && recommended_axis_count > 0
+        && recommended_axis_count < planned_axis_count
+    {
         "reduce_axis_count"
     } else if case_budget_exceeded {
         "reduce_samples_per_axis"
@@ -239,32 +257,24 @@ fn sweep_budget_summary(
     })
 }
 
-fn recommended_axis_count_for_budget(axes: &[Value], max_cases: f64) -> usize {
-    if !max_cases.is_finite() {
-        return axes.len();
-    }
-    let limit = max_cases.floor().max(1.0) as usize;
+fn recommended_axis_count_for_budget(axes: &[Value], max_cases: usize) -> usize {
     let mut product = 1usize;
     let mut included = 0usize;
     for axis in axes {
-        let value_count = axis
-            .get("values")
-            .and_then(Value::as_array)
-            .map(Vec::len)
-            .unwrap_or(0);
+        let value_count = axis.get("value_count").and_then(Value::as_u64).unwrap_or(0) as usize;
         if value_count == 0 {
             continue;
         }
         let Some(next_product) = product.checked_mul(value_count) else {
             break;
         };
-        if next_product > limit {
+        if next_product > max_cases {
             break;
         }
         product = next_product;
         included += 1;
     }
-    included.max(1).min(axes.len())
+    included
 }
 
 fn focus_rank(path: &str, focus_field: Option<&str>, focus_domain: Option<&str>) -> u8 {
@@ -325,32 +335,61 @@ fn domain_aliases(domain: &str) -> &'static [&'static str] {
     }
 }
 
-fn axis_values(spec: &Value, samples: usize) -> Vec<Value> {
-    if let Some(values) = spec.as_array() {
-        return values.clone();
-    }
-    if let Some(values) = spec.get("values").and_then(Value::as_array) {
-        return values.clone();
-    }
-    let Some(min) = spec.get("min").and_then(Value::as_f64) else {
-        return Vec::new();
-    };
-    let Some(max) = spec.get("max").and_then(Value::as_f64) else {
-        return Vec::new();
-    };
-    if samples <= 1 {
-        return Vec::new();
-    }
-    let step = (max - min) / (samples - 1) as f64;
-    (0..samples)
-        .map(|index| Value::from(min + step * index as f64))
-        .collect()
+struct PlannedAxis<'a> {
+    path: &'a str,
+    values: PlannedValues<'a>,
 }
 
-fn config_number(config: &Value, field: &str, default_value: f64) -> f64 {
-    config
-        .get(field)
-        .and_then(Value::as_f64)
-        .filter(|value| value.is_finite() && *value >= 0.0)
-        .unwrap_or(default_value)
+enum PlannedValues<'a> {
+    Explicit(&'a Vec<Value>),
+    Range { min: f64, max: f64, samples: usize },
+}
+
+impl PlannedAxis<'_> {
+    fn len(&self) -> usize {
+        match &self.values {
+            PlannedValues::Explicit(values) => values.len(),
+            PlannedValues::Range { samples, .. } => *samples,
+        }
+    }
+
+    fn materialize(&self, deferred: bool) -> Result<Value, String> {
+        let mut axis = serde_json::json!({
+            "label": self.path, "path": self.path, "value_count": self.len(),
+        });
+        if deferred {
+            axis["values_deferred"] = Value::Bool(true);
+        } else {
+            axis["values"] = Value::Array(match &self.values {
+                PlannedValues::Explicit(values) => (*values).clone(),
+                PlannedValues::Range { min, max, samples } => {
+                    let mut values = Vec::new();
+                    values.try_reserve_exact(*samples).map_err(|error| {
+                        format!("search_space axis {} allocation failed: {error}", self.path)
+                    })?;
+                    for index in 0..*samples {
+                        let t = index as f64 / (samples - 1) as f64;
+                        let value = if index == 0 || min == max {
+                            *min
+                        } else if index == samples - 1 {
+                            *max
+                        } else if min.is_sign_negative() == max.is_sign_negative() {
+                            min + (max - min) * t
+                        } else {
+                            min * (1.0 - t) + max * t
+                        };
+                        if !value.is_finite() {
+                            return Err(format!(
+                                "search_space axis {} sample is not finite",
+                                self.path
+                            ));
+                        }
+                        values.push(Value::from(value));
+                    }
+                    values
+                }
+            });
+        }
+        Ok(axis)
+    }
 }

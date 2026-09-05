@@ -128,6 +128,78 @@ fn stops_quality_ranking_to_sweep_workflow_graph_when_target_is_met() {
     assert_eq!(expanded["cases"].as_array().map(Vec::len), Some(0));
 }
 
+#[test]
+fn incomplete_ranking_stays_blocked_through_the_entire_sweep_graph() {
+    let run = run_workflow_graph(WorkflowGraphRunRequest {
+        graph: quality_ranking_to_sweep_graph(2.0),
+        input_artifacts: BTreeMap::from([(
+            "quality_candidates".to_string(),
+            serde_json::json!({
+                "candidates": {
+                    "good": {"qualities": {"structural": {
+                        "structural_quality_score": 0.0, "structural_quality_ready": true
+                    }}},
+                    "broken": {}
+                }
+            }),
+        )]),
+    })
+    .expect("partial evaluation should retain diagnostics without creating new cases");
+    let ranking = &run.artifacts["rank_candidates.ranking"];
+    let request = &run.artifacts["prepare_request.request"];
+    let plan = &run.artifacts["build_plan.plan"];
+    let expanded = &run.artifacts["expand_cases.cases"];
+    assert_eq!(ranking["rejected_candidate_count"], 1);
+    assert_eq!(request["action"], "replan");
+    assert_eq!(plan["sweep_enabled"], false);
+    assert_eq!(expanded["case_count"], 0);
+    assert_eq!(expanded["sweep_enabled"], false);
+    assert_eq!(expanded["sweep_action"], "replan");
+    assert_eq!(
+        expanded["sweep_blocking_reason"],
+        "candidate_evaluation_incomplete"
+    );
+    assert_eq!(
+        expanded["source_rejected_candidates"],
+        ranking["rejected_candidates"]
+    );
+}
+
+#[test]
+fn case_budget_limits_remain_enforced_across_the_entire_sweep_graph() {
+    for node_id in ["build_plan", "materialize", "expand_cases"] {
+        let mut graph = quality_ranking_to_sweep_graph(0.5);
+        let config = graph
+            .nodes
+            .iter_mut()
+            .find(|node| node.id == node_id)
+            .unwrap()
+            .config
+            .get_or_insert_with(|| serde_json::json!({}));
+        config["max_cases"] = serde_json::json!(3.0);
+        let run = run_workflow_graph(WorkflowGraphRunRequest {
+            graph,
+            input_artifacts: BTreeMap::from([(
+                "quality_candidates".to_string(),
+                serde_json::json!({
+                    "candidates": {"candidate": {"qualities": {"structural": {
+                        "structural_quality_score": 1.0, "structural_quality_ready": true
+                    }}}}
+                }),
+            )]),
+        })
+        .expect("budget blocks are inspectable workflow results, not failed computations");
+        assert!(run.failed_nodes.is_empty());
+        let output = &run.artifacts["expand_cases.cases"];
+        assert_eq!(output["case_count"], 0, "{node_id}");
+        assert_eq!(output["expansion_budget_ready"], false);
+        assert_eq!(output["expansion_blocking_reason"], "case_budget_exceeded");
+        assert_eq!(output["case_count_estimate"], 4);
+        assert_eq!(output["sweep_budget"]["max_cases"], 3);
+        assert_eq!(output["source_candidate_id"], "candidate");
+    }
+}
+
 fn quality_ranking_to_sweep_graph(target_score: f64) -> WorkflowGraph {
     WorkflowGraph {
         schema_version: "kyuubiki.workflow-graph/v1".to_string(),

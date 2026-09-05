@@ -137,6 +137,63 @@ fn nonfinite_validation_error_preserves_independent_work_and_diagnostics() {
     }
 }
 
+#[test]
+fn sweep_count_overflow_preserves_independent_work_with_explicit_recovery() {
+    for recover in [false, true] {
+        let mut graph = recovery_graph(recover);
+        let sweep = graph
+            .nodes
+            .iter_mut()
+            .find(|node| node.id == "recoverable_condition")
+            .unwrap();
+        sweep.kind = WorkflowNodeKind::Transform;
+        sweep.operator_id = Some("transform.build_quality_parameter_sweep_plan".to_string());
+        sweep.config = Some(if recover {
+            serde_json::json!({"on_error": "skip"})
+        } else {
+            serde_json::json!({})
+        });
+        sweep.outputs = vec![port("result")];
+        graph.edges[2].from.port = "result".to_string();
+        let space: serde_json::Map<String, serde_json::Value> = (0..65)
+            .map(|i| (format!("model.p{i}"), serde_json::json!([0, 1])))
+            .collect();
+        let result = run_workflow_graph(WorkflowGraphRunRequest {
+            graph,
+            input_artifacts: BTreeMap::from([
+                ("main_input".to_string(), serde_json::json!({"value": 7})),
+                (
+                    "bad_input".to_string(),
+                    serde_json::json!({"request_payload": {"search_space": space}}),
+                ),
+            ]),
+        });
+        if !recover {
+            let error = result.expect_err("the default policy must not hide a rejected plan");
+            assert!(error.contains("overflow"), "{error}");
+            assert!(!error.contains("panicked"), "{error}");
+            continue;
+        }
+        let run = result.expect("explicit recovery should retain independent results");
+        assert_eq!(run.failed_nodes, vec!["recoverable_condition"]);
+        assert_eq!(run.skipped_nodes, vec!["skipped_output"]);
+        assert_eq!(
+            run.artifacts["main_output.result"],
+            serde_json::json!({"value": 7})
+        );
+        let error = run
+            .node_runs
+            .iter()
+            .find(|trace| trace.node_id == "recoverable_condition")
+            .unwrap()
+            .error_message
+            .as_deref()
+            .unwrap();
+        assert!(error.contains("overflow"), "{error}");
+        assert!(!error.contains("panicked"), "{error}");
+    }
+}
+
 fn recovery_graph(recover_condition: bool) -> WorkflowGraph {
     WorkflowGraph {
         schema_version: "kyuubiki.workflow-graph/v1".to_string(),

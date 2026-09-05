@@ -1,9 +1,71 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Compiled workflow execution, deterministic scheduling, cache-aware and projected artifact retention, solver-pipeline hot-path evidence, and fail-closed summary validation with branch-local recovery for the Rust engine.",
+  "summary": "Compiled workflow execution, deterministic scheduling, cache-aware and projected artifact retention, solver-pipeline hot-path evidence, fail-closed summary validation, guarded quality ranking, and budget-safe sweep planning with branch-local recovery for the Rust engine.",
   "paradigm_contract_evidence": {
     "validation": [
+      {
+        "id": "workflow-parameter-sweep-budget-boundaries",
+        "modules": [
+          "runtime-engine-solver",
+          "verification-evidence"
+        ],
+        "files": [
+          "workers/rust/crates/engine/src/workflow_sweep_contract.rs",
+          "workers/rust/crates/engine/src/workflow_quality_sweep_request.rs",
+          "workers/rust/crates/engine/src/workflow_quality_sweep_plan.rs",
+          "workers/rust/crates/engine/src/workflow_parameter_sweep.rs",
+          "workers/rust/crates/engine/src/tests/workflow_sweep_limits.rs",
+          "workers/rust/crates/engine/src/tests/workflow_quality_ranking_graph.rs",
+          "workers/rust/crates/engine/src/tests/workflow_recovery.rs",
+          "docs/book-ch05-workflow-and-operators.html"
+        ],
+        "required_text": [
+          "integral_float_case_limits_are_enforced_in_direct_expansion",
+          "materialization_rechecks_a_lower_effective_budget",
+          "expansion_rechecks_a_lower_budget_override_before_allocation",
+          "upstream_budget_blocks_require_replanning_not_a_downstream_override",
+          "planner_checks_cartesian_product_overflow_before_materializing_values",
+          "over_budget_ranges_are_described_without_allocating_samples",
+          "interpolation_preserves_finite_extreme_endpoints_and_midpoints",
+          "unselected_ranges_are_not_materialized_and_remain_reported",
+          "serialized_mixed_sweeps_preserve_limits_and_case_values",
+          "case_budget_limits_remain_enforced_across_the_entire_sweep_graph",
+          "sweep_count_overflow_preserves_independent_work_with_explicit_recovery",
+          "Parameter sweep budget boundaries"
+        ]
+      },
+      {
+        "id": "workflow-quality-ranking-recovery-boundaries",
+        "modules": [
+          "runtime-engine-solver",
+          "verification-evidence"
+        ],
+        "files": [
+          "workers/rust/crates/engine/src/workflow_quality_terms.rs",
+          "workers/rust/crates/engine/src/workflow_quality_objective.rs",
+          "workers/rust/crates/engine/src/workflow_quality_sweep_request.rs",
+          "workers/rust/crates/engine/src/workflow_quality_sweep_plan.rs",
+          "workers/rust/crates/engine/src/workflow_parameter_sweep.rs",
+          "workers/rust/crates/engine/src/tests/workflow_quality_numeric.rs",
+          "workers/rust/crates/engine/src/tests/workflow_quality_ranking_reliability.rs",
+          "workers/rust/crates/engine/src/tests/workflow_quality_ranking_graph.rs",
+          "docs/book-ch05-workflow-and-operators.html"
+        ],
+        "required_text": [
+          "rejects_overflow_in_weighted_score_and_penalty_components",
+          "finite_terms_cannot_overflow_the_composite_score",
+          "quality_counter_aggregation_never_wraps",
+          "validation_error_metrics_cannot_be_malformed_or_overflow_the_score",
+          "failed_candidate_evaluations_remain_visible_in_partial_rankings",
+          "partial_ranking_cannot_stop_research_after_a_good_remaining_score",
+          "invalid_selected_scores_never_default_to_zero",
+          "contradictory_ranking_completeness_metadata_is_rejected",
+          "explicit_blocking_terms_override_a_claimed_ready_flag",
+          "incomplete_ranking_stays_blocked_through_the_entire_sweep_graph",
+          "Quality ranking and incomplete evaluations"
+        ]
+      },
       {
         "id": "workflow-summary-validation-boundaries",
         "modules": [

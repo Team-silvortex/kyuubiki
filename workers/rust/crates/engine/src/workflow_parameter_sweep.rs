@@ -1,43 +1,76 @@
 use serde_json::{Map, Value};
 
+use crate::workflow_sweep_contract::{
+    actual_case_count, bool_option, count_option, object_or_null, refreshed_budget,
+};
+
 pub use crate::workflow_parameter_sweep_results::{
     join_parameter_sweep_results, map_parameter_sweep_scores_to_quality_candidates,
     score_parameter_sweep,
 };
 
-#[derive(Debug, Clone)]
-struct SweepAxis {
-    label: String,
-    path: String,
-    values: Vec<Value>,
+struct SweepAxis<'a> {
+    label: &'a str,
+    path: &'a str,
+    values: &'a [Value],
 }
 
 pub fn expand_parameter_sweep(payload: Value, config: Value) -> Result<Value, String> {
-    if payload.get("quality_sweep_expansion_contract").is_some()
-        && payload.get("expansion_enabled").and_then(Value::as_bool) == Some(false)
-    {
-        return Ok(disabled_quality_sweep_result(&payload));
-    }
-    if payload.get("quality_sweep_expansion_contract").is_some()
-        && payload
-            .get("expansion_budget_ready")
-            .and_then(Value::as_bool)
-            == Some(false)
-    {
-        return Ok(budget_blocked_quality_sweep_result(&payload));
-    }
+    object_or_null(&config, "parameter sweep config")?;
+    let quality_context = if let Some(contract) = payload.get("quality_sweep_expansion_contract") {
+        if contract.as_str() != Some("kyuubiki.quality_sweep_expansion/v1") {
+            return Err("unsupported quality_sweep_expansion_contract".to_string());
+        }
+        if !bool_option(payload.get("expansion_enabled"), "expansion_enabled", true)? {
+            return Ok(disabled_quality_sweep_result(&payload));
+        }
+        let budget_ready = bool_option(
+            payload.get("expansion_budget_ready"),
+            "expansion_budget_ready",
+            true,
+        )?;
+        let budget = payload.get("sweep_budget").unwrap_or(&Value::Null);
+        object_or_null(budget, "sweep_budget")?;
+        let upstream_blocked = bool_option(
+            budget.get("case_budget_exceeded"),
+            "sweep_budget.case_budget_exceeded",
+            false,
+        )?;
+        if !budget_ready || upstream_blocked {
+            return Ok(budget_blocked_quality_sweep_result(&payload));
+        }
+        Some(serde_json::json!({
+            "source_candidate_id": payload.get("source_candidate_id"),
+            "sweep_budget": budget,
+        }))
+    } else {
+        None
+    };
 
     let (payload, config) = normalize_expand_input(payload, config)?;
     let base = payload
         .get("base")
         .or_else(|| payload.get("model"))
-        .cloned()
         .ok_or_else(|| "transform.expand_parameter_sweep requires payload.base".to_string())?;
-    let axes = parse_axes(payload.get("axes").or_else(|| config.get("axes")))?;
-    let max_cases = config
-        .get("max_cases")
-        .and_then(Value::as_u64)
-        .unwrap_or(256) as usize;
+    let axes_value = payload.get("axes").or_else(|| config.get("axes"));
+    let case_count = actual_case_count(
+        axes_value
+            .and_then(Value::as_array)
+            .ok_or_else(|| "transform.expand_parameter_sweep requires axes".to_string())?,
+    )?;
+    let max_cases = count_option(config.get("max_cases"), "max_cases", 256, 0)?;
+    if case_count > max_cases {
+        if let Some(mut context) = quality_context {
+            context["case_count_estimate"] = Value::from(case_count);
+            context["sweep_budget"] =
+                refreshed_budget(&context["sweep_budget"], case_count, max_cases, false);
+            return Ok(budget_blocked_quality_sweep_result(&context));
+        }
+        return Err(format!(
+            "transform.expand_parameter_sweep would emit {case_count} cases, above max_cases {max_cases}"
+        ));
+    }
+    let axes = parse_axes(axes_value)?;
     let id_prefix = config
         .get("id_prefix")
         .and_then(Value::as_str)
@@ -48,22 +81,12 @@ pub fn expand_parameter_sweep(payload: Value, config: Value) -> Result<Value, St
         .cloned()
         .unwrap_or_else(|| serde_json::json!({}));
 
-    let case_count = axes
-        .iter()
-        .try_fold(1usize, |count, axis| count.checked_mul(axis.values.len()))
-        .ok_or_else(|| "transform.expand_parameter_sweep case count overflowed".to_string())?;
-    if case_count == 0 {
-        return Err("transform.expand_parameter_sweep requires at least one case".to_string());
-    }
-    if case_count > max_cases {
-        return Err(format!(
-            "transform.expand_parameter_sweep would emit {case_count} cases, above max_cases {max_cases}"
-        ));
-    }
-
-    let mut cases = Vec::with_capacity(case_count);
+    let mut cases = Vec::new();
+    cases
+        .try_reserve_exact(case_count)
+        .map_err(|error| format!("parameter sweep case allocation failed: {error}"))?;
     expand_axis_cases(
-        &base,
+        base,
         &axes,
         0,
         &mut Map::new(),
@@ -80,14 +103,20 @@ pub fn expand_parameter_sweep(payload: Value, config: Value) -> Result<Value, St
 }
 
 fn disabled_quality_sweep_result(payload: &Value) -> Value {
+    let reason = payload
+        .get("reason")
+        .and_then(Value::as_str)
+        .unwrap_or("stopped");
     serde_json::json!({
         "cases": [],
         "case_count": 0,
         "axis_count": 0,
         "sweep_enabled": false,
         "expansion_enabled": false,
-        "sweep_action": payload.get("reason").and_then(Value::as_str).unwrap_or("stopped"),
-        "sweep_summary": "Quality parameter sweep was skipped because exploration has stopped.",
+        "sweep_action": reason,
+        "sweep_blocking_reason": payload.get("expansion_blocking_reason").cloned().unwrap_or(Value::Null),
+        "source_rejected_candidates": payload.get("source_rejected_candidates").cloned().unwrap_or_else(|| serde_json::json!([])),
+        "sweep_summary": format!("Quality parameter sweep was skipped: {reason}."),
     })
 }
 
@@ -113,29 +142,31 @@ fn budget_blocked_quality_sweep_result(payload: &Value) -> Value {
     })
 }
 
-fn normalize_expand_input(payload: Value, config: Value) -> Result<(Value, Value), String> {
+fn normalize_expand_input(mut payload: Value, config: Value) -> Result<(Value, Value), String> {
     if payload.get("quality_sweep_expansion_contract").is_none() {
         return Ok((payload, config));
     }
 
     let nested_payload = payload
-        .get("payload")
-        .cloned()
+        .get_mut("payload")
+        .map(Value::take)
         .ok_or_else(|| "quality sweep expansion requires payload".to_string())?;
     let nested_config = payload
-        .get("config")
-        .cloned()
+        .get_mut("config")
+        .map(Value::take)
         .unwrap_or_else(|| serde_json::json!({}));
 
+    object_or_null(&nested_config, "quality sweep expansion config")?;
     Ok((nested_payload, merge_config(nested_config, config)))
 }
 
 fn merge_config(base: Value, overrides: Value) -> Value {
-    let mut merged = base.as_object().cloned().unwrap_or_default();
-    if let Some(object) = overrides.as_object() {
-        for (key, value) in object {
-            merged.insert(key.clone(), value.clone());
-        }
+    let mut merged = match base {
+        Value::Object(object) => object,
+        _ => Map::new(),
+    };
+    if let Value::Object(object) = overrides {
+        merged.extend(object);
     }
     Value::Object(merged)
 }
@@ -216,7 +247,7 @@ pub fn summarize_parameter_sweep(payload: Value, config: Value) -> Result<Value,
     }))
 }
 
-fn parse_axes(value: Option<&Value>) -> Result<Vec<SweepAxis>, String> {
+fn parse_axes(value: Option<&Value>) -> Result<Vec<SweepAxis<'_>>, String> {
     let axes = value
         .and_then(Value::as_array)
         .ok_or_else(|| "transform.expand_parameter_sweep requires axes".to_string())?;
@@ -251,13 +282,9 @@ fn parse_axes(value: Option<&Value>) -> Result<Vec<SweepAxis>, String> {
                 ));
             }
             Ok(SweepAxis {
-                label: axis
-                    .get("label")
-                    .and_then(Value::as_str)
-                    .unwrap_or(path)
-                    .to_string(),
-                path: path.to_string(),
-                values: values.clone(),
+                label: axis.get("label").and_then(Value::as_str).unwrap_or(path),
+                path,
+                values,
             })
         })
         .collect()
@@ -265,7 +292,7 @@ fn parse_axes(value: Option<&Value>) -> Result<Vec<SweepAxis>, String> {
 
 fn expand_axis_cases(
     base: &Value,
-    axes: &[SweepAxis],
+    axes: &[SweepAxis<'_>],
     axis_index: usize,
     parameters: &mut Map<String, Value>,
     cases: &mut Vec<Value>,
@@ -276,9 +303,9 @@ fn expand_axis_cases(
         let mut model = base.clone();
         for axis in axes {
             let value = parameters
-                .get(&axis.label)
+                .get(axis.label)
                 .ok_or_else(|| format!("missing sweep parameter {}", axis.label))?;
-            set_dotted_path(&mut model, &axis.path, value.clone())?;
+            set_dotted_path(&mut model, axis.path, value.clone())?;
         }
         let index = cases.len();
         cases.push(serde_json::json!({
@@ -292,8 +319,8 @@ fn expand_axis_cases(
     }
 
     let axis = &axes[axis_index];
-    for value in &axis.values {
-        parameters.insert(axis.label.clone(), value.clone());
+    for value in axis.values {
+        parameters.insert(axis.label.to_string(), value.clone());
         expand_axis_cases(
             base,
             axes,
@@ -304,7 +331,7 @@ fn expand_axis_cases(
             case_metadata,
         )?;
     }
-    parameters.remove(&axis.label);
+    parameters.remove(axis.label);
     Ok(())
 }
 

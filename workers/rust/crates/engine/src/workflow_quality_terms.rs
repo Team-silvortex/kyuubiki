@@ -1,4 +1,5 @@
 use serde_json::{Map, Value};
+use std::collections::BTreeSet;
 
 type QualityEntry<'a> = (&'a str, &'a Map<String, Value>);
 
@@ -82,18 +83,29 @@ impl CandidateRank {
 pub(crate) fn quality_entries(
     object: &Map<String, Value>,
 ) -> Result<Vec<QualityEntry<'_>>, String> {
-    let source = object
-        .get("qualities")
-        .and_then(Value::as_object)
-        .unwrap_or(object);
+    let source = match object.get("qualities") {
+        None => object,
+        Some(value) => value.as_object().ok_or_else(|| {
+            "transform.compose_quality_objective expects an object qualities map".to_string()
+        })?,
+    };
     let entries = source
         .iter()
-        .filter_map(|(source_id, value)| {
+        // Candidate envelope metadata is not a quality source in the shorthand form.
+        .filter(|(id, _)| {
+            object.contains_key("qualities") || !matches!(id.as_str(), "id" | "label" | "metadata")
+        })
+        .map(|(source_id, value)| {
             value
                 .as_object()
                 .map(|summary| (source_id.as_str(), summary))
+                .ok_or_else(|| {
+                    format!(
+                        "transform.compose_quality_objective expects object summary for {source_id}"
+                    )
+                })
         })
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, _>>()?;
     if entries.is_empty() {
         Err("transform.compose_quality_objective expects named quality summaries".to_string())
     } else {
@@ -101,17 +113,17 @@ pub(crate) fn quality_entries(
     }
 }
 
-pub(crate) fn candidate_entries(object: &Map<String, Value>) -> Vec<(String, &Value)> {
-    match object.get("candidates") {
+pub(crate) fn candidate_entries(
+    object: &Map<String, Value>,
+) -> Result<Vec<(String, &Value)>, String> {
+    let entries = match object.get("candidates") {
         Some(Value::Object(candidates)) => candidates
             .iter()
-            .filter(|(_id, value)| value.is_object())
             .map(|(id, value)| (id.clone(), value))
-            .collect(),
+            .collect::<Vec<_>>(),
         Some(Value::Array(candidates)) => candidates
             .iter()
             .enumerate()
-            .filter(|(_index, value)| value.is_object())
             .map(|(index, value)| {
                 let id = value
                     .get("id")
@@ -121,12 +133,26 @@ pub(crate) fn candidate_entries(object: &Map<String, Value>) -> Vec<(String, &Va
                 (id, value)
             })
             .collect(),
-        _ => object
+        Some(_) => {
+            return Err(
+                "transform.rank_quality_candidates candidates must be an object or array"
+                    .to_string(),
+            );
+        }
+        None => object
             .iter()
-            .filter(|(_id, value)| value.is_object())
             .map(|(id, value)| (id.clone(), value))
             .collect(),
+    };
+    let mut seen = BTreeSet::new();
+    for (id, _) in &entries {
+        if id.trim().is_empty() || !seen.insert(id) {
+            return Err(format!(
+                "transform.rank_quality_candidates blank or duplicate candidate id {id:?}"
+            ));
+        }
     }
+    Ok(entries)
 }
 
 pub(crate) fn next_round_action(
@@ -135,13 +161,16 @@ pub(crate) fn next_round_action(
     target_score: f64,
     config: &Value,
 ) -> &'static str {
-    if !ready
-        && config
+    if !ready {
+        if config
             .get("require_ready")
             .and_then(Value::as_bool)
             .unwrap_or(false)
-    {
-        "replan"
+        {
+            "replan"
+        } else {
+            "continue"
+        }
     } else if score <= target_score {
         "stop"
     } else {
@@ -167,8 +196,9 @@ pub(crate) fn quality_term(
     let (score_field, score) = find_number_suffix(summary, "_quality_score").ok_or_else(|| {
         format!("transform.compose_quality_objective missing quality score for {source_id}")
     })?;
+    let score = finite_quality_value(score, source_id, &score_field)?;
     let domain = quality_domain(summary, &score_field);
-    let ready = find_bool_suffix(summary, "_quality_ready").unwrap_or(false);
+    let declared_ready = find_bool_suffix(summary, "_quality_ready").unwrap_or(false);
     let missing_metric_count =
         find_u64_suffix(summary, "_quality_missing_metric_count").unwrap_or(0);
     let watch_count = find_u64_suffix(summary, "_quality_watch_count").unwrap_or(0);
@@ -179,11 +209,23 @@ pub(crate) fn quality_term(
     let blocking_terms = find_value_suffix(summary, "_quality_blocking_terms")
         .cloned()
         .unwrap_or_else(|| Value::Array(Vec::new()));
+    let blockers = blocking_terms
+        .as_array()
+        .ok_or_else(|| format!("quality source {source_id} blocking_terms must be an array"))?;
+    let ready = declared_ready && blockers.is_empty();
     let weight = quality_weight(config, source_id, &domain);
-    let weighted_score = score * weight;
-    let missing_penalty = missing_metric_count as f64 * missing_metric_penalty;
+    let weighted_score = finite_quality_value(score * weight, source_id, "weighted_score")?;
+    let missing_penalty = finite_quality_value(
+        missing_metric_count as f64 * missing_metric_penalty,
+        source_id,
+        "missing_metric_penalty",
+    )?;
     let readiness_penalty = if ready { 0.0 } else { not_ready_penalty };
-    let contribution = weighted_score + missing_penalty + readiness_penalty;
+    let contribution = finite_quality_value(
+        weighted_score + missing_penalty + readiness_penalty,
+        source_id,
+        "contribution",
+    )?;
 
     Ok(QualityTerm {
         contribution,
@@ -198,7 +240,7 @@ pub(crate) fn quality_term(
             "weight": weight,
             "weighted_score": weighted_score,
             "ready": ready,
-            "grade": grade,
+            "grade": if ready { grade } else { "block" },
             "missing_metric_count": missing_metric_count,
             "watch_count": watch_count,
             "missing_metric_penalty": missing_penalty,
@@ -243,11 +285,15 @@ fn validation_quality_term(
             .is_some_and(|count| fail_on_missing.is_some_and(|required| !required || count == 0));
     let failed_count = failed_count.unwrap_or(0);
     let missing_count = missing_count.unwrap_or(0);
-    let score = validation_score(summary);
+    let score = validation_score(summary, source_id)?;
     let weight = quality_weight(config, source_id, "validation");
-    let weighted_score = score * weight;
+    let weighted_score = finite_quality_value(score * weight, source_id, "weighted_score")?;
     let readiness_penalty = if ready { 0.0 } else { not_ready_penalty };
-    let contribution = weighted_score + readiness_penalty;
+    let contribution = finite_quality_value(
+        weighted_score + readiness_penalty,
+        source_id,
+        "contribution",
+    )?;
     let mut blocking_terms = if ready {
         Vec::new()
     } else {
@@ -291,16 +337,23 @@ fn validation_quality_term(
     })
 }
 
-fn validation_score(summary: &Map<String, Value>) -> f64 {
-    let relative_error = summary
-        .get("validation_max_relative_error")
-        .and_then(Value::as_f64)
-        .unwrap_or(0.0);
-    let absolute_error = summary
-        .get("validation_max_absolute_error")
-        .and_then(Value::as_f64)
-        .unwrap_or(0.0);
-    (relative_error * 1000.0).max(absolute_error)
+fn validation_score(summary: &Map<String, Value>, source_id: &str) -> Result<f64, String> {
+    let metric = |field: &str| -> Result<f64, String> {
+        let value = match summary.get(field) {
+            None => 0.0,
+            Some(value) => value
+                .as_f64()
+                .ok_or_else(|| format!("quality source {source_id} {field} must be numeric"))?,
+        };
+        finite_quality_value(value, source_id, field)
+    };
+    let relative_error = metric("validation_max_relative_error")?;
+    let absolute_error = metric("validation_max_absolute_error")?;
+    finite_quality_value(
+        (relative_error * 1000.0).max(absolute_error),
+        source_id,
+        "validation_score",
+    )
 }
 
 fn validation_blocking_terms(summary: &Map<String, Value>) -> Vec<Value> {
@@ -368,12 +421,53 @@ pub(crate) fn composite_blocking_terms(terms: &[QualityTerm]) -> Vec<Value> {
         .collect()
 }
 
-pub(crate) fn config_number(config: &Value, field: &str, default_value: f64) -> f64 {
-    config
-        .get(field)
-        .and_then(Value::as_f64)
-        .filter(|value| value.is_finite() && *value >= 0.0)
-        .unwrap_or(default_value)
+pub(crate) fn config_number(
+    config: &Value,
+    field: &str,
+    default_value: f64,
+) -> Result<f64, String> {
+    match config.get(field) {
+        None => Ok(default_value),
+        Some(value) => {
+            let number = value
+                .as_f64()
+                .ok_or_else(|| format!("quality config.{field} must be numeric"))?;
+            finite_quality_value(number, "config", field)
+        }
+    }
+}
+
+pub(crate) fn validate_quality_config(config: &Value) -> Result<(), String> {
+    if !config.is_null() && !config.is_object() {
+        return Err("quality config must be an object".to_string());
+    }
+    if let Some(weights) = config.get("weights") {
+        let weights = weights
+            .as_object()
+            .ok_or_else(|| "quality config.weights must be an object".to_string())?;
+        for (id, value) in weights {
+            let field = format!("weights.{id}");
+            let number = value
+                .as_f64()
+                .ok_or_else(|| format!("quality config.{field} must be numeric"))?;
+            finite_quality_value(number, "config", &field)?;
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn finite_quality_value(value: f64, source: &str, field: &str) -> Result<f64, String> {
+    if !value.is_finite() {
+        Err(format!(
+            "quality source {source} {field} produced a non-finite value"
+        ))
+    } else if value < 0.0 {
+        Err(format!(
+            "quality source {source} {field} must be nonnegative"
+        ))
+    } else {
+        Ok(value)
+    }
 }
 
 pub(crate) fn composite_grade(
@@ -381,7 +475,13 @@ pub(crate) fn composite_grade(
     blocked_term_count: u64,
     max_ready_score: f64,
 ) -> &'static str {
-    if blocked_term_count > 0 || score > max_ready_score {
+    if !score.is_finite()
+        || score < 0.0
+        || !max_ready_score.is_finite()
+        || max_ready_score < 0.0
+        || blocked_term_count > 0
+        || score > max_ready_score
+    {
         "block"
     } else if score > max_ready_score * 0.7 {
         "review"

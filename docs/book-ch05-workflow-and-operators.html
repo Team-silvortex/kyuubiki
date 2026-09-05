@@ -219,6 +219,102 @@
         </p>
       </section>
 
+      <section class="docs-card docs-section" id="quality-ranking-recovery">
+        <h2>Quality ranking and incomplete evaluations</h2>
+        <p class="docs-copy">
+          Quality scores are nonnegative penalties, not arbitrary signed physical
+          quantities. <code>transform.compose_quality_objective</code> rejects
+          non-finite arithmetic, negative scores, malformed configured numbers,
+          and overflowing aggregate counters with the affected source and field.
+          Valid zero weights and large finite values remain supported. Explicit
+          blocking terms override a source's claimed ready flag.
+        </p>
+        <p class="docs-copy">
+          Use an explicit <code>qualities</code> object when a candidate also
+          carries metadata. Every named quality summary must be an object;
+          missing or malformed sources cannot silently disappear. Candidate IDs
+          must remain unique, including automatically assigned array IDs.
+        </p>
+        <ul class="docs-list">
+          <li><code>transform.rank_quality_candidates</code> retains evaluable
+            candidates in <code>ranking</code>. Each rejected evaluation is
+            recorded in <code>rejected_candidates</code> with its
+            <code>candidate_id</code> and <code>error</code>.</li>
+          <li><code>candidate_count</code> counts ranked candidates;
+            <code>input_candidate_count</code> includes rejected candidates.
+            <code>rejected_candidate_count</code> counts the rejection records.
+            <code>ranking_complete</code> is false if any evaluation was rejected.
+            Completeness does not imply that every ranked candidate is ready.</li>
+          <li>If all evaluations are rejected, ranking fails with their count
+            and the first named failure reason. It does not invent a winner.</li>
+          <li><code>transform.prepare_quality_next_round_request</code> refuses
+            missing, malformed, or negative selected scores instead of treating
+            them as zero. Supplied completeness counters must agree with the
+            ranking and rejection arrays.</li>
+          <li>Incomplete evaluation produces <code>replan</code> with a
+            <code>repair_rejected_candidates</code> hint and retained rejection
+            details. Even <code>require_ready: false</code> only permits an
+            unready candidate to continue; it cannot satisfy the stop condition.</li>
+          <li>An incomplete ranking disables downstream quality-sweep planning
+            and expansion. The result contains zero cases, keeps
+            <code>sweep_action: replan</code>, and exposes
+            <code>sweep_blocking_reason: candidate_evaluation_incomplete</code>
+            plus <code>source_rejected_candidates</code>. Repair those inputs
+            and rerun ranking before generating another parameter sweep.</li>
+        </ul>
+        <p class="docs-copy">
+          A disabled sweep awaiting repair is not a converged or completed study.
+          These checks preserve numerical and workflow integrity; they do not
+          replace independent physical validation.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section" id="sweep-budget-boundaries">
+        <h2>Parameter sweep budget boundaries</h2>
+        <p class="docs-copy">
+          Planning, materialization, and expansion share the same count rules.
+          <code>max_cases</code> is a nonnegative whole count; zero allows no
+          cases. <code>samples_per_axis</code> must be at least two and
+          <code>max_axes</code> at least one. Exact floating representations such
+          as <code>4.0</code> are accepted and emitted as integers. Null fields,
+          strings, negative or fractional counts, and out-of-range counts are
+          errors, not requests to use a larger default. Defaults apply only
+          when a field is absent.
+        </p>
+        <ul class="docs-list">
+          <li>The planner validates every search-space axis, selects axes by
+            focus and axis budget, then checks the Cartesian product with
+            overflow detection before allocating range samples. Malformed or
+            empty axes cannot silently shrink the search. Truncated axes remain
+            visible in the budget's usable count and follow-up recommendation.</li>
+          <li>Over-budget plans are diagnostic-only. Their axes contain
+            <code>value_count</code> and <code>values_deferred: true</code>,
+            without a <code>values</code> array. This avoids generating large
+            sample arrays that would immediately be rejected.</li>
+          <li>For an executable plan, materialization and expansion verify the
+            actual axis product against the effective limit. Stale estimates
+            and a claimed ready flag cannot authorize excess cases. Lowering
+            the limit in either stage takes effect before case generation.</li>
+          <li>A quality-sweep budget block returns zero cases with
+            <code>expansion_budget_ready: false</code> and
+            <code>expansion_blocking_reason: case_budget_exceeded</code>.
+            Candidate identity, estimated count, and budget diagnostics remain
+            available. Raising a downstream limit does not release an upstream
+            block: adjust the planning inputs and build a new plan.</li>
+          <li>Direct <code>transform.expand_parameter_sweep</code> requests above
+            their limit return an error. Invalid counts and arithmetic overflow
+            also return errors rather than partial sweeps or wrapped counts.
+            An explicit workflow recovery policy can preserve independent
+            branches while retaining the failed-node diagnostic.</li>
+        </ul>
+        <p class="docs-copy">
+          Billion-sample deferred-plan tests validate rejection without sample
+          allocation; they do not demonstrate billion-case simulation capacity.
+          Range interpolation preserves finite endpoints even when subtracting
+          the two endpoints directly would overflow.
+        </p>
+      </section>
+
       <section class="docs-card docs-section">
         <h2>Primary sources</h2>
         <div class="docs-links">
