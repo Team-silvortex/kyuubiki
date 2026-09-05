@@ -216,24 +216,50 @@ fn validation_quality_term(
     config: &Value,
     not_ready_penalty: f64,
 ) -> Result<QualityTerm, String> {
-    let ready = summary
+    let declared_pass = summary
         .get("validation_passed")
         .and_then(Value::as_bool)
         .unwrap_or(false);
+    let checked_count = summary
+        .get("validation_checked_field_count")
+        .and_then(Value::as_u64);
     let failed_count = summary
         .get("validation_failed_field_count")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
+        .and_then(Value::as_u64);
     let missing_count = summary
         .get("validation_missing_field_count")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
+        .and_then(Value::as_u64);
+    let fail_on_missing = match summary.get("validation_fail_on_missing") {
+        None => Some(true),
+        Some(value) => value.as_bool(),
+    };
+    let ready = declared_pass
+        && checked_count.is_some_and(|count| count > 0)
+        && failed_count == Some(0)
+        && summary
+            .get("validation_failures")
+            .is_none_or(|value| value.as_array().is_some_and(Vec::is_empty))
+        && missing_count
+            .is_some_and(|count| fail_on_missing.is_some_and(|required| !required || count == 0));
+    let failed_count = failed_count.unwrap_or(0);
+    let missing_count = missing_count.unwrap_or(0);
     let score = validation_score(summary);
     let weight = quality_weight(config, source_id, "validation");
     let weighted_score = score * weight;
     let readiness_penalty = if ready { 0.0 } else { not_ready_penalty };
     let contribution = weighted_score + readiness_penalty;
-    let blocking_terms = validation_blocking_terms(summary);
+    let mut blocking_terms = if ready {
+        Vec::new()
+    } else {
+        validation_blocking_terms(summary)
+    };
+    if !ready && blocking_terms.is_empty() {
+        blocking_terms.push(serde_json::json!({
+            "field": "validation_passed",
+            "status": "invalid_validation_evidence",
+            "reason": "Passing validation requires nonempty comparisons and consistent success counters.",
+        }));
+    }
 
     Ok(QualityTerm {
         contribution,

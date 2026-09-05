@@ -64,6 +64,79 @@ fn node_failure_without_recovery_policy_still_fails_fast() {
     assert!(error.contains("unsupported condition operator"));
 }
 
+#[test]
+fn nonfinite_validation_error_preserves_independent_work_and_diagnostics() {
+    for recover in [false, true] {
+        let mut graph = recovery_graph(recover);
+        let validation = graph
+            .nodes
+            .iter_mut()
+            .find(|node| node.id == "recoverable_condition")
+            .unwrap();
+        validation.kind = WorkflowNodeKind::Transform;
+        validation.operator_id = Some("transform.validate_summary_tolerance".to_string());
+        validation.config = Some(if recover {
+            serde_json::json!({"on_error": "skip"})
+        } else {
+            serde_json::json!({})
+        });
+        validation.inputs = vec![port("left"), port("right")];
+        validation.outputs = vec![port("result")];
+        graph.edges[1].to.port = "left".to_string();
+        graph.edges[2].from.port = "result".to_string();
+        graph.nodes.push(input_node("reference_input"));
+        graph.entry_nodes.push("reference_input".to_string());
+        graph.edges.push(edge(
+            "reference-validation",
+            "reference_input",
+            "value",
+            "recoverable_condition",
+            "right",
+        ));
+        let result = run_workflow_graph(WorkflowGraphRunRequest {
+            graph,
+            input_artifacts: BTreeMap::from([
+                ("main_input".to_string(), serde_json::json!({"value": 7})),
+                (
+                    "bad_input".to_string(),
+                    serde_json::json!({"stress": -1.0e308}),
+                ),
+                (
+                    "reference_input".to_string(),
+                    serde_json::json!({"stress": 1.0e308}),
+                ),
+            ]),
+        });
+        if !recover {
+            let error = result.expect_err("default validation errors fail the workflow");
+            assert!(
+                error.contains("stress") && error.contains("non-finite"),
+                "{error}"
+            );
+            continue;
+        }
+        let run = result.expect("opt-in recovery must preserve the independent branch");
+        assert_eq!(run.failed_nodes, vec!["recoverable_condition"]);
+        assert_eq!(run.skipped_nodes, vec!["skipped_output"]);
+        assert_eq!(
+            run.artifacts["main_output.result"],
+            serde_json::json!({"value": 7})
+        );
+        assert!(!run.artifacts.contains_key("recoverable_condition.result"));
+        let trace = run
+            .node_runs
+            .iter()
+            .find(|trace| trace.node_id == "recoverable_condition")
+            .unwrap();
+        assert_eq!(trace.status, WorkflowNodeRunStatus::Failed);
+        let error = trace.error_message.as_deref().expect("failure diagnostic");
+        assert!(
+            error.contains("stress") && error.contains("non-finite"),
+            "{error}"
+        );
+    }
+}
+
 fn recovery_graph(recover_condition: bool) -> WorkflowGraph {
     WorkflowGraph {
         schema_version: "kyuubiki.workflow-graph/v1".to_string(),

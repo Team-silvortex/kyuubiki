@@ -169,6 +169,56 @@
         </p>
       </section>
 
+      <section class="docs-card docs-section" id="summary-validation">
+        <h2>Summary cross-check gates</h2>
+        <p class="docs-copy">
+          Connect reference and candidate summary objects to the <code>left</code>
+          and <code>right</code> inputs of
+          <code>transform.validate_summary_tolerance</code>. Its
+          <code>kyuubiki.summary_tolerance_validation/v1</code> report can feed
+          <code>transform.compose_quality_objective</code> or the Rust Headless
+          SDK material quality gate. A completed node is not itself proof of a
+          passed comparison or a physically converged solution.
+        </p>
+        <pre><code>{
+  "fields": ["peak_temperature_c"],
+  "absolute_tolerance": 0.05,
+  "relative_tolerance": 0.001,
+  "fail_on_missing": true
+}</code></pre>
+        <ul class="docs-list">
+          <li>The example is node configuration. Tolerances must be finite and
+            nonnegative; zero is valid. A field passes if either its absolute
+            or relative error is within tolerance. Omitted tolerances default
+            to <code>1e-9</code> absolute and <code>1e-6</code> relative.</li>
+          <li>An explicit field list must be nonempty, with unique nonblank
+            strings. Without it, numeric keys from either summary are selected
+            in sorted order. One-sided numeric fields and numeric/type changes
+            are recorded as missing evidence, not silently excluded.</li>
+          <li>At least one field must actually be compared before the report
+            can pass. <code>fail_on_missing: false</code> allows partial evidence,
+            not an empty comparison. Missing fields block by default.</li>
+          <li>Present null or wrongly typed options are configuration errors;
+            they do not fall back to defaults. An omitted or null whole config
+            uses defaults. An unrepresentable error fails with the field name,
+            rather than producing a null error metric.</li>
+          <li>Quality consumers require an explicit pass, a positive checked
+            count, zero failures, and missing counts consistent with the
+            missing-field policy. Nonempty or malformed failure details also
+            block. Invalid success metadata remains available for repair planning.</li>
+          <li>Invalid configuration and non-finite errors fail the workflow by
+            default. With an explicit <code>on_error: "skip"</code> recovery
+            policy, the failed node retains its diagnostic, dependent work is
+            skipped, and independent branches may finish. That is recovery,
+            not successful validation.</li>
+        </ul>
+        <p class="docs-copy">
+          This gate checks summary agreement, not independent scientific
+          correctness. Model assumptions, convergence, reference quality,
+          and physical validation still need their own evidence.
+        </p>
+      </section>
+
       <section class="docs-card docs-section">
         <h2>Primary sources</h2>
         <div class="docs-links">

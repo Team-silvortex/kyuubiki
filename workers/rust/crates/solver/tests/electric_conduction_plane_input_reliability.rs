@@ -1,5 +1,6 @@
 use kyuubiki_protocol::{
-    ElectricConductionPlaneNodeInput, ElectricConductionPlaneQuadElementInput,
+    ElectricConductionContactInput, ElectricConductionPlaneNodeInput,
+    ElectricConductionPlaneQuadElementInput, ElectricConductionTerminalInput,
     SolveElectricConductionPlaneQuad2dRequest,
 };
 use kyuubiki_solver::solve_electric_conduction_plane_quad_2d;
@@ -61,26 +62,37 @@ fn rejects_unanchored_or_partially_unanchored_models_without_panicking() {
         "requires a fixed potential or impedance terminal",
     );
 
-    let mut disconnected = valid_request();
-    let offset = disconnected.nodes.len();
-    disconnected.nodes.extend([
-        free_node("island-0", 2.0, 0.0),
-        free_node("island-1", 3.0, 0.0),
-        free_node("island-2", 3.0, 1.0),
-        free_node("island-3", 2.0, 1.0),
-    ]);
-    disconnected
-        .elements
-        .push(ElectricConductionPlaneQuadElementInput {
-            id: "unanchored-island".to_string(),
-            node_i: offset,
-            node_j: offset + 1,
-            node_k: offset + 2,
-            node_l: offset + 3,
-            thickness: 1.0,
-            electrical_conductivity_s_m: 1.0,
+    assert_error_contains(
+        request_with_free_island(),
+        "topology component containing node 4 (island-0) is not anchored",
+    );
+}
+
+#[test]
+fn accepts_terminal_or_contact_anchoring_for_disconnected_components() {
+    let mut terminal_anchored = request_with_free_island();
+    terminal_anchored
+        .terminals
+        .push(ElectricConductionTerminalInput {
+            id: "island-terminal".to_string(),
+            node: 4,
+            external_potential_v: 0.5,
+            impedance_ohm: 2.0,
         });
-    assert_error_contains(disconnected, "electric conduction solve failed");
+    solve_electric_conduction_plane_quad_2d(&terminal_anchored)
+        .expect("a finite-impedance terminal must anchor its component");
+
+    let mut contact_anchored = request_with_free_island();
+    contact_anchored
+        .contact_interfaces
+        .push(ElectricConductionContactInput {
+            id: "bridge-contact".to_string(),
+            node_i: 1,
+            node_j: 4,
+            contact_resistance_ohm: 2.0,
+        });
+    solve_electric_conduction_plane_quad_2d(&contact_anchored)
+        .expect("a finite-resistance contact must connect the island to an anchored component");
 }
 
 fn valid_request() -> SolveElectricConductionPlaneQuad2dRequest {
@@ -103,6 +115,29 @@ fn valid_request() -> SolveElectricConductionPlaneQuad2dRequest {
         contact_interfaces: vec![],
         terminals: vec![],
     }
+}
+
+fn request_with_free_island() -> SolveElectricConductionPlaneQuad2dRequest {
+    let mut request = valid_request();
+    let offset = request.nodes.len();
+    request.nodes.extend([
+        free_node("island-0", 2.0, 0.0),
+        free_node("island-1", 3.0, 0.0),
+        free_node("island-2", 3.0, 1.0),
+        free_node("island-3", 2.0, 1.0),
+    ]);
+    request
+        .elements
+        .push(ElectricConductionPlaneQuadElementInput {
+            id: "free-island".to_string(),
+            node_i: offset,
+            node_j: offset + 1,
+            node_k: offset + 2,
+            node_l: offset + 3,
+            thickness: 1.0,
+            electrical_conductivity_s_m: 1.0,
+        });
+    request
 }
 
 fn fixed_node(

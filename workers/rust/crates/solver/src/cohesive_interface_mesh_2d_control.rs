@@ -2,6 +2,8 @@ use std::collections::HashSet;
 
 use kyuubiki_protocol::SolveCohesiveInterfaceMesh2dRequest;
 
+use crate::linear_algebra::stable_l2_norm;
+
 const DEFAULT_LOAD_STEPS: usize = 10;
 const MAX_LOAD_STEPS: usize = 4096;
 
@@ -112,12 +114,9 @@ pub(crate) fn build_controls(
 }
 
 pub(crate) fn restricted_norm(values: &[f64], dofs: &[usize]) -> f64 {
-    dofs.iter()
-        .map(|&dof| values[dof] * values[dof])
-        .sum::<f64>()
-        .sqrt()
+    stable_l2_norm(dofs.iter().map(|&dof| values[dof]))
 }
 
 pub(crate) fn vector_norm(values: &[f64]) -> f64 {
-    values.iter().map(|value| value * value).sum::<f64>().sqrt()
+    stable_l2_norm(values.iter().copied())
 }

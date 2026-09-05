@@ -58,7 +58,17 @@ fn solve_cohesive_interface_mesh_2d_internal(
         residual_norm = outcome.residual_norm;
         let summary_assembly =
             assemble(&model, step_index, &outcome.displacements, &outcome.states);
-        let summary = step_summary(&model, control, &outcome.displacements, &summary_assembly);
+        let summary_load_factor = if outcome.converged {
+            control.load_factor
+        } else {
+            completed_load_factor
+        };
+        let summary = step_summary(
+            &model,
+            summary_load_factor,
+            &outcome.displacements,
+            &summary_assembly,
+        );
         steps.push(CohesiveInterfaceMesh2dLoadStepResult {
             step: step_index,
             load_factor: control.load_factor,
@@ -563,11 +573,11 @@ struct StepSummary {
 
 fn step_summary(
     model: &ValidatedModel<'_>,
-    control: &ControlStep,
+    load_factor: f64,
     displacements: &[f64],
     assembly: &Assembly,
 ) -> StepSummary {
-    let reactions = reactions(model, control.load_factor, &assembly.internal_forces);
+    let reactions = reactions(model, load_factor, &assembly.internal_forces);
     let max_resultant_traction = assembly
         .evaluations
         .iter()

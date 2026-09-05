@@ -1,8 +1,35 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Compiled workflow execution, deterministic scheduling, cache-aware and projected artifact retention, and solver-pipeline hot-path evidence for the Rust engine.",
+  "summary": "Compiled workflow execution, deterministic scheduling, cache-aware and projected artifact retention, solver-pipeline hot-path evidence, and fail-closed summary validation with branch-local recovery for the Rust engine.",
   "paradigm_contract_evidence": {
+    "validation": [
+      {
+        "id": "workflow-summary-validation-boundaries",
+        "modules": [
+          "runtime-engine-solver",
+          "verification-evidence"
+        ],
+        "files": [
+          "workers/rust/crates/engine/src/workflow_summary_validation.rs",
+          "workers/rust/crates/engine/src/workflow_quality_terms.rs",
+          "workers/rust/crates/engine/src/tests/workflow_summary_validation.rs",
+          "workers/rust/crates/engine/src/tests/workflow_recovery.rs",
+          "docs/book-ch05-workflow-and-operators.html"
+        ],
+        "required_text": [
+          "zero_comparisons_block_even_when_missing_fields_are_optional",
+          "automatic_fields_retain_one_sided_numeric_evidence",
+          "malformed_tolerances_and_missing_policy_do_not_use_defaults",
+          "malformed_or_duplicate_field_selections_cannot_shrink_or_inflate_coverage",
+          "unrepresentable_error_fails_before_a_null_metric_can_escape",
+          "quality_objective_rejects_empty_or_contradictory_pass_claims",
+          "quality_objective_does_not_hide_contradictory_failure_details",
+          "nonfinite_validation_error_preserves_independent_work_and_diagnostics",
+          "Summary cross-check gates"
+        ]
+      }
+    ],
     "benchmark": [
       {
         "id": "workflow-execution-plan-regression",

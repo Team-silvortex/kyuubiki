@@ -87,6 +87,27 @@
     ],
     "validation": [
       {
+        "id": "headless-summary-validation-boundaries",
+        "modules": [
+          "sdk-headless"
+        ],
+        "files": [
+          "workers/rust/crates/headless-sdk/src/material_reliability.rs",
+          "workers/rust/crates/headless-sdk/src/material_reliability_tests.rs",
+          "workers/rust/crates/headless-sdk/src/material_research_validation_flow_tests.rs",
+          "docs/headless-sdks.md"
+        ],
+        "required_text": [
+          "empty_or_contradictory_validation_claims_block_and_request_repair",
+          "missing_or_malformed_validation_metadata_cannot_be_inferred_as_success",
+          "oversized_validation_counters_do_not_panic_or_wrap_to_success",
+          "optional_missing_validation_still_needs_a_checked_field",
+          "validation_cannot_ignore_malformed_policy_or_failure_details",
+          "unverifiable_success_routes_to_repair_instead_of_advancing_research",
+          "Summary cross-check gates"
+        ]
+      },
+      {
         "id": "headless-sdk-validation-qualification-contract",
         "modules": [
           "sdk-headless"

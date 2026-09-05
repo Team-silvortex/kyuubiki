@@ -171,6 +171,7 @@
         "single_element_closed_form",
         "shared_node_multi_element_assembly",
         "incremental_newton_equilibrium",
+        "free_dof_load_scaling_and_finite_norm_regression",
         "prescribed_displacement_softening_and_failure",
         "explicit_cyclic_and_nonproportional_control_history",
         "connector_and_cohesive_series_closed_form",
@@ -185,6 +186,9 @@
       "formal_invariants": [
         "trial_histories_are_not_committed_before_equilibrium",
         "failed_steps_restore_the_last_converged_displacement_and_history",
+        "support_loads_do_not_relax_free_dof_equilibrium_tolerance",
+        "equivalent_applied_load_factor_parameterizations_preserve_equilibrium",
+        "non_finite_force_residuals_never_commit_trial_history",
         "shared_node_internal_forces_are_assembled_once_per_incident_element",
         "fixed_dof_reactions_balance_external_load",
         "proportional_prescribed_opening_can_cross_peak_and_reach_zero_traction",
@@ -210,6 +214,8 @@
         "evidence/operator-screening/cohesive-interface-mesh-2d.md",
         "workers/rust/crates/solver/tests/cohesive_interface_mesh_2d_closed_form.rs",
         "workers/rust/crates/solver/tests/cohesive_interface_mesh_2d_sparse.rs",
+        "workers/rust/crates/solver/tests/cohesive_mesh_convergence_reliability.rs",
+        "workers/rust/crates/solver/tests/cohesive_mesh_convergence/plane.rs",
         "workers/rust/crates/solver/src/cohesive_interface_mesh_2d_frame.rs",
         "workers/rust/crates/protocol/src/tests/advanced_rpc.rs",
         "workers/rust/crates/cli/src/tests/advanced_rpc.rs",
@@ -232,6 +238,11 @@
           "id": "cohesive-interface-mesh-2d-rpc",
           "kind": "contract",
           "command": "cd workers/rust && cargo test -p kyuubiki-cli handles_cohesive_interface_mesh_2d -- --nocapture"
+        },
+        {
+          "id": "cohesive-interface-mesh-2d-convergence-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test cohesive_mesh_convergence_reliability plane:: -- --nocapture"
         },
         {
           "id": "cohesive-interface-mesh-2d-workflow",
@@ -264,6 +275,8 @@
         "committed_damage_unload_reload_regression",
         "rigid_coordinate_rotation_invariance",
         "tetrahedral_host_shared_dof_equilibrium",
+        "component_restraint_rank_preflight",
+        "free_dof_load_scaling_and_finite_norm_regression",
         "sparse_global_assembly_scale_regression",
         "rpc_headless_web_and_workflow_contract"
       ],
@@ -271,9 +284,13 @@
         "upper_and_lower_triangular_node_pairs_initially_coincide",
         "uniform_normal_opening_matches_traction_over_initial_stiffness",
         "three_direction_history_is_committed_only_after_equilibrium",
+        "support_loads_do_not_relax_free_dof_equilibrium_tolerance",
+        "equivalent_applied_load_factor_parameterizations_preserve_equilibrium",
+        "non_finite_force_residuals_never_commit_trial_history",
         "local_normal_response_is_invariant_under_rigid_coordinate_rotation",
         "tetrahedral_host_and_interface_forces_share_one_global_residual",
         "fixed_dof_reactions_balance_external_load",
+        "every_interface_host_component_restrains_all_six_rigid_body_modes",
         "global_tangent_non_zero_count_and_fill_ratio_match_sparse_assembly",
         "positive_definite_narrow_band_tangents_use_reported_sparse_cholesky"
       ],
@@ -281,8 +298,13 @@
         "docs/operator-reliability.md",
         "docs/book-ch05-workflow-and-operators.html",
         "evidence/operator-screening/cohesive-interface-mesh-3d.md",
+        "workers/rust/crates/solver/src/cohesive_interface_mesh_3d_topology.rs",
+        "workers/rust/crates/solver/src/rigid_body_restraints_3d.rs",
         "workers/rust/crates/solver/tests/cohesive_interface_mesh_3d_closed_form.rs",
+        "workers/rust/crates/solver/tests/cohesive_interface_mesh_3d_input_reliability.rs",
         "workers/rust/crates/solver/tests/cohesive_interface_mesh_3d_sparse.rs",
+        "workers/rust/crates/solver/tests/cohesive_mesh_convergence_reliability.rs",
+        "workers/rust/crates/solver/tests/cohesive_mesh_convergence/surface.rs",
         "workers/rust/crates/cli/src/tests/cohesive_mesh_3d_rpc.rs",
         "workers/rust/crates/engine/src/tests/workflow_solver_cohesive_3d.rs",
         "apps/web/test/kyuubiki_web/api/advanced_solver_api_test.exs"
@@ -299,9 +321,19 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test cohesive_interface_mesh_3d_sparse -- --nocapture"
         },
         {
+          "id": "cohesive-interface-mesh-3d-input-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test cohesive_interface_mesh_3d_input_reliability -- --nocapture"
+        },
+        {
           "id": "cohesive-interface-mesh-3d-agent-rpc",
           "kind": "contract",
           "command": "cd workers/rust && cargo test -p kyuubiki-cli handles_cohesive_interface_mesh_3d_rpc_requests -- --nocapture"
+        },
+        {
+          "id": "cohesive-interface-mesh-3d-convergence-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test cohesive_mesh_convergence_reliability surface:: -- --nocapture"
         },
         {
           "id": "cohesive-interface-mesh-3d-engine-workflow",

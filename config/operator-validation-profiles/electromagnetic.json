@@ -224,12 +224,14 @@
         "mesh_refinement_preserves_linear_potential_field_current_and_power",
         "free_node_current_residual_remains_bounded",
         "contact_and_terminal_losses_close_source_power_balance",
-        "degenerate_repeated_and_self_intersecting_quads_fail_before_assembly"
+        "degenerate_repeated_and_self_intersecting_quads_fail_before_assembly",
+        "every_connected_component_is_anchored_by_fixed_potential_or_finite_impedance_terminal"
       ],
       "evidence_paths": [
         "docs/operator-reliability.md",
         "evidence/operator-screening/electric-conduction-plane-quad-2d.md",
         "workers/rust/crates/solver/src/electric_conduction_plane_2d.rs",
+        "workers/rust/crates/solver/src/electric_conduction_topology.rs",
         "workers/rust/crates/solver/tests/electric_conduction_plane_quad_2d_review.rs",
         "workers/rust/crates/solver/tests/electric_conduction_plane_mesh_refinement.rs",
         "workers/rust/crates/solver/tests/electric_conduction_plane_input_reliability.rs",

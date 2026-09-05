@@ -2,6 +2,7 @@ use crate::electric_conduction_interfaces::{
     assemble_interfaces, recover_contacts, recover_terminals, terminal_currents_by_node,
     validate_interfaces,
 };
+use crate::electric_conduction_topology::validate_anchored_components;
 use crate::heat_plane_2d_element::{
     HeatPlaneQuadComputed, plane_triangle_scalar_gradient,
     precompute_heat_plane_quad_from_coordinates,
@@ -425,6 +426,7 @@ fn validate_request(request: &SolveElectricConductionPlaneQuad2dRequest) -> Resu
         return Err("electric conduction quad geometry is invalid".to_string());
     }
     validate_interfaces(request)?;
+    validate_anchored_components(request)?;
     Ok(())
 }
 

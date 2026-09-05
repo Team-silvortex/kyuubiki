@@ -18,6 +18,7 @@ use crate::cohesive_interface_mesh_3d_control::{
 };
 use crate::cohesive_interface_mesh_3d_newton::solve_load_step;
 use crate::cohesive_interface_mesh_3d_solid::HostTetra;
+use crate::cohesive_interface_mesh_3d_topology::validate_topology_and_restraints;
 use crate::linear_algebra::{SparseMatrix, add_at};
 
 const DEFAULT_MAX_ITERATIONS: usize = 30;
@@ -55,7 +56,17 @@ fn solve_cohesive_interface_mesh_3d_internal(
         let outcome = solve_load_step(&model, control, &displacements, &states);
         residual_norm = outcome.residual_norm;
         let summary_assembly = assemble(&model, &outcome.displacements, &outcome.states);
-        let summary = step_summary(&model, control, &outcome.displacements, &summary_assembly);
+        let summary_load_factor = if outcome.converged {
+            control.load_factor
+        } else {
+            completed_load_factor
+        };
+        let summary = step_summary(
+            &model,
+            summary_load_factor,
+            &outcome.displacements,
+            &summary_assembly,
+        );
         steps.push(CohesiveInterfaceMesh3dLoadStepResult {
             step: step_index,
             load_factor: control.load_factor,
@@ -272,6 +283,7 @@ impl<'a> ValidatedModel<'a> {
         if fixed_dofs.is_empty() {
             return Err("cohesive interface mesh 3d requires constrained dofs".to_string());
         }
+        validate_topology_and_restraints(request)?;
         let controls = build_controls(request, &free_dofs, &prescribed_displacements)?;
         let free_load_norm = restricted_norm(&external_loads, &free_dofs);
         if !controls.iter().any(|control| {
@@ -456,11 +468,11 @@ struct StepSummary {
 
 fn step_summary(
     model: &ValidatedModel<'_>,
-    control: &ControlStep,
+    load_factor: f64,
     displacements: &[f64],
     assembly: &Assembly,
 ) -> StepSummary {
-    let reactions = reactions(model, control.load_factor, &assembly.internal_forces);
+    let reactions = reactions(model, load_factor, &assembly.internal_forces);
     StepSummary {
         max_displacement: (0..model.node_count)
             .map(|node| {
@@ -566,5 +578,5 @@ fn max_step_or(
 }
 
 fn norm(vector: [f64; 3]) -> f64 {
-    vector.iter().map(|value| value * value).sum::<f64>().sqrt()
+    vector_norm(&vector)
 }

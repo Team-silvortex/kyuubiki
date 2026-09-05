@@ -1,3 +1,4 @@
+use crate::rigid_body_restraints_3d::rigid_body_restraint_rank;
 use kyuubiki_protocol::{SolidTetra3dElementInput, SolveSolidTetra3dRequest};
 use std::collections::BTreeMap;
 
@@ -141,7 +142,17 @@ fn validate_mesh_topology_and_restraints(request: &SolveSolidTetra3dRequest) -> 
     }
 
     for (component_index, component) in mesh_components(request).iter().enumerate() {
-        let rank = rigid_body_restraint_rank(request, component);
+        let rank = rigid_body_restraint_rank(
+            component,
+            |index| {
+                let node = &request.nodes[index];
+                [node.x, node.y, node.z]
+            },
+            |index| {
+                let node = &request.nodes[index];
+                [node.fix_x, node.fix_y, node.fix_z]
+            },
+        );
         if rank < 6 {
             let first_node = component[0];
             return Err(format!(
@@ -195,76 +206,4 @@ fn union(parent: &mut [usize], left: usize, right: usize) {
         };
         parent[child] = root;
     }
-}
-
-fn rigid_body_restraint_rank(request: &SolveSolidTetra3dRequest, component: &[usize]) -> usize {
-    let centroid = component.iter().fold([0.0; 3], |mut sum, &index| {
-        let node = &request.nodes[index];
-        sum[0] += node.x;
-        sum[1] += node.y;
-        sum[2] += node.z;
-        sum
-    });
-    let centroid = centroid.map(|value| value / component.len() as f64);
-    let scale = component
-        .iter()
-        .map(|&index| {
-            let node = &request.nodes[index];
-            ((node.x - centroid[0]).powi(2)
-                + (node.y - centroid[1]).powi(2)
-                + (node.z - centroid[2]).powi(2))
-            .sqrt()
-        })
-        .fold(0.0_f64, f64::max)
-        .max(f64::MIN_POSITIVE);
-    let mut rows = Vec::<[f64; 6]>::new();
-    for &index in component {
-        let node = &request.nodes[index];
-        let x = (node.x - centroid[0]) / scale;
-        let y = (node.y - centroid[1]) / scale;
-        let z = (node.z - centroid[2]) / scale;
-        if node.fix_x {
-            rows.push([1.0, 0.0, 0.0, 0.0, z, -y]);
-        }
-        if node.fix_y {
-            rows.push([0.0, 1.0, 0.0, -z, 0.0, x]);
-        }
-        if node.fix_z {
-            rows.push([0.0, 0.0, 1.0, y, -x, 0.0]);
-        }
-    }
-    matrix_rank(&mut rows)
-}
-
-fn matrix_rank(rows: &mut [[f64; 6]]) -> usize {
-    let mut rank = 0;
-    for column in 0..6 {
-        let pivot = (rank..rows.len()).max_by(|&left, &right| {
-            rows[left][column]
-                .abs()
-                .total_cmp(&rows[right][column].abs())
-        });
-        let Some(pivot) = pivot else {
-            break;
-        };
-        if rows[pivot][column].abs() <= 1.0e-10 {
-            continue;
-        }
-        rows.swap(rank, pivot);
-        let divisor = rows[rank][column];
-        for value in &mut rows[rank][column..] {
-            *value /= divisor;
-        }
-        for row in 0..rows.len() {
-            if row == rank {
-                continue;
-            }
-            let factor = rows[row][column];
-            for entry in column..6 {
-                rows[row][entry] -= factor * rows[rank][entry];
-            }
-        }
-        rank += 1;
-    }
-    rank
 }

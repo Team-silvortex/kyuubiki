@@ -45,8 +45,11 @@ test tolerance.
 The input regression rejects duplicate identifiers, repeated element nodes,
 non-finite material values, degenerate triangles, self-intersecting quad
 ordering, globally unanchored systems, and disconnected unanchored islands.
-Malformed geometry must fail before matrix assembly rather than surfacing a
-borrowed heat-operator diagnostic or producing an apparently valid result.
+Every topology component must be anchored by a prescribed potential or a
+finite-impedance terminal; finite-resistance contacts participate in component
+connectivity. Malformed geometry and floating components must fail before
+matrix assembly rather than surfacing a borrowed heat-operator diagnostic or
+producing an apparently valid result.
 
 The existing solver, Agent RPC, and Engine Workflow tests retain contact and
 terminal power partitioning plus the public transport contracts. Promotion
