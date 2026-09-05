@@ -215,6 +215,19 @@ test("project import reports Store persistence failure without discarding import
   assert.equal(storage.getItem(STORE_MANIFEST_STORAGE_KEY), null);
 });
 
+test("project import validates the workspace payload before creating persistent records", async () => {
+  const state = { selectedProjectId: "existing-project" as string | null, messages: [] as string[], alerts: [] as Array<{ id: string; message: string }> };
+  const effects = importEffects(state);
+  let creations = 0;
+  effects.createProject = async () => { creations += 1; return { project: { project_id: "unexpected" } }; };
+  const bundle = { ...JSON.parse(projectBundleJson()), workspace_snapshot: { kind: "unknown-study" } };
+  await importWorkbenchProjectBundle(new File([JSON.stringify(bundle)], "invalid.kyuubiki.json"), effects);
+  assert.equal(creations, 0);
+  assert.equal(state.selectedProjectId, "existing-project");
+  assert.ok(state.alerts.some((alert) => alert.id === "project-import-error"));
+  assert.notEqual(state.messages.at(-1), "project imported");
+});
+
 test("persisted version loading remains awaitable across a React transition", async () => {
   let release!: () => void;
   let settled = false;

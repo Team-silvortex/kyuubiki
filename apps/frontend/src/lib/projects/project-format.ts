@@ -87,14 +87,51 @@ export type ProjectBundle = {
   results?: JobResultRecord[];
 };
 
+function isBundleRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function validateBundleSections(raw: Partial<ProjectBundle>) {
+  if (!isBundleRecord(raw.project) || typeof raw.project.project_id !== "string" ||
+      typeof raw.project.name !== "string" || !Array.isArray(raw.models) || !Array.isArray(raw.model_versions)) {
+    throw new Error("project bundle requires a project record and models/model_versions arrays");
+  }
+  const modelIds = new Set<string>();
+  for (const model of raw.models) {
+    if (!isBundleRecord(model) || typeof model.model_id !== "string" || !model.model_id ||
+        modelIds.has(model.model_id) || model.project_id !== raw.project.project_id ||
+        typeof model.name !== "string" || typeof model.kind !== "string" || !isBundleRecord(model.payload)) {
+      throw new Error("project bundle contains an invalid, duplicate, or foreign model record");
+    }
+    modelIds.add(model.model_id);
+  }
+  const versionIds = new Set<string>();
+  for (const version of raw.model_versions) {
+    if (!isBundleRecord(version) || typeof version.version_id !== "string" || !version.version_id ||
+        versionIds.has(version.version_id) || !modelIds.has(version.model_id) ||
+        version.project_id !== raw.project.project_id || typeof version.name !== "string" ||
+        typeof version.kind !== "string" || !Number.isSafeInteger(version.version_number) ||
+        version.version_number < 1 || !isBundleRecord(version.payload)) {
+      throw new Error("project bundle contains an invalid, duplicate, or orphan model version");
+    }
+    versionIds.add(version.version_id);
+  }
+  for (const key of ["automation_presets", "snippet_presets", "asset_catalog", "asset_references", "jobs", "results"] as const) {
+    if (raw[key] != null && !Array.isArray(raw[key])) throw new Error(`project bundle ${key} must be an array`);
+  }
+  if (raw.workspace_snapshot != null && !isBundleRecord(raw.workspace_snapshot)) {
+    throw new Error("project bundle workspace_snapshot must be a model record");
+  }
+}
+
 function normalizeBundle(raw: Partial<ProjectBundle>): ProjectBundle {
+  if (!isBundleRecord(raw)) throw new Error("project bundle must be an object");
   if (raw.project_schema_version !== PROJECT_SCHEMA_VERSION && raw.project_schema_version !== LEGACY_PROJECT_SCHEMA_VERSION) {
     throw new Error(`unsupported project_schema_version: ${String(raw.project_schema_version)}`);
   }
 
-  if (!raw.project || !raw.models || !raw.model_versions) {
-    throw new Error("project bundle is missing required sections");
-  }
+  validateBundleSections(raw);
+  if (!raw.project || !raw.models || !raw.model_versions) throw new Error("project bundle is missing required sections");
 
   return {
     project_schema_version: raw.project_schema_version === LEGACY_PROJECT_SCHEMA_VERSION ? LEGACY_PROJECT_SCHEMA_VERSION : PROJECT_SCHEMA_VERSION,
@@ -419,7 +456,7 @@ export async function parseProjectBundleFile(file: File): Promise<ProjectBundle>
       }
     }
 
-    return bundle;
+    return normalizeBundle(bundle);
   }
 
   return parseProjectBundleJson(await file.text());

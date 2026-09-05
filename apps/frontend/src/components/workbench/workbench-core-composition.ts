@@ -120,11 +120,13 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     setJob: rootState.setJob,
     setMessage: rootState.setMessage,
     setSystemAlerts: rootState.setSystemAlerts,
+    setImportNotice: rootState.setImportNotice,
     startTransition: rootState.startTransition,
     resultRecords: rootState.resultRecords,
     projects: rootState.projects,
     selectedProjectId: rootState.selectedProjectId,
     selectedModelId: rootState.selectedModelId,
+    selectedVersionId: rootState.selectedVersionId,
     modelVersions: rootState.modelVersions,
     setSidebarSection: rootState.setSidebarSection,
     directMeshEndpointsText: rootState.directMeshEndpointsText,
@@ -142,6 +144,8 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     securityEventWindowMs: SECURITY_EVENT_WINDOW_MS,
     setLibraryTab: rootState.setLibraryTab,
     activeMaterial: rootState.activeMaterial,
+    adminDataBackendService:
+      props.adminDataBackendService ?? workbenchAdminDataBackendService,
     projectLibraryBackendService:
       props.projectLibraryBackendService ?? workbenchProjectLibraryBackendService,
     createProject: props.createProject,

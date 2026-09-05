@@ -5,10 +5,12 @@ import type {
   WorkbenchProjectLibraryBackendService,
 } from "@/lib/workbench/project-library-backend-service-core";
 import type { WorkbenchDownloadResult } from "@/components/workbench/workbench-export-controller";
+import type { ProjectRecord } from "@/lib/api/project-types";
 
 type ScriptProjectModelControllerDeps = {
   action: string;
   payload: Record<string, unknown>;
+  projects: ProjectRecord[];
   selectedProjectId: string | null;
   selectedModelId: string | null;
   selectedVersionId: string | null;
@@ -51,6 +53,7 @@ type ScriptProjectModelControllerDeps = {
 export async function handleWorkbenchScriptProjectModelAction({
   action,
   payload,
+  projects,
   selectedProjectId,
   selectedModelId,
   selectedVersionId,
@@ -94,18 +97,28 @@ export async function handleWorkbenchScriptProjectModelAction({
       const name = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : defaultProjectLabel;
       const description = typeof payload.description === "string" ? payload.description : "";
       const created = await projectLibraryBackendService.createProject({ name, description });
+      await refreshProjects(false, created.project.project_id);
       setSelectedProjectId(created.project.project_id);
+      setSelectedModelId(null);
+      setSelectedVersionId(null);
+      setModelVersions([]);
       setProjectNameDraft(created.project.name);
       setProjectDescriptionDraft(created.project.description ?? "");
-      await refreshProjects(false, created.project.project_id);
       setMessage(projectCreatedLabel);
       return { ok: true, action, projectId: created.project.project_id };
     }
     case "project/select": {
-      const projectId = typeof payload.projectId === "string" ? payload.projectId : null;
-      if (projectId) {
-        setSelectedProjectId(projectId);
+      const projectId = typeof payload.projectId === "string" ? payload.projectId.trim() : null;
+      const project = projects?.find((entry) => entry.project_id === projectId);
+      if (!project) throw new Error(projectRequiredLabel);
+      if (projectId !== selectedProjectId) {
+        setSelectedModelId(null);
+        setSelectedVersionId(null);
+        setModelVersions([]);
       }
+      setSelectedProjectId(project.project_id);
+      setProjectNameDraft(project.name);
+      setProjectDescriptionDraft(project.description ?? "");
       return { ok: true, action, projectId };
     }
     case "project/updateSelected": {
@@ -167,9 +180,9 @@ export async function handleWorkbenchScriptProjectModelAction({
 
       if (!selectedModelId || action === "model/saveAs") {
         const created = await projectLibraryBackendService.createModel(selectedProjectId, modelPayload);
+        await refreshProjects(false, selectedProjectId);
         setSelectedModelId(created.model.model_id);
         setSelectedVersionId(created.model.latest_version_id ?? null);
-        await refreshProjects();
         await refreshVersions(created.model.model_id);
         setMessage(modelCreatedLabel);
         return { ok: true, action, modelId: created.model.model_id };
@@ -177,8 +190,8 @@ export async function handleWorkbenchScriptProjectModelAction({
 
       await projectLibraryBackendService.updateModel(selectedModelId, modelPayload);
       const version = await projectLibraryBackendService.createModelVersion(selectedModelId, modelPayload);
-      setSelectedVersionId(version.version.version_id);
       await refreshProjects();
+      setSelectedVersionId(version.version.version_id);
       await refreshVersions(selectedModelId);
       setMessage(modelSavedLabel);
       return { ok: true, action, versionId: version.version.version_id };

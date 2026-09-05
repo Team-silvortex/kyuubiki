@@ -133,7 +133,11 @@ export function WorkbenchLibraryProjectsPanel({
               data-workbench-library-project-action="import"
               type="file"
               accept=".kyuubiki,.kyuubiki.json,application/json,application/zip"
-              onChange={(event) => void onImportProjectBundle(event.target.files?.[0])}
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0];
+                event.currentTarget.value = "";
+                void onImportProjectBundle(file);
+              }}
             />
           </label>
         </>

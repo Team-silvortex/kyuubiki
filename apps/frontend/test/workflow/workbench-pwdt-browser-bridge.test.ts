@@ -277,6 +277,7 @@ test("Pwdt browser bridge runs a closed-loop truss study recipe through action c
       "state/setParametric",
       "model/generateTruss",
       "model/setWorkspaceMeta",
+      "model/setWorkspaceMeta",
       "model/saveAs",
       "job/run",
       "data/setFilters",
@@ -284,6 +285,23 @@ test("Pwdt browser bridge runs a closed-loop truss study recipe through action c
   );
   assert.equal((await bridge.waitForState({ systemDataTab: "results" }, { timeoutMs: 50 })).systemDataTab, "results");
   await assert.rejects(() => bridge.runRecipe("recipe/missing"), /Unknown Pwdt recipe/);
+});
+
+test("Pwdt parametric generation applies material before generation and preserves the requested name", async () => {
+  const snapshot: Record<string, unknown> = { loadedModelName: "old", activeMaterial: "old" };
+  const bridge = createWorkbenchPwdtBrowserBridge({
+    getSnapshot: () => snapshot,
+    invokeAction: async (action, payload) => {
+      if (action === "model/setWorkspaceMeta") Object.assign(snapshot, payload);
+      if (action === "model/generateTruss") {
+        assert.equal(snapshot.activeMaterial, "210");
+        snapshot.loadedModelName = "parametric-pratt-truss";
+      }
+      return { ok: true, action };
+    },
+  });
+  const result = await bridge.buildParametricTruss2d({ activeMaterial: 210, modelName: "custom-truss" });
+  assert.equal(result.loadedModelName, "custom-truss");
 });
 
 test("Pwdt browser bridge runs a heat-to-thermo quad composite recipe through action calls", async () => {

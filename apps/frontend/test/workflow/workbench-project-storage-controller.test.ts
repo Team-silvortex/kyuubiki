@@ -22,6 +22,7 @@ function jobState(jobId: string): JobState {
   return {
     has_result: true,
     job_id: jobId,
+    project_id: "project-a",
     progress: 1,
     status: "completed",
     worker_id: "worker-a",
@@ -101,7 +102,11 @@ function projectLibraryService(calls: string[]): WorkbenchProjectLibraryBackendS
   };
 }
 
-function baseController(calls: string[], getSelectedProject: () => ProjectRecord | null = projectRecord) {
+function baseController(
+  calls: string[],
+  getSelectedProject: () => ProjectRecord | null = projectRecord,
+  overrides: Partial<Parameters<typeof createWorkbenchProjectStorageController>[0]> = {},
+) {
   return createWorkbenchProjectStorageController({
     activeMaterial: "steel",
     adminDataBackendService: adminDataService(calls),
@@ -151,6 +156,7 @@ function baseController(calls: string[], getSelectedProject: () => ProjectRecord
     torsionModel: {},
     truss3dModel: {},
     trussModel: {},
+    ...overrides,
   });
 }
 
@@ -184,4 +190,65 @@ test("project storage download wrappers preserve explicit failure outcomes", asy
     if (result.ok) assert.fail("missing project must not report a successful download");
     assert.match(result.error.message, /project required/u);
   }
+});
+
+test("project export excludes foreign and unassigned jobs before fetching results", async () => {
+  const calls: string[] = [];
+  const controller = baseController(calls, projectRecord, {
+    jobHistory: [jobState("owned"), { ...jobState("foreign"), project_id: "project-b" },
+      { ...jobState("unassigned"), project_id: undefined }],
+  });
+  const { bundle, partial } = await controller.buildProjectBundleJson();
+  assert.equal(partial, false);
+  assert.deepEqual(JSON.parse(bundle).jobs.map((entry: JobState) => entry.job_id), ["owned"]);
+  assert.deepEqual(JSON.parse(bundle).results.map((entry: JobState) => entry.job_id), ["owned"]);
+  assert.deepEqual(calls.filter((entry) => entry.startsWith("fetch-job:")), ["fetch-job:owned"]);
+});
+
+for (const mode of ["rejected", "missing", "null", "wrong-job", "wrong-project"]) {
+  test(`project export reports a partial bundle for a ${mode} result`, async () => {
+    const calls: string[] = [];
+    const service = adminDataService(calls);
+    service.fetchJob = async <TResult>() => {
+      if (mode === "rejected") throw new Error("result unavailable");
+      return {
+        job: { ...jobState(mode === "wrong-job" ? "other-job" : "job-a"),
+          ...(mode === "wrong-project" ? { project_id: "project-b" } : {}) },
+        result: (mode === "missing" ? undefined : mode === "null" ? null : { displacement: 1 }) as TResult,
+      };
+    };
+    const controller = baseController(calls, projectRecord, { adminDataBackendService: service });
+    const { bundle, partial } = await controller.buildProjectBundleJson();
+    assert.equal(partial, true);
+    assert.equal(JSON.parse(bundle).jobs.length, 1);
+    assert.deepEqual(JSON.parse(bundle).results, []);
+  });
+}
+
+for (const result of [0, false, ""]) {
+  test(`project export preserves the valid false-like result ${JSON.stringify(result)}`, async () => {
+    const service = adminDataService([]);
+    service.fetchJob = async <TResult>() => ({ job: jobState("job-a"), result: result as TResult });
+    const { bundle, partial } = await baseController([], projectRecord, {
+      adminDataBackendService: service,
+    }).buildProjectBundleJson();
+    assert.equal(partial, false);
+    assert.equal(JSON.parse(bundle).results[0].result, result);
+  });
+}
+
+test("project export retains available results when another result fails", async () => {
+  const service = adminDataService([]);
+  const fetchJob = service.fetchJob;
+  service.fetchJob = async <TResult>(id: string) => {
+    if (id === "unavailable") throw new Error("unavailable");
+    return fetchJob<TResult>(id);
+  };
+  const { bundle, partial } = await baseController([], projectRecord, {
+    jobHistory: [jobState("available"), jobState("unavailable")],
+    adminDataBackendService: service,
+  }).buildProjectBundleJson();
+  assert.equal(partial, true);
+  assert.equal(JSON.parse(bundle).jobs.length, 2);
+  assert.deepEqual(JSON.parse(bundle).results.map((entry: JobState) => entry.job_id), ["available"]);
 });

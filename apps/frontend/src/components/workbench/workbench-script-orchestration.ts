@@ -224,7 +224,7 @@ export async function invokeWorkbenchScriptAction(options: Record<string, any>):
           } else {
             const macroDataResult = await options.handleWorkbenchScriptMacroDataAction({
               ...options.macroDataArgs,
-              invokeScriptAction: (
+              invokeScriptAction: options.invokeNestedAction ?? ((
                 action: string,
                 payload: Record<string, unknown> = {},
                 source = "script",
@@ -241,7 +241,7 @@ export async function invokeWorkbenchScriptAction(options: Record<string, any>):
                   storeArgs: { ...options.storeArgs, action, payload },
                   stateArgs: { ...options.stateArgs, action, payload },
                   macroDataArgs: { ...options.macroDataArgs, action, payload, source, note },
-                }),
+                })),
             });
             if (macroDataResult) {
               resultPayload = macroDataResult;

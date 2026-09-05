@@ -64,3 +64,28 @@ test("flow composition preserves selected admin records and editing drafts", () 
   assert.equal(composition.selectedAdminResultJobId, "result-qualification");
   assert.equal(composition.adminResultDraft, '{"metric":42}');
 });
+
+test("flow composition connects project, model, selection and recovery dependencies to PWDT", () => {
+  const workspaceState = {
+    projects: [{ project_id: "project-a" }],
+    selectedModelId: "model-a",
+    setSelectedProjectId: () => {},
+    setSelectedTruss3dNodes: () => {},
+    setSystemAlerts: () => {},
+  };
+  const services = {
+    projectLibraryBackendService: { createProject: async () => ({}) },
+    resetActiveResult: () => {},
+    openWorkspaceStudy: () => {},
+  };
+  const composition = buildWorkbenchFlowComposition({
+    ...services,
+    workspaceState,
+    interactionControllers: { assistantAudit: {}, topLevelActions: {}, uiActionController: {} },
+    projectFlows: { adminDataEffects: {}, projectStorageController: {} },
+    shellState: { languagePacks: [] }, studyResultDerived: {}, workflowController: {},
+  });
+  for (const [name, value] of Object.entries({ ...services, ...workspaceState })) {
+    assert.equal(composition[name as keyof typeof composition], value, `${name} must reach the action controller`);
+  }
+});

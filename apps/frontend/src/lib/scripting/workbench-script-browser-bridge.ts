@@ -319,10 +319,9 @@ export function createWorkbenchPwdtBrowserBridge({
       await bridge.invoke("nav/setStudyKind", { studyKind: "truss_2d" });
       await bridge.openSidebar("model");
       await bridge.openTabs({ modelTab: "tools", modelToolsPage: "generate" });
-      if (params.modelName !== undefined || params.activeMaterial !== undefined) {
+      if (params.activeMaterial !== undefined) {
         await bridge.invoke("model/setWorkspaceMeta", {
-          ...(params.modelName !== undefined ? { loadedModelName: params.modelName } : {}),
-          ...(params.activeMaterial !== undefined ? { activeMaterial: String(params.activeMaterial) } : {}),
+          activeMaterial: String(params.activeMaterial),
         });
       }
       await bridge.invoke("state/setParametric", {
@@ -332,6 +331,9 @@ export function createWorkbenchPwdtBrowserBridge({
         loadY: params.loadY ?? -1500,
       });
       await bridge.invoke("model/generateTruss");
+      if (params.modelName !== undefined) {
+        await bridge.invoke("model/setWorkspaceMeta", { loadedModelName: params.modelName });
+      }
       return snapshotRecord(getSnapshot);
     },
     async prepareElectrostaticPlaneTriangleStudy(params = {}) {

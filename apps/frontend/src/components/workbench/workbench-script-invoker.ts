@@ -23,6 +23,7 @@ export function createWorkbenchScriptInvoker(options: Record<string, any>) {
       uxGuardrailSummary: options.uxGuardrailSummary,
       recordSecurityAuditEvent: options.recordSecurityAuditEvent,
       appendScriptActionLog: options.appendScriptActionLog,
+      invokeNestedAction: options.invokeNestedAction,
       handleWorkbenchScriptNavAction,
       handleWorkbenchScriptProjectModelAction,
       handleWorkbenchScriptStoreAction,
@@ -61,6 +62,7 @@ export function createWorkbenchScriptInvoker(options: Record<string, any>) {
       projectModelArgs: {
         action,
         payload,
+        projects: options.projects,
         selectedProjectId: options.selectedProjectId,
         selectedModelId: options.selectedModelId,
         selectedVersionId: options.selectedVersionId,

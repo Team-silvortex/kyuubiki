@@ -165,15 +165,14 @@ export function useWorkbenchDataRefreshController({
 
       const nextModelId =
         selectedModelId &&
-        nextProjects.some((project) =>
-          (project.models ?? []).some((model) => model.model_id === selectedModelId),
-        )
+        (nextProjects.find((project) => project.project_id === nextProjectId)?.models ?? [])
+          .some((model) => model.model_id === selectedModelId)
           ? selectedModelId
           : (nextProjects.find((project) => project.project_id === nextProjectId)?.models ?? [])[0]
               ?.model_id ?? null;
 
       setSelectedModelId(nextModelId);
-      if (!nextModelId) {
+      if (!nextModelId || nextModelId !== selectedModelId) {
         setSelectedVersionId(null);
       }
       clearRecovery("projects");
@@ -248,7 +247,9 @@ export function useWorkbenchDataRefreshController({
 
   useEffect(() => {
     if (!selectedModelId) {
+      versionsRefreshSeqRef.current += 1;
       setModelVersions([]);
+      setSelectedVersionId(null);
       return;
     }
 

@@ -4,7 +4,9 @@ import { useWorkbenchAssistantAuditController } from "@/components/workbench/wor
 import { createWorkbenchTopLevelActionsController } from "@/components/workbench/workbench-top-level-actions-controller";
 import { createWorkbenchUiActionController } from "@/components/workbench/workbench-ui-action-controller";
 
-export function useWorkbenchInteractionControllers(props: Record<string, any>) {
+export function useWorkbenchInteractionControllers(
+  props: Parameters<typeof createWorkbenchTopLevelActionsController>[0] & Record<string, any>,
+) {
   const topLevelActions = createWorkbenchTopLevelActionsController({
     language: props.language,
     t: props.t,

@@ -119,6 +119,7 @@ function baseArgs(calls: string[]) {
     noSavedModelsLabel: "no models",
     noVersionsLabel: "no versions",
     payload: {},
+    projects: [projectEnvelope("project-a").project, projectEnvelope("project-b", "Second project").project],
     projectCreatedLabel: "project created",
     projectDeletedLabel: "project deleted",
     projectDescriptionDraft: "",
@@ -171,8 +172,10 @@ test("script project action creates projects through project library service", a
   assert.deepEqual(result, { ok: true, action: "project/create", projectId: "project-created" });
   assert.deepEqual(calls, [
     "create-project:Script Project",
-    "set-project:project-created",
     "refresh-projects",
+    "set-project:project-created",
+    "set-model:",
+    "set-version:",
     "message:project created",
   ]);
 });
@@ -188,9 +191,9 @@ test("script model save creates models through project library service", async (
   assert.deepEqual(result, { ok: true, action: "model/save", modelId: "model-created" });
   assert.deepEqual(calls, [
     "create-model:project-a:model-a",
+    "refresh-projects",
     "set-model:model-created",
     "set-version:version-a",
-    "refresh-projects",
     "refresh-versions:model-created",
     "message:model created",
   ]);
@@ -208,4 +211,34 @@ test("script project exports propagate download failures instead of reporting fa
     }),
     failure,
   );
+});
+
+test("script project selection clears saved associations only when the project changes", async () => {
+  const calls: string[] = [];
+  const args = { ...baseArgs(calls), action: "project/select", selectedProjectId: "project-a", selectedModelId: "model-a" };
+  await handleWorkbenchScriptProjectModelAction({ ...args, payload: { projectId: "project-a" } });
+  assert.deepEqual(calls, ["set-project:project-a"]);
+  calls.length = 0;
+  await handleWorkbenchScriptProjectModelAction({ ...args, payload: { projectId: "project-b" } });
+  assert.deepEqual(calls, ["set-model:", "set-version:", "set-project:project-b"]);
+});
+
+for (const projectId of ["missing-project", "", null, 17]) {
+  test(`script project selection rejects invalid project ${JSON.stringify(projectId)} without mutations`, async () => {
+    const calls: string[] = [];
+    await assert.rejects(handleWorkbenchScriptProjectModelAction({
+      ...baseArgs(calls), action: "project/select", selectedProjectId: "project-a", payload: { projectId },
+    }), /project required/u);
+    assert.deepEqual(calls, []);
+  });
+}
+
+test("script save-as restores the newly created model after refreshing an existing project", async () => {
+  const calls: string[] = [];
+  const args = baseArgs(calls);
+  await handleWorkbenchScriptProjectModelAction({
+    ...args, action: "model/saveAs", selectedProjectId: "project-a", selectedModelId: "old-model",
+    refreshProjects: async () => { args.setSelectedModelId("old-model"); },
+  });
+  assert.deepEqual(calls.filter((entry) => entry.startsWith("set-model:")), ["set-model:old-model", "set-model:model-created"]);
 });

@@ -11,6 +11,8 @@
     "tests/integration/desktop-shell-regression.test.mjs",
     "tests/integration/workbench-ui-data-library-actions.test.mjs",
     "tests/integration/workbench-ui-functional-closure.test.mjs",
+    "tests/integration/workbench-ui-functional-recovery.test.mjs",
+    "tests/integration/workbench-ui-project-boundaries.test.mjs",
     "tests/integration/workbench-ui-workflow-builder-actions.test.mjs",
     "tests/integration/workbench-ui-workflow-invocation.test.mjs",
     "tests/integration/workbench-ui-workflow-readiness.test.mjs",

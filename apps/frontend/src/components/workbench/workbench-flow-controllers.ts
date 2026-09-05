@@ -3,6 +3,7 @@
 import { useWorkbenchAssistantController } from "@/components/workbench/workbench-assistant-controller";
 import { createWorkbenchPrimaryActionsController } from "@/components/workbench/workbench-primary-actions-controller";
 import { createWorkbenchScriptInvoker } from "@/components/workbench/workbench-script-invoker";
+import { useWorkbenchScriptCommitBoundary, type WorkbenchScriptInvoker } from "@/components/workbench/workbench-script-commit-boundary";
 import { buildWorkbenchUxGuardrailSummary } from "@/components/workbench/workbench-ux-guardrails";
 import { serializeCurrentModel } from "@/lib/workbench/helpers";
 
@@ -123,7 +124,7 @@ export function useWorkbenchFlowControllers(props: Record<string, any>) {
     },
     cancelCurrentJob: props.cancelCurrentJob,
     applyTrussSuggestion: props.applyTrussSuggestion,
-    openSample: props.openSample,
+    openSample: primaryActionsController.openSample,
     openWorkspaceStudy: props.openWorkspaceStudy,
     runAnalysis: primaryActionsController.runAnalysis,
     downloadResultCsv: props.downloadResultCsv,
@@ -136,8 +137,12 @@ export function useWorkbenchFlowControllers(props: Record<string, any>) {
     getScriptSnapshot: props.getScriptSnapshot,
   });
 
-  const invokeScriptAction = createWorkbenchScriptInvoker({
+  const invokeScriptAction: WorkbenchScriptInvoker = useWorkbenchScriptCommitBoundary(createWorkbenchScriptInvoker({
+    invokeNestedAction: (...args: Parameters<WorkbenchScriptInvoker>) => invokeScriptAction(...args),
+    projects: props.projects,
     language: props.language,
+    frontendRuntimeMode: props.frontendRuntimeMode,
+    directMeshEndpointsText: props.directMeshEndpointsText,
     uxGuardrailSummary: buildWorkbenchUxGuardrailSummary({
       frontendRuntimeMode: props.frontendRuntimeMode === "direct_mesh_gui" ? "direct_mesh_gui" : "orchestrated_gui",
       healthStatus: props.health?.status,
@@ -287,7 +292,7 @@ export function useWorkbenchFlowControllers(props: Record<string, any>) {
     openProjectContextById: props.openProjectContextById,
     applyJobContextToWorkbench: props.applyJobContextToWorkbench,
     downloadDatabaseSnapshot: props.downloadDatabaseSnapshot,
-  });
+  }));
 
   return {
     assistantController,

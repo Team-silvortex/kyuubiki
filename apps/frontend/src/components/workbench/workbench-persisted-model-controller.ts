@@ -61,7 +61,7 @@ type PersistedModelControllerDeps = PersistedModelEffects & {
   updateModelVersion: (versionId: string, input: { name: string }) => Promise<any>;
   fetchModel: (modelId: string) => Promise<any>;
   fetchModelVersion: (versionId: string) => Promise<any>;
-  refreshProjects: () => Promise<void>;
+  refreshProjects: (bootstrap?: boolean, preferredProjectId?: string | null) => Promise<void>;
   refreshVersions: (modelId: string) => Promise<void>;
   recordHistory: (label: string) => void;
   resetActiveResult: () => void;
@@ -109,12 +109,19 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
     dismissWorkbenchNotice(effects.setImportNotice);
     const { parseProjectBundleFile } = await import("@/lib/projects/project-format");
     const bundle = await parseProjectBundleFile(file);
+    const activeModel = bundle.models.find((model) => model.model_id === bundle.active_model_id) ?? bundle.models[0];
+    const activeVersion = bundle.model_versions.find((version) =>
+      version.version_id === bundle.active_version_id && version.model_id === activeModel?.model_id);
+    const workspacePayload = bundle.workspace_snapshot ?? activeVersion?.payload ?? activeModel?.payload;
+    // Validate the payload before creating persistent records or changing the active workspace.
+    const importedWorkspace = workspacePayload ? parsePlaygroundModel(JSON.stringify(workspacePayload)) : null;
     const createdProject = await effects.createProject({
       name: bundle.project.name,
       description: bundle.project.description ?? "",
     });
 
     const modelIdMap = new Map<string, string>();
+    const versionIdMap = new Map<string, string>();
 
     for (const bundledModel of bundle.models) {
       const bundledVersions = bundle.model_versions
@@ -133,19 +140,21 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
       const newModelId = createdModel.model.model_id;
       modelIdMap.set(bundledModel.model_id, newModelId);
 
-      const initialVersionId = createdModel.model.versions?.[0]?.version_id;
-      if (initialVersionId && baseVersion?.name) {
+      const initialVersionId = createdModel.model.latest_version_id ?? createdModel.model.versions?.[0]?.version_id;
+      if (initialVersionId && baseVersion) versionIdMap.set(baseVersion.version_id, initialVersionId);
+      if (createdModel.model.versions?.[0]?.version_id && baseVersion?.name) {
         await effects.updateModelVersion(initialVersionId, { name: baseVersion.name });
       }
 
       for (const extraVersion of bundledVersions.slice(1)) {
-        await effects.createModelVersion(newModelId, {
+        const createdVersion = await effects.createModelVersion(newModelId, {
           name: extraVersion.name,
           kind: extraVersion.kind,
           material: extraVersion.material ?? undefined,
           model_schema_version: extraVersion.model_schema_version,
           payload: extraVersion.payload,
         });
+        versionIdMap.set(extraVersion.version_id, createdVersion.version.version_id);
       }
     }
 
@@ -195,21 +204,24 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
       }
     }
 
-    await effects.refreshProjects();
+    await effects.refreshProjects(false, createdProject.project.project_id);
 
     const importedActiveModelId =
-      (bundle.active_model_id && modelIdMap.get(bundle.active_model_id)) ||
-      [...modelIdMap.values()][0] ||
-      null;
+      (activeModel && modelIdMap.get(activeModel.model_id)) || null;
+    const sourceVersionId = activeVersion?.version_id ?? activeModel?.latest_version_id;
+    const importedActiveVersionId = (sourceVersionId && versionIdMap.get(sourceVersionId)) || null;
 
-    effects.setSelectedProjectId(createdProject.project.project_id);
-    effects.setSelectedModelId(importedActiveModelId);
-
-    if (bundle.workspace_snapshot) {
+    if (importedWorkspace) {
       effects.recordHistory(effects.importActionLabel);
-      applyPersistedWorkbenchPayload(bundle.workspace_snapshot, bundle.project.name, effects);
+      applyImportedWorkbenchModel(importedWorkspace, effects);
+      if (!bundle.workspace_snapshot) effects.setLoadedModelName(activeVersion?.name ?? activeModel?.name ?? importedWorkspace.name);
+      effects.resetActiveResult();
     }
 
+    // Loading a payload clears saved-model associations; restore the remapped IDs afterwards.
+    effects.setSelectedProjectId(createdProject.project.project_id);
+    effects.setSelectedModelId(importedActiveModelId);
+    effects.setSelectedVersionId(importedActiveVersionId);
     if (importedActiveModelId) {
       await effects.refreshVersions(importedActiveModelId);
     } else {

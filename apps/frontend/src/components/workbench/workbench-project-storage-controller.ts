@@ -11,7 +11,7 @@ import {
   openPersistedWorkbenchVersion,
   openPersistedWorkbenchVersionById,
 } from "@/components/workbench/workbench-persisted-model-controller";
-import type { JobResultRecord } from "@/lib/api/fem-shared";
+import type { JobResultRecord, JobState } from "@/lib/api/fem-shared";
 import { exportProjectBundle } from "@/lib/models/modeler";
 import { listWorkbenchMacroPresets, listWorkbenchSnippetPresets } from "@/lib/scripting/workbench-script-runtime";
 import { readWorkspaceStoreManifest } from "@/lib/workbench/store-manifest";
@@ -34,7 +34,7 @@ type ProjectStorageControllerDeps = {
   loadedModelName: string;
   activeMaterial: string;
   studyKind: string;
-  jobHistory: any[];
+  jobHistory: JobState[];
   axialForm: any;
   heatBarModel: any;
   heatPlaneModel: any;
@@ -134,36 +134,29 @@ export function createWorkbenchProjectStorageController({
 
     const modelDetails = modelDetailsSettled.flatMap((entry) => (entry.status === "fulfilled" ? [entry.value] : []));
 
+    // Runtime history is global; a project bundle must never include another project's results.
+    const projectJobs = jobHistory.filter((entry) => entry.project_id === selectedProject.project_id);
+    const resultJobs = projectJobs.filter((entry) => entry.has_result);
     const resultCandidatesSettled = await Promise.allSettled(
-      jobHistory
-        .filter((historyJob) => historyJob.has_result)
-        .map(async (historyJob) => {
-          try {
-            const payload = await adminDataBackendService.fetchJob(historyJob.job_id);
-
-            if (!payload.result) {
-              return null;
-            }
-
-            return {
-              job_id: historyJob.job_id,
-              status: payload.job.status,
-              worker_id: payload.job.worker_id,
-              result: payload.result,
-            };
-          } catch {
-            return null;
-          }
-        }),
+      resultJobs.map(async (historyJob): Promise<JobResultRecord | null> => {
+        const payload = await adminDataBackendService.fetchJob(historyJob.job_id);
+        if (payload.result === undefined || payload.result === null ||
+            payload.job.job_id !== historyJob.job_id ||
+            payload.job.project_id !== selectedProject.project_id) return null;
+        return {
+          job_id: historyJob.job_id,
+          status: payload.job.status,
+          worker_id: payload.job.worker_id,
+          result: payload.result,
+        };
+      }),
     );
-
-    const resultCandidates = resultCandidatesSettled.flatMap((entry): Array<JobResultRecord | null> =>
-      entry.status === "fulfilled" ? [entry.value as JobResultRecord | null] : [],
+    const results = resultCandidatesSettled.flatMap((entry) =>
+      entry.status === "fulfilled" && entry.value !== null ? [entry.value] : [],
     );
-    const results = resultCandidates.filter((entry): entry is JobResultRecord => entry !== null);
     const partial =
       modelDetails.length !== selectedProjectModels.length ||
-      resultCandidatesSettled.some((entry) => entry.status === "rejected");
+      results.length !== resultJobs.length;
 
     return {
       bundle: exportProjectBundle({
@@ -176,7 +169,7 @@ export function createWorkbenchProjectStorageController({
         automationPresets: listWorkbenchMacroPresets(selectedProject.project_id),
         snippetPresets: listWorkbenchSnippetPresets(selectedProject.project_id),
         storeManifest: readWorkspaceStoreManifest(selectedProject.project_id),
-        jobs: jobHistory,
+        jobs: projectJobs,
         results,
       }),
       partial,
@@ -232,8 +225,11 @@ export function createWorkbenchProjectStorageController({
           name: projectNameDraft || t.defaultProject,
           description: projectDescriptionDraft,
         });
-        setSelectedProjectId(payload.project.project_id);
         await refreshProjects(false, payload.project.project_id);
+        setSelectedProjectId(payload.project.project_id);
+        setSelectedModelId(null);
+        setSelectedVersionId(null);
+        setModelVersions([]);
         setMessage(t.projectCreated);
       } catch (error) {
         setMessage(error instanceof Error ? error.message : t.initialFailed);
@@ -295,9 +291,9 @@ export function createWorkbenchProjectStorageController({
 
         if (!selectedModelId || saveAs) {
           const created = await projectLibraryBackendService.createModel(selectedProjectId, modelPayload);
+          await refreshProjects(false, selectedProjectId);
           setSelectedModelId(created.model.model_id);
           setSelectedVersionId(created.model.latest_version_id ?? null);
-          await refreshProjects();
           await refreshVersions(created.model.model_id);
           setMessage(t.modelCreated);
           return;
@@ -306,8 +302,8 @@ export function createWorkbenchProjectStorageController({
         await projectLibraryBackendService.updateModel(selectedModelId, modelPayload);
         const version = await projectLibraryBackendService.createModelVersion(selectedModelId, modelPayload);
 
-        setSelectedVersionId(version.version.version_id);
         await refreshProjects();
+        setSelectedVersionId(version.version.version_id);
         await refreshVersions(selectedModelId);
         setMessage(t.modelSaved);
       } catch (error) {

@@ -93,6 +93,7 @@ ky.log("Recipe result:", result)</pre>
       <section class="docs-card docs-section">
         <h2>Waiting and failure rules</h2>
         <ul class="docs-list">
+          <li>Await every state-changing action. The Workbench action bridge waits for the UI state commit before resolving, so the next action uses the updated project, model, selection, and parameters.</li>
           <li>Wait on observable state with <code>wait_for_job_done</code>, <code>wait_for_message</code>, or <code>wait_until</code>; do not add arbitrary sleeps around network work.</li>
           <li>Use <code>sleep</code> only for bounded UI settling where no stronger state exists.</li>
           <li>High-risk actions still require product confirmation. PWDT does not create hidden authority.</li>
@@ -120,6 +121,10 @@ tabs = ky.query_selector_all("runtimeTab", "overview")</pre>
           <li>The same project, model, terminal run, and result exist as in the manual tutorial.</li>
           <li>No localized copy, layout class, or raw DOM path is used as an action contract.</li>
           <li>The action timeline identifies the failing action if the loop does not complete.</li>
+          <li>Project bundle exports include only jobs explicitly assigned to the selected project. Other projects and unassigned runtime jobs are not included.</li>
+          <li>Switching to another existing project detaches the current saved-model and version IDs, while keeping the working geometry available to save into the new project. Unknown project IDs fail without changing the active context.</li>
+          <li>Bundle import validates the file sections and active workspace payload before creating records. Model and version IDs are remapped to the imported project; the workspace name and selected older version are retained, so the next save continues that model instead of duplicating it.</li>
+          <li>If an expected result is unavailable or mismatched, export returns <code>partial: true</code> and the GUI shows the existing partial-export warning. Keep the available data and retry after the service recovers.</li>
         </ul>
       </section>
     </main>

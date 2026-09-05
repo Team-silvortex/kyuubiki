@@ -145,6 +145,7 @@ export function useWorkbenchSessionComposition(props: Record<string, any>) {
     setSidebarSection: props.setSidebarSection,
     setMessage: props.setMessage,
     setSystemAlerts: props.setSystemAlerts,
+    setImportNotice: props.setImportNotice,
     language: props.language,
     t: props.t,
     startTransition: props.startTransition,

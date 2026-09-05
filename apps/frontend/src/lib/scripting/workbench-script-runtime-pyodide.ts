@@ -213,13 +213,8 @@ class _KyuubikiBridge:
         await self.set_study_kind("truss_2d")
         await self.open_sidebar("model")
         await self.open_tabs(modelTab="tools", modelToolsPage="generate")
-        if model_name is not None or material is not None:
-            meta = {}
-            if model_name is not None:
-                meta["loadedModelName"] = model_name
-            if material is not None:
-                meta["activeMaterial"] = str(material)
-            await self.invoke("model/setWorkspaceMeta", meta)
+        if material is not None:
+            await self.invoke("model/setWorkspaceMeta", {"activeMaterial": str(material)})
         await self.invoke("state/setParametric", {
             "bays": bays,
             "span": span,
@@ -227,6 +222,8 @@ class _KyuubikiBridge:
             "loadY": load_y,
         })
         await self.invoke("model/generateTruss")
+        if model_name is not None:
+            await self.invoke("model/setWorkspaceMeta", {"loadedModelName": model_name})
         return self.state()
 
     async def prepare_electrostatic_plane_triangle_study(self, model_name=None, material=None):
