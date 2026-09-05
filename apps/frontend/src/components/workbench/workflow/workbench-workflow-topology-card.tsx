@@ -29,6 +29,7 @@ type WorkbenchWorkflowTopologyCardProps = {
   highlightedPortKeys?: string[];
   focusedNodeId?: string | null;
   focusedEdgeId?: string | null;
+  focusRequestToken?: number;
   onAddNode: (template?: WorkflowNodeTemplateSelection) => void;
   onAddConnectedNode: (sourceNodeId: string, template?: WorkflowNodeTemplateSelection) => void;
   onSyncNodeTemplate: (nodeId: string, template?: WorkflowNodeTemplateSelection) => void;
@@ -73,6 +74,7 @@ export function WorkbenchWorkflowTopologyCard({
   highlightedPortKeys = [],
   focusedNodeId,
   focusedEdgeId,
+  focusRequestToken = 0,
   onAddNode,
   onAddConnectedNode,
   onSyncNodeTemplate,
@@ -161,13 +163,13 @@ export function WorkbenchWorkflowTopologyCard({
       setActiveNodeId(focusedNodeId);
       setTopologyView("nodes");
     }
-  }, [focusedNodeId, selectedNodeMap]);
+  }, [focusedNodeId, selectedNodeMap, focusRequestToken]);
   useEffect(() => {
     if (focusedEdgeId && edgeViewModels.some(({ edge }) => edge.id === focusedEdgeId)) {
       setActiveEdgeId(focusedEdgeId);
       setTopologyView("edges");
     }
-  }, [edgeViewModels, focusedEdgeId]);
+  }, [edgeViewModels, focusedEdgeId, focusRequestToken]);
   useEffect(() => {
     if (!selectedNodeMap.has(activeNodeId)) setActiveNodeId(selectedNodes[0]?.id ?? "");
   }, [activeNodeId, selectedNodeMap, selectedNodes]);

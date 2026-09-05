@@ -16,25 +16,33 @@ export function buildWorkflowInputArtifactTexts(
   );
 }
 
-export function parseWorkflowInputArtifactTexts(inputTexts: Record<string, string>): {
+export function parseWorkflowInputArtifactTexts(
+  inputTexts: Record<string, string>,
+  entryInputs?: WorkflowCatalogEntryArtifact[],
+): {
   inputArtifacts: Record<string, unknown>;
   invalidKeys: string[];
 } {
-  const inputArtifacts: Record<string, unknown> = {};
+  const parsedEntries: Array<[string, unknown]> = [];
   const invalidKeys: string[] = [];
+  // The live contract, not stale editor state, defines which inputs are required.
+  const keys = entryInputs
+    ? [...new Set(entryInputs.map((artifact) => artifact.node_id))]
+    : Object.keys(inputTexts);
 
-  for (const [key, raw] of Object.entries(inputTexts)) {
-    const trimmed = raw.trim();
+  for (const key of keys) {
+    const raw = Object.hasOwn(inputTexts, key) ? inputTexts[key] : "";
+    const trimmed = typeof raw === "string" ? raw.trim() : "";
     if (!trimmed) {
       invalidKeys.push(key);
       continue;
     }
     try {
-      inputArtifacts[key] = JSON.parse(trimmed) as unknown;
+      parsedEntries.push([key, JSON.parse(trimmed) as unknown]);
     } catch {
       invalidKeys.push(key);
     }
   }
 
-  return { inputArtifacts, invalidKeys };
+  return { inputArtifacts: Object.fromEntries(parsedEntries), invalidKeys };
 }

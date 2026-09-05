@@ -358,6 +358,8 @@ export function WorkbenchWorkflowInputArtifactsCard({
                 </details>
               ) : null}
               <textarea
+                aria-label={`${labels.inputArtifactsTitle}: ${artifact.node_id}`}
+                aria-invalid={isInvalid}
                 className="shell-textarea"
                 data-workflow-input-artifact={artifact.node_id}
                 onChange={(event) => onChangeInputText(artifact.node_id, event.target.value)}

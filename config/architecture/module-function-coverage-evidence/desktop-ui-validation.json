@@ -25,6 +25,7 @@
           "tests/integration/workbench-ui-functional-closure.test.mjs",
           "tests/integration/workbench-ui-workflow-builder-actions.test.mjs",
           "tests/integration/workbench-ui-workflow-invocation.test.mjs",
+          "tests/integration/workbench-ui-workflow-readiness.test.mjs",
           "tests/integration/workbench-shell-regression.test.mjs"
         ],
         "required_text": [
@@ -45,6 +46,8 @@
           "Workbench workflow catalog runs a visible entry directly to completion",
           "Workbench isolated workflow UI promotes and runs a valid graph draft",
           "Workbench workflow builder mutates topology and inserts a control-flow plane",
+          "Workbench draft blocker repeatedly reopens the relevant topology editor",
+          "Workbench draft readiness follows newly added and removed input contracts",
           "Workbench Model navigation and Pwdt study alias preserve the complete workspace path",
           "Workbench System navigation preserves controlled state across deep page round trips",
           "Workbench Library navigation mounts every primary and secondary page without client errors",

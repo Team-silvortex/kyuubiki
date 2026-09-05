@@ -66,6 +66,8 @@ export function WorkbenchWorkflowBuilderCard({
   const showDeferredPanels = useWorkflowBuilderDeferredPanels(selectedWorkflow?.id);
   const [builderStage, setBuilderStage] = useState<WorkflowBuilderStage>("topology");
   const [contractView, setContractView] = useState<WorkflowContractView>("inputs");
+  const [inputFocusRequest, setInputFocusRequest] = useState<string | null>(null);
+  const [focusRequestToken, setFocusRequestToken] = useState(0);
   const clearBuilderAlert = (alertId: string) =>
     clearWorkflowBuilderAlert(setSystemAlerts, alertId);
   const pushBuilderAlert = (
@@ -188,6 +190,7 @@ export function WorkbenchWorkflowBuilderCard({
     setPolicyFeedback(null);
     setBuilderStage("topology");
     setContractView("inputs");
+    setInputFocusRequest(null);
     resetBuilderFocus();
     setSavedDrafts(selectedWorkflow ? listStoredWorkflowDrafts(selectedWorkflow.id) : []);
     setSavedSnapshots(selectedWorkflow ? listStoredWorkflowSnapshots(selectedWorkflow.id) : []);
@@ -197,7 +200,17 @@ export function WorkbenchWorkflowBuilderCard({
   useEffect(() => { if (!traceFocusDatasetNodeId || !traceFocusDatasetPortId) return; const valueId = draftGraph?.nodes.find((node) => node.id === traceFocusDatasetNodeId)?.outputs?.find((port) => port.id === traceFocusDatasetPortId)?.dataset_value ?? null; if (!valueId) return; setBuilderStage("contracts"); setContractView("dataset"); const nodeIds = (draftGraph?.nodes ?? []).filter((node) => [...(node.inputs ?? []), ...(node.outputs ?? [])].some((port) => port.dataset_value === valueId)).map((node) => node.id); const edgeIds = (draftGraph?.edges ?? []).filter((edge) => edge.dataset_value === valueId).map((edge) => edge.id); setSelectedDatasetValueId(valueId); setFocusedDatasetValueId(valueId); setHighlightDatasetEditor(true); setHighlightedNodeIds(nodeIds); if (edgeIds.length > 0) setHighlightedEdgeIds(edgeIds); window.requestAnimationFrame(() => builderRootRef.current?.querySelector<HTMLElement>('[data-workflow-dataset-editor="editor"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" })); window.setTimeout(() => { setHighlightDatasetEditor((current) => (current ? false : current)); setHighlightedNodeIds((current) => (current.join(",") === nodeIds.join(",") ? [] : current)); setHighlightedEdgeIds((current) => (current.join(",") === edgeIds.join(",") ? [] : current)); }, 2200); }, [draftGraph, traceFocusDatasetNodeId, traceFocusDatasetPortId, traceFocusDatasetToken]);
   const selectedGraph = draftGraph;
   const selectedNodes = selectedGraph?.nodes ?? EMPTY_LIST, selectedEdges = selectedGraph?.edges ?? EMPTY_LIST, selectedEntryInputs = selectedGraph?.entry_inputs ?? EMPTY_LIST, selectedOutputArtifacts = selectedGraph?.output_artifacts ?? EMPTY_LIST, selectedDatasetContract = selectedGraph?.dataset_contract ?? null, selectedDatasetValues = selectedDatasetContract?.values ?? EMPTY_LIST;
-  const parsedDraftInputs = useMemo(() => parseWorkflowInputArtifactTexts(draftInputTexts), [draftInputTexts]);
+  useEffect(() => {
+    if (inputFocusRequest === null || builderStage !== "contracts" || contractView !== "inputs") return;
+    const input = builderRootRef.current?.querySelector<HTMLTextAreaElement>(
+      `[data-workflow-input-artifact="${CSS.escape(inputFocusRequest)}"]`,
+    );
+    if (!input) return;
+    input.focus({ preventScroll: true });
+    input.scrollIntoView({ block: "center" });
+    setInputFocusRequest(null);
+  }, [builderStage, contractView, inputFocusRequest]);
+  const parsedDraftInputs = useMemo(() => parseWorkflowInputArtifactTexts(draftInputTexts, selectedEntryInputs), [draftInputTexts, selectedEntryInputs]);
   const inputArtifactWarnings = useMemo(() => collectWorkflowInputArtifactContractWarnings({ entryInputs: selectedEntryInputs, inputArtifactTexts: draftInputTexts }), [selectedEntryInputs, draftInputTexts]);
   const inputArtifactWarningCount = useMemo(() => countWorkflowContractWarnings(inputArtifactWarnings), [inputArtifactWarnings]);
   const validationIssues = useMemo(() => validateWorkflowGraphDefinition(selectedGraph, selectedEntryInputs, selectedOutputArtifacts, operatorDescriptors ?? []), [operatorDescriptors, selectedGraph, selectedEntryInputs, selectedOutputArtifacts]);
@@ -207,6 +220,9 @@ export function WorkbenchWorkflowBuilderCard({
   );
   const packageResiduals = useMemo(() => selectedWorkflow ? scanWorkflowPackageResiduals({ workflow: selectedWorkflow, importedPackage, integrityReport }) : [], [importedPackage, integrityReport, selectedWorkflow]);
   const draftBlockingIssueCount = validationIssues.length + parsedDraftInputs.invalidKeys.length, canRunDraft = Boolean(selectedGraph) && draftBlockingIssueCount === 0;
+  const draftBlockerMessage = parsedDraftInputs.invalidKeys.length > 0
+    ? `${parsedDraftInputs.invalidKeys[0]}: ${labels.runDraftInvalidInputsLabel}`
+    : validationIssues[0]?.message ?? null;
   const selectedDatasetValue = useMemo(() => selectedDatasetValues.find((value) => value.id === selectedDatasetValueId) ?? selectedDatasetValues[0] ?? null, [selectedDatasetValueId, selectedDatasetValues]);
   const snapshotContractSummary = `contract warnings: ${inputArtifactWarningCount}`;
   const topologyActions = useMemo(() => createWorkflowTopologyActions(setDraftGraph, operatorDescriptors), [operatorDescriptors]);
@@ -327,6 +343,18 @@ export function WorkbenchWorkflowBuilderCard({
     showBuilderNotice("workflow-builder-validation-auto-fixed", [labels.validationAutoFixedLabel.replace("{count}", String(appliedCount)), firstFixedMessage].filter(Boolean).join(" "), "info");
   }
   function locateValidationIssue(issueId: string) { const issue = validationIssues.find((entry) => entry.id === issueId); if (issue?.locate) locateBuilderIssue(issue.locate); }
+  function locateDraftBlocker() {
+    const inputKey = parsedDraftInputs.invalidKeys[0];
+    if (inputKey !== undefined) {
+      setBuilderStage("contracts");
+      setContractView("inputs");
+      setInputFocusRequest(inputKey);
+      return;
+    }
+    const issue = validationIssues[0];
+    if (issue?.locate) locateBuilderIssue(issue.locate);
+    else setBuilderStage("validation");
+  }
   function locateIntegrityIssue(issue: WorkflowIntegrityIssue) { if (issue.locate) locateBuilderIssue(issue.locate); }
   function locateBridgeRuntimeIssue(issue: import("@/components/workbench/workflow/workbench-workflow-bridge-runtime-validation").WorkflowBridgeRuntimeValidationIssue) { setBuilderStage("topology"); window.requestAnimationFrame(() => locateWorkflowBridgeRuntimeIssue({ issue, builderRootRef, resetBuilderFocus, setFocusedNodeId, setFocusedEdgeId, setHighlightedNodeIds, flashHighlightedEdges })); }
   function locateAuditTarget(target: WorkflowAuditNavigationTarget) { if (target.kind === "run") { onLocateAuditTarget?.(target); return; } locateBuilderIssue(target.kind === "node" ? { kind: "node", nodeId: target.nodeId } : { kind: "dataset", datasetValueId: target.datasetValueId }); }
@@ -344,7 +372,10 @@ export function WorkbenchWorkflowBuilderCard({
     setBuilderStage(nextStage);
     if (locate.kind === "dataset") setContractView("dataset");
     if (locate.kind === "artifact") setContractView(locate.mode === "output" ? "output" : "entry");
-    window.requestAnimationFrame(() => locateWorkflowBuilderIssue({ locate, builderRootRef, selectedDatasetValues, selectedEntryInputs, selectedOutputArtifacts, resetBuilderFocus, setFocusedNodeId, setFocusedEdgeId, setSelectedDatasetValueId, setFocusedDatasetValueId, setHighlightDatasetEditor, setFocusedArtifactKey }));
+    window.requestAnimationFrame(() => {
+      locateWorkflowBuilderIssue({ locate, builderRootRef, selectedDatasetValues, selectedEntryInputs, selectedOutputArtifacts, resetBuilderFocus, setFocusedNodeId, setFocusedEdgeId, setSelectedDatasetValueId, setFocusedDatasetValueId, setHighlightDatasetEditor, setFocusedArtifactKey });
+      setFocusRequestToken((current) => current + 1);
+    });
   }
   function addDatasetValue() {
     setDraftGraph((current) => {
@@ -653,7 +684,7 @@ export function WorkbenchWorkflowBuilderCard({
   return (
     <section className="sidebar-card sidebar-card--compact workflow-builder-shell" data-workflow-builder-shell="builder" data-workflow-builder-stage={builderStage} ref={builderRootRef}>
       <WorkbenchWorkflowFocusStrip activeTarget={activeFocusTarget} feedback={policyFeedback} labels={labels} />
-      <WorkbenchWorkflowBuilderToolbar canExportDataset={Boolean(selectedDatasetContract)} canRunDraft={canRunDraft} draftBlockingIssueCount={draftBlockingIssueCount} datasetInputRef={datasetInputRef} graphInputRef={graphInputRef} importNotice={importNotice} setImportNotice={setImportNotice} labels={labels} onDatasetFileChange={handleDatasetFileChange} onExportDataset={exportDraftDatasetContract} onDuplicateLocalWorkflow={duplicateCurrentLocalWorkflow} onExportGraph={exportDraftWorkflowGraph} onDeleteLocalWorkflow={deleteCurrentLocalWorkflow} onGraphFileChange={handleGraphFileChange} onPromoteDraft={promoteCurrentDraft} onRenameLocalWorkflow={renameCurrentLocalWorkflow} onRunCatalog={() => { const workflowId = selectedWorkflow?.id; if (!workflowId) return; onRunWorkflowCatalog(workflowId); }} onRunDraft={runCurrentDraft} onSaveDraft={saveCurrentDraft} selectedWorkflow={selectedWorkflow} />
+      <WorkbenchWorkflowBuilderToolbar canExportDataset={Boolean(selectedDatasetContract)} canRunDraft={canRunDraft} draftBlockingIssueCount={draftBlockingIssueCount} draftBlockerMessage={draftBlockerMessage} onLocateDraftBlocker={locateDraftBlocker} datasetInputRef={datasetInputRef} graphInputRef={graphInputRef} importNotice={importNotice} setImportNotice={setImportNotice} labels={labels} onDatasetFileChange={handleDatasetFileChange} onExportDataset={exportDraftDatasetContract} onDuplicateLocalWorkflow={duplicateCurrentLocalWorkflow} onExportGraph={exportDraftWorkflowGraph} onDeleteLocalWorkflow={deleteCurrentLocalWorkflow} onGraphFileChange={handleGraphFileChange} onPromoteDraft={promoteCurrentDraft} onRenameLocalWorkflow={renameCurrentLocalWorkflow} onRunCatalog={() => { const workflowId = selectedWorkflow?.id; if (!workflowId) return; onRunWorkflowCatalog(workflowId); }} onRunDraft={runCurrentDraft} onSaveDraft={saveCurrentDraft} selectedWorkflow={selectedWorkflow} />
       <nav aria-label={labels.builderPageLabel} className="workflow-builder-stage-tabs">
         {builderStages.map((stage, index) => (
           <button
@@ -670,7 +701,7 @@ export function WorkbenchWorkflowBuilderCard({
         ))}
       </nav>
       {builderStage === "topology" ? (
-        <WorkbenchWorkflowTopologyCard bridgeRuntimeResult={latestRun?.result ?? null} currentHeatPlaneModel={currentHeatPlaneModel} currentPlaneModel={currentPlaneModel} currentStudyKind={currentStudyKind} focusedEdgeId={focusedEdgeId} focusedNodeId={focusedNodeId} highlightedNodeIds={highlightedNodeIds} highlightedPortKeys={highlightedPortKeys} labels={labels} operatorDescriptors={operatorDescriptors} onAddEdge={topologyActions.addEdge} onAddConnectedNode={topologyActions.addConnectedNode} onInsertTemplateChain={topologyActions.insertTemplateChain} onAddNode={topologyActions.addNode} onAddNodePort={topologyActions.addNodePort} onRemoveEdge={topologyActions.removeEdge} onRemoveNode={topologyActions.removeNode} onRemoveNodePort={topologyActions.removeNodePort} onSyncNodeTemplate={topologyActions.syncNodeTemplate} onUpdateEdge={topologyActions.updateEdge} onUpdateNode={topologyActions.updateNode} onUpdateNodePort={topologyActions.updateNodePort} highlightedEdgeIds={highlightedEdgeIds} selectedEdges={selectedEdges} selectedNodes={selectedNodes} setSystemAlerts={setSystemAlerts} />
+        <WorkbenchWorkflowTopologyCard focusRequestToken={focusRequestToken} bridgeRuntimeResult={latestRun?.result ?? null} currentHeatPlaneModel={currentHeatPlaneModel} currentPlaneModel={currentPlaneModel} currentStudyKind={currentStudyKind} focusedEdgeId={focusedEdgeId} focusedNodeId={focusedNodeId} highlightedNodeIds={highlightedNodeIds} highlightedPortKeys={highlightedPortKeys} labels={labels} operatorDescriptors={operatorDescriptors} onAddEdge={topologyActions.addEdge} onAddConnectedNode={topologyActions.addConnectedNode} onInsertTemplateChain={topologyActions.insertTemplateChain} onAddNode={topologyActions.addNode} onAddNodePort={topologyActions.addNodePort} onRemoveEdge={topologyActions.removeEdge} onRemoveNode={topologyActions.removeNode} onRemoveNodePort={topologyActions.removeNodePort} onSyncNodeTemplate={topologyActions.syncNodeTemplate} onUpdateEdge={topologyActions.updateEdge} onUpdateNode={topologyActions.updateNode} onUpdateNodePort={topologyActions.updateNodePort} highlightedEdgeIds={highlightedEdgeIds} selectedEdges={selectedEdges} selectedNodes={selectedNodes} setSystemAlerts={setSystemAlerts} />
       ) : null}
       {builderStage === "control" ? <WorkbenchWorkflowControlFlowPlaneCard labels={labels} operatorDescriptors={operatorDescriptors} selectedEdges={selectedEdges} selectedNodes={selectedNodes} validationIssues={validationIssues} invalidInputCount={parsedDraftInputs.invalidKeys.length} traceFocusBranchNodeId={traceFocusBranchNodeId} traceFocusBranchOutputId={traceFocusBranchOutputId} traceFocusBranchToken={traceFocusBranchToken} onAddConditionNode={() => addControlFlowNode("condition")} onAddMergeNode={() => addControlFlowNode("merge")} onAddNode={topologyActions.addNode} onSyncNodeTemplate={topologyActions.syncNodeTemplate} onInsertControlFlowPlane={insertControlFlowPlaneWithAudit} onSetControlFlowEdge={setControlFlowEdgeWithAudit} /> : null}
       {builderStage === "contracts" ? (

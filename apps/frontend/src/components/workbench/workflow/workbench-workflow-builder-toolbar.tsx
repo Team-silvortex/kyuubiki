@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChangeEvent, RefObject } from "react";
+import { useId, type ChangeEvent, type RefObject } from "react";
 import { WorkbenchPanelNotice } from "@/components/workbench/workbench-panel-notice";
 import type { WorkbenchNoticeItem, WorkbenchNoticeStateSetter } from "@/components/workbench/workbench-notice-state";
 import type { WorkflowCatalogEntry } from "@/lib/api";
@@ -12,12 +12,14 @@ type WorkbenchWorkflowBuilderToolbarProps = {
   canRunDraft: boolean;
   canExportDataset: boolean;
   draftBlockingIssueCount: number;
+  draftBlockerMessage: string | null;
   importNotice: WorkbenchNoticeItem | null;
   setImportNotice: WorkbenchNoticeStateSetter;
   graphInputRef: RefObject<HTMLInputElement | null>;
   datasetInputRef: RefObject<HTMLInputElement | null>;
   onRunCatalog: () => void;
   onRunDraft: () => void;
+  onLocateDraftBlocker: () => void;
   onSaveDraft: () => void;
   onPromoteDraft: () => void;
   onDuplicateLocalWorkflow: () => void;
@@ -35,12 +37,14 @@ export function WorkbenchWorkflowBuilderToolbar({
   canRunDraft,
   canExportDataset,
   draftBlockingIssueCount,
+  draftBlockerMessage,
   importNotice,
   setImportNotice,
   graphInputRef,
   datasetInputRef,
   onRunCatalog,
   onRunDraft,
+  onLocateDraftBlocker,
   onSaveDraft,
   onPromoteDraft,
   onDuplicateLocalWorkflow,
@@ -51,6 +55,7 @@ export function WorkbenchWorkflowBuilderToolbar({
   onGraphFileChange,
   onDatasetFileChange,
 }: WorkbenchWorkflowBuilderToolbarProps) {
+  const blockerDescriptionId = useId();
   const localWorkflowTags = selectedWorkflow.local?.tags?.filter(Boolean).join(", ") ?? null;
   const promotedAt = selectedWorkflow.local?.promoted_at
     ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(
@@ -58,9 +63,13 @@ export function WorkbenchWorkflowBuilderToolbar({
       )
     : null;
   const draftStatusTone = canRunDraft ? "good" : "watch";
-  const draftStatusLabel = canRunDraft ? labels.statusReadyLabel : String(draftBlockingIssueCount);
+  const draftStatusLabel = canRunDraft ? labels.statusReadyLabel : draftBlockingIssueCount > 0 ? String(draftBlockingIssueCount) : "--";
   return (
-    <section className="workflow-builder-toolbar">
+    <section
+      className="workflow-builder-toolbar"
+      data-workflow-draft-readiness={canRunDraft ? "ready" : draftBlockerMessage ? "blocked" : "unavailable"}
+      data-workflow-draft-blocker-count={draftBlockingIssueCount}
+    >
       <div className="card-head">
         <h2 title={selectedWorkflow.name}>{selectedWorkflow.name}</h2>
         <span className="workflow-builder-toolbar__status" data-workflow-builder-toolbar="status">
@@ -106,8 +115,24 @@ export function WorkbenchWorkflowBuilderToolbar({
         </div>
       ) : null}
       {selectedWorkflow.local?.notes ? <p className="card-copy">{selectedWorkflow.local.notes}</p> : null}
+      {draftBlockerMessage ? (
+        <div className="workflow-builder-blocker" data-workflow-draft-blocker="summary">
+          <div aria-live="polite" id={blockerDescriptionId} role="status">
+            <strong>{labels.validationTitle}: {draftBlockingIssueCount}</strong>
+            <p className="workflow-builder-blocker__message" title={draftBlockerMessage}>{draftBlockerMessage}</p>
+          </div>
+          <button
+            aria-describedby={blockerDescriptionId}
+            data-workflow-builder-action="locate-blocker"
+            onClick={onLocateDraftBlocker}
+            type="button"
+          >
+            {labels.validationLocateLabel}
+          </button>
+        </div>
+      ) : null}
       <div className="button-row button-row--adaptive" data-workflow-builder-toolbar="actions">
-        <button data-workflow-builder-action="run-draft" disabled={!canRunDraft} onClick={onRunDraft} type="button">{labels.runDraftLabel}</button>
+        <button aria-describedby={draftBlockerMessage ? blockerDescriptionId : undefined} data-workflow-builder-action="run-draft" disabled={!canRunDraft} onClick={onRunDraft} type="button">{labels.runDraftLabel}</button>
         <button data-workflow-builder-action="save-draft" onClick={onSaveDraft} type="button">{labels.saveDraftLabel}</button>
       </div>
       <details className="workflow-builder-more-actions" data-workflow-builder-tools="secondary">
