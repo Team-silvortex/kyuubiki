@@ -60,7 +60,9 @@ jobs:
             workers/rust
             sdks/rust
       - run: cargo fmt --check
-      - run: cargo test --locked
+      - run: cargo test --locked --no-fail-fast
+      - name: Test engine without workspace feature unification
+        run: cargo test --locked -p kyuubiki-engine --lib
       - name: Audit Rust source line counts
         working-directory: .
         run: ./scripts/kyuubiki rust-line-audit --max 800
@@ -205,7 +207,6 @@ jobs:
     name: sdk-smoke
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [web, rust]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -238,7 +239,6 @@ jobs:
     name: integration-smoke-${{ matrix.target }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [web, rust]
     strategy:
       fail-fast: false
       matrix:

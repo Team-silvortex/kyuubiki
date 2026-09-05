@@ -142,6 +142,44 @@ fn validates_portable_retained_report() {
     validate_retained_report(&windows).expect("portable Windows report should pass");
 }
 
+#[test]
+fn retained_report_paths_use_platform_independent_syntax() {
+    for path in [
+        "",
+        "/Applications/Hub.app",
+        r"\Applications\Hub.app",
+        "C:/Users/test/Hub.exe",
+        r"C:\Users\test\Hub.exe",
+        "C:Hub.exe",
+        "//server/share/Hub.exe",
+        r"\\server\share\Hub.exe",
+        r"\\?\C:\Hub.exe",
+        "../Hub.app",
+        "./Hub.app",
+        "tmp//Hub.app",
+        "tmp/./Hub.app",
+        "tmp/../Hub.app",
+        "tmp/Hub.app/",
+        "tmp/Hub.app:stream",
+        "tmp/Hub\0.app",
+        "tmp/Hub\n.app",
+    ] {
+        let value = serde_json::json!({"path": path});
+        let error = validate_report_path(&value, "/path", path)
+            .expect_err("host-specific or non-canonical report path must fail");
+        assert!(error.contains("must be portable"), "{path:?}: {error}");
+    }
+    for path in [
+        "tmp/report.json",
+        "tmp/report..json",
+        "@external/Applications",
+        "@bundle-root/Kyuubiki Hub.app/Contents/MacOS/kyuubiki-hub-gui",
+    ] {
+        validate_report_path(&serde_json::json!({"path": path}), "/path", path)
+            .expect("canonical report path should pass on every host");
+    }
+}
+
 fn retained_report(platform: Platform, bundle_root: &str) -> Value {
     serde_json::json!({
         "schema_version": REPORT_SCHEMA,

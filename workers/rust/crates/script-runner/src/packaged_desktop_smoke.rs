@@ -687,8 +687,11 @@ fn validate_report_path(value: &Value, pointer: &str, expected: &str) -> RunnerR
         .pointer(pointer)
         .and_then(Value::as_str)
         .ok_or_else(|| format!("retained packaged desktop report misses {pointer}"))?;
-    let parsed = Path::new(path);
-    if parsed.is_absolute() || parsed.components().any(|part| part.as_os_str() == "..") {
+    // Reports cross operating systems; do not use the host's path semantics.
+    if path.contains(['\\', ':'])
+        || path.chars().any(char::is_control)
+        || path.split('/').any(|part| matches!(part, "" | "." | ".."))
+    {
         return Err(format!(
             "retained packaged desktop report path must be portable: {path}"
         ));

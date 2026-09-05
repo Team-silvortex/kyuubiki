@@ -173,6 +173,10 @@ pub(crate) fn expand_sweep_cases(
     cases
         .try_reserve_exact(case_count)
         .map_err(|error| format!("parameter sweep case allocation failed: {error}"))?;
+    // JSON map order can change through workspace feature unification.
+    // Sort labels once, without changing mixed-radix case enumeration.
+    let mut label_order = (0..axes.len()).collect::<Vec<_>>();
+    label_order.sort_unstable_by_key(|&index| axes[index].label);
     let mut selection = vec![0usize; axes.len()];
     for case_index in 0..case_count {
         let mut model = base.clone();
@@ -184,7 +188,7 @@ pub(crate) fn expand_sweep_cases(
         }
         cases.push(serde_json::json!({
             "id": format!("{id_prefix}_{case_index}"),
-            "label": format_case_label(&parameters),
+            "label": format_case_label(axes, &selection, &label_order),
             "parameters": parameters,
             "metadata": case_metadata,
             "model": model,
@@ -202,15 +206,17 @@ pub(crate) fn expand_sweep_cases(
     Ok(cases)
 }
 
-fn format_case_label(parameters: &Map<String, Value>) -> String {
-    parameters
+fn format_case_label(axes: &[SweepAxis<'_>], selection: &[usize], label_order: &[usize]) -> String {
+    label_order
         .iter()
-        .map(|(key, value)| {
+        .map(|&index| {
+            let axis = &axes[index];
+            let value = &axis.values[selection[index]];
             let rendered = value
                 .as_str()
                 .map(ToString::to_string)
                 .unwrap_or_else(|| value.to_string());
-            format!("{key}={rendered}")
+            format!("{}={rendered}", axis.label)
         })
         .collect::<Vec<_>>()
         .join(", ")

@@ -382,8 +382,12 @@ exercise real HTTP execution instead of dry-run-only fixtures.
 CI installs the Rust channel declared in `config/toolchains.json` and
 `rust-toolchain.toml`; `make check-toolchains` rejects floating or mismatched
 Rust setup actions in the main and Windows qualification workflows. Rust tests
-use the committed lockfile. Jobs are isolated: Hex audit, SDK, integration, and
-live desktop regression explicitly fetch their Elixir dependencies even after
+use the committed lockfile and run the engine both in the full workspace
+(including unified JSON features) and independently. The workspace run collects
+all failing test targets instead of stopping at the first one. SDK and
+integration smoke jobs are self-contained and do not wait on unrelated unit
+test jobs. Hex audit, SDK, integration, and live desktop regression explicitly
+fetch their Elixir dependencies even after
 a cache restore. Live GUI tests install BEAM rather than assuming another
 job's environment is available.
 
@@ -413,9 +417,9 @@ Current GitHub Actions jobs are intentionally separated:
 - `integration-smoke-api`
 - `integration-smoke-cluster`
 - `integration-smoke-direct-mesh`
-- `hub-gui-smoke`
-- `installer-gui-smoke`
-- `workbench-gui-smoke`
+- `desktop-gui-smoke-hub`
+- `desktop-gui-smoke-installer`
+- `desktop-gui-smoke-workbench`
 
 ## Direct-mesh Docker regression lane
 
