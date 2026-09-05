@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { readFile } from "node:fs/promises";
 
-import { launchIntegrationBrowser } from "./playwright-browser.shared.mjs";
+import {
+  clickIntegrationControl as click,
+  launchIntegrationBrowser,
+  waitForVisibleOrPageError,
+} from "./playwright-browser.shared.mjs";
 import {
   chromium,
   startIsolatedWorkbenchUiRuntime,
@@ -20,31 +24,6 @@ after(async () => {
   await browser?.close();
   await runtime?.stop();
 }, { timeout: 90_000 });
-
-async function click(page, selector, label) {
-  const candidates = page.locator(selector);
-  const target = candidates.first();
-  await waitForVisibleOrPageError(page, target, label);
-  assert.equal(await candidates.count(), 1, `${label} should resolve to one visible control`);
-  await target.click({ timeout: 15_000 });
-  return target;
-}
-
-async function waitForVisibleOrPageError(page, locator, label, timeout = 30_000) {
-  let rejectPageError;
-  const pageError = new Promise((_, reject) => {
-    rejectPageError = (error) => reject(new Error(`${label} aborted after client error: ${error.message}`));
-    page.once("pageerror", rejectPageError);
-  });
-  try {
-    await Promise.race([
-      locator.waitFor({ state: "visible", timeout }),
-      pageError,
-    ]);
-  } finally {
-    page.off("pageerror", rejectPageError);
-  }
-}
 
 async function openQualificationBuilder(page) {
   await page.goto(workbenchUrl(runtime), { waitUntil: "networkidle", timeout: 60_000 });
@@ -154,12 +133,18 @@ test("Workbench isolated workflow UI blocks invalid draft input without backend 
   try {
     const builder = await openQualificationBuilder(page);
     const runDraft = builder.locator('[data-workflow-builder-action="run-draft"]');
-    await runDraft.waitFor({ state: "visible", timeout: 30_000 });
+    await waitForVisibleOrPageError(
+      page,
+      builder.locator('[data-workflow-builder-action="run-draft"]:enabled'),
+      "Initialized qualification draft",
+    );
     assert.equal(await runDraft.isEnabled(), true, "valid qualification draft should be runnable");
     const submissionsBefore = runtime.state.catalogSubmissions + runtime.state.graphSubmissions;
     await builder.locator('[data-workflow-builder-stage-target="contracts"]').click();
+    const input = builder.locator('[data-workflow-input-artifact="bar_1d_model"]');
+    await waitForVisibleOrPageError(page, input, "Draft input editor");
     assert.equal(await builder.getAttribute("data-workflow-builder-stage"), "contracts");
-    await builder.locator('[data-workflow-input-artifact="bar_1d_model"]').fill('{"nodes":');
+    await input.fill('{"nodes":');
     await page.waitForFunction(
       () => document.querySelector('[data-workflow-builder-action="run-draft"]')?.hasAttribute("disabled"),
       undefined,
