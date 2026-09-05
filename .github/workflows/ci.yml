@@ -66,7 +66,47 @@ jobs:
       - name: Audit Rust source line counts
         working-directory: .
         run: ./scripts/kyuubiki rust-line-audit --max 800
-      - run: cargo run -q -p kyuubiki-benchmark -- --profile medium --repeat 3 --baseline-compare benchmarks/medium-baseline.json --fail-on-median-regression-pct 25 --fail-on-rss-regression-pct 20 --min-baseline-median-ms 1.0
+      - name: Check out the benchmark base revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha || (github.event.before != '0000000000000000000000000000000000000000' && github.event.before) || github.event.repository.default_branch }}
+          path: tmp/ci-benchmark-base
+          persist-credentials: false
+      - name: Record benchmark revision provenance
+        working-directory: .
+        run: |
+          baseline_sha=$(git -C tmp/ci-benchmark-base rev-parse HEAD)
+          test "$baseline_sha" != "$GITHUB_SHA"
+          printf 'baseline=%s\ncurrent=%s\n' "$baseline_sha" "$GITHUB_SHA" > tmp/ci-benchmark-revisions.txt
+      - name: Measure the base revision on this runner
+        working-directory: .
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/workers/rust/target
+        run: >-
+          cargo run --locked -q --manifest-path tmp/ci-benchmark-base/workers/rust/Cargo.toml
+          -p kyuubiki-benchmark -- --matrix core --profile medium --repeat 7
+          --case-isolation process --baseline-out tmp/ci-benchmark-baseline.json
+      - name: Gate current performance against the paired baseline
+        working-directory: .
+        run: >-
+          cargo run --locked -q --manifest-path workers/rust/Cargo.toml
+          -p kyuubiki-benchmark -- --matrix core --profile medium --repeat 7
+          --case-isolation process --baseline-out tmp/ci-benchmark-current.json
+          --baseline-compare tmp/ci-benchmark-baseline.json
+          --compare-report-out tmp/ci-benchmark-comparison.md
+          --fail-on-median-regression-pct 25 --fail-on-rss-regression-pct 20
+          --min-baseline-median-ms 1.0
+      - name: Upload paired benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-benchmark-${{ github.run_attempt }}
+          path: |
+            tmp/ci-benchmark-revisions.txt
+            tmp/ci-benchmark-baseline.json
+            tmp/ci-benchmark-current.json
+            tmp/ci-benchmark-comparison.md
+          if-no-files-found: ignore
 
   frontend:
     name: frontend-test

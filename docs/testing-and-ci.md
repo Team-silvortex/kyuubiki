@@ -398,6 +398,16 @@ eager mounting. Historical operator qualification records are checked against
 their own release snapshot; the active roadmap and evidence kits must still
 agree with each other. Upgrading the product line does not relabel old evidence.
 
+The CI performance gate measures the PR base (or the previous push revision) and
+the current revision sequentially on the same runner, with the same pinned
+toolchain, `core/medium` cases, seven repeats, and per-case process isolation.
+It retains both reports, the comparison, and commit IDs. The existing 25% median
+time and 20% peak-RSS thresholds remain unchanged. New branches use the default
+branch as the base; comparing a revision against itself is rejected. This is an
+incremental regression gate, not a replacement for retained release benchmarks
+on qualified hardware. Historical measurements are not rewritten to match the
+current report schema or memory accounting mode.
+
 Current GitHub Actions jobs are intentionally separated:
 
 - `web-test`
