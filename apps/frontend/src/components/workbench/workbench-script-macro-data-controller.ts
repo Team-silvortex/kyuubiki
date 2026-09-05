@@ -3,6 +3,7 @@
 import type { JobState } from "@/lib/api";
 import type { WorkbenchDownloadResult } from "@/components/workbench/workbench-export-controller";
 import type { WorkbenchOperationResult } from "@/lib/workbench/operation-result";
+import { workbenchProjectContextChangedError } from "@/lib/workbench/project-context";
 import { getWorkbenchScriptErrorCopy } from "@/components/workbench/workbench-extended-language-copy";
 import { getWorkbenchScriptMacroSummary } from "@/components/workbench/workbench-script-catalog-copy";
 import type { WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
@@ -75,7 +76,8 @@ export async function handleWorkbenchScriptMacroDataAction({
 
       for (const step of macro.steps) {
         const nextPayload = resolveWorkbenchMacroPayloadTemplates(step.payload ?? {}, macroPayload, macroSnapshot) as Record<string, unknown>;
-        await invokeScriptAction(step.action, nextPayload, source, note ?? getWorkbenchScriptMacroSummary(macro, language));
+        const result = await invokeScriptAction(step.action, nextPayload, source, note ?? getWorkbenchScriptMacroSummary(macro, language));
+        if (result.contextChanged === true) throw workbenchProjectContextChangedError();
       }
 
       return { ok: true, action, macroId: macro.id, stepCount: macro.steps.length };

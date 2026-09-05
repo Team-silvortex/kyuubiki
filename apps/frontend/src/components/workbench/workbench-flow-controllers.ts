@@ -181,6 +181,7 @@ export function useWorkbenchFlowControllers(props: Record<string, any>) {
     refreshJobHistory: props.refreshJobHistory,
     refreshResults: props.refreshResults,
     refreshProjects: props.refreshProjects,
+    projectContext: props.projectContext,
     refreshSecurityEvents: props.refreshSecurityEvents,
     selectedProjectId: props.selectedProjectId,
     selectedModelId: props.selectedModelId,

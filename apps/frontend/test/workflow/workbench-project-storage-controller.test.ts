@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createWorkbenchProjectStorageController } from "../../src/components/workbench/workbench-project-storage-controller.ts";
+import { createWorkbenchProjectContext } from "../../src/lib/workbench/project-context.ts";
 import type { JobEnvelope, JobState } from "../../src/lib/api/fem-shared.ts";
 import type { ProjectRecord } from "../../src/lib/api/project-types.ts";
 import type { WorkbenchAdminDataBackendService } from "../../src/lib/workbench/admin-data-backend-service-core.ts";
@@ -108,6 +109,7 @@ function baseController(
   overrides: Partial<Parameters<typeof createWorkbenchProjectStorageController>[0]> = {},
 ) {
   return createWorkbenchProjectStorageController({
+    projectContext: createWorkbenchProjectContext({ projectId: "project-a", modelId: "model-a", versionId: null }),
     activeMaterial: "steel",
     adminDataBackendService: adminDataService(calls),
     axialForm: {},

@@ -13,6 +13,7 @@ export function buildWorkbenchFlowComposition(props: Record<string, any>) {
   const { assistantAudit, topLevelActions, uiActionController, toggleImmersiveViewport } = interactionControllers;
 
   return buildWorkbenchFlowControllerProps({
+    projectContext: projectFlows.projectContext,
     t: props.t,
     setMessage: workspaceState.setMessage,
     setSystemAlerts: workspaceState.setSystemAlerts,

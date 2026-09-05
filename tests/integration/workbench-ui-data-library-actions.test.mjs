@@ -151,11 +151,14 @@ test("Workbench Library GUI creates, updates, exports, and deletes a project", a
     );
     await projectPanel.locator('[data-workbench-library-project-action="delete"]').click();
     assert.equal((await deleteResponse).status(), 200);
-    await page.waitForFunction(() =>
-      document.querySelector('[data-workbench-library-project-field="selection"]')?.value === "qualification-project",
-    );
+    await page.evaluate(() => window.__kyuubikiPwdt.waitForState({
+      selectedProjectId: null, selectedModelId: null, selectedVersionId: null,
+    }));
+    assert.equal(await selection.inputValue(), "", "deletion must not silently select another project");
     assert.equal(runtime.state.projects.length, 1);
     assert.equal(runtime.state.projectMutations.at(-1)?.method, "DELETE");
+    await selection.selectOption("qualification-project");
+    await page.evaluate(() => window.__kyuubikiPwdt.waitForState({ selectedProjectId: "qualification-project" }));
     assert.deepEqual(pageErrors, []);
   } finally {
     await context.close();

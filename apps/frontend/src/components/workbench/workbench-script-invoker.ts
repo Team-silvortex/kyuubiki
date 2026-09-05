@@ -60,6 +60,7 @@ export function createWorkbenchScriptInvoker(options: Record<string, any>) {
         refreshSecurityEvents: options.refreshSecurityEvents,
       },
       projectModelArgs: {
+        projectContext: options.projectContext,
         action,
         payload,
         projects: options.projects,

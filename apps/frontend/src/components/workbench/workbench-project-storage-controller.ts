@@ -15,6 +15,7 @@ import type { JobResultRecord, JobState } from "@/lib/api/fem-shared";
 import { exportProjectBundle } from "@/lib/models/modeler";
 import { listWorkbenchMacroPresets, listWorkbenchSnippetPresets } from "@/lib/scripting/workbench-script-runtime";
 import { readWorkspaceStoreManifest } from "@/lib/workbench/store-manifest";
+import type { WorkbenchProjectContext, WorkbenchProjectRefresh } from "@/lib/workbench/project-context";
 import type {
   WorkbenchProjectLibraryBackendService,
 } from "@/lib/workbench/project-library-backend-service-core";
@@ -23,6 +24,7 @@ import type {
 } from "@/lib/workbench/admin-data-backend-service-core";
 
 type ProjectStorageControllerDeps = {
+  projectContext: WorkbenchProjectContext;
   t: any;
   getSelectedProject: () => any;
   selectedProjectId: string | null;
@@ -62,13 +64,14 @@ type ProjectStorageControllerDeps = {
   setModelVersions: (value: any[]) => void;
   adminDataBackendService: WorkbenchAdminDataBackendService;
   projectLibraryBackendService: WorkbenchProjectLibraryBackendService;
-  refreshProjects: (bootstrap?: boolean, preferredProjectId?: string | null) => Promise<void>;
+  refreshProjects: WorkbenchProjectRefresh;
   refreshVersions: (modelId: string) => Promise<void>;
   serializeCurrentModel: () => Record<string, unknown>;
   getPersistedModelEffects: () => any;
 };
 
 export function createWorkbenchProjectStorageController({
+  projectContext,
   t,
   getSelectedProject,
   selectedProjectId,
@@ -219,19 +222,22 @@ export function createWorkbenchProjectStorageController({
   };
 
   const createProjectRecord = () => {
+    const isCurrent = projectContext.begin();
     startTransition(async () => {
       try {
         const payload = await projectLibraryBackendService.createProject({
           name: projectNameDraft || t.defaultProject,
           description: projectDescriptionDraft,
         });
-        await refreshProjects(false, payload.project.project_id);
+        await refreshProjects(false, undefined, { preserveSelection: true });
+        if (!isCurrent()) return;
         setSelectedProjectId(payload.project.project_id);
         setSelectedModelId(null);
         setSelectedVersionId(null);
         setModelVersions([]);
         setMessage(t.projectCreated);
       } catch (error) {
+        if (!isCurrent()) return;
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
     });
@@ -239,6 +245,7 @@ export function createWorkbenchProjectStorageController({
 
   const updateProjectRecord = () => {
     if (!selectedProjectId) return;
+    const isCurrent = projectContext.begin();
 
     startTransition(async () => {
       try {
@@ -246,9 +253,11 @@ export function createWorkbenchProjectStorageController({
           name: projectNameDraft || t.defaultProject,
           description: projectDescriptionDraft,
         });
-        await refreshProjects();
+        await refreshProjects(false, undefined, { preserveSelection: true });
+        if (!isCurrent()) return;
         setMessage(t.projectUpdated);
       } catch (error) {
+        if (!isCurrent()) return;
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
     });
@@ -257,15 +266,22 @@ export function createWorkbenchProjectStorageController({
   const deleteProjectRecord = () => {
     if (!selectedProjectId) return;
     if (typeof window !== "undefined" && !window.confirm(projectNameDraft)) return;
+    const isCurrent = projectContext.begin();
 
     startTransition(async () => {
       try {
         await projectLibraryBackendService.deleteProject(selectedProjectId);
-        setSelectedModelId(null);
-        setSelectedVersionId(null);
-        await refreshProjects();
-        setMessage(t.projectDeleted);
+        await refreshProjects(false, undefined, { preserveSelection: true });
+        const contextChanged = !isCurrent();
+        if (projectContext.detachDeleted("projectId", selectedProjectId)) {
+          setSelectedProjectId(null);
+          setSelectedModelId(null);
+          setSelectedVersionId(null);
+          setModelVersions([]);
+        }
+        if (!contextChanged) setMessage(t.projectDeleted);
       } catch (error) {
+        if (!isCurrent()) return;
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
     });
@@ -278,6 +294,7 @@ export function createWorkbenchProjectStorageController({
     }
 
     const payload = serializeCurrentModel() as Record<string, unknown> & { model_schema_version?: string };
+    const isCurrent = projectContext.begin();
 
     startTransition(async () => {
       try {
@@ -291,22 +308,25 @@ export function createWorkbenchProjectStorageController({
 
         if (!selectedModelId || saveAs) {
           const created = await projectLibraryBackendService.createModel(selectedProjectId, modelPayload);
-          await refreshProjects(false, selectedProjectId);
+          await refreshProjects(false, undefined, { preserveSelection: true });
+          if (!isCurrent()) return;
           setSelectedModelId(created.model.model_id);
           setSelectedVersionId(created.model.latest_version_id ?? null);
-          await refreshVersions(created.model.model_id);
           setMessage(t.modelCreated);
+          await refreshVersions(created.model.model_id);
           return;
         }
 
         await projectLibraryBackendService.updateModel(selectedModelId, modelPayload);
         const version = await projectLibraryBackendService.createModelVersion(selectedModelId, modelPayload);
 
-        await refreshProjects();
+        await refreshProjects(false, undefined, { preserveSelection: true });
+        if (!isCurrent()) return;
         setSelectedVersionId(version.version.version_id);
-        await refreshVersions(selectedModelId);
         setMessage(t.modelSaved);
+        await refreshVersions(selectedModelId);
       } catch (error) {
+        if (!isCurrent()) return;
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
     });
@@ -326,13 +346,16 @@ export function createWorkbenchProjectStorageController({
 
   const renameSelectedVersion = () => {
     if (!selectedVersionId) return;
+    const isCurrent = projectContext.begin();
 
     startTransition(async () => {
       try {
         await projectLibraryBackendService.updateModelVersion(selectedVersionId, { name: loadedModelName });
-        await refreshVersions(selectedModelId ?? "");
+        if (selectedModelId && projectContext.hasModel(selectedModelId)) await refreshVersions(selectedModelId);
+        if (!isCurrent()) return;
         setMessage(t.versionRenamed);
       } catch (error) {
+        if (!isCurrent()) return;
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
     });
@@ -340,17 +363,18 @@ export function createWorkbenchProjectStorageController({
 
   const deleteSelectedVersion = () => {
     if (!selectedVersionId) return;
+    const isCurrent = projectContext.begin();
 
     startTransition(async () => {
       try {
         await projectLibraryBackendService.deleteModelVersion(selectedVersionId);
-        setSelectedVersionId(null);
-        if (selectedModelId) {
-          await refreshVersions(selectedModelId);
-        }
-        await refreshProjects();
-        setMessage(t.versionDeleted);
+        await refreshProjects(false, undefined, { preserveSelection: true });
+        if (selectedModelId && projectContext.hasModel(selectedModelId)) await refreshVersions(selectedModelId);
+        const contextChanged = !isCurrent();
+        if (projectContext.detachDeleted("versionId", selectedVersionId)) setSelectedVersionId(null);
+        if (!contextChanged) setMessage(t.versionDeleted);
       } catch (error) {
+        if (!isCurrent()) return;
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
     });
@@ -358,16 +382,21 @@ export function createWorkbenchProjectStorageController({
 
   const deleteSavedModelRecord = () => {
     if (!selectedModelId) return;
+    const isCurrent = projectContext.begin();
 
     startTransition(async () => {
       try {
         await projectLibraryBackendService.deleteModel(selectedModelId);
-        setSelectedModelId(null);
-        setSelectedVersionId(null);
-        setModelVersions([]);
-        await refreshProjects();
-        setMessage(t.modelDeletedStored);
+        await refreshProjects(false, undefined, { preserveSelection: true });
+        const contextChanged = !isCurrent();
+        if (projectContext.detachDeleted("modelId", selectedModelId)) {
+          setSelectedModelId(null);
+          setSelectedVersionId(null);
+          setModelVersions([]);
+        }
+        if (!contextChanged) setMessage(t.modelDeletedStored);
       } catch (error) {
+        if (!isCurrent()) return;
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
     });

@@ -6,8 +6,10 @@ import type {
 } from "@/lib/workbench/project-library-backend-service-core";
 import type { WorkbenchDownloadResult } from "@/components/workbench/workbench-export-controller";
 import type { ProjectRecord } from "@/lib/api/project-types";
+import type { WorkbenchProjectContext, WorkbenchProjectRefresh } from "@/lib/workbench/project-context";
 
 type ScriptProjectModelControllerDeps = {
+  projectContext: WorkbenchProjectContext;
   action: string;
   payload: Record<string, unknown>;
   projects: ProjectRecord[];
@@ -27,7 +29,7 @@ type ScriptProjectModelControllerDeps = {
   setModelVersions: (value: any[]) => void;
   setLoadedModelName: (value: string) => void;
   setActiveMaterial: (value: string) => void;
-  refreshProjects: (bootstrap?: boolean, preferredProjectId?: string | null) => Promise<void>;
+  refreshProjects: WorkbenchProjectRefresh;
   refreshVersions: (modelId: string) => Promise<void>;
   downloadProjectBundleJson: () => Promise<WorkbenchDownloadResult>;
   downloadProjectBundleZip: () => Promise<WorkbenchDownloadResult>;
@@ -51,6 +53,7 @@ type ScriptProjectModelControllerDeps = {
 };
 
 export async function handleWorkbenchScriptProjectModelAction({
+  projectContext,
   action,
   payload,
   projects,
@@ -94,10 +97,12 @@ export async function handleWorkbenchScriptProjectModelAction({
 }: ScriptProjectModelControllerDeps): Promise<Record<string, unknown> | null> {
   switch (action) {
     case "project/create": {
+      const isCurrent = projectContext.begin();
       const name = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : defaultProjectLabel;
       const description = typeof payload.description === "string" ? payload.description : "";
       const created = await projectLibraryBackendService.createProject({ name, description });
-      await refreshProjects(false, created.project.project_id);
+      await refreshProjects(false, undefined, { preserveSelection: true });
+      if (!isCurrent()) return { ok: true, action, projectId: created.project.project_id, contextChanged: true };
       setSelectedProjectId(created.project.project_id);
       setSelectedModelId(null);
       setSelectedVersionId(null);
@@ -125,12 +130,14 @@ export async function handleWorkbenchScriptProjectModelAction({
       if (!selectedProjectId) {
         throw new Error(projectRequiredLabel);
       }
+      const isCurrent = projectContext.begin();
       const name = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : projectNameDraft || defaultProjectLabel;
       const description = typeof payload.description === "string" ? payload.description : projectDescriptionDraft;
       await projectLibraryBackendService.updateProject(selectedProjectId, { name, description });
+      await refreshProjects(false, undefined, { preserveSelection: true });
+      if (!isCurrent()) return { ok: true, action, projectId: selectedProjectId, contextChanged: true };
       setProjectNameDraft(name);
       setProjectDescriptionDraft(description);
-      await refreshProjects();
       setMessage(projectUpdatedLabel);
       return { ok: true, action, projectId: selectedProjectId };
     }
@@ -138,11 +145,17 @@ export async function handleWorkbenchScriptProjectModelAction({
       if (!selectedProjectId) {
         throw new Error(projectRequiredLabel);
       }
+      const isCurrent = projectContext.begin();
       await projectLibraryBackendService.deleteProject(selectedProjectId);
-      setSelectedProjectId(null);
-      setSelectedModelId(null);
-      setSelectedVersionId(null);
-      await refreshProjects();
+      await refreshProjects(false, undefined, { preserveSelection: true });
+      const contextChanged = !isCurrent();
+      if (projectContext.detachDeleted("projectId", selectedProjectId)) {
+        setSelectedProjectId(null);
+        setSelectedModelId(null);
+        setSelectedVersionId(null);
+        setModelVersions([]);
+      }
+      if (contextChanged) return { ok: true, action, projectId: selectedProjectId, contextChanged: true };
       setMessage(projectDeletedLabel);
       return { ok: true, action };
     }
@@ -169,6 +182,7 @@ export async function handleWorkbenchScriptProjectModelAction({
       if (!selectedProjectId) {
         throw new Error(projectRequiredLabel);
       }
+      const isCurrent = projectContext.begin();
       const payloadModel = serializeCurrentModel();
       const modelPayload: WorkbenchModelCreateInput = {
         name: loadedModelName,
@@ -180,31 +194,38 @@ export async function handleWorkbenchScriptProjectModelAction({
 
       if (!selectedModelId || action === "model/saveAs") {
         const created = await projectLibraryBackendService.createModel(selectedProjectId, modelPayload);
-        await refreshProjects(false, selectedProjectId);
+        await refreshProjects(false, undefined, { preserveSelection: true });
+        if (!isCurrent()) return { ok: true, action, modelId: created.model.model_id, contextChanged: true };
         setSelectedModelId(created.model.model_id);
         setSelectedVersionId(created.model.latest_version_id ?? null);
-        await refreshVersions(created.model.model_id);
         setMessage(modelCreatedLabel);
+        await refreshVersions(created.model.model_id);
         return { ok: true, action, modelId: created.model.model_id };
       }
 
       await projectLibraryBackendService.updateModel(selectedModelId, modelPayload);
       const version = await projectLibraryBackendService.createModelVersion(selectedModelId, modelPayload);
-      await refreshProjects();
+      await refreshProjects(false, undefined, { preserveSelection: true });
+      if (!isCurrent()) return { ok: true, action, versionId: version.version.version_id, contextChanged: true };
       setSelectedVersionId(version.version.version_id);
-      await refreshVersions(selectedModelId);
       setMessage(modelSavedLabel);
+      await refreshVersions(selectedModelId);
       return { ok: true, action, versionId: version.version.version_id };
     }
     case "model/deleteSelected": {
       if (!selectedModelId) {
         throw new Error(noSavedModelsLabel);
       }
+      const isCurrent = projectContext.begin();
       await projectLibraryBackendService.deleteModel(selectedModelId);
-      setSelectedModelId(null);
-      setSelectedVersionId(null);
-      setModelVersions([]);
-      await refreshProjects();
+      await refreshProjects(false, undefined, { preserveSelection: true });
+      const contextChanged = !isCurrent();
+      if (projectContext.detachDeleted("modelId", selectedModelId)) {
+        setSelectedModelId(null);
+        setSelectedVersionId(null);
+        setModelVersions([]);
+      }
+      if (contextChanged) return { ok: true, action, modelId: selectedModelId, contextChanged: true };
       setMessage(modelDeletedLabel);
       return { ok: true, action };
     }
@@ -212,8 +233,10 @@ export async function handleWorkbenchScriptProjectModelAction({
       if (!selectedVersionId) {
         throw new Error(noVersionsLabel);
       }
+      const isCurrent = projectContext.begin();
       await projectLibraryBackendService.updateModelVersion(selectedVersionId, { name: loadedModelName });
-      await refreshVersions(selectedModelId ?? "");
+      if (selectedModelId && projectContext.hasModel(selectedModelId)) await refreshVersions(selectedModelId);
+      if (!isCurrent()) return { ok: true, action, versionId: selectedVersionId, contextChanged: true };
       setMessage(versionRenamedLabel);
       return { ok: true, action, versionId: selectedVersionId };
     }
@@ -221,12 +244,13 @@ export async function handleWorkbenchScriptProjectModelAction({
       if (!selectedVersionId) {
         throw new Error(noVersionsLabel);
       }
+      const isCurrent = projectContext.begin();
       await projectLibraryBackendService.deleteModelVersion(selectedVersionId);
-      setSelectedVersionId(null);
-      if (selectedModelId) {
-        await refreshVersions(selectedModelId);
-      }
-      await refreshProjects();
+      await refreshProjects(false, undefined, { preserveSelection: true });
+      if (selectedModelId && projectContext.hasModel(selectedModelId)) await refreshVersions(selectedModelId);
+      const contextChanged = !isCurrent();
+      if (projectContext.detachDeleted("versionId", selectedVersionId)) setSelectedVersionId(null);
+      if (contextChanged) return { ok: true, action, versionId: selectedVersionId, contextChanged: true };
       setMessage(versionDeletedLabel);
       return { ok: true, action };
     }

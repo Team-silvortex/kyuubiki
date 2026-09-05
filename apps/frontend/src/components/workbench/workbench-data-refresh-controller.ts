@@ -1,4 +1,5 @@
-import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { createWorkbenchProjectContext, type WorkbenchProjectRefresh } from "@/lib/workbench/project-context";
 import type {
   DirectMeshSelectionMode,
   FrontendRuntimeMode,
@@ -40,6 +41,7 @@ type UseWorkbenchDataRefreshControllerArgs = {
   securityEventWindowFilter: SecurityEventWindow;
   selectedModelId: string | null;
   selectedProjectId: string | null;
+  selectedVersionId: string | null;
   setHealth: (value: HealthPayload | null) => void;
   setModelVersions: (value: ModelVersionRecord[]) => void;
   setProjects: (value: ProjectRecord[]) => void;
@@ -68,6 +70,7 @@ export function useWorkbenchDataRefreshController({
   securityEventWindowFilter,
   selectedModelId,
   selectedProjectId,
+  selectedVersionId,
   setHealth,
   setModelVersions,
   setProjects,
@@ -88,6 +91,16 @@ export function useWorkbenchDataRefreshController({
   const projectRefreshSeqRef = useRef(0);
   const securityEventsRefreshSeqRef = useRef(0);
   const versionsRefreshSeqRef = useRef(0);
+  const [projectContext] = useState(() => createWorkbenchProjectContext({
+    projectId: selectedProjectId, modelId: selectedModelId, versionId: selectedVersionId,
+  }));
+  useLayoutEffect(() => {
+    projectContext.update({ projectId: selectedProjectId, modelId: selectedModelId, versionId: selectedVersionId });
+  }, [projectContext, selectedProjectId, selectedModelId, selectedVersionId]);
+  useLayoutEffect(() => {
+    projectContext.mount();
+    return () => projectContext.dispose();
+  }, [projectContext]);
 
   function clearRecovery(channel: "health" | "projects" | "security_events") {
     setRuntimeRecovery((current) => clearWorkbenchRuntimeRecoveryIssue(current, channel));
@@ -136,8 +149,9 @@ export function useWorkbenchDataRefreshController({
     }
   }
 
-  async function refreshProjects(bootstrap = false, preferredProjectId?: string | null) {
+  const refreshProjects: WorkbenchProjectRefresh = async (bootstrap = false, preferredProjectId, options) => {
     const refreshSeq = ++projectRefreshSeqRef.current;
+    const isCurrent = projectContext.capture();
 
     try {
       const payload = await projectLibraryBackendService.fetchProjects();
@@ -154,8 +168,11 @@ export function useWorkbenchDataRefreshController({
       if (refreshSeq !== projectRefreshSeqRef.current) return;
 
       setProjects(nextProjects);
+      clearRecovery("projects");
+      if (options?.preserveSelection || !isCurrent()) return;
 
-      const requestedProjectId = preferredProjectId === undefined ? selectedProjectId : preferredProjectId;
+      const selection = projectContext.current();
+      const requestedProjectId = preferredProjectId === undefined ? selection.projectId : preferredProjectId;
       const nextProjectId =
         requestedProjectId && nextProjects.some((project) => project.project_id === requestedProjectId)
           ? requestedProjectId
@@ -164,24 +181,23 @@ export function useWorkbenchDataRefreshController({
       setSelectedProjectId(nextProjectId);
 
       const nextModelId =
-        selectedModelId &&
+        selection.modelId &&
         (nextProjects.find((project) => project.project_id === nextProjectId)?.models ?? [])
-          .some((model) => model.model_id === selectedModelId)
-          ? selectedModelId
-          : (nextProjects.find((project) => project.project_id === nextProjectId)?.models ?? [])[0]
-              ?.model_id ?? null;
+          .some((model) => model.model_id === selection.modelId)
+          ? selection.modelId
+          : null;
 
+      // A catalog refresh never loads a payload, so it cannot attach an unrelated saved model.
       setSelectedModelId(nextModelId);
-      if (!nextModelId || nextModelId !== selectedModelId) {
+      if (!nextModelId || nextModelId !== selection.modelId) {
         setSelectedVersionId(null);
       }
-      clearRecovery("projects");
     } catch (error) {
       if (refreshSeq !== projectRefreshSeqRef.current) return;
-      setProjects([]);
+      // A refresh failure must not discard the last usable project catalog.
       pushRecovery("projects", error, "Project library");
     }
-  }
+  };
 
   async function refreshSecurityEvents() {
     const refreshSeq = ++securityEventsRefreshSeqRef.current;
@@ -214,10 +230,10 @@ export function useWorkbenchDataRefreshController({
 
     try {
       const payload = await projectLibraryBackendService.fetchModelVersions(modelId);
-      if (refreshSeq !== versionsRefreshSeqRef.current) return;
+      if (refreshSeq !== versionsRefreshSeqRef.current || projectContext.current().modelId !== modelId) return;
       setModelVersions(payload.versions);
     } catch {
-      if (refreshSeq !== versionsRefreshSeqRef.current) return;
+      if (refreshSeq !== versionsRefreshSeqRef.current || projectContext.current().modelId !== modelId) return;
       setModelVersions([]);
     }
   }
@@ -257,6 +273,7 @@ export function useWorkbenchDataRefreshController({
   }, [selectedModelId]);
 
   return {
+    projectContext,
     refreshHealth,
     refreshProjects,
     refreshSecurityEvents,

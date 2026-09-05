@@ -53,6 +53,7 @@ export function buildWorkbenchProjectFlows(props: Record<string, any>) {
   });
 
   const persistedModelEffects = {
+    projectContext: props.projectContext,
     startTransition: props.startTransition,
     activeMaterial: props.activeMaterial,
     createProject: props.projectLibraryBackendService.createProject,
@@ -110,6 +111,7 @@ export function buildWorkbenchProjectFlows(props: Record<string, any>) {
   };
 
   const projectStorageController = createWorkbenchProjectStorageController({
+    projectContext: props.projectContext,
     t: props.t,
     getSelectedProject: () => props.selectedProject,
     selectedProjectId: props.selectedProjectId,
@@ -157,6 +159,7 @@ export function buildWorkbenchProjectFlows(props: Record<string, any>) {
   projectStorageControllerRef = projectStorageController;
 
   return {
+    projectContext: props.projectContext,
     adminDataEffects,
     projectStorageController,
   };

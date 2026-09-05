@@ -374,6 +374,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     round,
     handleCanvasStageScroll,
     refreshHealth,
+    refreshResults,
     refreshProjects,
     refreshSecurityEvents,
     refreshVersions,

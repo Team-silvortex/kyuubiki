@@ -103,6 +103,20 @@ ky.log("Recipe result:", result)</pre>
       </section>
 
       <section class="docs-card docs-section">
+        <h2>Concurrent project operations</h2>
+        <ul class="docs-list">
+          <li>Model and version loads use the latest workspace operation. A late response cannot replace a newer load or a different selected project; stale failures do not overwrite that workspace's message.</li>
+          <li>A save already sent to the backend still belongs to its original project and model. If the workspace changes before the response is applied, the save action returns its persisted ID with <code>ok: true</code> and <code>contextChanged: true</code>, without selecting the old model again. Inspect the original project before retrying; do not assume that the write failed.</li>
+          <li>Project creation, update and deletion, saved-model deletion, and version rename and deletion follow the same rule in GUI and PWDT. Completed stale writes return the original affected ID with <code>contextChanged: true</code>; they do not select another project, reset its drafts, or replace its feedback. Failed writes still reject rather than report success.</li>
+          <li>Deletion reconciles associations by resource identity: deleting the active project detaches its project, model, and version; deleting the active model detaches that model and version; deleting a version detaches only that version. This also applies if you switched to another version within the deleted project or model. The working model remains available, but saving a detached copy cannot silently overwrite a different saved model. An unrelated selected resource remains untouched.</li>
+          <li>Built-in macros and <code>run_steps</code> stop remaining steps when an action reports <code>contextChanged</code>. Direct callers must inspect this flag before continuing a dependent operation. Superseded loads fail with <code>WORKBENCH_CONTEXT_CHANGED</code>.</li>
+          <li>A bundle import that has begun creating records finishes in its new project, but does not replace a workspace selected while the import was pending. The imported project remains available in the refreshed library.</li>
+          <li>Catalog refresh preserves newer selection. It does not load model geometry, so it never attaches an unbound working model to the first saved model; open that saved model explicitly instead. If refreshing fails, the last usable catalog remains visible with runtime recovery feedback; this does not claim the cached catalog is current.</li>
+        </ul>
+        <p class="docs-copy">These boundaries are exercised by isolated browser tests with delayed and failed API responses. They do not qualify packaged WebViews, real database transactions, or numerical solver accuracy.</p>
+      </section>
+
+      <section class="docs-card docs-section">
         <h2>Stable selector escape hatch</h2>
         <p class="docs-copy">
           Prefer actions and recipes. When a read-only UI assertion truly needs a

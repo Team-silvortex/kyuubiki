@@ -130,6 +130,7 @@ export function buildWorkbenchFlowControllerProps(props: WorkbenchFlowController
     setDirectMeshSelectionMode: props.setDirectMeshSelectionMode,
     refreshResults: props.refreshResults,
     refreshProjects: props.refreshProjects,
+    projectContext: props.projectContext,
     refreshSecurityEvents: props.refreshSecurityEvents,
     projectNameDraft: props.projectNameDraft,
     projectDescriptionDraft: props.projectDescriptionDraft,

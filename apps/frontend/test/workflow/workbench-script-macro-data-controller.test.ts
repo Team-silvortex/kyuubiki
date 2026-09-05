@@ -96,3 +96,15 @@ test("script linked-context navigation propagates version loading failures", asy
     failure,
   );
 });
+
+test("script macros stop remaining steps after an operation reports a changed workspace", async () => {
+  const calls: string[] = [];
+  await assert.rejects(handleWorkbenchScriptMacroDataAction({
+    ...baseArgs(), action: "macro/run", payload: { macroId: "macro/openProjectLibrary" },
+    invokeScriptAction: async (action) => {
+      calls.push(action);
+      return { ok: true, contextChanged: true };
+    },
+  }), /WORKBENCH_CONTEXT_CHANGED/u);
+  assert.deepEqual(calls, ["nav/setSidebarSection"]);
+});

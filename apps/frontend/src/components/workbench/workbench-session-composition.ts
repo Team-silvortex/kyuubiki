@@ -97,6 +97,7 @@ export function useWorkbenchSessionComposition(props: Record<string, any>) {
   const deferredResultRecords = useDeferredValue(props.resultRecords);
 
   const {
+    projectContext,
     refreshHealth,
     refreshProjects,
     refreshSecurityEvents,
@@ -112,6 +113,7 @@ export function useWorkbenchSessionComposition(props: Record<string, any>) {
     securityEventWindowFilter,
     selectedModelId: props.selectedModelId,
     selectedProjectId: props.selectedProjectId,
+    selectedVersionId: props.selectedVersionId,
     setHealth: props.setHealth,
     setModelVersions: props.setModelVersions,
     setProjects: props.setProjects,
@@ -128,6 +130,7 @@ export function useWorkbenchSessionComposition(props: Record<string, any>) {
   });
 
   const projectFlows = buildWorkbenchProjectFlows({
+    projectContext,
     selectedAdminJob,
     selectedAdminJobId,
     selectedAdminResultJobId,

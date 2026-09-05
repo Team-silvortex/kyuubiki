@@ -85,6 +85,19 @@ test("Pwdt browser bridge runs macros and action steps through the same action b
   assert.equal(stepResults.length, 2);
 });
 
+test("Pwdt action sequences stop after a save completes outside the active workspace", async () => {
+  const calls: string[] = [];
+  const bridge = createWorkbenchPwdtBrowserBridge({
+    getSnapshot: () => ({}),
+    invokeAction: async (action) => {
+      calls.push(action);
+      return { ok: true, contextChanged: true, modelId: "saved-in-original-project" };
+    },
+  });
+  await assert.rejects(bridge.runSteps([{ action: "model/save" }, { action: "job/run" }]), /WORKBENCH_CONTEXT_CHANGED/u);
+  assert.deepEqual(calls, ["model/save"]);
+});
+
 test("Pwdt browser bridge exposes Store manifest commands without DOM clicks", async () => {
   const calls: string[] = [];
   const bridge = makeBridge(calls);

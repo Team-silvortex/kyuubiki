@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import JSZip from "jszip";
+import { createWorkbenchProjectContext } from "../../src/lib/workbench/project-context.ts";
 
 import {
   importWorkbenchProjectBundle,
@@ -130,6 +131,7 @@ type ImportEffects = Parameters<typeof importWorkbenchProjectBundle>[1];
 
 function importEffects(state: { selectedProjectId: string | null; messages: string[]; alerts: Array<{ id: string; message: string }> }): ImportEffects {
   return {
+    projectContext: createWorkbenchProjectContext({ projectId: state.selectedProjectId, modelId: null, versionId: null }),
     activeMaterial: "steel",
     createModel: async () => { throw new Error("unexpected model import"); },
     createModelVersion: async () => { throw new Error("unexpected version import"); },

@@ -1,5 +1,7 @@
 "use client";
 
+import { workbenchProjectContextChangedError } from "../workbench/project-context.ts";
+
 import {
   getWorkbenchScriptActionDefinition,
   getWorkbenchScriptMacroDefinition,
@@ -241,7 +243,9 @@ export function createWorkbenchPwdtBrowserBridge({
     async runSteps(steps) {
       const results: Record<string, unknown>[] = [];
       for (const step of steps) {
-        results.push(await bridge.invoke(step.action, step.payload ?? {}));
+        const result = await bridge.invoke(step.action, step.payload ?? {});
+        results.push(result);
+        if (result.contextChanged === true) throw workbenchProjectContextChangedError();
       }
       return results;
     },

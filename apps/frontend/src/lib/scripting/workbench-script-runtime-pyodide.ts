@@ -554,7 +554,10 @@ class _KyuubikiBridge:
             action = step.get("action")
             payload = step.get("payload", {})
             self.require_action(action)
-            results.append(await self.invoke(action, payload))
+            result = await self.invoke(action, payload)
+            results.append(result)
+            if result.get("contextChanged") is True:
+                raise RuntimeError("WORKBENCH_CONTEXT_CHANGED: inspect the completed operation before continuing.")
         return results
 
     async def run_macro_definition(self, macro):

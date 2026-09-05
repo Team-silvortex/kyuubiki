@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { handleWorkbenchScriptProjectModelAction } from "../../src/components/workbench/workbench-script-project-model-controller.ts";
+import { createWorkbenchProjectContext } from "../../src/lib/workbench/project-context.ts";
 import type { WorkbenchProjectLibraryBackendService } from "../../src/lib/workbench/project-library-backend-service-core.ts";
 import type {
   ModelEnvelope,
@@ -104,6 +105,7 @@ function projectLibraryService(calls: string[]): WorkbenchProjectLibraryBackendS
 
 function baseArgs(calls: string[]) {
   return {
+    projectContext: createWorkbenchProjectContext({ projectId: null, modelId: null, versionId: null }),
     action: "",
     activeMaterial: "steel",
     defaultProjectLabel: "Default Project",
@@ -194,8 +196,8 @@ test("script model save creates models through project library service", async (
     "refresh-projects",
     "set-model:model-created",
     "set-version:version-a",
-    "refresh-versions:model-created",
     "message:model created",
+    "refresh-versions:model-created",
   ]);
 });
 
@@ -242,3 +244,69 @@ test("script save-as restores the newly created model after refreshing an existi
   });
   assert.deepEqual(calls.filter((entry) => entry.startsWith("set-model:")), ["set-model:old-model", "set-model:model-created"]);
 });
+
+for (const action of ["model/save", "model/saveAs"]) {
+  test(`script ${action} reports a completed write without applying it to a changed workspace`, async () => {
+    const calls: string[] = [];
+    const args = baseArgs(calls);
+    const result = await handleWorkbenchScriptProjectModelAction({
+      ...args, action, selectedProjectId: "project-a", selectedModelId: "model-a",
+      refreshProjects: async (_bootstrap, _preferred, options) => {
+        assert.equal(options?.preserveSelection, true);
+        args.projectContext.update({ projectId: "project-b", modelId: null, versionId: null });
+      },
+    });
+    assert.equal(result?.ok, true);
+    assert.equal(result?.contextChanged, true);
+    assert.ok(calls.some((entry) => entry.startsWith("create-")), "the original backend write is retained");
+    assert.deepEqual(calls.filter((entry) => /^(set-|message:|refresh-versions:)/u.test(entry)), []);
+  });
+}
+
+const savedSelection = { projectId: "project-a", modelId: "model-a", versionId: "version-a" };
+for (const action of ["project/create", "project/updateSelected", "project/deleteSelected",
+  "model/deleteSelected", "model/renameSelectedVersion", "model/deleteSelectedVersion"]) {
+  test(`script ${action} completes its original write without mutating a newer saved workspace`, async () => {
+    const calls: string[] = [];
+    const args = baseArgs(calls);
+    args.projectContext.update(savedSelection);
+    const changeWorkspace = () => args.projectContext.update({ projectId: "project-b", modelId: "model-b", versionId: "version-b" });
+    const updateVersion = args.projectLibraryBackendService.updateModelVersion;
+    args.projectLibraryBackendService.updateModelVersion = async (...inputs) => {
+      const response = await updateVersion(...inputs);
+      changeWorkspace();
+      return response;
+    };
+    const result = await handleWorkbenchScriptProjectModelAction({
+      ...args, action, selectedProjectId: "project-a", selectedModelId: "model-a", selectedVersionId: "version-a",
+      setProjectNameDraft: () => { calls.push("set-name"); },
+      setProjectDescriptionDraft: () => { calls.push("set-description"); },
+      setModelVersions: () => { calls.push("set-versions"); },
+      refreshProjects: async (_bootstrap, _preferred, options) => {
+        assert.equal(options?.preserveSelection, true);
+        changeWorkspace();
+      },
+    });
+    assert.equal(result?.ok, true);
+    assert.equal(result?.contextChanged, true);
+    assert.equal(calls.filter((entry) => /^(create-|update-|delete-)/u.test(entry)).length, 1);
+    assert.deepEqual(calls.filter((entry) => /^(set-|message:|refresh-versions:)/u.test(entry)), []);
+  });
+}
+
+for (const action of ["project/deleteSelected", "model/deleteSelected", "model/deleteSelectedVersion"]) {
+  test(`script ${action} reconciles current deleted bindings without selecting another saved record`, async () => {
+    const calls: string[] = [];
+    const args = baseArgs(calls);
+    args.projectContext.update(savedSelection);
+    const result = await handleWorkbenchScriptProjectModelAction({
+      ...args, action, selectedProjectId: "project-a", selectedModelId: "model-a", selectedVersionId: "version-a",
+      refreshProjects: async (_bootstrap, _preferred, options) => { assert.equal(options?.preserveSelection, true); },
+    });
+    assert.deepEqual(result, { ok: true, action });
+    const expected = action === "project/deleteSelected" ? ["set-project:", "set-model:", "set-version:"]
+      : action === "model/deleteSelected" ? ["set-model:", "set-version:"] : ["set-version:"];
+    assert.deepEqual(calls.filter((entry) => entry.startsWith("set-")), expected);
+    assert.equal(calls.filter((entry) => entry.startsWith("message:")).length, 1);
+  });
+}
