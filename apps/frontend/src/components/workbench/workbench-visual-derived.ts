@@ -66,6 +66,9 @@ type WorkbenchVisualDerivedArgs = {
   beamResult: { nodes: any[]; max_stress?: number; max_rotation?: number; max_displacement?: number } | null;
   frameResult: { nodes: any[]; max_stress?: number; max_rotation?: number; max_displacement?: number } | null;
   planeResult: { nodes: any[]; max_stress?: number; max_displacement?: number } | null;
+  heatPlaneTriangleResult: { max_temperature: number } | null;
+  heatPlaneQuadResult: { max_temperature: number } | null;
+  electrostaticPlaneResult: { max_potential: number } | null;
   heatBarResult: { max_temperature?: number } | null;
   thermalBarResult: { max_displacement?: number; max_stress?: number } | null;
   thermalBeamResult: { max_displacement?: number; max_stress?: number } | null;
@@ -179,6 +182,9 @@ export function useWorkbenchVisualDerived({
   beamResult,
   frameResult,
   planeResult,
+  heatPlaneTriangleResult,
+  heatPlaneQuadResult,
+  electrostaticPlaneResult,
   heatBarResult,
   thermalBarResult,
   thermalBeamResult,
@@ -317,6 +323,9 @@ export function useWorkbenchVisualDerived({
 
   const hasAnyResult = Boolean(
     axialResult ||
+      heatPlaneTriangleResult ||
+      heatPlaneQuadResult ||
+      electrostaticPlaneResult ||
       heatBarResult ||
       thermalBarResult ||
       thermalBeamResult ||

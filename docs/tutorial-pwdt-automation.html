@@ -57,15 +57,15 @@ await ky.build_parametric_truss_2d(
     height=3.5,
     load_y=-1500,
 )
-await ky.save_model(name="pwdt-truss-v1", save_as=True)
+saved = await ky.save_model(name="pwdt-truss-v1", save_as=True)
+if saved.get("contextChanged"):
+    raise RuntimeError("Workspace changed; inspect the saved model before continuing")
 
 run_state = await ky.run_current_study()
-if run_state["jobStatus"] != "completed":
-    raise RuntimeError(f"study ended as {run_state['jobStatus']}")
 
 await ky.open_results(project_id=project_id)
 ky.log("Result count:", run_state["resultCount"])</pre>
-        <p class="docs-checkpoint"><strong>Checkpoint:</strong> the script ends only after a terminal job state, opens the result for the created project, and leaves an action timeline that can be inspected.</p>
+        <p class="docs-checkpoint"><strong>Checkpoint:</strong> the script continues only after successful computation, opens the result for the created project, and leaves an action timeline that can be inspected.</p>
       </section>
 
       <section class="docs-card docs-section">
@@ -95,11 +95,23 @@ ky.log("Recipe result:", result)</pre>
         <ul class="docs-list">
           <li>Await every state-changing action. The Workbench action bridge waits for the UI state commit before resolving, so the next action uses the updated project, model, selection, and parameters.</li>
           <li>Wait on observable state with <code>wait_for_job_done</code>, <code>wait_for_message</code>, or <code>wait_until</code>; do not add arbitrary sleeps around network work.</li>
+          <li><code>wait_for_job_done</code> reports any terminal state, including failure or cancellation. <code>run_current_study</code> requires success and raises on failure instead. All five built-in recipes enforce this at every stage, before projection, another save, or opening results. They do not automatically retry a solver submission; completed input saves remain available for inspection.</li>
+          <li><code>ky.state()["hasResult"]</code> is a boolean for the recognized active result, including two-dimensional heat and electrostatic results. It is not a count of archived results and is cleared when switching to another study. Clearing the current view does not cancel backend jobs or delete archived records.</li>
           <li>Use <code>sleep</code> only for bounded UI settling where no stronger state exists.</li>
           <li>High-risk actions still require product confirmation. PWDT does not create hidden authority.</li>
           <li>If an action is absent, stop and inspect the parity report instead of clicking a similarly named element.</li>
           <li>If a run fails, preserve the action log and current snapshot before replaying any step.</li>
         </ul>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Runtime loading recovery</h2>
+        <ul class="docs-list">
+          <li>If the Pyodide script download or initialization fails, inspect the runtime error and use <strong>Load runtime</strong> again. Reloading the page is not required, and the editor source is preserved.</li>
+          <li>The script download has a 30-second timeout. Failed script tags and failed initialization promises are discarded so that a new explicit attempt can proceed; simultaneous loaders share one attempt.</li>
+          <li>A Python script error does not discard a successfully initialized runtime. Fix the script and run it again; earlier GUI actions or backend writes are not rolled back automatically.</li>
+        </ul>
+        <p class="docs-copy">Recovery tests use intercepted script downloads and a runtime adapter. They verify the GUI loading and retry path, not an actual Pyodide WebAssembly download or Python numerical execution.</p>
       </section>
 
       <section class="docs-card docs-section">
@@ -109,11 +121,13 @@ ky.log("Recipe result:", result)</pre>
           <li>A save already sent to the backend still belongs to its original project and model. If the workspace changes before the response is applied, the save action returns its persisted ID with <code>ok: true</code> and <code>contextChanged: true</code>, without selecting the old model again. Inspect the original project before retrying; do not assume that the write failed.</li>
           <li>Project creation, update and deletion, saved-model deletion, and version rename and deletion follow the same rule in GUI and PWDT. Completed stale writes return the original affected ID with <code>contextChanged: true</code>; they do not select another project, reset its drafts, or replace its feedback. Failed writes still reject rather than report success.</li>
           <li>Deletion reconciles associations by resource identity: deleting the active project detaches its project, model, and version; deleting the active model detaches that model and version; deleting a version detaches only that version. This also applies if you switched to another version within the deleted project or model. The working model remains available, but saving a detached copy cannot silently overwrite a different saved model. An unrelated selected resource remains untouched.</li>
-          <li>Built-in macros and <code>run_steps</code> stop remaining steps when an action reports <code>contextChanged</code>. Direct callers must inspect this flag before continuing a dependent operation. Superseded loads fail with <code>WORKBENCH_CONTEXT_CHANGED</code>.</li>
+          <li>Completion checks cover the final version-list refresh as well as the initial write or load. Switching away and back still invalidates the operation; committing its own newly saved or loaded selection does not.</li>
+          <li>Built-in macros, <code>run_steps</code>, and all five built-in research recipes stop remaining steps when an action reports <code>contextChanged</code>. This applies to both browser PWDT and Python PWDT, including project creation and each intermediate save in composite recipes. The completed write is retained; inspect it before retrying rather than generating duplicates. Superseded loads fail with <code>WORKBENCH_CONTEXT_CHANGED</code>.</li>
+          <li>Direct <code>invoke</code> and <code>save_model</code> callers still receive the affected ID and completion flag. Check <code>contextChanged</code> before continuing a dependent action. <code>ensure_project</code> stops with an error if a newly created project could not become the active workspace, rather than silently continuing in another project.</li>
           <li>A bundle import that has begun creating records finishes in its new project, but does not replace a workspace selected while the import was pending. The imported project remains available in the refreshed library.</li>
           <li>Catalog refresh preserves newer selection. It does not load model geometry, so it never attaches an unbound working model to the first saved model; open that saved model explicitly instead. If refreshing fails, the last usable catalog remains visible with runtime recovery feedback; this does not claim the cached catalog is current.</li>
         </ul>
-        <p class="docs-copy">These boundaries are exercised by isolated browser tests with delayed and failed API responses. They do not qualify packaged WebViews, real database transactions, or numerical solver accuracy.</p>
+        <p class="docs-copy">These boundaries are exercised by isolated browser tests with delayed and failed API responses. The shipped Python prelude is also executed against an in-memory JavaScript bridge adapter, not just inspected as text. That frontend test requires Python 3 (CI uses 3.12); it does not add a native Python dependency to the application. These checks do not qualify Pyodide downloads or WebAssembly startup, packaged WebViews, real database transactions, or numerical solver accuracy.</p>
       </section>
 
       <section class="docs-card docs-section">

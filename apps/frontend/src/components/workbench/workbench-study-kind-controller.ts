@@ -1,6 +1,14 @@
 "use client";
 
 import type { WorkbenchStudyKind } from "@/lib/workbench/history";
+import {
+  defaultPlaneQuad, defaultElectrostaticPlaneQuad, defaultThermalPlaneQuad,
+  defaultPlaneTriangle, defaultElectrostaticPlaneTriangle, defaultThermalPlaneTriangle,
+  defaultHeatBar1d, defaultHeatPlaneQuad, defaultHeatPlaneTriangle, defaultThermalBar1d,
+  defaultThermalBeam1d, defaultThermalFrame2d, defaultThermalTruss2d, defaultThermalTruss3d,
+  defaultSpring1d, defaultSpring2d, defaultSpring3d, defaultBeam1d, defaultTorsion1d, defaultFrame2d,
+} from "./workbench-defaults";
+import { ensureBeamModelMaterials, ensureFrameModelMaterials, ensurePlaneModelMaterials } from "@/lib/workbench/material-commands";
 
 export const WORKBENCH_STUDY_KINDS = [
   "axial_bar_1d",
@@ -45,35 +53,13 @@ type StudyKindResetFactoryArgs = {
   setTorsionModel: (value: any) => void;
   setFrameModel: (value: any) => void;
   setPlaneResultField: (value: any) => void;
-  ensurePlaneModelMaterials: (model: any, materialValue: string) => any;
-  ensureBeamModelMaterials: (model: any, materialValue: string) => any;
-  ensureFrameModelMaterials: (model: any, materialValue: string) => any;
-  defaultPlaneQuad: any;
-  defaultElectrostaticPlaneQuad: any;
-  defaultThermalPlaneQuad: any;
-  defaultPlaneTriangle: any;
-  defaultElectrostaticPlaneTriangle: any;
-  defaultThermalPlaneTriangle: any;
-  defaultHeatBar1d: any;
-  defaultHeatPlaneQuad: any;
-  defaultHeatPlaneTriangle: any;
-  defaultThermalBar1d: any;
-  defaultThermalBeam1d: any;
-  defaultThermalFrame2d: any;
-  defaultThermalTruss2d: any;
-  defaultThermalTruss3d: any;
-  defaultSpring1d: any;
-  defaultSpring2d: any;
-  defaultSpring3d: any;
-  defaultBeam1d: any;
-  defaultTorsion1d: any;
-  defaultFrame2d: any;
 };
 
 type StudyKindSelectionArgs = {
   currentStudyKind: WorkbenchStudyKind;
   nextStudyKind: WorkbenchStudyKind;
   setStudyKind: (value: WorkbenchStudyKind) => void;
+  resetActiveResult: () => void;
   resetHandlers: Partial<Record<WorkbenchStudyKind, () => void>>;
 };
 
@@ -98,29 +84,6 @@ export function createStudyKindResetHandlers({
   setTorsionModel,
   setFrameModel,
   setPlaneResultField,
-  ensurePlaneModelMaterials,
-  ensureBeamModelMaterials,
-  ensureFrameModelMaterials,
-  defaultPlaneQuad,
-  defaultElectrostaticPlaneQuad,
-  defaultThermalPlaneQuad,
-  defaultPlaneTriangle,
-  defaultElectrostaticPlaneTriangle,
-  defaultThermalPlaneTriangle,
-  defaultHeatBar1d,
-  defaultHeatPlaneQuad,
-  defaultHeatPlaneTriangle,
-  defaultThermalBar1d,
-  defaultThermalBeam1d,
-  defaultThermalFrame2d,
-  defaultThermalTruss2d,
-  defaultThermalTruss3d,
-  defaultSpring1d,
-  defaultSpring2d,
-  defaultSpring3d,
-  defaultBeam1d,
-  defaultTorsion1d,
-  defaultFrame2d,
 }: StudyKindResetFactoryArgs): Partial<Record<WorkbenchStudyKind, () => void>> {
   return {
     plane_quad_2d: () => setPlaneModel(ensurePlaneModelMaterials(defaultPlaneQuad, activeMaterial)),
@@ -156,10 +119,12 @@ export function applyStudyKindSelection({
   currentStudyKind,
   nextStudyKind,
   setStudyKind,
+  resetActiveResult,
   resetHandlers,
 }: StudyKindSelectionArgs) {
   if (currentStudyKind !== nextStudyKind) {
     resetHandlers[nextStudyKind]?.();
+    resetActiveResult();
   }
   setStudyKind(nextStudyKind);
 }

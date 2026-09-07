@@ -6,26 +6,26 @@ export { DEFAULT_WORKBENCH_PYTHON } from "./workbench-script-python-default.ts";
 export function buildWorkbenchPythonPrelude(): string {
   return `
 import json
-from js import __kyuubikiBridge
+from js import __kyuubikiBridge as _kyuubiki_bridge
 
 class _KyuubikiBridge:
     def state(self):
-        return json.loads(__kyuubikiBridge.state_json())
+        return json.loads(_kyuubiki_bridge.state_json())
 
     def actions(self):
-        return json.loads(__kyuubikiBridge.actions_json())
+        return json.loads(_kyuubiki_bridge.actions_json())
 
     def macros(self):
-        return json.loads(__kyuubikiBridge.macros_json())
+        return json.loads(_kyuubiki_bridge.macros_json())
 
     def recipes(self):
-        return json.loads(__kyuubikiBridge.recipes_json())
+        return json.loads(_kyuubiki_bridge.recipes_json())
 
     def ui_contract(self):
-        return json.loads(__kyuubikiBridge.ui_contract_json())
+        return json.loads(_kyuubiki_bridge.ui_contract_json())
 
     def log(self, *parts):
-        __kyuubikiBridge.log(" ".join(str(part) for part in parts))
+        _kyuubiki_bridge.log(" ".join(str(part) for part in parts))
 
     def action(self, action_id):
         for action in self.actions():
@@ -168,8 +168,13 @@ class _KyuubikiBridge:
         if payload is None:
             payload = {}
         self.require_action(action)
-        result = await __kyuubikiBridge.invoke(action, json.dumps(payload))
+        result = await _kyuubiki_bridge.invoke(action, json.dumps(payload))
         return json.loads(result)
+
+    def _require_current_context(self, result):
+        if result.get("contextChanged") is True:
+            raise RuntimeError("WORKBENCH_CONTEXT_CHANGED: inspect the completed operation before continuing.")
+        return result
 
     async def open_sidebar(self, section):
         return await self.invoke("nav/setSidebarSection", {"section": section})
@@ -194,6 +199,7 @@ class _KyuubikiBridge:
 
     async def create_project(self, name, description=""):
         result = await self.invoke("project/create", {"name": name, "description": description})
+        self._require_current_context(result)
         return result.get("projectId")
 
     async def select_project(self, project_id):
@@ -289,9 +295,16 @@ class _KyuubikiBridge:
         action = "model/saveAs" if save_as else "model/save"
         return await self.invoke(action)
 
+    async def _save_recipe_model(self, **params):
+        return self._require_current_context(await self.save_model(**params))
+
     async def run_current_study(self, timeout=90.0, interval=0.5):
-        await self.invoke("job/run")
-        return await self.wait_for_job_done(timeout=timeout, interval=interval)
+        self._require_current_context(await self.invoke("job/run"))
+        state = await self.wait_for_job_done(timeout=timeout, interval=interval)
+        if state.get("jobStatus") != "completed":
+            status = str(state.get("jobStatus")).upper()
+            raise RuntimeError(f"WORKBENCH_JOB_{status}: study did not complete successfully.")
+        return state
 
     async def open_results(self, project_id=None, model_version_id=None):
         payload = {"activeTab": "results"}
@@ -329,7 +342,7 @@ class _KyuubikiBridge:
             model_name=params.get("modelName"),
             material=params.get("activeMaterial"),
         )
-        save_result = await self.save_model(
+        save_result = await self._save_recipe_model(
             name=params.get("modelName"),
             material=params.get("activeMaterial"),
             save_as=True,
@@ -355,14 +368,14 @@ class _KyuubikiBridge:
             model_name=params.get("heatModelName"),
             material=params.get("activeMaterial"),
         )
-        heat_save_result = await self.save_model(
+        heat_save_result = await self._save_recipe_model(
             name=params.get("heatModelName"),
             material=params.get("activeMaterial"),
             save_as=True,
         )
         heat_run_state = await self.run_current_study(timeout=self.timeout_seconds(params))
         thermo_projection = await self.project_heat_to_thermo_quad_study()
-        thermo_save_result = await self.save_model(
+        thermo_save_result = await self._save_recipe_model(
             name=params.get("thermoModelName", params.get("heatModelName")),
             material=params.get("activeMaterial"),
             save_as=True,
@@ -395,14 +408,14 @@ class _KyuubikiBridge:
             model_name=params.get("heatModelName"),
             material=params.get("activeMaterial"),
         )
-        heat_save_result = await self.save_model(
+        heat_save_result = await self._save_recipe_model(
             name=params.get("heatModelName"),
             material=params.get("activeMaterial"),
             save_as=True,
         )
         heat_run_state = await self.run_current_study(timeout=self.timeout_seconds(params))
         thermo_projection = await self.project_heat_to_thermo_triangle_study()
-        thermo_save_result = await self.save_model(
+        thermo_save_result = await self._save_recipe_model(
             name=params.get("thermoModelName", params.get("heatModelName")),
             material=params.get("activeMaterial"),
             save_as=True,
@@ -435,21 +448,21 @@ class _KyuubikiBridge:
             model_name=params.get("electrostaticModelName"),
             material=params.get("activeMaterial"),
         )
-        electrostatic_save_result = await self.save_model(
+        electrostatic_save_result = await self._save_recipe_model(
             name=params.get("electrostaticModelName"),
             material=params.get("activeMaterial"),
             save_as=True,
         )
         electrostatic_run_state = await self.run_current_study(timeout=self.timeout_seconds(params))
         heat_projection = await self.project_electrostatic_to_heat_quad_study()
-        heat_save_result = await self.save_model(
+        heat_save_result = await self._save_recipe_model(
             name=params.get("heatModelName"),
             material=params.get("activeMaterial"),
             save_as=True,
         )
         heat_run_state = await self.run_current_study(timeout=self.timeout_seconds(params))
         thermo_projection = await self.project_heat_to_thermo_quad_study()
-        thermo_save_result = await self.save_model(
+        thermo_save_result = await self._save_recipe_model(
             name=params.get("thermoModelName", params.get("heatModelName")),
             material=params.get("activeMaterial"),
             save_as=True,
@@ -487,21 +500,21 @@ class _KyuubikiBridge:
             model_name=params.get("electrostaticModelName"),
             material=params.get("activeMaterial"),
         )
-        electrostatic_save_result = await self.save_model(
+        electrostatic_save_result = await self._save_recipe_model(
             name=params.get("electrostaticModelName"),
             material=params.get("activeMaterial"),
             save_as=True,
         )
         electrostatic_run_state = await self.run_current_study(timeout=self.timeout_seconds(params))
         heat_projection = await self.project_electrostatic_to_heat_triangle_study()
-        heat_save_result = await self.save_model(
+        heat_save_result = await self._save_recipe_model(
             name=params.get("heatModelName"),
             material=params.get("activeMaterial"),
             save_as=True,
         )
         heat_run_state = await self.run_current_study(timeout=self.timeout_seconds(params))
         thermo_projection = await self.project_heat_to_thermo_triangle_study()
-        thermo_save_result = await self.save_model(
+        thermo_save_result = await self._save_recipe_model(
             name=params.get("thermoModelName", params.get("heatModelName")),
             material=params.get("activeMaterial"),
             save_as=True,
@@ -556,15 +569,14 @@ class _KyuubikiBridge:
             self.require_action(action)
             result = await self.invoke(action, payload)
             results.append(result)
-            if result.get("contextChanged") is True:
-                raise RuntimeError("WORKBENCH_CONTEXT_CHANGED: inspect the completed operation before continuing.")
+            self._require_current_context(result)
         return results
 
     async def run_macro_definition(self, macro):
         return await self.run_steps(macro.get("steps", []))
 
     async def sleep(self, seconds=0.0):
-        await __kyuubikiBridge.sleep(seconds)
+        await _kyuubiki_bridge.sleep(seconds)
 
     async def wait_until(self, predicate, timeout=30.0, interval=0.25):
         elapsed = 0.0

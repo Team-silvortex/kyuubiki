@@ -36,7 +36,7 @@ function loadPyodideBrowserScript(): Promise<void> {
     return Promise.reject(new Error("Pyodide can only load in the browser."));
   }
 
-  if (window.loadPyodide) {
+  if (typeof window.loadPyodide === "function") {
     return Promise.resolve();
   }
 
@@ -44,25 +44,36 @@ function loadPyodideBrowserScript(): Promise<void> {
     return pyodideScriptPromise;
   }
 
-  pyodideScriptPromise = new Promise((resolve, reject) => {
+  const attempt = new Promise<void>((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>('script[data-pyodide="true"]');
-    if (existing) {
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("Unable to load the Pyodide runtime.")), {
-        once: true,
-      });
-      return;
+    const script = existing ?? document.createElement("script");
+    const finish = (error?: Error) => {
+      clearTimeout(timer);
+      script.removeEventListener("load", loaded);
+      script.removeEventListener("error", failed);
+      if (error) {
+        script.remove();
+        reject(error);
+      } else resolve();
+    };
+    const loaded = () => finish(typeof window.loadPyodide === "function"
+      ? undefined : new Error("Pyodide loader did not become available."));
+    const failed = () => finish(new Error("Unable to load the Pyodide runtime."));
+    const timer = setTimeout(() => finish(new Error("Pyodide script download timed out. Retry loading the runtime.")), 30_000);
+    script.addEventListener("load", loaded, { once: true });
+    script.addEventListener("error", failed, { once: true });
+    if (!existing) {
+      script.src = PYODIDE_SCRIPT_URL;
+      script.async = true;
+      script.dataset.pyodide = "true";
+      try { document.head.appendChild(script); } catch { failed(); }
     }
-
-    const script = document.createElement("script");
-    script.src = PYODIDE_SCRIPT_URL;
-    script.async = true;
-    script.dataset.pyodide = "true";
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Unable to load the Pyodide runtime."));
-    document.head.appendChild(script);
   });
-
+  const tracked = attempt.catch((error) => {
+    if (pyodideScriptPromise === tracked) pyodideScriptPromise = null;
+    throw error;
+  });
+  pyodideScriptPromise = tracked;
   return pyodideScriptPromise;
 }
 
@@ -73,14 +84,22 @@ export async function ensurePyodideRuntime(): Promise<PyodideInterface> {
 
   await loadPyodideBrowserScript();
 
-  if (!window.loadPyodide) {
+  if (typeof window.loadPyodide !== "function") {
     throw new Error("Pyodide loader did not become available.");
   }
 
   if (!window.__kyuubikiPyodidePromise) {
-    window.__kyuubikiPyodidePromise = window.loadPyodide({
-      indexURL: PYODIDE_INDEX_URL,
+    const load = window.loadPyodide;
+    // Share even synchronous loader failures, but never cache a rejected initialization.
+    const attempt = Promise.resolve().then(() => load({ indexURL: PYODIDE_INDEX_URL })).then((runtime) => {
+      if (!runtime || typeof runtime.runPythonAsync !== "function") throw new Error("Invalid Pyodide runtime.");
+      return runtime;
     });
+    const tracked = attempt.catch((error) => {
+      if (window.__kyuubikiPyodidePromise === tracked) delete window.__kyuubikiPyodidePromise;
+      throw error;
+    });
+    window.__kyuubikiPyodidePromise = tracked;
   }
 
   return window.__kyuubikiPyodidePromise;

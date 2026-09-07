@@ -182,7 +182,7 @@ export async function handleWorkbenchScriptProjectModelAction({
       if (!selectedProjectId) {
         throw new Error(projectRequiredLabel);
       }
-      const isCurrent = projectContext.begin();
+      let isCurrent = projectContext.begin();
       const payloadModel = serializeCurrentModel();
       const modelPayload: WorkbenchModelCreateInput = {
         name: loadedModelName,
@@ -196,10 +196,13 @@ export async function handleWorkbenchScriptProjectModelAction({
         const created = await projectLibraryBackendService.createModel(selectedProjectId, modelPayload);
         await refreshProjects(false, undefined, { preserveSelection: true });
         if (!isCurrent()) return { ok: true, action, modelId: created.model.model_id, contextChanged: true };
+        isCurrent = projectContext.update({ projectId: selectedProjectId, modelId: created.model.model_id,
+          versionId: created.model.latest_version_id ?? null });
         setSelectedModelId(created.model.model_id);
         setSelectedVersionId(created.model.latest_version_id ?? null);
         setMessage(modelCreatedLabel);
         await refreshVersions(created.model.model_id);
+        if (!isCurrent()) return { ok: true, action, modelId: created.model.model_id, contextChanged: true };
         return { ok: true, action, modelId: created.model.model_id };
       }
 
@@ -207,9 +210,12 @@ export async function handleWorkbenchScriptProjectModelAction({
       const version = await projectLibraryBackendService.createModelVersion(selectedModelId, modelPayload);
       await refreshProjects(false, undefined, { preserveSelection: true });
       if (!isCurrent()) return { ok: true, action, versionId: version.version.version_id, contextChanged: true };
+      isCurrent = projectContext.update({ projectId: selectedProjectId, modelId: selectedModelId,
+        versionId: version.version.version_id });
       setSelectedVersionId(version.version.version_id);
       setMessage(modelSavedLabel);
       await refreshVersions(selectedModelId);
+      if (!isCurrent()) return { ok: true, action, versionId: version.version.version_id, contextChanged: true };
       return { ok: true, action, versionId: version.version.version_id };
     }
     case "model/deleteSelected": {

@@ -264,6 +264,34 @@ for (const action of ["model/save", "model/saveAs"]) {
 }
 
 const savedSelection = { projectId: "project-a", modelId: "model-a", versionId: "version-a" };
+
+for (const action of ["model/save", "model/saveAs"]) {
+for (const moved of [false, true]) {
+  test(`script ${action} completion tracks the final version refresh with navigation=${moved}`, async () => {
+    const calls: string[] = [];
+    const args = baseArgs(calls);
+    args.projectContext.update(savedSelection);
+    const result = await handleWorkbenchScriptProjectModelAction({
+      ...args, action, selectedProjectId: "project-a", selectedModelId: "model-a", selectedVersionId: "version-a",
+      refreshVersions: async () => {
+        const ownSelection = { ...savedSelection,
+          modelId: action === "model/saveAs" ? "model-created" : "model-a",
+          versionId: action === "model/saveAs" ? "version-a" : "version-created" };
+        args.projectContext.update(ownSelection);
+        if (moved) {
+          args.projectContext.update({ projectId: "project-b", modelId: null, versionId: null });
+          args.projectContext.update(ownSelection);
+        }
+      },
+    });
+    assert.equal(result?.ok, true);
+    assert.equal(result?.contextChanged ?? false, moved);
+    assert.equal(result?.[action === "model/saveAs" ? "modelId" : "versionId"],
+      action === "model/saveAs" ? "model-created" : "version-created");
+  });
+}
+}
+
 for (const action of ["project/create", "project/updateSelected", "project/deleteSelected",
   "model/deleteSelected", "model/renameSelectedVersion", "model/deleteSelectedVersion"]) {
   test(`script ${action} completes its original write without mutating a newer saved workspace`, async () => {

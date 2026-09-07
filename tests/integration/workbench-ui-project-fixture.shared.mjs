@@ -1,0 +1,196 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { after, before } from "node:test";
+
+import { launchIntegrationBrowser } from "./playwright-browser.shared.mjs";
+import { chromium, startIsolatedWorkbenchUiRuntime, workbenchUrl } from "./workbench-ui-isolated.shared.mjs";
+
+export const PROJECT_ID = "qualification-project";
+export let runtime;
+let browser;
+export let initialProject;
+
+export function installProjectWorkbenchTestHooks() {
+  before(async () => {
+    runtime = await startIsolatedWorkbenchUiRuntime();
+    initialProject = structuredClone(runtime.state.projects[0]);
+    browser = await launchIntegrationBrowser(chromium);
+  }, { timeout: 180_000 });
+
+  after(async () => {
+    try { await browser?.close(); } finally { await runtime?.stop(); }
+  }, { timeout: 90_000 });
+}
+
+export async function usingWorkbench(run) {
+  runtime.state.projects.splice(0, runtime.state.projects.length, structuredClone(initialProject));
+  runtime.state.projectMutations.length = 0;
+  runtime.state.adminJobs.length = 0;
+  runtime.state.adminResults.length = 0;
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true });
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.stack ?? error.message));
+  try {
+    const library = await mockModelLibrary(page);
+    await run(page, library);
+    assert.deepEqual(errors, []);
+  } catch (error) {
+    const snapshot = await page.evaluate(() => window.__kyuubikiPwdt?.state()).catch(() => null);
+    throw new Error(`${error.message}\nstate=${JSON.stringify(snapshot)}\nerrors=${JSON.stringify(errors)}`, { cause: error });
+  } finally {
+    await context.close();
+  }
+}
+
+export function invoke(page, action, payload = {}) {
+  return page.evaluate(({ action, payload }) => window.__kyuubikiPwdt.invoke(action, payload), { action, payload });
+}
+
+export async function openWorkbench(page) {
+  await page.goto(workbenchUrl(runtime), { waitUntil: "networkidle", timeout: 60_000 });
+  await page.waitForFunction(() => Boolean(window.__kyuubikiPwdt));
+  await page.evaluate(() => window.__kyuubikiPwdt.waitForState({ selectedProjectId: "qualification-project" }));
+}
+
+export async function exportProject(page) {
+  page.once("dialog", (dialog) => dialog.accept());
+  const [download, outcome] = await Promise.all([
+    page.waitForEvent("download", { timeout: 20_000 }),
+    invoke(page, "project/exportJson"),
+  ]);
+  assert.equal(outcome.partial, false);
+  return JSON.parse(await readFile(await download.path(), "utf8"));
+}
+
+export async function importProject(page, bundle) {
+  await page.evaluate(() => window.__kyuubikiPwdt.openSidebar("library"));
+  await page.evaluate(() => window.__kyuubikiPwdt.openTabs({ libraryTab: "projects" }));
+  await page.locator('[data-workbench-library-project-page="exchange"]').click();
+  const previousMessage = await page.evaluate(() => window.__kyuubikiPwdt.state().message);
+  await page.locator('[data-workbench-library-project-action="import"]').setInputFiles({
+    name: "roundtrip.kyuubiki.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bundle)),
+  });
+  assert.equal(await page.locator('[data-workbench-library-project-action="import"]').inputValue(), "", "the same file must remain selectable for retry");
+  await page.waitForFunction((previous) => window.__kyuubikiPwdt.state().message !== previous, previousMessage, { timeout: 15_000 });
+}
+
+async function mockModelLibrary(page) {
+  const library = { models: [], versions: [], writes: [], failVersions: false };
+  let modelSequence = 0;
+  let versionSequence = 0;
+  function addVersion(model, input) {
+    const version = {
+      ...input, project_id: model.project_id, model_id: model.model_id,
+      version_id: `boundary-version-${++versionSequence}`,
+      version_number: library.versions.filter((entry) => entry.model_id === model.model_id).length + 1,
+      inserted_at: initialProject.inserted_at, updated_at: initialProject.updated_at,
+    };
+    library.versions.push(version);
+    model.latest_version_id = version.version_id;
+    model.latest_version_number = version.version_number;
+    return version;
+  }
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const pathname = new URL(request.url()).pathname;
+    const method = request.method();
+    const create = pathname.match(/^\/api\/v1\/projects\/([^/]+)\/models$/u);
+    const modelPath = pathname.match(/^\/api\/v1\/models\/([^/]+)(\/versions)?$/u);
+    const versionPath = pathname.match(/^\/api\/v1\/model-versions\/([^/]+)$/u);
+    if (versionPath) {
+      const version = library.versions.find((entry) => entry.version_id === versionPath[1]);
+      assert.ok(version);
+      if (method === "PATCH") {
+        library.writes.push({ method, pathname });
+        Object.assign(version, request.postDataJSON());
+      } else if (method === "DELETE") {
+        library.writes.push({ method, pathname });
+        library.versions.splice(library.versions.indexOf(version), 1);
+        const model = library.models.find((entry) => entry.model_id === version.model_id);
+        const latest = library.versions.filter((entry) => entry.model_id === version.model_id).at(-1);
+        model.latest_version_id = latest?.version_id ?? null;
+        model.latest_version_number = latest?.version_number ?? null;
+      }
+      await route.fulfill({ json: { version } });
+    } else if (create && method === "POST") {
+      const project = runtime.state.projects.find((entry) => entry.project_id === create[1]);
+      assert.ok(project);
+      const model = {
+        ...request.postDataJSON(), model_id: `boundary-model-${++modelSequence}`,
+        project_id: project.project_id, inserted_at: initialProject.inserted_at, updated_at: initialProject.updated_at,
+      };
+      library.writes.push({ method, pathname });
+      addVersion(model, request.postDataJSON());
+      library.models.push(model);
+      project.models.push(model);
+      await route.fulfill({ status: 201, json: { model } });
+    } else if (modelPath) {
+      const model = library.models.find((entry) => entry.model_id === modelPath[1]);
+      assert.ok(model);
+      if (modelPath[2]) {
+        if (method === "POST") {
+          if (library.failVersions) {
+            await route.fulfill({ status: 503, json: { error: "qualification version service unavailable" } });
+          } else {
+            library.writes.push({ method, pathname });
+            await route.fulfill({ status: 201, json: { version: addVersion(model, request.postDataJSON()) } });
+          }
+        } else await route.fulfill({ json: {
+          versions: library.versions.filter((entry) => entry.model_id === model.model_id).toReversed(),
+        } });
+      } else {
+        if (method === "PATCH") {
+          library.writes.push({ method, pathname });
+          Object.assign(model, request.postDataJSON());
+        } else if (method === "DELETE") {
+          library.writes.push({ method, pathname });
+          library.models.splice(library.models.indexOf(model), 1);
+          const project = runtime.state.projects.find((entry) => entry.project_id === model.project_id);
+          project.models.splice(project.models.indexOf(model), 1);
+          library.versions = library.versions.filter((entry) => entry.model_id !== model.model_id);
+        }
+        await route.fulfill({ json: { model } });
+      }
+    } else await route.fallback();
+  });
+  return library;
+}
+
+export async function holdRequest(page, pathname, method = "GET", respond = (route) => route.fallback()) {
+  let release;
+  let reached;
+  const gate = new Promise((resolve) => { release = resolve; });
+  let timer;
+  const received = new Promise((resolve, reject) => {
+    reached = () => { clearTimeout(timer); resolve(); };
+    timer = setTimeout(() => reject(new Error(`Expected request did not arrive: ${method} ${pathname}`)), 10_000);
+    timer.unref();
+  });
+  void received.catch(() => {});
+  await page.route(`**${pathname}`, async (route) => {
+    if (route.request().method() !== method) return route.fallback();
+    reached();
+    await gate;
+    await respond(route);
+  });
+  return { received, release: () => { clearTimeout(timer); release(); } };
+}
+
+export async function openSavedModels(page) {
+  await page.evaluate(() => window.__kyuubikiPwdt.openSidebar("library"));
+  await page.evaluate(() => window.__kyuubikiPwdt.openTabs({ libraryTab: "models" }));
+  await page.locator('[data-workbench-library-model-page="saved"]').click();
+}
+
+export async function openProjectManager(page) {
+  await page.evaluate(() => window.__kyuubikiPwdt.openSidebar("library"));
+  await page.evaluate(() => window.__kyuubikiPwdt.openTabs({ libraryTab: "projects" }));
+  await page.locator('[data-workbench-library-project-page="manage"]').click();
+}
+
+export async function waitForGuiTransition(page, pending = false) {
+  await page.waitForFunction((expected) =>
+    document.querySelector('[data-workbench-panel="inspector"] > .panel-head > span')?.textContent === expected,
+  pending ? "busy" : "ready", { timeout: 15_000 });
+}

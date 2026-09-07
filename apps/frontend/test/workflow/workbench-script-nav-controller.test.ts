@@ -15,6 +15,7 @@ function createNavigationHarness() {
       payload,
       studyKind: "truss_2d",
       studyKindResetHandlers: {},
+      resetActiveResult: () => {},
       setStudyKind: () => undefined,
       handleSidebarSectionChange: (section) => {
         state.sidebarSection = section;

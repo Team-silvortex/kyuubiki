@@ -70,12 +70,18 @@
         ],
         "files": [
           "apps/frontend/test/workflow/workbench-script-dsl-parity.test.ts",
+          "apps/frontend/test/workflow/workbench-pwdt-recipe-boundaries.test.ts",
+          "apps/frontend/test/workflow/workbench-pyodide-loader.test.ts",
+          "tests/integration/workbench-ui-pwdt-runtime.test.mjs",
           "apps/frontend/test/workflow/workbench-pwdt-browser-bridge.test.ts",
           "apps/frontend/test/workflow/workbench-script-snippets.test.ts",
           "apps/frontend/test/workflow/workbench-electrostatic-heat-projection.test.ts"
         ],
         "required_text": [
           "ky\\.run_recipe",
+          "PWDT runtime retries initialization",
+          "computation at stage",
+          "Workbench PWDT hasResult tracks",
           "ky.require_recipe",
           "ky.recipes_matching",
           "__kyuubikiPwdt.version",

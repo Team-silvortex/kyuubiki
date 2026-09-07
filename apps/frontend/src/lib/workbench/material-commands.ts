@@ -98,6 +98,14 @@ export function ensurePlaneModelMaterials<T extends PlaneStudyJobInput>(model: T
   } as T;
 }
 
+export function ensureBeamModelMaterials<T extends { materials?: Array<{ id: string }>; elements: Array<{ material_id?: string }> }>(
+  model: T, fallbackValue = "70",
+): T {
+  const materials = model.materials?.length ? model.materials : [createMaterialDefinition(fallbackValue, 1, { id: "mat-1" })];
+  const materialId = materials[0].id;
+  return { ...model, materials, elements: model.elements.map((element) => ({ ...element, material_id: element.material_id ?? materialId })) };
+}
+
 export function ensureFrameModelMaterials(model: Frame2dJobInput, fallbackValue = "70"): Frame2dJobInput {
   const materials =
     model.materials && model.materials.length > 0

@@ -6,6 +6,7 @@ import { createWorkbenchProjectContext } from "../../src/lib/workbench/project-c
 
 import {
   importWorkbenchProjectBundle,
+  openPersistedWorkbenchModel,
   openPersistedWorkbenchVersionById,
 } from "../../src/components/workbench/workbench-persisted-model-controller.ts";
 import { exportProjectBundle } from "../../src/lib/models/modeler-export.ts";
@@ -283,3 +284,40 @@ test("persisted version loading remains awaitable across a React transition", as
   assert.deepEqual(await operation, { ok: true });
   assert.equal(selectedVersionId, "version-a");
 });
+
+for (const source of ["model", "version"]) {
+for (const navigation of ["stay", "switch", "away-and-back", "new-intent"]) {
+  test(`persisted ${source} completion checks context after version refresh: ${navigation}`, async () => {
+    const state = { selectedProjectId: "project-a" as string | null, messages: [] as string[],
+      alerts: [] as Array<{ id: string; message: string }> };
+    const effects = importEffects(state);
+    const record = {
+      project_id: "project-a", model_id: "model-a", version_id: "version-a", version_number: 1,
+      name: "Loaded model", kind: "truss_2d", model_schema_version: "kyuubiki.model/v1",
+      inserted_at: "2026-09-07T00:00:00.000Z", updated_at: "2026-09-07T00:00:00.000Z",
+      payload: { kind: "truss_2d", name: "Loaded model", youngs_modulus_gpa: 210,
+        nodes: [{ id: "n1", x: 0, y: 0 }, { id: "n2", x: 1, y: 0 }],
+        elements: [{ id: "e1", node_i: 0, node_j: 1, area: 0.01, youngs_modulus: 210e9 }] },
+    };
+    const selection = { projectId: "project-a", modelId: "model-a", versionId: "version-a" };
+    effects.fetchModelVersion = async () => ({ version: record });
+    effects.fetchModel = async () => ({ model: { ...record, latest_version_id: "version-a" } });
+    effects.refreshVersions = async () => {
+      effects.projectContext.update(selection);
+      if (navigation === "stay") return;
+      if (navigation === "new-intent") effects.projectContext.begin();
+      else effects.projectContext.update({ projectId: "project-b", modelId: null, versionId: null });
+      if (navigation === "away-and-back") effects.projectContext.update(selection);
+      effects.setMessage("Newer operation");
+    };
+    const result = await (source === "model" ? openPersistedWorkbenchModel(record, effects)
+      : openPersistedWorkbenchVersionById("version-a", effects));
+    assert.equal(result.ok, navigation === "stay");
+    if (!result.ok) {
+      assert.match(result.error.message, /WORKBENCH_CONTEXT_CHANGED/u);
+      assert.equal(state.messages.at(-1), "Newer operation");
+    }
+    assert.deepEqual(state.alerts, [], "a superseded completion must not create a current-workspace error");
+  });
+}
+}

@@ -43,6 +43,7 @@ type ScriptNavControllerDeps = {
   studyKind: WorkbenchStudyKind;
   studyKindResetHandlers: Partial<Record<WorkbenchStudyKind, () => void>>;
   setStudyKind: (value: WorkbenchStudyKind) => void;
+  resetActiveResult: () => void;
   handleSidebarSectionChange: (section: SidebarSection) => void;
   recordHistory: (label: string) => void;
   changeStudyTypeLabel: string;
@@ -74,6 +75,7 @@ export async function handleWorkbenchScriptNavAction({
   studyKind,
   studyKindResetHandlers,
   setStudyKind,
+  resetActiveResult,
   handleSidebarSectionChange,
   recordHistory,
   changeStudyTypeLabel,
@@ -114,6 +116,7 @@ export async function handleWorkbenchScriptNavAction({
         currentStudyKind: studyKind,
         nextStudyKind,
         setStudyKind,
+        resetActiveResult,
         resetHandlers: studyKindResetHandlers,
       });
       return { ok: true, action, studyKind: nextStudyKind };

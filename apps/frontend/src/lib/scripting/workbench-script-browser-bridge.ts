@@ -225,6 +225,11 @@ export function createWorkbenchPwdtBrowserBridge({
   getSnapshot,
   invokeAction,
 }: WorkbenchPwdtBrowserBridgeInput): WorkbenchPwdtBrowserBridge {
+  async function saveRecipeModel(params: Parameters<WorkbenchPwdtBrowserBridge["saveModel"]>[0]) {
+    const result = await bridge.saveModel(params);
+    if (result.contextChanged === true) throw workbenchProjectContextChangedError();
+    return result;
+  }
   const bridge: WorkbenchPwdtBrowserBridge = {
     version: "kyuubiki.pwdt.browser-bridge/v1",
     async invoke(action, payload = {}) {
@@ -317,6 +322,7 @@ export function createWorkbenchPwdtBrowserBridge({
       const selectedProjectId = snapshotRecord(getSnapshot).selectedProjectId;
       if (selectedProjectId) return selectedProjectId;
       const result = await bridge.invoke("project/create", { name, description });
+      if (result.contextChanged === true) throw workbenchProjectContextChangedError();
       return typeof result.projectId === "string" ? result.projectId : null;
     },
     async buildParametricTruss2d(params = {}) {
@@ -398,8 +404,13 @@ export function createWorkbenchPwdtBrowserBridge({
       return bridge.invoke(params.saveAs ? "model/saveAs" : "model/save");
     },
     async runCurrentStudy(options) {
-      await bridge.invoke("job/run");
-      return bridge.waitForJobDone(options);
+      const result = await bridge.invoke("job/run");
+      if (result.contextChanged === true) throw workbenchProjectContextChangedError();
+      const state = await bridge.waitForJobDone(options);
+      if (state.jobStatus !== "completed") {
+        throw new Error(`WORKBENCH_JOB_${String(state.jobStatus).toUpperCase()}: study did not complete successfully.`);
+      }
+      return state;
     },
     async openResults(filters = {}) {
       await bridge.invoke("data/setFilters", {
@@ -437,7 +448,7 @@ export function createWorkbenchPwdtBrowserBridge({
     async runClosedLoopTrussStudy(params = {}) {
       const projectId = await bridge.ensureProject(params.projectName, params.projectDescription);
       await bridge.buildParametricTruss2d(params);
-      const saveResult = await bridge.saveModel({
+      const saveResult = await saveRecipeModel({
         name: params.modelName,
         material: params.activeMaterial,
         saveAs: true,
@@ -457,14 +468,14 @@ export function createWorkbenchPwdtBrowserBridge({
     async runHeatToThermoTriangleStudy(params = {}) {
       const projectId = await bridge.ensureProject(params.projectName, params.projectDescription);
       await bridge.prepareHeatPlaneTriangleStudy(params);
-      const heatSaveResult = await bridge.saveModel({
+      const heatSaveResult = await saveRecipeModel({
         name: params.heatModelName,
         material: params.activeMaterial,
         saveAs: true,
       });
       const heatRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
       const thermoProjection = await bridge.projectHeatToThermoTriangleStudy();
-      const thermoSaveResult = await bridge.saveModel({
+      const thermoSaveResult = await saveRecipeModel({
         name: params.thermoModelName ?? params.heatModelName,
         material: params.activeMaterial,
         saveAs: true,
@@ -488,14 +499,14 @@ export function createWorkbenchPwdtBrowserBridge({
     async runHeatToThermoQuadStudy(params = {}) {
       const projectId = await bridge.ensureProject(params.projectName, params.projectDescription);
       await bridge.prepareHeatPlaneQuadStudy(params);
-      const heatSaveResult = await bridge.saveModel({
+      const heatSaveResult = await saveRecipeModel({
         name: params.heatModelName,
         material: params.activeMaterial,
         saveAs: true,
       });
       const heatRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
       const thermoProjection = await bridge.projectHeatToThermoQuadStudy();
-      const thermoSaveResult = await bridge.saveModel({
+      const thermoSaveResult = await saveRecipeModel({
         name: params.thermoModelName ?? params.heatModelName,
         material: params.activeMaterial,
         saveAs: true,
@@ -519,21 +530,21 @@ export function createWorkbenchPwdtBrowserBridge({
     async runElectrostaticHeatThermoTriangleStudy(params = {}) {
       const projectId = await bridge.ensureProject(params.projectName, params.projectDescription);
       await bridge.prepareElectrostaticPlaneTriangleStudy(params);
-      const electrostaticSaveResult = await bridge.saveModel({
+      const electrostaticSaveResult = await saveRecipeModel({
         name: params.electrostaticModelName,
         material: params.activeMaterial,
         saveAs: true,
       });
       const electrostaticRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
       const heatProjection = await bridge.projectElectrostaticToHeatTriangleStudy();
-      const heatSaveResult = await bridge.saveModel({
+      const heatSaveResult = await saveRecipeModel({
         name: params.heatModelName,
         material: params.activeMaterial,
         saveAs: true,
       });
       const heatRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
       const thermoProjection = await bridge.projectHeatToThermoTriangleStudy();
-      const thermoSaveResult = await bridge.saveModel({
+      const thermoSaveResult = await saveRecipeModel({
         name: params.thermoModelName ?? params.heatModelName,
         material: params.activeMaterial,
         saveAs: true,
@@ -562,21 +573,21 @@ export function createWorkbenchPwdtBrowserBridge({
     async runElectrostaticHeatThermoQuadStudy(params = {}) {
       const projectId = await bridge.ensureProject(params.projectName, params.projectDescription);
       await bridge.prepareElectrostaticPlaneQuadStudy(params);
-      const electrostaticSaveResult = await bridge.saveModel({
+      const electrostaticSaveResult = await saveRecipeModel({
         name: params.electrostaticModelName,
         material: params.activeMaterial,
         saveAs: true,
       });
       const electrostaticRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
       const heatProjection = await bridge.projectElectrostaticToHeatQuadStudy();
-      const heatSaveResult = await bridge.saveModel({
+      const heatSaveResult = await saveRecipeModel({
         name: params.heatModelName,
         material: params.activeMaterial,
         saveAs: true,
       });
       const heatRunState = await bridge.runCurrentStudy(recipeTimeoutOptions(params));
       const thermoProjection = await bridge.projectHeatToThermoQuadStudy();
-      const thermoSaveResult = await bridge.saveModel({
+      const thermoSaveResult = await saveRecipeModel({
         name: params.thermoModelName ?? params.heatModelName,
         material: params.activeMaterial,
         saveAs: true,

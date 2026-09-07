@@ -43,6 +43,8 @@ export function createWorkbenchProjectContext(initial: WorkbenchProjectSelection
       if (selection.projectId !== next.projectId || selection.modelId !== next.modelId ||
           selection.versionId !== next.versionId) revision += 1;
       selection = { ...next };
+      // A caller applying its own selection can keep guarding subsequent awaits.
+      return capture();
     },
     mount: () => { mounted = true; },
     dispose: () => { mounted = false; revision += 1; },

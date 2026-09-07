@@ -15,6 +15,7 @@ import {
 import { applyStudyKindSelection } from "@/components/workbench/workbench-study-kind-controller";
 import { useWorkbenchStudyShellController } from "@/components/workbench/workbench-study-shell-controller";
 import type { WorkbenchSystemSidebarMountProps } from "@/components/workbench/workbench-system-sidebar-mount-types";
+import { ensureBeamModelMaterials, ensureFrameModelMaterials } from "@/lib/workbench/material-commands";
 
 type WorkbenchMainCompositionProps = Record<string, any> & {
   deferredJobHistory: WorkbenchSystemSidebarMountProps["jobHistory"];
@@ -254,6 +255,7 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
       currentStudyKind: props.studyKind,
       nextStudyKind,
       setStudyKind: props.setStudyKind,
+      resetActiveResult: props.resetActiveResult,
       resetHandlers: studyKindResetHandlers,
     });
   };
@@ -288,27 +290,6 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
     studyResultDerived: props.studyResultDerived,
     localMaterialLabel: props.localMaterialLabel,
     fixed: props.fixed,
-    ensurePlaneModelMaterials: props.ensurePlaneModelMaterials,
-    ensureBeamModelMaterials: props.ensureBeamModelMaterials,
-    ensureFrameModelMaterials: props.ensureFrameModelMaterials,
-    defaultPlaneQuad: props.defaultPlaneQuad,
-    defaultThermalPlaneQuad: props.defaultThermalPlaneQuad,
-    defaultPlaneTriangle: props.defaultPlaneTriangle,
-    defaultThermalPlaneTriangle: props.defaultThermalPlaneTriangle,
-    defaultHeatBar1d: props.defaultHeatBar1d,
-    defaultHeatPlaneQuad: props.defaultHeatPlaneQuad,
-    defaultHeatPlaneTriangle: props.defaultHeatPlaneTriangle,
-    defaultThermalBar1d: props.defaultThermalBar1d,
-    defaultThermalBeam1d: props.defaultThermalBeam1d,
-    defaultThermalFrame2d: props.defaultThermalFrame2d,
-    defaultThermalTruss2d: props.defaultThermalTruss2d,
-    defaultThermalTruss3d: props.defaultThermalTruss3d,
-    defaultSpring1d: props.defaultSpring1d,
-    defaultSpring2d: props.defaultSpring2d,
-    defaultSpring3d: props.defaultSpring3d,
-    defaultBeam1d: props.defaultBeam1d,
-    defaultTorsion1d: props.defaultTorsion1d,
-    defaultFrame2d: props.defaultFrame2d,
     round: props.round,
     recordHistory,
     resetActiveResult: props.resetActiveResult,
@@ -353,8 +334,8 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
       openWorkspaceStudy,
       handleLanguageChange,
       studyKindResetHandlers,
-      ensureFrameModelMaterials: props.ensureFrameModelMaterials,
-      ensureBeamModelMaterials: props.ensureBeamModelMaterials,
+      ensureFrameModelMaterials,
+      ensureBeamModelMaterials,
       resolveTruss2dJobInput: props.resolveTruss2dJobInput,
       resolveTruss3dJobInput: props.resolveTruss3dJobInput,
       resolvePlaneQuad2dJobInput: props.resolvePlaneQuad2dJobInput,

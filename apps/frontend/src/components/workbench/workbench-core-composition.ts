@@ -155,7 +155,10 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     fetchModel: props.fetchModel,
     fetchModelVersion: props.fetchModelVersion,
     recordHistory: recordHistoryBridge,
-    resetActiveResult: () => resetActiveResult(rootState.setResult, rootState.setJob),
+    resetActiveResult: () => {
+      rootState.jobPollTokenRef.current += 1;
+      resetActiveResult(rootState.setResult, rootState.setJob);
+    },
     setLoadedModelName: rootState.setLoadedModelName,
     setStudyKind: rootState.setStudyKind,
     setAxialForm: rootState.setAxialForm,
@@ -360,6 +363,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
 
   const mainComposition = useWorkbenchMainComposition({
     ...rootState,
+    ...resultDerivedBindings,
     fixed,
     localMaterialLabel,
     workflowController,
@@ -425,7 +429,10 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     storeBackendService:
       props.storeBackendService ?? workbenchStoreBackendService,
     downloadTextFile: props.downloadTextFile,
-    resetActiveResult: () => resetActiveResult(rootState.setResult, rootState.setJob),
+    resetActiveResult: () => {
+      rootState.jobPollTokenRef.current += 1;
+      resetActiveResult(rootState.setResult, rootState.setJob);
+    },
     projectLibraryBackendService:
       props.projectLibraryBackendService ?? workbenchProjectLibraryBackendService,
     createProject: props.createProject,

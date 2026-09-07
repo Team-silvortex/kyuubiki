@@ -34,6 +34,7 @@ export function createWorkbenchScriptInvoker(options: Record<string, any>) {
         payload,
         studyKind: options.studyKind,
         studyKindResetHandlers: options.studyKindResetHandlers,
+        resetActiveResult: options.resetActiveResult,
         setStudyKind: options.setStudyKind,
         handleSidebarSectionChange: options.handleSidebarSectionChange,
         recordHistory: options.recordHistory,
@@ -58,7 +59,7 @@ export function createWorkbenchScriptInvoker(options: Record<string, any>) {
         refreshResults: options.refreshResults,
         refreshProjects: options.refreshProjects,
         refreshSecurityEvents: options.refreshSecurityEvents,
-      },
+      } satisfies Parameters<typeof handleWorkbenchScriptNavAction>[0],
       projectModelArgs: {
         projectContext: options.projectContext,
         action,

@@ -255,7 +255,7 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
 }
 
 export function openPersistedWorkbenchModel(model: ModelRecord, effects: PersistedModelControllerDeps) {
-  const isCurrent = effects.projectContext.begin();
+  let isCurrent = effects.projectContext.begin();
   const run = async (): Promise<WorkbenchOperationResult> => {
     try {
       dismissWorkbenchAlert(effects.setSystemAlerts, "persisted-model-open-error");
@@ -264,11 +264,14 @@ export function openPersistedWorkbenchModel(model: ModelRecord, effects: Persist
       if (!isCurrent()) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
       effects.recordHistory(effects.historyActionLabel);
       applyPersistedWorkbenchPayload(payload.model.payload, payload.model.name, effects);
+      isCurrent = effects.projectContext.update({ projectId: payload.model.project_id, modelId: payload.model.model_id,
+        versionId: payload.model.latest_version_id ?? null });
       effects.setSelectedProjectId(payload.model.project_id);
       effects.setSelectedModelId(payload.model.model_id);
       effects.setSelectedVersionId(payload.model.latest_version_id ?? null);
       effects.setMessage(effects.importedModelLabel);
       await effects.refreshVersions(payload.model.model_id);
+      if (!isCurrent()) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
       return { ok: true };
     } catch (error) {
       const failure = workbenchOperationFailure(error, effects.importFailedLabel);
@@ -291,7 +294,7 @@ export function openPersistedWorkbenchVersion(version: ModelVersionRecord, effec
 }
 
 export function openPersistedWorkbenchVersionById(versionId: string, effects: PersistedModelControllerDeps) {
-  const isCurrent = effects.projectContext.begin();
+  let isCurrent = effects.projectContext.begin();
   const run = async (): Promise<WorkbenchOperationResult> => {
     try {
       dismissWorkbenchAlert(effects.setSystemAlerts, "persisted-version-open-error");
@@ -300,12 +303,15 @@ export function openPersistedWorkbenchVersionById(versionId: string, effects: Pe
       if (!isCurrent()) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
       effects.recordHistory(effects.historyActionLabel);
       applyPersistedWorkbenchPayload(payload.version.payload, payload.version.name, effects);
+      isCurrent = effects.projectContext.update({ projectId: payload.version.project_id, modelId: payload.version.model_id,
+        versionId: payload.version.version_id });
       effects.setSelectedModelId(payload.version.model_id);
       effects.setSelectedProjectId(payload.version.project_id);
       effects.setSelectedVersionId(payload.version.version_id);
       effects.setMessage(effects.importedVersionLabel);
       effects.setSidebarSection?.("model");
       await effects.refreshVersions(payload.version.model_id);
+      if (!isCurrent()) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
       return { ok: true };
     } catch (error) {
       const failure = workbenchOperationFailure(error, effects.importFailedLabel);
