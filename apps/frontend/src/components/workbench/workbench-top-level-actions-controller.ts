@@ -17,6 +17,7 @@ import {
   restoreWorkbenchUiSnapshot,
 } from "@/components/workbench/workbench-script-orchestration";
 import {
+  canRetainWorkbenchSnapshotBinding,
   pushHistoryEntry,
   stepHistory,
   type HistoryEntry,
@@ -24,8 +25,13 @@ import {
 } from "@/lib/workbench/history";
 import type { WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
 import { readWorkspaceStoreManifestResult } from "@/lib/workbench/store-manifest";
+import type { WorkbenchProjectContext } from "@/lib/workbench/project-context";
 
 type TopLevelActionsArgs = {
+  projectContext: WorkbenchProjectContext;
+  setSelectedModelId: (value: string | null) => void;
+  setSelectedVersionId: (value: string | null) => void;
+  setModelVersions: (value: any[]) => void;
   language: any;
   t: any;
   activeLanguagePack: any;
@@ -178,6 +184,7 @@ export function createWorkbenchTopLevelActionsController(args: TopLevelActionsAr
 
   const buildSnapshot = (): WorkbenchSnapshot =>
     buildWorkbenchUiSnapshot({
+      savedModelContext: { projectId: args.selectedProjectId, modelId: args.selectedModelId },
       studyKind: args.studyKind,
       axialForm: args.axialForm,
       heatBarModel: args.heatBarModel,
@@ -206,7 +213,16 @@ export function createWorkbenchTopLevelActionsController(args: TopLevelActionsAr
       memberDraftNodes: args.memberDraftNodes,
     });
 
-  const restoreSnapshot = (snapshot: WorkbenchSnapshot) =>
+  const restoreSnapshot = (snapshot: WorkbenchSnapshot) => {
+    // A snapshot restores working content, never authority to write a different saved model.
+    const selection = args.projectContext.current();
+    args.projectContext.begin();
+    if (!canRetainWorkbenchSnapshotBinding(snapshot, { ...selection, studyKind: args.studyKind })) {
+      args.projectContext.update({ projectId: selection.projectId, modelId: null, versionId: null });
+      args.setSelectedModelId(null);
+      args.setSelectedVersionId(null);
+      args.setModelVersions([]);
+    }
     restoreWorkbenchUiSnapshot(snapshot, {
       setStudyKind: args.setStudyKind,
       setAxialForm: args.setAxialForm,
@@ -236,6 +252,7 @@ export function createWorkbenchTopLevelActionsController(args: TopLevelActionsAr
       setMemberDraftNodes: args.setMemberDraftNodes,
       resetActiveResult: args.resetActiveResult,
     });
+  };
 
   const recordHistory = (label: string) => {
     const snapshot = buildSnapshot();

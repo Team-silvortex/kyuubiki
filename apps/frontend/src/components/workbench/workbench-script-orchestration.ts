@@ -53,6 +53,7 @@ export function buildWorkbenchScriptSnapshot(props: Record<string, any>) {
 
 export function buildWorkbenchUiSnapshot(props: Record<string, any>) {
   return buildWorkbenchSnapshot({
+    ...(props.savedModelContext ? { savedModelContext: props.savedModelContext } : {}),
     studyKind: props.studyKind,
     axialForm: props.axialForm,
     heatBarModel: props.heatBarModel,

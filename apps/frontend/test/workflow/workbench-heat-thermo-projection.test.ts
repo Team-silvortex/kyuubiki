@@ -30,6 +30,36 @@ function heatResult(source: typeof cases[number]["source"]) {
 }
 
 for (const entry of cases) {
+  for (const record of ["input-node", "input-element", "result-node"]) {
+    test(`heat-to-thermo ${entry.kind} rejects a null ${record} with a controlled projection error`, () => {
+      const source = structuredClone(entry.source);
+      const result = heatResult(source);
+      if (record === "input-node") (result.input.nodes as any[])[0] = null;
+      if (record === "input-element") (result.input.elements as any[])[0] = null;
+      if (record === "result-node") (result.nodes as any[])[0] = null;
+      assert.throws(() => entry.build(source, result, entry.seed), /HEAT_THERMO_PROJECTION_INVALID/u);
+    });
+  }
+
+  for (const field of ["conductivity", "heat_load", "temperature", "fix_temperature", "section", "element-id", "input-node-id"]) {
+    test(`heat-to-thermo ${entry.kind} rejects stale solved ${field} before state replacement`, () => {
+      const source = structuredClone(entry.source);
+      const result = heatResult(source);
+      if (field === "conductivity") source.elements[0].conductivity *= 2;
+      if (field === "heat_load") source.nodes[0].heat_load = 123;
+      if (field === "temperature") source.nodes[0].temperature = 123;
+      if (field === "fix_temperature") source.nodes[0].fix_temperature = !source.nodes[0].fix_temperature;
+      if (field === "section") {
+        const element = source.elements[0];
+        if ("area" in element) element.area *= 2;
+        else element.thickness *= 2;
+      }
+      if (field === "element-id") source.elements[0].id = "different-element";
+      if (field === "input-node-id") result.input.nodes[0].id = "different-solved-node";
+      assert.throws(() => entry.build(source, result, entry.seed), /HEAT_THERMO_PROJECTION_INVALID/u);
+    });
+  }
+
   test(`heat-to-thermo ${entry.kind} copies temperatures by index without mutating or keeping saved bindings`, () => {
     const source = { ...structuredClone(entry.source), project_id: "old-project", model_version_id: "heat-version" };
     const seed = structuredClone(entry.seed);
@@ -63,6 +93,18 @@ for (const entry of cases) {
       assert.throws(() => entry.build(source, result, entry.seed), /HEAT_THERMO_PROJECTION_INVALID/u);
     });
   }
+}
+
+for (const entry of cases.filter((entry) => entry.kind !== "bar")) {
+  test(`heat-to-thermo ${entry.kind} accepts omitted zero-valued heat data without comparing save metadata`, () => {
+    const source = { ...structuredClone(entry.source), project_id: "current-project", model_version_id: "current-version" };
+    source.nodes.forEach((node) => { node.temperature = 0; node.heat_load = 0; });
+    const result = heatResult(source);
+    result.input.project_id = "solved-project";
+    result.input.model_version_id = "solved-version";
+    result.input.nodes.forEach((node) => { delete (node as any).temperature; delete (node as any).heat_load; });
+    assert.ok(entry.build(source, result, entry.seed).nodes.every((node: any) => Number.isFinite(node.temperature_delta)));
+  });
 }
 
 test("aligned mechanical seed preserves supports, loads, materials and zero expansion", () => {

@@ -130,7 +130,7 @@ async function pollWorkbenchJob({
   copy: WorkbenchCopy;
   labels: Pick<WorkbenchCopy, "pollingDetached">;
 }): Promise<WorkbenchPollOutcome> {
-  const pollToken = ++jobPollTokenRef.current;
+  const pollToken = jobPollTokenRef.current;
   let consecutiveErrors = 0;
 
   for (let attempt = 0; attempt < 40; attempt += 1) {
@@ -152,6 +152,7 @@ async function pollWorkbenchJob({
 
       if (isWorkflowRunTerminalStatus(payload.job.status)) {
         await refreshJobHistory();
+        if (pollToken !== jobPollTokenRef.current) return { state: "superseded" };
         return { state: "terminal", hasResult: payload.result !== undefined, job: payload.job };
       }
     } catch (error) {
@@ -173,6 +174,7 @@ async function pollWorkbenchJob({
     setMessage(labels.pollingDetached);
     await refreshJobHistory();
   }
+  if (pollToken !== jobPollTokenRef.current) return { state: "superseded" };
   return { state: "detached" };
 }
 
@@ -212,6 +214,7 @@ export async function runWorkbenchAnalysis({
   trussDiagnostics,
   trussModel,
 }: RunWorkbenchAnalysisArgs): Promise<WorkbenchRunOperationResult> {
+  const runToken = ++jobPollTokenRef.current;
   const precheckErrors = trussDiagnostics?.blockingMessages ?? [];
   if (precheckErrors.length > 0) {
     const precheckMessage = `${labels.precheckPrefix}: ${precheckErrors[0]}`;
@@ -229,9 +232,8 @@ export async function runWorkbenchAnalysis({
   dismissWorkbenchAlert(setSystemAlerts, "precheck-blocking");
   setMessage(labels.dispatching);
   setResult(null);
-  jobPollTokenRef.current += 1;
 
-  let created = await runBackendService.submitRun({
+  const created = await runBackendService.submitRun({
     axialForm,
     beamModel,
     directMeshEndpointsText,
@@ -262,6 +264,7 @@ export async function runWorkbenchAnalysis({
     throw error;
   });
 
+  if (runToken !== jobPollTokenRef.current) throw new Error(`Job observation was superseded: ${created.envelope.job.job_id}`);
   setJob(created.envelope.job);
 
   if (created.envelope.result) {
@@ -294,6 +297,7 @@ export async function runWorkbenchAnalysis({
   }
 
   await refreshJobHistory();
+  if (runToken !== jobPollTokenRef.current) throw new Error(`Job observation was superseded: ${created.envelope.job.job_id}`);
   const outcome = await pollWorkbenchJob({
     jobId: created.envelope.job.job_id,
     kind: studyKind,

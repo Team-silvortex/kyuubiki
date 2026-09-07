@@ -1,10 +1,10 @@
 import { initialProject, runtime } from "./workbench-ui-project-fixture.shared.mjs";
 
 // Synthetic solver responses exercise data transfer and UI state, not numerical accuracy.
-export async function installProjectionSolver(page, { incompleteHeat = false, electrostaticFailure = null } = {}) {
+export async function installProjectionSolver(page, { incompleteHeat = false, electrostaticFailure = null, heatFailure = null } = {}) {
   const submissions = [];
   const results = [];
-  const solver = { submissions, results, electrostaticFailure };
+  const solver = { submissions, results, electrostaticFailure, heatFailure, beforeJobResponse: null };
   await page.route("**/api/v1/fem/**/jobs", async (route) => {
     const kind = new URL(route.request().url()).pathname.split("/").at(-2).replaceAll("-", "_");
     const input = route.request().postDataJSON();
@@ -15,6 +15,11 @@ export async function installProjectionSolver(page, { incompleteHeat = false, el
       created_at: initialProject.inserted_at, updated_at: initialProject.updated_at };
     const result = buildProjectionResult(kind, input);
     if (incompleteHeat && kind.startsWith("heat_")) result.nodes.pop();
+    if (kind.startsWith("heat_")) {
+      if (solver.heatFailure === "conductivity") result.input.elements[0].conductivity *= 2;
+      if (solver.heatFailure === "heat_load") result.input.nodes[0].heat_load = 123;
+      if (solver.heatFailure === "boundary") result.input.nodes[0].fix_temperature = !result.input.nodes[0].fix_temperature;
+    }
     if (kind.startsWith("electrostatic_")) {
       if (solver.electrostaticFailure === "missing-node") result.nodes.pop();
       if (solver.electrostaticFailure === "duplicate-node") result.nodes[1].index = result.nodes[0].index;
@@ -31,6 +36,7 @@ export async function installProjectionSolver(page, { incompleteHeat = false, el
       }
       await poll.fulfill({ json: { job: completed, result } });
     });
+    await solver.beforeJobResponse?.(job);
     await route.fulfill({ status: 202, json: { job } });
   });
   return solver;

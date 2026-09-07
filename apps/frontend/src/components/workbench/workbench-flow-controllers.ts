@@ -9,6 +9,7 @@ import { serializeCurrentModel } from "@/lib/workbench/helpers";
 
 export function useWorkbenchFlowControllers(props: Record<string, any>) {
   const primaryActionsController = createWorkbenchPrimaryActionsController({
+    projectContext: props.projectContext,
     t: props.t,
     setMessage: props.setMessage,
     recordHistory: props.recordHistory,

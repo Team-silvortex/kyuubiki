@@ -11,8 +11,10 @@ import { defaultThermalBar1d, defaultThermalPlaneQuad, defaultThermalPlaneTriang
 type MeshNode = { id: string; x: number; y?: number };
 type MeshElement = { node_i: number; node_j: number; node_k?: number; node_l?: number };
 type Mesh = { nodes: MeshNode[]; elements: MeshElement[] };
+type HeatPlaneModel = HeatPlaneTriangle2dJobInput | HeatPlaneQuad2dJobInput;
+type HeatModel = HeatBar1dJobInput | HeatPlaneModel;
 type HeatResult = {
-  input: Mesh;
+  input: HeatModel;
   nodes: Array<MeshNode & { index: number; temperature: number }>;
 };
 const INDEX_FIELDS = ["node_i", "node_j", "node_k", "node_l"] as const;
@@ -22,33 +24,69 @@ function invalid(reason: string): never {
 }
 
 function samePosition(left: MeshNode, right: MeshNode) {
-  return Number.isFinite(left.x) && Number.isFinite(right.x) && Math.abs(left.x - right.x) <= 1e-9 &&
+  return Boolean(left && right) && Number.isFinite(left.x) && Number.isFinite(right.x) && Math.abs(left.x - right.x) <= 1e-9 &&
     (left.y === undefined && right.y === undefined ||
       typeof left.y === "number" && typeof right.y === "number" &&
       Number.isFinite(left.y) && Number.isFinite(right.y) && Math.abs(left.y - right.y) <= 1e-9);
 }
 
 function sameMesh(source: Mesh, target: Mesh) {
-  return source.nodes.length === target.nodes.length && source.elements.length === target.elements.length &&
+  return Boolean(source && target) && Array.isArray(source.nodes) && Array.isArray(target.nodes) &&
+    Array.isArray(source.elements) && Array.isArray(target.elements) &&
+    source.nodes.length === target.nodes.length && source.elements.length === target.elements.length &&
     source.nodes.every((node, index) => samePosition(node, target.nodes[index])) &&
-    source.elements.every((element, index) => INDEX_FIELDS.every((key) => element[key] === target.elements[index][key]));
+    source.elements.every((element, index) => element && target.elements[index] &&
+      INDEX_FIELDS.every((key) => element[key] === target.elements[index][key]));
 }
 
-function projectedTemperatures(source: Mesh, result: HeatResult) {
-  if (!source.nodes.length || !source.elements.length || !sameMesh(source, result.input)) {
+function validateHeatInput(source: HeatModel, solved: HeatModel, arity: number) {
+  if (!source.nodes.length || !source.elements.length || !solved || !Array.isArray(solved.nodes) ||
+    !Array.isArray(solved.elements) || !sameMesh(source, solved)) {
     invalid("The working mesh no longer matches the solved heat input. Solve the current heat model again.");
   }
-  for (const element of source.elements) {
-    const indices = INDEX_FIELDS.map((key) => element[key]).filter((value) => value !== undefined);
-    if (new Set(indices).size !== indices.length || indices.some((index) =>
+  const nodeIds = new Set<string>();
+  const elementIds = new Set<string>();
+  source.nodes.forEach((node, index) => {
+    const previous = solved.nodes[index];
+    if (typeof node.id !== "string" || !node.id.trim() || nodeIds.has(node.id) ||
+      typeof node.fix_temperature !== "boolean" || !Number.isFinite(node.temperature ?? 0) || !Number.isFinite(node.heat_load ?? 0)) {
+      invalid("Heat node identities, boundaries, and loads must be valid before projecting.");
+    }
+    nodeIds.add(node.id);
+    if (node.id !== previous.id || node.fix_temperature !== previous.fix_temperature ||
+      (node.temperature ?? 0) !== (previous.temperature ?? 0) || (node.heat_load ?? 0) !== (previous.heat_load ?? 0)) {
+      invalid("The working heat model has changed. Solve the current heat model again before projecting.");
+    }
+  });
+  source.elements.forEach((element, index) => {
+    const connectivity: MeshElement = element;
+    const indices = INDEX_FIELDS.map((key) => connectivity[key]).filter((value) => value !== undefined);
+    if (indices.length !== arity || new Set(indices).size !== indices.length || indices.some((index) =>
       !Number.isInteger(index) || index < 0 || index >= source.nodes.length)) {
       invalid("The source mesh contains invalid element connectivity.");
     }
-  }
-  if (result.nodes.length !== source.nodes.length) invalid("A complete heat result is required; load or solve the full result before projecting.");
+    const previous = solved.elements[index];
+    const section = "area" in element ? element.area : element.thickness;
+    const previousSection = "area" in previous ? previous.area : previous.thickness;
+    if (typeof element.id !== "string" || !element.id.trim() || elementIds.has(element.id) ||
+      !Number.isFinite(element.conductivity) || element.conductivity <= 0 || !Number.isFinite(section) || section <= 0) {
+      invalid("Heat element identities, conductivity, and section must be valid before projecting.");
+    }
+    elementIds.add(element.id);
+    if (element.id !== previous.id || element.conductivity !== previous.conductivity || section !== previousSection ||
+      ("material_id" in element ? element.material_id : undefined) !== ("material_id" in previous ? previous.material_id : undefined)) {
+      invalid("The working heat model has changed. Solve the current heat model again before projecting.");
+    }
+  });
+}
+
+function projectedTemperatures(source: HeatModel, result: HeatResult, arity: number) {
+  validateHeatInput(source, result?.input, arity);
+  if (!Array.isArray(result.nodes) || result.nodes.length !== source.nodes.length) invalid("A complete heat result is required; load or solve the full result before projecting.");
   const temperatures = new Array<number>(source.nodes.length);
   const seen = new Set<number>();
   for (const node of result.nodes) {
+    if (!node) invalid("The heat result contains an invalid node record.");
     const index = node.index;
     if (!Number.isInteger(index) || index < 0 || index >= source.nodes.length || seen.has(index)) {
       invalid("The heat result contains duplicate or invalid node indices.");
@@ -69,7 +107,7 @@ export function buildThermalBarFromHeatResult(
   result: HeatBar1dResult,
   current: ThermalBar1dJobInput,
 ): ThermalBar1dJobInput {
-  const temperatures = projectedTemperatures(source, result);
+  const temperatures = projectedTemperatures(source, result, 2);
   const reuse = sameMesh(source, current);
   const fallback = defaultThermalBar1d.elements[0];
   return {
@@ -87,7 +125,6 @@ export function buildThermalBarFromHeatResult(
   };
 }
 
-type HeatPlaneModel = HeatPlaneTriangle2dJobInput | HeatPlaneQuad2dJobInput;
 type MechanicalPlaneSeed = PlaneTriangle2dJobInput | PlaneQuad2dJobInput | ThermalPlaneTriangle2dJobInput | ThermalPlaneQuad2dJobInput;
 type PlaneSeed = MechanicalPlaneSeed | ElectrostaticPlaneTriangle2dJobInput | ElectrostaticPlaneQuad2dJobInput;
 
@@ -103,7 +140,7 @@ function buildThermalPlane(
   material: string,
   quad: boolean,
 ): ThermalPlaneTriangle2dJobInput | ThermalPlaneQuad2dJobInput {
-  const temperatures = projectedTemperatures(source, result);
+  const temperatures = projectedTemperatures(source, result, quad ? 4 : 3);
   const seedModel = sameMesh(source, current) && isMechanicalSeed(current) ? current : null;
   const fallback = (quad ? defaultThermalPlaneQuad : defaultThermalPlaneTriangle).elements[0];
   const materials = seedModel?.materials?.length

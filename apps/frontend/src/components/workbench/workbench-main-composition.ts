@@ -102,6 +102,10 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
   });
 
   const interactionControllers = useWorkbenchInteractionControllers({
+    projectContext: props.projectFlows.projectContext,
+    setSelectedModelId: props.setSelectedModelId,
+    setSelectedVersionId: props.setSelectedVersionId,
+    setModelVersions: props.setModelVersions,
     securityEventWindowFilter: props.securityEventWindowFilter,
     securityEventSourceFilter: props.securityEventSourceFilter,
     securityEventRiskFilter: props.securityEventRiskFilter,

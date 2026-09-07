@@ -98,6 +98,7 @@ test("applyHistoryJobPayload opens workflow history entries with diagnostics hig
         message = value;
       },
       recordHistory: () => {},
+      detachSavedModel: () => {},
       openWorkspaceStudy: () => {},
       setStudyKind: () => {},
       setAxialForm: () => {},

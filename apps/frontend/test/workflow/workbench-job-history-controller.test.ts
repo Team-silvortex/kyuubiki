@@ -77,3 +77,49 @@ test("rejected cancellation preserves active polling and exposes failure", async
   assert.equal(token.current, 7);
   assert.deepEqual(messages, ["cancel rejected"]);
 });
+
+for (const failed of [false, true]) {
+  test(`late cancellation ${failed ? "failure" : "success"} cannot replace a newer job observation`, async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const token = { current: 1 };
+    const writes: unknown[] = [];
+    const pending = cancelWorkbenchJob({ jobId: "job-a", jobPollTokenRef: token,
+      labels: { initialFailed: "failed", jobCancelled: "cancelled", requestTimedOut: "timeout" },
+      jobHistoryBackendService: { fetchHistory: async () => ({ jobs: [] }), cancelJob: async () => {
+        await gate;
+        if (failed) throw new Error("old cancellation failed");
+        return { job: cancelledJob() };
+      } },
+      refreshJobHistory: async () => {}, setJob: (value) => writes.push(value), setMessage: (value) => writes.push(value) });
+    token.current += 1;
+    release();
+    const outcome = await pending;
+    assert.equal(token.current, 2, "the late cancellation must not stop the new job's polling");
+    assert.deepEqual(writes, []);
+    assert.equal(outcome.ok, !failed);
+    if (outcome.ok) assert.deepEqual(outcome, { ok: true, jobId: "job-a", contextChanged: true });
+  });
+}
+
+test("cancellation reports changed context after its final history refresh", async () => {
+  const token = { current: 1 };
+  const outcome = await cancelWorkbenchJob({ jobId: "job-a", jobPollTokenRef: token,
+    labels: { initialFailed: "failed", jobCancelled: "cancelled", requestTimedOut: "timeout" },
+    jobHistoryBackendService: { fetchHistory: async () => ({ jobs: [] }), cancelJob: async () => ({ job: cancelledJob() }) },
+    refreshJobHistory: async () => { token.current += 1; }, setJob: () => {}, setMessage: () => {} });
+  assert.deepEqual(outcome, { ok: true, jobId: "job-a", contextChanged: true });
+});
+
+test("cancellation rejects a mismatched job response without stopping active polling", async () => {
+  const token = { current: 1 };
+  const jobs: unknown[] = [];
+  const outcome = await cancelWorkbenchJob({ jobId: "job-a", jobPollTokenRef: token,
+    labels: { initialFailed: "failed", jobCancelled: "cancelled", requestTimedOut: "timeout" },
+    jobHistoryBackendService: { fetchHistory: async () => ({ jobs: [] }),
+      cancelJob: async () => ({ job: { ...cancelledJob(), job_id: "other" } }) },
+    refreshJobHistory: async () => {}, setJob: (value) => jobs.push(value), setMessage: () => {} });
+  assert.equal(outcome.ok, false);
+  assert.equal(token.current, 1);
+  assert.deepEqual(jobs, []);
+});

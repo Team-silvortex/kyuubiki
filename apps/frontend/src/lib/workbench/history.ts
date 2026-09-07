@@ -59,6 +59,7 @@ export type WorkbenchAxialFormState = {
 };
 
 export type WorkbenchSnapshot = {
+  savedModelContext?: { projectId: string | null; modelId: string | null };
   studyKind: WorkbenchStudyKind;
   axialForm: WorkbenchAxialFormState;
   heatBarModel: HeatBar1dJobInput;
@@ -134,8 +135,17 @@ type SnapshotSetters = {
 export function buildWorkbenchSnapshot(snapshot: WorkbenchSnapshot): WorkbenchSnapshot {
   return {
     ...snapshot,
+    ...(snapshot.savedModelContext ? { savedModelContext: { ...snapshot.savedModelContext } } : {}),
     memberDraftNodes: [...snapshot.memberDraftNodes],
   };
+}
+
+export function canRetainWorkbenchSnapshotBinding(
+  snapshot: WorkbenchSnapshot,
+  current: { projectId: string | null; modelId: string | null; studyKind: WorkbenchStudyKind },
+) {
+  return snapshot.savedModelContext != null && snapshot.savedModelContext.projectId === current.projectId &&
+    snapshot.savedModelContext.modelId === current.modelId && snapshot.studyKind === current.studyKind;
 }
 
 export function restoreWorkbenchSnapshot(

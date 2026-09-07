@@ -8,6 +8,10 @@ export function useWorkbenchInteractionControllers(
   props: Parameters<typeof createWorkbenchTopLevelActionsController>[0] & Record<string, any>,
 ) {
   const topLevelActions = createWorkbenchTopLevelActionsController({
+    projectContext: props.projectContext,
+    setSelectedModelId: props.setSelectedModelId,
+    setSelectedVersionId: props.setSelectedVersionId,
+    setModelVersions: props.setModelVersions,
     language: props.language,
     t: props.t,
     activeLanguagePack: props.activeLanguagePack,

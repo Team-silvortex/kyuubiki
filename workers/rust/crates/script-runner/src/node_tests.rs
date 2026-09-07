@@ -114,6 +114,7 @@ pub(crate) fn run_node_command(
                 "tests/integration/workbench-ui-pwdt-completion.test.mjs",
                 "tests/integration/workbench-ui-pwdt-runtime.test.mjs",
                 "tests/integration/workbench-ui-pwdt-projection.test.mjs",
+                "tests/integration/workbench-ui-history-observation.test.mjs",
             ],
         ),
         _ => return None,

@@ -95,6 +95,7 @@ ky.log("Recipe result:", result)</pre>
         <p class="docs-copy">The Inspector export action and PWDT <code>state/projectHeatToThermo</code> share the same transformation for heat bars, plane triangles, and plane quads. Solve the heat model first, project its full result, review the mechanical model, save, and solve again.</p>
         <ul class="docs-list">
           <li>Projection requires complete, finite nodal temperatures and a result whose mesh matches the working heat model. Temperature transfer follows node indices, not response array order; missing nodes, ambiguous indices, or mismatched identities are rejected with <code>HEAT_THERMO_PROJECTION_INVALID</code>, not filled with zero.</li>
+          <li>The current heat input must still match the solved input: node and element identities, temperature boundaries, heat loads, conductivity, area or thickness, and material bindings. Changing these values requires a fresh heat solve, even when the mesh is unchanged. Omitted optional temperature and load values are compared as zero; project and version labels are not computational inputs.</li>
           <li>A failed conversion preserves the source study, active result, and saved-model selection. A successful conversion detaches the new working model from the saved source model and version. The next ordinary save creates a separate model in the same project, rather than overwriting the heat input.</li>
           <li>Temperature values are copied into <code>temperature_delta</code> using the engine's existing zero-reference convention. No ambient temperature is inferred. If the heat result represents absolute temperature, convert it to the intended temperature difference before using this projection for research.</li>
           <li>A mechanical seed with matching geometry and connectivity retains its supports, loads, and material properties. Without that seed, the helper supplies defaults, including supports derived from fixed-temperature nodes. These are convenience defaults, not a physical boundary-condition inference. Review constraints, Young's modulus, thermal expansion, loads, and units before solving.</li>
@@ -156,6 +157,31 @@ ky.log("Recipe result:", result)</pre>
           <li>Catalog refresh preserves newer selection. It does not load model geometry, so it never attaches an unbound working model to the first saved model; open that saved model explicitly instead. If refreshing fails, the last usable catalog remains visible with runtime recovery feedback; this does not claim the cached catalog is current.</li>
         </ul>
         <p class="docs-copy">These boundaries are exercised by isolated browser tests with delayed and failed API responses. The shipped Python prelude is also executed against an in-memory JavaScript bridge adapter, not just inspected as text. That frontend test requires Python 3 (CI uses 3.12); it does not add a native Python dependency to the application. These checks do not qualify Pyodide downloads or WebAssembly startup, packaged WebViews, real database transactions, or numerical solver accuracy.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Undo, redo, and saved-model ownership</h2>
+        <p class="docs-copy">Inspector History and PWDT <code>history/undo</code> and <code>history/redo</code> restore the working content, not a database transaction. A saved model or submitted job is not deleted or rolled back by restoring a snapshot.</p>
+        <ul class="docs-list">
+          <li>Restoring within the same project, saved model, and study keeps the current save binding. Even if another version has been saved since the snapshot, the next ordinary save appends a version to that model rather than creating a duplicate.</li>
+          <li>A snapshot from another model, project, or study is restored as a detached working copy in the current project. The next ordinary save creates a separate model. Missing snapshot provenance is also detached; restoration never selects an old project or resurrects a deleted record.</li>
+          <li>For example, after saving a projected thermo model, undoing back to its heat source cannot save heat content over the thermo record. Redo restores the working thermo content, not permission to overwrite its former saved record.</li>
+          <li>Every restore invalidates earlier pending model loads and saves, including when the binding stays the same. A completed save can still return its persisted ID with <code>contextChanged: true</code>, but cannot replace the restored selection, geometry, or feedback. Inspect the original saved record before retrying.</li>
+          <li>Restoration clears the active result and job view and invalidates earlier run submissions, polling, and completion observations. Late responses cannot replace the restored view or let a dependent recipe continue as if it still owned the result. This does not cancel a backend job; inspect Job and Result records separately. Solve the restored input again before projecting it.</li>
+        </ul>
+        <p class="docs-copy">Snapshots retain only a small project/model provenance record for these checks. Immutable model geometry remains shared rather than deeply copied, and the history capacity is unchanged. Browser regressions exercise both GUI and PWDT paths with synthetic API responses, not native solver accuracy or installed WebView qualification.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Reopening jobs and cancelling observations</h2>
+        <ul class="docs-list">
+          <li>Library / Jobs and Results reopen persisted jobs through the same history action. A supported simulation result is routed to exactly one of the 23 built-in Workbench study types using its input dimension, connectivity, and constitutive fields. Heat, electrostatic, and thermo-mechanical results must not fall through to a mechanical study merely because they share node arrays or stress summaries.</li>
+          <li>Opening a solved input creates a detached working copy in the current project. Its old project/version labels are not carried into new submissions. The next ordinary save creates a new model; use the separate linked-version action when you intentionally want to resume a saved version. Archived inline material values and material libraries are retained, not replaced by the current material preset.</li>
+          <li>Unsupported or structurally ambiguous simulation results fail with <code>HISTORY_RESULT_INVALID</code> before replacing the current model or active result. Opening a job without a result clears the previous result view but keeps working geometry and save binding. Workflow graph results still open the workflow run trace rather than a simulation model.</li>
+          <li>A newer history open, run, workspace load, or undo supersedes an older pending history response. A stale success or error cannot overwrite the newer view. Opening history is not a backend rerun, and undo does not delete the archived job.</li>
+          <li><code>job/cancel</code> keeps observing the active job until the cancellation response arrives, so a rejected cancellation remains retryable. If the user has opened another job or restored a snapshot meanwhile, an accepted cancellation returns the original <code>jobId</code> with <code>contextChanged: true</code>; it cannot stop the newer observation or replace its feedback. Dependent action sequences stop at that flag instead of continuing in another workspace.</li>
+        </ul>
+        <p class="docs-copy">These checks exercise archive routing and GUI/PWDT state ownership with synthetic API responses. They do not certify solver accuracy, arbitrary advanced result formats, actual Pyodide execution, or a packaged WebView.</p>
       </section>
 
       <section class="docs-card docs-section">

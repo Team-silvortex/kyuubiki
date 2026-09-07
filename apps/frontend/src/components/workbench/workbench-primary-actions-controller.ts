@@ -24,6 +24,8 @@ import {
   openWorkbenchSample,
 } from "@/components/workbench/workbench-sample-import-controller";
 import { runWorkbenchAnalysis } from "@/components/workbench/workbench-run-controller";
+import { workbenchProjectContextChangedError, type WorkbenchProjectContext } from "@/lib/workbench/project-context";
+import { invalidHistoryResult } from "./workbench-history-result-kind";
 import {
   ensurePlaneModelMaterials,
   ensureTrussModelMaterials,
@@ -45,6 +47,7 @@ import {
 } from "@/lib/models";
 
 type PrimaryActionsControllerDeps = {
+  projectContext: WorkbenchProjectContext;
   t: any;
   setMessage: (value: string) => void;
   recordHistory: (label: string) => void;
@@ -146,6 +149,7 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
 
   const runAnalysis = () =>
     runWorkbenchTransitionOperation(deps.startTransition, async () => {
+      const runToken = deps.jobPollTokenRef.current + 1;
       try {
         dismissWorkbenchAlert(deps.setSystemAlerts, "run-analysis-error");
         const outcome = await runWorkbenchAnalysis({
@@ -195,8 +199,14 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
         if (outcome.ok && outcome.backend === "orchestrated" && outcome.completion === "terminal") {
           await refreshResults();
         }
+        if (runToken !== deps.jobPollTokenRef.current) {
+          throw new Error("Job observation was superseded during result refresh.");
+        }
         return outcome;
       } catch (error) {
+        if (runToken !== deps.jobPollTokenRef.current) {
+          return workbenchOperationFailure(error, deps.t.initialFailed);
+        }
         const message =
           error instanceof Error
             ? error.message.startsWith("request timed out:")
@@ -214,59 +224,74 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
     });
 
   const openHistoryJob = (jobId: string) => {
-    deps.jobPollTokenRef.current += 1;
-
-    deps.startTransition(() => {
-      void (async () => {
-        try {
-          dismissWorkbenchAlert(deps.setSystemAlerts, "history-open-error");
-          const payload = await deps.adminDataBackendService.fetchJob<HistoryJobResult>(jobId);
-          applyHistoryJobPayload(payload, {
-            activeMaterial: deps.activeMaterial,
-            copy: {
-              historyAction: deps.t.historyAction,
-              historyLoaded: deps.t.historyLoaded,
-              workflowCatalogCompleted: deps.t.workflowCatalogCompleted,
-            },
-            setJob: deps.setJob,
-            setResult: deps.setResult,
-            setSidebarSection: deps.setSidebarSection,
-            setWorkflowPanelTab: deps.setWorkflowPanelTab,
-            setSelectedWorkflowId: deps.setSelectedWorkflowId,
-            setWorkflowRuns: deps.setWorkflowRuns,
-            setMessage: deps.setMessage,
-            recordHistory: deps.recordHistory,
-            openWorkspaceStudy: deps.openWorkspaceStudy,
-            setStudyKind: deps.setStudyKind,
-            setAxialForm: deps.setAxialForm,
-            setThermalBarModel: deps.setThermalBarModel,
-            setHeatBarModel: deps.setHeatBarModel,
-            setHeatPlaneModel: deps.setHeatPlaneModel,
-            setPlaneResultField: deps.setPlaneResultField,
-            setThermalBeamModel: deps.setThermalBeamModel,
-            setThermalTrussModel: deps.setThermalTrussModel,
-            setThermalTruss3dModel: deps.setThermalTruss3dModel,
-            setSpringModel: deps.setSpringModel,
-            setSpring2dModel: deps.setSpring2dModel,
-            setSpring3dModel: deps.setSpring3dModel,
-            setBeamModel: deps.setBeamModel,
-            setTorsionModel: deps.setTorsionModel,
-            setTrussModel: deps.setTrussModel,
-            setTruss3dModel: deps.setTruss3dModel,
-            setFrameModel: deps.setFrameModel,
-            setThermalFrameModel: deps.setThermalFrameModel,
-            setPlaneModel: deps.setPlaneModel,
-          });
-        } catch (error) {
-          const message = error instanceof Error ? error.message : deps.t.initialFailed;
-          upsertWorkbenchAlert(deps.setSystemAlerts, {
-            id: "history-open-error",
-            message,
-            tone: "error",
-          });
-          deps.setMessage(message);
-        }
-      })();
+    const observation = ++deps.jobPollTokenRef.current;
+    const ownsProject = deps.projectContext.begin();
+    const isCurrent = () => observation === deps.jobPollTokenRef.current && ownsProject();
+    return runWorkbenchTransitionOperation(deps.startTransition, async () => {
+      try {
+        dismissWorkbenchAlert(deps.setSystemAlerts, "history-open-error");
+        const payload = await deps.adminDataBackendService.fetchJob<HistoryJobResult>(jobId);
+        if (!isCurrent()) return workbenchOperationFailure(workbenchProjectContextChangedError(), deps.t.initialFailed);
+        if (payload.job?.job_id !== jobId) invalidHistoryResult("The response belongs to a different job.");
+        applyHistoryJobPayload(payload, {
+          detachSavedModel: () => {
+            const selection = deps.projectContext.current();
+            deps.projectContext.update({ projectId: selection.projectId, modelId: null, versionId: null });
+            deps.setSelectedModelId(null);
+            deps.setSelectedVersionId(null);
+            deps.setModelVersions([]);
+            deps.setSelectedNode(null);
+            deps.setSelectedElement(null);
+            deps.setMemberDraftNodes([]);
+            deps.setLoadedModelName(`history-${jobId}`);
+          },
+          activeMaterial: deps.activeMaterial,
+          copy: {
+            historyAction: deps.t.historyAction,
+            historyLoaded: deps.t.historyLoaded,
+            workflowCatalogCompleted: deps.t.workflowCatalogCompleted,
+          },
+          setJob: deps.setJob,
+          setResult: deps.setResult,
+          setSidebarSection: deps.setSidebarSection,
+          setWorkflowPanelTab: deps.setWorkflowPanelTab,
+          setSelectedWorkflowId: deps.setSelectedWorkflowId,
+          setWorkflowRuns: deps.setWorkflowRuns,
+          setMessage: deps.setMessage,
+          recordHistory: deps.recordHistory,
+          openWorkspaceStudy: deps.openWorkspaceStudy,
+          setStudyKind: deps.setStudyKind,
+          setAxialForm: deps.setAxialForm,
+          setThermalBarModel: deps.setThermalBarModel,
+          setHeatBarModel: deps.setHeatBarModel,
+          setHeatPlaneModel: deps.setHeatPlaneModel,
+          setPlaneResultField: deps.setPlaneResultField,
+          setThermalBeamModel: deps.setThermalBeamModel,
+          setThermalTrussModel: deps.setThermalTrussModel,
+          setThermalTruss3dModel: deps.setThermalTruss3dModel,
+          setSpringModel: deps.setSpringModel,
+          setSpring2dModel: deps.setSpring2dModel,
+          setSpring3dModel: deps.setSpring3dModel,
+          setBeamModel: deps.setBeamModel,
+          setTorsionModel: deps.setTorsionModel,
+          setTrussModel: deps.setTrussModel,
+          setTruss3dModel: deps.setTruss3dModel,
+          setFrameModel: deps.setFrameModel,
+          setThermalFrameModel: deps.setThermalFrameModel,
+          setPlaneModel: deps.setPlaneModel,
+        });
+        return { ok: true as const, jobId };
+      } catch (error) {
+        if (!isCurrent()) return workbenchOperationFailure(error, deps.t.initialFailed);
+        const message = error instanceof Error ? error.message : deps.t.initialFailed;
+        upsertWorkbenchAlert(deps.setSystemAlerts, {
+          id: "history-open-error",
+          message,
+          tone: "error",
+        });
+        deps.setMessage(message);
+        return workbenchOperationFailure(error, deps.t.initialFailed);
+      }
     });
   };
 

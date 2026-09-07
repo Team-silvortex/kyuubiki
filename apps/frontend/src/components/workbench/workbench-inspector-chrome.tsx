@@ -62,7 +62,7 @@ export function WorkbenchInspectorTabChrome({
       {inspectorTab === "actions" ? (
         <section className="info-card">
           <div className="panel-tabs panel-tabs--wide">
-            <button className={`panel-tab${actionsPage === "history" ? " panel-tab--active" : ""}`} onClick={() => onActionsPageChange("history")} type="button">{t.historyPanel}</button>
+            <button className={`panel-tab${actionsPage === "history" ? " panel-tab--active" : ""}`} data-workbench-inspector-actions-target="history" onClick={() => onActionsPageChange("history")} type="button">{t.historyPanel}</button>
             <button className={`panel-tab${actionsPage === "exports" ? " panel-tab--active" : ""}`} data-workbench-inspector-actions-target="exports" onClick={() => onActionsPageChange("exports")} type="button">{t.exportData}</button>
           </div>
         </section>
@@ -132,16 +132,16 @@ export function WorkbenchInspectorHistoryPanel({
   onRedo,
 }: HistoryPanelProps) {
   const historyRows = [
-    ...undoStack.slice(-4).reverse().map((entry) => ({ key: `undo-${entry.label}`, label: entry.label, kind: t.undo })),
-    ...redoStack.slice(-2).reverse().map((entry) => ({ key: `redo-${entry.label}`, label: entry.label, kind: t.redo })),
+    ...undoStack.slice(-4).reverse().map((entry, index) => ({ key: `undo-${undoStack.length - 1 - index}`, label: entry.label, kind: t.undo })),
+    ...redoStack.slice(-2).reverse().map((entry, index) => ({ key: `redo-${redoStack.length - 1 - index}`, label: entry.label, kind: t.redo })),
   ];
 
   return (
     <section className="info-card">
       <h3>{t.historyPanel}</h3>
       <div className="button-row">
-        <button className="ghost-button" disabled={undoStack.length === 0} onClick={onUndo} type="button">{t.undo}</button>
-        <button className="ghost-button" disabled={redoStack.length === 0} onClick={onRedo} type="button">{t.redo}</button>
+        <button className="ghost-button" data-workbench-history-action="undo" disabled={undoStack.length === 0} onClick={onUndo} type="button">{t.undo}</button>
+        <button className="ghost-button" data-workbench-history-action="redo" disabled={redoStack.length === 0} onClick={onRedo} type="button">{t.redo}</button>
       </div>
       {historyRows.length === 0 ? (
         <p className="card-copy">{t.noOperations}</p>

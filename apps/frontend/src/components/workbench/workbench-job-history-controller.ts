@@ -49,21 +49,25 @@ export async function cancelWorkbenchJob({
   refreshJobHistory,
   setJob,
   setMessage,
-}: CancelWorkbenchJobArgs): Promise<WorkbenchOperationResult<{ jobId: string }>> {
+}: CancelWorkbenchJobArgs): Promise<WorkbenchOperationResult<{ jobId: string; contextChanged?: boolean }>> {
+  let observation = jobPollTokenRef.current;
   try {
     const payload = await jobHistoryBackendService.cancelJob(jobId);
-    jobPollTokenRef.current += 1;
-    setJob(payload.job);
-    setMessage(labels.jobCancelled);
+    if (payload.job?.job_id !== jobId) throw new Error("Cancellation response belongs to a different job.");
+    if (observation === jobPollTokenRef.current) {
+      observation = ++jobPollTokenRef.current;
+      setJob(payload.job);
+      setMessage(labels.jobCancelled);
+    }
     await refreshJobHistory();
-    return { ok: true, jobId };
+    return { ok: true, jobId, ...(observation !== jobPollTokenRef.current ? { contextChanged: true } : {}) };
   } catch (error) {
     const message = error instanceof Error
       ? error.message.startsWith("request timed out:")
         ? labels.requestTimedOut
         : error.message
       : labels.initialFailed;
-    setMessage(message);
+    if (observation === jobPollTokenRef.current) setMessage(message);
     return workbenchOperationFailure(new Error(message), labels.initialFailed);
   }
 }

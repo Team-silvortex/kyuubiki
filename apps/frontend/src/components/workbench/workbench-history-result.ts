@@ -1,54 +1,17 @@
 "use client";
 
-import type {
-  AxialBarResult,
-  Beam1dResult,
-  HeatBar1dResult,
-  Spring1dResult,
-  ThermalBeam1dResult,
-  Torsion1dResult,
-  ThermalBar1dResult,
-} from "@/lib/api/fem-1d";
-import type {
-  Frame2dResult,
-  Spring2dResult,
-  ThermalFrame2dResult,
-  ThermalTruss2dResult,
-  Truss2dResult,
-} from "@/lib/api/fem-2d-line";
-import type {
-  ElectrostaticPlaneQuad2dResult,
-  ElectrostaticPlaneTriangle2dResult,
-  HeatPlaneQuad2dResult,
-  HeatPlaneTriangle2dResult,
-  PlaneQuad2dResult,
-  PlaneTriangle2dResult,
-  ThermalPlaneQuad2dResult,
-  ThermalPlaneTriangle2dResult,
-} from "@/lib/api/fem-2d-surface";
-import type { Spring3dResult, ThermalTruss3dResult, Truss3dResult } from "@/lib/api/fem-3d";
 import type { JobEnvelope } from "@/lib/api/fem-shared";
 import type { WorkflowGraphJobResult } from "@/lib/api/workflow-types";
 import { resolveJobStatusDetailLabel } from "@/lib/api/job-status";
-import { createMaterialDefinition } from "@/lib/materials/materials";
-import {
-  ensureFrameModelMaterials,
-  ensurePlaneModelMaterials,
-  ensureTruss3dModelMaterials,
-  ensureTrussModelMaterials,
-} from "@/lib/workbench/material-commands";
+import type { WorkbenchStudyResult } from "@/lib/workbench/study-run-backend-service-core";
+import type { WorkbenchStudyKind } from "@/lib/workbench/history";
 import { summarizeWorkflowResultArtifacts } from "@/components/workbench/workflow/workbench-workflow-summary-contract";
 import type { WorkflowRunRecord } from "@/components/workbench/workflow/workbench-workflow-types";
-
-type HistoryResultCopy = {
-  historyAction: string;
-  historyLoaded: string;
-  workflowCatalogCompleted: string;
-};
+import { resolveHistoryResultStudyKind } from "./workbench-history-result-kind";
 
 type HistoryOpenEffects = {
   activeMaterial: string;
-  copy: HistoryResultCopy;
+  copy: { historyAction: string; historyLoaded: string; workflowCatalogCompleted: string };
   setJob: (value: JobEnvelope["job"] | null) => void;
   setResult: (value: any) => void;
   setSidebarSection: (section: any) => void;
@@ -58,7 +21,8 @@ type HistoryOpenEffects = {
   setMessage: (value: string) => void;
   recordHistory: (label: string) => void;
   openWorkspaceStudy: (tab: any) => void;
-  setStudyKind: (value: any) => void;
+  detachSavedModel: () => void;
+  setStudyKind: (value: WorkbenchStudyKind) => void;
   setAxialForm: (value: any) => void;
   setThermalBarModel: (value: any) => void;
   setHeatBarModel: (value: any) => void;
@@ -79,143 +43,15 @@ type HistoryOpenEffects = {
   setPlaneModel: (value: any) => void;
 };
 
-export type HistoryJobResult =
-  | AxialBarResult
-  | HeatBar1dResult
-  | ElectrostaticPlaneTriangle2dResult
-  | ElectrostaticPlaneQuad2dResult
-  | HeatPlaneTriangle2dResult
-  | HeatPlaneQuad2dResult
-  | ThermalBar1dResult
-  | ThermalBeam1dResult
-  | ThermalTruss2dResult
-  | ThermalTruss3dResult
-  | Spring1dResult
-  | Spring2dResult
-  | Spring3dResult
-  | Beam1dResult
-  | Torsion1dResult
-  | Truss2dResult
-  | Truss3dResult
-  | PlaneTriangle2dResult
-  | PlaneQuad2dResult
-  | Frame2dResult
-  | ThermalFrame2dResult
-  | ThermalPlaneTriangle2dResult
-  | ThermalPlaneQuad2dResult
-  | WorkflowGraphJobResult;
+export type HistoryJobResult = WorkbenchStudyResult | WorkflowGraphJobResult;
 
 function isWorkflowGraphResult(value: unknown): value is WorkflowGraphJobResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "workflow_id" in value &&
-    "completed_nodes" in value &&
-    "artifacts" in value
-  );
-}
-
-function summarizeWorkflowArtifacts(result: WorkflowGraphJobResult): string | null {
-  return summarizeWorkflowResultArtifacts(result);
+  return typeof value === "object" && value !== null && "workflow_id" in value &&
+    "completed_nodes" in value && "artifacts" in value;
 }
 
 function upsertWorkflowRunRecord(current: WorkflowRunRecord[], next: WorkflowRunRecord): WorkflowRunRecord[] {
-  const withoutMatch = current.filter((entry) => entry.jobId !== next.jobId);
-  return [next, ...withoutMatch].slice(0, 12);
-}
-
-function isAxialResult(value: unknown): value is AxialBarResult {
-  return typeof value === "object" && value !== null && "displacements" in value && "strains" in value && "input" in value;
-}
-
-function isThermalBar1dResult(value: unknown): value is ThermalBar1dResult {
-  return typeof value === "object" && value !== null && "max_temperature_delta" in value && "axial_force" in value && "input" in value;
-}
-
-function isHeatBar1dResult(value: unknown): value is HeatBar1dResult {
-  return typeof value === "object" && value !== null && "max_temperature" in value && "heat_flux" in value && "input" in value;
-}
-
-function isHeatPlaneTriangle2dResult(value: unknown): value is HeatPlaneTriangle2dResult {
-  return typeof value === "object" && value !== null && "max_heat_flux" in value && "elements" in value && "input" in value;
-}
-
-function isHeatPlaneQuad2dResult(value: unknown): value is HeatPlaneQuad2dResult {
-  return typeof value === "object" && value !== null && "max_heat_flux" in value && "elements" in value && "input" in value;
-}
-
-function isThermalTruss2dResult(value: unknown): value is ThermalTruss2dResult {
-  return typeof value === "object" && value !== null && "max_temperature_delta" in value && "elements" in value && "input" in value;
-}
-
-function isThermalTruss3dResult(value: unknown): value is ThermalTruss3dResult {
-  return typeof value === "object" && value !== null && "max_temperature_delta" in value && "elements" in value && "input" in value;
-}
-
-function isTrussResult(value: unknown): value is Truss2dResult {
-  return typeof value === "object" && value !== null && "max_stress" in value && "elements" in value && "nodes" in value && "input" in value;
-}
-
-function isTruss3dResult(value: unknown): value is Truss3dResult {
-  return typeof value === "object" && value !== null && "max_stress" in value && "elements" in value && "nodes" in value && "input" in value;
-}
-
-function isBeam1dResult(value: unknown): value is Beam1dResult {
-  return typeof value === "object" && value !== null && "max_bending_stress" in value && "elements" in value && "input" in value;
-}
-
-function isThermalBeam1dResult(value: unknown): value is ThermalBeam1dResult {
-  return typeof value === "object" && value !== null && "max_temperature_gradient" in value && "max_bending_stress" in value && "input" in value;
-}
-
-function isTorsion1dResult(value: unknown): value is Torsion1dResult {
-  return typeof value === "object" && value !== null && "max_torque" in value && "max_rotation" in value && "input" in value;
-}
-
-function isSpring1dResult(value: unknown): value is Spring1dResult {
-  return typeof value === "object" && value !== null && "max_force" in value && "elements" in value && "input" in value;
-}
-
-function isSpring2dResult(value: unknown): value is Spring2dResult {
-  return typeof value === "object" && value !== null && "max_force" in value && "elements" in value && "input" in value;
-}
-
-function isSpring3dResult(value: unknown): value is Spring3dResult {
-  return typeof value === "object" && value !== null && "max_force" in value && "elements" in value && "input" in value;
-}
-
-function isFrame2dResult(value: unknown): value is Frame2dResult {
-  return typeof value === "object" && value !== null && "max_moment" in value && "max_rotation" in value && "input" in value;
-}
-
-function isThermalFrame2dResult(value: unknown): value is ThermalFrame2dResult {
-  return typeof value === "object" && value !== null && "max_temperature_delta" in value && "max_temperature_gradient" in value && "max_rotation" in value && "input" in value;
-}
-
-function isPlaneResult(
-  value: unknown,
-): value is PlaneTriangle2dResult | PlaneQuad2dResult | ThermalPlaneTriangle2dResult | ThermalPlaneQuad2dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "elements" in value &&
-    "nodes" in value &&
-    "input" in value &&
-    Array.isArray(
-      (value as PlaneTriangle2dResult | PlaneQuad2dResult | ThermalPlaneTriangle2dResult | ThermalPlaneQuad2dResult).elements,
-    ) &&
-    (value as PlaneTriangle2dResult | PlaneQuad2dResult | ThermalPlaneTriangle2dResult | ThermalPlaneQuad2dResult).elements.some(
-      (element) => "node_k" in element,
-    )
-  );
-}
-
-function isElectrostaticPlaneTriangle2dResult(value: unknown): value is ElectrostaticPlaneTriangle2dResult {
-  return typeof value === "object" && value !== null && "max_electric_field" in value && "input" in value && Array.isArray((value as ElectrostaticPlaneTriangle2dResult).elements) && (value as ElectrostaticPlaneTriangle2dResult).elements.every((element) => !("node_l" in element));
-}
-
-function isElectrostaticPlaneQuad2dResult(value: unknown): value is ElectrostaticPlaneQuad2dResult {
-  return typeof value === "object" && value !== null && "max_electric_field" in value && "input" in value && Array.isArray((value as ElectrostaticPlaneQuad2dResult).elements) && (value as ElectrostaticPlaneQuad2dResult).elements.some((element) => "node_l" in element);
+  return [next, ...current.filter((entry) => entry.jobId !== next.jobId)].slice(0, 12);
 }
 
 export function applyHistoryJobPayload(
@@ -223,222 +59,63 @@ export function applyHistoryJobPayload(
   effects: HistoryOpenEffects,
 ) {
   const { activeMaterial, copy, recordHistory, openWorkspaceStudy, setMessage } = effects;
-  effects.setJob(payload.job);
-
-  if (!payload.result) {
-    setMessage(
-      payload.job.status === "failed"
-        ? payload.job.message ?? resolveJobStatusDetailLabel(payload.job.status_detail) ?? copy.historyLoaded
-        : copy.historyLoaded,
-    );
-    return;
-  }
-
   const workflowResult = isWorkflowGraphResult(payload.result) ? payload.result : null;
+  const kind = payload.result && !workflowResult ? resolveHistoryResultStudyKind(payload.result) : null;
+  // Finish validation and summary construction before any state mutation.
+  const summary = workflowResult ? summarizeWorkflowResultArtifacts(workflowResult) : null;
+
   if (workflowResult) {
+    effects.setJob(payload.job);
     effects.setResult(null);
-    const summary = summarizeWorkflowArtifacts(workflowResult);
     effects.setSidebarSection("workflow");
     effects.setWorkflowPanelTab("runs");
     effects.setSelectedWorkflowId(workflowResult.workflow_id);
-    effects.setWorkflowRuns((current: WorkflowRunRecord[]) =>
-      upsertWorkflowRunRecord(current, {
-        jobId: payload.job.job_id,
-        workflowId: workflowResult.workflow_id,
-        status: payload.job.status,
-        statusDetail: payload.job.status_detail ?? null,
-        progress: payload.job.progress ?? 0,
-        currentNode: workflowResult.current_node ?? payload.job.message ?? null,
-        summary,
-        updatedAt: payload.job.updated_at ?? null,
-        skippedNodes: workflowResult.skipped_nodes ?? [],
-        branchDecisions: workflowResult.branch_decisions ?? [],
-        nodeRuns: workflowResult.node_runs ?? [],
-        artifactLineage: workflowResult.artifact_lineage ?? [],
-        result: workflowResult,
-      }),
-    );
-    setMessage(
-      summary
-        ? `${copy.workflowCatalogCompleted}: ${workflowResult.workflow_id} (${summary})`
-        : `${copy.workflowCatalogCompleted}: ${workflowResult.workflow_id}`,
-    );
+    effects.setWorkflowRuns((current: WorkflowRunRecord[]) => upsertWorkflowRunRecord(current, {
+      jobId: payload.job.job_id, workflowId: workflowResult.workflow_id, status: payload.job.status,
+      statusDetail: payload.job.status_detail ?? null, progress: payload.job.progress ?? 0,
+      currentNode: workflowResult.current_node ?? payload.job.message ?? null, summary,
+      updatedAt: payload.job.updated_at ?? null, skippedNodes: workflowResult.skipped_nodes ?? [],
+      branchDecisions: workflowResult.branch_decisions ?? [], nodeRuns: workflowResult.node_runs ?? [],
+      artifactLineage: workflowResult.artifact_lineage ?? [], result: workflowResult,
+    }));
+    setMessage(`${copy.workflowCatalogCompleted}: ${workflowResult.workflow_id}${summary ? ` (${summary})` : ""}`);
     return;
   }
 
-  const nonWorkflowResult = payload.result as Exclude<HistoryJobResult, WorkflowGraphJobResult>;
-  effects.setResult(nonWorkflowResult);
-
-  if (isAxialResult(nonWorkflowResult)) {
+  if (kind && payload.result) {
+    const result = payload.result as WorkbenchStudyResult;
+    const { project_id: _project, model_version_id: _version, ...input } = result.input as
+      WorkbenchStudyResult["input"] & { project_id?: string; model_version_id?: string };
     recordHistory(copy.historyAction);
-    effects.setStudyKind("axial_bar_1d");
-    effects.setAxialForm({
-      length: nonWorkflowResult.input.length,
-      area: nonWorkflowResult.input.area,
-      elements: nonWorkflowResult.input.elements,
-      tipForce: nonWorkflowResult.input.tip_force,
-      material: activeMaterial,
-      youngsModulusGpa: nonWorkflowResult.input.youngs_modulus / 1.0e9,
-    });
-  }
-
-  if (isThermalBar1dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("thermal_bar_1d");
-    effects.setThermalBarModel(nonWorkflowResult.input);
+    effects.detachSavedModel();
+    effects.setStudyKind(kind);
+    if (kind === "axial_bar_1d" && "length" in input) {
+      effects.setAxialForm({ length: input.length, area: input.area, elements: input.elements,
+        tipForce: input.tip_force, material: activeMaterial, youngsModulusGpa: input.youngs_modulus / 1e9 });
+    } else {
+      const setters: Record<Exclude<WorkbenchStudyKind, "axial_bar_1d">, (value: any) => void> = {
+        heat_bar_1d: effects.setHeatBarModel,
+        heat_plane_triangle_2d: effects.setHeatPlaneModel, heat_plane_quad_2d: effects.setHeatPlaneModel,
+        electrostatic_plane_triangle_2d: effects.setPlaneModel, electrostatic_plane_quad_2d: effects.setPlaneModel,
+        thermal_plane_triangle_2d: effects.setPlaneModel, thermal_plane_quad_2d: effects.setPlaneModel,
+        plane_triangle_2d: effects.setPlaneModel, plane_quad_2d: effects.setPlaneModel,
+        thermal_bar_1d: effects.setThermalBarModel, thermal_beam_1d: effects.setThermalBeamModel,
+        thermal_frame_2d: effects.setThermalFrameModel, thermal_truss_2d: effects.setThermalTrussModel,
+        thermal_truss_3d: effects.setThermalTruss3dModel,
+        spring_1d: effects.setSpringModel, spring_2d: effects.setSpring2dModel, spring_3d: effects.setSpring3dModel,
+        beam_1d: effects.setBeamModel, torsion_1d: effects.setTorsionModel,
+        truss_2d: effects.setTrussModel, truss_3d: effects.setTruss3dModel, frame_2d: effects.setFrameModel,
+      };
+      if (kind !== "axial_bar_1d") setters[kind](input);
+    }
+    if (kind.startsWith("heat_plane_")) effects.setPlaneResultField("average_temperature");
+    else if (kind.startsWith("electrostatic_plane_")) effects.setPlaneResultField("electric_field_magnitude");
+    else if (kind.includes("plane_")) effects.setPlaneResultField("von_mises");
     openWorkspaceStudy("controls");
   }
-
-  if (isHeatBar1dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("heat_bar_1d");
-    effects.setHeatBarModel(nonWorkflowResult.input);
-    openWorkspaceStudy("controls");
-  }
-
-  if (isHeatPlaneTriangle2dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("heat_plane_triangle_2d");
-    effects.setHeatPlaneModel(nonWorkflowResult.input);
-    effects.setPlaneResultField("average_temperature");
-    openWorkspaceStudy("controls");
-  }
-
-  if (isHeatPlaneQuad2dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("heat_plane_quad_2d");
-    effects.setHeatPlaneModel(nonWorkflowResult.input);
-    effects.setPlaneResultField("average_temperature");
-    openWorkspaceStudy("controls");
-  }
-
-  if (isElectrostaticPlaneTriangle2dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("electrostatic_plane_triangle_2d");
-    effects.setPlaneModel(ensurePlaneModelMaterials(nonWorkflowResult.input, activeMaterial));
-    openWorkspaceStudy("controls");
-  }
-
-  if (isElectrostaticPlaneQuad2dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("electrostatic_plane_quad_2d");
-    effects.setPlaneModel(ensurePlaneModelMaterials(nonWorkflowResult.input, activeMaterial));
-    openWorkspaceStudy("controls");
-  }
-
-  if (isThermalBeam1dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("thermal_beam_1d");
-    effects.setThermalBeamModel(ensureBeamModelMaterials(nonWorkflowResult.input, activeMaterial));
-    openWorkspaceStudy("controls");
-  }
-
-  if (isThermalTruss2dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("thermal_truss_2d");
-    effects.setThermalTrussModel(nonWorkflowResult.input);
-    openWorkspaceStudy("controls");
-  }
-
-  if (isThermalTruss3dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("thermal_truss_3d");
-    effects.setThermalTruss3dModel(nonWorkflowResult.input);
-    openWorkspaceStudy("controls");
-  }
-
-  if (isSpring1dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("spring_1d");
-    effects.setSpringModel(nonWorkflowResult.input);
-    openWorkspaceStudy("controls");
-  }
-
-  if (isSpring2dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("spring_2d");
-    effects.setSpring2dModel(nonWorkflowResult.input);
-    openWorkspaceStudy("controls");
-  }
-
-  if (isSpring3dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("spring_3d");
-    effects.setSpring3dModel(nonWorkflowResult.input);
-    openWorkspaceStudy("controls");
-  }
-
-  if (isBeam1dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("beam_1d");
-    effects.setBeamModel(ensureBeamModelMaterials(nonWorkflowResult.input, activeMaterial));
-    openWorkspaceStudy("controls");
-  }
-
-  if (isTorsion1dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("torsion_1d");
-    effects.setTorsionModel(nonWorkflowResult.input);
-    openWorkspaceStudy("controls");
-  }
-
-  if (isTrussResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("truss_2d");
-    effects.setTrussModel(ensureTrussModelMaterials(nonWorkflowResult.input, activeMaterial));
-    openWorkspaceStudy("controls");
-  }
-
-  if (isTruss3dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("truss_3d");
-    effects.setTruss3dModel(ensureTruss3dModelMaterials(nonWorkflowResult.input, activeMaterial));
-    openWorkspaceStudy("controls");
-  }
-
-  if (isFrame2dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("frame_2d");
-    effects.setFrameModel(ensureFrameModelMaterials(nonWorkflowResult.input, activeMaterial));
-    openWorkspaceStudy("controls");
-  }
-
-  if (isThermalFrame2dResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind("thermal_frame_2d");
-    effects.setThermalFrameModel(ensureFrameModelMaterials(nonWorkflowResult.input, activeMaterial));
-    openWorkspaceStudy("controls");
-  }
-
-  if (isPlaneResult(nonWorkflowResult)) {
-    recordHistory(copy.historyAction);
-    effects.setStudyKind(
-      nonWorkflowResult.input.elements.some((element) => "node_l" in element) ? "plane_quad_2d" : "plane_triangle_2d",
-    );
-    effects.setPlaneModel(ensurePlaneModelMaterials(nonWorkflowResult.input, activeMaterial));
-    openWorkspaceStudy("controls");
-  }
-
-  setMessage(
-    payload.job.status === "failed"
-      ? payload.job.message ?? resolveJobStatusDetailLabel(payload.job.status_detail) ?? copy.historyLoaded
-      : copy.historyLoaded,
-  );
-}
-function ensureBeamModelMaterials<T extends { materials?: Array<{ id: string }>; elements: Array<{ material_id?: string | undefined }> }>(
-  model: T,
-  materialValue: string,
-): T {
-  const existingMaterials = model.materials?.length
-    ? model.materials
-    : [createMaterialDefinition(materialValue, 1, { id: "mat-1" })];
-  const defaultMaterialId = existingMaterials[0]?.id ?? "mat-1";
-  return {
-    ...model,
-    materials: existingMaterials,
-    elements: model.elements.map((element) => ({
-      ...element,
-      material_id: element.material_id ?? defaultMaterialId,
-    })),
-  };
+  effects.setJob(payload.job);
+  effects.setResult(payload.result ?? null);
+  setMessage(payload.job.status === "failed"
+    ? payload.job.message ?? resolveJobStatusDetailLabel(payload.job.status_detail) ?? copy.historyLoaded
+    : copy.historyLoaded);
 }

@@ -63,6 +63,7 @@ export function WorkbenchLibraryHistoryPanel({
           renderItem={(historyJob) => (
             <button
               className={`history-item${activeJobId === historyJob.id ? " history-item--active" : ""}`}
+              data-workbench-history-job-id={historyJob.id}
               onClick={() => onOpenHistoryJob(historyJob.id)}
               type="button"
             >

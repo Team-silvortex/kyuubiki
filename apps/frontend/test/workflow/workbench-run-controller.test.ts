@@ -144,3 +144,49 @@ test("orchestrated completion without a result rejects instead of reporting succ
     /did not include a result/,
   );
 });
+
+for (const backend of ["direct_mesh", "orchestrated"] as const) {
+  test(`${backend} run rejects a superseded submission before applying its response`, async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const token = { current: 0 };
+    const writes: unknown[] = [];
+    const operation = runWorkbenchAnalysis(runArgs({
+      jobPollTokenRef: token,
+      setJob: (value) => writes.push(value), setResult: (value) => writes.push(value), setMessage: (value) => writes.push(value),
+      runBackendService: {
+        fetchJob: async () => ({ job: job("completed"), result: {} } as never),
+        submitRun: async () => {
+          await gate;
+          return backend === "orchestrated" ? { backend, envelope: { job: job("queued") } } as never
+            : runArgs().runBackendService!.submitRun({} as never);
+        },
+      },
+    }));
+    token.current += 1;
+    writes.length = 0;
+    release();
+    await assert.rejects(operation, /superseded/u);
+    assert.deepEqual(writes, []);
+  });
+}
+
+for (const phase of ["before-poll", "terminal-refresh"]) {
+  test(`orchestrated run cannot regain ownership after ${phase} is superseded`, async () => {
+    const token = { current: 0 };
+    const writes: unknown[] = [];
+    let refreshes = 0;
+    await assert.rejects(runWorkbenchAnalysis(runArgs({
+      jobPollTokenRef: token,
+      setJob: (value) => writes.push(value), setResult: (value) => writes.push(value), setMessage: (value) => writes.push(value),
+      refreshJobHistory: async () => {
+        if (++refreshes === (phase === "before-poll" ? 1 : 2)) { token.current += 1; writes.length = 0; }
+      },
+      runBackendService: {
+        fetchJob: async () => ({ job: job("completed"), result: {} } as never),
+        submitRun: async () => ({ backend: "orchestrated", envelope: { job: job("queued") } } as never),
+      },
+    })), /superseded/u);
+    assert.deepEqual(writes, []);
+  });
+}

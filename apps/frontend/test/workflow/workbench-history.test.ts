@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildWorkbenchSnapshot,
+  canRetainWorkbenchSnapshotBinding,
   createAssistantTransactionEntry,
   pushHistoryEntry,
   type WorkbenchSnapshot,
@@ -46,3 +48,27 @@ test("assistant transaction audit actions are isolated from caller mutation", ()
 
   assert.deepEqual(entry.executedActions, ["study/run"]);
 });
+
+test("history snapshot owns its save provenance without deep-copying immutable model geometry", () => {
+  const source = { ...snapshot(1), savedModelContext: { projectId: "project", modelId: "model" },
+    heatBarModel: { nodes: [], elements: [] } };
+  const captured = buildWorkbenchSnapshot(source);
+  source.savedModelContext.modelId = "different-model";
+  assert.deepEqual(captured.savedModelContext, { projectId: "project", modelId: "model" });
+  assert.equal(captured.heatBarModel, source.heatBarModel);
+});
+
+for (const scenario of ["same", "project", "model", "study", "unsaved", "legacy", "null-context"]) {
+  test(`history save binding handles ${scenario} provenance without adopting another model`, () => {
+    const captured: WorkbenchSnapshot = { ...snapshot(1), studyKind: "heat_bar_1d",
+      savedModelContext: { projectId: "project", modelId: "model" } };
+    const current = { projectId: "project", modelId: "model", studyKind: "heat_bar_1d" as const };
+    if (scenario === "project") captured.savedModelContext!.projectId = "other-project";
+    if (scenario === "model") captured.savedModelContext!.modelId = "other-model";
+    if (scenario === "study") captured.studyKind = "thermal_bar_1d";
+    if (scenario === "unsaved") captured.savedModelContext!.modelId = null;
+    if (scenario === "legacy") delete captured.savedModelContext;
+    if (scenario === "null-context") (captured as any).savedModelContext = null;
+    assert.equal(canRetainWorkbenchSnapshotBinding(captured, current), scenario === "same");
+  });
+}
