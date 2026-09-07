@@ -63,7 +63,7 @@ export function WorkbenchInspectorTabChrome({
         <section className="info-card">
           <div className="panel-tabs panel-tabs--wide">
             <button className={`panel-tab${actionsPage === "history" ? " panel-tab--active" : ""}`} onClick={() => onActionsPageChange("history")} type="button">{t.historyPanel}</button>
-            <button className={`panel-tab${actionsPage === "exports" ? " panel-tab--active" : ""}`} onClick={() => onActionsPageChange("exports")} type="button">{t.exportData}</button>
+            <button className={`panel-tab${actionsPage === "exports" ? " panel-tab--active" : ""}`} data-workbench-inspector-actions-target="exports" onClick={() => onActionsPageChange("exports")} type="button">{t.exportData}</button>
           </div>
         </section>
       ) : null}

@@ -91,6 +91,34 @@ ky.log("Recipe result:", result)</pre>
       </section>
 
       <section class="docs-card docs-section">
+        <h2>Heat-to-thermo projection boundaries</h2>
+        <p class="docs-copy">The Inspector export action and PWDT <code>state/projectHeatToThermo</code> share the same transformation for heat bars, plane triangles, and plane quads. Solve the heat model first, project its full result, review the mechanical model, save, and solve again.</p>
+        <ul class="docs-list">
+          <li>Projection requires complete, finite nodal temperatures and a result whose mesh matches the working heat model. Temperature transfer follows node indices, not response array order; missing nodes, ambiguous indices, or mismatched identities are rejected with <code>HEAT_THERMO_PROJECTION_INVALID</code>, not filled with zero.</li>
+          <li>A failed conversion preserves the source study, active result, and saved-model selection. A successful conversion detaches the new working model from the saved source model and version. The next ordinary save creates a separate model in the same project, rather than overwriting the heat input.</li>
+          <li>Temperature values are copied into <code>temperature_delta</code> using the engine's existing zero-reference convention. No ambient temperature is inferred. If the heat result represents absolute temperature, convert it to the intended temperature difference before using this projection for research.</li>
+          <li>A mechanical seed with matching geometry and connectivity retains its supports, loads, and material properties. Without that seed, the helper supplies defaults, including supports derived from fixed-temperature nodes. These are convenience defaults, not a physical boundary-condition inference. Review constraints, Young's modulus, thermal expansion, loads, and units before solving.</li>
+          <li>The triangle and quad heat-thermo recipes preserve separate saved stages and finish in System / Data / Results for their project. Electrostatic-heat-thermo recipes add the existing electrostatic-to-heat heuristic; this is not a qualified Joule-heating or fully coupled multiphysics solver.</li>
+        </ul>
+        <p class="docs-copy">Browser regression tests execute the product GUI and PWDT action bridge with synthetic solver and archive responses. They verify projection, save isolation, resubmission, result navigation, and error preservation. They do not qualify numerical accuracy, actual Pyodide WebAssembly execution, or an installed native WebView.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Electrostatic-to-heat projection boundaries</h2>
+        <p class="docs-copy">PWDT <code>state/projectElectrostaticToHeat</code> and the triangle and quad electrostatic-heat-thermo recipes use the same validated transformation. This is a workflow convenience heuristic, not Joule heating: each nodal heat load is the mean incident electric-field magnitude multiplied by a scale, not a conductivity-weighted power-density calculation.</p>
+        <ul class="docs-list">
+          <li>The result must contain every source node and element exactly once, with matching identities, coordinates, and connectivity. Output follows the solved input order even when response arrays are shuffled. Potentials must be finite, field magnitudes finite and nonnegative, and source thickness positive. Invalid or incomplete data raises <code>ELECTROSTATIC_HEAT_PROJECTION_INVALID</code> instead of being filled with zero.</li>
+          <li>The current electrostatic model must still match the solved input, including node identities, potential boundaries, charge densities, permittivity, thickness, and material bindings. If it has changed, solve it again before projecting. A rejected projection retains the source study, active result, and saved-model selection.</li>
+          <li>A thermal seed is reused only when geometry and connectivity match, not merely node and element counts. Its thermal constraints, temperatures (including zero), and positive conductivities are preserved. Projected heat loads replace previous seed loads rather than accumulate them. Element thickness comes from the solved electrostatic input.</li>
+          <li>Without a matching seed, defaults are conductivity <code>45</code>, load scale <code>50</code>, and boundary temperature range <code>20..100</code>. Fixed-potential nodes become fixed-temperature nodes; if there are none, potential extrema provide anchors. These are reviewable convenience defaults, not physical boundary-condition inference. PWDT recipes currently use these defaults rather than exposing projection options.</li>
+          <li>The projection helper rejects nonfinite option values, nonpositive conductivity, negative load scale, reversed temperature ranges, and arithmetic overflow. Explicit zero load scale and a uniform temperature range remain valid. Incident-load averaging avoids overflowing an intermediate sum of otherwise finite nonnegative values.</li>
+          <li>Material bindings carry cloned definitions from their actual source: an explicit thermal seed binding uses its seed library; otherwise the electrostatic input supplies the binding. Missing references, duplicate identifiers, and conflicting definitions under the same selected identifier are rejected.</li>
+          <li>Successful projection detaches the working copy from its saved source, so the next save creates a separate heat model. A failed recipe stops before the heat-stage save or submission. Inspect the retained source and error, obtain a fresh result, and continue the individual stages; restarting a whole recipe may create new records and is not automatic rollback.</li>
+        </ul>
+        <p class="docs-copy">Unit and browser tests cover response ordering, invalid payloads, material provenance, arithmetic boundaries, source preservation, and a fresh-solve retry. Browser solver responses are synthetic; these tests do not qualify physical coupling accuracy, installed native WebViews, or Pyodide WebAssembly execution.</p>
+      </section>
+
+      <section class="docs-card docs-section">
         <h2>Waiting and failure rules</h2>
         <ul class="docs-list">
           <li>Await every state-changing action. The Workbench action bridge waits for the UI state commit before resolving, so the next action uses the updated project, model, selection, and parameters.</li>

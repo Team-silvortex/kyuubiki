@@ -18,6 +18,8 @@ export const workbenchAutomationSelectors = {
   sidebarSection: (section: string) => `[data-workbench-sidebar-section="${section}"]`,
   railButton: (section: string) => `[aria-label="workbench-rail:${section}"]`,
   inspector: '[data-workbench-panel="inspector"]',
+  inspectorExports: '[data-workbench-inspector-actions-target="exports"]',
+  projectHeatToThermo: '[data-workbench-project-heat-to-thermo="true"]',
   console: '[data-workbench-panel="console"]',
   viewportPanel: '[data-workbench-panel="viewport"]',
   viewportStage: '[data-workbench-viewport="stage"]',

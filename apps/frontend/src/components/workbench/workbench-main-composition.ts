@@ -293,9 +293,7 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
     round: props.round,
     recordHistory,
     resetActiveResult: props.resetActiveResult,
-    buildThermalBarFromHeatResult: props.buildThermalBarFromHeatResult,
-    buildThermalPlaneTriangleFromHeatResult: props.buildThermalPlaneTriangleFromHeatResult,
-    buildThermalPlaneQuadFromHeatResult: props.buildThermalPlaneQuadFromHeatResult,
+    projectContext: props.projectFlows.projectContext,
     openWorkspaceStudy,
   });
 
@@ -502,7 +500,10 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
     currentStudyFamilyHint,
     isPending: props.isPending,
     canProjectHeatToThermo,
-    projectHeatToThermoStudy,
+    projectHeatToThermoStudy: () => {
+      try { projectHeatToThermoStudy(); }
+      catch (error) { props.setMessage(error instanceof Error ? error.message : String(error)); }
+    },
     clampChunkOffset: props.clampChunkOffset,
     recordHistory,
     drag3dHistoryCapturedRef: props.drag3dHistoryCapturedRef,

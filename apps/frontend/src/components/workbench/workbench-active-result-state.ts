@@ -283,7 +283,7 @@ export function buildWorkbenchActiveResultState(props: Record<string, any>) {
     (planeWindowNodes ?? activePlaneResult?.nodes)?.map((node: any, index: number) => ({
       ...activePlaneInputModel.nodes[node.index ?? index],
       ...node,
-      index,
+      index: node.index ?? index,
       ux: typeof node.ux === "number" ? node.ux : 0,
       uy: typeof node.uy === "number" ? node.uy : 0,
       fix_x: !isHeatPlane ? activePlaneInputModel.nodes[node.index ?? index]?.fix_x ?? false : false,
@@ -291,7 +291,7 @@ export function buildWorkbenchActiveResultState(props: Record<string, any>) {
       load_x: !isHeatPlane ? activePlaneInputModel.nodes[node.index ?? index]?.load_x ?? 0 : 0,
       load_y: !isHeatPlane ? activePlaneInputModel.nodes[node.index ?? index]?.load_y ?? 0 : 0,
       fix_temperature: isHeatPlane ? activePlaneInputModel.nodes[node.index ?? index]?.fix_temperature ?? false : undefined,
-      temperature: isHeatPlane ? activePlaneInputModel.nodes[node.index ?? index]?.temperature ?? 0 : undefined,
+      temperature: isHeatPlane ? node.temperature : undefined,
       heat_load: isHeatPlane ? activePlaneInputModel.nodes[node.index ?? index]?.heat_load ?? 0 : undefined,
     })) ??
     activePlaneInputModel.nodes.map((node: any, index: number) => ({
@@ -309,10 +309,7 @@ export function buildWorkbenchActiveResultState(props: Record<string, any>) {
     (planeWindowElements ?? activePlaneResult?.elements)?.map((element: any) => ({
       ...activePlaneInputModel.elements[element.index],
       ...element,
-      material_id:
-        "material_id" in activePlaneInputModel.elements[element.index]
-          ? activePlaneInputModel.elements[element.index]?.material_id
-          : undefined,
+      material_id: activePlaneInputModel.elements[element.index]?.material_id,
     })) ??
     activePlaneInputModel.elements.map((element: any, index: number) => ({
       ...element,

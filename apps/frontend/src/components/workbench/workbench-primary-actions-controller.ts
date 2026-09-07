@@ -148,7 +148,7 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
     runWorkbenchTransitionOperation(deps.startTransition, async () => {
       try {
         dismissWorkbenchAlert(deps.setSystemAlerts, "run-analysis-error");
-        return await runWorkbenchAnalysis({
+        const outcome = await runWorkbenchAnalysis({
           axialForm: deps.axialForm,
           beamModel: deps.beamModel,
           copy: deps.t,
@@ -192,6 +192,10 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
           trussDiagnostics: deps.trussDiagnostics,
           trussModel: deps.trussModel,
         });
+        if (outcome.ok && outcome.backend === "orchestrated" && outcome.completion === "terminal") {
+          await refreshResults();
+        }
+        return outcome;
       } catch (error) {
         const message =
           error instanceof Error

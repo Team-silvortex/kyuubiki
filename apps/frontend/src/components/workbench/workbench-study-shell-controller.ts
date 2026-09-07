@@ -4,6 +4,8 @@ import { useMemo } from "react";
 
 import { buildWorkbenchStudySidebarData } from "@/components/workbench/workbench-study-sidebar-data";
 import { createStudyKindResetHandlers } from "@/components/workbench/workbench-study-kind-controller";
+import { buildThermalBarFromHeatResult, buildThermalPlaneTriangleFromHeatResult, buildThermalPlaneQuadFromHeatResult } from "./workbench-heat-thermo-projection";
+import type { WorkbenchStudyKind } from "@/lib/workbench/history";
 import {
   projectElectrostaticPlaneQuadResultToHeatModel,
   projectElectrostaticPlaneTriangleResultToHeatModel,
@@ -126,32 +128,41 @@ export function useWorkbenchStudyShellController(props: Record<string, any>) {
         ? "静電場の結果を熱伝導 study に投影しました。求解前に熱境界と熱源スケールを確認してください。"
         : "Mapped the electrostatic field result into a heat-conduction study. Review thermal boundaries and heat-load scale before solving.";
 
+  function commitProjection(kind: WorkbenchStudyKind, applyModel: () => void, label: string, message: string) {
+    props.recordHistory(label);
+    props.projectContext.begin();
+    props.projectContext.update({ projectId: props.workspaceState.selectedProjectId, modelId: null, versionId: null });
+    props.resetActiveResult();
+    props.workspaceState.setSelectedModelId(null);
+    props.workspaceState.setSelectedVersionId(null);
+    props.workspaceState.setModelVersions([]);
+    applyModel();
+    props.workspaceState.setStudyKind(kind);
+    props.openWorkspaceStudy("controls");
+    props.workspaceState.setMessage(message);
+    return kind;
+  }
+
   const projectElectrostaticToHeatStudy = () => {
     const electrostaticResult = props.studyResultDerived.electrostaticPlaneResult;
     if (props.workspaceState.studyKind === "electrostatic_plane_triangle_2d" && electrostaticResult) {
-      props.recordHistory("Mapped electrostatic result into heat study");
-      props.resetActiveResult();
-      props.workspaceState.setHeatPlaneModel(
-        projectElectrostaticPlaneTriangleResultToHeatModel(electrostaticResult, props.workspaceState.heatPlaneModel),
+      const model = projectElectrostaticPlaneTriangleResultToHeatModel(
+        electrostaticResult, props.workspaceState.heatPlaneModel, undefined, props.workspaceState.planeModel,
       );
-      props.workspaceState.setPlaneResultField("average_temperature");
-      props.workspaceState.setStudyKind("heat_plane_triangle_2d");
-      props.openWorkspaceStudy("controls");
-      props.workspaceState.setMessage(electrostaticHeatMessage);
-      return "heat_plane_triangle_2d" as const;
+      return commitProjection("heat_plane_triangle_2d", () => {
+        props.workspaceState.setHeatPlaneModel(model);
+        props.workspaceState.setPlaneResultField("average_temperature");
+      }, "Mapped electrostatic result into heat study", electrostaticHeatMessage);
     }
 
     if (props.workspaceState.studyKind === "electrostatic_plane_quad_2d" && electrostaticResult) {
-      props.recordHistory("Mapped electrostatic result into heat study");
-      props.resetActiveResult();
-      props.workspaceState.setHeatPlaneModel(
-        projectElectrostaticPlaneQuadResultToHeatModel(electrostaticResult, props.workspaceState.heatPlaneModel),
+      const model = projectElectrostaticPlaneQuadResultToHeatModel(
+        electrostaticResult, props.workspaceState.heatPlaneModel, undefined, props.workspaceState.planeModel,
       );
-      props.workspaceState.setPlaneResultField("average_temperature");
-      props.workspaceState.setStudyKind("heat_plane_quad_2d");
-      props.openWorkspaceStudy("controls");
-      props.workspaceState.setMessage(electrostaticHeatMessage);
-      return "heat_plane_quad_2d" as const;
+      return commitProjection("heat_plane_quad_2d", () => {
+        props.workspaceState.setHeatPlaneModel(model);
+        props.workspaceState.setPlaneResultField("average_temperature");
+      }, "Mapped electrostatic result into heat study", electrostaticHeatMessage);
     }
 
     return null;
@@ -159,55 +170,33 @@ export function useWorkbenchStudyShellController(props: Record<string, any>) {
 
   const projectHeatToThermoStudy = () => {
     if (props.workspaceState.studyKind === "heat_bar_1d" && props.studyResultDerived.heatBarResult) {
-      props.recordHistory(props.t.projectHeatToThermoAction);
-      props.resetActiveResult();
-      props.workspaceState.setThermalBarModel(
-        props.buildThermalBarFromHeatResult(
-          props.workspaceState.heatBarModel,
-          props.studyResultDerived.heatBarResult,
-          props.workspaceState.thermalBarModel,
-        ),
+      const model = buildThermalBarFromHeatResult(
+        props.workspaceState.heatBarModel, props.studyResultDerived.heatBarResult, props.workspaceState.thermalBarModel,
       );
-      props.workspaceState.setStudyKind("thermal_bar_1d");
-      props.openWorkspaceStudy("controls");
-      props.workspaceState.setMessage(props.t.projectedHeatToThermo);
-      return "thermal_bar_1d" as const;
+      return commitProjection("thermal_bar_1d", () => props.workspaceState.setThermalBarModel(model),
+        props.t.projectHeatToThermoAction, props.t.projectedHeatToThermo);
     }
 
     if (props.workspaceState.studyKind === "heat_plane_triangle_2d" && props.studyResultDerived.heatPlaneTriangleResult) {
-      props.recordHistory(props.t.projectHeatToThermoAction);
-      props.resetActiveResult();
-      props.workspaceState.setPlaneModel(
-        props.buildThermalPlaneTriangleFromHeatResult(
-          props.workspaceState.heatPlaneModel,
-          props.studyResultDerived.heatPlaneTriangleResult,
-          props.workspaceState.planeModel,
-          props.workspaceState.activeMaterial,
-        ),
+      const model = buildThermalPlaneTriangleFromHeatResult(
+        props.workspaceState.heatPlaneModel, props.studyResultDerived.heatPlaneTriangleResult,
+        props.workspaceState.planeModel, props.workspaceState.activeMaterial,
       );
-      props.workspaceState.setPlaneResultField("average_temperature_delta");
-      props.workspaceState.setStudyKind("thermal_plane_triangle_2d");
-      props.openWorkspaceStudy("controls");
-      props.workspaceState.setMessage(props.t.projectedHeatToThermo);
-      return "thermal_plane_triangle_2d" as const;
+      return commitProjection("thermal_plane_triangle_2d", () => {
+        props.workspaceState.setPlaneModel(model);
+        props.workspaceState.setPlaneResultField("average_temperature_delta");
+      }, props.t.projectHeatToThermoAction, props.t.projectedHeatToThermo);
     }
 
     if (props.workspaceState.studyKind === "heat_plane_quad_2d" && props.studyResultDerived.heatPlaneQuadResult) {
-      props.recordHistory(props.t.projectHeatToThermoAction);
-      props.resetActiveResult();
-      props.workspaceState.setPlaneModel(
-        props.buildThermalPlaneQuadFromHeatResult(
-          props.workspaceState.heatPlaneModel,
-          props.studyResultDerived.heatPlaneQuadResult,
-          props.workspaceState.planeModel,
-          props.workspaceState.activeMaterial,
-        ),
+      const model = buildThermalPlaneQuadFromHeatResult(
+        props.workspaceState.heatPlaneModel, props.studyResultDerived.heatPlaneQuadResult,
+        props.workspaceState.planeModel, props.workspaceState.activeMaterial,
       );
-      props.workspaceState.setPlaneResultField("average_temperature_delta");
-      props.workspaceState.setStudyKind("thermal_plane_quad_2d");
-      props.openWorkspaceStudy("controls");
-      props.workspaceState.setMessage(props.t.projectedHeatToThermo);
-      return "thermal_plane_quad_2d" as const;
+      return commitProjection("thermal_plane_quad_2d", () => {
+        props.workspaceState.setPlaneModel(model);
+        props.workspaceState.setPlaneResultField("average_temperature_delta");
+      }, props.t.projectHeatToThermoAction, props.t.projectedHeatToThermo);
     }
 
     return null;

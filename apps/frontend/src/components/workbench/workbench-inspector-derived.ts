@@ -1,6 +1,7 @@
 import { lineResultFieldValue, planeResultFieldValue } from "@/components/workbench/workbench-result-helpers";
 import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
 import { scientific } from "@/lib/workbench/helpers";
+import { findPlaneItemByIndex } from "@/components/workbench/workbench-plane-topology";
 
 type PlaneElement = {
   index: number;
@@ -232,7 +233,7 @@ export function buildWorkbenchSelectionData({
   displayTrussElements: LineElement[];
   displayTruss3dNodes: SpatialNode[];
   displayTruss3dElements: Array<LineElement & { material_id?: string }>;
-  planeNodes: PointNode[];
+  planeNodes: Array<PointNode & { index: number }>;
   planeElements: PlaneElement[];
   isThermalFrame: boolean;
   thermalFrameModel: { nodes: FrameNode[]; elements: FrameElement[] };
@@ -291,23 +292,25 @@ export function buildWorkbenchSelectionData({
           node_j: displayTruss3dElements[selectedElement].node_j ?? 0,
         }
       : null;
+  const selectedPlaneNode = findPlaneItemByIndex(planeNodes, selectedNode);
   const selectedPlaneNodeData =
-    selectedNode !== null && planeNodes[selectedNode]
+    selectedPlaneNode
       ? {
-          ...planeNodes[selectedNode],
-          load_x: planeNodes[selectedNode].load_x ?? 0,
-          load_y: planeNodes[selectedNode].load_y ?? 0,
-          fix_x: planeNodes[selectedNode].fix_x ?? false,
-          fix_y: planeNodes[selectedNode].fix_y ?? false,
+          ...selectedPlaneNode,
+          load_x: selectedPlaneNode.load_x ?? 0,
+          load_y: selectedPlaneNode.load_y ?? 0,
+          fix_x: selectedPlaneNode.fix_x ?? false,
+          fix_y: selectedPlaneNode.fix_y ?? false,
         }
       : null;
+  const selectedPlaneElement = findPlaneItemByIndex(planeElements, selectedElement);
   const selectedPlaneElementData =
-    selectedElement !== null && planeElements[selectedElement]
+    selectedPlaneElement
       ? {
-          ...planeElements[selectedElement],
-          node_i: planeElements[selectedElement].node_i ?? 0,
-          node_j: planeElements[selectedElement].node_j ?? 0,
-          node_k: planeElements[selectedElement].node_k ?? 0,
+          ...selectedPlaneElement,
+          node_i: selectedPlaneElement.node_i ?? 0,
+          node_j: selectedPlaneElement.node_j ?? 0,
+          node_k: selectedPlaneElement.node_k ?? 0,
         }
       : null;
   const selectedFrameNodeData =

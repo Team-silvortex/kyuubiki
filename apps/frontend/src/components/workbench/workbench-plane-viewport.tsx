@@ -13,6 +13,7 @@ import {
   VIEWPORT_CLIP,
 } from "@/components/workbench/workbench-viewport-core";
 import { buildPlaneElementReadout, buildPlaneNodeReadout, type PlaneReadout } from "@/components/workbench/workbench-plane-readout";
+import { buildPlaneNodeIndex, findPlaneItemByIndex, resolvePlaneElementNodes } from "@/components/workbench/workbench-plane-topology";
 
 function renderSupportGlyph(
   point: { x: number; y: number },
@@ -91,12 +92,13 @@ type WorkbenchPlaneViewportProps = {
 
 export function WorkbenchPlaneViewport(props: WorkbenchPlaneViewportProps) {
   const [hoverReadout, setHoverReadout] = useState<PlaneReadout | null>(null);
+  const nodeIndex = useMemo(() => buildPlaneNodeIndex(props.planeNodes), [props.planeNodes]);
 
   const selectedNodeData = useMemo(
     () => (props.selectedPlaneNodeId ? props.planeNodes.find((node) => node.id === props.selectedPlaneNodeId) ?? null : null),
     [props.planeNodes, props.selectedPlaneNodeId],
   );
-  const selectedElementData = props.selectedElement !== null ? props.planeElements[props.selectedElement] ?? null : null;
+  const selectedElementData = findPlaneItemByIndex(props.planeElements, props.selectedElement);
   const persistentReadout =
     selectedElementData ? buildPlaneElementReadout(props.studyKind, selectedElementData) : selectedNodeData ? buildPlaneNodeReadout(props.studyKind, selectedNodeData) : null;
   const activeReadout = persistentReadout ?? hoverReadout;
@@ -116,8 +118,9 @@ export function WorkbenchPlaneViewport(props: WorkbenchPlaneViewportProps) {
       <g clipPath="url(#viewportClipPlane)">
         {props.visiblePlaneElements.map((element) => {
           if (element.material_id && props.hiddenPlaneMaterialIds.includes(element.material_id)) return null;
-          const nodeIndices = typeof element.node_l === "number" ? [element.node_i, element.node_j, element.node_k, element.node_l] : [element.node_i, element.node_j, element.node_k];
-          const points = nodeIndices.map((nodeIndex) => toSvgPoint(props.planeNodes[nodeIndex], props.planeBounds));
+          const nodes = resolvePlaneElementNodes(element, nodeIndex);
+          if (!nodes) return null;
+          const points = nodes.map((node) => toSvgPoint(node, props.planeBounds));
           if (!polygonInsideViewport(points)) return null;
           return (
             <polygon
@@ -137,15 +140,17 @@ export function WorkbenchPlaneViewport(props: WorkbenchPlaneViewportProps) {
           ? props.visiblePlaneElements.flatMap((element, index) => {
               if (element.material_id && props.hiddenPlaneMaterialIds.includes(element.material_id)) return [];
               if (index % props.planeDeformedStep !== 0) return [];
-              const nodeIndices = typeof element.node_l === "number" ? [element.node_i, element.node_j, element.node_k, element.node_l] : [element.node_i, element.node_j, element.node_k];
-              const points = nodeIndices.map((nodeIndex) =>
-                toSvgPoint({ x: props.planeNodes[nodeIndex].x + props.planeNodes[nodeIndex].ux * 5000, y: props.planeNodes[nodeIndex].y + props.planeNodes[nodeIndex].uy * 5000 }, props.planeBounds),
+              const nodes = resolvePlaneElementNodes(element, nodeIndex);
+              if (!nodes || nodes.some((node) => !Number.isFinite(node.ux) || !Number.isFinite(node.uy))) return [];
+              const points = nodes.map((node) =>
+                toSvgPoint({ x: node.x + node.ux * 5000, y: node.y + node.uy * 5000 }, props.planeBounds),
               );
               if (!polygonInsideViewport(points, 70)) return [];
               return <polygon key={`plane-def-${element.id}`} points={points.map((point) => `${point.x},${point.y}`).join(" ")} className="plane-triangle plane-triangle--deformed" />;
             })
           : null}
         {props.visiblePlaneNodes.flatMap((node, index) => {
+          if (nodeIndex.get(node.index) !== node) return [];
           const point = toSvgPoint(node, props.planeBounds);
           if (!pointInsideViewport(point, 18)) return [];
           const showLabel = index % props.planeNodeLabelStep === 0 || props.selectedPlaneNodeId === node.id;

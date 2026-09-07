@@ -161,6 +161,7 @@ export function useWorkbenchFlowControllers(props: Record<string, any>) {
     studyKind: props.studyKind,
     studyKindResetHandlers: props.studyKindResetHandlers,
     setStudyKind: props.setStudyKind,
+    setSidebarSection: props.setSidebarSection,
     handleSidebarSectionChange: props.handleSidebarSectionChange,
     recordHistory: props.recordHistory,
     changeStudyTypeLabel: props.t.changeStudyType,

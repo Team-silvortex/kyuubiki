@@ -305,7 +305,7 @@ export function WorkbenchInspectorActionsExportPanel({
         <button className="ghost-button" onClick={onDownloadJson} type="button">{t.exportData} {t.exportJson}</button>
         <button className="ghost-button" onClick={onDownloadCsv} type="button">{t.exportData} {t.exportCsv}</button>
         {canProjectHeatToThermo && onProjectHeatToThermo && projectHeatToThermoLabel ? (
-          <button className="ghost-button" onClick={onProjectHeatToThermo} type="button">{projectHeatToThermoLabel}</button>
+          <button className="ghost-button" data-workbench-project-heat-to-thermo="true" onClick={onProjectHeatToThermo} type="button">{projectHeatToThermoLabel}</button>
         ) : null}
       </div>
       <div className="metric-grid">
