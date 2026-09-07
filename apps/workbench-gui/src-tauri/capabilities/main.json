@@ -11,6 +11,8 @@
     "allow-guarded-mutation-action",
     "allow-workbench-environment",
     "allow-get-global-language-preference",
-    "allow-set-global-language-preference"
+    "allow-set-global-language-preference",
+    "allow-get-workbench-panel-layout",
+    "allow-set-workbench-panel-layout"
   ]
 }

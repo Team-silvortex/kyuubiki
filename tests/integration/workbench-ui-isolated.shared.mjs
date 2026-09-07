@@ -396,6 +396,7 @@ function createIsolatedFrontendWorkspace() {
       },
     });
     cpSync(path.join(ROOT, "assets"), path.join(repoRoot, "assets"), { recursive: true });
+    cpSync(path.join(ROOT, "apps/desktop-shared/src"), path.join(repoRoot, "apps/desktop-shared/src"), { recursive: true });
     symlinkSync(
       path.join(FRONTEND_ROOT, "node_modules"),
       path.join(workspaceRoot, "node_modules"),

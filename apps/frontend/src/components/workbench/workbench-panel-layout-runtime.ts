@@ -1,7 +1,9 @@
 import {
-  WORKBENCH_PANEL_LAYOUT_KEY, parseWorkbenchPanelPreferences, resolveWorkbenchPanelLayout, resizeWorkbenchPanel,
+  resolveWorkbenchPanelLayout, resizeWorkbenchPanel,
   type WorkbenchPanelGeometry, type WorkbenchPanelPreferences, type WorkbenchPanelSize,
 } from "./workbench-panel-layout";
+import { createWorkbenchPanelPersistence } from "./workbench-panel-persistence";
+import { createWorkbenchPanelLayoutClient } from "../../../../desktop-shared/src/workbench-panel-layout-bridge";
 
 const handleSelector = "[data-workbench-resize]";
 
@@ -14,11 +16,13 @@ export function installWorkbenchPanelLayout(root: HTMLElement) {
     windowWidth: number; windowHeight: number;
   } | null = null;
 
-  try {
-    preferences = parseWorkbenchPanelPreferences(window.localStorage.getItem(WORKBENCH_PANEL_LAYOUT_KEY));
-  } catch {
-    root.dataset.workbenchLayoutStorage = "memory";
-  }
+  const persistence = createWorkbenchPanelPersistence({
+    storage: () => window.localStorage,
+    client: createWorkbenchPanelLayoutClient(),
+    restore: sizes => { preferences = sizes; schedulePaint(); },
+    status: value => { root.dataset.workbenchLayoutStorage = value; },
+  });
+  preferences = persistence.initial;
 
   function geometry(): WorkbenchPanelGeometry {
     const style = getComputedStyle(root);
@@ -49,14 +53,7 @@ export function installWorkbenchPanelLayout(root: HTMLElement) {
   }
 
   function save() {
-    try {
-      if (Object.keys(preferences).length) {
-        window.localStorage.setItem(WORKBENCH_PANEL_LAYOUT_KEY, JSON.stringify({ version: 1, sizes: preferences }));
-      } else window.localStorage.removeItem(WORKBENCH_PANEL_LAYOUT_KEY);
-      root.dataset.workbenchLayoutStorage = "saved";
-    } catch {
-      root.dataset.workbenchLayoutStorage = "memory";
-    }
+    persistence.save(preferences);
   }
 
   function stop(commit: boolean) {
@@ -90,6 +87,7 @@ export function installWorkbenchPanelLayout(root: HTMLElement) {
     if (!handle || !panel || !enabled(handle) || drag || event.button !== 0 || !event.isPrimary) return;
     event.preventDefault();
     const bounds = geometry();
+    persistence.changed();
     handle.focus({ preventScroll: true });
     handle.setPointerCapture(event.pointerId);
     drag = {
@@ -192,6 +190,7 @@ export function installWorkbenchPanelLayout(root: HTMLElement) {
   window.addEventListener("resize", resize);
   document.addEventListener("fullscreenchange", resize);
   return () => {
+    persistence.dispose();
     cancel();
     if (frame) cancelAnimationFrame(frame);
     observer?.disconnect();

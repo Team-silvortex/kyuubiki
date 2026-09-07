@@ -18,6 +18,9 @@ mod runtime_export;
 mod runtime_layout;
 mod runtime_options;
 mod runtime_support;
+mod panel_preferences;
+
+pub use panel_preferences::{read_workbench_panel_layout, write_workbench_panel_layout, WorkbenchPanelLayout};
 
 pub use audit_log::{
     DesktopAuditLedgerStatus, append_desktop_provenance_record, desktop_provenance_status,

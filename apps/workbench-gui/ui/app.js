@@ -13,6 +13,7 @@ import {
 import { normalizeDesktopPlatform } from "./shared/platform.js";
 import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/runtime-status-summary.js";
 import { loadDesktopLanguagePack } from "./shared/language-pack-loader.js";
+import { installWorkbenchPanelLayoutHost } from "./shared/workbench-panel-layout-bridge.js";
 
 const shellCopy = {
   en: {
@@ -355,6 +356,7 @@ async function loadEnvironment() {
 function loadWorkbenchFrame() {
   const nextUrl = new URL(state.workbenchUrl);
   nextUrl.searchParams.set("desktopLanguage", state.language);
+  nextUrl.searchParams.set("desktopLayout", "1");
   elements.frame.src = nextUrl.toString();
   elements.viewerCaption.textContent = state.workbenchUrl;
 }
@@ -529,6 +531,8 @@ watchDesktopLanguagePreference({
     postLanguageToWorkbench();
   },
 });
+
+installWorkbenchPanelLayoutHost(elements.frame, invokeTauri);
 
 window.addEventListener("message", async (event) => {
   if (event.source !== elements.frame.contentWindow) return;

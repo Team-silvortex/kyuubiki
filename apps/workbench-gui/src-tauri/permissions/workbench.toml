@@ -32,3 +32,13 @@ commands.allow = ["get_global_language_preference"]
 identifier = "allow-set-global-language-preference"
 description = "Enables the set_global_language_preference command."
 commands.allow = ["set_global_language_preference"]
+
+[[permission]]
+identifier = "allow-get-workbench-panel-layout"
+description = "Reads only the fixed Workbench panel layout preference."
+commands.allow = ["get_workbench_panel_layout"]
+
+[[permission]]
+identifier = "allow-set-workbench-panel-layout"
+description = "Writes only validated Workbench panel dimensions, not arbitrary preferences or files."
+commands.allow = ["set_workbench_panel_layout"]

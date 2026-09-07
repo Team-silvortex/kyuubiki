@@ -60,7 +60,7 @@ const STORAGE_BUCKETS: StorageBucketDefinition[] = [
     dataClass: "preference",
     portable: false,
     cleanupLabel: "Restore layout in the report header",
-    detail: "One bounded versioned record of panel widths and report height. No model or credential data; saved only after user adjustment.",
+    detail: "One bounded versioned record of panel widths and report height. Desktop authority: desktop-workbench-layout.json in the native application preferences directory; this browser record is only a cache there. No model or credential data; saved only after user adjustment.",
   },
   {
     id: "workflow_snapshots",

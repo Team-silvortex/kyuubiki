@@ -37,6 +37,18 @@ struct DesktopPreferencesPayload {
     language: String,
 }
 
+#[tauri::command]
+fn get_workbench_panel_layout() -> Result<Option<kyuubiki_desktop_runtime::WorkbenchPanelLayout>, String> {
+    kyuubiki_desktop_runtime::read_workbench_panel_layout()
+}
+
+#[tauri::command]
+fn set_workbench_panel_layout(
+    payload: kyuubiki_desktop_runtime::WorkbenchPanelLayout,
+) -> Result<kyuubiki_desktop_runtime::WorkbenchPanelLayout, String> {
+    kyuubiki_desktop_runtime::write_workbench_panel_layout(payload)
+}
+
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct WorkbenchGuardedMutationPayload {
@@ -172,6 +184,8 @@ fn main() {
             workbench_environment,
             get_global_language_preference,
             set_global_language_preference,
+            get_workbench_panel_layout,
+            set_workbench_panel_layout,
             guarded_mutation_action
         ])
         .run(tauri::generate_context!())

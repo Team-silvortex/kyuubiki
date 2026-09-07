@@ -183,6 +183,12 @@
           "markdownDescription": "Enables the get_global_language_preference command."
         },
         {
+          "description": "Reads only the fixed Workbench panel layout preference.",
+          "type": "string",
+          "const": "allow-get-workbench-panel-layout",
+          "markdownDescription": "Reads only the fixed Workbench panel layout preference."
+        },
+        {
           "description": "Enables the guarded_mutation_action command.",
           "type": "string",
           "const": "allow-guarded-mutation-action",
@@ -211,6 +217,12 @@
           "type": "string",
           "const": "allow-set-global-language-preference",
           "markdownDescription": "Enables the set_global_language_preference command."
+        },
+        {
+          "description": "Writes only validated Workbench panel dimensions, not arbitrary preferences or files.",
+          "type": "string",
+          "const": "allow-set-workbench-panel-layout",
+          "markdownDescription": "Writes only validated Workbench panel dimensions, not arbitrary preferences or files."
         },
         {
           "description": "Enables the workbench_environment command.",

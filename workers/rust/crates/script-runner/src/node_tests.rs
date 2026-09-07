@@ -79,6 +79,7 @@ pub(crate) fn run_node_command(
             &paths.root,
             &[
                 "apps/desktop-shared/test/tauri-bridge.test.mjs",
+                "apps/desktop-shared/test/workbench-panel-layout-bridge.test.mjs",
                 "tests/integration/desktop-gui-action-sweep.test.mjs",
                 "tests/integration/desktop-gui-capability-closure.test.mjs",
                 "tests/integration/desktop-gui-call-chain-contract.test.mjs",
