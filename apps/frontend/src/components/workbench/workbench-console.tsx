@@ -1,8 +1,9 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useId, useState } from "react";
 import { WorkbenchAlertStrip, type WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import { VirtualList } from "@/components/ui/virtual-list";
+import { WorkbenchLayoutReset, WorkbenchPanelResizeHandle } from "./workbench-panel-resize-handle";
 
 type SidebarSection = "study" | "model" | "workflow" | "library" | "system";
 
@@ -24,6 +25,7 @@ export type WorkbenchConsoleElement = {
 };
 
 export type WorkbenchConsoleProps = {
+  language?: string;
   sidebarSection: SidebarSection;
   title: string;
   subtitle: string;
@@ -57,6 +59,7 @@ function scientific(value: number | null | undefined, digits = 3): string {
 }
 
 function WorkbenchConsoleInner({
+  language,
   sidebarSection,
   title,
   subtitle,
@@ -80,13 +83,22 @@ function WorkbenchConsoleInner({
   isFrame,
   elements,
 }: WorkbenchConsoleProps) {
+  const [expanded, setExpanded] = useState(false);
+  const contentId = useId();
+  const summary = alerts.length ? alerts.map((alert) => alert.message).join("; ") : subtitle;
   return (
-    <section className="panel console-panel">
+    <section className="panel console-panel" data-workbench-report-expanded={expanded}>
+      <WorkbenchPanelResizeHandle panel="report" language={language} />
       <div className="panel-head">
-        <h2>{title}</h2>
-        <span>{subtitle}</span>
+        <h2><button type="button" data-workbench-report-toggle="true" aria-expanded={expanded}
+          aria-controls={contentId} onClick={() => setExpanded((current) => !current)}>
+          <span className="console-panel__chevron" aria-hidden="true" />{title}
+        </button></h2>
+        <span className={alerts.length ? "console-panel__alert" : undefined} title={summary}>{summary}</span>
+        <WorkbenchLayoutReset language={language} />
       </div>
-      <div className="console-grid">
+      <div id={contentId} className="console-grid" hidden={!expanded}>
+        {expanded ? <>
         <div className="console-card">
           <h3>{sidebarSection === "model" ? modelMessageTitle : reportMessageTitle}</h3>
           {sidebarSection === "model" ? (
@@ -163,6 +175,7 @@ function WorkbenchConsoleInner({
             />
           </div>
         </div>
+        </> : null}
       </div>
     </section>
   );

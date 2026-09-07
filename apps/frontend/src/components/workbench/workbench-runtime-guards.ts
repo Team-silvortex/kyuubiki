@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { exitWorkbenchViewportFullscreen, isWorkbenchViewportFullscreen } from "@/components/workbench/workbench-fullscreen";
 import { heartbeatTone } from "@/components/workbench/workbench-result-helpers";
 import { buildWorkbenchGovernanceEnforcementPlan, buildWorkbenchGovernanceRuntimeDiagnostics } from "@/lib/workbench/governance";
 import type {
@@ -209,7 +210,7 @@ export function useWorkbenchRuntimeGuards(params: {
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setImmersiveViewport(document.fullscreenElement === viewportPanelRef.current);
+      setImmersiveViewport(isWorkbenchViewportFullscreen(document, viewportPanelRef.current));
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
@@ -226,9 +227,7 @@ export function useWorkbenchRuntimeGuards(params: {
       setImmersiveViewport(false);
     }
 
-    if (document.fullscreenElement === viewportPanelRef.current) {
-      void document.exitFullscreen().catch(() => undefined);
-    }
+    void exitWorkbenchViewportFullscreen(document, viewportPanelRef.current).catch(() => undefined);
   }, [
     immersiveViewport,
     setImmersiveHelpDrawerOpen,

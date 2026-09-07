@@ -1,6 +1,8 @@
 "use client";
 
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { installWorkbenchPanelLayout } from "./workbench-panel-layout-runtime";
+import { WorkbenchPanelResizeHandle } from "./workbench-panel-resize-handle";
 import type { ReactNode } from "react";
 import { createWorkbenchUiStreamingRuntime } from "@/components/workbench/workbench-ui-streaming-runtime";
 import {
@@ -16,6 +18,7 @@ type WorkbenchShellFrameProps = {
   sidebarSection: SidebarSection;
   sidebar: ReactNode;
   workspace: ReactNode;
+  language?: string;
 };
 
 export function WorkbenchShellFrame({
@@ -24,13 +27,19 @@ export function WorkbenchShellFrame({
   sidebarSection,
   sidebar,
   workspace,
+  language,
 }: WorkbenchShellFrameProps) {
+  const shellRef = useRef<HTMLDivElement>(null);
   const [resolution, setResolution] = useState<WorkbenchResolutionAdaptation>(() =>
     resolveWorkbenchResolutionAdaptation({ width: 1440, height: 900 }),
   );
   const [fullscreen, setFullscreen] = useState(false);
   const uiStreamingRuntime = createWorkbenchUiStreamingRuntime(sidebarSection);
   const resolutionStyleVars = buildWorkbenchResolutionStyleVars(resolution);
+
+  useLayoutEffect(() => {
+    if (shellRef.current) return installWorkbenchPanelLayout(shellRef.current);
+  }, []);
 
   useLayoutEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -56,6 +65,7 @@ export function WorkbenchShellFrame({
 
   return (
     <div
+      ref={shellRef}
       className="workbench-shell"
       data-workbench-automation-contract="v1"
       data-workbench-shell="root"
@@ -72,7 +82,7 @@ export function WorkbenchShellFrame({
     >
       {assistantOverlay}
       <div className="workbench-shell__rail">{rail}</div>
-      <div className="workbench-shell__sidebar">{sidebar}</div>
+      <div className="workbench-shell__sidebar">{sidebar}<WorkbenchPanelResizeHandle panel="sidebar" language={language} /></div>
       <div className="workbench-shell__workspace">{workspace}</div>
     </div>
   );

@@ -62,13 +62,13 @@ export function WorkbenchScriptLaunchCard({
         }
       />
       <div className="button-row">
-        <button className="ghost-button" onClick={loadRuntime} type="button">
+        <button className="ghost-button" disabled={runtimeStatus === "loading" || runtimeStatus === "running"} onClick={loadRuntime} type="button">
           {copy.loadRuntime}
         </button>
         <button className="ghost-button" onClick={resetScript} type="button">
           {copy.resetScript}
         </button>
-        <button className="ghost-button" onClick={runScript} type="button">
+        <button className="ghost-button" disabled={runtimeStatus === "loading" || runtimeStatus === "running"} onClick={runScript} type="button">
           {copy.runScript}
         </button>
         <button className={`ghost-button${recordingMode ? " ghost-button--active" : ""}`} onClick={toggleRecordingMode} type="button">

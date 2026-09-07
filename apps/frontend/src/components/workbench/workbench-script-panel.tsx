@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { workbenchScriptSession } from "@/lib/scripting/workbench-script-session";
 import { WorkbenchAlertStrip } from "@/components/workbench/workbench-alert-strip";
 import { WorkbenchHeadlessWorkflowPanel } from "@/components/workbench/workbench-headless-workflow-panel";
 import type { FrontendMacroAssetRecord } from "@/components/workbench/workbench-headless-workflow-panel";
@@ -75,7 +76,6 @@ type WorkbenchScriptPanelProps = {
   onToggleRecordingMode: () => void;
   onInvokeAction: (action: string, payload?: Record<string, unknown>) => Promise<unknown>;
 };
-type RuntimeStatus = "idle" | "loading" | "ready" | "running" | "error";
 type PanelStorageStatus = "loading" | "ready" | "blocked";
 const STORAGE_KEY = "kyuubiki-workbench-python-panel", DSL_STORAGE_KEY = "kyuubiki-workbench-dsl-panel";
 function stringifyPayload(payload: Record<string, unknown> | undefined): string {
@@ -86,9 +86,10 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
   const [headlessFrontendMacroAssets, setHeadlessFrontendMacroAssets] = useState<FrontendMacroAssetRecord[]>([]);
   const [scriptCode, setScriptCode] = useState(DEFAULT_WORKBENCH_PYTHON);
   const [dslCode, setDslCode] = useState(DEFAULT_WORKBENCH_FRONTEND_DSL);
-  const [output, setOutput] = useState<string[]>([]);
-  const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatus>("idle");
-  const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const { output, runtimeStatus, runtimeError } = useSyncExternalStore(
+    workbenchScriptSession.subscribe, workbenchScriptSession.getSnapshot, workbenchScriptSession.getServerSnapshot,
+  );
+  const { setOutput, setRuntimeStatus, setRuntimeError } = workbenchScriptSession;
   const [dslError, setDslError] = useState<string | null>(null);
   const [scriptStorageStatus, setScriptStorageStatus] = useState<PanelStorageStatus>("loading");
   const [dslStorageStatus, setDslStorageStatus] = useState<PanelStorageStatus>("loading");
@@ -158,13 +159,12 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
   };
   const resolveCurrentDraft = () => macroDraftBuffer ?? buildWorkbenchRecordedMacroDraft(actionLog);
   const loadRuntime = async () => {
+    if (workbenchScriptSession.isBusy()) return;
     setRuntimeError(null);
     setRuntimeStatus("loading");
     try {
       await executeWorkbenchPythonSource({
         appendOutput,
-        getSnapshot,
-        onInvokeAction,
         source: `${buildWorkbenchPythonPrelude()}\nky.log("Runtime loaded")`,
       });
       setRuntimeStatus("ready");
@@ -193,14 +193,13 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     }
   };
   const runScript = async () => {
+    if (workbenchScriptSession.isBusy()) return;
     setRuntimeError(null);
     setRuntimeStatus("running");
     try {
       appendOutput(`[script] ${t.running}`);
       await executeWorkbenchPythonSource({
         appendOutput,
-        getSnapshot,
-        onInvokeAction,
         source: `${buildWorkbenchPythonPrelude()}\n${scriptCode}`,
       });
       setRuntimeStatus("ready");
@@ -213,6 +212,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     }
   };
   const runDsl = async () => {
+    if (workbenchScriptSession.isBusy()) return;
     const compiled = compileDslToScript();
     if (!compiled) return;
     setRuntimeError(null);
@@ -221,8 +221,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       appendOutput("[dsl] running");
       await executeWorkbenchPythonSource({
         appendOutput,
-        getSnapshot,
-        onInvokeAction,
         source: `${buildWorkbenchPythonPrelude()}\n${compiled}`,
       });
       setRuntimeStatus("ready");

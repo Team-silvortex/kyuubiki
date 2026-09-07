@@ -148,6 +148,41 @@ test("Workbench PWDT retries script execution without discarding the loaded runt
   });
 });
 
+test("Workbench PWDT retains an in-flight execution across panel unload and allows a second run", { timeout: 75_000 }, async () => {
+  await usingWorkbench(async (page) => {
+    // This adapter exercises view lifetime and concurrency, not Python/WASM computation.
+    await page.route("https://cdn.jsdelivr.net/pyodide/**/pyodide.js", (route) => route.fulfill({
+      contentType: "application/javascript",
+      body: `window.loadPyodide = async () => ({ runPythonAsync: async () => {
+        window.pwdtExecutionCount = (window.pwdtExecutionCount || 0) + 1;
+        const bridge = window.__kyuubikiBridge;
+        bridge.log("execution-start-" + window.pwdtExecutionCount);
+        if (window.pwdtExecutionCount === 1) {
+          await window.__kyuubikiPwdt.openSidebar("model");
+          await new Promise(resolve => { window.releasePwdtExecution = resolve; });
+        }
+        bridge.log("execution-end-" + window.pwdtExecutionCount);
+      } });`,
+    }));
+    await openWorkbench(page);
+    let launch = await openPythonPanel(page);
+    await launch.getByRole("button", { name: "Run script", exact: true }).click();
+    await page.waitForFunction(() => typeof window.releasePwdtExecution === "function");
+    assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().sidebarSection), "model");
+    launch = await openPythonPanel(page);
+    assert.equal(await launch.getByRole("button", { name: "Run script", exact: true }).isDisabled(), true);
+    assert.equal(await launch.getByRole("button", { name: "Load runtime", exact: true }).isDisabled(), true);
+    assert.match(await page.locator("body").innerText(), /execution-start-1/u);
+    await page.evaluate(() => window.releasePwdtExecution());
+    await launch.locator(".status-chip--good").waitFor();
+    assert.match(await page.locator("body").innerText(), /execution-end-1/u);
+    await launch.getByRole("button", { name: "Run script", exact: true }).click();
+    await page.waitForFunction(() => window.pwdtExecutionCount === 2);
+    await launch.locator(".status-chip--good").waitFor();
+    assert.match(await page.locator("body").innerText(), /execution-end-2/u);
+  });
+});
+
 for (const status of ["failed", "cancelled"]) {
 test(`Workbench PWDT recipe stops at a real action-chain ${status} response`, { timeout: 75_000 }, async () => {
   await usingWorkbench(async (page, library) => {

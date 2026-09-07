@@ -224,7 +224,7 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
     });
 
   const openHistoryJob = (jobId: string) => {
-    const observation = ++deps.jobPollTokenRef.current;
+    let observation = deps.jobPollTokenRef.current;
     const ownsProject = deps.projectContext.begin();
     const isCurrent = () => observation === deps.jobPollTokenRef.current && ownsProject();
     return runWorkbenchTransitionOperation(deps.startTransition, async () => {
@@ -234,6 +234,8 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
         if (!isCurrent()) return workbenchOperationFailure(workbenchProjectContextChangedError(), deps.t.initialFailed);
         if (payload.job?.job_id !== jobId) invalidHistoryResult("The response belongs to a different job.");
         applyHistoryJobPayload(payload, {
+          // A failed archive read must leave the current submission/polling alive.
+          commitObservation: () => { observation = ++deps.jobPollTokenRef.current; },
           detachSavedModel: () => {
             const selection = deps.projectContext.current();
             deps.projectContext.update({ projectId: selection.projectId, modelId: null, versionId: null });

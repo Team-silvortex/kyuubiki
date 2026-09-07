@@ -486,6 +486,7 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
 
   const mainShellMountProps = buildWorkbenchMainShellComposition({
     t: props.t,
+    runtimeRecovery: props.runtimeRecovery,
     shellState: props.shellState,
     workspaceState: props.workspaceState,
     studyResultDerived: props.studyResultDerived,

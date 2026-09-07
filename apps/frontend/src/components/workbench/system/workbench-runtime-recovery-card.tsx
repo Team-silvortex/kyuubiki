@@ -37,7 +37,7 @@ export function WorkbenchRuntimeRecoveryCard({
       title={copy.suggestedFixes}
       actions={
         <>
-          <button onClick={onRetryAll} type="button">{copy.refresh}</button>
+          <button data-workbench-recovery-action="retry-all" onClick={onRetryAll} type="button">{copy.refresh}</button>
           <button onClick={onRetryHealth} type="button">{copy.clusterHealth}</button>
           <button onClick={onRetryProjects} type="button">{copy.projectLibrary}</button>
           <button onClick={onRetrySecurityEvents} type="button">{copy.audit}</button>

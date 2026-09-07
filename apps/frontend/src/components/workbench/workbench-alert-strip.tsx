@@ -21,6 +21,7 @@ export function WorkbenchAlertStrip({ alerts }: WorkbenchAlertStripProps) {
       {alerts.map((alert) => (
         <div
           key={alert.id}
+          data-workbench-alert-id={alert.id}
           className={`card-copy workbench-alert-strip__item workbench-alert-strip__item--${alert.tone ?? "info"}`}
         >
           <span>{alert.message}</span>

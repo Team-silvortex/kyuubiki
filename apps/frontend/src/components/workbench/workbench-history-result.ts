@@ -20,6 +20,7 @@ type HistoryOpenEffects = {
   setWorkflowRuns: (value: any) => void;
   setMessage: (value: string) => void;
   recordHistory: (label: string) => void;
+  commitObservation: () => void;
   openWorkspaceStudy: (tab: any) => void;
   detachSavedModel: () => void;
   setStudyKind: (value: WorkbenchStudyKind) => void;
@@ -63,6 +64,7 @@ export function applyHistoryJobPayload(
   const kind = payload.result && !workflowResult ? resolveHistoryResultStudyKind(payload.result) : null;
   // Finish validation and summary construction before any state mutation.
   const summary = workflowResult ? summarizeWorkflowResultArtifacts(workflowResult) : null;
+  effects.commitObservation();
 
   if (workflowResult) {
     effects.setJob(payload.job);

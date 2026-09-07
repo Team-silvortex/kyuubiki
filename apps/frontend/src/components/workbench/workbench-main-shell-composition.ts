@@ -1,8 +1,13 @@
 "use client";
 
 import { buildWorkbenchMainShellProps } from "@/components/workbench/workbench-main-shell-props";
+import type { WorkbenchRuntimeRecoveryState } from "./workbench-runtime-recovery";
 
-export function buildWorkbenchMainShellComposition(props: Record<string, any>) {
+type WorkbenchMainShellCompositionProps = Record<string, any> & {
+  runtimeRecovery: WorkbenchRuntimeRecoveryState;
+};
+
+export function buildWorkbenchMainShellComposition(props: WorkbenchMainShellCompositionProps) {
   const { shellState, workspaceState, studyResultDerived, editControllers, interactionControllers, flowControllers } =
     props;
   const { assistantAudit, topLevelActions, uiActionController, toggleImmersiveViewport } = interactionControllers;

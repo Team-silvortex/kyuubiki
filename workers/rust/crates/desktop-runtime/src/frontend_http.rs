@@ -9,6 +9,8 @@ use serde_json::Value;
 
 const MAX_HEADER_BYTES: usize = 64 * 1024;
 const MAX_BODY_BYTES: usize = 32 * 1024 * 1024;
+const DESKTOP_FRAME_ANCESTORS: &str =
+    "frame-ancestors 'self' tauri://localhost http://tauri.localhost https://tauri.localhost";
 
 #[derive(Clone, Debug)]
 pub(crate) struct HttpRequest {
@@ -208,6 +210,16 @@ pub(crate) fn static_response(root: &Path, request: &HttpRequest) -> HttpRespons
     match fs::read(&canonical) {
         Ok(body) => {
             let mut response = response(200, mime_type(&canonical), body);
+            if response.content_type == "text/html; charset=utf-8" {
+                // The installed shell embeds loopback HTML from a different Tauri origin.
+                response
+                    .headers
+                    .retain(|(name, _)| name != "X-Frame-Options");
+                response.headers.push((
+                    "Content-Security-Policy".to_string(),
+                    DESKTOP_FRAME_ANCESTORS.to_string(),
+                ));
+            }
             response.headers.push((
                 "Cache-Control".to_string(),
                 cache_control(&canonical).to_string(),
@@ -358,7 +370,10 @@ mod tests {
     use std::fs;
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use super::{HttpRequest, insert_header, query_parameter, safe_static_path, static_response};
+    use super::{
+        HttpRequest, insert_header, json_response, query_parameter, safe_static_path,
+        static_response,
+    };
 
     fn request(path: &str) -> HttpRequest {
         HttpRequest {
@@ -418,6 +433,63 @@ mod tests {
         let response = static_response(&root, &request("/docs"));
         assert_eq!(response.status, 200);
         assert_eq!(response.body, b"documentation");
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn exported_html_allows_only_self_and_fixed_desktop_shell_ancestors() {
+        let root = std::env::temp_dir().join(format!(
+            "kyuubiki-frontend-embedding-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        fs::write(root.join("index.html"), "workbench").unwrap();
+        fs::write(root.join("app.js"), "boot()").unwrap();
+        let root = root.canonicalize().unwrap();
+        for path in ["/", "/study"] {
+            let response = static_response(&root, &request(path));
+            assert_eq!(response.status, 200);
+            assert!(response.headers.contains(&(
+                "Content-Security-Policy".to_string(),
+                "frame-ancestors 'self' tauri://localhost http://tauri.localhost https://tauri.localhost"
+                    .to_string(),
+            )));
+            assert!(
+                !response
+                    .headers
+                    .iter()
+                    .any(|(name, _)| name == "X-Frame-Options")
+            );
+            assert!(
+                response
+                    .headers
+                    .contains(&("X-Content-Type-Options".to_string(), "nosniff".to_string(),))
+            );
+            assert!(response.headers.contains(&(
+                "Cross-Origin-Resource-Policy".to_string(),
+                "same-origin".to_string(),
+            )));
+        }
+        for response in [
+            static_response(&root, &request("/app.js")),
+            static_response(&root, &request("/missing.js")),
+            json_response(200, serde_json::json!({"ok": true})),
+        ] {
+            assert!(
+                response
+                    .headers
+                    .contains(&("X-Frame-Options".to_string(), "SAMEORIGIN".to_string(),))
+            );
+            assert!(
+                !response
+                    .headers
+                    .iter()
+                    .any(|(name, _)| name == "Content-Security-Policy")
+            );
+        }
         fs::remove_dir_all(root).unwrap();
     }
 }

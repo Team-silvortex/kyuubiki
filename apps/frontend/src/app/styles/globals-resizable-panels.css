@@ -1,0 +1,105 @@
+.workbench-shell[data-workbench-window-mode][data-workbench-stack-panels="false"][data-workbench-resizable-layout="true"] {
+  grid-template-columns: 70px var(--workbench-sidebar-size) minmax(0, 1fr) var(--workbench-inspector-size);
+}
+
+.workbench-shell__sidebar,
+.workbench-shell__inspector {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.workbench-shell__inspector > .workbench-ui-chunk > .workspace-inspector {
+  height: 100%;
+}
+
+.workbench-shell .console-panel[data-workbench-report-expanded="true"] {
+  height: var(--workbench-report-size, clamp(150px, 25dvh, 240px));
+}
+
+.workbench-shell .console-panel { overflow: visible; }
+
+.workbench-panel-resize {
+  position: absolute;
+  z-index: 4;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: col-resize;
+  top: 0;
+  bottom: 0;
+  width: var(--editor-gap);
+  min-width: 6px;
+  border-radius: 3px;
+}
+
+[data-workbench-resize="sidebar"] { right: calc(-1 * var(--editor-gap)); }
+[data-workbench-resize="inspector"] { left: calc(-1 * var(--editor-gap)); }
+
+.workbench-panel-resize::after {
+  content: "";
+  position: absolute;
+  inset: calc(50% - 18px) 2px;
+  border-radius: 2px;
+  background: var(--muted);
+  opacity: 0.4;
+}
+
+.workbench-panel-resize:hover,
+.workbench-panel-resize:focus-visible {
+  background: var(--accent-soft);
+  outline: 1px solid var(--accent);
+}
+
+.workbench-shell[data-workbench-resizing] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.workbench-shell[data-workbench-resizing] iframe { pointer-events: none; }
+
+[data-workbench-resize="report"] {
+  top: calc(-1 * var(--editor-gap));
+  bottom: auto;
+  left: 0;
+  right: 0;
+  width: auto;
+  height: var(--editor-gap);
+  min-height: 6px;
+  cursor: row-resize;
+}
+
+[data-workbench-resize="report"]::after { inset: 2px calc(50% - 18px); }
+
+.workbench-shell[data-workbench-stack-panels="true"] .workbench-panel-resize,
+.console-panel[data-workbench-report-expanded="false"] [data-workbench-resize="report"] {
+  display: none;
+}
+
+.workbench-shell .workbench-layout-reset {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.workbench-layout-reset:hover { color: var(--ink); }
+.console-panel > .panel-head > span { flex: 1 1 auto; }
+
+/* WebKit can overestimate an auto-sized grid's flex basis inside the inspector. */
+.workbench-shell .inspector-stack .panel-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  height: auto;
+  align-content: flex-start;
+}
+
+.workbench-shell .inspector-stack .panel-tabs > .panel-tab {
+  flex: 1 1 calc(50% - 5px);
+}

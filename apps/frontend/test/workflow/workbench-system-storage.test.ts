@@ -59,6 +59,7 @@ test("workbench storage manifest classifies persisted buckets", async () => {
   localStorage.setItem("kyuubiki.workflow.recentOperators", JSON.stringify(["solve.bar_1d"]));
   localStorage.setItem("kyuubiki.workflow.favoriteOperators", JSON.stringify(["solve.bar_1d"]));
   localStorage.setItem("kyuubiki.unregistered.debug", "leftover");
+  localStorage.setItem("kyuubiki.workbench.panelLayout.v1", '{"version":1,"sizes":{"sidebar":300}}');
 
   const snapshot = await inspectWorkbenchStorage();
   assert.equal(snapshot.unknownKeys, 1);
@@ -70,6 +71,10 @@ test("workbench storage manifest classifies persisted buckets", async () => {
   const storeManifests = manifest.find((entry) => entry.id === "workspace_store_manifests");
   const workflowFavorites = manifest.find((entry) => entry.id === "workflow_favorites");
   const snapshots = manifest.find((entry) => entry.id === "workflow_snapshots");
+  const layout = manifest.find((entry) => entry.id === "panel_layout");
+  assert.equal(layout?.entries, 1);
+  assert.equal(layout?.dataClass, "preference");
+  assert.equal(layout?.mode, "careful");
 
   assert.equal(localWorkflows?.authority, "workbench");
   assert.equal(localWorkflows?.dataClass, "source_of_truth");
@@ -95,6 +100,7 @@ test("safe storage cleanup preserves careful source-of-truth buckets", async () 
   localStorage.setItem("kyuubiki-workbench-store-manifests", "authoritative-store-manifest");
   localStorage.setItem("kyuubiki.workbench.workflowSnapshots.index.v1", "cache");
   localStorage.setItem("kyuubiki.workbench.workflowPackageMaintenanceLog.v1", "receipt");
+  localStorage.setItem("kyuubiki.workbench.panelLayout.v1", "layout-preference");
 
   clearWorkbenchSafeStorage();
 
@@ -103,6 +109,7 @@ test("safe storage cleanup preserves careful source-of-truth buckets", async () 
   assert.equal(localStorage.getItem("kyuubiki-workbench-store-manifests"), "authoritative-store-manifest");
   assert.equal(localStorage.getItem("kyuubiki.workbench.workflowSnapshots.index.v1"), null);
   assert.equal(localStorage.getItem("kyuubiki.workbench.workflowPackageMaintenanceLog.v1"), null);
+  assert.equal(localStorage.getItem("kyuubiki.workbench.panelLayout.v1"), "layout-preference");
 
   const carefulRules = listWorkbenchStorageRules().filter((rule) => rule.mode === "careful");
   assert(carefulRules.some((rule) => rule.dataClass === "source_of_truth"));

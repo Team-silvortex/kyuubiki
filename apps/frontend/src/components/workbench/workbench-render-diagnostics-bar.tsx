@@ -59,9 +59,13 @@ export function WorkbenchRenderDiagnosticsBar({
   const fallback = resolveRenderFallbackMode(diagnostics, resultWindow);
 
   return (
-    <div className="viewport-render-bar">
-      <div className="viewport-render-bar__meta">
+    <details className="viewport-render-bar" data-workbench-render-details="true">
+      <summary>
         <strong>{t.renderDiagnosticsTitle}</strong>
+        <span>{diagnostics.progressiveActive ? t.renderStatusProgressive : t.renderStatusStable}</span>
+        <span>{diagnostics.visibleNodes}/{diagnostics.totalNodes} {t.nodes} · {diagnostics.visibleElements}/{diagnostics.totalElements} {t.totalElements}</span>
+      </summary>
+      <div className="viewport-render-bar__meta">
         <span>
           {t.renderViewportModeLabel}: {modeLabel(t, diagnostics.mode)}
         </span>
@@ -100,6 +104,6 @@ export function WorkbenchRenderDiagnosticsBar({
           </button>
         ))}
       </div>
-    </div>
+    </details>
   );
 }

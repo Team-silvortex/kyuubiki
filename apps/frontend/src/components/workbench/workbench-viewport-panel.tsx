@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode, RefObject, UIEvent as ReactUIEvent } from "react";
+import { useEffect, type ReactNode, type RefObject, type UIEvent as ReactUIEvent } from "react";
+import { observeWorkbenchViewportFit } from "./workbench-viewport-fit";
 
 type WorkbenchViewportPanelProps = {
   viewportPanelRef: RefObject<HTMLElement | null>;
@@ -13,6 +14,7 @@ type WorkbenchViewportPanelProps = {
   diagnosticsBar?: ReactNode;
   isTruss3d: boolean;
   shouldStretchSpaceViewport: boolean;
+  windowedViewport?: boolean;
   onCanvasStageScroll: (event: ReactUIEvent<HTMLDivElement>) => void;
   canvasStageRef: RefObject<HTMLDivElement | null>;
   viewportContent: ReactNode;
@@ -30,12 +32,17 @@ export function WorkbenchViewportPanel({
   diagnosticsBar,
   isTruss3d,
   shouldStretchSpaceViewport,
+  windowedViewport = false,
   onCanvasStageScroll,
   canvasStageRef,
   viewportContent,
   immersiveDrawer,
 }: WorkbenchViewportPanelProps) {
   const hasChrome = Boolean(resultWindowBar || diagnosticsBar);
+  useEffect(() => {
+    const stage = canvasStageRef.current;
+    if (stage) return observeWorkbenchViewportFit(stage);
+  }, [canvasStageRef]);
 
   return (
     <section
@@ -67,6 +74,7 @@ export function WorkbenchViewportPanel({
               onScroll={onCanvasStageScroll}
               ref={canvasStageRef}
               data-workbench-viewport="stage"
+              data-workbench-viewport-sizing={windowedViewport ? "windowed" : "fit"}
             >
               {viewportContent}
             </div>

@@ -39,6 +39,6 @@ test("short desktop windows keep compact chrome and safe bottom clearance", () =
   assert.equal(adaptation.profile, "compact");
   assert.equal(adaptation.shouldCompactChrome, true);
   assert.equal(adaptation.shouldStackPanels, false);
-  assert.equal(adaptation.shouldUseScrollableShell, true);
+  assert.equal(adaptation.shouldUseScrollableShell, false);
   assert.equal(styleVars["--workbench-bottom-safe-area"], "72px");
 });

@@ -310,11 +310,7 @@ export function useWorkbenchVisualDerived({
   const shouldStretchSpaceViewport = isTruss3d && !hasViewportDock && !activeResultWindow;
   const viewportPixelWidth = activeResultWindow
     ? Math.min(3200, 980 + Math.ceil(resultWindowMaxTotal / activeResultWindowLimit) * 180)
-    : isTruss3d
-      ? hasViewportDock
-        ? 1120
-        : undefined
-      : 980;
+    : undefined;
 
   const directMeshEndpoints = useMemo(
     () => parseDirectMeshEndpoints(directMeshEndpointsText),

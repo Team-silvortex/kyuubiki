@@ -1,28 +1,19 @@
 "use client";
 
-import {
-  ensurePyodideRuntime,
-  buildWorkbenchPyodideBridge,
-} from "@/lib/scripting/workbench-script-runtime";
+import { ensurePyodideRuntime } from "@/lib/scripting/workbench-script-runtime";
+import { buildLiveWorkbenchPythonBridge } from "@/lib/scripting/workbench-script-live-bridge";
 
 type ExecuteWorkbenchPythonSourceInput = {
   appendOutput: (line: string) => void;
-  getSnapshot: () => unknown;
-  onInvokeAction: (action: string, payload?: Record<string, unknown>) => Promise<unknown>;
   source: string;
 };
 
 export async function executeWorkbenchPythonSource({
   appendOutput,
-  getSnapshot,
-  onInvokeAction,
   source,
 }: ExecuteWorkbenchPythonSourceInput) {
+  const bridge = buildLiveWorkbenchPythonBridge(appendOutput);
   const pyodide = await ensurePyodideRuntime();
-  window.__kyuubikiBridge = buildWorkbenchPyodideBridge({
-    appendOutput,
-    getSnapshot,
-    invokeAction: onInvokeAction,
-  });
+  window.__kyuubikiBridge = bridge;
   await pyodide.runPythonAsync(source);
 }

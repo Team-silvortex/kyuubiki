@@ -58,7 +58,7 @@ export function historyEffects() {
     "setThermalBeamModel", "setThermalFrameModel", "setThermalTrussModel", "setThermalTruss3dModel",
     "setSpringModel", "setSpring2dModel", "setSpring3dModel", "setBeamModel", "setTorsionModel",
     "setTrussModel", "setTruss3dModel", "setFrameModel", "setPlaneModel", "setSidebarSection",
-    "setWorkflowPanelTab", "setSelectedWorkflowId", "setWorkflowRuns", "detachSavedModel"];
+    "setWorkflowPanelTab", "setSelectedWorkflowId", "setWorkflowRuns", "detachSavedModel", "commitObservation"];
   const effects: any = { activeMaterial: "210", copy: { historyAction: "history", historyLoaded: "loaded",
     workflowCatalogCompleted: "workflow complete" } };
   for (const name of names) effects[name] = (value: any) => writes.push([name, value]);

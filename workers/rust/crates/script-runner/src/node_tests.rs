@@ -106,6 +106,8 @@ pub(crate) fn run_node_command(
             &[
                 "tests/integration/workbench-ui-workflow-invocation.test.mjs",
                 "tests/integration/workbench-ui-layout-flow.test.mjs",
+                "tests/integration/workbench-ui-viewport-priority.test.mjs",
+                "tests/integration/workbench-ui-panel-resize.test.mjs",
                 "tests/integration/workbench-ui-workflow-readiness.test.mjs",
                 "tests/integration/workbench-ui-data-library-actions.test.mjs",
                 "tests/integration/workbench-ui-functional-closure.test.mjs",

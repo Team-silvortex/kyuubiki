@@ -141,6 +141,7 @@ export function WorkbenchMainViewportPanelMount(props: WorkbenchMainViewportPane
       }
       isTruss3d={props.isTruss3d}
       shouldStretchSpaceViewport={props.shouldStretchSpaceViewport}
+      windowedViewport={Boolean(props.activeResultWindow)}
       onCanvasStageScroll={props.onCanvasStageScroll}
       canvasStageRef={props.canvasStageRef}
       viewportContent={

@@ -1,7 +1,7 @@
 "use client";
 
 import type { WorkbenchStudyKind } from "@/lib/workbench/history";
-import type { WorkbenchOperationResult } from "@/lib/workbench/operation-result";
+import type { WorkbenchCancellationResult } from "@/components/workbench/workbench-job-history-controller";
 import type { WorkbenchRunOperationResult } from "@/components/workbench/workbench-run-controller";
 
 type ScriptStateControllerDeps = {
@@ -47,7 +47,7 @@ type ScriptStateControllerDeps = {
   handleUndo: () => void;
   handleRedo: () => void;
   runAnalysis: () => Promise<WorkbenchRunOperationResult>;
-  cancelCurrentJob: () => Promise<WorkbenchOperationResult<{ jobId: string }>>;
+  cancelCurrentJob: () => Promise<WorkbenchCancellationResult>;
   setTruss3dViewPreset: (value: "iso" | "front" | "right" | "top") => void;
   setTruss3dProjectionMode: (value: "ortho" | "persp") => void;
 };

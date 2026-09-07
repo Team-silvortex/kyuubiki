@@ -8,6 +8,7 @@ import { buildWorkbenchUiChunkRuntimeAttrs } from "@/components/workbench/workbe
 import { scheduleWorkbenchSidebarChunkPrefetch } from "@/components/workbench/workbench-sidebar-chunk-loader";
 import type { SidebarSection } from "@/components/workbench/workbench-types";
 import { installWorkbenchPwdtBrowserBridge } from "@/lib/scripting/workbench-script-runtime";
+import { WorkbenchPanelResizeHandle } from "./workbench-panel-resize-handle";
 
 const WorkbenchAssistantFloat = lazy(() =>
   import("@/components/workbench/workbench-assistant-float").then((module) => ({
@@ -105,7 +106,7 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
           canvasStageRef={props.canvasStageRef}
           viewportPixelWidth={props.viewportPixelWidth}
           immersiveViewport={props.immersiveViewport}
-          title={props.sidebarSection === "model" || props.sidebarSection === "store" ? props.t.sections[props.sidebarSection] : props.t.viewport}
+          title={props.sidebarSection === "model" ? props.t.sections.model : props.t.viewport}
           sidebarSection={props.sidebarSection}
           modelTab={props.modelTab}
           modelToolsPage={props.modelToolsPage}
@@ -283,6 +284,7 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
           props.sidebarSection,
           "workspace.console",
           <WorkbenchConsoleMount
+          language={props.language}
           sidebarSection={props.sidebarSection}
           message={props.message}
           importNotice={props.importNotice}
@@ -325,6 +327,8 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
         )}
       </main>
 
+      <div className="workbench-shell__inspector">
+      <WorkbenchPanelResizeHandle panel="inspector" language={props.language} />
       {workspaceChunk(
         props.sidebarSection,
         "workspace.inspector",
@@ -446,6 +450,7 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
         setPlaneHotspotLimit={props.setPlaneHotspotLimit}
         />,
       )}
+      </div>
     </>
   );
 }

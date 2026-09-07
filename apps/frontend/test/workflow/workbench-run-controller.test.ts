@@ -1,9 +1,15 @@
-import test from "node:test";
+import test, { type TestContext } from "node:test";
 import assert from "node:assert/strict";
 
 import { runWorkbenchAnalysis } from "../../src/components/workbench/workbench-run-controller.ts";
 
 type RunArgs = Parameters<typeof runWorkbenchAnalysis>[0];
+
+function useImmediateBrowserTimers(t: TestContext) {
+  const previousWindow = globalThis.window;
+  globalThis.window = { setTimeout: (callback: () => void) => setTimeout(callback, 0) } as unknown as Window & typeof globalThis;
+  t.after(() => { globalThis.window = previousWindow; });
+}
 
 function job(status: "queued" | "completed" | "failed", message?: string) {
   return {
@@ -188,5 +194,77 @@ for (const phase of ["before-poll", "terminal-refresh"]) {
       },
     })), /superseded/u);
     assert.deepEqual(writes, []);
+  });
+}
+
+for (const backend of ["direct_mesh", "orchestrated"] as const) {
+  test(`${backend} explicit null result is not a successful completion`, async () => {
+    await assert.rejects(runWorkbenchAnalysis(runArgs({
+      runBackendService: {
+        submitRun: async () => backend === "orchestrated"
+          ? { backend, envelope: { job: job("queued") } } as never
+          : { backend, envelope: { job: job("completed"), result: null,
+            direct_mesh: { endpoint: "agent:5001", strategy: "healthiest" } } } as never,
+        fetchJob: async () => ({ job: job("completed"), result: null } as never),
+      },
+    })), /did not include a result/u);
+  });
+}
+
+test("polling rejects another job's response before applying its job or result", async (t) => {
+  useImmediateBrowserTimers(t);
+  const writes: unknown[] = [];
+  let polls = 0;
+  await assert.rejects(runWorkbenchAnalysis(runArgs({
+    setJob: (value) => writes.push(value), setResult: (value) => writes.push(value),
+    runBackendService: {
+      submitRun: async () => ({ backend: "orchestrated", envelope: { job: job("queued") } }),
+      fetchJob: async () => { polls += 1; return { job: { ...job("completed"), job_id: "wrong-job" }, result: {} } as never; },
+    },
+  })), /different job/u);
+  assert.equal(writes.some((value: any) => value?.job_id === "wrong-job"), false);
+  assert.equal(writes.some((value: any) => value && !value.job_id), false);
+  assert.equal(polls, 3, "identity failures use the bounded observation retry budget");
+});
+
+test("polling recovers from a mismatched frame without exposing it or resubmitting", async (t) => {
+  useImmediateBrowserTimers(t);
+  const writes: any[] = [];
+  const expected = { correct: true };
+  let polls = 0;
+  let submissions = 0;
+  const outcome = await runWorkbenchAnalysis(runArgs({
+    setJob: (value) => writes.push(value), setResult: (value) => writes.push(value),
+    runBackendService: {
+      submitRun: async () => { submissions += 1; return { backend: "orchestrated", envelope: { job: job("queued") } }; },
+      fetchJob: async () => ++polls === 1
+        ? { job: { ...job("completed"), job_id: "wrong-job" }, result: { foreign: true } } as never
+        : { job: job("completed"), result: expected } as never,
+    },
+  }));
+  assert.equal(outcome.ok, true);
+  assert.equal(submissions, 1);
+  assert.equal(polls, 2);
+  assert.equal(writes.some((value) => value?.job_id === "wrong-job" || value?.foreign), false);
+  assert.equal(writes.at(-1), expected);
+});
+
+for (const absent of [null, undefined]) {
+  test(`terminal ${absent} result clears an earlier progress result and rejects completion`, async (t) => {
+    useImmediateBrowserTimers(t);
+    const results: unknown[] = [];
+    const preview = { partial: true };
+    let polls = 0;
+    await assert.rejects(runWorkbenchAnalysis(runArgs({
+      setResult: (value) => results.push(value),
+      runBackendService: {
+        submitRun: async () => ({ backend: "orchestrated", envelope: { job: job("queued") } }),
+        fetchJob: async () => ++polls === 1
+          ? { job: job("queued"), result: preview } as never
+          : { job: job("completed"), result: absent } as never,
+      },
+    })), /did not include a result/u);
+    assert.deepEqual(results, [null, preview, null]);
+    assert.equal(polls, 2);
   });
 }

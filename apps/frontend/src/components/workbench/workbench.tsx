@@ -43,6 +43,7 @@ export function Workbench() {
 
   return (
     <WorkbenchShellFrame
+      language={rootState.language}
       sidebarSection={sidebarMountProps.sidebarSection}
       rail={
         <WorkbenchAppRail

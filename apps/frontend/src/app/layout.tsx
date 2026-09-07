@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import brand from "../../../../assets/brand/brand.json";
 import "./globals.css";
 import "./workbench-shell-window-protection.css";
+import "./styles/globals-viewport-priority.css";
+import "./styles/globals-resizable-panels.css";
 
 const metadataBase =
   process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.trim().length > 0

@@ -118,6 +118,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     jobIsActive: rootState.jobIsActive,
     jobPollTokenRef: rootState.jobPollTokenRef,
     setJob: rootState.setJob,
+    setResult: rootState.setResult,
     setMessage: rootState.setMessage,
     setSystemAlerts: rootState.setSystemAlerts,
     setImportNotice: rootState.setImportNotice,

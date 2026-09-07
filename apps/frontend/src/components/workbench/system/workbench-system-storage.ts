@@ -52,6 +52,17 @@ export type WorkbenchStorageManifestEntry = WorkbenchStorageRule & {
 
 const STORAGE_BUCKETS: StorageBucketDefinition[] = [
   {
+    id: "panel_layout",
+    label: "Panel layout",
+    keyPrefixes: ["kyuubiki.workbench.panelLayout.v1"],
+    mode: "careful",
+    authority: "workbench",
+    dataClass: "preference",
+    portable: false,
+    cleanupLabel: "Restore layout in the report header",
+    detail: "One bounded versioned record of panel widths and report height. No model or credential data; saved only after user adjustment.",
+  },
+  {
     id: "workflow_snapshots",
     label: "Workflow snapshots",
     keyPrefixes: [

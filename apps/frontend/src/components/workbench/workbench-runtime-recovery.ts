@@ -6,6 +6,7 @@ import type { WorkbenchRequestError, WorkbenchRequestFailureKind } from "@/lib/a
 export type WorkbenchRuntimeRecoveryChannel =
   | "health"
   | "projects"
+  | "job_history"
   | "security_events"
   | "workflow_catalog";
 

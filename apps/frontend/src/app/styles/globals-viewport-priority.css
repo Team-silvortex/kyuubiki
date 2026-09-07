@@ -1,0 +1,219 @@
+/* The visualization owns remaining space; auxiliary content must not size its parent. */
+.workbench-shell .workspace-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.workbench-shell .canvas-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.workbench-shell .canvas-layout {
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  padding: 6px;
+}
+
+.workbench-shell .canvas-layout__main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.workbench-shell .canvas-layout__chrome {
+  flex: 0 0 auto;
+  max-height: 30%;
+  overflow: auto;
+  gap: 4px;
+}
+
+.workbench-shell .canvas-layout__viewport {
+  flex: 1 1 0;
+  overflow: hidden;
+}
+
+.workbench-shell .canvas-stage[data-workbench-viewport-sizing="fit"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.canvas-stage[data-workbench-viewport-sizing="fit"] .viewport-svg,
+.canvas-stage[data-workbench-viewport-sizing="fit"] .viewport-3d-shell {
+  width: var(--workbench-fit-width, 100%);
+  height: var(--workbench-fit-height, 100%);
+  min-width: 0;
+  max-width: 100%;
+  max-height: 100%;
+  flex: 0 0 auto;
+}
+
+.workbench-shell .canvas-stage .viewport-svg {
+  padding: 0;
+}
+
+.workbench-shell .canvas-layout .viewport-render-bar {
+  display: block;
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--panel-soft);
+  font-size: 0.75rem;
+}
+
+.viewport-render-bar > summary {
+  cursor: pointer;
+  line-height: 24px;
+}
+
+.viewport-render-bar > summary > span {
+  margin-inline-start: 12px;
+  color: var(--muted);
+}
+
+.viewport-render-bar[open] > .viewport-render-bar__meta,
+.viewport-render-bar[open] > .button-row {
+  margin-top: 6px;
+}
+
+.workbench-shell .console-panel {
+  flex: 0 0 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.workbench-shell [data-workbench-console="mount"] {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.workbench-shell .console-panel[data-workbench-report-expanded="true"] {
+  height: clamp(150px, 25dvh, 240px);
+}
+
+.workbench-shell .console-panel > .panel-head {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  padding: 3px 10px;
+}
+
+.console-panel > .panel-head h2 {
+  flex-shrink: 0;
+}
+
+.console-panel > .panel-head > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.console-panel > .panel-head .console-panel__alert {
+  color: var(--accent);
+}
+
+[data-workbench-report-toggle] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.console-panel__chevron {
+  width: 7px;
+  height: 7px;
+  border-left: 2px solid currentColor;
+  border-top: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+
+[aria-expanded="true"] > .console-panel__chevron {
+  transform: rotate(225deg);
+}
+
+.workbench-shell .console-grid {
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 8px;
+  padding: 6px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.workbench-shell .console-grid[hidden] {
+  display: none;
+}
+
+.workbench-shell .console-card {
+  min-height: 0;
+  overflow: auto;
+}
+
+.workbench-shell .sidebar-header,
+.workbench-shell .workspace-inspector > .panel-head {
+  flex-shrink: 0;
+}
+
+.workbench-shell .sidebar-stack,
+.workbench-shell .inspector-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.workbench-shell .sidebar-stack > *,
+.workbench-shell .inspector-stack > * {
+  flex: 0 0 auto;
+}
+
+.workbench-shell .panel-tabs {
+  align-content: start;
+  align-items: start;
+}
+
+.workbench-shell .panel-scroll-window {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+}
+
+.workbench-shell [data-workbench-store-entry-id] {
+  overflow-wrap: anywhere;
+}
+
+.workbench-shell[data-workbench-scrollable-shell="true"] .workspace-main {
+  height: max(340px, 72dvh);
+  flex: none;
+}
+
+.workbench-shell[data-workbench-stack-panels="true"] {
+  display: flex;
+  flex-direction: column;
+}
+
+.workbench-shell[data-workbench-stack-panels="true"] .workbench-shell__workspace {
+  order: 1;
+}
+
+.workbench-shell[data-workbench-stack-panels="true"] .workbench-shell__sidebar {
+  order: 2;
+}
+
+.workbench-shell[data-workbench-stack-panels="true"] .workspace-sidebar,
+.workbench-shell[data-workbench-stack-panels="true"] .workspace-inspector {
+  max-height: 48dvh;
+}

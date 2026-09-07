@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { createWorkbenchPrimaryActionsController } from "../../src/components/workbench/workbench-primary-actions-controller.ts";
 import { createWorkbenchProjectContext } from "../../src/lib/workbench/project-context.ts";
 import { historyEffects, historyResult } from "../support/history-result-fixture.ts";
+import { cancelWorkbenchJob } from "../../src/components/workbench/workbench-job-history-controller.ts";
 
 function controllerDeps(overrides: Record<string, unknown> = {}) {
   return {
@@ -191,3 +192,125 @@ test("history open remains awaitable and rejects a mismatched response before re
   assert.match(outcome.error.message, /HISTORY_RESULT_INVALID/u);
   assert.deepEqual(writes.map(([key]) => key), ["setMessage"]);
 });
+
+for (const phase of ["submission", "polling"]) {
+  for (const failure of ["network", "identity", "result"]) {
+    test(`failed history ${failure} preserves the original ${phase} without resubmitting`, async () => {
+      let release!: () => void;
+      let reached!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      const pending = new Promise<void>((resolve) => { reached = resolve; });
+      const token = { current: 0 };
+      const writes: unknown[] = [];
+      const result = historyResult("heat_bar_1d");
+      let submissions = 0;
+      const controller = createWorkbenchPrimaryActionsController(controllerDeps({
+        jobPollTokenRef: token, resultRefreshSeqRef: { current: 0 },
+        setResultRecords: () => {}, setSelectedAdminResultJobId: () => {},
+        setJob: (value: unknown) => writes.push(value), setResult: (value: unknown) => writes.push(value),
+        adminDataBackendService: {
+          fetchResults: async () => ({ results: [] }),
+          fetchJob: async () => {
+            if (failure === "network") throw new Error("archive unavailable");
+            return { job: { job_id: failure === "identity" ? "wrong" : "archive", status: "completed" },
+              result: failure === "result" ? { input: null } : result };
+          },
+        },
+        runBackendService: {
+          submitRun: async () => {
+            submissions += 1;
+            if (phase === "submission") { reached(); await gate; }
+            return { backend: "orchestrated", envelope: { job: { job_id: "live", status: "queued" } } };
+          },
+          fetchJob: async () => {
+            if (phase === "polling") { reached(); await gate; }
+            return { job: { job_id: "live", status: "completed" }, result };
+          },
+        },
+      }));
+      const running = controller.runAnalysis();
+      await pending;
+      const observation = token.current;
+      const opened = await controller.openHistoryJob("archive");
+      const afterOpen = token.current;
+      release();
+      const completed = await running;
+      assert.equal(opened.ok, false);
+      assert.equal(afterOpen, observation, "a failed read must not stop the live observation");
+      assert.equal(completed.ok, true);
+      assert.equal(submissions, 1);
+      assert.equal(writes.at(-1), result);
+    });
+  }
+}
+
+for (const failed of [false, true]) {
+  test(`a new run supersedes pending history ${failed ? "failure" : "success"}`, async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const { effects, writes } = historyEffects();
+    const controller = createWorkbenchPrimaryActionsController(controllerDeps({ ...effects,
+      adminDataBackendService: { fetchJob: async () => {
+        await gate;
+        if (failed) throw new Error("archive unavailable");
+        return { job: { job_id: "archive", status: "completed" }, result: historyResult("heat_bar_1d") };
+      } },
+    }));
+    const opening = controller.openHistoryJob("archive");
+    assert.equal((await controller.runAnalysis()).ok, true);
+    writes.length = 0;
+    release();
+    assert.equal((await opening).ok, false);
+    assert.deepEqual(writes, []);
+  });
+}
+
+for (const first of ["history", "cancellation"]) {
+  for (const failed of [false, true]) {
+    test(`concurrent history ${failed ? "failure" : "success"} and ${first}-first cancellation keep observation ownership`, async () => {
+      let releaseHistory!: () => void;
+      let releaseCancel!: () => void;
+      const historyGate = new Promise<void>((resolve) => { releaseHistory = resolve; });
+      const cancelGate = new Promise<void>((resolve) => { releaseCancel = resolve; });
+      const token = { current: 0 };
+      const { effects, writes } = historyEffects();
+      const controller = createWorkbenchPrimaryActionsController(controllerDeps({ ...effects,
+        jobPollTokenRef: token,
+        setSelectedModelId: () => {}, setSelectedVersionId: () => {}, setModelVersions: () => {},
+        setSelectedNode: () => {}, setSelectedElement: () => {}, setMemberDraftNodes: () => {}, setLoadedModelName: () => {},
+        adminDataBackendService: { fetchJob: async () => {
+          await historyGate;
+          if (failed) throw new Error("archive unavailable");
+          return { job: { job_id: "archive", status: "completed" }, result: historyResult("heat_bar_1d") };
+        } },
+      }));
+      const cancelling = cancelWorkbenchJob({
+        jobId: "live", jobPollTokenRef: token, setJob: effects.setJob, setResult: effects.setResult, setMessage: effects.setMessage,
+        refreshJobHistory: async () => {}, labels: { jobCancelled: "cancelled", initialFailed: "failed", requestTimedOut: "timeout" },
+        jobHistoryBackendService: {
+          fetchHistory: async () => ({ jobs: [] }),
+          cancelJob: async () => { await cancelGate; return { job: { job_id: "live", status: "cancelled", progress: 0, worker_id: "test" } }; },
+        },
+      });
+      const opening = controller.openHistoryJob("archive");
+      if (first === "history") {
+        releaseHistory();
+        const opened = await opening;
+        writes.length = 0;
+        releaseCancel();
+        const cancelled = await cancelling;
+        assert.equal(opened.ok, !failed);
+        assert.equal(cancelled.ok, true);
+        if (cancelled.ok) assert.equal(cancelled.contextChanged === true, !failed);
+        assert.deepEqual(writes.filter(([key]) => key === "setJob").map(([, value]) => value.job_id), failed ? ["live"] : []);
+      } else {
+        releaseCancel();
+        assert.equal((await cancelling).ok, true);
+        writes.length = 0;
+        releaseHistory();
+        assert.equal((await opening).ok, false, "a pending read must not resurrect an observation changed by accepted cancellation");
+        assert.deepEqual(writes, []);
+      }
+    });
+  }
+}

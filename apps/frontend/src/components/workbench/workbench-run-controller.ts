@@ -141,19 +141,17 @@ async function pollWorkbenchJob({
 
       if (pollToken !== jobPollTokenRef.current) return { state: "superseded" };
 
+      if (payload.job?.job_id !== jobId) throw new Error("Polling response belongs to a different job.");
       consecutiveErrors = 0;
       setJob(payload.job);
-
-      if (payload.result) {
-        setResult(payload.result);
-      }
+      setResult(payload.result ?? null);
 
       setMessage(formatJobMessage(payload.job, `${jobId} ${payload.job.status}`, copy));
 
       if (isWorkflowRunTerminalStatus(payload.job.status)) {
         await refreshJobHistory();
         if (pollToken !== jobPollTokenRef.current) return { state: "superseded" };
-        return { state: "terminal", hasResult: payload.result !== undefined, job: payload.job };
+        return { state: "terminal", hasResult: payload.result != null, job: payload.job };
       }
     } catch (error) {
       if (pollToken !== jobPollTokenRef.current) return { state: "superseded" };
@@ -284,7 +282,7 @@ export async function runWorkbenchAnalysis({
     if (isWorkflowRunFailureStatus(created.envelope.job.status)) {
       throw new Error(created.envelope.job.message ?? `${created.envelope.job.job_id} ${created.envelope.job.status}`);
     }
-    if (created.envelope.result === undefined) {
+    if (created.envelope.result == null) {
       throw new Error(`Completed job did not include a result: ${created.envelope.job.job_id}`);
     }
     return {

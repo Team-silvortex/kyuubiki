@@ -12,8 +12,13 @@ import {
   useWorkbenchWorkflowController,
 } from "@/components/workbench/workflow/workbench-workflow-controller";
 
-export function useWorkbenchSessionComposition(props: Record<string, any>) {
+type WorkbenchSessionCompositionProps = Record<string, any> & Pick<
+  Parameters<typeof useWorkbenchJobHistoryController>[0], "setResult" | "setRuntimeRecovery"
+>;
+
+export function useWorkbenchSessionComposition(props: WorkbenchSessionCompositionProps) {
   const jobHistoryController = useWorkbenchJobHistoryController({
+    historyScopeLabel: props.t.tabs.jobs,
     labels: {
       jobCancelled: props.t.jobCancelled,
       initialFailed: props.t.initialFailed,
@@ -24,6 +29,8 @@ export function useWorkbenchSessionComposition(props: Record<string, any>) {
     jobPollTokenRef: props.jobPollTokenRef,
     setJob: props.setJob,
     setMessage: props.setMessage,
+    setResult: props.setResult,
+    setRuntimeRecovery: props.setRuntimeRecovery,
     startTransition: props.startTransition,
   });
   const {
@@ -242,6 +249,7 @@ export function useWorkbenchSessionComposition(props: Record<string, any>) {
     retryRuntimeRecovery: async () => {
       await Promise.allSettled([
         refreshHealth(),
+        refreshJobHistory(),
         refreshProjects(),
         refreshSecurityEvents(),
         sessionWorkflowController.refreshWorkflowCatalog(),

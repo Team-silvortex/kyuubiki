@@ -46,8 +46,8 @@ export function resolveWorkbenchResolutionAdaptation(
     minTouchTargetPx: phone || tablet ? 44 : 36,
     profile,
     shouldCompactChrome: profile !== "desktop" || shortWindow,
-    shouldStackPanels: phone || width <= 860,
-    shouldUseScrollableShell: phone || shortWindow,
+    shouldStackPanels: phone || tablet,
+    shouldUseScrollableShell: phone || tablet || (height > 0 && height < 420),
     windowMode: resolveWorkbenchWindowMode(width),
   };
 }

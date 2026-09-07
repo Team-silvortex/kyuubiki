@@ -172,7 +172,7 @@ export function generatePrattTruss(config: ParametricTrussConfig): Truss2dJobInp
   for (let index = 0; index < bays; index += 1) {
     const top = bays + 1 + index;
     elements.push(member(`v${index}`, index + 1, top, area, modulus));
-    elements.push(member(`d${index}`, index % 2 === 0 ? index : index + 1, top, area, modulus));
+    elements.push(member(`d${index}`, index, top, area, modulus));
   }
 
   return { nodes, elements };

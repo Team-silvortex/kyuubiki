@@ -16,6 +16,8 @@ for (const kind of Object.keys(historyInputs) as Array<keyof typeof historyInput
     const original = structuredClone(result);
     const { effects, writes } = historyEffects();
     applyHistoryJobPayload({ job, result }, effects);
+    assert.equal(writes[0][0], "commitObservation", "only a validated history can replace the active observation");
+    assert.equal(writes.filter(([key]) => key === "commitObservation").length, 1);
     assert.deepEqual(writes.filter(([key]) => key === "setStudyKind").map(([, value]) => value), [kind]);
     assert.equal(writes.filter(([key]) => key === "recordHistory").length, 1);
     assert.equal(writes.filter(([key]) => key === "detachSavedModel").length, 1);
@@ -32,6 +34,7 @@ for (const kind of Object.keys(historyInputs) as Array<keyof typeof historyInput
 test("history without a result clears the previous result without replacing the working model", () => {
   const { effects, writes } = historyEffects();
   applyHistoryJobPayload({ job: { ...job, status: "failed" } }, effects);
+  assert.equal(writes[0][0], "commitObservation");
   assert.deepEqual(writes.filter(([key]) => key === "setResult"), [["setResult", null]]);
   assert.equal(writes.some(([key]) => key === "setStudyKind" || key === "detachSavedModel"), false);
 });

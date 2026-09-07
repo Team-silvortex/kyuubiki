@@ -133,3 +133,245 @@ for (const replacement of ["job", "undo"]) {
     });
   }
 }
+
+for (const phase of ["submission", "polling"]) {
+  for (const failure of ["network", "identity", "result"]) {
+    test(`Workbench failed history ${failure} preserves live ${phase} and retries without resubmitting`, { timeout: 75_000 }, async () => {
+      await usingWorkbench(async (page, library) => {
+        const solver = await installProjectionSolver(page);
+        const archive = { job_id: "retry-archive", status: "completed", progress: 1, worker_id: "test", has_result: true };
+        runtime.state.adminJobs.push(archive);
+        let recover = false;
+        await page.route(`**/api/v1/jobs/${archive.job_id}`, (route) => {
+          if (!recover && failure === "network") return route.fulfill({ status: 503, json: { error: "archive unavailable" } });
+          return route.fulfill({ json: {
+            job: !recover && failure === "identity" ? { ...archive, job_id: "wrong-archive" } : archive,
+            result: !recover && failure === "result" ? { input: null } : solver.results[0],
+          } });
+        });
+        await openWorkbench(page);
+        await invoke(page, "nav/setStudyKind", { studyKind: "heat_bar_1d" });
+        await invoke(page, "model/saveAs");
+        const pendingGate = phase === "submission"
+          ? Promise.resolve(await holdRequest(page, "/api/v1/fem/heat-bar-1d/jobs", "POST"))
+          : new Promise((resolve) => {
+            solver.beforeJobResponse = async (job) => resolve(await holdRequest(page, `/api/v1/jobs/${job.job_id}`));
+          });
+        const running = invoke(page, "job/run").catch((error) => ({ error: error.message }));
+        const pending = await pendingGate;
+        try {
+          await pending.received;
+          await openHistory(page, archive.job_id);
+          await page.waitForFunction(() => /archive unavailable|HISTORY_RESULT_INVALID/u.test(window.__kyuubikiPwdt.state().message));
+          const preserved = await page.evaluate(() => window.__kyuubikiPwdt.state());
+          assert.equal(preserved.studyKind, "heat_bar_1d");
+          assert.equal(preserved.selectedModelId, library.models[0].model_id);
+          pending.release();
+          const completed = await running;
+          assert.equal(completed.ok, true, JSON.stringify(completed));
+          await page.evaluate(() => window.__kyuubikiPwdt.waitForState({ jobStatus: "completed", hasResult: true }));
+          recover = true;
+          await openHistory(page, archive.job_id);
+          await page.evaluate(() => window.__kyuubikiPwdt.waitForState({ selectedModelId: null, hasResult: true }));
+          assert.equal(solver.submissions.length, 1, "retrying a history read must not submit a second computation");
+        } finally { pending.release(); await running; }
+      });
+    });
+  }
+}
+
+for (const mode of ["steps", "recipe"]) {
+  for (const failure of ["null-result", "identity"]) {
+    test(`Workbench PWDT ${mode} stops on ${failure} without submitting dependent work and allows explicit recovery`, { timeout: 75_000 }, async () => {
+      await usingWorkbench(async (page, library) => {
+        const solver = await installProjectionSolver(page);
+        let inject = true;
+        let polls = 0;
+        solver.beforeJobResponse = async (job) => {
+          await page.route(`**/api/v1/jobs/${job.job_id}`, async (route) => {
+            if (!inject) return route.fallback();
+            polls += 1;
+            const result = solver.results.at(-1);
+            return route.fulfill({ json: failure === "identity"
+              ? { job: { ...job, job_id: "foreign-job", status: "completed", progress: 1 }, result }
+              : polls === 1 ? { job, result } : { job: { ...job, status: "completed", progress: 1 }, result: null },
+            });
+          });
+        };
+        await openWorkbench(page);
+        await invoke(page, "nav/setStudyKind", { studyKind: "heat_plane_quad_2d" });
+        await assert.rejects(page.evaluate((sequence) => sequence === "steps"
+          ? window.__kyuubikiPwdt.runSteps([{ action: "job/run" }, { action: "model/saveAs" }])
+          : window.__kyuubikiPwdt.runRecipe("recipe/heat-thermo/quad-closed-loop"), mode),
+        failure === "identity" ? /different job/u : /did not include a result/u);
+        const state = await page.evaluate(() => window.__kyuubikiPwdt.state());
+        assert.equal(state.hasResult, false, "a progress preview must not survive a result-free terminal response");
+        assert.equal(solver.submissions.length, 1);
+        assert.equal(polls, failure === "identity" ? 3 : 2);
+        assert.equal(library.models.length, mode === "steps" ? 0 : 1, "dependent saves must not execute after an invalid completion");
+        inject = false;
+        await invoke(page, "job/run");
+        await page.evaluate(() => window.__kyuubikiPwdt.waitForState({ jobStatus: "completed", hasResult: true }));
+        assert.equal(solver.submissions.length, 2, "a new computation requires an explicit invocation");
+      });
+    });
+  }
+}
+
+async function startCancellationPreview(page) {
+  const solver = await installProjectionSolver(page);
+  const control = { status: "cancelled", unavailable: false, cancellations: 0, job: null };
+  solver.beforeJobResponse = async (job) => {
+    control.job = job;
+    runtime.state.adminJobs.push(job);
+    await page.route(`**/api/v1/jobs/${job.job_id}`, (route) => route.fulfill({ json: {
+      job, ...(["solving", "completed"].includes(job.status) ? { result: solver.results.at(-1) } : {}),
+    } }));
+    await page.route(`**/api/v1/jobs/${job.job_id}/cancel`, (route) => {
+      control.cancellations += 1;
+      if (control.unavailable) return route.fulfill({ status: 503, json: { error: "qualification cancellation unavailable" } });
+      job.status = control.status;
+      return route.fulfill({ json: { job } });
+    });
+  };
+  await openWorkbench(page);
+  await invoke(page, "nav/setStudyKind", { studyKind: "heat_plane_quad_2d" });
+  const running = invoke(page, "job/run").catch((error) => ({ error: error.message }));
+  await page.evaluate(() => window.__kyuubikiPwdt.waitForState({ jobStatus: "solving", hasResult: true }));
+  return { control, solver, running };
+}
+
+for (const status of ["solving", "completed", "failed"]) {
+  test(`Workbench cancellation returning ${status} stops dependent steps but preserves truthful job observation`, { timeout: 75_000 }, async () => {
+    await usingWorkbench(async (page, library) => {
+      const { control, solver, running } = await startCancellationPreview(page);
+      try {
+        control.status = status;
+        page.once("dialog", (dialog) => dialog.accept());
+        await assert.rejects(page.evaluate(() => window.__kyuubikiPwdt.runSteps([
+          { action: "job/cancel" }, { action: "model/saveAs" },
+        ])), /JOB_CANCELLATION_NOT_CONFIRMED/u);
+        assert.equal(library.models.length, 0, "dependent writes require actual cancellation confirmation");
+        assert.equal(solver.submissions.length, 1);
+        if (status === "solving") {
+          await page.waitForResponse((response) => new URL(response.url()).pathname === `/api/v1/jobs/${control.job.job_id}`);
+          control.status = "cancelled";
+          page.once("dialog", (dialog) => dialog.accept());
+          await invoke(page, "job/cancel");
+          await running;
+          assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().hasResult), false);
+        } else {
+          const completed = await running;
+          if (status === "completed") assert.equal(completed.ok, true);
+          else assert.match(completed.error, /failed/u);
+          await page.evaluate((jobStatus) => window.__kyuubikiPwdt.waitForState({ jobStatus }), status);
+        }
+      } finally { control.job.status = "failed"; await running; }
+    });
+  });
+}
+
+for (const failure of ["network", "malformed"]) {
+  test(`Workbench confirmed cancellation survives ${failure} history refresh and retains a visibly stale catalog`, { timeout: 75_000 }, async () => {
+    await usingWorkbench(async (page) => {
+      const { control, solver, running } = await startCancellationPreview(page);
+      await page.evaluate(() => window.__kyuubikiPwdt.openSidebar("library"));
+      await page.evaluate(() => window.__kyuubikiPwdt.openTabs({ libraryTab: "jobs" }));
+      let recover = false;
+      await page.route("**/api/v1/jobs", (route) => recover ? route.fallback()
+        : failure === "network"
+          ? route.fulfill({ status: 503, json: { error: "qualification history unavailable" } })
+          : route.fulfill({ json: { jobs: null } }));
+      try {
+        const before = await page.evaluate(() => window.__kyuubikiPwdt.state());
+        page.once("dialog", (dialog) => dialog.accept());
+        assert.equal((await invoke(page, "job/cancel")).ok, true);
+        await running;
+        const after = await page.evaluate(() => window.__kyuubikiPwdt.state());
+        assert.equal(after.jobStatus, "cancelled");
+        assert.equal(after.hasResult, false);
+        assert.equal(after.jobHistoryCount, before.jobHistoryCount);
+        assert.equal(after.selectedAdminJobId, before.selectedAdminJobId);
+        assert.equal(await page.locator(`[data-workbench-history-job-id="${control.job.job_id}"]`).count(), 1);
+        const issue = page.locator('[data-workbench-alert-id="runtime-recovery-job_history"]');
+        await issue.first().waitFor({ state: "visible" });
+        assert.match(await issue.first().textContent(), failure === "network" ? /qualification history unavailable/u : /JOB_HISTORY_INVALID/u);
+        recover = true;
+        if (failure === "malformed") {
+          await page.evaluate(() => window.__kyuubikiPwdt.openSidebar("system"));
+          await page.evaluate(() => window.__kyuubikiPwdt.openTabs({ systemPanelTab: "runtime" }));
+          await page.locator('[data-workbench-runtime-tab="watchdog"]').click();
+          const refreshed = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/v1/jobs", { timeout: 5000 });
+          const retry = page.locator('[data-workbench-recovery-action="retry-all"]').click();
+          await Promise.all([refreshed, retry]);
+        } else await invoke(page, "runtime/refreshAll");
+        await page.waitForFunction(() => !document.querySelector('[data-workbench-alert-id="runtime-recovery-job_history"]'));
+        runtime.state.adminJobs.length = 0;
+        await invoke(page, "runtime/refreshAll");
+        await page.evaluate(() => window.__kyuubikiPwdt.waitForState({ jobHistoryCount: 0, selectedAdminJobId: null }));
+        assert.equal(solver.submissions.length, 1);
+        assert.equal(control.cancellations, 1);
+      } finally { control.job.status = "failed"; await running; }
+    });
+  });
+}
+
+for (const failFirst of [false, true]) {
+  test(`Workbench overlapping cancellation shares one request and ${failFirst ? "allows retry after failure" : "one confirmed receipt"}`, { timeout: 75_000 }, async () => {
+    await usingWorkbench(async (page) => {
+      const { control, running } = await startCancellationPreview(page);
+      control.unavailable = failFirst;
+      const pending = await holdRequest(page, `/api/v1/jobs/${control.job.job_id}/cancel`, "POST");
+      let confirmed;
+      const confirmations = new Promise((resolve) => { confirmed = resolve; });
+      let dialogs = 0;
+      page.on("dialog", async (dialog) => { await dialog.accept(); if (++dialogs === 2) confirmed(); });
+      const cancelling = page.evaluate(() => Promise.allSettled([
+        window.__kyuubikiPwdt.invoke("job/cancel"), window.__kyuubikiPwdt.invoke("job/cancel"),
+      ]));
+      try {
+        await pending.received;
+        await confirmations;
+        await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        pending.release();
+        const outcomes = await cancelling;
+        assert.equal(control.cancellations, 1, "concurrent UI/PWDT invocations must not duplicate cancellation writes");
+        for (const outcome of outcomes) assert.equal(outcome.status, failFirst ? "rejected" : "fulfilled");
+        if (failFirst) {
+          control.unavailable = false;
+          await invoke(page, "job/cancel");
+          assert.equal(control.cancellations, 2);
+        } else {
+          for (const outcome of outcomes) assert.equal(outcome.value.contextChanged, undefined);
+        }
+        await running;
+        assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().hasResult), false);
+      } finally { pending.release(); control.job.status = "failed"; await cancelling; await running; }
+    });
+  });
+}
+
+test("Workbench cancellation shares its receipt while the confirmed history refresh is pending", { timeout: 75_000 }, async () => {
+  await usingWorkbench(async (page) => {
+    const { control, running } = await startCancellationPreview(page);
+    const pending = await holdRequest(page, "/api/v1/jobs", "GET");
+    let confirmed;
+    const confirmations = new Promise((resolve) => { confirmed = resolve; });
+    let dialogs = 0;
+    page.on("dialog", async (dialog) => { await dialog.accept(); if (++dialogs === 2) confirmed(); });
+    const cancelling = invoke(page, "job/cancel").catch((error) => ({ error: error.message }));
+    let repeated = Promise.resolve(null);
+    try {
+      await pending.received;
+      await page.evaluate(() => window.__kyuubikiPwdt.waitForState({ jobStatus: "cancelled", hasResult: false }));
+      repeated = invoke(page, "job/cancel").catch((error) => ({ error: error.message }));
+      await confirmations;
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      pending.release();
+      const receipt = await cancelling;
+      assert.equal(receipt.ok, true);
+      assert.deepEqual(await repeated, receipt, "a pending receipt remains shared after cancellation changes the job status");
+      assert.equal(control.cancellations, 1);
+    } finally { pending.release(); control.job.status = "failed"; await cancelling; await repeated; await running; }
+  });
+});

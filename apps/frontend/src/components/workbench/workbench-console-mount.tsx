@@ -20,6 +20,7 @@ type NodeSelectionData = {
 };
 
 type ConsoleMountProps = {
+  language?: string;
   sidebarSection: "study" | "model" | "workflow" | "library" | "system";
   t: Pick<
     WorkbenchCopy,
@@ -89,6 +90,7 @@ type ConsoleMountProps = {
 };
 
 export function WorkbenchConsoleMount({
+  language,
   sidebarSection,
   t,
   message,
@@ -246,6 +248,7 @@ export function WorkbenchConsoleMount({
       data-workbench-surface="built-in"
     >
       <WorkbenchConsole
+        language={language}
         sidebarSection={sidebarSection}
         title={sidebarSection === "model" ? t.nodeTable : t.report}
         subtitle={message}
