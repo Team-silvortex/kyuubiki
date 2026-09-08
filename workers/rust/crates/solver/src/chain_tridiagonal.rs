@@ -1,3 +1,5 @@
+use crate::solver_control::{SolverStage, checkpoint};
+
 struct TridiagonalSystem<'a> {
     diagonal: &'a [f64],
     lower: &'a [f64],
@@ -18,6 +20,7 @@ pub(crate) struct PreparedTridiagonal {
 
 impl PreparedTridiagonal {
     pub(crate) fn factor(diagonal: &[f64], lower: &[f64], upper: &[f64]) -> Result<Self, String> {
+        checkpoint(SolverStage::TridiagonalFactor, 0)?;
         validate_coefficient_dimensions(diagonal, lower, upper)?;
         validate_finite(diagonal, lower, upper, &[])?;
         if diagonal.is_empty() {
@@ -48,8 +51,12 @@ impl PreparedTridiagonal {
                 return Err("tridiagonal elimination diverged".to_string());
             }
             elimination_factors.push(factor);
+            if row % 256 == 0 {
+                checkpoint(SolverStage::TridiagonalFactor, row)?;
+            }
         }
         ensure_usable_pivot(factored_diagonal[size - 1], row_scales[size - 1], size)?;
+        checkpoint(SolverStage::TridiagonalFactor, size)?;
 
         Ok(Self {
             diagonal: diagonal.to_vec(),
@@ -61,6 +68,7 @@ impl PreparedTridiagonal {
     }
 
     pub(crate) fn solve(&self, rhs: &[f64]) -> Result<Vec<f64>, String> {
+        checkpoint(SolverStage::TridiagonalSubstitution, 0)?;
         if rhs.len() != self.diagonal.len() {
             return Err("tridiagonal system dimensions must match".to_string());
         }
@@ -79,6 +87,9 @@ impl PreparedTridiagonal {
             if !rhs_work[row].is_finite() {
                 return Err("tridiagonal elimination diverged".to_string());
             }
+            if row % 256 == 0 {
+                checkpoint(SolverStage::TridiagonalSubstitution, row)?;
+            }
         }
 
         let mut solution = vec![0.0; size];
@@ -86,7 +97,11 @@ impl PreparedTridiagonal {
         for row in (0..size - 1).rev() {
             solution[row] = (-self.upper[row]).mul_add(solution[row + 1], rhs_work[row])
                 / self.factored_diagonal[row];
+            if row % 256 == 0 {
+                checkpoint(SolverStage::TridiagonalSubstitution, size + (size - row))?;
+            }
         }
+        checkpoint(SolverStage::TridiagonalSubstitution, size.saturating_mul(2))?;
         if solution.iter().any(|value| !value.is_finite()) {
             return Err("tridiagonal back substitution diverged".to_string());
         }

@@ -2,8 +2,6 @@ use super::*;
 
 #[test]
 fn handles_solver_rpc_requests() {
-    agent_watchdog::reset_for_tests();
-
     let request = RpcRequest {
         rpc_version: RPC_VERSION,
         id: "rpc-1".to_string(),
@@ -36,8 +34,6 @@ fn handles_solver_rpc_requests() {
 
 #[test]
 fn records_watchdog_failure_for_invalid_solver_params() {
-    agent_watchdog::reset_for_tests();
-
     let request = RpcRequest {
         rpc_version: RPC_VERSION,
         id: "rpc-invalid-watchdog".to_string(),

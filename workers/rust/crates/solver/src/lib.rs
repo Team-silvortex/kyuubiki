@@ -91,6 +91,7 @@ mod rigid_body_restraints_3d;
 mod solid_tetra_3d;
 mod solid_tetra_3d_element;
 mod solid_tetra_3d_validation;
+pub mod solver_control;
 mod spring;
 mod spring_validation;
 mod stokes_flow_plane_2d;
@@ -122,6 +123,9 @@ mod transport_bar_1d_validation;
 mod truss;
 mod truss_summary;
 mod truss_validation;
+
+#[cfg(test)]
+mod solver_control_kernels_tests;
 
 pub use acoustic_bar_1d::{solve_acoustic_bar_1d, solve_acoustic_bar_1d_owned};
 pub use bar_1d::{

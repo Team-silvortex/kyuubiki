@@ -162,6 +162,61 @@ it is not an independent disconnect monitor for every RPC.
 The [installed orphan-execution study](../reports/orphan-execution-research-20260908.md)
 separates these boundaries from the cases actually exercised.
 
+## Cooperative Numerical Cancellation
+
+`kyuubiki_solver::solver_control` provides a Rust-only, synchronous execution
+scope: `SolverControl`, `with_solver_control` and `with_solver_observer`.
+It has no GUI or Orchestra dependency and does not change physical input formats.
+The Agent installs a fresh control token around each solver RPC and TaskIR call.
+A token is sticky and must not be reset/reused for another execution. Scope exit,
+including panic unwind, restores the calling thread's previous control context.
+Nested scopes cannot mask a parent's cancellation. Child threads need their own
+explicit scope; this is not an ambient async-task context or a thread-kill API.
+
+Safe points currently cover common PCG iterations, dense LU and banded Cholesky
+factorization/substitution, and prepared tridiagonal factorization/substitution.
+Dense/banded paths check completed rows or pivots; the tridiagonal path batches
+checks at 256-row boundaries and completion. Shared sparse regularization and
+dense fallback paths check cancellation before retrying, so interruption is not
+treated as a reason to regularize and recompute. Reusable prepared factors remain
+unchanged by a cancelled substitution. An observed cancellation discards a
+partial success and returns an error rather than exporting a partial field.
+
+An explicit job cancellation marks every matching execution currently registered
+in the control registry, not a single globally consumed flag. Cancellation with
+no matching registered execution retains the existing one-shot pre-admission
+behavior. A transport failure marks only its guard; watchdog notifications match
+both request id and execution generation. A late notification cannot target a
+new execution that happens to reuse an id. This is not a persistent job tombstone.
+
+Descriptor and registration payloads expose read-only `solver_control`
+(`kyuubiki.agent-solver-control/v1`): active request/job identities, generation,
+cancellation state and last safe point. Failure responses retain
+`solver_checkpoint` and the original watchdog reason, when one already exists.
+The checkpoint's `stage` and `completed_steps` are diagnostics for the current
+kernel invocation, not whole-job progress, convergence, or a resumable state;
+`resumable` is false. The observation resets when another kernel starts.
+
+For isolated fault qualification only,
+`KYUUBIKI_AGENT_FAULT_INJECTION_SOLVER_STAGE` selects `sparse_iteration`,
+`dense_factor` or `tridiagonal_factor`. It requires the existing hold-file and
+explicit execution-method settings. A matching job is held once, after at least
+three completed steps at that stage, for no more than 120 seconds. Numerical
+stage mode replaces the pre-computation hold. Descriptor metadata exposes phase,
+stage and minimum step count, never the host marker path. Leave all three fault
+controls unset in normal use. A slow observer delays its synchronous caller.
+
+This first scope does not interrupt validation, assembly, matrix compression,
+preconditioner construction, or the interior of a single matrix/vector operation.
+It does not add safe points to every analytical shortcut, nonlinear outer loop,
+external worker, dynamic library or child thread. TaskIR's scope alone does not
+make such implementations cooperative; the analytical `solve.bar_1d` path, for
+example, has entry/exit control but no numerical kernel safe points here.
+Uncooperative work still owns its capacity until it actually returns. There is
+no universal cancellation-latency or numerical-checkpoint recovery guarantee.
+See the [installed numerical cancellation study](../reports/cooperative-solver-research-20260908.md)
+for real in-progress heat/structure faults and the bounded acceptance evidence.
+
 ## Termination Signals And Shutdown Budget
 
 The native Agent now routes handled termination signals into the same admission

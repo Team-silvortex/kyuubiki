@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -49,16 +49,20 @@ impl Default for LifecycleState {
 pub(crate) struct ExecutionGuard {
     watchdog: agent_watchdog::ExecutionGuard,
     _lifecycle_lease: Arc<ExecutionLease>,
-    cancellation: Arc<AtomicBool>,
+    control: Arc<crate::agent_execution_control::ExecutionControl>,
 }
 
 impl ExecutionGuard {
     pub(crate) fn request_cancellation(&self) {
-        self.cancellation.store(true, Ordering::Release);
+        self.control.solver.request_cancel();
     }
 
     pub(crate) fn cancellation_requested(&self) -> bool {
-        self.cancellation.load(Ordering::Acquire)
+        self.control.solver.cancellation_requested()
+    }
+
+    pub(crate) fn solver_control(&self) -> kyuubiki_solver::solver_control::SolverControl {
+        self.control.solver.clone()
     }
 }
 
@@ -125,17 +129,41 @@ pub(crate) fn begin_execution(
 ) -> Result<ExecutionGuard, ExecutionAdmissionError> {
     let state = lifecycle_state();
     let lifecycle_lease = acquire_execution_slot(&state, &request_id)?;
-    let watchdog = match agent_watchdog::begin_execution(request_id, job_id, method) {
+    let watchdog = match agent_watchdog::begin_execution(request_id.clone(), job_id.clone(), method)
+    {
         Ok(guard) => guard,
         Err(error) => {
             drop(lifecycle_lease);
             return Err(error);
         }
     };
+    let control = match crate::agent_execution_control::begin(
+        request_id.clone(),
+        watchdog.generation(),
+        job_id,
+    ) {
+        Ok(control) => control,
+        Err(message) => {
+            agent_watchdog::fail_execution(
+                watchdog,
+                "agent_execution_control_unavailable",
+                &message,
+            );
+            return Err(ExecutionAdmissionError {
+                request_id,
+                reason_code: "agent_execution_control_unavailable".into(),
+                message,
+            });
+        }
+    };
+    // A watchdog scan may have expired this generation before control registration finished.
+    if !agent_watchdog::is_current(&watchdog) {
+        control.solver.request_cancel();
+    }
     Ok(ExecutionGuard {
         watchdog,
         _lifecycle_lease: lifecycle_lease,
-        cancellation: Arc::new(AtomicBool::new(false)),
+        control,
     })
 }
 

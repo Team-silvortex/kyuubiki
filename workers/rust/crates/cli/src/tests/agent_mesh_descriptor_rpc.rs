@@ -28,8 +28,6 @@ fn handles_ping_rpc_requests() {
 
 #[test]
 fn handles_describe_agent_rpc_requests() {
-    agent_watchdog::reset_for_tests();
-
     let request = RpcRequest {
         rpc_version: RPC_VERSION,
         id: "rpc-describe".to_string(),

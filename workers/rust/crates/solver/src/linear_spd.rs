@@ -5,6 +5,7 @@ use crate::linear_algebra::{
 };
 use crate::linear_dense::solve_linear_system;
 use crate::linear_solver_profile::{SpdSolveOptions, SpdSolveProfile, SpdSolveStage};
+use crate::solver_control::{SolverStage, check_cancellation, checkpoint};
 
 pub(crate) fn solve_spd_compressed(
     matrix: &CompressedSparseMatrix,
@@ -12,6 +13,7 @@ pub(crate) fn solve_spd_compressed(
     fallback_source: &SparseMatrix,
     options: &SpdSolveOptions,
 ) -> Result<SpdSolveProfile, String> {
+    checkpoint(SolverStage::SparseIteration, 0)?;
     let size = rhs.len();
     let solve_started = Instant::now();
     let preconditioner = options.preconditioner;
@@ -118,6 +120,7 @@ pub(crate) fn solve_spd_compressed(
         }
 
         let residual_norm = residual_squared.sqrt();
+        checkpoint(SolverStage::SparseIteration, iteration + 1)?;
         if options
             .progress_interval
             .is_some_and(|interval| interval > 0 && (iteration + 1) % interval == 0)
@@ -283,6 +286,7 @@ fn solve_spd_fallback(
     rhs: &[f64],
     reason: &str,
 ) -> Result<SpdSolveProfile, String> {
+    check_cancellation()?;
     if rhs.len() <= 1024 {
         solve_linear_system(sparse_to_dense(matrix), rhs.to_vec()).map(|solution| {
             let residual_norm = sparse_residual_norm(matrix, rhs, &solution);

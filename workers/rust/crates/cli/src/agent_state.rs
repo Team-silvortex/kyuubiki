@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::sync::{Mutex, OnceLock};
 
 use kyuubiki_protocol::{
@@ -10,6 +9,9 @@ use crate::agent_control_link;
 use crate::agent_deployment::{
     AgentDeploymentReadiness, build_agent_deployment_readiness, default_agent_deployment_readiness,
 };
+pub(crate) use crate::agent_execution_control::register_cancel;
+#[cfg(test)]
+pub(crate) use crate::agent_execution_control::take_cancelled;
 use crate::agent_headless_bridge::agent_headless_bridge_manifest;
 use crate::config::AgentConfig;
 use crate::operator_task_runtime::{
@@ -163,6 +165,7 @@ pub(crate) fn registration_payload(config: &AgentConfig) -> serde_json::Value {
         "shutdown_policy": crate::agent_shutdown::snapshot(),
         "lifecycle": agent_lifecycle::snapshot(),
         "execution_admission": agent_lifecycle::execution_admission_snapshot(),
+        "solver_control": crate::agent_execution_control::snapshot(),
         "fault_injection": agent_fault_injection::snapshot(),
         "control_plane_link": agent_control_link::snapshot()
     })
@@ -187,6 +190,10 @@ pub(crate) fn agent_descriptor_payload() -> serde_json::Value {
         serde_json::to_value(agent_descriptor()).expect("agent descriptor should serialize");
 
     if let Some(object) = payload.as_object_mut() {
+        object.insert(
+            "solver_control".into(),
+            crate::agent_execution_control::snapshot(),
+        );
         object.insert(
             "execution_admission".into(),
             agent_lifecycle::execution_admission_snapshot(),
@@ -308,51 +315,6 @@ pub(crate) fn build_progress_frames(
         .collect()
 }
 
-fn cancellation_registry() -> &'static Mutex<HashSet<String>> {
-    static REGISTRY: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
-    REGISTRY.get_or_init(|| Mutex::new(HashSet::new()))
-}
-
-fn execution_cancellation_registry() -> &'static Mutex<HashSet<String>> {
-    static REGISTRY: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
-    REGISTRY.get_or_init(|| Mutex::new(HashSet::new()))
-}
-
-pub(crate) fn register_cancel(job_id: String) {
-    if let Ok(mut registry) = cancellation_registry().lock() {
-        registry.insert(job_id);
-    }
-}
-
-pub(crate) fn take_cancelled(job_id: &str) -> bool {
-    if let Ok(mut registry) = cancellation_registry().lock() {
-        return registry.remove(job_id);
-    }
-
-    false
-}
-
-pub(crate) fn register_execution_cancel(request_id: String) {
-    if let Ok(mut registry) = execution_cancellation_registry().lock() {
-        registry.insert(request_id);
-    }
-}
-
-pub(crate) fn take_execution_cancelled(request_id: &str) -> bool {
-    execution_cancellation_registry()
-        .lock()
-        .is_ok_and(|mut registry| registry.remove(request_id))
-}
-
-pub(crate) fn cancellation_pending(request_id: &str, job_id: &str) -> bool {
-    execution_cancellation_registry()
-        .lock()
-        .is_ok_and(|r| r.contains(request_id))
-        || cancellation_registry()
-            .lock()
-            .is_ok_and(|r| r.contains(job_id))
-}
-
 pub(crate) fn extract_job_id(params: &serde_json::Value) -> Option<String> {
     params
         .as_object()
@@ -367,9 +329,21 @@ mod cancellation_tests {
 
     #[test]
     fn transport_cancellation_is_scoped_to_one_request_generation() {
-        register_execution_cancel("request-generation-one".to_string());
-        assert!(take_execution_cancelled("request-generation-one"));
-        assert!(!take_execution_cancelled("request-generation-two"));
+        let old = crate::agent_execution_control::begin(
+            "request-generation-one".into(),
+            1,
+            Some("shared-job".into()),
+        )
+        .unwrap();
+        let next = crate::agent_execution_control::begin(
+            "request-generation-two".into(),
+            2,
+            Some("shared-job".into()),
+        )
+        .unwrap();
+        old.solver.request_cancel();
+        assert!(old.solver.cancellation_requested());
+        assert!(!next.solver.cancellation_requested());
         assert!(!take_cancelled("shared-job"));
     }
 }

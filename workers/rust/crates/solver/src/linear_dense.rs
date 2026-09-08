@@ -1,3 +1,5 @@
+use crate::solver_control::{SolverStage, checkpoint};
+
 pub(crate) fn solve_linear_system(
     matrix: Vec<Vec<f64>>,
     vector: Vec<f64>,
@@ -17,6 +19,7 @@ pub(crate) struct DenseLu {
 
 impl DenseLu {
     pub(crate) fn factor(mut matrix: Vec<Vec<f64>>) -> Result<Self, String> {
+        checkpoint(SolverStage::DenseFactor, 0)?;
         let size = matrix.len();
         if matrix.iter().any(|row| row.len() != size) {
             return Err("dense factor matrix must be square".to_string());
@@ -69,6 +72,7 @@ impl DenseLu {
                     }
                 }
             }
+            checkpoint(SolverStage::DenseFactor, pivot + 1)?;
         }
 
         Ok(Self {
@@ -78,6 +82,7 @@ impl DenseLu {
     }
 
     pub(crate) fn solve(&self, vector: &[f64]) -> Result<Vec<f64>, String> {
+        checkpoint(SolverStage::DenseSubstitution, 0)?;
         let size = self.factors.len();
         if vector.len() != size {
             return Err("matrix dimensions do not match vector".to_string());
@@ -101,6 +106,7 @@ impl DenseLu {
             if !solution[row].is_finite() {
                 return Err("linear system forward substitution diverged".to_string());
             }
+            checkpoint(SolverStage::DenseSubstitution, row + 1)?;
         }
 
         for row in (0..size).rev() {
@@ -113,6 +119,7 @@ impl DenseLu {
             if !solution[row].is_finite() {
                 return Err("linear system back substitution diverged".to_string());
             }
+            checkpoint(SolverStage::DenseSubstitution, size + (size - row))?;
         }
 
         Ok(solution)

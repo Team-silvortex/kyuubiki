@@ -2,6 +2,7 @@ use self::linear_ic0::IncompleteCholesky;
 use crate::linear_dense::{DenseLu, zero_matrix};
 use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions, SpdSolveProfile};
 use crate::linear_spd::solve_spd_compressed;
+use crate::solver_control::{SolverStage, check_cancellation, checkpoint};
 use std::time::Instant;
 
 const DENSE_REFINEMENT_TARGET: f64 = 1.0e-12;
@@ -458,6 +459,7 @@ pub(crate) fn solve_spd_system_profile_with_options(
     rhs: &[f64],
     options: SpdSolveOptions,
 ) -> Result<SpdSolveProfile, String> {
+    checkpoint(SolverStage::LinearPrepare, 0)?;
     let size = rhs.len();
     if matrix.size() != size {
         return Err("matrix dimensions do not match vector".to_string());
@@ -494,14 +496,17 @@ pub(crate) fn solve_spd_system_profile_with_options(
     let setup_started = Instant::now();
     let compressed = matrix.compress_scaled(&scaling, options.preconditioner);
     let setup_elapsed_ms = setup_started.elapsed().as_secs_f64() * 1000.0;
+    checkpoint(SolverStage::LinearPrepare, 1)?;
 
     let scaled_profile = match solve_spd_compressed(&compressed, &scaled_rhs, matrix, &options) {
         Ok(profile) => profile,
         Err(error) => {
+            check_cancellation()?;
             let scaled_matrix = scaling::scale_sparse_matrix(matrix, &scaling);
             let mut recovered = None;
 
             for factor in [1.0e-10, 1.0e-8, 1.0e-6] {
+                check_cancellation()?;
                 let regularized =
                     scaling::regularize_sparse_diagonal(&scaled_matrix, diagonal_scale * factor);
                 let compressed_regularized = regularized.compress(options.preconditioner);
@@ -517,6 +522,7 @@ pub(crate) fn solve_spd_system_profile_with_options(
                 }
             }
 
+            check_cancellation()?;
             recovered.ok_or(error)?
         }
     };

@@ -7,6 +7,12 @@ use serde_json::Value;
 use crate::operator_task_receipts::operator_task_failure_receipt;
 use crate::operator_task_runtime::OperatorTaskRuntimeError;
 
+impl From<kyuubiki_solver::solver_control::SolverCancelled> for OperatorTaskRuntimeError {
+    fn from(error: kyuubiki_solver::solver_control::SolverCancelled) -> Self {
+        Self::with_task("cancelled", error.to_string(), "execute_solver", None)
+    }
+}
+
 pub(crate) fn classify_digest_error(
     error: OperatorTaskDigestError,
     task_ir: &Value,

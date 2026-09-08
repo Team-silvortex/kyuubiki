@@ -20,6 +20,7 @@ pub(crate) struct LiveAgent {
     reply_timeout_ms: String,
     shutdown_timeout_ms: String,
     capacity: String,
+    solver_hold: Option<(String, String)>,
     retain_evidence: bool,
 }
 
@@ -52,6 +53,28 @@ impl LiveAgent {
         shutdown_timeout_ms: &str,
         capacity: &str,
     ) -> Result<Self, Box<dyn Error>> {
+        Self::start_configured(reply_timeout_ms, shutdown_timeout_ms, capacity, None)
+    }
+
+    pub(crate) fn start_with_solver_hold(
+        stage: &str,
+        method: &str,
+        capacity: &str,
+    ) -> Result<Self, Box<dyn Error>> {
+        Self::start_configured(
+            "10000",
+            "30000",
+            capacity,
+            Some((stage.into(), method.into())),
+        )
+    }
+
+    fn start_configured(
+        reply_timeout_ms: &str,
+        shutdown_timeout_ms: &str,
+        capacity: &str,
+        solver_hold: Option<(String, String)>,
+    ) -> Result<Self, Box<dyn Error>> {
         let port = reserve_port()?;
         let unique = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
         let evidence_root = std::env::var_os("KYUUBIKI_TEST_AGENT_EVIDENCE_DIR").map(PathBuf::from);
@@ -74,6 +97,7 @@ impl LiveAgent {
             reply_timeout_ms: reply_timeout_ms.into(),
             shutdown_timeout_ms: shutdown_timeout_ms.into(),
             capacity: capacity.into(),
+            solver_hold,
             retain_evidence: evidence_root.is_some(),
         };
         agent.start_process()?;
@@ -90,7 +114,8 @@ impl LiveAgent {
             .open(&self.log_path)?;
         let binary = std::env::var_os("KYUUBIKI_TEST_AGENT_BINARY")
             .unwrap_or_else(|| env!("CARGO_BIN_EXE_kyuubiki-cli").into());
-        let child = Command::new(binary)
+        let mut command = Command::new(binary);
+        command
             .args([
                 "agent",
                 "--host",
@@ -106,6 +131,7 @@ impl LiveAgent {
             ])
             .env("KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_FILE", &self.hold_path)
             .env_remove("KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_METHOD")
+            .env_remove("KYUUBIKI_AGENT_FAULT_INJECTION_SOLVER_STAGE")
             .env("KYUUBIKI_AGENT_MAX_ACTIVE_EXECUTIONS", &self.capacity)
             .env("KYUUBIKI_AGENT_REPLY_TIMEOUT_MS", &self.reply_timeout_ms)
             .env(
@@ -113,8 +139,13 @@ impl LiveAgent {
                 &self.shutdown_timeout_ms,
             )
             .stdout(Stdio::from(log.try_clone()?))
-            .stderr(Stdio::from(log))
-            .spawn()?;
+            .stderr(Stdio::from(log));
+        if let Some((stage, method)) = &self.solver_hold {
+            command
+                .env("KYUUBIKI_AGENT_FAULT_INJECTION_SOLVER_STAGE", stage)
+                .env("KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_METHOD", method);
+        }
+        let child = command.spawn()?;
         self.child = Some(child);
         self.wait_until_ready(Duration::from_secs(30))
     }

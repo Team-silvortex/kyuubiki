@@ -9,6 +9,7 @@ use serde::Deserialize;
 mod agent_artifact;
 mod agent_control_link;
 mod agent_deployment;
+mod agent_execution_control;
 mod agent_fault_injection;
 mod agent_headless_bridge;
 mod agent_http;

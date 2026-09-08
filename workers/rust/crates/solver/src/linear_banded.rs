@@ -1,4 +1,5 @@
 use crate::linear_algebra::SparseMatrix;
+use crate::solver_control::{SolverStage, checkpoint};
 
 /// Reusable Cholesky factor for symmetric positive-definite matrices with a narrow band.
 pub(crate) struct SymmetricBandCholesky {
@@ -73,6 +74,7 @@ impl SymmetricBandCholesky {
     }
 
     pub(crate) fn solve(&self, rhs: &[f64]) -> Result<Vec<f64>, String> {
+        checkpoint(SolverStage::BandedSubstitution, 0)?;
         if rhs.len() != self.size || rhs.iter().any(|value| !value.is_finite()) {
             return Err("banded Cholesky right-hand side is invalid".to_string());
         }
@@ -83,6 +85,7 @@ impl SymmetricBandCholesky {
                 .map(|column| self.get(row, column) * forward[column])
                 .sum::<f64>();
             forward[row] = (rhs[row] - correction) / self.get(row, row);
+            checkpoint(SolverStage::BandedSubstitution, row + 1)?;
         }
 
         let mut solution = vec![0.0; self.size];
@@ -92,6 +95,10 @@ impl SymmetricBandCholesky {
                 .map(|other| self.get(other, row) * solution[other])
                 .sum::<f64>();
             solution[row] = (forward[row] - correction) / self.get(row, row);
+            checkpoint(
+                SolverStage::BandedSubstitution,
+                self.size + (self.size - row),
+            )?;
         }
         if solution.iter().any(|value| !value.is_finite()) {
             return Err("banded Cholesky solve produced a non-finite value".to_string());
@@ -100,6 +107,7 @@ impl SymmetricBandCholesky {
     }
 
     fn factor_in_place(&mut self) -> Result<(), String> {
+        checkpoint(SolverStage::BandedFactor, 0)?;
         let relative_floor = (64.0 * f64::EPSILON * self.size.max(1) as f64).min(1.0e-8);
         for row in 0..self.size {
             let row_start = row.saturating_sub(self.width);
@@ -127,6 +135,7 @@ impl SymmetricBandCholesky {
                     self.set(row, column, factored);
                 }
             }
+            checkpoint(SolverStage::BandedFactor, row + 1)?;
         }
         Ok(())
     }

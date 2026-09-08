@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 
-use crate::agent_state::register_execution_cancel;
+use crate::agent_execution_control::cancel_generation;
 use crate::agent_watchdog;
 use crate::config::AgentConfig;
 
@@ -55,24 +55,34 @@ fn submit_timeout_cancellations(failures: Vec<agent_watchdog::FailureReport>) ->
     failures
         .into_iter()
         .filter(|failure| failure.job_id.is_some())
-        .map(|failure| {
-            register_execution_cancel(failure.request_id);
-            1_usize
-        })
+        .map(|failure| usize::from(cancel_generation(&failure.request_id, failure.generation)))
         .sum()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent_state::{take_cancelled, take_execution_cancelled};
+    use crate::agent_state::take_cancelled;
 
     #[test]
     fn timeout_bridge_submits_only_job_bound_cancellations() {
+        let active = crate::agent_execution_control::begin(
+            "watchdog-runtime-request".into(),
+            1,
+            Some("watchdog-runtime-job".into()),
+        )
+        .unwrap();
+        let later = crate::agent_execution_control::begin(
+            "watchdog-runtime-request".into(),
+            2,
+            Some("watchdog-runtime-job".into()),
+        )
+        .unwrap();
         let failures = vec![failure(Some("watchdog-runtime-job")), failure(None)];
 
         assert_eq!(submit_timeout_cancellations(failures), 1);
-        assert!(take_execution_cancelled("watchdog-runtime-request"));
+        assert!(active.solver.cancellation_requested());
+        assert!(!later.solver.cancellation_requested());
         assert!(!take_cancelled("watchdog-runtime-job"));
     }
 

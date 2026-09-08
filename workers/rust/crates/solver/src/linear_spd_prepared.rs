@@ -7,6 +7,7 @@ use crate::chain_tridiagonal::PreparedTridiagonal;
 use crate::linear_dense::DenseLu;
 use crate::linear_solver_profile::{SpdSolveOptions, SpdSolveProfile};
 use crate::linear_spd::solve_spd_compressed;
+use crate::solver_control::{SolverStage, check_cancellation, checkpoint};
 
 pub(crate) struct PreparedSpdSolver {
     matrix: SparseMatrix,
@@ -30,6 +31,7 @@ enum PreparedBackend {
 
 impl PreparedSpdSolver {
     pub(crate) fn factor(matrix: SparseMatrix) -> Result<Self, String> {
+        checkpoint(SolverStage::LinearPrepare, 0)?;
         scaling::validate_sparse_system_finite(&matrix, &[])?;
         let size = matrix.size();
         let backend = if size == 0 {
@@ -64,6 +66,7 @@ impl PreparedSpdSolver {
     }
 
     pub(crate) fn solve(&self, rhs: &[f64]) -> Result<Vec<f64>, String> {
+        check_cancellation()?;
         if rhs.len() != self.matrix.size() {
             return Err("matrix dimensions do not match vector".to_string());
         }
@@ -116,9 +119,11 @@ impl PreparedSpdSolver {
         let scaled_profile =
             match solve_spd_compressed(compressed, &scaled_rhs, &self.matrix, options) {
                 Ok(profile) => profile,
-                Err(error) => self
-                    .solve_regularized(&scaled_rhs, scaling_factors, diagonal_scale, options)
-                    .ok_or(error)?,
+                Err(error) => {
+                    check_cancellation()?;
+                    self.solve_regularized(&scaled_rhs, scaling_factors, diagonal_scale, options)?
+                        .ok_or(error)?
+                }
             };
         Ok(scaling::unscale_profile(scaled_profile, scaling_factors))
     }
@@ -129,19 +134,22 @@ impl PreparedSpdSolver {
         scaling_factors: &[f64],
         diagonal_scale: f64,
         options: &SpdSolveOptions,
-    ) -> Option<SpdSolveProfile> {
+    ) -> Result<Option<SpdSolveProfile>, String> {
+        check_cancellation()?;
         let scaled_matrix = scaling::scale_sparse_matrix(&self.matrix, scaling_factors);
         for factor in [1.0e-10, 1.0e-8, 1.0e-6] {
+            check_cancellation()?;
             let regularized =
                 scaling::regularize_sparse_diagonal(&scaled_matrix, diagonal_scale * factor);
             let compressed = regularized.compress(options.preconditioner);
             if let Ok(profile) =
                 solve_spd_compressed(&compressed, scaled_rhs, &regularized, options)
             {
-                return Some(profile);
+                return Ok(Some(profile));
             }
         }
-        None
+        check_cancellation()?;
+        Ok(None)
     }
 }
 

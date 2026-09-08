@@ -32,6 +32,21 @@ pub(crate) struct ExecutionGuard {
     generation: u64,
 }
 
+impl ExecutionGuard {
+    pub(crate) fn generation(&self) -> u64 {
+        self.generation
+    }
+}
+
+pub(crate) fn is_current(guard: &ExecutionGuard) -> bool {
+    watchdog_state().lock().is_ok_and(|state| {
+        state
+            .active
+            .get(&guard.request_id)
+            .is_some_and(|record| record.generation == guard.generation)
+    })
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct ExecutionAdmissionError {
     pub(crate) request_id: String,
@@ -585,12 +600,6 @@ pub fn run_timeout_fault_injection_probe() -> Result<Value, String> {
         return Err("agent watchdog timeout injection violated recovery invariants".to_string());
     }
     Ok(observations)
-}
-
-#[cfg(test)]
-#[allow(dead_code)]
-pub(crate) fn reset_for_tests() {
-    reset_state(watchdog_state());
 }
 
 fn reset_state(state: &Mutex<WatchdogState>) {

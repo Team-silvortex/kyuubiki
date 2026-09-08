@@ -1,8 +1,6 @@
 use crate::agent_artifact::decode_solver_params;
 use crate::agent_reply_writer::{self, SharedReplyWriter};
-use crate::agent_state::{
-    build_progress_frames, extract_job_id, take_cancelled, take_execution_cancelled,
-};
+use crate::agent_state::{build_progress_frames, extract_job_id};
 use crate::operator_task_runtime::run_operator_task_ir;
 use crate::transport::{AgentReply, HeartbeatHandle};
 use crate::{agent_fault_injection, agent_lifecycle};
@@ -44,18 +42,35 @@ pub(crate) fn handle_operator_task_ir(
         return cancelled_reply(request_id, guard, heartbeat);
     }
 
-    let result = match run_operator_task_ir(&request.params) {
+    let result = match agent_fault_injection::with_solver_control(
+        &guard,
+        maybe_job_id.as_deref(),
+        "run_operator_task_ir",
+        || run_operator_task_ir(&request.params),
+    ) {
         Ok(result) => result,
-        Err(error) => {
+        Err(mut error) => {
             stop_heartbeat(heartbeat);
+            let control = guard.solver_control();
+            if control.was_interrupted() {
+                error = crate::operator_task_runtime::OperatorTaskRuntimeError::with_task(
+                    "cancelled",
+                    error.message,
+                    "execute_solver",
+                    request.params.get("task_ir"),
+                );
+            }
             let report = agent_lifecycle::fail_execution(guard, error.code, error.message);
+            let reason_code = report.reason_code.clone();
             let mut details =
                 serde_json::to_value(report).expect("failure report should serialize");
+            details["solver_checkpoint"] =
+                crate::agent_execution_control::checkpoint_json(&control);
             details["operator_task_failure_receipt"] = error.details;
             let message = details["message"].as_str().unwrap_or_default().to_string();
             return AgentReply::Stream(
                 Vec::new(),
-                RpcResponse::error_with_details(request_id, error.code, message, details),
+                RpcResponse::error_with_details(request_id, reason_code, message, details),
             );
         }
     };
@@ -145,7 +160,12 @@ where
     if execution_cancelled(&guard, &request_id, maybe_job_id.as_deref()) {
         return cancelled_reply(request_id, guard, heartbeat);
     }
-    match solver(&params) {
+    match agent_fault_injection::with_solver_control(
+        &guard,
+        maybe_job_id.as_deref(),
+        &method,
+        || solver(&params),
+    ) {
         Ok(result) => {
             if execution_cancelled(&guard, &request_id, maybe_job_id.as_deref()) {
                 stop_heartbeat(heartbeat);
@@ -197,15 +217,22 @@ where
         }
         Err(error) => {
             stop_heartbeat(heartbeat);
-            let report = agent_lifecycle::fail_execution(guard, "solve_failed", error);
+            let control = guard.solver_control();
+            let code = if control.was_interrupted() {
+                "cancelled"
+            } else {
+                "solve_failed"
+            };
+            let report = agent_lifecycle::fail_execution(guard, code, error);
+            let reason_code = report.reason_code.clone();
+            let message = report.message.clone();
+            let mut details =
+                serde_json::to_value(report).expect("failure report should serialize");
+            details["solver_checkpoint"] =
+                crate::agent_execution_control::checkpoint_json(&control);
             AgentReply::Stream(
                 Vec::new(),
-                RpcResponse::error_with_details(
-                    request_id,
-                    "solve_failed",
-                    report.message.clone(),
-                    serde_json::to_value(report).expect("failure report should serialize"),
-                ),
+                RpcResponse::error_with_details(request_id, reason_code, message, details),
             )
         }
     }
@@ -213,12 +240,10 @@ where
 
 fn execution_cancelled(
     guard: &agent_lifecycle::ExecutionGuard,
-    request_id: &str,
-    job_id: Option<&str>,
+    _request_id: &str,
+    _job_id: Option<&str>,
 ) -> bool {
-    let request_cancelled = take_execution_cancelled(request_id);
-    let job_cancelled = job_id.is_some_and(take_cancelled);
-    guard.cancellation_requested() || request_cancelled || job_cancelled
+    guard.cancellation_requested()
 }
 
 fn cancelled_reply(

@@ -239,9 +239,22 @@ cargo run --locked --manifest-path sdks/rust/Cargo.toml \
           weakening replay policy. Neither mechanism preempts arbitrary solver iterations or
           reconstructs the entire old scheduling ledger. Keep admission settings explicit and
           do not generalize the pre-computation hold to numerical checkpoint recovery.</p>
+        <p class="docs-copy">The numerical-cancellation follow-up moves the fault inside actual
+          computation. Set <code>KYUUBIKI_AGENT_FAULT_INJECTION_SOLVER_STAGE=dense_factor</code>
+          together with the structural hold method and exact-job marker, then inspect
+          <code>solver_control.active</code> for the matching request and at least three
+          <code>completed_steps</code> before injecting a fault. An <code>await-held</code>
+          snapshot alone still does not prove this numerical stage. Inspect the old failure,
+          new generation, native capacity and unchanged Agent identity after restart.</p>
+        <p class="docs-copy">Common PCG, dense, banded and tridiagonal kernels now respond at
+          cooperative safe points, and sparse fallback does not swallow cancellation.
+          A checkpoint with <code>resumable=false</code> is diagnostic, not saved solver state.
+          Assembly, external workers, analytical shortcuts and child threads are not all
+          interruptible; no fixed cancellation latency or universal solver coverage is claimed.</p>
         <div class="docs-links">
           <a class="docs-link" href="../reports/interrupted-thermal-research-20260908.md">Fault matrix, fixes and retained evidence</a>
           <a class="docs-link" href="../reports/orphan-execution-research-20260908.md">Orphan cleanup and native capacity qualification</a>
+          <a class="docs-link" href="../reports/cooperative-solver-research-20260908.md">In-solver cancellation and installed research qualification</a>
           <a class="docs-link" href="../sdks/rust/examples/interrupted_thermal_research.rs">Phased research example</a>
           <a class="docs-link" href="./agent-orchestrator-boundary.md#workflow-activity-and-replay">Activity and replay contract</a>
         </div>
