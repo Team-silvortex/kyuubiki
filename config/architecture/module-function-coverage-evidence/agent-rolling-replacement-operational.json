@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Operational two-Agent rolling replacement with explicit admission draining, exact in-flight execution accounting, process-instance fencing, peer continuity probes, changed binary payloads, and retained remote Linux evidence.",
+  "summary": "Operational two-Agent rolling replacement with exact in-flight accounting through response delivery, bounded slow-consumer failures, irreversible signal-driven admission shutdown, bounded background cleanup, process-instance fencing, and retained Linux research evidence; forced-kill and workflow replay boundaries remain separate.",
   "paradigm_contract_evidence": {
     "deployment_update": [
       {
@@ -16,6 +16,10 @@
           "workers/rust/crates/protocol/src/types/rpc.rs",
           "workers/rust/crates/cli/src/agent_lifecycle.rs",
           "workers/rust/crates/cli/src/agent_lifecycle_rpc.rs",
+          "workers/rust/crates/cli/src/agent_reply_writer.rs",
+          "workers/rust/crates/cli/src/transport.rs",
+          "workers/rust/crates/cli/src/tests/reply_delivery.rs",
+          "workers/rust/crates/cli/tests/agent_lifecycle_live.rs",
           "workers/rust/crates/cli/src/rpc.rs",
           "workers/rust/crates/cli/src/tests/config_and_transport.rs",
           "workers/rust/crates/installer/src/agent_lifecycle_control.rs",
@@ -38,6 +42,75 @@
           "kyuubiki.agent-rolling-replacement-qualification/v1",
           "qualify-agent-rolling-replacement-operational-remote",
           "check-agent-rolling-replacement-operational-qualification"
+        ]
+      }
+    ],
+    "validation": [
+      {
+        "id": "agent-termination-signal-drain-contract",
+        "modules": ["runtime-agent-cli", "runtime-installer", "verification-evidence"],
+        "files": [
+          "workers/rust/crates/cli/src/agent_shutdown.rs",
+          "workers/rust/crates/cli/src/agent_lifecycle.rs",
+          "workers/rust/crates/cli/tests/agent_shutdown_live.rs",
+          "workers/rust/crates/cli/tests/support/agent_lifecycle.rs",
+          "docs/agent-orchestrator-boundary.md",
+          "reports/agent-shutdown-research-20260908.md"
+        ],
+        "required_text": [
+          "termination_drains_the_admitted_request_and_preserves_its_response",
+          "termination_cannot_be_undone_by_the_existing_drain_owner",
+          "shutdown_deadline_preserves_unfinished_identity_and_allows_a_fresh_process",
+          "idle_shutdown_does_not_wait_for_an_incomplete_request_header",
+          "shutdown_during_response_backpressure_never_claims_a_successful_drain",
+          "other_handled_unix_signals_also_exit_through_the_graceful_gate",
+          "repeated_shutdown_signals_do_not_reset_the_deadline_or_close_admission_twice",
+          "background_cleanup_cannot_extend_the_total_shutdown_budget",
+          "agent_shutdown_in_progress",
+          "agent_shutdown_timeout",
+          "KYUUBIKI_AGENT_SHUTDOWN_TIMEOUT_MS"
+        ]
+      },
+      {
+        "id": "agent-final-response-drain-boundary",
+        "modules": ["runtime-agent-cli", "runtime-installer", "verification-evidence"],
+        "files": [
+          "workers/rust/crates/cli/src/agent_reply_writer.rs",
+          "workers/rust/crates/cli/src/transport.rs",
+          "workers/rust/crates/cli/src/tests/reply_delivery.rs",
+          "workers/rust/crates/cli/tests/agent_lifecycle_live.rs",
+          "docs/agent-orchestrator-boundary.md",
+          "reports/agent-reply-delivery-research-20260908.md"
+        ],
+        "required_text": [
+          "solver_remains_active_until_final_reply_is_written",
+          "failed_reply_delivery_is_not_recorded_as_a_completed_execution",
+          "operator_task_ir_also_stays_active_until_its_reply_is_written",
+          "slow_result_consumer_cannot_make_drain_quiescent_or_hold_it_forever",
+          "heartbeat_shutdown_wakes_a_parked_thread_instead_of_waiting_for_its_interval",
+          "failed_frame_closes_transport_before_any_later_response",
+          "result_delivery_failed",
+          "durable_receiver_acknowledgement"
+        ]
+      }
+    ],
+    "benchmark": [
+      {
+        "id": "agent-reply-heartbeat-layered-research-latency",
+        "modules": ["runtime-agent-cli", "sdk-headless", "verification-evidence"],
+        "files": [
+          "workers/rust/crates/cli/src/transport.rs",
+          "workers/rust/crates/cli/src/tests/reply_delivery.rs",
+          "sdks/rust/examples/layered_thermal_research.rs",
+          "sdks/rust/examples/verify_layered_thermal_research.rs",
+          "reports/agent-reply-delivery-research-20260908.md"
+        ],
+        "required_text": [
+          "heartbeat_shutdown_wakes_a_parked_thread_instead_of_waiting_for_its_interval",
+          "33.22 s",
+          "5.44 s",
+          "Final installed candidate: PASS, 302/302 reference cases.",
+          "synthetic_reference_not_material_certification"
         ]
       }
     ]

@@ -159,6 +159,8 @@ pub(crate) fn registration_payload(config: &AgentConfig) -> serde_json::Value {
         "deployment_readiness": build_agent_deployment_readiness_for_config(config),
         "health_score": descriptor.runtime.health_score,
         "watchdog": agent_watchdog::snapshot(),
+        "reply_delivery": crate::agent_reply_writer::snapshot(),
+        "shutdown_policy": crate::agent_shutdown::snapshot(),
         "lifecycle": agent_lifecycle::snapshot(),
         "fault_injection": agent_fault_injection::snapshot(),
         "control_plane_link": agent_control_link::snapshot()
@@ -193,6 +195,14 @@ pub(crate) fn agent_descriptor_payload() -> serde_json::Value {
             "lifecycle".to_string(),
             serde_json::to_value(agent_lifecycle::snapshot())
                 .expect("agent lifecycle snapshot should serialize"),
+        );
+        object.insert(
+            "shutdown_policy".to_string(),
+            crate::agent_shutdown::snapshot(),
+        );
+        object.insert(
+            "reply_delivery".to_string(),
+            crate::agent_reply_writer::snapshot(),
         );
         object.insert(
             "fault_injection".to_string(),

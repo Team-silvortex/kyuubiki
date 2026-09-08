@@ -27,6 +27,7 @@ struct LifecycleState {
     active_execution_count: usize,
     drain: Option<DrainLease>,
     last_resumed: Option<(u64, String)>,
+    shutdown_requested: bool,
 }
 
 impl Default for LifecycleState {
@@ -37,6 +38,7 @@ impl Default for LifecycleState {
             active_execution_count: 0,
             drain: None,
             last_resumed: None,
+            shutdown_requested: false,
         }
     }
 }
@@ -117,6 +119,31 @@ pub(crate) fn snapshot() -> AgentLifecycleDescriptor {
     snapshot_in(&lifecycle_state())
 }
 
+pub(crate) fn begin_shutdown() -> Result<(), String> {
+    begin_shutdown_in(&lifecycle_state())
+}
+
+fn begin_shutdown_in(state: &Arc<Mutex<LifecycleState>>) -> Result<(), String> {
+    let mut lifecycle = state
+        .lock()
+        .map_err(|_| "agent lifecycle state is unavailable")?;
+    lifecycle.shutdown_requested = true;
+    if lifecycle.drain.is_none() {
+        let generation = lifecycle
+            .next_drain_generation
+            .checked_add(1)
+            .ok_or("agent drain generation is exhausted")?;
+        lifecycle.next_drain_generation = generation;
+        lifecycle.drain = Some(DrainLease {
+            generation,
+            owner_id: "agent-termination".into(),
+            reason: "process shutdown requested".into(),
+            started_unix_ms: unix_now_ms(),
+        });
+    }
+    Ok(())
+}
+
 fn acquire_execution_slot(
     state: &Arc<Mutex<LifecycleState>>,
     request_id: &str,
@@ -126,6 +153,13 @@ fn acquire_execution_slot(
         reason_code: "agent_lifecycle_unavailable".to_string(),
         message: "agent lifecycle state is unavailable".to_string(),
     })?;
+    if lifecycle.shutdown_requested {
+        return Err(ExecutionAdmissionError {
+            request_id: request_id.to_string(),
+            reason_code: "agent_draining".into(),
+            message: "agent process is shutting down and cannot accept new execution".into(),
+        });
+    }
     if let Some(drain) = lifecycle.drain.as_ref() {
         return Err(ExecutionAdmissionError {
             request_id: request_id.to_string(),
@@ -166,6 +200,9 @@ fn begin_drain_in(
         lifecycle: Box::new(unavailable_snapshot()),
     })?;
 
+    if lifecycle.shutdown_requested {
+        return Err(shutdown_control_error(&lifecycle));
+    }
     if let Some(drain) = lifecycle.drain.as_ref() {
         if drain.owner_id == controller_id {
             return Ok(snapshot_locked(&lifecycle));
@@ -212,6 +249,9 @@ fn resume_admission_in(
         lifecycle: Box::new(unavailable_snapshot()),
     })?;
 
+    if lifecycle.shutdown_requested {
+        return Err(shutdown_control_error(&lifecycle));
+    }
     let Some(drain) = lifecycle.drain.as_ref() else {
         if lifecycle
             .last_resumed
@@ -250,11 +290,12 @@ fn snapshot_in(state: &Arc<Mutex<LifecycleState>>) -> AgentLifecycleDescriptor {
 }
 
 fn snapshot_locked(state: &LifecycleState) -> AgentLifecycleDescriptor {
-    let quiescent = state.drain.is_some() && state.active_execution_count == 0;
-    let lifecycle_state = match (&state.drain, quiescent) {
-        (None, _) => "accepting",
-        (Some(_), false) => "draining",
-        (Some(_), true) => "quiescent",
+    let draining = state.drain.is_some() || state.shutdown_requested;
+    let quiescent = draining && state.active_execution_count == 0;
+    let lifecycle_state = match (draining, quiescent) {
+        (false, _) => "accepting",
+        (true, false) => "draining",
+        (true, true) => "quiescent",
     };
     AgentLifecycleDescriptor {
         schema_version: AGENT_LIFECYCLE_SCHEMA.to_string(),
@@ -262,13 +303,21 @@ fn snapshot_locked(state: &LifecycleState) -> AgentLifecycleDescriptor {
         mutation_control_scope: "host_loopback".to_string(),
         state: lifecycle_state.to_string(),
         drain_generation: state.next_drain_generation,
-        accepting_new_work: state.drain.is_none(),
+        accepting_new_work: !draining,
         active_execution_count: state.active_execution_count,
         quiescent,
         safe_to_replace: quiescent,
         drain_owner_id: state.drain.as_ref().map(|drain| drain.owner_id.clone()),
         drain_reason: state.drain.as_ref().map(|drain| drain.reason.clone()),
         drain_started_unix_ms: state.drain.as_ref().map(|drain| drain.started_unix_ms),
+    }
+}
+
+fn shutdown_control_error(state: &LifecycleState) -> LifecycleControlError {
+    LifecycleControlError {
+        code: "agent_shutdown_in_progress".into(),
+        message: "process shutdown cannot be resumed or reassigned by a drain controller".into(),
+        lifecycle: Box::new(snapshot_locked(state)),
     }
 }
 
@@ -354,6 +403,54 @@ impl Drop for ExecutionLease {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn shutdown_latch_preserves_drain_ownership_and_cannot_be_resumed() {
+        let state = Arc::new(Mutex::new(LifecycleState::default()));
+        let active = acquire_execution_slot(&state, "inflight").unwrap();
+        let drain = begin_drain_in(&state, "installer", "planned replacement").unwrap();
+        begin_shutdown_in(&state).unwrap();
+        begin_shutdown_in(&state).unwrap();
+        let snapshot = snapshot_in(&state);
+        assert_eq!(snapshot.drain_owner_id.as_deref(), Some("installer"));
+        assert_eq!(snapshot.drain_generation, drain.drain_generation);
+        assert_eq!(snapshot.active_execution_count, 1);
+        assert!(!snapshot.safe_to_replace);
+        assert_eq!(
+            acquire_execution_slot(&state, "new")
+                .unwrap_err()
+                .reason_code,
+            "agent_draining"
+        );
+        assert_eq!(
+            resume_admission_in(&state, "installer", drain.drain_generation)
+                .unwrap_err()
+                .code,
+            "agent_shutdown_in_progress"
+        );
+        assert_eq!(
+            begin_drain_in(&state, "other", "replace").unwrap_err().code,
+            "agent_shutdown_in_progress"
+        );
+        drop(active);
+        assert!(snapshot_in(&state).safe_to_replace);
+        assert!(!snapshot_in(&state).accepting_new_work);
+    }
+
+    #[test]
+    fn shutdown_generation_failure_does_not_reopen_admission() {
+        let state = Arc::new(Mutex::new(LifecycleState::default()));
+        state.lock().unwrap().next_drain_generation = u64::MAX;
+        assert!(begin_shutdown_in(&state).is_err());
+        assert!(!snapshot_in(&state).accepting_new_work);
+        assert!(acquire_execution_slot(&state, "new").is_err());
+        assert_eq!(
+            resume_admission_in(&state, "installer", 0)
+                .unwrap_err()
+                .code,
+            "agent_shutdown_in_progress"
+        );
+    }
 
     #[test]
     fn drain_preserves_existing_slots_and_rejects_new_work() {

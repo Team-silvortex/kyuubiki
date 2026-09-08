@@ -88,6 +88,76 @@ The agent is not:
 If an execution peer needs one of those concerns, it must receive it through a
 protocol contract rather than by inheriting product-layer logic.
 
+## Result Delivery And Draining
+
+An execution remains in the Agent lifecycle until its final response has been
+written to the transport, or delivery has failed explicitly. Computing a result
+is not enough to advertise `safe_to_replace`. The existing host-loopback drain
+owner and generation contract remains unchanged: drain rejects new executions,
+preserves in-flight work, and leaves control/inspection requests available.
+Both solver RPCs and TaskIR responses retain the same execution lease through
+delivery. Failed writes record `result_delivery_failed`; abandoned writers
+record `result_delivery_aborted`, including the original request/job identity.
+An existing solver failure is not overwritten by a later connection error.
+
+`KYUUBIKI_AGENT_REPLY_TIMEOUT_MS` configures a total response-write deadline,
+including serialization, progress frames and the final frame. The default is
+10,000 ms; accepted values are integers from 1 through 300,000. Invalid values
+stop Agent startup rather than disabling the bound. A failed frame write closes
+the connection immediately, including a heartbeat failure, so neither a later
+final response nor a following request can continue a truncated frame.
+Configure this budget for expected result sizes/network throughput, and
+prefer result artifacts for large data rather than an unbounded inline reply.
+
+`describe_agent` and registration/heartbeat payloads expose the read-only
+`reply_delivery` policy (`kyuubiki.agent-reply-delivery/v1`), including the
+effective timeout and `completion_boundary`. Successful socket writes are not
+durable receiver acknowledgements; `durable_receiver_acknowledgement` is false.
+Orchestra result persistence and SDK readback still require separate gates.
+The heartbeat thread is woken on completion/unwinding instead of adding a
+one-second sleep to each short job. A blocked heartbeat write is also bounded.
+
+## Termination Signals And Shutdown Budget
+
+The native Agent now routes handled termination signals into the same admission
+gate. Unix handles SIGINT, SIGTERM and SIGHUP through the
+[ctrlc signal adapter](https://docs.rs/ctrlc/3.5.2/ctrlc/). Its callback runs on a
+dedicated thread, not in an asynchronous signal context. The Windows adapter
+uses platform Ctrl-C events; this is not Windows Service Control Manager or
+Task Manager forced-termination support. Linux live tests exercise the signal
+path; macOS compile checks alone do not qualify live delivery on every platform.
+
+Shutdown irreversibly closes admission for that process and preserves an
+existing Installer drain owner/generation. New execution returns
+`agent_draining`; attempts to resume or reassign draining return
+`agent_shutdown_in_progress`. Ping and inspection stay available while admitted
+work and response delivery drain. Repeated signals neither reset the deadline
+nor force an early successful exit. Normal RPC acceptance remains blocking and
+event-driven, with no added polling delay on each request.
+
+`KYUUBIKI_AGENT_SHUTDOWN_TIMEOUT_MS` is a total budget for execution draining and
+background cleanup, default 30,000 ms, accepted integers 1..=300000. Invalid
+values reject startup. Descriptor and registration/heartbeat payloads expose
+the read-only `shutdown_policy` (`kyuubiki.agent-shutdown-policy/v1`). Graceful
+completion exits 0. A deadline failure exits 1 and emits a structured
+`kyuubiki.agent-shutdown/v1` event with `agent_shutdown_timeout`, the phase,
+remaining execution identities and recent execution failures through existing
+stderr logging. Blocking background cleanup cannot restart the budget. Events
+are diagnostic evidence, not a signed or durably acknowledged result receipt.
+
+The process supervisor must allow more time than this budget; for example, a
+30-second Agent budget needs a longer Docker stop/systemd timeout, not Docker's
+shorter default stop window. Continue using container init for process reaping.
+Planned replacement should still use the Installer lifecycle sequence.
+
+This protects admitted Agent executions, not every future node of a multi-node
+research workflow. SIGKILL, power loss and forced supervisor kills bypass the
+handler. A timed-out task is not silently declared successful or automatically
+resubmitted by the Agent; Orchestra replay/checkpoint policy remains separate.
+See the [signal and installed research evidence](../reports/agent-shutdown-research-20260908.md)
+for the exact scope, including explicit process restart rather than implicit
+replay of the timed-out computation.
+
 ## What The Orchestrator Is
 
 `orchestrator` means the control-plane runtime family.

@@ -1,6 +1,7 @@
 use std::net::{TcpListener, TcpStream};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::thread;
+use std::time::Duration;
 
 use kyuubiki_protocol::{RpcRequest, RpcResponse};
 use serde::Deserialize;
@@ -14,7 +15,9 @@ mod agent_http;
 mod agent_lifecycle;
 mod agent_lifecycle_rpc;
 mod agent_mesh;
+mod agent_reply_writer;
 mod agent_result_artifact;
+mod agent_shutdown;
 mod agent_state;
 mod agent_watchdog;
 mod agent_watchdog_runtime;
@@ -41,6 +44,7 @@ use agent_mesh::{
     build_peer_descriptors, compute_cluster_health_score, filter_self_peers,
     normalize_peer_addresses,
 };
+use agent_reply_writer::ReplyWriter;
 use agent_state::{
     build_agent_deployment_readiness_for_config, build_agent_descriptor,
     store_deployment_readiness, store_runtime_descriptor,
@@ -76,6 +80,8 @@ fn main() {
 }
 
 fn run_agent(config: &AgentConfig) -> Result<(), String> {
+    let reply_timeout = agent_reply_writer::timeout_from_env()?;
+    let shutdown = agent_shutdown::AgentShutdown::install()?;
     let package_binding = initialize_operator_package_runtime(config)?;
     let mut config = config.clone();
     config.operator_activated_package_count = package_binding.activated_package_count();
@@ -90,34 +96,55 @@ fn run_agent(config: &AgentConfig) -> Result<(), String> {
     let registration = AgentRegistrationHandle::maybe_spawn(&config);
     let peer_mesh = PeerMeshHandle::maybe_spawn(&config);
 
+    let trigger = shutdown.trigger();
+    thread::Builder::new()
+        .name("kyuubiki-agent-listener".into())
+        .spawn(move || {
+            let outcome = std::panic::catch_unwind(|| accept_connections(listener, reply_timeout));
+            let error = match outcome {
+                Ok(Err(error)) => error,
+                Err(_) => "Agent listener panicked".into(),
+                Ok(Ok(())) => "Agent listener stopped unexpectedly".into(),
+            };
+            trigger.request("listener_failure", Some(error));
+        })
+        .map_err(|error| format!("failed to spawn Agent listener: {error}"))?;
+
+    // No polling delay on the normal RPC path. The process exits only after this gate.
+    shutdown.finish(move || {
+        if let Some(watchdog) = watchdog {
+            watchdog.stop();
+        }
+        if let Some(registration) = registration {
+            registration.stop();
+        }
+        if let Some(peer_mesh) = peer_mesh {
+            peer_mesh.stop();
+        }
+    })
+}
+
+fn accept_connections(listener: TcpListener, reply_timeout: Duration) -> Result<(), String> {
     for stream in listener.incoming() {
-        let stream = stream.map_err(|error| format!("failed to accept connection: {error}"))?;
+        let stream = match stream {
+            Ok(stream) => stream,
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(error) => return Err(format!("failed to accept connection: {error}")),
+        };
         thread::Builder::new()
             .name("kyuubiki-agent-rpc".to_string())
             .spawn(move || {
-                if let Err(error) = handle_connection(stream) {
+                if let Err(error) = handle_connection(stream, reply_timeout) {
                     eprintln!("agent connection error: {error}");
                 }
             })
             .map_err(|error| format!("failed to spawn agent connection handler: {error}"))?;
     }
 
-    if let Some(watchdog) = watchdog {
-        watchdog.stop();
-    }
-
-    if let Some(registration) = registration {
-        registration.stop();
-    }
-
-    if let Some(peer_mesh) = peer_mesh {
-        peer_mesh.stop();
-    }
-
     Ok(())
 }
 
-fn handle_connection(mut stream: TcpStream) -> Result<(), String> {
+fn handle_connection(mut stream: TcpStream, reply_timeout: Duration) -> Result<(), String> {
     let peer_is_loopback = stream
         .peer_addr()
         .map(|address| address.ip().is_loopback())
@@ -131,10 +158,11 @@ fn handle_connection(mut stream: TcpStream) -> Result<(), String> {
             }
         };
 
-        let writer = Arc::new(Mutex::new(
+        let writer = Arc::new(ReplyWriter::new(
             stream
                 .try_clone()
                 .map_err(|error| format!("failed to clone stream: {error}"))?,
+            reply_timeout,
         ));
 
         let response = match decode_rpc_request(&payload) {

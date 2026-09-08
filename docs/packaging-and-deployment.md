@@ -223,6 +223,19 @@ service study observed a 15-second stop timeout and exit 137 without init;
 the idle init-enabled probe received termination and exited 143 promptly.
 Signal delivery is not in-flight task draining. Wait for terminal jobs before
 planned maintenance until that separate recovery boundary is qualified.
+For planned Agent replacement, use the existing Installer drain sequence:
+`safe_to_replace` now stays false while a final execution response is still
+being written. The configurable, descriptor-visible
+`KYUUBIKI_AGENT_REPLY_TIMEOUT_MS` bounds slow result consumers. See the
+[result-delivery boundary](./agent-orchestrator-boundary.md#result-delivery-and-draining)
+for its limits; it is not a durable receiver acknowledgement. Handled termination
+signals now use an irreversible admission latch and the separate, observable
+`KYUUBIKI_AGENT_SHUTDOWN_TIMEOUT_MS` budget (default 30 seconds). This covers
+draining plus background cleanup. Configure Docker/systemd or other supervisors
+with a longer stop timeout, for example 40 seconds, so they do not kill the Agent
+before its own deadline. See the
+[termination contract](./agent-orchestrator-boundary.md#termination-signals-and-shutdown-budget).
+Forced kills and workflow-node replay remain separate recovery boundaries.
 
 The managed desktop bundle format is
 `kyuubiki.desktop-bundle-set/v1`. Its manifest binds the platform, package

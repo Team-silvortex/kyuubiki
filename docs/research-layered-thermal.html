@@ -206,10 +206,21 @@ Both: tau_xy = 0; heat flux = 0</pre>
         <p class="docs-copy">This series does not yet establish material calibration, realistic
           nonuniform Poisson coupling, nonlinear constitutive behavior, external-solver agreement,
           in-flight task recovery, power-loss durability, large-mesh scaling, or general
-          mesh-convergence order. The native Agent also needs a qualified task-draining contract;
-          the Docker init probe only verifies idle signal delivery. These simple references
+          mesh-convergence order. The existing Agent drain contract now retains execution leases
+          until final response delivery, with bounded slow-consumer failures and readable causes.
+          Handled termination signals now close admission and wait within a configured shutdown
+          budget. This does not resume a killed computation or automatically replay future
+          workflow nodes; forced kills and power loss remain separate boundaries. These references
           deliberately expose semantic and persistence errors before more complex research.</p>
+        <p class="docs-copy">The final reply-delivery candidate passed all 302 cases, exact
+          original-job readback before and after process restarts, and 14 fresh recovery jobs.
+          Its paired 14-case study took 5.44 seconds versus 33.22 seconds before the heartbeat
+          wakeup fix, with identical requests and physical artifacts. This is one bounded
+          end-to-end timing comparison, not a solver-throughput or material-certification claim.</p>
         <div class="docs-links">
+          <a class="docs-link" href="../reports/agent-reply-delivery-research-20260908.md">Reply delivery, draining and final-build evidence</a>
+          <a class="docs-link" href="../reports/agent-shutdown-research-20260908.md">Termination signals and installed Agent qualification</a>
+          <a class="docs-link" href="./agent-orchestrator-boundary.md#result-delivery-and-draining">Response deadline and completion contract</a>
           <a class="docs-link" href="../workers/rust/crates/engine/tests/layered_thermal_research.rs">Current engine regressions</a>
           <a class="docs-link" href="./accuracy-baselines.md">Accuracy boundaries</a>
           <a class="docs-link" href="./automated-material-research-example.md">Candidate-screening series</a>

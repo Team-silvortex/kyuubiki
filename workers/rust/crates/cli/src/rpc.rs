@@ -1,6 +1,3 @@
-use std::net::TcpStream;
-use std::sync::{Arc, Mutex};
-
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -49,6 +46,7 @@ use kyuubiki_solver::{
 };
 
 use crate::agent_artifact::decode_solver_params;
+use crate::agent_reply_writer::{self, SharedReplyWriter};
 use crate::agent_state::{
     agent_descriptor_payload, build_progress_frames, extract_job_id, take_cancelled,
     take_execution_cancelled,
@@ -57,10 +55,7 @@ use crate::operator_task_runtime::run_operator_task_ir;
 use crate::transport::{AgentReply, HeartbeatHandle};
 use crate::{agent_fault_injection, agent_lifecycle};
 
-pub(crate) fn handle_request(
-    request: RpcRequest,
-    writer: Option<Arc<Mutex<TcpStream>>>,
-) -> AgentReply {
+pub(crate) fn handle_request(request: RpcRequest, writer: Option<SharedReplyWriter>) -> AgentReply {
     if let Err(error) = validate_rpc_request_envelope(&request) {
         let response_id = if error.code == RpcEnvelopeErrorCode::InvalidRequestId {
             "unknown".to_string()
@@ -557,7 +552,7 @@ pub(crate) fn handle_request(
 
 pub(crate) fn handle_request_from_peer(
     request: RpcRequest,
-    writer: Option<Arc<Mutex<TcpStream>>>,
+    writer: Option<SharedReplyWriter>,
     peer_is_loopback: bool,
 ) -> AgentReply {
     if !peer_is_loopback && crate::agent_lifecycle_rpc::is_mutation(&request.method) {
@@ -566,13 +561,11 @@ pub(crate) fn handle_request_from_peer(
     handle_request(request, writer)
 }
 
-fn handle_operator_task_ir(
-    request: RpcRequest,
-    writer: Option<Arc<Mutex<TcpStream>>>,
-) -> AgentReply {
+fn handle_operator_task_ir(request: RpcRequest, writer: Option<SharedReplyWriter>) -> AgentReply {
     let request_id = request.id;
     let maybe_job_id = extract_job_id(&request.params);
-    let guard = match agent_lifecycle::begin_execution(
+    let guard = match agent_reply_writer::begin_execution(
+        writer.as_ref(),
         request_id.clone(),
         maybe_job_id.clone(),
         "run_operator_task_ir".to_string(),
@@ -625,13 +618,13 @@ fn handle_operator_task_ir(
     }
 
     stop_heartbeat(heartbeat);
-    agent_lifecycle::complete_execution(guard);
+    agent_reply_writer::complete_execution(writer.as_ref(), guard);
     AgentReply::Stream(Vec::new(), RpcResponse::success(request_id, result))
 }
 
 fn run_solver<Request, ResultValue, NodeCount, Solver>(
     request: RpcRequest,
-    writer: Option<Arc<Mutex<TcpStream>>>,
+    writer: Option<SharedReplyWriter>,
     model_name: &str,
     serialize_label: &str,
     node_count: NodeCount,
@@ -647,7 +640,8 @@ where
     let method = rpc_method_name(&request.method);
     let maybe_job_id = extract_job_id(&request.params);
     let externalize_result = request.params.get("model_artifact_ref").is_some();
-    let guard = match agent_lifecycle::begin_execution(
+    let guard = match agent_reply_writer::begin_execution(
+        writer.as_ref(),
         request_id.clone(),
         maybe_job_id.clone(),
         method.clone(),
@@ -730,7 +724,7 @@ where
             let progress_frames =
                 build_progress_frames(model_name, &request_id, node_count(&params));
             stop_heartbeat(heartbeat);
-            agent_lifecycle::complete_execution(guard);
+            agent_reply_writer::complete_execution(writer.as_ref(), guard);
             AgentReply::Stream(
                 progress_frames,
                 RpcResponse::success(request_id, encoded_result),

@@ -26,7 +26,8 @@
           "docs/research-layered-thermal.html",
           "reports/layered-thermal-research-20260908.md",
           "reports/thermal-wide-research-20260908.md",
-          "reports/thermal-service-research-20260908.md"
+          "reports/thermal-service-research-20260908.md",
+          "reports/agent-reply-delivery-research-20260908.md"
         ],
         "required_text": [
           "layered_research_matches_independent_temperature_flux_and_expansion_references",
