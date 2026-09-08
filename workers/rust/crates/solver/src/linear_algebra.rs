@@ -12,6 +12,10 @@ const SPARSE_RESIDUAL_TOLERANCE: f64 = 1.0e-8;
 #[path = "linear_sparse_product_tests.rs"]
 mod product_tests;
 
+#[cfg(test)]
+#[path = "linear_scaling_control_tests.rs"]
+mod scaling_tests;
+
 #[path = "linear_sparse_compression.rs"]
 mod compression;
 #[path = "linear_ic0.rs"]
@@ -309,9 +313,9 @@ pub(crate) fn solve_spd_system_profile_with_options(
             },
         );
     }
-    let scaling = scaling::diagonal_sparse_scaling(matrix);
-    let scaled_rhs = scaling::scale_sparse_rhs(rhs, &scaling);
-    let diagonal_scale = scaling::average_scaled_diagonal_magnitude(matrix, &scaling).max(1.0);
+    let scaling = scaling::diagonal_sparse_scaling(matrix)?;
+    let scaled_rhs = scaling::scale_sparse_rhs(rhs, &scaling)?;
+    let diagonal_scale = scaling::average_scaled_diagonal_magnitude(matrix, &scaling)?.max(1.0);
     let setup_started = Instant::now();
     let compressed = matrix.compress_scaled(&scaling, options.preconditioner)?;
     let setup_elapsed_ms = setup_started.elapsed().as_secs_f64() * 1000.0;
@@ -321,13 +325,13 @@ pub(crate) fn solve_spd_system_profile_with_options(
         Ok(profile) => profile,
         Err(error) => {
             check_cancellation()?;
-            let scaled_matrix = scaling::scale_sparse_matrix(matrix, &scaling);
+            let scaled_matrix = scaling::scale_sparse_matrix(matrix, &scaling)?;
             let mut recovered = None;
 
             for factor in [1.0e-10, 1.0e-8, 1.0e-6] {
                 check_cancellation()?;
                 let regularized =
-                    scaling::regularize_sparse_diagonal(&scaled_matrix, diagonal_scale * factor);
+                    scaling::regularize_sparse_diagonal(&scaled_matrix, diagonal_scale * factor)?;
                 let compressed_regularized = regularized.compress(options.preconditioner)?;
 
                 if let Ok(profile) = solve_spd_compressed(
@@ -345,7 +349,7 @@ pub(crate) fn solve_spd_system_profile_with_options(
             recovered.ok_or(error)?
         }
     };
-    let mut profile = scaling::unscale_profile(scaled_profile, &scaling);
+    let mut profile = scaling::unscale_profile(scaled_profile, &scaling)?;
     profile
         .stages
         .push(crate::linear_solver_profile::SpdSolveStage {

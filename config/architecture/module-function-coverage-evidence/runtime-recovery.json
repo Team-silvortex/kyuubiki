@@ -129,6 +129,48 @@
   },
   "evidence_claims": [
     {
+      "id": "sparse-scaling-installed-thermal-recovery",
+      "status": "proven", "grade": "qualified",
+      "modules": ["runtime-engine-solver", "runtime-agent-cli", "verification-evidence"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/src/linear_algebra_scaling.rs",
+        "workers/rust/crates/solver/src/linear_algebra.rs",
+        "workers/rust/crates/solver/src/linear_spd_prepared.rs",
+        "workers/rust/crates/solver/src/linear_scaling_control_tests.rs",
+        "workers/rust/crates/cli/src/agent_fault_injection.rs",
+        "workers/rust/crates/cli/tests/support/solver_scaling_cancel.rs",
+        "docs/agent-orchestrator-boundary.md",
+        "reports/sparse-scaling-research-20260908.md"
+      ],
+      "required_text": [
+        "prepared_scaling_cancellation_does_not_escape_or_poison_a_reused_factor",
+        "public_scaling_cancellation_preserves_all_three_preconditioner_results",
+        "disconnected_sparse_unscaling_does_not_export_a_partial_solution",
+        "Installed sparse scaling/validation cancellation: PASS, 8/8 new fault scenarios.",
+        "synthetic_reference_not_material_certification"
+      ]
+    },
+    {
+      "id": "sparse-scaling-paired-cancellation-overhead",
+      "status": "proven", "grade": "qualified",
+      "modules": ["runtime-engine-solver", "verification-evidence"],
+      "paradigms": ["validation"],
+      "dimensions": ["benchmark"],
+      "files": [
+        "workers/rust/crates/solver/src/linear_scaling_benchmark.rs",
+        "workers/rust/crates/solver/src/linear_scaling_reference.rs",
+        "workers/rust/crates/solver/src/linear_scaling_control_tests.rs",
+        "reports/sparse-scaling-research-20260908.md"
+      ],
+      "required_text": [
+        "paired_sparse_scaling_control_overhead", "baseline_ms", "unscoped_ms", "controlled_ms",
+        "No global overhead bound"
+      ]
+    },
+    {
       "id": "pcg-vector-installed-thermal-recovery",
       "status": "proven",
       "grade": "qualified",

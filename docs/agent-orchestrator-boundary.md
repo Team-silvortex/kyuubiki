@@ -235,8 +235,33 @@ reset per invocation; a norm counts visited elements even when their value is
 zero. No partial dot/norm, normalized RHS or final scaled solution is returned
 on cancellation. Mutable scratch may contain a prefix and must be discarded.
 PCG and prepared-solver callers propagate cancellation instead of entering a
-dense/regularized retry. These checks do not cover the separate sparse-system
-scaling helpers, allocations, or arbitrary vector operations in other algorithms.
+dense/regularized retry. Separate sparse-system scaling is covered below;
+allocations and arbitrary vector operations in other algorithms remain distinct.
+
+Shared sparse-system finite validation polls at `sparse_validate_rhs` every
+1,024 RHS elements and `sparse_validate_matrix` every 64 rows, including empty
+rows. Both poll at entry and completion. Rows longer than 1,024 entries also
+poll at `sparse_validate_matrix_row` every 1,024 entries plus entry/completion.
+RHS errors still take precedence over matrix errors; finite checks do not
+identify an offending index. A boolean reduction may inspect a whole bounded
+block before rejecting it, without regrouping any numerical sum.
+
+`sparse_diagonal_scale` and `sparse_diagonal_magnitude` poll every 64 rows.
+Diagonal scaling reuses SparseMatrix's existing binary lookup on its sorted,
+unique columns; missing/zero diagonal behavior and arithmetic are unchanged.
+`sparse_rhs_scale` and `sparse_solution_unscale` poll every 1,024 vector elements.
+All include entry and the final short block. Original accumulation/multiplication
+order is retained, and final unscaling must succeed before result acceptance.
+
+Fallback matrix scaling and regularization are also fallible. Their capacity
+hint scans poll at `sparse_capacity_scan` every 1,024 rows; `sparse_matrix_scale`,
+`sparse_regularize_copy` and `sparse_regularize_diagonal` count 64-row blocks.
+The copy/scale paths additionally poll within wide rows using
+`sparse_matrix_scale_row` and `sparse_regularize_copy_row`, at 1,024-entry
+boundaries. Row buffers are allocated along the checked traversal, not all in an
+uninterrupted preallocation loop. Neither ordinary nor prepared solvers publish
+a partial matrix or continue regularized retries after cancellation. Counters
+reset per pass/row and remain diagnostic, not saved restart state.
 
 An explicit job cancellation marks every matching execution currently registered
 in the control registry, not a single globally consumed flag. Cancellation with
@@ -258,7 +283,7 @@ define its actual coverage, not arbitrary work invoked within that scope.
 For isolated fault qualification only,
 `KYUUBIKI_AGENT_FAULT_INJECTION_SOLVER_STAGE` selects `sparse_iteration`,
 `dense_factor`, `tridiagonal_factor`, or one of the preparation, sweep, product,
-residual or PCG vector stages above.
+residual, PCG vector or sparse scaling/validation stages above.
 It requires the existing hold-file and
 explicit execution-method settings. A matching job is held once, after at least
 three completed steps at that stage, for no more than 120 seconds. Numerical
@@ -266,11 +291,15 @@ stage mode replaces the pre-computation hold. Descriptor metadata exposes phase,
 stage and minimum step count, never the host marker path. Leave all three fault
 controls unset in normal use. A slow observer delays its synchronous caller.
 
-This scope does not interrupt input validation, allocation, custom constraint
-algorithms, physical-result postprocessing, other preconditioner implementations,
+This scope does not interrupt arbitrary input parsing/validation, individual
+allocations, custom constraint algorithms, physical-result postprocessing,
+other preconditioner implementations,
 or arbitrary matrix/vector operations. The row-interior guarantee above applies
-only to compressed products and shared sparse residual validation, not dense
-factorization interiors or preconditioner rows. PCG vector passes use their
+only to the listed compressed products, sparse residual/finite checks and
+scaling/copy paths, not dense factorization interiors or preconditioner rows.
+Regularization's single Vec insert/remove may still shift an entire row without
+an internal poll. Other capacity scans, structural-input checks and sparse-path
+detection are not covered by the scaling capacity stage. PCG vector passes use their
 separate element-block contract above, not the 64-row product contract.
 Element-level coverage is limited to the four planar
 heat/thermal paths above, not every operator's assembly or preconditioner type.
@@ -287,6 +316,9 @@ and [matrix-product/residual validation](../reports/matvec-residual-research-202
 for real in-progress heat/structure faults and bounded acceptance evidence.
 The [PCG vector follow-up](../reports/pcg-vector-research-20260908.md) separates
 installed vector-stage faults from unchanged mixed-workflow numerical regression.
+The [sparse scaling/validation study](../reports/sparse-scaling-research-20260908.md)
+adds installed pre-solve and post-solve faults, with fallback/long-row coverage
+kept explicitly at the native numerical-test layer.
 
 ## Termination Signals And Shutdown Budget
 

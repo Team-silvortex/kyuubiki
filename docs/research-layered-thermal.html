@@ -287,6 +287,18 @@ cargo run --locked --manifest-path sdks/rust/Cargo.toml \
           a direct solver need not reach a PCG-only stage. The fresh mixed-workflow matrix
           and restart readback are separate regression evidence, not PCG-stage process-fault
           qualification. Release-mode vector timings likewise are not end-to-end FEM timings.</p>
+        <p class="docs-copy">The sparse scaling/validation follow-up uses the same 1,681-node
+          heat fixture for six additional cancellation boundaries and two transport-loss
+          cases. RHS finite validation, RHS scaling and final solution unscaling must be
+          observed at exactly 1,024 completed vector elements; matrix finite validation,
+          diagonal scaling and diagonal magnitude must show 64 completed rows. Failed
+          requests must release capacity while the hold marker still exists, and the
+          next complete solve must retain the analytical temperature tolerance. Native
+          tests separately force negative-definite fallback and long-row interiors in
+          validation, matrix scaling and regularization copying; the ordinary heat case
+          does not prove those fallback branches. No copied matrix, unscaled prefix or
+          diagnostics counter is a resumable solver checkpoint. Allocation and individual
+          row insert/remove operations still have distinct interruption limits.</p>
         <div class="docs-links">
           <a class="docs-link" href="../reports/interrupted-thermal-research-20260908.md">Fault matrix, fixes and retained evidence</a>
           <a class="docs-link" href="../reports/orphan-execution-research-20260908.md">Orphan cleanup and native capacity qualification</a>
@@ -295,6 +307,7 @@ cargo run --locked --manifest-path sdks/rust/Cargo.toml \
           <a class="docs-link" href="../reports/constraint-preconditioner-research-20260908.md">Constraint and preconditioner sweep qualification</a>
           <a class="docs-link" href="../reports/matvec-residual-research-20260908.md">Matrix-product and residual qualification</a>
           <a class="docs-link" href="../reports/pcg-vector-research-20260908.md">PCG vectors, installed cancellation and paired timings</a>
+          <a class="docs-link" href="../reports/sparse-scaling-research-20260908.md">Sparse validation, scaling and fallback recovery evidence</a>
           <a class="docs-link" href="../sdks/rust/examples/interrupted_thermal_research.rs">Phased research example</a>
           <a class="docs-link" href="./agent-orchestrator-boundary.md#workflow-activity-and-replay">Activity and replay contract</a>
         </div>

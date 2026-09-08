@@ -51,9 +51,9 @@ impl PreparedSpdSolver {
             PreparedBackend::Dense(DenseLu::factor(sparse_to_dense(&matrix))?)
         } else {
             let options = SpdSolveOptions::default();
-            let scaling = scaling::diagonal_sparse_scaling(&matrix);
+            let scaling = scaling::diagonal_sparse_scaling(&matrix)?;
             let diagonal_scale =
-                scaling::average_scaled_diagonal_magnitude(&matrix, &scaling).max(1.0);
+                scaling::average_scaled_diagonal_magnitude(&matrix, &scaling)?.max(1.0);
             let compressed = Box::new(matrix.compress_scaled(&scaling, options.preconditioner)?);
             PreparedBackend::Iterative {
                 scaling,
@@ -115,7 +115,7 @@ impl PreparedSpdSolver {
         diagonal_scale: f64,
         options: &SpdSolveOptions,
     ) -> Result<SpdSolveProfile, String> {
-        let scaled_rhs = scaling::scale_sparse_rhs(rhs, scaling_factors);
+        let scaled_rhs = scaling::scale_sparse_rhs(rhs, scaling_factors)?;
         let scaled_profile =
             match solve_spd_compressed(compressed, &scaled_rhs, &self.matrix, options) {
                 Ok(profile) => profile,
@@ -125,7 +125,7 @@ impl PreparedSpdSolver {
                         .ok_or(error)?
                 }
             };
-        Ok(scaling::unscale_profile(scaled_profile, scaling_factors))
+        scaling::unscale_profile(scaled_profile, scaling_factors)
     }
 
     fn solve_regularized(
@@ -136,11 +136,11 @@ impl PreparedSpdSolver {
         options: &SpdSolveOptions,
     ) -> Result<Option<SpdSolveProfile>, String> {
         check_cancellation()?;
-        let scaled_matrix = scaling::scale_sparse_matrix(&self.matrix, scaling_factors);
+        let scaled_matrix = scaling::scale_sparse_matrix(&self.matrix, scaling_factors)?;
         for factor in [1.0e-10, 1.0e-8, 1.0e-6] {
             check_cancellation()?;
             let regularized =
-                scaling::regularize_sparse_diagonal(&scaled_matrix, diagonal_scale * factor);
+                scaling::regularize_sparse_diagonal(&scaled_matrix, diagonal_scale * factor)?;
             let compressed = regularized.compress(options.preconditioner)?;
             if let Ok(profile) =
                 solve_spd_compressed(&compressed, scaled_rhs, &regularized, options)

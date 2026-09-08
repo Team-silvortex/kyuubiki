@@ -45,6 +45,19 @@ pub enum SolverStage {
     PcgResidualUpdate,
     PcgDirectionUpdate,
     PcgSolutionScale,
+    SparseValidateRhs,
+    SparseValidateMatrix,
+    SparseValidateMatrixRow,
+    SparseDiagonalScale,
+    SparseRhsScale,
+    SparseSolutionUnscale,
+    SparseDiagonalMagnitude,
+    SparseCapacityScan,
+    SparseMatrixScale,
+    SparseMatrixScaleRow,
+    SparseRegularizeCopy,
+    SparseRegularizeCopyRow,
+    SparseRegularizeDiagonal,
 }
 
 impl SolverStage {
@@ -87,6 +100,19 @@ impl SolverStage {
             Self::PcgResidualUpdate => "pcg_residual_update",
             Self::PcgDirectionUpdate => "pcg_direction_update",
             Self::PcgSolutionScale => "pcg_solution_scale",
+            Self::SparseValidateRhs => "sparse_validate_rhs",
+            Self::SparseValidateMatrix => "sparse_validate_matrix",
+            Self::SparseValidateMatrixRow => "sparse_validate_matrix_row",
+            Self::SparseDiagonalScale => "sparse_diagonal_scale",
+            Self::SparseRhsScale => "sparse_rhs_scale",
+            Self::SparseSolutionUnscale => "sparse_solution_unscale",
+            Self::SparseDiagonalMagnitude => "sparse_diagonal_magnitude",
+            Self::SparseCapacityScan => "sparse_capacity_scan",
+            Self::SparseMatrixScale => "sparse_matrix_scale",
+            Self::SparseMatrixScaleRow => "sparse_matrix_scale_row",
+            Self::SparseRegularizeCopy => "sparse_regularize_copy",
+            Self::SparseRegularizeCopyRow => "sparse_regularize_copy_row",
+            Self::SparseRegularizeDiagonal => "sparse_regularize_diagonal",
         }
     }
 
@@ -129,6 +155,19 @@ impl SolverStage {
             Self::PcgResidualUpdate,
             Self::PcgDirectionUpdate,
             Self::PcgSolutionScale,
+            Self::SparseValidateRhs,
+            Self::SparseValidateMatrix,
+            Self::SparseValidateMatrixRow,
+            Self::SparseDiagonalScale,
+            Self::SparseRhsScale,
+            Self::SparseSolutionUnscale,
+            Self::SparseDiagonalMagnitude,
+            Self::SparseCapacityScan,
+            Self::SparseMatrixScale,
+            Self::SparseMatrixScaleRow,
+            Self::SparseRegularizeCopy,
+            Self::SparseRegularizeCopyRow,
+            Self::SparseRegularizeDiagonal,
         ]
         .into_iter()
         .find(|stage| *stage as u8 == value)
