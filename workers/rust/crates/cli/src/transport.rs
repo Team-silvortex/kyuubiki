@@ -9,7 +9,6 @@ use kyuubiki_protocol::{JobStatus, ProgressEvent, RpcProgress, RpcResponse};
 
 use crate::agent_lifecycle;
 use crate::agent_reply_writer::SharedReplyWriter;
-use crate::agent_state::register_execution_cancel;
 
 #[cfg(test)]
 #[path = "tests/reply_delivery.rs"]
@@ -171,7 +170,7 @@ impl HeartbeatHandle {
                 );
 
                 if write_json_frame(&writer, &heartbeat, Instant::now() + writer.timeout).is_err() {
-                    register_execution_cancel(request_id.clone());
+                    execution_guard.request_cancellation();
                     break;
                 }
             }

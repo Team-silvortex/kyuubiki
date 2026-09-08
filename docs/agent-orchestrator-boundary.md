@@ -117,6 +117,51 @@ Orchestra result persistence and SDK readback still require separate gates.
 The heartbeat thread is woken on completion/unwinding instead of adding a
 one-second sleep to each short job. A blocked heartbeat write is also bounded.
 
+## Native Execution Capacity And Orphaned Work
+
+`KYUUBIKI_AGENT_MAX_ACTIVE_EXECUTIONS` is the Agent-local admission limit, default
+1, accepted integers 1..=1024. Startup rejects invalid values; changing the
+limit requires a process restart. Both solver RPC and TaskIR use the same
+locked lifecycle count. The slot remains reserved until the last execution /
+response lease is dropped, including failure and cancellation. Ping, inspection
+and lifecycle controls do not consume execution slots. This is not a limit on
+TCP connections, request bytes, or every background thread.
+
+A full Agent rejects new work with `agent_at_capacity` before execution, rather
+than relying exclusively on Orchestra's in-memory scheduling ledger. Descriptor
+and registration/heartbeat payloads expose read-only `execution_admission`
+(`kyuubiki.agent-execution-admission/v1`), including the effective limit, active
+count and admission/release boundaries. Configure Orchestra's declared endpoint
+capacity no higher than this native limit. The control plane does not yet adopt
+the native limit automatically; a lower declared limit can underutilize an Agent.
+
+Orchestra treats this specific rejection as non-admission, not a failed accepted
+computation. It tries another eligible endpoint or waits in bounded 50 ms retry
+intervals, without marking a full Agent unhealthy. One admission-wait deadline
+starts at the first native capacity rejection and uses the existing queue timeout;
+expiry returns `agent_capacity_timeout`. Existing transport deadlines still bound
+individual RPCs. Every dispatch rechecks current authorization. A capacity retry
+does not waive checkpoint-required policy for uncertain transport failure or
+accepted execution, and does not reset the workflow execution deadline.
+
+A failed heartbeat write marks cancellation on that specific execution guard,
+not on a reusable request/job id. Cooperative boundaries check it before TaskIR
+decoding or solver computation, and after solver parameter decoding. The
+test-only hold also responds to transport loss and explicit cancellation without
+requiring marker removal. An old guard cannot cancel a new execution that reuses
+its request id, or a distinct live execution of the same job.
+
+This does not preempt a solver already inside an uncooperative numerical call.
+Such a call keeps its capacity slot until it returns; it must not advertise
+spare capacity just because the control plane considers it cancelled. Heartbeat
+write failure is not a proof of immediate network-blackhole detection. Native
+admission protects one Agent across an Orchestra restart, but does not rebuild
+the control plane's old execution ledger or guarantee exactly-once side effects.
+This transport-loss observation covers job-bound executions that emit heartbeats;
+it is not an independent disconnect monitor for every RPC.
+The [installed orphan-execution study](../reports/orphan-execution-research-20260908.md)
+separates these boundaries from the cases actually exercised.
+
 ## Termination Signals And Shutdown Budget
 
 The native Agent now routes handled termination signals into the same admission
@@ -157,6 +202,46 @@ resubmitted by the Agent; Orchestra replay/checkpoint policy remains separate.
 See the [signal and installed research evidence](../reports/agent-shutdown-research-20260908.md)
 for the exact scope, including explicit process restart rather than implicit
 replay of the timed-out computation.
+
+## Workflow Activity And Replay
+
+Workflow solve-node `retry_safety` and `replay_checkpoint` must reach Agent
+transport recovery unchanged. `replay_safety` is an alias only when the canonical
+key is absent. Only an absent policy may inherit the pure-solver default;
+invalid explicit values or unverified `checkpointed` assertions require a
+checkpoint. Connection failures before dispatch are different from uncertain
+send/receive failures. Graph-level recovery policy controls whole-workflow
+restart; it must not be confused with a node's transport-retry policy.
+
+Agent activity now reaches the workflow coordinator. A valid current owner,
+lease and generation can refresh job liveness at most once per second, without
+rewriting artifacts, advancing completed graph nodes or resetting the original
+execution deadline. Throttled activity still checks the claim. Cancellation,
+stale-heartbeat detection and total execution timeout remain independent guards.
+
+Idempotent restart can replay the whole graph, including completed upstream
+nodes. Durable job progress and iteration retain their high-water marks;
+progress events separately expose `generation`, `attempt` and raw
+`execution_progress`. This avoids rejecting valid replay as progress regression
+without disabling monotonic Job validation. It is not reuse of a solver checkpoint.
+
+The explicit test-only `KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_METHOD` narrows an
+existing job-scoped hold to a supported execution RPC. It requires
+`KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_FILE`, whose path is supplied at deployment;
+only exact job-id marker content activates the hold, for at most 120 seconds.
+Invalid/non-execution methods reject startup. `describe_agent.fault_injection`
+exposes the method scope but not the host file path. Leave both controls unset
+outside reviewed isolated fault tests; this is not a scheduling or pause API.
+
+See the [mixed research qualification](../reports/interrupted-thermal-research-20260908.md)
+for actual SIGTERM, Agent SIGKILL, Orchestra restart and checkpoint-required
+negative cases. Its earlier candidate allowed old/new computations to overlap
+despite fenced result ownership. The subsequent
+[orphan-execution qualification](../reports/orphan-execution-research-20260908.md)
+adds native admission and cooperative cancellation: in the tested single-Agent
+restart, the old held execution exits without marker release before a new one
+is admitted. Capacity accounting is still distinct from result-commit fencing
+and complete control-plane ledger reconciliation.
 
 ## What The Orchestrator Is
 

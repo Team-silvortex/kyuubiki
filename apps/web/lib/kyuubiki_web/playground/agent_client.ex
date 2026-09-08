@@ -304,8 +304,16 @@ defmodule KyuubikiWeb.Playground.AgentClient do
       endpoints = AgentPool.checkout_endpoints(method, opts)
 
       case endpoints do
-        [] -> {:error, no_matching_agent_error(method, opts)}
-        _ -> attempt_request(endpoints, request_id, request, on_progress, opts, [])
+        [] ->
+          {:error, no_matching_agent_error(method, opts)}
+
+        _ ->
+          opts =
+            opts
+            |> Keyword.put(:capacity_candidates, endpoints)
+            |> Keyword.delete(:capacity_retry_deadline_ms)
+
+          attempt_request(endpoints, request_id, request, on_progress, opts, [])
       end
     end
   end
@@ -350,8 +358,9 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   end
 
   defp attempt_request(endpoints, request_id, request, on_progress, opts, failures) do
-    with :ok <- emit_queue_progress(on_progress, opts, endpoints) do
-      case AgentExecutionGate.acquire(endpoints, request_id, queue_timeout_ms(opts)) do
+    with :ok <- emit_queue_progress(on_progress, opts, endpoints),
+         {:ok, wait_ms} <- capacity_wait_timeout(opts) do
+      case AgentExecutionGate.acquire(endpoints, request_id, wait_ms) do
         {:ok, endpoint, queue_metadata} ->
           remaining = Enum.reject(endpoints, &(&1.id == endpoint.id))
 
@@ -396,6 +405,34 @@ defmodule KyuubikiWeb.Playground.AgentClient do
        ) do
     :ok = AgentPool.report_success(endpoint)
     {:ok, result, endpoint}
+  end
+
+  defp handle_endpoint_result(
+         {:error, {:rpc_error, "agent_at_capacity", _message}},
+         endpoint,
+         remaining,
+         request_id,
+         request,
+         on_progress,
+         opts,
+         failures
+       ) do
+    :ok = AgentPool.report_success(endpoint)
+
+    deadline =
+      Keyword.get(opts, :capacity_retry_deadline_ms) ||
+        System.monotonic_time(:millisecond) + queue_timeout_ms(opts)
+
+    opts = Keyword.put(opts, :capacity_retry_deadline_ms, deadline)
+
+    with {:ok, wait_ms} <- capacity_wait_timeout(opts) do
+      # Native rejection precedes execution, so no replay permission is consumed.
+      candidates =
+        if remaining == [], do: Keyword.fetch!(opts, :capacity_candidates), else: remaining
+
+      if remaining == [], do: Process.sleep(min(50, wait_ms))
+      attempt_request(candidates, request_id, request, on_progress, opts, failures)
+    end
   end
 
   defp handle_endpoint_result(
@@ -465,6 +502,11 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     with :ok <- emit_recovery_progress(on_progress, opts, receipt) do
       cond do
         DistributedRecovery.retryable?(receipt) and remaining != [] ->
+          opts =
+            opts
+            |> Keyword.put(:capacity_candidates, remaining)
+            |> Keyword.delete(:capacity_retry_deadline_ms)
+
           attempt_request(remaining, request_id, request, on_progress, opts, [receipt | failures])
 
         DistributedRecovery.retryable?(receipt) ->
@@ -619,6 +661,22 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     case Keyword.get(opts, :queue_timeout_ms) do
       value when is_integer(value) and value > 0 -> value
       _ -> configured_queue_timeout_ms()
+    end
+  end
+
+  defp capacity_wait_timeout(opts) do
+    timeout = queue_timeout_ms(opts)
+
+    case Keyword.get(opts, :capacity_retry_deadline_ms) do
+      nil ->
+        {:ok, timeout}
+
+      deadline ->
+        remaining = deadline - System.monotonic_time(:millisecond)
+
+        if remaining > 0,
+          do: {:ok, min(timeout, remaining)},
+          else: {:error, {:agent_capacity_timeout, %{timeout_ms: timeout}}}
     end
   end
 

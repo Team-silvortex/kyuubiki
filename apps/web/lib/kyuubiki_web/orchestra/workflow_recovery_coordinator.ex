@@ -95,6 +95,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
       refs: %{},
       jobs: %{},
       progress: %{},
+      activity: %{},
       recovery_runs: 0,
       recovered_jobs: 0,
       blocked_jobs: 0
@@ -141,6 +142,26 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
         else: {{:error, :orchestra_standby}, state}
 
     {:reply, reply, Ownership.after_write(next_state, reply)}
+  end
+
+  def handle_call(
+        {:record_progress, job_id, claim,
+         %{"event" => "operator_activity", "node_id" => node_id}},
+        _from,
+        state
+      )
+      when is_binary(node_id) do
+    now = System.monotonic_time(:millisecond)
+    previous = Map.get(state.activity, job_id)
+    persist? = is_nil(previous) or now - previous >= 1_000
+
+    result =
+      if Ownership.owner?(state),
+        do: touch_activity_if_owned(job_id, claim, node_id, state.lease, persist?),
+        else: {:error, :orchestra_standby}
+
+    next = if result == :ok and persist?, do: put_in(state, [:activity, job_id], now), else: state
+    {:reply, result, Ownership.after_write(next, result)}
   end
 
   def handle_call({:record_progress, job_id, claim, progress}, _from, state) do
@@ -263,7 +284,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
           state
           | refs: refs,
             jobs: Map.delete(state.jobs, job_id),
-            progress: Map.delete(state.progress, job_id)
+            progress: Map.delete(state.progress, job_id),
+            activity: Map.delete(state.activity, job_id)
         }
 
         if Ownership.owner?(next_state) do
@@ -419,6 +441,33 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     end
   end
 
+  defp touch_activity_if_owned(job_id, claim, node_id, lease, persist?) do
+    LeaseStore.with_lease(lease, fn ->
+      with {:ok, job} <- active_job(job_id),
+           {:ok, _runtime, recovery} <- fetch_runtime(job_id),
+           true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim) do
+        if persist? do
+          # A live operator is not a completed graph node and cannot reset the execution deadline.
+          case Store.apply_progress(%{
+                 job_id: job_id,
+                 stage: Atom.to_string(job.status),
+                 progress: job.progress,
+                 iteration: job.iteration,
+                 message: "workflow node #{node_id} active"
+               }) do
+            {:ok, _job} -> :ok
+            error -> error
+          end
+        else
+          :ok
+        end
+      else
+        false -> {:error, :stale_workflow_execution_claim}
+        error -> error
+      end
+    end)
+  end
+
   defp record_progress_if_owned(
          job_id,
          claim,
@@ -435,8 +484,17 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
       with {:ok, job} <- active_job(job_id),
            {:ok, runtime, recovery} <- fetch_runtime(job_id),
            true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim),
-           progress <- min(completed_nodes / total_nodes, 0.98),
+           execution_progress <- min(completed_nodes / total_nodes, 0.98),
+           replay? <- claim["generation"] > 1,
+           progress <-
+             if(replay?, do: max(job.progress, execution_progress), else: execution_progress),
            progress_event <- progress_event(node_id, completed_nodes, total_nodes, progress),
+           progress_event <-
+             Map.merge(progress_event, %{
+               "generation" => claim["generation"],
+               "attempt" => claim["attempt"],
+               "execution_progress" => execution_progress
+             }),
            updated_runtime <-
              runtime
              |> Map.put("current_node", node_id)
@@ -449,7 +507,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
                job_id: job_id,
                stage: "solving",
                progress: progress,
-               iteration: completed_nodes,
+               iteration:
+                 if(replay?, do: max(job.iteration || 0, completed_nodes), else: completed_nodes),
                message: "completed workflow node #{node_id}"
              }) do
         _ = job
@@ -681,7 +740,13 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   defp remember_progress(state, _job_id, _progress), do: state
-  defp forget_progress(state, job_id), do: %{state | progress: Map.delete(state.progress, job_id)}
+
+  defp forget_progress(state, job_id),
+    do: %{
+      state
+      | progress: Map.delete(state.progress, job_id),
+        activity: Map.delete(state.activity, job_id)
+    }
 
   defp normalize_block_reason({:workflow_replay_blocked, safety}),
     do: {:workflow_replay_blocked, safety}

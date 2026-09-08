@@ -33,6 +33,7 @@ mod operator_task_receipts;
 mod operator_task_runtime;
 mod operator_task_runtime_error;
 mod rpc;
+mod rpc_execution;
 mod transport;
 mod worker;
 
@@ -80,6 +81,7 @@ fn main() {
 }
 
 fn run_agent(config: &AgentConfig) -> Result<(), String> {
+    agent_lifecycle::configure_execution_capacity()?;
     let reply_timeout = agent_reply_writer::timeout_from_env()?;
     let shutdown = agent_shutdown::AgentShutdown::install()?;
     let package_binding = initialize_operator_package_runtime(config)?;

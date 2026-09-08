@@ -62,17 +62,18 @@ defmodule KyuubikiWeb.Orchestra.DistributedRecovery do
   defp failure_stage(reason), do: {:dispatch, reason}
 
   defp retry_safety(method, opts, checkpoint_digest) do
-    case Keyword.get(opts, :retry_safety) do
-      value when value in [:idempotent, "idempotent"] ->
+    case Keyword.fetch(opts, :retry_safety) do
+      {:ok, value} when value in [:idempotent, "idempotent"] ->
         :idempotent
 
-      value when value in [:checkpointed, "checkpointed"] and is_binary(checkpoint_digest) ->
+      {:ok, value}
+      when value in [:checkpointed, "checkpointed"] and is_binary(checkpoint_digest) ->
         :checkpointed
 
-      value when value in [:checkpoint_required, "checkpoint_required"] ->
+      {:ok, _explicit_policy} ->
         :checkpoint_required
 
-      _ ->
+      :error ->
         default_retry_safety(method)
     end
   end

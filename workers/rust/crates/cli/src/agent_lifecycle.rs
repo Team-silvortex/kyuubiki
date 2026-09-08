@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -25,6 +25,7 @@ struct LifecycleState {
     process_instance_id: String,
     next_drain_generation: u64,
     active_execution_count: usize,
+    max_active_executions: Option<usize>,
     drain: Option<DrainLease>,
     last_resumed: Option<(u64, String)>,
     shutdown_requested: bool,
@@ -36,6 +37,7 @@ impl Default for LifecycleState {
             process_instance_id: next_process_instance_id(),
             next_drain_generation: 0,
             active_execution_count: 0,
+            max_active_executions: None,
             drain: None,
             last_resumed: None,
             shutdown_requested: false,
@@ -47,6 +49,61 @@ impl Default for LifecycleState {
 pub(crate) struct ExecutionGuard {
     watchdog: agent_watchdog::ExecutionGuard,
     _lifecycle_lease: Arc<ExecutionLease>,
+    cancellation: Arc<AtomicBool>,
+}
+
+impl ExecutionGuard {
+    pub(crate) fn request_cancellation(&self) {
+        self.cancellation.store(true, Ordering::Release);
+    }
+
+    pub(crate) fn cancellation_requested(&self) -> bool {
+        self.cancellation.load(Ordering::Acquire)
+    }
+}
+
+const CAPACITY_ENV: &str = "KYUUBIKI_AGENT_MAX_ACTIVE_EXECUTIONS";
+
+pub(crate) fn configure_execution_capacity() -> Result<(), String> {
+    let limit = match std::env::var(CAPACITY_ENV) {
+        Ok(value) => parse_execution_capacity(Some(&value))?,
+        Err(std::env::VarError::NotPresent) => parse_execution_capacity(None)?,
+        Err(_) => return Err(format!("{CAPACITY_ENV} must be valid Unicode")),
+    };
+    let state = lifecycle_state();
+    let mut state = state.lock().map_err(|_| "Agent lifecycle is unavailable")?;
+    if state.active_execution_count != 0 || state.max_active_executions.is_some() {
+        return Err("Agent execution capacity may only be configured once before admission".into());
+    }
+    state.max_active_executions = Some(limit);
+    Ok(())
+}
+
+fn parse_execution_capacity(value: Option<&str>) -> Result<usize, String> {
+    match value {
+        None => Ok(1),
+        Some(value) => value
+            .parse::<usize>()
+            .ok()
+            .filter(|n| (1..=1024).contains(n))
+            .ok_or_else(|| format!("{CAPACITY_ENV} must be within 1..=1024")),
+    }
+}
+
+pub(crate) fn execution_admission_snapshot() -> serde_json::Value {
+    let state = lifecycle_state();
+    let state = state.lock().unwrap_or_else(|error| error.into_inner());
+    serde_json::json!({
+        "schema_version":"kyuubiki.agent-execution-admission/v1",
+        "configuration_env":CAPACITY_ENV,
+        "configured":state.max_active_executions.is_some(),
+        "max_active_executions":state.max_active_executions,
+        "active_execution_count":state.active_execution_count,
+        "rejection_code":"agent_at_capacity",
+        "rejection_boundary":"before_execution",
+        "release_boundary":"execution_and_response_finished",
+        "cancellation":"cooperative_boundary_not_thread_preemption"
+    })
 }
 
 #[derive(Debug)]
@@ -78,6 +135,7 @@ pub(crate) fn begin_execution(
     Ok(ExecutionGuard {
         watchdog,
         _lifecycle_lease: lifecycle_lease,
+        cancellation: Arc::new(AtomicBool::new(false)),
     })
 }
 
@@ -168,6 +226,16 @@ fn acquire_execution_slot(
                 "agent drain generation {} is not accepting new execution",
                 drain.generation
             ),
+        });
+    }
+    if lifecycle
+        .max_active_executions
+        .is_some_and(|limit| lifecycle.active_execution_count >= limit)
+    {
+        return Err(ExecutionAdmissionError {
+            request_id: request_id.to_owned(),
+            reason_code: "agent_at_capacity".into(),
+            message: "Agent execution capacity is full; request was not admitted".into(),
         });
     }
     lifecycle.active_execution_count =
@@ -403,6 +471,65 @@ impl Drop for ExecutionLease {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn capacity_configuration_is_bounded_and_never_silently_disabled() {
+        assert_eq!(parse_execution_capacity(None).unwrap(), 1);
+        assert_eq!(parse_execution_capacity(Some("1024")).unwrap(), 1024);
+        for value in [
+            "",
+            "0",
+            "-1",
+            "1.5",
+            "1025",
+            "unlimited",
+            "18446744073709551616",
+        ] {
+            assert!(parse_execution_capacity(Some(value)).is_err());
+        }
+    }
+
+    #[test]
+    fn capacity_is_not_released_until_the_last_execution_lease_is_dropped() {
+        let state = Arc::new(Mutex::new(LifecycleState::default()));
+        state.lock().unwrap().max_active_executions = Some(1);
+        let work = acquire_execution_slot(&state, "work").unwrap();
+        let response = work.clone();
+        drop(work);
+        assert_eq!(
+            acquire_execution_slot(&state, "excess")
+                .unwrap_err()
+                .reason_code,
+            "agent_at_capacity"
+        );
+        assert_eq!(snapshot_in(&state).active_execution_count, 1);
+        drop(response);
+        let next = acquire_execution_slot(&state, "next").unwrap();
+        drop(next);
+        assert_eq!(snapshot_in(&state).active_execution_count, 0);
+    }
+
+    #[test]
+    fn stale_transport_cancellation_does_not_poison_a_reused_request_id() {
+        let old = begin_execution(
+            "cancel-generation-reuse".into(),
+            Some("same-job".into()),
+            "solve_bar_1d".into(),
+        )
+        .unwrap();
+        let old_transport = old.clone();
+        complete_execution(old);
+        let current = begin_execution(
+            "cancel-generation-reuse".into(),
+            Some("same-job".into()),
+            "solve_bar_1d".into(),
+        )
+        .unwrap();
+        old_transport.request_cancellation();
+        assert!(old_transport.cancellation_requested());
+        assert!(!current.cancellation_requested());
+        complete_execution(current);
+    }
 
     #[test]
     fn shutdown_latch_preserves_drain_ownership_and_cannot_be_resumed() {

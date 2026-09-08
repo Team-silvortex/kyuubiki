@@ -188,6 +188,66 @@ Both: tau_xy = 0; heat flux = 0</pre>
       </section>
 
       <section class="docs-card docs-section">
+        <h2 id="interrupted-research">Interrupt a real mixed workflow</h2>
+        <p class="docs-copy">The research series now checks admitted structural work after the
+          heat solve and temperature bridge have completed. The public SDK example separates
+          submission, observation and acceptance from external process-fault control. This is
+          a study-specific wrapper around the SDK, not a required generic CLI.</p>
+        <pre class="docs-code">cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example interrupted_thermal_research -- submit fault-input-001 idempotent
+# Perform the reviewed isolated fault scenario outside this SDK example.
+cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example interrupted_thermal_research -- capture fault-input-001 fault-observation-001
+cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example interrupted_thermal_research -- verify fault-input-001 fault-result-001 \
+  replayed uninterrupted-result-001</pre>
+        <p class="docs-copy">Require an explicit <code>KYUUBIKI_BASE_URL</code>. Build the
+          uninterrupted baseline using the same example's <code>submit</code> and
+          <code>verify ... completed</code>; on that first verification, the baseline directory
+          argument may equal its new output directory. The positive fault outcomes must then
+          match that baseline's complete physical arrays as well as analytical gates.</p>
+        <p class="docs-copy">To observe a controlled pre-computation barrier, configure only
+          isolated test Agents with <code>KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_FILE</code>
+          and <code>KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_METHOD=solve_thermal_plane_quad_2d</code>.
+          The marker contains the exact generated job id. Set
+          <code>KYUUBIKI_RESEARCH_AGENT_ENDPOINTS</code> to comma-separated IP:port endpoints
+          for public Agent inspection. <code>await-held</code> waits up to 30 seconds for
+          upstream heat/bridge progress and the matching admitted structural job.
+          It does not assert a new recovery generation; inspect the recovery envelope separately.
+          Prepare the marker before dispatch can reach the Agent, release it after fault
+          observation, and remove it on failure. The explicit hold is bounded to 120 seconds.</p>
+        <p class="docs-copy">Acceptance modes are <code>completed</code>, <code>replayed</code>,
+          <code>retry-blocked</code> and <code>recovery-blocked</code>. Submit the last two with
+          <code>checkpoint_required</code>. Preserve process identities, signals, before/after
+          dispatch counters and late-result observations alongside the SDK reports. A green
+          report alone is not proof that a process fault actually occurred.</p>
+        <p class="docs-copy">The earlier installed candidate passed six bounded scenarios and a fresh
+          302-case matrix, with unchanged original results after restart. Heartbeats preserve
+          liveness, not convergence or completed-node counts. Replay keeps overall progress
+          monotonic and reports per-generation execution progress separately. That candidate
+          allowed old and new computations to overlap; one accepted terminal commit was not
+          proof of exactly-once computation.</p>
+        <p class="docs-copy">The follow-up candidate adds native execution capacity, default 1
+          via <code>KYUUBIKI_AGENT_MAX_ACTIVE_EXECUTIONS</code>, and guard-scoped cancellation.
+          In the isolated single-Agent restart, the old structural execution cancelled without
+          releasing its marker; generation 2 then reached structure with one active execution.
+          Checkpoint-required restart remained blocked, with no new dispatch and no orphan left
+          active. Inspect <code>execution_admission</code>, request identities and failure receipts
+          alongside the recovery generation. A completed report alone does not prove orphan cleanup.</p>
+        <p class="docs-copy">Native capacity protects admitted execution and response delivery.
+          Orchestra can wait after a definite <code>agent_at_capacity</code> non-admission without
+          weakening replay policy. Neither mechanism preempts arbitrary solver iterations or
+          reconstructs the entire old scheduling ledger. Keep admission settings explicit and
+          do not generalize the pre-computation hold to numerical checkpoint recovery.</p>
+        <div class="docs-links">
+          <a class="docs-link" href="../reports/interrupted-thermal-research-20260908.md">Fault matrix, fixes and retained evidence</a>
+          <a class="docs-link" href="../reports/orphan-execution-research-20260908.md">Orphan cleanup and native capacity qualification</a>
+          <a class="docs-link" href="../sdks/rust/examples/interrupted_thermal_research.rs">Phased research example</a>
+          <a class="docs-link" href="./agent-orchestrator-boundary.md#workflow-activity-and-replay">Activity and replay contract</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
         <h2>First result and remaining boundary</h2>
         <p class="docs-copy">The first installed-service round completed all 14 jobs but passed
           zero physical cases. Heat temperature and flux were correct; the bridge ignored the
@@ -205,12 +265,13 @@ Both: tau_xy = 0; heat flux = 0</pre>
           do not create replacement jobs or restart the service themselves.</p>
         <p class="docs-copy">This series does not yet establish material calibration, realistic
           nonuniform Poisson coupling, nonlinear constitutive behavior, external-solver agreement,
-          in-flight task recovery, power-loss durability, large-mesh scaling, or general
+          general in-flight task recovery, power-loss durability, large-mesh scaling, or general
           mesh-convergence order. The existing Agent drain contract now retains execution leases
           until final response delivery, with bounded slow-consumer failures and readable causes.
           Handled termination signals now close admission and wait within a configured shutdown
           budget. This does not resume a killed computation or automatically replay future
-          workflow nodes; forced kills and power loss remain separate boundaries. These references
+          workflow nodes. The bounded mixed-workflow fault matrix above now covers selected
+          Agent and Orchestra process kills; power loss remains a separate boundary. These references
           deliberately expose semantic and persistence errors before more complex research.</p>
         <p class="docs-copy">The final reply-delivery candidate passed all 302 cases, exact
           original-job readback before and after process restarts, and 14 fresh recovery jobs.

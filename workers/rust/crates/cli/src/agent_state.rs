@@ -162,6 +162,7 @@ pub(crate) fn registration_payload(config: &AgentConfig) -> serde_json::Value {
         "reply_delivery": crate::agent_reply_writer::snapshot(),
         "shutdown_policy": crate::agent_shutdown::snapshot(),
         "lifecycle": agent_lifecycle::snapshot(),
+        "execution_admission": agent_lifecycle::execution_admission_snapshot(),
         "fault_injection": agent_fault_injection::snapshot(),
         "control_plane_link": agent_control_link::snapshot()
     })
@@ -186,6 +187,10 @@ pub(crate) fn agent_descriptor_payload() -> serde_json::Value {
         serde_json::to_value(agent_descriptor()).expect("agent descriptor should serialize");
 
     if let Some(object) = payload.as_object_mut() {
+        object.insert(
+            "execution_admission".into(),
+            agent_lifecycle::execution_admission_snapshot(),
+        );
         object.insert(
             "watchdog".to_string(),
             serde_json::to_value(agent_watchdog::snapshot())
@@ -337,6 +342,15 @@ pub(crate) fn take_execution_cancelled(request_id: &str) -> bool {
     execution_cancellation_registry()
         .lock()
         .is_ok_and(|mut registry| registry.remove(request_id))
+}
+
+pub(crate) fn cancellation_pending(request_id: &str, job_id: &str) -> bool {
+    execution_cancellation_registry()
+        .lock()
+        .is_ok_and(|r| r.contains(request_id))
+        || cancellation_registry()
+            .lock()
+            .is_ok_and(|r| r.contains(job_id))
 }
 
 pub(crate) fn extract_job_id(params: &serde_json::Value) -> Option<String> {

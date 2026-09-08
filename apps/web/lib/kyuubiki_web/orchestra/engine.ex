@@ -84,7 +84,16 @@ defmodule KyuubikiWeb.Orchestra.Engine do
         WorkflowOperatorRuntime.run_solve_operator(
           operator_id,
           payload,
-          Map.put(node, "orchestration_context", orchestration_context)
+          Map.put(node, "orchestration_context", orchestration_context),
+          fn activity ->
+            if is_function(progress_callback, 1) do
+              progress_callback.(%{
+                "event" => "operator_activity",
+                "node_id" => node["id"],
+                "activity" => activity
+              })
+            end
+          end
         )
       end,
       execute_transform: &WorkflowOperatorRuntime.run_transform_operator/3,

@@ -19,6 +19,7 @@ pub(crate) struct LiveAgent {
     pub(crate) port: u16,
     reply_timeout_ms: String,
     shutdown_timeout_ms: String,
+    capacity: String,
     retain_evidence: bool,
 }
 
@@ -38,6 +39,18 @@ impl LiveAgent {
     fn start_with_timeouts(
         reply_timeout_ms: &str,
         shutdown_timeout_ms: &str,
+    ) -> Result<Self, Box<dyn Error>> {
+        Self::start_with_limits(reply_timeout_ms, shutdown_timeout_ms, "1")
+    }
+
+    pub(crate) fn start_with_capacity(capacity: &str) -> Result<Self, Box<dyn Error>> {
+        Self::start_with_limits("10000", "30000", capacity)
+    }
+
+    fn start_with_limits(
+        reply_timeout_ms: &str,
+        shutdown_timeout_ms: &str,
+        capacity: &str,
     ) -> Result<Self, Box<dyn Error>> {
         let port = reserve_port()?;
         let unique = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
@@ -60,6 +73,7 @@ impl LiveAgent {
             port,
             reply_timeout_ms: reply_timeout_ms.into(),
             shutdown_timeout_ms: shutdown_timeout_ms.into(),
+            capacity: capacity.into(),
             retain_evidence: evidence_root.is_some(),
         };
         agent.start_process()?;
@@ -91,6 +105,8 @@ impl LiveAgent {
                 "10000",
             ])
             .env("KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_FILE", &self.hold_path)
+            .env_remove("KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_METHOD")
+            .env("KYUUBIKI_AGENT_MAX_ACTIVE_EXECUTIONS", &self.capacity)
             .env("KYUUBIKI_AGENT_REPLY_TIMEOUT_MS", &self.reply_timeout_ms)
             .env(
                 "KYUUBIKI_AGENT_SHUTDOWN_TIMEOUT_MS",
@@ -234,7 +250,7 @@ pub(crate) fn rpc_request(
     }
 }
 
-fn read_json_frame(stream: &mut TcpStream) -> Result<Value, Box<dyn Error>> {
+pub(crate) fn read_json_frame(stream: &mut TcpStream) -> Result<Value, Box<dyn Error>> {
     let mut header = [0_u8; 4];
     stream.read_exact(&mut header)?;
     let length = u32::from_be_bytes(header) as usize;

@@ -129,6 +129,78 @@
   },
   "evidence_claims": [
     {
+      "id": "mixed-thermal-orphan-capacity-recovery",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["orchestra-control-plane", "runtime-agent-cli", "sdk-headless", "verification-evidence"],
+      "paradigms": ["workflow_composition", "runtime_api", "validation", "persistence_provenance"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/agent_lifecycle.rs",
+        "workers/rust/crates/cli/src/agent_state.rs",
+        "workers/rust/crates/cli/src/agent_fault_injection.rs",
+        "workers/rust/crates/cli/src/rpc_execution.rs",
+        "workers/rust/crates/cli/src/transport.rs",
+        "workers/rust/crates/cli/tests/agent_orphan_live.rs",
+        "workers/rust/crates/cli/tests/support/agent_lifecycle.rs",
+        "apps/web/lib/kyuubiki_web/playground/agent_client.ex",
+        "apps/web/test/kyuubiki_web/playground/agent_capacity_retry_test.exs",
+        "sdks/rust/examples/interrupted_thermal_research.rs",
+        "sdks/rust/examples/layered_thermal_research/interruption.rs",
+        "docs/agent-orchestrator-boundary.md",
+        "docs/research-layered-thermal.html",
+        "reports/orphan-execution-research-20260908.md"
+      ],
+      "required_text": [
+        "KYUUBIKI_AGENT_MAX_ACTIVE_EXECUTIONS",
+        "kyuubiki.agent-execution-admission/v1",
+        "capacity_is_not_released_until_the_last_execution_lease_is_dropped",
+        "stale_transport_cancellation_does_not_poison_a_reused_request_id",
+        "abandoned_structure_is_reaped_without_releasing_hold_or_poisoning_replay",
+        "simultaneous_clients_cannot_exceed_agent_execution_capacity",
+        "configured_capacity_preserves_the_other_generation_when_one_transport_dies",
+        "explicit_cancellation_precedes_solver_and_task_ir_decoding",
+        "capacity rejection can wait without weakening checkpoint-required execution policy",
+        "permanent saturation expires without leaking a lease or penalizing agent health",
+        "ownership is rechecked before dispatch after capacity becomes available",
+        "Final installed candidate: PASS, 3/3 research outcomes and 302/302 reference cases.",
+        "synthetic_reference_not_material_certification"
+      ]
+    },
+    {
+      "id": "mixed-thermal-inflight-recovery",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["orchestra-control-plane", "runtime-agent-cli", "sdk-headless", "verification-evidence"],
+      "paradigms": ["workflow_composition", "runtime_api", "validation", "persistence_provenance"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/workflow_operator_runtime.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/test/kyuubiki_web/workflow_operator_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_operator_activity_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_restart_recovery_test.exs",
+        "workers/rust/crates/cli/src/agent_fault_injection.rs",
+        "sdks/rust/examples/interrupted_thermal_research.rs",
+        "sdks/rust/examples/layered_thermal_research/interruption.rs",
+        "docs/research-layered-thermal.html",
+        "reports/interrupted-thermal-research-20260908.md"
+      ],
+      "required_text": [
+        "workflow checkpoint-required node reaches transport recovery without weakening",
+        "operator heartbeat refreshes liveness without advancing nodes or resetting execution time",
+        "fresh operator heartbeat cannot extend the original execution deadline",
+        "throttled activity still checks ownership and cannot touch cancelled or stale claims",
+        "replays a progressed workflow without regressing the durable job progress",
+        "fault_barrier_requires_same_job_method_and_completed_upstream_nodes",
+        "KYUUBIKI_AGENT_FAULT_INJECTION_HOLD_METHOD",
+        "kyuubiki.interrupted-thermal-research/v1",
+        "Final installed candidate: PASS, 6/6 bounded recovery scenarios and 302/302 reference cases.",
+        "synthetic_reference_not_material_certification"
+      ]
+    },
+    {
       "id": "workflow-branch-recovery-fault-injection",
       "status": "proven",
       "grade": "qualified",

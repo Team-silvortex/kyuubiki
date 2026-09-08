@@ -111,6 +111,52 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRestartRecoveryTest do
     assert job.message =~ "checkpoint_required"
   end
 
+  test "replays a progressed workflow without regressing the durable job progress" do
+    graph = idempotent_graph()
+    [input, solve, output] = graph["nodes"]
+    [first, last] = graph["edges"]
+    port = %{"id" => "model", "artifact_type" => "model/bar_1d"}
+
+    bridge = %{
+      "id" => "bridge",
+      "kind" => "transform",
+      "operator_id" => "transform.first_available",
+      "inputs" => [port],
+      "outputs" => [port]
+    }
+
+    first = put_in(first, ["to", "node"], "bridge")
+
+    middle = %{
+      "id" => "middle",
+      "from" => %{"node" => "bridge", "port" => "model"},
+      "to" => %{"node" => "solve", "port" => "model"},
+      "artifact_type" => "model/bar_1d"
+    }
+
+    graph =
+      graph
+      |> Map.put("nodes", [input, bridge, solve, output])
+      |> Map.put("edges", [first, middle, last])
+
+    {:ok, submitted} = submit_workflow(graph)
+    id = submitted["job"]["job_id"]
+    assert_receive {:restart_runtime_request, ^id, :hold}, 2_000
+    assert {:ok, %{progress: 0.5, iteration: 2} = original} = Store.get(id)
+    restart_application(:succeed)
+    assert_receive {:restart_runtime_request, ^id, :succeed}, 2_000
+    result = wait_for_terminal_result(id, "completed")
+    assert result["recovery"]["generation"] == 2
+
+    assert Enum.any?(result["progress_events"], fn event ->
+             event["generation"] == 2 and event["node_id"] == "input" and
+               event["execution_progress"] == 0.25 and event["progress"] == 0.5
+           end)
+
+    assert {:ok, finished} = Store.get(id)
+    assert finished.execution_started_at == original.execution_started_at
+  end
+
   test "blocks a digest-tampered execution envelope before restart replay" do
     {:ok, payload} = submit_workflow(idempotent_graph())
     job_id = payload["job"]["job_id"]

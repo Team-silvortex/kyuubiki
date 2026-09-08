@@ -18,15 +18,16 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
   alias KyuubikiWeb.WorkflowSummaryRuntime
   alias KyuubikiWeb.WorkflowThermalRuntime
 
-  def run_solve_operator(operator_id, payload, node \\ %{})
+  def run_solve_operator(operator_id, payload, node \\ %{}, on_progress \\ fn _ -> :ok end)
 
-  def run_solve_operator(operator_id, payload, node) when is_map(payload) and is_map(node) do
+  def run_solve_operator(operator_id, payload, node, on_progress)
+      when is_map(payload) and is_map(node) and is_function(on_progress, 1) do
     case WorkflowSolverRegistry.fetch(operator_id) do
       {:ok, %{capability_tags: tags, method: method}} ->
         if roadmap_operator_tags?(tags) do
           {:error, {:roadmap_workflow_solve_operator, operator_id}}
         else
-          dispatch_solve_operator(method, payload, node)
+          dispatch_solve_operator(method, payload, node, on_progress)
         end
 
       :error ->
@@ -34,7 +35,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
     end
   end
 
-  def run_solve_operator(operator_id, _payload, _node),
+  def run_solve_operator(operator_id, _payload, _node, _on_progress),
     do: {:error, {:unsupported_workflow_solve_operator, operator_id}}
 
   defp roadmap_operator_tags?(tags),
@@ -429,14 +430,14 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
     |> Keyword.get(:solve_runtime_client, AgentClient)
   end
 
-  defp dispatch_solve_operator(method, payload, node) when is_atom(method) do
+  defp dispatch_solve_operator(method, payload, node, on_progress) when is_atom(method) do
     client = solve_runtime_client()
     routing_opts = solve_routing_opts(node)
     _ = Code.ensure_loaded(client)
 
     cond do
       function_exported?(client, :request, 4) ->
-        client.request(Atom.to_string(method), payload, fn _progress -> :ok end, routing_opts)
+        client.request(Atom.to_string(method), payload, on_progress, routing_opts)
 
       function_exported?(client, method, 1) ->
         apply(client, method, [payload])
@@ -461,6 +462,25 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       orchestration: normalize_orchestration_context(context)
     ]
     |> maybe_put_job_id(context)
+    |> maybe_put_replay_policy(node)
+  end
+
+  defp maybe_put_replay_policy(opts, node) do
+    policy =
+      case Map.fetch(node, "retry_safety") do
+        :error -> Map.fetch(node, "replay_safety")
+        found -> found
+      end
+
+    case policy do
+      {:ok, value} ->
+        opts
+        |> Keyword.put(:retry_safety, value)
+        |> Keyword.put(:replay_checkpoint, Map.get(node, "replay_checkpoint"))
+
+      :error ->
+        opts
+    end
   end
 
   defp normalize_routing_values(values) when is_list(values) do

@@ -95,6 +95,23 @@ defmodule KyuubikiWeb.Orchestra.DistributedRecoveryTest do
     assert receipt.reason_code == "orchestra_dispatch_rejected"
   end
 
+  test "explicit invalid solver replay policies fail closed instead of using solver defaults" do
+    for policy <- ["checkpointed", "typo", nil], stage <- [:send, :receive, :protocol] do
+      receipt =
+        DistributedRecovery.failure_receipt(
+          @endpoint,
+          "solve_thermal_plane_quad_2d",
+          {:agent_transport_failure, stage, :closed},
+          [retry_safety: policy],
+          1,
+          1
+        )
+
+      refute receipt.retryable, "#{inspect(policy)} at #{stage} must not replay"
+      assert receipt.retry_safety == "checkpoint_required"
+    end
+  end
+
   test "reports when safe work must await agent recovery" do
     receipt =
       DistributedRecovery.failure_receipt(
