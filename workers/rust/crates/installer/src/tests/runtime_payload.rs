@@ -50,6 +50,105 @@ fn write_payload(root: &Path, version: &str) {
     seal_runtime_payload(root, version, Platform::Macos).unwrap();
 }
 
+fn headless_payload(root: &Path, profile: Option<&str>) {
+    write_payload(root, "3.1.0");
+    let path = root.join("manifests/service-launch.json");
+    let mut manifest: serde_json::Value =
+        serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    manifest["services"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|entry| entry["id"] != "frontend");
+    if let Some(profile) = profile {
+        manifest["profile"] = profile.into();
+    }
+    fs::write(path, serde_json::to_vec_pretty(&manifest).unwrap()).unwrap();
+    fs::remove_dir_all(root.join("services/frontend")).unwrap();
+    fs::remove_file(root.join("bin/kyuubiki-runtime")).unwrap();
+}
+
+#[test]
+fn explicit_headless_payload_installs_without_any_frontend_for_each_platform() {
+    for platform in [Platform::Linux, Platform::Macos, Platform::Windows] {
+        let root = fixture_root("headless-install");
+        let source = root.join("source");
+        let store = root.join("store");
+        headless_payload(&source, Some("headless"));
+        seal_runtime_payload(&source, "3.1.0", platform).unwrap();
+        let installed = install_runtime_payload_into(&source, &store, platform).unwrap();
+        assert_eq!(installed.version, "3.1.0");
+        assert!(
+            !store
+                .join(&installed.relative_path)
+                .join("services/frontend")
+                .exists()
+        );
+        assert!(active_runtime_activation_in(&store, platform).is_ok());
+        fs::remove_dir_all(root).unwrap();
+    }
+}
+
+#[test]
+fn missing_or_invalid_profile_cannot_silently_install_an_incomplete_runtime() {
+    for profile in [None, Some("desktop"), Some("headles"), Some("")] {
+        let root = fixture_root("headless-profile");
+        headless_payload(&root, profile);
+        assert!(seal_runtime_payload(&root, "3.1.0", Platform::Linux).is_err());
+        fs::remove_dir_all(root).unwrap();
+    }
+}
+
+#[test]
+fn rollback_preserves_the_original_desktop_or_headless_inventory() {
+    let root = fixture_root("headless-rollback");
+    let desktop = root.join("desktop");
+    let headless = root.join("headless");
+    let store = root.join("store");
+    write_payload(&desktop, "3.0.0");
+    headless_payload(&headless, Some("headless"));
+    seal_runtime_payload(&headless, "3.1.0", Platform::Macos).unwrap();
+    install_runtime_payload_into(&desktop, &store, Platform::Macos).unwrap();
+    install_runtime_payload_into(&headless, &store, Platform::Macos).unwrap();
+    let restored = rollback_runtime_payload_in(&store, Platform::Macos).unwrap();
+    assert_eq!(restored.version, "3.0.0");
+    let services = crate::runtime_payload::verified_runtime_service_launches_in(
+        &store.join(&restored.relative_path),
+        Platform::Macos,
+    )
+    .unwrap();
+    assert_eq!(services.len(), 3);
+    let restored = rollback_runtime_payload_in(&store, Platform::Macos).unwrap();
+    assert_eq!(restored.version, "3.1.0");
+    let services = crate::runtime_payload::verified_runtime_service_launches_in(
+        &store.join(&restored.relative_path),
+        Platform::Macos,
+    )
+    .unwrap();
+    assert_eq!(services.len(), 2);
+    assert!(services.iter().all(|entry| entry.id != "frontend"));
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn headless_payload_still_requires_both_compute_services_and_valid_paths() {
+    for invalid in ["agent", "orchestrator", "extra-path", "frontend"] {
+        let root = fixture_root("headless-boundary");
+        headless_payload(&root, Some("headless"));
+        let path = root.join("manifests/service-launch.json");
+        let mut manifest: serde_json::Value =
+            serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        let services = manifest["services"].as_array_mut().unwrap();
+        if invalid == "agent" || invalid == "orchestrator" {
+            services.retain(|entry| entry["id"] != invalid);
+        } else {
+            services.push(serde_json::json!({"id": invalid, "cwd": ".", "command": "../escape"}));
+        }
+        fs::write(&path, serde_json::to_vec_pretty(&manifest).unwrap()).unwrap();
+        assert!(seal_runtime_payload(&root, "3.1.0", Platform::Linux).is_err());
+        fs::remove_dir_all(root).unwrap();
+    }
+}
+
 #[test]
 fn installs_activates_and_rolls_back_versioned_payloads() {
     let root = fixture_root("lifecycle");

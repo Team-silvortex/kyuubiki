@@ -47,7 +47,8 @@ struct StartedProcess {
 pub(super) fn service_status() -> Result<String, String> {
     let paths = runtime_paths()?;
     let env = runtime_env(&paths.root);
-    let options = RuntimeOptions::from_env(&env)?;
+    let mut options = RuntimeOptions::from_env(&env)?;
+    options.frontend_disabled |= paths.is_headless();
     let mode = read_runtime_mode(&paths, &env, options);
     let mut lines = vec![
         format!("deployment-mode: {mode}"),
@@ -143,7 +144,8 @@ pub(super) fn service_restart(mode: ServiceMode) -> Result<String, String> {
 pub(super) fn service_stop() -> Result<String, String> {
     let paths = runtime_paths()?;
     let env = runtime_env(&paths.root);
-    let options = RuntimeOptions::from_env(&env)?;
+    let mut options = RuntimeOptions::from_env(&env)?;
+    options.frontend_disabled |= paths.is_headless();
     let mut lines = Vec::new();
     let mut ports = agent_ports(&paths.root, &env);
     ports.reverse();
@@ -248,7 +250,8 @@ fn start_services(requested_mode: &str) -> Result<String, String> {
             });
     }
     apply_mode_env(&mut env, &mode)?;
-    let options = RuntimeOptions::from_env(&env)?;
+    let mut options = RuntimeOptions::from_env(&env)?;
+    options.frontend_disabled |= paths.is_headless();
     env.entry("KYUUBIKI_ORCHESTRATOR_URL".to_string())
         .or_insert_with(|| options.orchestrator_url());
     let endpoints = agent_endpoints(&env);

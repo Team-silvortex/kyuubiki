@@ -17,6 +17,10 @@ const SERVICE_MANIFEST: &str = "manifests/service-launch.json";
 const PAYLOAD_MANIFEST: &str = "manifests/runtime-payload.json";
 const ACTIVATION_SCHEMA: &str = "kyuubiki.runtime-activation/v1";
 
+#[cfg(test)]
+#[path = "runtime_headless_tests.rs"]
+mod headless_tests;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum RuntimeOrigin {
     Development,
@@ -43,6 +47,7 @@ pub(crate) struct ResolvedService {
 #[derive(Clone, Debug, Deserialize)]
 struct ServiceLaunchManifest {
     schema_version: String,
+    profile: Option<String>,
     services: Vec<ServiceLaunchEntry>,
 }
 
@@ -145,6 +150,10 @@ fn development_command_dirs(
 }
 
 impl RuntimePaths {
+    pub fn is_headless(&self) -> bool {
+        self.origin == RuntimeOrigin::Installed && !self.services.contains_key("frontend")
+    }
+
     pub fn is_development(&self) -> bool {
         self.origin == RuntimeOrigin::Development
     }
@@ -367,6 +376,7 @@ fn installed_paths(root: PathBuf) -> Result<RuntimePaths, String> {
             manifest_path.display()
         ));
     }
+    let required = kyuubiki_platform::required_runtime_services(manifest.profile.as_deref())?;
     let mut services = HashMap::new();
     for entry in manifest.services {
         if entry.id.trim().is_empty() || services.insert(entry.id.clone(), entry).is_some() {
@@ -376,13 +386,16 @@ fn installed_paths(root: PathBuf) -> Result<RuntimePaths, String> {
             ));
         }
     }
-    for required in ["agent", "orchestrator", "frontend"] {
-        if !services.contains_key(required) {
+    for required in required {
+        if !services.contains_key(*required) {
             return Err(format!(
                 "service launch manifest is missing required service `{required}`: {}",
                 manifest_path.display()
             ));
         }
+    }
+    if manifest.profile.as_deref() == Some("headless") && services.contains_key("frontend") {
+        return Err("headless runtime must not declare a frontend service".into());
     }
     let identity_path = root.join(PAYLOAD_MANIFEST);
     let identity: RuntimePayloadIdentity = read_json(&identity_path)?;

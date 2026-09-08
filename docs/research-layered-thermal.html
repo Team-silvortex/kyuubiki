@@ -9,13 +9,13 @@
   <body>
     <main class="docs-shell docs-stack">
       <section class="docs-hero">
-        <div class="docs-kicker">daji 3.0.x | Research verification series</div>
+        <div class="docs-kicker">Daji | Research verification series</div>
         <h1>Two materials, one heat-to-structure workflow</h1>
         <p class="docs-copy">Run the public Rust Headless SDK against a real control plane,
           retain the complete inputs and outputs, and check the numbers against an independent
           analytical reference. A completed job is not a numerical pass.</p>
         <div class="docs-meta">
-          <span class="docs-chip">14 bounded cases</span>
+          <span class="docs-chip">14 layered + 288 thermal patch cases</span>
           <span class="docs-chip">7 workflow nodes per case</span>
           <span class="docs-chip">Synthetic reference, not material certification</span>
         </div>
@@ -23,6 +23,7 @@
           <a class="docs-link" href="./tutorial-headless-rust.html">Headless tutorial</a>
           <a class="docs-link" href="../sdks/rust/examples/layered_thermal_research.rs">Runnable SDK example</a>
           <a class="docs-link" href="../reports/layered-thermal-research-20260908.md">First findings</a>
+          <a class="docs-link" href="../reports/thermal-service-research-20260908.md">Installed-service and restart findings</a>
         </div>
       </section>
 
@@ -106,10 +107,12 @@ temperature_delta = (source_temperature - reference_temperature) * scale</pre>
       <section class="docs-card docs-section">
         <h2>Retain and interpret a round</h2>
         <ul class="docs-list">
-          <li>Each case retains its complete request and returned result in separate JSON files.</li>
+          <li>Each submitted case retains its request, returned result and complete terminal
+            response in separate JSON files, including execution failure details.</li>
           <li><code>report.json</code> records relative file names, SHA-256 checksums, job ids,
             per-gate errors, and output-manifest/readback validation.</li>
-          <li><code>study_definition_sha256</code> fingerprints the runner, model and checker source.
+          <li><code>study_definition_sha256</code> fingerprints the runner, model, checker,
+            execution-outcome helper and SDK dependency manifest.
             Optional <code>KYUUBIKI_SOURCE_REVISION</code> labels the caller's reviewed source revision;
             an absent value is explicitly <code>unrecorded</code>, never an inferred server revision.</li>
           <li>Progress reports have <code>complete: false</code>. Only a finished matrix has
@@ -151,13 +154,37 @@ Both: tau_xy = 0; heat flux = 0</pre>
           convergence. Displacement tolerance is 1e-10 m; stress error divided by
           max(E * alpha * |rise|, 1 Pa) must not exceed 1e-8. Temperature and flux tolerances
           are 1e-8 K and 1e-8 W/m2. Expectations are analytical, not solver-derived.</p>
-        <p class="docs-copy">All 302 cases passed in the current-source Linux Rust engine tests.
-          This is explicitly separate from an installed-service run. The extended service runner
-          is compiled and its public graph contracts validated, but the 288-case suite has not
-          yet passed through a newly installed Orchestra/Agent pair.</p>
+        <p class="docs-copy">All 302 cases passed in the current-source Linux Rust engine tests
+          and then passed through a separate Installer-installed candidate Orchestra/Agent pair
+          using the public SDK. The same 302 completed jobs passed read-only verification both
+          before and after restarting the candidate processes. These are distinct evidence
+          stages, not 906 independent physical cases or a claim about every installed version.</p>
         <div class="docs-links">
           <a class="docs-link" href="../reports/thermal-wide-research-20260908.md">Expanded findings and retained evidence</a>
+          <a class="docs-link" href="../reports/thermal-service-research-20260908.md">Service acceptance and lifecycle evidence</a>
         </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Read back original jobs after a controlled restart</h2>
+        <pre class="docs-code">cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example verify_layered_thermal_research -- research-round-003 research-readback-001</pre>
+        <p class="docs-copy">This is a read-only SDK example. It refuses incomplete or failed
+          baselines, verifies retained file digests and the expected case inventory, fetches
+          the same completed jobs, and checks exact JSON value equality, output contracts and
+          analytical numerical gates. It never resubmits the study to manufacture replacement
+          results. JSON float-roundtrip decoding prevents save/reload drift; comparison
+          thresholds are not loosened to hide it.</p>
+        <p class="docs-copy">The example does not restart a server or prove a restart occurred.
+          Capture the original process identities, perform a controlled restart only after all
+          jobs are terminal, wait for both services to become ready, and retain changed process
+          identities alongside the verifier report. This covers completed-result readback,
+          not interrupted-job recovery, database corruption or physical power loss.</p>
+        <p class="docs-copy">Deploy compute-only packages with the explicit headless profile
+          described in <a href="./packaging-and-deployment.md">packaging and deployment</a>.
+          A control-plane health response is not a numerical acceptance gate. A failed job
+          retains its execution cause and complete terminal response rather than being
+          mislabeled as a physics-validation error.</p>
       </section>
 
       <section class="docs-card docs-section">
@@ -167,14 +194,21 @@ Both: tau_xy = 0; heat flux = 0</pre>
           reference temperature, introducing false expansion. Even zero temperature rise gave
           a 0.3 mm tip displacement. A Kelvin-origin equivalent case had about 4.39725 mm
           displacement error. The current Rust and Elixir source now subtract the reference.</p>
-        <p class="docs-copy">Current-source Rust regression passes all 14 cases, with separate
-          triangle/quad bridge and corrupted-result checks. Remote Elixir contract checks also
-          pass. The older installed remote service was deliberately not hot-patched: its failed
-          rounds remain evidence, and an Installer-managed deployment/retest is still required.</p>
+        <p class="docs-copy">The corrected candidate now passes 14 layered and 288 patch cases
+          through the real installed services. The older remote service was deliberately not
+          hot-patched and its failed rounds remain historical evidence. Candidate acceptance
+          does not automatically promote that package into the existing installation.</p>
+        <p class="docs-copy">With the candidate Agent stopped, all 14 negative requests failed
+          explicitly at execution with <code>agent_process_unavailable</code>. After restarting
+          both processes, all 302 original results remained readable and unchanged, and 14 fresh
+          layered jobs passed. The readback reports require separate lifecycle evidence; they
+          do not create replacement jobs or restart the service themselves.</p>
         <p class="docs-copy">This series does not yet establish material calibration, realistic
-          Poisson coupling, nonlinear constitutive behavior, external-solver agreement,
-          restart recovery, large-mesh scaling, or general mesh-convergence order. Its aligned,
-          piecewise-linear reference is intentionally simple enough to expose semantic errors.</p>
+          nonuniform Poisson coupling, nonlinear constitutive behavior, external-solver agreement,
+          in-flight task recovery, power-loss durability, large-mesh scaling, or general
+          mesh-convergence order. The native Agent also needs a qualified task-draining contract;
+          the Docker init probe only verifies idle signal delivery. These simple references
+          deliberately expose semantic and persistence errors before more complex research.</p>
         <div class="docs-links">
           <a class="docs-link" href="../workers/rust/crates/engine/tests/layered_thermal_research.rs">Current engine regressions</a>
           <a class="docs-link" href="./accuracy-baselines.md">Accuracy boundaries</a>

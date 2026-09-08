@@ -3,6 +3,8 @@
 mod checks;
 #[path = "layered_thermal_research/model.rs"]
 mod model;
+#[path = "layered_thermal_research/outcome.rs"]
+mod outcome;
 #[path = "layered_thermal_research/patch.rs"]
 mod patch;
 #[path = "layered_thermal_research/suite.rs"]
@@ -47,11 +49,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "{:x}",
         Sha256::digest(
             concat!(
+                include_str!("../Cargo.toml"),
                 include_str!("layered_thermal_research.rs"),
                 include_str!("layered_thermal_research/model.rs"),
                 include_str!("layered_thermal_research/checks.rs"),
                 include_str!("layered_thermal_research/patch.rs"),
                 include_str!("layered_thermal_research/suite.rs"),
+                include_str!("layered_thermal_research/outcome.rs"),
             )
             .as_bytes()
         )
@@ -78,9 +82,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let result = outcome.result.unwrap_or(Value::Null);
                 let result_name = format!("{}-result.json", case.id());
                 let digest = retain(root, &result_name, &result)?;
-                let mut row = case.validate(&result).unwrap_or_else(
-                    |error| json!({"case": case.id(), "passed": false, "error": error}),
-                );
+                let mut row =
+                    outcome::execution_failure(&case.id(), &terminal).unwrap_or_else(|| {
+                        case.validate(&result).unwrap_or_else(
+                            |error| json!({"case": case.id(), "passed": false, "error": error}),
+                        )
+                    });
+                let terminal_name = format!("{}-terminal.json", case.id());
+                row["terminal_sha256"] = json!(retain(root, &terminal_name, &terminal)?);
+                row["terminal_file"] = json!(terminal_name);
                 let job = &terminal["job"];
                 row["terminal"] = json!({"job_id": job["job_id"], "status": job["status"]});
                 let readback = job["job_id"]

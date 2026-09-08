@@ -187,6 +187,43 @@ copied into an installed Kyuubiki runtime.
 `make package-runtime` is the cleanest entry point when you want a portable
 runtime layout that keeps component outputs organized in one generated tree.
 
+### Headless Runtime Payloads
+
+For a compute-only host, `manifests/service-launch.json` may explicitly declare
+`"profile": "headless"`. Installer then requires `agent` and `orchestrator`,
+rejects a contradictory `frontend` entry, and still validates every declared
+command and working-directory path before sealing or activation. Omitting the
+profile, or declaring `desktop`, continues to require all three services.
+Unknown profiles fail closed. The native runtime respects the headless
+inventory and does not attempt to start a frontend.
+
+Use [the Unix headless manifest example](../config/runtime/service-launch.headless.example.json)
+inside a separately assembled package containing the real Agent binary and
+complete Mix release. Windows packages need their native `.exe` and release
+`.bat` entrypoints. This profile does not make the desktop packaging command a
+headless-only builder, nor does sealing prove that the services can execute.
+
+```sh
+cargo run --manifest-path workers/rust/Cargo.toml -p kyuubiki-installer -- \
+  seal-runtime-payload path/to/headless-package candidate-version linux
+cargo run --manifest-path workers/rust/Cargo.toml -p kyuubiki-installer -- \
+  install-runtime-payload path/to/headless-package
+```
+
+Keep state outside the immutable installed version. For an orchestrated Agent,
+the configured operator cache must be an existing managed `packages` directory,
+not its parent. Verify the Agent process and an actual solver request; a healthy
+Orchestra HTTP endpoint alone does not prove Agent availability. Isolated test
+deployments must also isolate the Installer store, database, writable state,
+ports, and Agent identity from existing services.
+
+When supervising the native Agent in Docker, use an init process (`--init`)
+instead of relying on the Agent as an unsupervised PID 1. The isolated thermal
+service study observed a 15-second stop timeout and exit 137 without init;
+the idle init-enabled probe received termination and exited 143 promptly.
+Signal delivery is not in-flight task draining. Wait for terminal jobs before
+planned maintenance until that separate recovery boundary is qualified.
+
 The managed desktop bundle format is
 `kyuubiki.desktop-bundle-set/v1`. Its manifest binds the platform, package
 version, exact three-component inventory, entrypoints, executable bits, file

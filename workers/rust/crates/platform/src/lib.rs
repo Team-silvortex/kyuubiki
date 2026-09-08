@@ -1,6 +1,9 @@
 use std::env;
 use std::path::{Path, PathBuf};
 
+mod runtime_profile;
+pub use runtime_profile::required_runtime_services;
+
 pub const LIB_PREFIX_PLACEHOLDER: &str = "{lib_prefix}";
 pub const LIB_EXTENSION_PLACEHOLDER: &str = "{lib_extension}";
 

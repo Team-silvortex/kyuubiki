@@ -29,6 +29,22 @@ thermal-expansion cases, or `all` for all 302 reference cases. These suites shar
 the same reviewed submission, retention and numerical-gate path; no mock is
 substituted for service execution. Current-source engine verification and
 installed-service acceptance are reported separately.
+
+After retaining a successful service round, use the read-only verifier to fetch
+the same job identities and compare every result against the original evidence:
+
+```sh
+cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example verify_layered_thermal_research -- research-round-003 research-readback-001
+```
+
+It submits no new jobs and requires the retained request/result digests, expected
+case inventory, output contracts, and independent numerical gates to agree.
+Restarting services is an external deployment action; retain process lifecycle
+evidence separately before claiming restart durability. JSON decoding enables
+`float_roundtrip` so scientific values retain their IEEE-754 representation
+through save/reload, without introducing a comparison tolerance.
+
 SDK library/example fixtures are bundled under `fixtures/`; repository tests
 additionally check their parity with shared schemas. Bootstrap-document tests
 still require repository documentation and the other official SDK surfaces.

@@ -25,7 +25,8 @@
           "apps/web/test/kyuubiki_web/heat_bridge_integrity_test.exs",
           "docs/research-layered-thermal.html",
           "reports/layered-thermal-research-20260908.md",
-          "reports/thermal-wide-research-20260908.md"
+          "reports/thermal-wide-research-20260908.md",
+          "reports/thermal-service-research-20260908.md"
         ],
         "required_text": [
           "layered_research_matches_independent_temperature_flux_and_expansion_references",
@@ -37,7 +38,26 @@
           "overflowing_reductions_never_produce_a_successful_null_temperature",
           "incomplete_result_elements_and_invalid_indexes_are_rejected",
           "current_source_rust_engine_integration",
-          "Installed-runtime numerical verdict: FAIL, 0/14 cases."
+          "Installed-runtime numerical verdict: FAIL, 0/14 cases.",
+          "Installed candidate numerical verdict: PASS, 302/302 cases."
+        ]
+      },
+      {
+        "id": "research-sdk-float-and-execution-integrity",
+        "modules": ["sdk-headless", "verification-evidence"],
+        "files": [
+          "sdks/rust/Cargo.toml",
+          "sdks/rust/tests/json_float_roundtrip.rs",
+          "sdks/rust/examples/layered_thermal_research.rs",
+          "sdks/rust/examples/layered_thermal_research/outcome.rs",
+          "reports/thermal-service-research-20260908.md"
+        ],
+        "required_text": [
+          "float_roundtrip",
+          "measured_research_values_decode_to_the_correct_ieee_value",
+          "persisted_scientific_json_does_not_drift_on_repeated_readback",
+          "deterministic_finite_bit_patterns_roundtrip_without_a_tolerance",
+          "failed_jobs_keep_the_execution_cause_instead_of_running_numerical_checks"
         ]
       },
       {
@@ -189,6 +209,49 @@
           "quality_objective_does_not_hide_contradictory_failure_details",
           "nonfinite_validation_error_preserves_independent_work_and_diagnostics",
           "Summary cross-check gates"
+        ]
+      }
+    ],
+    "persistence_provenance": [
+      {
+        "id": "thermal-research-original-job-readback",
+        "modules": ["sdk-headless", "orchestra-control-plane", "verification-evidence"],
+        "files": [
+          "sdks/rust/examples/verify_layered_thermal_research.rs",
+          "sdks/rust/examples/layered_thermal_research/retained.rs",
+          "sdks/rust/examples/layered_thermal_research/retained_tests.rs",
+          "docs/research-layered-thermal.html",
+          "reports/thermal-service-research-20260908.md"
+        ],
+        "required_text": [
+          "official_rust_headless_sdk_read_only",
+          "requires_separate_process_lifecycle_evidence",
+          "baseline_report_sha256",
+          "retrieved result differs from retained evidence",
+          "Read-only check after both process restarts"
+        ]
+      }
+    ],
+    "deployment_update": [
+      {
+        "id": "explicit-headless-runtime-inventory",
+        "modules": ["runtime-installer"],
+        "files": [
+          "config/runtime/service-launch.headless.example.json",
+          "workers/rust/crates/platform/src/runtime_profile.rs",
+          "workers/rust/crates/installer/src/runtime_payload.rs",
+          "workers/rust/crates/installer/src/tests/runtime_payload.rs",
+          "workers/rust/crates/desktop-runtime/src/runtime_control.rs",
+          "workers/rust/crates/desktop-runtime/src/runtime_layout.rs",
+          "workers/rust/crates/desktop-runtime/src/runtime_headless_tests.rs",
+          "docs/packaging-and-deployment.md"
+        ],
+        "required_text": [
+          "missing_profile_never_weakens_the_desktop_inventory",
+          "explicit_headless_payload_installs_without_any_frontend_for_each_platform",
+          "rollback_preserves_the_original_desktop_or_headless_inventory",
+          "installed_headless_layout_requires_an_explicit_consistent_profile",
+          "headless runtime must not declare a frontend service"
         ]
       }
     ],

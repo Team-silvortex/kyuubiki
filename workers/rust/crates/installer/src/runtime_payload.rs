@@ -31,6 +31,7 @@ struct RuntimePayloadFile {
 #[derive(Clone, Debug, Deserialize)]
 struct ServiceLaunchManifest {
     schema_version: String,
+    profile: Option<String>,
     services: Vec<ServiceLaunchEntry>,
 }
 
@@ -518,6 +519,7 @@ fn validate_service_manifest(root: &Path, path: &Path) -> Result<(), String> {
             path.display()
         ));
     }
+    let required = kyuubiki_platform::required_runtime_services(manifest.profile.as_deref())?;
     let mut services = BTreeMap::new();
     for entry in manifest.services {
         if entry.id.is_empty() || services.insert(entry.id.clone(), entry).is_some() {
@@ -527,10 +529,15 @@ fn validate_service_manifest(root: &Path, path: &Path) -> Result<(), String> {
             ));
         }
     }
-    for id in ["agent", "orchestrator", "frontend"] {
-        let entry = services
-            .get(id)
-            .ok_or_else(|| format!("service launch manifest is missing `{id}`"))?;
+    for id in required {
+        if !services.contains_key(*id) {
+            return Err(format!("service launch manifest is missing `{id}`"));
+        }
+    }
+    if manifest.profile.as_deref() == Some("headless") && services.contains_key("frontend") {
+        return Err("headless runtime must not declare a frontend service".into());
+    }
+    for (id, entry) in &services {
         let command = root.join(checked_relative(&entry.command.replace("{port}", "5001"))?);
         let cwd = root.join(checked_relative(&entry.cwd.replace("{port}", "5001"))?);
         if !command.is_file() {
