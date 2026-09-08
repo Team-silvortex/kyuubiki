@@ -3,7 +3,7 @@ use serde_json::Value;
 
 fn fixture() -> MaterialResearchBundle {
     serde_json::from_str(include_str!(
-        "../../../schemas/examples.material-research-bundle.json"
+        "../fixtures/examples.material-research-bundle.json"
     ))
     .expect("fixture should decode")
 }
@@ -119,7 +119,7 @@ fn rejects_missing_screening_boundary() {
 #[test]
 fn decoding_requires_retained_evidence() {
     let mut value: Value = serde_json::from_str(include_str!(
-        "../../../schemas/examples.material-research-bundle.json"
+        "../fixtures/examples.material-research-bundle.json"
     ))
     .expect("fixture should decode as json");
     value

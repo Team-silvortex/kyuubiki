@@ -167,7 +167,7 @@ defmodule KyuubikiWeb.WorkflowCatalogSupport do
     %{
       "version" => "kyuubiki.bridge-contract/v1",
       "source" => %{"field" => "temperature"},
-      "transform" => %{"scale" => 1.0, "default_value" => 0.0},
+      "transform" => %{"scale" => 1.0, "reference_temperature" => 0.0, "default_value" => 0.0},
       "target" => %{"field" => "temperature_delta"}
     }
   end

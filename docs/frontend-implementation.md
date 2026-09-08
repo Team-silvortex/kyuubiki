@@ -49,6 +49,32 @@ Rules:
 - if a component grows multiple independent modes, split those modes into child
   surfaces before adding more condition-heavy JSX
 
+### Panel navigation and scrolling
+
+Use `WorkbenchPanelPages` for the model, workflow, library, system, store, and
+inspector page groups. Its navigation occupies a separate, bounded region;
+only the content below it scrolls. Do not turn navigation into a sticky overlay
+that can cover form controls, or duplicate it at the bottom of a long page.
+
+- Keep existing action handlers and automation attributes on the real buttons.
+- Set `pageKey` from the active page, including nested page or pagination state
+  where appropriate. GUI and PWDT transitions then share the same scroll reset.
+- Do not reset scroll for ordinary input edits, polling, or a refreshed message.
+- Preserve a usable content region in stacked/mobile layouts and when users
+  resize desktop panels. Navigation labels wrap as whole buttons when possible.
+- Test the actual `[data-workbench-panel-content]` scroller rather than measuring
+  the non-scrolling outer shell; otherwise a scroll-depth check can pass vacuously.
+- Check nested lists for horizontal overflow too. Sample grids use shrinkable
+  columns and wrap long titles instead of hiding them outside a narrow sidebar.
+- Bound responsive form-column minimums by the actual container width, not just
+  the window breakpoint, so user-resized panels cannot clip form controls.
+
+`tests/integration/workbench-ui-panel-resize.test.mjs` covers pinned navigation,
+keyboard access, page resets, and compact/mobile layouts alongside splitter
+persistence and cancellation. It runs in `make test-integration-ui-workflow`.
+Set `KYUUBIKI_UI_LAYOUT_ARTIFACTS=1` during a local test run to capture the layout
+under the ignored `tmp/desktop-gui-regression-artifacts/panel-navigation` directory.
+
 ### `src/components/ui`
 
 Use this directory only for reusable primitives that are not specific to FEM or

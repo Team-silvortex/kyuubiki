@@ -11,6 +11,11 @@ candidates. The value is not the sophistication of the fixture. The value is
 that the whole loop is executable, machine-checkable, and explicit about its
 limitations.
 
+For a direct public-SDK study that checks solver numbers rather than only a
+candidate ranking, use [Research 01: layered thermal expansion](research-layered-thermal.html).
+It runs 14 real-service workflow cases against analytical heat and displacement
+references and retains failed cases instead of treating job completion as success.
+
 ## Goal
 
 Run a repeatable local material exploration that:

@@ -1,6 +1,7 @@
 "use client";
 
 import { lazy, memo, Suspense, useState } from "react";
+import { WorkbenchPanelPages } from "../workbench-panel-pages";
 
 import type {
   LibraryPanelTab,
@@ -67,7 +68,8 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar(
   const tabs = Object.keys(TAB_GLYPHS) as LibraryPanelTab[];
 
   return (
-    <div className="sidebar-stack panel-scroll-window" data-workbench-library="panel">
+    <WorkbenchPanelPages data-workbench-library="panel"
+      pageKey={`${libraryTab}:${samplePage}:${projectPage}:${modelPage}`} navigation={
       <div className="panel-tabs panel-tabs--wide panel-tabs--library">
         {tabs.map((tab) => (
           <button
@@ -75,6 +77,7 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar(
             aria-label={`workbench-library-tab:${tab}`}
             className={`panel-tab panel-tab--icon${libraryTab === tab ? " panel-tab--active" : ""}`}
             data-workbench-library-tab={tab}
+            aria-pressed={libraryTab === tab}
             onClick={() => onLibraryTabChange(tab)}
             type="button"
           >
@@ -83,7 +86,7 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar(
           </button>
         ))}
       </div>
-
+      }>
       <Suspense fallback={<LoadingPanel label={labels.tabs[libraryTab]} tab={libraryTab} />}>
         {libraryTab === "jobs" || libraryTab === "results" ? (
           <WorkbenchLibraryHistoryPanel
@@ -153,6 +156,6 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar(
           />
         ) : null}
       </Suspense>
-    </div>
+    </WorkbenchPanelPages>
   );
 });

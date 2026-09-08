@@ -9,6 +9,25 @@ installer tooling, local automation, and high-confidence reference runners. It
 shares the same headless contracts as the Python and Elixir SDKs; Rust CLIs are
 packaged examples over those contracts rather than the only supported entry.
 
+## Research example
+
+`examples/layered_thermal_research.rs` runs 14 bounded heat-to-structure workflow
+cases through `KyuubikiAgentClient`, without a GUI or a separate research CLI.
+It retains requests, results, checksums and real job ids, checks analytical
+temperature/flux/expansion references, and exits nonzero on a failed gate.
+Use a new output directory on the compute host:
+
+```sh
+cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example layered_thermal_research -- research-round-001
+```
+
+See the [HTML research tutorial](../../docs/research-layered-thermal.html) for
+parameters, authentication boundaries, limitations and first findings.
+SDK library/example fixtures are bundled under `fixtures/`; repository tests
+additionally check their parity with shared schemas. Bootstrap-document tests
+still require repository documentation and the other official SDK surfaces.
+
 ## Model collaboration
 
 Before projecting tools, `inspect_model_research_bootstrap(...)` checks the

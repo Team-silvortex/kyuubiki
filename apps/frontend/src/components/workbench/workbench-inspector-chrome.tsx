@@ -52,28 +52,22 @@ export function WorkbenchInspectorTabChrome({
   return (
     <>
       {inspectorTab === "status" ? (
-        <section className="info-card">
-          <div className="panel-tabs panel-tabs--wide">
+          <div className="panel-tabs panel-tabs--wide" data-workbench-inspector-navigation="properties">
             <button className={`panel-tab${statusPage === "properties" ? " panel-tab--active" : ""}`} onClick={() => onStatusPageChange("properties")} type="button">{t.properties}</button>
             <button className={`panel-tab${statusPage === "diagnostics" ? " panel-tab--active" : ""}`} onClick={() => onStatusPageChange("diagnostics")} type="button">{t.diagnostics}</button>
           </div>
-        </section>
       ) : null}
       {inspectorTab === "actions" ? (
-        <section className="info-card">
-          <div className="panel-tabs panel-tabs--wide">
+          <div className="panel-tabs panel-tabs--wide" data-workbench-inspector-navigation="actions">
             <button className={`panel-tab${actionsPage === "history" ? " panel-tab--active" : ""}`} data-workbench-inspector-actions-target="history" onClick={() => onActionsPageChange("history")} type="button">{t.historyPanel}</button>
             <button className={`panel-tab${actionsPage === "exports" ? " panel-tab--active" : ""}`} data-workbench-inspector-actions-target="exports" onClick={() => onActionsPageChange("exports")} type="button">{t.exportData}</button>
           </div>
-        </section>
       ) : null}
       {inspectorTab === "result" ? (
-        <section className="info-card">
-          <div className="panel-tabs panel-tabs--wide">
+          <div className="panel-tabs panel-tabs--wide" data-workbench-inspector-navigation="result">
             <button className={`panel-tab${resultPage === "summary" ? " panel-tab--active" : ""}`} onClick={() => onResultPageChange("summary")} type="button">{t.summary}</button>
             <button className={`panel-tab${resultPage === "details" ? " panel-tab--active" : ""}`} onClick={() => onResultPageChange("details")} type="button">{t.details}</button>
           </div>
-        </section>
       ) : null}
     </>
   );

@@ -47,6 +47,8 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
            ),
          {:ok, scale} <-
            normalize_bridge_scale(get_in(contract, ["transform", "scale"]) || 1.0),
+         {:ok, reference_temperature} <-
+           normalize_reference_temperature(contract, source_field),
          {:ok, reduction} <-
            normalize_contract_string(
              get_in(contract, ["transform", "reduction"]) ||
@@ -66,6 +68,7 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
          reduction: reduction,
          target_field: target_field,
          scale: scale,
+         reference_temperature: reference_temperature,
          default_value: default_value
        }}
     end
@@ -90,6 +93,7 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
             node_index_fields: [],
             reduction: "copy",
             scale: 1.0,
+            reference_temperature: 0.0,
             default_value: 0.0
           })
         end)
@@ -192,12 +196,15 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
            source_field: source_field,
            scale: scale,
            default_value: default_value
-         }
+         } = bridge_contract
        ) do
+    reference = Map.get(bridge_contract, :reference_temperature, 0.0)
+
     Enum.map(heat_nodes, fn node ->
       node
       |> Map.get(source_field, default_value)
       |> normalize_numeric_value()
+      |> Kernel.-(reference)
       |> Kernel.*(scale)
     end)
   end
@@ -225,6 +232,7 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
             element
             |> Map.get(source_field, bridge_contract.default_value)
             |> normalize_numeric_value()
+            |> Kernel.-(Map.get(bridge_contract, :reference_temperature, 0.0))
             |> Kernel.*(scale)
 
           weight = normalize_numeric_value(Map.get(element, "area", 1.0))
@@ -402,6 +410,22 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
   defp normalize_bridge_scale(nil), do: {:ok, 1.0}
   defp normalize_bridge_scale(scale) when is_number(scale), do: {:ok, scale}
   defp normalize_bridge_scale(_scale), do: {:error, :invalid_bridge_scale}
+
+  defp normalize_reference_temperature(contract, source_field) do
+    transform = get_in(contract, ["transform"]) || %{}
+    value = Map.get(transform, "reference_temperature", 0.0)
+
+    cond do
+      not is_number(value) ->
+        {:error, :invalid_bridge_reference_temperature}
+
+      value != 0 and source_field not in ["temperature", "average_temperature"] ->
+        {:error, :invalid_bridge_reference_temperature_source}
+
+      true ->
+        {:ok, value}
+    end
+  end
 
   defp normalize_contract_string(value, _reason) when is_binary(value) and value != "",
     do: {:ok, value}

@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
+import { WorkbenchPanelPages } from "./workbench-panel-pages";
 import {
   WorkbenchInspectorActionsExportPanel,
   WorkbenchInspectorResultPanels,
@@ -151,7 +152,8 @@ function WorkbenchInspectorInner({
         <h2>{t.overview}</h2>
         <span>{isPending ? t.busy : t.ready}</span>
       </div>
-      <div className="inspector-stack panel-scroll-window">
+      <WorkbenchPanelPages contentClassName="inspector-stack"
+        pageKey={`${inspectorTab}:${statusPage}:${actionsPage}:${resultPage}`} navigation={<>
         <div className="panel-tabs panel-tabs--wide">
           <button className={`panel-tab${inspectorTab === "status" ? " panel-tab--active" : ""}`} data-workbench-inspector-tab-target="status" onClick={() => setInspectorTab("status")} type="button">{t.status}</button>
           <button className={`panel-tab${inspectorTab === "result" ? " panel-tab--active" : ""}`} data-workbench-inspector-tab-target="result" onClick={() => setInspectorTab("result")} type="button">{t.result}</button>
@@ -167,6 +169,7 @@ function WorkbenchInspectorInner({
           onActionsPageChange={setActionsPage}
           onResultPageChange={setResultPage}
         />
+        </>}>
         {sidebarSection === "model" && inspectorTab === "status" && statusPage === "properties" ? (
           <section className="info-card">
             <h3>{t.properties}</h3>
@@ -550,7 +553,7 @@ function WorkbenchInspectorInner({
             onPlaneHeatSortChange={setPlaneHeatSort}
           />
         ) : null}
-      </div>
+      </WorkbenchPanelPages>
     </aside>
   );
 }

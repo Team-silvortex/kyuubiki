@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { WorkbenchRouteJourney } from "@/components/workbench/workbench-route-journey";
+import { WorkbenchPanelPages } from "../workbench-panel-pages";
 
 type SystemPanelTab = "overview" | "config" | "scripts" | "runtime" | "data";
 type SystemSurfaceTab = "settings" | "runtime" | "data";
@@ -48,11 +49,12 @@ export function WorkbenchSystemSidebar({
       : "overview";
 
   return (
-    <div className="sidebar-stack panel-scroll-window" data-workbench-system-sidebar="root">
+    <WorkbenchPanelPages data-workbench-system-sidebar="root" pageKey={systemPanelTab} navigation={
       <div className="panel-tabs panel-tabs--editor">
         <button
           className={`panel-tab${surfaceTab === "settings" ? " panel-tab--active" : ""}`}
           data-workbench-system-surface-tab="settings"
+          aria-pressed={surfaceTab === "settings"}
           onClick={() => onSystemPanelTabChange("overview")}
           type="button"
         >
@@ -61,6 +63,7 @@ export function WorkbenchSystemSidebar({
         <button
           className={`panel-tab${surfaceTab === "runtime" ? " panel-tab--active" : ""}`}
           data-workbench-system-surface-tab="runtime"
+          aria-pressed={surfaceTab === "runtime"}
           onClick={() => onSystemPanelTabChange("runtime")}
           type="button"
         >
@@ -69,13 +72,14 @@ export function WorkbenchSystemSidebar({
         <button
           className={`panel-tab${surfaceTab === "data" ? " panel-tab--active" : ""}`}
           data-workbench-system-surface-tab="data"
+          aria-pressed={surfaceTab === "data"}
           onClick={() => onSystemPanelTabChange("data")}
           type="button"
         >
           {dataTabLabel}
         </button>
       </div>
-
+      }>
       {surfaceTab === "settings" ? (
         settingsPage === "overview" ? (
           <>
@@ -144,6 +148,6 @@ export function WorkbenchSystemSidebar({
 
       {surfaceTab === "runtime" ? runtimeContent : null}
       {surfaceTab === "data" ? dataContent : null}
-    </div>
+    </WorkbenchPanelPages>
   );
 }

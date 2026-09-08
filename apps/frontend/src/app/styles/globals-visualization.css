@@ -36,6 +36,7 @@
 
 .sample-group-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   max-height: 400px;
   overflow-y: auto;
@@ -44,6 +45,8 @@
 
 .sample-group {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 10px;
 }
 
@@ -60,6 +63,8 @@
 }
 
 .sample-group__head strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--ink);
   font-size: 0.8rem;
   letter-spacing: 0.06em;
@@ -67,7 +72,15 @@
 
 .sample-group__items {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 10px;
+}
+
+.sample-group .history-item {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .virtual-list__viewport {

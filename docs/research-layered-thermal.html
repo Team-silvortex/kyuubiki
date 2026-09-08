@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Research 01 | Layered Thermal Expansion</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">daji 3.0.x | Research verification series</div>
+        <h1>Two materials, one heat-to-structure workflow</h1>
+        <p class="docs-copy">Run the public Rust Headless SDK against a real control plane,
+          retain the complete inputs and outputs, and check the numbers against an independent
+          analytical reference. A completed job is not a numerical pass.</p>
+        <div class="docs-meta">
+          <span class="docs-chip">14 bounded cases</span>
+          <span class="docs-chip">7 workflow nodes per case</span>
+          <span class="docs-chip">Synthetic reference, not material certification</span>
+        </div>
+        <div class="docs-links">
+          <a class="docs-link" href="./tutorial-headless-rust.html">Headless tutorial</a>
+          <a class="docs-link" href="../sdks/rust/examples/layered_thermal_research.rs">Runnable SDK example</a>
+          <a class="docs-link" href="../reports/layered-thermal-research-20260908.md">First findings</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Research question and assumptions</h2>
+        <p class="docs-copy">Does a steady thermal field crossing a conductivity interface
+          produce the expected axial expansion, independently of the chosen temperature origin?
+          This is a verification problem before it is a material-selection problem.</p>
+        <table class="docs-table">
+          <thead><tr><th>Quantity</th><th>Definition</th></tr></thead>
+          <tbody>
+            <tr><td>Geometry</td><td>1 m long, 0.1 m high, 0.01 m thick; bonded interface at x = 0.5 m</td></tr>
+            <tr><td>Conductivity k, W/(m K)</td><td>Moderate contrast: [10, 100]; high contrast: [2, 200]</td></tr>
+            <tr><td>Young's modulus E</td><td>[70e9, 3e9] Pa; constant in each layer</td></tr>
+            <tr><td>Expansion coefficient alpha</td><td>[10e-6, 20e-6] /K; constant in each layer</td></tr>
+            <tr><td>Thermal conditions</td><td>T(left) = Tref + rise, T(right) = Tref; other edges insulated; no sources</td></tr>
+            <tr><td>Mechanical conditions</td><td>Left ux fixed; all uy fixed; no external force; Poisson ratio zero</td></tr>
+            <tr><td>Mesh</td><td>Q4 cells; nx = 2r, ny = r; r = 1, 2, 4, 8; maximum 153 nodes</td></tr>
+          </tbody>
+        </table>
+        <p class="docs-copy">The zero Poisson ratio and transverse restraint deliberately isolate
+          an exact axial displacement reference. They do not describe a general unconstrained
+          two-dimensional specimen. The coefficients are synthetic, not verified material cards.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Independent numerical gates</h2>
+        <pre class="docs-code">q = rise / (0.5/k_left + 0.5/k_right)
+T(x) = Tref + rise - q * (min(x, 0.5)/k_left + max(x - 0.5, 0)/k_right)
+ux(x) = integral from 0 to x of alpha(s) * (T(s) - Tref) ds
+temperature_delta = (source_temperature - reference_temperature) * scale</pre>
+        <p class="docs-copy">The temperature profile is piecewise linear, so the displacement
+          integral is evaluated analytically within each layer, without calling a solver.
+          Subtraction precedes scaling and element-to-node reduction. The stress-free reference
+          and the input temperatures must use the same origin.</p>
+        <table class="docs-table">
+          <thead><tr><th>Gate</th><th>Required error</th></tr></thead>
+          <tbody>
+            <tr><td>Nodal temperature</td><td>Maximum absolute error &lt;= 1e-7 K</td></tr>
+            <tr><td>Nodal axial displacement</td><td>Maximum absolute error &lt;= 1e-9 m</td></tr>
+            <tr><td>Bridged temperature rise</td><td>Maximum absolute error &lt;= 1e-7 K</td></tr>
+            <tr><td>Axial and transverse heat flux</td><td>|qx - q| and |qy| &lt;= 1e-6 * max(|q|, 1) W/m2</td></tr>
+            <tr><td>Identity and shape</td><td>Matching workflow id, node ids, coordinates and array counts; finite required fields</td></tr>
+            <tr><td>Service result</td><td>Completed job, validated SDK output manifest, identical second result fetch</td></tr>
+          </tbody>
+        </table>
+        <p class="docs-copy">For each conductivity pair, run four mesh sizes at Tref = 20 and
+          rise = 20, then r = 8 with (Tref, rise) = (293.15, 20), (20, 0), and (20, 40).
+          The Kelvin-shift case must preserve expansion, zero rise must produce zero expansion,
+          and doubling the rise must double displacement.</p>
+        <p class="docs-copy">Temperature-reference formulation references:
+          <a href="https://doc.comsol.com/6.3/doc/com.comsol.help.sme/sme_ug_solid.07.033.html">COMSOL Thermal Expansion</a>
+          and <a href="https://mooseframework.inl.gov/releases/moose/2021-05-18/source/materials/ComputeThermalExpansionEigenstrain.html">MOOSE thermal expansion eigenstrain</a>.
+          These are formulation references, not claims that those external solvers were run.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Run through the official SDK</h2>
+        <pre class="docs-code">cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example layered_thermal_research -- research-round-001</pre>
+        <p class="docs-copy">Run on the compute host with a reviewed, installed Orchestra and Agent.
+          The default endpoint is <code>http://127.0.0.1:4000</code>.
+          Configure <code>KYUUBIKI_BASE_URL</code> and, if needed,
+          <code>KYUUBIKI_ACCESS_TOKEN</code> through the process environment, never a tracked file.
+          This minimal HTTP SDK example is intended for host-local access or a trusted local
+          transport boundary, not credential transmission over public plaintext HTTP.</p>
+        <p class="docs-copy">The output directory must be new and its parent must already exist.
+          Existing rounds are not overwritten. The example submits only the 14 defined cases,
+          sequentially, with a 120-second polling deadline per case. A client timeout is not
+          a guarantee that server work was cancelled. No fallback mock is requested.</p>
+        <pre class="docs-code">input -&gt; solve.heat_plane_quad_2d
+      -&gt; bridge.temperature_field_to_thermo_quad_2d
+      -&gt; solve.thermal_plane_quad_2d
+      -&gt; retain heat, bridge model, and structural outputs</pre>
+        <p class="docs-copy">The bridge contract explicitly supplies
+          <code>transform.reference_temperature</code>. Its default remains zero for existing
+          workflows that already supply temperature rise. Nonzero references on heat-load/flux
+          fields and nonnumeric references are rejected rather than silently discarded.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Retain and interpret a round</h2>
+        <ul class="docs-list">
+          <li>Each case retains its complete request and returned result in separate JSON files.</li>
+          <li><code>report.json</code> records relative file names, SHA-256 checksums, job ids,
+            per-gate errors, and output-manifest/readback validation.</li>
+          <li><code>study_definition_sha256</code> fingerprints the runner, model and checker source.
+            Optional <code>KYUUBIKI_SOURCE_REVISION</code> labels the caller's reviewed source revision;
+            an absent value is explicitly <code>unrecorded</code>, never an inferred server revision.</li>
+          <li>Progress reports have <code>complete: false</code>. Only a finished matrix has
+            <code>complete: true</code>; that flag alone does not mean its physics passed.</li>
+          <li>Any failed gate yields a nonzero process exit. Inspect the retained report rather
+            than retrying over the same output directory.</li>
+        </ul>
+        <p class="docs-copy">A second result fetch tests retrieval consistency only. It does not
+          prove persistence across a server restart or power loss. This example's report writes
+          are not a transactional research database. Keep large raw results outside Git.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>First result and remaining boundary</h2>
+        <p class="docs-copy">The first installed-service round completed all 14 jobs but passed
+          zero physical cases. Heat temperature and flux were correct; the bridge ignored the
+          reference temperature, introducing false expansion. Even zero temperature rise gave
+          a 0.3 mm tip displacement. A Kelvin-origin equivalent case had about 4.39725 mm
+          displacement error. The current Rust and Elixir source now subtract the reference.</p>
+        <p class="docs-copy">Current-source Rust regression passes all 14 cases, with separate
+          triangle/quad bridge and corrupted-result checks. Remote Elixir contract checks also
+          pass. The older installed remote service was deliberately not hot-patched: its failed
+          rounds remain evidence, and an Installer-managed deployment/retest is still required.</p>
+        <p class="docs-copy">This series does not yet establish material calibration, realistic
+          Poisson coupling, nonlinear constitutive behavior, external-solver agreement,
+          restart recovery, large-mesh scaling, or general mesh-convergence order. Its aligned,
+          piecewise-linear reference is intentionally simple enough to expose semantic errors.</p>
+        <div class="docs-links">
+          <a class="docs-link" href="../workers/rust/crates/engine/tests/layered_thermal_research.rs">Current engine regressions</a>
+          <a class="docs-link" href="./accuracy-baselines.md">Accuracy boundaries</a>
+          <a class="docs-link" href="./automated-material-research-example.md">Candidate-screening series</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

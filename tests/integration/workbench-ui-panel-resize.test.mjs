@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { captureDesktopGuiArtifacts } from "./desktop-gui-artifacts.mjs";
 import { test } from "node:test";
 import { installProjectWorkbenchTestHooks, usingWorkbench, openWorkbench, invoke } from "./workbench-ui-project-fixture.shared.mjs";
 
@@ -8,6 +9,121 @@ const handle = (page, panel) => page.locator(`[data-workbench-resize="${panel}"]
 const reset = page => page.locator('[data-workbench-layout-reset="true"]');
 const report = page => page.locator('[data-workbench-report-toggle="true"]');
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
+async function panelNavigationBounds(scope) {
+  await scope.locator('[data-workbench-panel-navigation="true"]').first().waitFor();
+  return scope.evaluate(root => {
+    const nav = root.querySelector('[data-workbench-panel-navigation]');
+    const content = root.querySelector('[data-workbench-panel-content]');
+    const rect = element => {
+      const { x, y, width, height, bottom } = element.getBoundingClientRect();
+      return { x, y, width, height, bottom };
+    };
+    return { root: rect(root), nav: rect(nav), content: rect(content), scrollTop: content.scrollTop,
+      overflow: root.scrollHeight - root.clientHeight, buttons: [...nav.querySelectorAll('button')].map(rect) };
+  });
+}
+
+async function assertPanelNavigation(scope) {
+  const bounds = await panelNavigationBounds(scope);
+  assert.ok(bounds.nav.height > 0 && bounds.nav.height <= bounds.root.height * 0.45, JSON.stringify(bounds));
+  assert.ok(bounds.content.height >= bounds.root.height * 0.35, JSON.stringify(bounds));
+  assert.ok(bounds.content.y >= bounds.nav.bottom - 1, "navigation must not overlay a form");
+  assert.ok(bounds.content.bottom <= bounds.root.bottom + 1 && bounds.overflow <= 1, JSON.stringify(bounds));
+  assert.ok(bounds.buttons.length > 0, "navigation must retain its real action targets");
+  for (const button of bounds.buttons) {
+    assert.ok(button.x >= bounds.nav.x && button.x + button.width <= bounds.nav.x + bounds.nav.width + 1, JSON.stringify(bounds));
+    assert.ok(button.y >= bounds.nav.y && button.bottom <= bounds.nav.bottom + 1, JSON.stringify(bounds));
+  }
+  return bounds;
+}
+
+for (const viewport of [{ width: 1280, height: 720 }, { width: 1100, height: 620 }, { width: 390, height: 844 }]) {
+  test(`panel navigation remains reachable after scrolling the sample library at ${viewport.width}px`, { timeout: 90_000 }, async () => {
+    await usingWorkbench(async page => {
+      await page.setViewportSize(viewport);
+      await openWorkbench(page);
+      await page.evaluate(() => window.__kyuubikiPwdt.buildParametricTruss2d({ bays: 4, span: 12, height: 2, loadY: -800 }));
+      await page.evaluate(() => window.__kyuubikiPwdt.openSidebar("library"));
+      await page.evaluate(() => window.__kyuubikiPwdt.openTabs({ libraryTab: "samples" }));
+      await page.getByRole("button", { name: "Refresh workflows", exact: true }).waitFor();
+      const panel = page.locator('[data-workbench-library="panel"]');
+      await panel.scrollIntoViewIfNeeded();
+      const sampleOverflow = await panel.locator(".sample-group-list").evaluate(list => ({
+        list: list.scrollWidth - list.clientWidth,
+        rows: [...list.querySelectorAll(".history-item")].map(row => row.scrollWidth - row.clientWidth),
+      }));
+      assert.ok(sampleOverflow.rows.length > 0, "the fixture must contain real sample cards");
+      assert.ok(sampleOverflow.list <= 1 && sampleOverflow.rows.every(width => width <= 1), JSON.stringify(sampleOverflow));
+      const formOverflow = await panel.locator(".form-grid").evaluateAll(forms => forms.map(form => form.scrollWidth - form.clientWidth));
+      assert.ok(formOverflow.length > 0 && formOverflow.every(width => width <= 1), `Sidebar form columns overflow: ${formOverflow}`);
+      const before = await assertPanelNavigation(panel);
+      await panel.locator('[data-workbench-panel-content]').evaluate(element => { element.scrollTop = element.scrollHeight; });
+      const after = await assertPanelNavigation(panel);
+      assert.ok(after.scrollTop > 100, "the fixture must exercise a genuinely long page");
+      assert.ok(Math.abs(before.nav.y - after.nav.y) <= 1, "scrolling content must not move navigation");
+      await page.getByRole("button", { name: "Refresh workflows", exact: true }).press("Tab");
+      await assertPanelNavigation(panel);
+      const projects = panel.locator('[data-workbench-library-tab="projects"]');
+      await projects.click();
+      assert.equal(await projects.getAttribute("aria-pressed"), "true");
+      assert.equal((await panelNavigationBounds(panel)).scrollTop, 0);
+      await page.evaluate(() => window.__kyuubikiPwdt.openTabs({ libraryTab: "samples" }));
+      assert.equal((await panelNavigationBounds(panel)).scrollTop, 0, "PWDT navigation follows the same scroll lifecycle");
+      if (process.env.KYUUBIKI_UI_LAYOUT_ARTIFACTS === "1") {
+        await captureDesktopGuiArtifacts(page, { suite: "panel-navigation", scenario: "sample-library", viewport });
+      }
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    });
+  });
+}
+
+test("panel navigation uses the same bounded layout across all workspaces and the inspector", { timeout: 90_000 }, async () => {
+  await usingWorkbench(async page => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await openWorkbench(page);
+    for (const [section, selector] of [
+      ["model", '[data-workbench-model="panel"]'],
+      ["workflow", '[data-workbench-workflow-surface]'],
+      ["library", '[data-workbench-library="panel"]'],
+      ["system", '[data-workbench-system-sidebar="root"]'],
+      ["store", '[data-workbench-store-panel="true"]'],
+    ]) {
+      await page.evaluate(value => window.__kyuubikiPwdt.openSidebar(value), section);
+      await assertPanelNavigation(page.locator(selector));
+    }
+    await page.evaluate(() => window.__kyuubikiPwdt.openSidebar("model"));
+    await page.locator('[data-workbench-model-tools-page="generate"]').click();
+    await assertPanelNavigation(page.locator('[data-workbench-model="panel"]'));
+    await page.evaluate(() => window.__kyuubikiPwdt.openSidebar("workflow"));
+    await page.locator('[data-workflow-surface-tab="builder"]').click();
+    await assertPanelNavigation(page.locator('[data-workbench-workflow-surface]'));
+    await page.evaluate(() => window.__kyuubikiPwdt.openSidebar("system"));
+    await page.evaluate(() => window.__kyuubikiPwdt.openTabs({ systemPanelTab: "config" }));
+    const system = page.locator('[data-workbench-system-sidebar="root"]');
+    await assertPanelNavigation(system);
+    await system.locator('[data-workbench-panel-content]').evaluate(element => { element.scrollTop = element.scrollHeight; });
+    await assertPanelNavigation(system);
+    await system.locator('[data-workbench-system-surface-tab="data"]').click();
+    assert.equal((await panelNavigationBounds(system)).scrollTop, 0);
+    const inspector = page.locator('[data-workbench-panel="inspector"]');
+    for (const target of ["actions", "result", "status"]) {
+      await inspector.locator(`[data-workbench-inspector-tab-target="${target}"]`).click();
+      await assertPanelNavigation(inspector);
+      assert.equal(await inspector.locator('[data-workbench-panel-navigation] .panel-tabs').count(), 2);
+      await inspector.locator('[data-workbench-panel-content]').evaluate(element => { element.scrollTop = element.scrollHeight; });
+      await assertPanelNavigation(inspector);
+      if (target === "status") {
+        const lines = await inspector.getByRole("button", { name: "Diagnostics", exact: true }).evaluate(element => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          return range.getClientRects().length;
+        });
+        assert.equal(lines, 1, "a short navigation label must not be broken into arbitrary letters");
+      }
+    }
+  });
+});
 
 test("navigation updates default panel widths even while animation frames are delayed", { timeout: 90_000 }, async () => {
   await usingWorkbench(async page => {
@@ -69,7 +185,8 @@ async function assertFits(page) {
     assert.ok(current.svg[axis] + current.svg[size] <= current.stage[axis] + current.stage[size] + 1, JSON.stringify(current));
   }
   assert.ok(current.overflow <= 1, JSON.stringify(current));
-  const tabBars = await page.locator(".inspector-stack .panel-tabs").evaluateAll(bars => bars.map(bar => bar.getBoundingClientRect().height));
+  const tabBars = await page.locator(".workspace-inspector .panel-tabs").evaluateAll(bars => bars.map(bar => bar.getBoundingClientRect().height));
+  assert.ok(tabBars.length >= 2, "Inspector primary and secondary navigation must both be checked");
   assert.ok(tabBars.every(height => height <= 140), `Inspector tab containers stretched: ${tabBars}`);
   return current;
 }

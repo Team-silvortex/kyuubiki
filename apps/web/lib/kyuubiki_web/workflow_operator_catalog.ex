@@ -482,6 +482,8 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
           "element_to_nodes" => "mean"
         },
         "default_scale" => 1.0,
+        "default_reference_temperature" => 0.0,
+        "temperature_conversion" => "(source - reference_temperature) * scale before reduction",
         "default_value" => 0.0
       },
       "target" => %{"fields" => ["temperature_delta"], "default_field" => "temperature_delta"}
@@ -519,6 +521,8 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
           "element_to_nodes" => "mean"
         },
         "default_scale" => 1.0,
+        "default_reference_temperature" => 0.0,
+        "temperature_conversion" => "(source - reference_temperature) * scale before reduction",
         "default_value" => 0.0
       },
       "target" => %{"fields" => ["temperature_delta"], "default_field" => "temperature_delta"}

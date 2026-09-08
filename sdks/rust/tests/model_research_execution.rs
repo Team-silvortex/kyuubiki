@@ -261,7 +261,7 @@ fn session_dispatcher_reaches_real_control_plane_routes() {
 
 #[test]
 fn repository_bootstrap_fixtures_reach_approved_execution() {
-    let schemas = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../schemas");
+    let schemas = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("fixtures");
     let session: ModelCollaborationSession = serde_json::from_slice(
         &std::fs::read(schemas.join("examples.model-collaboration-session.json"))
             .expect("session fixture"),

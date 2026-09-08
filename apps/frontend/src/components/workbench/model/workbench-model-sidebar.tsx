@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { WorkbenchRouteJourney } from "@/components/workbench/workbench-route-journey";
+import { WorkbenchPanelPages } from "../workbench-panel-pages";
 
 type ModelPanelTab = "tools" | "tree";
 export type ModelToolsPage = "overview" | "study" | "studio" | "materials" | "generate";
@@ -56,14 +57,16 @@ export function WorkbenchModelSidebar({
   treeContent,
 }: WorkbenchModelSidebarProps) {
   return (
-    <div
-      className={`sidebar-stack panel-scroll-window${isTruss3d ? " sidebar-stack--space" : ""}`}
+    <WorkbenchPanelPages
+      className={isTruss3d ? "sidebar-stack--space" : ""}
       data-workbench-model="panel"
-    >
+      pageKey={`${modelTab}:${toolsPage}`}
+      navigation={<>
       <div className="panel-tabs">
         <button
           className={`panel-tab${modelTab === "tools" ? " panel-tab--active" : ""}`}
           data-workbench-model-tab="tools"
+          aria-pressed={modelTab === "tools"}
           onClick={() => onModelTabChange("tools")}
           type="button"
         >
@@ -72,6 +75,7 @@ export function WorkbenchModelSidebar({
         <button
           className={`panel-tab${modelTab === "tree" ? " panel-tab--active" : ""}`}
           data-workbench-model-tab="tree"
+          aria-pressed={modelTab === "tree"}
           onClick={() => onModelTabChange("tree")}
           type="button"
         >
@@ -80,8 +84,7 @@ export function WorkbenchModelSidebar({
       </div>
 
       {modelTab === "tools" ? (
-        <>
-          {toolsPage === "overview" ? (
+          toolsPage === "overview" ? (
             <div className="panel-tabs panel-tabs--overview">
               <button
                 className="panel-tab panel-tab--active"
@@ -141,7 +144,11 @@ export function WorkbenchModelSidebar({
                 </button>
               ) : null}
             </div>
-          )}
+          )
+      ) : null}
+      </>}>
+      {modelTab === "tools" ? (
+        <>
           {toolsPage === "overview" ? (
             <WorkbenchRouteJourney
               steps={[
@@ -190,6 +197,6 @@ export function WorkbenchModelSidebar({
         </>
       ) : null}
       {modelTab === "tree" ? treeContent : null}
-    </div>
+    </WorkbenchPanelPages>
   );
 }

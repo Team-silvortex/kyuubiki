@@ -5,6 +5,29 @@
   "paradigm_contract_evidence": {
     "validation": [
       {
+        "id": "layered-thermal-reference-research",
+        "modules": ["runtime-engine-solver", "verification-evidence"],
+        "files": [
+          "sdks/rust/examples/layered_thermal_research.rs",
+          "sdks/rust/examples/layered_thermal_research/model.rs",
+          "sdks/rust/examples/layered_thermal_research/checks.rs",
+          "workers/rust/crates/engine/src/heat_bridge.rs",
+          "workers/rust/crates/engine/tests/layered_thermal_research.rs",
+          "apps/web/lib/kyuubiki_web/workflow_operator_heat_bridge_runtime.ex",
+          "apps/web/test/kyuubiki_web/heat_reference_temperature_test.exs",
+          "docs/research-layered-thermal.html",
+          "reports/layered-thermal-research-20260908.md"
+        ],
+        "required_text": [
+          "layered_research_matches_independent_temperature_flux_and_expansion_references",
+          "research_gates_reject_wrong_identity_missing_data_and_numerical_corruption",
+          "reference_temperature_is_applied_before_scaling_for_triangles_and_quads",
+          "synthetic_reference_not_material_certification",
+          "result_readback_matches",
+          "Installed-runtime numerical verdict: FAIL, 0/14 cases."
+        ]
+      },
+      {
         "id": "workflow-parameter-sweep-result-evidence",
         "modules": [
           "runtime-engine-solver",

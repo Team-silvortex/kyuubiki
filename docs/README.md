@@ -100,6 +100,9 @@ runtime owner, automation surface, and explicit limitation.
 - `tutorial-headless-rust.html`
   Rust Headless route from template discovery through validation, retained plan,
   mock orchestration, live service execution, and material evidence.
+- `research-layered-thermal.html`
+  Direct public-SDK research verification: 14 layered heat-to-structure cases,
+  independent analytical gates, retained failures, and installed/source boundaries.
 - `tutorial-operator-sdk.html`
   Rust-only operator extension route from the crate template through descriptor
   readiness, baselines, package preflight, and dynamic smoke.

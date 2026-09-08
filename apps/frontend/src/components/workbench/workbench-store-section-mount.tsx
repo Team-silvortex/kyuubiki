@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { WorkbenchPanelPages } from "./workbench-panel-pages";
 import {
   type AssetStoreEntry,
   type AssetStoreEntryKind,
@@ -179,15 +180,27 @@ export function WorkbenchStoreSectionMount({
   }
 
   return (
-    <div
-      className="sidebar-stack panel-scroll-window"
+    <WorkbenchPanelPages
       data-workbench-store-panel="true"
       data-workbench-store-manifest-count={activeManifest.entries.length}
       data-workbench-store-model={selectedModelId ?? ""}
       data-workbench-store-status={busy ? "loading" : error ? "error" : "ready"}
       data-workbench-store-view={view}
       data-workbench-store-visible-count={view === "catalog" ? visibleEntries.length : visibleManifestEntries.length}
-    >
+      pageKey={`${view}:${kind}:${view === "catalog" ? activeCatalogPage : activeManifestPage}`}
+      navigation={
+      <div className="panel-tabs panel-tabs--editor" data-workbench-store-navigation="true">
+        <button className={`panel-tab${view === "catalog" ? " panel-tab--active" : ""}`} aria-pressed={view === "catalog"} data-workbench-store-view-tab="catalog" onClick={() => setView("catalog")} type="button">
+          {copy.browse}
+        </button>
+        <button className={`panel-tab${view === "project" ? " panel-tab--active" : ""}`} aria-pressed={view === "project"} data-workbench-store-view-tab="project" onClick={() => setView("project")} type="button">
+          {copy.projectAssets} · {activeManifest.entries.length}
+        </button>
+        <button className={`panel-tab${view === "sources" ? " panel-tab--active" : ""}`} aria-pressed={view === "sources"} data-workbench-store-view-tab="sources" onClick={() => setView("sources")} type="button">
+          {copy.sources} · {sources.length}
+        </button>
+      </div>
+      }>
       <section className="sidebar-card sidebar-card--compact store-context-card">
         <div className="card-head">
           <div>
@@ -209,18 +222,6 @@ export function WorkbenchStoreSectionMount({
         {error ? <p className="warning-copy">{error}</p> : null}
         {storageError ? <p className="warning-copy">{storageError}</p> : null}
       </section>
-
-      <div className="panel-tabs panel-tabs--editor" data-workbench-store-navigation="true">
-        <button className={`panel-tab${view === "catalog" ? " panel-tab--active" : ""}`} data-workbench-store-view-tab="catalog" onClick={() => setView("catalog")} type="button">
-          {copy.browse}
-        </button>
-        <button className={`panel-tab${view === "project" ? " panel-tab--active" : ""}`} data-workbench-store-view-tab="project" onClick={() => setView("project")} type="button">
-          {copy.projectAssets} · {activeManifest.entries.length}
-        </button>
-        <button className={`panel-tab${view === "sources" ? " panel-tab--active" : ""}`} data-workbench-store-view-tab="sources" onClick={() => setView("sources")} type="button">
-          {copy.sources} · {sources.length}
-        </button>
-      </div>
 
       {view === "catalog" ? (
         <section className="sidebar-card sidebar-card--compact">
@@ -346,7 +347,7 @@ export function WorkbenchStoreSectionMount({
           ))}
         </div>
       </section> : null}
-    </div>
+    </WorkbenchPanelPages>
   );
 }
 

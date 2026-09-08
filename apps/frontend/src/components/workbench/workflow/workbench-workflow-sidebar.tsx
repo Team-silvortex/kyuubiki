@@ -2,6 +2,7 @@
 import { useDeferredValue, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import { WorkbenchRouteJourney } from "@/components/workbench/workbench-route-journey";
+import { WorkbenchPanelPages } from "../workbench-panel-pages";
 import { resolveWorkflowRunStatusTone } from "@/lib/api";
 import type { JobState, ProtocolAgentDescriptor, WorkflowCatalogEntry, WorkflowGraphDefinition, WorkflowOperatorDescriptor, WorkflowOperatorModuleSummary } from "@/lib/api";
 import type { HeatPlaneStudyJobInput, PlaneStudyJobInput, StudyKind } from "@/components/workbench/workbench-types";
@@ -312,12 +313,11 @@ export function WorkbenchWorkflowSidebar({
   }, [surfaceTab, latestRun?.jobId, filteredWorkflowCatalogEntries.length]);
 
   return (
-    <div
-      className="sidebar-stack panel-scroll-window"
+    <WorkbenchPanelPages
       data-workbench-workflow-surface={surfaceTab}
       data-workbench-workflow-runs-filter={runsFilter}
-    >
-      {surfaceTab === "overview" ? (
+      pageKey={surfaceTab}
+      navigation={surfaceTab === "overview" ? (
         <div className="panel-tabs panel-tabs--overview">
           <button
             className="panel-tab panel-tab--active"
@@ -343,8 +343,7 @@ export function WorkbenchWorkflowSidebar({
             {labels.runsPageLabel}
           </button>
         </div>
-      )}
-
+      )}>
       {surfaceTab === "overview" ? (
         <>
           <WorkbenchRouteJourney
@@ -593,6 +592,6 @@ export function WorkbenchWorkflowSidebar({
           {filteredWorkflowRuns.length > WORKFLOW_RUN_RENDER_LIMIT ? <p className="card-copy">Showing {WORKFLOW_RUN_RENDER_LIMIT} of {filteredWorkflowRuns.length} runs. Use bridge filters to narrow the list.</p> : null}
         </section>
       ) : null}
-    </div>
+    </WorkbenchPanelPages>
   );
 }

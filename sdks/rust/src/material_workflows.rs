@@ -69,7 +69,7 @@ pub fn material_workflow_catalog() -> Value {
 
 pub fn material_study_execution_plan_example() -> Value {
     serde_json::from_str(include_str!(
-        "../../../schemas/examples.material-study-execution-plan.json"
+        "../fixtures/material-study-execution-plan.json"
     ))
     .expect("bundled material study execution plan example should be valid JSON")
 }

@@ -5,7 +5,7 @@ use kyuubiki_headless_sdk::{MaterialResearchBundle, SdkResult};
 fn main() -> SdkResult<()> {
     let text = match env::args().nth(1) {
         Some(path) => fs::read_to_string(path)?,
-        None => include_str!("../../../schemas/examples.material-research-bundle.json").to_string(),
+        None => include_str!("../fixtures/examples.material-research-bundle.json").to_string(),
     };
     let bundle: MaterialResearchBundle = serde_json::from_str(&text)?;
     bundle.validate()?;

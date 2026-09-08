@@ -7,7 +7,7 @@ use serde_json::json;
 
 fn material_envelope_fixture() -> serde_json::Value {
     let mut fixture: serde_json::Value = serde_json::from_str(include_str!(
-        "../../../schemas/examples.material-envelope-catalog-request.json"
+        "../fixtures/material-envelope-catalog-request.json"
     ))
     .expect("material envelope catalog request fixture");
     fixture
@@ -97,4 +97,47 @@ fn material_study_execution_plan_example_matches_shared_contract() {
             .unwrap()
             .contains("heat-spreader")
     );
+}
+
+#[test]
+fn bundled_material_fixtures_match_the_repository_contract_when_present() {
+    // Packaged crates are self-contained; repository runs additionally guard vendored fixture drift.
+    let schemas = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../schemas");
+    if !schemas.is_dir() {
+        return;
+    }
+    for (name, actual) in [
+        (
+            "examples.material-study-execution-plan.json",
+            material_study_execution_plan_example(),
+        ),
+        (
+            "examples.material-envelope-catalog-request.json",
+            material_envelope_fixture(),
+        ),
+    ] {
+        let mut expected: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(schemas.join(name)).unwrap()).unwrap();
+        expected.as_object_mut().unwrap().remove("$schema");
+        assert_eq!(actual, expected, "vendored SDK fixture drift: {name}");
+    }
+    for name in [
+        "workflow-graph",
+        "workflow-dataset",
+        "material-research-bundle",
+        "model-collaboration-session",
+        "model-workflow-proposal",
+        "model-plan-approval-request",
+        "model-plan-approval",
+    ] {
+        let filename = format!("examples.{name}.json");
+        let bundled = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("fixtures")
+            .join(&filename);
+        let actual: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(bundled).unwrap()).unwrap();
+        let expected: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(schemas.join(&filename)).unwrap()).unwrap();
+        assert_eq!(actual, expected, "vendored SDK fixture drift: {filename}");
+    }
 }

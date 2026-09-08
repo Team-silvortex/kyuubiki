@@ -58,7 +58,7 @@ fn approval_request_rejects_inconsistent_gated_risk() {
 }
 
 fn schemas() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../schemas")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("fixtures")
 }
 
 fn read_json<T: serde::de::DeserializeOwned>(schemas: &std::path::Path, name: &str) -> T {

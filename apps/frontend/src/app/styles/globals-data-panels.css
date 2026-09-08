@@ -45,12 +45,12 @@
 
 .form-grid.compact {
   margin-top: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
   align-items: start;
 }
 
 .sidebar-card > .form-grid.compact {
-  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 168px), 1fr));
 }
 
 .form-grid label {

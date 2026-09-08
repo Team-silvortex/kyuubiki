@@ -1,0 +1,43 @@
+{
+  "$schema": "material-envelope-catalog-request.schema.json",
+  "workflow_id": "workflow.material-study-envelope-ranking-json",
+  "input_artifacts": {
+    "material_rows": {
+      "rows": [
+        {
+          "case_id": "cool_stiff",
+          "summaries": {
+            "thermal": {
+              "max_temperature": 82.0
+            },
+            "structural": {
+              "max_stress": 100.0
+            }
+          }
+        },
+        {
+          "case_id": "warm_safe",
+          "summaries": {
+            "thermal": {
+              "max_temperature": 90.0
+            },
+            "structural": {
+              "max_stress": 120.0
+            }
+          }
+        },
+        {
+          "case_id": "hot_light",
+          "summaries": {
+            "thermal": {
+              "max_temperature": 140.0
+            },
+            "structural": {
+              "max_stress": 110.0
+            }
+          }
+        }
+      ]
+    }
+  }
+}

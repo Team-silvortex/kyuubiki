@@ -14,6 +14,9 @@ Top-level files keep the shell and cross-cutting surfaces:
   Right-side diagnostics, properties, history, and reporting surface.
 - `workbench-console.tsx`
   Bottom report/messages/results surface.
+- `workbench-panel-pages.tsx`
+  Bounded navigation and a separate content scroller shared by the main sidebar
+  sections and inspector. GUI and PWDT page changes reset content scroll together.
 - `workbench-object-tree.tsx`
   Modeling-side object tree and selection list.
 - `workbench-script-panel.tsx`

@@ -13,6 +13,7 @@ pub(crate) struct HeatToThermoBridgeContract {
     reduction: String,
     target_field: String,
     scale: f64,
+    reference_temperature: f64,
     default_value: f64,
 }
 
@@ -162,6 +163,7 @@ fn default_heat_to_thermo_bridge_contract() -> HeatToThermoBridgeContract {
         reduction: "copy".to_string(),
         target_field: "temperature_delta".to_string(),
         scale: 1.0,
+        reference_temperature: 0.0,
         default_value: 0.0,
     }
 }
@@ -223,6 +225,21 @@ pub(crate) fn resolve_heat_to_thermo_bridge_contract(
         .and_then(|value| value.get("default_value"))
         .and_then(Value::as_f64)
         .unwrap_or(0.0);
+    let reference_temperature = match transform.and_then(|value| value.get("reference_temperature"))
+    {
+        None => 0.0,
+        Some(value) => value
+            .as_f64()
+            .filter(|v| v.is_finite())
+            .ok_or("heat-to-thermo reference_temperature must be finite and numeric")?,
+    };
+    if reference_temperature != 0.0
+        && !matches!(source_field.as_str(), "temperature" | "average_temperature")
+    {
+        return Err(
+            "heat-to-thermo reference_temperature requires a temperature source field".into(),
+        );
+    }
 
     if source_field != "temperature" && source_field != "heat_load" {
         let supports_element_field = distribution == "element_to_nodes"
@@ -265,6 +282,7 @@ pub(crate) fn resolve_heat_to_thermo_bridge_contract(
         reduction,
         target_field,
         scale,
+        reference_temperature,
         default_value,
     })
 }
@@ -277,7 +295,12 @@ fn derive_direct_heat_nodal_target_field(
     let nodal_values = nodes
         .iter()
         .map(|node| {
-            let source_value = resolve_heat_bridge_node_value(node, contract)? * contract.scale;
+            let source_value = (resolve_heat_bridge_node_value(node, contract)?
+                - contract.reference_temperature)
+                * contract.scale;
+            if !source_value.is_finite() {
+                return Err("heat-to-thermo temperature conversion overflowed".into());
+            }
             source_values.push(source_value);
             Ok(source_value)
         })
@@ -302,8 +325,12 @@ fn derive_element_heat_nodal_target_field<TElement>(
     let mut source_values = Vec::new();
 
     for element in elements {
-        let source_value =
-            resolve_source(element, contract.source_field.as_str())? * contract.scale;
+        let source_value = (resolve_source(element, contract.source_field.as_str())?
+            - contract.reference_temperature)
+            * contract.scale;
+        if !source_value.is_finite() {
+            return Err("heat-to-thermo temperature conversion overflowed".into());
+        }
         source_values.push(source_value);
         let weight = resolve_weight(element);
         for field in &contract.node_index_fields {

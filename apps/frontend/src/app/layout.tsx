@@ -4,6 +4,7 @@ import "./globals.css";
 import "./workbench-shell-window-protection.css";
 import "./styles/globals-viewport-priority.css";
 import "./styles/globals-resizable-panels.css";
+import "./styles/globals-panel-pages.css";
 
 const metadataBase =
   process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.trim().length > 0

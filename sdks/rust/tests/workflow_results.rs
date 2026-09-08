@@ -7,7 +7,7 @@ use kyuubiki_headless_sdk::{
 #[test]
 fn builds_output_manifest_from_graph() {
     let graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
-        "../../../schemas/examples.workflow-graph.json"
+        "../fixtures/examples.workflow-graph.json"
     ))
     .expect("graph example");
     let manifest = build_workflow_output_manifest(&graph).expect("manifest");
@@ -18,7 +18,7 @@ fn builds_output_manifest_from_graph() {
 #[test]
 fn validates_result_payload_with_artifact_type_fallback() {
     let graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
-        "../../../schemas/examples.workflow-graph.json"
+        "../fixtures/examples.workflow-graph.json"
     ))
     .expect("graph example");
     let payload = serde_json::json!({
@@ -50,7 +50,7 @@ fn validates_result_payload_with_artifact_type_fallback() {
 #[test]
 fn rejects_missing_required_output_artifact() {
     let graph: WorkflowGraphDefinition = serde_json::from_str(include_str!(
-        "../../../schemas/examples.workflow-graph.json"
+        "../fixtures/examples.workflow-graph.json"
     ))
     .expect("graph example");
     let payload = serde_json::json!({"result": {"artifacts": {}}});

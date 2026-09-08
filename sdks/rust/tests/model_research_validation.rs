@@ -52,7 +52,7 @@ fn validates_bound_workflow_result_without_overclaiming() {
 #[test]
 fn validates_retained_screening_bundle() {
     let bundle: MaterialResearchBundle = serde_json::from_str(include_str!(
-        "../../../schemas/examples.material-research-bundle.json"
+        "../fixtures/examples.material-research-bundle.json"
     ))
     .expect("bundle fixture");
     let report = validate_model_research_frontier_result(
@@ -177,7 +177,7 @@ fn frontier() -> ModelResearchFrontier {
 
 fn graph() -> WorkflowGraphDefinition {
     serde_json::from_str(include_str!(
-        "../../../schemas/examples.workflow-graph.json"
+        "../fixtures/examples.workflow-graph.json"
     ))
     .expect("graph fixture")
 }
