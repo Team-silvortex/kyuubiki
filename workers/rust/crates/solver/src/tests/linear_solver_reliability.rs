@@ -170,11 +170,11 @@ fn sparse_residual_norm_remains_finite_across_extreme_scales() {
     add_at(&mut matrix, 0, 0, 1.0e200);
     add_at(&mut matrix, 1, 1, 1.0e200);
 
-    let large = sparse_residual_norm(&matrix, &[0.0, 0.0], &[1.0e100, 1.0e100]);
+    let large = sparse_residual_norm(&matrix, &[0.0, 0.0], &[1.0e100, 1.0e100]).unwrap();
     assert!(large.is_finite());
     assert!((large / 1.0e300 - std::f64::consts::SQRT_2).abs() < 1.0e-12);
 
-    let tiny = sparse_residual_norm(&matrix, &[1.0e-300, 1.0e-300], &[0.0, 0.0]);
+    let tiny = sparse_residual_norm(&matrix, &[1.0e-300, 1.0e-300], &[0.0, 0.0]).unwrap();
     assert!(tiny > 0.0);
     assert!((tiny / 1.0e-300 - std::f64::consts::SQRT_2).abs() < 1.0e-12);
 }

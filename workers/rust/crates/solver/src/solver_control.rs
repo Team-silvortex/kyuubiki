@@ -30,6 +30,21 @@ pub enum SolverStage {
     SgsBackward,
     Ic0Forward,
     Ic0Backward,
+    SparseMatvec,
+    SparseMatvecRow,
+    SparseResidual,
+    SparseResidualRow,
+    ResidualValidate,
+    ResidualValidateRow,
+    PcgRhsScale,
+    PcgRhsNormalize,
+    PcgDirectionCopy,
+    PcgDot,
+    PcgNorm,
+    PcgVectorUpdate,
+    PcgResidualUpdate,
+    PcgDirectionUpdate,
+    PcgSolutionScale,
 }
 
 impl SolverStage {
@@ -57,6 +72,21 @@ impl SolverStage {
             Self::SgsBackward => "sgs_backward",
             Self::Ic0Forward => "ic0_forward",
             Self::Ic0Backward => "ic0_backward",
+            Self::SparseMatvec => "sparse_matvec",
+            Self::SparseMatvecRow => "sparse_matvec_row",
+            Self::SparseResidual => "sparse_residual",
+            Self::SparseResidualRow => "sparse_residual_row",
+            Self::ResidualValidate => "residual_validate",
+            Self::ResidualValidateRow => "residual_validate_row",
+            Self::PcgRhsScale => "pcg_rhs_scale",
+            Self::PcgRhsNormalize => "pcg_rhs_normalize",
+            Self::PcgDirectionCopy => "pcg_direction_copy",
+            Self::PcgDot => "pcg_dot",
+            Self::PcgNorm => "pcg_norm",
+            Self::PcgVectorUpdate => "pcg_vector_update",
+            Self::PcgResidualUpdate => "pcg_residual_update",
+            Self::PcgDirectionUpdate => "pcg_direction_update",
+            Self::PcgSolutionScale => "pcg_solution_scale",
         }
     }
 
@@ -84,6 +114,21 @@ impl SolverStage {
             Self::SgsBackward,
             Self::Ic0Forward,
             Self::Ic0Backward,
+            Self::SparseMatvec,
+            Self::SparseMatvecRow,
+            Self::SparseResidual,
+            Self::SparseResidualRow,
+            Self::ResidualValidate,
+            Self::ResidualValidateRow,
+            Self::PcgRhsScale,
+            Self::PcgRhsNormalize,
+            Self::PcgDirectionCopy,
+            Self::PcgDot,
+            Self::PcgNorm,
+            Self::PcgVectorUpdate,
+            Self::PcgResidualUpdate,
+            Self::PcgDirectionUpdate,
+            Self::PcgSolutionScale,
         ]
         .into_iter()
         .find(|stage| *stage as u8 == value)
@@ -241,6 +286,7 @@ pub(crate) fn check_cancellation() -> Result<(), String> {
 }
 
 /// Batch short preparation steps without putting an atomic poll in every inner operation.
+#[inline]
 pub(crate) fn checkpoint_chunk(
     stage: SolverStage,
     completed: usize,

@@ -8,14 +8,22 @@ use std::time::Instant;
 const DENSE_REFINEMENT_TARGET: f64 = 1.0e-12;
 const SPARSE_RESIDUAL_TOLERANCE: f64 = 1.0e-8;
 
+#[cfg(test)]
+#[path = "linear_sparse_product_tests.rs"]
+mod product_tests;
+
 #[path = "linear_sparse_compression.rs"]
 mod compression;
 #[path = "linear_ic0.rs"]
 mod linear_ic0;
 #[path = "linear_spd_prepared.rs"]
 mod prepared;
+#[path = "linear_sparse_product.rs"]
+mod product;
 #[path = "linear_sparse_reduction.rs"]
 mod reduction;
+#[path = "linear_sparse_residual.rs"]
+mod residual;
 #[path = "linear_algebra_scaling.rs"]
 mod scaling;
 #[path = "linear_sparse_path.rs"]
@@ -23,6 +31,8 @@ mod sparse_path;
 
 pub(crate) use prepared::PreparedSpdSolver;
 pub(crate) use reduction::{reduce_sparse_system, reduce_sparse_system_with_prescribed};
+use residual::{sparse_relative_residual, sparse_residual_vector};
+pub(crate) use residual::{sparse_residual_norm, stable_l2_norm};
 pub(crate) use sparse_path::solve_tridiagonal_system;
 
 #[derive(Debug, Clone)]
@@ -32,6 +42,7 @@ pub(crate) struct SparseMatrix {
 
 #[derive(Debug, Clone)]
 pub(crate) struct CompressedSparseMatrix {
+    max_row_entries: usize,
     pub(crate) row_offsets: Vec<usize>,
     pub(crate) lower_end_offsets: Vec<usize>,
     pub(crate) upper_start_offsets: Vec<usize>,
@@ -158,21 +169,6 @@ impl CompressedSparseMatrix {
 
     fn inverse_diagonal(&self, index: usize) -> f64 {
         self.inverse_diagonal[index]
-    }
-
-    pub(crate) fn multiply_vector_into(&self, vector: &[f64], result: &mut [f64]) {
-        debug_assert_eq!(result.len(), self.size());
-        for (row, result_value) in result.iter_mut().enumerate() {
-            let start = self.row_offsets[row];
-            let end = self.row_offsets[row + 1];
-            let mut sum = 0.0;
-            let columns = &self.columns[start..end];
-            let values = &self.values[start..end];
-            for (&column, &value) in columns.iter().zip(values.iter()) {
-                sum += value * vector[column];
-            }
-            *result_value = sum;
-        }
     }
 
     pub(crate) fn apply_preconditioner_into(
@@ -366,11 +362,11 @@ fn refine_dense_solution(
     factor: &DenseLu,
 ) -> Result<Vec<f64>, String> {
     for _ in 0..2 {
-        let validation = sparse_relative_residual(matrix, rhs, &solution, DENSE_REFINEMENT_TARGET);
+        let validation = sparse_relative_residual(matrix, rhs, &solution, DENSE_REFINEMENT_TARGET)?;
         if validation.relative <= DENSE_REFINEMENT_TARGET {
             return Ok(solution);
         }
-        let residual = sparse_residual_vector(matrix, rhs, &solution);
+        let residual = sparse_residual_vector(matrix, rhs, &solution)?;
         let correction = factor.solve(&residual)?;
         for (value, correction) in solution.iter_mut().zip(correction) {
             *value += correction;
@@ -387,9 +383,9 @@ fn validate_spd_solution(
     rhs: &[f64],
     mut profile: SpdSolveProfile,
 ) -> Result<SpdSolveProfile, String> {
-    profile.residual_norm = sparse_residual_norm(matrix, rhs, &profile.solution);
+    profile.residual_norm = sparse_residual_norm(matrix, rhs, &profile.solution)?;
     let validation =
-        sparse_relative_residual(matrix, rhs, &profile.solution, SPARSE_RESIDUAL_TOLERANCE);
+        sparse_relative_residual(matrix, rhs, &profile.solution, SPARSE_RESIDUAL_TOLERANCE)?;
     if !profile.residual_norm.is_finite() || !validation.relative.is_finite() {
         return Err("linear system solution produced a non-finite residual".to_string());
     }
@@ -400,110 +396,6 @@ fn validate_spd_solution(
         ));
     }
     Ok(profile)
-}
-
-pub(crate) fn sparse_residual_norm(matrix: &SparseMatrix, rhs: &[f64], solution: &[f64]) -> f64 {
-    let residuals = matrix.rows.iter().zip(rhs).map(|(row, expected)| {
-        expected
-            - row
-                .iter()
-                .map(|(column, value)| value * solution[*column])
-                .sum::<f64>()
-    });
-    stable_l2_norm(residuals)
-}
-
-fn sparse_residual_vector(matrix: &SparseMatrix, rhs: &[f64], solution: &[f64]) -> Vec<f64> {
-    matrix
-        .rows
-        .iter()
-        .zip(rhs)
-        .map(|(row, expected)| {
-            expected
-                - row
-                    .iter()
-                    .map(|(column, value)| value * solution[*column])
-                    .sum::<f64>()
-        })
-        .collect()
-}
-
-pub(crate) fn stable_l2_norm(values: impl IntoIterator<Item = f64>) -> f64 {
-    let mut scale = 0.0;
-    let mut sum_squares = 1.0;
-    for value in values.into_iter().map(f64::abs) {
-        if !value.is_finite() {
-            return value;
-        }
-        if value == 0.0 {
-            continue;
-        }
-        if scale < value {
-            sum_squares = 1.0 + sum_squares * (scale / value).powi(2);
-            scale = value;
-        } else {
-            sum_squares += (value / scale).powi(2);
-        }
-    }
-    if scale == 0.0 {
-        0.0
-    } else {
-        scale * sum_squares.sqrt()
-    }
-}
-
-struct SparseResidualValidation {
-    relative: f64,
-    row: usize,
-    residual: f64,
-    equation_scale: f64,
-}
-
-fn sparse_relative_residual(
-    matrix: &SparseMatrix,
-    rhs: &[f64],
-    solution: &[f64],
-    tolerance: f64,
-) -> SparseResidualValidation {
-    let mut rows = Vec::with_capacity(matrix.size());
-    let mut global_scale = 0.0_f64;
-    for (row, expected) in matrix.rows.iter().zip(rhs) {
-        let mut actual = 0.0;
-        let mut equation_scale = expected.abs();
-        for (column, value) in row {
-            let term = value * solution[*column];
-            actual += term;
-            equation_scale += term.abs();
-        }
-        let residual = (expected - actual).abs();
-        global_scale = global_scale.max(equation_scale);
-        rows.push((residual, equation_scale));
-    }
-
-    let roundoff_floor = global_scale * f64::EPSILON / tolerance;
-    let mut worst = SparseResidualValidation {
-        relative: 0.0,
-        row: 0,
-        residual: 0.0,
-        equation_scale: 0.0,
-    };
-    for (row_index, (residual, equation_scale)) in rows.into_iter().enumerate() {
-        let effective_scale = equation_scale.max(roundoff_floor);
-        let relative = if effective_scale == 0.0 {
-            if residual == 0.0 { 0.0 } else { f64::INFINITY }
-        } else {
-            residual / effective_scale
-        };
-        if relative > worst.relative {
-            worst = SparseResidualValidation {
-                relative,
-                row: row_index,
-                residual,
-                equation_scale: effective_scale,
-            };
-        }
-    }
-    worst
 }
 
 pub(crate) fn safe_diagonal(value: f64) -> f64 {

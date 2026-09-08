@@ -7,6 +7,10 @@ use crate::linear_dense::solve_linear_system;
 use crate::linear_solver_profile::{SpdSolveOptions, SpdSolveProfile, SpdSolveStage};
 use crate::solver_control::{SolverStage, check_cancellation, checkpoint};
 
+#[path = "linear_spd_vectors.rs"]
+mod vectors;
+use vectors::{copy_direction, dot, l2_norm, rescale_solution};
+
 pub(crate) fn solve_spd_compressed(
     matrix: &CompressedSparseMatrix,
     rhs: &[f64],
@@ -19,7 +23,7 @@ pub(crate) fn solve_spd_compressed(
     let preconditioner = options.preconditioner;
     let mut timings = SpdTimings::default();
     let started = Instant::now();
-    let rhs_scale = rhs.iter().map(|value| value.abs()).fold(0.0, f64::max);
+    let rhs_scale = vectors::rhs_scale(rhs)?;
     timings.dot_ms += elapsed_ms(started);
     if rhs_scale == 0.0 {
         return Ok(SpdSolveProfile {
@@ -32,10 +36,7 @@ pub(crate) fn solve_spd_compressed(
     }
 
     let mut x = vec![0.0; size];
-    let mut r = rhs
-        .iter()
-        .map(|value| value / rhs_scale)
-        .collect::<Vec<_>>();
+    let mut r = vectors::normalize_rhs(rhs, rhs_scale)?;
     let mut z = vec![0.0; size];
     let mut p = vec![0.0; size];
     let mut ap = vec![0.0; size];
@@ -44,15 +45,15 @@ pub(crate) fn solve_spd_compressed(
     let started = Instant::now();
     matrix.apply_preconditioner_into(preconditioner, &r, &mut z, &mut preconditioner_workspace)?;
     timings.preconditioner_ms += elapsed_ms(started);
-    p.clone_from(&z);
+    copy_direction(&z, &mut p)?;
 
-    let tolerance = (1.0e-9 * l2_norm(&r)).max(f64::MIN_POSITIVE);
+    let tolerance = (1.0e-9 * l2_norm(&r)?).max(f64::MIN_POSITIVE);
     let started = Instant::now();
-    let mut rz_old = dot(&r, &z);
+    let mut rz_old = dot(&r, &z)?;
     timings.dot_ms += elapsed_ms(started);
     if !rz_old.is_finite() || rz_old <= 0.0 {
         let started = Instant::now();
-        let residual_norm = l2_norm(&r);
+        let residual_norm = l2_norm(&r)?;
         timings.dot_ms += elapsed_ms(started);
         if residual_norm <= tolerance {
             return Ok(SpdSolveProfile {
@@ -74,18 +75,18 @@ pub(crate) fn solve_spd_compressed(
 
     for iteration in 0..max_iter {
         let started = Instant::now();
-        matrix.multiply_vector_into(&p, &mut ap);
+        matrix.multiply_vector_into(&p, &mut ap)?;
         timings.matvec_ms += elapsed_ms(started);
         let started = Instant::now();
-        let mut denom = dot(&p, &ap);
+        let mut denom = dot(&p, &ap)?;
         timings.dot_ms += elapsed_ms(started);
         if !denom.is_finite() || denom <= 0.0 {
-            p.clone_from(&z);
+            copy_direction(&z, &mut p)?;
             let started = Instant::now();
-            matrix.multiply_vector_into(&p, &mut ap);
+            matrix.multiply_vector_into(&p, &mut ap)?;
             timings.matvec_ms += elapsed_ms(started);
             let started = Instant::now();
-            denom = dot(&p, &ap);
+            denom = dot(&p, &ap)?;
             timings.dot_ms += elapsed_ms(started);
             if !denom.is_finite() || denom <= 0.0 {
                 return solve_spd_fallback(fallback_source, rhs, "system is singular");
@@ -96,13 +97,9 @@ pub(crate) fn solve_spd_compressed(
         if !alpha.is_finite() || alpha <= 0.0 {
             return solve_spd_fallback(fallback_source, rhs, "iterative solver diverged");
         }
-        let mut residual_squared = 0.0;
         let started = Instant::now();
-        for index in 0..size {
-            x[index] += alpha * p[index];
-            r[index] -= alpha * ap[index];
-            residual_squared += r[index] * r[index];
-        }
+        let mut residual_squared =
+            vectors::update_solution_residual(&mut x, &mut r, &p, &ap, alpha)?;
         timings.vector_update_ms += elapsed_ms(started);
         if !residual_squared.is_finite() {
             return solve_spd_fallback(fallback_source, rhs, "iterative solver diverged");
@@ -113,7 +110,7 @@ pub(crate) fn solve_spd_compressed(
         if residual_recomputed {
             let recursive_norm = residual_squared.sqrt();
             let started = Instant::now();
-            residual_squared = recompute_residual(matrix, rhs, rhs_scale, &x, &mut r, &mut ax);
+            residual_squared = recompute_residual(matrix, rhs, rhs_scale, &x, &mut r, &mut ax)?;
             timings.residual_recompute_ms += elapsed_ms(started);
             restart_direction =
                 residual_drift_requires_restart(recursive_norm, residual_squared.sqrt(), tolerance);
@@ -139,7 +136,7 @@ pub(crate) fn solve_spd_compressed(
             } else {
                 let recursive_norm = residual_norm;
                 let started = Instant::now();
-                let exact = recompute_residual(matrix, rhs, rhs_scale, &x, &mut r, &mut ax);
+                let exact = recompute_residual(matrix, rhs, rhs_scale, &x, &mut r, &mut ax)?;
                 timings.residual_recompute_ms += elapsed_ms(started);
                 restart_direction =
                     residual_drift_requires_restart(recursive_norm, exact.sqrt(), tolerance);
@@ -151,7 +148,7 @@ pub(crate) fn solve_spd_compressed(
             }
             if verified_norm <= tolerance {
                 return Ok(SpdSolveProfile {
-                    solution: rescale_solution(x, rhs_scale),
+                    solution: rescale_solution(x, rhs_scale)?,
                     iterations: iteration + 1,
                     matrix_non_zero_count: matrix.non_zero_count(),
                     residual_norm: verified_norm * rhs_scale,
@@ -170,22 +167,20 @@ pub(crate) fn solve_spd_compressed(
         timings.preconditioner_ms += elapsed_ms(started);
 
         let started = Instant::now();
-        let rz_new = dot(&r, &z);
+        let rz_new = dot(&r, &z)?;
         timings.dot_ms += elapsed_ms(started);
         if !rz_new.is_finite() || rz_new <= 0.0 {
             return solve_spd_fallback(fallback_source, rhs, "iterative solver diverged");
         }
         let started = Instant::now();
         if restart_direction {
-            p.clone_from(&z);
+            copy_direction(&z, &mut p)?;
         } else {
             let beta = rz_new / rz_old;
             if !beta.is_finite() || beta < 0.0 {
                 return solve_spd_fallback(fallback_source, rhs, "iterative solver diverged");
             }
-            for index in 0..size {
-                p[index] = z[index] + beta * p[index];
-            }
+            vectors::update_direction(&mut p, &z, beta)?;
         }
         timings.direction_update_ms += elapsed_ms(started);
         rz_old = rz_new;
@@ -201,58 +196,15 @@ fn recompute_residual(
     x: &[f64],
     residual: &mut [f64],
     ax: &mut [f64],
-) -> f64 {
-    matrix.multiply_vector_into(x, ax);
-    let mut residual_squared = 0.0;
-    for index in 0..rhs.len() {
-        residual[index] = rhs[index] / rhs_scale - ax[index];
-        residual_squared += residual[index] * residual[index];
-    }
-    residual_squared
-}
-
-fn rescale_solution(mut solution: Vec<f64>, rhs_scale: f64) -> Vec<f64> {
-    for value in &mut solution {
-        *value *= rhs_scale;
-    }
-    solution
+) -> Result<f64, String> {
+    matrix.multiply_vector_into(x, ax)?;
+    vectors::update_residual(rhs, rhs_scale, ax, residual)
 }
 
 fn residual_drift_requires_restart(recursive: f64, exact: f64, tolerance: f64) -> bool {
     !recursive.is_finite()
         || !exact.is_finite()
         || (recursive - exact).abs() > 0.25 * recursive.max(exact).max(tolerance)
-}
-
-fn dot(lhs: &[f64], rhs: &[f64]) -> f64 {
-    debug_assert_eq!(lhs.len(), rhs.len());
-    let mut sum = 0.0;
-    for index in 0..lhs.len() {
-        sum += lhs[index] * rhs[index];
-    }
-    sum
-}
-
-fn l2_norm(values: &[f64]) -> f64 {
-    let mut scale = 0.0;
-    let mut sum_squares = 1.0;
-    for value in values
-        .iter()
-        .map(|value| value.abs())
-        .filter(|value| *value > 0.0)
-    {
-        if scale < value {
-            sum_squares = 1.0 + sum_squares * (scale / value).powi(2);
-            scale = value;
-        } else {
-            sum_squares += (value / scale).powi(2);
-        }
-    }
-    if scale == 0.0 {
-        0.0
-    } else {
-        scale * sum_squares.sqrt()
-    }
 }
 
 #[derive(Debug, Default)]
@@ -293,20 +245,24 @@ fn solve_spd_fallback(
 ) -> Result<SpdSolveProfile, String> {
     check_cancellation()?;
     if rhs.len() <= 1024 {
-        solve_linear_system(sparse_to_dense(matrix), rhs.to_vec()).map(|solution| {
-            let residual_norm = sparse_residual_norm(matrix, rhs, &solution);
-            SpdSolveProfile {
+        solve_linear_system(sparse_to_dense(matrix), rhs.to_vec()).and_then(|solution| {
+            let residual_norm = sparse_residual_norm(matrix, rhs, &solution)?;
+            Ok(SpdSolveProfile {
                 solution,
                 iterations: 0,
                 matrix_non_zero_count: matrix.non_zero_count(),
                 residual_norm,
                 stages: Vec::new(),
-            }
+            })
         })
     } else {
         Err(reason.to_string())
     }
 }
+
+#[cfg(test)]
+#[path = "linear_spd_control_tests.rs"]
+mod control_tests;
 
 #[cfg(test)]
 mod tests {

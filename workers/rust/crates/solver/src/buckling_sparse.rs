@@ -48,7 +48,7 @@ pub(crate) fn sparse_generalized_eigenpairs(
     let scaled_stiffness = symmetrically_scaled(stiffness, &scaling);
     let scaled_elastic = scaled_stiffness.compress(SpdPreconditioner::SymmetricGaussSeidel)?;
     let banded_elastic = SymmetricBandCholesky::try_factor(&scaled_stiffness, 8_000_000)?;
-    let mut basis = k_orthonormalize(initial_subspace(stiffness.size(), subspace_size), &elastic);
+    let mut basis = k_orthonormalize(initial_subspace(stiffness.size(), subspace_size), &elastic)?;
     if basis.len() < requested {
         return Err("buckling sparse eigensolver could not initialize its subspace".to_string());
     }
@@ -65,7 +65,7 @@ pub(crate) fn sparse_generalized_eigenpairs(
         let mut max_scaled_solution_norm = 0.0_f64;
         let mut max_solve_iterations = 0;
         for vector in &basis {
-            let mut geometric_product = multiply(&geometric, vector);
+            let mut geometric_product = multiply(&geometric, vector)?;
             if !normalize_euclidean(&mut geometric_product) {
                 continue;
             }
@@ -105,11 +105,10 @@ pub(crate) fn sparse_generalized_eigenpairs(
             .iter()
             .map(|value| l2_norm(value))
             .fold(0.0, f64::max);
-        let max_candidate_energy = candidates
-            .iter()
-            .map(|value| dot(value, &multiply(&elastic, value)))
-            .fold(0.0, f64::max);
-        basis = k_orthonormalize(candidates, &elastic);
+        let max_candidate_energy = candidates.iter().try_fold(0.0_f64, |max, value| {
+            Ok::<_, String>(max.max(dot(value, &multiply(&elastic, value)?)))
+        })?;
+        basis = k_orthonormalize(candidates, &elastic)?;
         if basis.len() < requested {
             return Err(format!(
                 "buckling reference load pattern has too few positive independent modes (candidate_norm={max_candidate_norm:.6e}, candidate_k_energy={max_candidate_energy:.6e}, scaled_solution_norm={max_scaled_solution_norm:.6e}, solve_iterations={max_solve_iterations})"
@@ -119,7 +118,7 @@ pub(crate) fn sparse_generalized_eigenpairs(
         let geometric_products = basis
             .iter()
             .map(|vector| multiply(&geometric, vector))
-            .collect::<Vec<_>>();
+            .collect::<Result<Vec<_>, _>>()?;
         let projected = projected_geometric(&basis, &geometric_products);
         let raw_pairs = jacobi_eigenpairs(projected)?;
         let positive_reciprocal_floor =
@@ -141,8 +140,8 @@ pub(crate) fn sparse_generalized_eigenpairs(
         for (index, (reciprocal, coefficients)) in reciprocal_pairs.into_iter().enumerate() {
             let vector = combine(&basis, &coefficients);
             if index < requested {
-                let elastic_product = multiply(&elastic, &vector);
-                let geometric_product = multiply(&geometric, &vector);
+                let elastic_product = multiply(&elastic, &vector)?;
+                let geometric_product = multiply(&geometric, &vector)?;
                 let eigenvalue = reciprocal.recip();
                 let residual_norm = residual_norm(&elastic_product, &geometric_product, eigenvalue);
                 let scale =
@@ -241,7 +240,7 @@ fn solve_banded_refined(
     let mut solution = factor.solve(rhs)?;
     let target = 1.0e-11 * l2_norm(rhs);
     for _ in 0..4 {
-        let product = multiply(matrix, &solution);
+        let product = multiply(matrix, &solution)?;
         let residual = rhs
             .iter()
             .zip(product)
@@ -273,7 +272,7 @@ fn initial_subspace(size: usize, count: usize) -> Vec<Vec<f64>> {
 fn k_orthonormalize(
     candidates: Vec<Vec<f64>>,
     stiffness: &CompressedSparseMatrix,
-) -> Vec<Vec<f64>> {
+) -> Result<Vec<Vec<f64>>, String> {
     let mut basis: Vec<Vec<f64>> = Vec::with_capacity(candidates.len());
     let mut products: Vec<Vec<f64>> = Vec::with_capacity(candidates.len());
     for mut candidate in candidates {
@@ -289,7 +288,7 @@ fn k_orthonormalize(
         if !normalize_euclidean(&mut candidate) {
             continue;
         }
-        let mut product = multiply(stiffness, &candidate);
+        let mut product = multiply(stiffness, &candidate)?;
         let norm_squared = dot(&candidate, &product);
         if !(norm_squared.is_finite() && norm_squared > f64::MIN_POSITIVE) {
             continue;
@@ -302,7 +301,7 @@ fn k_orthonormalize(
         basis.push(candidate);
         products.push(product);
     }
-    basis
+    Ok(basis)
 }
 
 fn projected_geometric(basis: &[Vec<f64>], products: &[Vec<f64>]) -> Vec<Vec<f64>> {
@@ -323,10 +322,10 @@ fn combine(basis: &[Vec<f64>], coefficients: &[f64]) -> Vec<f64> {
     result
 }
 
-fn multiply(matrix: &CompressedSparseMatrix, vector: &[f64]) -> Vec<f64> {
+fn multiply(matrix: &CompressedSparseMatrix, vector: &[f64]) -> Result<Vec<f64>, String> {
     let mut result = vec![0.0; vector.len()];
-    matrix.multiply_vector_into(vector, &mut result);
-    result
+    matrix.multiply_vector_into(vector, &mut result)?;
+    Ok(result)
 }
 
 fn add_scaled(target: &mut [f64], source: &[f64], scale: f64) {

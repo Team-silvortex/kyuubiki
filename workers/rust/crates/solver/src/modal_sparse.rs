@@ -64,7 +64,7 @@ impl SparseMassNormalizedOperator {
             .map(|(value, inverse_mass)| value * inverse_mass)
             .collect::<Vec<_>>();
         let mut product = vec![0.0; vector.len()];
-        self.stiffness.multiply_vector_into(&scaled, &mut product);
+        self.stiffness.multiply_vector_into(&scaled, &mut product)?;
         Ok(product
             .into_iter()
             .zip(&self.inverse_mass_sqrt)

@@ -129,6 +129,118 @@
   },
   "evidence_claims": [
     {
+      "id": "pcg-vector-installed-thermal-recovery",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["runtime-engine-solver", "runtime-agent-cli", "verification-evidence"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/src/linear_spd.rs",
+        "workers/rust/crates/solver/src/linear_spd_vectors.rs",
+        "workers/rust/crates/solver/src/linear_spd_control_tests.rs",
+        "workers/rust/crates/solver/src/linear_spd_vector_tests.rs",
+        "workers/rust/crates/cli/src/agent_fault_injection.rs",
+        "workers/rust/crates/cli/tests/agent_solver_cancel_live.rs",
+        "docs/agent-orchestrator-boundary.md",
+        "docs/research-layered-thermal.html",
+        "reports/pcg-vector-research-20260908.md"
+      ],
+      "required_text": [
+        "cancelled_pcg_does_not_fallback_or_poison_any_preconditioner",
+        "prepared_solver_propagates_vector_cancellation_without_regularized_retry",
+        "all_vector_passes_poll_entry_interior_and_short_final_blocks",
+        "vector_passes_retain_original_order_and_nonfinite_behavior",
+        "cancel_pcg_solution_scale_then_reuse_the_job",
+        "disconnected_pcg_update_releases_capacity_without_releasing_the_hold",
+        "disconnected_pcg_solution_scale_does_not_commit_a_partial_success",
+        "Installed PCG vector cancellation: PASS, 11/11 new fault scenarios.",
+        "synthetic_reference_not_material_certification"
+      ]
+    },
+    {
+      "id": "pcg-vector-paired-cancellation-overhead",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["runtime-engine-solver", "verification-evidence"],
+      "paradigms": ["validation"],
+      "dimensions": ["benchmark"],
+      "files": [
+        "workers/rust/crates/solver/src/linear_spd_vectors.rs",
+        "workers/rust/crates/solver/src/linear_spd_vector_tests.rs",
+        "workers/rust/crates/solver/src/linear_spd_vector_benchmark.rs",
+        "reports/pcg-vector-research-20260908.md"
+      ],
+      "required_text": [
+        "paired_pcg_vector_control_overhead",
+        "baseline_ms",
+        "unscoped_ms",
+        "controlled_ms",
+        "No global overhead bound"
+      ]
+    },
+    {
+      "id": "mixed-thermal-matvec-residual-recovery",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["runtime-engine-solver", "runtime-agent-cli", "orchestra-control-plane", "sdk-headless", "verification-evidence"],
+      "paradigms": ["workflow_composition", "runtime_api", "validation", "persistence_provenance"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/src/linear_sparse_product.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual.rs",
+        "workers/rust/crates/solver/src/linear_sparse_product_tests.rs",
+        "workers/rust/crates/solver/src/linear_spd.rs",
+        "workers/rust/crates/solver/src/linear_spd_prepared.rs",
+        "workers/rust/crates/solver/src/modal_sparse.rs",
+        "workers/rust/crates/solver/src/buckling_sparse.rs",
+        "workers/rust/crates/cli/src/agent_fault_injection.rs",
+        "workers/rust/crates/cli/tests/agent_solver_cancel_live.rs",
+        "sdks/rust/examples/interrupted_thermal_research.rs",
+        "sdks/rust/examples/verify_layered_thermal_research.rs",
+        "docs/agent-orchestrator-boundary.md",
+        "docs/research-layered-thermal.html",
+        "reports/matvec-residual-research-20260908.md"
+      ],
+      "required_text": [
+        "wide_product_retains_entry_order_and_reuses_partly_written_output",
+        "short_empty_and_second_validation_passes_observe_cancellation",
+        "reusable_backends_do_not_export_a_cancelled_validation",
+        "modal_products_propagate_cancellation_without_poisoning_the_operator",
+        "buckling_subspace_propagates_a_cancelled_product",
+        "cancel_heat_matvec_then_reuse_the_job",
+        "cancel_heat_residual_then_reuse_the_job",
+        "cancel_heat_validation_then_reuse_the_job",
+        "disconnected_validation_releases_capacity_without_releasing_the_hold",
+        "Installed residual cancellation: PASS, 3/3 expected research outcomes.",
+        "synthetic_reference_not_material_certification"
+      ]
+    },
+    {
+      "id": "sparse-matvec-cancellation-overhead-paired",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["runtime-engine-solver", "verification-evidence"],
+      "paradigms": ["validation"],
+      "dimensions": ["benchmark"],
+      "files": [
+        "workers/rust/crates/solver/src/linear_sparse_product.rs",
+        "workers/rust/crates/solver/src/linear_sparse_compression.rs",
+        "workers/rust/crates/solver/src/linear_sparse_product_tests.rs",
+        "reports/matvec-residual-research-20260908.md"
+      ],
+      "required_text": [
+        "paired_matvec_control_overhead",
+        "compression_records_the_actual_row_bound_for_both_scaling_paths",
+        "baseline_ms",
+        "unscoped_ms",
+        "controlled_ms",
+        "No global overhead bound"
+      ]
+    },
+    {
       "id": "mixed-thermal-constraint-preconditioner-recovery",
       "status": "proven",
       "grade": "qualified",

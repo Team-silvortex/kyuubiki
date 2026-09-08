@@ -267,12 +267,34 @@ cargo run --locked --manifest-path sdks/rust/Cargo.toml \
           redispatch. Preparation and application scratch buffers are not resumable state.
           Custom constraint algorithms, large allocations, matrix/vector interiors and
           arbitrary workers still have separate cancellation limits.</p>
+        <p class="docs-copy">Matrix-product and residual qualification additionally targets
+          <code>residual_validate</code> during the structural solve. Require exactly 64
+          completed validation rows before the fault: numerical solving having produced
+          a candidate vector is not permission to skip its residual acceptance check.
+          The same replay/blocking and unchanged-Agent requirements apply. Native tests
+          also cover cancellation inside wide rows of compressed products and shared
+          residual checks, at 1,024-entry boundaries. These are bounded safe points, not
+          saved solver state, a fixed latency guarantee, or coverage of all vector loops.</p>
+        <p class="docs-copy">PCG vector-stage qualification uses a separate 40-by-40-cell
+          heat fixture (1,681 physical nodes), large enough to exercise the iterative
+          backend. Its RHS scale/normalization, direction copy/update, dot, norm,
+          solution/residual update and final rescaling poll every 1,024 elements plus
+          entry/completion. Require an exact matching stage and 1,024 completed elements
+          before cancelling or disconnecting; keep the hold marker in place until the
+          old execution has failed and released capacity. Reusing the job then computes
+          and validates the full analytical temperature field, not a saved partial vector.
+          Do not substitute this hold stage into the small structural fixture above:
+          a direct solver need not reach a PCG-only stage. The fresh mixed-workflow matrix
+          and restart readback are separate regression evidence, not PCG-stage process-fault
+          qualification. Release-mode vector timings likewise are not end-to-end FEM timings.</p>
         <div class="docs-links">
           <a class="docs-link" href="../reports/interrupted-thermal-research-20260908.md">Fault matrix, fixes and retained evidence</a>
           <a class="docs-link" href="../reports/orphan-execution-research-20260908.md">Orphan cleanup and native capacity qualification</a>
           <a class="docs-link" href="../reports/cooperative-solver-research-20260908.md">In-solver cancellation and installed research qualification</a>
           <a class="docs-link" href="../reports/preparation-cancellation-research-20260908.md">Preparation-stage cancellation and recovery evidence</a>
           <a class="docs-link" href="../reports/constraint-preconditioner-research-20260908.md">Constraint and preconditioner sweep qualification</a>
+          <a class="docs-link" href="../reports/matvec-residual-research-20260908.md">Matrix-product and residual qualification</a>
+          <a class="docs-link" href="../reports/pcg-vector-research-20260908.md">PCG vectors, installed cancellation and paired timings</a>
           <a class="docs-link" href="../sdks/rust/examples/interrupted_thermal_research.rs">Phased research example</a>
           <a class="docs-link" href="./agent-orchestrator-boundary.md#workflow-activity-and-replay">Activity and replay contract</a>
         </div>

@@ -15,9 +15,11 @@ impl SparseMatrix {
         let mut columns = Vec::new();
         let mut values = Vec::new();
         let mut diagonal = vec![0.0; size];
+        let mut max_row_entries = 0;
 
         row_offsets.push(0);
         for (row_index, row) in self.rows.iter().enumerate() {
+            max_row_entries = max_row_entries.max(row.len());
             let row_start = columns.len();
             lower_end_offsets
                 .push(row_start + row.partition_point(|(column, _)| *column < row_index));
@@ -34,6 +36,7 @@ impl SparseMatrix {
             checkpoint_chunk(SolverStage::SparseCompress, row_index + 1, size)?;
         }
         CompressedSparseMatrix {
+            max_row_entries,
             row_offsets,
             lower_end_offsets,
             upper_start_offsets,
@@ -61,9 +64,11 @@ impl SparseMatrix {
         let mut columns = Vec::with_capacity(non_zero_hint);
         let mut values = Vec::with_capacity(non_zero_hint);
         let mut diagonal = vec![0.0; size];
+        let mut max_row_entries = 0;
 
         row_offsets.push(0);
         for (row_index, row) in self.rows.iter().enumerate() {
+            max_row_entries = max_row_entries.max(row.len());
             let row_start = columns.len();
             lower_end_offsets
                 .push(row_start + row.partition_point(|(column, _)| *column < row_index));
@@ -82,6 +87,7 @@ impl SparseMatrix {
             checkpoint_chunk(SolverStage::SparseCompress, row_index + 1, size)?;
         }
         CompressedSparseMatrix {
+            max_row_entries,
             row_offsets,
             lower_end_offsets,
             upper_start_offsets,

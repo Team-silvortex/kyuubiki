@@ -211,6 +211,33 @@ The shared symmetric tangent fallback checks cancellation before dense expansion
 and cohesive Newton/co-rotational failure paths distinguish cancellation from
 ordinary nonconvergence instead of exporting degraded output or trying a fallback.
 
+Compressed sparse matrix products and shared residual/refinement validation are
+also fallible. `sparse_matvec` and `sparse_residual` count completed rows, polling
+at entry, each 64 rows and the final short batch. `residual_validate` counts rows
+cumulatively through equation-scale collection and worst-row selection. Cancellation
+during final validation is an error, not an accepted solution with an incomplete
+residual check. PCG, prepared, modal and buckling callers propagate these errors.
+
+Rows with more than 1,024 entries additionally poll at entry, every 1,024 entries
+and completion, using `sparse_matvec_row`, `sparse_residual_row` or
+`residual_validate_row`. These counters reset for each wide row and identify
+neither the row number nor overall progress. Short rows retain a direct loop.
+Chunks retain the original accumulator and entry order; they are not parallel
+or regrouped reductions. A cancelled product may have written earlier complete
+rows to scratch; the vector is not a valid result and must be discarded/recomputed.
+
+PCG's internal vector passes are fallible as well: `pcg_rhs_scale`,
+`pcg_rhs_normalize`, `pcg_direction_copy`, `pcg_dot`, `pcg_norm`,
+`pcg_vector_update`, `pcg_residual_update`, `pcg_direction_update` and
+`pcg_solution_scale`. Each polls at entry, every 1,024 completed elements and
+the final short block, retaining the original sequential arithmetic. Counters
+reset per invocation; a norm counts visited elements even when their value is
+zero. No partial dot/norm, normalized RHS or final scaled solution is returned
+on cancellation. Mutable scratch may contain a prefix and must be discarded.
+PCG and prepared-solver callers propagate cancellation instead of entering a
+dense/regularized retry. These checks do not cover the separate sparse-system
+scaling helpers, allocations, or arbitrary vector operations in other algorithms.
+
 An explicit job cancellation marks every matching execution currently registered
 in the control registry, not a single globally consumed flag. Cancellation with
 no matching registered execution retains the existing one-shot pre-admission
@@ -230,7 +257,8 @@ define its actual coverage, not arbitrary work invoked within that scope.
 
 For isolated fault qualification only,
 `KYUUBIKI_AGENT_FAULT_INJECTION_SOLVER_STAGE` selects `sparse_iteration`,
-`dense_factor`, `tridiagonal_factor`, or one of the preparation/sweep stages above.
+`dense_factor`, `tridiagonal_factor`, or one of the preparation, sweep, product,
+residual or PCG vector stages above.
 It requires the existing hold-file and
 explicit execution-method settings. A matching job is held once, after at least
 three completed steps at that stage, for no more than 120 seconds. Numerical
@@ -239,8 +267,12 @@ stage and minimum step count, never the host marker path. Leave all three fault
 controls unset in normal use. A slow observer delays its synchronous caller.
 
 This scope does not interrupt input validation, allocation, custom constraint
-algorithms, result postprocessing, other preconditioner implementations, or one large
-matrix row/vector operation. Element-level coverage is limited to the four planar
+algorithms, physical-result postprocessing, other preconditioner implementations,
+or arbitrary matrix/vector operations. The row-interior guarantee above applies
+only to compressed products and shared sparse residual validation, not dense
+factorization interiors or preconditioner rows. PCG vector passes use their
+separate element-block contract above, not the 64-row product contract.
+Element-level coverage is limited to the four planar
 heat/thermal paths above, not every operator's assembly or preconditioner type.
 It does not add safe points to every analytical shortcut, nonlinear outer loop,
 external worker, dynamic library or child thread. TaskIR's scope alone does not
@@ -251,7 +283,10 @@ no universal cancellation-latency or numerical-checkpoint recovery guarantee.
 See the [installed numerical cancellation study](../reports/cooperative-solver-research-20260908.md)
 and [preparation-stage follow-up](../reports/preparation-cancellation-research-20260908.md)
 plus [constraint/preconditioner sweeps](../reports/constraint-preconditioner-research-20260908.md)
+and [matrix-product/residual validation](../reports/matvec-residual-research-20260908.md)
 for real in-progress heat/structure faults and bounded acceptance evidence.
+The [PCG vector follow-up](../reports/pcg-vector-research-20260908.md) separates
+installed vector-stage faults from unchanged mixed-workflow numerical regression.
 
 ## Termination Signals And Shutdown Budget
 

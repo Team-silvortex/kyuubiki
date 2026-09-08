@@ -284,19 +284,23 @@ fn cancellation_inside_heat_chain_preserves_the_next_analytical_solution()
 }
 
 fn cancel_preparation(stage: &str, method: &str, params: Value) -> Result<(), Box<dyn Error>> {
+    cancel_pass(stage, method, params, 64)
+}
+
+fn cancel_pass(stage: &str, method: &str, params: Value, steps: u64) -> Result<(), Box<dyn Error>> {
     let agent = LiveAgent::start_with_solver_hold(stage, method, "1")?;
     let job = params["job_id"].as_str().unwrap();
     fs::write(&agent.hold_path, job)?;
     let mut stream = pending(&agent, "preparation-held", method, params.clone())?;
     let observed = wait_for_numerical_steps(&agent, &["preparation-held"], stage)?;
     let point = &observed["result"]["solver_control"]["active"][0]["checkpoint"];
-    assert_eq!(point["completed_steps"], 64);
+    assert_eq!(point["completed_steps"], steps);
     cancel(&agent, job)?;
     let response = final_frame(&mut stream)?;
     assert_cancelled(&response, stage);
     assert_eq!(
         response["error"]["details"]["solver_checkpoint"]["completed_steps"],
-        64
+        steps
     );
     record(&agent, "cancelled", &response)?;
     wait_for_lifecycle(&agent, "accepting", 0)?;
@@ -311,6 +315,83 @@ fn cancel_preparation(stage: &str, method: &str, params: Value) -> Result<(), Bo
     )?;
     wait_for_lifecycle(&agent, "accepting", 0)?;
     Ok(())
+}
+
+#[test]
+fn cancel_pcg_rhs_scale_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_pass("pcg_rhs_scale", HEAT, heat_grid("pcg-scale", 40), 1024)
+}
+
+#[test]
+fn cancel_pcg_rhs_normalize_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_pass(
+        "pcg_rhs_normalize",
+        HEAT,
+        heat_grid("pcg-normalize", 40),
+        1024,
+    )
+}
+
+#[test]
+fn cancel_pcg_direction_copy_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_pass("pcg_direction_copy", HEAT, heat_grid("pcg-copy", 40), 1024)
+}
+
+#[test]
+fn cancel_pcg_dot_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_pass("pcg_dot", HEAT, heat_grid("pcg-dot", 40), 1024)
+}
+
+#[test]
+fn cancel_pcg_norm_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_pass("pcg_norm", HEAT, heat_grid("pcg-norm", 40), 1024)
+}
+
+#[test]
+fn cancel_pcg_vector_update_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_pass("pcg_vector_update", HEAT, heat_grid("pcg-update", 40), 1024)
+}
+
+#[test]
+fn cancel_pcg_residual_update_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_pass(
+        "pcg_residual_update",
+        HEAT,
+        heat_grid("pcg-residual", 40),
+        1024,
+    )
+}
+
+#[test]
+fn cancel_pcg_direction_update_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_pass(
+        "pcg_direction_update",
+        HEAT,
+        heat_grid("pcg-direction", 40),
+        1024,
+    )
+}
+
+#[test]
+fn cancel_pcg_solution_scale_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_pass(
+        "pcg_solution_scale",
+        HEAT,
+        heat_grid("pcg-solution", 40),
+        1024,
+    )
+}
+
+#[test]
+fn disconnected_pcg_update_releases_capacity_without_releasing_the_hold()
+-> Result<(), Box<dyn Error>> {
+    disconnected_pass("pcg_vector_update", 1024)
+}
+
+#[test]
+fn disconnected_pcg_solution_scale_does_not_commit_a_partial_success() -> Result<(), Box<dyn Error>>
+{
+    disconnected_pass("pcg_solution_scale", 1024)
 }
 
 #[test]
@@ -379,6 +460,27 @@ fn cancel_heat_jacobi_application_then_reuse_the_job() -> Result<(), Box<dyn Err
 }
 
 #[test]
+fn cancel_heat_matvec_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_preparation("sparse_matvec", HEAT, heat_grid("matvec-held", 40))
+}
+
+#[test]
+fn cancel_heat_residual_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_preparation("sparse_residual", HEAT, heat_grid("residual-held", 40))
+}
+
+#[test]
+fn cancel_heat_validation_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_preparation("residual_validate", HEAT, heat_grid("validation-held", 40))
+}
+
+#[test]
+fn disconnected_validation_releases_capacity_without_releasing_the_hold()
+-> Result<(), Box<dyn Error>> {
+    disconnected_sweep("residual_validate")
+}
+
+#[test]
 fn cancel_triangle_precompute_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
     cancel_preparation(
         "element_precompute",
@@ -409,11 +511,19 @@ fn disconnected_reduction_releases_capacity_without_releasing_the_hold()
 }
 
 fn disconnected_sweep(stage: &str) -> Result<(), Box<dyn Error>> {
+    disconnected_pass(stage, 64)
+}
+
+fn disconnected_pass(stage: &str, steps: u64) -> Result<(), Box<dyn Error>> {
     let agent = LiveAgent::start_with_solver_hold(stage, HEAT, "1")?;
     let job = "assembly-orphan";
     fs::write(&agent.hold_path, job)?;
     let stream = pending(&agent, "assembly-orphan-old", HEAT, heat_grid(job, 40))?;
-    wait_for_numerical_steps(&agent, &["assembly-orphan-old"], stage)?;
+    let held = wait_for_numerical_steps(&agent, &["assembly-orphan-old"], stage)?;
+    assert_eq!(
+        held["result"]["solver_control"]["active"][0]["checkpoint"]["completed_steps"],
+        steps
+    );
     stream.shutdown(Shutdown::Both)?;
     drop(stream);
     wait_for_lifecycle(&agent, "accepting", 0)?;
@@ -426,7 +536,10 @@ fn disconnected_sweep(stage: &str) -> Result<(), Box<dyn Error>> {
             .iter()
             .any(|f| f["request_id"] == "assembly-orphan-old"
                 && f["reason_code"] == "cancelled"
-                && f["message"].as_str().unwrap_or("").contains(stage))
+                && f["message"]
+                    .as_str()
+                    .unwrap_or("")
+                    .contains(&format!("{stage} after {steps} steps")))
     );
     record(&agent, "orphan-outcome", &observed)?;
     fs::remove_file(&agent.hold_path)?;
