@@ -123,6 +123,44 @@ temperature_delta = (source_temperature - reference_temperature) * scale</pre>
       </section>
 
       <section class="docs-card docs-section">
+        <h2>Expand to 302 reference cases</h2>
+        <pre class="docs-code">cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example layered_thermal_research -- research-round-002 thermal-patch
+
+cargo run --locked --manifest-path sdks/rust/Cargo.toml \
+  --example layered_thermal_research -- research-round-003 all</pre>
+        <p class="docs-copy">The optional <code>thermal-patch</code> suite contains 288 cases;
+          <code>all</code> combines them with the original 14 layered cases. The default remains
+          <code>layered</code>. Unknown suite names fail before any directory creation or dispatch.</p>
+        <table class="docs-table">
+          <thead><tr><th>Axis</th><th>Thermal patch values</th></tr></thead>
+          <tbody>
+            <tr><td>Element shape</td><td>Triangle and quadrilateral, 9 nodes per mesh</td></tr>
+            <tr><td>Poisson ratio</td><td>0, 0.25, 0.45</td></tr>
+            <tr><td>Temperature rise</td><td>-20, 0, +20 K; origins 20 and 293.15</td></tr>
+            <tr><td>Restraint</td><td>Free expansion with rigid modes removed, or fully clamped</td></tr>
+            <tr><td>Mapping</td><td>Node copy or element mean, with shape-derived default indexes</td></tr>
+            <tr><td>Modulus</td><td>Uniform 70 GPa, or alternating 3/70 GPa; uniform alpha = 12e-6 /K</td></tr>
+          </tbody>
+        </table>
+        <pre class="docs-code">Free: ux = alpha * rise * x; uy = alpha * rise * y; stress = 0
+Clamped: ux = uy = 0; sigma_x = sigma_y = -E * alpha * rise / (1 - nu)
+Both: tau_xy = 0; heat flux = 0</pre>
+        <p class="docs-copy">This small-strain plane-stress patch prescribes a uniform thermal
+          field at every node. It checks constitutive response and coupling, not heat-equation
+          convergence. Displacement tolerance is 1e-10 m; stress error divided by
+          max(E * alpha * |rise|, 1 Pa) must not exceed 1e-8. Temperature and flux tolerances
+          are 1e-8 K and 1e-8 W/m2. Expectations are analytical, not solver-derived.</p>
+        <p class="docs-copy">All 302 cases passed in the current-source Linux Rust engine tests.
+          This is explicitly separate from an installed-service run. The extended service runner
+          is compiled and its public graph contracts validated, but the 288-case suite has not
+          yet passed through a newly installed Orchestra/Agent pair.</p>
+        <div class="docs-links">
+          <a class="docs-link" href="../reports/thermal-wide-research-20260908.md">Expanded findings and retained evidence</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
         <h2>First result and remaining boundary</h2>
         <p class="docs-copy">The first installed-service round completed all 14 jobs but passed
           zero physical cases. Heat temperature and flux were correct; the bridge ignored the

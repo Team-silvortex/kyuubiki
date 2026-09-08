@@ -24,6 +24,11 @@ cargo run --locked --manifest-path sdks/rust/Cargo.toml \
 
 See the [HTML research tutorial](../../docs/research-layered-thermal.html) for
 parameters, authentication boundaries, limitations and first findings.
+Append `thermal-patch` after the output directory to select 288 free/clamped
+thermal-expansion cases, or `all` for all 302 reference cases. These suites share
+the same reviewed submission, retention and numerical-gate path; no mock is
+substituted for service execution. Current-source engine verification and
+installed-service acceptance are reported separately.
 SDK library/example fixtures are bundled under `fixtures/`; repository tests
 additionally check their parity with shared schemas. Bootstrap-document tests
 still require repository documentation and the other official SDK surfaces.

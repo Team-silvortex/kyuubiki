@@ -8,6 +8,7 @@ mod dynamic_quality;
 mod electrostatic_diagnostics;
 mod electrostatic_quality;
 mod heat_bridge;
+mod heat_bridge_contract;
 mod magnetostatic_bridge;
 mod magnetostatic_diagnostics;
 mod magnetostatic_quality;

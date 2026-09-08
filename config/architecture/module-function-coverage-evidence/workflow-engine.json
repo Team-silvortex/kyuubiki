@@ -11,12 +11,21 @@
           "sdks/rust/examples/layered_thermal_research.rs",
           "sdks/rust/examples/layered_thermal_research/model.rs",
           "sdks/rust/examples/layered_thermal_research/checks.rs",
+          "sdks/rust/examples/layered_thermal_research/patch.rs",
+          "sdks/rust/examples/layered_thermal_research/suite.rs",
           "workers/rust/crates/engine/src/heat_bridge.rs",
+          "workers/rust/crates/engine/src/heat_bridge_contract.rs",
           "workers/rust/crates/engine/tests/layered_thermal_research.rs",
+          "workers/rust/crates/engine/tests/heat_bridge_integrity.rs",
+          "workers/rust/crates/engine/tests/thermal_patch_research.rs",
+          "workers/rust/crates/engine/tests/support/research_evidence.rs",
+          "apps/web/lib/kyuubiki_web/workflow_heat_bridge_contract.ex",
           "apps/web/lib/kyuubiki_web/workflow_operator_heat_bridge_runtime.ex",
           "apps/web/test/kyuubiki_web/heat_reference_temperature_test.exs",
+          "apps/web/test/kyuubiki_web/heat_bridge_integrity_test.exs",
           "docs/research-layered-thermal.html",
-          "reports/layered-thermal-research-20260908.md"
+          "reports/layered-thermal-research-20260908.md",
+          "reports/thermal-wide-research-20260908.md"
         ],
         "required_text": [
           "layered_research_matches_independent_temperature_flux_and_expansion_references",
@@ -24,6 +33,10 @@
           "reference_temperature_is_applied_before_scaling_for_triangles_and_quads",
           "synthetic_reference_not_material_certification",
           "result_readback_matches",
+          "thermal_patch_matrix_covers_free_clamped_poisson_cooling_and_mapping_modes",
+          "overflowing_reductions_never_produce_a_successful_null_temperature",
+          "incomplete_result_elements_and_invalid_indexes_are_rejected",
+          "current_source_rust_engine_integration",
           "Installed-runtime numerical verdict: FAIL, 0/14 cases."
         ]
       },

@@ -3,6 +3,10 @@
 mod checks;
 #[path = "layered_thermal_research/model.rs"]
 mod model;
+#[path = "layered_thermal_research/patch.rs"]
+mod patch;
+#[path = "layered_thermal_research/suite.rs"]
+mod suite;
 
 use kyuubiki_headless_sdk::{
     ControlPlaneClient, KyuubikiAgentClient, KyuubikiAuth, KyuubikiSession,
@@ -18,9 +22,16 @@ fn retain(root: &Path, name: &str, value: &Value) -> Result<String, Box<dyn std:
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let out = env::args()
-        .nth(1)
-        .ok_or("usage: layered_thermal_research <new-output-directory>")?;
+    let mut args = env::args().skip(1);
+    let out = args.next().ok_or(
+        "usage: layered_thermal_research <new-output-directory> [layered|thermal-patch|all]",
+    )?;
+    let suite_name = args.next().unwrap_or_else(|| "layered".into());
+    let cases = suite::cases(&suite_name)?;
+    if args.next().is_some() {
+        return Err("unexpected extra research argument".into());
+    }
+    let case_count = cases.len();
     let root = Path::new(&out);
     // Do not overwrite a previous research round, including a failed one.
     fs::create_dir(root)?;
@@ -39,12 +50,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 include_str!("layered_thermal_research.rs"),
                 include_str!("layered_thermal_research/model.rs"),
                 include_str!("layered_thermal_research/checks.rs"),
+                include_str!("layered_thermal_research/patch.rs"),
+                include_str!("layered_thermal_research/suite.rs"),
             )
             .as_bytes()
         )
     );
     let mut rows = vec![];
-    for case in model::cases() {
+    for case in cases {
         let (graph, inputs) = case.workflow();
         let request_name = format!("{}-request.json", case.id());
         let request_digest = retain(
@@ -65,7 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let result = outcome.result.unwrap_or(Value::Null);
                 let result_name = format!("{}-result.json", case.id());
                 let digest = retain(root, &result_name, &result)?;
-                let mut row = checks::validate(case, &result).unwrap_or_else(
+                let mut row = case.validate(&result).unwrap_or_else(
                     |error| json!({"case": case.id(), "passed": false, "error": error}),
                 );
                 let job = &terminal["job"];
@@ -112,6 +125,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &json!({"schema_version": "kyuubiki.layered-thermal-research/v1",
             "execution": "official_rust_headless_sdk_service", "complete": false,
             "study_definition_sha256": definition_digest,
+            "suite": suite_name, "expected_case_count": case_count,
             "qualification": "synthetic_reference_not_material_certification", "cases": rows}),
         )?;
     }
@@ -122,11 +136,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "service": health["service"], "deployment_mode": health["deployment"]["mode"],
         "case_count": rows.len(), "passed_count": passed, "failed_count": rows.len() - passed,
         "study_definition_sha256": definition_digest, "sdk_version": env!("CARGO_PKG_VERSION"),
+        "suite": suite_name, "expected_case_count": case_count,
         "source_revision": env::var("KYUUBIKI_SOURCE_REVISION").unwrap_or_else(|_| "unrecorded".into()),
         "cases": rows});
     retain(root, "report.json", &report)?;
     println!("{}", serde_json::to_string_pretty(&report)?);
-    if passed != model::cases().len() {
+    if passed != case_count {
         return Err("research validation failed; evidence retained".into());
     }
     Ok(())

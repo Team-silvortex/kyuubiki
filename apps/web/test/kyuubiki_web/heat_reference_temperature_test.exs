@@ -11,7 +11,7 @@ defmodule KyuubikiWeb.HeatReferenceTemperatureTest do
 
       heat = %{
         "nodes" => nodes,
-        "input" => %{"elements" => [%{}]},
+        "input" => %{"elements" => [%{"node_i" => 0}]},
         "elements" => [%{"node_i" => 0, "area" => 1.0, "average_temperature" => reference + rise}]
       }
 

@@ -1,21 +1,11 @@
 use crate::bridge::BridgeDiagnostics;
+pub(crate) use crate::heat_bridge_contract::{
+    HeatToThermoBridgeContract, resolve_heat_to_thermo_bridge_contract,
+};
 use kyuubiki_protocol::{
     HeatPlaneNodeResult, SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dResult,
     SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
 };
-use serde_json::Value;
-
-#[derive(Debug, Clone)]
-pub(crate) struct HeatToThermoBridgeContract {
-    source_field: String,
-    distribution: String,
-    node_index_fields: Vec<String>,
-    reduction: String,
-    target_field: String,
-    scale: f64,
-    reference_temperature: f64,
-    default_value: f64,
-}
 
 pub fn bridge_heat_result_to_thermal_plane_quad_model(
     heat_result: &SolveHeatPlaneQuad2dResult,
@@ -34,18 +24,33 @@ pub(crate) fn bridge_heat_result_to_thermal_plane_quad_model_with_contract(
     thermo_seed_model: &SolveThermalPlaneQuad2dRequest,
     contract: &HeatToThermoBridgeContract,
 ) -> Result<(SolveThermalPlaneQuad2dRequest, BridgeDiagnostics), String> {
+    let contract = &contract.for_shape(&["node_i", "node_j", "node_k", "node_l"])?;
     if heat_result.nodes.len() != thermo_seed_model.nodes.len() {
         return Err("heat and thermo quad models must have the same node count".to_string());
     }
     if contract.distribution == "element_to_nodes"
-        && heat_result.input.elements.len() != thermo_seed_model.elements.len()
+        && (heat_result.input.elements.len() != thermo_seed_model.elements.len()
+            || heat_result.elements.len() != heat_result.input.elements.len())
     {
         return Err("heat and thermo quad models must have the same element count".to_string());
     }
 
     let mut bridged = thermo_seed_model.clone();
+    if contract.distribution == "element_to_nodes" {
+        for (result, input) in heat_result.elements.iter().zip(&heat_result.input.elements) {
+            if result.id != input.id
+                || [result.node_i, result.node_j, result.node_k, result.node_l]
+                    != [input.node_i, input.node_j, input.node_k, input.node_l]
+            {
+                return Err("heat quad result connectivity does not match its input".into());
+            }
+        }
+    }
     for (heat_node, thermo_node) in heat_result.nodes.iter().zip(bridged.nodes.iter()) {
-        if (heat_node.x - thermo_node.x).abs() > 1.0e-9
+        if ![heat_node.x, heat_node.y, thermo_node.x, thermo_node.y]
+            .iter()
+            .all(|v| v.is_finite())
+            || (heat_node.x - thermo_node.x).abs() > 1.0e-9
             || (heat_node.y - thermo_node.y).abs() > 1.0e-9
         {
             return Err(format!(
@@ -63,7 +68,7 @@ pub(crate) fn bridge_heat_result_to_thermal_plane_quad_model_with_contract(
             contract,
             heat_quad_bridge_source_value,
             heat_quad_bridge_node_index,
-            |element| element.area.abs(),
+            |element| element.area,
         )?
     };
     for (index, thermo_node) in bridged.nodes.iter_mut().enumerate() {
@@ -91,18 +96,33 @@ pub(crate) fn bridge_heat_result_to_thermal_plane_triangle_model_with_contract(
     thermo_seed_model: &SolveThermalPlaneTriangle2dRequest,
     contract: &HeatToThermoBridgeContract,
 ) -> Result<(SolveThermalPlaneTriangle2dRequest, BridgeDiagnostics), String> {
+    let contract = &contract.for_shape(&["node_i", "node_j", "node_k"])?;
     if heat_result.nodes.len() != thermo_seed_model.nodes.len() {
         return Err("heat and thermo triangle models must have the same node count".to_string());
     }
     if contract.distribution == "element_to_nodes"
-        && heat_result.input.elements.len() != thermo_seed_model.elements.len()
+        && (heat_result.input.elements.len() != thermo_seed_model.elements.len()
+            || heat_result.elements.len() != heat_result.input.elements.len())
     {
         return Err("heat and thermo triangle models must have the same element count".to_string());
     }
 
     let mut bridged = thermo_seed_model.clone();
+    if contract.distribution == "element_to_nodes" {
+        for (result, input) in heat_result.elements.iter().zip(&heat_result.input.elements) {
+            if result.id != input.id
+                || [result.node_i, result.node_j, result.node_k]
+                    != [input.node_i, input.node_j, input.node_k]
+            {
+                return Err("heat triangle result connectivity does not match its input".into());
+            }
+        }
+    }
     for (heat_node, thermo_node) in heat_result.nodes.iter().zip(bridged.nodes.iter()) {
-        if (heat_node.x - thermo_node.x).abs() > 1.0e-9
+        if ![heat_node.x, heat_node.y, thermo_node.x, thermo_node.y]
+            .iter()
+            .all(|v| v.is_finite())
+            || (heat_node.x - thermo_node.x).abs() > 1.0e-9
             || (heat_node.y - thermo_node.y).abs() > 1.0e-9
         {
             return Err(format!(
@@ -120,7 +140,7 @@ pub(crate) fn bridge_heat_result_to_thermal_plane_triangle_model_with_contract(
             contract,
             heat_triangle_bridge_source_value,
             heat_triangle_bridge_node_index,
-            |element| element.area.abs(),
+            |element| element.area,
         )?
     };
     for (index, thermo_node) in bridged.nodes.iter_mut().enumerate() {
@@ -166,125 +186,6 @@ fn default_heat_to_thermo_bridge_contract() -> HeatToThermoBridgeContract {
         reference_temperature: 0.0,
         default_value: 0.0,
     }
-}
-
-pub(crate) fn resolve_heat_to_thermo_bridge_contract(
-    config: &Value,
-) -> Result<HeatToThermoBridgeContract, String> {
-    let contract = config.get("contract").unwrap_or(config);
-    let source = contract.get("source").and_then(Value::as_object);
-    let transform = contract.get("transform").and_then(Value::as_object);
-    let target = contract.get("target").and_then(Value::as_object);
-    let source_field = source
-        .and_then(|value| value.get("field"))
-        .and_then(Value::as_str)
-        .unwrap_or("temperature")
-        .to_string();
-    let distribution = source
-        .and_then(|value| value.get("distribution"))
-        .and_then(Value::as_str)
-        .unwrap_or("node_to_node")
-        .to_string();
-    let node_index_fields = source
-        .and_then(|value| value.get("node_index_fields"))
-        .and_then(Value::as_array)
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(Value::as_str)
-                .map(ToString::to_string)
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_else(|| {
-            vec![
-                "node_i".to_string(),
-                "node_j".to_string(),
-                "node_k".to_string(),
-                "node_l".to_string(),
-            ]
-        });
-    let reduction = transform
-        .and_then(|value| value.get("reduction"))
-        .and_then(Value::as_str)
-        .unwrap_or(if distribution == "node_to_node" {
-            "copy"
-        } else {
-            "mean"
-        })
-        .to_string();
-    let target_field = target
-        .and_then(|value| value.get("field"))
-        .and_then(Value::as_str)
-        .unwrap_or("temperature_delta")
-        .to_string();
-    let scale = transform
-        .and_then(|value| value.get("scale"))
-        .and_then(Value::as_f64)
-        .unwrap_or(1.0);
-    let default_value = transform
-        .and_then(|value| value.get("default_value"))
-        .and_then(Value::as_f64)
-        .unwrap_or(0.0);
-    let reference_temperature = match transform.and_then(|value| value.get("reference_temperature"))
-    {
-        None => 0.0,
-        Some(value) => value
-            .as_f64()
-            .filter(|v| v.is_finite())
-            .ok_or("heat-to-thermo reference_temperature must be finite and numeric")?,
-    };
-    if reference_temperature != 0.0
-        && !matches!(source_field.as_str(), "temperature" | "average_temperature")
-    {
-        return Err(
-            "heat-to-thermo reference_temperature requires a temperature source field".into(),
-        );
-    }
-
-    if source_field != "temperature" && source_field != "heat_load" {
-        let supports_element_field = distribution == "element_to_nodes"
-            && matches!(
-                source_field.as_str(),
-                "average_temperature" | "heat_flux_x" | "heat_flux_y" | "heat_flux_magnitude"
-            );
-        if !supports_element_field {
-            return Err(format!(
-                "unsupported heat-to-thermo bridge source field: {source_field}"
-            ));
-        }
-    }
-    if distribution != "node_to_node" && distribution != "element_to_nodes" {
-        return Err(format!(
-            "unsupported heat-to-thermo bridge distribution: {distribution}"
-        ));
-    }
-    if reduction != "copy"
-        && reduction != "mean"
-        && reduction != "sum"
-        && reduction != "area_weighted_mean"
-        && reduction != "max"
-        && reduction != "min"
-    {
-        return Err(format!(
-            "unsupported heat-to-thermo bridge reduction: {reduction}"
-        ));
-    }
-    if target_field != "temperature_delta" {
-        return Err(format!(
-            "unsupported heat-to-thermo bridge target field: {target_field}"
-        ));
-    }
-
-    Ok(HeatToThermoBridgeContract {
-        source_field,
-        distribution,
-        node_index_fields,
-        reduction,
-        target_field,
-        scale,
-        reference_temperature,
-        default_value,
-    })
 }
 
 fn derive_direct_heat_nodal_target_field(
@@ -333,6 +234,9 @@ fn derive_element_heat_nodal_target_field<TElement>(
         }
         source_values.push(source_value);
         let weight = resolve_weight(element);
+        if !weight.is_finite() || weight <= 0.0 {
+            return Err("heat bridge element area must be positive and finite".into());
+        }
         for field in &contract.node_index_fields {
             let index = resolve_node_index(element, field)?;
             let Some(sum) = sums.get_mut(index) else {
@@ -346,6 +250,16 @@ fn derive_element_heat_nodal_target_field<TElement>(
             weight_totals[index] += weight;
             minima[index] = minima[index].min(source_value);
             maxima[index] = maxima[index].max(source_value);
+            let valid = match contract.reduction.as_str() {
+                "copy" | "mean" | "sum" => sums[index].is_finite(),
+                "area_weighted_mean" => {
+                    weighted_sums[index].is_finite() && weight_totals[index].is_finite()
+                }
+                _ => true,
+            };
+            if !valid {
+                return Err("heat bridge reduction overflowed".into());
+            }
         }
     }
 
@@ -414,11 +328,10 @@ fn resolve_heat_bridge_node_value(
             ));
         }
     };
-    Ok(if source_value.is_finite() {
-        source_value
-    } else {
-        contract.default_value
-    })
+    if !source_value.is_finite() {
+        return Err("heat bridge source value must be finite".into());
+    }
+    Ok(source_value)
 }
 
 fn heat_quad_bridge_source_value(

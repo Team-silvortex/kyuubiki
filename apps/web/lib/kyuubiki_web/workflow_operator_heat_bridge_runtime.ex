@@ -1,5 +1,6 @@
 defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
   @moduledoc false
+  alias KyuubikiWeb.WorkflowHeatBridgeContract, as: Contract
 
   def bridge_heat_result_to_thermal_plane_quad_model(heat_result, thermo_seed_model),
     do: bridge_heat_result_to_thermal_model(heat_result, thermo_seed_model, "temperature_delta")
@@ -11,70 +12,21 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
         heat_result,
         thermo_seed_model,
         bridge_contract
-      ),
-      do: bridge_heat_result_to_thermal_model(heat_result, thermo_seed_model, bridge_contract)
+      ) do
+    with {:ok, contract} <- Contract.for_shape(bridge_contract, :quad),
+         do: bridge_heat_result_to_thermal_model(heat_result, thermo_seed_model, contract)
+  end
 
   def bridge_heat_result_to_thermal_plane_triangle_model(
         heat_result,
         thermo_seed_model,
         bridge_contract
-      ),
-      do: bridge_heat_result_to_thermal_model(heat_result, thermo_seed_model, bridge_contract)
-
-  def resolve_heat_to_thermo_bridge_contract(config) when is_map(config) do
-    contract = Map.get(config, "contract", %{})
-
-    with {:ok, source_field} <-
-           normalize_contract_string(
-             get_in(contract, ["source", "field"]) || "temperature",
-             :invalid_bridge_contract_source_field
-           ),
-         {:ok, distribution} <-
-           normalize_contract_string(
-             get_in(contract, ["source", "distribution"]) || "node_to_node",
-             :invalid_bridge_contract_distribution
-           ),
-         :ok <- validate_heat_bridge_distribution(distribution),
-         {:ok, node_index_fields} <-
-           normalize_node_index_fields(
-             get_in(contract, ["source", "node_index_fields"]) ||
-               ["node_i", "node_j", "node_k", "node_l"]
-           ),
-         {:ok, target_field} <-
-           normalize_contract_string(
-             get_in(contract, ["target", "field"]) || "temperature_delta",
-             :invalid_bridge_contract_target_field
-           ),
-         {:ok, scale} <-
-           normalize_bridge_scale(get_in(contract, ["transform", "scale"]) || 1.0),
-         {:ok, reference_temperature} <-
-           normalize_reference_temperature(contract, source_field),
-         {:ok, reduction} <-
-           normalize_contract_string(
-             get_in(contract, ["transform", "reduction"]) ||
-               if(distribution == "node_to_node", do: "copy", else: "mean"),
-             :invalid_bridge_contract_reduction
-           ),
-         :ok <- validate_heat_bridge_reduction(reduction),
-         {:ok, default_value} <-
-           normalize_bridge_scale(get_in(contract, ["transform", "default_value"]) || 0.0),
-         :ok <- validate_heat_bridge_source_field(source_field, distribution),
-         :ok <- validate_heat_bridge_target_field(target_field) do
-      {:ok,
-       %{
-         source_field: source_field,
-         distribution: distribution,
-         node_index_fields: node_index_fields,
-         reduction: reduction,
-         target_field: target_field,
-         scale: scale,
-         reference_temperature: reference_temperature,
-         default_value: default_value
-       }}
-    end
+      ) do
+    with {:ok, contract} <- Contract.for_shape(bridge_contract, :triangle),
+         do: bridge_heat_result_to_thermal_model(heat_result, thermo_seed_model, contract)
   end
 
-  def resolve_heat_to_thermo_bridge_contract(_config), do: {:error, :invalid_bridge_contract}
+  defdelegate resolve_heat_to_thermo_bridge_contract(config), to: Contract, as: :resolve
 
   defp bridge_heat_result_to_thermal_model(
          %{"nodes" => heat_nodes} = heat_result,
@@ -112,22 +64,24 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
               is_map(bridge_contract) do
     case resolve_heat_elements(heat_result, distribution) do
       {:ok, heat_elements} ->
-        validate_heat_bridge_shapes(
-          heat_nodes,
-          heat_elements,
-          thermo_nodes,
-          thermo_elements,
-          bridge_contract,
-          fn ->
-            bridge_heat_nodes(
-              heat_nodes,
-              heat_elements,
-              thermo_nodes,
-              thermo_seed_model,
-              bridge_contract
-            )
-          end
-        )
+        with :ok <- validate_element_evidence(heat_result, heat_elements, bridge_contract) do
+          validate_heat_bridge_shapes(
+            heat_nodes,
+            heat_elements,
+            thermo_nodes,
+            thermo_elements,
+            bridge_contract,
+            fn ->
+              bridge_heat_nodes(
+                heat_nodes,
+                heat_elements,
+                thermo_nodes,
+                thermo_seed_model,
+                bridge_contract
+              )
+            end
+          )
+        end
 
       error ->
         error
@@ -138,14 +92,21 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
     do: {:error, :invalid_bridge_payload}
 
   defp validate_heat_bridge_shapes(
-         _heat_nodes,
-         _heat_elements,
-         _thermo_nodes,
-         _thermo_elements,
+         heat_nodes,
+         heat_elements,
+         thermo_nodes,
+         thermo_elements,
          %{distribution: "element_to_nodes"},
          on_valid
        ),
-       do: on_valid.()
+       do:
+         validate_bridge_shapes(
+           heat_nodes,
+           heat_elements,
+           thermo_nodes,
+           thermo_elements,
+           on_valid
+         )
 
   defp validate_heat_bridge_shapes(
          heat_nodes,
@@ -166,6 +127,8 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
          bridge_contract
        ) do
     with :ok <- ensure_node_alignment(heat_nodes, thermo_nodes),
+         :ok <-
+           validate_field_values(heat_nodes, heat_elements, length(thermo_nodes), bridge_contract),
          nodal_values <-
            derive_heat_nodal_target_field(
              heat_nodes,
@@ -185,6 +148,8 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
 
       {:ok, Map.put(thermo_seed_model, "nodes", bridged_nodes)}
     end
+  rescue
+    ArithmeticError -> {:error, :bridge_numeric_overflow}
   end
 
   defp derive_heat_nodal_target_field(
@@ -237,6 +202,17 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
 
           weight = normalize_numeric_value(Map.get(element, "area", 1.0))
 
+          sum_value =
+            if bridge_contract.reduction in ["copy", "mean", "sum"], do: magnitude, else: 0.0
+
+          weighted_value =
+            if bridge_contract.reduction == "area_weighted_mean",
+              do: magnitude * weight,
+              else: 0.0
+
+          active_weight =
+            if bridge_contract.reduction == "area_weighted_mean", do: weight, else: 0.0
+
           node_indexes =
             Enum.map(node_index_fields, &Map.get(element, &1)) |> Enum.filter(&is_integer/1)
 
@@ -263,10 +239,10 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
                 end
 
               {
-                List.update_at(totals_acc, node_index, &(&1 + magnitude)),
+                List.update_at(totals_acc, node_index, &(&1 + sum_value)),
                 List.update_at(counts_acc, node_index, &(&1 + 1)),
-                List.update_at(weighted_totals_acc, node_index, &(&1 + magnitude * weight)),
-                List.update_at(weight_sums_acc, node_index, &(&1 + weight)),
+                List.update_at(weighted_totals_acc, node_index, &(&1 + weighted_value)),
+                List.update_at(weight_sums_acc, node_index, &(&1 + active_weight)),
                 List.replace_at(minima_acc, node_index, next_min),
                 List.replace_at(maxima_acc, node_index, next_max)
               }
@@ -398,7 +374,8 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
     source_nodes
     |> Enum.zip(target_nodes)
     |> Enum.reduce_while(:ok, fn {source_node, target_node}, _acc ->
-      if close_enough?(Map.get(source_node, "x"), Map.get(target_node, "x")) and
+      if is_map(source_node) and is_map(target_node) and
+           close_enough?(Map.get(source_node, "x"), Map.get(target_node, "x")) and
            close_enough?(Map.get(source_node, "y"), Map.get(target_node, "y")) do
         {:cont, :ok}
       else
@@ -407,77 +384,53 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
     end)
   end
 
-  defp normalize_bridge_scale(nil), do: {:ok, 1.0}
-  defp normalize_bridge_scale(scale) when is_number(scale), do: {:ok, scale}
-  defp normalize_bridge_scale(_scale), do: {:error, :invalid_bridge_scale}
+  defp validate_element_evidence(_heat, _elements, %{distribution: "node_to_node"}), do: :ok
 
-  defp normalize_reference_temperature(contract, source_field) do
-    transform = get_in(contract, ["transform"]) || %{}
-    value = Map.get(transform, "reference_temperature", 0.0)
+  defp validate_element_evidence(heat, elements, contract) do
+    input = get_in(heat, ["input", "elements"])
 
-    cond do
-      not is_number(value) ->
-        {:error, :invalid_bridge_reference_temperature}
+    valid =
+      is_list(input) and length(input) == length(elements) and
+        Enum.all?(Enum.zip(elements, input), fn {result, original} ->
+          is_map(result) and is_map(original) and result["id"] == original["id"] and
+            Enum.all?(contract.node_index_fields, fn field ->
+              Map.has_key?(original, field) and result[field] == original[field]
+            end)
+        end)
 
-      value != 0 and source_field not in ["temperature", "average_temperature"] ->
-        {:error, :invalid_bridge_reference_temperature_source}
-
-      true ->
-        {:ok, value}
-    end
+    if valid, do: :ok, else: {:error, :bridge_element_evidence_mismatch}
   end
 
-  defp normalize_contract_string(value, _reason) when is_binary(value) and value != "",
-    do: {:ok, value}
+  defp validate_field_values(nodes, _elements, _count, %{distribution: "node_to_node"} = contract) do
+    valid =
+      Enum.all?(nodes, fn node ->
+        is_map(node) and Contract.finite_number?(Map.get(node, contract.source_field))
+      end)
 
-  defp normalize_contract_string(_value, reason), do: {:error, reason}
-
-  defp normalize_node_index_fields(fields) when is_list(fields) do
-    normalized = fields |> Enum.filter(&(is_binary(&1) and &1 != "")) |> Enum.uniq()
-
-    if normalized == [],
-      do: {:error, :invalid_bridge_contract_node_index_fields},
-      else: {:ok, normalized}
+    if valid, do: :ok, else: {:error, :invalid_bridge_source_value}
   end
 
-  defp normalize_node_index_fields(_fields),
-    do: {:error, :invalid_bridge_contract_node_index_fields}
+  defp validate_field_values(_nodes, elements, count, contract) do
+    valid =
+      Enum.all?(elements, fn element ->
+        is_map(element) and Contract.finite_number?(Map.get(element, contract.source_field)) and
+          Contract.finite_number?(element["area"]) and element["area"] > 0 and
+          Enum.all?(contract.node_index_fields, fn field ->
+            index = element[field]
+            is_integer(index) and index >= 0 and index < count
+          end)
+      end)
 
-  defp validate_heat_bridge_distribution("node_to_node"), do: :ok
-  defp validate_heat_bridge_distribution("element_to_nodes"), do: :ok
-
-  defp validate_heat_bridge_distribution(_distribution),
-    do: {:error, :unsupported_bridge_distribution}
-
-  defp validate_heat_bridge_reduction("copy"), do: :ok
-  defp validate_heat_bridge_reduction("mean"), do: :ok
-  defp validate_heat_bridge_reduction("sum"), do: :ok
-  defp validate_heat_bridge_reduction("area_weighted_mean"), do: :ok
-  defp validate_heat_bridge_reduction("min"), do: :ok
-  defp validate_heat_bridge_reduction("max"), do: :ok
-  defp validate_heat_bridge_reduction(_reduction), do: {:error, :unsupported_bridge_reduction}
-
-  defp validate_heat_bridge_source_field("temperature", "node_to_node"), do: :ok
-  defp validate_heat_bridge_source_field("heat_load", "node_to_node"), do: :ok
-  defp validate_heat_bridge_source_field("average_temperature", "element_to_nodes"), do: :ok
-  defp validate_heat_bridge_source_field("heat_flux_x", "element_to_nodes"), do: :ok
-  defp validate_heat_bridge_source_field("heat_flux_y", "element_to_nodes"), do: :ok
-  defp validate_heat_bridge_source_field("heat_flux", "element_to_nodes"), do: :ok
-  defp validate_heat_bridge_source_field("heat_flux_magnitude", "element_to_nodes"), do: :ok
-
-  defp validate_heat_bridge_source_field(_source_field, _distribution),
-    do: {:error, :invalid_bridge_contract_source_field}
-
-  defp validate_heat_bridge_target_field("temperature_delta"), do: :ok
-
-  defp validate_heat_bridge_target_field(_target_field),
-    do: {:error, :invalid_bridge_contract_target_field}
+    if valid, do: :ok, else: {:error, :invalid_bridge_element_value_or_index}
+  end
 
   defp normalize_numeric_value(value) when is_number(value), do: value
   defp normalize_numeric_value(_value), do: 0.0
 
   defp close_enough?(left, right) when is_number(left) and is_number(right),
-    do: abs(left - right) <= 1.0e-9
+    do:
+      Contract.finite_number?(left) and Contract.finite_number?(right) and
+        abs(left - right) <= 1.0e-9
 
   defp close_enough?(_, _), do: false
 end

@@ -1,5 +1,7 @@
 #[path = "../../../../../sdks/rust/examples/layered_thermal_research/checks.rs"]
 mod checks;
+#[path = "support/research_evidence.rs"]
+mod evidence;
 #[path = "../../../../../sdks/rust/examples/layered_thermal_research/model.rs"]
 mod model;
 
@@ -39,15 +41,17 @@ fn run_transform_operator(operator: &str, payload: Value, config: Value) -> Resu
 
 #[test]
 fn layered_research_matches_independent_temperature_flux_and_expansion_references() {
+    let mut evidence = evidence::Evidence::new("layered", model::cases().len());
     for case in model::cases() {
         let (graph, input_artifacts) = case.workflow();
-        let request =
-            serde_json::from_value(json!({"graph": graph, "input_artifacts": input_artifacts}))
-                .unwrap();
+        let request_value = json!({"graph": graph, "input_artifacts": input_artifacts});
+        let request = serde_json::from_value(request_value.clone()).unwrap();
         let result = serde_json::to_value(run_workflow_graph(request).unwrap()).unwrap();
         let report = checks::validate(case, &result).unwrap();
+        evidence.record(&request_value, &result, &report);
         assert_eq!(report["passed"], true, "{report}");
     }
+    evidence.finish();
 }
 
 #[test]
