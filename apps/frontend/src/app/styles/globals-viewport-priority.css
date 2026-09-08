@@ -119,6 +119,29 @@
   color: var(--accent);
 }
 
+.console-panel > .panel-head .workbench-alert-strip--compact {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: 48px;
+  overflow: auto;
+  margin: 0;
+  gap: 2px;
+}
+
+.workbench-alert-strip--compact .workbench-alert-strip__item {
+  min-width: 0;
+  padding: 2px 6px;
+  gap: 4px;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.workbench-alert-strip--compact .workbench-alert-strip__item > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 [data-workbench-report-toggle] {
   display: flex;
   align-items: center;

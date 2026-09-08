@@ -294,8 +294,21 @@ for (const failure of ["network", "malformed"]) {
         assert.equal(after.selectedAdminJobId, before.selectedAdminJobId);
         assert.equal(await page.locator(`[data-workbench-history-job-id="${control.job.job_id}"]`).count(), 1);
         const issue = page.locator('[data-workbench-alert-id="runtime-recovery-job_history"]');
+        const reportToggle = page.locator('[data-workbench-report-toggle="true"]');
+        assert.equal(await reportToggle.getAttribute("aria-expanded"), "false");
         await issue.first().waitFor({ state: "visible" });
         assert.match(await issue.first().textContent(), failure === "network" ? /qualification history unavailable/u : /JOB_HISTORY_INVALID/u);
+        assert.equal(await issue.count(), 1, "the collapsed report must own one accessible alert, not a duplicate");
+        const bounds = await issue.evaluate(element => {
+          const report = element.closest(".console-panel");
+          return { report: report.getBoundingClientRect().height, main: report.closest(".workspace-main").getBoundingClientRect().height };
+        });
+        assert.ok(bounds.report <= 64 && bounds.report < bounds.main * 0.2, "recovery alerts must not take over the primary viewport");
+        await reportToggle.click();
+        await issue.first().waitFor({ state: "visible" });
+        assert.equal(await issue.count(), 1);
+        await reportToggle.click();
+        await issue.first().waitFor({ state: "visible" });
         recover = true;
         if (failure === "malformed") {
           await page.evaluate(() => window.__kyuubikiPwdt.openSidebar("system"));

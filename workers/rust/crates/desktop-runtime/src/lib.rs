@@ -13,14 +13,16 @@ mod frontend_http;
 mod frontend_launch;
 mod frontend_proxy;
 mod frontend_server;
+mod panel_preferences;
 mod runtime_control;
 mod runtime_export;
 mod runtime_layout;
 mod runtime_options;
 mod runtime_support;
-mod panel_preferences;
 
-pub use panel_preferences::{read_workbench_panel_layout, write_workbench_panel_layout, WorkbenchPanelLayout};
+pub use panel_preferences::{
+    WorkbenchPanelLayout, read_workbench_panel_layout, write_workbench_panel_layout,
+};
 
 pub use audit_log::{
     DesktopAuditLedgerStatus, append_desktop_provenance_record, desktop_provenance_status,

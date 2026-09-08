@@ -94,13 +94,16 @@ function WorkbenchConsoleInner({
           aria-controls={contentId} onClick={() => setExpanded((current) => !current)}>
           <span className="console-panel__chevron" aria-hidden="true" />{title}
         </button></h2>
-        <span className={alerts.length ? "console-panel__alert" : undefined} title={summary}>{summary}</span>
+        {!expanded && alerts.length
+          ? <WorkbenchAlertStrip alerts={alerts} compact />
+          : <span className={alerts.length ? "console-panel__alert" : undefined} title={summary}>{summary}</span>}
         <WorkbenchLayoutReset language={language} />
       </div>
       <div id={contentId} className="console-grid" hidden={!expanded}>
         {expanded ? <>
         <div className="console-card">
           <h3>{sidebarSection === "model" ? modelMessageTitle : reportMessageTitle}</h3>
+          <WorkbenchAlertStrip alerts={alerts} />
           {sidebarSection === "model" ? (
             <div className="metric-grid">
               <div>
@@ -126,7 +129,6 @@ function WorkbenchConsoleInner({
             </div>
           ) : (
             <>
-              <WorkbenchAlertStrip alerts={alerts} />
               <p>{message}</p>
             </>
           )}

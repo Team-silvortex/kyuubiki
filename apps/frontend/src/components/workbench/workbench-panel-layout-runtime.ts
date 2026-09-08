@@ -169,10 +169,16 @@ export function installWorkbenchPanelLayout(root: HTMLElement) {
 
   function cancel() { stop(false); }
   function resize() { cancel(); schedulePaint(); }
+  function reconcileNavigation() {
+    cancel();
+    if (frame) cancelAnimationFrame(frame);
+    // Navigation changes the panel's default width; do not leave new content in the old layout until a later frame.
+    paint();
+  }
   root.dataset.workbenchResizableLayout = "true";
   paint();
   const observer = typeof ResizeObserver === "function" ? new ResizeObserver(schedulePaint) : null;
-  const attributes = new MutationObserver(resize);
+  const attributes = new MutationObserver(reconcileNavigation);
   attributes.observe(root, { attributes: true, attributeFilter: ["data-workbench-section", "data-workbench-stack-panels"] });
   observer?.observe(root);
   const main = root.querySelector(".workspace-main");

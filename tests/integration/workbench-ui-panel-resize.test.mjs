@@ -9,6 +9,37 @@ const reset = page => page.locator('[data-workbench-layout-reset="true"]');
 const report = page => page.locator('[data-workbench-report-toggle="true"]');
 const settle = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
+test("navigation updates default panel widths even while animation frames are delayed", { timeout: 90_000 }, async () => {
+  await usingWorkbench(async page => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await openWorkbench(page);
+    await sizes(page);
+    await page.evaluate(() => {
+      const request = window.requestAnimationFrame.bind(window);
+      const cancel = window.cancelAnimationFrame.bind(window);
+      const pending = new Map();
+      let id = 0;
+      window.requestAnimationFrame = callback => { pending.set(--id, callback); return id; };
+      window.cancelAnimationFrame = handle => { if (handle < 0) pending.delete(handle); else cancel(handle); };
+      window.__restoreLayoutFrames = () => {
+        window.requestAnimationFrame = request;
+        window.cancelAnimationFrame = cancel;
+        for (const callback of pending.values()) request(callback);
+        pending.clear();
+      };
+    });
+    try {
+      for (const section of ["workflow", "model", "workflow"]) {
+        await page.evaluate(value => window.__kyuubikiPwdt.openSidebar(value), section);
+        await page.locator(`[data-workbench-shell="root"][data-workbench-section="${section}"]`).waitFor();
+        const width = await page.locator(".workspace-sidebar").evaluate(element => element.getBoundingClientRect().width);
+        assert.ok(section === "workflow" ? width >= 280 : width < 280, `${section} retained a stale width: ${width}`);
+      }
+      assert.equal(await page.evaluate(storageKey => localStorage.getItem(storageKey), key), null, "navigation must not save a user preference");
+    } finally { await page.evaluate(() => window.__restoreLayoutFrames()); }
+  });
+});
+
 async function sizes(page) {
   await page.waitForFunction(() => [
     '[data-workbench-panel="sidebar"]', '[data-workbench-panel="inspector"]', ".console-panel",
