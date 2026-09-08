@@ -58,7 +58,7 @@ fn solve_solid_tetra_3d_internal(
 
     let constrained = constrained_dofs(request.as_ref());
     let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(&stiffness, &force, &constrained);
+        reduce_sparse_system(&stiffness, &force, &constrained)?;
     let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
     let mut displacements = vec![0.0; dof_count];
     for (index, &dof) in free.iter().enumerate() {

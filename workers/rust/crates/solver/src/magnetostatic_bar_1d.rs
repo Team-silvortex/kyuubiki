@@ -148,7 +148,7 @@ fn solve_magnetic_potentials(request: &SolveMagnetostaticBar1dRequest) -> Result
         }
     }
     let (reduced_stiffness, reduced_rhs, free) =
-        reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed);
+        reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed)?;
     let reduced_values = solve_spd_system(&reduced_stiffness, &reduced_rhs)?;
     let mut values = vec![0.0; node_count];
     for &(index, value) in &prescribed {

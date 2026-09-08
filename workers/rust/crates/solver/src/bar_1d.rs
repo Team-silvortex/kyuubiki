@@ -164,7 +164,7 @@ fn solve_validated_thermal_bar_1d(
         .collect::<Vec<_>>();
 
     let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained)?;
     let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
 
     let mut displacements = vec![0.0; dof_count];
@@ -384,7 +384,7 @@ fn solve_heat_bar_1d_temperatures(request: &SolveHeatBar1dRequest) -> Result<Vec
         }
     }
     let (reduced_stiffness, reduced_rhs, free) =
-        reduce_sparse_system_with_prescribed(&global_stiffness, &rhs, &prescribed);
+        reduce_sparse_system_with_prescribed(&global_stiffness, &rhs, &prescribed)?;
     let reduced_values = solve_spd_system(&reduced_stiffness, &reduced_rhs)?;
     expand_prescribed_values(node_count, &prescribed, &free, reduced_values)
 }
@@ -433,7 +433,7 @@ fn solve_electrostatic_bar_1d_potentials(
         }
     }
     let (reduced_stiffness, reduced_rhs, free) =
-        reduce_sparse_system_with_prescribed(&global_stiffness, &rhs, &prescribed);
+        reduce_sparse_system_with_prescribed(&global_stiffness, &rhs, &prescribed)?;
     let reduced_values = solve_spd_system(&reduced_stiffness, &reduced_rhs)?;
     expand_prescribed_values(node_count, &prescribed, &free, reduced_values)
 }

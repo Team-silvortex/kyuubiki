@@ -157,8 +157,22 @@ fn validate_stage(
         "sparse_iteration" => Ok(Some(SolverStage::SparseIteration)),
         "dense_factor" => Ok(Some(SolverStage::DenseFactor)),
         "tridiagonal_factor" => Ok(Some(SolverStage::TridiagonalFactor)),
+        "element_precompute" => Ok(Some(SolverStage::ElementPrecompute)),
+        "element_assembly" => Ok(Some(SolverStage::ElementAssembly)),
+        "sparse_compress" => Ok(Some(SolverStage::SparseCompress)),
+        "preconditioner_setup" => Ok(Some(SolverStage::PreconditionerSetup)),
+        "ic0_factor" => Ok(Some(SolverStage::IncompleteCholeskyFactor)),
+        "ic0_transpose" => Ok(Some(SolverStage::IncompleteCholeskyTranspose)),
+        "constraint_index" => Ok(Some(SolverStage::ConstraintIndex)),
+        "constraint_map" => Ok(Some(SolverStage::ConstraintMap)),
+        "constraint_reduce" => Ok(Some(SolverStage::ConstraintReduce)),
+        "preconditioner_jacobi" => Ok(Some(SolverStage::PreconditionerJacobi)),
+        "sgs_forward" => Ok(Some(SolverStage::SgsForward)),
+        "sgs_backward" => Ok(Some(SolverStage::SgsBackward)),
+        "ic0_forward" => Ok(Some(SolverStage::Ic0Forward)),
+        "ic0_backward" => Ok(Some(SolverStage::Ic0Backward)),
         _ => Err(format!(
-            "{STAGE_ENV} must name sparse_iteration, dense_factor, or tridiagonal_factor"
+            "{STAGE_ENV} must name a supported numerical preparation or solver stage"
         )),
     }
 }
@@ -200,7 +214,25 @@ mod tests {
         assert!(validate_stage(path, None, Some("dense_factor")).is_err());
         assert!(validate_stage(None, Some("solve_bar_1d"), Some("dense_factor")).is_err());
         assert!(validate_stage(path, Some("solve_bar_1d"), Some("linear_prepare")).is_err());
-        for stage in ["sparse_iteration", "dense_factor", "tridiagonal_factor"] {
+        for stage in [
+            "sparse_iteration",
+            "dense_factor",
+            "tridiagonal_factor",
+            "element_precompute",
+            "element_assembly",
+            "sparse_compress",
+            "preconditioner_setup",
+            "ic0_factor",
+            "ic0_transpose",
+            "constraint_index",
+            "constraint_map",
+            "constraint_reduce",
+            "preconditioner_jacobi",
+            "sgs_forward",
+            "sgs_backward",
+            "ic0_forward",
+            "ic0_backward",
+        ] {
             assert!(
                 validate_stage(path, Some("solve_bar_1d"), Some(stage))
                     .unwrap()

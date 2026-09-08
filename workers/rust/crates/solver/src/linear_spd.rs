@@ -42,7 +42,7 @@ pub(crate) fn solve_spd_compressed(
     let mut ax = vec![0.0; size];
     let mut preconditioner_workspace = vec![0.0; size];
     let started = Instant::now();
-    matrix.apply_preconditioner_into(preconditioner, &r, &mut z, &mut preconditioner_workspace);
+    matrix.apply_preconditioner_into(preconditioner, &r, &mut z, &mut preconditioner_workspace)?;
     timings.preconditioner_ms += elapsed_ms(started);
     p.clone_from(&z);
 
@@ -161,7 +161,12 @@ pub(crate) fn solve_spd_compressed(
         }
 
         let started = Instant::now();
-        matrix.apply_preconditioner_into(preconditioner, &r, &mut z, &mut preconditioner_workspace);
+        matrix.apply_preconditioner_into(
+            preconditioner,
+            &r,
+            &mut z,
+            &mut preconditioner_workspace,
+        )?;
         timings.preconditioner_ms += elapsed_ms(started);
 
         let started = Instant::now();
@@ -321,7 +326,7 @@ mod tests {
             preconditioner: SpdPreconditioner::IncompleteCholesky,
             progress_interval: None,
         };
-        let compressed = matrix.compress(options.preconditioner);
+        let compressed = matrix.compress(options.preconditioner).unwrap();
 
         let profile = solve_spd_compressed(&compressed, &[1.0, 0.0], &matrix, &options)
             .expect("high-scale SPD system should solve");

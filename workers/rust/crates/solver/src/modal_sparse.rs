@@ -50,7 +50,7 @@ impl SparseMassNormalizedOperator {
         }
         Ok(Self {
             inverse_mass_sqrt,
-            stiffness: stiffness.compress(SpdPreconditioner::Jacobi),
+            stiffness: stiffness.compress(SpdPreconditioner::Jacobi)?,
         })
     }
 
@@ -285,7 +285,8 @@ pub(crate) fn reduce_sparse_modal_system(
         return Err("sparse modal stiffness and mass dimensions must match".to_string());
     }
     let zero_rhs = vec![0.0; mass.len()];
-    let (reduced_stiffness, _, free_dofs) = reduce_sparse_system(stiffness, &zero_rhs, constrained);
+    let (reduced_stiffness, _, free_dofs) =
+        reduce_sparse_system(stiffness, &zero_rhs, constrained)?;
     if free_dofs.is_empty() {
         return Err(
             "sparse modal system must leave at least one free degree of freedom".to_string(),

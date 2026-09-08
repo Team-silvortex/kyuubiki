@@ -145,7 +145,7 @@ fn negative_pivots(
         &tangent,
         &context.system.reference_force,
         &context.system.constrained_dofs,
-    );
+    )?;
     Ok(assess_symmetric_inertia(&reduced).negative_pivots)
 }
 
@@ -159,7 +159,7 @@ fn endpoint_modes(
         &tangent,
         &context.system.reference_force,
         &context.system.constrained_dofs,
-    );
+    )?;
     debug_assert_eq!(free, context.free_dofs);
     extract_symmetric_critical_modes(
         &reduced,

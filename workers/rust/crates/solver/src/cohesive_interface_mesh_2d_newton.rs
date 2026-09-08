@@ -3,6 +3,7 @@ use crate::cohesive_interface_mesh_2d::{ValidatedModel, assemble};
 use crate::cohesive_interface_mesh_2d_control::{ControlStep, restricted_norm};
 use crate::linear_algebra::{reduce_sparse_system, stable_l2_norm};
 use crate::linear_symmetric_tangent::{DENSE_PIVOTED_FALLBACK, solve_symmetric_tangent};
+use crate::solver_control::check_cancellation;
 
 const MAX_DENSE_FALLBACK_DOFS: usize = 1_536;
 
@@ -54,7 +55,8 @@ pub(crate) fn solve_load_step(
     control: &ControlStep,
     committed_displacements: &[f64],
     committed_states: &[CohesiveInterface2dState],
-) -> LoadStepOutcome {
+) -> Result<LoadStepOutcome, String> {
+    check_cancellation()?;
     let mut trial_displacements = committed_displacements.to_vec();
     for &dof in &model.fixed_dofs {
         trial_displacements[dof] = control.prescribed_displacements[dof];
@@ -70,6 +72,7 @@ pub(crate) fn solve_load_step(
     let mut diagnostics = StepLinearDiagnostics::new();
 
     for iteration in 1..=model.max_iterations {
+        check_cancellation()?;
         let assembly = assemble(model, step, &trial_displacements, committed_states);
         diagnostics.observe_tangent(assembly.tangent.non_zero_count(), assembly.tangent.size());
         let residual = model
@@ -83,7 +86,7 @@ pub(crate) fn solve_load_step(
             || !last_norm.is_finite()
             || residual.iter().any(|value| !value.is_finite())
         {
-            return failed_step(
+            return Ok(failed_step(
                 committed_displacements,
                 committed_states,
                 iteration,
@@ -93,7 +96,7 @@ pub(crate) fn solve_load_step(
                     step + 1
                 ),
                 diagnostics,
-            );
+            ));
         }
         // Prescribed motion can drive equilibrium with no external free-DOF load.
         if iteration == 1 {
@@ -105,7 +108,7 @@ pub(crate) fn solve_load_step(
                 .into_iter()
                 .map(|evaluation| evaluation.state)
                 .collect();
-            return LoadStepOutcome {
+            return Ok(LoadStepOutcome {
                 displacements: trial_displacements,
                 states,
                 iterations: iteration,
@@ -115,11 +118,11 @@ pub(crate) fn solve_load_step(
                 tangent_non_zero_count: diagnostics.tangent_non_zero_count,
                 tangent_fill_ratio: diagnostics.tangent_fill_ratio,
                 linear_solver: diagnostics.linear_solver.to_string(),
-            };
+            });
         }
 
         let (reduced_matrix, reduced_residual, reduced_free_dofs) =
-            reduce_sparse_system(&assembly.tangent, &residual, &model.fixed_dofs);
+            reduce_sparse_system(&assembly.tangent, &residual, &model.fixed_dofs)?;
         let solved = match solve_symmetric_tangent(
             &reduced_matrix,
             &reduced_residual,
@@ -128,7 +131,8 @@ pub(crate) fn solve_load_step(
         ) {
             Ok(solved) => solved,
             Err(error) => {
-                return failed_step(
+                check_cancellation()?;
+                return Ok(failed_step(
                     committed_displacements,
                     committed_states,
                     iteration,
@@ -138,7 +142,7 @@ pub(crate) fn solve_load_step(
                         step + 1
                     ),
                     diagnostics,
-                );
+                ));
             }
         };
         diagnostics.observe_solver(solved.method);
@@ -146,18 +150,18 @@ pub(crate) fn solve_load_step(
             trial_displacements[dof] += delta;
         }
         if trial_displacements.iter().any(|value| !value.is_finite()) {
-            return failed_step(
+            return Ok(failed_step(
                 committed_displacements,
                 committed_states,
                 iteration,
                 last_norm,
                 format!("load step {} produced non-finite displacement", step + 1),
                 diagnostics,
-            );
+            ));
         }
     }
 
-    failed_step(
+    Ok(failed_step(
         committed_displacements,
         committed_states,
         model.max_iterations,
@@ -168,7 +172,7 @@ pub(crate) fn solve_load_step(
             model.max_iterations
         ),
         diagnostics,
-    )
+    ))
 }
 
 fn failed_step(

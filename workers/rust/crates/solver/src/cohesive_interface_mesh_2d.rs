@@ -54,7 +54,7 @@ fn solve_cohesive_interface_mesh_2d_internal(
     let mut failure_reason = None;
 
     for (step_index, control) in model.controls.iter().enumerate() {
-        let outcome = solve_load_step(&model, step_index, control, &displacements, &states);
+        let outcome = solve_load_step(&model, step_index, control, &displacements, &states)?;
         residual_norm = outcome.residual_norm;
         let summary_assembly =
             assemble(&model, step_index, &outcome.displacements, &outcome.states);

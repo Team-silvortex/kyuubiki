@@ -266,3 +266,9 @@ impl MockSolver {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod solver_preparation_tests;
+
+#[cfg(test)]
+mod solver_sweep_tests;

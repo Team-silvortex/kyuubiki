@@ -182,6 +182,35 @@ treated as a reason to regularize and recompute. Reusable prepared factors remai
 unchanged by a cancelled substitution. An observed cancellation discards a
 partial success and returns an error rather than exporting a partial field.
 
+The planar triangle/quad heat and thermal-stress paths also poll during element
+precomputation and assembly. Shared sparse compression, inverse-diagonal setup,
+and IC(0) factor/transpose construction are fallible preparation stages. A
+cancelled preparation never publishes a usable compressed matrix or prepared
+solver. These stages check at entry, each 64 completed elements/rows, and the
+final short batch; existing arithmetic and convergence criteria are unchanged.
+The diagnostic stage names are `element_precompute`, `element_assembly`,
+`sparse_compress`, `preconditioner_setup`, `ic0_factor` and `ic0_transpose`.
+IC(0) transpose counts completed rows cumulatively through its count, prefix-sum
+and fill passes. These counts are not percentages or a wall-clock latency bound.
+
+Shared homogeneous/prescribed sparse constraint elimination is also fallible:
+`constraint_index`, `constraint_map` and `constraint_reduce` poll at entry,
+64-step boundaries and completion. They count constraint entries, original DOFs
+and free rows respectively. All callers propagate errors rather than receiving a
+partly reduced system. This does not cover every operator-specific constraint
+algorithm or the memory allocation inside a step.
+
+Built-in preconditioner application polls at `preconditioner_jacobi`,
+`sgs_forward`, `sgs_backward`, `ic0_forward` and `ic0_backward`. Each sweep
+counts completed rows, including reverse sweeps, and starts its count anew.
+On error the output/workspace buffers can contain partial scratch values: callers
+must discard them, not treat them as a valid vector. Prepared factors remain
+immutable; a subsequent complete application overwrites/reuses the scratch
+buffers. PCG propagates cancellation from both initial and later applications.
+The shared symmetric tangent fallback checks cancellation before dense expansion,
+and cohesive Newton/co-rotational failure paths distinguish cancellation from
+ordinary nonconvergence instead of exporting degraded output or trying a fallback.
+
 An explicit job cancellation marks every matching execution currently registered
 in the control registry, not a single globally consumed flag. Cancellation with
 no matching registered execution retains the existing one-shot pre-admission
@@ -196,18 +225,23 @@ cancellation state and last safe point. Failure responses retain
 The checkpoint's `stage` and `completed_steps` are diagnostics for the current
 kernel invocation, not whole-job progress, convergence, or a resumable state;
 `resumable` is false. The observation resets when another kernel starts.
+The scope label is `same_thread_builtin_numerical_safe_points`; the stages above
+define its actual coverage, not arbitrary work invoked within that scope.
 
 For isolated fault qualification only,
 `KYUUBIKI_AGENT_FAULT_INJECTION_SOLVER_STAGE` selects `sparse_iteration`,
-`dense_factor` or `tridiagonal_factor`. It requires the existing hold-file and
+`dense_factor`, `tridiagonal_factor`, or one of the preparation/sweep stages above.
+It requires the existing hold-file and
 explicit execution-method settings. A matching job is held once, after at least
 three completed steps at that stage, for no more than 120 seconds. Numerical
 stage mode replaces the pre-computation hold. Descriptor metadata exposes phase,
 stage and minimum step count, never the host marker path. Leave all three fault
 controls unset in normal use. A slow observer delays its synchronous caller.
 
-This first scope does not interrupt validation, assembly, matrix compression,
-preconditioner construction, or the interior of a single matrix/vector operation.
+This scope does not interrupt input validation, allocation, custom constraint
+algorithms, result postprocessing, other preconditioner implementations, or one large
+matrix row/vector operation. Element-level coverage is limited to the four planar
+heat/thermal paths above, not every operator's assembly or preconditioner type.
 It does not add safe points to every analytical shortcut, nonlinear outer loop,
 external worker, dynamic library or child thread. TaskIR's scope alone does not
 make such implementations cooperative; the analytical `solve.bar_1d` path, for
@@ -215,7 +249,9 @@ example, has entry/exit control but no numerical kernel safe points here.
 Uncooperative work still owns its capacity until it actually returns. There is
 no universal cancellation-latency or numerical-checkpoint recovery guarantee.
 See the [installed numerical cancellation study](../reports/cooperative-solver-research-20260908.md)
-for real in-progress heat/structure faults and the bounded acceptance evidence.
+and [preparation-stage follow-up](../reports/preparation-cancellation-research-20260908.md)
+plus [constraint/preconditioner sweeps](../reports/constraint-preconditioner-research-20260908.md)
+for real in-progress heat/structure faults and bounded acceptance evidence.
 
 ## Termination Signals And Shutdown Budget
 

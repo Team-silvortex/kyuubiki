@@ -2,22 +2,27 @@ use self::linear_ic0::IncompleteCholesky;
 use crate::linear_dense::{DenseLu, zero_matrix};
 use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions, SpdSolveProfile};
 use crate::linear_spd::solve_spd_compressed;
-use crate::solver_control::{SolverStage, check_cancellation, checkpoint};
+use crate::solver_control::{SolverStage, check_cancellation, checkpoint, checkpoint_chunk};
 use std::time::Instant;
 
 const DENSE_REFINEMENT_TARGET: f64 = 1.0e-12;
 const SPARSE_RESIDUAL_TOLERANCE: f64 = 1.0e-8;
 
+#[path = "linear_sparse_compression.rs"]
+mod compression;
 #[path = "linear_ic0.rs"]
 mod linear_ic0;
 #[path = "linear_spd_prepared.rs"]
 mod prepared;
+#[path = "linear_sparse_reduction.rs"]
+mod reduction;
 #[path = "linear_algebra_scaling.rs"]
 mod scaling;
 #[path = "linear_sparse_path.rs"]
 mod sparse_path;
 
 pub(crate) use prepared::PreparedSpdSolver;
+pub(crate) use reduction::{reduce_sparse_system, reduce_sparse_system_with_prescribed};
 pub(crate) use sparse_path::solve_tridiagonal_system;
 
 #[derive(Debug, Clone)]
@@ -136,120 +141,6 @@ impl SparseMatrix {
             .map(|index| self.rows[row][index].1)
             .unwrap_or(0.0)
     }
-
-    pub(crate) fn compress(&self, preconditioner: SpdPreconditioner) -> CompressedSparseMatrix {
-        let size = self.size();
-        let mut row_offsets = Vec::with_capacity(size + 1);
-        let mut lower_end_offsets = Vec::with_capacity(size);
-        let mut upper_start_offsets = Vec::with_capacity(size);
-        let mut columns = Vec::new();
-        let mut values = Vec::new();
-        let mut diagonal = vec![0.0; size];
-
-        row_offsets.push(0);
-        for (row_index, row) in self.rows.iter().enumerate() {
-            let row_start = columns.len();
-            lower_end_offsets
-                .push(row_start + row.partition_point(|(column, _)| *column < row_index));
-            upper_start_offsets
-                .push(row_start + row.partition_point(|(column, _)| *column <= row_index));
-            for &(column, value) in row {
-                if column == row_index {
-                    diagonal[row_index] = value;
-                }
-                columns.push(column);
-                values.push(value);
-            }
-            row_offsets.push(columns.len());
-        }
-
-        let inverse_diagonal: Vec<f64> = diagonal
-            .iter()
-            .map(|value| safe_diagonal(*value).recip())
-            .collect();
-        let incomplete_cholesky = matches!(preconditioner, SpdPreconditioner::IncompleteCholesky)
-            .then(|| {
-                IncompleteCholesky::build(
-                    &row_offsets,
-                    &lower_end_offsets,
-                    &columns,
-                    &values,
-                    &diagonal,
-                )
-            });
-        CompressedSparseMatrix {
-            row_offsets,
-            lower_end_offsets,
-            upper_start_offsets,
-            columns,
-            values,
-            diagonal,
-            incomplete_cholesky,
-            inverse_diagonal,
-        }
-    }
-
-    fn compress_scaled(
-        &self,
-        scaling: &[f64],
-        preconditioner: SpdPreconditioner,
-    ) -> CompressedSparseMatrix {
-        let size = self.size();
-        debug_assert_eq!(scaling.len(), size);
-
-        let mut row_offsets = Vec::with_capacity(size + 1);
-        let mut lower_end_offsets = Vec::with_capacity(size);
-        let mut upper_start_offsets = Vec::with_capacity(size);
-        let non_zero_hint = self.non_zero_count();
-        let mut columns = Vec::with_capacity(non_zero_hint);
-        let mut values = Vec::with_capacity(non_zero_hint);
-        let mut diagonal = vec![0.0; size];
-
-        row_offsets.push(0);
-        for (row_index, row) in self.rows.iter().enumerate() {
-            let row_start = columns.len();
-            lower_end_offsets
-                .push(row_start + row.partition_point(|(column, _)| *column < row_index));
-            upper_start_offsets
-                .push(row_start + row.partition_point(|(column, _)| *column <= row_index));
-
-            let row_scale = scaling[row_index];
-            for &(column, value) in row {
-                let scaled_value = value * row_scale * scaling[column];
-                if column == row_index {
-                    diagonal[row_index] = scaled_value;
-                }
-                columns.push(column);
-                values.push(scaled_value);
-            }
-            row_offsets.push(columns.len());
-        }
-
-        let inverse_diagonal: Vec<f64> = diagonal
-            .iter()
-            .map(|value| safe_diagonal(*value).recip())
-            .collect();
-        let incomplete_cholesky = matches!(preconditioner, SpdPreconditioner::IncompleteCholesky)
-            .then(|| {
-                IncompleteCholesky::build(
-                    &row_offsets,
-                    &lower_end_offsets,
-                    &columns,
-                    &values,
-                    &diagonal,
-                )
-            });
-        CompressedSparseMatrix {
-            row_offsets,
-            lower_end_offsets,
-            upper_start_offsets,
-            columns,
-            values,
-            diagonal,
-            incomplete_cholesky,
-            inverse_diagonal,
-        }
-    }
 }
 
 impl CompressedSparseMatrix {
@@ -290,7 +181,7 @@ impl CompressedSparseMatrix {
         residual: &[f64],
         result: &mut [f64],
         workspace: &mut [f64],
-    ) {
+    ) -> Result<(), String> {
         match kind {
             SpdPreconditioner::IncompleteCholesky => self
                 .incomplete_cholesky
@@ -298,9 +189,12 @@ impl CompressedSparseMatrix {
                 .expect("IC(0) preconditioner must be prepared")
                 .apply(residual, result, workspace),
             SpdPreconditioner::Jacobi => {
+                checkpoint(SolverStage::PreconditionerJacobi, 0)?;
                 for index in 0..self.size() {
                     result[index] = residual[index] * self.inverse_diagonal(index);
+                    checkpoint_chunk(SolverStage::PreconditionerJacobi, index + 1, self.size())?;
                 }
+                Ok(())
             }
             SpdPreconditioner::SymmetricGaussSeidel => {
                 self.apply_sgs_into(residual, result, workspace)
@@ -308,7 +202,13 @@ impl CompressedSparseMatrix {
         }
     }
 
-    fn apply_sgs_into(&self, residual: &[f64], result: &mut [f64], forward: &mut [f64]) {
+    fn apply_sgs_into(
+        &self,
+        residual: &[f64],
+        result: &mut [f64],
+        forward: &mut [f64],
+    ) -> Result<(), String> {
+        checkpoint(SolverStage::SgsForward, 0)?;
         let size = self.size();
         debug_assert_eq!(forward.len(), size);
         for row in 0..size {
@@ -318,8 +218,10 @@ impl CompressedSparseMatrix {
                 sum -= self.values[index] * forward[column];
             }
             forward[row] = sum * self.inverse_diagonal(row);
+            checkpoint_chunk(SolverStage::SgsForward, row + 1, size)?;
         }
 
+        checkpoint(SolverStage::SgsBackward, 0)?;
         for row in (0..size).rev() {
             let mut sum = self.diagonal(row) * forward[row];
             for index in self.upper_start_offsets[row]..self.row_offsets[row + 1] {
@@ -327,7 +229,9 @@ impl CompressedSparseMatrix {
                 sum -= self.values[index] * result[column];
             }
             result[row] = sum * self.inverse_diagonal(row);
+            checkpoint_chunk(SolverStage::SgsBackward, size - row, size)?;
         }
+        Ok(())
     }
 }
 
@@ -360,87 +264,6 @@ pub(crate) fn add_at<M: MatrixAssembler + ?Sized>(
     value: f64,
 ) {
     matrix.add_entry(row, column, value);
-}
-
-pub(crate) fn reduce_sparse_system(
-    matrix: &SparseMatrix,
-    force: &[f64],
-    constrained: &[usize],
-) -> (SparseMatrix, Vec<f64>, Vec<usize>) {
-    let size = force.len();
-    let mut is_constrained = vec![false; size];
-    for &dof in constrained {
-        if dof < size {
-            is_constrained[dof] = true;
-        }
-    }
-
-    let free = (0..size)
-        .filter(|index| !is_constrained[*index])
-        .collect::<Vec<_>>();
-    let mut free_map = vec![usize::MAX; size];
-    for (reduced, &global) in free.iter().enumerate() {
-        free_map[global] = reduced;
-    }
-
-    let mut reduced =
-        SparseMatrix::with_uniform_row_capacity(free.len(), matrix.average_row_non_zero_hint());
-    let mut reduced_force = vec![0.0; free.len()];
-
-    for (reduced_row, &global_row) in free.iter().enumerate() {
-        reduced_force[reduced_row] = force[global_row];
-        for &(global_col, value) in &matrix.rows[global_row] {
-            let reduced_col = free_map[global_col];
-            if reduced_col != usize::MAX {
-                reduced.push_sorted_entry(reduced_row, reduced_col, value);
-            }
-        }
-    }
-
-    (reduced, reduced_force, free)
-}
-
-pub(crate) fn reduce_sparse_system_with_prescribed(
-    matrix: &SparseMatrix,
-    force: &[f64],
-    prescribed: &[(usize, f64)],
-) -> (SparseMatrix, Vec<f64>, Vec<usize>) {
-    let size = force.len();
-    let mut prescribed_values = vec![None; size];
-    for &(dof, value) in prescribed {
-        if dof < size {
-            prescribed_values[dof] = Some(value);
-        }
-    }
-
-    let free = (0..size)
-        .filter(|index| prescribed_values[*index].is_none())
-        .collect::<Vec<_>>();
-    let mut free_map = vec![usize::MAX; size];
-    for (reduced, &global) in free.iter().enumerate() {
-        free_map[global] = reduced;
-    }
-
-    let mut reduced =
-        SparseMatrix::with_uniform_row_capacity(free.len(), matrix.average_row_non_zero_hint());
-    let mut reduced_force = vec![0.0; free.len()];
-
-    for (reduced_row, &global_row) in free.iter().enumerate() {
-        let mut rhs = force[global_row];
-        for &(global_col, value) in &matrix.rows[global_row] {
-            if let Some(prescribed_value) = prescribed_values[global_col] {
-                rhs -= value * prescribed_value;
-            } else {
-                let reduced_col = free_map[global_col];
-                if reduced_col != usize::MAX {
-                    reduced.push_sorted_entry(reduced_row, reduced_col, value);
-                }
-            }
-        }
-        reduced_force[reduced_row] = rhs;
-    }
-
-    (reduced, reduced_force, free)
 }
 
 pub(crate) fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, String> {
@@ -494,7 +317,7 @@ pub(crate) fn solve_spd_system_profile_with_options(
     let scaled_rhs = scaling::scale_sparse_rhs(rhs, &scaling);
     let diagonal_scale = scaling::average_scaled_diagonal_magnitude(matrix, &scaling).max(1.0);
     let setup_started = Instant::now();
-    let compressed = matrix.compress_scaled(&scaling, options.preconditioner);
+    let compressed = matrix.compress_scaled(&scaling, options.preconditioner)?;
     let setup_elapsed_ms = setup_started.elapsed().as_secs_f64() * 1000.0;
     checkpoint(SolverStage::LinearPrepare, 1)?;
 
@@ -509,7 +332,7 @@ pub(crate) fn solve_spd_system_profile_with_options(
                 check_cancellation()?;
                 let regularized =
                     scaling::regularize_sparse_diagonal(&scaled_matrix, diagonal_scale * factor);
-                let compressed_regularized = regularized.compress(options.preconditioner);
+                let compressed_regularized = regularized.compress(options.preconditioner)?;
 
                 if let Ok(profile) = solve_spd_compressed(
                     &compressed_regularized,

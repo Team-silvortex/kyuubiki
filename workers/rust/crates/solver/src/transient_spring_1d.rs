@@ -99,7 +99,7 @@ fn solve_transient_spring_1d_internal(
 
     let effective = assemble_effective_system(request.as_ref(), coefficients)?;
     let (reduced_effective, _, free) =
-        reduce_sparse_system(&effective, &vec![0.0; count], &constrained);
+        reduce_sparse_system(&effective, &vec![0.0; count], &constrained)?;
     let solver = PreparedSpdSolver::factor(reduced_effective)
         .map_err(|error| format!("transient spring effective system failed: {error}"))?;
     let system = NewmarkSystem {

@@ -84,7 +84,7 @@ pub(crate) fn solve_arc_length_steps(
         &initial_tangent,
         &system.reference_force,
         &system.constrained_dofs,
-    );
+    )?;
     let load_direction = solve_tangent(&reduced_tangent, &reduced_reference)?;
     let direction_norm = dot(&load_direction, &load_direction).sqrt();
     let load_scale = request
@@ -445,7 +445,7 @@ fn extract_critical_modes(
 ) -> Result<Vec<SymmetricCriticalMode>, String> {
     let (tangent, _) = assemble_tangent_and_internal(positions, elements, displacement)?;
     let (reduced, _, current_free) =
-        reduce_sparse_system(&tangent, &system.reference_force, &system.constrained_dofs);
+        reduce_sparse_system(&tangent, &system.reference_force, &system.constrained_dofs)?;
     debug_assert_eq!(current_free, free);
     extract_symmetric_critical_modes(&reduced, free, displacement.len(), mode_count)
 }
@@ -480,7 +480,7 @@ pub(crate) fn solve_arc_length_step(
         &base_tangent,
         &system.reference_force,
         &system.constrained_dofs,
-    );
+    )?;
     debug_assert_eq!(current_free, free);
     let load_direction = solve_tangent(&reduced_tangent, &reduced_reference)?;
     let denominator = (dot(&load_direction, &load_direction) + load_scale.powi(2)).sqrt();
@@ -508,7 +508,7 @@ pub(crate) fn solve_arc_length_step(
             .map(|(external, internal)| load_factor * external - internal)
             .collect::<Vec<_>>();
         let (reduced_tangent, reduced_residual, _) =
-            reduce_sparse_system(&tangent, &residual, &system.constrained_dofs);
+            reduce_sparse_system(&tangent, &residual, &system.constrained_dofs)?;
         residual_norm =
             normalized_residual(&reduced_residual, &system.reference_force, load_factor);
         let constraint = dot(&displacement_increment, &displacement_increment)

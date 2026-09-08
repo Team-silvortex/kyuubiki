@@ -120,7 +120,7 @@ fn solve_pressures(request: &SolveAcousticBar1dRequest, omega: f64) -> Result<Ve
         }
     }
     let (reduced, reduced_rhs, free) =
-        reduce_sparse_system_with_prescribed(&system, &rhs, &prescribed);
+        reduce_sparse_system_with_prescribed(&system, &rhs, &prescribed)?;
     let solved = solve_spd_system(&reduced, &reduced_rhs)?;
     let mut pressures = vec![0.0; dof_count];
     for &(index, value) in &prescribed {

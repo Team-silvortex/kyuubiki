@@ -65,7 +65,7 @@ fn solve_transient_heat_bar_1d_internal(
         .filter_map(|(index, node)| node.fix_temperature.then_some((index, node.temperature)))
         .collect::<Vec<_>>();
     let (reduced_system, reduced_base_rhs, free) =
-        reduce_sparse_system_with_prescribed(&system, &heat_load, &prescribed);
+        reduce_sparse_system_with_prescribed(&system, &heat_load, &prescribed)?;
     let solver = PreparedSpdSolver::factor(reduced_system)
         .map_err(|error| format!("transient heat bar effective system failed: {error}"))?;
 

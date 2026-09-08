@@ -57,7 +57,7 @@ fn solve_validated_torsion_1d(
         .collect::<Vec<_>>();
 
     let (reduced_stiffness, reduced_torque, free) =
-        reduce_sparse_system(&global_stiffness, &torque_vector, &constrained);
+        reduce_sparse_system(&global_stiffness, &torque_vector, &constrained)?;
     let reduced_rotations = solve_tridiagonal_system(&reduced_stiffness, &reduced_torque)
         .unwrap_or_else(|| solve_spd_system(&reduced_stiffness, &reduced_torque))?;
 

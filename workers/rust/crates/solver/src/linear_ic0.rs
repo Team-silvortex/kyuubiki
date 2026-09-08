@@ -1,3 +1,5 @@
+use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
+
 #[derive(Debug, Clone)]
 pub(crate) struct IncompleteCholesky {
     diagonal: Vec<f64>,
@@ -16,7 +18,8 @@ impl IncompleteCholesky {
         columns: &[usize],
         values: &[f64],
         diagonal: &[f64],
-    ) -> Self {
+    ) -> Result<Self, String> {
+        checkpoint(SolverStage::IncompleteCholeskyFactor, 0)?;
         let size = diagonal.len();
         assert!(
             size <= u32::MAX as usize,
@@ -57,11 +60,12 @@ impl IncompleteCholesky {
             // singular assembled systems while the outer solver still checks residuals.
             factor_diagonal[row] = (diagonal[row] - lower_square_sum).max(1.0e-18).sqrt();
             lower_offsets.push(lower_columns.len());
+            checkpoint_chunk(SolverStage::IncompleteCholeskyFactor, row + 1, size)?;
         }
 
         let (transpose_offsets, transpose_entries, transpose_rows) =
-            transpose_lower(size, &lower_offsets, &lower_columns);
-        Self {
+            transpose_lower(size, &lower_offsets, &lower_columns)?;
+        Ok(Self {
             diagonal: factor_diagonal,
             lower_columns,
             lower_offsets,
@@ -69,18 +73,26 @@ impl IncompleteCholesky {
             transpose_offsets,
             transpose_entries,
             transpose_rows,
-        }
+        })
     }
 
-    pub(crate) fn apply(&self, residual: &[f64], result: &mut [f64], forward: &mut [f64]) {
+    pub(crate) fn apply(
+        &self,
+        residual: &[f64],
+        result: &mut [f64],
+        forward: &mut [f64],
+    ) -> Result<(), String> {
+        checkpoint(SolverStage::Ic0Forward, 0)?;
         for row in 0..self.diagonal.len() {
             let mut sum = residual[row];
             for entry in self.lower_offsets[row]..self.lower_offsets[row + 1] {
                 sum -= self.lower_values[entry] * forward[self.lower_columns[entry] as usize];
             }
             forward[row] = sum / self.diagonal[row];
+            checkpoint_chunk(SolverStage::Ic0Forward, row + 1, self.diagonal.len())?;
         }
 
+        checkpoint(SolverStage::Ic0Backward, 0)?;
         for row in (0..self.diagonal.len()).rev() {
             let mut sum = forward[row];
             for entry in self.transpose_offsets[row]..self.transpose_offsets[row + 1] {
@@ -89,7 +101,13 @@ impl IncompleteCholesky {
                     self.lower_values[factor_entry] * result[self.transpose_rows[entry] as usize];
             }
             result[row] = sum / self.diagonal[row];
+            checkpoint_chunk(
+                SolverStage::Ic0Backward,
+                self.diagonal.len() - row,
+                self.diagonal.len(),
+            )?;
         }
+        Ok(())
     }
 }
 
@@ -125,17 +143,24 @@ fn transpose_lower(
     size: usize,
     lower_offsets: &[usize],
     lower_columns: &[u32],
-) -> (Vec<usize>, Vec<u32>, Vec<u32>) {
+) -> Result<(Vec<usize>, Vec<u32>, Vec<u32>), String> {
+    checkpoint(SolverStage::IncompleteCholeskyTranspose, 0)?;
     let mut counts = vec![0usize; size];
     for row in 0..size {
         for entry in lower_offsets[row]..lower_offsets[row + 1] {
             counts[lower_columns[entry] as usize] += 1;
         }
+        checkpoint_chunk(SolverStage::IncompleteCholeskyTranspose, row + 1, size)?;
     }
     let mut offsets = Vec::with_capacity(size + 1);
     offsets.push(0);
-    for count in &counts {
+    for (index, count) in counts.iter().enumerate() {
         offsets.push(offsets.last().copied().unwrap_or(0) + count);
+        checkpoint_chunk(
+            SolverStage::IncompleteCholeskyTranspose,
+            size + index + 1,
+            size * 2,
+        )?;
     }
     let mut next = offsets[..size].to_vec();
     let mut entries = vec![0u32; offsets[size]];
@@ -151,6 +176,11 @@ fn transpose_lower(
             rows[target] = row as u32;
             next[column] += 1;
         }
+        checkpoint_chunk(
+            SolverStage::IncompleteCholeskyTranspose,
+            size * 2 + row + 1,
+            size * 3,
+        )?;
     }
-    (offsets, entries, rows)
+    Ok((offsets, entries, rows))
 }

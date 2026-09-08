@@ -8,6 +8,43 @@ use kyuubiki_solver::solve_cohesive_interface_mesh_2d;
 const SEGMENT_COUNT: usize = 96;
 
 #[test]
+fn cancellation_is_not_exported_as_a_nonconverged_cohesive_result() {
+    use kyuubiki_solver::solver_control::{SolverControl, SolverStage, with_solver_observer};
+    let request = segmented_request(96);
+    let baseline = solve_cohesive_interface_mesh_2d(&request).unwrap();
+    for stage in [SolverStage::ConstraintReduce, SolverStage::BandedFactor] {
+        let control = SolverControl::default();
+        let cancel = control.clone();
+        let result = with_solver_observer(
+            &control,
+            move |point| {
+                if point.stage == stage && point.completed_steps == 64 {
+                    cancel.request_cancel();
+                }
+            },
+            || {
+                let result = solve_cohesive_interface_mesh_2d(&request);
+                assert!(
+                    result.is_err(),
+                    "cancelled work must return an error, not degraded output"
+                );
+                result
+            },
+        );
+        assert!(result.is_err());
+        assert!(control.was_interrupted());
+        assert_eq!(control.last_checkpoint().unwrap().stage, stage);
+        assert_eq!(control.last_checkpoint().unwrap().completed_steps, 64);
+        let next = solve_cohesive_interface_mesh_2d(&request).unwrap();
+        assert!(next.converged);
+        assert_eq!(
+            serde_json::to_value(next).unwrap(),
+            serde_json::to_value(&baseline).unwrap()
+        );
+    }
+}
+
+#[test]
 fn large_interface_mesh_uses_sparse_banded_newton_assembly() {
     let result = solve_cohesive_interface_mesh_2d(&segmented_request(SEGMENT_COUNT))
         .expect("large block interface mesh should solve");

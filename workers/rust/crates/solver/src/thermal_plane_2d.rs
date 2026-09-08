@@ -6,6 +6,7 @@ use crate::plane_2d_math::{
     PlaneTriangleComputed, precompute_plane_triangle_element_from_coordinates,
     thermal_plane_triangle_equivalent_load,
 };
+use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 use crate::thermal_plane_2d_profile::{
     ThermalPlaneQuadProfile, ThermalPlaneTriangleProfile, push_thermal_plane_stage,
 };
@@ -77,6 +78,7 @@ fn solve_thermal_plane_triangle_2d_internal(
     solve_options: SpdSolveOptions,
 ) -> Result<ThermalPlaneTriangleProfile, String> {
     validate_thermal_plane_triangle_request(request.as_ref())?;
+    checkpoint(SolverStage::ElementPrecompute, 0)?;
 
     let dof_count = request.nodes.len() * 2;
     let mut global_stiffness = SparseMatrix::with_uniform_row_capacity(dof_count, 18);
@@ -86,7 +88,16 @@ fn solve_thermal_plane_triangle_2d_internal(
     let computed_elements = request
         .elements
         .iter()
-        .map(|element| precompute_thermal_plane_triangle_element(request.as_ref(), element))
+        .enumerate()
+        .map(|(index, element)| {
+            let computed = precompute_thermal_plane_triangle_element(request.as_ref(), element)?;
+            checkpoint_chunk(
+                SolverStage::ElementPrecompute,
+                index + 1,
+                request.elements.len(),
+            )?;
+            Ok(computed)
+        })
         .collect::<Result<Vec<_>, String>>()?;
     push_thermal_plane_stage(
         &mut stages,
@@ -96,8 +107,19 @@ fn solve_thermal_plane_triangle_2d_internal(
     );
 
     stage_started = Instant::now();
-    for (element, computed) in request.elements.iter().zip(computed_elements.iter()) {
+    checkpoint(SolverStage::ElementAssembly, 0)?;
+    for (index, (element, computed)) in request
+        .elements
+        .iter()
+        .zip(computed_elements.iter())
+        .enumerate()
+    {
         assemble_thermal_triangle(element, computed, &mut global_stiffness, &mut force_vector);
+        checkpoint_chunk(
+            SolverStage::ElementAssembly,
+            index + 1,
+            request.elements.len(),
+        )?;
     }
     push_thermal_plane_stage(
         &mut stages,
@@ -187,6 +209,7 @@ fn solve_thermal_plane_quad_2d_internal(
     solve_options: SpdSolveOptions,
 ) -> Result<ThermalPlaneQuadProfile, String> {
     validate_thermal_plane_quad_request(request.as_ref())?;
+    checkpoint(SolverStage::ElementPrecompute, 0)?;
 
     let dof_count = request.nodes.len() * 2;
     let mut global_stiffness = SparseMatrix::with_uniform_row_capacity(dof_count, 24);
@@ -196,7 +219,16 @@ fn solve_thermal_plane_quad_2d_internal(
     let computed_elements = request
         .elements
         .iter()
-        .map(|element| precompute_thermal_plane_quad_element(request.as_ref(), element))
+        .enumerate()
+        .map(|(index, element)| {
+            let computed = precompute_thermal_plane_quad_element(request.as_ref(), element)?;
+            checkpoint_chunk(
+                SolverStage::ElementPrecompute,
+                index + 1,
+                request.elements.len(),
+            )?;
+            Ok(computed)
+        })
         .collect::<Result<Vec<_>, String>>()?;
     push_thermal_plane_stage(
         &mut stages,
@@ -206,8 +238,19 @@ fn solve_thermal_plane_quad_2d_internal(
     );
 
     stage_started = Instant::now();
-    for (element, computed) in request.elements.iter().zip(computed_elements.iter()) {
+    checkpoint(SolverStage::ElementAssembly, 0)?;
+    for (index, (element, computed)) in request
+        .elements
+        .iter()
+        .zip(computed_elements.iter())
+        .enumerate()
+    {
         assemble_thermal_plane_quad(element, computed, &mut global_stiffness, &mut force_vector);
+        checkpoint_chunk(
+            SolverStage::ElementAssembly,
+            index + 1,
+            request.elements.len(),
+        )?;
     }
     push_thermal_plane_stage(
         &mut stages,

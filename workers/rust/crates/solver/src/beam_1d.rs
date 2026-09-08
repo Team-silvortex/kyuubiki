@@ -87,7 +87,7 @@ fn solve_beam_1d_internal(
         .collect::<Vec<_>>();
 
     let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained)?;
     let reduced_displacements =
         solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?
             .solution;
@@ -277,7 +277,7 @@ fn solve_thermal_beam_1d_internal(
         .collect::<Vec<_>>();
 
     let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained)?;
     let reduced_displacements =
         solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?
             .solution;

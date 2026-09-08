@@ -123,10 +123,21 @@ fn assert_cancelled(response: &Value, stage: &str) {
 
 fn verify_heat(agent: &LiveAgent, job: &str, n: usize) -> Result<(), Box<dyn Error>> {
     let response = agent.request("healthy-next", HEAT, heat_grid(job, n))?;
+    verify_heat_result(agent, n, n * n, &response)?;
+    wait_for_lifecycle(agent, "accepting", 0)?;
+    Ok(())
+}
+
+fn verify_heat_result(
+    agent: &LiveAgent,
+    n: usize,
+    elements: usize,
+    response: &Value,
+) -> Result<(), Box<dyn Error>> {
     let result = successful_result(&response, "healthy-next");
     let nodes = result["nodes"].as_array().unwrap();
     assert_eq!(nodes.len(), (n + 1) * (n + 1));
-    assert_eq!(result["elements"].as_array().unwrap().len(), n * n);
+    assert_eq!(result["elements"].as_array().unwrap().len(), elements);
     for (i, node) in nodes.iter().enumerate() {
         let expected = 100.0 - 80.0 * (i % (n + 1)) as f64 / n as f64;
         let value = node["temperature"].as_f64().unwrap();
@@ -136,7 +147,6 @@ fn verify_heat(agent: &LiveAgent, job: &str, n: usize) -> Result<(), Box<dyn Err
         );
     }
     record(agent, "healthy-next", &response)?;
-    wait_for_lifecycle(agent, "accepting", 0)?;
     Ok(())
 }
 
@@ -271,4 +281,180 @@ fn cancellation_inside_heat_chain_preserves_the_next_analytical_solution()
     }
     record(&agent, "healthy-next", &next)?;
     Ok(())
+}
+
+fn cancel_preparation(stage: &str, method: &str, params: Value) -> Result<(), Box<dyn Error>> {
+    let agent = LiveAgent::start_with_solver_hold(stage, method, "1")?;
+    let job = params["job_id"].as_str().unwrap();
+    fs::write(&agent.hold_path, job)?;
+    let mut stream = pending(&agent, "preparation-held", method, params.clone())?;
+    let observed = wait_for_numerical_steps(&agent, &["preparation-held"], stage)?;
+    let point = &observed["result"]["solver_control"]["active"][0]["checkpoint"];
+    assert_eq!(point["completed_steps"], 64);
+    cancel(&agent, job)?;
+    let response = final_frame(&mut stream)?;
+    assert_cancelled(&response, stage);
+    assert_eq!(
+        response["error"]["details"]["solver_checkpoint"]["completed_steps"],
+        64
+    );
+    record(&agent, "cancelled", &response)?;
+    wait_for_lifecycle(&agent, "accepting", 0)?;
+    assert!(agent.hold_path.exists());
+    fs::remove_file(&agent.hold_path)?;
+    let response = agent.request("healthy-next", method, params.clone())?;
+    verify_heat_result(
+        &agent,
+        40,
+        params["elements"].as_array().unwrap().len(),
+        &response,
+    )?;
+    wait_for_lifecycle(&agent, "accepting", 0)?;
+    Ok(())
+}
+
+#[test]
+fn cancel_heat_element_precompute_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_preparation("element_precompute", HEAT, heat_grid("precompute-held", 40))
+}
+
+#[test]
+fn cancel_heat_element_assembly_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_preparation("element_assembly", HEAT, heat_grid("assembly-held", 40))
+}
+
+#[test]
+fn cancel_heat_sparse_compression_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_preparation("sparse_compress", HEAT, heat_grid("compression-held", 40))
+}
+
+#[test]
+fn cancel_heat_preconditioner_setup_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_preparation(
+        "preconditioner_setup",
+        HEAT,
+        heat_grid("preconditioner-held", 40),
+    )
+}
+
+fn heat_triangles(job: &str) -> Value {
+    let mut grid = heat_grid(job, 40);
+    let elements: Vec<_> = grid["elements"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|quad| {
+            let mut first = quad.clone();
+            first.as_object_mut().unwrap().remove("node_l");
+            first["id"] = json!(format!("{}a", quad["id"].as_str().unwrap()));
+            let mut second = first.clone();
+            second["id"] = json!(format!("{}b", quad["id"].as_str().unwrap()));
+            second["node_j"] = quad["node_k"].clone();
+            second["node_k"] = quad["node_l"].clone();
+            [first, second]
+        })
+        .collect();
+    grid["elements"] = json!(elements);
+    grid
+}
+
+#[test]
+fn cancel_heat_constraint_index_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_preparation("constraint_index", HEAT, heat_grid("index-held", 40))
+}
+
+#[test]
+fn cancel_heat_free_mapping_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_preparation("constraint_map", HEAT, heat_grid("mapping-held", 40))
+}
+
+#[test]
+fn cancel_heat_constraint_reduction_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_preparation("constraint_reduce", HEAT, heat_grid("reduction-held", 40))
+}
+
+#[test]
+fn cancel_heat_jacobi_application_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_preparation("preconditioner_jacobi", HEAT, heat_grid("jacobi-held", 40))
+}
+
+#[test]
+fn cancel_triangle_precompute_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_preparation(
+        "element_precompute",
+        "solve_heat_plane_triangle_2d",
+        heat_triangles("tri-precompute"),
+    )
+}
+
+#[test]
+fn cancel_triangle_assembly_then_reuse_the_job() -> Result<(), Box<dyn Error>> {
+    cancel_preparation(
+        "element_assembly",
+        "solve_heat_plane_triangle_2d",
+        heat_triangles("tri-assembly"),
+    )
+}
+
+#[test]
+fn disconnected_assembly_releases_capacity_without_releasing_the_hold() -> Result<(), Box<dyn Error>>
+{
+    disconnected_sweep("element_assembly")
+}
+
+#[test]
+fn disconnected_reduction_releases_capacity_without_releasing_the_hold()
+-> Result<(), Box<dyn Error>> {
+    disconnected_sweep("constraint_reduce")
+}
+
+fn disconnected_sweep(stage: &str) -> Result<(), Box<dyn Error>> {
+    let agent = LiveAgent::start_with_solver_hold(stage, HEAT, "1")?;
+    let job = "assembly-orphan";
+    fs::write(&agent.hold_path, job)?;
+    let stream = pending(&agent, "assembly-orphan-old", HEAT, heat_grid(job, 40))?;
+    wait_for_numerical_steps(&agent, &["assembly-orphan-old"], stage)?;
+    stream.shutdown(Shutdown::Both)?;
+    drop(stream);
+    wait_for_lifecycle(&agent, "accepting", 0)?;
+    assert!(agent.hold_path.exists());
+    let observed = agent.request("orphan-outcome", "describe_agent", json!({}))?;
+    assert!(
+        observed["result"]["watchdog"]["recent_failures"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|f| f["request_id"] == "assembly-orphan-old"
+                && f["reason_code"] == "cancelled"
+                && f["message"].as_str().unwrap_or("").contains(stage))
+    );
+    record(&agent, "orphan-outcome", &observed)?;
+    fs::remove_file(&agent.hold_path)?;
+    verify_heat(&agent, job, 40)
+}
+
+#[test]
+fn cancelling_one_assembly_does_not_cancel_another_job() -> Result<(), Box<dyn Error>> {
+    let agent = LiveAgent::start_with_solver_hold("element_assembly", HEAT, "2")?;
+    fs::write(&agent.hold_path, "assembly-isolated")?;
+    let mut stream = pending(
+        &agent,
+        "isolated-held",
+        HEAT,
+        heat_grid("assembly-isolated", 40),
+    )?;
+    wait_for_numerical_steps(&agent, &["isolated-held"], "element_assembly")?;
+    let healthy = agent.request(
+        "healthy-next",
+        HEAT,
+        heat_grid("independent-before-cancel", 40),
+    )?;
+    verify_heat_result(&agent, 40, 1600, &healthy)?;
+    wait_for_lifecycle(&agent, "accepting", 1)?;
+    cancel(&agent, "assembly-isolated")?;
+    let response = final_frame(&mut stream)?;
+    assert_cancelled(&response, "element_assembly");
+    record(&agent, "cancelled", &response)?;
+    wait_for_lifecycle(&agent, "accepting", 0)?;
+    verify_heat(&agent, "independent-after-cancel", 40)
 }

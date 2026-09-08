@@ -42,11 +42,11 @@ pub(crate) fn sparse_generalized_eigenpairs(
     // iteration stalls when the first two buckling factors are clustered,
     // while a small block isolates that cluster from the rest of the spectrum.
     let subspace_size = (requested * 2).max(requested + 2).min(stiffness.size());
-    let elastic = stiffness.compress(SpdPreconditioner::Jacobi);
-    let geometric = geometric.compress(SpdPreconditioner::Jacobi);
+    let elastic = stiffness.compress(SpdPreconditioner::Jacobi)?;
+    let geometric = geometric.compress(SpdPreconditioner::Jacobi)?;
     let scaling = diagonal_scaling(stiffness)?;
     let scaled_stiffness = symmetrically_scaled(stiffness, &scaling);
-    let scaled_elastic = scaled_stiffness.compress(SpdPreconditioner::SymmetricGaussSeidel);
+    let scaled_elastic = scaled_stiffness.compress(SpdPreconditioner::SymmetricGaussSeidel)?;
     let banded_elastic = SymmetricBandCholesky::try_factor(&scaled_stiffness, 8_000_000)?;
     let mut basis = k_orthonormalize(initial_subspace(stiffness.size(), subspace_size), &elastic);
     if basis.len() < requested {

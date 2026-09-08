@@ -1,6 +1,7 @@
 use crate::linear_algebra::{SparseMatrix, sparse_to_dense};
 use crate::linear_banded::SymmetricBandCholesky;
 use crate::linear_dense::solve_linear_system;
+use crate::solver_control::check_cancellation;
 
 const MAX_BAND_FACTOR_ENTRIES: usize = 8_000_000;
 const MIN_BACKWARD_ERROR_TOLERANCE: f64 = 1.0e-9;
@@ -20,6 +21,7 @@ pub(crate) fn solve_symmetric_tangent(
     dense_fallback_limit: usize,
     context: &str,
 ) -> Result<SymmetricTangentSolution, String> {
+    check_cancellation()?;
     if matrix.size() != rhs.len() || matrix.size() == 0 {
         return Err(format!(
             "{context} tangent dimensions do not match a non-empty right-hand side"
@@ -49,6 +51,7 @@ pub(crate) fn solve_symmetric_tangent(
         Err(error) => error,
     };
 
+    check_cancellation()?;
     if rhs.len() <= dense_fallback_limit {
         let solution = solve_linear_system(sparse_to_dense(matrix), rhs.to_vec())
             .map_err(|error| format!("{context} tangent solve failed: {error}"))?;

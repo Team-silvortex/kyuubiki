@@ -58,9 +58,9 @@ fn solve_buckling_modes(
     let dof_count = request.frame.nodes.len() * 3;
     let zero_rhs = vec![0.0; dof_count];
     let (reduced_elastic, _, free_dofs) =
-        reduce_sparse_system(&system.elastic, &zero_rhs, &system.constrained_dofs);
+        reduce_sparse_system(&system.elastic, &zero_rhs, &system.constrained_dofs)?;
     let (reduced_geometric, _, geometric_free_dofs) =
-        reduce_sparse_system(&system.geometric, &zero_rhs, &system.constrained_dofs);
+        reduce_sparse_system(&system.geometric, &zero_rhs, &system.constrained_dofs)?;
     debug_assert_eq!(free_dofs, geometric_free_dofs);
     let mode_limit = request.mode_count.unwrap_or(3).max(1).min(free_dofs.len());
     let eigenpairs =

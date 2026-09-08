@@ -36,7 +36,7 @@ pub(crate) fn solve_thermal_plane_displacements(
         .flatten()
         .collect::<Vec<_>>();
     let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(global_stiffness, force_vector, &constrained);
+        reduce_sparse_system(global_stiffness, force_vector, &constrained)?;
     push_thermal_plane_stage(
         stages,
         collect_stages,

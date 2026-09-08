@@ -81,7 +81,7 @@ fn solve_frame_3d_internal(
 
     let constrained = constrained_frame_3d_dofs(request.as_ref());
     let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained)?;
     let reduced_displacements =
         solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?
             .solution;

@@ -270,7 +270,7 @@ fn solve_linearized_steps(
             .map(|(external, imperfection)| load_factor * (external + imperfection))
             .collect::<Vec<_>>();
         let (reduced_tangent, reduced_force, free_dofs) =
-            reduce_sparse_system(&tangent, &force, &system.constrained_dofs);
+            reduce_sparse_system(&tangent, &force, &system.constrained_dofs)?;
         let reduced_displacements = solve_precritical_tangent(&reduced_tangent, &reduced_force)?;
         let displacements = expand(&reduced_displacements, &free_dofs, tangent.size());
         let residual_norm =

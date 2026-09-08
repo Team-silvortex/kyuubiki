@@ -5,11 +5,15 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::process::{Child, Command, ExitStatus, Stdio};
+use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub(crate) const RPC_VERSION: u8 = 1;
 pub(crate) const MAX_FRAME_BYTES: usize = 16 * 1024 * 1024;
+
+// Serialize port selection through readiness, not the live tests themselves.
+static STARTUP: Mutex<()> = Mutex::new(());
 
 pub(crate) struct LiveAgent {
     pub(crate) child: Option<Child>,
@@ -17,6 +21,7 @@ pub(crate) struct LiveAgent {
     pub(crate) log_path: PathBuf,
     pub(crate) hold_path: PathBuf,
     pub(crate) port: u16,
+    agent_id: String,
     reply_timeout_ms: String,
     shutdown_timeout_ms: String,
     capacity: String,
@@ -75,7 +80,6 @@ impl LiveAgent {
         capacity: &str,
         solver_hold: Option<(String, String)>,
     ) -> Result<Self, Box<dyn Error>> {
-        let port = reserve_port()?;
         let unique = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
         let evidence_root = std::env::var_os("KYUUBIKI_TEST_AGENT_EVIDENCE_DIR").map(PathBuf::from);
         let root = evidence_root
@@ -93,7 +97,8 @@ impl LiveAgent {
             root,
             log_path,
             hold_path,
-            port,
+            port: 0,
+            agent_id: format!("lifecycle-live-{}-{unique}", std::process::id()),
             reply_timeout_ms: reply_timeout_ms.into(),
             shutdown_timeout_ms: shutdown_timeout_ms.into(),
             capacity: capacity.into(),
@@ -105,8 +110,12 @@ impl LiveAgent {
     }
 
     pub(crate) fn start_process(&mut self) -> Result<(), Box<dyn Error>> {
+        let _startup = STARTUP.lock().map_err(|_| "Agent startup lock poisoned")?;
         if self.child.is_some() {
             return Ok(());
+        }
+        if self.port == 0 {
+            self.port = reserve_port()?;
         }
         let log = OpenOptions::new()
             .create(true)
@@ -123,7 +132,7 @@ impl LiveAgent {
                 "--port",
                 &self.port.to_string(),
                 "--agent-id",
-                "lifecycle-live-agent",
+                &self.agent_id,
                 "--watchdog-scan-interval-ms",
                 "50",
                 "--watchdog-stale-execution-ms",
@@ -208,9 +217,6 @@ impl LiveAgent {
     fn wait_until_ready(&mut self, timeout: Duration) -> Result<(), Box<dyn Error>> {
         let deadline = Instant::now() + timeout;
         while Instant::now() < deadline {
-            if TcpStream::connect(("127.0.0.1", self.port)).is_ok() {
-                return Ok(());
-            }
             if let Some(status) = self
                 .child
                 .as_mut()
@@ -222,6 +228,15 @@ impl LiveAgent {
                     fs::read_to_string(&self.log_path).unwrap_or_default()
                 )
                 .into());
+            }
+            if TcpStream::connect(("127.0.0.1", self.port)).is_ok() {
+                if let Ok(reply) = self.request("owned-readiness", "describe_agent", json!({})) {
+                    if reply["ok"] == true
+                        && reply["result"]["deployment_readiness"]["agent_id"] == self.agent_id
+                    {
+                        return Ok(());
+                    }
+                }
             }
             thread::sleep(Duration::from_millis(25));
         }
@@ -235,6 +250,34 @@ impl LiveAgent {
         params: Value,
     ) -> Result<Value, Box<dyn Error>> {
         rpc_request(self.port, id, method, params)
+    }
+}
+
+#[cfg(test)]
+mod readiness_tests {
+    use super::*;
+
+    #[test]
+    fn another_agents_listener_cannot_mask_a_rejected_child() -> Result<(), Box<dyn Error>> {
+        let owner = LiveAgent::start()?;
+        let mut rejected = LiveAgent::start()?;
+        rejected.stop_process()?;
+        rejected.port = owner.port;
+        rejected.solver_hold = Some(("linear_prepare".into(), "solve_heat_plane_quad_2d".into()));
+        let error = rejected
+            .start_process()
+            .expect_err("foreign listener accepted as child readiness");
+        assert!(
+            error
+                .to_string()
+                .contains("KYUUBIKI_AGENT_FAULT_INJECTION_SOLVER_STAGE")
+        );
+        let response = owner.request("still-owned", "describe_agent", json!({}))?;
+        assert_eq!(
+            response["result"]["deployment_readiness"]["agent_id"],
+            owner.agent_id
+        );
+        Ok(())
     }
 }
 

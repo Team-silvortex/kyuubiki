@@ -104,7 +104,7 @@ pub(crate) fn snapshot() -> Value {
             "schema_version":"kyuubiki.agent-solver-control/v1",
             "available":true,
             "mode":"cooperative_safe_points",
-            "scope":"same_thread_builtin_linear_kernels",
+            "scope":"same_thread_builtin_numerical_safe_points",
             "thread_preemption":false,
             "active":state.active.iter().filter_map(Weak::upgrade).map(|active| json!({
                 "request_id":active.request_id, "generation":active.generation,

@@ -8,6 +8,7 @@ use crate::frame_2d_material_p_delta::{
 use crate::frame_2d_stability::Frame2dStabilitySystem;
 use crate::linear_algebra::{SparseMatrix, reduce_sparse_system};
 use crate::linear_symmetric_tangent::solve_symmetric_tangent;
+use crate::solver_control::check_cancellation;
 use kyuubiki_protocol::{
     Frame2dElementInput, Frame2dPDeltaFailureReason, Frame2dPDeltaStepResult,
     SolveFrame2dPDeltaRequest,
@@ -347,7 +348,7 @@ fn solve_equilibrium(
         )?;
         let residual = residual(&system.reference_force, &internal, load_factor);
         let (reduced_tangent, reduced_residual, free) =
-            reduce_sparse_system(&tangent, &residual, &system.constrained_dofs);
+            reduce_sparse_system(&tangent, &residual, &system.constrained_dofs)?;
         residual_norm =
             normalized_residual(&reduced_residual, &system.reference_force, load_factor);
         if residual_norm <= tolerance {
@@ -357,6 +358,7 @@ fn solve_equilibrium(
         let delta = match solve_tangent(&reduced_tangent, &reduced_residual) {
             Ok(delta) => delta,
             Err(error) => {
+                check_cancellation()?;
                 failure_reason = Some(Frame2dPDeltaFailureReason::TangentSolveFailed);
                 failure_detail = Some(error);
                 break;
@@ -454,7 +456,7 @@ pub(crate) fn correct_parameter_continuation_equilibrium(
             assemble_tangent_and_internal(positions, elements, &displacement)?;
         let residual = residual(&system.reference_force, &internal, load_factor);
         let (reduced_tangent, reduced_residual, free) =
-            reduce_sparse_system(&tangent, &residual, &system.constrained_dofs);
+            reduce_sparse_system(&tangent, &residual, &system.constrained_dofs)?;
         let residual_norm =
             normalized_residual(&reduced_residual, &system.reference_force, load_factor);
         let displacement_offset = free
@@ -472,7 +474,10 @@ pub(crate) fn correct_parameter_continuation_equilibrium(
         }
         let residual_direction = match solve_tangent(&reduced_tangent, &reduced_residual) {
             Ok(direction) => direction,
-            Err(_) => return Ok(None),
+            Err(_) => {
+                check_cancellation()?;
+                return Ok(None);
+            }
         };
         let reduced_reference = free
             .iter()
@@ -480,7 +485,10 @@ pub(crate) fn correct_parameter_continuation_equilibrium(
             .collect::<Vec<_>>();
         let load_direction = match solve_tangent(&reduced_tangent, &reduced_reference) {
             Ok(direction) => direction,
-            Err(_) => return Ok(None),
+            Err(_) => {
+                check_cancellation()?;
+                return Ok(None);
+            }
         };
         let denominator = displacement_increment
             .iter()

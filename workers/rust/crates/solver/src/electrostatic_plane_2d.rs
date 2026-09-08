@@ -82,7 +82,7 @@ fn solve_electrostatic_plane_triangle_2d_internal(
         .collect::<Vec<_>>();
 
     let (reduced_stiffness, reduced_source, free) =
-        reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed);
+        reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed)?;
     let reduced_potentials =
         solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_source, options)?
             .solution;
@@ -264,7 +264,7 @@ fn solve_electrostatic_plane_quad_2d_internal(
         .collect::<Vec<_>>();
 
     let (reduced_stiffness, reduced_source, free) =
-        reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed);
+        reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed)?;
     let reduced_potentials =
         solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_source, options)?
             .solution;

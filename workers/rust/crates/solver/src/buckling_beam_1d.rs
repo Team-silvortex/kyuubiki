@@ -58,9 +58,9 @@ fn solve_buckling_beam_1d_internal(
 
     let constrained = constrained_dofs(request.as_ref());
     let zero_rhs = vec![0.0; dof_count];
-    let (reduced_elastic, _, free_dofs) = reduce_sparse_system(&elastic, &zero_rhs, &constrained);
+    let (reduced_elastic, _, free_dofs) = reduce_sparse_system(&elastic, &zero_rhs, &constrained)?;
     let (reduced_geometric, _, geometric_free_dofs) =
-        reduce_sparse_system(&geometric, &zero_rhs, &constrained);
+        reduce_sparse_system(&geometric, &zero_rhs, &constrained)?;
     debug_assert_eq!(free_dofs, geometric_free_dofs);
     let mode_limit = request.mode_count.unwrap_or(3).max(1).min(free_dofs.len());
     let eigenpairs =

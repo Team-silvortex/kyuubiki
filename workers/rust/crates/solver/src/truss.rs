@@ -135,7 +135,7 @@ fn solve_truss_2d_internal(
         .collect::<Vec<_>>();
 
     let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained)?;
     push_truss_2d_stage(
         &mut stages,
         collect_stages,
@@ -382,7 +382,7 @@ fn solve_truss_3d_internal(
         .collect::<Vec<_>>();
 
     let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained)?;
     let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
 
     let mut displacements = vec![0.0; dof_count];

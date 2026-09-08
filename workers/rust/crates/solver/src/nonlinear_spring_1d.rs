@@ -60,7 +60,7 @@ fn solve_validated_nonlinear_spring_1d(
                 .collect::<Vec<_>>();
 
             let (reduced_tangent, reduced_residual, free) =
-                reduce_sparse_system(&tangent, &residual, &constrained);
+                reduce_sparse_system(&tangent, &residual, &constrained)?;
             residual_norm = reduced_residual
                 .iter()
                 .map(|entry| entry.abs())
@@ -201,7 +201,7 @@ fn solve_validated_contact_gap_1d(
                 .collect::<Vec<_>>();
 
             let (reduced_tangent, reduced_residual, free) =
-                reduce_sparse_system(&tangent, &residual, &constrained);
+                reduce_sparse_system(&tangent, &residual, &constrained)?;
             residual_norm = reduced_residual
                 .iter()
                 .map(|entry| entry.abs())

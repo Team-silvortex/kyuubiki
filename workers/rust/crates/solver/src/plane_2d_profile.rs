@@ -76,7 +76,7 @@ pub(crate) fn profile_plane_displacements_with_options(
 
     let started = Instant::now();
     let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(global_stiffness, force_vector, &constrained);
+        reduce_sparse_system(global_stiffness, force_vector, &constrained)?;
     push_stage(&mut stages, "reduce_system", started);
 
     let started = Instant::now();

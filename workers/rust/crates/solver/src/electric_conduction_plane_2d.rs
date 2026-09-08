@@ -231,7 +231,7 @@ fn solve_potentials(
         })
         .collect::<Vec<_>>();
     let (reduced, reduced_currents, free) =
-        reduce_sparse_system_with_prescribed(conductance, currents, &prescribed);
+        reduce_sparse_system_with_prescribed(conductance, currents, &prescribed)?;
     let solved = solve_spd_system_profile_with_options(&reduced, &reduced_currents, options)
         .map_err(|error| format!("electric conduction solve failed: {error}"))?
         .solution;

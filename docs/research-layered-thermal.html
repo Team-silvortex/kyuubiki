@@ -251,10 +251,28 @@ cargo run --locked --manifest-path sdks/rust/Cargo.toml \
           A checkpoint with <code>resumable=false</code> is diagnostic, not saved solver state.
           Assembly, external workers, analytical shortcuts and child threads are not all
           interruptible; no fixed cancellation latency or universal solver coverage is claimed.</p>
+        <p class="docs-copy">Preparation-stage qualification additionally selects
+          <code>element_assembly</code> with the structural hold method. On the 128-cell
+          fixture, require exactly 64 completed elements before the process fault, rather
+          than only a generic active-task label. Planar heat/thermal triangle and quad
+          precomputation and assembly, shared sparse compression, inverse-diagonal setup,
+          and IC(0) construction now have cooperative safe points every 64 rows/elements
+          plus the final short batch. That study did not yet qualify constraint reduction
+          or preconditioner application; the follow-up below addresses these stages.</p>
+        <p class="docs-copy">The follow-up qualification extends shared constraint elimination and
+          Jacobi/SGS/IC(0) application. Select <code>constraint_reduce</code> on the structural
+          step and require 64 completed free rows before interrupting Orchestra. The old
+          execution must cancel without marker release; permitted replay must use a new
+          request on the same Agent, while checkpoint-required work stays blocked without
+          redispatch. Preparation and application scratch buffers are not resumable state.
+          Custom constraint algorithms, large allocations, matrix/vector interiors and
+          arbitrary workers still have separate cancellation limits.</p>
         <div class="docs-links">
           <a class="docs-link" href="../reports/interrupted-thermal-research-20260908.md">Fault matrix, fixes and retained evidence</a>
           <a class="docs-link" href="../reports/orphan-execution-research-20260908.md">Orphan cleanup and native capacity qualification</a>
           <a class="docs-link" href="../reports/cooperative-solver-research-20260908.md">In-solver cancellation and installed research qualification</a>
+          <a class="docs-link" href="../reports/preparation-cancellation-research-20260908.md">Preparation-stage cancellation and recovery evidence</a>
+          <a class="docs-link" href="../reports/constraint-preconditioner-research-20260908.md">Constraint and preconditioner sweep qualification</a>
           <a class="docs-link" href="../sdks/rust/examples/interrupted_thermal_research.rs">Phased research example</a>
           <a class="docs-link" href="./agent-orchestrator-boundary.md#workflow-activity-and-replay">Activity and replay contract</a>
         </div>

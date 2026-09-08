@@ -63,7 +63,7 @@ pub(crate) fn solve_modal_constraints(
             state.load_factor,
         );
         let (reduced_tangent, reduced_residual, free) =
-            reduce_sparse_system(&tangent, &residual, &context.system.constrained_dofs);
+            reduce_sparse_system(&tangent, &residual, &context.system.constrained_dofs)?;
         debug_assert_eq!(free, context.free_dofs);
         state.residual_norm = normalized_residual(
             &reduced_residual,

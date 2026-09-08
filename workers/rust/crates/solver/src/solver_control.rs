@@ -16,6 +16,20 @@ pub enum SolverStage {
     BandedSubstitution,
     TridiagonalFactor,
     TridiagonalSubstitution,
+    ElementPrecompute,
+    ElementAssembly,
+    SparseCompress,
+    PreconditionerSetup,
+    IncompleteCholeskyFactor,
+    IncompleteCholeskyTranspose,
+    ConstraintIndex,
+    ConstraintMap,
+    ConstraintReduce,
+    PreconditionerJacobi,
+    SgsForward,
+    SgsBackward,
+    Ic0Forward,
+    Ic0Backward,
 }
 
 impl SolverStage {
@@ -29,6 +43,20 @@ impl SolverStage {
             Self::BandedSubstitution => "banded_substitution",
             Self::TridiagonalFactor => "tridiagonal_factor",
             Self::TridiagonalSubstitution => "tridiagonal_substitution",
+            Self::ElementPrecompute => "element_precompute",
+            Self::ElementAssembly => "element_assembly",
+            Self::SparseCompress => "sparse_compress",
+            Self::PreconditionerSetup => "preconditioner_setup",
+            Self::IncompleteCholeskyFactor => "ic0_factor",
+            Self::IncompleteCholeskyTranspose => "ic0_transpose",
+            Self::ConstraintIndex => "constraint_index",
+            Self::ConstraintMap => "constraint_map",
+            Self::ConstraintReduce => "constraint_reduce",
+            Self::PreconditionerJacobi => "preconditioner_jacobi",
+            Self::SgsForward => "sgs_forward",
+            Self::SgsBackward => "sgs_backward",
+            Self::Ic0Forward => "ic0_forward",
+            Self::Ic0Backward => "ic0_backward",
         }
     }
 
@@ -42,6 +70,20 @@ impl SolverStage {
             Self::BandedSubstitution,
             Self::TridiagonalFactor,
             Self::TridiagonalSubstitution,
+            Self::ElementPrecompute,
+            Self::ElementAssembly,
+            Self::SparseCompress,
+            Self::PreconditionerSetup,
+            Self::IncompleteCholeskyFactor,
+            Self::IncompleteCholeskyTranspose,
+            Self::ConstraintIndex,
+            Self::ConstraintMap,
+            Self::ConstraintReduce,
+            Self::PreconditionerJacobi,
+            Self::SgsForward,
+            Self::SgsBackward,
+            Self::Ic0Forward,
+            Self::Ic0Backward,
         ]
         .into_iter()
         .find(|stage| *stage as u8 == value)
@@ -196,6 +238,19 @@ fn cancellation_error() -> Option<SolverCancelled> {
 
 pub(crate) fn check_cancellation() -> Result<(), String> {
     cancellation_error().map_or(Ok(()), |error| Err(error.to_string()))
+}
+
+/// Batch short preparation steps without putting an atomic poll in every inner operation.
+pub(crate) fn checkpoint_chunk(
+    stage: SolverStage,
+    completed: usize,
+    total: usize,
+) -> Result<(), String> {
+    if completed % 64 == 0 || completed == total {
+        checkpoint(stage, completed)
+    } else {
+        Ok(())
+    }
 }
 
 pub(crate) fn checkpoint(stage: SolverStage, completed_steps: usize) -> Result<(), String> {

@@ -10,6 +10,7 @@ use crate::linear_algebra::{
     solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
+use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 use kyuubiki_protocol::{
     HeatPlaneNodeResult, HeatPlaneQuadElementResult, HeatPlaneTriangleElementResult,
     SolveHeatPlaneQuad2dRequest, SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dRequest,
@@ -44,6 +45,7 @@ fn solve_heat_plane_triangle_2d_internal(
     options: SpdSolveOptions,
 ) -> Result<SolveHeatPlaneTriangle2dResult, String> {
     validate_heat_plane_triangle_request(request.as_ref())?;
+    checkpoint(SolverStage::ElementPrecompute, 0)?;
 
     let dof_count = request.nodes.len();
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -51,14 +53,29 @@ fn solve_heat_plane_triangle_2d_internal(
     let computed_elements = request
         .elements
         .iter()
-        .map(|element| precompute_heat_plane_triangle_element(request.as_ref(), element))
+        .enumerate()
+        .map(|(index, element)| {
+            let computed = precompute_heat_plane_triangle_element(request.as_ref(), element)?;
+            checkpoint_chunk(
+                SolverStage::ElementPrecompute,
+                index + 1,
+                request.elements.len(),
+            )?;
+            Ok(computed)
+        })
         .collect::<Result<Vec<_>, String>>()?;
 
     for (index, node) in request.nodes.iter().enumerate() {
         heat_vector[index] = node.heat_load;
     }
 
-    for (element, computed) in request.elements.iter().zip(computed_elements.iter()) {
+    checkpoint(SolverStage::ElementAssembly, 0)?;
+    for (index, (element, computed)) in request
+        .elements
+        .iter()
+        .zip(computed_elements.iter())
+        .enumerate()
+    {
         let map = [element.node_i, element.node_j, element.node_k];
         for row in 0..3 {
             for column in 0..3 {
@@ -70,6 +87,11 @@ fn solve_heat_plane_triangle_2d_internal(
                 );
             }
         }
+        checkpoint_chunk(
+            SolverStage::ElementAssembly,
+            index + 1,
+            request.elements.len(),
+        )?;
     }
 
     let prescribed = request
@@ -80,7 +102,7 @@ fn solve_heat_plane_triangle_2d_internal(
         .collect::<Vec<_>>();
 
     let (reduced_stiffness, reduced_heat, free) =
-        reduce_sparse_system_with_prescribed(&global_stiffness, &heat_vector, &prescribed);
+        reduce_sparse_system_with_prescribed(&global_stiffness, &heat_vector, &prescribed)?;
     let reduced_temperatures =
         solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_heat, options)?.solution;
 
@@ -217,6 +239,7 @@ fn solve_heat_plane_quad_2d_internal(
     solve_options: SpdSolveOptions,
 ) -> Result<HeatPlaneQuadProfile, String> {
     validate_heat_plane_quad_request(request.as_ref())?;
+    checkpoint(SolverStage::ElementPrecompute, 0)?;
 
     let dof_count = request.nodes.len();
     let mut global_stiffness = SparseMatrix::new(dof_count);
@@ -226,7 +249,16 @@ fn solve_heat_plane_quad_2d_internal(
     let computed_elements = request
         .elements
         .iter()
-        .map(|element| precompute_heat_plane_quad_element(request.as_ref(), element))
+        .enumerate()
+        .map(|(index, element)| {
+            let computed = precompute_heat_plane_quad_element(request.as_ref(), element)?;
+            checkpoint_chunk(
+                SolverStage::ElementPrecompute,
+                index + 1,
+                request.elements.len(),
+            )?;
+            Ok(computed)
+        })
         .collect::<Result<Vec<_>, String>>()?;
     push_heat_plane_quad_memory_stage(
         &mut memory_stages,
@@ -240,7 +272,13 @@ fn solve_heat_plane_quad_2d_internal(
         heat_vector[index] = node.heat_load;
     }
 
-    for (element, computed) in request.elements.iter().zip(computed_elements.iter()) {
+    checkpoint(SolverStage::ElementAssembly, 0)?;
+    for (index, (element, computed)) in request
+        .elements
+        .iter()
+        .zip(computed_elements.iter())
+        .enumerate()
+    {
         let triangles = [
             (
                 [element.node_i, element.node_j, element.node_k],
@@ -265,6 +303,11 @@ fn solve_heat_plane_quad_2d_internal(
                 }
             }
         }
+        checkpoint_chunk(
+            SolverStage::ElementAssembly,
+            index + 1,
+            request.elements.len(),
+        )?;
     }
 
     let prescribed = request
@@ -282,7 +325,7 @@ fn solve_heat_plane_quad_2d_internal(
     );
     stage_started = Instant::now();
     let (reduced_stiffness, reduced_heat, free) =
-        reduce_sparse_system_with_prescribed(&global_stiffness, &heat_vector, &prescribed);
+        reduce_sparse_system_with_prescribed(&global_stiffness, &heat_vector, &prescribed)?;
     push_heat_plane_quad_memory_stage(
         &mut memory_stages,
         collect_memory_stages,

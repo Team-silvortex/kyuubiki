@@ -56,7 +56,7 @@ fn solve_validated_spring_1d(request: SolveSpring1dRequest) -> Result<SolveSprin
         .collect::<Vec<_>>();
 
     let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained)?;
     let reduced_displacements = solve_tridiagonal_system(&reduced_stiffness, &reduced_force)
         .unwrap_or_else(|| solve_spd_system(&reduced_stiffness, &reduced_force))?;
 
@@ -194,7 +194,7 @@ fn solve_validated_spring_2d(request: SolveSpring2dRequest) -> Result<SolveSprin
         .collect::<Vec<_>>();
 
     let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained)?;
     let reduced_displacements = solve_tridiagonal_system(&reduced_stiffness, &reduced_force)
         .unwrap_or_else(|| solve_spd_system(&reduced_stiffness, &reduced_force))?;
 
@@ -354,7 +354,7 @@ fn solve_validated_spring_3d(request: SolveSpring3dRequest) -> Result<SolveSprin
         .collect::<Vec<_>>();
 
     let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained)?;
     let reduced_displacements = solve_tridiagonal_system(&reduced_stiffness, &reduced_force)
         .unwrap_or_else(|| solve_spd_system(&reduced_stiffness, &reduced_force))?;
 
