@@ -657,7 +657,9 @@ name = "kyuubiki-project-bundle"
 version = "3.0.0"
 dependencies = [
  "chrono",
+ "serde",
  "serde_json",
+ "sha2",
  "uuid",
  "zip",
 ]

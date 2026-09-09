@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/project-migration.schema.json",
+  "title": "Offline Project Migration Plan, Receipt And Verification",
+  "description": "Source-preserving project migration, independent of the application release version. No database or credential migration is implied.",
+  "oneOf": [
+    { "$ref": "#/$defs/plan" },
+    { "$ref": "#/$defs/receipt" },
+    { "$ref": "#/$defs/verification" }
+  ],
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "strings": { "type": "array", "items": { "type": "string" } },
+    "limits": {
+      "type": "object",
+      "required": ["max_source_bytes", "max_manifest_bytes", "max_expanded_bytes", "max_entries"],
+      "properties": {
+        "max_source_bytes": { "type": "integer", "minimum": 1 },
+        "max_manifest_bytes": { "type": "integer", "minimum": 1 },
+        "max_expanded_bytes": { "type": "integer", "minimum": 1 },
+        "max_entries": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "plan": {
+      "type": "object",
+      "required": [
+        "schema_version", "source_sha256", "source_bytes", "source_format", "source_schema",
+        "target_schema", "status", "changed_fields", "issues", "limits", "source_mutation",
+        "overwrite_allowed", "validation_scope"
+      ],
+      "properties": {
+        "schema_version": { "const": "kyuubiki.project-migration-plan/v1" },
+        "source_sha256": { "$ref": "#/$defs/digest" },
+        "source_bytes": { "type": "integer", "minimum": 0 },
+        "source_format": { "enum": ["archive", "json"] },
+        "source_schema": { "type": ["string", "null"] },
+        "target_schema": { "const": "kyuubiki.project/v2" },
+        "status": { "enum": ["current", "upgrade_required", "normalization_required", "blocked"] },
+        "changed_fields": { "$ref": "#/$defs/strings" },
+        "issues": { "$ref": "#/$defs/strings" },
+        "limits": { "$ref": "#/$defs/limits" },
+        "source_mutation": { "const": false },
+        "overwrite_allowed": { "const": false },
+        "validation_scope": { "const": "source_integrity_and_root_structure; apply_also_checks_record_mirrors" }
+      },
+      "additionalProperties": false
+    },
+    "receipt": {
+      "type": "object",
+      "required": [
+        "schema_version", "migration_id", "created_at", "source_sha256", "source_schema",
+        "target_schema", "changed_fields", "preserved_entries", "rewritten_entries",
+        "added_entries", "rollback", "record_path"
+      ],
+      "properties": {
+        "schema_version": { "const": "kyuubiki.project-migration-receipt/v1" },
+        "migration_id": { "type": "string", "format": "uuid" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "source_sha256": { "$ref": "#/$defs/digest" },
+        "source_schema": { "enum": ["kyuubiki.project/v1", "kyuubiki.project/v2"] },
+        "target_schema": { "const": "kyuubiki.project/v2" },
+        "changed_fields": { "$ref": "#/$defs/strings" },
+        "preserved_entries": { "type": "integer", "minimum": 0 },
+        "rewritten_entries": { "$ref": "#/$defs/strings" },
+        "added_entries": { "$ref": "#/$defs/strings" },
+        "rollback": { "const": "reopen_retained_source_no_automatic_downgrade" },
+        "record_path": { "type": "string", "pattern": "^\\.kyuubiki/migrations/[0-9a-f-]{36}\\.json$" },
+        "output_sha256": { "$ref": "#/$defs/digest" },
+        "directory_synced": { "type": "boolean" },
+        "cleanup_pending": { "type": "string", "pattern": "^\\.kyuubiki-migrate-[0-9a-f-]{36}$" }
+      },
+      "additionalProperties": false
+    },
+    "verification": {
+      "type": "object",
+      "required": ["schema_version", "status", "output_sha256"],
+      "properties": {
+        "schema_version": { "const": "kyuubiki.project-migration-verification/v1" },
+        "status": { "const": "passed" },
+        "output_sha256": { "$ref": "#/$defs/digest" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

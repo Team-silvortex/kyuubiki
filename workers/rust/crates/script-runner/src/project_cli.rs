@@ -21,6 +21,9 @@ const NATIVE_COMMANDS: &[&str] = &[
     "unpack",
     "pack",
     "diff",
+    "migration-plan",
+    "migrate",
+    "migration-verify",
     "automation-presets",
     "automation-render",
     "automation-run",
@@ -36,6 +39,13 @@ pub(crate) fn run_project_command(args: Vec<OsString>) -> RunnerResult<u8> {
     }
 
     let options = parse_options(&args[1..])?;
+    if !matches!(
+        command.as_str(),
+        "migration-plan" | "migrate" | "migration-verify"
+    ) && (options.expected_source_sha256.is_some() || options.receipt.is_some())
+    {
+        return Err("migration options require a migration command".into());
+    }
     match command.as_str() {
         "create" => run_create(options),
         "inspect" => run_inspect(options),
@@ -44,6 +54,9 @@ pub(crate) fn run_project_command(args: Vec<OsString>) -> RunnerResult<u8> {
         "unpack" => run_unpack(options),
         "pack" => run_pack(options),
         "diff" => run_diff(options),
+        "migration-plan" => run_migration_plan(options),
+        "migrate" => run_migration(options),
+        "migration-verify" => run_migration_verify(options),
         "automation-presets" => run_automation_presets(options),
         "automation-render" => run_automation_render(options),
         "automation-run" => run_automation(options),
@@ -55,6 +68,8 @@ pub(crate) fn run_project_command(args: Vec<OsString>) -> RunnerResult<u8> {
 struct Options {
     positional: Vec<String>,
     output: Option<String>,
+    expected_source_sha256: Option<String>,
+    receipt: Option<String>,
     preset: Option<String>,
     payload: Option<String>,
     state: Option<String>,
@@ -73,6 +88,11 @@ fn parse_options(args: &[OsString]) -> RunnerResult<Options> {
         let value = args[index].to_string_lossy();
         match value.as_ref() {
             "--json" => options.json = true,
+            "--receipt" => options.receipt = Some(take_option(args, &mut index, "--receipt")?),
+            "--expect-source-sha256" => {
+                options.expected_source_sha256 =
+                    Some(take_option(args, &mut index, "--expect-source-sha256")?);
+            }
             "--execute" => options.execute = true,
             "--allow-sensitive" => options.allow_sensitive = true,
             "--allow-destructive" => options.allow_destructive = true,
@@ -176,6 +196,104 @@ fn run_normalize(options: Options) -> RunnerResult<u8> {
         normalize_project_bundle(&options.positional[0], required_output(&options)?)?
     );
     Ok(0)
+}
+
+fn run_migration_plan(options: Options) -> RunnerResult<u8> {
+    require_arity(&options, 1, 1, "project migration-plan <input> [--json]")?;
+    validate_migration_options(&options, false)?;
+    if options.receipt.is_some() {
+        return Err("migration-plan does not accept --receipt".into());
+    }
+    let plan = kyuubiki_project_bundle::plan_project_migration(
+        &options.positional[0],
+        &kyuubiki_project_bundle::ProjectMigrationLimits::default(),
+    )?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&plan).map_err(|error| error.to_string())?
+    );
+    Ok(if plan.status == "blocked" { 1 } else { 0 })
+}
+
+fn run_migration(options: Options) -> RunnerResult<u8> {
+    require_arity(
+        &options,
+        1,
+        1,
+        "project migrate <input> --out <new.kyuubiki> --expect-source-sha256 <digest>",
+    )?;
+    validate_migration_options(&options, true)?;
+    if options.receipt.is_some() {
+        return Err("migrate writes its receipt to stdout; --receipt is for verification".into());
+    }
+    let digest = options
+        .expected_source_sha256
+        .as_deref()
+        .ok_or("migration requires --expect-source-sha256 from a reviewed migration-plan")?;
+    let receipt = kyuubiki_project_bundle::migrate_project_bundle(
+        &options.positional[0],
+        required_output(&options)?,
+        digest,
+        &kyuubiki_project_bundle::ProjectMigrationLimits::default(),
+    )?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&receipt).map_err(|error| error.to_string())?
+    );
+    Ok(0)
+}
+
+fn run_migration_verify(options: Options) -> RunnerResult<u8> {
+    use std::io::Read;
+    require_arity(
+        &options,
+        1,
+        1,
+        "project migration-verify <bundle> --receipt <receipt.json>",
+    )?;
+    validate_migration_options(&options, false)?;
+    let path = options
+        .receipt
+        .as_deref()
+        .ok_or("migration-verify requires --receipt")?;
+    let limits = kyuubiki_project_bundle::ProjectMigrationLimits::default();
+    let mut bytes = Vec::new();
+    fs::File::open(path)
+        .map_err(|error| error.to_string())?
+        .take(limits.max_manifest_bytes + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| error.to_string())?;
+    if bytes.len() as u64 > limits.max_manifest_bytes {
+        return Err("receipt exceeds configured byte limit".into());
+    }
+    let receipt =
+        serde_json::from_slice::<kyuubiki_project_bundle::ProjectMigrationReceipt>(&bytes)
+            .map_err(|error| format!("invalid receipt: {error}"))?;
+    kyuubiki_project_bundle::verify_project_migration(&options.positional[0], &receipt, &limits)?;
+    println!(
+        "{}",
+        serde_json::json!({"schema_version": "kyuubiki.project-migration-verification/v1", "status": "passed", "output_sha256": receipt.output_sha256})
+    );
+    Ok(0)
+}
+
+fn validate_migration_options(options: &Options, execute: bool) -> RunnerResult<()> {
+    if options.execute
+        || options.allow_sensitive
+        || options.allow_destructive
+        || options.preset.is_some()
+        || options.payload.is_some()
+        || options.state.is_some()
+        || options.api_base_url.is_some()
+        || options.artifacts_dir.is_some()
+        || (!execute && (options.output.is_some() || options.expected_source_sha256.is_some()))
+    {
+        return Err(
+            "unsupported option for project migration; no destructive/in-place mode is available"
+                .into(),
+        );
+    }
+    Ok(())
 }
 
 fn run_unpack(options: Options) -> RunnerResult<u8> {
@@ -417,4 +535,51 @@ fn print_inspection(summary: &Value) {
     );
     println!("Jobs: {}", summary["job_count"].as_u64().unwrap_or(0));
     println!("Results: {}", summary["result_count"].as_u64().unwrap_or(0));
+}
+
+#[cfg(test)]
+mod migration_tests {
+    use super::*;
+
+    fn args(values: &[&str]) -> Vec<OsString> {
+        values.iter().map(OsString::from).collect()
+    }
+
+    #[test]
+    fn migration_commands_reject_ambiguous_or_unrelated_operations() {
+        for values in [
+            vec!["migration-plan", "input.json", "--out", "output.kyuubiki"],
+            vec!["migration-plan", "input.json", "--execute"],
+            vec!["migrate", "input.json", "--allow-destructive"],
+            vec!["migrate", "input.json", "--receipt", "receipt.json"],
+            vec!["migration-verify", "input.kyuubiki"],
+            vec!["inspect", "input.json", "--expect-source-sha256", "abc"],
+        ] {
+            assert!(run_project_command(args(&values)).is_err(), "{values:?}");
+        }
+    }
+
+    #[test]
+    fn migration_requires_reviewed_source_digest_before_file_access() {
+        let result =
+            run_project_command(args(&["migrate", "missing.json", "--out", "new.kyuubiki"]));
+        assert!(result.unwrap_err().contains("--expect-source-sha256"));
+    }
+
+    #[test]
+    fn migration_plan_has_nonzero_exit_for_unsupported_data() {
+        let mut random = [0; 16];
+        getrandom::fill(&mut random).unwrap();
+        let root = std::env::temp_dir().join(format!("kyuubiki-cli-migration-{random:x?}"));
+        fs::create_dir(&root).unwrap();
+        let input = root.join("project.json");
+        fs::write(&input, br#"{"project_schema_version":"kyuubiki.project/v99","project":{"project_id":"p"},"models":[],"model_versions":[]}"#).unwrap();
+        assert_eq!(
+            run_project_command(args(&["migration-plan", input.to_str().unwrap(), "--json"]))
+                .unwrap(),
+            1
+        );
+        assert_eq!(fs::read_dir(&root).unwrap().count(), 1);
+        fs::remove_dir_all(root).unwrap();
+    }
 }

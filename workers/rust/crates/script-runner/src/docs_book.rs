@@ -19,6 +19,7 @@ const HTML_FILES: &[&str] = &[
     "docs/book-ch05-workflow-and-operators.html",
     "docs/book-ch06-sdk-surfaces.html",
     "docs/book-ch07-trust-and-safety.html",
+    "docs/data-lifecycle.html",
     "docs/book-ch08-reading-paths.html",
     "docs/tutorials.html",
     "docs/tutorial-first-research.html",

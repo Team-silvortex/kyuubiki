@@ -38,8 +38,10 @@ pub(crate) fn normalize(mut bundle: Value) -> Result<Value, String> {
         "jobs",
         "results",
     ] {
-        if !bundle.get(key).is_some_and(Value::is_array) {
-            bundle[key] = json!([]);
+        match bundle.get(key) {
+            None => bundle[key] = json!([]),
+            Some(value) if value.is_array() => {}
+            Some(_) => return Err(format!("{key} must be an array; refusing to discard data")),
         }
     }
     for key in ["active_model_id", "active_version_id", "workspace_snapshot"] {

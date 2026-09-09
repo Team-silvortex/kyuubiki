@@ -1,6 +1,16 @@
 mod archive;
+mod migration;
+mod migration_archive;
+mod migration_input;
+mod migration_validation;
+mod migration_zip;
 mod model;
 mod paths;
+
+pub use migration::{
+    ProjectMigrationLimits, ProjectMigrationPlan, ProjectMigrationReceipt, migrate_project_bundle,
+    plan_project_migration, verify_project_migration,
+};
 
 use chrono::{SecondsFormat, Utc};
 use serde_json::{Value, json};

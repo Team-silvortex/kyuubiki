@@ -29,6 +29,7 @@ operator-package-dynamic-smoke\n  \
   check-operator-qualification-release-records\n  \
   check-operator-qualification-review-decision\n  \
 project create|inspect|validate|normalize|unpack|pack|diff\n  \
+project migration-plan|migrate|migration-verify\n  \
 project automation-presets|automation-render|automation-run\n  \
 kcore export|research-export|inspect|verify|extract\n  \
 macro actions|inspect|validate|normalize|render|run\n  \

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Data Management, Migration And Compatibility</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">Kyuubiki Data Lifecycle</div>
+        <h1>Keep research data independent of application upgrades</h1>
+        <p class="docs-copy">An application patch does not imply a data-format revision.
+          Migration must be explicit, inspectable and reversible by retaining the source.
+          Installing an older binary is not a database downgrade.</p>
+        <div class="docs-links">
+          <a class="docs-link" href="./book.html">Book</a>
+          <a class="docs-link" href="./book-ch07-trust-and-safety.html">Trust and safety</a>
+          <a class="docs-link" href="../schemas/project-migration.schema.json">Migration contracts</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section" id="ownership">
+        <h2>Data classes and authority</h2>
+        <p class="docs-copy">These are lifecycle boundaries, not new editable configuration
+          switches. Only the project-file migration below is implemented by this increment.</p>
+        <ul class="docs-list">
+          <li><strong>Projects:</strong> the user-selected <code>.kyuubiki</code> file owns
+            project records, model versions, jobs, results, workspace state and attachments.
+            The root <code>project.json</code> is the primary manifest; contradictory mirrors
+            require explicit resolution. Owner: <code>kyuubiki-project-bundle</code>.</li>
+          <li><strong>Research evidence and Kcore:</strong> retain immutable output artifacts,
+            inputs, manifests, contracts and provenance together. Kcore verification is an
+            existing exchange-format boundary, not permission to recompute or rewrite results.
+            Owner: research SDKs and <code>kyuubiki-kcore</code>.</li>
+          <li><strong>Runtime databases:</strong> Orchestra owns jobs, models, results and
+            recovery state in its configured SQLite/Postgres backend. Central-store tables
+            share that storage owner. Startup table setup is not yet a versioned migration
+            ledger; this command must never be pointed at database files.</li>
+          <li><strong>Recovery generations:</strong> existing persistence envelopes retain
+            integrity-checked current/previous generations. Preserve recovery records and
+            referenced artifacts together; a previous-generation fallback is not a schema
+            downgrade or proof of cross-version recovery.</li>
+          <li><strong>User preferences and drafts:</strong> Hub/Workbench/Installer own their
+            settings and browser state. Portable export and schema migration of those stores
+            remain separate work. Do not classify unsaved drafts as disposable caches.</li>
+          <li><strong>Packages and caches:</strong> Installer owns sealed runtime/package
+            generations; the bound Orchestra owns the authoritative operator library.
+            Agent download caches may be rebuilt only under their existing ownership and
+            eviction rules. Installer rollback must not roll back scientific data silently.</li>
+          <li><strong>Credentials:</strong> vaults, tokens, certificates and native secure-store
+            handles are outside ordinary project migration. This is not a secret scanner:
+            opaque attachments are preserved, even if a user put sensitive data in them.
+            Credential transfer needs explicit re-enrollment or a separate encrypted export.</li>
+          <li><strong>Logs and audit trails:</strong> diagnostic logs follow retention policy;
+            research provenance and mutation audit trails are not disposable debug output.
+            Source paths, server addresses and credentials are not embedded in migration receipts.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section" id="project-migration">
+        <h2>Implemented: offline project migration</h2>
+        <p class="docs-copy">The native Rust library exposes
+          <code>plan_project_migration</code>, <code>migrate_project_bundle</code> and
+          <code>verify_project_migration</code>. The native command runner is a thin adapter;
+          no Node process, browser, Orchestra or Agent is required.</p>
+        <ol class="docs-list">
+          <li>Stop all writers and retain the source file. Input is a regular
+            <code>.json</code> or <code>.kyuubiki</code> file. Mutable directories, symlink
+            sources, live stores and other formats are refused.</li>
+          <li>Run the read-only plan. Review its actual source schema, status, changed root
+            fields, source SHA-256, limits and issues. Archive entry integrity is scanned.
+            Plan scope is root structure plus source inventory, not physical validation
+            or complete JSON-Schema conformance; mirror reconciliation also runs on apply.</li>
+          <li>Approve the exact source digest and choose a new output. Migration snapshots
+            source bytes into a private sibling staging directory, rechecks the digest,
+            upgrades metadata, materializes the standard layout, and reconciles mirrors.</li>
+          <li>Opaque attachments and prior receipts are retained byte-for-byte. Existing
+            model/result mirrors must agree with the root. Workspace schema metadata can
+            advance from v1 to v2 without dropping extra preference fields. Missing derived
+            catalogs may be built; malformed arrays and conflicting scientific records
+            are never replaced with empty/default values.</li>
+          <li>All candidate entry digests and the full manifest are read back. The source
+            digest is checked again. A synced complete candidate is published with an atomic
+            no-overwrite hard link in the destination filesystem. Unsupported hard-link
+            filesystems fail closed; there is no unsafe rename/copy fallback.</li>
+          <li>Retain the external JSON receipt alongside the output, then verify after a
+            transfer or move. Its output digest binds the entire archive. An embedded record
+            retains source digest, source/target schemas, changed and preserved entries,
+            migration ID and timestamp. It omits publication fields to avoid a self-digest.</li>
+          <li>To roll back, reopen the retained source with a compatible reader. Do not merge
+            post-migration edits back automatically. Deleting either copy is a separate
+            operator decision, never an upgrade side effect.</li>
+        </ol>
+        <pre><code>cargo kyuubiki project migration-plan studies/original.kyuubiki --json
+cargo kyuubiki project migrate studies/original.kyuubiki \
+  --out studies/upgraded.kyuubiki --expect-source-sha256 &lt;reviewed-source-sha256&gt; \
+  &gt; studies/migration-receipt.json
+cargo kyuubiki project migration-verify studies/upgraded.kyuubiki \
+  --receipt studies/migration-receipt.json</code></pre>
+        <p class="docs-copy">The commands print JSON. A blocked plan returns exit 1;
+          migration/verification errors return a nonzero exit. Existing output files,
+          dangling symlinks and concurrently created target names are not overwritten.
+          The caller must also avoid overwriting a receipt via shell redirection.</p>
+      </section>
+
+      <section class="docs-card docs-section" id="compatibility">
+        <h2>Compatibility policy</h2>
+        <ul class="docs-list">
+          <li><code>kyuubiki.project/v1</code>: explicit copy migration to v2. Existing
+            readers may still adapt v1 in memory; reading alone does not rewrite the source.</li>
+          <li><code>kyuubiki.project/v2</code>: current format. Missing optional fields are
+            reported as <code>normalization_required</code>. A deliberate copy of current
+            data adds a receipt without incrementing the data schema.</li>
+          <li>Unknown project versions or layouts: blocked, no best-effort downgrade.
+            The only supported layout is <code>kyuubiki.project-layout/v1</code>.</li>
+          <li>Unknown extension data: retained, not executed or interpreted. Migration does
+            not certify that an older reader can use that extension or embedded model.</li>
+          <li>Scientific values, identities, result payloads and record ordering are not
+            intentionally changed. JSON formatting and equivalent numeric spelling may
+            change; this is not a numerical solver or material calibration step.</li>
+          <li>Digest verification assumes a separately trusted receipt. An attacker who can
+            replace both archive and receipt is outside hash-only integrity protection.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section" id="limits-and-failure">
+        <h2>Visible limits and failure behavior</h2>
+        <p class="docs-copy">Default <code>ProjectMigrationLimits</code>: 4 GiB source/output
+          file, 64 MiB per parsed/generated JSON document, 8 GiB expanded archive content,
+          100,000 entries. Rust callers can pass explicit limits; the plan records them.
+          These are safety budgets, not million-node workload qualification.</p>
+        <p class="docs-copy">Migration needs space for a source snapshot, generated canonical
+          archive and final candidate. Source and destination may be on different volumes;
+          staging and final publication must share the destination filesystem. On Unix,
+          staging uses mode 0700 and the output uses mode 0600. Common traversal, reserved
+          device, case-collision and file/directory aliases are rejected. No archive is
+          extracted to arbitrary paths by this flow.</p>
+        <p class="docs-copy">Normal pre-publication errors remove the owned staging tree and
+          leave no final candidate. A kill/power loss may leave a private
+          <code>.kyuubiki-migrate-&lt;uuid&gt;</code> directory beside the target. It is never
+          considered published data. Stop the migration process, retain/verify the source
+          and any published output, then remove only that owned staging directory. There
+          is no age-based recursive cleanup of user folders.</p>
+        <p class="docs-copy">If ordinary staging cleanup fails, the error names the pending
+          sibling directory; after successful publication, <code>cleanup_pending</code> in
+          the returned receipt exposes that residue instead. Publication is not undone
+          merely because cleanup or a directory sync failed.</p>
+        <p class="docs-copy">The returned <code>directory_synced</code> publication field is
+          true only when parent-directory sync succeeds. False means the complete file is
+          published but directory-entry power-loss durability is not confirmed. That field
+          is absent from the earlier embedded record. Windows ACLs, Unicode filesystem
+          normalization, network-filesystem crash semantics and real power loss require
+          platform qualification; a successful unit test is not such a qualification.</p>
+        <p class="docs-copy">Physical ZIP/ZIP64 directory bounds and entry counts are checked
+          before the ZIP library builds its name map, so duplicate names cannot disappear
+          through map deduplication. Encrypted, multi-volume, ambiguous-trailer and legacy
+          non-UTF-8 filename archives require separate explicit conversion, not best-effort
+          rewriting during this migration.</p>
+      </section>
+
+      <section class="docs-card docs-section" id="rollout">
+        <h2>Next lifecycle work</h2>
+        <ol class="docs-list">
+          <li><strong>Runtime database ledger:</strong> introduce explicit current/minimum
+            reader versions, immutable migration IDs and checksums, transactional application,
+            single-writer ownership and refusal of unknown/future ledger entries.</li>
+          <li><strong>Consistent backup and restore:</strong> database-aware SQLite snapshots
+            and Postgres backup/restore, artifact/digest inventories, validated restore into
+            a separate root, then explicit service activation. Copying a live SQLite main
+            file alone is not a backup; WAL/transaction consistency must be handled by the
+            owning backend.</li>
+          <li><strong>Research archive evolution:</strong> preserve Kcore, run lineage and
+            referenced artifacts, with export/import compatibility matrices and bounded
+            verification. Do not rewrite historical experimental evidence during upgrade.</li>
+          <li><strong>Settings and credentials:</strong> separate portable preferences,
+            unsaved drafts and secret handles; add explicit settings revisions and native
+            credential re-binding rather than copying machine-specific secure-store paths.</li>
+          <li><strong>Installer and GUI integration:</strong> expose data inventory, retained
+            bytes, preflight plan, approval, progress, receipt and rollback entry. Block
+            incompatible runtime activation before opening existing data for writes.</li>
+          <li><strong>Qualification:</strong> cross-release fixtures, interrupted migrations,
+            ENOSPC, concurrent writers, hard process kills, restart recovery, large bundles
+            and Linux/macOS/Windows native filesystem coverage before broad rollout.</li>
+        </ol>
+        <p class="docs-copy">No production database, user project or credential store is
+          migrated automatically by this increment. Legacy <code>normalize</code>/<code>pack</code>
+          tools are not substitutes for the digest-bound migration/receipt workflow.</p>
+      </section>
+    </main>
+  </body>
+</html>

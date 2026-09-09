@@ -457,6 +457,11 @@ Then branch by intent:
 
 ## Suggested Reading Paths
 
+- Data management and upgrades:
+  [Data lifecycle](data-lifecycle.html) covers ownership, native project migration,
+  digest-bound verification, retained-source rollback, and the remaining database,
+  archive, settings and credential migration work.
+
 - Browser/frontend work:
   `philosophy.md` -> `frontend-style.md` -> `frontend-implementation.md` -> `ui-automation-contract.html` -> `rendering-roadmap.html`
 - Workflow-heavy frontend work:
