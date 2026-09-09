@@ -242,7 +242,18 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
           {:error, state}
 
         version ->
-          {{:ok, version}, update_in(state, [:versions], &Map.delete(&1, version_id))}
+          next_state = update_in(state, [:versions], &Map.delete(&1, version_id))
+          latest = List.first(list_versions_for_state(next_state, version["model_id"])) || %{}
+
+          next_state =
+            update_in(next_state, [:models, version["model_id"]], fn model ->
+              model
+              |> Map.put("latest_version_id", latest["version_id"])
+              |> Map.put("latest_version_number", latest["version_number"] || 0)
+              |> Map.put("updated_at", DateTime.utc_now(:second))
+            end)
+
+          {{:ok, version}, next_state}
       end
     end)
   end

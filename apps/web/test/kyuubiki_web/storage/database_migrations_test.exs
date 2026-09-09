@@ -25,7 +25,12 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrationsTest do
   test "legacy startup refuses before any schema or data mutation", %{connection: db} do
     Fixture.legacy!(db, :sqlite, old_jobs: true)
     before = MigrationQuery.rows!(db, "SELECT sql FROM sqlite_schema ORDER BY name")
-    assert_raise RuntimeError, ~r/unversioned/, fn -> DatabaseMigrations.boot!(db, :sqlite) end
+
+    error =
+      assert_raise RuntimeError, ~r/unversioned/, fn -> DatabaseMigrations.boot!(db, :sqlite) end
+
+    assert error.message =~ "fresh empty database for disposable development data"
+    assert error.message =~ "retain valuable data"
     assert MigrationQuery.rows!(db, "SELECT sql FROM sqlite_schema ORDER BY name") == before
     assert [["Thermal study"]] == MigrationQuery.rows!(db, "SELECT name FROM kyuubiki_projects")
   end

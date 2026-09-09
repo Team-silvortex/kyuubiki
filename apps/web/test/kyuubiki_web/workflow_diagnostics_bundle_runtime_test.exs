@@ -87,4 +87,25 @@ defmodule KyuubikiWeb.WorkflowDiagnosticsBundleRuntimeTest do
     refute Map.has_key?(bundle, "bundle_payloads")
     refute Map.has_key?(bundle, "bundle_numeric_fields")
   end
+
+  test "generic material summaries do not invent a nil diagnostic domain" do
+    payload = %{
+      "ranking" => %{"best_candidate" => "sample-a"},
+      "pareto" => %{"diagnostic_domain" => nil, "candidate_count" => 2},
+      "thermal" => %{"diagnostic_domain" => "thermal"}
+    }
+
+    assert {:ok, bundle} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.compose_diagnostics_bundle",
+               payload,
+               %{"include_non_diagnostics" => true}
+             )
+
+    assert bundle["bundle_source_count"] == 3
+    assert bundle["bundle_domains"] == ["thermal"]
+    assert bundle["bundle_domain_counts"] == %{"thermal" => 1}
+    assert bundle["bundle_payloads"] == payload
+    assert bundle == bundle |> Jason.encode!() |> Jason.decode!()
+  end
 end

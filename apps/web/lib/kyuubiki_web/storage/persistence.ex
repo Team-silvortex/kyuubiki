@@ -1,6 +1,8 @@
 defmodule KyuubikiWeb.Persistence do
   @moduledoc false
 
+  alias KyuubikiWeb.Storage.DurableJson
+
   @default_dir Path.expand("../../../../tmp/data", __DIR__)
   @envelope_schema "kyuubiki.persistence-envelope/v1"
   @recovery_schema "kyuubiki.persistence-recovery-receipt/v1"
@@ -36,7 +38,7 @@ defmodule KyuubikiWeb.Persistence do
       "payload" => payload
     }
 
-    commit_atomic!(path, Jason.encode!(envelope))
+    commit_atomic!(path, Jason.encode!(envelope, maps: :strict))
   end
 
   def read_json(path, default) do
@@ -190,23 +192,10 @@ defmodule KyuubikiWeb.Persistence do
 
   defp payload_digest(payload) do
     payload
-    |> canonical_json_value()
-    |> Jason.encode!()
+    |> DurableJson.encode!()
     |> then(&:crypto.hash(:sha256, &1))
     |> Base.encode16(case: :lower)
   end
-
-  defp canonical_json_value(value) when is_map(value) do
-    value
-    |> Enum.map(fn {key, item} -> {to_string(key), canonical_json_value(item)} end)
-    |> Enum.sort_by(&elem(&1, 0))
-    |> Jason.OrderedObject.new()
-  end
-
-  defp canonical_json_value(value) when is_list(value),
-    do: Enum.map(value, &canonical_json_value/1)
-
-  defp canonical_json_value(value), do: value
 
   defp valid_digest?(digest), do: Regex.match?(~r/\A[0-9a-f]{64}\z/, digest)
   defp sidecar(path, suffix), do: "#{path}#{suffix}"

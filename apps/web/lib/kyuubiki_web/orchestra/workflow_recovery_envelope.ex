@@ -6,6 +6,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
   replay after Orchestra process loss requires an idempotent graph or a verified checkpoint.
   """
 
+  alias KyuubikiWeb.Storage.DurableJson
+
   @schema_version "kyuubiki.workflow-recovery/v1"
   @envelope_schema "kyuubiki.workflow-execution-envelope/v1"
   @checkpoint_contract "kyuubiki.operator_task_batch_checkpoint_verification/v1"
@@ -57,6 +59,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
        "updated_at" => now,
        "history" => [event("prepared", 0, 0, now, %{})]
      }}
+  rescue
+    _error in [Jason.EncodeError, Protocol.UndefinedError, ArgumentError] ->
+      {:error, :invalid_workflow_recovery_envelope}
   end
 
   def new(_graph, _input_artifacts, _orchestration_context, _response_options),
@@ -109,6 +114,9 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
       true ->
         :ok
     end
+  rescue
+    _error in [Jason.EncodeError, Protocol.UndefinedError, ArgumentError] ->
+      {:error, :invalid_workflow_recovery_record}
   end
 
   def verify(_recovery), do: {:error, :invalid_workflow_recovery_record}
@@ -330,23 +338,10 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
 
   defp digest(value) do
     value
-    |> canonical_json_value()
-    |> Jason.encode!()
+    |> DurableJson.encode!()
     |> then(&:crypto.hash(:sha256, &1))
     |> Base.encode16(case: :lower)
   end
-
-  defp canonical_json_value(value) when is_map(value) do
-    value
-    |> Enum.map(fn {key, item} -> {to_string(key), canonical_json_value(item)} end)
-    |> Enum.sort_by(&elem(&1, 0))
-    |> Jason.OrderedObject.new()
-  end
-
-  defp canonical_json_value(value) when is_list(value),
-    do: Enum.map(value, &canonical_json_value/1)
-
-  defp canonical_json_value(value), do: value
 
   # PostgreSQL jsonb treats integral floats and integers as the same JSON number.
   # Normalize before hashing so a durable round trip cannot invalidate the envelope.

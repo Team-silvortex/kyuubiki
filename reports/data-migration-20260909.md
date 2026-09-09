@@ -61,8 +61,8 @@ The first attempt was blocked by a missing frontend operator-template source
 file in the remote test copy, not a numerical assertion; after copying the
 original repository file, the entire group passed without skipping that test.
 
-All 1,265 retained native-workspace source/test file digests match the remote
-tree. The plan, receipt and relocated-verification output pass their JSON Schema
+All 1,265 native-workspace source/test file digests matched the remote
+tree at test time. The plan, receipt and relocated-verification output pass their JSON Schema
 on the server. Clippy with warnings denied, Rustfmt, the 26-page HTML book,
 documentation inventory, tensor structure/self-test and organization audit pass.
 Source/document limits remain 800/2000 with zero tracked debt; the global tensor
@@ -87,12 +87,19 @@ counts/offsets, truncation, stale source approval, conflicting scientific mirror
 output budgets, existing targets, symlinks, unknown versions and tampered receipts.
 Migration is structural data work, not numerical/material certification.
 
-Server evidence is retained under managed state
+Small server evidence is retained under managed state
 `research-runs/data-migration-20260909/evidence/`: native test logs, command
-tests/build log, source fixture, plan, external receipt, relocated archive,
+tests/build log, source fixture, plan, external receipt,
 verification receipts and expected overwrite-refusal logs. Local diagnostics
 remain ignored under `tmp/data-migration-*`. Server configuration and payloads
 are not added to Git.
+
+A development retention cleanup on 2026-09-09 removed this completed run's duplicate
+source/build tree, generated archives and duplicate document package. Shared Rust build
+cache was not removed. The archive digest above records the historical verification;
+the archive is no longer retained. Redundant local tensor JSON, document package and
+synthetic CLI input were also removed. No cleanup backup was created; fixtures remain
+reproducible from source and the small command input retained on the server.
 
 ## Remaining Gates
 

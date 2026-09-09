@@ -77,6 +77,11 @@ The affected workflow API file passes separately in a fresh memory profile (2 te
 error's root cause; follow-up should isolate backend/lifecycle fixture interference.
 The final 317-test result is specifically the normal SQLite profile plus explicit PG cases.
 
+Follow-up: [result key round-trip verification](persistence-key-roundtrip-20260909.md)
+identified and fixed the digest mismatch as inconsistent native nil-key serialization.
+Its corrected 327-test memory and SQLite selections pass; the SQL-only assertion and
+duplicate memory-process test setup are handled explicitly rather than hiding failures.
+
 ## Real command artifacts
 
 The remote native maintenance command chain produced and verified:
@@ -97,8 +102,15 @@ Relocated candidate SHA-256, unchanged after the refused overwrite:
 `410c1c2ac24d805c5ed5c3a8aa5010d4c196b2a2f4fe8b3b58959f2455ad97ff`.
 
 Receipts report `directory_synced=true`; no ordinary cleanup residue was reported.
-Artifacts are retained in the lab's isolated `research-runs/database-lifecycle-20260909`
-evidence directory, not committed as binary database fixtures. The shared JSON contracts
+The lab's isolated `research-runs/database-lifecycle-20260909/evidence` directory retains
+the small logs, plans, digests and receipts, not binary database fixtures. A development
+retention cleanup on 2026-09-09 removed the completed run's duplicate source/build tree,
+synthetic SQLite files/sidecars and successful isolated memory-profile stores. The small
+`memory-profile-results.json.corrupt` failure artifact was retained for diagnosis, then
+removed after the follow-up reduced it to source regressions; the failed-run log and
+compatible Mix tool cache were kept. The hashes above describe the
+verified historical run, not database files still retained. No cleanup backup was created.
+The shared JSON contracts
 are `schemas/database-lifecycle.schema.json` and `schemas/central-database-policy.schema.json`.
 All seven lifecycle JSON outputs and the actual central-database policy output passed
 their JSON Schema checks using the server's preinstalled validator.
@@ -121,7 +133,8 @@ self-test. `git diff --check` is clean. Global tensor `daji status=blocked` rema
 - Hard process kills, ENOSPC, power loss, network filesystems, Windows ACLs and large
   production datasets remain unqualified. The 16 GiB limit is a safety budget, not a
   throughput, temporary-space reservation or million-node qualification.
-- Broad JSON/memory-backend cross-profile qualification remains open as noted above.
+- The mixed-profile regression noted above is resolved by the follow-up; this does not
+  qualify concurrent file writers or installed whole-system JSON recovery.
 - Existing unversioned databases now require explicit maintenance before runtime startup.
   Installed GUI/Installer integration and rollout messaging are the next operational work.
 

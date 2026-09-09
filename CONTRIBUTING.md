@@ -22,6 +22,23 @@ A change is not done until all of the following are true:
 - formatting checks pass locally
 - docs or schemas are updated when contracts changed
 
+## Development Data And Disk Budget
+
+Development fixtures and synthetic research runs are disposable by default. Preserve
+source, contracts, fixture generators, regression tests and concise verification logs,
+not a new full source/database/archive copy for every patch or test run. Reuse isolated
+test workspaces and shared toolchain/build caches when their owners are idle. After a
+run finishes, remove its generated payloads and temporary stores; keep a small failure
+fixture only while needed to investigate a defect. Do not back up cleanup candidates.
+
+For disposable legacy data, stop all writers and use a fresh empty test database rather
+than backing up and migrating each generation. Backup and copy migration are opt-in
+when retaining valuable or non-reproducible data, or explicitly testing migration.
+This policy does not enable automatic deletion of unknown projects, shared caches,
+credentials or live databases. Cleanup must name its owned targets, check active use,
+and leave the project reproducible. It is not a global Docker prune or a Git-history
+rewrite. See the [data lifecycle policy](docs/data-lifecycle.html#development-retention).
+
 ## Useful Commands
 
 - `make tdd-web FILE=test/kyuubiki_web/jobs/store_test.exs`

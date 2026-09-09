@@ -153,18 +153,15 @@ defmodule KyuubikiWeb.Workloads do
   defp active_model_id([]), do: nil
   defp active_model_id([model | _]), do: model["model_id"]
 
-  defp active_version_id(models, versions) do
-    preferred =
-      models
-      |> Enum.find_value(fn model ->
-        latest_id = model["latest_version_id"]
+  defp active_version_id([], _versions), do: nil
 
-        if latest_id && Enum.any?(versions, &(&1["version_id"] == latest_id)),
-          do: latest_id,
-          else: nil
-      end)
+  defp active_version_id([model | _], versions) do
+    model_versions = Enum.filter(versions, &(&1["model_id"] == model["model_id"]))
+    latest_id = model["latest_version_id"]
 
-    preferred || (List.first(versions) || %{})["version_id"]
+    if latest_id && Enum.any?(model_versions, &(&1["version_id"] == latest_id)),
+      do: latest_id,
+      else: (List.first(model_versions) || %{})["version_id"]
   end
 
   defp project_file_manifest do

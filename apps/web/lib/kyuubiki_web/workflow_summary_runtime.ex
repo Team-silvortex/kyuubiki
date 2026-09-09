@@ -269,9 +269,10 @@ defmodule KyuubikiWeb.WorkflowSummaryRuntime do
         end)
 
       domain_counts =
-        Enum.reduce(items, %{}, fn item, acc ->
-          Map.update(acc, item["domain"], 1, &(&1 + 1))
-        end)
+        items
+        |> Enum.map(& &1["domain"])
+        |> Enum.reject(&is_nil/1)
+        |> Enum.frequencies()
 
       {:ok,
        %{

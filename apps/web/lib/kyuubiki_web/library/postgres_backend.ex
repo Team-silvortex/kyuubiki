@@ -84,6 +84,10 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
   end
 
   def create_model(attrs) do
+    transaction(fn -> create_model_with_initial_version(attrs) end)
+  end
+
+  defp create_model_with_initial_version(attrs) do
     case repo_get(ProjectRecord, attrs["project_id"]) do
       nil ->
         {:error, {:project_not_found, attrs["project_id"]}}
@@ -103,15 +107,7 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
           })
           |> repo_insert!()
 
-        {:ok, version} =
-          create_version(%{
-            "model_id" => model.model_id,
-            "name" => "Initial version",
-            "payload" => attrs["payload"],
-            "kind" => attrs["kind"],
-            "material" => attrs["material"],
-            "model_schema_version" => attrs["model_schema_version"]
-          })
+        {:ok, version} = insert_version(model, %{"name" => "Initial version"}, true)
 
         {:ok,
          repo_get!(ModelRecord, model.model_id)
@@ -154,46 +150,49 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
   end
 
   def create_version(attrs) do
-    case repo_get(ModelRecord, attrs["model_id"]) do
-      nil ->
-        {:error, {:model_not_found, attrs["model_id"]}}
+    transaction(fn ->
+      case lock_model(attrs["model_id"]) do
+        nil -> {:error, {:model_not_found, attrs["model_id"]}}
+        model -> insert_version(model, attrs, false)
+      end
+    end)
+  end
 
-      model ->
-        version_number = (model.latest_version_number || 0) + 1
-        timestamp = DateTime.utc_now()
+  defp insert_version(model, attrs, initial?) do
+    version_number = (model.latest_version_number || 0) + 1
+    timestamp = DateTime.utc_now()
 
-        version =
-          %ModelVersionRecord{}
-          |> Ecto.Changeset.change(%{
-            version_id: attrs["version_id"] || random_id(),
-            project_id: model.project_id,
-            model_id: model.model_id,
-            name: attrs["name"] || model.name,
-            version_number: version_number,
-            kind: attrs["kind"] || model.kind,
-            material: attrs["material"] || model.material,
-            model_schema_version: attrs["model_schema_version"] || model.model_schema_version,
-            payload: attrs["payload"] || model.payload,
-            inserted_at: timestamp,
-            updated_at: timestamp
-          })
-          |> repo_insert!()
+    version =
+      %ModelVersionRecord{}
+      |> Ecto.Changeset.change(%{
+        version_id: attrs["version_id"] || random_id(),
+        project_id: model.project_id,
+        model_id: model.model_id,
+        name: attrs["name"] || model.name,
+        version_number: version_number,
+        kind: attrs["kind"] || model.kind,
+        material: attrs["material"] || model.material,
+        model_schema_version: attrs["model_schema_version"] || model.model_schema_version,
+        payload: attrs["payload"] || model.payload,
+        inserted_at: timestamp,
+        updated_at: timestamp
+      })
+      |> repo_insert!()
 
-        model
-        |> Ecto.Changeset.change(%{
-          name: attrs["name"] || model.name,
-          kind: attrs["kind"] || model.kind,
-          material: attrs["material"] || model.material,
-          model_schema_version: attrs["model_schema_version"] || model.model_schema_version,
-          payload: attrs["payload"] || model.payload,
-          latest_version_id: version.version_id,
-          latest_version_number: version.version_number,
-          updated_at: timestamp
-        })
-        |> repo_update!()
+    model
+    |> Ecto.Changeset.change(%{
+      name: if(initial?, do: model.name, else: attrs["name"] || model.name),
+      kind: version.kind,
+      material: version.material,
+      model_schema_version: version.model_schema_version,
+      payload: version.payload,
+      latest_version_id: version.version_id,
+      latest_version_number: version.version_number,
+      updated_at: timestamp
+    })
+    |> repo_update!()
 
-        {:ok, serialize_version(version)}
-    end
+    {:ok, serialize_version(version)}
   end
 
   def update_version(version_id, attrs) do
@@ -213,9 +212,62 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
 
   def delete_version(version_id) do
     case repo_get(ModelVersionRecord, version_id) do
-      nil -> :error
-      version -> {:ok, serialize_version(repo_delete!(version))}
+      nil ->
+        :error
+
+      version ->
+        transaction(fn ->
+          # Lock the parent first, matching checkpoint creation, then recheck the target.
+          model = lock_model(version.model_id)
+
+          case repo_get(ModelVersionRecord, version_id) do
+            nil ->
+              :error
+
+            current ->
+              deleted = repo_delete!(current)
+              latest = latest_version_reference(version.model_id) || %{}
+
+              model
+              |> Ecto.Changeset.change(%{
+                latest_version_id: latest["version_id"],
+                latest_version_number: latest["version_number"] || 0
+              })
+              |> repo_update!()
+
+              {:ok, serialize_version(deleted)}
+          end
+        end)
     end
+  end
+
+  defp transaction(callback) do
+    options = if Storage.sqlite?(), do: [mode: :immediate], else: []
+
+    case apply(repo(), :transaction, [callback, options]) do
+      {:ok, result} -> result
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp lock_model(model_id) do
+    query = where(ModelRecord, [model], model.model_id == ^model_id)
+    query = if Storage.postgres?(), do: lock(query, "FOR UPDATE"), else: query
+    apply(repo(), :one, [query])
+  end
+
+  defp latest_version_reference(model_id) do
+    query =
+      ModelVersionRecord
+      |> where([version], version.model_id == ^model_id)
+      |> order_by([version], desc: version.version_number)
+      |> limit(1)
+      |> select([version], %{
+        "version_id" => version.version_id,
+        "version_number" => version.version_number
+      })
+
+    apply(repo(), :one, [query])
   end
 
   def reset do

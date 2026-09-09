@@ -35,6 +35,62 @@
   },
   "evidence_claims": [
     {
+      "id": "project-checkpoint-export-chain",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "verification-evidence"],
+      "paradigms": ["persistence_provenance", "validation"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/library/memory_backend.ex",
+        "apps/web/lib/kyuubiki_web/library/postgres_backend.ex",
+        "apps/web/lib/kyuubiki_web/workloads.ex",
+        "apps/web/test/kyuubiki_web/api/project_version_chain_api_test.exs",
+        "apps/web/test/kyuubiki_web/library/checkpoint_transaction_test.exs",
+        "docs/data-lifecycle.html",
+        "reports/project-version-chain-20260909.md"
+      ],
+      "required_text": [
+        "creating a model preserves its name independently of the initial checkpoint label",
+        "deleting the latest checkpoint repairs references without reverting the working model",
+        "project bundle never selects another model's checkpoint for an unversioned active model",
+        "parallel checkpoint requests publish distinct ordered versions with a consistent latest pointer",
+        "failed initial checkpoint publication rolls back the model and permits a clean retry",
+        "checkpoint create and delete roll back together with their latest pointer on failure",
+        "Project/version chain: PASS within the tested scope."
+      ]
+    },
+    {
+      "id": "material-result-json-key-roundtrip",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "verification-evidence"],
+      "paradigms": ["persistence_provenance", "workflow_composition", "validation"],
+      "dimensions": ["execution", "contract", "security", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/storage/durable_json.ex",
+        "apps/web/lib/kyuubiki_web/storage/persistence.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+        "apps/web/lib/kyuubiki_web/workflow_summary_runtime.ex",
+        "apps/web/test/kyuubiki_web/storage/persistence_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_recovery_envelope_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_diagnostics_bundle_runtime_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_catalog_material_envelope_job_api_test.exs",
+        "docs/data-lifecycle.html",
+        "reports/persistence-key-roundtrip-20260909.md"
+      ],
+      "required_text": [
+        "JSON object keys remain digest-stable across a durable round trip",
+        "ambiguous JSON key aliases cannot replace the current generation",
+        "previous string-key envelopes stay readable without rewriting",
+        "old inconsistent nil-key digests are not silently certified",
+        "recovery digest survives JSON key normalization without conflating nil and empty",
+        "ambiguous JSON keys refuse preparation and replay without raising",
+        "generic material summaries do not invent a nil diagnostic domain",
+        "Result persistence key round trip: PASS."
+      ]
+    },
+    {
       "id": "persistence-provenance-repeatable-local-qualification",
       "status": "proven",
       "grade": "qualified",

@@ -12,13 +12,49 @@
         <div class="docs-kicker">Kyuubiki Data Lifecycle</div>
         <h1>Keep research data independent of application upgrades</h1>
         <p class="docs-copy">An application patch does not imply a data-format revision.
-          Migration must be explicit, inspectable and reversible by retaining the source.
+          When retaining data, migration must be explicit, inspectable and reversible by
+          retaining the source. Disposable development data can instead be rebuilt.
           Installing an older binary is not a database downgrade.</p>
         <div class="docs-links">
           <a class="docs-link" href="./book.html">Book</a>
           <a class="docs-link" href="./book-ch07-trust-and-safety.html">Trust and safety</a>
           <a class="docs-link" href="../schemas/project-migration.schema.json">Migration contracts</a>
         </div>
+      </section>
+
+      <section class="docs-card docs-section" id="development-retention">
+        <h2>Development default: rebuild disposable data, do not accumulate backups</h2>
+        <p class="docs-copy">The current development workflow prioritizes project integrity
+          and bounded disk use on both developer machines and test servers. Synthetic test
+          data is not a permanent research archive. The preservation procedures below are
+          opt-in for valuable, non-reproducible data or an explicit migration qualification;
+          they are not a mandatory backup step for each patch, startup or cleanup.</p>
+        <ul class="docs-list">
+          <li><strong>Keep the reproducible project:</strong> source, dependency locks,
+            contracts, fixture generators, regression tests and concise reports/logs/digests.
+            Reuse isolated workspaces and compatible shared toolchain/build caches instead
+            of retaining a complete source and build copy for every successful test round.</li>
+          <li><strong>Remove completed-run bulk:</strong> generated mesh inputs, outputs,
+            temporary databases and their sidecars, duplicate source trees and intermediate
+            packages can be removed after checking ownership and active use. Do not create
+            a cleanup backup. Keep only a small relevant failure fixture while investigating
+            an unresolved defect, not every generation of the entire run.</li>
+          <li><strong>Rebuild disposable legacy stores:</strong> stop all writers, select a
+            fresh empty test database and initialize it with the current runtime. Remove
+            the explicitly identified old test store when it is no longer in use; do not
+            accumulate old stores under new names. For SQLite, use
+            <code>SQLITE_DATABASE_PATH</code> for the fresh test path. Never delete WAL or
+            journal sidecars while a database is active.</li>
+          <li><strong>Keep safety without forced preservation:</strong> schema gates,
+            transaction rollback, integrity checks and cleanup of owned staging remain.
+            Backup commands run only when explicitly invoked. There is no new automatic
+            reset, retention daemon, backup rotation or recursive user-folder cleaner.</li>
+          <li><strong>Limit the scope:</strong> this policy covers known disposable
+            development data, not unknown user projects, credentials, live services or
+            unrelated containers. Decide retention explicitly for actual research. When
+            pruning test artifacts, keep reports honest about historical evidence versus
+            files still retained; a digest alone cannot reconstruct the original artifact.</li>
+        </ul>
       </section>
 
       <section class="docs-card docs-section" id="ownership">
@@ -59,6 +95,60 @@
             research provenance and mutation audit trails are not disposable debug output.
             Source paths, server addresses and credentials are not embedded in migration receipts.</li>
         </ul>
+      </section>
+
+      <section class="docs-card docs-section" id="result-round-trip">
+        <h2>Result and workflow recovery round trips</h2>
+        <p class="docs-copy">JSON persistence and workflow recovery digests use the same
+          <code>Storage.DurableJson</code> object-key rules as the actual JSON encoder.
+          In particular, the Elixir <code>nil</code> key becomes <code>"nil"</code>, not
+          an empty string. Nested atom/string or integer/string key aliases that would
+          produce duplicate JSON keys are refused before publication. Recovery preparation
+          and verification return a controlled error for these ambiguous native values.</p>
+        <p class="docs-copy">The existing v1 envelope schemas remain unchanged. String-key
+          records retain their previous digest behavior and are read without rewriting.
+          Scientific number serialization is not rounded to repair a checksum. TaskIR's
+          separate canonical encoding contract is unchanged. Previously inconsistent
+          nil-key digests are still rejected: a new checksum over suspect bytes would not
+          prove those bytes are the original research result. Regenerate disposable fixtures
+          or explicitly investigate valuable data instead of silently accepting it.</p>
+        <p class="docs-copy">Generic ranking and Pareto summaries remain in diagnostics
+          bundles even without a diagnostic domain. <code>bundle_domain_counts</code>
+          counts declared domains only, consistent with <code>bundle_domains</code>;
+          <code>bundle_source_count</code> still includes every source. No artificial null
+          domain or automatic scientific-data rewrite is introduced.</p>
+        <p class="docs-copy">The material-envelope API regression now checks completion,
+          result-file publication, independent disk readback and a subsequent generation
+          write. This is scoped persistence/recovery evidence, not power-loss, multi-writer
+          or installed cross-platform qualification. See the
+          <a href="../reports/persistence-key-roundtrip-20260909.md">verification report</a>.</p>
+      </section>
+
+      <section class="docs-card docs-section" id="checkpoint-lifecycle">
+        <h2>Model checkpoints and project export</h2>
+        <p class="docs-copy">A model's current payload is a working copy, distinct from
+          its stored checkpoints. Deleting a checkpoint repairs
+          <code>latest_version_id</code> and <code>latest_version_number</code> to the
+          highest remaining version without reverting the working payload. Removing the
+          last checkpoint leaves a usable model with a null latest ID and number zero.
+          A later save creates a fresh version ID.</p>
+        <p class="docs-copy">Use <code>version_id</code> as the identity in jobs and
+          external references, not <code>version_number</code>. Numbers order the current
+          checkpoint list; after deleting its newest entries, a number can be used again
+          with a different ID. Existing duplicate numbers or dangling historical records
+          are not automatically rewritten by this change.</p>
+        <p class="docs-copy">SQL model creation and its initial checkpoint now publish
+          in one transaction. Checkpoint creation and deletion update the latest pointer
+          in the same transaction; SQLite uses an immediate transaction and PostgreSQL
+          locks the parent model row before allocating a number. Failed publication rolls
+          back both sides and can be retried without a partial model or orphan checkpoint.
+          The initial checkpoint label does not replace the requested model name.</p>
+        <p class="docs-copy">Project export selects an active version only from the
+          active model. A model without checkpoints exports a null active version rather
+          than a checkpoint belonging to a different model. This does not make a live
+          multi-query export an atomic database snapshot or add a new import endpoint.
+          See the <a href="../reports/project-version-chain-20260909.md">project/version
+          chain regression report</a> for API reconstruction, concurrency and rollback scope.</p>
       </section>
 
       <section class="docs-card docs-section" id="project-migration">
@@ -182,7 +272,9 @@ cargo kyuubiki project migration-verify studies/upgraded.kyuubiki \
             is not a byte-read-only inspection. This is not an audit of every index, trigger,
             default expression, privilege or all research payloads.</li>
           <li>An existing unversioned Kyuubiki database now deliberately blocks startup.
-            Take a consistent snapshot, upgrade a separate candidate and verify it first.
+            For disposable development data, initialize a fresh empty test database as
+            described above. To retain valuable data, take a consistent snapshot, upgrade
+            a separate candidate and verify it first.
             Reinstalling an old binary is not an approved database downgrade. Older binaries
             without this gate cannot be forced to obey it; isolate them operationally.</li>
           <li>The baseline preserves existing records and can add the four known missing
@@ -202,6 +294,9 @@ cargo kyuubiki project migration-verify studies/upgraded.kyuubiki \
 
       <section class="docs-card docs-section" id="sqlite-maintenance">
         <h2>SQLite backup, copy upgrade and restore</h2>
+        <p class="docs-copy">Use this workflow when data preservation is required, or when
+          testing migration itself. For ordinary disposable development fixtures, prefer
+          rebuilding and cleaning the previous test store instead of retaining these copies.</p>
         <p class="docs-copy"><code>KyuubikiWeb.Storage.SqliteLifecycle</code> exposes
           <code>backup!</code>, <code>plan!</code>, <code>upgrade!</code>,
           <code>restore!</code> and <code>verify!</code>. The Mix adapter starts dependencies
@@ -302,8 +397,9 @@ mix kyuubiki.data restore path/to/snapshot.sqlite3 \
             and Linux/macOS/Windows native filesystem coverage before broad rollout.</li>
         </ol>
         <p class="docs-copy">No production database, user project or credential store is
-          migrated automatically. Existing unversioned runtime databases now require explicit
-          maintenance before the new runtime can start. Legacy <code>normalize</code>/<code>pack</code>
+          migrated automatically. Existing unversioned runtime databases require explicit
+          maintenance if their data must be kept; disposable development stores can instead
+          be replaced by fresh empty test databases. Legacy <code>normalize</code>/<code>pack</code>
           tools are not substitutes for the digest-bound migration/receipt workflow.</p>
       </section>
     </main>

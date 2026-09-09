@@ -3,10 +3,11 @@ defmodule KyuubikiWeb.Jobs.StoreTest do
 
   alias KyuubikiWeb.AnalysisResultStore
   alias KyuubikiWeb.AnalysisResultMemoryBackend
-  alias KyuubikiWeb.Persistence
   alias KyuubikiWeb.Jobs.Store
 
   setup do
+    original_data_dir = System.get_env("KYUUBIKI_DATA_DIR")
+
     data_dir =
       Path.join(System.tmp_dir!(), "kyuubiki-store-test-#{System.unique_integer([:positive])}")
 
@@ -15,8 +16,11 @@ defmodule KyuubikiWeb.Jobs.StoreTest do
     AnalysisResultStore.reset()
 
     on_exit(fn ->
-      Persistence.clear!()
-      System.delete_env("KYUUBIKI_DATA_DIR")
+      File.rm_rf!(data_dir)
+
+      if original_data_dir,
+        do: System.put_env("KYUUBIKI_DATA_DIR", original_data_dir),
+        else: System.delete_env("KYUUBIKI_DATA_DIR")
     end)
 
     :ok
@@ -83,6 +87,7 @@ defmodule KyuubikiWeb.Jobs.StoreTest do
     assert result["max_displacement"] == 1.23e-4
   end
 
+  @tag skip: not KyuubikiWeb.Storage.sql?()
   test "result store reports missing job constraints without crashing" do
     assert {:error, _reason} =
              AnalysisResultStore.put("missing-job", %{"status" => "orphaned_result"})
@@ -121,7 +126,9 @@ defmodule KyuubikiWeb.Jobs.StoreTest do
   end
 
   test "memory result store compare-and-swap is atomic and fail-closed" do
-    start_supervised!({AnalysisResultMemoryBackend, []})
+    if is_nil(Process.whereis(AnalysisResultMemoryBackend)) do
+      start_supervised!({AnalysisResultMemoryBackend, []})
+    end
 
     initial = %{"generation" => 3}
     replacement = %{"generation" => 4}

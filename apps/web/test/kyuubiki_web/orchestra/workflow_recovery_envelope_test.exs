@@ -116,6 +116,40 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelopeTest do
     refute Map.has_key?(public["recovery"], "envelope")
   end
 
+  test "recovery digest survives JSON key normalization without conflating nil and empty" do
+    artifacts = %{"input" => %{nil => 1, "" => 2, true => 3, 7 => 4}}
+    assert {:ok, recovery} = WorkflowRecoveryEnvelope.new(idempotent_graph(), artifacts, %{}, %{})
+    reloaded = recovery |> Jason.encode!() |> Jason.decode!()
+    assert :ok = WorkflowRecoveryEnvelope.verify(reloaded)
+
+    assert reloaded["envelope"]["input_artifacts"]["input"] == %{
+             "nil" => 1,
+             "" => 2,
+             "true" => 3,
+             "7" => 4
+           }
+
+    tampered = put_in(reloaded, ["envelope", "input_artifacts", "input", "nil"], 99)
+
+    assert {:error, :workflow_recovery_digest_mismatch} =
+             WorkflowRecoveryEnvelope.verify(tampered)
+  end
+
+  test "ambiguous JSON keys refuse preparation and replay without raising" do
+    artifacts = %{"input" => %{nil => 1, "nil" => 2}}
+
+    assert {:error, :invalid_workflow_recovery_envelope} =
+             WorkflowRecoveryEnvelope.new(idempotent_graph(), artifacts, %{}, %{})
+
+    assert {:ok, recovery} =
+             WorkflowRecoveryEnvelope.new(idempotent_graph(), input_artifacts(), %{}, %{})
+
+    ambiguous = put_in(recovery, ["envelope", "input_artifacts"], artifacts)
+
+    assert {:error, :invalid_workflow_recovery_record} =
+             WorkflowRecoveryEnvelope.verify(ambiguous)
+  end
+
   defp idempotent_graph do
     %{
       "schema_version" => "kyuubiki.workflow-graph/v1",

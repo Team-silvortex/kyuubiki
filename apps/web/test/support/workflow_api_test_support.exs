@@ -56,7 +56,8 @@ defmodule KyuubikiWeb.TestSupport.WorkflowApi do
     end)
   end
 
-  def wait_for_job(job_id, router_opts, attempts \\ 20)
+  # Multi-stage workflows durably publish each checkpoint; 200 ms is not a CI completion budget.
+  def wait_for_job(job_id, router_opts, attempts \\ 200)
 
   def wait_for_job(job_id, router_opts, attempts)
       when is_binary(job_id) and attempts > 0 do
@@ -75,8 +76,15 @@ defmodule KyuubikiWeb.TestSupport.WorkflowApi do
     end
   end
 
-  def wait_for_job(_job_id, _router_opts, 0),
-    do: ExUnit.Assertions.flunk("timed out waiting for async job completion")
+  def wait_for_job(job_id, router_opts, 0) do
+    response = conn(:get, "/api/v1/jobs/#{job_id}/status") |> Router.call(router_opts)
+    status = response.resp_body |> Jason.decode!() |> Map.get("job", %{})
+
+    ExUnit.Assertions.flunk(
+      "timed out waiting for async job completion: " <>
+        inspect(Map.take(status, ["job_id", "status", "progress", "message"]))
+    )
+  end
 
   def configure_fake_agent_pool(port) when is_integer(port) do
     Application.put_env(:kyuubiki_web, AgentPool,

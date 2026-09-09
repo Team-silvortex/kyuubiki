@@ -68,7 +68,8 @@ defmodule KyuubikiWeb.Storage.DatabaseMigrations do
           :ok
 
         "legacy_unversioned" ->
-          raise "unversioned Kyuubiki database: stop writers, create a consistent backup, then explicitly upgrade a separate copy; see docs/data-lifecycle.html#runtime-database"
+          raise "unversioned Kyuubiki database: stop writers, select a fresh empty database for disposable development data, " <>
+                  "or explicitly copy-upgrade to retain valuable data; see docs/data-lifecycle.html#development-retention"
       end
     end)
   end

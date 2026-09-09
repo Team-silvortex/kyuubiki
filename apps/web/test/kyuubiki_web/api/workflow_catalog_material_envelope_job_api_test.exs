@@ -1,7 +1,12 @@
 defmodule KyuubikiWeb.Api.WorkflowCatalogMaterialEnvelopeJobApiTest do
   use KyuubikiWeb.TestSupport.ApiRouterCase
 
-  test "submits a material study envelope catalog workflow as an asynchronous job" do
+  @tag :tmp_dir
+  test "submits a material study envelope catalog workflow as an asynchronous job", %{
+    tmp_dir: tmp_dir
+  } do
+    on_exit(fn -> File.rm_rf!(tmp_dir) end)
+
     result_payload =
       WorkflowApi.submit_catalog_workflow_job(
         @opts,
@@ -48,6 +53,20 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogMaterialEnvelopeJobApiTest do
 
     assert summary["bundle_payloads"]["pareto"]["material_pareto_best_candidate_id"] ==
              "cool_stiff"
+
+    assert summary["bundle_domains"] == []
+    assert summary["bundle_domain_counts"] == %{}
+
+    job_id = result_payload["job"]["job_id"]
+    assert {:ok, stored} = AnalysisResultStore.get(job_id)
+    path = Path.join(tmp_dir, "material-results.json")
+    KyuubikiWeb.Persistence.write_json!(path, %{job_id => stored})
+    reloaded = KyuubikiWeb.Persistence.read_json(path, %{})
+    assert reloaded[job_id] == stored |> Jason.encode!() |> Jason.decode!()
+    refute File.exists?("#{path}.corrupt")
+    refute File.exists?("#{path}.recovery.json")
+    assert :ok = KyuubikiWeb.Persistence.write_json!(path, %{})
+    assert KyuubikiWeb.Persistence.read_json("#{path}.previous", %{}) == reloaded
   end
 
   test "rejects oversized material envelope catalog requests" do
