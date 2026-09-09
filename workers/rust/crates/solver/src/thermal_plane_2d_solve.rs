@@ -4,6 +4,8 @@ use crate::linear_algebra::{
     SparseMatrix, reduce_sparse_system, solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
+use crate::solver_control::SolverStage;
+use crate::solver_postprocess::{fold_results, restore_solution};
 use crate::thermal_plane_2d_profile::{ThermalPlaneProfileStage, push_thermal_plane_stage};
 use kyuubiki_protocol::ThermalPlaneNodeInput;
 
@@ -50,11 +52,13 @@ pub(crate) fn solve_thermal_plane_displacements(
     let solver_iterations = solve_profile.iterations;
     let solver_matrix_non_zero_count = solve_profile.matrix_non_zero_count;
     let solver_residual_norm = solve_profile.residual_norm;
-    let solver_rhs_norm = reduced_force
-        .iter()
-        .map(|value| value * value)
-        .sum::<f64>()
-        .sqrt();
+    let solver_rhs_norm = fold_results(
+        SolverStage::ResultRhsNorm,
+        reduced_force.iter().map(|value| value * value),
+        -0.0_f64,
+        |sum, value| sum + value,
+    )?
+    .sqrt();
     let reduced_displacements = solve_profile.solution;
     push_thermal_plane_stage(
         stages,
@@ -63,10 +67,7 @@ pub(crate) fn solve_thermal_plane_displacements(
         stage_started.elapsed(),
     );
 
-    let mut displacements = vec![0.0; nodes.len() * 2];
-    for (index, &dof) in free.iter().enumerate() {
-        displacements[dof] = reduced_displacements[index];
-    }
+    let displacements = restore_solution(nodes.len() * 2, &[], &free, &reduced_displacements)?;
     Ok(ThermalPlaneSolvedDisplacements {
         displacements,
         solver_iterations,

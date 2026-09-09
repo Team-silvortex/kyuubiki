@@ -58,6 +58,14 @@ pub enum SolverStage {
     SparseRegularizeCopy,
     SparseRegularizeCopyRow,
     SparseRegularizeDiagonal,
+    ResultPrescribed,
+    ResultFreeDofs,
+    ResultNodes,
+    ResultElements,
+    ResultNodeSummary,
+    ResultElementSummary,
+    ResultTotals,
+    ResultRhsNorm,
 }
 
 impl SolverStage {
@@ -113,6 +121,14 @@ impl SolverStage {
             Self::SparseRegularizeCopy => "sparse_regularize_copy",
             Self::SparseRegularizeCopyRow => "sparse_regularize_copy_row",
             Self::SparseRegularizeDiagonal => "sparse_regularize_diagonal",
+            Self::ResultPrescribed => "result_prescribed",
+            Self::ResultFreeDofs => "result_free_dofs",
+            Self::ResultNodes => "result_nodes",
+            Self::ResultElements => "result_elements",
+            Self::ResultNodeSummary => "result_node_summary",
+            Self::ResultElementSummary => "result_element_summary",
+            Self::ResultTotals => "result_totals",
+            Self::ResultRhsNorm => "result_rhs_norm",
         }
     }
 
@@ -168,6 +184,14 @@ impl SolverStage {
             Self::SparseRegularizeCopy,
             Self::SparseRegularizeCopyRow,
             Self::SparseRegularizeDiagonal,
+            Self::ResultPrescribed,
+            Self::ResultFreeDofs,
+            Self::ResultNodes,
+            Self::ResultElements,
+            Self::ResultNodeSummary,
+            Self::ResultElementSummary,
+            Self::ResultTotals,
+            Self::ResultRhsNorm,
         ]
         .into_iter()
         .find(|stage| *stage as u8 == value)

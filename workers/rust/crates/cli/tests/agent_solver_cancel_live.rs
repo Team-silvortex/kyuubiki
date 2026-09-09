@@ -16,6 +16,9 @@ const HEAT: &str = "solve_heat_plane_quad_2d";
 #[path = "support/solver_scaling_cancel.rs"]
 mod scaling_cancel;
 
+#[path = "support/solver_postprocess_cancel.rs"]
+mod postprocess_cancel;
+
 fn heat_grid(job: &str, n: usize) -> Value {
     let mut nodes = Vec::new();
     let mut elements = Vec::new();

@@ -11,6 +11,7 @@ use crate::linear_algebra::{
 };
 use crate::linear_solver_profile::SpdSolveOptions;
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
+use crate::solver_postprocess::{collect_results, fold_results, max_results, restore_solution};
 use kyuubiki_protocol::{
     HeatPlaneNodeResult, HeatPlaneQuadElementResult, HeatPlaneTriangleElementResult,
     SolveHeatPlaneQuad2dRequest, SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dRequest,
@@ -106,79 +107,77 @@ fn solve_heat_plane_triangle_2d_internal(
     let reduced_temperatures =
         solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_heat, options)?.solution;
 
-    let mut temperatures = vec![0.0; dof_count];
-    for &(index, value) in &prescribed {
-        temperatures[index] = value;
-    }
-    for (index, &dof) in free.iter().enumerate() {
-        temperatures[dof] = reduced_temperatures[index];
-    }
+    let temperatures = restore_solution(dof_count, &prescribed, &free, &reduced_temperatures)?;
 
-    let nodes = request
-        .nodes
-        .iter()
-        .enumerate()
-        .map(|(index, node)| HeatPlaneNodeResult {
-            index,
-            id: node.id.clone(),
-            x: node.x,
-            y: node.y,
-            temperature: temperatures[index],
-            heat_load: node.heat_load,
-        })
-        .collect::<Vec<_>>();
-
-    let elements = request
-        .elements
-        .iter()
-        .zip(computed_elements.iter())
-        .enumerate()
-        .map(|(index, (element, computed))| {
-            let element_temperatures = [
-                temperatures[element.node_i],
-                temperatures[element.node_j],
-                temperatures[element.node_k],
-            ];
-            let gradient = plane_triangle_scalar_gradient(
-                &computed.gradient_x,
-                &computed.gradient_y,
-                &element_temperatures,
-            );
-            let heat_flux_x = -element.conductivity * gradient[0];
-            let heat_flux_y = -element.conductivity * gradient[1];
-            let heat_flux_magnitude =
-                (heat_flux_x * heat_flux_x + heat_flux_y * heat_flux_y).sqrt();
-
-            HeatPlaneTriangleElementResult {
+    let nodes = collect_results(
+        SolverStage::ResultNodes,
+        request
+            .nodes
+            .iter()
+            .enumerate()
+            .map(|(index, node)| HeatPlaneNodeResult {
                 index,
-                id: element.id.clone(),
-                node_i: element.node_i,
-                node_j: element.node_j,
-                node_k: element.node_k,
-                area: computed.area,
-                average_temperature: element_temperatures.iter().sum::<f64>() / 3.0,
-                temperature_gradient_x: gradient[0],
-                temperature_gradient_y: gradient[1],
-                heat_flux_x,
-                heat_flux_y,
-                heat_flux_magnitude,
-                heat_flow_rate: heat_flux_magnitude * computed.area * element.thickness,
-            }
-        })
-        .collect::<Vec<_>>();
+                id: node.id.clone(),
+                x: node.x,
+                y: node.y,
+                temperature: temperatures[index],
+                heat_load: node.heat_load,
+            }),
+    )?;
 
-    let max_temperature = nodes
-        .iter()
-        .map(|node| node.temperature.abs())
-        .fold(0.0_f64, f64::max);
-    let max_heat_flux = elements
-        .iter()
-        .map(|element| element.heat_flux_magnitude.abs())
-        .fold(0.0_f64, f64::max);
-    let total_abs_heat_flow_rate = elements
-        .iter()
-        .map(|element| element.heat_flow_rate.abs())
-        .sum();
+    let elements = collect_results(
+        SolverStage::ResultElements,
+        request
+            .elements
+            .iter()
+            .zip(computed_elements.iter())
+            .enumerate()
+            .map(|(index, (element, computed))| {
+                let element_temperatures = [
+                    temperatures[element.node_i],
+                    temperatures[element.node_j],
+                    temperatures[element.node_k],
+                ];
+                let gradient = plane_triangle_scalar_gradient(
+                    &computed.gradient_x,
+                    &computed.gradient_y,
+                    &element_temperatures,
+                );
+                let heat_flux_x = -element.conductivity * gradient[0];
+                let heat_flux_y = -element.conductivity * gradient[1];
+                let heat_flux_magnitude =
+                    (heat_flux_x * heat_flux_x + heat_flux_y * heat_flux_y).sqrt();
+
+                HeatPlaneTriangleElementResult {
+                    index,
+                    id: element.id.clone(),
+                    node_i: element.node_i,
+                    node_j: element.node_j,
+                    node_k: element.node_k,
+                    area: computed.area,
+                    average_temperature: element_temperatures.iter().sum::<f64>() / 3.0,
+                    temperature_gradient_x: gradient[0],
+                    temperature_gradient_y: gradient[1],
+                    heat_flux_x,
+                    heat_flux_y,
+                    heat_flux_magnitude,
+                    heat_flow_rate: heat_flux_magnitude * computed.area * element.thickness,
+                }
+            }),
+    )?;
+
+    let max_temperature = max_results(SolverStage::ResultNodeSummary, &nodes, |node| {
+        node.temperature.abs()
+    })?;
+    let max_heat_flux = max_results(SolverStage::ResultElementSummary, &elements, |element| {
+        element.heat_flux_magnitude.abs()
+    })?;
+    let total_abs_heat_flow_rate = fold_results(
+        SolverStage::ResultTotals,
+        elements.iter().map(|element| element.heat_flow_rate.abs()),
+        -0.0_f64,
+        |sum, value| sum + value,
+    )?;
 
     Ok(SolveHeatPlaneTriangle2dResult {
         input: request.into_owned(),
@@ -356,100 +355,98 @@ fn solve_heat_plane_quad_2d_internal(
     }
     stage_started = Instant::now();
 
-    let mut temperatures = vec![0.0; dof_count];
-    for &(index, value) in &prescribed {
-        temperatures[index] = value;
-    }
-    for (index, &dof) in free.iter().enumerate() {
-        temperatures[dof] = reduced_temperatures[index];
-    }
+    let temperatures = restore_solution(dof_count, &prescribed, &free, &reduced_temperatures)?;
 
-    let nodes = request
-        .nodes
-        .iter()
-        .enumerate()
-        .map(|(index, node)| HeatPlaneNodeResult {
-            index,
-            id: node.id.clone(),
-            x: node.x,
-            y: node.y,
-            temperature: temperatures[index],
-            heat_load: node.heat_load,
-        })
-        .collect::<Vec<_>>();
-
-    let elements = request
-        .elements
-        .iter()
-        .zip(computed_elements.iter())
-        .enumerate()
-        .map(|(index, (element, computed))| {
-            let first_temperatures = [
-                temperatures[element.node_i],
-                temperatures[element.node_j],
-                temperatures[element.node_k],
-            ];
-            let second_temperatures = [
-                temperatures[element.node_i],
-                temperatures[element.node_k],
-                temperatures[element.node_l],
-            ];
-            let first_gradient = plane_triangle_scalar_gradient(
-                &computed.first.gradient_x,
-                &computed.first.gradient_y,
-                &first_temperatures,
-            );
-            let second_gradient = plane_triangle_scalar_gradient(
-                &computed.second.gradient_x,
-                &computed.second.gradient_y,
-                &second_temperatures,
-            );
-            let total_area = computed.first.area + computed.second.area;
-            let weighted = |left: f64, right: f64| -> f64 {
-                ((left * computed.first.area) + (right * computed.second.area)) / total_area
-            };
-            let heat_flux_x =
-                -element.conductivity * weighted(first_gradient[0], second_gradient[0]);
-            let heat_flux_y =
-                -element.conductivity * weighted(first_gradient[1], second_gradient[1]);
-            let heat_flux_magnitude =
-                (heat_flux_x * heat_flux_x + heat_flux_y * heat_flux_y).sqrt();
-
-            HeatPlaneQuadElementResult {
+    let nodes = collect_results(
+        SolverStage::ResultNodes,
+        request
+            .nodes
+            .iter()
+            .enumerate()
+            .map(|(index, node)| HeatPlaneNodeResult {
                 index,
-                id: element.id.clone(),
-                node_i: element.node_i,
-                node_j: element.node_j,
-                node_k: element.node_k,
-                node_l: element.node_l,
-                area: total_area,
-                average_temperature: (temperatures[element.node_i]
-                    + temperatures[element.node_j]
-                    + temperatures[element.node_k]
-                    + temperatures[element.node_l])
-                    / 4.0,
-                temperature_gradient_x: weighted(first_gradient[0], second_gradient[0]),
-                temperature_gradient_y: weighted(first_gradient[1], second_gradient[1]),
-                heat_flux_x,
-                heat_flux_y,
-                heat_flux_magnitude,
-                heat_flow_rate: heat_flux_magnitude * total_area * element.thickness,
-            }
-        })
-        .collect::<Vec<_>>();
+                id: node.id.clone(),
+                x: node.x,
+                y: node.y,
+                temperature: temperatures[index],
+                heat_load: node.heat_load,
+            }),
+    )?;
 
-    let max_temperature = nodes
-        .iter()
-        .map(|node| node.temperature.abs())
-        .fold(0.0_f64, f64::max);
-    let max_heat_flux = elements
-        .iter()
-        .map(|element| element.heat_flux_magnitude.abs())
-        .fold(0.0_f64, f64::max);
-    let total_abs_heat_flow_rate = elements
-        .iter()
-        .map(|element| element.heat_flow_rate.abs())
-        .sum();
+    let elements = collect_results(
+        SolverStage::ResultElements,
+        request
+            .elements
+            .iter()
+            .zip(computed_elements.iter())
+            .enumerate()
+            .map(|(index, (element, computed))| {
+                let first_temperatures = [
+                    temperatures[element.node_i],
+                    temperatures[element.node_j],
+                    temperatures[element.node_k],
+                ];
+                let second_temperatures = [
+                    temperatures[element.node_i],
+                    temperatures[element.node_k],
+                    temperatures[element.node_l],
+                ];
+                let first_gradient = plane_triangle_scalar_gradient(
+                    &computed.first.gradient_x,
+                    &computed.first.gradient_y,
+                    &first_temperatures,
+                );
+                let second_gradient = plane_triangle_scalar_gradient(
+                    &computed.second.gradient_x,
+                    &computed.second.gradient_y,
+                    &second_temperatures,
+                );
+                let total_area = computed.first.area + computed.second.area;
+                let weighted = |left: f64, right: f64| -> f64 {
+                    ((left * computed.first.area) + (right * computed.second.area)) / total_area
+                };
+                let heat_flux_x =
+                    -element.conductivity * weighted(first_gradient[0], second_gradient[0]);
+                let heat_flux_y =
+                    -element.conductivity * weighted(first_gradient[1], second_gradient[1]);
+                let heat_flux_magnitude =
+                    (heat_flux_x * heat_flux_x + heat_flux_y * heat_flux_y).sqrt();
+
+                HeatPlaneQuadElementResult {
+                    index,
+                    id: element.id.clone(),
+                    node_i: element.node_i,
+                    node_j: element.node_j,
+                    node_k: element.node_k,
+                    node_l: element.node_l,
+                    area: total_area,
+                    average_temperature: (temperatures[element.node_i]
+                        + temperatures[element.node_j]
+                        + temperatures[element.node_k]
+                        + temperatures[element.node_l])
+                        / 4.0,
+                    temperature_gradient_x: weighted(first_gradient[0], second_gradient[0]),
+                    temperature_gradient_y: weighted(first_gradient[1], second_gradient[1]),
+                    heat_flux_x,
+                    heat_flux_y,
+                    heat_flux_magnitude,
+                    heat_flow_rate: heat_flux_magnitude * total_area * element.thickness,
+                }
+            }),
+    )?;
+
+    let max_temperature = max_results(SolverStage::ResultNodeSummary, &nodes, |node| {
+        node.temperature.abs()
+    })?;
+    let max_heat_flux = max_results(SolverStage::ResultElementSummary, &elements, |element| {
+        element.heat_flux_magnitude.abs()
+    })?;
+    let total_abs_heat_flow_rate = fold_results(
+        SolverStage::ResultTotals,
+        elements.iter().map(|element| element.heat_flow_rate.abs()),
+        -0.0_f64,
+        |sum, value| sum + value,
+    )?;
 
     push_heat_plane_quad_memory_stage(
         &mut memory_stages,

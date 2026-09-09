@@ -135,7 +135,7 @@ fn ic0_transpose_prefix_sum_and_fill_both_observe_cancellation() {
         .unwrap();
 }
 
-fn heat_quad(n: usize) -> SolveHeatPlaneQuad2dRequest {
+pub(super) fn heat_quad(n: usize) -> SolveHeatPlaneQuad2dRequest {
     let nodes = (0..=n)
         .flat_map(|y| {
             (0..=n).map(move |x| HeatPlaneNodeInput {
@@ -167,7 +167,7 @@ fn heat_quad(n: usize) -> SolveHeatPlaneQuad2dRequest {
     SolveHeatPlaneQuad2dRequest { nodes, elements }
 }
 
-fn heat_triangle(n: usize) -> SolveHeatPlaneTriangle2dRequest {
+pub(super) fn heat_triangle(n: usize) -> SolveHeatPlaneTriangle2dRequest {
     let quad = heat_quad(n);
     let elements = quad
         .elements
@@ -249,7 +249,7 @@ fn heat_triangle_precompute_and_assembly_cancel_without_changing_the_next_field(
     verify_heat(&before.nodes);
 }
 
-fn thermal_nodes(heat: Vec<HeatPlaneNodeInput>) -> Vec<ThermalPlaneNodeInput> {
+pub(super) fn thermal_nodes(heat: Vec<HeatPlaneNodeInput>) -> Vec<ThermalPlaneNodeInput> {
     heat.into_iter()
         .map(|node| ThermalPlaneNodeInput {
             id: node.id,

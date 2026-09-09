@@ -2,6 +2,8 @@ use crate::plane_2d_math::{
     derive_planar_stress_metrics, multiply_matrix_vector_3x3, multiply_matrix_vector_3x6,
     strain_energy_density, subtract_vector_3,
 };
+use crate::solver_control::SolverStage;
+use crate::solver_postprocess::{collect_results, fold_results, max_results};
 use crate::thermal_plane_2d::ThermalPlaneTriangleComputed;
 use kyuubiki_protocol::{
     SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest, ThermalPlaneNodeInput,
@@ -49,11 +51,10 @@ pub(crate) fn thermal_plane_triangle_state(
 pub(crate) fn build_thermal_plane_nodes(
     nodes: &[ThermalPlaneNodeInput],
     displacements: &[f64],
-) -> Vec<ThermalPlaneNodeResult> {
-    nodes
-        .iter()
-        .enumerate()
-        .map(|(index, node)| {
+) -> Result<Vec<ThermalPlaneNodeResult>, String> {
+    collect_results(
+        SolverStage::ResultNodes,
+        nodes.iter().enumerate().map(|(index, node)| {
             let ux = displacements[index * 2];
             let uy = displacements[index * 2 + 1];
             ThermalPlaneNodeResult {
@@ -66,74 +67,82 @@ pub(crate) fn build_thermal_plane_nodes(
                 displacement_magnitude: (ux * ux + uy * uy).sqrt(),
                 temperature_delta: node.temperature_delta,
             }
-        })
-        .collect()
+        }),
+    )
 }
 
-pub(crate) fn max_thermal_plane_displacement(nodes: &[ThermalPlaneNodeResult]) -> f64 {
-    nodes
-        .iter()
-        .map(|node| node.displacement_magnitude)
-        .fold(0.0_f64, f64::max)
+pub(crate) fn max_thermal_plane_displacement(
+    nodes: &[ThermalPlaneNodeResult],
+) -> Result<f64, String> {
+    max_results(SolverStage::ResultNodeSummary, nodes, |node| {
+        node.displacement_magnitude
+    })
 }
 
-pub(crate) fn max_temperature_delta(nodes: &[ThermalPlaneNodeResult]) -> f64 {
-    nodes
-        .iter()
-        .map(|node| node.temperature_delta.abs())
-        .fold(0.0_f64, f64::max)
+pub(crate) fn max_temperature_delta(nodes: &[ThermalPlaneNodeResult]) -> Result<f64, String> {
+    max_results(SolverStage::ResultNodeSummary, nodes, |node| {
+        node.temperature_delta.abs()
+    })
 }
 
-pub(crate) fn max_thermal_triangle_stress(elements: &[ThermalPlaneTriangleElementResult]) -> f64 {
-    elements
-        .iter()
-        .map(|element| element.von_mises.abs())
-        .fold(0.0_f64, f64::max)
+pub(crate) fn max_thermal_triangle_stress(
+    elements: &[ThermalPlaneTriangleElementResult],
+) -> Result<f64, String> {
+    max_results(SolverStage::ResultElementSummary, elements, |element| {
+        element.von_mises.abs()
+    })
 }
 
-pub(crate) fn max_thermal_quad_stress(elements: &[ThermalPlaneQuadElementResult]) -> f64 {
-    elements
-        .iter()
-        .map(|element| element.von_mises.abs())
-        .fold(0.0_f64, f64::max)
+pub(crate) fn max_thermal_quad_stress(
+    elements: &[ThermalPlaneQuadElementResult],
+) -> Result<f64, String> {
+    max_results(SolverStage::ResultElementSummary, elements, |element| {
+        element.von_mises.abs()
+    })
 }
 
 pub(crate) fn thermal_triangle_total_strain_energy(
     request: &SolveThermalPlaneTriangle2dRequest,
     elements: &[ThermalPlaneTriangleElementResult],
-) -> f64 {
-    elements
-        .iter()
-        .zip(request.elements.iter())
-        .map(|(element, input)| element.strain_energy_density * element.area * input.thickness)
-        .sum()
+) -> Result<f64, String> {
+    fold_results(
+        SolverStage::ResultTotals,
+        elements
+            .iter()
+            .zip(request.elements.iter())
+            .map(|(element, input)| element.strain_energy_density * element.area * input.thickness),
+        -0.0_f64,
+        |sum, value| sum + value,
+    )
 }
 
 pub(crate) fn thermal_quad_total_strain_energy(
     request: &SolveThermalPlaneQuad2dRequest,
     elements: &[ThermalPlaneQuadElementResult],
-) -> f64 {
-    elements
-        .iter()
-        .zip(request.elements.iter())
-        .map(|(element, input)| element.strain_energy_density * element.area * input.thickness)
-        .sum()
+) -> Result<f64, String> {
+    fold_results(
+        SolverStage::ResultTotals,
+        elements
+            .iter()
+            .zip(request.elements.iter())
+            .map(|(element, input)| element.strain_energy_density * element.area * input.thickness),
+        -0.0_f64,
+        |sum, value| sum + value,
+    )
 }
 
 pub(crate) fn max_thermal_triangle_strain_energy_density(
     elements: &[ThermalPlaneTriangleElementResult],
-) -> f64 {
-    elements
-        .iter()
-        .map(|element| element.strain_energy_density.abs())
-        .fold(0.0_f64, f64::max)
+) -> Result<f64, String> {
+    max_results(SolverStage::ResultElementSummary, elements, |element| {
+        element.strain_energy_density.abs()
+    })
 }
 
 pub(crate) fn max_thermal_quad_strain_energy_density(
     elements: &[ThermalPlaneQuadElementResult],
-) -> f64 {
-    elements
-        .iter()
-        .map(|element| element.strain_energy_density.abs())
-        .fold(0.0_f64, f64::max)
+) -> Result<f64, String> {
+    max_results(SolverStage::ResultElementSummary, elements, |element| {
+        element.strain_energy_density.abs()
+    })
 }

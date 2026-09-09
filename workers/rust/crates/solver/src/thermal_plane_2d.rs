@@ -7,6 +7,7 @@ use crate::plane_2d_math::{
     thermal_plane_triangle_equivalent_load,
 };
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
+use crate::solver_postprocess::collect_results;
 use crate::thermal_plane_2d_profile::{
     ThermalPlaneQuadProfile, ThermalPlaneTriangleProfile, push_thermal_plane_stage,
 };
@@ -146,11 +147,14 @@ fn solve_thermal_plane_triangle_2d_internal(
 
     stage_started = Instant::now();
     let displacements = solved.displacements;
-    let nodes = build_thermal_plane_nodes(&request.nodes, &displacements);
+    let nodes = build_thermal_plane_nodes(&request.nodes, &displacements)?;
     let elements =
-        build_thermal_triangle_elements(request.as_ref(), &computed_elements, &displacements);
-    let total_strain_energy = thermal_triangle_total_strain_energy(request.as_ref(), &elements);
-    let max_strain_energy_density = max_thermal_triangle_strain_energy_density(&elements);
+        build_thermal_triangle_elements(request.as_ref(), &computed_elements, &displacements)?;
+    let total_strain_energy = thermal_triangle_total_strain_energy(request.as_ref(), &elements)?;
+    let max_strain_energy_density = max_thermal_triangle_strain_energy_density(&elements)?;
+    let max_displacement = max_thermal_plane_displacement(&nodes)?;
+    let max_stress = max_thermal_triangle_stress(&elements)?;
+    let max_temperature_delta = max_temperature_delta(&nodes)?;
     push_thermal_plane_stage(
         &mut stages,
         collect_stages,
@@ -161,9 +165,9 @@ fn solve_thermal_plane_triangle_2d_internal(
     Ok(ThermalPlaneTriangleProfile {
         result: SolveThermalPlaneTriangle2dResult {
             input: request.into_owned(),
-            max_displacement: max_thermal_plane_displacement(&nodes),
-            max_stress: max_thermal_triangle_stress(&elements),
-            max_temperature_delta: max_temperature_delta(&nodes),
+            max_displacement,
+            max_stress,
+            max_temperature_delta,
             total_strain_energy,
             max_strain_energy_density,
             nodes,
@@ -277,11 +281,14 @@ fn solve_thermal_plane_quad_2d_internal(
 
     stage_started = Instant::now();
     let displacements = solved.displacements;
-    let nodes = build_thermal_plane_nodes(&request.nodes, &displacements);
+    let nodes = build_thermal_plane_nodes(&request.nodes, &displacements)?;
     let elements =
-        build_thermal_quad_elements(request.as_ref(), &computed_elements, &displacements);
-    let total_strain_energy = thermal_quad_total_strain_energy(request.as_ref(), &elements);
-    let max_strain_energy_density = max_thermal_quad_strain_energy_density(&elements);
+        build_thermal_quad_elements(request.as_ref(), &computed_elements, &displacements)?;
+    let total_strain_energy = thermal_quad_total_strain_energy(request.as_ref(), &elements)?;
+    let max_strain_energy_density = max_thermal_quad_strain_energy_density(&elements)?;
+    let max_displacement = max_thermal_plane_displacement(&nodes)?;
+    let max_stress = max_thermal_quad_stress(&elements)?;
+    let max_temperature_delta = max_temperature_delta(&nodes)?;
     push_thermal_plane_stage(
         &mut stages,
         collect_stages,
@@ -292,9 +299,9 @@ fn solve_thermal_plane_quad_2d_internal(
     Ok(ThermalPlaneQuadProfile {
         result: SolveThermalPlaneQuad2dResult {
             input: request.into_owned(),
-            max_displacement: max_thermal_plane_displacement(&nodes),
-            max_stress: max_thermal_quad_stress(&elements),
-            max_temperature_delta: max_temperature_delta(&nodes),
+            max_displacement,
+            max_stress,
+            max_temperature_delta,
             total_strain_energy,
             max_strain_energy_density,
             nodes,
@@ -359,66 +366,70 @@ fn build_thermal_triangle_elements(
     request: &SolveThermalPlaneTriangle2dRequest,
     computed_elements: &[ThermalPlaneTriangleComputed],
     displacements: &[f64],
-) -> Vec<ThermalPlaneTriangleElementResult> {
-    request
-        .elements
-        .iter()
-        .zip(computed_elements.iter())
-        .enumerate()
-        .map(|(index, (element, computed))| {
-            let element_displacements = triangle_displacements(
-                displacements,
-                element.node_i,
-                element.node_j,
-                element.node_k,
-            );
-            let state = thermal_plane_triangle_state(
-                computed,
-                &element_displacements,
-                element.thermal_expansion,
-            );
+) -> Result<Vec<ThermalPlaneTriangleElementResult>, String> {
+    collect_results(
+        SolverStage::ResultElements,
+        request
+            .elements
+            .iter()
+            .zip(computed_elements.iter())
+            .enumerate()
+            .map(|(index, (element, computed))| {
+                let element_displacements = triangle_displacements(
+                    displacements,
+                    element.node_i,
+                    element.node_j,
+                    element.node_k,
+                );
+                let state = thermal_plane_triangle_state(
+                    computed,
+                    &element_displacements,
+                    element.thermal_expansion,
+                );
 
-            ThermalPlaneTriangleElementResult {
-                index,
-                id: element.id.clone(),
-                node_i: element.node_i,
-                node_j: element.node_j,
-                node_k: element.node_k,
-                area: computed.area,
-                average_temperature_delta: computed.average_temperature_delta,
-                thermal_strain: state.thermal_strain,
-                mechanical_strain_x: state.mechanical_strain[0],
-                mechanical_strain_y: state.mechanical_strain[1],
-                total_strain_x: state.total_strain[0],
-                total_strain_y: state.total_strain[1],
-                gamma_xy: state.total_strain[2],
-                stress_x: state.stress[0],
-                stress_y: state.stress[1],
-                tau_xy: state.stress[2],
-                principal_stress_1: state.principal_stress_1,
-                principal_stress_2: state.principal_stress_2,
-                max_in_plane_shear: state.max_in_plane_shear,
-                von_mises: state.von_mises,
-                strain_energy_density: state.strain_energy_density,
-            }
-        })
-        .collect()
+                ThermalPlaneTriangleElementResult {
+                    index,
+                    id: element.id.clone(),
+                    node_i: element.node_i,
+                    node_j: element.node_j,
+                    node_k: element.node_k,
+                    area: computed.area,
+                    average_temperature_delta: computed.average_temperature_delta,
+                    thermal_strain: state.thermal_strain,
+                    mechanical_strain_x: state.mechanical_strain[0],
+                    mechanical_strain_y: state.mechanical_strain[1],
+                    total_strain_x: state.total_strain[0],
+                    total_strain_y: state.total_strain[1],
+                    gamma_xy: state.total_strain[2],
+                    stress_x: state.stress[0],
+                    stress_y: state.stress[1],
+                    tau_xy: state.stress[2],
+                    principal_stress_1: state.principal_stress_1,
+                    principal_stress_2: state.principal_stress_2,
+                    max_in_plane_shear: state.max_in_plane_shear,
+                    von_mises: state.von_mises,
+                    strain_energy_density: state.strain_energy_density,
+                }
+            }),
+    )
 }
 
 fn build_thermal_quad_elements(
     request: &SolveThermalPlaneQuad2dRequest,
     computed_elements: &[ThermalPlaneQuadComputed],
     displacements: &[f64],
-) -> Vec<ThermalPlaneQuadElementResult> {
-    request
-        .elements
-        .iter()
-        .zip(computed_elements.iter())
-        .enumerate()
-        .map(|(index, (element, computed))| {
-            build_thermal_plane_quad_element(index, element, computed, displacements)
-        })
-        .collect()
+) -> Result<Vec<ThermalPlaneQuadElementResult>, String> {
+    collect_results(
+        SolverStage::ResultElements,
+        request
+            .elements
+            .iter()
+            .zip(computed_elements.iter())
+            .enumerate()
+            .map(|(index, (element, computed))| {
+                build_thermal_plane_quad_element(index, element, computed, displacements)
+            }),
+    )
 }
 
 fn precompute_thermal_plane_triangle_element(

@@ -199,6 +199,14 @@ fn validate_stage(
         "sparse_regularize_copy" => Ok(Some(SolverStage::SparseRegularizeCopy)),
         "sparse_regularize_copy_row" => Ok(Some(SolverStage::SparseRegularizeCopyRow)),
         "sparse_regularize_diagonal" => Ok(Some(SolverStage::SparseRegularizeDiagonal)),
+        "result_prescribed" => Ok(Some(SolverStage::ResultPrescribed)),
+        "result_free_dofs" => Ok(Some(SolverStage::ResultFreeDofs)),
+        "result_nodes" => Ok(Some(SolverStage::ResultNodes)),
+        "result_elements" => Ok(Some(SolverStage::ResultElements)),
+        "result_node_summary" => Ok(Some(SolverStage::ResultNodeSummary)),
+        "result_element_summary" => Ok(Some(SolverStage::ResultElementSummary)),
+        "result_totals" => Ok(Some(SolverStage::ResultTotals)),
+        "result_rhs_norm" => Ok(Some(SolverStage::ResultRhsNorm)),
         _ => Err(format!(
             "{STAGE_ENV} must name a supported numerical preparation or solver stage"
         )),
@@ -288,6 +296,14 @@ mod tests {
             "sparse_regularize_copy",
             "sparse_regularize_copy_row",
             "sparse_regularize_diagonal",
+            "result_prescribed",
+            "result_free_dofs",
+            "result_nodes",
+            "result_elements",
+            "result_node_summary",
+            "result_element_summary",
+            "result_totals",
+            "result_rhs_norm",
         ] {
             assert!(
                 validate_stage(path, Some("solve_bar_1d"), Some(stage))

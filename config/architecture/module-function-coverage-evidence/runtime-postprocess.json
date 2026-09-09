@@ -1,0 +1,62 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Scoped planar heat and thermal-stress result construction: cooperative cancellation, old/new physical reference equality, installed Agent cancel/disconnect/replay, and paired result-kernel overhead. Retained-input cloning, serialization, and other operators remain separate coverage.",
+  "evidence_claims": [
+    {
+      "id": "planar-postprocess-installed-thermal-recovery",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["runtime-engine-solver", "runtime-agent-cli", "verification-evidence"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["execution", "contract", "numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/src/solver_postprocess.rs",
+        "workers/rust/crates/solver/src/heat_plane_2d.rs",
+        "workers/rust/crates/solver/src/thermal_plane_2d.rs",
+        "workers/rust/crates/solver/src/thermal_plane_2d_results.rs",
+        "workers/rust/crates/solver/src/thermal_plane_2d_solve.rs",
+        "workers/rust/crates/solver/src/solver_postprocess_tests.rs",
+        "workers/rust/crates/solver/src/solver_postprocess_kernel_tests.rs",
+        "workers/rust/crates/cli/src/agent_fault_injection.rs",
+        "workers/rust/crates/cli/tests/agent_solver_cancel_live.rs",
+        "workers/rust/crates/cli/tests/support/solver_postprocess_cancel.rs",
+        "docs/agent-orchestrator-boundary.md",
+        "docs/research-layered-thermal.html",
+        "reports/postprocess-research-20260909.md"
+      ],
+      "required_text": [
+        "cancelled_collection_drops_every_constructed_result",
+        "owned_short_results_poll_entry_and_terminal_nodes_and_elements",
+        "later_thermal_summary_invocations_remain_cancellable",
+        "summaries_preserve_sequential_rounding_signed_zero_and_nonfinite_behavior",
+        "maximum_slice_polling_preserves_projection_order_and_special_values",
+        "retained_postprocess_physical_reference",
+        "heat_triangle_postprocessing_cancel_and_replay",
+        "thermal_quad_postprocessing_disconnect_and_replay",
+        "Installed planar postprocessing: PASS, 36/36 new fault scenarios.",
+        "synthetic_reference_not_material_certification"
+      ]
+    },
+    {
+      "id": "planar-postprocess-paired-cancellation-overhead",
+      "status": "proven",
+      "grade": "qualified",
+      "modules": ["runtime-engine-solver", "verification-evidence"],
+      "paradigms": ["validation"],
+      "dimensions": ["benchmark"],
+      "files": [
+        "workers/rust/crates/solver/src/solver_postprocess.rs",
+        "workers/rust/crates/solver/src/thermal_plane_2d_results.rs",
+        "workers/rust/crates/solver/src/solver_postprocess_benchmark.rs",
+        "reports/postprocess-research-20260909.md"
+      ],
+      "required_text": [
+        "paired_postprocess_control_overhead",
+        "baseline_ms", "unscoped_ms", "controlled_ms",
+        "No global overhead bound"
+      ]
+    }
+  ]
+}

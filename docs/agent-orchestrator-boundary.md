@@ -263,6 +263,27 @@ uninterrupted preallocation loop. Neither ordinary nor prepared solvers publish
 a partial matrix or continue regularized retries after cancellation. Counters
 reset per pass/row and remain diagnostic, not saved restart state.
 
+The triangle/quad planar heat and thermal-stress paths also check physical
+postprocessing. `result_prescribed` restores prescribed scalar DOFs and
+`result_free_dofs` scatters reduced values into the full field; each counts
+64 entries per block. Thermal-stress restoration has no nonzero prescribed
+values and reaches only the entry of `result_prescribed`. `result_rhs_norm`
+counts the thermal solver's diagnostic RHS-norm reduction in 64-value blocks.
+It retains the original sum-of-squares formula, not a different norm algorithm.
+
+`result_nodes` and `result_elements` count 64 constructed output records.
+`result_node_summary` and `result_element_summary` scan at most 1,024 source
+records per maximum pass; `result_totals` sums in 64-record blocks.
+All poll at entry and the final short block. Multiple summaries reuse a stage
+but reset its counter for each pass;
+neither stage nor count identifies a unique field or whole-job percentage.
+Maximum scans use sliced folds; sums retain a single sequential accumulator
+and their original identity. Fields, record order and numerical tolerances are
+unchanged. Cancelled collections drop the constructed prefix and return an
+error; no partial result/profile is accepted or resumable. Borrowed, owned and
+profiled entry points use the same fallible builders. This coverage is limited
+to these four planar paths, not every physical operator's result construction.
+
 An explicit job cancellation marks every matching execution currently registered
 in the control registry, not a single globally consumed flag. Cancellation with
 no matching registered execution retains the existing one-shot pre-admission
@@ -283,7 +304,7 @@ define its actual coverage, not arbitrary work invoked within that scope.
 For isolated fault qualification only,
 `KYUUBIKI_AGENT_FAULT_INJECTION_SOLVER_STAGE` selects `sparse_iteration`,
 `dense_factor`, `tridiagonal_factor`, or one of the preparation, sweep, product,
-residual, PCG vector or sparse scaling/validation stages above.
+residual, PCG vector, sparse scaling/validation or planar result stages above.
 It requires the existing hold-file and
 explicit execution-method settings. A matching job is held once, after at least
 three completed steps at that stage, for no more than 120 seconds. Numerical
@@ -292,8 +313,9 @@ stage and minimum step count, never the host marker path. Leave all three fault
 controls unset in normal use. A slow observer delays its synchronous caller.
 
 This scope does not interrupt arbitrary input parsing/validation, individual
-allocations, custom constraint algorithms, physical-result postprocessing,
-other preconditioner implementations,
+allocations, custom constraint algorithms, other operators' physical-result
+postprocessing, retained-input cloning, serialization, output writes,
+or other preconditioner implementations,
 or arbitrary matrix/vector operations. The row-interior guarantee above applies
 only to the listed compressed products, sparse residual/finite checks and
 scaling/copy paths, not dense factorization interiors or preconditioner rows.
@@ -319,6 +341,9 @@ installed vector-stage faults from unchanged mixed-workflow numerical regression
 The [sparse scaling/validation study](../reports/sparse-scaling-research-20260908.md)
 adds installed pre-solve and post-solve faults, with fallback/long-row coverage
 kept explicitly at the native numerical-test layer.
+The [planar postprocessing study](../reports/postprocess-research-20260909.md)
+extends this to field construction, summaries and healthy same-job replay,
+separating physical reference comparison from paired kernel performance.
 
 ## Termination Signals And Shutdown Budget
 

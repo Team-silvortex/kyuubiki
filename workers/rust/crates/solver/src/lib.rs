@@ -92,6 +92,7 @@ mod solid_tetra_3d;
 mod solid_tetra_3d_element;
 mod solid_tetra_3d_validation;
 pub mod solver_control;
+mod solver_postprocess;
 mod spring;
 mod spring_validation;
 mod stokes_flow_plane_2d;
@@ -269,6 +270,9 @@ mod tests;
 
 #[cfg(test)]
 mod solver_preparation_tests;
+
+#[cfg(test)]
+mod solver_postprocess_tests;
 
 #[cfg(test)]
 mod solver_sweep_tests;
