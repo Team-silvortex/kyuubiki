@@ -58,6 +58,9 @@
         "mode": { "type": "string" },
         "future_mode": { "type": "string" },
         "startup_schema_check": { "type": "boolean" },
+        "data_version": { "type": "integer", "minimum": 1 },
+        "legacy_startup": { "const": "refuse_until_explicit_copy_upgrade" },
+        "ledger_table": { "const": "kyuubiki_data_migrations" },
         "destructive_changes_allowed": { "type": "boolean" },
         "managed_tables": { "type": "array", "items": { "type": "string" } }
       }

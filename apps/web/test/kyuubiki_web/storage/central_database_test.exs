@@ -7,7 +7,9 @@ defmodule KyuubikiWeb.Storage.CentralDatabaseTest do
     plan = CentralDatabase.migration_plan()
 
     assert plan["schema_version"] == "kyuubiki.central-database-contract/v1"
-    assert plan["mode"] == "schema_setup_preview"
+    assert plan["mode"] == "versioned_migrations"
+    assert plan["legacy_startup"] == "refuse_until_explicit_copy_upgrade"
+    assert plan["data_version"] == 1
     assert plan["destructive_changes_allowed"] == false
 
     assert MapSet.subset?(

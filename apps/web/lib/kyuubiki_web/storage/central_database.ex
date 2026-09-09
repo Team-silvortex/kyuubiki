@@ -73,9 +73,12 @@ defmodule KyuubikiWeb.Storage.CentralDatabase do
   def migration_plan do
     %{
       "schema_version" => @schema_version,
-      "mode" => "schema_setup_preview",
+      "mode" => "versioned_migrations",
       "future_mode" => "versioned_migrations",
       "startup_schema_check" => true,
+      "data_version" => KyuubikiWeb.Storage.DatabaseMigrations.version(),
+      "legacy_startup" => "refuse_until_explicit_copy_upgrade",
+      "ledger_table" => "kyuubiki_data_migrations",
       "destructive_changes_allowed" => false,
       "managed_tables" => Enum.map(@tables, & &1["name"])
     }
@@ -122,14 +125,14 @@ defmodule KyuubikiWeb.Storage.CentralDatabase do
     ]
   end
 
-  def create_table_sqls do
+  def create_table_sqls(backend \\ Storage.backend()) do
     [
-      create_sources_sql(),
-      create_entries_sql(),
-      create_publishers_sql(),
-      create_publisher_tokens_sql(),
-      create_artifacts_sql(),
-      create_artifact_signatures_sql()
+      create_sources_sql(backend),
+      create_entries_sql(backend),
+      create_publishers_sql(backend),
+      create_publisher_tokens_sql(backend),
+      create_artifacts_sql(backend),
+      create_artifact_signatures_sql(backend)
     ]
   end
 
@@ -157,22 +160,22 @@ defmodule KyuubikiWeb.Storage.CentralDatabase do
     end
   end
 
-  defp create_sources_sql do
+  defp create_sources_sql(backend) do
     """
       CREATE TABLE IF NOT EXISTS central_store_sources (
         source_id TEXT PRIMARY KEY,
         source_type TEXT NOT NULL,
         label TEXT NOT NULL,
-        enabled #{boolean_type()} NOT NULL DEFAULT #{boolean_default(true)},
+        enabled #{boolean_type(backend)} NOT NULL DEFAULT #{boolean_default(backend)},
         status TEXT NOT NULL,
-        metadata #{json_type()} NOT NULL,
-        inserted_at #{timestamp_type()} NOT NULL DEFAULT #{timestamp_default()},
-        updated_at #{timestamp_type()} NOT NULL DEFAULT #{timestamp_default()}
+        metadata #{json_type(backend)} NOT NULL,
+        inserted_at #{timestamp_type(backend)} NOT NULL DEFAULT #{timestamp_default(backend)},
+        updated_at #{timestamp_type(backend)} NOT NULL DEFAULT #{timestamp_default(backend)}
       )
     """
   end
 
-  defp create_entries_sql do
+  defp create_entries_sql(backend) do
     """
       CREATE TABLE IF NOT EXISTS central_store_entries (
         kind TEXT NOT NULL,
@@ -181,43 +184,43 @@ defmodule KyuubikiWeb.Storage.CentralDatabase do
         title TEXT NOT NULL,
         version TEXT NOT NULL,
         package_ref TEXT,
-        payload #{json_type()} NOT NULL,
-        metadata #{json_type()} NOT NULL,
-        inserted_at #{timestamp_type()} NOT NULL DEFAULT #{timestamp_default()},
-        updated_at #{timestamp_type()} NOT NULL DEFAULT #{timestamp_default()},
+        payload #{json_type(backend)} NOT NULL,
+        metadata #{json_type(backend)} NOT NULL,
+        inserted_at #{timestamp_type(backend)} NOT NULL DEFAULT #{timestamp_default(backend)},
+        updated_at #{timestamp_type(backend)} NOT NULL DEFAULT #{timestamp_default(backend)},
         PRIMARY KEY (kind, entry_id)
       )
     """
   end
 
-  defp create_publishers_sql do
+  defp create_publishers_sql(backend) do
     """
       CREATE TABLE IF NOT EXISTS central_publishers (
         publisher_id TEXT PRIMARY KEY,
         display_name TEXT NOT NULL,
         status TEXT NOT NULL,
-        metadata #{json_type()} NOT NULL,
-        inserted_at #{timestamp_type()} NOT NULL DEFAULT #{timestamp_default()},
-        updated_at #{timestamp_type()} NOT NULL DEFAULT #{timestamp_default()}
+        metadata #{json_type(backend)} NOT NULL,
+        inserted_at #{timestamp_type(backend)} NOT NULL DEFAULT #{timestamp_default(backend)},
+        updated_at #{timestamp_type(backend)} NOT NULL DEFAULT #{timestamp_default(backend)}
       )
     """
   end
 
-  defp create_publisher_tokens_sql do
+  defp create_publisher_tokens_sql(backend) do
     """
       CREATE TABLE IF NOT EXISTS central_publisher_tokens (
         token_id TEXT PRIMARY KEY,
         publisher_id TEXT NOT NULL REFERENCES central_publishers(publisher_id) ON DELETE CASCADE,
         token_fingerprint TEXT NOT NULL,
         status TEXT NOT NULL,
-        scopes #{json_type()} NOT NULL,
-        inserted_at #{timestamp_type()} NOT NULL DEFAULT #{timestamp_default()},
-        expires_at #{timestamp_type()}
+        scopes #{json_type(backend)} NOT NULL,
+        inserted_at #{timestamp_type(backend)} NOT NULL DEFAULT #{timestamp_default(backend)},
+        expires_at #{timestamp_type(backend)}
       )
     """
   end
 
-  defp create_artifacts_sql do
+  defp create_artifacts_sql(backend) do
     """
       CREATE TABLE IF NOT EXISTS central_artifacts (
         artifact_id TEXT PRIMARY KEY,
@@ -226,28 +229,31 @@ defmodule KyuubikiWeb.Storage.CentralDatabase do
         version TEXT NOT NULL,
         storage_uri TEXT NOT NULL,
         sha256 TEXT NOT NULL,
-        metadata #{json_type()} NOT NULL,
-        inserted_at #{timestamp_type()} NOT NULL DEFAULT #{timestamp_default()}
+        metadata #{json_type(backend)} NOT NULL,
+        inserted_at #{timestamp_type(backend)} NOT NULL DEFAULT #{timestamp_default(backend)}
       )
     """
   end
 
-  defp create_artifact_signatures_sql do
+  defp create_artifact_signatures_sql(backend) do
     """
       CREATE TABLE IF NOT EXISTS central_artifact_signatures (
         signature_id TEXT PRIMARY KEY,
         artifact_id TEXT NOT NULL REFERENCES central_artifacts(artifact_id) ON DELETE CASCADE,
         key_id TEXT NOT NULL,
         signature TEXT NOT NULL,
-        metadata #{json_type()} NOT NULL,
-        inserted_at #{timestamp_type()} NOT NULL DEFAULT #{timestamp_default()}
+        metadata #{json_type(backend)} NOT NULL,
+        inserted_at #{timestamp_type(backend)} NOT NULL DEFAULT #{timestamp_default(backend)}
       )
     """
   end
 
-  defp timestamp_type, do: if(Storage.sqlite?(), do: "TEXT", else: "TIMESTAMPTZ")
-  defp timestamp_default, do: if(Storage.sqlite?(), do: "CURRENT_TIMESTAMP", else: "NOW()")
-  defp json_type, do: if(Storage.sqlite?(), do: "JSON", else: "JSONB")
-  defp boolean_type, do: if(Storage.sqlite?(), do: "INTEGER", else: "BOOLEAN")
-  defp boolean_default(true), do: if(Storage.sqlite?(), do: "1", else: "TRUE")
+  defp timestamp_type(backend), do: if(backend == :sqlite, do: "TEXT", else: "TIMESTAMPTZ")
+
+  defp timestamp_default(backend),
+    do: if(backend == :sqlite, do: "CURRENT_TIMESTAMP", else: "NOW()")
+
+  defp json_type(backend), do: if(backend == :sqlite, do: "JSON", else: "JSONB")
+  defp boolean_type(backend), do: if(backend == :sqlite, do: "INTEGER", else: "BOOLEAN")
+  defp boolean_default(backend), do: if(backend == :sqlite, do: "1", else: "TRUE")
 end

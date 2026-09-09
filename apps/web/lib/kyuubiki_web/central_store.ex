@@ -219,7 +219,8 @@ defmodule KyuubikiWeb.CentralStore do
       "migration_policy" => CentralDatabase.migration_plan(),
       "table_specs" => CentralDatabase.table_specs(),
       "backup_policy" => %{
-        "sqlite" => "copy database file after stopping writers",
+        "sqlite" =>
+          "SqliteLifecycle.backup! uses VACUUM INTO, verifies integrity and publishes a standalone snapshot including committed WAL data",
         "postgres" => "pg_dump plus retained catalog manifest snapshot",
         "retention" => "deployment-defined"
       }

@@ -29,6 +29,7 @@
     "config/architecture/module-function-coverage-evidence/runtime-recovery.json",
     "config/architecture/module-function-coverage-evidence/runtime-postprocess.json",
     "config/architecture/module-function-coverage-evidence/project-data-lifecycle.json",
+    "config/architecture/module-function-coverage-evidence/runtime-database-lifecycle.json",
     "config/architecture/module-function-coverage-evidence/linux-host-power-loss-operational.json",
     "config/architecture/module-function-coverage-evidence/agent-control-link.json",
     "config/architecture/module-function-coverage-evidence/agent-solver-execution.json",

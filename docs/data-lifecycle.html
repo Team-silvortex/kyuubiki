@@ -24,7 +24,8 @@
       <section class="docs-card docs-section" id="ownership">
         <h2>Data classes and authority</h2>
         <p class="docs-copy">These are lifecycle boundaries, not new editable configuration
-          switches. Only the project-file migration below is implemented by this increment.</p>
+          switches. Project-file migration and the scoped runtime-database lifecycle below
+          are implemented; artifact, settings and credential migration remain separate work.</p>
         <ul class="docs-list">
           <li><strong>Projects:</strong> the user-selected <code>.kyuubiki</code> file owns
             project records, model versions, jobs, results, workspace state and attachments.
@@ -36,8 +37,9 @@
             Owner: research SDKs and <code>kyuubiki-kcore</code>.</li>
           <li><strong>Runtime databases:</strong> Orchestra owns jobs, models, results and
             recovery state in its configured SQLite/Postgres backend. Central-store tables
-            share that storage owner. Startup table setup is not yet a versioned migration
-            ledger; this command must never be pointed at database files.</li>
+            share that storage owner. Startup is now gated by a versioned migration ledger.
+            Project commands must never be pointed at database files; use the database-specific
+            maintenance API described below.</li>
           <li><strong>Recovery generations:</strong> existing persistence envelopes retain
             integrity-checked current/previous generations. Preserve recovery records and
             referenced artifacts together; a previous-generation fallback is not a schema
@@ -160,15 +162,130 @@ cargo kyuubiki project migration-verify studies/upgraded.kyuubiki \
           rewriting during this migration.</p>
       </section>
 
+      <section class="docs-card docs-section" id="runtime-database">
+        <h2>Implemented: runtime database version gate</h2>
+        <p class="docs-copy"><code>Storage.SchemaSetup</code> now calls
+          <code>DatabaseMigrations.boot!</code> before the application starts recovery workers
+          or HTTP listeners. SQLite and PostgreSQL use the same migration definition and
+          shape policy, with backend-specific SQL. No new Rust or Node database owner is
+          introduced alongside the existing Elixir/Ecto service.</p>
+        <ul class="docs-list">
+          <li>A genuinely empty database is initialized in one transaction. The
+            <code>kyuubiki_data_migrations</code> ledger records data version, immutable
+            migration ID/checksum, minimum reader version and application time. Data version
+            <code>1</code> is independent of the product's release number.</li>
+          <li>A known current ledger is checked, never rewritten merely on restart. Missing
+            managed tables, incompatible column types/nullability/primary keys/foreign-key
+            contracts, unknown managed tables or columns, malformed ledgers and future
+            history fail before application schema changes or business writes. Opening the
+            Ecto connection may still update SQLite journal metadata before this gate; startup
+            is not a byte-read-only inspection. This is not an audit of every index, trigger,
+            default expression, privilege or all research payloads.</li>
+          <li>An existing unversioned Kyuubiki database now deliberately blocks startup.
+            Take a consistent snapshot, upgrade a separate candidate and verify it first.
+            Reinstalling an old binary is not an approved database downgrade. Older binaries
+            without this gate cannot be forced to obey it; isolate them operationally.</li>
+          <li>The baseline preserves existing records and can add the four known missing
+            legacy job columns: <code>model_version_id</code>, <code>queue_timeout_ms</code>,
+            <code>execution_timeout_ms</code> and <code>execution_started_at</code>. Only
+            missing known legacy tables are materialized; versioned databases are not
+            silently repaired. Unknown extensions in managed tables require conversion.</li>
+          <li>SQLite uses an immediate transaction; PostgreSQL uses a transaction-scoped
+            advisory lock. DDL and ledger writes commit together or roll back together.
+            The lock coordinates cooperating migrators, not arbitrary old application
+            writers. Stop every writer before service activation or maintenance on a clone.</li>
+          <li>Future revisions must append an explicit migration and compatibility rule,
+            with fixtures and qualification. Never edit the pinned baseline recipe or
+            manually stamp an unknown database as current.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section" id="sqlite-maintenance">
+        <h2>SQLite backup, copy upgrade and restore</h2>
+        <p class="docs-copy"><code>KyuubikiWeb.Storage.SqliteLifecycle</code> exposes
+          <code>backup!</code>, <code>plan!</code>, <code>upgrade!</code>,
+          <code>restore!</code> and <code>verify!</code>. The Mix adapter starts dependencies
+          only, not Orchestra or its HTTP listener. The same library can be called by an
+          installed BEAM maintenance process with Exqlite and crypto started; Mix is a
+          development adapter, not a new runtime shell/Node dependency.</p>
+        <pre><code># Run from apps/web. All output paths below must be new.
+mix kyuubiki.data backup path/to/active.sqlite3 --out path/to/snapshot.sqlite3
+mix kyuubiki.data plan path/to/snapshot.sqlite3
+mix kyuubiki.data upgrade path/to/snapshot.sqlite3 \
+  --out path/to/candidate.sqlite3 --expect-sha256 &lt;reviewed-snapshot-sha256&gt;
+mix kyuubiki.data verify path/to/candidate.sqlite3 --receipt path/to/upgrade-receipt.json
+mix kyuubiki.data restore path/to/snapshot.sqlite3 \
+  --out path/to/restored.sqlite3 --expect-sha256 &lt;reviewed-snapshot-sha256&gt;</code></pre>
+        <ol class="docs-list">
+          <li>Keep each JSON receipt printed by backup/upgrade/restore. Use a unique receipt
+            filename if redirecting output. Compilation notices may precede JSON on the
+            first Mix invocation; compile first for machine consumption. Prefer the direct
+            library API for integration.</li>
+          <li><code>backup!</code> reads through SQLite and uses parameter-bound
+            <code>VACUUM INTO</code> to construct a consistent standalone snapshot, including
+            committed WAL pages. It does not copy only the live main file. The source is
+            opened read-only, though SQLite may need shared-memory sidecar access. The
+            snapshot is logically equivalent, not necessarily byte-identical; implicit
+            SQLite ROWIDs are not a portable application identity.</li>
+          <li>A backup is one point in time. Stop writers and take a final backup before
+            switching services, otherwise writes made after that snapshot are not in the
+            new database. This increment does not implement online delta synchronization.</li>
+          <li>Plan/upgrade/restore require a standalone file without active WAL/journal
+            content. Approval binds the whole snapshot SHA-256. Upgrades copy into a private
+            candidate, verify that digest, migrate transactionally, check SQLite integrity
+            and foreign-key consistency, then read the resulting plan back.</li>
+          <li>A synced complete candidate is published by an atomic no-overwrite hard link.
+            Existing outputs and sidecars, source symlinks and dangling destinations are
+            refused. Unsupported hard-link filesystems fail closed. Unix staging/output
+            permissions are 0700/0600; Windows ACLs remain unqualified.</li>
+          <li>Verify uses a separately trusted receipt, output digest, byte count and actual
+            database plan. Moving a snapshot does not invalidate its receipt. Hashes are
+            integrity evidence, not signatures; they do not resist replacing both artifacts.</li>
+          <li>After stopping writers, explicitly select the verified database through
+            <code>SQLITE_DATABASE_PATH</code>, then start one compatible runtime and perform
+            a read/write health check. None of these commands changes configuration, starts
+            services or selects the candidate automatically.</li>
+          <li>Restore produces an exact separate copy of an approved standalone snapshot.
+            A restored legacy database still needs a compatible old reader or explicit
+            upgrade. Recovery is not automatic merging of changes made after the snapshot.
+            Keep both the old database and receipts until the retention decision is explicit.</li>
+        </ol>
+        <p class="docs-copy">The current safety limit is 16 GiB per main file or sidecar and
+          per resulting snapshot. This is not a disk reservation or hard runtime quota:
+          concurrent growth and SQLite temporary work require additional free space.
+          Copy/hash operations stream in 1 MiB chunks; backup and integrity-check latency
+          require workload qualification. Ordinary failures clean owned staging. A hard kill
+          can leave <code>.kyuubiki-data-*</code> beside the destination: stop the writer,
+          verify retained source/published output, then remove only that owned stage. Cleanup
+          errors report residue explicitly. A published output still returns its receipt with
+          <code>cleanup_pending</code> if only staging cleanup failed; never interpret an error as permission to overwrite
+          an output that might already have been published.</p>
+        <p class="docs-copy"><code>directory_synced=false</code> means publication occurred
+          but parent-directory power-loss durability was not confirmed. Snapshot consistency
+          does not prove hardware, filesystem, ENOSPC or hard power-loss recovery. Database
+          snapshots exclude external result files, Kcore artifacts, workflow recovery envelopes,
+          credentials and package caches; retain their corresponding generation separately.
+          This is not yet a whole-system backup.</p>
+        <p class="docs-copy">PostgreSQL shares the ledger, schema gate and transactional
+          candidate-adoption API. Its integrated backup/restore command is still pending.
+          An operator must first restore a proper PostgreSQL backup into an isolated database
+          and own that candidate before calling <code>upgrade_candidate!</code>; do not pass
+          the active repository. Remote tests use disposable databases, not production tables.</p>
+        <p class="docs-copy">Underlying semantics:
+          <a href="https://www.sqlite.org/lang_vacuum.html">SQLite VACUUM INTO</a> and
+          <a href="https://www.postgresql.org/docs/current/explicit-locking.html#ADVISORY-LOCKS">PostgreSQL advisory locking</a>.
+          Output contracts: <a href="../schemas/database-lifecycle.schema.json">database lifecycle schema</a>.</p>
+      </section>
+
       <section class="docs-card docs-section" id="rollout">
         <h2>Next lifecycle work</h2>
         <ol class="docs-list">
-          <li><strong>Runtime database ledger:</strong> introduce explicit current/minimum
-            reader versions, immutable migration IDs and checksums, transactional application,
-            single-writer ownership and refusal of unknown/future ledger entries.</li>
+          <li><strong>Runtime database evolution:</strong> baseline ledger and startup gate
+            are implemented; qualify each future revision, rolling-version coexistence,
+            operational writer fencing and cross-release fixtures before adding new upgrades.</li>
           <li><strong>Consistent backup and restore:</strong> database-aware SQLite snapshots
-            and Postgres backup/restore, artifact/digest inventories, validated restore into
-            a separate root, then explicit service activation. Copying a live SQLite main
+            are implemented here. Add Postgres backup/restore, artifact/digest inventories,
+            validated whole-generation restore, then explicit service activation. Copying a live SQLite main
             file alone is not a backup; WAL/transaction consistency must be handled by the
             owning backend.</li>
           <li><strong>Research archive evolution:</strong> preserve Kcore, run lineage and
@@ -185,7 +302,8 @@ cargo kyuubiki project migration-verify studies/upgraded.kyuubiki \
             and Linux/macOS/Windows native filesystem coverage before broad rollout.</li>
         </ol>
         <p class="docs-copy">No production database, user project or credential store is
-          migrated automatically by this increment. Legacy <code>normalize</code>/<code>pack</code>
+          migrated automatically. Existing unversioned runtime databases now require explicit
+          maintenance before the new runtime can start. Legacy <code>normalize</code>/<code>pack</code>
           tools are not substitutes for the digest-bound migration/receipt workflow.</p>
       </section>
     </main>

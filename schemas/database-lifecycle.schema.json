@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/database-lifecycle.schema.json",
+  "title": "Runtime Database Lifecycle",
+  "oneOf": [
+    { "$ref": "#/$defs/plan" },
+    { "$ref": "#/$defs/receipt" },
+    { "$ref": "#/$defs/verification" }
+  ],
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "backend", "status", "data_version", "target_data_version", "minimum_reader_version", "migration_id", "migration_sha256", "managed_table_count", "pending_columns", "destructive_changes_allowed", "activation"],
+      "properties": {
+        "schema_version": { "const": "kyuubiki.database-migration-plan/v1" },
+        "backend": { "enum": ["sqlite", "postgres"] },
+        "status": { "enum": ["empty", "legacy_unversioned", "current"] },
+        "data_version": { "enum": [0, 1] },
+        "target_data_version": { "const": 1 },
+        "minimum_reader_version": { "const": 1 },
+        "migration_id": { "const": "runtime-baseline-0001" },
+        "migration_sha256": { "$ref": "#/$defs/digest" },
+        "source_sha256": { "$ref": "#/$defs/digest" },
+        "managed_table_count": { "type": "integer", "minimum": 0, "maximum": 13 },
+        "pending_columns": { "type": "array", "items": { "type": "string" }, "maxItems": 4 },
+        "destructive_changes_allowed": { "const": false },
+        "activation": { "const": "explicit_service_switch" }
+      }
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "operation", "output_sha256", "output_bytes", "directory_synced", "source_retained", "activation", "created_at", "database"],
+      "properties": {
+        "schema_version": { "const": "kyuubiki.sqlite-lifecycle-receipt/v1" },
+        "operation": { "enum": ["backup", "upgrade", "restore"] },
+        "output_sha256": { "$ref": "#/$defs/digest" },
+        "output_bytes": { "type": "integer", "minimum": 1, "maximum": 17179869184 },
+        "directory_synced": { "type": "boolean" },
+        "cleanup_pending": { "type": "string", "pattern": "^\\.kyuubiki-data-[0-9a-f]{32}$" },
+        "source_retained": { "const": true },
+        "activation": { "const": "explicit_service_switch" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "database": { "$ref": "#/$defs/plan" },
+        "snapshot_kind": { "const": "sqlite_vacuum_into" },
+        "source_sha256": { "$ref": "#/$defs/digest" },
+        "source_data_version": { "enum": [0, 1] },
+        "rollback": { "const": "reopen_retained_snapshot_with_compatible_reader" }
+      },
+      "if": { "properties": { "operation": { "const": "backup" } } },
+      "then": { "required": ["snapshot_kind"] },
+      "else": { "required": ["source_sha256", "source_data_version", "rollback"] }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "status", "output_sha256", "database"],
+      "properties": {
+        "schema_version": { "const": "kyuubiki.database-verification/v1" },
+        "status": { "const": "verified" },
+        "output_sha256": { "$ref": "#/$defs/digest" },
+        "database": { "$ref": "#/$defs/plan" }
+      }
+    }
+  }
+}
