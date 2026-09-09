@@ -727,6 +727,10 @@ defmodule KyuubikiWeb.Router do
   defp respond_submit({conn, {:error, reason}}), do: unprocessable(conn, reason)
 
   defp respond_success({conn, {:ok, payload}}, status), do: respond_json(conn, status, payload)
+
+  defp respond_success({conn, {:error, {:job_not_found, _job_id}}}, _status),
+    do: respond_json(conn, 404, %{"error" => "job_not_found"})
+
   defp respond_success({conn, {:error, reason}}, _status), do: unprocessable(conn, reason)
 
   defp handoff_not_found(conn, handoff_id) do

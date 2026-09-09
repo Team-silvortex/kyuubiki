@@ -149,6 +149,24 @@
           multi-query export an atomic database snapshot or add a new import endpoint.
           See the <a href="../reports/project-version-chain-20260909.md">project/version
           chain regression report</a> for API reconstruction, concurrency and rollback scope.</p>
+        <p class="docs-copy">For project-bound execution, submit <code>project_id</code>
+          and <code>model_version_id</code> alongside the solver payload or catalog
+          <code>input_artifacts</code>. Direct solvers, raw graphs and catalog workflows
+          preserve this context. A selected version determines the owning project;
+          a missing or deleted version is rejected with HTTP 422 before creating a job.
+          Version IDs are provenance metadata, not automatic input loading: explicitly
+          fetch and submit the selected checkpoint payload, rather than the edited working
+          copy. No payload-to-checkpoint digest equivalence is implied.</p>
+        <p class="docs-copy">Exported workflow records may contain failure diagnostics
+          and recovery history, not just successful outputs. Check the job status and
+          workflow <code>recovery.state</code>; <code>has_result</code> alone does not mean
+          the solve succeeded. Deleting a job also removes its result. Reading a missing
+          job or its <code>/status</code> endpoint now returns HTTP 404 with
+          <code>{"error":"job_not_found"}</code>, consistent with other job operations,
+          rather than the previous generic HTTP 422 response.
+          See the <a href="../reports/project-execution-chain-20260909.md">native project
+          execution chain report</a> for analytical checks, failed-solve recovery and
+          model reconstruction on macOS and Linux.</p>
       </section>
 
       <section class="docs-card docs-section" id="project-migration">

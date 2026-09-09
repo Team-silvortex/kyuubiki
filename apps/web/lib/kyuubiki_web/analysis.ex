@@ -87,6 +87,8 @@ defmodule KyuubikiWeb.Analysis do
              "graph" => graph,
              "input_artifacts" => input_artifacts,
              "response_options" => response_options,
+             "project_id" => Map.get(normalized, "project_id"),
+             "model_version_id" => Map.get(normalized, "model_version_id"),
              "tags" => Map.get(normalized, "tags", []),
              "requested_agent_id" => Map.get(normalized, "requested_agent_id"),
              "requested_capability" => Map.get(normalized, "requested_capability"),

@@ -35,6 +35,34 @@
   },
   "evidence_claims": [
     {
+      "id": "project-native-execution-export-chain",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "runtime-engine-solver", "verification-evidence"],
+      "paradigms": ["persistence_provenance", "workflow_composition", "validation"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/analysis.ex",
+        "apps/web/lib/kyuubiki_web/router.ex",
+        "apps/web/test/support/workflow_project_execution_api.exs",
+        "apps/web/test/kyuubiki_web/api/project_workflow_context_api_test.exs",
+        "apps/web/test/kyuubiki_web/api/project_execution_chain_live_test.exs",
+        "apps/web/test/kyuubiki_web/api/job_audit_api_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_operator_activity_test.exs",
+        "docs/data-lifecycle.html",
+        "reports/project-execution-chain-20260909.md"
+      ],
+      "required_text": [
+        "catalog jobs retain selected project and checkpoint through execution and export",
+        "missing or deleted checkpoints reject before job creation and a valid retry succeeds",
+        "missing job detail and polling endpoints use the same not-found contract",
+        "saved input executes directly and through a catalog, exports, reconstructs, and reruns",
+        "singular native solve keeps failure diagnostics, not a successful artifact, and permits a corrected retry",
+        "direct and catalog results both match the analytical load sweep",
+        "Project execution chain: PASS within the tested scope."
+      ]
+    },
+    {
       "id": "project-checkpoint-export-chain",
       "status": "proven",
       "grade": "verified",

@@ -43,8 +43,17 @@ defmodule KyuubikiWeb.Orchestra.WorkflowOperatorActivityTest do
     Application.put_env(
       :kyuubiki_web,
       Watchdog,
-      Keyword.merge(watchdog, stale_job_ms: 1_500, job_timeout_ms: 60_000)
+      Keyword.merge(watchdog,
+        scan_interval_ms: 60_000,
+        stale_job_ms: 1_500,
+        job_timeout_ms: 60_000
+      )
     )
+
+    # These cases control scan_now explicitly. Restart to discard a previously scheduled
+    # tick, which could otherwise fail the deliberately stale job before its heartbeat.
+    :ok = Supervisor.terminate_child(KyuubikiWeb.Supervisor, Watchdog)
+    {:ok, _} = Supervisor.restart_child(KyuubikiWeb.Supervisor, Watchdog)
 
     on_exit(fn ->
       Application.put_env(:kyuubiki_web, WorkflowOperatorRuntime, runtime)
@@ -52,6 +61,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowOperatorActivityTest do
       :persistent_term.erase({HeartbeatClient, :owner})
       Store.reset()
       AnalysisResultStore.reset()
+      :ok = Supervisor.terminate_child(KyuubikiWeb.Supervisor, Watchdog)
+      {:ok, _} = Supervisor.restart_child(KyuubikiWeb.Supervisor, Watchdog)
     end)
 
     :ok

@@ -217,7 +217,8 @@ defmodule KyuubikiWeb.Api.JobAuditApiTest do
       |> conn("/api/v1/jobs/job-admin")
       |> Router.call(@opts)
 
-    assert missing_job_conn.status == 422
+    assert missing_job_conn.status == 404
+    assert Jason.decode!(missing_job_conn.resp_body) == %{"error" => "job_not_found"}
   end
 
   test "supports append-only security event ingestion and listing" do
