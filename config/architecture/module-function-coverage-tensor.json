@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.module-function-coverage-tensor/v4",
-  "version_line": "daji 3.0.x",
+  "version_line": "daji 3.2.x",
   "topology": "config/architecture/module-topology.json",
   "matrix": "config/architecture/module-function-coverage-matrix.json",
   "runtime_api_client_contract": "config/architecture/contracts-runtime-api-surface.json",
@@ -54,7 +54,7 @@
   },
   "release_profile": {
     "id": "daji-3-0-0",
-    "current_checkpoint": "daji 3.0.0",
+    "current_checkpoint": "daji 3.2.0",
     "target_release": "daji 3.0.0",
     "gate_mode": "advisory",
     "enforce_from": "moxi 2.17.0",

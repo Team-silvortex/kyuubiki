@@ -2,7 +2,7 @@
   "version": "3.0.0",
   "codename": "daji",
   "line": "3.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-09-05",
   "git_commit": "85f4b02c01efbdbbddd487e5e4e81732e37a9677",
   "summary": "Daji 3.0.0 begins the 3.x product line with aligned desktop, runtime, SDK, language-pack, installer, and documentation metadata. It carries forward the moxi contract and reliability baseline without relabeling historical qualification as fresh 3.0 evidence.",

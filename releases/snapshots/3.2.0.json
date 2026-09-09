@@ -1,0 +1,86 @@
+{
+  "version": "3.2.0",
+  "codename": "daji",
+  "line": "3.x",
+  "status": "current",
+  "date": "2026-09-09",
+  "git_commit": "388e061e48c0a7b4d63366471c8095cf11b86c8e",
+  "summary": "Daji 3.2.0 desktop rebuild with aligned native runtimes, SDK metadata, language packs, and current documentation. Includes the committed project-version transaction, result-persistence, and workflow-recovery fixes.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md",
+    "data_lifecycle": "docs/data-lifecycle.html"
+  },
+  "product_surfaces": {
+    "frontend_workbench": { "version": "3.2.0", "notes": ["Static UI shipped with the native runtime payload; no runtime Node service."] },
+    "hub_gui": { "version": "3.2.0", "notes": ["Native desktop system entrypoint."] },
+    "workbench_gui": { "version": "3.2.0", "notes": ["Native desktop workflow and visualization shell."] },
+    "installer_gui": { "version": "3.2.0", "notes": ["Native installation, runtime activation, and integrity management."] },
+    "web_api": { "version": "3.2.0", "notes": ["Self-contained Orchestra release includes committed persistence and checkpoint fixes."] },
+    "rust_headless_sdk": { "version": "3.2.0", "notes": ["Version metadata aligned; registry publication is separate."] },
+    "python_headless_sdk": { "version": "3.2.0", "notes": ["Version metadata aligned; registry publication is separate."] },
+    "elixir_headless_sdk": { "version": "3.2.0", "notes": ["Version metadata aligned; registry publication is separate."] },
+    "rust_worker_sdk": { "version": "3.2.0", "notes": ["Operator extension SDK remains distinct from headless control SDKs."] }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": ["Existing workflow editing and execution contracts retained; this rebuild does not expand numerical qualification claims."]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": ["Existing Rust operator and language-neutral engine contracts retained."]
+  },
+  "desktop_artifacts": {
+    "hub_macos_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
+    "installer_macos_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
+    "workbench_macos_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app"
+  },
+  "verification": {
+    "source_revision_role": "Committed implementation baseline before packaging metadata alignment; no new commit created by the rebuild.",
+    "metadata_checks": {
+      "status": "passed",
+      "exact_version_contracts": 224,
+      "mismatches": 0,
+      "language_packs": 60,
+      "docs_book_html_files": 26,
+      "docs_inventory": "passed",
+      "desktop_shared_assets": "passed",
+      "project_organization": "passed; source limit 800, document limit 2000"
+    },
+    "desktop_packaging": {
+      "status": "passed",
+      "platform": "macos-aarch64",
+      "kind": "app",
+      "version": "3.2.0",
+      "build_seconds": 582.98,
+      "installed_in_applications": true,
+      "signature_integrity": "codesign --verify --deep --strict passed for all three installed apps; ad-hoc signatures",
+      "packaged_interactive_boot": { "passed": 3, "failed": 0 },
+      "retained_report": "releases/usability-evidence/3.2.0/macos-installed-desktop-smoke.json",
+      "local_report": "reports/desktop-packaging-3.2.0-20260909.md"
+    },
+    "runtime_payload": {
+      "status": "sealed, verified, installed, and activated",
+      "version": "3.2.0",
+      "sealed_file_count": 1646,
+      "services": ["two Rust Agents", "Orchestra release", "native static frontend server"],
+      "health": "two agents ready; Orchestra watchdog healthy; native frontend API proxy healthy",
+      "frontend_build": "production static export and TypeScript validation passed",
+      "node_runtime_required": false
+    },
+    "packaged_api_smoke": {
+      "status": "passed",
+      "transport": "native frontend proxy -> installed Orchestra -> SQLite",
+      "checks": 9,
+      "scope": "project/model creation, initial name preservation, checkpoint metadata promotion, working edits, checkpoint deletion, pointer repair, working-state preservation, bundle export, and deleted-version 404",
+      "temporary_projects_removed": true,
+      "probe_note": "The first probe incorrectly assumed that explicitly supplied checkpoint metadata never renames the working model. Both backends explicitly promote supplied version metadata; the corrected probe checks that behavior without changing production code."
+    },
+    "public_distribution": "not performed",
+    "notarized": false,
+    "linux_and_windows": "Version metadata aligned; native builds not requested in this rebuild.",
+    "qualification": "Previous research and regression reports remain historical, scoped evidence; this snapshot does not promote them to fresh full-system validation."
+  }
+}

@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-09-05T03:00:26Z",
-  "shipping_version": "3.0.0",
+  "generated_at": "2026-09-09T06:31:15Z",
+  "shipping_version": "3.2.0",
   "default_channel": "stable",
   "line": "daji 3.x",
   "source": {
@@ -16,14 +16,14 @@
       "aliases": [
         "daji:latest",
         "daji:3",
-        "daji:3.0",
-        "daji:3.0.0"
+        "daji:3.2",
+        "daji:3.2.0"
       ],
       "line": "3.x",
       "status": "current",
-      "version": "3.0.0",
-      "summary": "Daji 3.0.0 begins the 3.x product line with aligned desktop, runtime, SDK, language-pack, installer, and documentation metadata. It carries forward the moxi contract and reliability baseline without relabeling historical qualification as fresh 3.0 evidence.",
-      "date": "2026-09-05",
+      "version": "3.2.0",
+      "summary": "Daji 3.2.0 desktop rebuild with aligned native runtimes, SDK metadata, language packs, and current documentation. Includes the committed project-version transaction, result-persistence, and workflow-recovery fixes.",
+      "date": "2026-09-09",
       "notes": [
         "Primary operator-facing update track for the current daji 3.x line.",
         "Targets standard installs that follow the visible installation contract."
@@ -65,70 +65,67 @@
         "managed_path_policy": "workspace_relative",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/3.0.0.json",
+      "snapshot_path": "releases/snapshots/3.2.0.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
-        "release_notes": "docs/daji-3.0.0.md",
         "packaging": "docs/packaging-and-deployment.md",
         "desktop_release_checklist": "docs/desktop-release-checklist.md",
-        "operator_sdk": "docs/operator-sdk.md",
-        "workflow_graph": "docs/workflow-graph.md",
-        "workflow_dataset": "docs/workflow-dataset.md"
+        "data_lifecycle": "docs/data-lifecycle.html"
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "3.0.0",
+          "version": "3.2.0",
           "notes": [
-            "Aligned to daji 3.0.0; qualification scope remains explicit."
+            "Static UI shipped with the native runtime payload; no runtime Node service."
           ]
         },
         "hub_gui": {
-          "version": "3.0.0",
+          "version": "3.2.0",
           "notes": [
-            "Aligned to daji 3.0.0; qualification scope remains explicit."
+            "Native desktop system entrypoint."
           ]
         },
         "workbench_gui": {
-          "version": "3.0.0",
+          "version": "3.2.0",
           "notes": [
-            "Aligned to daji 3.0.0; qualification scope remains explicit."
+            "Native desktop workflow and visualization shell."
           ]
         },
         "installer_gui": {
-          "version": "3.0.0",
+          "version": "3.2.0",
           "notes": [
-            "Aligned to daji 3.0.0; qualification scope remains explicit."
+            "Native installation, runtime activation, and integrity management."
           ]
         },
         "web_api": {
-          "version": "3.0.0",
+          "version": "3.2.0",
           "notes": [
-            "Aligned to daji 3.0.0; qualification scope remains explicit."
+            "Self-contained Orchestra release includes committed persistence and checkpoint fixes."
           ]
         },
         "rust_headless_sdk": {
-          "version": "3.0.0",
+          "version": "3.2.0",
           "notes": [
-            "Backend control SDK; distinct from Rust worker extensions and frontend PWDT."
+            "Version metadata aligned; registry publication is separate."
           ]
         },
         "python_headless_sdk": {
-          "version": "3.0.0",
+          "version": "3.2.0",
           "notes": [
-            "Backend control SDK; distinct from Rust worker extensions and frontend PWDT."
+            "Version metadata aligned; registry publication is separate."
           ]
         },
         "elixir_headless_sdk": {
-          "version": "3.0.0",
+          "version": "3.2.0",
           "notes": [
-            "Backend control SDK; distinct from Rust worker extensions and frontend PWDT."
+            "Version metadata aligned; registry publication is separate."
           ]
         },
         "rust_worker_sdk": {
-          "version": "3.0.0",
+          "version": "3.2.0",
           "notes": [
-            "Aligned to daji 3.0.0; qualification scope remains explicit."
+            "Operator extension SDK remains distinct from headless control SDKs."
           ]
         }
       },
@@ -138,69 +135,6 @@
           "kind": "app",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": true
-        },
-        {
-          "product": "hub",
-          "kind": "dmg",
-          "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Hub_3.0.0_aarch64.dmg",
-          "exists": false
-        },
-        {
-          "product": "hub",
-          "kind": "manifest",
-          "platform": "macos",
-          "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
-        },
-        {
-          "product": "hub",
-          "kind": "manifest",
-          "platform": "linux",
-          "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
-        },
-        {
-          "product": "hub",
-          "kind": "manifest",
-          "platform": "windows",
-          "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
-        },
-        {
-          "product": "workbench",
-          "kind": "app",
-          "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": true
-        },
-        {
-          "product": "workbench",
-          "kind": "dmg",
-          "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_3.0.0_aarch64.dmg",
-          "exists": false
-        },
-        {
-          "product": "workbench",
-          "kind": "manifest",
-          "platform": "macos",
-          "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
-        },
-        {
-          "product": "workbench",
-          "kind": "manifest",
-          "platform": "linux",
-          "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
-        },
-        {
-          "product": "workbench",
-          "kind": "manifest",
-          "platform": "windows",
-          "path": "dist/windows/desktop/workbench-gui/manifest.json",
           "exists": true
         },
         {
@@ -211,31 +145,10 @@
           "exists": true
         },
         {
-          "product": "installer",
-          "kind": "dmg",
+          "product": "workbench",
+          "kind": "app",
           "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Installer_3.0.0_aarch64.dmg",
-          "exists": false
-        },
-        {
-          "product": "installer",
-          "kind": "manifest",
-          "platform": "macos",
-          "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
-        },
-        {
-          "product": "installer",
-          "kind": "manifest",
-          "platform": "linux",
-          "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
-        },
-        {
-          "product": "installer",
-          "kind": "manifest",
-          "platform": "windows",
-          "path": "dist/windows/desktop/installer-gui/manifest.json",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
           "exists": true
         }
       ]
@@ -243,12 +156,12 @@
   ],
   "versions": [
     {
-      "version": "3.0.0",
+      "version": "3.2.0",
       "line": "3.x",
       "status": "current",
-      "date": "2026-09-05",
-      "summary": "Daji 3.0.0 begins the 3.x product line with aligned desktop, runtime, SDK, language-pack, installer, and documentation metadata. It carries forward the moxi contract and reliability baseline without relabeling historical qualification as fresh 3.0 evidence.",
-      "snapshot_path": "releases/snapshots/3.0.0.json",
+      "date": "2026-09-09",
+      "summary": "Daji 3.2.0 desktop rebuild with aligned native runtimes, SDK metadata, language packs, and current documentation. Includes the committed project-version transaction, result-persistence, and workflow-recovery fixes.",
+      "snapshot_path": "releases/snapshots/3.2.0.json",
       "channels": [
         "stable"
       ],
@@ -256,9 +169,98 @@
         "daji:stable",
         "daji:latest",
         "daji:3",
-        "daji:3.0",
-        "daji:3.0.0"
+        "daji:3.2",
+        "daji:3.2.0"
       ],
+      "product_surfaces": {
+        "frontend_workbench": {
+          "version": "3.2.0",
+          "notes": [
+            "Static UI shipped with the native runtime payload; no runtime Node service."
+          ]
+        },
+        "hub_gui": {
+          "version": "3.2.0",
+          "notes": [
+            "Native desktop system entrypoint."
+          ]
+        },
+        "workbench_gui": {
+          "version": "3.2.0",
+          "notes": [
+            "Native desktop workflow and visualization shell."
+          ]
+        },
+        "installer_gui": {
+          "version": "3.2.0",
+          "notes": [
+            "Native installation, runtime activation, and integrity management."
+          ]
+        },
+        "web_api": {
+          "version": "3.2.0",
+          "notes": [
+            "Self-contained Orchestra release includes committed persistence and checkpoint fixes."
+          ]
+        },
+        "rust_headless_sdk": {
+          "version": "3.2.0",
+          "notes": [
+            "Version metadata aligned; registry publication is separate."
+          ]
+        },
+        "python_headless_sdk": {
+          "version": "3.2.0",
+          "notes": [
+            "Version metadata aligned; registry publication is separate."
+          ]
+        },
+        "elixir_headless_sdk": {
+          "version": "3.2.0",
+          "notes": [
+            "Version metadata aligned; registry publication is separate."
+          ]
+        },
+        "rust_worker_sdk": {
+          "version": "3.2.0",
+          "notes": [
+            "Operator extension SDK remains distinct from headless control SDKs."
+          ]
+        }
+      },
+      "desktop_artifacts": [
+        {
+          "product": "hub",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
+          "exists": true
+        },
+        {
+          "product": "installer",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
+          "exists": true
+        },
+        {
+          "product": "workbench",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "version": "3.0.0",
+      "line": "3.x",
+      "status": "archived",
+      "date": "2026-09-05",
+      "summary": "Daji 3.0.0 begins the 3.x product line with aligned desktop, runtime, SDK, language-pack, installer, and documentation metadata. It carries forward the moxi contract and reliability baseline without relabeling historical qualification as fresh 3.0 evidence.",
+      "snapshot_path": "releases/snapshots/3.0.0.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {
         "frontend_workbench": {
           "version": "3.0.0",
@@ -363,7 +365,7 @@
           "kind": "dmg",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_3.0.0_aarch64.dmg",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",

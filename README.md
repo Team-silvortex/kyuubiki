@@ -5,7 +5,7 @@ simulation runtime. Its long-term direction is to become a Blender-like
 engineering environment for finite-element research: visual when that helps,
 headless when automation matters, and open at every protocol boundary.
 
-> The active line is **daji 3.x**, starting at **daji 3.0.0**.
+> The current packaged version is **daji 3.2.0**, in the **daji 3.x** line.
 > Desktop applications, runtimes, official SDKs, language packs, and release
 > contracts share this version. Historical moxi evidence remains unchanged.
 > The version transition is a milestone, not a blanket industrial-certification

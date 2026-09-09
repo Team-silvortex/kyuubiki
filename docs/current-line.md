@@ -1,7 +1,7 @@
 # daji 3.x
 
 This is the single entrypoint for the active Kyuubiki product line.
-The current development point in this line is `daji 3.0.0`.
+The current development point in this line is `daji 3.2.0`.
 
 ## What Changed
 

@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.update-channels/v1",
-  "shipping_version": "3.0.0",
+  "shipping_version": "3.2.0",
   "default_channel": "stable",
   "line": "daji 3.x",
   "channels": [
@@ -8,12 +8,12 @@
       "id": "stable",
       "label": "Stable",
       "tag": "daji:stable",
-      "version": "3.0.0",
+      "version": "3.2.0",
       "aliases": [
         "daji:latest",
         "daji:3",
-        "daji:3.0",
-        "daji:3.0.0"
+        "daji:3.2",
+        "daji:3.2.0"
       ],
       "notes": [
         "Primary operator-facing update track for the current daji 3.x line.",
