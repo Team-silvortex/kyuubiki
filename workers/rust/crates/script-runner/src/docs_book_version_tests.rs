@@ -99,3 +99,37 @@ fn daji_patch_sync_preserves_historical_versions() {
     );
     assert_eq!(text, "One book for daji 3.0.1; historical moxi 2.20.1");
 }
+
+#[test]
+fn ui_contract_sync_updates_release_line_without_changing_protocol_version() {
+    for (version, minor) in [("3.2.1", "3.2"), ("3.3.0", "3.3")] {
+        let replacements = sync_replacements(version, &format!("daji {version}"), minor);
+        for (path, before, after) in [
+            (
+                "docs/ui-automation-contract.html",
+                "<div class=\"eyebrow\">daji 3.0.x</div><span>Contract version: 2</span>",
+                format!(
+                    "<div class=\"eyebrow\">daji {minor}.x</div><span>Contract version: 2</span>"
+                ),
+            ),
+            (
+                "docs/ui-automation-contract.json",
+                "{\"version\": \"3.0.x\", \"contractVersion\": 2}",
+                format!("{{\"version\": \"{minor}.x\", \"contractVersion\": 2}}"),
+            ),
+        ] {
+            let rules = &replacements
+                .iter()
+                .find(|(file, _)| *file == path)
+                .unwrap()
+                .1;
+            let apply = |text: String| rules.iter().fold(text, |text, rule| rule.apply(&text));
+            assert_eq!(apply(before.to_string()), after, "{path}");
+            assert_eq!(
+                apply(after.clone()),
+                after,
+                "sync must be idempotent: {path}"
+            );
+        }
+    }
+}

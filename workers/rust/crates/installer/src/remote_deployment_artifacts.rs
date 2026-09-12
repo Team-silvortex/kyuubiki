@@ -1,4 +1,4 @@
-use crate::{Platform, UpdateArtifactRef, unified_update_plan};
+use crate::{Platform, UnifiedUpdatePlan, UpdateArtifactRef, unified_update_plan};
 use serde::{Deserialize, Serialize};
 
 const REMOTE_ARTIFACT_SCHEMA_VERSION: &str = "kyuubiki.remote-artifact-delivery/v1";
@@ -6,6 +6,10 @@ const REMOTE_ARTIFACT_SCHEMA_VERSION: &str = "kyuubiki.remote-artifact-delivery/
 #[cfg(test)]
 #[path = "remote_deployment_artifacts_fuzz.rs"]
 mod remote_deployment_artifacts_fuzz;
+
+#[cfg(test)]
+#[path = "remote_deployment_artifacts_tests.rs"]
+mod tests;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteArtifactDeliveryManifest {
@@ -57,6 +61,13 @@ pub fn remote_artifact_delivery_manifest(
     platform: Platform,
 ) -> Result<RemoteArtifactDeliveryManifest, String> {
     let plan = unified_update_plan(channel)?;
+    remote_artifact_delivery_manifest_from_plan(plan, platform)
+}
+
+fn remote_artifact_delivery_manifest_from_plan(
+    plan: UnifiedUpdatePlan,
+    platform: Platform,
+) -> Result<RemoteArtifactDeliveryManifest, String> {
     let platform_key = platform.as_str().to_string();
     let artifacts: Vec<RemoteArtifactDeliveryRef> = plan
         .artifacts

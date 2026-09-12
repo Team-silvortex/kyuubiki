@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Exact-coordinate contract and execution evidence for desktop runtime clients, the native installed frontend gateway, and the native installer runtime API.",
+  "summary": "Exact-coordinate evidence for desktop runtime clients, the native frontend gateway and installer API, including native-listener lifecycle fault tests. Lifecycle fixtures do not qualify task draining, automatic supervision, or production OS-service integration.",
   "paradigm_contract_evidence": {
     "runtime_api": [
       {
@@ -67,6 +67,37 @@
     ]
   },
   "evidence_claims": [
+    {
+      "id": "desktop-shared-native-lifecycle-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["hub-shell", "workbench-shell", "installer-shell"],
+      "paradigms": ["runtime_api"],
+      "dimensions": ["contract", "recovery", "security"],
+      "files": [
+        "apps/hub-gui/src-tauri/src/hub_commands.rs",
+        "apps/workbench-gui/src-tauri/src/main.rs",
+        "apps/installer-gui/src-tauri/src/main.rs",
+        "workers/rust/crates/desktop-runtime/src/runtime_control.rs",
+        "workers/rust/crates/desktop-runtime/src/runtime_lifecycle_lock.rs",
+        "workers/rust/crates/desktop-runtime/src/runtime_process_record.rs",
+        "workers/rust/crates/desktop-runtime/src/runtime_process_tests.rs",
+        "workers/rust/crates/desktop-runtime/tests/runtime_lifecycle.rs",
+        "docs/book-ch04-runtime-modes.html"
+      ],
+      "required_text": [
+        "desktop_service_start",
+        "GUI exit does not stop services",
+        "kyuubiki.runtime-process/v1",
+        "registration_failure_and_readiness_timeout_do_not_leak_children",
+        "concurrent_stop_cannot_interrupt_an_inflight_start_and_status_remains_readable",
+        "unmanaged_port_blocks_start_before_any_agent_is_spawned_and_is_never_stopped",
+        "stop_continues_other_owned_services_after_one_ownership_failure",
+        "terminated_controller_releases_lock_and_registered_services_are_recoverable",
+        "legacy_live_pid_and_reused_pid_tokens_never_authorize_termination",
+        "missing_mode_record_does_not_relabel_live_local_processes_as_cloud"
+      ]
+    },
     {
       "id": "desktop-runtime-api-execution-closure",
       "status": "proven",

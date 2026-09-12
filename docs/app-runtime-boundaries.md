@@ -118,6 +118,13 @@ For the headless caller and direct-mesh contract, see
 
 The GUI is a client surface, not the owner of the backend runtime.
 
+For a local installation, start/stop/restart use the shared native lifecycle
+controller with OS-backed serialization and process-incarnation ownership.
+Quitting a GUI does not stop background computation, and an occupied port alone
+never authorizes adoption or termination. Detailed state paths, scoped controls,
+legacy-PID upgrade precautions, and recovery limits are documented in
+[Runtime Modes: Local Lifecycle](book-ch04-runtime-modes.html#local-lifecycle).
+
 This means Workbench and Hub must not assume that the control plane, mesh
 gateway, or agent-compatible service is co-located with the WebView process.
 They may use same-origin APIs as the default developer layout, but that is only

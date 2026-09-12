@@ -569,6 +569,7 @@ name = "kyuubiki-desktop-runtime"
 version = "3.2.0"
 dependencies = [
  "chrono",
+ "fs2",
  "kyuubiki-platform",
  "libc",
  "serde",

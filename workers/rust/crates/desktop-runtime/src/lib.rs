@@ -17,7 +17,10 @@ mod panel_preferences;
 mod runtime_control;
 mod runtime_export;
 mod runtime_layout;
+mod runtime_lifecycle_lock;
 mod runtime_options;
+mod runtime_process;
+mod runtime_process_record;
 mod runtime_support;
 
 pub use panel_preferences::{
@@ -244,25 +247,19 @@ pub fn export_database(url: Option<&str>) -> Result<String, String> {
 
 pub fn log_path_for(service: &str) -> Result<PathBuf, String> {
     let paths = runtime_layout::runtime_paths()?;
+    let options =
+        runtime_options::RuntimeOptions::from_env(&runtime_control::runtime_env(&paths.root))?;
+    if matches!(service, "frontend" | "hot-frontend") {
+        return Ok(options.frontend_log(&paths.run));
+    }
+    if matches!(service, "orchestrator" | "hot-web") {
+        return Ok(options.orchestrator_log(&paths.run));
+    }
     let filename = match service {
-        "frontend" => "frontend.log",
-        "orchestrator" => "orchestrator.log",
-        "agent-5001" => "agent-5001.log",
-        "agent-5002" => "agent-5002.log",
+        "agent-5001" | "hot-agent-5001" => "agent-5001.log",
+        "agent-5002" | "hot-agent-5002" => "agent-5002.log",
         "hot-stack" => {
             return Ok(paths.hot.join("stack.console.log"));
-        }
-        "hot-web" => {
-            return Ok(paths.hot.join("web-4000.log"));
-        }
-        "hot-frontend" => {
-            return Ok(paths.hot.join("frontend-3000.log"));
-        }
-        "hot-agent-5001" => {
-            return Ok(paths.hot.join("agent-5001.log"));
-        }
-        "hot-agent-5002" => {
-            return Ok(paths.hot.join("agent-5002.log"));
         }
         other => return Err(format!("unknown service log: {other}")),
     };
@@ -336,15 +333,23 @@ fn parse_service_status_summary(rendered: &str) -> ServiceStatusSummary {
 fn parse_named_status(line: &str, name: &str) -> Option<String> {
     let prefix = format!("{name}:");
     let value = line.strip_prefix(&prefix)?.trim();
-    Some(
-        if value.starts_with("running") || value.starts_with("listening") {
-            "running".to_string()
-        } else if value.starts_with("stopped") {
-            "stopped".to_string()
-        } else {
-            "unknown".to_string()
-        },
-    )
+    Some(parse_runtime_state(value).to_string())
+}
+
+fn parse_runtime_state(value: &str) -> &'static str {
+    if value.starts_with("blocked") || value.contains("(unmanaged pid)") {
+        "blocked"
+    } else if value.starts_with("starting") {
+        "starting"
+    } else if value.starts_with("disabled") {
+        "disabled"
+    } else if value.starts_with("running") || value.starts_with("listening") {
+        "running"
+    } else if value.starts_with("stopped") {
+        "stopped"
+    } else {
+        "unknown"
+    }
 }
 
 fn parse_agent_status(line: &str) -> Option<ServiceEndpointSummary> {
@@ -353,13 +358,7 @@ fn parse_agent_status(line: &str) -> Option<ServiceEndpointSummary> {
         return None;
     }
 
-    let status = if value.trim().starts_with("running") || value.trim().starts_with("listening") {
-        "running"
-    } else if value.trim().starts_with("stopped") {
-        "stopped"
-    } else {
-        "unknown"
-    };
+    let status = parse_runtime_state(value.trim());
 
     Some(ServiceEndpointSummary {
         label: label.trim().to_string(),
@@ -437,5 +436,17 @@ mod tests {
         );
         assert_eq!(normalize_language(""), None);
         assert_eq!(normalize_language("../fr"), None);
+    }
+
+    #[test]
+    fn unmanaged_or_starting_services_never_count_as_healthy_agents() {
+        let summary = parse_service_status_summary(
+            "orchestrator: blocked (unmanaged pid)\nfrontend: disabled by runtime configuration\nagent[5001]: running on tcp://127.0.0.1:5001 (unmanaged pid)\nagent[5002]: starting (not ready)",
+        );
+        assert_eq!(summary.orchestrator_status, "blocked");
+        assert_eq!(summary.frontend_status, "disabled");
+        assert_eq!(summary.active_agent_count, 0);
+        assert_eq!(summary.agents[0].status, "blocked");
+        assert_eq!(summary.agents[1].status, "starting");
     }
 }

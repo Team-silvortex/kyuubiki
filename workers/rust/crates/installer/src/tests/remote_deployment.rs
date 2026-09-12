@@ -1,8 +1,8 @@
 use crate::{
-    default_remote_artifact_delivery_manifest, default_remote_deployment_dry_run,
+    Platform, default_remote_artifact_delivery_manifest, default_remote_deployment_dry_run,
     default_remote_deployment_journal, default_remote_deployment_plan,
     default_remote_host_trust_plan, default_remote_ssh_fixture_plan,
-    default_remote_ssh_fixture_report, remote_deployment_roadmap,
+    default_remote_ssh_fixture_report, remote_deployment_roadmap, unified_update_plan,
 };
 
 #[test]
@@ -89,23 +89,36 @@ fn remote_deployment_journal_matches_plan_steps() {
 }
 
 #[test]
-fn remote_artifact_delivery_manifest_uses_remote_pull_contract() {
-    let manifest = default_remote_artifact_delivery_manifest()
-        .expect("default update catalog should declare current-platform artifacts");
-    assert_eq!(
-        manifest.schema_version,
-        "kyuubiki.remote-artifact-delivery/v1"
-    );
-    assert_eq!(manifest.delivery_mode, "remote-pull-from-installer-source");
-    assert!(!manifest.artifacts.is_empty());
-    assert!(manifest.artifacts.iter().all(|artifact| {
-        artifact.remote_path.starts_with(".kyuubiki/artifacts/")
-            && artifact.verify_policy == "checksum-and-component-integrity-before-start"
-    }));
+fn default_remote_artifact_delivery_matches_published_platform_artifacts() {
+    let plan = unified_update_plan(None).expect("default update catalog should be valid");
+    let platform = Platform::current().as_str();
+    let declared: Vec<_> = plan
+        .artifacts
+        .iter()
+        .filter(|artifact| artifact.platform == platform)
+        .map(|artifact| artifact.path.as_str())
+        .collect();
+    let result = default_remote_artifact_delivery_manifest();
+    if declared.is_empty() {
+        assert_eq!(
+            result.unwrap_err(),
+            format!(
+                "no remote-deliverable artifacts declared for {platform} on channel {}",
+                plan.target_channel
+            )
+        );
+        return;
+    }
+    let manifest = result.expect("published platform artifacts should be deliverable");
+    assert_eq!(manifest.platform, platform);
+    assert_eq!(manifest.channel, plan.target_channel);
+    assert_eq!(manifest.target_version, plan.target_version);
     assert!(
         manifest
-            .render()
-            .contains("remote artifact delivery preview")
+            .artifacts
+            .iter()
+            .map(|artifact| artifact.source_path.as_str())
+            .eq(declared)
     );
 }
 

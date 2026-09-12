@@ -12,9 +12,9 @@ pub(crate) struct FrontendLaunchSpec {
     pub label: &'static str,
 }
 
-pub(crate) fn resolve(paths: &RuntimePaths) -> Result<FrontendLaunchSpec, String> {
+pub(crate) fn resolve(paths: &RuntimePaths, port: u16) -> Result<FrontendLaunchSpec, String> {
     if !paths.is_development() {
-        let spec = paths.service("frontend", &[])?;
+        let spec = paths.service("frontend", &[("port", port.to_string())])?;
         return Ok(FrontendLaunchSpec {
             command: spec.command,
             args: spec.args,

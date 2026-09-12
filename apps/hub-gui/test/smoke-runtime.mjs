@@ -1,11 +1,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { assertMatches } from "../../desktop-shared/test/smoke-test-helpers.mjs";
+import { inferHotRuntimeState } from "../ui/hub-runtime-helpers.js";
 import {
   HUB_APP_RUNTIME_PATTERNS,
   HUB_MODULE_PATTERNS,
   read,
 } from "./smoke-fixtures.mjs";
+
+test("hot runtime status preserves native blocked and transitional states", () => {
+  for (const [native, expected] of Object.entries({
+    running: "running", stopped: "idle", starting: "starting",
+    blocked: "failed", degraded: "degraded", configured: "unknown",
+  })) {
+    const state = inferHotRuntimeState(`hot-loop: ${native} (native runtime control)\ndeployment-mode: distributed`);
+    assert.equal(state.status, expected);
+    assert.equal(state.mode, "distributed");
+  }
+});
 
 test("hub shell registers section switching behavior", () => {
   const js = read("ui/app.js");

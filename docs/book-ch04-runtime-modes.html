@@ -42,6 +42,93 @@
         </p>
       </section>
 
+      <section class="docs-card docs-section" id="local-lifecycle">
+        <h2>Local background-service lifecycle</h2>
+        <p class="docs-copy">
+          Hub, Workbench, Installer, and the native runtime command share one Rust
+          lifecycle implementation. The GUI is a control client, not the lifetime
+          owner of computations: closing a window or quitting the GUI does not
+          stop background services. Start, stop, and restart remain explicit actions.
+          There is no implicit OS-login startup or automatic crash-restart policy.
+        </p>
+        <ul class="docs-list">
+          <li><strong>Start</strong>: validate the requested ports and existing ownership,
+            then start local agents, Orchestra, and the optional frontend gateway.
+            A repeated start reuses only verified, listening service instances.</li>
+          <li><strong>Start failure</strong>: detect an early process exit without waiting
+            for the full readiness timeout; terminate a child whose registration or
+            readiness fails, and roll back only services created by this operation.
+            Existing services are preserved and cleanup failures are reported.</li>
+          <li><strong>Stop</strong>: stop the frontend gateway, Orchestra, and local
+            agents in reverse startup order. A failure on one service does not skip
+            cleanup of the other owned services or produce a false success.</li>
+          <li><strong>Restart</strong>: hold the same OS-backed lifecycle lock across
+            stop and start. A competing mutation fails as busy; status remains readable.
+            A controller crash releases the lock without deleting its lock file.</li>
+          <li><strong>Recovery</strong>: a later controller can inspect and stop registered
+            background processes left by an interrupted launcher. Dead PID records are
+            reconciled. Unverified live processes and inconsistent records fail closed.</li>
+        </ul>
+        <p class="docs-copy">
+          Readiness here means a live, ownership-verified process and a listening
+          local port, not proof of API health, solver correctness, or completion of
+          in-flight research. Stop is an explicit service shutdown, not a job-draining
+          contract; checkpoint or complete important tasks before stopping the stack.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section" id="local-lifecycle-state">
+        <h2>Visible state, scope, and ownership</h2>
+        <p class="docs-copy">
+          Installed payloads remain separate from writable state. Use
+          <code>KYUUBIKI_RUNTIME_ROOT</code> for the installed payload and
+          <code>KYUUBIKI_RUNTIME_STATE_ROOT</code> for its external writable state.
+          Status reports the resolved runtime paths, lifecycle policy, lock location,
+          and service readiness. Source mode uses the repository's <code>tmp/run</code>.
+        </p>
+        <ul class="docs-list">
+          <li><code>&lt;runtime-state&gt;/run/lifecycle.lock</code> is a persistent,
+            small OS-lock file, not a stale-lock marker to delete manually.</li>
+          <li>Each managed service has a PID file and a
+            <code>*.process.json</code> ownership record with schema
+            <code>kyuubiki.runtime-process/v1</code>, process incarnation, label,
+            port, and canonical state-directory identity. It stores no launch
+            environment, credentials, or command-line secrets.</li>
+          <li>PID reuse, a copied record from another state directory, or a live
+            legacy PID without an ownership record never authorizes automatic
+            adoption or termination. An occupied unmanaged port is
+            <code>blocked</code>, not a healthy running service.</li>
+          <li><code>KYUUBIKI_ORCHESTRATOR_PORT</code> and
+            <code>KYUUBIKI_FRONTEND_PORT</code> select validated nonzero ports;
+            defaults are 4000 and 3000. Nondefault ports have distinct PID and log
+            filenames. Local agent ports come from the configured discovery source.</li>
+          <li><code>KYUUBIKI_RUNTIME_ORCHESTRATOR_ONLY</code> limits mutations to
+            Orchestra; <code>KYUUBIKI_RUNTIME_FRONTEND_DISABLED</code> excludes the
+            frontend gateway. Distributed mode does not start or stop local agents.
+            Use consistent scope settings across start, status, and stop.</li>
+        </ul>
+        <p class="docs-copy">
+          During an upgrade from legacy PID-only management, stop old services with
+          their existing controller before switching controllers. Do not fabricate
+          ownership records or delete live PID files to force adoption. An interrupted
+          registration with inconsistent files requires diagnosis, not blind cleanup.
+          OS service registration, task draining, and supervised restart with backoff
+          are separate follow-up work, not guarantees of this lifecycle layer.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Lifecycle regression tests</h2>
+        <p class="docs-copy">
+          The native tests use temporary payload/state directories, dynamic ports,
+          and a Rust listener, without Node, shell launch scripts, database services,
+          or the workstation's default service ports. The same scenarios run on
+          macOS and Linux; Windows-specific paths also receive compilation checks.
+          These fixtures validate process management, not the full production stack.
+        </p>
+        <pre><code>cargo test --locked --manifest-path workers/rust/Cargo.toml -p kyuubiki-platform -p kyuubiki-desktop-runtime</code></pre>
+      </section>
+
       <section class="docs-card docs-section">
         <h2>Remote deployment maturity</h2>
         <p class="docs-copy">

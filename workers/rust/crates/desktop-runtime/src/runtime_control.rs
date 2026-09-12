@@ -1,42 +1,25 @@
 use std::collections::HashMap;
 use std::env;
-use std::fs::{self, OpenOptions};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
+use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
-use std::thread;
-use std::time::{Duration, Instant};
-
-#[cfg(unix)]
-use std::os::unix::process::CommandExt;
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
+use std::time::Duration;
 
 use serde_json::Value;
-
-use kyuubiki_platform::process_is_alive;
 
 use crate::frontend_launch;
 use crate::runtime_layout::{
     RuntimePaths, resolve_development_command, runtime_bin_dirs, runtime_paths,
 };
+use crate::runtime_lifecycle_lock::RuntimeLifecycleLock;
 use crate::runtime_options::{DEFAULT_ORCHESTRATOR_PORT, RuntimeOptions};
+use crate::runtime_process::{
+    ManagedProcess, already_running, service_line, spawn_managed, stop_managed,
+};
+use crate::runtime_process_record::read_pid;
 use crate::runtime_support::{remove_file_if_present, service_mode_name};
 use crate::{HotServiceMode, ServiceMode};
 
-const FRONTEND_PORT: u16 = 3000;
 const DEFAULT_AGENT_ENDPOINTS: &str = "127.0.0.1:5001,127.0.0.1:5002";
-
-struct ManagedProcess {
-    label: String,
-    command: PathBuf,
-    args: Vec<String>,
-    cwd: PathBuf,
-    pid: PathBuf,
-    log: PathBuf,
-    port: Option<u16>,
-    env: HashMap<String, String>,
-}
 
 struct StartedProcess {
     label: String,
@@ -69,6 +52,13 @@ pub(super) fn service_status() -> Result<String, String> {
             }
         ),
         format!("runtime-policy: {}", paths.origin_label()),
+        "lifecycle-policy: explicit-background (GUI exit does not stop services)".to_string(),
+        "lifecycle-ownership: process-incarnation; unmanaged processes are never adopted"
+            .to_string(),
+        format!(
+            "lifecycle-lock: {}",
+            paths.run.join("lifecycle.lock").display()
+        ),
     ];
     if paths.is_development() {
         for command in ["mix", "cargo"] {
@@ -113,8 +103,8 @@ pub(super) fn service_status() -> Result<String, String> {
     } else {
         service_line(
             "frontend",
-            &paths.run.join("frontend.pid"),
-            FRONTEND_PORT,
+            &options.frontend_pid(&paths.run),
+            options.frontend_port,
             "http",
         )
     });
@@ -130,78 +120,115 @@ pub(super) fn service_status() -> Result<String, String> {
 }
 
 pub(super) fn service_start(mode: ServiceMode) -> Result<String, String> {
-    let requested = service_mode_name(mode);
-    start_services(requested)
+    let paths = runtime_paths()?;
+    let _lock = RuntimeLifecycleLock::acquire(&paths.run)?;
+    start_services(&paths, service_mode_name(mode))
 }
 
 pub(super) fn service_restart(mode: ServiceMode) -> Result<String, String> {
-    let mut lines = vec![service_stop()?];
-    lines.push(start_services(service_mode_name(mode))?);
+    let paths = runtime_paths()?;
+    let _lock = RuntimeLifecycleLock::acquire(&paths.run)?;
+    let mut lines = vec![stop_services(&paths)?];
+    lines.push(start_services(&paths, service_mode_name(mode))?);
     lines.push("restart complete".to_string());
     Ok(lines.join("\n"))
 }
 
 pub(super) fn service_stop() -> Result<String, String> {
     let paths = runtime_paths()?;
+    let _lock = RuntimeLifecycleLock::acquire(&paths.run)?;
+    stop_services(&paths)
+}
+
+fn stop_services(paths: &RuntimePaths) -> Result<String, String> {
     let env = runtime_env(&paths.root);
     let mut options = RuntimeOptions::from_env(&env)?;
     options.frontend_disabled |= paths.is_headless();
     let mut lines = Vec::new();
-    let mut ports = agent_ports(&paths.root, &env);
-    ports.reverse();
-    for port in ports {
-        lines.push(stop_managed(
-            &paths.run.join(format!("agent-{port}.pid")),
-            &format!("agent[{port}]"),
-            Some(port),
-        )?);
+    let mut targets = Vec::new();
+    if !options.orchestrator_only && !options.frontend_disabled {
+        targets.push((
+            options.frontend_pid(&paths.run),
+            "frontend".to_string(),
+            options.frontend_port,
+        ));
     }
-    lines.push(stop_managed(
-        &paths.run.join("frontend.pid"),
-        "frontend",
-        Some(FRONTEND_PORT),
-    )?);
-    lines.push(stop_managed(
-        &options.orchestrator_pid(&paths.run),
-        "orchestrator",
-        Some(options.orchestrator_port),
-    )?);
-    remove_file_if_present(&options.runtime_mode(&paths.run))?;
-    remove_file_if_present(&paths.hot.join("native-mode.txt"))?;
+    targets.push((
+        options.orchestrator_pid(&paths.run),
+        "orchestrator".to_string(),
+        options.orchestrator_port,
+    ));
+    if !options.orchestrator_only && read_runtime_mode(paths, &env, options) != "distributed" {
+        for port in agent_ports(&paths.root, &env).into_iter().rev() {
+            targets.push((
+                paths.run.join(format!("agent-{port}.pid")),
+                format!("agent[{port}]"),
+                port,
+            ));
+        }
+    }
+    let mut failed = false;
+    for (pid, label, port) in targets {
+        match stop_managed(&pid, &label, Some(port)) {
+            Ok(line) => lines.push(line),
+            Err(error) => {
+                failed = true;
+                lines.push(error);
+            }
+        }
+    }
+    if failed {
+        return Err(format!("runtime stop incomplete:\n{}", lines.join("\n")));
+    }
+    if !options.orchestrator_only {
+        remove_file_if_present(&options.runtime_mode(&paths.run))?;
+    }
+    if !options.orchestrator_only && options.orchestrator_port == DEFAULT_ORCHESTRATOR_PORT {
+        remove_file_if_present(&paths.hot.join("native-mode.txt"))?;
+    }
     Ok(lines.join("\n"))
 }
 
 pub(super) fn hot_service_status() -> Result<String, String> {
     let paths = runtime_paths()?;
     let active = paths.hot.join("native-mode.txt").is_file();
+    let status = service_status()?;
     let mut lines = vec![format!(
-        "hot-loop: {}",
-        if active {
-            "running (native runtime control)"
-        } else {
-            "stopped"
-        }
+        "hot-loop: {} (native runtime control)",
+        hot_runtime_state(active, &status)
     )];
-    lines.push(listening_line(
-        "hot-web",
-        "http://127.0.0.1:4000",
-        DEFAULT_ORCHESTRATOR_PORT,
-    ));
-    lines.push(listening_line(
-        "hot-frontend",
-        "http://127.0.0.1:3000",
-        FRONTEND_PORT,
-    ));
-    let env = runtime_env(&paths.root);
-    for port in agent_ports(&paths.root, &env) {
-        lines.push(listening_line(
-            &format!("hot-agent[{port}]"),
-            &format!("tcp://127.0.0.1:{port}"),
-            port,
-        ));
-    }
+    lines.push(status);
     lines.push(format!("hot-logs: {}", paths.hot.display()));
     Ok(lines.join("\n"))
+}
+
+fn hot_runtime_state(configured: bool, rendered: &str) -> &'static str {
+    if !configured {
+        return "stopped";
+    }
+    let summary = crate::summarize_service_status(rendered);
+    let states = std::iter::once(summary.orchestrator_status.as_str())
+        .chain(std::iter::once(summary.frontend_status.as_str()))
+        .chain(
+            summary
+                .agents
+                .iter()
+                .filter(|_| summary.deployment_mode != "distributed")
+                .map(|agent| agent.status.as_str()),
+        )
+        .collect::<Vec<_>>();
+    if states.contains(&"blocked") {
+        "blocked"
+    } else if states.contains(&"starting") {
+        "starting"
+    } else if states
+        .iter()
+        .all(|state| matches!(*state, "running" | "disabled"))
+    {
+        "running"
+    } else {
+        "degraded"
+    }
 }
 
 pub(super) fn hot_service_start(mode: HotServiceMode) -> Result<String, String> {
@@ -211,13 +238,14 @@ pub(super) fn hot_service_start(mode: HotServiceMode) -> Result<String, String> 
             "hot runtime controls are available only in explicit desktop source mode".to_string(),
         );
     }
+    let _lock = RuntimeLifecycleLock::acquire(&paths.run)?;
     ensure_runtime_dirs(&paths)?;
     let mode = match mode {
         HotServiceMode::Local => "local",
         HotServiceMode::Cloud => "cloud",
         HotServiceMode::Distributed => "distributed",
     };
-    let rendered = start_services(mode)?;
+    let rendered = start_services(&paths, mode)?;
     fs::write(paths.hot.join("native-mode.txt"), format!("{mode}\n"))
         .map_err(|error| format!("failed to write native hot runtime state: {error}"))?;
     Ok(format!(
@@ -229,12 +257,12 @@ pub(super) fn hot_service_stop() -> Result<String, String> {
     service_stop()
 }
 
-fn start_services(requested_mode: &str) -> Result<String, String> {
-    let paths = runtime_paths()?;
+fn start_services(paths: &RuntimePaths, requested_mode: &str) -> Result<String, String> {
     ensure_runtime_dirs(&paths)?;
     let mut env = runtime_env(&paths.root);
     paths.apply_writable_state_env(&mut env)?;
     let mode = resolve_mode(requested_mode, &env)?;
+    let existing_mode = read_runtime_mode(paths, &env, RuntimeOptions::from_env(&env)?);
     if mode == "local" {
         env.entry("SQLITE_DATABASE_PATH".to_string())
             .or_insert_with(|| {
@@ -259,6 +287,34 @@ fn start_services(requested_mode: &str) -> Result<String, String> {
     env.entry("KYUUBIKI_AGENT_DISCOVERY".to_string())
         .or_insert_with(|| "static".to_string());
     augment_path(&paths, &mut env);
+
+    let mut reused = false;
+    if mode != "distributed" && !options.orchestrator_only {
+        for port in agent_ports(&paths.root, &env) {
+            reused |= already_running(
+                &paths.run.join(format!("agent-{port}.pid")),
+                &format!("agent[{port}]"),
+                port,
+            )?;
+        }
+    }
+    reused |= already_running(
+        &options.orchestrator_pid(&paths.run),
+        "orchestrator",
+        options.orchestrator_port,
+    )?;
+    if !options.orchestrator_only && !options.frontend_disabled {
+        reused |= already_running(
+            &options.frontend_pid(&paths.run),
+            "frontend",
+            options.frontend_port,
+        )?;
+    }
+    if reused && existing_mode != mode {
+        return Err(
+            "running runtime uses a different deployment mode; use explicit restart".to_string(),
+        );
+    }
 
     let mut lines = Vec::new();
     let mut started = Vec::new();
@@ -289,10 +345,16 @@ fn start_services(requested_mode: &str) -> Result<String, String> {
     );
     lines.push(rollback_on_error(result, &mut started)?);
     if !options.orchestrator_only && !options.frontend_disabled {
-        let pid = paths.run.join("frontend.pid");
+        let pid = options.frontend_pid(&paths.run);
         let previous_pid = read_pid(&pid);
-        let result = start_frontend(&paths, &env);
-        record_started(&mut started, &pid, "frontend", FRONTEND_PORT, previous_pid);
+        let result = start_frontend(&paths, &env, options);
+        record_started(
+            &mut started,
+            &pid,
+            "frontend",
+            options.frontend_port,
+            previous_pid,
+        );
         lines.push(rollback_on_error(result, &mut started)?);
     }
     let persisted = fs::write(options.runtime_mode(&paths.run), format!("{mode}\n"))
@@ -340,7 +402,11 @@ fn start_agent(
     port: u16,
     env: &HashMap<String, String>,
 ) -> Result<String, String> {
-    if is_port_listening(port) {
+    if already_running(
+        &paths.run.join(format!("agent-{port}.pid")),
+        &format!("agent[{port}]"),
+        port,
+    )? {
         return Ok(format!(
             "Rust FEM agent already running at tcp://127.0.0.1:{port}"
         ));
@@ -396,7 +462,11 @@ fn start_orchestrator(
     options: RuntimeOptions,
 ) -> Result<String, String> {
     let url = options.orchestrator_url();
-    if is_port_listening(options.orchestrator_port) {
+    if already_running(
+        &options.orchestrator_pid(&paths.run),
+        "orchestrator",
+        options.orchestrator_port,
+    )? {
         return Ok(format!("orchestrator already running at {url}"));
     }
     let mut process_env = env.clone();
@@ -426,200 +496,36 @@ fn start_orchestrator(
     Ok(format!("started orchestrator API at {url} ({mode})"))
 }
 
-fn start_frontend(paths: &RuntimePaths, env: &HashMap<String, String>) -> Result<String, String> {
-    if is_port_listening(FRONTEND_PORT) {
-        return Ok("frontend already running at http://127.0.0.1:3000".to_string());
+fn start_frontend(
+    paths: &RuntimePaths,
+    env: &HashMap<String, String>,
+    options: RuntimeOptions,
+) -> Result<String, String> {
+    let port = options.frontend_port;
+    if already_running(&options.frontend_pid(&paths.run), "frontend", port)? {
+        return Ok(format!(
+            "frontend already running at http://127.0.0.1:{port}"
+        ));
     }
     let mut process_env = env.clone();
     process_env.insert("HOSTNAME".to_string(), "127.0.0.1".to_string());
-    process_env.insert("PORT".to_string(), FRONTEND_PORT.to_string());
-    let frontend = frontend_launch::resolve(paths)?;
+    process_env.insert("PORT".to_string(), port.to_string());
+    let frontend = frontend_launch::resolve(paths, port)?;
     let process = ManagedProcess {
         label: "frontend".to_string(),
         command: frontend.command,
         args: frontend.args,
         cwd: frontend.cwd,
-        pid: paths.run.join("frontend.pid"),
-        log: paths.run.join("frontend.log"),
-        port: Some(FRONTEND_PORT),
+        pid: options.frontend_pid(&paths.run),
+        log: options.frontend_log(&paths.run),
+        port: Some(port),
         env: process_env,
     };
     spawn_managed(process, Duration::from_secs(60))?;
     Ok(format!(
-        "started {} at http://127.0.0.1:3000",
+        "started {} at http://127.0.0.1:{port}",
         frontend.label
     ))
-}
-
-fn spawn_managed(process: ManagedProcess, timeout: Duration) -> Result<u32, String> {
-    if let Some(parent) = process.pid.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
-    }
-    let stdout = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&process.log)
-        .map_err(|error| format!("failed to open {}: {error}", process.log.display()))?;
-    let stderr = stdout
-        .try_clone()
-        .map_err(|error| format!("failed to clone {}: {error}", process.log.display()))?;
-    let mut command = Command::new(&process.command);
-    command
-        .args(&process.args)
-        .current_dir(&process.cwd)
-        .envs(&process.env)
-        .stdin(Stdio::null())
-        .stdout(Stdio::from(stdout))
-        .stderr(Stdio::from(stderr));
-    configure_detached(&mut command);
-    let mut child = command.spawn().map_err(|error| {
-        format!(
-            "failed to start {} with {}: {error}",
-            process.label,
-            process.command.display()
-        )
-    })?;
-    let pid = child.id();
-    fs::write(&process.pid, format!("{pid}\n"))
-        .map_err(|error| format!("failed to write {}: {error}", process.pid.display()))?;
-    thread::spawn(move || {
-        let _ = child.wait();
-    });
-
-    if let Some(port) = process.port {
-        wait_for_port(port, true, timeout).map_err(|error| {
-            let detail = fs::read_to_string(&process.log)
-                .ok()
-                .map(|text| {
-                    let mut lines = text.lines().rev().take(8).collect::<Vec<_>>();
-                    lines.reverse();
-                    lines.join(" | ")
-                })
-                .filter(|text| !text.is_empty())
-                .unwrap_or_else(|| "no runtime log output".to_string());
-            format!("{error}; {} log: {detail}", process.label)
-        })?;
-    }
-    Ok(pid)
-}
-
-#[cfg(unix)]
-fn configure_detached(command: &mut Command) {
-    unsafe {
-        command.pre_exec(|| {
-            if libc::setsid() == -1 {
-                Err(std::io::Error::last_os_error())
-            } else {
-                Ok(())
-            }
-        });
-    }
-}
-
-#[cfg(windows)]
-fn configure_detached(command: &mut Command) {
-    const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
-    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-    command.creation_flags(CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW);
-}
-
-fn stop_managed(pid_path: &Path, label: &str, port: Option<u16>) -> Result<String, String> {
-    let pid = read_pid(pid_path);
-    if let Some(pid) = pid.filter(|pid| process_is_alive(*pid)) {
-        terminate_process(pid)?;
-        if let Some(port) = port {
-            wait_for_port(port, false, Duration::from_secs(10))?;
-        }
-        remove_file_if_present(pid_path)?;
-        return Ok(format!("stopped {label} (pid {pid})"));
-    }
-    remove_file_if_present(pid_path)?;
-    Ok(match port {
-        Some(port) if is_port_listening(port) => {
-            format!("{label}: port {port} is still busy (unmanaged process)")
-        }
-        _ => format!("{label}: stopped"),
-    })
-}
-
-#[cfg(unix)]
-fn terminate_process(pid: u32) -> Result<(), String> {
-    unsafe {
-        libc::kill(-(pid as i32), libc::SIGTERM);
-    }
-    let started = Instant::now();
-    while started.elapsed() < Duration::from_secs(5) && process_is_alive(pid) {
-        thread::sleep(Duration::from_millis(100));
-    }
-    if process_is_alive(pid) {
-        unsafe {
-            libc::kill(-(pid as i32), libc::SIGKILL);
-        }
-    }
-    Ok(())
-}
-
-#[cfg(windows)]
-fn terminate_process(pid: u32) -> Result<(), String> {
-    let status = Command::new("taskkill")
-        .args(["/PID", &pid.to_string(), "/T", "/F"])
-        .status()
-        .map_err(|error| format!("failed to stop process {pid}: {error}"))?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(format!("taskkill failed for process {pid}"))
-    }
-}
-
-fn wait_for_port(port: u16, expected_listening: bool, timeout: Duration) -> Result<(), String> {
-    let started = Instant::now();
-    while started.elapsed() < timeout {
-        if is_port_listening(port) == expected_listening {
-            return Ok(());
-        }
-        thread::sleep(Duration::from_millis(200));
-    }
-    Err(format!(
-        "timed out waiting for port {port} to become {}",
-        if expected_listening {
-            "ready"
-        } else {
-            "closed"
-        }
-    ))
-}
-
-fn is_port_listening(port: u16) -> bool {
-    let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
-    TcpStream::connect_timeout(&address, Duration::from_millis(180)).is_ok()
-}
-
-fn read_pid(path: &Path) -> Option<u32> {
-    fs::read_to_string(path).ok()?.trim().parse().ok()
-}
-
-fn service_line(label: &str, pid_path: &Path, port: u16, scheme: &str) -> String {
-    let pid = read_pid(pid_path);
-    let address = format!("{scheme}://127.0.0.1:{port}");
-    if is_port_listening(port) {
-        if let Some(pid) = pid.filter(|pid| process_is_alive(*pid)) {
-            format!("{label}: running on {address} (pid {pid})")
-        } else {
-            format!("{label}: running on {address} (unmanaged pid)")
-        }
-    } else {
-        format!("{label}: stopped")
-    }
-}
-
-fn listening_line(label: &str, address: &str, port: u16) -> String {
-    if is_port_listening(port) {
-        format!("{label}: listening on {address}")
-    } else {
-        format!("{label}: stopped")
-    }
 }
 
 fn ensure_runtime_dirs(paths: &RuntimePaths) -> Result<(), String> {
@@ -629,7 +535,7 @@ fn ensure_runtime_dirs(paths: &RuntimePaths) -> Result<(), String> {
         .map_err(|error| format!("failed to create {}: {error}", paths.data.display()))
 }
 
-fn runtime_env(root: &Path) -> HashMap<String, String> {
+pub(super) fn runtime_env(root: &Path) -> HashMap<String, String> {
     let mut values = HashMap::new();
     for path in [
         root.join("config/.env.example"),

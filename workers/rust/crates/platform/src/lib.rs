@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 
 mod runtime_profile;
 pub use runtime_profile::required_runtime_services;
+mod process_identity;
+pub use process_identity::process_instance_token;
 
 pub const LIB_PREFIX_PLACEHOLDER: &str = "{lib_prefix}";
 pub const LIB_EXTENSION_PLACEHOLDER: &str = "{lib_extension}";
@@ -150,7 +152,7 @@ pub fn desktop_preferences_dir(app_name: &str) -> Result<PathBuf, String> {
 
 #[cfg(unix)]
 pub fn process_is_alive(pid: u32) -> bool {
-    if pid == 0 {
+    if pid == 0 || pid > i32::MAX as u32 {
         return false;
     }
     let result = unsafe { libc::kill(pid as i32, 0) };
@@ -187,5 +189,6 @@ mod process_tests {
     fn current_process_is_alive_and_zero_is_not() {
         assert!(process_is_alive(std::process::id()));
         assert!(!process_is_alive(0));
+        assert!(!process_is_alive(u32::MAX));
     }
 }

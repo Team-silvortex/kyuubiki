@@ -594,6 +594,22 @@ fn sync_replacements(
             vec![semver_rule("Current development: ", "", shipping_version)],
         ),
         (
+            "docs/ui-automation-contract.html",
+            vec![minor_rule(
+                &format!("<div class=\"eyebrow\">{codename} "),
+                "</div>",
+                &format!("{minor_line}.x"),
+            )],
+        ),
+        (
+            "docs/ui-automation-contract.json",
+            vec![minor_rule(
+                "\"version\": \"",
+                "\"",
+                &format!("{minor_line}.x"),
+            )],
+        ),
+        (
             "apps/hub-gui/ui/docs/index.html",
             vec![
                 line_rule(

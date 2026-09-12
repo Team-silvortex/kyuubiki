@@ -6,6 +6,7 @@ license.workspace = true
 
 [dependencies]
 chrono = "0.4"
+fs2 = "0.4"
 kyuubiki-platform = { path = "../platform" }
 libc = "0.2"
 serde = { version = "1", features = ["derive"] }

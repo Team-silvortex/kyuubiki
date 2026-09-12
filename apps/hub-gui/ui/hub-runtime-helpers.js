@@ -15,14 +15,17 @@ export async function copySanitizedRuntimeLogToClipboard(text) {
 
 export function inferHotRuntimeState(rendered, fallbackMode = "local") {
   const text = String(rendered || "");
-  const running = /hot-loop:\s+running/i.test(text);
-  const stopped = /hot-loop:\s+stopped/i.test(text);
+  const stateMatch = /^hot-loop:\s+([a-z-]+)/im.exec(text);
+  const states = {
+    running: "running", stopped: "idle", starting: "starting",
+    blocked: "failed", degraded: "degraded",
+  };
   const modeMatch =
     /started managed hot-reload loop \((cloud|distributed|local)\)/i.exec(text) ||
     /Mode\W*(cloud|distributed|local)/i.exec(text);
 
   return {
-    status: running ? "running" : stopped ? "idle" : "unknown",
+    status: states[stateMatch?.[1]?.toLowerCase()] || "unknown",
     mode: modeMatch?.[1] || fallbackMode,
   };
 }
