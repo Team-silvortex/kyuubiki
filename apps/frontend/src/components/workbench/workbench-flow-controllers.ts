@@ -6,8 +6,18 @@ import { createWorkbenchScriptInvoker } from "@/components/workbench/workbench-s
 import { useWorkbenchScriptCommitBoundary, type WorkbenchScriptInvoker } from "@/components/workbench/workbench-script-commit-boundary";
 import { buildWorkbenchUxGuardrailSummary } from "@/components/workbench/workbench-ux-guardrails";
 import { serializeCurrentModel } from "@/lib/workbench/helpers";
+import { createWorkbenchModelBatchController } from "./workbench-model-batch-controller";
 
 export function useWorkbenchFlowControllers(props: Record<string, any>) {
+  const batchModelController = createWorkbenchModelBatchController({
+    studyKind: props.studyKind, trussModel: props.trussModel, truss3dModel: props.truss3dModel,
+    frameModel: props.frameModel, selectedNode: props.selectedNode,
+    selectedTruss3dNodes: props.selectedTruss3dNodes ?? [],
+    setTrussModel: props.setTrussModel, setTruss3dModel: props.setTruss3dModel, setFrameModel: props.setFrameModel,
+    setSelectedNode: props.setSelectedNode, setSelectedElement: props.setSelectedElement,
+    setSelectedTruss3dNodes: props.setSelectedTruss3dNodes, setMemberDraftNodes: props.setMemberDraftNodes,
+    recordHistory: props.recordHistory, resetActiveResult: props.resetActiveResult, historyLabel: props.t.editNodeAction,
+  });
   const primaryActionsController = createWorkbenchPrimaryActionsController({
     projectContext: props.projectContext,
     t: props.t,
@@ -130,7 +140,7 @@ export function useWorkbenchFlowControllers(props: Record<string, any>) {
     runAnalysis: primaryActionsController.runAnalysis,
     downloadResultCsv: props.downloadResultCsv,
     toggleImmersiveViewport: () => {
-      void props.toggleImmersiveViewport();
+      void props.toggleImmersiveViewport().catch(() => undefined);
     },
     assistantApiBaseUrl: props.assistantApiBaseUrl,
     assistantApiKey: props.assistantApiKey,
@@ -139,6 +149,7 @@ export function useWorkbenchFlowControllers(props: Record<string, any>) {
   });
 
   const invokeScriptAction: WorkbenchScriptInvoker = useWorkbenchScriptCommitBoundary(createWorkbenchScriptInvoker({
+    batchModelController,
     invokeNestedAction: (...args: Parameters<WorkbenchScriptInvoker>) => invokeScriptAction(...args),
     projects: props.projects,
     language: props.language,
@@ -265,6 +276,7 @@ export function useWorkbenchFlowControllers(props: Record<string, any>) {
     setTruss3dShowNodes: props.setTruss3dShowNodes,
     setImmersiveToolDrawerOpen: props.setImmersiveToolDrawerOpen,
     setImmersiveHelpDrawerOpen: props.setImmersiveHelpDrawerOpen,
+    setImmersiveToolTab: props.setImmersiveToolTab,
     setTruss3dBoxSelectMode: props.setTruss3dBoxSelectMode,
     immersiveViewport: props.immersiveViewport,
     importActionLabel: props.t.importAction,
@@ -298,6 +310,7 @@ export function useWorkbenchFlowControllers(props: Record<string, any>) {
   }));
 
   return {
+    batchModelController,
     assistantController,
     invokeScriptAction,
     primaryActionsController,

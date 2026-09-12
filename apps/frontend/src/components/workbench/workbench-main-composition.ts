@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+import type { ModelBatchDraftCache } from "./model/workbench-model-batch-draft";
 import { useWorkbenchEditControllers } from "@/components/workbench/workbench-edit-controllers";
 import { useWorkbenchFlowControllers } from "@/components/workbench/workbench-flow-controllers";
 import { buildWorkbenchFlowComposition } from "@/components/workbench/workbench-flow-composition";
@@ -20,9 +22,11 @@ import { ensureBeamModelMaterials, ensureFrameModelMaterials } from "@/lib/workb
 type WorkbenchMainCompositionProps = Record<string, any> & {
   deferredJobHistory: WorkbenchSystemSidebarMountProps["jobHistory"];
   round: (value: number) => number;
+  resetActiveResult: () => void;
 };
 
 export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps) {
+  const modelBatchDraftCache = useRef<ModelBatchDraftCache>(null);
   const {
     createProjectRecord,
     deleteProjectRecord,
@@ -55,8 +59,8 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
     isThermalTruss3d: props.isThermalTruss3d,
     memberDraftNodes: props.memberDraftNodes,
     parametric: props.parametric,
-    recordHistory: props.recordHistory,
-    resetResults: props.resetResults,
+    recordHistory,
+    resetResults: props.resetActiveResult,
     round: props.round,
     selectedElement: props.selectedElement,
     selectedNode: props.selectedNode,
@@ -122,6 +126,7 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
     setPanelParametric: props.setPanelParametric,
     setSelectedNode: props.setSelectedNode,
     setSelectedElement: props.setSelectedElement,
+    setSelectedTruss3dNodes: props.setSelectedTruss3dNodes,
     scriptRecordingMode: props.scriptRecordingMode,
     directMeshEndpointsText: props.directMeshEndpointsText,
     controlPlaneApiToken: props.controlPlaneApiToken,
@@ -137,6 +142,8 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
     heatPlaneModel: props.heatPlaneModel,
     immersiveHelpDrawerOpen: props.immersiveHelpDrawerOpen,
     immersiveToolDrawerOpen: props.immersiveToolDrawerOpen,
+    immersiveToolTab: props.shellState.immersiveToolTab,
+    setImmersiveToolTab: props.shellState.setImmersiveToolTab,
     immersiveViewport: props.immersiveViewport,
     job: props.job,
     jobHistory: props.deferredJobHistory,
@@ -371,6 +378,8 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
     modelTreeContent,
   } = buildWorkbenchModelContent(
     buildWorkbenchModelContentComposition({
+      batchModelController: flowControllers.batchModelController,
+      modelBatchDraftCache,
       t: props.t,
       shellState: props.shellState,
       workspaceState: props.workspaceState,
@@ -409,7 +418,7 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
     studyControlsRows,
     studyControlsContent,
     isPending: props.isPending,
-    modelStudyContent,
+    modelStudyContent: props.shellState.immersiveViewport ? null : modelStudyContent,
     modelStudioContent,
     modelMaterialsContent,
     modelGenerateContent,
@@ -485,6 +494,13 @@ export function useWorkbenchMainComposition(props: WorkbenchMainCompositionProps
   });
 
   const mainShellMountProps = buildWorkbenchMainShellComposition({
+    immersiveModelStorage: {
+      projects: props.projects, selectedProjectId: props.selectedProjectId,
+      selectedModelId: props.selectedModelId, selectedVersionId: props.selectedVersionId,
+      loadedModelName: props.loadedModelName, invoke: flowControllers.invokeScriptAction,
+    },
+    modelBatchDraftCache,
+    immersiveStudyContent: modelStudyContent,
     t: props.t,
     runtimeRecovery: props.runtimeRecovery,
     shellState: props.shellState,

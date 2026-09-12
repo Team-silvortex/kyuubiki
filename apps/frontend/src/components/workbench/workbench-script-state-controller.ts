@@ -3,8 +3,13 @@
 import type { WorkbenchStudyKind } from "@/lib/workbench/history";
 import type { WorkbenchCancellationResult } from "@/components/workbench/workbench-job-history-controller";
 import type { WorkbenchRunOperationResult } from "@/components/workbench/workbench-run-controller";
+import type { WorkbenchModelBatchController } from "./workbench-model-batch-controller";
+import type { ModelBatchRequest } from "@/lib/workbench/model-batch-commands";
+import type { BatchQuery } from "@/lib/workbench/model-batch-selection";
+import { IMMERSIVE_TOOL_TABS, type ImmersiveToolTab } from "./workbench-types";
 
 type ScriptStateControllerDeps = {
+  batchModelController?: WorkbenchModelBatchController;
   action: string;
   payload: Record<string, unknown>;
   language: string;
@@ -28,6 +33,7 @@ type ScriptStateControllerDeps = {
   setTruss3dShowNodes: (value: boolean) => void;
   setImmersiveToolDrawerOpen: (value: boolean) => void;
   setImmersiveHelpDrawerOpen: (value: boolean) => void;
+  setImmersiveToolTab: (value: ImmersiveToolTab) => void;
   setTruss3dBoxSelectMode: (value: boolean) => void;
   immersiveViewport: boolean;
   recordHistory: (label: string) => void;
@@ -53,6 +59,7 @@ type ScriptStateControllerDeps = {
 };
 
 export async function handleWorkbenchScriptStateAction({
+  batchModelController,
   action,
   payload,
   language,
@@ -76,6 +83,7 @@ export async function handleWorkbenchScriptStateAction({
   setTruss3dShowNodes,
   setImmersiveToolDrawerOpen,
   setImmersiveHelpDrawerOpen,
+  setImmersiveToolTab,
   setTruss3dBoxSelectMode,
   immersiveViewport,
   recordHistory,
@@ -100,6 +108,14 @@ export async function handleWorkbenchScriptStateAction({
   setTruss3dProjectionMode,
 }: ScriptStateControllerDeps): Promise<Record<string, unknown> | null> {
   switch (action) {
+    case "state/inspectModelBatch": {
+      if (!batchModelController) throw new Error("model_batch:unavailable");
+      return { ok: true, action, ...batchModelController.inspect(payload.query as BatchQuery) };
+    }
+    case "state/applyModelBatch": {
+      if (!batchModelController) throw new Error("model_batch:unavailable");
+      return { ok: true, action, ...batchModelController.apply(payload as ModelBatchRequest) };
+    }
     case "state/setParametric": {
       recordHistory(editParametricLabel);
       setParametric((current) => ({ ...current, ...(payload as Record<string, unknown>) }));
@@ -182,6 +198,10 @@ export async function handleWorkbenchScriptStateAction({
       setSelectedElement(typeof payload.elementIndex === "number" ? payload.elementIndex : null);
       return { ok: true, action };
     }
+    case "selection/query3d": {
+      if (!batchModelController) throw new Error("model_batch:unavailable");
+      return { ok: true, action, ...batchModelController.select3d(payload.query as BatchQuery) };
+    }
     case "selection/set3d": {
       if (Array.isArray(payload.nodeIndices)) {
         setSelectedTruss3dNodes(payload.nodeIndices.filter((entry): entry is number => typeof entry === "number"));
@@ -249,9 +269,13 @@ export async function handleWorkbenchScriptStateAction({
       return { ok: true, action };
     }
     case "viewport/setUiState": {
+      if (payload.toolTab !== undefined && !IMMERSIVE_TOOL_TABS.includes(payload.toolTab as ImmersiveToolTab)) {
+        throw new Error("viewport:invalid_tool_tab");
+      }
       if (typeof payload.immersiveViewport === "boolean" && payload.immersiveViewport !== immersiveViewport) {
         await toggleImmersiveViewport();
       }
+      if (payload.toolTab !== undefined) setImmersiveToolTab(payload.toolTab as ImmersiveToolTab);
       if (typeof payload.toolDrawerOpen === "boolean") {
         setImmersiveToolDrawerOpen(payload.toolDrawerOpen);
       }

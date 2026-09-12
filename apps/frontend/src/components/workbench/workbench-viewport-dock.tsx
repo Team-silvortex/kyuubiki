@@ -1,7 +1,16 @@
 "use client";
 
 import { fixed } from "@/lib/workbench/helpers";
+import dynamic from "next/dynamic";
+import type { ReactNode, RefObject } from "react";
 import type { WorkbenchCopy } from "./workbench-copy";
+import type { ImmersiveToolTab } from "./workbench-types";
+import type { WorkbenchModelBatchController } from "./workbench-model-batch-controller";
+import type { ModelBatchDraftCache } from "./model/workbench-model-batch-draft";
+import { getModelBatchCopy } from "./model/workbench-model-batch-copy";
+import { WorkbenchImmersiveSave, type useWorkbenchImmersiveSave } from "./workbench-immersive-save";
+
+const WorkbenchModelBatchCard = dynamic(() => import("./model/workbench-model-batch-card").then((module) => module.WorkbenchModelBatchCard));
 
 type Truss3dNodeLike = {
   id?: string;
@@ -13,12 +22,17 @@ type Truss3dNodeLike = {
 
 type WorkbenchViewportDockProps = {
   t: WorkbenchCopy;
+  language: string;
+  batchModelController: WorkbenchModelBatchController;
+  modelBatchDraftCache: RefObject<ModelBatchDraftCache>;
+  immersiveStudyContent: ReactNode;
+  immersiveSave: ReturnType<typeof useWorkbenchImmersiveSave>;
   immersiveViewport: boolean;
   immersiveToolDrawerOpen: boolean;
   immersiveHelpDrawerOpen: boolean;
   showShortcutHints: boolean;
   showViewportToolStrip: boolean;
-  immersiveToolTab: "node" | "props";
+  immersiveToolTab: ImmersiveToolTab;
   truss3dViewPreset: "iso" | "front" | "right" | "top";
   selectedNode: number | null;
   selectedElement: number | null;
@@ -49,7 +63,7 @@ type WorkbenchViewportDockProps = {
       fix_z?: boolean;
     }>;
   };
-  setImmersiveToolTab: (tab: "node" | "props") => void;
+  setImmersiveToolTab: (tab: ImmersiveToolTab) => void;
   handleTruss3dViewPresetChange: (preset: "iso" | "front" | "right" | "top") => void;
   handleTruss3dFocusViewport: () => void;
   setTruss3dFocusRequestVersion: (updater: (current: number) => number) => void;
@@ -79,6 +93,11 @@ type WorkbenchViewportDockProps = {
 
 export function WorkbenchViewportDock({
   t,
+  language,
+  batchModelController,
+  modelBatchDraftCache,
+  immersiveStudyContent,
+  immersiveSave,
   immersiveViewport,
   immersiveToolDrawerOpen,
   immersiveHelpDrawerOpen,
@@ -133,12 +152,14 @@ export function WorkbenchViewportDock({
   return (
     <>
       {immersiveViewport && immersiveToolDrawerOpen ? (
-        <section className="viewport-dock__card">
+        <section className="viewport-dock__card viewport-dock__card--tools" data-workbench-immersive="tools">
           <div className="card-head">
             <h2>{t.immersiveTools}</h2>
             <span>{t.kinds.truss_3d}</span>
           </div>
           {showViewportToolStrip ? (
+            <details className="viewport-dock__view-tools">
+              <summary>{t.immersiveViewTools}</summary>
             <div className="viewport-toolbar-strip viewport-toolbar-strip--dock" role="toolbar" aria-label={t.immersiveViewTools}>
               {(["iso", "front", "right", "top"] as const).map((preset) => (
                 <button
@@ -187,16 +208,29 @@ export function WorkbenchViewportDock({
                 RESET
               </button>
             </div>
+            </details>
           ) : null}
-          <div className="panel-tabs viewport-dock__tabs">
-            <button className={`panel-tab${immersiveToolTab === "node" ? " panel-tab--active" : ""}`} onClick={() => setImmersiveToolTab("node")} type="button">
-              {t.immersiveNodeOps}
-            </button>
-            <button className={`panel-tab${immersiveToolTab === "props" ? " panel-tab--active" : ""}`} onClick={() => setImmersiveToolTab("props")} type="button">
-              {t.immersiveQuickProps}
-            </button>
+          <div className="panel-tabs viewport-dock__tabs" role="tablist" aria-label={t.immersiveTools}>
+            {([["node", t.immersiveNodeOps], ["batch", getModelBatchCopy(language).title],
+              ["props", t.immersiveQuickProps], ["study", t.immersiveStudy], ["save", t.save]] as const).map(([tab, label]) => (
+              <button key={tab} role="tab" aria-selected={immersiveToolTab === tab}
+                id={`immersive-tab-${tab}`} aria-controls="immersive-tool-panel" data-workbench-immersive-tab={tab}
+                className={`panel-tab${immersiveToolTab === tab ? " panel-tab--active" : ""}`}
+                onClick={() => setImmersiveToolTab(tab)} type="button">{label}</button>
+            ))}
           </div>
-          <div className="viewport-dock__stack">
+          <div className="button-row viewport-dock__history">
+            <button className="ghost-button ghost-button--compact" data-workbench-immersive="undo" disabled={undoStack.length === 0} onClick={handleUndo} type="button">{t.undo}</button>
+            <button className="ghost-button ghost-button--compact" data-workbench-immersive="redo" disabled={redoStack.length === 0} onClick={handleRedo} type="button">{t.redo}</button>
+          </div>
+          <div className="viewport-dock__stack" role="tabpanel" id="immersive-tool-panel"
+            aria-labelledby={`immersive-tab-${immersiveToolTab}`} data-workbench-immersive-panel={immersiveToolTab}>
+            {immersiveToolTab === "batch" && batchModelController.model ? (
+              <WorkbenchModelBatchCard key={batchModelController.studyKind} embedded controller={batchModelController}
+                draftCache={modelBatchDraftCache} language={language} t={t} />
+            ) : null}
+            {immersiveToolTab === "study" ? immersiveStudyContent : null}
+            {immersiveToolTab === "save" ? <WorkbenchImmersiveSave controller={immersiveSave} t={t} /> : null}
             {immersiveViewport && immersiveToolTab === "node" ? (
               <div>
                 <div className="card-subhead">
@@ -221,10 +255,6 @@ export function WorkbenchViewportDock({
                   <button className="ghost-button ghost-button--compact" disabled={selectedNode === null && selectedTruss3dNodes.length === 0} onClick={() => cloneSelectedTruss3dNodes("y")} type="button">{t.mirrorY}</button>
                   <button className="ghost-button ghost-button--compact" disabled={selectedNode === null && selectedTruss3dNodes.length === 0} onClick={() => cloneSelectedTruss3dNodes("z")} type="button">{t.mirrorZ}</button>
                 </div>
-                <div className="button-row">
-                  <button className="ghost-button ghost-button--compact" disabled={undoStack.length === 0} onClick={handleUndo} type="button">{t.undo}</button>
-                  <button className="ghost-button ghost-button--compact" disabled={redoStack.length === 0} onClick={handleRedo} type="button">{t.redo}</button>
-                </div>
                 <p className="card-copy">{truss3dLinkMode ? t.linkModeIdle : t.selectionHint}</p>
               </div>
             ) : null}
@@ -234,7 +264,7 @@ export function WorkbenchViewportDock({
                   <strong>{t.immersiveQuickProps}</strong>
                   <span>{selectedTruss3dNodes.length > 1 ? `${selectedTruss3dNodes.length} ${t.immersiveNodeSelection}` : selectedTruss3dNodeData?.id ?? t.none}</span>
                 </div>
-                {selectedTruss3dNodeData ? (
+                {selectedTruss3dNodeData && selectedTruss3dNodes.length <= 1 ? (
                   <>
                     <div className="form-grid compact">
                       <label><span>{t.nodeX}</span><input type="number" step={0.1} value={truss3dModel.nodes[selectedTruss3dNodeData.index]?.x ?? selectedTruss3dNodeData.x} onChange={(event) => updateSelectedTruss3dNode("x", Number(event.target.value))} /></label>

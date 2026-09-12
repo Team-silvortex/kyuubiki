@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { exitWorkbenchViewportFullscreen, isWorkbenchViewportFullscreen } from "@/components/workbench/workbench-fullscreen";
+import { exitWorkbenchViewportFullscreen, isWorkbenchViewportFullscreen, workbenchFullscreenEvents } from "@/components/workbench/workbench-fullscreen";
 import { heartbeatTone } from "@/components/workbench/workbench-result-helpers";
 import { buildWorkbenchGovernanceEnforcementPlan, buildWorkbenchGovernanceRuntimeDiagnostics } from "@/lib/workbench/governance";
 import type {
@@ -213,8 +213,12 @@ export function useWorkbenchRuntimeGuards(params: {
       setImmersiveViewport(isWorkbenchViewportFullscreen(document, viewportPanelRef.current));
     };
 
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    const target = viewportPanelRef.current;
+    for (const event of workbenchFullscreenEvents) document.addEventListener(event, handleFullscreenChange);
+    return () => {
+      for (const event of workbenchFullscreenEvents) document.removeEventListener(event, handleFullscreenChange);
+      void exitWorkbenchViewportFullscreen(document, target).catch(() => undefined);
+    };
   }, [setImmersiveViewport, viewportPanelRef]);
 
   useEffect(() => {
@@ -243,7 +247,10 @@ export function useWorkbenchRuntimeGuards(params: {
       return;
     }
 
+    const editing = (event: Event) => event.target instanceof Element &&
+      Boolean(event.target.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']"));
     const stopEvent = (event: Event) => {
+      if (editing(event)) return;
       event.preventDefault();
       event.stopPropagation();
     };

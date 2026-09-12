@@ -62,9 +62,13 @@ export function buildElementReadout(kind: Truss3dReadoutStudyKind, element: Disp
 }
 
 export function buildSelectionSummary(kind: Truss3dReadoutStudyKind, nodes: DisplayTruss3dNode[]): Truss3dReadout {
-  const magnitudes = nodes.map((node) => Math.hypot(node.ux, node.uy, node.uz));
-  const average = magnitudes.reduce((sum, value) => sum + value, 0) / Math.max(nodes.length, 1);
-  const max = Math.max(...magnitudes, 0);
+  let sum = 0, max = 0;
+  for (const node of nodes) {
+    const magnitude = Math.hypot(node.ux, node.uy, node.uz);
+    sum += magnitude;
+    max = Math.max(max, magnitude);
+  }
+  const average = sum / Math.max(nodes.length, 1);
   return {
     kind: "node",
     title: `${nodes.length} ${kind === "spring_3d" ? "spring" : kind === "thermal_truss_3d" ? "thermal" : ""} nodes selected`.replace("  ", " "),

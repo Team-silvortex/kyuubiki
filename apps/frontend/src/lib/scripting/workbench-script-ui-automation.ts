@@ -39,11 +39,14 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
       renderDetails: workbenchAutomationSelectors.renderDetails,
       viewportPanel: workbenchAutomationSelectors.viewportPanel,
       viewportStage: workbenchAutomationSelectors.viewportStage,
+      immersiveToggle: workbenchAutomationSelectors.immersiveToggle,
+      immersiveResize: workbenchAutomationSelectors.immersiveResize,
       loadedModelState: workbenchAutomationSelectors.loadedModelState,
       modelPanel: workbenchAutomationSelectors.modelPanel,
       modelStudyPanel: workbenchAutomationSelectors.modelStudyPanel,
       modelStudyKind: workbenchAutomationSelectors.modelStudyKind,
       modelStudyRun: workbenchAutomationSelectors.modelStudyRun,
+      modelBatchPanel: workbenchAutomationSelectors.modelBatchPanel,
       workflowSurface: workbenchAutomationSelectors.workflowSurface,
       workflowCatalogSearch: workbenchAutomationSelectors.workflowCatalogSearch,
       workflowBuilder: workbenchAutomationSelectors.workflowBuilder,
@@ -70,6 +73,22 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
       controlWindowResetButton: workbenchAutomationSelectors.controlWindowResetButton,
     },
     parameterizedSelectors: [
+      {
+        key: "immersiveSave", parameter: "control",
+        template: workbenchAutomationSelectors.immersiveSave(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${control}"),
+      },
+      {
+        key: "immersiveTab", parameter: "tab",
+        template: workbenchAutomationSelectors.immersiveTab(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${tab}"),
+      },
+      {
+        key: "immersiveAction", parameter: "action",
+        template: workbenchAutomationSelectors.immersiveAction(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${action}"),
+      },
+      {
+        key: "modelBatchControl", parameter: "control",
+        template: workbenchAutomationSelectors.modelBatchControl(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${control}"),
+      },
       {
         key: "uiChunk",
         parameter: "chunkId",

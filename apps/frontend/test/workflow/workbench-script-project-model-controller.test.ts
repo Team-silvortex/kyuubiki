@@ -201,6 +201,49 @@ test("script model save creates models through project library service", async (
   ]);
 });
 
+for (const action of ["model/save", "model/saveAs"]) {
+  test(`script ${action} accepts an atomic name payload and publishes the trimmed name only on success`, async () => {
+    const calls: string[] = [], args = baseArgs(calls);
+    await handleWorkbenchScriptProjectModelAction({
+      ...args, action, payload: { name: "  Research model  " }, selectedProjectId: "project-a", selectedModelId: "model-a",
+      setLoadedModelName: (name) => { calls.push(`local-name:${name}`); },
+    });
+    const writes = calls.filter((call) => /^(create|update)-/.test(call));
+    assert.deepEqual(writes, action === "model/saveAs" ? ["create-model:project-a:Research model"]
+      : ["update-model:model-a:Research model", "create-version:model-a:Research model"]);
+    assert.deepEqual(calls.filter((call) => call.startsWith("local-name:")), ["local-name:Research model"]);
+  });
+
+  test(`script ${action} rejects invalid names before serialization or writes`, async () => {
+    for (const name of ["", "  ", 3, null, {}, "a".repeat(257)]) {
+      const calls: string[] = [];
+      await assert.rejects(handleWorkbenchScriptProjectModelAction({
+        ...baseArgs(calls), action, payload: { name }, selectedProjectId: "project-a",
+        serializeCurrentModel: () => assert.fail("must reject before reading the model"),
+        setLoadedModelName: () => assert.fail("must not rename the live model"),
+      }), /model:invalid_name/);
+      assert.deepEqual(calls, []);
+    }
+  });
+
+  test(`script ${action} preserves the local name on write failure and on changed project context`, async () => {
+    for (const fail of [true, false]) {
+      const calls: string[] = [], args = baseArgs(calls);
+      if (fail) {
+        args.projectLibraryBackendService.createModel = async () => { throw new Error("write unavailable"); };
+        args.projectLibraryBackendService.createModelVersion = async () => { throw new Error("write unavailable"); };
+      }
+      const pending = handleWorkbenchScriptProjectModelAction({
+        ...args, action, payload: { name: "Original project model" }, selectedProjectId: "project-a", selectedModelId: "model-a",
+        setLoadedModelName: () => assert.fail("must not overwrite local name after failure or navigation"),
+        refreshProjects: async () => { args.projectContext.update({ projectId: "project-b", modelId: null, versionId: null }); },
+      });
+      if (fail) await assert.rejects(pending, /write unavailable/);
+      else assert.equal((await pending)?.contextChanged, true);
+    }
+  });
+}
+
 test("script project exports propagate download failures instead of reporting false success", async () => {
   const calls: string[] = [];
   const failure = new Error("project bundle download failed");

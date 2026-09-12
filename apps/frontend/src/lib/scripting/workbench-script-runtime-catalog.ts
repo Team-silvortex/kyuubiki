@@ -171,6 +171,7 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
       en: "Save into the selected model or create the first saved version.",
       zh: "保存到当前模型，或创建首个保存版本。",
     },
+    payloadExample: { name: "3D research model" },
   },
   {
     id: "model/saveAs",
@@ -180,6 +181,7 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
       en: "Save the current workspace as a new saved model.",
       zh: "将当前工作区另存为新模型。",
     },
+    payloadExample: { name: "3D research variant" },
   },
   {
     id: "model/deleteSelected",
@@ -229,6 +231,22 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
       zh: "更新桁架参数化生成器输入。",
     },
     payloadExample: { bays: 8, span: 24, height: 4, loadY: -1800 },
+  },
+  {
+    id: "state/inspectModelBatch", category: "state", risk: "normal",
+    summary: {
+      en: "Count selected nodes and internal/touching members without editing. Supports truss_2d, truss_3d and frame_2d.",
+      zh: "只读预览批量操作的节点、组内杆件和关联杆件数量，支持二维/三维桁架与二维框架。",
+    },
+    payloadExample: { query: { kind: "range", axis: "x", min: 0, max: 0.01 } },
+  },
+  {
+    id: "state/applyModelBatch", category: "state", risk: "normal",
+    summary: {
+      en: "Apply one undoable modeling batch: translate, align, array, rotate, scale, mirror, snap, loads, supports, members or delete. Transforms require a pivot (origin/selection bounds/point); rotation uses angleDegrees and optional copy creates internal members only. Geometry transforms do not transform loads/supports/sections. SI units; copies omit boundaries by default. Delete requires operation.confirmDelete=true.",
+      zh: "以一个可撤销步骤批量平移、对齐、阵列、旋转、缩放、镜像、吸附、修改载荷/约束/杆件或删除。变换需指定基点（原点/选区包围盒/坐标）；旋转使用 angleDegrees，可用 copy 生成仅含组内杆件的副本。几何变换不变换载荷/约束/截面，使用 SI 单位，副本默认清空边界。删除需 operation.confirmDelete=true。",
+    },
+    payloadExample: { query: { kind: "indices", indices: [0, 1] }, operation: { kind: "array", copies: 4, offset: { x: 2, y: 0, z: 0 } } },
   },
   {
     id: "state/setPanelParametric",
@@ -322,6 +340,14 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
       zh: "更新当前三维节点选择、连线草稿节点或连线模式状态。",
     },
     payloadExample: { nodeIndices: [0, 1], anchorNodeIndex: 0, memberDraftNodeIndices: [0, 1], linkMode: true },
+  },
+  {
+    id: "selection/query3d", category: "selection", risk: "normal",
+    summary: {
+      en: "Select truss_3d nodes by current/all/indices/range and optional inversion, including hidden nodes. An empty indices list clears selection. Does not edit geometry, history or results.",
+      zh: "按当前/全部/编号/坐标范围及可选反选选中三维桁架节点，包含隐藏节点。空编号列表清空选择，不修改几何、历史或结果。",
+    },
+    payloadExample: { query: { kind: "range", axis: "z", min: 0, max: 1 } },
   },
   {
     id: "job/run",
@@ -422,10 +448,10 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
     category: "viewport",
     risk: "normal",
     summary: {
-      en: "Control immersive viewport drawers, box select, or 3D link mode UI state.",
-      zh: "控制沉浸式视图抽屉、框选或三维连线模式等 UI 状态。",
+      en: "Control immersive drawers, toolTab (node/props/batch/study/save), box select, or 3D link mode. Native fullscreen entry requires browser user activation; failures are propagated.",
+      zh: "控制全屏抽屉、toolTab（node/props/batch/study/save）、框选和连线。浏览器全屏进入需要用户激活，失败会向调用方抛出。",
     },
-    payloadExample: { immersiveViewport: true, toolDrawerOpen: true, helpDrawerOpen: false, boxSelectMode: false, linkMode: true },
+    payloadExample: { immersiveViewport: true, toolDrawerOpen: true, toolTab: "batch", helpDrawerOpen: false, boxSelectMode: false, linkMode: false },
   },
   {
     id: "data/setFilters",

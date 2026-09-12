@@ -6,6 +6,7 @@ import {
   computeTruss3dSceneBounds,
   type Truss3dSceneBuildArgs,
 } from "../../src/components/workbench/workbench-truss3d-webgl-scene.ts";
+import { modelingSceneFixture } from "../support/modeling-fixtures";
 
 const nodes = [
   { index: 0, id: "n0", x: -1, y: -2, z: 0, ux: 0, uy: 0, uz: 0 },
@@ -58,4 +59,71 @@ test("omits spatial bounding box when grid reference is hidden", () => {
 
   assert.equal(buffers.linePositions.length, 0);
   assert.equal(buffers.lineColors.length, 0);
+});
+
+test("visible node highlighting uses model identity, not a filtered array offset", () => {
+  const buffers = buildTruss3dSceneBuffers(buildArgs({
+    showGrid: false, showNodes: true, visibleTruss3dNodes: [nodes[1], nodes[0]],
+    selectedTruss3dNodeIndices: [1], memberDraftNodes: [0],
+  }));
+  assert.deepEqual([...buffers.nodeSizes], [12, 9]);
+});
+
+test("deformed-only views retain point-size data and cannot hide the modeling geometry", () => {
+  const args = modelingSceneFixture(3);
+  const buffers = buildTruss3dSceneBuffers({ ...args, isModelMode: false, deformationViewMode: "deformed" });
+  assert.equal(buffers.nodePositions.length, 0);
+  assert.equal(buffers.deformedNodePositions.length, 9);
+  assert.equal(buffers.nodeSizes.length, 3);
+  const modeling = buildTruss3dSceneBuffers({ ...args, deformationViewMode: "deformed" });
+  assert.equal(modeling.nodePositions.length, 9);
+  assert.equal(modeling.deformedNodePositions.length, 0);
+  const noResult = buildTruss3dSceneBuffers(buildArgs({ showNodes: true, isModelMode: false, deformationViewMode: "deformed" }));
+  assert.equal(noResult.nodePositions.length, nodes.length * 3, "clearing the result cannot leave a hidden original view");
+});
+
+test("model coordinate scale cannot create an unbounded visual grid", () => {
+  const buffers = buildTruss3dSceneBuffers(buildArgs({ gridExtent: 1e12, gridStep: 1 }));
+  assert.ok(buffers.linePositions.length <= (258 + 12) * 6);
+  for (const gridStep of [0, -1, NaN, Infinity]) {
+    assert.equal(buildTruss3dSceneBuffers(buildArgs({ gridStep })).linePositions.length, 0);
+  }
+});
+
+test("scene colors reuse one parser and preserve hex-normalized material colors", () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, "document");
+  let canvases = 0, materialParses = 0, style = "#000000";
+  const context = {
+    get fillStyle() { return style; },
+    set fillStyle(value: string) {
+      if (value === "hsl(120 100% 50%)") { materialParses += 1; style = "#00ff00"; }
+      else if (value.startsWith("rgba(")) style = value;
+      // Browser canvas ignores invalid CSS assignments.
+    },
+  };
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: { createElement: () => { canvases += 1; return { getContext: () => context }; } },
+  });
+  try {
+    const args = modelingSceneFixture(2_000);
+    const colors = args.visibleTruss3dElements.map(() => "hsl(120 100% 50%)");
+    colors[1] = "invalid-css";
+    const buffers = buildTruss3dSceneBuffers({ ...args, truss3dElementColors: colors });
+    assert.equal(canvases, 1);
+    assert.equal(materialParses, 1);
+    assert.deepEqual([...buffers.lineColors.slice(0, 4)], [0, 1, 0, 1]);
+    assert.ok(Math.abs(buffers.lineColors[8] - 0.48) < 1e-6, "invalid CSS must use the member fallback, not green");
+  } finally {
+    if (descriptor) Object.defineProperty(globalThis, "document", descriptor);
+    else Reflect.deleteProperty(globalThis, "document");
+  }
+});
+
+test("hidden materials and missing endpoints do not generate geometry", () => {
+  const args = modelingSceneFixture(3);
+  args.visibleTruss3dElements[0].material_id = "hidden";
+  args.visibleTruss3dElements[1].node_j = 99;
+  const buffers = buildTruss3dSceneBuffers({ ...args, hiddenTruss3dMaterialIds: ["hidden"] });
+  assert.equal(buffers.linePositions.length, 0);
 });

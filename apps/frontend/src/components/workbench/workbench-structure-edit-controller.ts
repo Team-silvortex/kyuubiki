@@ -244,9 +244,17 @@ export function createWorkbenchStructureEditController(deps: StructureController
     const targetIndices =
       selectedTruss3dNodes.length > 0 ? selectedTruss3dNodes : selectedNode !== null ? [selectedNode] : [];
     if (targetIndices.length === 0) return;
+    if (studyKind !== "truss_3d") { setMessage("model_batch:unsupported_study"); return; }
+    let nextState: ReturnType<typeof cloneTruss3dSelectedNodes>;
+    try {
+      nextState = cloneTruss3dSelectedNodes(truss3dModel, selectedTruss3dNodes, selectedNode, mirrorAxis);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "model_batch:invalid_request");
+      return;
+    }
+    if (nextState.model === truss3dModel) return;
     recordHistory(labels.addNodeAction);
     resetResults();
-    const nextState = cloneTruss3dSelectedNodes(truss3dModel, selectedTruss3dNodes, selectedNode, roundValue, mirrorAxis);
     setTruss3dModel(nextState.model);
     if (nextState.nextSelection.length > 0) {
       setSelectedTruss3dNodes(nextState.nextSelection);
@@ -452,6 +460,7 @@ export function createWorkbenchStructureEditController(deps: StructureController
     recordHistory(labels.deleteNodeAction);
     resetResults();
     setTruss3dModel((current) => deleteTruss3dNodeCommand(current, selectedNode));
+    setSelectedTruss3dNodes([]);
     setSelectedNode(null);
     setSelectedElement(null);
     setMemberDraftNodes([]);

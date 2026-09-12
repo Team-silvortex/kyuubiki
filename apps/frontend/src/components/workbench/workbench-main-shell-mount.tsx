@@ -102,6 +102,11 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
           props.sidebarSection,
           "workspace.viewport",
           <WorkbenchMainViewportPanelMount
+          batchModelController={props.batchModelController}
+          modelBatchDraftCache={props.modelBatchDraftCache}
+          immersiveStudyContent={props.immersiveStudyContent}
+          immersiveModelStorage={props.immersiveModelStorage}
+          language={props.language}
           viewportPanelRef={props.viewportPanelRef}
           canvasStageRef={props.canvasStageRef}
           viewportPixelWidth={props.viewportPixelWidth}

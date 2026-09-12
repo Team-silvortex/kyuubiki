@@ -20,11 +20,12 @@
         <div class="docs-meta">
           <span class="docs-chip">Current line: daji 3.x</span>
           <span class="docs-chip">North star: FEM-side Blender viewport</span>
-          <span class="docs-chip">Status: planning contract</span>
+          <span class="docs-chip">Status: staged implementation and bounded evidence</span>
         </div>
         <div class="docs-links">
           <a class="docs-link" href="./README.md">Back to docs readme</a>
           <a class="docs-link" href="./fem-blender-roadmap.md">Open product north star</a>
+          <a class="docs-link" href="./acceptance-immersive-modeling.html">Native 3D modeling acceptance</a>
         </div>
       </section>
 
@@ -50,8 +51,8 @@
           <div class="docs-kicker">evidence</div>
           <h2>Why this assessment is concrete</h2>
           <ul class="docs-list">
-            <li><strong>viewport dispatch</strong>: <code>apps/frontend/src/components/workbench/workbench-viewport.tsx</code> selects SVG-oriented renderers for axial, line, plane, and truss3d views</li>
-            <li><strong>render strategy</strong>: progressive reveal is handled by <code>requestAnimationFrame</code> plus <code>renderBatchSize</code> instead of a persistent GPU scene graph</li>
+            <li><strong>viewport dispatch</strong>: <code>apps/frontend/src/components/workbench/workbench-viewport.tsx</code> selects SVG renderers for axial, line, and plane views, and a WebGL geometry layer with SVG picking for 3D trusses</li>
+            <li><strong>render strategy</strong>: progressive reveal uses <code>requestAnimationFrame</code> plus <code>renderBatchSize</code>; the 3D renderer retains its shader program and geometry buffers until scene replacement, context loss, or unmount</li>
             <li><strong>field surface</strong>: result fields are already broad in <code>workbench-viewport-core.ts</code>, which means the data model is moving faster than the viewport substrate</li>
             <li><strong>result chunking</strong>: the bounded cache and chunk routes in <code>workers/rust/crates/desktop-runtime/src/direct_mesh_gateway.rs</code> keep large-result access outside the UI thread</li>
           </ul>
@@ -66,6 +67,80 @@
             visuals. New advanced physics features may land before the final render
             substrate does, as long as they remain inspectable, testable, and
             performance-bounded.
+          </p>
+        </article>
+      </section>
+
+      <section class="docs-stack" id="modeling-performance">
+        <article class="docs-card">
+          <h2>Fullscreen modeling workspace</h2>
+          <p>The existing 3D fullscreen surface now contains the real batch, node,
+            quick-property, study and save tools. Inactive batch editors unmount while
+            a lightweight in-memory draft preserves input parameters. No second
+            model snapshot or hidden batch editor is kept for fullscreen.</p>
+          <p>Undo/redo and query-based actual node selection share existing controllers.
+            The dock resizes by pointer or keyboard within a canvas-first budget;
+            compact layouts retain reachable batch actions. Save and Save As use
+            the project storage service with a busy lock surviving tab remounts.
+            Native fullscreen rejection propagates through PWDT. Browser regression
+            covers five viewport sizes, geometry edits, selection, history and
+            mocked save failures; installed native
+            WebView behavior and solver accuracy are separate qualifications.</p>
+          <p>See the <a href="tutorial-pwdt-automation.html#immersive-modeling">fullscreen
+            editing tutorial and boundaries</a>. Aspect-fit geometry is retained
+            rather than stretching the WebGL surface away from SVG picking.</p>
+        </article>
+        <article class="docs-card">
+          <div class="docs-kicker">2026-09-12 / daji 3.2.0 development</div>
+          <h2>Measured modeling hot paths</h2>
+          <p class="docs-copy">
+            CPU measurements below use the real frontend source on macOS ARM64,
+            Node v24.6.0, two warmups and seven timed samples (median), compared
+            against the pre-change implementation at <code>c00e1cb5</code>.
+            These are geometry-edit and scene-preparation measurements, not solver
+            speedups, browser frame-rate guarantees, or a 200k-node interactive GUI qualification.
+          </p>
+          <ul class="docs-list">
+            <li><strong>batch property edit</strong>, 20k nodes / 10k selected: 31.020 ms to 0.951 ms</li>
+            <li><strong>batch nudge</strong>, 20k nodes / 10k selected: 30.169 ms to 0.760 ms</li>
+            <li><strong>batch load assignment</strong>, 20k nodes / 10k selected: 31.130 ms to 0.701 ms</li>
+            <li><strong>nearest unconnected node</strong>, 10k nodes / 9,999 members: 93.185 ms to 0.321 ms</li>
+            <li><strong>3D scene buffer preparation</strong>, 20k nodes: 35.939 ms to 5.774 ms (without browser CSS parsing or GPU upload)</li>
+            <li><strong>200k-node bounds and deformation scale</strong>: four former argument-stack overflows now complete; planar bounds 2.149 ms, projected bounds 1.923 ms, spatial bounds 1.818 ms, deformation scale 5.605 ms</li>
+          </ul>
+          <p class="docs-copy">
+            Batch edits visit the selected indices once and copy the node array only
+            when values change. Unedited node objects and element arrays remain shared
+            with immutable history snapshots. Nearest-node selection builds a local
+            adjacency set once; bounds use bounded-memory scans instead of spread arguments.
+            Visual grid density is capped independently of physical mesh resolution.
+          </p>
+          <h3>Repeatable checks</h3>
+          <pre><code># Repository root: correctness and operation-count guards
+./scripts/kyuubiki frontend-unit-test workbench-modeling-performance workbench-truss3d-webgl
+
+# Repository root: real Workbench WebGL with an isolated mock backend
+node --test tests/integration/workbench-ui-modeling-performance.test.mjs
+
+# From apps/frontend: optional CPU benchmark; JSON on stdout
+node --import ./test/support/register-alias-loader.mjs ./test/benchmarks/workbench-modeling.bench.ts</code></pre>
+          <p class="docs-copy">
+            The browser regression imports a 1,000-node model through PWDT, then exercises
+            camera changes, window resize, selection, geometry replacement, undo,
+            context loss/restoration, and switching back to 2D. Camera actions made no
+            additional shader compilations, GPU buffer allocations, or geometry uploads.
+            One program and nine buffers remain live while mounted; all are released on
+            exit. GPU drawing is clipped to the SVG picking region and the SVG frame
+            does not paint an opaque layer over the geometry. The test observed no WebGL errors.
+            It does not use or stop installed
+            services, and its temporary frontend/backend workspace is removed after the run.
+          </p>
+          <p class="docs-copy">
+            Remaining limits: SVG picking still scales with visible geometry; whole-workbench
+            state changes can still rebuild derived scene data, including on window resize.
+            Dense plane fields, sustained high-density frame rates, and installed WKWebView
+            behavior require separate qualification. No new WASM, Node runtime service,
+            or long-lived global geometry cache was introduced by this optimization.
           </p>
         </article>
       </section>

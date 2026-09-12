@@ -1,0 +1,41 @@
+const COPY: Record<string, readonly [string, string]> = {
+  en: ["Select matches", "Clear selection"],
+  zh: ["选中匹配节点", "清空选择"],
+  "zh-tw": ["選取符合節點", "清除選取"],
+  ja: ["該当節点を選択", "選択を解除"],
+  es: ["Seleccionar coincidencias", "Borrar selección"],
+  ar: ["تحديد المطابقات", "إلغاء التحديد"],
+  bn: ["মিলগুলি নির্বাচন করুন", "নির্বাচন মুছুন"],
+  cs: ["Vybrat odpovídající", "Zrušit výběr"],
+  da: ["Vælg matchende", "Ryd markering"],
+  de: ["Treffer auswählen", "Auswahl aufheben"],
+  el: ["Επιλογή αντιστοιχιών", "Εκκαθάριση επιλογής"],
+  fa: ["انتخاب موارد منطبق", "پاک کردن انتخاب"],
+  fi: ["Valitse vastaavat", "Tyhjennä valinta"],
+  fr: ["Sélectionner les correspondances", "Effacer la sélection"],
+  he: ["בחירת התאמות", "ניקוי הבחירה"],
+  hi: ["मिलते नोड चुनें", "चयन साफ़ करें"],
+  id: ["Pilih yang cocok", "Hapus pilihan"],
+  it: ["Seleziona corrispondenze", "Cancella selezione"],
+  ko: ["일치하는 노드 선택", "선택 해제"],
+  ms: ["Pilih padanan", "Kosongkan pilihan"],
+  nl: ["Overeenkomsten selecteren", "Selectie wissen"],
+  no: ["Velg samsvarende", "Fjern markering"],
+  pl: ["Wybierz pasujące", "Wyczyść zaznaczenie"],
+  "pt-br": ["Selecionar correspondências", "Limpar seleção"],
+  ro: ["Selectează potrivirile", "Golește selecția"],
+  ru: ["Выбрать совпадения", "Снять выделение"],
+  sv: ["Välj matchande", "Rensa markering"],
+  sw: ["Chagua zinazolingana", "Futa uteuzi"],
+  ta: ["பொருந்துவனவற்றைத் தேர்ந்தெடு", "தேர்வை நீக்கு"],
+  th: ["เลือกโหนดที่ตรงกัน", "ล้างการเลือก"],
+  tr: ["Eşleşenleri seç", "Seçimi temizle"],
+  uk: ["Вибрати збіги", "Зняти виділення"],
+  ur: ["مماثل نوڈ منتخب کریں", "انتخاب صاف کریں"],
+  vi: ["Chọn các nút phù hợp", "Xóa lựa chọn"],
+};
+
+export function getModelSelectionCopy(language: string) {
+  const [select, clear] = COPY[language.toLowerCase()] ?? COPY.en;
+  return { select, clear };
+}

@@ -14,6 +14,10 @@ export function buildWorkbenchMainShellComposition(props: WorkbenchMainShellComp
   const { assistantController, invokeScriptAction } = flowControllers;
 
   return buildWorkbenchMainShellProps({
+    batchModelController: flowControllers.batchModelController,
+    modelBatchDraftCache: props.modelBatchDraftCache,
+    immersiveStudyContent: props.immersiveStudyContent,
+    immersiveModelStorage: props.immersiveModelStorage,
     t: props.t,
     assistantWindowOpen: shellState.assistantWindowOpen,
     setAssistantWindowOpen: shellState.setAssistantWindowOpen,
@@ -78,7 +82,7 @@ export function buildWorkbenchMainShellComposition(props: WorkbenchMainShellComp
     undoStack: workspaceState.undoStack,
     redoStack: workspaceState.redoStack,
     truss3dModel: workspaceState.truss3dModel,
-    setImmersiveToolTab: shellState.setImmersiveToolTab,
+    setImmersiveToolTab: uiActionController.handleImmersiveToolTabChange,
     handleTruss3dViewPresetChange: uiActionController.handleTruss3dViewPresetChange,
     handleTruss3dFocusViewport: uiActionController.handleTruss3dFocusViewport,
     setTruss3dFocusRequestVersion: shellState.setTruss3dFocusRequestVersion,

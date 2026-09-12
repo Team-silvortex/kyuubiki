@@ -6,7 +6,12 @@ import { createWorkbenchStructureEditController } from "@/components/workbench/w
 import { createWorkbenchTrussGestureController } from "@/components/workbench/workbench-truss-gesture-controller";
 import { findNearestConnectableNode } from "@/components/workbench/workbench-truss-helpers";
 
-export function useWorkbenchEditControllers(props: Record<string, any>) {
+type WorkbenchEditControllerProps = Record<string, any> & {
+  recordHistory: (label: string) => void;
+  resetResults: () => void;
+};
+
+export function useWorkbenchEditControllers(props: WorkbenchEditControllerProps) {
   const materialController = createWorkbenchMaterialEditController({
     activeMaterial: props.activeMaterial,
     labels: {

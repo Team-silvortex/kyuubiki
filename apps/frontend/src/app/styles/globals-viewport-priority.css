@@ -1,4 +1,6 @@
 /* The visualization owns remaining space; auxiliary content must not size its parent. */
+@import "./globals-immersive-modeling.css";
+
 .workbench-shell .workspace-main {
   display: flex;
   flex-direction: column;

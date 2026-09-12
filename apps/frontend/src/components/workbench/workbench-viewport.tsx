@@ -1,15 +1,17 @@
 "use client";
 
-import { memo, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 import {
   buildProjectedBounds,
+  buildTruss3dGrid,
   cameraForPreset,
   initialRenderBudget,
   pointerToViewport,
   projectTruss3dPoint,
   renderBatchSize,
-  rotatedDeltaToWorld,
   stepForDensity,
+  truss3dDragDelta,
+  TRUSS3D_PROJECTION,
   type CameraState,
   type ProjectionMode,
   type ViewPreset,
@@ -129,14 +131,18 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  const projected3d = buildProjectedBounds(displayTruss3dNodes, camera);
+  const projected3d = useMemo(() => buildProjectedBounds(displayTruss3dNodes, camera),
+    [displayTruss3dNodes, camera.yaw, camera.pitch]);
   const selected3dNodeData = selectedTruss3dNode !== null ? displayTruss3dNodes[selectedTruss3dNode] : null;
   const draftStartNodeIndex = memberDraftNodes[0] ?? null;
   const draftStartNode = truss3dLinkMode && draftStartNodeIndex !== null ? displayTruss3dNodes[draftStartNodeIndex] ?? null : null;
   const visibleTrussElements = displayTrussElements.slice(0, trussElementRenderLimit);
   const visibleTrussNodes = displayTrussNodes.slice(0, trussNodeRenderLimit);
-  const visibleTruss3dElements = displayTruss3dElements.slice(0, truss3dElementRenderLimit);
-  const visibleTruss3dNodes = displayTruss3dNodes.slice(0, truss3dNodeRenderLimit);
+  const visibleTruss3dElements = useMemo(() => displayTruss3dElements.slice(0, truss3dElementRenderLimit),
+    [displayTruss3dElements, truss3dElementRenderLimit]);
+  const visibleTruss3dNodes = useMemo(() => displayTruss3dNodes.slice(0, truss3dNodeRenderLimit),
+    [displayTruss3dNodes, truss3dNodeRenderLimit]);
+  const { extent: gridExtent, step: gridStep } = useMemo(() => buildTruss3dGrid(displayTruss3dNodes), [displayTruss3dNodes]);
   const visiblePlaneElements = planeElements.slice(0, planeElementRenderLimit);
   const visiblePlaneNodes = planeNodes.slice(0, planeNodeRenderLimit);
   const trussLabelStep = stepForDensity(visibleTrussNodes.length, isModelMode ? 22 : 12);
@@ -318,6 +324,8 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
 
     const dx = event.clientX - pointerRef.current.x;
     const dy = event.clientY - pointerRef.current.y;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const viewDx = dx * 980 / Math.max(rect.width, 1), viewDy = dy * 460 / Math.max(rect.height, 1);
     pointerRef.current = { x: event.clientX, y: event.clientY };
 
     if (dragNode3dRef.current !== null) {
@@ -325,12 +333,7 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
       const target = displayTruss3dNodes[targetIndex];
       if (!target) return;
       onBeginTruss3dNodeDrag();
-      const usableWidth = 980 - 120 * 2;
-      const usableHeight = 460 - 80 * 2;
-      const factor = projectionMode === "persp" ? Math.max(0.64, Math.min(1.42, 8 / (8 + projectTruss3dPoint(target, projected3d, camera, projectionMode).y))) : 1;
-      const deltaRotatedX = (dx / Math.max(camera.zoom * factor, 0.01)) * (projected3d.width / usableWidth);
-      const deltaRotatedZ = (-dy / Math.max(camera.zoom * factor, 0.01)) * (projected3d.height / usableHeight);
-      const deltaWorld = rotatedDeltaToWorld(deltaRotatedX, deltaRotatedZ, camera);
+      const deltaWorld = truss3dDragDelta(target, projected3d, camera, projectionMode, viewDx, viewDy);
       onUpdateTruss3dNodePosition(targetIndex, { x: target.x + deltaWorld.x, y: target.y + deltaWorld.y, z: target.z + deltaWorld.z });
       return;
     }
@@ -346,7 +349,7 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
       const vectorY = axisTarget.y - origin.y;
       const lengthSquared = vectorX * vectorX + vectorY * vectorY;
       if (lengthSquared <= 1.0e-9) return;
-      const delta = (dx * vectorX + dy * vectorY) / lengthSquared;
+      const delta = (viewDx * vectorX + viewDy * vectorY) / lengthSquared;
       onUpdateTruss3dNodePosition(selectedTruss3dNode, {
         x: target.x + (axis === "x" ? delta : 0),
         y: target.y + (axis === "y" ? delta : 0),
@@ -358,7 +361,7 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
     if (!dragModeRef.current) return;
     setCamera((current) =>
       dragModeRef.current === "pan"
-        ? { ...current, panX: current.panX + dx, panY: current.panY + dy }
+        ? { ...current, panX: current.panX + viewDx, panY: current.panY + viewDy }
         : { ...current, yaw: current.yaw + dx * 0.008, pitch: Math.max(-1.35, Math.min(1.35, current.pitch - dy * 0.008)) },
     );
   };
@@ -415,8 +418,8 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
     setCamera((current) => {
       const bounds = buildProjectedBounds(displayTruss3dNodes, current);
       const point = projectTruss3dPoint(target, bounds, { ...current, panX: 0, panY: 0 }, projectionMode);
-      const nextPanX = current.panX + (490 - point.x);
-      const nextPanY = current.panY + (230 - point.y);
+      const nextPanX = TRUSS3D_PROJECTION.centerX - point.x;
+      const nextPanY = TRUSS3D_PROJECTION.centerY - point.y;
       return { ...current, panX: Number.isFinite(nextPanX) ? nextPanX : current.panX, panY: Number.isFinite(nextPanY) ? nextPanY : current.panY };
     });
   };
@@ -450,9 +453,6 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
     if (event.key === "ArrowUp" || event.key.toLowerCase() === "w") setCamera((current) => ({ ...current, panY: current.panY + step }));
     if (event.key === "ArrowDown" || event.key.toLowerCase() === "s") setCamera((current) => ({ ...current, panY: current.panY - step }));
   };
-
-  const gridExtent = Math.max(...displayTruss3dNodes.map((node) => Math.max(Math.abs(node.x), Math.abs(node.y))), 2);
-  const gridStep = gridExtent > 6 ? 2 : 1;
 
   if (studyKind === "axial_bar_1d") {
     return renderAxialViewport({ axialLength, axialNodes, axialScale, axialTitle });

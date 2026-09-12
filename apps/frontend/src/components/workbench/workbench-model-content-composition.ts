@@ -6,6 +6,9 @@ export function buildWorkbenchModelContentComposition(props: Record<string, any>
   const { shellState, workspaceState, studyResultDerived, editControllers, primaryActionsController } = props;
 
   return buildWorkbenchModelContentProps({
+    batchModelController: props.batchModelController,
+    modelBatchDraftCache: props.modelBatchDraftCache,
+    immersiveViewport: shellState.immersiveViewport,
     t: props.t,
     isAxial: studyResultDerived.isAxial,
     axialForm: workspaceState.axialForm,

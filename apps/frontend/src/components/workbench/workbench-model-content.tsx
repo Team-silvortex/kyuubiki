@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import dynamic from "next/dynamic";
 
 import { WorkbenchObjectTree } from "@/components/workbench/workbench-object-tree";
 import { lineResultFieldValue, localMaterialLabel } from "@/components/workbench/workbench-result-helpers";
@@ -11,6 +12,8 @@ import { WorkbenchTruss3dTreeCard } from "@/components/workbench/model/workbench
 import { MATERIAL_PRESETS } from "@/lib/materials";
 import { fixed, scientific } from "@/lib/workbench/helpers";
 import { classifyStudyKindDomain } from "@/lib/workbench/view-models";
+
+const WorkbenchModelBatchCard = dynamic(() => import("./model/workbench-model-batch-card").then((module) => module.WorkbenchModelBatchCard));
 
 export function buildWorkbenchModelContent(props: Record<string, any>) {
   const {
@@ -251,6 +254,11 @@ export function buildWorkbenchModelContent(props: Record<string, any>) {
   );
 
   const modelStudioContent: ReactNode = (
+    <>
+    {props.batchModelController?.model && !props.immersiveViewport ? <WorkbenchModelBatchCard
+      key={studyKind} controller={props.batchModelController} language={language} t={t}
+      draftCache={props.modelBatchDraftCache}
+    /> : null}
     <WorkbenchModelToolsCard
       title={isTruss3d ? t.spaceStudio : t.sections.model}
       status={isTruss3d ? t.orbitHint : isFrameLike ? t.ready : t.dragToEdit}
@@ -307,6 +315,7 @@ export function buildWorkbenchModelContent(props: Record<string, any>) {
         setMessage(isPlane ? t.planeHint : isBeam ? t.modelStudioHint : isTorsion ? t.torsionHint : isThermal ? currentStudyFamilyHint : isTruss3d ? t.switchedTo3dStudio : isFrameLike ? t.frameEditorHint : t.switchedTo2dStudio);
       }}
     />
+    </>
   );
 
   const modelMaterialsContent: ReactNode =

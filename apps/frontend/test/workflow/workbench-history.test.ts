@@ -1,11 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { modelingFixture } from "../support/modeling-fixtures";
 
 import {
   buildWorkbenchSnapshot,
   canRetainWorkbenchSnapshotBinding,
   createAssistantTransactionEntry,
   pushHistoryEntry,
+  restoreWorkbenchSnapshot,
   type WorkbenchSnapshot,
 } from "../../src/lib/workbench/history.ts";
 
@@ -56,6 +58,24 @@ test("history snapshot owns its save provenance without deep-copying immutable m
   source.savedModelContext.modelId = "different-model";
   assert.deepEqual(captured.savedModelContext, { projectId: "project", modelId: "model" });
   assert.equal(captured.heatBarModel, source.heatBarModel);
+});
+
+test("history restores independent 3D multi-selection and drops stale indices", () => {
+  const source: WorkbenchSnapshot = { ...snapshot(1), selectedTruss3dNodes: [1, 2], truss3dModel: modelingFixture(3) };
+  const captured = buildWorkbenchSnapshot(source);
+  source.selectedTruss3dNodes![0] = 0;
+  assert.deepEqual(captured.selectedTruss3dNodes, [1, 2]);
+  assert.equal(captured.truss3dModel, source.truss3dModel);
+  let selection: number[] = [];
+  const setters = new Proxy({ setSelectedTruss3dNodes: (value: number[]) => { selection = value; } }, {
+    get: (target, key) => key === "setSelectedTruss3dNodes" ? target.setSelectedTruss3dNodes : () => {},
+  }) as unknown as Parameters<typeof restoreWorkbenchSnapshot>[1];
+  restoreWorkbenchSnapshot(captured, setters);
+  assert.deepEqual(selection, [1, 2]);
+  restoreWorkbenchSnapshot({ ...captured, selectedTruss3dNodes: [1, -1, 90, NaN] }, setters);
+  assert.deepEqual(selection, [1]);
+  restoreWorkbenchSnapshot({ ...captured, selectedTruss3dNodes: undefined }, setters);
+  assert.deepEqual(selection, []);
 });
 
 for (const scenario of ["same", "project", "model", "study", "unsaved", "legacy", "null-context"]) {

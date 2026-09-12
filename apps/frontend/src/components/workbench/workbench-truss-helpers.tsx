@@ -5,6 +5,9 @@ import type {
   TrussSuggestion,
 } from "@/components/workbench/workbench-defaults";
 import type { Truss2dJobInput } from "@/lib/api";
+import { getTrussBounds } from "@/lib/workbench/model-geometry";
+
+export { getTrussBounds, findNearestConnectableNode } from "@/lib/workbench/model-geometry";
 
 export function summarizeTrussStability(
   model: Truss2dJobInput,
@@ -32,23 +35,6 @@ export function summarizeTrussStability(
   if (score >= 80) return { score, tone: "good", hotspotNodes };
   if (score >= 55) return { score, tone: "watch", hotspotNodes };
   return { score, tone: "risk", hotspotNodes };
-}
-
-export function getTrussBounds(nodes: Array<{ x: number; y: number }>) {
-  const xs = nodes.map((node) => node.x);
-  const ys = nodes.map((node) => node.y);
-  const minX = Math.min(...xs, 0);
-  const maxX = Math.max(...xs, 1);
-  const minY = Math.min(...ys, 0);
-  const maxY = Math.max(...ys, 1);
-  return {
-    minX,
-    maxX,
-    minY,
-    maxY,
-    width: Math.max(maxX - minX, 1),
-    height: Math.max(maxY - minY, 1),
-  };
 }
 
 export function toSvgPoint(
@@ -102,36 +88,6 @@ function pushNodeIssue(
   if (!issues.includes(issue)) {
     nodeIssues[nodeIndex] = [...issues, issue];
   }
-}
-
-export function findNearestConnectableNode(
-  model: Truss2dJobInput,
-  nodeIndex: number,
-): number | null {
-  const origin = model.nodes[nodeIndex];
-  if (!origin) return null;
-
-  let bestIndex: number | null = null;
-  let bestDistance = Number.POSITIVE_INFINITY;
-
-  for (const [candidateIndex, candidate] of model.nodes.entries()) {
-    if (candidateIndex === nodeIndex) continue;
-
-    const alreadyLinked = model.elements.some(
-      (element) =>
-        (element.node_i === nodeIndex && element.node_j === candidateIndex) ||
-        (element.node_i === candidateIndex && element.node_j === nodeIndex),
-    );
-    if (alreadyLinked) continue;
-
-    const distance = Math.hypot(candidate.x - origin.x, candidate.y - origin.y);
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      bestIndex = candidateIndex;
-    }
-  }
-
-  return bestIndex;
 }
 
 export function analyzeTrussModel(

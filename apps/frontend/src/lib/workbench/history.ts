@@ -85,6 +85,7 @@ export type WorkbenchSnapshot = {
   sidebarSection: WorkbenchSidebarSection;
   selectedNode: number | null;
   selectedElement: number | null;
+  selectedTruss3dNodes?: number[];
   memberDraftNodes: number[];
 };
 
@@ -129,6 +130,7 @@ type SnapshotSetters = {
   setSidebarSection: Dispatch<SetStateAction<WorkbenchSidebarSection>>;
   setSelectedNode: Dispatch<SetStateAction<number | null>>;
   setSelectedElement: Dispatch<SetStateAction<number | null>>;
+  setSelectedTruss3dNodes?: Dispatch<SetStateAction<number[]>>;
   setMemberDraftNodes: Dispatch<SetStateAction<number[]>>;
 };
 
@@ -136,6 +138,7 @@ export function buildWorkbenchSnapshot(snapshot: WorkbenchSnapshot): WorkbenchSn
   return {
     ...snapshot,
     ...(snapshot.savedModelContext ? { savedModelContext: { ...snapshot.savedModelContext } } : {}),
+    ...(snapshot.selectedTruss3dNodes ? { selectedTruss3dNodes: [...snapshot.selectedTruss3dNodes] } : {}),
     memberDraftNodes: [...snapshot.memberDraftNodes],
   };
 }
@@ -178,6 +181,8 @@ export function restoreWorkbenchSnapshot(
   setters.setSidebarSection(snapshot.sidebarSection);
   setters.setSelectedNode(snapshot.selectedNode);
   setters.setSelectedElement(snapshot.selectedElement);
+  setters.setSelectedTruss3dNodes?.((snapshot.selectedTruss3dNodes ?? []).filter((index) =>
+    Number.isInteger(index) && index >= 0 && index < (snapshot.truss3dModel?.nodes.length ?? 0)));
   setters.setMemberDraftNodes(snapshot.memberDraftNodes);
   onRestored?.();
 }

@@ -2,6 +2,9 @@
 
 export function buildWorkbenchModelContentProps(props: Record<string, any>) {
   return {
+    batchModelController: props.batchModelController,
+    modelBatchDraftCache: props.modelBatchDraftCache,
+    immersiveViewport: props.immersiveViewport,
     t: props.t,
     isAxial: props.isAxial,
     axialForm: props.axialForm,

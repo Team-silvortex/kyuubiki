@@ -101,6 +101,107 @@ ky.log("Recipe result:", result)</pre>
       </section>
 
       <section class="docs-card docs-section">
+        <h2 id="batch-modeling">Batch modeling without individual clicks</h2>
+        <p>Open <strong>Workspace / Tools / Studio / Batch modeling</strong>. The same commands are registered as <code>state/inspectModelBatch</code> and <code>state/applyModelBatch</code> for PWDT. Current support is limited to <code>truss_2d</code>, <code>truss_3d</code>, and <code>frame_2d</code>; other studies return <code>model_batch:unsupported_study</code> rather than editing an inactive mechanical model.</p>
+        <p>Choose the current selection, all nodes, zero-based indices such as <code>0-9, 15, 20-30</code>, or an inclusive coordinate interval. Inversion applies to the entire working model, including hidden nodes, not just the rendered viewport slice. The preview counts matching nodes, members with both endpoints inside the group, and members with at least one endpoint inside.</p>
+        <ul class="docs-list">
+          <li><strong>Translate:</strong> add an offset vector in metres. <strong>Align:</strong> set one coordinate. Loads remain in the original global axes. Creating a zero or near-zero-length affected member is rejected atomically.</li>
+          <li><strong>Rotate / scale / mirror:</strong> edit the selected geometry in place or set <code>copy: true</code> to create one transformed copy with internal members only. Each transform requires a <code>pivot</code>: <code>{"kind":"origin"}</code>, <code>{"kind":"selection"}</code> (the selected nodes' axis-aligned bounds center, not their centroid), or <code>{"kind":"point","point":{"x":0,"y":0,"z":0}}</code>. The pivot is resolved once from the source selection. Copies may overlap the source; there is no implicit welding or collision check.</li>
+          <li><strong>Rotation:</strong> <code>axis</code> is a global X/Y/Z axis through the pivot, with right-hand <code>angleDegrees</code>. Quarter turns are exact; arbitrary angles use floating-point trigonometry. Planar trusses and frames allow rotation about Z only and do not acquire a Z coordinate. For a multi-step rotation sequence, use an explicit point if the pivot must stay fixed: recomputing selection bounds after a rotation can move their center. Undo restores the exact prior geometry.</li>
+          <li><strong>Scaling:</strong> <code>factors</code> are positive, dimensionless X/Y/Z multipliers about the pivot; an omitted Z factor is 1. Set equal factors for uniform scaling. Zero and negative factors are rejected; use mirror for reflection. Node positions change, but member areas, inertia, section moduli, materials, loads, supports and frame moments are not automatically scaled or rotated. This is a geometry editor, not a physical similarity transformation.</li>
+          <li><strong>Mirror:</strong> <code>axis: "x"</code> reflects across the YZ-parallel plane at the pivot's X coordinate; Y reflects across XZ and Z across XY. The GUI labels these planes explicitly. Planar studies allow X/Y reflection only. Existing endpoint order and member properties are preserved.</li>
+          <li><strong>Snap:</strong> <code>{"kind":"snap","axes":["x","y","z"],"spacing":0.1}</code> snaps selected coordinates to a world-origin grid in metres. Only listed axes change; half steps round away from zero. A nonpositive spacing, unrepresentable grid index, or collapsed incident member rejects the whole batch. Snapping neither merges coincident nodes nor synchronizes the decorative viewport grid.</li>
+          <li><strong>Linear array:</strong> <code>copies</code> counts additional copies. Copy k uses <code>offset * k</code>. Only internal members are duplicated; endpoints are remapped, existing IDs preserved, and new IDs avoid collisions. There is no automatic bridging, node welding, intersection test, or support inference.</li>
+          <li><strong>Copy boundaries:</strong> off by default. Copies clear nodal loads and supports, including frame rotation restraints and moments, and an existing frame distributed Y load. <code>copyBoundaryConditions: true</code> explicitly retains them. Material and section properties are retained either way. Review constraints and connectivity before solving.</li>
+          <li><strong>Loads:</strong> force values in newtons replace the selected nodes' force components. <code>distribution: "total"</code> divides the resultant equally across the group; <code>"per_node"</code> assigns the entire vector to each node. Zero clears those forces; frame moments remain unchanged.</li>
+          <li><strong>Supports:</strong> fix or release only listed axes. Z is supported for 3D trusses and <code>rz</code> for 2D frames. Unlisted constraints remain unchanged.</li>
+          <li><strong>Members:</strong> choose <code>scope: "internal"</code> or <code>"touching"</code>. Set a positive cross-sectional area in square metres, assign an existing material, or both. Material assignment also updates inline Young's modulus. Omitted fields and unrelated members remain unchanged.</li>
+          <li><strong>Delete:</strong> removes matching nodes and all incident members, then remaps surviving endpoints without renaming objects. GUI confirmation is invalidated by model or selection changes. PWDT requires <code>operation.confirmDelete: true</code>. An empty working model is permitted for editing, not for solving.</li>
+        </ul>
+        <pre class="docs-code">ky.require_action("state/inspectModelBatch")
+ky.require_action("state/applyModelBatch")
+
+# Start with an existing truss/frame. Both interval endpoints are included.
+query = {"kind": "range", "axis": "x", "min": 0, "max": 0.01}
+preview = await ky.invoke("state/inspectModelBatch", {"query": query})
+ky.log("Selection:", preview)
+if preview["nodes"] == 0:
+    raise RuntimeError("No matching nodes; adjust the selection")
+
+receipt = await ky.invoke("state/applyModelBatch", {
+    "query": query,
+    "operation": {"kind": "supports", "axes": ["x", "y"], "fixed": True},
+})
+ky.log("Receipt:", receipt)
+await ky.invoke("history/undo")
+await ky.invoke("history/redo")
+
+# Review node indices and boundaries for your model before copying a group.
+receipt = await ky.invoke("state/applyModelBatch", {
+    "query": {"kind": "indices", "indices": [0, 1]},
+    "operation": {
+        "kind": "array", "copies": 4,
+        "offset": {"x": 0, "y": 2, "z": 0},
+        "copyBoundaryConditions": False,
+    },
+})
+ky.log("New nodes:", receipt["addedNodes"])
+
+# Rotate the current group in 3D, preserving the source and clearing copy boundaries.
+receipt = await ky.invoke("state/applyModelBatch", {
+    "query": {"kind": "current"},
+    "operation": {
+        "kind": "rotate", "axis": "z", "angleDegrees": 90,
+        "pivot": {"kind": "point", "point": {"x": 0, "y": 0, "z": 0}},
+        "copy": True, "copyBoundaryConditions": False,
+    },
+})
+# Successful copies become the current selection.
+await ky.invoke("state/applyModelBatch", {
+    "query": {"kind": "current"},
+    "operation": {"kind": "snap", "axes": ["x", "y", "z"], "spacing": 0.1},
+})
+ky.log("Copied nodes:", receipt["addedNodes"])</pre>
+        <p>The viewport's existing quick Duplicate and Mirror buttons now share batch identity and topology guards. Quick Duplicate retains its fixed <code>(0.4, 0.2, 0.4)</code> metre offset. Quick Mirror uses the selection bounds center. Both quick buttons retain their existing boundary-copy policy, unlike the batch panel's default clearing policy; use the batch panel or PWDT for explicit control. Existing IDs are not renumbered and geometry is no longer rounded to a few decimal places during copying.</p>
+        <p><code>inspectModelBatch</code> counts selection only; it is not a solver precheck or full operation dry run. A successful changed batch commits one history checkpoint and invalidates the old result observation. No-op edits create no checkpoint. Invalid requests leave model, results and history untouched. Receipts contain selected/affected, added and removed counts, not a duplicate model. Undo/redo restore 3D multi-selection and geometry; they do not roll back backend saves or cancel submitted jobs.</p>
+        <p>Array limits per operation: 1–1,000 additional copies, at most 100,000 added nodes and 200,000 added members. These are frontend resource limits, not a frame-rate guarantee. Invalid indices, non-finite values, missing materials, unsupported axes, degenerate affected members and excessive allocations fail with stable <code>model_batch:*</code> codes. Await each PWDT invocation: a second batch against an already consumed, not-yet-published model returns <code>model_batch:stale_model</code> rather than overwriting the first edit. The fixed selector contract exposes <code>modelBatchPanel</code> and parameterized <code>modelBatchControl</code>; prefer registered actions over clicks for automation.</p>
+        <p>Qualification: pure tests include 100k-node selection scans, 200k-node transforms with bounded topology reads, 72 rotation/inverse cases across axes, angles and pivots, exact quarter turns, planar guards, connectivity remapping, immutable snapshots and failure atomicity. Isolated real-browser tests exercise GUI/PWDT parity, explicit transform pivots, copied selection, grid-collapse rejection, save payloads, confirmation invalidation and undo/redo with a mock backend. This is not numerical solver validation, actual Pyodide execution qualification, native WebView qualification, or a 200k-node interactive frame-rate claim.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2 id="immersive-modeling">Edit inside the fullscreen 3D workspace</h2>
+        <p>For <code>truss_3d</code>, enter the existing immersive viewport from its header. The fullscreen element owns the node, batch, quick-property, study and save tools. <strong>Model</strong> opens batch modeling, <strong>Study</strong> opens the real study controls, and <strong>Save</strong> opens project/model storage without leaving fullscreen. Undo and redo stay available across tool tabs. Outside fullscreen, <strong>Tools</strong> opens Workspace / Tools / Studio.</p>
+        <ul class="docs-list">
+          <li>Batch operations use the same validated controller as the sidebar and PWDT. Selection queries, rotation pivots, offsets and other form parameters are shared in an in-memory draft, not copied model snapshots. Closing tools, changing tabs and leaving fullscreen unmount inactive editors but preserve those parameters. A different study kind starts with compatible defaults.</li>
+          <li>Drafts are not autosaves or crash recovery. Page reloads discard them. Destructive deletion confirmation and old success messages never survive editor remounts; confirm again against the current model and selection.</li>
+          <li>Quick properties honor multi-selection before the anchor node: group supports, nudges and loads target the group. The shared edit path records history and clears stale results. Undo restores geometry and selection but does not reverse an already completed backend save.</li>
+          <li><strong>Select matches</strong> promotes an all/current/indices/range query, with optional inversion, into actual 3D canvas selection. It includes nodes hidden by render sampling; it does not edit geometry, record history or invalidate results. The form switches to that current selection and clears inversion. <strong>Clear selection</strong> also clears the anchor, selected member and link draft. PWDT uses <code>selection/query3d</code>; an empty explicit indices list clears selection.</li>
+          <li>Drag the tool/canvas separator, use arrows for 10-pixel steps (Shift: 40), Home/End for limits, or double-click to reset. Width and stacked height are remembered independently in this viewport session only. The dock is capped at 40% of available horizontal space and 45% of stacked vertical space. A cancelled pointer, window blur or resize discards an unfinished drag. Resizing updates CSS through animation frames, not React model snapshots.</li>
+          <li>The field area scrolls independently with batch actions at the bottom. Very short stacked docks scroll the tool as a whole with a sticky batch footer rather than collapsing fields to zero height. View controls are collapsible. The renderer retains its aspect-fit surface so geometry and picking are not stretched out of alignment.</li>
+          <li>Save requires an existing project and a nonblank model name (up to 256 characters). With no saved model selected it creates one; otherwise it saves a new version. Save As creates a separate model. Both invoke the existing <code>model/save</code>/<code>model/saveAs</code> actions with the name in the same request. The fullscreen UI prevents duplicate submissions while busy, even if its tab is closed and reopened; errors retain the name draft for correction and retry. The header Library button exits fullscreen before showing the workspace library, so it cannot silently navigate a hidden sidebar.</li>
+          <li>Storage is not an all-or-nothing distributed transaction: updating model metadata and creating its version are separate existing backend writes. A failed or uncertain request may have partially completed; inspect stored records before retrying an uncertain response. The busy lock is local to this viewport, not a cross-client idempotency mechanism. Project-context guards prevent a late response from replacing a newer workspace selection; a <code>contextChanged</code> receipt refers to the original write, not the current model.</li>
+        </ul>
+        <pre class="docs-code"># After entering fullscreen through the viewport button:
+await ky.invoke("viewport/setUiState", {
+    "toolTab": "batch", "toolDrawerOpen": True, "helpDrawerOpen": False,
+})
+assert ky.state()["immersiveToolTab"] == "batch"
+await ky.invoke("selection/query3d", {
+    "query": {"kind": "range", "axis": "z", "min": 0, "max": 1},
+})
+await ky.invoke("state/applyModelBatch", {
+    "query": {"kind": "current"},
+    "operation": {"kind": "translate", "offset": {"x": 0, "y": 0, "z": 0.2}},
+})
+await ky.invoke("history/undo")
+await ky.invoke("viewport/setUiState", {"toolTab": "save"})
+await ky.invoke("model/saveAs", {"name": "3D research variant"})
+await ky.invoke("viewport/setUiState", {"immersiveViewport": False})</pre>
+        <p><code>toolTab</code> accepts <code>node</code>, <code>props</code>, <code>batch</code>, <code>study</code> and <code>save</code>; invalid values fail before any UI change. Standard or WebKit-prefixed native fullscreen still follows browser user-activation rules; explicit API failures propagate. When a WebView has no fullscreen API, a reversible window-local immersive panel provides the same modeling tools without claiming OS fullscreen. Escape restores the workspace; form selection and clipboard editing remain available. Changing away from the supported 3D study exits immersive mode. Stable selectors include <code>immersiveToggle</code>, <code>immersiveTab</code>, <code>immersiveAction</code>, <code>immersiveResize</code> and parameterized <code>immersiveSave</code>.</p>
+        <p>Browser regression uses real Chromium fullscreen and mocked storage services. It checks sidebar/fullscreen draft transfer, exact saved transform and quick-copy payloads, query selection, undo/redo, save/as/retry, submission locks across tab remounts, drag/keyboard/reset/cancellation, refused or absent fullscreen APIs, form editing, study changes, readout clipping and layouts at 1440×1000, 1024×768, 800×600, 640×800 and 640×600. Pure tests also cover 200k-node query selection without reading member connectivity. Separate <a href="./acceptance-immersive-modeling.html">macOS installed-WebView acceptance</a> covers actual Pyodide, local Rust-agent solving, model versions and restart recovery for a four-node truss. Neither evidence lane qualifies 200k-node interactive frame rate or other native platforms.</p>
+      </section>
+
+      <section class="docs-card docs-section">
         <h2>Heat-to-thermo projection boundaries</h2>
         <p class="docs-copy">The Inspector export action and PWDT <code>state/projectHeatToThermo</code> share the same transformation for heat bars, plane triangles, and plane quads. Solve the heat model first, project its full result, review the mechanical model, save, and solve again.</p>
         <ul class="docs-list">

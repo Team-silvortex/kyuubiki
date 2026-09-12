@@ -302,13 +302,17 @@ function rotatePoint(node: { x: number; y: number; z: number }, camera: CameraSt
 
 export function buildProjectedBounds(nodes: DisplayTruss3dNode[], camera: CameraState) {
   if (!nodes.length) return { minX: -1, maxX: 1, minZ: -1, maxZ: 1, width: 2, height: 2 };
-  const rotated = nodes.map((node) => rotatePoint(node, camera));
-  const xs = rotated.map((node) => node.x);
-  const zs = rotated.map((node) => node.z);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minZ = Math.min(...zs);
-  const maxZ = Math.max(...zs);
+  const cy = Math.cos(camera.yaw), sy = Math.sin(camera.yaw);
+  const cp = Math.cos(camera.pitch), sp = Math.sin(camera.pitch);
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const node of nodes) {
+    const x = node.x * cy - node.y * sy;
+    const z = (node.x * sy + node.y * cy) * sp + node.z * cp;
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minZ = Math.min(minZ, z);
+    maxZ = Math.max(maxZ, z);
+  }
   return {
     minX,
     maxX,
@@ -319,11 +323,28 @@ export function buildProjectedBounds(nodes: DisplayTruss3dNode[], camera: Camera
   };
 }
 
+export function buildTruss3dGrid(nodes: readonly { x: number; y: number }[]) {
+  let extent = 2;
+  for (const node of nodes) {
+    if (Number.isFinite(node.x) && Number.isFinite(node.y)) {
+      extent = Math.max(extent, Math.abs(node.x), Math.abs(node.y));
+    }
+  }
+  // Grid detail is a viewport aid, not mesh resolution; bound it for large coordinate ranges.
+  return { extent, step: Math.max(extent > 6 ? 2 : 1, extent / 64) };
+}
+
 export function cameraForPreset(preset: ViewPreset): CameraState {
-  if (preset === "front") return { yaw: 0, pitch: 0, zoom: 1.2, panX: 0, panY: 0 };
-  if (preset === "right") return { yaw: Math.PI / 2, pitch: 0, zoom: 1.2, panX: 0, panY: 0 };
-  if (preset === "top") return { yaw: 0, pitch: -Math.PI / 2 + 0.0001, zoom: 1.15, panX: 0, panY: 0 };
-  return { yaw: -0.78, pitch: 0.66, zoom: 1.18, panX: 0, panY: 0 };
+  if (preset === "front") return { yaw: 0, pitch: 0, zoom: 1, panX: 0, panY: 0 };
+  if (preset === "right") return { yaw: Math.PI / 2, pitch: 0, zoom: 1, panX: 0, panY: 0 };
+  if (preset === "top") return { yaw: 0, pitch: -Math.PI / 2 + 0.0001, zoom: 1, panX: 0, panY: 0 };
+  return { yaw: -0.78, pitch: 0.66, zoom: 1, panX: 0, panY: 0 };
+}
+
+// One world-to-view scale preserves geometry proportions and keeps default-fit nodes below the title.
+export const TRUSS3D_PROJECTION = { centerX: 490, centerY: 256, width: 740, height: 280 };
+export function truss3dProjectionScale(bounds: { width: number; height: number }) {
+  return Math.min(TRUSS3D_PROJECTION.width / bounds.width, TRUSS3D_PROJECTION.height / bounds.height);
 }
 
 export function pointerToViewport(event: ReactPointerEvent<SVGSVGElement>) {
@@ -340,24 +361,27 @@ export function projectTruss3dPoint(
   camera: CameraState,
   projection: ProjectionMode,
 ) {
-  const paddingX = 120;
-  const paddingY = 80;
-  const usableWidth = 980 - paddingX * 2;
-  const usableHeight = 460 - paddingY * 2;
   const rotated = rotatePoint(node, camera);
   const depth = projection === "persp" ? 8 / (8 + rotated.y) : 1;
-  const baseX = ((rotated.x - bounds.minX) / bounds.width) * usableWidth;
-  const baseY = (1 - (rotated.z - bounds.minZ) / bounds.height) * usableHeight;
+  const scale = truss3dProjectionScale(bounds) * camera.zoom * depth;
   return {
-    x: paddingX + baseX * camera.zoom * depth + camera.panX,
-    y: paddingY + baseY * camera.zoom * depth + camera.panY,
+    x: TRUSS3D_PROJECTION.centerX + (rotated.x - bounds.minX - bounds.width / 2) * scale + camera.panX,
+    y: TRUSS3D_PROJECTION.centerY - (rotated.z - bounds.minZ - bounds.height / 2) * scale + camera.panY,
   };
 }
 
 export function rotatedDeltaToWorld(deltaX: number, deltaZ: number, camera: CameraState) {
   const cy = Math.cos(camera.yaw);
   const sy = Math.sin(camera.yaw);
-  return { x: deltaX * cy, y: -deltaX * sy, z: deltaZ };
+  const yawY = deltaZ * Math.sin(camera.pitch);
+  return { x: deltaX * cy + yawY * sy, y: -deltaX * sy + yawY * cy, z: deltaZ * Math.cos(camera.pitch) };
+}
+
+export function truss3dDragDelta(node: { x: number; y: number; z: number }, bounds: { width: number; height: number },
+  camera: CameraState, projection: ProjectionMode, dx: number, dy: number) {
+  const depth = projection === "persp" ? 8 / (8 + rotatePoint(node, camera).y) : 1;
+  const scale = truss3dProjectionScale(bounds) * camera.zoom * depth;
+  return rotatedDeltaToWorld(dx / scale, -dy / scale, camera);
 }
 
 export function planeStressFill(value: number, maxValue: number): string {

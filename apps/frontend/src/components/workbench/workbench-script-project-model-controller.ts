@@ -182,10 +182,14 @@ export async function handleWorkbenchScriptProjectModelAction({
       if (!selectedProjectId) {
         throw new Error(projectRequiredLabel);
       }
+      if (payload.name !== undefined && (typeof payload.name !== "string" || !payload.name.trim() || payload.name.length > 256)) {
+        throw new Error("model:invalid_name");
+      }
+      const name = typeof payload.name === "string" ? payload.name.trim() : loadedModelName;
       let isCurrent = projectContext.begin();
       const payloadModel = serializeCurrentModel();
       const modelPayload: WorkbenchModelCreateInput = {
-        name: loadedModelName,
+        name,
         kind: studyKind,
         material: activeMaterial,
         model_schema_version: String(payloadModel.model_schema_version ?? "kyuubiki.model/v1"),
@@ -200,6 +204,7 @@ export async function handleWorkbenchScriptProjectModelAction({
           versionId: created.model.latest_version_id ?? null });
         setSelectedModelId(created.model.model_id);
         setSelectedVersionId(created.model.latest_version_id ?? null);
+        if (payload.name !== undefined) setLoadedModelName(name);
         setMessage(modelCreatedLabel);
         await refreshVersions(created.model.model_id);
         if (!isCurrent()) return { ok: true, action, modelId: created.model.model_id, contextChanged: true };
@@ -213,6 +218,7 @@ export async function handleWorkbenchScriptProjectModelAction({
       isCurrent = projectContext.update({ projectId: selectedProjectId, modelId: selectedModelId,
         versionId: version.version.version_id });
       setSelectedVersionId(version.version.version_id);
+      if (payload.name !== undefined) setLoadedModelName(name);
       setMessage(modelSavedLabel);
       await refreshVersions(selectedModelId);
       if (!isCurrent()) return { ok: true, action, versionId: version.version.version_id, contextChanged: true };

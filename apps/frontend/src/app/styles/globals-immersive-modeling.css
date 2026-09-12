@@ -1,0 +1,140 @@
+/* Fullscreen tools stay inside the fullscreen element, not the hidden workspace sidebar. */
+[data-workbench-fullscreen-ancestor] { contain: none !important; transform: none !important; filter: none !important; }
+.workbench-shell [data-workbench-window-fullscreen] {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  width: 100%;
+  height: 100dvh;
+  max-height: none;
+  border-radius: 0;
+  margin: 0;
+  background: var(--panel);
+}
+.canvas-panel--immersive:-webkit-full-screen {
+  width: 100%; height: 100%; max-height: none; border-radius: 0; margin: 0; background: var(--panel);
+}
+
+.workbench-shell .canvas-panel--immersive > .panel-head {
+  padding: 6px 10px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.workbench-shell .canvas-panel--immersive .canvas-layout--split {
+  grid-template-columns: clamp(260px, 27vw, 340px) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.canvas-panel--immersive .canvas-layout__dock { min-height: 0; }
+
+.workbench-shell .canvas-panel--immersive [data-immersive-resizable] {
+  grid-template-columns: var(--workbench-immersive-dock-size, 300px) 8px minmax(0, 1fr);
+  column-gap: 4px;
+}
+.immersive-dock-resize { cursor: col-resize; touch-action: none; border-radius: 4px; background: var(--line); }
+.immersive-dock-resize:hover, .immersive-dock-resize:focus-visible { background: var(--accent); outline: 1px solid var(--ink); }
+[data-immersive-resizing] { user-select: none; }
+.batch-editor__actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.batch-editor__actions > button { flex: 1 1 80px; min-width: 0; padding: 6px; overflow-wrap: anywhere; }
+
+.canvas-panel--immersive .viewport-dock {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: none;
+  min-height: 0;
+  overflow: hidden;
+  position: static;
+}
+
+.canvas-panel--immersive .viewport-dock__card--tools {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  overflow: hidden;
+  min-width: 0;
+  padding: 8px;
+  gap: 6px;
+}
+
+.viewport-dock__card--tools > :not(.viewport-dock__stack) { flex: 0 0 auto; }
+.viewport-dock__card--tools .card-head h2 { font-size: 0.9rem; }
+.viewport-dock__card--tools .card-head span { font-size: 0.75rem; }
+.viewport-dock__view-tools { font-size: 0.8rem; max-height: 23dvh; overflow: auto; }
+.viewport-dock__view-tools > summary { cursor: pointer; }
+.viewport-dock__view-tools .viewport-toolbar-strip { flex-wrap: wrap; overflow: visible; }
+
+.workbench-shell .viewport-dock__tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  gap: 4px;
+}
+
+.viewport-dock__tabs .panel-tab { min-width: 0; padding: 5px 6px; overflow-wrap: anywhere; }
+.viewport-dock__tabs .panel-tab:last-child { grid-column: 1 / -1; }
+.immersive-save .card-copy, .immersive-save__context { overflow-wrap: anywhere; font-size: 0.8rem; }
+.immersive-save__context { margin: 0; }
+.immersive-save__context dd { margin: 4px 0 10px; color: var(--muted); }
+.viewport-dock__history { margin: 0; }
+.viewport-dock__history > button { flex: 1 1 0; }
+
+.viewport-dock__card--tools > .viewport-dock__stack {
+  flex: 1 1 0;
+  overflow: auto;
+  display: block;
+  scrollbar-width: thin;
+}
+
+.viewport-dock__stack > .sidebar-card { padding: 8px; }
+.viewport-dock__card--tools > [data-workbench-immersive-panel="batch"] { overflow: hidden; }
+.batch-editor__footer { display: grid; gap: 8px; min-width: 0; }
+
+.workbench-shell .viewport-dock__stack .batch-editor--dock {
+  height: 100%;
+  margin: 0;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.workbench-shell .batch-editor--dock > [data-model-batch="fields"] {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+  align-content: start;
+  scrollbar-width: thin;
+  padding-inline-end: 4px;
+}
+
+.batch-editor--dock .batch-help { max-height: 20%; overflow: auto; }
+.batch-editor--dock .batch-editor__footer { border-top: 1px solid var(--line); padding-top: 6px; }
+.batch-editor--dock [data-model-batch="status"] { max-height: 44px; overflow: auto; margin: 0; }
+.canvas-panel--immersive .viewport-dock__card--help { flex: 0 1 auto; max-height: 35%; overflow: auto; }
+
+/* Short stacked docks scroll as one tool, instead of squeezing the form to zero height. */
+.canvas-panel--immersive [data-immersive-compact] .viewport-dock__card--tools { overflow: auto; display: block; }
+[data-immersive-compact] .viewport-dock__card--tools > * + * { margin-top: 6px; }
+[data-immersive-compact] .viewport-dock__card--tools > .viewport-dock__stack { overflow: visible; }
+.workbench-shell [data-immersive-compact] .batch-editor--dock { height: auto; overflow: visible; }
+.workbench-shell [data-immersive-compact] .batch-editor--dock > [data-model-batch="fields"] { flex: none; overflow: visible; }
+[data-immersive-compact] .batch-editor__footer { position: sticky; bottom: -8px; background: var(--bg); padding-bottom: 6px; z-index: 1; }
+
+@media (max-width: 700px) {
+  .workbench-shell .canvas-panel--immersive .canvas-layout--split {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 0.45fr) minmax(0, 0.55fr);
+  }
+  .workbench-shell .canvas-panel--immersive .viewport-dock__tabs {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .viewport-dock__tabs .panel-tab:last-child { grid-column: auto; }
+  .canvas-panel--immersive .viewport-dock__card--tools > .card-head { display: none; }
+  .workbench-shell .canvas-panel--immersive [data-immersive-resizable] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: var(--workbench-immersive-dock-size, 40%) 8px minmax(0, 1fr);
+    row-gap: 4px;
+  }
+  .immersive-dock-resize { cursor: row-resize; }
+}

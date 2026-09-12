@@ -2,6 +2,10 @@
 
 export function buildWorkbenchMainShellProps(props: Record<string, any>) {
   return {
+    batchModelController: props.batchModelController,
+    modelBatchDraftCache: props.modelBatchDraftCache,
+    immersiveStudyContent: props.immersiveStudyContent,
+    immersiveModelStorage: props.immersiveModelStorage,
     t: props.t,
     assistantWindowOpen: props.assistantWindowOpen,
     setAssistantWindowOpen: props.setAssistantWindowOpen,

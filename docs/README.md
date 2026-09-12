@@ -97,6 +97,9 @@ runtime owner, automation surface, and explicit limitation.
 - `tutorial-pwdt-automation.html`
   Workbench PWDT route using the registered action catalog, product recipes,
   observable waits, and the stable UI contract instead of raw DOM guessing.
+- `acceptance-immersive-modeling.html`
+  Bounded daji 3.2.0 macOS acceptance: installed WKWebView, actual PWDT, fullscreen
+  compatibility, batch edits, saved model versions and real-solver restart recovery.
 - `tutorial-headless-rust.html`
   Rust Headless route from template discovery through validation, retained plan,
   mock orchestration, live service execution, and material evidence.

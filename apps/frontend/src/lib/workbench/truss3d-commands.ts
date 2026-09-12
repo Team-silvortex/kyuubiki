@@ -1,7 +1,27 @@
 import type { Truss3dJobInput } from "@/lib/api";
+import { applyModelBatch } from "./model-batch-commands.ts";
+import { selectBatchNodes } from "./model-batch-selection.ts";
 
 function selectedOrFocusedIndices(selected: number[], focused: number | null) {
   return selected.length > 0 ? selected : focused !== null ? [focused] : [];
+}
+
+function updateSelectedNodes(
+  model: Truss3dJobInput,
+  indices: number[],
+  update: (node: Truss3dJobInput["nodes"][number]) => Truss3dJobInput["nodes"][number],
+) {
+  let nodes = model.nodes;
+  for (const index of new Set(indices)) {
+    if (!Number.isInteger(index) || index < 0 || index >= model.nodes.length) continue;
+    const node = model.nodes[index];
+    const next = update(node);
+    if (next === node) continue;
+    // Copy the node array once, only when an actual edit occurs. History keeps the old objects.
+    if (nodes === model.nodes) nodes = model.nodes.slice();
+    nodes[index] = next;
+  }
+  return nodes === model.nodes ? model : { ...model, nodes };
 }
 
 export function updateTruss3dSelectedNodes(
@@ -11,14 +31,8 @@ export function updateTruss3dSelectedNodes(
   key: keyof Truss3dJobInput["nodes"][number],
   value: number | boolean,
 ) {
-  const targetIndices = selectedOrFocusedIndices(selectedNodes, selectedNode);
-  if (targetIndices.length === 0) return model;
-  return {
-    ...model,
-    nodes: model.nodes.map((node, index) =>
-      targetIndices.includes(index) ? { ...node, [key]: value } : node,
-    ),
-  };
+  return updateSelectedNodes(model, selectedOrFocusedIndices(selectedNodes, selectedNode),
+    (node) => Object.is(node[key], value) ? node : { ...node, [key]: value });
 }
 
 export function updateTruss3dNodePositionCommand(
@@ -27,14 +41,11 @@ export function updateTruss3dNodePositionCommand(
   position: { x: number; y: number; z: number },
   round: (value: number) => number,
 ) {
-  return {
-    ...model,
-    nodes: model.nodes.map((node, nodeIndex) =>
-      nodeIndex === index
-        ? { ...node, x: round(position.x), y: round(position.y), z: round(position.z) }
-        : node,
-    ),
-  };
+  return updateSelectedNodes(model, [index], (node) => {
+    const x = round(position.x), y = round(position.y), z = round(position.z);
+    return Object.is(node.x, x) && Object.is(node.y, y) && Object.is(node.z, z)
+      ? node : { ...node, x, y, z };
+  });
 }
 
 export function nudgeTruss3dSelectedNodes(
@@ -45,14 +56,10 @@ export function nudgeTruss3dSelectedNodes(
   delta: number,
   round: (value: number) => number,
 ) {
-  const targetIndices = selectedOrFocusedIndices(selectedNodes, selectedNode);
-  if (targetIndices.length === 0) return model;
-  return {
-    ...model,
-    nodes: model.nodes.map((node, index) =>
-      targetIndices.includes(index) ? { ...node, [axis]: round(node[axis] + delta) } : node,
-    ),
-  };
+  return updateSelectedNodes(model, selectedOrFocusedIndices(selectedNodes, selectedNode), (node) => {
+    const value = round(node[axis] + delta);
+    return Object.is(node[axis], value) ? node : { ...node, [axis]: value };
+  });
 }
 
 export function applyTruss3dSelectedLoads(
@@ -62,99 +69,26 @@ export function applyTruss3dSelectedLoads(
   mode: "apply" | "clear",
   loads: { x: number; y: number; z: number },
 ) {
-  const targetIndices = selectedOrFocusedIndices(selectedNodes, selectedNode);
-  if (targetIndices.length === 0) return model;
-  return {
-    ...model,
-    nodes: model.nodes.map((node, index) =>
-      targetIndices.includes(index)
-        ? {
-            ...node,
-            load_x: mode === "clear" ? 0 : loads.x,
-            load_y: mode === "clear" ? 0 : loads.y,
-            load_z: mode === "clear" ? 0 : loads.z,
-          }
-        : node,
-    ),
-  };
+  const load_x = mode === "clear" ? 0 : loads.x;
+  const load_y = mode === "clear" ? 0 : loads.y;
+  const load_z = mode === "clear" ? 0 : loads.z;
+  return updateSelectedNodes(model, selectedOrFocusedIndices(selectedNodes, selectedNode), (node) =>
+    Object.is(node.load_x, load_x) && Object.is(node.load_y, load_y) && Object.is(node.load_z, load_z)
+      ? node : { ...node, load_x, load_y, load_z });
 }
 
 export function cloneTruss3dSelectedNodes(
   model: Truss3dJobInput,
   selectedNodes: number[],
   selectedNode: number | null,
-  round: (value: number) => number,
   mirrorAxis: "x" | "y" | "z" | null = null,
 ) {
-  const targetIndices = selectedOrFocusedIndices(selectedNodes, selectedNode);
-  if (targetIndices.length === 0) {
-    return { model, nextSelection: [] as number[] };
-  }
-
-  const sourceNodes = targetIndices
-    .map((index) => ({ index, node: model.nodes[index] }))
-    .filter((entry) => Boolean(entry.node));
-  if (sourceNodes.length === 0) {
-    return { model, nextSelection: [] as number[] };
-  }
-
-  const center = sourceNodes.reduce(
-    (acc, entry) => ({
-      x: acc.x + entry.node.x,
-      y: acc.y + entry.node.y,
-      z: acc.z + entry.node.z,
-    }),
-    { x: 0, y: 0, z: 0 },
-  );
-  const pivot = {
-    x: center.x / sourceNodes.length,
-    y: center.y / sourceNodes.length,
-    z: center.z / sourceNodes.length,
-  };
-
-  const indexMap = new Map<number, number>();
-  const duplicatedNodes = sourceNodes.map((entry, offset) => {
-    const nextIndex = model.nodes.length + offset;
-    indexMap.set(entry.index, nextIndex);
-    const baseNode = { ...entry.node, id: `n${nextIndex}` };
-
-    if (mirrorAxis) {
-      return {
-        ...baseNode,
-        [mirrorAxis]: round(pivot[mirrorAxis] - (entry.node[mirrorAxis] - pivot[mirrorAxis])),
-      };
-    }
-
-    return {
-      ...baseNode,
-      x: round(entry.node.x + 0.4),
-      y: round(entry.node.y + 0.2),
-      z: round(entry.node.z + 0.4),
-    };
-  });
-
-  const duplicatedElements = model.elements.flatMap((element, offset) => {
-    const mappedI = indexMap.get(element.node_i);
-    const mappedJ = indexMap.get(element.node_j);
-    if (mappedI === undefined || mappedJ === undefined) return [];
-    return [
-      {
-        ...element,
-        id: `e${model.elements.length + offset}`,
-        node_i: mappedI,
-        node_j: mappedJ,
-      },
-    ];
-  });
-
-  return {
-    model: {
-      ...model,
-      nodes: [...model.nodes, ...duplicatedNodes],
-      elements: [...model.elements, ...duplicatedElements].map((element, index) => ({ ...element, id: `e${index}` })),
-    },
-    nextSelection: duplicatedNodes.map((_, offset) => model.nodes.length + offset),
-  };
+  const indices = selectBatchNodes(model, { kind: "current" }, selectedOrFocusedIndices(selectedNodes, selectedNode));
+  if (indices.length === 0) return { model, nextSelection: [] as number[] };
+  // Keep quick-duplicate's boundary policy, but share IDs, topology and precision guards with PWDT.
+  return applyModelBatch(model, { query: { kind: "indices", indices }, operation: mirrorAxis
+    ? { kind: "mirror", axis: mirrorAxis, pivot: { kind: "selection" }, copy: true, copyBoundaryConditions: true }
+    : { kind: "array", offset: { x: 0.4, y: 0.2, z: 0.4 }, copies: 1, copyBoundaryConditions: true } });
 }
 
 export function updateTruss3dElement(

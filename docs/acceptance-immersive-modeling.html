@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Native 3D Modeling Acceptance | Kyuubiki daji 3.2.0</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell">
+      <section class="docs-hero">
+        <div class="docs-kicker">Bounded native acceptance / 2026-09-12</div>
+        <h1>Immersive 3D modeling: installed Workbench acceptance</h1>
+        <p class="docs-copy">Accepted for the macOS scenario below after fixing issues found in the
+          installed WKWebView. This is not a whole-product, cross-platform, large-mesh, or industrial
+          solver certification. Browser mocks and native service evidence are reported separately.</p>
+        <div class="docs-meta">
+          <span class="docs-chip">daji 3.2.0</span>
+          <span class="docs-chip">Installed Tauri / WKWebView</span>
+          <span class="docs-chip">Actual PWDT Python 3.12.7</span>
+        </div>
+        <div class="docs-links">
+          <a class="docs-link" href="./tutorial-pwdt-automation.html#immersive-modeling">PWDT modeling tutorial</a>
+          <a class="docs-link" href="./rendering-roadmap.html">Rendering roadmap</a>
+        </div>
+      </section>
+      <section class="docs-stack">
+        <article class="docs-card">
+          <h2>Environment and scope</h2>
+          <p>The installed application used the installer-managed static frontend, a real local
+            Orchestra service, two Rust agents, and the existing durable project store. There was
+            no Next development server or mocked API in the native acceptance path. Node was used
+            for frontend building and isolated browser regression only, not as an installed service.</p>
+          <p>The existing 3.2.0 native shell was reused. Updated runtime assets were built, sealed and
+            installed through the installer; no application version was bumped. The build and installed
+            frontend entrypoint matched at SHA-256
+            <code>c77c496a48616e1cf78379d52fb6682149d0635ead658b7abb3bbc76ab89c86b</code>.
+            This digest identifies the entrypoint, not the complete application bundle.</p>
+          <p>All writes were isolated to the small <code>Acceptance - immersive 3D</code> project.
+            Services were stopped only with no active jobs. The existing project database was not
+            replaced. One temporary pre-acceptance runtime copy was used for rollback, then removed.</p>
+        </article>
+        <article class="docs-card">
+          <h2>Issues found and corrected</h2>
+          <ul class="docs-list">
+            <li><strong>Unavailable fullscreen API:</strong> WKWebView had no standard
+              <code>requestFullscreen</code>. Entry now uses standard or prefixed WebKit APIs when
+              available; otherwise it uses a reversible window-local immersive panel. Existing API
+              rejections are still observable failures, not silently bypassed.</li>
+            <li><strong>Cold-load exit recovery:</strong> a lazily loaded tool can temporarily clear
+              React's viewport ref. Window-local fullscreen retains its owned target so exit can
+              restore the workspace instead of failing with <code>viewport:unavailable</code>.</li>
+            <li><strong>Default camera clipping:</strong> fitting and zooming from the top-left cropped
+              tetrahedron nodes. CPU picking and GPU projection now share centered, proportion-preserving
+              fitting below the title. Default presets fit the model. Drag conversion accounts for
+              viewport scale and camera rotation; repeated focus no longer accumulates pan offsets.</li>
+            <li><strong>Unexpected library overlay:</strong> entering immersive modeling from a loaded
+              library model now opens the modeling tools instead of automatically showing the old
+              library drawer on top of the canvas.</li>
+            <li><strong>Blocked form editing:</strong> immersive guardrails previously intercepted
+              Select All and clipboard events inside inputs. Native model-name and numeric fields now
+              allow text editing while canvas interaction protection remains enabled.</li>
+          </ul>
+        </article>
+        <article class="docs-card">
+          <h2>Observed native chain</h2>
+          <ol class="docs-list">
+            <li>PWDT loaded actual Pyodide, created a separate project, constructed a four-node,
+              six-member truss, saved it, submitted a study and observed completed Rust-agent results.</li>
+            <li>A Z-coordinate query selected only node 3 without clearing the result. The repaired
+              viewport displayed all four nodes, and pointer picking identified the correct apex.</li>
+            <li>Batch translation changed apex Z from 1.00 m to 1.25 m. Undo restored 1.00 m and
+              redo restored 1.25 m. The shared model and viewport readout agreed.</li>
+            <li>The native dock resized by keyboard in 10-pixel steps, with Home/End limiting it to
+              220/460 pixels. Escape restored the main interface. Library navigation exited immersive
+              mode and displayed the real model library.</li>
+            <li>Empty model names disabled Save and Save As. Select All and paste worked in the
+              installed immersive form after the guardrail fix.</li>
+            <li>Save created baseline v2 with apex Z=1.25 m while baseline v1 retained Z=1.00 m.
+              Save As created a separate tall-variant model with four nodes and six members.</li>
+            <li>The immersive Study tab submitted the tall variant successfully. After restarting the
+              entire managed runtime and reopening the application, the saved models and versions
+              remained available, and the reloaded variant solved to the same numeric result.</li>
+            <li>The final PWDT recovery script emitted <code>NATIVE_RECOVERY_PASS</code> and returned
+              Ready. Invalid negative selection indices were rejected without modifying selection or
+              discarding results. Native layout measurement: window/panel 1432 by 821 CSS pixels;
+              canvas stage 1062 by 710 CSS pixels. The panel filled the available WebView window.</li>
+          </ol>
+        </article>
+        <article class="docs-card">
+          <h2>Numerical oracle and durable receipts</h2>
+          <p>Nodes are (0,0,0), (1,0,0), (0,1,0), (0,0,h). The first three are fully fixed;
+            the apex has a -1000 N Z load. All six tetrahedron edges use E=210 GPa and A=0.01 m2.
+            For this linear small-displacement truss, apex uz=-1000h/(EA), ux=uy=h*uz.
+            The vertical member carries -1000 N; the two other apex members have zero axial force.</p>
+          <ul class="docs-list">
+            <li>At h=1: ux=uy=uz approximately -4.7619047619e-7 m.</li>
+            <li>At h=1.25: uz approximately -5.9523809524e-7 m and ux=uy approximately -7.4404761905e-7 m.</li>
+            <li>Recovered result: vertical axial force -999.9999999999995 N. Displacement checks used
+              an absolute tolerance of 1e-12 m and axial force 1e-8 N.</li>
+            <li>Project: <code>3d6c33402e4e15ff</code>. Baseline model: <code>02e4daf95e101210</code>;
+              v1 <code>57c2a52484daa367</code>, v2 <code>7d9a5231060d2314</code>.</li>
+            <li>Tall model: <code>0af123b85d7a8bb3</code>; version <code>f2b962105329cba4</code>.</li>
+            <li>Baseline job <code>d4153f1c5ec6ae75</code>; immersive GUI job <code>f15b5eed738a9862</code>;
+              restart recovery job <code>eb281ac724582a64</code>; final complete PWDT run
+              <code>9614cc8146ae6e5a</code>. All completed on the local Rust agents.</li>
+          </ul>
+        </article>
+        <article class="docs-card">
+          <h2>Repeatable checks and limits</h2>
+          <p>PWDT setup: <code>tests/manual/pwdt-immersive-truss3d.py</code>. Restart/reload check:
+            <code>tests/manual/pwdt-immersive-recovery.py</code>. These are frontend Python scripts,
+            not headless-SDK implementations. The recovery script waits for mounted, measurable
+            controls; a fixed sleep is not a reliable cold-load readiness signal.</p>
+          <p>933 workflow unit tests passed. Eleven unique related browser integration cases passed;
+            the seven fullscreen cases were rerun after the final changes. They use Chromium with
+            mocked storage, including API refusal, missing-API fallback, form editing, save failures,
+            resizing, undo/redo and GPU lifecycle checks. Type checking and production build passed.</p>
+          <p>Not qualified here: Windows/Linux native WebViews, mobile native shells, large-mesh
+            interactive frame rate, solver families beyond this linear 3D truss, or arbitrary
+            multi-client storage failure recovery. Window-local immersive mode does not claim to
+            enter OS fullscreen. Save still consists of existing separate metadata/version writes,
+            not a distributed transaction. A failed or uncertain write must be inspected before retry.</p>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

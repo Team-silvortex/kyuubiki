@@ -3,6 +3,7 @@
 import { useWorkbenchAssistantAuditController } from "@/components/workbench/workbench-assistant-audit-controller";
 import { createWorkbenchTopLevelActionsController } from "@/components/workbench/workbench-top-level-actions-controller";
 import { createWorkbenchUiActionController } from "@/components/workbench/workbench-ui-action-controller";
+import { exitWorkbenchViewportFullscreen, getWindowImmersiveTarget, isWorkbenchViewportFullscreen, requestWorkbenchViewportFullscreen } from "./workbench-fullscreen";
 
 export function useWorkbenchInteractionControllers(
   props: Parameters<typeof createWorkbenchTopLevelActionsController>[0] & Record<string, any>,
@@ -53,6 +54,7 @@ export function useWorkbenchInteractionControllers(
     immersiveViewport: props.immersiveViewport,
     immersiveToolDrawerOpen: props.immersiveToolDrawerOpen,
     immersiveHelpDrawerOpen: props.immersiveHelpDrawerOpen,
+    immersiveToolTab: props.immersiveToolTab,
     truss3dProjectionMode: props.truss3dProjectionMode,
     truss3dViewPreset: props.truss3dViewPreset,
     truss3dBoxSelectMode: props.truss3dBoxSelectMode,
@@ -109,6 +111,7 @@ export function useWorkbenchInteractionControllers(
     setSidebarSection: props.setSidebarSection,
     setSelectedNode: props.setSelectedNode,
     setSelectedElement: props.setSelectedElement,
+    setSelectedTruss3dNodes: props.setSelectedTruss3dNodes,
     setMemberDraftNodes: props.setMemberDraftNodes,
     resetActiveResult: props.resetActiveResult,
   });
@@ -134,19 +137,24 @@ export function useWorkbenchInteractionControllers(
   });
 
   const toggleImmersiveViewport = async () => {
-    const target = props.viewportPanelRef.current;
-    if (!target) return;
-
+    // Suspense may clear the React ref while a fullscreen tool chunk is loading.
+    const target = props.viewportPanelRef.current ?? getWindowImmersiveTarget(document);
     try {
-      if (document.fullscreenElement === target) {
-        await document.exitFullscreen();
+      if (!target) throw new Error("viewport:unavailable");
+      if (isWorkbenchViewportFullscreen(document, target)) {
+        await exitWorkbenchViewportFullscreen(document, target);
         props.setMessage(props.t.immersiveModeDisabled);
       } else {
-        await target.requestFullscreen();
+        await requestWorkbenchViewportFullscreen(document, target);
+        props.setSidebarSection("model");
+        props.setModelTab("tools");
+        props.setModelToolsPage("studio");
+        props.setImmersiveToolDrawerOpen(true);
         props.setMessage(props.t.immersiveModeEnabled);
       }
     } catch (error) {
       props.setMessage(error instanceof Error ? error.message : props.t.initialFailed);
+      throw error;
     }
   };
 
@@ -180,6 +188,7 @@ export function useWorkbenchInteractionControllers(
     setTruss3dShowNodes: props.setTruss3dShowNodes,
     setImmersiveToolDrawerOpen: props.setImmersiveToolDrawerOpen,
     setImmersiveHelpDrawerOpen: props.setImmersiveHelpDrawerOpen,
+    setImmersiveToolTab: props.setImmersiveToolTab,
     setTruss3dFocusRequestVersion: props.setTruss3dFocusRequestVersion,
     setTruss3dResetRequestVersion: props.setTruss3dResetRequestVersion,
     refreshWorkflowCatalog: props.refreshWorkflowCatalog,

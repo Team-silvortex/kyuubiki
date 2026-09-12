@@ -72,6 +72,7 @@ type TopLevelActionsArgs = {
   memberDraftNodes: any;
   immersiveViewport: boolean;
   immersiveToolDrawerOpen: boolean;
+  immersiveToolTab?: string;
   immersiveHelpDrawerOpen: boolean;
   truss3dProjectionMode: any;
   truss3dViewPreset: any;
@@ -129,6 +130,7 @@ type TopLevelActionsArgs = {
   setSidebarSection: (value: any) => void;
   setSelectedNode: (value: any) => void;
   setSelectedElement: (value: any) => void;
+  setSelectedTruss3dNodes?: (value: number[]) => void;
   setMemberDraftNodes: (value: any) => void;
   resetActiveResult: () => void;
 };
@@ -164,6 +166,7 @@ export function createWorkbenchTopLevelActionsController(args: TopLevelActionsAr
       memberDraftNodes: args.memberDraftNodes,
       immersiveViewport: args.immersiveViewport,
       immersiveToolDrawerOpen: args.immersiveToolDrawerOpen,
+      immersiveToolTab: args.immersiveToolTab,
       immersiveHelpDrawerOpen: args.immersiveHelpDrawerOpen,
       truss3dProjectionMode: args.truss3dProjectionMode,
       truss3dViewPreset: args.truss3dViewPreset,
@@ -210,6 +213,7 @@ export function createWorkbenchTopLevelActionsController(args: TopLevelActionsAr
       sidebarSection: args.sidebarSection,
       selectedNode: args.selectedNode,
       selectedElement: args.selectedElement,
+      selectedTruss3dNodes: args.selectedTruss3dNodes,
       memberDraftNodes: args.memberDraftNodes,
     });
 
@@ -249,6 +253,7 @@ export function createWorkbenchTopLevelActionsController(args: TopLevelActionsAr
       setSidebarSection: args.setSidebarSection,
       setSelectedNode: args.setSelectedNode,
       setSelectedElement: args.setSelectedElement,
+      setSelectedTruss3dNodes: args.setSelectedTruss3dNodes,
       setMemberDraftNodes: args.setMemberDraftNodes,
       resetActiveResult: args.resetActiveResult,
     });

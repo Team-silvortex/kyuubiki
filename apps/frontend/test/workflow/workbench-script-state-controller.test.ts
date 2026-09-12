@@ -5,6 +5,42 @@ import { handleWorkbenchScriptStateAction } from "../../src/components/workbench
 
 type StateActionArgs = Parameters<typeof handleWorkbenchScriptStateAction>[0];
 
+test("PWDT fullscreen validates tool tabs before any UI or native fullscreen mutation", async () => {
+  const calls: string[] = [];
+  for (const toolTab of ["unknown", "", null, 1, ["batch"], {}]) {
+    await assert.rejects(handleWorkbenchScriptStateAction(actionArgs({
+      action: "viewport/setUiState", payload: { immersiveViewport: true, toolTab, toolDrawerOpen: true },
+      immersiveViewport: false,
+      toggleImmersiveViewport: async () => { calls.push("fullscreen"); },
+      setImmersiveToolTab: () => calls.push("tab"), setImmersiveToolDrawerOpen: () => calls.push("drawer"),
+    })), /viewport:invalid_tool_tab/);
+  }
+  assert.deepEqual(calls, []);
+});
+
+test("PWDT fullscreen errors cannot masquerade as successful UI changes", async () => {
+  const calls: string[] = [];
+  await assert.rejects(handleWorkbenchScriptStateAction(actionArgs({
+    action: "viewport/setUiState", payload: { immersiveViewport: true, toolTab: "batch", toolDrawerOpen: true },
+    immersiveViewport: false, toggleImmersiveViewport: async () => { throw new Error("fullscreen denied"); },
+    setImmersiveToolTab: () => calls.push("tab"), setImmersiveToolDrawerOpen: () => calls.push("drawer"),
+  })), /fullscreen denied/);
+  assert.deepEqual(calls, []);
+});
+
+test("PWDT exposes every fullscreen editing tab without re-entering an active fullscreen", async () => {
+  for (const toolTab of ["node", "props", "batch", "study", "save"] as const) {
+    const calls: unknown[] = [];
+    const result = await handleWorkbenchScriptStateAction(actionArgs({
+      action: "viewport/setUiState", payload: { immersiveViewport: true, toolTab, toolDrawerOpen: true },
+      immersiveViewport: true, toggleImmersiveViewport: async () => { calls.push("fullscreen"); },
+      setImmersiveToolTab: (value) => calls.push(value), setImmersiveToolDrawerOpen: (value) => calls.push(value),
+    }));
+    assert.deepEqual(result, { ok: true, action: "viewport/setUiState" });
+    assert.deepEqual(calls, [toolTab, true]);
+  }
+});
+
 function actionArgs(overrides: Partial<StateActionArgs>): StateActionArgs {
   return {
     action: "job/run",

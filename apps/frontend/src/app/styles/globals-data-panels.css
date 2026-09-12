@@ -95,6 +95,63 @@
   height: 18px;
 }
 
+[data-model-batch="editor"] {
+  min-width: 0;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+[data-model-batch="editor"] .form-grid.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+  margin: 0;
+}
+
+[data-model-batch="editor"] .form-grid > * {
+  grid-column: 1 / -1;
+}
+
+[data-model-batch="editor"] .form-grid > .batch-scalar {
+  grid-column: auto;
+}
+
+[data-model-batch="editor"] .batch-vector {
+  display: grid;
+  align-items: end;
+  gap: 6px;
+  min-width: 0;
+}
+
+[data-model-batch="editor"] .checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+
+[data-model-batch="editor"] input[type="checkbox"] {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  padding: 0;
+}
+
+[data-model-batch="editor"] .card-copy,
+[data-model-batch="editor"] .batch-help {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+[data-model-batch="editor"] .form-grid input,
+[data-model-batch="editor"] .form-grid select {
+  min-width: 0;
+  padding: 6px;
+}
+
 .inline-field {
   display: grid;
   grid-template-columns: auto minmax(90px, 120px);
@@ -278,11 +335,6 @@ html[data-theme="graphite"] .inline-field input {
 .canvas-panel--immersive:fullscreen .panel-head {
   padding-inline: 22px;
   padding-block: 18px 14px;
-}
-
-.canvas-panel--immersive:fullscreen .viewport-svg {
-  height: calc(100vh - 78px);
-  max-height: none;
 }
 
 .immersive-drawer {

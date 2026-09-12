@@ -266,6 +266,14 @@ html.immersive-guardrails * {
   -webkit-user-select: none;
 }
 
+html.immersive-guardrails input,
+html.immersive-guardrails textarea,
+html.immersive-guardrails [contenteditable="true"],
+html.immersive-guardrails [contenteditable="true"] * {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 .guide {
   stroke: rgba(23, 36, 45, 0.18);
   stroke-width: 2;

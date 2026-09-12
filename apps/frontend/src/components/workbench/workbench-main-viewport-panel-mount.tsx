@@ -8,18 +8,21 @@ import { WorkbenchViewportDock } from "@/components/workbench/workbench-viewport
 import { WorkbenchViewportHeadActions } from "@/components/workbench/workbench-viewport-head-actions";
 import { WorkbenchViewportMount } from "@/components/workbench/workbench-viewport-mount";
 import { WorkbenchViewportPanel } from "@/components/workbench/workbench-viewport-panel";
+import { useWorkbenchImmersiveSave } from "./workbench-immersive-save";
 import type { ViewportRenderDiagnostics } from "@/components/workbench/workbench-render-diagnostics";
 
 type WorkbenchMainViewportPanelMountProps = Record<string, any>;
 
 export function WorkbenchMainViewportPanelMount(props: WorkbenchMainViewportPanelMountProps) {
   const [renderDiagnostics, setRenderDiagnostics] = useState<ViewportRenderDiagnostics | null>(null);
+  const immersiveSave = useWorkbenchImmersiveSave(props.immersiveModelStorage);
 
   return (
     <WorkbenchViewportPanel
       viewportPanelRef={props.viewportPanelRef}
       immersiveViewport={props.immersiveViewport}
       title={props.title}
+      language={props.language}
       headActions={
         <WorkbenchViewportHeadActions
           t={props.t}
@@ -27,6 +30,8 @@ export function WorkbenchMainViewportPanelMount(props: WorkbenchMainViewportPane
           immersiveViewport={props.immersiveViewport}
           immersiveToolDrawerOpen={props.immersiveToolDrawerOpen}
           immersiveHelpDrawerOpen={props.immersiveHelpDrawerOpen}
+          immersiveToolTab={props.immersiveToolTab}
+          setImmersiveToolTab={props.setImmersiveToolTab}
           sidebarSection={props.sidebarSection}
           modelTab={props.modelTab}
           modelToolsPage={props.modelToolsPage}
@@ -43,6 +48,11 @@ export function WorkbenchMainViewportPanelMount(props: WorkbenchMainViewportPane
       dockContent={
         <WorkbenchViewportDock
           t={props.t}
+          language={props.language}
+          batchModelController={props.batchModelController}
+          modelBatchDraftCache={props.modelBatchDraftCache}
+          immersiveStudyContent={props.immersiveStudyContent}
+          immersiveSave={immersiveSave}
           immersiveViewport={props.immersiveViewport}
           immersiveToolDrawerOpen={props.immersiveToolDrawerOpen}
           immersiveHelpDrawerOpen={props.immersiveHelpDrawerOpen}

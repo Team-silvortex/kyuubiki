@@ -17,6 +17,10 @@ Kyuubiki is no longer one program. It has:
 That means one flat `test everything` command is not enough context anymore.
 The repository now keeps validation split by responsibility.
 
+Workbench modeling has a separate [performance evidence section](rendering-roadmap.html#modeling-performance).
+It distinguishes CPU geometry benchmarks from real-browser GPU reuse and recovery
+checks; neither is a solver-performance or full-density frame-rate claim.
+
 ## Local test layers
 
 ### Core application checks

@@ -20,3 +20,51 @@ Organization rules:
 - The unit-test runner registers a local `@/` alias loader, so tests may import
   real frontend source modules directly instead of copying logic into test-only
   wrappers.
+
+## Modeling performance
+
+The `workbench-model-batch` filter covers grouped selection, topology-preserving
+arrays, load distribution, member assignment, deletion and atomic history edits.
+The `workbench-model-transform` filter covers right-hand rotation, selection and
+explicit pivots, scaling, reflection, grid snapping, copy identity/boundary rules,
+72 rotation round trips and bounded 200k-node transforms. These are geometry
+invariants and operation-count checks, not solver or interactive FPS benchmarks.
+The real-browser GUI/PWDT boundary test is
+`tests/integration/workbench-ui-model-batch.test.mjs` (run from the repository
+root with `node --test`). Its backend is isolated and mocked; it is not a solver
+accuracy or native WebView qualification. See the
+[batch modeling tutorial](../../../docs/tutorial-pwdt-automation.html#batch-modeling).
+
+`tests/integration/workbench-ui-immersive-modeling.test.mjs` exercises real Chromium
+fullscreen, sidebar/dock draft transfer, legacy quick edits, multi-selection,
+undo/redo, study navigation, rejected fullscreen requests and five viewport sizes.
+It also covers query-to-canvas selection, fullscreen save/save-as/retry with mocked
+storage, duplicate-submit prevention across tool-tab remounts, and bounded pointer /
+keyboard dock resizing, cancellation and reset. Pure layout and selection tests
+cover invalid dimensions and 200k-node selection without scanning connectivity.
+Its storage service is mocked. `workbench-model-batch-draft` and
+`workbench-script-state-controller` add draft-scope and failure-atomicity checks.
+See the [fullscreen editing contract](../../../docs/tutorial-pwdt-automation.html#immersive-modeling).
+
+Missing-API fallback, editable-form shortcuts and cold-load exit ownership are
+covered separately from actual browser fullscreen. Projection tests keep default
+3D presets inside the canvas and verify proportional fitting and drag inversion.
+For native acceptance, run `tests/manual/pwdt-immersive-truss3d.py` in Workbench PWDT,
+then follow the [installed macOS acceptance record](../../../docs/acceptance-immersive-modeling.html).
+After saving the tall variant and restarting the managed runtime, reopen it and
+run `tests/manual/pwdt-immersive-recovery.py`. These use real services and create a
+small isolated project; they are not standalone Python/headless-SDK tests.
+
+`workbench-modeling-performance` and `workbench-truss3d-webgl` unit filters cover
+immutable batch edits, linear selection/adjacency work, 200k-node bounds, scene
+colors, and GPU-resource lifecycle. Run the opt-in CPU benchmark from this directory:
+
+```sh
+node --import ./test/support/register-alias-loader.mjs ./test/benchmarks/workbench-modeling.bench.ts
+```
+
+The benchmark emits a small JSON summary, never generated mesh files. Timing is
+informational; deterministic operation-count tests provide the CI regression gate.
+The real-browser counterpart is
+`tests/integration/workbench-ui-modeling-performance.test.mjs` at repository root.
+See [measured scope and limitations](../../../docs/rendering-roadmap.html#modeling-performance).

@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  ImmersiveToolTab,
   LibraryPanelTab,
   ModelPanelTab,
   SidebarSection,
@@ -41,6 +42,7 @@ type WorkbenchUiActionControllerDeps = {
   setTruss3dShowNodes: (value: boolean) => void;
   setImmersiveToolDrawerOpen: (value: React.SetStateAction<boolean>) => void;
   setImmersiveHelpDrawerOpen: (value: React.SetStateAction<boolean>) => void;
+  setImmersiveToolTab: (value: ImmersiveToolTab) => void;
   setTruss3dFocusRequestVersion: (updater: (current: number) => number) => void;
   setTruss3dResetRequestVersion: (updater: (current: number) => number) => void;
   refreshWorkflowCatalog: () => Promise<void>;
@@ -79,6 +81,7 @@ export function createWorkbenchUiActionController({
   setTruss3dShowNodes,
   setImmersiveToolDrawerOpen,
   setImmersiveHelpDrawerOpen,
+  setImmersiveToolTab,
   setTruss3dFocusRequestVersion,
   setTruss3dResetRequestVersion,
   refreshWorkflowCatalog,
@@ -197,8 +200,16 @@ export function createWorkbenchUiActionController({
   };
 
   const handleToggleImmersiveViewport = async () => {
-    await toggleImmersiveViewport();
+    try { await toggleImmersiveViewport(); } catch { return; }
     recordManualDslAction("viewport/setUiState", { immersiveViewport: !immersiveViewport });
+  };
+
+  const handleImmersiveToolTabChange = (tab: ImmersiveToolTab) => {
+    handleSidebarSectionChange("model");
+    setImmersiveToolTab(tab);
+    setImmersiveToolDrawerOpen(true);
+    setImmersiveHelpDrawerOpen(false);
+    recordManualDslAction("viewport/setUiState", { toolTab: tab, toolDrawerOpen: true, helpDrawerOpen: false });
   };
 
   const handleToggleImmersiveToolDrawer = () => {
@@ -266,6 +277,7 @@ export function createWorkbenchUiActionController({
     handleSystemPanelTabChange,
     handleToggleImmersiveHelpDrawer,
     handleToggleImmersiveToolDrawer,
+    handleImmersiveToolTabChange,
     handleToggleImmersiveViewport,
     handleToggleTruss3dLinkMode,
     handleTruss3dBoxSelectModeChange,

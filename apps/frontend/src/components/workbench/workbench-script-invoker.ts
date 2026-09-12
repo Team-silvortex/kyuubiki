@@ -113,6 +113,7 @@ export function createWorkbenchScriptInvoker(options: Record<string, any>) {
         downloadTextFile: options.downloadTextFile,
       },
       stateArgs: {
+        batchModelController: options.batchModelController,
         action,
         payload,
         language: options.language,
@@ -136,6 +137,7 @@ export function createWorkbenchScriptInvoker(options: Record<string, any>) {
         setTruss3dShowNodes: options.setTruss3dShowNodes,
         setImmersiveToolDrawerOpen: options.setImmersiveToolDrawerOpen,
         setImmersiveHelpDrawerOpen: options.setImmersiveHelpDrawerOpen,
+        setImmersiveToolTab: options.setImmersiveToolTab,
         setTruss3dBoxSelectMode: options.setTruss3dBoxSelectMode,
         immersiveViewport: options.immersiveViewport,
         recordHistory: options.recordHistory,

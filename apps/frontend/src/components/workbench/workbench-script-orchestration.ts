@@ -33,6 +33,7 @@ export function buildWorkbenchScriptSnapshot(props: Record<string, any>) {
     memberDraftNodeIndices: props.memberDraftNodes,
     immersiveViewport: props.immersiveViewport,
     immersiveToolDrawerOpen: props.immersiveToolDrawerOpen,
+    immersiveToolTab: props.immersiveToolTab ?? "node",
     immersiveHelpDrawerOpen: props.immersiveHelpDrawerOpen,
     truss3dProjectionMode: props.truss3dProjectionMode,
     truss3dViewPreset: props.truss3dViewPreset,
@@ -80,6 +81,7 @@ export function buildWorkbenchUiSnapshot(props: Record<string, any>) {
     selectedNode: props.selectedNode,
     selectedElement: props.selectedElement,
     memberDraftNodes: props.memberDraftNodes,
+    selectedTruss3dNodes: props.selectedTruss3dNodes,
   });
 }
 
@@ -112,6 +114,7 @@ export function restoreWorkbenchUiSnapshot(snapshot: any, props: Record<string, 
       setSidebarSection: props.setSidebarSection,
       setSelectedNode: props.setSelectedNode,
       setSelectedElement: props.setSelectedElement,
+      setSelectedTruss3dNodes: props.setSelectedTruss3dNodes,
       setMemberDraftNodes: props.setMemberDraftNodes,
     },
     props.resetActiveResult,

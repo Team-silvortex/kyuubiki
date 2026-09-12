@@ -30,6 +30,7 @@ export type WorkbenchScriptSnapshot = {
   memberDraftNodeIndices: number[];
   immersiveViewport: boolean;
   immersiveToolDrawerOpen: boolean;
+  immersiveToolTab?: string;
   immersiveHelpDrawerOpen: boolean;
   truss3dProjectionMode: string;
   truss3dViewPreset: string;
