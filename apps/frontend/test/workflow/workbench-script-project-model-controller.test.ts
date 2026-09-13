@@ -202,6 +202,30 @@ test("script model save creates models through project library service", async (
 });
 
 for (const action of ["model/save", "model/saveAs"]) {
+  test(`script ${action} validates and forwards checkpoint request ids separately from geometry`, async () => {
+    const calls: string[] = [], args = baseArgs(calls);
+    for (const request_id of ["", "short", {}, 123, "a".repeat(129)]) {
+      await assert.rejects(handleWorkbenchScriptProjectModelAction({
+        ...args, action, payload: { request_id }, selectedProjectId: "project-a",
+        serializeCurrentModel: () => assert.fail("invalid request ids must not read geometry"),
+      }), /invalid_checkpoint_request_id/);
+    }
+    const requestId = "durable-checkpoint-key-0001";
+    args.projectLibraryBackendService.createModel = async (_id, input) => {
+      assert.equal(input.request_id, requestId);
+      assert.equal(input.payload.request_id, undefined);
+      return modelEnvelope("created");
+    };
+    args.projectLibraryBackendService.createModelVersion = async (_id, input) => {
+      assert.equal(input.request_id, requestId);
+      assert.equal(input.payload.request_id, undefined);
+      return versionEnvelope("created");
+    };
+    assert.equal((await handleWorkbenchScriptProjectModelAction({
+      ...args, action, payload: { request_id: requestId }, selectedProjectId: "project-a", selectedModelId: "model-a",
+    }))?.ok, true);
+  });
+
   test(`script ${action} accepts an atomic name payload and publishes the trimmed name only on success`, async () => {
     const calls: string[] = [], args = baseArgs(calls);
     await handleWorkbenchScriptProjectModelAction({
@@ -210,7 +234,7 @@ for (const action of ["model/save", "model/saveAs"]) {
     });
     const writes = calls.filter((call) => /^(create|update)-/.test(call));
     assert.deepEqual(writes, action === "model/saveAs" ? ["create-model:project-a:Research model"]
-      : ["update-model:model-a:Research model", "create-version:model-a:Research model"]);
+      : ["create-version:model-a:Research model"]);
     assert.deepEqual(calls.filter((call) => call.startsWith("local-name:")), ["local-name:Research model"]);
   });
 
@@ -241,6 +265,42 @@ for (const action of ["model/save", "model/saveAs"]) {
       if (fail) await assert.rejects(pending, /write unavailable/);
       else assert.equal((await pending)?.contextChanged, true);
     }
+  });
+}
+
+test("script checkpoint rejection cannot mutate the persisted model before its version exists", async () => {
+  const calls: string[] = [], args = baseArgs(calls);
+  args.projectLibraryBackendService.updateModel = async () => assert.fail("save must use the atomic checkpoint endpoint");
+  args.projectLibraryBackendService.createModelVersion = async () => { throw new Error("checkpoint rejected"); };
+  await assert.rejects(handleWorkbenchScriptProjectModelAction({
+    ...args, action: "model/save", payload: { name: "Unsaved change" }, selectedProjectId: "project-a", selectedModelId: "model-a",
+  }), /checkpoint rejected/);
+  assert.deepEqual(calls, []);
+});
+
+for (const fail of [false, true]) {
+  test(`script checkpoint keeps serialized and live metadata aligned without premature updates; failure=${fail}`, async () => {
+    const calls: string[] = [], args = baseArgs(calls);
+    const original = { name: "Old name", material: "Old material", nodes: [{ x: 1 }] };
+    args.projectLibraryBackendService.createModelVersion = async (_id, input) => {
+      assert.equal(input.name, "Saved name");
+      assert.equal(input.material, "Saved material");
+      assert.deepEqual(input.payload, { ...original, name: input.name, material: input.material });
+      if (fail) throw new Error("checkpoint rejected");
+      return versionEnvelope("version-created");
+    };
+    const pending = handleWorkbenchScriptProjectModelAction({
+      ...args, action: "model/save", payload: { name: " Saved name ", material: " Saved material " },
+      selectedProjectId: "project-a", selectedModelId: "model-a", serializeCurrentModel: () => original,
+      setLoadedModelName: (name) => { calls.push(`local-name:${name}`); },
+      setActiveMaterial: (material) => { calls.push(`local-material:${material}`); },
+    });
+    if (fail) await assert.rejects(pending, /checkpoint rejected/);
+    else await pending;
+    assert.deepEqual(calls.filter((call) => call.startsWith("local-")),
+      fail ? [] : ["local-name:Saved name", "local-material:Saved material"]);
+    assert.equal(original.name, "Old name");
+    assert.equal(original.material, "Old material");
   });
 }
 

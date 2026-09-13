@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Scoped SQLite/PostgreSQL baseline ledger and startup gate, plus SQLite database-aware backup, digest-approved copy upgrade and independently verified separate restore. Whole-system restore, PostgreSQL backup orchestration, online activation and power-loss qualification remain open.",
+  "summary": "Scoped SQLite/PostgreSQL baseline ledger and startup gate, plus SQLite copy lifecycle and revision-2 checkpoint retry receipts. Revision-2 PostgreSQL execution, whole-system restore, online activation and power-loss qualification remain open.",
   "evidence_claims": [
     {
       "id": "runtime-database-baseline-and-sqlite-copy-lifecycle",
@@ -37,6 +37,38 @@
         "DDL failure after column additions rolls back the full migration",
         "successful publication retains its receipt when staging cleanup needs attention",
         "Runtime database baseline, copy upgrade and independent verification: PASS."
+      ]
+    },
+    {
+      "id": "checkpoint-retry-sqlite-and-revision-two-upgrade",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "verification-evidence"],
+      "paradigms": ["persistence_provenance", "validation"],
+      "dimensions": ["contract", "execution", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/library/checkpoint_request.ex",
+        "apps/web/lib/kyuubiki_web/library/memory_backend.ex",
+        "apps/web/lib/kyuubiki_web/library/postgres_backend.ex",
+        "apps/web/lib/kyuubiki_web/storage/checkpoint_schema.ex",
+        "apps/web/lib/kyuubiki_web/storage/checkpoint_request_record.ex",
+        "apps/web/lib/kyuubiki_web/storage/database_migrations.ex",
+        "apps/web/lib/kyuubiki_web/storage/sqlite_lifecycle.ex",
+        "apps/web/test/kyuubiki_web/library/checkpoint_request_test.exs",
+        "apps/web/test/kyuubiki_web/library/checkpoint_receipt_transaction_test.exs",
+        "apps/web/test/kyuubiki_web/storage/database_migrations_test.exs",
+        "apps/web/test/kyuubiki_web/storage/sqlite_lifecycle_test.exs",
+        "schemas/database-lifecycle.schema.json",
+        "docs/data-lifecycle.html",
+        "docs/acceptance-immersive-modeling.html"
+      ],
+      "required_text": [
+        "runtime-checkpoint-requests-0002",
+        "checkpoint_request_conflict",
+        "checkpoint_result_deleted",
+        "concurrent identical retries create exactly one model and one checkpoint",
+        "revision-one snapshot receipts remain verifiable and upgrade without rewriting the source",
+        "restart_replay_pass"
       ]
     }
   ]

@@ -623,8 +623,15 @@ defmodule KyuubikiWeb.Router do
   post "/api/v1/projects/:project_id/models" do
     with_auth(conn, :write, fn conn ->
       case Library.create_model(project_id, conn.body_params) do
-        {:ok, model} -> respond_json(conn, 201, %{"model" => model})
-        {:error, reason} -> unprocessable(conn, reason)
+        {:ok, model} ->
+          respond_json(conn, 201, %{"model" => model})
+
+        {:error, reason}
+        when reason in [:checkpoint_request_conflict, :checkpoint_result_deleted] ->
+          respond_json(conn, 409, %{"error" => Atom.to_string(reason)})
+
+        {:error, reason} ->
+          unprocessable(conn, reason)
       end
     end)
   end
@@ -669,8 +676,15 @@ defmodule KyuubikiWeb.Router do
   post "/api/v1/models/:model_id/versions" do
     with_auth(conn, :write, fn conn ->
       case Library.create_version(model_id, conn.body_params) do
-        {:ok, version} -> respond_json(conn, 201, %{"version" => version})
-        {:error, reason} -> unprocessable(conn, reason)
+        {:ok, version} ->
+          respond_json(conn, 201, %{"version" => version})
+
+        {:error, reason}
+        when reason in [:checkpoint_request_conflict, :checkpoint_result_deleted] ->
+          respond_json(conn, 409, %{"error" => Atom.to_string(reason)})
+
+        {:error, reason} ->
+          unprocessable(conn, reason)
       end
     end)
   end

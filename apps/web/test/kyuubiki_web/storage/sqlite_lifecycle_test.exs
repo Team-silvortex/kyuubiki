@@ -19,7 +19,7 @@ defmodule KyuubikiWeb.Storage.SqliteLifecycleTest do
     receipt = SqliteLifecycle.upgrade!(ctx.source, output, ctx.digest)
     assert Files.digest!(ctx.source) == ctx.digest
     assert receipt["source_data_version"] == 0
-    assert receipt["database"]["data_version"] == 1
+    assert receipt["database"]["data_version"] == 2
     assert receipt["source_retained"]
     assert is_boolean(receipt["directory_synced"])
     moved = Path.join(ctx.dir, "relocated.sqlite3")
@@ -32,6 +32,47 @@ defmodule KyuubikiWeb.Storage.SqliteLifecycleTest do
 
     Fixture.close!(db)
     assert Path.wildcard(Path.join(ctx.dir, ".kyuubiki-data-*")) == []
+  end
+
+  test "revision-one snapshot receipts remain verifiable and upgrade without rewriting the source",
+       ctx do
+    baseline = Path.join(ctx.dir, "baseline.sqlite3")
+    SqliteLifecycle.upgrade!(ctx.source, baseline, ctx.digest)
+    db = Fixture.open!(baseline)
+    MigrationQuery.rows!(db, "DROP TABLE kyuubiki_checkpoint_requests")
+    MigrationQuery.rows!(db, "DELETE FROM kyuubiki_data_migrations WHERE version = 2")
+    Fixture.close!(db)
+    snapshot = Path.join(ctx.dir, "baseline-snapshot.sqlite3")
+    receipt = SqliteLifecycle.backup!(baseline, snapshot)
+
+    old_plan =
+      Map.merge(receipt["database"], %{
+        "target_data_version" => 1,
+        "minimum_reader_version" => 1,
+        "status" => "current",
+        "migration_id" => "runtime-baseline-0001",
+        "migration_sha256" => DatabaseMigrations.checksum(:sqlite, 1)
+      })
+
+    old_receipt = Map.put(receipt, "database", old_plan)
+    assert SqliteLifecycle.verify!(snapshot, old_receipt)["status"] == "verified"
+
+    assert_raise RuntimeError, ~r/does not match/, fn ->
+      SqliteLifecycle.verify!(
+        snapshot,
+        put_in(old_receipt, ["database", "minimum_reader_version"], 2)
+      )
+    end
+
+    digest = Files.digest!(snapshot)
+
+    upgraded =
+      SqliteLifecycle.upgrade!(snapshot, Path.join(ctx.dir, "revision-two.sqlite3"), digest)
+
+    assert upgraded["source_data_version"] == 1
+    assert upgraded["database"]["data_version"] == 2
+    assert Files.digest!(snapshot) == digest
+    assert SqliteLifecycle.verify!(snapshot, old_receipt)["status"] == "verified"
   end
 
   test "consistent backup includes committed WAL that main-file copy does not contain", ctx do
@@ -127,7 +168,7 @@ defmodule KyuubikiWeb.Storage.SqliteLifecycleTest do
   test "future ledger cannot be upgraded or silently restored with an older reader", ctx do
     db = Fixture.open!(ctx.source)
     DatabaseMigrations.upgrade_candidate!(db, :sqlite)
-    MigrationQuery.rows!(db, "UPDATE kyuubiki_data_migrations SET version=10")
+    MigrationQuery.rows!(db, "UPDATE kyuubiki_data_migrations SET version=10 WHERE version=2")
     Fixture.close!(db)
 
     assert_raise RuntimeError, ~r/history/, fn ->
@@ -201,7 +242,7 @@ defmodule KyuubikiWeb.Storage.SqliteLifecycleTest do
     second =
       SqliteLifecycle.upgrade!(output, Path.join(ctx.dir, "next.sqlite3"), first["output_sha256"])
 
-    assert second["database"]["data_version"] == 1
+    assert second["database"]["data_version"] == 2
     assert second["output_sha256"] == first["output_sha256"]
   end
 

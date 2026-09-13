@@ -32,7 +32,7 @@ defmodule KyuubikiWeb.Storage.DatabasePostgresTest do
     %{pid: pid, schema: schema}
   end
 
-  test "fresh PostgreSQL startup records exactly one compatible baseline" do
+  test "fresh PostgreSQL startup records the compatible revision history" do
     DatabaseMigrations.boot!(Repo, :postgres)
     assert DatabaseMigrations.plan!(Repo, :postgres)["status"] == "current"
     before = MigrationQuery.rows!(Repo, "SELECT * FROM kyuubiki_data_migrations")
@@ -70,14 +70,23 @@ defmodule KyuubikiWeb.Storage.DatabasePostgresTest do
 
   test "future history, changed checksum and missing current tables fail closed" do
     DatabaseMigrations.boot!(Repo, :postgres)
-    MigrationQuery.rows!(Repo, "UPDATE kyuubiki_data_migrations SET version=2")
+    MigrationQuery.rows!(Repo, "UPDATE kyuubiki_data_migrations SET version=99 WHERE version=2")
     assert_raise RuntimeError, ~r/history/, fn -> DatabaseMigrations.boot!(Repo, :postgres) end
-    MigrationQuery.rows!(Repo, "UPDATE kyuubiki_data_migrations SET version=1, checksum='bad'")
+
+    MigrationQuery.rows!(
+      Repo,
+      "UPDATE kyuubiki_data_migrations SET version=2, checksum='bad' WHERE version=99"
+    )
+
     assert_raise RuntimeError, ~r/checksum/, fn -> DatabaseMigrations.boot!(Repo, :postgres) end
 
-    MigrationQuery.rows!(Repo, "UPDATE kyuubiki_data_migrations SET checksum=$1", [
-      DatabaseMigrations.checksum(:postgres)
-    ])
+    MigrationQuery.rows!(
+      Repo,
+      "UPDATE kyuubiki_data_migrations SET checksum=$1 WHERE version=2",
+      [
+        DatabaseMigrations.checksum(:postgres)
+      ]
+    )
 
     MigrationQuery.rows!(Repo, "DROP TABLE kyuubiki_analysis_results")
 

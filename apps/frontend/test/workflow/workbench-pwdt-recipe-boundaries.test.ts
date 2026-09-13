@@ -7,7 +7,9 @@ import {
   WORKBENCH_SCRIPT_ACTIONS, WORKBENCH_SCRIPT_RECIPES,
 } from "../../src/lib/scripting/workbench-script-runtime.ts";
 
-function runPython(recipe?: string, stopAt?: number, options: { stopRunAt?: number; jobStatus?: string } = {}) {
+function runPython(recipe?: string, stopAt?: number, options: {
+  stopRunAt?: number; jobStatus?: string; save?: boolean; failSave?: boolean; requestId?: string;
+} = {}) {
   const process = spawnSync(globalThis.process.platform === "win32" ? "python" : "python3", [
     "-I", "-B", fileURLToPath(new URL("../support/pwdt-python-harness.py", import.meta.url)),
   ], {
@@ -26,6 +28,30 @@ test("PWDT shipped Python prelude initializes and calls its JavaScript bridge", 
   assert.equal(outcome.result.initialized, true);
   assert.equal(outcome.result.actions, WORKBENCH_SCRIPT_ACTIONS.length);
   assert.deepEqual(outcome.logs, ["bridge ready"]);
+});
+
+for (const failSave of [false, true]) {
+  test(`PWDT shipped Python save helper submits metadata with the checkpoint; failure=${failSave}`, () => {
+    const outcome = runPython(undefined, undefined, { save: true, failSave });
+    assert.deepEqual(outcome.calls, ["model/save"]);
+    assert.deepEqual(outcome.payloads, [{ name: "Saved", material: "70" }]);
+    assert.equal(outcome.snapshot.loadedModelName, failSave ? "Original" : "Saved");
+    assert.equal(outcome.snapshot.activeMaterial, failSave ? "210" : "70");
+    if (failSave) assert.match(outcome.error, /checkpoint rejected/);
+    else assert.equal(outcome.result.ok, true);
+  });
+}
+
+test("Python and browser save helpers forward an explicit durable checkpoint request id", async () => {
+  const requestId = "research-checkpoint-0001";
+  const outcome = runPython(undefined, undefined, { save: true, requestId });
+  assert.deepEqual(outcome.payloads, [{ name: "Saved", material: "70", request_id: requestId }]);
+  const bridge = createWorkbenchPwdtBrowserBridge({
+    getSnapshot: () => ({}),
+    invokeAction: async (action, payload) => ({ action, ...payload }),
+  });
+  assert.deepEqual(await bridge.saveModel({ name: "Saved", requestId }),
+    { action: "model/save", name: "Saved", request_id: requestId });
 });
 
 for (const recipe of WORKBENCH_SCRIPT_RECIPES) {

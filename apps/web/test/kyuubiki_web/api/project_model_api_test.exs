@@ -49,6 +49,7 @@ defmodule KyuubikiWeb.Api.ProjectModelApiTest do
         "/api/v1/models/#{model_id}/versions",
         Jason.encode!(%{
           "name" => "Checkpoint A",
+          "material" => "Aluminum",
           "payload" => %{
             "kind" => "truss_2d",
             "model_schema_version" => "kyuubiki.model/v1",
@@ -85,6 +86,24 @@ defmodule KyuubikiWeb.Api.ProjectModelApiTest do
     assert get_model_conn.status == 200
     returned_model = Jason.decode!(get_model_conn.resp_body)["model"]
     assert length(returned_model["versions"]) == 2
+    assert returned_model["name"] == "Checkpoint A"
+    assert returned_model["material"] == "Aluminum"
+    assert returned_model["payload"] == version["payload"]
+    assert returned_model["latest_version_id"] == version["version_id"]
+
+    rejected_version_conn =
+      :post
+      |> conn(
+        "/api/v1/models/#{model_id}/versions",
+        Jason.encode!(%{"name" => "Must not leak", "payload" => "invalid"})
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert rejected_version_conn.status == 422
+
+    after_rejection = :get |> conn("/api/v1/models/#{model_id}") |> Router.call(@opts)
+    assert Jason.decode!(after_rejection.resp_body)["model"] == returned_model
 
     update_project_conn =
       :patch

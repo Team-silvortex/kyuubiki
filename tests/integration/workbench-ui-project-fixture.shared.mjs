@@ -76,10 +76,14 @@ export async function importProject(page, bundle) {
 }
 
 async function mockModelLibrary(page) {
-  const library = { models: [], versions: [], writes: [], failVersions: false };
+  const library = { models: [], versions: [], writes: [], requests: [], failVersions: false, failVersionReads: false,
+    loseCreateResponseOnce: false, loseVersionResponseOnce: false };
+  const checkpointReceipts = new Map();
   let modelSequence = 0;
   let versionSequence = 0;
   function addVersion(model, input) {
+    input = { ...input };
+    delete input.request_id;
     const version = {
       ...input, project_id: model.project_id, model_id: model.model_id,
       version_id: `boundary-version-${++versionSequence}`,
@@ -87,6 +91,8 @@ async function mockModelLibrary(page) {
       inserted_at: initialProject.inserted_at, updated_at: initialProject.updated_at,
     };
     library.versions.push(version);
+    // The real checkpoint endpoint commits model metadata/payload and version together.
+    Object.assign(model, input);
     model.latest_version_id = version.version_id;
     model.latest_version_number = version.version_number;
     return version;
@@ -98,6 +104,31 @@ async function mockModelLibrary(page) {
     const create = pathname.match(/^\/api\/v1\/projects\/([^/]+)\/models$/u);
     const modelPath = pathname.match(/^\/api\/v1\/models\/([^/]+)(\/versions)?$/u);
     const versionPath = pathname.match(/^\/api\/v1\/model-versions\/([^/]+)$/u);
+    const checkpoint = method === "POST" && (create || modelPath?.[2]);
+    const input = checkpoint ? request.postDataJSON() : null;
+    const requestKey = input?.request_id ? `${pathname}:${input.request_id}` : null;
+    if (checkpoint) library.requests.push({ pathname, requestId: input.request_id });
+    const receipt = requestKey ? checkpointReceipts.get(requestKey) : null;
+    if (receipt) {
+      const existing = receipt.body.model ?? receipt.body.version;
+      const versionId = existing.latest_version_id ?? existing.version_id;
+      if (receipt.input !== JSON.stringify(input)) {
+        return route.fulfill({ status: 409, json: { error: "checkpoint_request_conflict" } });
+      }
+      if (!library.models.some((model) => model.model_id === existing.model_id) ||
+          !library.versions.some((version) => version.version_id === versionId)) {
+        return route.fulfill({ status: 409, json: { error: "checkpoint_result_deleted" } });
+      }
+      return route.fulfill({ status: 201, json: receipt.body });
+    }
+    async function publishCheckpoint(body, lossFlag) {
+      if (requestKey) checkpointReceipts.set(requestKey, { input: JSON.stringify(input), body: structuredClone(body) });
+      if (library[lossFlag]) {
+        library[lossFlag] = false;
+        return route.abort("failed");
+      }
+      return route.fulfill({ status: 201, json: body });
+    }
     if (versionPath) {
       const version = library.versions.find((entry) => entry.version_id === versionPath[1]);
       assert.ok(version);
@@ -120,11 +151,12 @@ async function mockModelLibrary(page) {
         ...request.postDataJSON(), model_id: `boundary-model-${++modelSequence}`,
         project_id: project.project_id, inserted_at: initialProject.inserted_at, updated_at: initialProject.updated_at,
       };
+      delete model.request_id;
       library.writes.push({ method, pathname });
       addVersion(model, request.postDataJSON());
       library.models.push(model);
       project.models.push(model);
-      await route.fulfill({ status: 201, json: { model } });
+      await publishCheckpoint({ model }, "loseCreateResponseOnce");
     } else if (modelPath) {
       const model = library.models.find((entry) => entry.model_id === modelPath[1]);
       assert.ok(model);
@@ -134,8 +166,10 @@ async function mockModelLibrary(page) {
             await route.fulfill({ status: 503, json: { error: "qualification version service unavailable" } });
           } else {
             library.writes.push({ method, pathname });
-            await route.fulfill({ status: 201, json: { version: addVersion(model, request.postDataJSON()) } });
+            await publishCheckpoint({ version: addVersion(model, request.postDataJSON()) }, "loseVersionResponseOnce");
           }
+        } else if (library.failVersionReads) {
+          await route.fulfill({ status: 503, json: { error: "qualification version read unavailable" } });
         } else await route.fulfill({ json: {
           versions: library.versions.filter((entry) => entry.model_id === model.model_id).toReversed(),
         } });

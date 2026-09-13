@@ -185,13 +185,21 @@ export async function handleWorkbenchScriptProjectModelAction({
       if (payload.name !== undefined && (typeof payload.name !== "string" || !payload.name.trim() || payload.name.length > 256)) {
         throw new Error("model:invalid_name");
       }
+      if (payload.material !== undefined && (typeof payload.material !== "string" || payload.material.length > 256)) {
+        throw new Error("model:invalid_material");
+      }
+      if (payload.request_id !== undefined && (typeof payload.request_id !== "string" || !/^[A-Za-z0-9_-]{16,128}$/.test(payload.request_id))) {
+        throw new Error("model:invalid_checkpoint_request_id");
+      }
       const name = typeof payload.name === "string" ? payload.name.trim() : loadedModelName;
+      const material = typeof payload.material === "string" ? payload.material.trim() : activeMaterial;
       let isCurrent = projectContext.begin();
-      const payloadModel = serializeCurrentModel();
+      const payloadModel: Record<string, unknown> = { ...serializeCurrentModel(), name, material };
       const modelPayload: WorkbenchModelCreateInput = {
+        ...(typeof payload.request_id === "string" ? { request_id: payload.request_id } : {}),
         name,
         kind: studyKind,
-        material: activeMaterial,
+        material,
         model_schema_version: String(payloadModel.model_schema_version ?? "kyuubiki.model/v1"),
         payload: payloadModel,
       };
@@ -205,13 +213,14 @@ export async function handleWorkbenchScriptProjectModelAction({
         setSelectedModelId(created.model.model_id);
         setSelectedVersionId(created.model.latest_version_id ?? null);
         if (payload.name !== undefined) setLoadedModelName(name);
+        if (payload.material !== undefined) setActiveMaterial(material);
         setMessage(modelCreatedLabel);
         await refreshVersions(created.model.model_id);
         if (!isCurrent()) return { ok: true, action, modelId: created.model.model_id, contextChanged: true };
         return { ok: true, action, modelId: created.model.model_id };
       }
 
-      await projectLibraryBackendService.updateModel(selectedModelId, modelPayload);
+      // Checkpoint creation already commits the model metadata, payload and version atomically.
       const version = await projectLibraryBackendService.createModelVersion(selectedModelId, modelPayload);
       await refreshProjects(false, undefined, { preserveSelection: true });
       if (!isCurrent()) return { ok: true, action, versionId: version.version.version_id, contextChanged: true };
@@ -219,6 +228,7 @@ export async function handleWorkbenchScriptProjectModelAction({
         versionId: version.version.version_id });
       setSelectedVersionId(version.version.version_id);
       if (payload.name !== undefined) setLoadedModelName(name);
+      if (payload.material !== undefined) setActiveMaterial(material);
       setMessage(modelSavedLabel);
       await refreshVersions(selectedModelId);
       if (!isCurrent()) return { ok: true, action, versionId: version.version.version_id, contextChanged: true };

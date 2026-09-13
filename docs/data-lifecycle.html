@@ -281,7 +281,8 @@ cargo kyuubiki project migration-verify studies/upgraded.kyuubiki \
           <li>A genuinely empty database is initialized in one transaction. The
             <code>kyuubiki_data_migrations</code> ledger records data version, immutable
             migration ID/checksum, minimum reader version and application time. Data version
-            <code>1</code> is independent of the product's release number.</li>
+            <code>2</code> is independent of the product's release number. The original
+            <code>runtime-baseline-0001</code> recipe and checksum remain unchanged.</li>
           <li>A known current ledger is checked, never rewritten merely on restart. Missing
             managed tables, incompatible column types/nullability/primary keys/foreign-key
             contracts, unknown managed tables or columns, malformed ledgers and future
@@ -300,6 +301,18 @@ cargo kyuubiki project migration-verify studies/upgraded.kyuubiki \
             <code>execution_timeout_ms</code> and <code>execution_started_at</code>. Only
             missing known legacy tables are materialized; versioned databases are not
             silently repaired. Unknown extensions in managed tables require conversion.</li>
+          <li>Revision 2, <code>runtime-checkpoint-requests-0002</code>, adds
+            <code>kyuubiki_checkpoint_requests</code> for idempotent model/checkpoint creation.
+            Receipts contain request digests, resource IDs and small response metadata, not another
+            geometry payload. They survive model/version deletion and are removed with the project.
+            Receipt and research-data writes share one transaction.</li>
+          <li>A valid revision-1 ledger reports <code>upgrade_required</code> and startup refuses
+            writes until an explicit candidate upgrade. It is not silently upgraded on restart.
+            Use the existing digest-approved copy-upgrade and verification procedure below, stop
+            every writer, then explicitly switch the service database. A clean empty development
+            database initializes both revisions atomically. Trusted revision-1 snapshot receipts
+            remain independently verifiable; their old reader target is checked against the known
+            immutable baseline, not rewritten to appear current.</li>
           <li>SQLite uses an immediate transaction; PostgreSQL uses a transaction-scoped
             advisory lock. DDL and ledger writes commit together or roll back together.
             The lock coordinates cooperating migrators, not arbitrary old application
@@ -393,8 +406,10 @@ mix kyuubiki.data restore path/to/snapshot.sqlite3 \
       <section class="docs-card docs-section" id="rollout">
         <h2>Next lifecycle work</h2>
         <ol class="docs-list">
-          <li><strong>Runtime database evolution:</strong> baseline ledger and startup gate
-            are implemented; qualify each future revision, rolling-version coexistence,
+          <li><strong>Runtime database evolution:</strong> baseline ledger, checkpoint receipt revision 2
+            and startup gate are implemented. SQLite additive upgrade, rollback and older-receipt
+            verification are tested; revision-2 PostgreSQL execution remains unqualified in this
+            local round. Qualify each future revision, rolling-version coexistence,
             operational writer fencing and cross-release fixtures before adding new upgrades.</li>
           <li><strong>Consistent backup and restore:</strong> database-aware SQLite snapshots
             are implemented here. Add Postgres backup/restore, artifact/digest inventories,

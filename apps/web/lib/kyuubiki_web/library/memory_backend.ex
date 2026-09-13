@@ -2,9 +2,12 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   @moduledoc false
 
   use Agent
+  alias KyuubikiWeb.Library.CheckpointRequest
 
   def start_link(_opts) do
-    Agent.start_link(fn -> %{projects: %{}, models: %{}, versions: %{}} end, name: __MODULE__)
+    Agent.start_link(fn -> %{projects: %{}, models: %{}, versions: %{}, requests: %{}} end,
+      name: __MODULE__
+    )
   end
 
   def list_projects do
@@ -84,6 +87,9 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
             |> update_in([:versions], fn versions ->
               Enum.reduce(version_ids, versions, &Map.delete(&2, &1))
             end)
+            |> update_in([:requests], fn requests ->
+              Map.reject(requests, fn {_key, receipt} -> receipt.project_id == project_id end)
+            end)
 
           {{:ok, project}, next_state}
       end
@@ -105,34 +111,37 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
 
   def create_model(attrs) do
     Agent.get_and_update(__MODULE__, fn state ->
-      if Map.has_key?(state.projects, attrs["project_id"]) do
-        timestamp = DateTime.utc_now(:second)
+      checkpoint(state, :model, attrs, fn state ->
+        if Map.has_key?(state.projects, attrs["project_id"]) do
+          timestamp = DateTime.utc_now(:second)
 
-        model =
-          attrs
-          |> Map.put("inserted_at", timestamp)
-          |> Map.put("updated_at", timestamp)
+          model =
+            attrs
+            |> Map.delete("request_id")
+            |> Map.put("inserted_at", timestamp)
+            |> Map.put("updated_at", timestamp)
 
-        version =
-          build_version(attrs["project_id"], model, %{
-            "version_id" => random_id(),
-            "name" => "Initial version"
-          })
+          version =
+            build_version(attrs["project_id"], model, %{
+              "version_id" => random_id(),
+              "name" => "Initial version"
+            })
 
-        updated_model =
-          model
-          |> Map.put("latest_version_id", version["version_id"])
-          |> Map.put("latest_version_number", version["version_number"])
+          updated_model =
+            model
+            |> Map.put("latest_version_id", version["version_id"])
+            |> Map.put("latest_version_number", version["version_number"])
 
-        next_state =
-          state
-          |> put_in([:models, updated_model["model_id"]], updated_model)
-          |> put_in([:versions, version["version_id"]], version)
+          next_state =
+            state
+            |> put_in([:models, updated_model["model_id"]], updated_model)
+            |> put_in([:versions, version["version_id"]], version)
 
-        {{:ok, updated_model}, next_state}
-      else
-        {{:error, {:project_not_found, attrs["project_id"]}}, state}
-      end
+          {{:ok, updated_model}, next_state}
+        else
+          {{:error, {:project_not_found, attrs["project_id"]}}, state}
+        end
+      end)
     end)
   end
 
@@ -189,35 +198,64 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
 
   def create_version(attrs) do
     Agent.get_and_update(__MODULE__, fn state ->
-      case Map.get(state.models, attrs["model_id"]) do
-        nil ->
-          {{:error, {:model_not_found, attrs["model_id"]}}, state}
+      checkpoint(state, :version, attrs, fn state ->
+        case Map.get(state.models, attrs["model_id"]) do
+          nil ->
+            {{:error, {:model_not_found, attrs["model_id"]}}, state}
 
-        model ->
-          version = build_version(model["project_id"], model, attrs)
+          model ->
+            version = build_version(model["project_id"], model, attrs)
 
-          updated_model =
-            model
-            |> Map.put("name", attrs["name"] || model["name"])
-            |> Map.put("kind", attrs["kind"] || model["kind"])
-            |> Map.put("material", attrs["material"] || model["material"])
-            |> Map.put(
-              "model_schema_version",
-              attrs["model_schema_version"] || model["model_schema_version"]
-            )
-            |> Map.put("payload", attrs["payload"])
-            |> Map.put("latest_version_id", version["version_id"])
-            |> Map.put("latest_version_number", version["version_number"])
-            |> Map.put("updated_at", DateTime.utc_now(:second))
+            updated_model =
+              model
+              |> Map.put("name", attrs["name"] || model["name"])
+              |> Map.put("kind", attrs["kind"] || model["kind"])
+              |> Map.put("material", attrs["material"] || model["material"])
+              |> Map.put(
+                "model_schema_version",
+                attrs["model_schema_version"] || model["model_schema_version"]
+              )
+              |> Map.put("payload", attrs["payload"])
+              |> Map.put("latest_version_id", version["version_id"])
+              |> Map.put("latest_version_number", version["version_number"])
+              |> Map.put("updated_at", DateTime.utc_now(:second))
 
-          next_state =
-            state
-            |> put_in([:models, updated_model["model_id"]], updated_model)
-            |> put_in([:versions, version["version_id"]], version)
+            next_state =
+              state
+              |> put_in([:models, updated_model["model_id"]], updated_model)
+              |> put_in([:versions, version["version_id"]], version)
 
-          {{:ok, version}, next_state}
-      end
+            {{:ok, version}, next_state}
+        end
+      end)
     end)
+  end
+
+  defp checkpoint(state, operation, attrs, write) do
+    case CheckpointRequest.identify(operation, attrs) do
+      nil ->
+        write.(state)
+
+      identity ->
+        case Map.get(state.requests, identity.request_key) do
+          nil ->
+            case write.(state) do
+              {{:ok, response}, next_state} ->
+                receipt = CheckpointRequest.receipt(identity, response, operation)
+                {{:ok, response}, put_in(next_state, [:requests, identity.request_key], receipt)}
+
+              other ->
+                other
+            end
+
+          receipt ->
+            exists? =
+              Map.has_key?(state.models, receipt.model_id) and
+                Map.has_key?(state.versions, receipt.version_id)
+
+            {CheckpointRequest.replay(receipt, identity, attrs, exists?), state}
+        end
+    end
   end
 
   def update_version(version_id, attrs) do
@@ -259,7 +297,10 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
   end
 
   def reset do
-    Agent.update(__MODULE__, fn _ -> %{projects: %{}, models: %{}, versions: %{}} end)
+    Agent.update(__MODULE__, fn _ ->
+      %{projects: %{}, models: %{}, versions: %{}, requests: %{}}
+    end)
+
     :ok
   end
 

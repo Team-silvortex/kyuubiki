@@ -266,8 +266,46 @@ await ky.invoke("viewport/setUiState", {"immersiveViewport": False})</pre>
           <li>Direct <code>invoke</code> and <code>save_model</code> callers still receive the affected ID and completion flag. Check <code>contextChanged</code> before continuing a dependent action. <code>ensure_project</code> stops with an error if a newly created project could not become the active workspace, rather than silently continuing in another project.</li>
           <li>A bundle import that has begun creating records finishes in its new project, but does not replace a workspace selected while the import was pending. The imported project remains available in the refreshed library.</li>
           <li>Catalog refresh preserves newer selection. It does not load model geometry, so it never attaches an unbound working model to the first saved model; open that saved model explicitly instead. If refreshing fails, the last usable catalog remains visible with runtime recovery feedback; this does not claim the cached catalog is current.</li>
+          <li><code>save_model(name=..., material=...)</code> passes metadata in the checkpoint request, not in a preceding workspace edit. A rejected save leaves the working name/material unchanged; a successful current-context save publishes them and stores matching payload metadata. Saving an existing model uses one backend checkpoint operation for metadata, geometry and version creation, without a preliminary PATCH.</li>
+          <li>A failed version-list read retains known versions only for the same selected model, with a <code>model_versions</code> recovery issue. Use the recovery refresh control or <code>runtime/refreshAll</code> to retry the read; do not repeat a successful save just to refresh history. Navigation invalidates delayed responses and hides the previous model's rows.</li>
         </ul>
         <p class="docs-copy">These boundaries are exercised by isolated browser tests with delayed and failed API responses. The shipped Python prelude is also executed against an in-memory JavaScript bridge adapter, not just inspected as text. That frontend test requires Python 3 (CI uses 3.12); it does not add a native Python dependency to the application. These checks do not qualify Pyodide downloads or WebAssembly startup, packaged WebViews, real database transactions, or numerical solver accuracy.</p>
+        <p class="docs-copy">Separate installed-macOS and SQLite checkpoint evidence is recorded in the September 13 follow-up of the <a href="./acceptance-immersive-modeling.html">native acceptance report</a>; its scope is deliberately narrower than whole-product qualification.</p>
+      </section>
+
+      <section class="docs-card docs-section" id="checkpoint-retries">
+        <h2>Recovering an uncertain checkpoint write</h2>
+        <p>GUI Save/Save As and PWDT share the checkpoint retry service. During the current WebView
+          session, retrying unchanged content after a lost response reuses the request ID. Concurrent
+          identical submissions share one in-flight write. A valid success receipt completes that
+          attempt; a later intentional save then receives a new ID. A malformed success response
+          does not complete the attempt.</p>
+        <p>The retry key is scoped to the backend, authentication context, operation, parent and
+          request content. Only digests and request IDs are retained, not credentials or mesh copies.
+          The bounded cache holds up to 64 unresolved requests and refuses new ones rather than
+          silently forgetting uncertain writes. It requires WebCrypto in an HTTPS/localhost context.
+          There is no background write retry or persistent browser draft archive.</p>
+        <pre class="docs-code"># Keep this identifier with your own research-run receipt if the WebView may close.
+# Reuse it only with the same project, operation, name/material and model payload.
+saved = await ky.save_model(
+    name="Tetrahedron trial 01",
+    save_as=True,
+    request_id="research-run-001-checkpoint-01",
+)
+if saved.get("contextChanged"):
+    raise RuntimeError("Saved in the original project; inspect it before continuing")</pre>
+        <p>The browser helper uses <code>saveModel({requestId: ...})</code>; direct actions and the
+          model/version POST APIs accept <code>request_id</code>. IDs contain 16-128 ASCII letters,
+          digits, underscores or hyphens. The backend commits a small durable receipt with the model
+          or version. Reusing a key with different normalized content returns HTTP 409
+          <code>checkpoint_request_conflict</code>. Deleting the saved result leaves a tombstone
+          receipt until project deletion; an old retry returns <code>checkpoint_result_deleted</code>
+          instead of recreating it. Replay never rewinds a newer latest-version pointer.</p>
+        <p>This requires the matching checkpoint-capable backend and database data revision 2;
+          older services may ignore the optional field. The automatic frontend cache does not survive
+          closing or reloading the WebView. After losing that cache, reuse an explicitly retained
+          request ID with unchanged input, or inspect history before saving again. This is bounded
+          retry idempotency, not an exactly-once distributed workflow guarantee.</p>
       </section>
 
       <section class="docs-card docs-section">

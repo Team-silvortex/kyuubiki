@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeferredValue } from "react";
+import type { ModelVersionRecord } from "@/lib/api/project-types";
 import {
   buildWorkbenchAdminSelections,
 } from "@/components/workbench/workbench-admin-context";
@@ -99,7 +100,9 @@ export function useWorkbenchSessionComposition(props: WorkbenchSessionCompositio
     selectedAdminResultJobId,
   });
   const deferredProjectModels = useDeferredValue(selectedProjectModels);
-  const deferredModelVersions = useDeferredValue(props.modelVersions);
+  const deferredVersions = useDeferredValue(props.modelVersions as ModelVersionRecord[]);
+  // A deferred render must never offer a previous model's versions after navigation.
+  const deferredModelVersions = deferredVersions.filter((version) => version.model_id === props.selectedModelId);
   const deferredJobHistory = useDeferredValue(jobHistory);
   const deferredResultRecords = useDeferredValue(props.resultRecords);
 
@@ -121,6 +124,7 @@ export function useWorkbenchSessionComposition(props: WorkbenchSessionCompositio
     selectedModelId: props.selectedModelId,
     selectedProjectId: props.selectedProjectId,
     selectedVersionId: props.selectedVersionId,
+    versionHistoryLabel: props.t.versions,
     setHealth: props.setHealth,
     setModelVersions: props.setModelVersions,
     setProjects: props.setProjects,

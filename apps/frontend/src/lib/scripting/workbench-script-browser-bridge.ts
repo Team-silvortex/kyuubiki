@@ -124,6 +124,7 @@ export type WorkbenchPwdtBrowserBridge = {
   prepareHeatPlaneTriangleStudy: (params?: WorkbenchPwdtHeatThermoTriangleParams) => Promise<Partial<WorkbenchScriptSnapshot>>;
   prepareHeatPlaneQuadStudy: (params?: WorkbenchPwdtHeatThermoQuadParams) => Promise<Partial<WorkbenchScriptSnapshot>>;
   saveModel: (params?: {
+    requestId?: string;
     name?: string;
     material?: string | number;
     saveAs?: boolean;
@@ -395,13 +396,11 @@ export function createWorkbenchPwdtBrowserBridge({
       return snapshotRecord(getSnapshot);
     },
     async saveModel(params = {}) {
-      if (params.name !== undefined || params.material !== undefined) {
-        await bridge.invoke("model/setWorkspaceMeta", {
-          ...(params.name !== undefined ? { loadedModelName: params.name } : {}),
-          ...(params.material !== undefined ? { activeMaterial: String(params.material) } : {}),
-        });
-      }
-      return bridge.invoke(params.saveAs ? "model/saveAs" : "model/save");
+      return bridge.invoke(params.saveAs ? "model/saveAs" : "model/save", {
+        ...(params.requestId !== undefined ? { request_id: params.requestId } : {}),
+        ...(params.name !== undefined ? { name: params.name } : {}),
+        ...(params.material !== undefined ? { material: String(params.material) } : {}),
+      });
     },
     async runCurrentStudy(options) {
       const result = await bridge.invoke("job/run");

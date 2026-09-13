@@ -295,6 +295,10 @@ test("fullscreen save and save-as persist the live model, recover from errors an
     await saveField(page, "save").click();
     await waitForSave(page, true);
     assert.equal(library.versions.length, 1, "a failed version write cannot be presented as a saved version");
+    assert.equal(library.models[0].name, "Fullscreen research", "failed checkpoints must not rename stored models");
+    assert.deepEqual(library.models[0].payload.nodes, model().nodes, "failed checkpoints must not overwrite stored geometry");
+    assert.equal(library.writes.filter((write) => write.method === "PATCH").length, 0,
+      "saving uses the backend atomic checkpoint, never a preceding metadata write");
     assert.equal(await saveField(page, "name").inputValue(), "Revised research");
     assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().loadedModelName), "Fullscreen research");
     library.failVersions = false;
@@ -313,6 +317,7 @@ test("fullscreen save and save-as persist the live model, recover from errors an
     assert.equal(library.models.length, 1);
     assert.equal(library.versions.length, 2);
     assert.equal(library.versions[1].model_id, modelId);
+    assert.equal(library.models[0].name, "Revised research");
     assert.ok(library.versions[1].payload.nodes.every((node) => node.y === 2));
     await saveField(page, "name").fill("Research variant");
     await saveField(page, "save-as").click();

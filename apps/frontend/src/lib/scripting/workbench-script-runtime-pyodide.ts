@@ -284,16 +284,16 @@ class _KyuubikiBridge:
             await self.invoke("model/setWorkspaceMeta", meta)
         return self.state()
 
-    async def save_model(self, name=None, material=None, save_as=False):
-        if name is not None or material is not None:
-            meta = {}
-            if name is not None:
-                meta["loadedModelName"] = name
-            if material is not None:
-                meta["activeMaterial"] = str(material)
-            await self.invoke("model/setWorkspaceMeta", meta)
+    async def save_model(self, name=None, material=None, save_as=False, request_id=None):
+        payload = {}
+        if name is not None:
+            payload["name"] = name
+        if material is not None:
+            payload["material"] = str(material)
+        if request_id is not None:
+            payload["request_id"] = request_id
         action = "model/saveAs" if save_as else "model/save"
-        return await self.invoke(action)
+        return await self.invoke(action, payload)
 
     async def _save_recipe_model(self, **params):
         return self._require_current_context(await self.save_model(**params))

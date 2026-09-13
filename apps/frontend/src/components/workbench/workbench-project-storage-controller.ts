@@ -294,7 +294,7 @@ export function createWorkbenchProjectStorageController({
     }
 
     const payload = serializeCurrentModel() as Record<string, unknown> & { model_schema_version?: string };
-    const isCurrent = projectContext.begin();
+    let isCurrent = projectContext.begin();
 
     startTransition(async () => {
       try {
@@ -310,6 +310,8 @@ export function createWorkbenchProjectStorageController({
           const created = await projectLibraryBackendService.createModel(selectedProjectId, modelPayload);
           await refreshProjects(false, undefined, { preserveSelection: true });
           if (!isCurrent()) return;
+          isCurrent = projectContext.update({ projectId: selectedProjectId, modelId: created.model.model_id,
+            versionId: created.model.latest_version_id ?? null });
           setSelectedModelId(created.model.model_id);
           setSelectedVersionId(created.model.latest_version_id ?? null);
           setMessage(t.modelCreated);
@@ -317,11 +319,13 @@ export function createWorkbenchProjectStorageController({
           return;
         }
 
-        await projectLibraryBackendService.updateModel(selectedModelId, modelPayload);
+        // The backend checkpoint updates model metadata and geometry in the same transaction.
         const version = await projectLibraryBackendService.createModelVersion(selectedModelId, modelPayload);
 
         await refreshProjects(false, undefined, { preserveSelection: true });
         if (!isCurrent()) return;
+        isCurrent = projectContext.update({ projectId: selectedProjectId, modelId: selectedModelId,
+          versionId: version.version.version_id });
         setSelectedVersionId(version.version.version_id);
         setMessage(t.modelSaved);
         await refreshVersions(selectedModelId);

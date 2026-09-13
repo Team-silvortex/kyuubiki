@@ -4,7 +4,14 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
   import Ecto.Query
 
   alias KyuubikiWeb.Storage
-  alias KyuubikiWeb.Storage.{ModelRecord, ModelVersionRecord, ProjectRecord}
+  alias KyuubikiWeb.Library.CheckpointRequest
+
+  alias KyuubikiWeb.Storage.{
+    CheckpointRequestRecord,
+    ModelRecord,
+    ModelVersionRecord,
+    ProjectRecord
+  }
 
   def list_projects do
     query =
@@ -84,7 +91,16 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
   end
 
   def create_model(attrs) do
-    transaction(fn -> create_model_with_initial_version(attrs) end)
+    transaction(fn ->
+      # The parent lock serializes request lookup, model creation and its receipt.
+      query = where(ProjectRecord, [project], project.project_id == ^attrs["project_id"])
+      query = if Storage.postgres?(), do: lock(query, "FOR UPDATE"), else: query
+
+      case apply(repo(), :one, [query]) do
+        nil -> {:error, {:project_not_found, attrs["project_id"]}}
+        _ -> checkpoint(:model, attrs, fn -> create_model_with_initial_version(attrs) end)
+      end
+    end)
   end
 
   defp create_model_with_initial_version(attrs) do
@@ -153,9 +169,35 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
     transaction(fn ->
       case lock_model(attrs["model_id"]) do
         nil -> {:error, {:model_not_found, attrs["model_id"]}}
-        model -> insert_version(model, attrs, false)
+        model -> checkpoint(:version, attrs, fn -> insert_version(model, attrs, false) end)
       end
     end)
+  end
+
+  defp checkpoint(operation, attrs, write) do
+    case CheckpointRequest.identify(operation, attrs) do
+      nil ->
+        write.()
+
+      identity ->
+        case repo_get(CheckpointRequestRecord, identity.request_key) do
+          nil ->
+            with {:ok, response} <- write.() do
+              %CheckpointRequestRecord{}
+              |> Ecto.Changeset.change(CheckpointRequest.receipt(identity, response, operation))
+              |> repo_insert!()
+
+              {:ok, response}
+            end
+
+          receipt ->
+            exists? =
+              repo_get(ModelRecord, receipt.model_id) != nil and
+                repo_get(ModelVersionRecord, receipt.version_id) != nil
+
+            CheckpointRequest.replay(receipt, identity, attrs, exists?)
+        end
+    end
   end
 
   defp insert_version(model, attrs, initial?) do
@@ -271,6 +313,7 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
   end
 
   def reset do
+    repo_delete_all(CheckpointRequestRecord)
     repo_delete_all(ModelVersionRecord)
     repo_delete_all(ModelRecord)
     repo_delete_all(ProjectRecord)

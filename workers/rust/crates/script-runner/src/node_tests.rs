@@ -117,6 +117,7 @@ pub(crate) fn run_node_command(
                 "tests/integration/workbench-ui-functional-closure.test.mjs",
                 "tests/integration/workbench-ui-functional-recovery.test.mjs",
                 "tests/integration/workbench-ui-project-boundaries.test.mjs",
+                "tests/integration/workbench-ui-checkpoint-recovery.test.mjs",
                 "tests/integration/workbench-ui-pwdt-completion.test.mjs",
                 "tests/integration/workbench-ui-pwdt-runtime.test.mjs",
                 "tests/integration/workbench-ui-pwdt-projection.test.mjs",

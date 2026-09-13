@@ -13,6 +13,7 @@ type ProjectRequestJson = <T>(url: string, init?: RequestInit, timeoutMs?: numbe
 export type ProjectCreateInput = { name: string; description?: string };
 export type ProjectUpdateInput = { name?: string; description?: string };
 export type ModelCreateInput = {
+  request_id?: string;
   name: string;
   kind: string;
   material?: string;
@@ -26,7 +27,7 @@ export type ModelUpdateInput = Partial<{
   model_schema_version: string;
   payload: Record<string, unknown>;
 }>;
-export type ModelVersionCreateInput = ModelUpdateInput & { payload: Record<string, unknown> };
+export type ModelVersionCreateInput = ModelUpdateInput & { request_id?: string; payload: Record<string, unknown> };
 export type ModelVersionUpdateInput = ModelUpdateInput;
 
 export function fetchProjects(): Promise<ProjectListPayload> {

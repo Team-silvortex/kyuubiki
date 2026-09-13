@@ -33,7 +33,12 @@ defmodule KyuubikiWeb.Library.CheckpointTransactionTest do
     install_publication_failure()
 
     assert_publication_failure(fn ->
-      Library.create_version(model["model_id"], %{"payload" => %{"revision" => 3}})
+      Library.create_version(model["model_id"], %{
+        "name" => "Uncommitted rename",
+        "kind" => "truss_3d",
+        "material" => "Aluminum",
+        "payload" => %{"revision" => 3}
+      })
     end)
 
     assert Library.get_model(model["model_id"]) == before_model
@@ -44,11 +49,22 @@ defmodule KyuubikiWeb.Library.CheckpointTransactionTest do
 
     remove_publication_failure()
     assert {:ok, _} = Library.delete_version(version["version_id"])
-    {:ok, next} = Library.create_version(model["model_id"], %{"payload" => %{"revision" => 4}})
+
+    {:ok, next} =
+      Library.create_version(model["model_id"], %{
+        "name" => "Committed rename",
+        "kind" => "truss_3d",
+        "material" => "Steel",
+        "payload" => %{"revision" => 4}
+      })
+
     assert next["version_number"] == 2
     {:ok, current} = Library.get_model(model["model_id"])
     assert current["latest_version_id"] == next["version_id"]
     assert current["payload"] == %{"revision" => 4}
+    assert current["name"] == next["name"]
+    assert current["kind"] == next["kind"]
+    assert current["material"] == next["material"]
   end
 
   defp install_publication_failure do

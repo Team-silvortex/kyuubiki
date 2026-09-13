@@ -162,6 +162,32 @@ function baseController(
   });
 }
 
+for (const fails of [false, true]) {
+  test(`GUI checkpoint uses one atomic write and preserves local selection on failure=${fails}`, async () => {
+    const calls: string[] = [], service = projectLibraryService(calls);
+    let completed: Promise<void> = Promise.resolve();
+    service.updateModel = async () => assert.fail("save must not update the model before checkpointing");
+    service.createModelVersion = async (modelId, input) => {
+      calls.push(`checkpoint:${modelId}:${input.name}`);
+      if (fails) throw new Error("checkpoint rejected");
+      return { version: { ...input, version_id: "version-new", model_id: modelId, project_id: "project-a",
+        name: input.name!, kind: input.kind!, model_schema_version: "kyuubiki.model/v1", version_number: 2,
+        inserted_at: "2026-09-13T00:00:00Z", updated_at: "2026-09-13T00:00:00Z" } };
+    };
+    const controller = baseController(calls, projectRecord, {
+      projectLibraryBackendService: service,
+      startTransition: (callback) => { completed = Promise.resolve(callback()); },
+      setSelectedVersionId: (id) => { calls.push(`selected:${id}`); },
+      setMessage: (message) => { calls.push(`message:${message}`); },
+      t: { modelSaved: "saved", initialFailed: "failed" },
+    });
+    controller.saveModelVersion(false);
+    await completed;
+    assert.deepEqual(calls, fails ? ["checkpoint:model-a:Model A", "message:checkpoint rejected"]
+      : ["checkpoint:model-a:Model A", "selected:version-new", "message:saved"]);
+  });
+}
+
 test("project bundle export reads job results through admin data backend service", async () => {
   const calls: string[] = [];
   const controller = baseController(calls);

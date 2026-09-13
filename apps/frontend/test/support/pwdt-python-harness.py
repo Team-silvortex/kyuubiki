@@ -7,8 +7,10 @@ import types
 
 request = json.load(sys.stdin)
 calls = []
+payloads = []
 logs = []
-snapshot = {"selectedProjectId": None, "jobStatus": None, "resultCount": 0}
+snapshot = {"selectedProjectId": None, "jobStatus": None, "resultCount": 0,
+            "loadedModelName": "Original", "activeMaterial": "210"}
 save_count = 0
 run_count = 0
 
@@ -17,7 +19,17 @@ async def invoke(action, encoded):
     global save_count, run_count
     payload = json.loads(encoded)
     calls.append(action)
+    payloads.append(payload)
     result = {"ok": True, "action": action}
+    if action == "model/setWorkspaceMeta":
+        snapshot.update(payload)
+    if action in {"model/save", "model/saveAs"}:
+        if request.get("failSave"):
+            raise RuntimeError("checkpoint rejected")
+        if "name" in payload:
+            snapshot["loadedModelName"] = payload["name"]
+        if "material" in payload:
+            snapshot["activeMaterial"] = payload["material"]
     if action == "project/create":
         snapshot["selectedProjectId"] = "created-project"
         result["projectId"] = "created-project"
@@ -68,11 +80,13 @@ try:
     ky = namespace["ky"]
     ky.log("bridge", "ready")
     asyncio.run(ky.sleep())
-    if request.get("recipe"):
+    if request.get("save"):
+        result = asyncio.run(ky.save_model(name="Saved", material=70, request_id=request.get("requestId")))
+    elif request.get("recipe"):
         result = asyncio.run(ky.run_recipe(request["recipe"], {"timeoutMs": 50}))
     else:
         result = {"initialized": True, "actions": len(ky.actions())}
     outcome = {"result": result}
 except Exception as error:
     outcome = {"error": str(error), "errorType": type(error).__name__}
-print(json.dumps({**outcome, "calls": calls, "snapshot": snapshot, "logs": logs}))
+print(json.dumps({**outcome, "calls": calls, "payloads": payloads, "snapshot": snapshot, "logs": logs}))

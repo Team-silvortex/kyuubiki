@@ -119,10 +119,12 @@ defmodule KyuubikiWeb.Library do
     with {:ok, project_id} <- fetch_required_string(attrs, ["project_id", :project_id]),
          {:ok, name} <- fetch_required_string(attrs, ["name", :name]),
          {:ok, kind} <- fetch_required_string(attrs, ["kind", :kind]),
-         {:ok, payload} <- fetch_required_map(attrs, ["payload", :payload]) do
+         {:ok, payload} <- fetch_required_map(attrs, ["payload", :payload]),
+         {:ok, request_id} <- KyuubikiWeb.Library.CheckpointRequest.normalize(attrs) do
       {:ok,
        %{
          "model_id" => random_id(),
+         "request_id" => request_id,
          "project_id" => project_id,
          "name" => name,
          "kind" => kind,
@@ -150,10 +152,12 @@ defmodule KyuubikiWeb.Library do
 
   defp normalize_version_attrs(attrs) do
     with {:ok, model_id} <- fetch_required_string(attrs, ["model_id", :model_id]),
-         {:ok, payload} <- fetch_required_map(attrs, ["payload", :payload]) do
+         {:ok, payload} <- fetch_required_map(attrs, ["payload", :payload]),
+         {:ok, request_id} <- KyuubikiWeb.Library.CheckpointRequest.normalize(attrs) do
       {:ok,
        %{
          "version_id" => random_id(),
+         "request_id" => request_id,
          "model_id" => model_id,
          "name" => fetch_optional_string(attrs, ["name", :name]),
          "kind" => fetch_optional_string(attrs, ["kind", :kind]),

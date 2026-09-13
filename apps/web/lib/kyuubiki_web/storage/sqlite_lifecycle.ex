@@ -46,7 +46,13 @@ defmodule KyuubikiWeb.Storage.SqliteLifecycle do
       do: raise("database receipt byte count differs")
 
     plan = checked_plan!(path)
-    if plan != receipt["database"], do: raise("database plan does not match the trusted receipt")
+    # An older trusted snapshot receipt remains verifiable after adding a new reader revision.
+    receipt_plan =
+      DatabaseMigrations.plan_for_target(plan, receipt["database"]["target_data_version"])
+
+    if receipt_plan != receipt["database"],
+      do: raise("database plan does not match the trusted receipt")
+
     Files.approve!(path, receipt["output_sha256"])
 
     %{
@@ -87,7 +93,7 @@ defmodule KyuubikiWeb.Storage.SqliteLifecycle do
     else
       unless is_binary(receipt["source_sha256"]) and
                Regex.match?(~r/\A[0-9a-f]{64}\z/, receipt["source_sha256"]) and
-               receipt["source_data_version"] in [0, 1] and
+               receipt["source_data_version"] in 0..DatabaseMigrations.version() and
                receipt["rollback"] == "reopen_retained_snapshot_with_compatible_reader",
              do: raise("invalid database copy receipt")
     end

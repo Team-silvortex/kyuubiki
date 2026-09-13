@@ -55,6 +55,25 @@ After saving the tall variant and restarting the managed runtime, reopen it and
 run `tests/manual/pwdt-immersive-recovery.py`. These use real services and create a
 small isolated project; they are not standalone Python/headless-SDK tests.
 
+`tests/integration/workbench-ui-checkpoint-recovery.test.mjs` covers checkpoint
+publication versus history-read failures, read-only recovery without duplicate
+writes, model-scoped history, and delayed responses after navigation. The installed
+backend's checkpoint endpoint already commits model metadata, geometry, latest
+pointer and version together; neither GUI nor PWDT may precede it with a model
+PATCH. SQLite rollback injection is covered independently in
+`apps/web/test/kyuubiki_web/library/checkpoint_transaction_test.exs`.
+
+The same browser suite aborts responses after committed Save and Save As operations,
+then exercises GUI buttons and PWDT retries without duplicate versions. Unit checks
+in `workbench-checkpoint-retry` cover request-key retention, concurrent submissions,
+authority changes, explicit keys and bounded-cache refusal. The project-library
+service also rejects malformed success envelopes without discarding the retry key.
+Backend request/conflict/deletion and SQL receipt-transaction tests live in
+`apps/web/test/kyuubiki_web/library/checkpoint_request_test.exs` and
+`apps/web/test/kyuubiki_web/library/checkpoint_receipt_transaction_test.exs`.
+These require data revision 2 for SQL stores; use disposable test databases, never
+the installed application's state database.
+
 `workbench-modeling-performance` and `workbench-truss3d-webgl` unit filters cover
 immutable batch edits, linear selection/adjacency work, 200k-node bounds, scene
 colors, and GPU-resource lifecycle. Run the opt-in CPU benchmark from this directory:

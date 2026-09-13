@@ -42,6 +42,7 @@ type UseWorkbenchDataRefreshControllerArgs = {
   selectedModelId: string | null;
   selectedProjectId: string | null;
   selectedVersionId: string | null;
+  versionHistoryLabel: string;
   setHealth: (value: HealthPayload | null) => void;
   setModelVersions: (value: ModelVersionRecord[]) => void;
   setProjects: (value: ProjectRecord[]) => void;
@@ -71,6 +72,7 @@ export function useWorkbenchDataRefreshController({
   selectedModelId,
   selectedProjectId,
   selectedVersionId,
+  versionHistoryLabel,
   setHealth,
   setModelVersions,
   setProjects,
@@ -91,6 +93,7 @@ export function useWorkbenchDataRefreshController({
   const projectRefreshSeqRef = useRef(0);
   const securityEventsRefreshSeqRef = useRef(0);
   const versionsRefreshSeqRef = useRef(0);
+  const versionListModelIdRef = useRef(selectedModelId);
   const [projectContext] = useState(() => createWorkbenchProjectContext({
     projectId: selectedProjectId, modelId: selectedModelId, versionId: selectedVersionId,
   }));
@@ -102,12 +105,12 @@ export function useWorkbenchDataRefreshController({
     return () => projectContext.dispose();
   }, [projectContext]);
 
-  function clearRecovery(channel: "health" | "projects" | "security_events") {
+  function clearRecovery(channel: "health" | "projects" | "model_versions" | "security_events") {
     setRuntimeRecovery((current) => clearWorkbenchRuntimeRecoveryIssue(current, channel));
   }
 
   function pushRecovery(
-    channel: "health" | "projects" | "security_events",
+    channel: "health" | "projects" | "model_versions" | "security_events",
     error: unknown,
     scopeLabel: string,
   ) {
@@ -192,6 +195,8 @@ export function useWorkbenchDataRefreshController({
       if (!nextModelId || nextModelId !== selection.modelId) {
         setSelectedVersionId(null);
       }
+      // Catalog/recovery refresh is read-only; it also repairs a stale checkpoint list.
+      if (nextModelId && nextModelId === selection.modelId) await refreshVersions(nextModelId);
     } catch (error) {
       if (refreshSeq !== projectRefreshSeqRef.current) return;
       // A refresh failure must not discard the last usable project catalog.
@@ -225,16 +230,28 @@ export function useWorkbenchDataRefreshController({
     }
   }
 
+  function syncVersionListScope(modelId: string | null) {
+    if (versionListModelIdRef.current === modelId) return;
+    versionListModelIdRef.current = modelId;
+    setModelVersions([]);
+    clearRecovery("model_versions");
+  }
+
   async function refreshVersions(modelId: string) {
+    if (!projectContext.hasModel(modelId)) return;
+    syncVersionListScope(modelId);
     const refreshSeq = ++versionsRefreshSeqRef.current;
+    const isCurrent = projectContext.capture();
 
     try {
       const payload = await projectLibraryBackendService.fetchModelVersions(modelId);
-      if (refreshSeq !== versionsRefreshSeqRef.current || projectContext.current().modelId !== modelId) return;
+      if (refreshSeq !== versionsRefreshSeqRef.current || !isCurrent()) return;
       setModelVersions(payload.versions);
-    } catch {
-      if (refreshSeq !== versionsRefreshSeqRef.current || projectContext.current().modelId !== modelId) return;
-      setModelVersions([]);
+      clearRecovery("model_versions");
+    } catch (error) {
+      if (refreshSeq !== versionsRefreshSeqRef.current || !isCurrent()) return;
+      // Preserve known history for this model; a failed read is not an empty history.
+      pushRecovery("model_versions", error, versionHistoryLabel);
     }
   }
 
@@ -262,9 +279,11 @@ export function useWorkbenchDataRefreshController({
   ]);
 
   useEffect(() => {
+    syncVersionListScope(selectedModelId);
     if (!selectedModelId) {
       versionsRefreshSeqRef.current += 1;
       setModelVersions([]);
+      clearRecovery("model_versions");
       setSelectedVersionId(null);
       return;
     }

@@ -32,6 +32,8 @@ function modelEnvelope(modelId: string): ModelEnvelope {
       inserted_at: "2026-06-29T00:00:00.000Z",
       kind: "truss_2d",
       model_id: modelId,
+      latest_version_id: "initial-version",
+      latest_version_number: 1,
       model_schema_version: "kyuubiki.model/v1",
       name: "model",
       payload: {},
@@ -203,3 +205,27 @@ test("project library backend forwards full model and version CRUD through trans
     "delete-version:version-a",
   ]);
 });
+
+for (const kind of ["model", "version"] as const) {
+  test(`an invalid successful HTTP envelope retains the uncertain ${kind} request for recovery`, async () => {
+    const keys: string[] = [];
+    let malformed = true;
+    const service = createProjectLibraryBackendService(projectTransport({
+      createModel: async (_id, input) => {
+        keys.push(input.request_id!);
+        return malformed ? {} as ModelEnvelope : modelEnvelope("created");
+      },
+      createModelVersion: async (_id, input) => {
+        keys.push(input.request_id!);
+        return malformed ? {} as ModelVersionEnvelope : versionEnvelope("created");
+      },
+    }));
+    const save = () => kind === "model"
+      ? service.createModel("project-a", { name: "Model", kind: "truss_2d", payload: {} })
+      : service.createModelVersion("model-a", { payload: {} });
+    await assert.rejects(save(), /checkpoint:invalid_response/);
+    malformed = false;
+    await save();
+    assert.equal(keys[0], keys[1]);
+  });
+}

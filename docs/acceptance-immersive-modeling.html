@@ -9,7 +9,7 @@
   <body>
     <main class="docs-shell">
       <section class="docs-hero">
-        <div class="docs-kicker">Bounded native acceptance / 2026-09-12</div>
+        <div class="docs-kicker">Bounded native acceptance / 2026-09-12 and 2026-09-13</div>
         <h1>Immersive 3D modeling: installed Workbench acceptance</h1>
         <p class="docs-copy">Accepted for the macOS scenario below after fixing issues found in the
           installed WKWebView. This is not a whole-product, cross-platform, large-mesh, or industrial
@@ -26,7 +26,7 @@
       </section>
       <section class="docs-stack">
         <article class="docs-card">
-          <h2>Environment and scope</h2>
+          <h2>September 12: environment and scope</h2>
           <p>The installed application used the installer-managed static frontend, a real local
             Orchestra service, two Rust agents, and the existing durable project store. There was
             no Next development server or mocked API in the native acceptance path. Node was used
@@ -119,8 +119,127 @@
           <p>Not qualified here: Windows/Linux native WebViews, mobile native shells, large-mesh
             interactive frame rate, solver families beyond this linear 3D truss, or arbitrary
             multi-client storage failure recovery. Window-local immersive mode does not claim to
-            enter OS fullscreen. Save still consists of existing separate metadata/version writes,
-            not a distributed transaction. A failed or uncertain write must be inspected before retry.</p>
+            enter OS fullscreen. The separate metadata/version write issue observed in this round
+            was corrected in the September 13 follow-up below. An uncertain write must still be
+            inspected before retry; a database transaction does not provide client retry idempotency.</p>
+        </article>
+        <article class="docs-card" id="checkpoint-recovery">
+          <h2>September 13: checkpoint consistency and recovery</h2>
+          <p>This follow-up tested the complete working-model to saved-version to reloaded-model
+            chain. Four targeted checkpoint unit cases first reproduced the pre-fix failure. The
+            backend already provided transactional checkpoint creation; the frontend was performing
+            an unnecessary metadata update before calling it.</p>
+          <ul class="docs-list">
+            <li><strong>One checkpoint write:</strong> GUI and PWDT now create an existing model's
+              version without a preceding metadata PATCH. Model metadata, payload, latest-version
+              pointer and new version use the backend's existing atomic checkpoint operation.</li>
+            <li><strong>Save helpers preserve rejected drafts:</strong> Python <code>ky.save_model</code>
+              and the browser helper send name/material in the save action instead of first changing
+              workspace metadata. Invalid or rejected saves cannot silently rename the workspace or
+              replace its material. Successful saves serialize matching name/material into the payload.</li>
+            <li><strong>Read failure is not empty history:</strong> a failed version-list request
+              retains known rows for the current model and publishes a <code>model_versions</code>
+              recovery issue. Refresh retries the read, not the committed save. Switching models
+              clears the old scope; delayed replies and deferred rendering cannot expose another
+              model's version rows or overwrite its feedback.</li>
+          </ul>
+          <p>The existing 3.2.0 native shell was reused again. The final production runtime was built,
+            sealed, installed with Installer, and started with the existing database intact. The
+            built and installed frontend entrypoint matched SHA-256
+            <code>d3f917ad342fc88e19a27853fe19991b1753cbcacc261802f3ca77a5e0ac33b5</code>.
+            The temporary previous-runtime copy was removed after acceptance; no additional backup
+            database or older application was installed.</p>
+        </article>
+        <article class="docs-card">
+          <h2>Checkpoint evidence by test layer</h2>
+          <ul class="docs-list">
+            <li><strong>Frontend unit:</strong> 940 passed, none failed or skipped. This includes
+              controller failure paths and executing the shipped Python prelude against a test
+              bridge. That prelude test is not a Pyodide runtime test.</li>
+            <li><strong>Browser integration:</strong> 63 passed, none failed or skipped, across
+              checkpoint recovery, immersive modeling and project-boundary suites. These use
+              mocked HTTP responses for refused writes, failed reads and delayed navigation races.
+              A concurrent run encountered a fixture teardown timeout; the complete final rerun used
+              the existing serial runner and passed. The timed-out run is not counted as a pass.</li>
+            <li><strong>Real storage:</strong> three tests passed against a disposable SQLite database,
+              including an injected SQL failure that rolls back metadata, payload and the latest
+              version pointer, plus API validation/re-read checks. One API test also passed against
+              the memory backend. PostgreSQL was not rerun in this round.</li>
+            <li><strong>Installed native:</strong> actual PWDT Python 3.12.7 created a separate
+              h=1.25 m checkpoint model, batch-translated the apex to h=1.50 m, saved v2, rejected
+              a blank-name save without changing metadata or the selected version, refreshed, and
+              completed a real Rust solve. The original tall-variant model remained unchanged.</li>
+            <li><strong>Reload:</strong> native Library loaded v1 and visibly restored h=1.25 m, then
+              loaded v2 and restored h=1.50 m. PWDT submitted the reloaded version successfully and
+              emitted <code>NATIVE_CHECKPOINT_RELOAD_PASS</code>. Stored version count remained two.</li>
+          </ul>
+          <p>Final reloaded apex displacement: ux=uy=-1.0714285714285716e-6 m,
+            uz=-7.142857142857143e-7 m. The vertical member carried -1000.0000000000001 N.
+            The analytical oracle above passed at 1e-12 m displacement and 1e-8 N force tolerance.</p>
+          <p>Project <code>3d6c33402e4e15ff</code>; new model <code>93c1ff86614b245b</code>;
+            v1 <code>f96db9a5beff9c4a</code>; v2 <code>5ed648a506e453a2</code>.
+            Initial job <code>1e934a1a1786c168</code>, reloaded job <code>4af1d6356be6c42c</code>,
+            final repeat <code>9e5c24beab5513dd</code>. Completed jobs ran on the two local Rust agents.</p>
+          <p>Repeatable native script:
+            <a href="../tests/manual/pwdt-checkpoint-acceptance.py">PWDT checkpoint acceptance</a>.
+            Browser failure/recovery suite:
+            <a href="../tests/integration/workbench-ui-checkpoint-recovery.test.mjs">checkpoint recovery integration</a>.
+            The browser suite is registered in the serial UI workflow runner and the desktop
+            validation evidence map. Type checking, production build and tensor validation passed;
+            this evidence does not promote the global release gate to passed.</p>
+          <p>Limits: native fault injection was not performed against the installed database; those
+            failures were exercised only in isolated browser and SQLite tests. Cross-platform native
+            shells, large meshes and multi-client reconciliation remain outside this acceptance.
+            Lost-response retries were not supported by these installed resources. The source-level
+            retry protocol developed afterward is qualified separately below.</p>
+        </article>
+        <article class="docs-card" id="checkpoint-idempotency">
+          <h2>September 13: durable checkpoint retry protocol</h2>
+          <p>This is source-build, browser-mock and isolated-storage qualification, not a new native
+            installation. The existing installed database and background services were left alone.
+            The earlier native numerical evidence above must not be read as native acceptance of
+            the new database revision.</p>
+          <ul class="docs-list">
+            <li>Model and version POSTs accept an optional <code>request_id</code>. A successful
+              write stores a durable, payload-free receipt in the same transaction. Identical
+              retries return the original IDs and metadata; they do not move a newer latest-version
+              pointer backward. Changed content returns HTTP 409. Deleting the target leaves a
+              project-owned receipt so a stale retry cannot recreate it.</li>
+            <li>GUI and PWDT share an in-session retry manager. Uncertain failures and malformed
+              successful responses retain the key; duplicate concurrent submissions share one
+              request. A confirmed success ends the attempt, allowing later intentional saves.
+              Backend/authentication changes, changed payloads and different parents are isolated.</li>
+            <li>Data revision 2 adds only receipt storage. Revision 1 is a known upgrade source,
+              not an invitation for startup to mutate the active database. Explicit copy-upgrade
+              preserves the baseline and source. Older trusted snapshot receipts remain verifiable.</li>
+          </ul>
+          <p>Final workflow unit regression: <strong>953 passed</strong>. Browser integration:
+            <strong>67 passed</strong> across checkpoint recovery, immersive modeling and project
+            boundaries; the four lost-response cases exercise both GUI buttons and PWDT Save/Save As.
+            The browser deliberately commits its mocked record before aborting the HTTP response.</p>
+          <p>SQLite/API/storage regression: <strong>60 tests, 55 passed and 5 skipped</strong>, no
+            failures. The skipped cases require PostgreSQL; they are not evidence of PostgreSQL
+            revision-2 execution. Memory-backend API/request regression: <strong>9 passed</strong>.
+            SQL injection tests cover receipt insertion failure rolling back both the business write
+            and the receipt, followed by a clean retry. Migration tests cover revision-1 refusal,
+            additive copy upgrade, late DDL rollback and older-receipt verification.</p>
+          <p>Two separate BEAM invocations also exercised the public Library facade against one
+            disposable SQLite file. The first committed a model and version; the second restarted
+            the application and replayed both keys. Observed <code>restart_replay_pass=true</code>,
+            one model, two versions and an unchanged newer latest pointer. Model
+            <code>e1f91b3c4340d1bc</code>, initial version <code>dbaba0e176dfa77f</code>,
+            subsequent version <code>28adb1578d55704c</code>. This probe used minimal storage payloads,
+            not a physics-solver case or a power-loss test.</p>
+          <p>Limits: the automatic frontend cache does not survive a WebView reload/close and holds
+            at most 64 unresolved writes. It fails closed instead of silently evicting unknown
+            outcomes. Callers needing restart recovery can retain their own explicit request ID and
+            unchanged input. This requires a matching backend and data revision 2; older services
+            may ignore the optional key. No PostgreSQL revision-2 run, installed-app migration,
+            large-mesh retry benchmark or exactly-once distributed-workflow guarantee is claimed.</p>
+          <p>Usage and recovery boundaries are in the
+            <a href="./tutorial-pwdt-automation.html">PWDT tutorial</a>; activation and cleanup rules
+            are in <a href="./data-lifecycle.html">data lifecycle</a>. Test databases are disposable;
+            no user database or persistent backup set is created by this qualification.</p>
         </article>
       </section>
     </main>

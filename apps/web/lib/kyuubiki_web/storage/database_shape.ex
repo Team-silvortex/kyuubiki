@@ -1,11 +1,11 @@
 defmodule KyuubikiWeb.Storage.DatabaseShape do
   @moduledoc false
-  alias KyuubikiWeb.Storage.{MigrationQuery, RuntimeSchema}
+  alias KyuubikiWeb.Storage.{CheckpointSchema, MigrationQuery, RuntimeSchema}
 
   @legacy_columns ~w(model_version_id queue_timeout_ms execution_timeout_ms execution_started_at)
 
-  def contracts(backend) do
-    Map.new(RuntimeSchema.statements(backend), fn sql ->
+  def contracts(backend, version \\ 2) do
+    Map.new(statements(backend, version), fn sql ->
       [_, table] = Regex.run(~r/CREATE TABLE IF NOT EXISTS (\w+)/, sql)
       primary = primary_keys(sql)
 
@@ -82,9 +82,9 @@ defmodule KyuubikiWeb.Storage.DatabaseShape do
     end)
   end
 
-  def validate!(connection, backend, mode) do
+  def validate!(connection, backend, mode, version \\ 2) do
     tables = tables!(connection, backend)
-    contracts = contracts(backend)
+    contracts = contracts(backend, version)
 
     Enum.each(tables, fn table ->
       if (String.starts_with?(table, "kyuubiki_") or String.starts_with?(table, "central_")) and
@@ -137,7 +137,7 @@ defmodule KyuubikiWeb.Storage.DatabaseShape do
   end
 
   defp validate_foreign_keys!(connection, backend, table) do
-    sql = Enum.find(RuntimeSchema.statements(backend), &String.contains?(&1, "EXISTS #{table} ("))
+    sql = Enum.find(statements(backend, 2), &String.contains?(&1, "EXISTS #{table} ("))
 
     expected =
       Regex.scan(~r/^\s+(\w+) [^\n]*REFERENCES (\w+)\((\w+)\) ON DELETE (CASCADE|SET NULL)/m, sql)
@@ -196,5 +196,10 @@ defmodule KyuubikiWeb.Storage.DatabaseShape do
       [_, keys] -> keys |> String.split(",") |> Enum.map(&String.trim/1)
       nil -> Regex.scan(~r/(\w+) \w+ PRIMARY KEY/, sql) |> Enum.map(&Enum.at(&1, 1))
     end
+  end
+
+  defp statements(backend, version) do
+    RuntimeSchema.statements(backend) ++
+      if(version >= 2, do: CheckpointSchema.statements(backend), else: [])
   end
 end
