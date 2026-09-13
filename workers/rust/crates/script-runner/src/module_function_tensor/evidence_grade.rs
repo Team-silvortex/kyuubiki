@@ -130,10 +130,7 @@ pub(super) fn evaluate(input: &CellEvaluationInput<'_>) -> Value {
         achieved_rank = achieved_rank.max(rank(levels, "declared").unwrap_or(0));
         sources.push("contract_evidence".to_string());
     }
-    if !benchmark_tests.is_empty() || !security_tests.is_empty() {
-        achieved_rank = achieved_rank.max(rank(levels, "exercised").unwrap_or(0));
-        sources.push("runnable_lane".to_string());
-    }
+    let registered_test_command_count = benchmark_tests.len() + security_tests.len();
 
     let claims = matching_claims(tensor, module_id, paradigm)
         .into_iter()
@@ -157,6 +154,33 @@ pub(super) fn evaluate(input: &CellEvaluationInput<'_>) -> Value {
     sources.sort();
     sources.dedup();
 
+    let best_available_grade = level_id(levels, achieved_rank);
+    let dimension_grades = super::maturity::required_dimensions(tensor, module_id, paradigm)
+        .iter().map(|dimension| {
+            let proven = matching_claims(tensor, module_id, paradigm).into_iter()
+                .filter(|claim| string_field(claim, "status") == Some("proven")
+                    && string_array(claim, "dimensions").contains(dimension))
+                .collect::<Vec<_>>();
+            let declared = usize::from(status == "covered" || status == "partial"
+                || (dimension == "contract" && !contract_evidence.is_empty()));
+            let achieved = proven.iter().map(|claim| rank(levels,
+                string_field(claim, "grade").unwrap_or("unassessed")).unwrap_or(0))
+                .max().unwrap_or(0).max(declared);
+            json!({"dimension": dimension, "grade": level_id(levels, achieved), "rank": achieved,
+                "claims": proven.iter().filter_map(|claim| string_field(claim, "id")).collect::<Vec<_>>()})
+        }).collect::<Vec<_>>();
+    // One strong dimension is not proof of every required dimension.
+    achieved_rank = dimension_grades
+        .iter()
+        .filter_map(|grade| grade["rank"].as_u64())
+        .min()
+        .unwrap_or(0) as usize;
+    let qualification_requirements = super::qualifications::evaluate(tensor, module_id, paradigm);
+    let qualification_gaps = qualification_requirements
+        .iter()
+        .filter(|requirement| requirement["met"] != true)
+        .cloned()
+        .collect::<Vec<_>>();
     let target_grade = target_for(policy, module_id, paradigm);
     let target_rank = rank(levels, target_grade).unwrap_or(0);
     let gap_steps = if required {
@@ -168,7 +192,7 @@ pub(super) fn evaluate(input: &CellEvaluationInput<'_>) -> Value {
         "optional"
     } else if status != "covered" {
         "not_ready"
-    } else if gap_steps == 0 {
+    } else if gap_steps == 0 && qualification_gaps.is_empty() {
         "target_met"
     } else {
         "below_target"
@@ -189,6 +213,12 @@ pub(super) fn evaluate(input: &CellEvaluationInput<'_>) -> Value {
         "gap_steps": gap_steps,
         "evidence_score": level_score(levels, achieved_rank),
         "target_score": level_score(levels, target_rank),
+        "best_available_grade": best_available_grade,
+        "dimension_grades": dimension_grades,
+        "qualification_requirements": qualification_requirements,
+        "qualification_gaps": qualification_gaps,
+        "registered_test_command_count": registered_test_command_count,
+        "assessment_basis": "retained_claims_not_fresh_test_execution",
         "sources": sources,
         "claims": claims
     })
@@ -208,6 +238,8 @@ pub(super) fn summarize(tensor: &Value, cells: &Map<String, Value>) -> Value {
     let mut score_sum = 0_u64;
     let mut target_score_sum = 0_u64;
     let mut achieved_toward_target = 0_u64;
+    let mut scope_count = 0;
+    let mut scope_gap_count = 0;
 
     for (module_id, module_cells) in cells {
         for (paradigm, cell) in module_cells.as_object().into_iter().flatten() {
@@ -232,7 +264,10 @@ pub(super) fn summarize(tensor: &Value, cells: &Map<String, Value>) -> Value {
             target_score_sum += target_score;
             achieved_toward_target += score.min(target_score);
             let gap_steps = grade.get("gap_steps").and_then(Value::as_u64).unwrap_or(0);
-            if gap_steps == 0 {
+            let qualification_gaps = array_field(grade, "qualification_gaps");
+            scope_count += array_field(grade, "qualification_requirements").len();
+            scope_gap_count += qualification_gaps.len();
+            if string_field(grade, "state") == Some("target_met") {
                 continue;
             }
             let missing_dimensions = string_array(
@@ -242,6 +277,7 @@ pub(super) fn summarize(tensor: &Value, cells: &Map<String, Value>) -> Value {
             let status_penalty = u64::from(string_field(cell, "status") != Some("covered")) * 1000;
             let priority_score = status_penalty
                 + gap_steps * 100
+                + qualification_gaps.len() as u64 * 100
                 + target_score.saturating_sub(score)
                 + missing_dimensions.len() as u64 * 10
                 + priority_weight(policy, paradigm);
@@ -258,7 +294,11 @@ pub(super) fn summarize(tensor: &Value, cells: &Map<String, Value>) -> Value {
                 "target_score": target_score,
                 "priority_score": priority_score,
                 "missing_dimensions": missing_dimensions,
-                "recommended_action": recommendation(achieved),
+                "dimension_grades": grade.get("dimension_grades"),
+                "qualification_gaps": qualification_gaps,
+                "recommended_action": if !qualification_gaps.is_empty() { "close_scoped_qualification_requirements" }
+                    else if string_field(cell, "status") != Some("covered") { "complete_required_capability" }
+                    else { recommendation(achieved) },
                 "sources": grade.get("sources").cloned().unwrap_or_else(|| json!([]))
             }));
         }
@@ -309,6 +349,9 @@ pub(super) fn summarize(tensor: &Value, cells: &Map<String, Value>) -> Value {
         "target_score_total": target_score_sum,
         "remaining_target_score": target_score_sum.saturating_sub(achieved_toward_target),
         "proof_completion_percent": (proof_completion_percent * 10.0).round() / 10.0,
+        "percentage_scope": "configured_dimension_evidence_only_not_test_or_product_coverage",
+        "scope_requirement_count": scope_count,
+        "scope_requirement_gap_count": scope_gap_count,
         "achieved_summary": achieved_summary,
         "target_summary": target_summary,
         "gaps": all_gaps,
@@ -476,7 +519,7 @@ fn coordinate(value: &Value) -> String {
 fn recommendation(grade: &str) -> &'static str {
     match grade {
         "unassessed" => "declare_contract_and_test_scope",
-        "declared" => "add_runnable_smoke_evidence",
+        "declared" => "retain_required_dimension_evidence",
         "exercised" => "add_asserted_verification_evidence",
         "verified" => "add_repeatable_qualification_evidence",
         "qualified" => "add_packaged_or_multi_host_operational_evidence",
@@ -512,7 +555,9 @@ mod tests {
 
     fn tensor() -> Value {
         json!({
+            "maturity_policy": {"validation": ["execution", "contract"]},
             "evidence_grade_policy": {
+                "gate_mode": "advisory",
                 "levels": [
                     {"id": "unassessed", "score": 0, "description": "none"},
                     {"id": "declared", "score": 20, "description": "declared"},
@@ -531,7 +576,7 @@ mod tests {
     }
 
     #[test]
-    fn runnable_lane_only_reaches_exercised() {
+    fn registered_lane_is_a_plan_not_executed_evidence() {
         let tensor = tensor();
         let benchmark_tests = [json!({"id": "smoke"})];
         let contract_evidence = [json!({"id": "contract"})];
@@ -545,8 +590,8 @@ mod tests {
             security_tests: &[],
             contract_evidence: &contract_evidence,
         });
-        assert_eq!(grade["achieved_grade"], "exercised");
-        assert_eq!(grade["gap_steps"], 2);
+        assert_eq!(grade["achieved_grade"], "declared");
+        assert_eq!(grade["gap_steps"], 3);
     }
 
     #[test]
@@ -557,6 +602,7 @@ mod tests {
                 "id": "partial-depth",
                 "status": "partial",
                 "grade": "operational",
+                "dimensions": ["execution", "contract"],
                 "modules": ["engine"],
                 "paradigms": ["validation"]
             },
@@ -564,6 +610,7 @@ mod tests {
                 "id": "verified-depth",
                 "status": "proven",
                 "grade": "verified",
+                "dimensions": ["execution", "contract"],
                 "modules": ["engine"],
                 "paradigms": ["validation"]
             }

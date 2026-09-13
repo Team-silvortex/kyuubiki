@@ -51,7 +51,7 @@ pub(super) fn run_self_test() -> RunnerResult<()> {
         || report
             .pointer("/cells/engine/solver_execution/evidence_grade/achieved_grade")
             .and_then(Value::as_str)
-            != Some("exercised")
+            != Some("declared")
     {
         return Err("self-test report derivation failed".to_string());
     }
@@ -133,7 +133,7 @@ fn temp_root(prefix: &str) -> RunnerResult<PathBuf> {
     Ok(root)
 }
 
-fn fixture_topology() -> Value {
+pub(super) fn fixture_topology() -> Value {
     json!({
         "benchmark_lanes": { "runtime_solver": "r" },
         "security_lanes": { "data_contract": "d" },
@@ -150,7 +150,7 @@ fn fixture_topology() -> Value {
     })
 }
 
-fn fixture_matrix() -> Value {
+pub(super) fn fixture_matrix() -> Value {
     json!({
         "paradigms": { "solver_execution": "s" },
         "required_by_module": { "engine": ["solver_execution"] },
@@ -158,7 +158,7 @@ fn fixture_matrix() -> Value {
     })
 }
 
-fn fixture_tensor() -> Value {
+pub(super) fn fixture_tensor() -> Value {
     json!({
         "schema_version": SCHEMA_VERSION,
         "topology": TOPOLOGY_PATH,

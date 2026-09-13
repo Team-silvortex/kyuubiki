@@ -223,11 +223,13 @@ The tensor is the three-axis review map:
 - function paradigm
 - evidence depth
 
-Tensor v4 splits evidence depth into dimension completeness, calibrated proof
-strength, and release criticality. Its `daji 3.0.0` profile distinguishes
-runnable smoke coverage from verified, qualified, operational, and externally
-release-gated evidence without weakening the structural architecture gate
-during the current advisory phase.
+Tensor v5 splits evidence depth into required-dimension strength, explicit
+scenario qualification, and release criticality. Its `daji 3.2.x` hardening
+profile no longer promotes registered test commands into execution evidence,
+and takes the weakest required dimension rather than the highest claim.
+Named platform/backend/language/recovery obligations cannot inherit proof from
+unrelated scenarios. Structural success remains distinct from readiness during
+the advisory phase. See the [current recalibration](book-ch03-architecture-boundaries.html#tensor-calibration).
 
 The moxi 2.15 calibration has 13 modules and 11 paradigms. It assigns
 `workers/rust/crates/operator-sdk` and `workers/rust/templates` to the dedicated

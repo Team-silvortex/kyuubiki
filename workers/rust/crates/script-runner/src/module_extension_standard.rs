@@ -9,7 +9,7 @@ type RunnerResult<T> = Result<T, String>;
 const STANDARD_PATH: &str = "config/architecture/module-extension-standard.json";
 const SCHEMA_PATH: &str = "schemas/module-extension-standard.schema.json";
 const SCHEMA_VERSION: &str = "kyuubiki.module-extension-standard/v1";
-const VERSION_LINE: &str = "daji 3.0.x";
+const TOPOLOGY_PATH: &str = "config/architecture/module-topology.json";
 const REQUIRED_TYPES: &[&str] = &[
     "module",
     "function_paradigm",
@@ -52,11 +52,7 @@ fn validate_standard(root: &Path, standard: &Value) -> RunnerResult<()> {
         SCHEMA_VERSION,
         &format!("schema_version must be {SCHEMA_VERSION}"),
     )?;
-    require_string_eq(
-        standard.get("version_line"),
-        VERSION_LINE,
-        &format!("version_line must be {VERSION_LINE}"),
-    )?;
+    validate_version_line(standard, &read_json(root, TOPOLOGY_PATH)?)?;
     assert_repo_file(root, SCHEMA_PATH)?;
 
     let source_of_truth = standard
@@ -153,11 +149,24 @@ fn validate_standard(root: &Path, standard: &Value) -> RunnerResult<()> {
     Ok(())
 }
 
+fn validate_version_line(standard: &Value, topology: &Value) -> RunnerResult<()> {
+    let expected = topology
+        .get("version_line")
+        .and_then(Value::as_str)
+        .filter(|line| !line.trim().is_empty())
+        .ok_or("module topology must declare the current version_line")?;
+    require_string_eq(
+        standard.get("version_line"),
+        expected,
+        &format!("version_line must match module topology: {expected}"),
+    )
+}
+
 fn run_self_test(root: &Path) -> RunnerResult<()> {
     let fixture = serde_json::json!({
         "$schema": "../../schemas/module-extension-standard.schema.json",
         "schema_version": SCHEMA_VERSION,
-        "version_line": VERSION_LINE,
+        "version_line": read_json(root, TOPOLOGY_PATH)?["version_line"],
         "source_of_truth": {
             "topology": "config/architecture/module-topology.json",
             "matrix": "config/architecture/module-function-coverage-matrix.json",
@@ -166,7 +175,7 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
         },
         "evidence_rules": {
             "required_cell_without_evidence": "weak_evidence",
-            "claim_grade_rule": "Runnable lanes reach exercised; stronger grades require scoped proven claims."
+            "claim_grade_rule": "Registered commands are plans; exercised and stronger grades require scoped proven claims."
         },
         "extension_types": REQUIRED_TYPES.iter().map(|id| serde_json::json!({
             "id": id,
@@ -187,6 +196,25 @@ fn run_self_test(root: &Path) -> RunnerResult<()> {
 fn read_json(root: &Path, relative_path: &str) -> RunnerResult<Value> {
     let text = read_text(root, relative_path)?;
     serde_json::from_str(&text).map_err(|error| format!("{relative_path}: invalid json: {error}"))
+}
+
+#[cfg(test)]
+mod version_tests {
+    use super::validate_version_line;
+    use serde_json::json;
+
+    #[test]
+    fn extension_standard_follows_topology_instead_of_a_fixed_release() {
+        for line in ["moxi 2.19.x", "daji 3.2.x", "daji 3.20.x"] {
+            let current = json!({"version_line": line});
+            assert!(validate_version_line(&current, &current).is_ok());
+            assert!(
+                validate_version_line(&json!({"version_line": "daji 3.0.x"}), &current).is_err()
+            );
+        }
+        assert!(validate_version_line(&json!({}), &json!({"version_line": "daji 3.2.x"})).is_err());
+        assert!(validate_version_line(&json!({}), &json!({"version_line": " "})).is_err());
+    }
 }
 
 fn read_text(root: &Path, relative_path: &str) -> RunnerResult<String> {

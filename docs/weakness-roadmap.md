@@ -30,49 +30,99 @@ The module/function/evidence tensor is now the first navigation gate for this
 roadmap. Run `make check-module-function-coverage-tensor` before claiming a
 roadmap area is closed.
 
-Current Daji baseline:
+Recalibrated on September 13, 2026 using tensor v5 and the `daji 3.2.x`
+hardening profile (source checkpoint `daji 3.2.0`). This is a review of retained
+claims, not a fresh execution campaign. All 108 existing claims are preserved;
+their highest grade no longer qualifies every required dimension or scenario.
 
-- `gap_count`: `0`
-- `blocking_gap_count`: `0`
-- `maturity_gap_count`: `0`
-- `thin_evidence_count`: `0`
-- `evidence_grade_gap_count`: `0`
-- required cells meeting their grade target: `77 / 77` (`100.0%`)
-- evidence progress toward configured targets: `100.0%`
-- release-critical P0 cells meeting target: `55 / 55` (`100.0%`)
-- release-profile P1 cells meeting target: `22 / 22` (`100.0%`)
-- `daji 3.0.0` release state: `blocked` solely by the independently controlled
-  external usability release gate
+| Measure | Previous v4 calculation | Recalibrated v5 |
+| --- | ---: | ---: |
+| Required coordinates | 77 | 77 |
+| Coordinates meeting every configured target | 77 (100.0%) | 61 (79.2%) |
+| Structural gaps | 0 | 0 |
+| Dimension-presence gaps | 0 | 5 |
+| Below-target or scope-incomplete coordinates | 0 | 16 |
+| P0 coordinates at target | 55 / 55 | 44 / 55 |
+| P1 coordinates at target | 22 / 22 | 17 / 22 |
+| Dimension-score progress | 100.0% | 90.7% |
+| Explicit scenario requirements met | Not tracked | 6 / 20 |
 
-No configured coordinate remains below its current evidence target. This does
-not grant a daji release claim: the installed Linux recovery subtier is closed,
-while packaged macOS/Windows recovery and Windows upgrade tiers remain
-independently open; static or local evidence cannot close them. The moxi 2.15
-recalibration separated the
-Rust-only Worker/Operator SDK
-from both Installer and the three-language Headless SDK family, added ABI
-compatibility as an evidence dimension, and promoted security, persistence,
-validation, and benchmark coordinates that were previously optional.
+The 14 open scenarios overlap coordinates; do not add them to the 16 coordinate
+gaps. These percentages are not test/code coverage, supported-physics coverage,
+or reliability probabilities. The 20-scenario registry is the current reviewed
+hardening subset, not a complete inventory of every configuration. Release
+readiness remains `blocked`, now for coordinate-local gaps as well as the
+independent external usability gate. Structural checks remain advisory for
+evidence depth; this recalibration does not enable a release claim.
 
-The remaining release queue is now external rather than coordinate-local.
-Agent package execution is qualified on native macOS aarch64 and physical
-Linux x86_64, while Windows installed external-package operation spans SDK,
-Engine, Agent, and Installer. Workbench, Engine, and Headless
-persistence/provenance now meet their local `verified` targets, while Workbench
-and Headless security meet the local `qualified` target. Headless manifest
-generation now has a current-line 1000-repeat qualification run. Protocol now
-qualifies TaskIR preview and typed workflow graph round trips with 1000 repeats
-each. Orchestra retains three semantically stable rounds across 256, 512, and
-1024 pass-through graph sizes. Every P1 coordinate now meets its target.
-Operator SDK workflow dispatch now proves same-process recovery after rejecting
-an unknown extension, while the retained dynamic qualification binds tamper
-rejection and Installer lifecycle recovery into the verification coordinate.
-No required coordinate remains maturity-thin.
-The core workflow graph/dataset contract
-now has scoped, repeatable positive and rejection-boundary qualification.
-Ordinary lane execution no longer counts
-as asserted verification, and two native hosts do not imply an untested Windows
-ABI journey.
+The current release queue starts with `hub-shell/product_surface` and
+`installer-shell/product_surface`, then `workbench-shell/product_surface`.
+Their `declared` bottlenecks mean that execution/contract evidence is not
+explicitly proven at the required strength in the matching dimensions, not
+that the applications cannot run. Installed startup evidence remains visible
+under `best_available_grade` and its named scenario. First audit and bind the
+appropriate existing proof; do not blindly rewrite working functionality or
+promote claim metadata solely to restore a green score.
+
+| Workstream | Coordinates | Next acceptance boundary |
+| --- | --- | --- |
+| Product proof and platform closure | `hub-shell/product_surface`, `installer-shell/product_surface`, `workbench-shell/product_surface`, `desktop-shared-ui/product_surface` | Review exact execution/contract claims; retain real Windows installed journeys separately from macOS/Linux startup. |
+| Protocol and engine evidence | `runtime-protocol/sdk_operator`, `runtime-protocol/solver_execution`, `runtime-engine-solver/benchmark` | Bind or obtain security/contract proof per required dimension; existing numerical or scale evidence must not substitute. |
+| Headless independence | `sdk-headless/sdk_headless`, `workbench-shell/sdk_headless` | Retain source-detached Python and Elixir research journeys; audit Workbench/Headless boundary execution and contract evidence separately from Rust-only installed proof. |
+| Data lifecycle | `orchestra-control-plane/persistence_provenance`, `runtime-installer/persistence_provenance`, `runtime-installer/deployment_update`, `installer-shell/deployment_update` | Qualify PostgreSQL revision-2 replay, consistent database plus external-artifact restore, compatibility-gated activation and the visible Installer upgrade journey. |
+| GUI recovery | `workbench-shell/persistence_provenance`, `workbench-shell/validation` | Reconcile an uncertain save after WebView closure; qualify actual installed macOS/Windows service or response loss, not just a clean restart. |
+| Windows control and updates | `runtime-agent-cli/runtime_api`, `runtime-installer/deployment_update` | Retain the installed Agent/Orchestra round trip and complete desktop-set update/rollback. |
+
+The native macOS SQLite revision-2 migration and explicit-key PWDT checkpoint
+replay are retained `verified` achievements. They do not close PostgreSQL,
+whole-generation restore, GUI recovery without a caller-retained key, or
+installed fault injection. Each concrete next step is machine-readable in
+`config/architecture/module-function-coverage-evidence/current-qualification-scopes.json`.
+
+The generated JSON contains every coordinate's `dimension_grades`,
+`qualification_requirements` and `qualification_gaps`, with the full queue at
+`release_readiness.planning_queue`. The generated Markdown lists all scenarios
+and their acceptance conditions. Read the [book chapter](book-ch03-architecture-boundaries.html#tensor-calibration)
+for the scoring rules and evidence limitations.
+
+### First Product-Recovery Follow-Up
+
+The September 13 execution follow-up fixes a real Installer declarative-action
+race: duplicate Bootstrap and competing service actions could run concurrently.
+One in-flight owner now rejects overlap without queueing writes, preserves the
+last successful action through failure, and permits an explicit retry. Sidebar
+navigation remains usable; cleanup preserves prerequisite-disabled controls.
+Six focused lifecycle cases and the isolated Chromium/mock-IPC journey cover
+overlap, reentrant dispatch, synchronous/asynchronous failure and retry.
+
+The broader GUI campaign also corrects a stale Workbench checkpoint fixture:
+the existing-model save is one atomic version request, not PATCH followed by
+POST. The test still verifies one model, two immutable versions, updated names,
+changed geometry and exported current-version identity. Isolated HTTP preview
+shutdown now closes unfinished browser connections rather than waiting for a
+socket timeout. The native report retains required TAP pass lines even when
+they fall beyond the bounded log excerpt; a subtest title alone is not proof.
+Failed-test excerpts are retained separately. The UI contract limits concurrent
+test files to two, rather than starting one Next/WebView fixture per available
+CPU; this bounds local resource pressure without dropping test cases.
+
+Current retention is
+`releases/usability-evidence/3.2.0/desktop-ui-validation-recovery.json`; the Make
+and usability probes verify that report, while historical claims keep their
+original reports. `installer-declarative-mock-ipc-recovery` is deliberately
+`partial` product evidence. It does not promote the full product coordinate:
+startup/delegated remote actions, cross-window ownership, native post-commit
+response loss and installed platform journeys still need separate proof.
+The usability gate baseline and target now follow the current minor line;
+`release_claim_allowed` remains false and no open release subtier was removed.
+See the [book follow-up](book-ch03-architecture-boundaries.html#product-recovery-follow-up).
+
+### Retained Qualification History
+
+The following progress records describe their original runs and the earlier
+promotion policy. They preserve useful evidence, but are not fresh runs and do
+not override the v5 queue above. A prior coordinate-level promotion is no longer
+sufficient when a required dimension or explicit scenario is still open.
 
 The earlier Agent, Engine, and verification benchmark qualification remains
 valid. The native current-line route executes a
@@ -557,8 +607,9 @@ native Installer service, Protocol, and Headless SDK to required `runtime_api`
 coordinates. Desktop clients retain UI-to-native execution closure, the native
 Installer retains its serializable Rust API manifest and stable exports, and
 Protocol plus Headless now carry scoped current-line verification. Ordinary
-runnable lanes still stop at `exercised`; only exact-coordinate retained claims
-can promote a runtime API coordinate further.
+runnable lanes were previously capped at `exercised`; v5 treats registration
+as planning only and requires exact-coordinate retained claims for execution
+evidence as well.
 
 ## 1. Numerical Trust
 
@@ -1070,6 +1121,11 @@ This still does not close distributed recovery: remote host kill/rejoin needs
 retained fault-injection evidence on a managed physical deployment.
 
 ## Priority Order
+
+Use the dated [current tensor status](#current-tensor-status) and regenerated
+`release_readiness.planning_queue` for the immediate evidence backlog. The
+sequence below is the broader research hardening strategy, not a claim that
+the reopened v5 coordinates have been closed.
 
 Early Daji uses one bounded, real Headless research loop as the acceptance
 spine. A retained run must bind its objective, input and package identities,

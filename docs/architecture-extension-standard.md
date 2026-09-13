@@ -17,16 +17,28 @@ Every extension must have:
 - functional coverage in `config/architecture/module-function-coverage-matrix.json`
 - evidence depth in `config/architecture/module-function-coverage-tensor.json`
 - an evidence grade target and paradigm priority weight
+- explicit platform, backend, language and recovery qualification requirements
+  where the capability makes those claims
 - a runnable gate or contract evidence
 - documentation of what the extension does not own
 
 If a required cell is marked `covered` but has no runnable test command and no
 contract evidence, the tensor reports `weak_evidence`.
 
-A runnable lane proves only `exercised`. Grades above it require a scoped
-`proven` evidence claim whose `grade` states whether the retained proof is
-`verified`, `qualified`, or `operational`. New modules must review advisory
-grade gaps even when the structural command exits successfully.
+A registered lane is a plan, not proof that it ran. Grades from `exercised`
+upward require scoped `proven` claims. Tensor v5 takes the weakest required
+dimension and also requires each explicit qualification scope to pass.
+New modules must review advisory grade and scope gaps even when the structural
+command exits successfully.
+
+Each `qualification_requirements` entry declares `module_id`, `paradigm`,
+`dimension`, `scope`, `target`, `acceptance`, `basis` and named `claims`.
+Use an empty claim list for an open obligation. The dimension must be required
+by that exact coordinate; references to unknown or differently scoped claims
+are rejected. Review the actual retained report before binding it: schema and
+text-anchor checks do not verify platform semantics, freshness or test success.
+Rationale files are not proof, and a registered scenario list is not automatically
+a complete inventory of every supported platform or feature.
 
 ## Adding A Module
 
@@ -39,8 +51,9 @@ grade gaps even when the structural command exits successfully.
 7. Add required paradigms and cell statuses in the matrix.
 8. Add tensor lane mappings, target grades, and scoped contract evidence until
    required covered cells are not left as unexplained `thin` evidence.
-9. Run `make check-module-function-coverage-tensor`.
-10. Add prose ownership and non-ownership notes.
+9. Register scenario acceptance requirements and explicitly bind only reviewed proof.
+10. Run `make check-module-function-coverage-tensor`.
+11. Add prose ownership and non-ownership notes.
 
 Do not create a top-level module for an internal service face. Use a service
 surface when the code and ownership remain inside an existing module.
@@ -60,9 +73,9 @@ desktop applications, but it owns their common source assets and mirror gate.
 4. Declare the paradigm's evidence grade target and priority weight.
 5. Ensure every required covered cell has runnable evidence or contract
    evidence.
-6. Prefer a `strong` maturity coordinate whose grade meets its target before
-   using the paradigm in release claims. If either axis is below target,
-   document the next hardening gate.
+6. Require `strong` dimension presence, target grade, and satisfied scenario
+   requirements before using the paradigm in release claims. For each gap,
+   document the next executable acceptance step.
 
 ## Adding A Service Surface
 
@@ -84,8 +97,11 @@ This is the pattern used by `central-web-service`: it is part of
 Evidence lanes should be concrete. A lane that cannot point to a command is a
 planning note, not evidence.
 
-Lane presence raises a coordinate no higher than `exercised`. Add an explicit
-graded claim only after the stronger evidence is retained and machine-checkable.
+Lane presence does not raise a coordinate's grade. Add an explicit graded
+claim only after the execution evidence is retained and reviewed. A Rust
+installed journey does not qualify Python/Elixir packages; Linux/macOS success
+does not qualify Windows; a database snapshot does not qualify whole-generation
+recovery with external artifacts.
 
 ## Adding A Contract Family
 

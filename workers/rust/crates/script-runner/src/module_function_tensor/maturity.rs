@@ -57,25 +57,9 @@ pub(super) fn evaluate(input: &CellEvaluationInput<'_>) -> Value {
         security_tests,
         contract_evidence,
     } = *input;
-    let mut required_dimensions = string_array(
-        tensor.get("maturity_policy").unwrap_or(&Value::Null),
-        paradigm,
-    );
-    for requirement in matching_cell_requirements(tensor, module_id, paradigm) {
-        required_dimensions.extend(string_array(requirement, "dimensions"));
-    }
-    normalize(&mut required_dimensions);
+    let required_dimensions = required_dimensions(tensor, module_id, paradigm);
 
     let mut present_dimensions = Vec::new();
-    if !benchmark_tests.is_empty() || !security_tests.is_empty() {
-        present_dimensions.push("execution".to_string());
-    }
-    if !benchmark_tests.is_empty() {
-        present_dimensions.push("benchmark".to_string());
-    }
-    if !security_tests.is_empty() {
-        present_dimensions.push("security".to_string());
-    }
     if !contract_evidence.is_empty() {
         present_dimensions.push("contract".to_string());
     }
@@ -118,8 +102,21 @@ pub(super) fn evaluate(input: &CellEvaluationInput<'_>) -> Value {
         "required_dimensions": required_dimensions,
         "present_dimensions": present_dimensions,
         "missing_dimensions": missing_dimensions,
+        "registered_test_command_count": benchmark_tests.len() + security_tests.len(),
         "claims": claims
     })
+}
+
+pub(super) fn required_dimensions(tensor: &Value, module_id: &str, paradigm: &str) -> Vec<String> {
+    let mut dimensions = string_array(
+        tensor.get("maturity_policy").unwrap_or(&Value::Null),
+        paradigm,
+    );
+    for requirement in matching_cell_requirements(tensor, module_id, paradigm) {
+        dimensions.extend(string_array(requirement, "dimensions"));
+    }
+    normalize(&mut dimensions);
+    dimensions
 }
 
 fn validate_cell_requirements(
@@ -336,10 +333,10 @@ mod tests {
             security_tests: &[],
             contract_evidence: &contract_evidence,
         });
-        assert_eq!(maturity["level"], Value::String("medium".to_string()));
+        assert_eq!(maturity["level"], Value::String("thin".to_string()));
         assert_eq!(
             maturity["missing_dimensions"],
-            json!(["numerical_validation"])
+            json!(["execution", "numerical_validation"])
         );
         assert_eq!(maturity["claims"][0]["status"], "partial");
     }

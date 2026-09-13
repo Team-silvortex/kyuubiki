@@ -14,6 +14,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { INSTALLER_RUNTIME_PAYLOAD_STATUS } from "./desktop-shell-regression-fixtures.mjs";
+import { closeHttpPreview } from "./http-preview-lifecycle.shared.mjs";
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -472,7 +473,7 @@ async function serveDirectory(rootDir) {
   return {
     url: `http://127.0.0.1:${address.port}/`,
     async close() {
-      await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+      await closeHttpPreview(server);
     },
   };
 }

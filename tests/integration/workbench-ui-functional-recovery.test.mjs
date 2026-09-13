@@ -226,12 +226,15 @@ test("Workbench Pwdt saves a model then appends a version without duplicating th
     const writes = [];
     let model;
     function addVersion(body) {
+      const { request_id: _requestId, ...checkpoint } = body;
       const version = {
-        ...body, model_id: model.model_id, project_id: PROJECT_ID,
+        ...checkpoint, model_id: model.model_id, project_id: PROJECT_ID,
         version_id: `recovery-version-${versions.length + 1}`, version_number: versions.length + 1,
         inserted_at: initialProject.inserted_at, updated_at: initialProject.updated_at,
       };
       versions.unshift(version);
+      // Match the backend's atomic checkpoint, not the retired PATCH + POST sequence.
+      Object.assign(model, checkpoint);
       model.latest_version_id = version.version_id;
       model.latest_version_number = version.version_number;
       return version;
@@ -267,15 +270,22 @@ test("Workbench Pwdt saves a model then appends a version without duplicating th
     const created = await page.evaluate(() => window.__kyuubikiPwdt.saveModel({ name: "saved-v1", saveAs: true }));
     assert.equal(created.modelId, "recovery-model");
     assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().selectedModelId), created.modelId);
+    await invoke(page, "state/applyModelBatch", {
+      query: { kind: "all" }, operation: { kind: "translate", offset: { x: 1, y: 0 } },
+    });
     const saved = await page.evaluate(() => window.__kyuubikiPwdt.saveModel({ name: "saved-v2" }));
     assert.equal(saved.versionId, "recovery-version-2");
-    assert.deepEqual(writes, ["create-model", "update-model", "create-version"]);
+    assert.deepEqual(writes, ["create-model", "create-version"]);
     const { bundle, outcome } = await exportProject(page);
     assert.equal(outcome.partial, false);
     assert.equal(bundle.models.length, 1);
     assert.equal(bundle.models[0].name, "saved-v2");
+    assert.equal(bundle.models[0].payload.nodes.length, 7);
     assert.deepEqual(bundle.model_versions.map((entry) => entry.name), ["saved-v2", "saved-v1"]);
-    assert.equal(bundle.model_versions[0].payload.nodes.length, 7);
+    assert.deepEqual(bundle.model_versions.map((entry) => entry.payload.nodes.length), [7, 7]);
+    const [current, previous] = bundle.model_versions;
+    assert.deepEqual(current.payload.nodes.map((node) => node.x), previous.payload.nodes.map((node) => node.x + 1));
+    assert.deepEqual(bundle.models[0].payload, current.payload);
     assert.equal(bundle.active_version_id, saved.versionId);
   });
 }, { timeout: 90_000 });

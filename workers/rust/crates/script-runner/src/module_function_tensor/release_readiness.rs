@@ -154,7 +154,19 @@ pub(super) fn evaluate(
         .get("required_target_met_percent")
         .and_then(Value::as_f64)
         .unwrap_or(100.0);
-    let evidence_targets_met = target_met_percent >= required_target;
+    // Display percentages are rounded; gate on exact coordinate counts instead.
+    let (required_count, met_count) = criticality_summary
+        .as_object()
+        .into_iter()
+        .flat_map(|summary| summary.values())
+        .fold((0_u64, 0_u64), |(required, met), summary| {
+            (
+                required + summary["required_cell_count"].as_u64().unwrap_or(0),
+                met + summary["target_met_count"].as_u64().unwrap_or(0),
+            )
+        });
+    let evidence_targets_met =
+        required_count > 0 && met_count as f64 * 100.0 >= required_count as f64 * required_target;
     let release_ready = structural_ok
         && maturity_ok
         && evidence_targets_met
@@ -229,9 +241,9 @@ fn summarize_criticalities(profile: &Value, cells: &Map<String, Value>) -> Value
             let Some(entry) = entry else { continue };
             increment(entry, "required_cell_count");
             let met = cell
-                .pointer("/evidence_grade/gap_steps")
-                .and_then(Value::as_u64)
-                == Some(0);
+                .pointer("/evidence_grade/state")
+                .and_then(Value::as_str)
+                == Some("target_met");
             increment(entry, if met { "target_met_count" } else { "gap_count" });
         }
     }

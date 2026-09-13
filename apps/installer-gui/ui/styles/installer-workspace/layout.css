@@ -78,6 +78,11 @@ button {
   gap: 10px;
 }
 
+button[data-action][aria-busy="true"] {
+  cursor: progress;
+  border-color: var(--accent);
+}
+
 .sidebar-tab__glyph {
   width: 24px;
   height: 24px;

@@ -1,0 +1,160 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "September 13, 2026 scope review of retained evidence, not a new execution campaign. Explicit current hardening obligations prevent historical Linux, macOS, Rust-only or baseline database success from qualifying a different platform, language or data revision. Empty claim lists are deliberate open obligations, not evidence that the feature does not exist.",
+  "cell_requirements": [
+    { "module_id": "runtime-installer", "paradigm": "persistence_provenance", "dimensions": ["recovery"] },
+    { "module_id": "installer-shell", "paradigm": "deployment_update", "dimensions": ["recovery"] },
+    { "module_id": "orchestra-control-plane", "paradigm": "persistence_provenance", "dimensions": ["recovery"] },
+    { "module_id": "workbench-shell", "paradigm": "persistence_provenance", "dimensions": ["recovery"] },
+    { "module_id": "workbench-shell", "paradigm": "validation", "dimensions": ["recovery"] }
+  ],
+  "qualification_requirements": [
+    {
+      "id": "sqlite-revision-two-installed-replay",
+      "module_id": "orchestra-control-plane", "paradigm": "persistence_provenance", "dimension": "recovery",
+      "scope": "macos/sqlite/revision-2/offline-upgrade-and-clean-restart", "target": "verified",
+      "claims": ["native-macos-checkpoint-migration-and-replay"],
+      "basis": ["docs/acceptance-immersive-modeling.html"],
+      "acceptance": "Preserve existing business rows through verified candidate activation; replay explicit checkpoint IDs after the installed runtime restarts. Does not qualify PostgreSQL or hard power loss."
+    },
+    {
+      "id": "pwdt-native-explicit-checkpoint-replay",
+      "module_id": "workbench-shell", "paradigm": "persistence_provenance", "dimension": "recovery",
+      "scope": "macos/wkwebview/pwdt/explicit-checkpoint-key", "target": "verified",
+      "claims": ["native-macos-checkpoint-migration-and-replay"],
+      "basis": ["docs/acceptance-immersive-modeling.html"],
+      "acceptance": "Native save, conflict rejection, WebView restart, version reload and real solve retain identity without duplicate checkpoints. The caller retains the explicit key."
+    },
+    {
+      "id": "postgres-revision-two-checkpoint-lifecycle",
+      "module_id": "orchestra-control-plane", "paradigm": "persistence_provenance", "dimension": "recovery",
+      "scope": "linux/postgresql/revision-2/checkpoint-migration-replay", "target": "qualified", "claims": [],
+      "basis": ["docs/data-lifecycle.html", "docs/acceptance-immersive-modeling.html"],
+      "acceptance": "Execute revision-1 copy upgrade and revision-2 receipt concurrency, transaction rollback and restart replay on isolated PostgreSQL. The five skipped local PostgreSQL tests and the older baseline run do not satisfy this scope."
+    },
+    {
+      "id": "installer-whole-generation-restore",
+      "module_id": "runtime-installer", "paradigm": "persistence_provenance", "dimension": "recovery",
+      "scope": "managed-runtime/database-and-external-artifacts/consistent-restore", "target": "qualified", "claims": [],
+      "basis": ["docs/data-lifecycle.html"],
+      "acceptance": "Restore one consistent generation of the database, external result files, Kcore artifacts and workflow recovery envelopes, verify lineage and run a healthy follow-up. A database-only snapshot is insufficient."
+    },
+    {
+      "id": "installer-database-compatibility-activation",
+      "module_id": "runtime-installer", "paradigm": "deployment_update", "dimension": "recovery",
+      "scope": "managed-runtime/update/data-compatibility-preflight", "target": "qualified", "claims": [],
+      "basis": ["docs/data-lifecycle.html"],
+      "acceptance": "Installer blocks incompatible activation before opening active data for writes, exposes a digest-bound candidate and retains a usable rollback on failed activation. Package-only replacement does not qualify database cutover."
+    },
+    {
+      "id": "installer-data-upgrade-user-journey",
+      "module_id": "installer-shell", "paradigm": "deployment_update", "dimension": "recovery",
+      "scope": "installed-gui/data-upgrade/plan-approve-verify-recover", "target": "qualified", "claims": [],
+      "basis": ["docs/data-lifecycle.html"],
+      "acceptance": "GUI exposes data inventory, retained bytes, plan, approval, progress, verification and safe recovery. Manual maintenance eval and file switching are not this user journey."
+    },
+    {
+      "id": "workbench-uncertain-write-recovery-ui",
+      "module_id": "workbench-shell", "paradigm": "persistence_provenance", "dimension": "recovery",
+      "scope": "installed-gui/uncertain-checkpoint/webview-close-and-reopen", "target": "qualified", "claims": [],
+      "basis": ["docs/tutorial-pwdt-automation.html", "docs/acceptance-immersive-modeling.html"],
+      "acceptance": "Expose a bounded durable recovery receipt for an uncertain GUI save after WebView closure, reconcile its outcome without silent re-save and offer an explicit next step. Current in-memory retry and an externally retained PWDT key are partial building blocks only."
+    },
+    {
+      "id": "workbench-macos-installed-fault-recovery",
+      "module_id": "workbench-shell", "paradigm": "validation", "dimension": "recovery",
+      "scope": "macos/installed-webview/interrupted-write-and-service-loss", "target": "qualified", "claims": [],
+      "basis": ["config/architecture/usability-release-gate.json", "docs/acceptance-immersive-modeling.html"],
+      "acceptance": "Retain actual installed fault-injection evidence for service loss or response loss with recovery and no duplicated writes. Mock HTTP failures and a clean native restart do not close installed-macos fault recovery."
+    },
+    {
+      "id": "workbench-windows-installed-fault-recovery",
+      "module_id": "workbench-shell", "paradigm": "validation", "dimension": "recovery",
+      "scope": "windows/installed-webview/interrupted-write-and-service-loss", "target": "qualified", "claims": [],
+      "basis": ["config/architecture/usability-release-gate.json"],
+      "acceptance": "Close fault_injection_and_recovery/installed-windows using actual installed service or response loss, reconcile writes without duplication and complete a healthy follow-up. A clean startup or another platform's recovery does not satisfy this scope."
+    },
+    {
+      "id": "hub-windows-installed-round-trip",
+      "module_id": "hub-shell", "paradigm": "product_surface", "dimension": "ux_closure",
+      "scope": "windows/installed-hub/round-trip", "target": "operational", "claims": [],
+      "basis": ["config/architecture/usability-release-gate.json"],
+      "acceptance": "Close packaged_desktop_round_trip/windows-installed for Hub with native observable actions, backend effects and a reversible handoff. Linux/macOS shell evidence cannot substitute."
+    },
+    {
+      "id": "workbench-windows-installed-round-trip",
+      "module_id": "workbench-shell", "paradigm": "product_surface", "dimension": "ux_closure",
+      "scope": "windows/installed-workbench/round-trip", "target": "operational", "claims": [],
+      "basis": ["config/architecture/usability-release-gate.json"],
+      "acceptance": "Close packaged_desktop_round_trip/windows-installed for Workbench with a saved study, native rendering, real run and reload. A Windows Operator SDK run is a different surface."
+    },
+    {
+      "id": "installer-windows-installed-round-trip",
+      "module_id": "installer-shell", "paradigm": "product_surface", "dimension": "ux_closure",
+      "scope": "windows/installed-installer/round-trip", "target": "operational", "claims": [],
+      "basis": ["config/architecture/usability-release-gate.json"],
+      "acceptance": "Close packaged_desktop_round_trip/windows-installed for Installer with actual setup, managed lifecycle and inspectable failure recovery, not compilation alone."
+    },
+    {
+      "id": "windows-desktop-set-update-rollback",
+      "module_id": "runtime-installer", "paradigm": "deployment_update", "dimension": "recovery",
+      "scope": "windows/packaged-desktop-set/update-and-rollback", "target": "operational", "claims": [],
+      "basis": ["config/architecture/usability-release-gate.json"],
+      "acceptance": "Close upgrade_and_rollback/packaged-desktop-set-windows with verified bundle-set replacement and a healthy rollback. Agent package installation is not desktop-set replacement."
+    },
+    {
+      "id": "windows-installed-control-round-trip",
+      "module_id": "runtime-agent-cli", "paradigm": "runtime_api", "dimension": "execution",
+      "scope": "windows/installed-agent/orchestra-control-round-trip", "target": "operational", "claims": [],
+      "basis": ["config/architecture/usability-release-gate.json"],
+      "acceptance": "Close remote_agent_orchestra_round_trip/installed-windows with the installed control path and healthy next-task execution; retain host and runtime identity."
+    },
+    {
+      "id": "rust-headless-installed-research",
+      "module_id": "sdk-headless", "paradigm": "sdk_headless", "dimension": "execution",
+      "scope": "linux/cargo-install/rust/research-journey", "target": "operational",
+      "claims": ["rust-headless-sdk-remote-linux-operational"],
+      "basis": ["config/architecture/module-function-coverage-evidence/headless-sdk-operational.json"],
+      "acceptance": "Retain source-detached installed Rust SDK research and post-failure recovery with real solver evidence. This is retained historical evidence, not a fresh run on the current revision."
+    },
+    {
+      "id": "python-headless-installed-research",
+      "module_id": "sdk-headless", "paradigm": "sdk_headless", "dimension": "execution",
+      "scope": "linux/python-package/research-journey", "target": "operational", "claims": [],
+      "basis": ["config/architecture/module-function-coverage-evidence/headless-sdk-operational.json"],
+      "acceptance": "Retain the installed Python package's source-detached study/save/run/export/recovery journey on managed services. Cross-language mock parity and installed Rust execution cannot promote this scope."
+    },
+    {
+      "id": "elixir-headless-installed-research",
+      "module_id": "sdk-headless", "paradigm": "sdk_headless", "dimension": "execution",
+      "scope": "linux/mix-package/elixir/research-journey", "target": "operational", "claims": [],
+      "basis": ["config/architecture/module-function-coverage-evidence/headless-sdk-operational.json"],
+      "acceptance": "Retain the installed Elixir SDK package's source-detached study/save/run/export/recovery journey on managed services. Rust-only installed evidence does not close it."
+    },
+    {
+      "id": "headless-cross-language-contract-parity",
+      "module_id": "sdk-headless", "paradigm": "sdk_headless", "dimension": "sdk_parity",
+      "scope": "official-rust-python-elixir/contract-parity", "target": "qualified",
+      "claims": ["headless-cross-language-parity"],
+      "basis": ["config/architecture/module-function-coverage-evidence/core-contracts.json"],
+      "acceptance": "Preserve the existing scoped cross-language parity qualification without reinterpreting it as installed native execution."
+    },
+    {
+      "id": "hub-macos-installed-startup",
+      "module_id": "hub-shell", "paradigm": "product_surface", "dimension": "ux_closure",
+      "scope": "macos/installed-hub/startup", "target": "operational",
+      "claims": ["macos-installed-desktop-startup"],
+      "basis": ["config/architecture/module-function-coverage-evidence/desktop-usability.json"],
+      "acceptance": "Preserve retained macOS installed startup evidence; do not broadcast it to Windows or every Hub workflow."
+    },
+    {
+      "id": "installer-linux-installed-startup",
+      "module_id": "installer-shell", "paradigm": "product_surface", "dimension": "ux_closure",
+      "scope": "linux/installed-installer/startup", "target": "operational",
+      "claims": ["linux-installed-desktop-startup"],
+      "basis": ["config/architecture/module-function-coverage-evidence/desktop-usability.json"],
+      "acceptance": "Preserve retained Linux installed startup evidence; data migration and Windows bundle-set update remain separate obligations."
+    }
+  ]
+}

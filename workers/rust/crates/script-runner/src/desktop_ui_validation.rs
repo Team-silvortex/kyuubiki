@@ -20,6 +20,7 @@ const DEFAULT_OUT: &str = "tmp/desktop-ui-validation-report.json";
 struct ValidationContract {
     schema_version: String,
     report_schema: String,
+    test_concurrency: usize,
     test_files: Vec<String>,
     minimum_test_count: usize,
     shell_minimum_actions: Vec<ShellRequirement>,
@@ -128,6 +129,9 @@ fn validate_contract(root: &Path, contract: &ValidationContract) -> RunnerResult
     if contract.schema_version != CONTRACT_SCHEMA || contract.report_schema != REPORT_SCHEMA {
         return Err("desktop UI validation schema contract is invalid".to_string());
     }
+    if !(1..=4).contains(&contract.test_concurrency) {
+        return Err("desktop UI test concurrency must be between 1 and 4".to_string());
+    }
     if contract.minimum_test_count < 10 || contract.test_files.len() < 3 {
         return Err("desktop UI validation thresholds are too weak".to_string());
     }
@@ -173,15 +177,20 @@ fn validate_contract(root: &Path, contract: &ValidationContract) -> RunnerResult
     Ok(())
 }
 
+fn test_command(contract: &ValidationContract) -> Vec<String> {
+    [
+        "node".to_string(),
+        "--test".to_string(),
+        "--test-reporter=tap".to_string(),
+        format!("--test-concurrency={}", contract.test_concurrency),
+    ]
+    .into_iter()
+    .chain(contract.test_files.iter().cloned())
+    .collect()
+}
+
 fn execute_suite(root: &Path, contract: &ValidationContract) -> RunnerResult<ValidationReport> {
-    let command = std::iter::once("node".to_string())
-        .chain(
-            ["--test", "--test-reporter=tap"]
-                .into_iter()
-                .map(str::to_string),
-        )
-        .chain(contract.test_files.iter().cloned())
-        .collect::<Vec<_>>();
+    let command = test_command(contract);
     let started = Instant::now();
     let output = Command::new(&command[0])
         .args(&command[1..])
@@ -226,7 +235,7 @@ fn execute_suite(root: &Path, contract: &ValidationContract) -> RunnerResult<Val
         summary,
         shells,
         assertions,
-        output_excerpt: rendered.chars().take(12_000).collect(),
+        output_excerpt: retain_output_excerpt(&rendered, &contract.required_assertions),
     })
 }
 
@@ -274,29 +283,67 @@ fn parse_shell_result(output: &str, shell: &str) -> Option<ShellResult> {
 }
 
 fn assertion_passed(output: &str, label: &str) -> bool {
-    output.lines().any(|line| {
-        let line = line.trim();
-        line.starts_with("ok ") && line.contains(label)
-    })
+    output
+        .lines()
+        .any(|line| passed_assertion_line(line, label))
+}
+
+fn passed_assertion_line(line: &str, label: &str) -> bool {
+    line.trim()
+        .strip_prefix("ok ")
+        .and_then(|line| line.split_once(" - "))
+        .is_some_and(|(number, actual)| number.parse::<usize>().is_ok() && actual == label)
+}
+
+fn retain_output_excerpt(output: &str, requirements: &[AssertionRequirement]) -> String {
+    // Keep actual TAP proof even when a large suite places it beyond the log prefix.
+    let proof = requirements
+        .iter()
+        .filter_map(|required| {
+            output
+                .lines()
+                .find(|line| passed_assertion_line(line, &required.label))
+                .map(str::trim)
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    let lines = output.lines().collect::<Vec<_>>();
+    let failures = lines
+        .iter()
+        .enumerate()
+        .filter(|(_, line)| line.trim().starts_with("not ok "))
+        .flat_map(|(index, _)| lines[index..].iter().take(20).copied())
+        .collect::<Vec<_>>()
+        .join("\n");
+    let failures = failures.chars().take(3_000).collect::<String>();
+    let budget =
+        12_000_usize.saturating_sub(proof.chars().count() + failures.chars().count() + 150);
+    let prefix = output.chars().take(budget / 2).collect::<String>();
+    let suffix = output.chars().rev().take(budget / 2).collect::<Vec<_>>();
+    format!(
+        "Required assertion TAP lines (verbatim):\n{proof}\n\nFailure excerpts:\n{failures}\n\nOutput prefix:\n{prefix}\n\nOutput suffix:\n{}",
+        suffix.into_iter().rev().collect::<String>()
+    )
 }
 
 fn validate_report(contract: &ValidationContract, report: &ValidationReport) -> RunnerResult<()> {
     if report.schema_version != REPORT_SCHEMA
         || report.contract_path != CONTRACT_PATH
-        || report.status != "pass"
         || report.generated_at_unix_ms == 0
-        || report.exit_code != Some(0)
     {
         return Err("desktop UI validation report header is invalid".to_string());
     }
-    let expected_command = std::iter::once("node".to_string())
-        .chain(
-            ["--test", "--test-reporter=tap"]
-                .into_iter()
-                .map(str::to_string),
-        )
-        .chain(contract.test_files.iter().cloned())
-        .collect::<Vec<_>>();
+    if report.status != "pass" || report.exit_code != Some(0) {
+        return Err(format!(
+            "desktop UI suite did not pass: {}/{} passed, {} failed, {} cancelled, exit {:?}",
+            report.summary.passed,
+            report.summary.tests,
+            report.summary.failed,
+            report.summary.cancelled,
+            report.exit_code
+        ));
+    }
+    let expected_command = test_command(contract);
     if report.command != expected_command
         || report.summary.tests < contract.minimum_test_count
         || report.summary.tests != report.summary.passed
@@ -332,7 +379,7 @@ fn validate_report(contract: &ValidationContract, report: &ValidationReport) -> 
             .iter()
             .find(|entry| entry.id == requirement.id && entry.label == requirement.label)
             .ok_or_else(|| format!("report misses assertion {}", requirement.id))?;
-        if !assertion.passed || !report.output_excerpt.contains(&requirement.label) {
+        if !assertion.passed || !assertion_passed(&report.output_excerpt, &requirement.label) {
             return Err(format!("assertion {} did not pass", requirement.id));
         }
     }
@@ -366,8 +413,87 @@ fn run_self_test() -> RunnerResult<()> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn parses_qualification_tap() {
         super::run_self_test().unwrap();
+    }
+
+    #[test]
+    fn required_proof_survives_large_log_compaction() {
+        let label = "late recovery assertion";
+        let output = format!(
+            "{}\n    ok 218 - {label}\n{}",
+            "noise\n".repeat(8_000),
+            "tail\n".repeat(8_000)
+        );
+        let requirements = vec![AssertionRequirement {
+            id: "recovery".into(),
+            label: label.into(),
+        }];
+        let excerpt = retain_output_excerpt(&output, &requirements);
+        assert!(assertion_passed(&excerpt, label));
+        assert!(excerpt.chars().count() <= 12_000);
+    }
+
+    #[test]
+    fn assertion_names_must_match_complete_tap_pass_lines() {
+        assert!(assertion_passed("  ok 8 - recovery", "recovery"));
+        for output in [
+            "not ok 8 - recovery",
+            "# Subtest: recovery",
+            "ok 8 - recovery helper",
+            "ok x - recovery",
+        ] {
+            assert!(!assertion_passed(output, "recovery"), "{output}");
+        }
+    }
+
+    #[test]
+    fn log_compaction_cannot_manufacture_missing_or_failed_proof() {
+        let requirements = vec![AssertionRequirement {
+            id: "recovery".into(),
+            label: "recovery".into(),
+        }];
+        let excerpt =
+            retain_output_excerpt("# Subtest: recovery\nnot ok 8 - recovery\n", &requirements);
+        assert!(!assertion_passed(&excerpt, "recovery"));
+        assert!(excerpt.contains("not ok 8 - recovery"));
+    }
+
+    #[test]
+    fn cleanup_failures_are_retained_from_the_middle_of_a_large_suite() {
+        let output = format!(
+            "{}\nnot ok 219 - cleanup\n  error: 'hook timed out'\n{}",
+            "prefix\n".repeat(8_000),
+            "suffix\n".repeat(8_000)
+        );
+        let excerpt = retain_output_excerpt(&output, &[]);
+        assert!(excerpt.contains("not ok 219 - cleanup"));
+        assert!(excerpt.contains("hook timed out"));
+        assert!(excerpt.chars().count() <= 12_000);
+    }
+
+    #[test]
+    fn test_concurrency_is_bounded_and_bound_to_the_report_command() {
+        let mut contract = ValidationContract {
+            schema_version: CONTRACT_SCHEMA.into(),
+            report_schema: REPORT_SCHEMA.into(),
+            test_concurrency: 2,
+            test_files: vec!["fixture.test.mjs".into()],
+            minimum_test_count: 40,
+            shell_minimum_actions: vec![],
+            required_assertions: vec![],
+        };
+        assert_eq!(test_command(&contract)[3], "--test-concurrency=2");
+        for concurrency in [0, 5] {
+            contract.test_concurrency = concurrency;
+            assert!(
+                validate_contract(Path::new("."), &contract)
+                    .unwrap_err()
+                    .contains("concurrency")
+            );
+        }
     }
 }

@@ -14,6 +14,12 @@ pub(super) fn load_tensor_with_includes(root: &Path, mut tensor: Value) -> Runne
         merge_paradigm_contract_evidence(&mut tensor, &include, &include_path)?;
         merge_array_section(&mut tensor, &include, "evidence_claims", &include_path)?;
         merge_array_section(&mut tensor, &include, "cell_requirements", &include_path)?;
+        merge_array_section(
+            &mut tensor,
+            &include,
+            "qualification_requirements",
+            &include_path,
+        )?;
     }
     Ok(tensor)
 }

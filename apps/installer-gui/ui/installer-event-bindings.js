@@ -15,28 +15,48 @@ function publishInstallerActionState(action, status, error) {
     detail: {
       action,
       status,
+      activeAction: window.__kyuubikiInstallerActiveAction ?? null,
       error: error ? String(error?.message || error) : null,
     },
   }));
 }
 
 export function bindInstallerActionHandlers(actionHandlers) {
+  let activeAction = null;
   document.addEventListener("click", async (event) => {
     const button = event.target?.closest?.("[data-action]");
     if (!button || button.disabled) return;
     const action = button.dataset.action;
-    const handler = actionHandlers[action];
-    if (!handler) {
+    const handler = Object.hasOwn(actionHandlers, action) ? actionHandlers[action] : null;
+    if (typeof handler !== "function") {
       publishInstallerActionState(action, "missing");
       return;
     }
-    publishInstallerActionState(action, "running");
-    try {
-      await handler();
-      publishInstallerActionState(action, "completed");
-    } catch (error) {
-      publishInstallerActionState(action, "failed", error);
+    if (activeAction !== null) {
+      publishInstallerActionState(action, "blocked", `Installer action already running: ${activeAction}`);
+      return;
     }
+    // Own the request before notifying automation, which may dispatch another click.
+    activeAction = action;
+    window.__kyuubikiInstallerActiveAction = action;
+    const previousBusy = button.getAttribute("aria-busy");
+    let status = "completed";
+    let failure;
+    try {
+      button.setAttribute("aria-busy", "true");
+      publishInstallerActionState(action, "running");
+      await handler();
+    } catch (error) {
+      status = "failed";
+      failure = error;
+    } finally {
+      activeAction = null;
+      window.__kyuubikiInstallerActiveAction = null;
+      if (previousBusy === null) button.removeAttribute("aria-busy");
+      else button.setAttribute("aria-busy", previousBusy);
+    }
+    // Completion listeners can start the next action without the old owner blocking it.
+    publishInstallerActionState(action, status, failure);
   });
 }
 

@@ -1,7 +1,7 @@
 {
   "$schema": "../../schemas/module-extension-standard.schema.json",
   "schema_version": "kyuubiki.module-extension-standard/v1",
-  "version_line": "daji 3.0.x",
+  "version_line": "daji 3.2.x",
   "summary": "Standard onboarding flow for new architecture modules, function paradigms, service surfaces, evidence lanes, and contract families.",
   "source_of_truth": {
     "topology": "config/architecture/module-topology.json",
@@ -13,7 +13,7 @@
     "required_cell_without_evidence": "weak_evidence",
     "minimum_required_cell_evidence": "At least one runnable test command or one contract evidence bundle.",
     "required_cell_grade_target": "Every function paradigm must declare an evidence grade target; critical coordinates may raise it with a cell override.",
-    "claim_grade_rule": "Runnable lanes reach exercised only; verified, qualified, and operational grades require scoped proven claims.",
+    "claim_grade_rule": "Registered commands are plans, not execution. Grades from exercised upward require scoped proven claims. Use the weakest required dimension and satisfy every explicit qualification requirement; no cross-platform or cross-language promotion by inference.",
     "service_surface_rule": "A service surface belongs inside an existing module and must not claim owned paths.",
     "path_rule": "All source, evidence, and docs paths must be repository-relative.",
     "file_size_rule": "Source and docs touched by extension work should stay under the project file-line guard."
@@ -31,7 +31,8 @@
       "steps": [
         "Declare the module id, layer, owned paths, dependencies, benchmark lanes, security lanes, and risk tags in module-topology.",
         "Add required function paradigms and cell statuses in module-function-coverage-matrix.",
-        "Ensure the coverage tensor reports no required_gap, missing, or weak_evidence cells and review every below-target evidence grade.",
+        "Ensure the coverage tensor reports no required_gap, missing, or weak_evidence cells and review every below-target required dimension and qualification scope.",
+        "Register platform, backend, language and recovery obligations as qualification_requirements with target, acceptance, basis and explicit claims; leave claims empty until the matching proof is reviewed.",
         "Document ownership, non-ownership, and handoff boundaries."
       ]
     },
@@ -74,7 +75,7 @@
         "Declare the benchmark or security lane centrally.",
         "Attach at least one command to lane_test_plan.",
         "Map the lane from relevant paradigms in the tensor.",
-        "Verify the lane creates exercised evidence depth without silently claiming a stronger grade."
+        "Verify the lane appears as a registered test plan without raising execution evidence or grade; promote exercised or stronger only after retaining and binding the actual proof."
       ]
     },
     {
@@ -89,7 +90,7 @@
         "Add repository-relative source files and client surfaces.",
         "Add schema or text anchors to the appropriate release contract.",
         "Attach contract evidence to the tensor when the family proves a required paradigm.",
-        "Add a scoped evidence claim with an explicit grade only when retained proof justifies promotion above exercised.",
+        "Add a scoped evidence claim with an explicit grade only when retained proof justifies exercised or stronger evidence for its stated dimensions.",
         "Use tensor evidence_includes for large scoped evidence bundles that would bloat the main tensor file.",
         "Run the family checker and the full architecture gate."
       ]

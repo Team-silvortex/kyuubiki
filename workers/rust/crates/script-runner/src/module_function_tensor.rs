@@ -8,6 +8,9 @@ mod evidence_grade;
 mod includes;
 mod markdown;
 mod maturity;
+mod qualifications;
+#[cfg(test)]
+mod recalibration_tests;
 mod release_readiness;
 mod self_test;
 
@@ -19,9 +22,9 @@ pub(super) const MATRIX_PATH: &str = "config/architecture/module-function-covera
 const RUNTIME_API_CLIENT_CONTRACT_PATH: &str =
     "config/architecture/contracts-runtime-api-surface.json";
 const DEFAULT_OUT: &str = "tmp/module-function-coverage-tensor.json";
-pub(super) const SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor/v4";
+pub(super) const SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor/v5";
 const EVIDENCE_INCLUDE_SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-evidence/v2";
-const REPORT_SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor-report/v4";
+const REPORT_SCHEMA_VERSION: &str = "kyuubiki.module-function-coverage-tensor-report/v5";
 const ALLOWED_STATUS: &[&str] = &["covered", "partial", "planned", "not_applicable"];
 const PARADIGM_ORDER: &[&str] = &[
     "product_surface",
@@ -194,6 +197,7 @@ fn validate_tensor_config(
     validate_declared_runtime_api_clients(root, tensor, matrix, &module_ids)?;
     maturity::validate_config(root, tensor, &paradigms, &module_ids)?;
     evidence_grade::validate_config(tensor, &paradigms, &module_ids)?;
+    qualifications::validate_config(root, tensor, matrix)?;
     release_readiness::validate_config(root, tensor, matrix, &paradigms, &module_ids)?;
     Ok(())
 }

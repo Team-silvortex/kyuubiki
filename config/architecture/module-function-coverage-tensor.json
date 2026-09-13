@@ -1,10 +1,11 @@
 {
-  "schema_version": "kyuubiki.module-function-coverage-tensor/v4",
+  "schema_version": "kyuubiki.module-function-coverage-tensor/v5",
   "version_line": "daji 3.2.x",
   "topology": "config/architecture/module-topology.json",
   "matrix": "config/architecture/module-function-coverage-matrix.json",
   "runtime_api_client_contract": "config/architecture/contracts-runtime-api-surface.json",
   "evidence_includes": [
+    "config/architecture/module-function-coverage-evidence/current-qualification-scopes.json",
     "config/architecture/module-function-coverage-evidence/core-contracts.json",
     "config/architecture/module-function-coverage-evidence/contracts-validation.json",
     "config/architecture/module-function-coverage-evidence/product-surface-contracts.json",
@@ -48,16 +49,17 @@
     "contract_evidence": "Required schemas, config contracts, and text anchors that prove a paradigm has machine-readable release gates.",
     "maturity_requirements": "Evidence dimensions required for this exact module and paradigm coordinate.",
     "maturity_evidence": "Module-scoped proven, partial, and open claims rather than globally broadcast paradigm evidence.",
-    "evidence_grade": "Calibrated proof strength from unassessed through operational, with an explicit target for each required coordinate.",
+    "evidence_grade": "Minimum proven grade across required dimensions; registered commands are plans, not executed evidence. Best-available claims are reported separately.",
+    "qualification_requirements": "Explicit platform, backend and scenario obligations bound to named claims. A different scope cannot satisfy them.",
     "release_criticality": "Daji release priority for the exact coordinate, independently of its evidence grade.",
     "gap": "Derived action level for locating weak, thinly evidenced, or uncovered coordinates."
   },
   "release_profile": {
-    "id": "daji-3-0-0",
+    "id": "daji-3-2-hardening",
     "current_checkpoint": "daji 3.2.0",
-    "target_release": "daji 3.0.0",
+    "target_release": "daji 3.2.x",
     "gate_mode": "advisory",
-    "enforce_from": "moxi 2.17.0",
+    "enforce_from": "explicit gate-mode decision",
     "required_target_met_percent": 100.0,
     "criticality_order": ["p0", "p1", "p2"],
     "paradigm_criticality": {
@@ -118,7 +120,7 @@
       {
         "id": "exercised",
         "score": 40,
-        "description": "At least one mapped command exercises the path, but proof depth is not explicitly asserted."
+        "description": "A scoped proven claim records that the path was exercised; a registered command alone is only a test plan."
       },
       {
         "id": "verified",

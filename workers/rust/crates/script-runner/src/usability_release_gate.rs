@@ -184,16 +184,16 @@ fn validate_config(root: &Path, config: &GateConfig) -> RunnerResult<()> {
         .as_str()
         .ok_or("missing releaseCodename")?;
     let expected_baseline = baseline_release_for(VERSION, codename)?;
-    if config.baseline_release != expected_baseline || config.target_release != "daji 3.0.0" {
-        return Err(format!(
-            "usability gate must describe the {expected_baseline} to daji 3.0.0 line"
-        ));
-    }
+    validate_release_line(
+        &config.baseline_release,
+        &config.target_release,
+        &expected_baseline,
+    )?;
     if !config.policy.all_blocking_journeys_must_pass
         || !config.policy.planned_or_static_only_is_not_release_evidence
         || !config.policy.production_runtime_must_be_native
     {
-        return Err("all 3.0 usability policies must remain enabled".to_string());
+        return Err("all current-line usability policies must remain enabled".to_string());
     }
     if config.policy.gate_scope.trim().is_empty() {
         return Err("usability gate scope must be explicit".to_string());
@@ -320,6 +320,16 @@ fn validate_release_tier_policy(policy: &Policy) -> RunnerResult<()> {
         );
     }
     Ok(())
+}
+
+fn validate_release_line(baseline: &str, target: &str, expected: &str) -> RunnerResult<()> {
+    if baseline == expected && target == expected {
+        Ok(())
+    } else {
+        Err(format!(
+            "usability gate must describe the current {expected} line"
+        ))
+    }
 }
 
 fn baseline_release_for(version: &str, codename: &str) -> RunnerResult<String> {
@@ -721,6 +731,11 @@ mod tests {
             "daji 3.0.x"
         );
         assert!(baseline_release_for("3.0", "daji").is_err());
+        let current = baseline_release_for("3.2.7", "daji").unwrap();
+        assert_eq!(current, "daji 3.2.x");
+        assert!(super::validate_release_line(&current, &current, &current).is_ok());
+        assert!(super::validate_release_line(&current, "daji 3.0.0", &current).is_err());
+        assert!(super::validate_release_line("daji 3.0.x", &current, &current).is_err());
     }
 
     #[test]

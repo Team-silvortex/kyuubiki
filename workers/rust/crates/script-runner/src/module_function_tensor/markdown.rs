@@ -38,6 +38,8 @@ pub(super) fn render_markdown(report: &Value) -> String {
                 .unwrap_or(false)
         ),
         "- Axes: `module x function_paradigm x scoped_evidence_depth`".to_string(),
+        "- Basis: retained claims, not fresh test execution. Registered commands are test plans, not run evidence.".to_string(),
+        "- Dimension score progress is not a test or product coverage percentage; scope obligations are separate.".to_string(),
         format!(
             "- Modules: `{}`",
             report
@@ -113,7 +115,7 @@ pub(super) fn render_markdown(report: &Value) -> String {
                 .unwrap_or(0.0)
         ),
         String::new(),
-        "## Module Summary".to_string(),
+        "## Structural Module Summary".to_string(),
         String::new(),
         "| Module | Layer | OK | Weak | Weak Evidence | Watch | Planned | Required Gap | Missing | N/A |".to_string(),
         "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |".to_string(),
@@ -137,11 +139,53 @@ pub(super) fn render_markdown(report: &Value) -> String {
     }
     render_paradigm_summary(report, &mut lines);
     render_evidence_grades(report, &mut lines);
+    render_qualifications(report, &mut lines);
     render_release_readiness(report, &mut lines);
     render_contract_evidence(report, &mut lines);
     render_thin_points(report, &mut lines);
     render_gaps(report, &mut lines);
     format!("{}\n", lines.join("\n").trim_end())
+}
+
+fn render_qualifications(report: &Value, lines: &mut Vec<String>) {
+    let calibration = report
+        .get("evidence_grade_calibration")
+        .unwrap_or(&Value::Null);
+    lines.extend([
+        String::new(), "## Scoped Qualification Requirements".to_string(), String::new(),
+        format!("{} configured scenarios; {} remain open. This registry is not an exhaustive platform/scenario inventory.",
+            count(calibration, "scope_requirement_count"), count(calibration, "scope_requirement_gap_count")),
+        "Bindings require review of the retained proof. File/anchor validation does not independently prove platform semantics or freshness.".to_string(),
+        String::new(),
+        "| Module | Paradigm | Dimension | Scope | Achieved | Target | Met | Acceptance |".to_string(),
+        "| --- | --- | --- | --- | --- | --- | --- | --- |".to_string(),
+    ]);
+    for (module_id, module_cells) in object_entries(report, "cells") {
+        for (paradigm, cell) in module_cells.as_object().into_iter().flatten() {
+            for requirement in cell
+                .pointer("/evidence_grade/qualification_requirements")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+            {
+                let field = |key| {
+                    string_field(requirement, key)
+                        .unwrap_or_default()
+                        .replace('|', "\\|")
+                        .replace(['\n', '\r'], " ")
+                };
+                lines.push(format!(
+                    "| `{module_id}` | `{paradigm}` | `{}` | `{}` | `{}` | `{}` | {} | {} |",
+                    field("dimension"),
+                    field("scope"),
+                    field("achieved_grade"),
+                    field("target_grade"),
+                    requirement["met"].as_bool().unwrap_or(false),
+                    field("acceptance")
+                ));
+            }
+        }
+    }
 }
 
 fn render_release_readiness(report: &Value, lines: &mut Vec<String>) {
@@ -305,13 +349,24 @@ fn render_evidence_grades(report: &Value, lines: &mut Vec<String>) {
         return;
     }
     lines.push(
-        "| Priority | Module | Paradigm | Achieved | Target | Steps | Next | Recommended Action |"
+        "| Priority | Module | Paradigm | Achieved | Target | Limiting Dimensions | Steps | Next | Recommended Action |"
             .to_string(),
     );
-    lines.push("| ---: | --- | --- | --- | --- | ---: | --- | --- |".to_string());
+    lines.push("| ---: | --- | --- | --- | --- | --- | ---: | --- | --- |".to_string());
     for point in points {
+        let limiting = point
+            .get("dimension_grades")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter(|dimension| {
+                dimension.get("grade") == point.get("achieved_grade")
+                    && count(&point, "gap_steps") > 0
+            })
+            .filter_map(|dimension| string_field(dimension, "dimension").map(str::to_string))
+            .collect::<Vec<_>>();
         lines.push(format!(
-            "| {} | `{}` | `{}` | `{}` | `{}` | {} | `{}` | `{}` |",
+            "| {} | `{}` | `{}` | `{}` | `{}` | `{}` | {} | `{}` | `{}` |",
             point
                 .get("priority_score")
                 .and_then(Value::as_u64)
@@ -320,6 +375,7 @@ fn render_evidence_grades(report: &Value, lines: &mut Vec<String>) {
             string_field(&point, "paradigm").unwrap_or_default(),
             string_field(&point, "achieved_grade").unwrap_or_default(),
             string_field(&point, "target_grade").unwrap_or_default(),
+            joined_or_dash(&limiting),
             point.get("gap_steps").and_then(Value::as_u64).unwrap_or(0),
             string_field(&point, "next_grade").unwrap_or_default(),
             string_field(&point, "recommended_action").unwrap_or_default()
@@ -330,7 +386,7 @@ fn render_evidence_grades(report: &Value, lines: &mut Vec<String>) {
 fn render_paradigm_summary(report: &Value, lines: &mut Vec<String>) {
     lines.extend([
         String::new(),
-        "## Paradigm Summary".to_string(),
+        "## Structural Paradigm Summary".to_string(),
         String::new(),
     ]);
     lines.push(
@@ -390,14 +446,18 @@ fn render_contract_evidence(report: &Value, lines: &mut Vec<String>) {
 }
 
 fn render_gaps(report: &Value, lines: &mut Vec<String>) {
-    lines.extend([String::new(), "## Gaps".to_string(), String::new()]);
+    lines.extend([
+        String::new(),
+        "## Structural Gaps".to_string(),
+        String::new(),
+    ]);
     let gaps = report
         .get("gaps")
         .and_then(Value::as_array)
         .cloned()
         .unwrap_or_default();
     if gaps.is_empty() {
-        lines.push("No gaps.".to_string());
+        lines.push("No structural gaps. See evidence grades and scoped qualifications for remaining obligations.".to_string());
         return;
     }
     lines.push(

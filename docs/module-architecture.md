@@ -68,7 +68,7 @@ benchmark and security lane to suggested commands with a scope:
 - `remote`: lab/self-hosted runner path
 - `release`: broad release-style gate
 
-The checker in `scripts/check-module-topology.mjs` enforces:
+The native `./scripts/kyuubiki check-module-topology` checker enforces:
 
 - the topology schema version
 - all owned paths exist and are repository-relative
@@ -142,20 +142,33 @@ test commands nor contract evidence are reported as `weak_evidence`, so a
 module cannot look healthy only because the two-dimensional matrix says it is
 covered.
 
-Tensor v4 preserves the v3 rule that a mapped smoke command is not equivalent
-to retained qualification or an installed journey. It also adds a versioned
-release profile for `daji 3.0.0`, classifies exact coordinates as P0, P1, or
-P2, and imports external release decisions such as the usability release
-claim. Structural `ok` and release readiness are deliberately separate.
+Tensor v5 recalibrates the current `daji 3.2.x` hardening profile. A registered
+command is a test plan, not evidence of execution. The coordinate grade is the
+minimum proven strength across its required dimensions, not its best single
+claim. `best_available_grade` preserves that stronger retained claim without
+broadcasting it to other dimensions. P0/P1/P2 criticality and external release
+decisions remain separate from structural `ok`.
 
-The current `daji 3.0.0` checkpoint has reached the configured enforcement
-decision point. The release profile remains advisory until its gate mode is
-deliberately changed to `enforced`; after that change, an unready profile fails
-the command instead of merely producing a hardening queue.
+The current source checkpoint is `daji 3.2.0`. This recalibration does not bump
+the application. The profile stays advisory until an explicit gate-mode
+decision changes it to `enforced`; only then does an unready profile fail the
+command rather than produce a hardening queue.
+
+`qualification_requirements` add explicit module/paradigm/dimension/scenario
+obligations. Each records a platform/backend/language scope, target, acceptance
+condition, repository-relative rationale (`basis`), and named claim bindings.
+Empty `claims` deliberately means open. Other high-grade claims cannot close
+that scenario. These bindings need human evidence review: the checker validates
+coordinates, dimensions, files and anchors, not the truth or freshness of an
+installed run. The registry is not an exhaustive scenario inventory.
+
+See the [book's current calibration](book-ch03-architecture-boundaries.html#tensor-calibration)
+and [hardening queue](weakness-roadmap.md#current-tensor-status) for the dated
+baseline and its limits.
 
 Validation contract evidence includes both readiness reports and release
 review gates. Operator qualification records, retained review decisions, and
-their Node/Rust checkers are part of the validation tensor so a candidate
+their native checkers are part of the validation tensor so a candidate
 cannot appear mature only because release evidence exists. The default
 `make check-operator-reliability` lane also depends on release-record checks,
 so approved promotion summaries are verified by the aggregate operator
@@ -179,17 +192,17 @@ Evidence strength uses one ordered ladder:
 
 - `unassessed`: no machine-readable evidence is attached
 - `declared`: the matrix or contract declares the capability
-- `exercised`: a mapped command executes the path
+- `exercised`: a retained, explicitly proven claim records execution of the path
 - `verified`: assertions, invariants, boundaries, or references verify it
 - `qualified`: repeatable scale, convergence, fault, cross-language, or
   cross-platform evidence qualifies it
 - `operational`: retained installed, packaged, multi-host, or recovery evidence
   proves a real operating journey
 
-Mapped benchmark and security lanes can raise a coordinate only to
-`exercised`. Promotion above that level requires a module-scoped `proven`
-claim with an explicit `grade`. Partial and open claims remain visible but do
-not promote the achieved grade.
+Mapped benchmark and security lanes do not raise a coordinate's grade or
+satisfy execution, benchmark or security dimensions. Promotion from `declared`
+requires a module/paradigm/dimension-scoped `proven` claim with an explicit
+`grade`. Partial and open claims remain visible but do not promote the grade.
 
 Specialized evidence claims use one of three states:
 
@@ -204,16 +217,19 @@ The generated tensor report assigns a maturity label to every required covered
 coordinate:
 
 - `strong`
-  Every dimension required by the paradigm and exact coordinate is proven.
+  Every required dimension is represented by a proven claim or, for contract,
+  scoped static evidence. This presence label does not imply sufficient grade
+  or satisfied qualification scopes.
 - `medium`
   Exactly one required evidence dimension remains unsatisfied.
 - `thin`
   Two or more required dimensions remain unsatisfied.
 
-This distinction matters for moxi because a `0` gap count only means no
+This distinction matters because a `0` structural gap count only means no
 required coordinate is missing. It does not mean the coordinate is mature
 enough for a stronger public claim. `maturity_gap_count` tracks missing kinds
-of proof; `evidence_grade_gap_count` tracks insufficient proof strength.
+of proof; `evidence_grade_gap_count` counts below-target, not-ready, or
+scope-incomplete coordinates, including those with zero dimension `gap_steps`.
 `evidence_grade_calibration.gaps` contains the full queue, while
 `weakest_points` is a priority-weighted review window. Neither changes the
 structural exit status while `gate_mode` is `advisory`.
@@ -221,10 +237,17 @@ structural exit status while `gate_mode` is `advisory`.
 Two percentages must be read together:
 
 - `target_met_percent` counts required coordinates that completely reached
-  their configured grade target.
+  their configured grade target, are `covered`, and meet every scoped obligation.
 - `proof_completion_percent` sums achieved evidence points toward each
-  coordinate target, capped at that target. It measures remaining proof work
-  without allowing over-qualified coordinates to hide untouched ones.
+  coordinate target, capped at that target. This measures dimension-grade
+  progress only; inspect `scope_requirement_gap_count` separately.
+
+Neither percentage is code/test coverage, a count of supported physics, or a
+reliability probability. Recalculation reads retained claims; it does not rerun
+the tests they describe. Release thresholds use exact coordinate counts, not
+rounded display percentages. The priority score combines capability status,
+dimension-grade gaps, open scope count and configured paradigm weight; the
+release queue applies P0/P1/P2 ordering above that advisory score.
 
 `release_readiness` adds P0/P1/P2 summaries, a P0 blocking queue, external
 gate outcomes, and a derived release claim. A zero structural gap count can

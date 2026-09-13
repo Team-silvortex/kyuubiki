@@ -37,9 +37,12 @@
       "id": "architecture-boundaries",
       "title": "Hard architecture boundaries",
       "chapter_page": "docs/book-ch03-architecture-boundaries.html",
-      "summary": "Role split and authority boundaries across desktop shells, orchestrator, and agents.",
+      "summary": "Role split, authority boundaries and scope-aware tensor recalibration across shells, orchestrator, agents and SDKs.",
       "sources": [
         "docs/current-architecture-map.md",
+        "docs/module-architecture.md",
+        "docs/architecture-extension-standard.md",
+        "docs/weakness-roadmap.md",
         "docs/project-architecture-organization.md",
         "docs/app-runtime-boundaries.md",
         "docs/agent-orchestrator-boundary.md",

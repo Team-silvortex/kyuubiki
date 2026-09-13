@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Product-surface contract evidence split from the core shard to keep architecture evidence modular and within the line-count limit.",
+  "summary": "Product-surface contracts and scoped hardening evidence. The September 13 Installer action-recovery follow-up is partial product evidence from Chromium and mock IPC, not installed native execution, cross-window exclusion, startup ownership, or delegated remote-node action qualification.",
   "paradigm_contract_evidence": {
     "product_surface": [
       {
@@ -65,6 +65,29 @@
     ]
   },
   "evidence_claims": [
+    {
+      "id": "installer-declarative-mock-ipc-recovery",
+      "status": "partial",
+      "grade": "verified",
+      "modules": ["installer-shell"],
+      "paradigms": ["product_surface"],
+      "dimensions": ["execution", "contract", "recovery", "ux_closure"],
+      "files": [
+        "apps/installer-gui/ui/installer-event-bindings.js",
+        "apps/installer-gui/test/action-lifecycle.test.mjs",
+        "tests/integration/desktop-installer-action-recovery.test.mjs",
+        "releases/usability-evidence/3.2.0/desktop-ui-validation-recovery.json",
+        "docs/book-ch03-architecture-boundaries.html"
+      ],
+      "required_text": [
+        "__kyuubikiInstallerActiveAction",
+        "installer blocks duplicate and competing actions without queueing mutations",
+        "Installer mock-IPC mutations reject overlap and recover after failure without automatic replay",
+        "\"id\": \"installer-mock-ipc-action-recovery\"",
+        "\"status\": \"pass\"",
+        "Not an installed-service qualification"
+      ]
+    },
     {
       "id": "desktop-product-ux-closure",
       "status": "proven",
