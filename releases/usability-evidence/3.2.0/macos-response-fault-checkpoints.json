@@ -1,0 +1,52 @@
+[
+  {
+    "event": "committed_response",
+    "fault": "none",
+    "initial_version_id": "ebd3c0719f8df2af",
+    "model_id": "4b6e03a7f5709792",
+    "path": "/api/v1/projects/3d6c33402e4e15ff/models",
+    "request_id": "macos-body-480606fbce7a4a7397709275ad61eb3d",
+    "status": 201,
+    "version_id": null
+  },
+  {
+    "event": "committed_response",
+    "fault": "stall_body_after_commit",
+    "initial_version_id": null,
+    "model_id": null,
+    "path": "/api/v1/models/4b6e03a7f5709792/versions",
+    "request_id": "35c8f1af-1dac-4059-b604-eb4b1ace441d",
+    "status": 201,
+    "version_id": "767bed29ff513135"
+  },
+  {
+    "event": "committed_response",
+    "fault": "none",
+    "initial_version_id": null,
+    "model_id": null,
+    "path": "/api/v1/models/4b6e03a7f5709792/versions",
+    "request_id": "35c8f1af-1dac-4059-b604-eb4b1ace441d",
+    "status": 201,
+    "version_id": "767bed29ff513135"
+  },
+  {
+    "event": "committed_response",
+    "fault": "drop_after_commit",
+    "initial_version_id": "2debdd67b0711494",
+    "model_id": "9120b3d6d5b0a267",
+    "path": "/api/v1/projects/3d6c33402e4e15ff/models",
+    "request_id": "6f6ad3e0-3704-4793-a4da-f6eafd7eaab4",
+    "status": 201,
+    "version_id": null
+  },
+  {
+    "event": "committed_response",
+    "fault": "none",
+    "initial_version_id": "2debdd67b0711494",
+    "model_id": "9120b3d6d5b0a267",
+    "path": "/api/v1/projects/3d6c33402e4e15ff/models",
+    "request_id": "6f6ad3e0-3704-4793-a4da-f6eafd7eaab4",
+    "status": 201,
+    "version_id": null
+  }
+]

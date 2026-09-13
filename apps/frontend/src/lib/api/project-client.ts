@@ -1,4 +1,5 @@
 import type {
+  CheckpointReceipt,
   ModelEnvelope,
   ModelListPayload,
   ModelVersionEnvelope,
@@ -90,6 +91,10 @@ export function deleteModelVersion(versionId: string): Promise<ModelVersionEnvel
 
 export function createProjectApiClient(request: ProjectRequestJson) {
   return {
+    fetchCheckpoint(operation: "model" | "version", parentId: string, requestId: string) {
+      const path = [operation, parentId, requestId].map(encodeURIComponent).join("/");
+      return request<{ checkpoint: CheckpointReceipt }>(`/api/v1/checkpoints/${path}`, { method: "GET", cache: "no-store" });
+    },
     fetchProjects() {
       return request<ProjectListPayload>("/api/v1/projects", { method: "GET", cache: "no-store" });
     },

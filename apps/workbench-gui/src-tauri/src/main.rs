@@ -43,6 +43,21 @@ fn get_workbench_panel_layout() -> Result<Option<kyuubiki_desktop_runtime::Workb
 }
 
 #[tauri::command]
+fn list_checkpoint_intents() -> Result<Vec<kyuubiki_desktop_runtime::CheckpointIntent>, String> {
+    kyuubiki_desktop_runtime::list_checkpoint_intents()
+}
+
+#[tauri::command]
+fn reserve_checkpoint_intent(payload: kyuubiki_desktop_runtime::CheckpointIntent) -> Result<kyuubiki_desktop_runtime::CheckpointReservation, String> {
+    kyuubiki_desktop_runtime::reserve_checkpoint_intent(payload)
+}
+
+#[tauri::command]
+fn remove_checkpoint_intent(key: String, request_id: String) -> Result<(), String> {
+    kyuubiki_desktop_runtime::remove_checkpoint_intent(key, request_id)
+}
+
+#[tauri::command]
 fn set_workbench_panel_layout(
     payload: kyuubiki_desktop_runtime::WorkbenchPanelLayout,
 ) -> Result<kyuubiki_desktop_runtime::WorkbenchPanelLayout, String> {
@@ -185,6 +200,9 @@ fn main() {
             get_global_language_preference,
             set_global_language_preference,
             get_workbench_panel_layout,
+            list_checkpoint_intents,
+            reserve_checkpoint_intent,
+            remove_checkpoint_intent,
             set_workbench_panel_layout,
             guarded_mutation_action
         ])

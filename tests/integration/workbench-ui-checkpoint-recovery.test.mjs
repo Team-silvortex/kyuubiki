@@ -113,6 +113,41 @@ test("PWDT save helper preserves local and persisted metadata on rejection befor
 });
 
 for (const saveAs of [false, true]) {
+  test(`a committed save survives catalog and history outages; recovery never rewrites; saveAs=${saveAs}`, { timeout: 120_000 }, async () => {
+    await usingWorkbench(async (page, library) => {
+      await seed(page);
+      const previousVersion = structuredClone(library.versions[0]);
+      let failCatalog = true;
+      await page.route("**/api/v1/projects", (route) => failCatalog
+        ? route.fulfill({ status: 503, json: { error: "qualification catalog unavailable" } })
+        : route.fallback());
+      library.failVersionReads = true;
+      const receipt = await page.evaluate((saveAs) => window.__kyuubikiPwdt.saveModel({ name: "Recovered checkpoint", saveAs }), saveAs);
+      assert.equal(receipt.ok, true, "read outages cannot turn a confirmed commit into a failed save");
+      const checkpoint = structuredClone(library.versions.at(-1));
+      const state = await page.evaluate(() => window.__kyuubikiPwdt.state());
+      assert.equal(state.selectedModelId, checkpoint.model_id);
+      assert.equal(state.selectedVersionId, checkpoint.version_id);
+      assert.equal(state.loadedModelName, "Recovered checkpoint");
+      assert.deepEqual(library.versions[0], previousVersion);
+      await page.getByText(/Project library:.*qualification catalog unavailable/).first().waitFor();
+      await page.getByText(/Versions:.*qualification version read unavailable/).first().waitFor();
+      const writes = library.writes.length;
+      const requests = library.requests.length;
+      failCatalog = false;
+      library.failVersionReads = false;
+      await invoke(page, "runtime/refreshAll");
+      await openVersions(page);
+      await rows(page).filter({ hasText: "Recovered checkpoint" }).waitFor();
+      assert.equal(library.writes.length, writes);
+      assert.equal(library.requests.length, requests, "reconciliation sends no checkpoint POST, even an idempotent one");
+      assert.equal(library.versions.length, 2);
+      assert.equal(library.models.length, saveAs ? 2 : 1);
+      assert.equal(await page.getByText(/qualification (catalog|version read) unavailable/).count(), 0);
+      assert.equal(await page.evaluate(() => window.__kyuubikiPwdt.state().selectedVersionId), checkpoint.version_id);
+    });
+  });
+
   test(`GUI save buttons recover a lost committed response without another write; saveAs=${saveAs}`, { timeout: 120_000 }, async () => {
     await usingWorkbench(async (page, library) => {
       await seed(page);

@@ -169,6 +169,8 @@ export function buildWorkbenchSidebarMountProps(props: WorkbenchSidebarMountSour
       props.sidebarSection,
       "section.library",
       <WorkbenchLibrarySectionMount
+        language={props.language}
+        invokeScriptAction={props.invokeScriptAction}
         labels={props.t}
         libraryTab={props.libraryTab}
         onLibraryTabChange={props.handleLibraryTabChange}

@@ -4,6 +4,7 @@ import type { ResultWindowState } from "./workbench-result-window-controller";
 
 export type ViewportRenderMode = "axial" | "line" | "plane" | "space";
 export type ViewportRenderStrategy = "auto" | "full" | "progressive" | "focus";
+export type ViewportLodDiagnostics = { active: boolean; nodeBudget: number; elementBudget: number };
 
 export type ViewportRenderDiagnostics = {
   mode: ViewportRenderMode;
@@ -14,6 +15,7 @@ export type ViewportRenderDiagnostics = {
   visibleElements: number;
   progressiveActive: boolean;
   progressiveBatchSize: number;
+  lod?: ViewportLodDiagnostics;
 };
 
 export type RenderFallbackMode = "direct" | "progressive" | "chunked" | "hybrid";
@@ -80,6 +82,7 @@ type BuildViewportRenderDiagnosticsArgs = {
   spaceVisibleNodeCount: number;
   spaceVisibleElementCount: number;
   spaceProgressiveActive: boolean;
+  spaceLod?: ViewportLodDiagnostics;
   planeNodeCount: number;
   planeElementCount: number;
   planeVisibleNodeCount: number;
@@ -110,6 +113,7 @@ export function buildViewportRenderDiagnostics(args: BuildViewportRenderDiagnost
       visibleNodes: args.spaceVisibleNodeCount,
       visibleElements: args.spaceVisibleElementCount,
       progressiveActive: args.spaceProgressiveActive,
+      ...(args.spaceLod ? { lod: args.spaceLod } : {}),
       progressiveBatchSize: Math.max(
         strategyRenderBatchSize(args.spaceNodeCount, args.strategy),
         strategyRenderBatchSize(args.spaceElementCount, args.strategy),

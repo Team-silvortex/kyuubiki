@@ -21,6 +21,12 @@ export type Truss3dSceneBuildArgs = {
   visibleTruss3dElements: DisplayTruss3dElement[];
   visibleTruss3dNodes: DisplayTruss3dNode[];
   deformationViewMode: DeformationViewMode;
+  sceneBounds?: Truss3dSceneBounds;
+  deformationScale?: number;
+  selectedNodeSet?: ReadonlySet<number>;
+  hasDeformation?: boolean;
+  nodeByIndex?: (index: number) => DisplayTruss3dNode | undefined;
+  elementColorByIndex?: (index: number) => string | undefined;
 };
 
 export type SceneBufferSet = {
@@ -34,6 +40,7 @@ export type SceneBufferSet = {
   deformedNodePositions: Float32Array;
   deformedNodeColors: Float32Array;
   deformationScale: number;
+  origin?: { x: number; y: number; z: number };
 };
 
 export type Truss3dSceneBounds = {
@@ -188,7 +195,7 @@ export function buildTruss3dSceneBuffers(args: Truss3dSceneBuildArgs): SceneBuff
   const deformedNodePositions: number[] = [];
   const deformedNodeColors: number[] = [];
   const parseCssColor = createColorResolver();
-  const selectedNodes = new Set(args.selectedTruss3dNodeIndices);
+  const selectedNodes = args.selectedNodeSet ?? new Set(args.selectedTruss3dNodeIndices);
   const draftNodes = new Set(args.memberDraftNodes);
   const hiddenMaterials = new Set(args.hiddenTruss3dMaterialIds);
   const gridColor = parseCssColor("rgba(132, 146, 166, 0.22)", [0.52, 0.57, 0.65, 0.22]);
@@ -198,8 +205,8 @@ export function buildTruss3dSceneBuffers(args: Truss3dSceneBuildArgs): SceneBuff
   const nodeColor = parseCssColor("rgba(222, 229, 239, 0.95)", [0.87, 0.9, 0.94, 0.95]);
   const hiddenNodeColor = parseCssColor("rgba(222, 229, 239, 0.45)", [0.87, 0.9, 0.94, 0.45]);
   const showDeformation = !args.isModelMode;
-  const deformationScale = resolveDeformationScale(args.visibleTruss3dNodes, showDeformation);
-  const canShowDeformation = showDeformation && deformationScale > 1;
+  const deformationScale = args.deformationScale ?? resolveDeformationScale(args.displayTruss3dNodes, showDeformation);
+  const canShowDeformation = showDeformation && (args.hasDeformation ?? args.displayTruss3dNodes.some((n) => Math.hypot(n.ux, n.uy, n.uz) > 1e-9));
   const showOriginal = !canShowDeformation || args.deformationViewMode !== "deformed";
   const showDeformed = canShowDeformation && args.deformationViewMode !== "original";
 
@@ -211,15 +218,16 @@ export function buildTruss3dSceneBuffers(args: Truss3dSceneBuildArgs): SceneBuff
       pushSegment(linePositions, lineColors, { x: -args.gridExtent, y: value, z: 0 }, { x: args.gridExtent, y: value, z: 0 }, gridColor);
       pushSegment(linePositions, lineColors, { x: value, y: -args.gridExtent, z: 0 }, { x: value, y: args.gridExtent, z: 0 }, gridColor);
     }
-    pushBoundingBox(linePositions, lineColors, computeTruss3dSceneBounds(args.visibleTruss3dNodes), boundsColor);
+    pushBoundingBox(linePositions, lineColors, args.sceneBounds ?? computeTruss3dSceneBounds(args.displayTruss3dNodes), boundsColor);
   }
 
   args.visibleTruss3dElements.forEach((element) => {
     if (element.material_id && hiddenMaterials.has(element.material_id)) return;
-    const start = args.displayTruss3dNodes[element.node_i];
-    const end = args.displayTruss3dNodes[element.node_j];
+    const start = args.nodeByIndex ? args.nodeByIndex(element.node_i) : args.displayTruss3dNodes[element.node_i];
+    const end = args.nodeByIndex ? args.nodeByIndex(element.node_j) : args.displayTruss3dNodes[element.node_j];
     if (!start || !end) return;
-    const base = parseCssColor(args.truss3dElementColors[element.index] ?? "rgba(122, 154, 255, 1)", [0.48, 0.6, 1, 1]);
+    const colorValue = args.elementColorByIndex ? args.elementColorByIndex(element.index) : args.truss3dElementColors[element.index];
+    const base = parseCssColor(colorValue ?? "rgba(122, 154, 255, 1)", [0.48, 0.6, 1, 1]);
     if (showOriginal) {
       const color = args.selectedTruss3dElement === element.index ? selectedColor : showDeformed ? withAlpha(base, 0.2) : base;
       pushSegment(linePositions, lineColors, start, end, color);
@@ -247,16 +255,25 @@ export function buildTruss3dSceneBuffers(args: Truss3dSceneBuildArgs): SceneBuff
     });
   }
 
+  // Subtract the global origin before Float32 conversion, preserving small details far from (0,0,0).
+  const origin = args.sceneBounds?.center;
+  const positions = (values: number[]) => {
+    if (origin) for (let i = 0; i < values.length; i += 3) {
+      values[i] -= origin.x; values[i + 1] -= origin.y; values[i + 2] -= origin.z;
+    }
+    return new Float32Array(values);
+  };
   return {
-    linePositions: new Float32Array(linePositions),
+    linePositions: positions(linePositions),
     lineColors: new Float32Array(lineColors),
-    nodePositions: new Float32Array(nodePositions),
+    nodePositions: positions(nodePositions),
     nodeColors: new Float32Array(nodeColors),
     nodeSizes: new Float32Array(nodeSizes),
-    deformedLinePositions: new Float32Array(deformedLinePositions),
+    deformedLinePositions: positions(deformedLinePositions),
     deformedLineColors: new Float32Array(deformedLineColors),
-    deformedNodePositions: new Float32Array(deformedNodePositions),
+    deformedNodePositions: positions(deformedNodePositions),
     deformedNodeColors: new Float32Array(deformedNodeColors),
     deformationScale,
+    origin,
   };
 }

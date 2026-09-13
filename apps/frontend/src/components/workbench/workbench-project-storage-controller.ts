@@ -344,8 +344,8 @@ export function createWorkbenchProjectStorageController({
     return openPersistedWorkbenchVersion(version, getPersistedModelEffects());
   };
 
-  const openModelVersionById = (versionId: string) => {
-    return openPersistedWorkbenchVersionById(versionId, getPersistedModelEffects());
+  const openModelVersionById = (versionId: string, validate?: import("@/lib/workbench/checkpoint-recovery").CheckpointVersionGuard) => {
+    return openPersistedWorkbenchVersionById(versionId, getPersistedModelEffects(), validate);
   };
 
   const renameSelectedVersion = () => {

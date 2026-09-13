@@ -1,0 +1,67 @@
+{
+  "kind": "bounded-native-gui-acceptance-observation",
+  "observed_at": "2026-09-13T05:06:19Z",
+  "status": "pass",
+  "grade": "verified",
+  "product_version": "daji 3.2.0",
+  "platform": "macos/aarch64",
+  "surface": "installed Tauri WKWebView with actual PWDT Python 3.12.7",
+  "scope": "idle managed service loss, blocked save, draft retention, explicit restart and healthy follow-up",
+  "script": "tests/manual/pwdt-macos-service-recovery.py",
+  "script_sha256": "a47c5e53abb7f7b643225813c39f6bba13f7151068261564bf1ebe1896465e53",
+  "checkpoint_source_sha256": "9d843956c86539a0aa95b7614257a657163f777bbcffa49ef1a304f8e39f63c6",
+  "frontend_entrypoint_sha256": "4a8b4709432dd386f024b64c5dbd0389a3f67d5693adb6803488eab5b8f44bcb",
+  "installed_runtime_manifest_sha256": "2e4ae79ca1ef697cd61ca44cc2f5daf3551a05eb34b2b077e112f3d3b594ae2c",
+  "startup_report": "releases/usability-evidence/3.2.0/macos-installed-recovery-startup.json",
+  "native_actions": [
+    "PWDT created and solved a four-node six-member truss, then translated the apex from 1.25 m to 1.50 m without saving",
+    "Installer GUI Check services showed four running managed services; independent API read found fourteen terminal jobs and no active job",
+    "Installer GUI Stop all stopped the frontend, Orchestra and two Rust agents; the loaded Workbench remained usable",
+    "PWDT refresh observed no health; model/save was blocked with Control plane is offline, retaining selection, metadata and working geometry",
+    "Installer GUI Start local restored all four services without changing the database",
+    "PWDT read-only refresh retained the original model/version selection; explicit save committed one new version and a real Rust-agent solve completed"
+  ],
+  "native_markers": [
+    "MACOS_SERVICE_PREPARED",
+    "MACOS_OFFLINE_SAVE_BLOCKED",
+    "MACOS_OFFLINE_DRAFT_RETAINED",
+    "MACOS_SERVICE_RECOVERY_PASS"
+  ],
+  "independent_api_checks": {
+    "project_id": "3d6c33402e4e15ff",
+    "model_id": "b6d57f26d6a2be01",
+    "model_version_count": 2,
+    "version_one": { "id": "11ef0ed688d5e843", "number": 1, "apex_z_m": 1.25 },
+    "version_two": { "id": "7e71b02365403bcb", "number": 2, "apex_z_m": 1.5 },
+    "same_model": true,
+    "latest_pointer_matches_v2": true,
+    "job_id": "b8ae21a5fefee8f6",
+    "job_status": "completed",
+    "job_version_matches_v2": true,
+    "worker": "rust-agent-rpc@127.0.0.1:5001",
+    "apex_ux_m": -0.0000010714285714285716,
+    "apex_uy_m": -0.0000010714285714285716,
+    "apex_uz_m": -0.0000007142857142857143,
+    "vertical_member_force_N": -1000.0000000000001,
+    "displacement_absolute_tolerance_m": 1e-12,
+    "force_absolute_tolerance_N": 1e-8,
+    "analytical_oracle_pass": true
+  },
+  "source_regressions": {
+    "new_retry_cases_failed_before_fix": 3,
+    "checkpoint_unit_tests_passed": 13,
+    "workflow_unit_tests_passed": 958,
+    "checkpoint_browser_tests_passed": 10,
+    "skipped": 0,
+    "typecheck": "pass",
+    "production_frontend_build": "pass"
+  },
+  "limits": [
+    "The offline save was rejected before transport. This is not native post-commit response-loss or interrupted-write qualification.",
+    "The WebView stayed open during the outage. Durable recovery of automatic GUI request keys after WebView closure remains open.",
+    "The three new request-identity/authority races were reproduced in source unit tests, not by mutating an installed WebView transport.",
+    "Catalog/history response failures were exercised in Chromium HTTP mocks, separately from native service controls.",
+    "Only the bounded linear 3D truss and local SQLite service lifecycle were exercised, not large meshes or other solver families.",
+    "macOS packages are development ad-hoc signed, not Apple-notarized distribution artifacts. Windows work is deferred, not qualified."
+  ]
+}

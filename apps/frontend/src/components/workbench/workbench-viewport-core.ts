@@ -288,7 +288,7 @@ export function toSvgPoint(node: { x: number; y: number }, bounds: Bounds) {
   };
 }
 
-function rotatePoint(node: { x: number; y: number; z: number }, camera: CameraState) {
+export function rotatePoint(node: { x: number; y: number; z: number }, camera: CameraState) {
   const cy = Math.cos(camera.yaw);
   const sy = Math.sin(camera.yaw);
   const cp = Math.cos(camera.pitch);
@@ -300,26 +300,33 @@ function rotatePoint(node: { x: number; y: number; z: number }, camera: CameraSt
   return { x: yawX, y: pitchY, z: pitchZ };
 }
 
-export function buildProjectedBounds(nodes: DisplayTruss3dNode[], camera: CameraState) {
-  if (!nodes.length) return { minX: -1, maxX: 1, minZ: -1, maxZ: 1, width: 2, height: 2 };
+export type Truss3dDepth = { depthCenter?: number; depthDistance?: number };
+
+export function buildProjectedBounds(nodes: readonly { x: number; y: number; z: number }[], camera: CameraState) {
+  if (!nodes.length) return { minX: -1, maxX: 1, minZ: -1, maxZ: 1, width: 2, height: 2, depthCenter: 0, depthDistance: 8 };
   const cy = Math.cos(camera.yaw), sy = Math.sin(camera.yaw);
   const cp = Math.cos(camera.pitch), sp = Math.sin(camera.pitch);
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  let minDepth = Infinity, maxDepth = -Infinity;
   for (const node of nodes) {
     const x = node.x * cy - node.y * sy;
     const z = (node.x * sy + node.y * cy) * sp + node.z * cp;
+    const depth = (node.x * sy + node.y * cy) * cp - node.z * sp;
     minX = Math.min(minX, x);
     maxX = Math.max(maxX, x);
     minZ = Math.min(minZ, z);
     maxZ = Math.max(maxZ, z);
+    minDepth = Math.min(minDepth, depth); maxDepth = Math.max(maxDepth, depth);
   }
   return {
     minX,
     maxX,
     minZ,
     maxZ,
-    width: Math.max(maxX - minX, 1.0e-6),
-    height: Math.max(maxZ - minZ, 1.0e-6),
+    width: Math.max(maxX - minX, 1.0e-12),
+    height: Math.max(maxZ - minZ, 1.0e-12),
+    depthCenter: (minDepth + maxDepth) / 2,
+    depthDistance: Math.max(maxX - minX, maxZ - minZ, maxDepth - minDepth, 1e-12) * 4,
   };
 }
 
@@ -347,7 +354,7 @@ export function truss3dProjectionScale(bounds: { width: number; height: number }
   return Math.min(TRUSS3D_PROJECTION.width / bounds.width, TRUSS3D_PROJECTION.height / bounds.height);
 }
 
-export function pointerToViewport(event: ReactPointerEvent<SVGSVGElement>) {
+export function pointerToViewport(event: { currentTarget: SVGSVGElement; clientX: number; clientY: number }) {
   const rect = event.currentTarget.getBoundingClientRect();
   return {
     x: ((event.clientX - rect.left) / rect.width) * 980,
@@ -357,12 +364,12 @@ export function pointerToViewport(event: ReactPointerEvent<SVGSVGElement>) {
 
 export function projectTruss3dPoint(
   node: { x: number; y: number; z: number },
-  bounds: { minX: number; maxX: number; minZ: number; maxZ: number; width: number; height: number },
+  bounds: { minX: number; maxX: number; minZ: number; maxZ: number; width: number; height: number } & Truss3dDepth,
   camera: CameraState,
   projection: ProjectionMode,
 ) {
   const rotated = rotatePoint(node, camera);
-  const depth = projection === "persp" ? 8 / (8 + rotated.y) : 1;
+  const depth = projection === "persp" ? truss3dPerspectiveDepth(rotated.y, bounds) : 1;
   const scale = truss3dProjectionScale(bounds) * camera.zoom * depth;
   return {
     x: TRUSS3D_PROJECTION.centerX + (rotated.x - bounds.minX - bounds.width / 2) * scale + camera.panX,
@@ -377,9 +384,14 @@ export function rotatedDeltaToWorld(deltaX: number, deltaZ: number, camera: Came
   return { x: deltaX * cy + yawY * sy, y: -deltaX * sy + yawY * cy, z: deltaZ * Math.cos(camera.pitch) };
 }
 
-export function truss3dDragDelta(node: { x: number; y: number; z: number }, bounds: { width: number; height: number },
+export function truss3dPerspectiveDepth(rotatedY: number, bounds: Truss3dDepth) {
+  const distance = bounds.depthDistance ?? 8;
+  return distance / Math.max(distance * 0.01, distance + rotatedY - (bounds.depthCenter ?? 0));
+}
+
+export function truss3dDragDelta(node: { x: number; y: number; z: number }, bounds: { width: number; height: number } & Truss3dDepth,
   camera: CameraState, projection: ProjectionMode, dx: number, dy: number) {
-  const depth = projection === "persp" ? 8 / (8 + rotatePoint(node, camera).y) : 1;
+  const depth = projection === "persp" ? truss3dPerspectiveDepth(rotatePoint(node, camera).y, bounds) : 1;
   const scale = truss3dProjectionScale(bounds) * camera.zoom * depth;
   return rotatedDeltaToWorld(dx / scale, -dy / scale, camera);
 }

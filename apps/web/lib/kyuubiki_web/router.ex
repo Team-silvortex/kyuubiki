@@ -611,6 +611,24 @@ defmodule KyuubikiWeb.Router do
     end)
   end
 
+  get "/api/v1/checkpoints/:operation/:parent_id/:request_id" do
+    conn = put_resp_header(conn, "cache-control", "no-store")
+
+    with_auth(conn, :read, fn conn ->
+      kind =
+        case operation do
+          "model" -> :model
+          "version" -> :version
+          _ -> nil
+        end
+
+      case Library.get_checkpoint(kind, parent_id, request_id) do
+        {:ok, checkpoint} -> respond_json(conn, 200, %{"checkpoint" => checkpoint})
+        {:error, reason} -> unprocessable(conn, reason)
+      end
+    end)
+  end
+
   get "/api/v1/projects/:project_id/models" do
     with_auth(conn, :read, fn conn ->
       case Library.list_models(project_id) do

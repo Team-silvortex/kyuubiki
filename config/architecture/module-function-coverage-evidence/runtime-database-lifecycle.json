@@ -91,7 +91,7 @@
         "NATIVE_RETRY_PASS",
         "NATIVE_RETRY_RELOAD_PASS",
         "one new model, two versions, two durable",
-        "Automatic retry keys remain WebView-session-local"
+        "Automatic retry keys were WebView-session-local in this round"
       ]
     }
   ]

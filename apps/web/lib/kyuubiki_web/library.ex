@@ -89,6 +89,18 @@ defmodule KyuubikiWeb.Library do
     backend().reset()
   end
 
+  def get_checkpoint(operation, parent, request_id)
+      when operation in [:model, :version] and is_binary(parent) and byte_size(parent) in 1..128 do
+    with {:ok, id} when is_binary(id) <-
+           KyuubikiWeb.Library.CheckpointRequest.normalize(%{"request_id" => request_id}) do
+      {:ok, backend().get_checkpoint(operation, parent, id)}
+    else
+      _ -> {:error, :invalid_checkpoint_request_id}
+    end
+  end
+
+  def get_checkpoint(_, _, _), do: {:error, :invalid_checkpoint_request}
+
   defp backend do
     if KyuubikiWeb.Storage.sql?() do
       KyuubikiWeb.Library.PostgresBackend

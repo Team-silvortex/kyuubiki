@@ -14,6 +14,7 @@ import { normalizeDesktopPlatform } from "./shared/platform.js";
 import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/runtime-status-summary.js";
 import { loadDesktopLanguagePack } from "./shared/language-pack-loader.js";
 import { installWorkbenchPanelLayoutHost } from "./shared/workbench-panel-layout-bridge.js";
+import { installWorkbenchCheckpointHost } from "./shared/checkpoint-recovery-bridge.js";
 
 const shellCopy = {
   en: {
@@ -533,6 +534,7 @@ watchDesktopLanguagePreference({
 });
 
 installWorkbenchPanelLayoutHost(elements.frame, invokeTauri);
+installWorkbenchCheckpointHost(elements.frame, invokeTauri);
 
 window.addEventListener("message", async (event) => {
   if (event.source !== elements.frame.contentWindow) return;

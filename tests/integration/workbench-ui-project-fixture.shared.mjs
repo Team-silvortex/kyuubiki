@@ -101,6 +101,20 @@ async function mockModelLibrary(page) {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
     const method = request.method();
+    const lookup = pathname.match(/^\/api\/v1\/checkpoints\/(model|version)\/([^/]+)\/([^/]+)$/u);
+    if (lookup && method === "GET") {
+      const [, operation, parent, id] = lookup.map(decodeURIComponent);
+      const path = operation === "model" ? `/api/v1/projects/${parent}/models` : `/api/v1/models/${parent}/versions`;
+      const stored = checkpointReceipts.get(`${path}:${id}`);
+      const saved = stored?.body.model ?? stored?.body.version;
+      const versionId = saved?.latest_version_id ?? saved?.version_id;
+      const exists = library.models.some((entry) => entry.model_id === saved?.model_id)
+        && library.versions.some((entry) => entry.version_id === versionId);
+      return route.fulfill({ json: { checkpoint: saved ? {
+        status: exists ? "committed" : "deleted", project_id: saved.project_id,
+        model_id: saved.model_id, version_id: versionId,
+      } : { status: "unknown" } } });
+    }
     const create = pathname.match(/^\/api\/v1\/projects\/([^/]+)\/models$/u);
     const modelPath = pathname.match(/^\/api\/v1\/models\/([^/]+)(\/versions)?$/u);
     const versionPath = pathname.match(/^\/api\/v1\/model-versions\/([^/]+)$/u);

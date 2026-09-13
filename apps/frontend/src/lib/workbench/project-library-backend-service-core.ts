@@ -1,6 +1,7 @@
 "use client";
 
 import { createCheckpointRetry } from "./checkpoint-retry.ts";
+import type { CheckpointJournal } from "./checkpoint-journal.ts";
 
 import type {
   ModelEnvelope,
@@ -72,7 +73,7 @@ export type WorkbenchProjectLibraryBackendService = {
 
 export function createProjectLibraryBackendService(
   transport: WorkbenchProjectLibraryBackendTransport,
-  retryOptions: { scope?: () => string } = {},
+  retryOptions: { scope?: () => string; journal?: CheckpointJournal } = {},
 ): WorkbenchProjectLibraryBackendService {
   const checkpoint = createCheckpointRetry(retryOptions);
   return {

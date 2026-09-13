@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createTruss3dWebglRenderer } from "../../src/components/workbench/workbench-truss3d-webgl-renderer";
-import { buildTruss3dSceneBuffers } from "../../src/components/workbench/workbench-truss3d-webgl-scene";
-import { buildProjectedBounds, cameraForPreset } from "../../src/components/workbench/workbench-viewport-core";
+import { buildTruss3dSceneBuffers, computeTruss3dSceneBounds } from "../../src/components/workbench/workbench-truss3d-webgl-scene";
+import { buildProjectedBounds, cameraForPreset, projectTruss3dPoint } from "../../src/components/workbench/workbench-viewport-core";
 import { modelingSceneFixture } from "../support/modeling-fixtures";
 import { webglFixture } from "../support/webgl-context-fixture";
 
@@ -57,4 +57,26 @@ test("lost contexts do not receive draw calls", () => {
   assert.equal(fixture.calls.drawArrays ?? 0, 0);
   renderer.dispose();
   assert.equal(fixture.liveBuffers.size, 0);
+});
+
+test("rebased GPU projection uniforms agree with SVG picking for tiny details far from the origin", () => {
+  const { gl, uniforms } = webglFixture(), renderer = createTruss3dWebglRenderer(gl)!;
+  const args = modelingSceneFixture(8);
+  for (const node of args.displayTruss3dNodes) { node.x = 1e6 + node.x * 0.001; node.y -= 1e6; node.z *= 0.001; }
+  const scene = buildTruss3dSceneBuffers({ ...args, sceneBounds: computeTruss3dSceneBounds(args.displayTruss3dNodes) });
+  const camera = { ...cameraForPreset("iso"), zoom: 2 };
+  const projected3d = buildProjectedBounds(args.displayTruss3dNodes, camera);
+  for (const projectionMode of ["ortho", "persp"] as const) {
+    renderer.draw(scene, { camera, projected3d, projectionMode }, 980, 460);
+    const [minX, minZ, width, height] = uniforms.uBounds, [depthCenter, depthDistance] = uniforms.uDepth;
+    const localBounds = { minX, maxX: minX + width, minZ, maxZ: minZ + height, width, height, depthCenter, depthDistance };
+    for (let i = 0; i < args.displayTruss3dNodes.length; i++) {
+      const p = i * 3;
+      const local = { x: scene.nodePositions[p], y: scene.nodePositions[p + 1], z: scene.nodePositions[p + 2] };
+      const gpu = projectTruss3dPoint(local, localBounds, camera, projectionMode);
+      const svg = projectTruss3dPoint(args.displayTruss3dNodes[i], projected3d, camera, projectionMode);
+      assert.ok(Math.abs(gpu.x - svg.x) < 0.001 && Math.abs(gpu.y - svg.y) < 0.001);
+    }
+  }
+  renderer.dispose();
 });

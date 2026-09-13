@@ -57,16 +57,18 @@
     {
       "id": "workbench-uncertain-write-recovery-ui",
       "module_id": "workbench-shell", "paradigm": "persistence_provenance", "dimension": "recovery",
-      "scope": "installed-gui/uncertain-checkpoint/webview-close-and-reopen", "target": "qualified", "claims": [],
+      "scope": "installed-gui/uncertain-checkpoint/webview-close-and-reopen", "target": "qualified",
+      "claims": ["macos-installed-pwdt-checkpoint-reopen-recovery"],
       "basis": ["docs/tutorial-pwdt-automation.html", "docs/acceptance-immersive-modeling.html"],
-      "acceptance": "Expose a bounded durable recovery receipt for an uncertain GUI save after WebView closure, reconcile its outcome without silent re-save and offer an explicit next step. Current in-memory retry and an externally retained PWDT key are partial building blocks only."
+      "acceptance": "Expose a bounded durable recovery receipt for an uncertain GUI save after WebView closure, reconcile its outcome without silent re-save and offer an explicit next step. A native metadata journal, actual macOS process exit, GUI check/open, PWDT acknowledgement and zero recovery POSTs now have verified evidence. Sustained, concurrent-window and wider installed fault qualification remain open."
     },
     {
       "id": "workbench-macos-installed-fault-recovery",
       "module_id": "workbench-shell", "paradigm": "validation", "dimension": "recovery",
-      "scope": "macos/installed-webview/interrupted-write-and-service-loss", "target": "qualified", "claims": [],
-      "basis": ["config/architecture/usability-release-gate.json", "docs/acceptance-immersive-modeling.html"],
-      "acceptance": "Retain actual installed fault-injection evidence for service loss or response loss with recovery and no duplicated writes. Mock HTTP failures and a clean native restart do not close installed-macos fault recovery."
+      "scope": "macos/installed-webview/interrupted-write-and-service-loss", "target": "qualified",
+      "claims": ["macos-installed-pwdt-service-outage-recovery", "macos-installed-pwdt-postcommit-response-recovery", "macos-installed-pwdt-checkpoint-reopen-recovery"],
+      "basis": ["config/architecture/usability-release-gate.json", "docs/acceptance-immersive-modeling.html", "releases/usability-evidence/3.2.0/macos-pwdt-service-recovery.json", "releases/usability-evidence/3.2.0/macos-pwdt-response-fault.json"],
+      "acceptance": "Retain actual installed fault-injection evidence for service loss or response loss with recovery and no duplicated writes. Idle-service outage and bounded post-commit body stall/response loss now have verified native evidence. Mid-transaction interruption and sustained fault qualification remain open. Mock HTTP failures and a clean native restart alone do not close this scope."
     },
     {
       "id": "workbench-windows-installed-fault-recovery",

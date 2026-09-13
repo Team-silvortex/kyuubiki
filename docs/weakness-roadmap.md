@@ -70,7 +70,7 @@ promote claim metadata solely to restore a green score.
 | Protocol and engine evidence | `runtime-protocol/sdk_operator`, `runtime-protocol/solver_execution`, `runtime-engine-solver/benchmark` | Bind or obtain security/contract proof per required dimension; existing numerical or scale evidence must not substitute. |
 | Headless independence | `sdk-headless/sdk_headless`, `workbench-shell/sdk_headless` | Retain source-detached Python and Elixir research journeys; audit Workbench/Headless boundary execution and contract evidence separately from Rust-only installed proof. |
 | Data lifecycle | `orchestra-control-plane/persistence_provenance`, `runtime-installer/persistence_provenance`, `runtime-installer/deployment_update`, `installer-shell/deployment_update` | Qualify PostgreSQL revision-2 replay, consistent database plus external-artifact restore, compatibility-gated activation and the visible Installer upgrade journey. |
-| GUI recovery | `workbench-shell/persistence_provenance`, `workbench-shell/validation` | Reconcile an uncertain save after WebView closure; qualify actual installed macOS/Windows service or response loss, not just a clean restart. |
+| GUI recovery | `workbench-shell/persistence_provenance`, `workbench-shell/validation` | Extend verified macOS App-exit receipt recovery to sustained/interrupted-write qualification; Windows remains separately open. |
 | Windows control and updates | `runtime-agent-cli/runtime_api`, `runtime-installer/deployment_update` | Retain the installed Agent/Orchestra round trip and complete desktop-set update/rollback. |
 
 The native macOS SQLite revision-2 migration and explicit-key PWDT checkpoint
@@ -116,6 +116,89 @@ response loss and installed platform journeys still need separate proof.
 The usability gate baseline and target now follow the current minor line;
 `release_claim_allowed` remains false and no open release subtier was removed.
 See the [book follow-up](book-ch03-architecture-boundaries.html#product-recovery-follow-up).
+
+### macOS-First Native Follow-Up
+
+Windows work is deferred for now, not removed from the obligations above.
+The installed macOS follow-up rebuilt and installed all three independent App
+bundles, updated the sealed frontend, and kept the existing database in place.
+Actual Installer Stop all / Start local actions controlled the four managed
+services. PWDT in WKWebView rejected an offline save, retained the unsaved 3D
+draft, then saved it once after recovery and completed a real Rust-agent solve.
+Independent API checks found exactly two versions and verified the retained
+geometry, latest pointer, job binding and analytical displacement/force oracle.
+
+The shared checkpoint retry code also now snapshots request identity with its
+payload and checks authority again at dispatch. Three new unit cases reproduced
+the pre-fix races. Final source checks passed: 13 checkpoint unit cases, 958
+workflow unit cases, 10 checkpoint browser cases, type checking and production
+build. The two new browser cases verify that simultaneous catalog/history read
+failures after commit are recovered with no checkpoint POSTs. These mock cases
+are not the installed native failure evidence.
+
+The tensor binds `macos-installed-pwdt-service-outage-recovery` at `verified`,
+not `qualified`. Dimension-presence gaps fall from 5 to 4; 61/77 coordinates
+still meet every target, 16 remain open, including 11 P0 coordinates, and the
+named requirements remain 6/20 met. The offline save was rejected before
+transport: native interrupted writes, post-commit response loss and automatic
+request-key recovery after WebView closure were still open at that step; the two
+follow-ups below add narrower verified evidence. No release claim
+or broad GUI reliability percentage is implied. See the
+[native acceptance and limits](acceptance-immersive-modeling.html#macos-service-recovery).
+
+### macOS Post-Commit Response Recovery
+
+The next macOS follow-up now covers post-commit response loss in an installed
+WKWebView, not just an offline guard. A bounded Rust loopback proxy observed real
+201 commits, then stalled a version body or dropped a new-model response.
+Explicit retries reused both automatic keys and returned the original receipts:
+two models, three versions, five POSTs, three distinct keys, zero duplicate
+versions. A real Rust-agent solve of the recovered fork passed its analytical
+oracle. The original API override was restored and the test proxy stopped.
+
+This exposed and fixed a shared API-client bug: the request timeout and caller
+cancellation ended at headers instead of after body consumption; JSON transport
+errors could also be swallowed as empty successes. Ten new lifecycle cases
+reproduced eight failures before the fix. Verification: 968 workflow unit tests,
+10 checkpoint browser tests, 8 Rust fixture tests, type checking and production
+build passed. The installed static frontend was updated without changing the
+database or adding production fault hooks. See the
+[response-fault acceptance](acceptance-immersive-modeling.html#macos-response-fault).
+
+`macos-installed-pwdt-postcommit-response-recovery` remains `verified`; the
+broader requirement is still not `qualified`. Native mid-transaction failure,
+hard power loss and sustained fault stress remain open. Automatic keys after
+WebView closure are addressed by the following bounded native round.
+
+### macOS App-Exit Receipt Recovery
+
+Automatic save identities now reserve a native Rust journal entry before any
+checkpoint transport. The dedicated IPC accepts only six metadata fields and
+list/reserve/conditional-remove operations; it never accepts arbitrary paths or
+commands. Capacity is 64 entries / 64 KiB, plus one atomic staging file and a lock.
+Normal browser mode uses IndexedDB. The desktop path never silently falls back
+when its host is absent, and no WebView privacy setting was changed.
+
+Installed macOS acceptance injected a committed version-body stall and a dropped
+Save As response, then fully exited Workbench and opened a different process.
+Both automatic request IDs survived. The Library panel checked and opened the
+confirmed version; PWDT checked, opened and acknowledged both records. Recovery
+sent zero checkpoint POSTs: two new models, three versions, no duplicates. The
+recovered fork completed a real Rust-agent solve with the analytical oracle.
+The proxy routing override was explicitly rebound to the same authority after
+restart and removed afterward; it is not part of the metadata journal.
+
+Verification passed 980 workflow unit cases, 15 browser cases, 17 bridge/shell
+cases, 12 SQLite and 11 memory checkpoint cases. Desktop-runtime passed 71 cases
+(including seven native-journal cases); one existing manual test was ignored.
+The initial concurrent browser run hung during teardown; the serial rerun passed,
+but that harness flake is not diagnosed. Native receipts and limits are retained
+in the [App-exit acceptance](acceptance-immersive-modeling.html#macos-checkpoint-reopen).
+
+`macos-installed-pwdt-checkpoint-reopen-recovery` is `verified`, not `qualified`.
+Unknown receipts remain pending; this is not an unsaved-draft archive, hard-power-
+loss guarantee, cross-window writer qualification or sustained fault campaign.
+The 6/20 named qualification requirements remain unchanged; Windows is deferred.
 
 ### Retained Qualification History
 

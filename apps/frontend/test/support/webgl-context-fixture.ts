@@ -2,6 +2,7 @@ export function webglFixture(fail: { shader?: number; program?: boolean; link?: 
   const calls: Record<string, number> = {};
   const liveBuffers = new Set<object>(), livePrograms = new Set<object>(), liveShaders = new Set<object>();
   const scissors: number[][] = [];
+  const uniforms: Record<string, number[]> = {};
   let lost = false;
   const count = (key: string) => { calls[key] = (calls[key] ?? 0) + 1; };
   const gl = {
@@ -17,13 +18,16 @@ export function webglFixture(fail: { shader?: number; program?: boolean; link?: 
     deleteProgram(program: object) { count("deleteProgram"); livePrograms.delete(program); },
     createBuffer() { count("createBuffer"); if (calls.createBuffer === fail.buffer) return null; const buffer = {}; liveBuffers.add(buffer); return buffer; },
     deleteBuffer(buffer: object) { count("deleteBuffer"); liveBuffers.delete(buffer); },
-    getAttribLocation() { return 0; }, getUniformLocation() { return {}; },
+    getAttribLocation() { return 0; }, getUniformLocation(_program: object, name: string) { return { name }; },
     bindBuffer() {}, bufferData() { count("bufferData"); },
     enableVertexAttribArray() {}, disableVertexAttribArray() {}, vertexAttribPointer() {}, vertexAttrib1f() {},
     viewport() { count("viewport"); }, clearColor() {}, clear() {}, enable() {}, disable() {},
     scissor(...rect: number[]) { scissors.push(rect); }, blendFunc() {}, useProgram() {},
-    uniform4f() {}, uniform3f() {}, uniform2f() {}, uniform1f() {},
+    uniform4f(location: { name: string }, ...values: number[]) { uniforms[location.name] = values; },
+    uniform3f(location: { name: string }, ...values: number[]) { uniforms[location.name] = values; },
+    uniform2f(location: { name: string }, ...values: number[]) { uniforms[location.name] = values; },
+    uniform1f(location: { name: string }, ...values: number[]) { uniforms[location.name] = values; },
     drawArrays() { count("drawArrays"); }, isContextLost() { return lost; },
   };
-  return { gl: gl as unknown as WebGLRenderingContext, calls, scissors, liveBuffers, livePrograms, liveShaders, lose: () => { lost = true; } };
+  return { gl: gl as unknown as WebGLRenderingContext, calls, scissors, uniforms, liveBuffers, livePrograms, liveShaders, lose: () => { lost = true; } };
 }

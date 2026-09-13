@@ -110,9 +110,12 @@ test("bounds preserve default margins, signed zero, and camera projections", () 
     const camera = cameraForPreset(preset);
     const xs = nodes.map((node) => node.x * Math.cos(camera.yaw) - node.y * Math.sin(camera.yaw));
     const zs = nodes.map((node) => (node.x * Math.sin(camera.yaw) + node.y * Math.cos(camera.yaw)) * Math.sin(camera.pitch) + node.z * Math.cos(camera.pitch));
+    const depths = nodes.map((node) => (node.x * Math.sin(camera.yaw) + node.y * Math.cos(camera.yaw)) * Math.cos(camera.pitch) - node.z * Math.sin(camera.pitch));
     assert.deepEqual(buildProjectedBounds(nodes, camera), {
       minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs),
-      width: Math.max(Math.max(...xs) - Math.min(...xs), 1e-6), height: Math.max(Math.max(...zs) - Math.min(...zs), 1e-6),
+      width: Math.max(Math.max(...xs) - Math.min(...xs), 1e-12), height: Math.max(Math.max(...zs) - Math.min(...zs), 1e-12),
+      depthCenter: (Math.min(...depths) + Math.max(...depths)) / 2,
+      depthDistance: Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs), Math.max(...depths) - Math.min(...depths), 1e-12) * 4,
     });
   }
 });

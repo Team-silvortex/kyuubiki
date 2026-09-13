@@ -62,7 +62,7 @@ export function WorkbenchRenderDiagnosticsBar({
     <details className="viewport-render-bar" data-workbench-render-details="true">
       <summary>
         <strong>{t.renderDiagnosticsTitle}</strong>
-        <span>{diagnostics.progressiveActive ? t.renderStatusProgressive : t.renderStatusStable}</span>
+        <span>{diagnostics.lod?.active ? "LOD" : diagnostics.progressiveActive ? t.renderStatusProgressive : t.renderStatusStable}</span>
         <span>{diagnostics.visibleNodes}/{diagnostics.totalNodes} {t.nodes} · {diagnostics.visibleElements}/{diagnostics.totalElements} {t.totalElements}</span>
       </summary>
       <div className="viewport-render-bar__meta">
@@ -86,6 +86,7 @@ export function WorkbenchRenderDiagnosticsBar({
             {t.renderBatchLabel}: {diagnostics.progressiveBatchSize}
           </span>
         ) : null}
+        {diagnostics.lod ? <span>LOD ≤ {diagnostics.lod.nodeBudget} {t.nodes} / {diagnostics.lod.elementBudget} {t.totalElements}</span> : null}
         {resultWindow ? (
           <span>
             {t.chunkSize}: {resultWindow.limit}
@@ -100,7 +101,7 @@ export function WorkbenchRenderDiagnosticsBar({
             onClick={() => onRenderStrategyChange(strategy)}
             type="button"
           >
-            {strategyLabel(t, strategy)}
+            {strategyLabel(t, strategy)}{diagnostics.lod ? " · LOD" : ""}
           </button>
         ))}
       </div>

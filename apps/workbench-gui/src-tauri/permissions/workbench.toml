@@ -42,3 +42,8 @@ commands.allow = ["get_workbench_panel_layout"]
 identifier = "allow-set-workbench-panel-layout"
 description = "Writes only validated Workbench panel dimensions, not arbitrary preferences or files."
 commands.allow = ["set_workbench_panel_layout"]
+
+[[permission]]
+identifier = "allow-checkpoint-recovery"
+description = "Manage only bounded checkpoint identity metadata in a fixed application-owned journal; no paths, payloads or credentials."
+commands.allow = ["list_checkpoint_intents", "reserve_checkpoint_intent", "remove_checkpoint_intent"]

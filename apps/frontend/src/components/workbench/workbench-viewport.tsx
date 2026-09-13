@@ -5,16 +5,13 @@ import {
   buildProjectedBounds,
   buildTruss3dGrid,
   cameraForPreset,
-  initialRenderBudget,
   pointerToViewport,
+  pointInsideViewport,
   projectTruss3dPoint,
-  renderBatchSize,
   stepForDensity,
   truss3dDragDelta,
-  TRUSS3D_PROJECTION,
   type CameraState,
   type ProjectionMode,
-  type ViewPreset,
   type WorkbenchViewportProps,
 } from "@/components/workbench/workbench-viewport-core";
 import {
@@ -27,8 +24,9 @@ import {
   buildViewportRenderDiagnostics,
   strategyInitialRenderBudget,
   strategyRenderBatchSize,
-  type ViewportRenderDiagnostics,
 } from "@/components/workbench/workbench-render-diagnostics";
+import { buildTruss3dLodIndex, queryTruss3dLod, truss3dLodBudget } from "./workbench-truss3d-lod";
+import { focusTruss3d, zoomTruss3dAt } from "./workbench-truss3d-camera";
 
 function WorkbenchViewportInner(props: WorkbenchViewportProps) {
   const {
@@ -116,8 +114,6 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
   const isModelMode = sidebarSection === "model";
   const [trussElementRenderLimit, setTrussElementRenderLimit] = useState(displayTrussElements.length);
   const [trussNodeRenderLimit, setTrussNodeRenderLimit] = useState(displayTrussNodes.length);
-  const [truss3dElementRenderLimit, setTruss3dElementRenderLimit] = useState(displayTruss3dElements.length);
-  const [truss3dNodeRenderLimit, setTruss3dNodeRenderLimit] = useState(displayTruss3dNodes.length);
   const [planeElementRenderLimit, setPlaneElementRenderLimit] = useState(planeElements.length);
   const [planeNodeRenderLimit, setPlaneNodeRenderLimit] = useState(planeNodes.length);
   const progressiveRenderFrameRef = useRef<number | null>(null);
@@ -131,17 +127,25 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  const projected3d = useMemo(() => buildProjectedBounds(displayTruss3dNodes, camera),
-    [displayTruss3dNodes, camera.yaw, camera.pitch]);
-  const selected3dNodeData = selectedTruss3dNode !== null ? displayTruss3dNodes[selectedTruss3dNode] : null;
+  const lodIndex = useMemo(() => buildTruss3dLodIndex(displayTruss3dNodes, displayTruss3dElements, hiddenTruss3dMaterialIds, !isModelMode),
+    [displayTruss3dNodes, displayTruss3dElements, hiddenTruss3dMaterialIds, isModelMode]);
+  // Camera changes fit eight cached corners, never rescan the full mesh.
+  const projected3d = useMemo(() => buildProjectedBounds(lodIndex.corners, camera),
+    [lodIndex, camera.yaw, camera.pitch]);
+  const lodBudget = useMemo(() => truss3dLodBudget(renderStrategy), [renderStrategy]);
+  const lod = useMemo(() => queryTruss3dLod(lodIndex, { camera, projected3d, projectionMode }, lodBudget, {
+    node: selectedTruss3dNode, element: selectedTruss3dElement, nodes: selectedTruss3dNodeIndices, draft: memberDraftNodes,
+  }), [lodIndex, camera, projected3d, projectionMode, lodBudget, selectedTruss3dNode, selectedTruss3dElement, selectedTruss3dNodeIndices, memberDraftNodes]);
+  const selected3dNodeData = selectedTruss3dNode !== null ? lodIndex.nodeAt(selectedTruss3dNode) ?? null : null;
   const draftStartNodeIndex = memberDraftNodes[0] ?? null;
-  const draftStartNode = truss3dLinkMode && draftStartNodeIndex !== null ? displayTruss3dNodes[draftStartNodeIndex] ?? null : null;
+  const draftStartNode = truss3dLinkMode && draftStartNodeIndex !== null ? lodIndex.nodeAt(draftStartNodeIndex) ?? null : null;
   const visibleTrussElements = displayTrussElements.slice(0, trussElementRenderLimit);
   const visibleTrussNodes = displayTrussNodes.slice(0, trussNodeRenderLimit);
-  const visibleTruss3dElements = useMemo(() => displayTruss3dElements.slice(0, truss3dElementRenderLimit),
-    [displayTruss3dElements, truss3dElementRenderLimit]);
-  const visibleTruss3dNodes = useMemo(() => displayTruss3dNodes.slice(0, truss3dNodeRenderLimit),
-    [displayTruss3dNodes, truss3dNodeRenderLimit]);
+  const nodeLodKey = lod.nodes.map((node) => node.index).join(",");
+  const elementLodKey = lod.elements.map((element) => element.index).join(",");
+  // Stable membership reuses GPU buffers even while camera uniforms change.
+  const visibleTruss3dElements = useMemo(() => lod.elements, [lodIndex, elementLodKey]);
+  const visibleTruss3dNodes = useMemo(() => lod.nodes, [lodIndex, nodeLodKey]);
   const { extent: gridExtent, step: gridStep } = useMemo(() => buildTruss3dGrid(displayTruss3dNodes), [displayTruss3dNodes]);
   const visiblePlaneElements = planeElements.slice(0, planeElementRenderLimit);
   const visiblePlaneNodes = planeNodes.slice(0, planeNodeRenderLimit);
@@ -157,16 +161,12 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
     const targets = {
       trussElements: displayTrussElements.length,
       trussNodes: displayTrussNodes.length,
-      truss3dElements: displayTruss3dElements.length,
-      truss3dNodes: displayTruss3dNodes.length,
       planeElements: planeElements.length,
       planeNodes: planeNodes.length,
     };
 
     setTrussElementRenderLimit(strategyInitialRenderBudget(targets.trussElements, renderStrategy));
     setTrussNodeRenderLimit(strategyInitialRenderBudget(targets.trussNodes, renderStrategy));
-    setTruss3dElementRenderLimit(strategyInitialRenderBudget(targets.truss3dElements, renderStrategy));
-    setTruss3dNodeRenderLimit(strategyInitialRenderBudget(targets.truss3dNodes, renderStrategy));
     setPlaneElementRenderLimit(strategyInitialRenderBudget(targets.planeElements, renderStrategy));
     setPlaneNodeRenderLimit(strategyInitialRenderBudget(targets.planeNodes, renderStrategy));
 
@@ -184,16 +184,6 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
       setTrussNodeRenderLimit((current) => {
         const next = Math.min(targets.trussNodes, current + strategyRenderBatchSize(targets.trussNodes, renderStrategy));
         complete &&= next >= targets.trussNodes;
-        return next;
-      });
-      setTruss3dElementRenderLimit((current) => {
-        const next = Math.min(targets.truss3dElements, current + strategyRenderBatchSize(targets.truss3dElements, renderStrategy));
-        complete &&= next >= targets.truss3dElements;
-        return next;
-      });
-      setTruss3dNodeRenderLimit((current) => {
-        const next = Math.min(targets.truss3dNodes, current + strategyRenderBatchSize(targets.truss3dNodes, renderStrategy));
-        complete &&= next >= targets.truss3dNodes;
         return next;
       });
       setPlaneElementRenderLimit((current) => {
@@ -217,8 +207,6 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
     const needsProgressive =
       targets.trussElements > strategyInitialRenderBudget(targets.trussElements, renderStrategy) ||
       targets.trussNodes > strategyInitialRenderBudget(targets.trussNodes, renderStrategy) ||
-      targets.truss3dElements > strategyInitialRenderBudget(targets.truss3dElements, renderStrategy) ||
-      targets.truss3dNodes > strategyInitialRenderBudget(targets.truss3dNodes, renderStrategy) ||
       targets.planeElements > strategyInitialRenderBudget(targets.planeElements, renderStrategy) ||
       targets.planeNodes > strategyInitialRenderBudget(targets.planeNodes, renderStrategy);
 
@@ -235,8 +223,6 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
   }, [
     displayTrussElements.length,
     displayTrussNodes.length,
-    displayTruss3dElements.length,
-    displayTruss3dNodes.length,
     planeElements.length,
     planeNodes.length,
     renderStrategy,
@@ -261,8 +247,8 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
         spaceElementCount: displayTruss3dElements.length,
         spaceVisibleNodeCount: visibleTruss3dNodes.length,
         spaceVisibleElementCount: visibleTruss3dElements.length,
-        spaceProgressiveActive:
-          truss3dNodeRenderLimit < displayTruss3dNodes.length || truss3dElementRenderLimit < displayTruss3dElements.length,
+        spaceProgressiveActive: false,
+        spaceLod: { active: lod.limited, nodeBudget: lodBudget.nodes, elementBudget: lodBudget.elements },
         planeNodeCount: planeNodes.length,
         planeElementCount: planeElements.length,
         planeVisibleNodeCount: visiblePlaneNodes.length,
@@ -283,8 +269,8 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
     planeNodeRenderLimit,
     renderStrategy,
     studyKind,
-    truss3dElementRenderLimit,
-    truss3dNodeRenderLimit,
+    lod.limited,
+    lodBudget,
     trussElementRenderLimit,
     trussNodeRenderLimit,
     visiblePlaneElements.length,
@@ -330,7 +316,7 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
 
     if (dragNode3dRef.current !== null) {
       const targetIndex = dragNode3dRef.current;
-      const target = displayTruss3dNodes[targetIndex];
+      const target = lodIndex.nodeAt(targetIndex);
       if (!target) return;
       onBeginTruss3dNodeDrag();
       const deltaWorld = truss3dDragDelta(target, projected3d, camera, projectionMode, viewDx, viewDy);
@@ -339,7 +325,7 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
     }
 
     if (dragAxisRef.current !== null && selectedTruss3dNode !== null) {
-      const target = displayTruss3dNodes[selectedTruss3dNode];
+      const target = lodIndex.nodeAt(selectedTruss3dNode);
       if (!target) return;
       onBeginTruss3dNodeDrag();
       const axis = dragAxisRef.current;
@@ -376,9 +362,9 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
       const maxX = selectionRect.x + selectionRect.width;
       const minY = selectionRect.y;
       const maxY = selectionRect.y + selectionRect.height;
-      const selectedIndices = displayTruss3dNodes.flatMap((node, index) => {
+      const selectedIndices = visibleTruss3dNodes.flatMap((node) => {
         const point = projectTruss3dPoint(node, projected3d, camera, projectionMode);
-        return point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY ? [index] : [];
+        return pointInsideViewport(point, 0) && point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY ? [node.index] : [];
       });
       onSelectTruss3dNodes(selectedIndices, selectionAppendRef.current);
     }
@@ -399,33 +385,22 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
       setCamera((current) => ({ ...current, panX: current.panX - event.deltaY * 0.45 }));
       return;
     }
-    const direction = event.deltaY > 0 ? 0.92 : 1.08;
-    setCamera((current) => ({ ...current, zoom: Math.max(0.55, Math.min(2.8, current.zoom * direction)) }));
+    const anchor = pointerToViewport(event);
+    setCamera((current) => zoomTruss3dAt(current, anchor, event.deltaY, event.deltaMode));
   };
 
   const focusSelected3dNode = () => {
     const selectedNodes =
       selectedTruss3dNodeIndices.length > 0
-        ? selectedTruss3dNodeIndices.map((index) => displayTruss3dNodes[index]).filter(Boolean)
+        ? selectedTruss3dNodeIndices.map(lodIndex.nodeAt).filter(Boolean)
         : selected3dNodeData
           ? [selected3dNodeData]
-          : displayTruss3dNodes;
-    if (selectedNodes.length === 0) return;
-
-    const center = selectedNodes.reduce((acc, node) => ({ x: acc.x + node.x, y: acc.y + node.y, z: acc.z + node.z }), { x: 0, y: 0, z: 0 });
-    const target = { x: center.x / selectedNodes.length, y: center.y / selectedNodes.length, z: center.z / selectedNodes.length };
-
-    setCamera((current) => {
-      const bounds = buildProjectedBounds(displayTruss3dNodes, current);
-      const point = projectTruss3dPoint(target, bounds, { ...current, panX: 0, panY: 0 }, projectionMode);
-      const nextPanX = TRUSS3D_PROJECTION.centerX - point.x;
-      const nextPanY = TRUSS3D_PROJECTION.centerY - point.y;
-      return { ...current, panX: Number.isFinite(nextPanX) ? nextPanX : current.panX, panY: Number.isFinite(nextPanY) ? nextPanY : current.panY };
-    });
+          : [];
+    setCamera((current) => focusTruss3d(current, projected3d, projectionMode, selectedNodes));
   };
 
   const resetCamera = () => {
-    setCamera((current) => ({ ...cameraForPreset("iso"), zoom: current.zoom }));
+    setCamera(cameraForPreset("iso"));
   };
 
   useEffect(() => {
@@ -499,6 +474,13 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
         boxSelectMode={boxSelectMode}
         camera={camera}
         displayTruss3dNodes={displayTruss3dNodes}
+        displayTruss3dElements={displayTruss3dElements}
+        sceneBounds={lodIndex.bounds}
+        nodeByIndex={lodIndex.nodeAt}
+        elementByIndex={lodIndex.elementAt}
+        elementOffsetByIndex={lodIndex.elementPosition}
+        deformationScale={lodIndex.deformationScale}
+        lod={lod}
         draftStartNode={draftStartNode}
         draftStartNodeIndex={draftStartNodeIndex}
         gridExtent={gridExtent}

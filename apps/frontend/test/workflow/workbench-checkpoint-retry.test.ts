@@ -103,3 +103,73 @@ test("a confirmed validation rejection releases capacity rather than leaking pen
   }));
   assert.equal(await retry("model", "other", input, async () => "saved"), "saved");
 });
+
+test("an explicit checkpoint key is snapshotted with the payload before hashing", async () => {
+  const mutable = { ...input, request_id: "original-checkpoint-request-0001" };
+  const request = createCheckpointRetry()("model", "project", mutable, async (body) => body);
+  mutable.request_id = "different-checkpoint-request-0002";
+  assert.equal((await request).request_id, "original-checkpoint-request-0001");
+});
+
+test("caller mutation cannot discard an automatic key after an uncertain write", async () => {
+  const retry = createCheckpointRetry();
+  const mutable = { ...input };
+  let started!: () => void;
+  let release!: () => void;
+  const writing = new Promise<void>((resolve) => { started = resolve; });
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  let firstKey = "";
+  const request = retry("model", "project", mutable, async (body) => {
+    firstKey = body.request_id!;
+    started();
+    await held;
+    throw new Error("response lost");
+  });
+  const rejected = assert.rejects(request, /response lost/);
+  await writing;
+  mutable.request_id = "caller-added-checkpoint-request-0002";
+  release();
+  await rejected;
+  assert.equal(await retry("model", "project", input, async (body) => body.request_id), firstKey);
+});
+
+test("authority is rechecked at transport dispatch, not just after hashing", async () => {
+  let scope = "server-a";
+  let reads = 0;
+  let writes = 0;
+  const retry = createCheckpointRetry({ scope: () => {
+    if (++reads === 2) queueMicrotask(() => { scope = "server-b"; });
+    return scope;
+  } });
+  await assert.rejects(retry("model", "project", input, async () => { writes += 1; }), /context_changed/);
+  assert.equal(writes, 0);
+});
+
+for (const hadUncertainWrite of [false, true]) {
+  test(`dispatch cancellation releases only unsent keys; earlier uncertain write=${hadUncertainWrite}`, async () => {
+    let scope = "server-a";
+    let reads = 0;
+    let switchOnDispatch = false;
+    let originalKey = "";
+    const retry = createCheckpointRetry({ limit: 1, scope: () => {
+      if (switchOnDispatch && ++reads === 2) queueMicrotask(() => { scope = "server-b"; });
+      return scope;
+    } });
+    if (hadUncertainWrite) {
+      await assert.rejects(retry("model", "project", input, async (body) => {
+        originalKey = body.request_id!;
+        throw new Error("lost");
+      }), /lost/);
+    }
+    switchOnDispatch = true;
+    await assert.rejects(retry("model", "project", input, async () => assert.fail("wrong authority")), /context_changed/);
+    switchOnDispatch = false;
+    if (hadUncertainWrite) {
+      await assert.rejects(retry("model", "project", input, async () => "must not evict"), /recovery_capacity_reached/);
+      scope = "server-a";
+      assert.equal(await retry("model", "project", input, async (body) => body.request_id), originalKey);
+    } else {
+      assert.equal(await retry("model", "project", input, async () => "new authority saved"), "new authority saved");
+    }
+  });
+}

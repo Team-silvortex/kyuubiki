@@ -1,6 +1,7 @@
 "use client";
 
 import { WorkbenchLibrarySidebar } from "@/components/workbench/library/workbench-library-sidebar";
+import { CheckpointRecoveryPanel, type CheckpointRecoveryInvoker } from "./library/checkpoint-recovery-panel";
 import type {
   JobRow,
   LibraryLabels,
@@ -13,6 +14,8 @@ import type { ModelRecord, ModelVersionRecord, ProjectRecord, WorkflowCatalogEnt
 import type { WorkbenchDownloadResult } from "@/components/workbench/workbench-export-controller";
 
 type WorkbenchLibrarySectionMountProps = {
+  language: string;
+  invokeScriptAction: CheckpointRecoveryInvoker;
   labels: LibraryLabels;
   libraryTab: LibraryPanelTab;
   onLibraryTabChange: (tab: LibraryPanelTab) => void;
@@ -60,6 +63,8 @@ type WorkbenchLibrarySectionMountProps = {
 };
 
 export function WorkbenchLibrarySectionMount({
+  language,
+  invokeScriptAction,
   labels,
   libraryTab,
   onLibraryTabChange,
@@ -106,6 +111,8 @@ export function WorkbenchLibrarySectionMount({
   importModel,
 }: WorkbenchLibrarySectionMountProps) {
   return (
+    <>
+    <CheckpointRecoveryPanel language={language} invoke={invokeScriptAction} />
     <WorkbenchLibrarySidebar
       libraryTab={libraryTab}
       onLibraryTabChange={onLibraryTabChange}
@@ -168,5 +175,6 @@ export function WorkbenchLibrarySectionMount({
         void importModel(file);
       }}
     />
+    </>
   );
 }

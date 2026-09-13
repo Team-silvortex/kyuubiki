@@ -174,6 +174,17 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
     end)
   end
 
+  def get_checkpoint(operation, parent, id) do
+    receipt =
+      repo_get(CheckpointRequestRecord, CheckpointRequest.lookup_key(operation, parent, id))
+
+    exists? =
+      receipt && repo_get(ModelRecord, receipt.model_id) != nil &&
+        repo_get(ModelVersionRecord, receipt.version_id) != nil
+
+    CheckpointRequest.status(receipt, exists?)
+  end
+
   defp checkpoint(operation, attrs, write) do
     case CheckpointRequest.identify(operation, attrs) do
       nil ->

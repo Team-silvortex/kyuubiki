@@ -6,6 +6,7 @@ import { handleWorkbenchScriptNavAction } from "@/components/workbench/workbench
 import { handleWorkbenchScriptProjectModelAction } from "@/components/workbench/workbench-script-project-model-controller";
 import { handleWorkbenchScriptStateAction } from "@/components/workbench/workbench-script-state-controller";
 import { handleWorkbenchScriptStoreAction } from "@/components/workbench/workbench-script-store-controller";
+import { workbenchCheckpointRecovery } from "@/lib/workbench/project-library-backend-service";
 
 export function createWorkbenchScriptInvoker(options: Record<string, any>) {
   return async (
@@ -61,6 +62,8 @@ export function createWorkbenchScriptInvoker(options: Record<string, any>) {
         refreshSecurityEvents: options.refreshSecurityEvents,
       } satisfies Parameters<typeof handleWorkbenchScriptNavAction>[0],
       projectModelArgs: {
+        checkpointRecovery: workbenchCheckpointRecovery,
+        openModelVersionById: options.openModelVersionById,
         projectContext: options.projectContext,
         action,
         payload,

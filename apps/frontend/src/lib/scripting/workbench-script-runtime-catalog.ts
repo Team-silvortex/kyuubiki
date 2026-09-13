@@ -164,6 +164,25 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
     },
   },
   {
+    id: "model/listPendingSaves", category: "model", risk: "normal",
+    summary: { en: "List bounded pending save identities for the current backend. No geometry or credentials.", zh: "列出当前后端待确认保存的有限元数据，不含几何或凭证。" },
+  },
+  {
+    id: "model/checkPendingSave", category: "model", risk: "normal",
+    summary: { en: "Read the server receipt without resending a save. Unknown does not mean uncommitted.", zh: "只读查询服务端回执，不重发保存。未知不代表未提交。" },
+    payloadExample: { key: "<key from model/listPendingSaves>" },
+  },
+  {
+    id: "model/openRecoveredSave", category: "model", risk: "normal",
+    summary: { en: "Open a confirmed saved version, replacing the current draft through normal undo history. Never resaves.", zh: "通过正常撤销历史打开已确认版本，替换当前草稿，不重新保存。" },
+    payloadExample: { key: "<key from model/listPendingSaves>" },
+  },
+  {
+    id: "model/acknowledgeSave", category: "model", risk: "normal",
+    summary: { en: "Clear only a committed or deleted receipt from this device after a fresh server check.", zh: "重新查询后，仅从本机清除已提交或已删除的回执记录。" },
+    payloadExample: { key: "<key from model/listPendingSaves>" },
+  },
+  {
     id: "model/save",
     category: "model",
     risk: "normal",

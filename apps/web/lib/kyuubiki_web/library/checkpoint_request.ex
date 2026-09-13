@@ -22,10 +22,25 @@ defmodule KyuubikiWeb.Library.CheckpointRequest do
       content = Map.take(attrs, ~w(name kind material model_schema_version payload))
 
       %{
-        request_key: digest([Atom.to_string(operation), parent, id]),
+        request_key: lookup_key(operation, parent, id),
         request_digest: digest(content)
       }
     end
+  end
+
+  def lookup_key(operation, parent, id), do: digest([Atom.to_string(operation), parent, id])
+
+  # A read-only receipt lookup never needs or returns the submitted mesh payload.
+  # Unknown means not observed yet, not permission to submit a replacement write.
+  def status(nil, _exists?), do: %{"status" => "unknown"}
+
+  def status(receipt, exists?) do
+    %{
+      "status" => if(exists?, do: "committed", else: "deleted"),
+      "project_id" => receipt.project_id,
+      "model_id" => receipt.model_id,
+      "version_id" => receipt.version_id
+    }
   end
 
   def receipt(identity, response, operation) do

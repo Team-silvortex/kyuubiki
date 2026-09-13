@@ -24,6 +24,18 @@ defmodule KyuubikiWeb.Library.MemoryBackend do
     end)
   end
 
+  def get_checkpoint(operation, parent, id) do
+    Agent.get(__MODULE__, fn state ->
+      receipt = state.requests[CheckpointRequest.lookup_key(operation, parent, id)]
+
+      exists? =
+        receipt && Map.has_key?(state.models, receipt.model_id) &&
+          Map.has_key?(state.versions, receipt.version_id)
+
+      CheckpointRequest.status(receipt, exists?)
+    end)
+  end
+
   def get_project(project_id) do
     Agent.get(__MODULE__, fn state ->
       case Map.get(state.projects, project_id) do

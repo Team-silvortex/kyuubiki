@@ -23,9 +23,183 @@
           <a class="docs-link" href="./tutorial-pwdt-automation.html#immersive-modeling">PWDT modeling tutorial</a>
           <a class="docs-link" href="./rendering-roadmap.html">Rendering roadmap</a>
           <a class="docs-link" href="#checkpoint-native-upgrade">Installed checkpoint migration and replay</a>
+          <a class="docs-link" href="#macos-service-recovery">Native service outage and recovery</a>
+          <a class="docs-link" href="#macos-response-fault">Committed response loss and timeout</a>
+          <a class="docs-link" href="#macos-checkpoint-reopen">Recover after App exit</a>
         </div>
       </section>
       <section class="docs-stack">
+        <article class="docs-card" id="macos-checkpoint-reopen">
+          <h2>September 13: recover uncertain saves after native App exit</h2>
+          <p><strong>Installed macOS checkpoint reopen recovery: PASS.</strong> All three native
+            shells were rebuilt and installed, together with the sealed frontend and matching
+            Orchestra release. The existing SQLite database stayed in place. Automatic request
+            identities now have a dedicated metadata-only Rust journal; the desktop path does not
+            depend on the embedded page's storage lifetime or fall back when the native bridge fails.</p>
+          <ol class="docs-list">
+            <li>A fresh bounded Rust proxy forwarded three real checkpoint POSTs: a baseline model,
+              a subsequent version and Save As. It stalled the committed version body and dropped
+              the committed Save As response. PWDT reported timeout after 15.044 seconds and
+              connection failure after 0.060 seconds, preserving the local selection on both errors.</li>
+            <li>The native journal retained two identities in a 581-byte, mode-0600 file. Workbench
+              PID 89329 exited completely; the new process was PID 90138. After explicitly selecting
+              the same test-proxy authority, both original request IDs were present. The temporary
+              API override itself had not survived process exit; the journal does not store it.</li>
+            <li>Library displayed <em>Unconfirmed saves (2/64)</em> as a collapsed recovery panel.
+              Before checking, open and clear were disabled. A real GUI receipt check reported
+              Saved and enabled both actions; opening restored the original saved 3D version.
+              PWDT then checked, opened and acknowledged both entries through the same action path.</li>
+            <li>Recovery performed zero checkpoint POSTs, including idempotent retries. Independent
+              API checks retained two models and three versions. Clearing confirmed entries left
+              an empty journal; unknown outcomes cannot be cleared or opened through this flow.</li>
+            <li>After restoring the default API target, the recovered fork completed job
+              <code>5006ccee70639e32</code> on the real Rust agent at port 5001. The h=1.50 m
+              tetrahedron matched its analytical displacement and vertical-force oracle at
+              1e-12 m and 1e-8 N tolerances. PWDT emitted <code>REOPEN_PASS</code> and
+              <code>REOPEN_FINAL pending=0 override=None</code>.</li>
+          </ol>
+          <p>Original model <code>53ab0f29a7b0c93f</code>: v1 <code>736d1dda15350c0f</code>,
+            v2 <code>da9950f13f6165a3</code>. Fork <code>8bebfefa9c82887e</code>:
+            v1 <code>943e4a23abd9b5fa</code>. Exact identities, build/installed hashes and limits
+            are retained in the <a href="../releases/usability-evidence/3.2.0/macos-pwdt-checkpoint-reopen.json">native observation</a>.
+            Repeat with the <a href="../tests/manual/pwdt-macos-checkpoint-reopen.py">two-phase PWDT script</a>
+            and a fresh instance of the bounded proxy described below. Never rerun prepare merely
+            to inspect a successful commit; recover is read-only until the explicit final solve.</p>
+          <p>Final regressions: 980 workflow unit cases, 15 browser cases, 17 bridge/shell cases,
+            12 SQLite checkpoint cases, 11 memory checkpoint cases, type checking and production
+            build passed. Desktop-runtime tests passed 71 cases, including all seven journal cases;
+            the existing <code>native_local_stack_round_trip</code> test was ignored. The first concurrent browser
+            run hung during teardown; a serial rerun passed. That harness flake remains unqualified.</p>
+          <p>The fixed journal holds at most 64 entries / 64 KiB, plus one bounded atomic staging
+            file and a lock inode. Only digests, IDs, operation and time are allowed; no credentials,
+            URL, names or mesh copies. Corruption, capacity exhaustion and unsafe paths fail closed.
+            See <a href="./data-lifecycle.html#checkpoint-recovery-storage">storage lifecycle</a>
+            and <a href="./tutorial-pwdt-automation.html#checkpoint-retries">recovery actions</a>.</p>
+          <p><strong>Boundary:</strong> verified single-App, small-model post-commit recovery only.
+            Clean exit is not hard power loss, transaction interruption, multi-window writer
+            qualification or an unsaved-draft archive. The preliminary browser-journal attempt
+            lost its routing override; its empty current-scope list alone did not prove IndexedDB
+            loss. No privacy setting was weakened. The fault proxy expired, its two incidental
+            read timeouts are not checkpoint evidence, and the temporary runtime rollback copy
+            was removed. Broader fault qualification and Windows remain open.</p>
+        </article>
+        <article class="docs-card" id="macos-response-fault">
+          <h2>September 13 follow-up: committed response loss and body timeout</h2>
+          <p><strong>Installed macOS post-commit response recovery: PASS.</strong> The native shell
+            was reused with the newly built, sealed and installed static frontend. A separate,
+            loopback-only Rust acceptance proxy forwarded real requests to the installed Orchestra
+            database. No production fault hook or mocked checkpoint store was added.</p>
+          <p>The shared API client previously cleared its timeout and detached caller cancellation
+            as soon as response headers arrived. Body reads could then wait indefinitely, and JSON
+            body transport failures were swallowed as empty successes. Both JSON and text requests
+            now retain the original budget and signal through body consumption. Only JSON syntax
+            failures retain the existing empty-payload compatibility; network failures propagate.</p>
+          <ol class="docs-list">
+            <li>PWDT created a new four-node, six-member h=1.25 m truss in the explicitly selected
+              acceptance project, then moved its apex to h=1.50 m without saving.</li>
+            <li>After the real version commit returned a complete 201 receipt, the proxy forwarded
+              headers and one body byte, then held the connection. Workbench reported a timeout in
+              <strong>15.038 seconds</strong>, before the fixture's 25-second cutoff. Local selection
+              and metadata stayed unchanged. Explicit retry used the same automatically generated
+              request key and returned the same committed version.</li>
+            <li>For Save As, the proxy read the complete new-model commit receipt and closed the
+              downstream connection without a response. Workbench reported <em>Load failed</em> in
+              0.049 seconds. Explicit retry returned the same model and initial-version IDs.</li>
+            <li>Independent API checks found exactly two acceptance models: the original has two
+              versions, the fork has one. Five checkpoint POSTs used three distinct request keys;
+              neither retry created a duplicate. The original h=1.25 version remained intact.</li>
+            <li>The original API target was restored in <code>finally</code> and independently
+              checked in PWDT. The fork then completed a real Rust-agent solve. The proxy was
+              stopped, the temporary prior-runtime copy removed, and all four managed services
+              left running. The database was never replaced.</li>
+          </ol>
+          <p>Model <code>4b6e03a7f5709792</code>, recovered version <code>767bed29ff513135</code>;
+            fork <code>9120b3d6d5b0a267</code>, initial version <code>2debdd67b0711494</code>;
+            job <code>c4bf9896f41565ff</code>. For E=210 GPa, A=0.01 m2, h=1.50 m and Fz=-1000 N,
+            the apex displacement uz=Fz*h/(EA)=-7.142857e-7 m, ux=uy=(h/1 m)*uz for the one-meter
+            base axes, and -1000 N vertical-member
+            force matched at 1e-12 m and 1e-8 N absolute tolerances.</p>
+          <p>The installed frontend entrypoint matches the build at SHA-256
+            <code>092133d6083cb70bff58349159f360794c249be1305ef0bc449b460589f49efd</code>;
+            the sealed-runtime manifest digest is
+            <code>87c3c6da93db0c11115d766b08411c2c573fd364a5a1f08624ea3bcf950742a5</code>.
+            Ten new lifecycle tests first exposed eight failing cases. Final checks passed:
+            968 workflow unit tests, 10 checkpoint browser tests, 8 Rust fixture tests,
+            type checking and production frontend build. No tests were skipped.</p>
+          <p>Repeat with a <strong>fresh</strong> proxy process for each run:</p>
+          <pre><code>cd workers/rust
+cargo run -p kyuubiki-desktop-runtime --example checkpoint_response_fault -- PROJECT_ID</code></pre>
+          <p>Use the exact disposable project ID and the printed loopback URL in
+            <a href="../tests/manual/pwdt-macos-response-fault.py">the installed PWDT script</a>.
+            The proxy accepts writes only to its newly created, prefixed truss fixtures, rejects
+            existing-model mutations, limits connections and response size, and expires after ten
+            minutes. Stop it after acceptance. Do not rerun the creation script if only the final
+            solve failed: run the existing study instead.</p>
+          <p>Retained <a href="../releases/usability-evidence/3.2.0/macos-pwdt-response-fault.json">native observation</a>
+            and <a href="../releases/usability-evidence/3.2.0/macos-response-fault-checkpoints.json">five upstream checkpoint receipts</a>.
+            The fixture also logged three additional request-read timeouts; these are not counted
+            as checkpoint failures or as verified idle-connection behavior.</p>
+          <p><strong>Boundary:</strong> this is verified post-commit recovery in one open WebView,
+            not mid-transaction termination, hard power loss, durable automatic-key recovery after
+            WebView closure, long-running fault stress or broad industrial qualification. The wider
+            installed-fault tensor requirement remains open. Windows work remains deferred.</p>
+        </article>
+        <article class="docs-card" id="macos-service-recovery">
+          <h2>September 13: macOS service-outage recovery</h2>
+          <p><strong>Installed macOS idle-service outage recovery: PASS.</strong> Rebuilt and installed
+            the three separate App bundles and the sealed static frontend through the native
+            installation tools. Existing data stayed in place. Three installed startup checks passed;
+            the local packages remain ad-hoc signed, not Apple-notarized distribution artifacts.</p>
+          <p>The frontend entrypoint SHA-256 is
+            <code>4a8b4709432dd386f024b64c5dbd0389a3f67d5693adb6803488eab5b8f44bcb</code>,
+            matching the installed copy. The complete sealed-runtime manifest SHA-256 is
+            <code>2e4ae79ca1ef697cd61ca44cc2f5daf3551a05eb34b2b077e112f3d3b594ae2c</code>.
+            No Node server, HTTP mock, fault proxy or native Python interpreter participated in this
+            installed journey. The temporary prior-runtime copy was removed after acceptance.</p>
+          <ol class="docs-list">
+            <li>Actual PWDT Python 3.12.7 saved and solved the four-node, six-member h=1.25 m truss,
+              then translated the apex to 1.50 m without saving. The setup required the exact
+              disposable project ID; it did not implicitly select or create a research project.</li>
+            <li>Independent API inspection found fourteen terminal jobs and no active job.
+              Installer's real <em>Check services</em> and <em>Stop all</em> buttons showed all four
+              managed processes stop. Workbench remained open with its unsaved geometry.</li>
+            <li>PWDT refresh observed the offline control plane. Save was explicitly blocked,
+              retaining project, model, version, name and material. The script emitted
+              <code>MACOS_OFFLINE_SAVE_BLOCKED</code> and <code>MACOS_OFFLINE_DRAFT_RETAINED</code>.</li>
+            <li>Installer's <em>Start local</em> button restored frontend, Orchestra and both Rust
+              agents. Read-only refresh retained the original selection. One explicit save then
+              committed v2 and a real solve emitted <code>MACOS_SERVICE_RECOVERY_PASS</code>.</li>
+            <li>Independent API reads confirmed exactly two versions, h=1.25 and h=1.50 m,
+              both under the same model, with latest pointer and job bound to v2. Geometry was not
+              reconstructed after the outage; the successful save contained the retained draft.</li>
+          </ol>
+          <p>Final model <code>b6d57f26d6a2be01</code>; v1 <code>11ef0ed688d5e843</code>;
+            v2 <code>7e71b02365403bcb</code>; job <code>b8ae21a5fefee8f6</code>, completed on
+            <code>rust-agent-rpc@127.0.0.1:5001</code>. The h=1.50 m analytical displacement and
+            -1000 N vertical-member force passed at 1e-12 m and 1e-8 N absolute tolerances.</p>
+          <p>Three source regressions first reproduced request-identity races: changing an explicit
+            key during hashing, changing caller input during an uncertain write, and changing the
+            backend between hashing and transport dispatch. The fix snapshots identity with content
+            and rechecks authority at dispatch. Cancellation releases only a newly allocated unsent
+            key; prior uncertain writes remain recoverable. Final checks: 13 checkpoint unit cases,
+            958 workflow unit cases, 10 checkpoint browser cases, zero skipped; type checking and
+            production build passed. The browser cases additionally cover simultaneous catalog and
+            version-history read outages after a confirmed save, with zero POSTs during recovery.</p>
+          <p>Repeat with <a href="../tests/manual/pwdt-macos-service-recovery.py">the three-phase
+            native PWDT script</a>: set the selected disposable project ID, run <code>prepare</code>,
+            stop idle managed services with Installer, run <code>offline</code>, restart services,
+            then run <code>recover</code>. Keep the WebView open. If the final solve fails after a
+            confirmed save, inspect the recorded version and rerun the study only, not the save.</p>
+          <p>Retained observations:
+            <a href="../releases/usability-evidence/3.2.0/macos-pwdt-service-recovery.json">native recovery record</a>
+            and <a href="../releases/usability-evidence/3.2.0/macos-installed-recovery-startup.json">installed startup receipt</a>.
+            The older startup report is preserved separately.</p>
+          <p><strong>Boundary:</strong> the offline save was blocked before transport. Native
+            post-commit response loss, interrupted writes, automatic-key recovery after WebView
+            closure, hard power loss, large meshes and non-macOS platforms remain unqualified.
+            Windows work is deferred by priority, not removed from the tensor. This verified
+            service-outage subset does not close the broader qualified installed-fault requirement.</p>
+        </article>
         <article class="docs-card">
           <h2>September 12: environment and scope</h2>
           <p>The installed application used the installer-managed static frontend, a real local
@@ -231,7 +405,8 @@
             <code>e1f91b3c4340d1bc</code>, initial version <code>dbaba0e176dfa77f</code>,
             subsequent version <code>28adb1578d55704c</code>. This probe used minimal storage payloads,
             not a physics-solver case or a power-loss test.</p>
-          <p>Limits: the automatic frontend cache does not survive a WebView reload/close and holds
+          <p>Historical limits of this source-only round, superseded for bounded recovery by the
+            <a href="#macos-checkpoint-reopen">native journal follow-up</a>: the automatic frontend cache did not survive a WebView reload/close and held
             at most 64 unresolved writes. It fails closed instead of silently evicting unknown
             outcomes. Callers needing restart recovery can retain their own explicit request ID and
             unchanged input. This requires a matching backend and data revision 2; older services
@@ -310,7 +485,7 @@
             rollback-after-new-writes qualification. Native response-loss injection was not used;
             that remains the isolated browser/storage evidence above. PostgreSQL revision 2,
             other native platforms, large-mesh retries and cross-client reconciliation are still
-            unqualified here. Automatic retry keys remain WebView-session-local; cross-restart
+            unqualified here. Automatic retry keys were WebView-session-local in this round; cross-restart
             recovery in this round intentionally retained explicit IDs in the script.</p>
         </article>
       </section>

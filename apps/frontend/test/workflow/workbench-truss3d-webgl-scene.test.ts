@@ -90,7 +90,26 @@ test("model coordinate scale cannot create an unbounded visual grid", () => {
   }
 });
 
-test("scene colors reuse one parser and preserve hex-normalized material colors", () => {
+test("GPU positions preserve submillimeter detail at a million-unit origin", () => {
+  const args = modelingSceneFixture(2);
+  args.displayTruss3dNodes[0].x = 1e6;
+  args.displayTruss3dNodes[1].x = 1e6 + 0.001;
+  const bounds = computeTruss3dSceneBounds(args.displayTruss3dNodes);
+  const scene = buildTruss3dSceneBuffers({ ...args, sceneBounds: bounds });
+  assert.ok(Math.abs(scene.nodePositions[3] - scene.nodePositions[0] - 0.001) < 1e-9);
+  assert.deepEqual(scene.origin, bounds.center);
+});
+
+test("unit-gain physical deformation remains visible instead of being mistaken for no result", () => {
+  const args = modelingSceneFixture(2);
+  args.displayTruss3dNodes[1].ux = 100;
+  const scene = buildTruss3dSceneBuffers({ ...args, isModelMode: false, deformationViewMode: "deformed" });
+  assert.equal(scene.deformationScale, 1);
+  assert.equal(scene.nodePositions.length, 0);
+  assert.equal(scene.deformedNodePositions.length, 6);
+});
+
+test("scene colors reuse one parser and resolve paged global member IDs to the correct material colors", () => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, "document");
   let canvases = 0, materialParses = 0, style = "#000000";
   const context = {
@@ -108,8 +127,9 @@ test("scene colors reuse one parser and preserve hex-normalized material colors"
   try {
     const args = modelingSceneFixture(2_000);
     const colors = args.visibleTruss3dElements.map(() => "hsl(120 100% 50%)");
+    for (const element of args.visibleTruss3dElements) element.index += 5000;
     colors[1] = "invalid-css";
-    const buffers = buildTruss3dSceneBuffers({ ...args, truss3dElementColors: colors });
+    const buffers = buildTruss3dSceneBuffers({ ...args, truss3dElementColors: colors, elementColorByIndex: (index) => colors[index - 5000] });
     assert.equal(canvases, 1);
     assert.equal(materialParses, 1);
     assert.deepEqual([...buffers.lineColors.slice(0, 4)], [0, 1, 0, 1]);

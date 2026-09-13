@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Product-surface contracts and scoped hardening evidence. The September 13 Installer action-recovery follow-up is partial product evidence from Chromium and mock IPC, not installed native execution, cross-window exclusion, startup ownership, or delegated remote-node action qualification.",
+  "summary": "Product-surface contracts and scoped hardening evidence. Chromium/mock IPC remains separate from installed macOS service and post-commit response recovery. A dedicated bounded Rust metadata journal now retains automatic checkpoint identities across actual App process exit; GUI/PWDT reconcile through GET-only receipts and a recovered version completes a real solve. Mid-transaction interruption, hard power loss, cross-window exclusion, sustained fault stress, Windows and delegated remote actions are not qualified.",
   "paradigm_contract_evidence": {
     "product_surface": [
       {
@@ -65,6 +65,109 @@
     ]
   },
   "evidence_claims": [
+    {
+      "id": "workbench-browser-100k-spatial-lod",
+      "status": "partial",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["product_surface", "validation"],
+      "dimensions": ["execution", "ux_closure"],
+      "files": [
+        "docs/rendering-roadmap.html",
+        "apps/frontend/src/components/workbench/workbench-truss3d-lod.ts",
+        "apps/frontend/src/components/workbench/workbench-truss3d-camera.ts",
+        "apps/frontend/test/workflow/workbench-truss3d-lod.test.ts",
+        "apps/frontend/test/workflow/workbench-truss3d-camera.test.ts",
+        "tests/integration/workbench-ui-large-model-lod.test.mjs"
+      ],
+      "required_text": [
+        "Bounded browser acceptance: PASS.",
+        "PWDT imports 100k nodes; real WebGL stays bounded and zoom/picking refine the true tail",
+        "idle must not eventually grow to all 100k nodes",
+        "paged results resolve global node and member IDs instead of treating them as local offsets"
+      ]
+    },
+    {
+      "id": "macos-installed-pwdt-checkpoint-reopen-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["product_surface", "persistence_provenance", "validation"],
+      "dimensions": ["execution", "recovery", "ux_closure"],
+      "files": [
+        "docs/acceptance-immersive-modeling.html",
+        "docs/data-lifecycle.html",
+        "apps/desktop-shared/src/checkpoint-recovery-bridge.ts",
+        "workers/rust/crates/desktop-runtime/src/checkpoint_journal.rs",
+        "workers/rust/crates/desktop-runtime/src/checkpoint_journal_tests.rs",
+        "apps/frontend/src/lib/workbench/checkpoint-recovery.ts",
+        "tests/integration/workbench-ui-checkpoint-reopen.test.mjs",
+        "tests/manual/pwdt-macos-checkpoint-reopen.py",
+        "releases/usability-evidence/3.2.0/macos-pwdt-checkpoint-reopen.json"
+      ],
+      "required_text": [
+        "Installed macOS checkpoint reopen recovery: PASS.",
+        "REOPEN_AFTER_EXIT",
+        "REOPEN_FINAL pending=0 override=None",
+        "\"process_absence_observed\": true",
+        "\"recovery_checkpoint_posts\": 0",
+        "\"duplicate_versions\": 0",
+        "\"analytical_oracle_pass\": true",
+        "desktop-checkpoint-recovery.json",
+        "unknown save survives reload and cannot be opened, cleared, or silently resent"
+      ]
+    },
+    {
+      "id": "macos-installed-pwdt-postcommit-response-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell"],
+      "paradigms": ["product_surface", "validation"],
+      "dimensions": ["execution", "recovery", "ux_closure"],
+      "files": [
+        "docs/acceptance-immersive-modeling.html",
+        "apps/frontend/src/lib/api/core.ts",
+        "apps/frontend/test/workflow/workbench-api-response-lifecycle.test.ts",
+        "workers/rust/crates/desktop-runtime/examples/checkpoint_response_fault.rs",
+        "tests/manual/pwdt-macos-response-fault.py",
+        "releases/usability-evidence/3.2.0/macos-pwdt-response-fault.json",
+        "releases/usability-evidence/3.2.0/macos-response-fault-checkpoints.json"
+      ],
+      "required_text": [
+        "Installed macOS post-commit response recovery: PASS.",
+        "MACOS_RESPONSE_FAULT_PASS",
+        "MACOS_ORIGINAL_BACKEND_CONFIRMED",
+        "\"duplicate_versions\": 0",
+        "\"observed_seconds\": 15.038",
+        "\"analytical_oracle_pass\": true",
+        "stall_body_after_commit",
+        "drop_after_commit",
+        "a timed-out committed response retains the automatic checkpoint key for an explicit retry"
+      ]
+    },
+    {
+      "id": "macos-installed-pwdt-service-outage-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["installer-shell", "workbench-shell"],
+      "paradigms": ["product_surface", "validation"],
+      "dimensions": ["execution", "recovery", "ux_closure"],
+      "files": [
+        "docs/acceptance-immersive-modeling.html",
+        "tests/manual/pwdt-macos-service-recovery.py",
+        "releases/usability-evidence/3.2.0/macos-pwdt-service-recovery.json",
+        "releases/usability-evidence/3.2.0/macos-installed-recovery-startup.json"
+      ],
+      "required_text": [
+        "Installed macOS idle-service outage recovery: PASS.",
+        "MACOS_OFFLINE_SAVE_BLOCKED",
+        "MACOS_OFFLINE_DRAFT_RETAINED",
+        "MACOS_SERVICE_RECOVERY_PASS",
+        "\"model_version_count\": 2",
+        "\"analytical_oracle_pass\": true",
+        "This is not native post-commit response-loss or interrupted-write qualification."
+      ]
+    },
     {
       "id": "installer-declarative-mock-ipc-recovery",
       "status": "partial",

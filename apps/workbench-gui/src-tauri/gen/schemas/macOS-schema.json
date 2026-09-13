@@ -177,6 +177,12 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Manage only bounded checkpoint identity metadata in a fixed application-owned journal; no paths, payloads or credentials.",
+          "type": "string",
+          "const": "allow-checkpoint-recovery",
+          "markdownDescription": "Manage only bounded checkpoint identity metadata in a fixed application-owned journal; no paths, payloads or credentials."
+        },
+        {
           "description": "Enables the get_global_language_preference command.",
           "type": "string",
           "const": "allow-get-global-language-preference",

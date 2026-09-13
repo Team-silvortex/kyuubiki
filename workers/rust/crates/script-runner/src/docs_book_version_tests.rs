@@ -1,7 +1,28 @@
 use super::{
-    ReplacementRule, VersionKind, extract_local_hrefs, required_snippets, semver_major,
-    semver_minor, sync_replacements,
+    ReplacementRule, VersionKind, extract_local_hrefs, required_snippets, resolve_local_href,
+    semver_major, semver_minor, sync_replacements,
 };
+
+#[test]
+fn resolves_local_link_resources_without_query_or_fragment() {
+    let source = std::path::Path::new("docs/chapter.html");
+    for href in [
+        "./guide.html#recovery",
+        "./guide.html?language=en#recovery",
+        "./guide.html#recovery?detail=1",
+    ] {
+        assert_eq!(
+            resolve_local_href(source, href),
+            std::path::Path::new("docs/guide.html")
+        );
+    }
+    assert_eq!(resolve_local_href(source, "?language=en#recovery"), source);
+    assert_eq!(resolve_local_href(source, "#recovery"), source);
+    assert_eq!(
+        resolve_local_href(source, "missing.html#recovery"),
+        std::path::Path::new("docs/missing.html")
+    );
+}
 
 #[test]
 fn extracts_local_hrefs_like_the_legacy_checker() {

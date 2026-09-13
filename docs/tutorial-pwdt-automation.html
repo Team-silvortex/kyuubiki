@@ -288,9 +288,29 @@ await ky.invoke("viewport/setUiState", {"immersiveViewport": False})</pre>
           does not complete the attempt.</p>
         <p>The retry key is scoped to the backend, authentication context, operation, parent and
           request content. Only digests and request IDs are retained, not credentials or mesh copies.
-          The bounded cache holds up to 64 unresolved requests and refuses new ones rather than
+          A bounded journal holds up to 64 unresolved requests and refuses new ones rather than
           silently forgetting uncertain writes. It requires WebCrypto in an HTTPS/localhost context.
-          There is no background write retry or persistent browser draft archive.</p>
+          Desktop uses a dedicated native metadata journal; a normal browser uses IndexedDB.
+          Reservation must finish before the write is sent. There is no background write retry
+          or persistent draft archive. A missing or incompatible desktop bridge blocks the save
+          instead of falling back to potentially ephemeral browser storage.</p>
+        <p>After reopening, select the same backend and authentication context. Library's Models
+          page exposes <em>Unconfirmed saves</em>. Check receipt is read-only. Open saved version
+          appears only after a confirmed commit and replaces the working draft through undoable
+          history. Clear confirmed receipt removes only the recovery entry, not the saved model.
+          Both actions recheck the receipt; unknown, offline and malformed outcomes stay pending.</p>
+        <pre class="docs-code">pending = (await ky.invoke("model/listPendingSaves"))["pending"]
+for entry in pending:
+    key = {"key": entry["key"]}
+    receipt = (await ky.invoke("model/checkPendingSave", key))["checkpoint"]
+    ky.log(entry["operation"], receipt)
+# Explicitly review which entry to open; do not batch-open over an unsaved draft.
+# await ky.invoke("model/openRecoveredSave", {"key": chosen_key})
+# await ky.invoke("model/acknowledgeSave", {"key": chosen_key})</pre>
+        <p><code>committed</code> can be opened or acknowledged; <code>deleted</code> can only be
+          acknowledged. <code>unknown</code> cannot be opened or cleared. These actions never issue
+          a model/version POST. They do not silently select another authority when credentials or
+          routing change. Reconnect the original authority to reconcile its pending entries.</p>
         <pre class="docs-code"># Keep this identifier with your own research-run receipt if the WebView may close.
 # Reuse it only with the same project, operation, name/material and model payload.
 saved = await ky.save_model(
@@ -307,11 +327,13 @@ if saved.get("contextChanged"):
           <code>checkpoint_request_conflict</code>. Deleting the saved result leaves a tombstone
           receipt until project deletion; an old retry returns <code>checkpoint_result_deleted</code>
           instead of recreating it. Replay never rewinds a newer latest-version pointer.</p>
-        <p>This requires the matching checkpoint-capable backend and database data revision 2;
-          older services may ignore the optional field. The automatic frontend cache does not survive
-          closing or reloading the WebView. After losing that cache, reuse an explicitly retained
-          request ID with unchanged input, or inspect history before saving again. This is bounded
-          retry idempotency, not an exactly-once distributed workflow guarantee.</p>
+        <p>This requires the matching checkpoint-capable backend, receipt-lookup endpoint and
+          database data revision 2; older services may ignore the optional field. Installed macOS
+          post-commit recovery after full App exit is
+          <a href="./acceptance-immersive-modeling.html#macos-checkpoint-reopen">verified separately</a>.
+          An explicitly retained key remains useful to external callers, but the GUI no longer
+          requires users to copy its automatically allocated ID. This is bounded retry idempotency,
+          not exactly-once distributed workflow, hard-power-loss or cross-platform qualification.</p>
       </section>
 
       <section class="docs-card docs-section">

@@ -59,3 +59,10 @@ export type ModelVersionEnvelope = {
 export type ModelVersionListPayload = {
   versions: ModelVersionRecord[];
 };
+
+export type CheckpointReceipt = { status: "unknown" } | {
+  status: "committed" | "deleted";
+  project_id: string;
+  model_id: string;
+  version_id: string;
+};

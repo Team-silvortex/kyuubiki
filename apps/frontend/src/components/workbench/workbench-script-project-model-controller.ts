@@ -7,8 +7,11 @@ import type {
 import type { WorkbenchDownloadResult } from "@/components/workbench/workbench-export-controller";
 import type { ProjectRecord } from "@/lib/api/project-types";
 import type { WorkbenchProjectContext, WorkbenchProjectRefresh } from "@/lib/workbench/project-context";
+import type { CheckpointRecovery, CheckpointVersionOpener } from "@/lib/workbench/checkpoint-recovery";
 
 type ScriptProjectModelControllerDeps = {
+  checkpointRecovery?: CheckpointRecovery;
+  openModelVersionById?: CheckpointVersionOpener;
   projectContext: WorkbenchProjectContext;
   action: string;
   payload: Record<string, unknown>;
@@ -53,6 +56,8 @@ type ScriptProjectModelControllerDeps = {
 };
 
 export async function handleWorkbenchScriptProjectModelAction({
+  checkpointRecovery,
+  openModelVersionById,
   projectContext,
   action,
   payload,
@@ -96,6 +101,22 @@ export async function handleWorkbenchScriptProjectModelAction({
   setMessage,
 }: ScriptProjectModelControllerDeps): Promise<Record<string, unknown> | null> {
   switch (action) {
+    case "model/listPendingSaves":
+    case "model/checkPendingSave":
+    case "model/openRecoveredSave":
+    case "model/acknowledgeSave": {
+      if (!checkpointRecovery) throw new Error("checkpoint:recovery_unavailable");
+      if (action === "model/listPendingSaves") return { ok: true, action, pending: await checkpointRecovery.list() };
+      const key = payload.key as string;
+      if (action === "model/checkPendingSave") return { ok: true, action, checkpoint: await checkpointRecovery.check(key) };
+      if (action === "model/acknowledgeSave") return { ok: true, action, checkpoint: await checkpointRecovery.acknowledge(key) };
+      if (!openModelVersionById) throw new Error("checkpoint:recovery_unavailable");
+      const isCurrent = projectContext.begin();
+      return { ok: true, action, checkpoint: await checkpointRecovery.open(key, (id, guard) => {
+        if (!isCurrent()) throw new Error("checkpoint:context_changed");
+        return openModelVersionById(id, guard);
+      }) };
+    }
     case "project/create": {
       const isCurrent = projectContext.begin();
       const name = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : defaultProjectLabel;

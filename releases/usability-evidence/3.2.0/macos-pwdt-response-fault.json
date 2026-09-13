@@ -1,0 +1,95 @@
+{
+  "kind": "bounded-native-gui-acceptance-observation",
+  "observed_at": "2026-09-13T05:45:05Z",
+  "status": "pass",
+  "grade": "verified",
+  "product_version": "daji 3.2.0",
+  "platform": "macos/aarch64",
+  "surface": "installed Tauri WKWebView and PWDT with real local Orchestra persistence",
+  "scope": "post-commit response-body stall and connection loss; explicit same-WebView retry",
+  "script": "tests/manual/pwdt-macos-response-fault.py",
+  "script_sha256": "5ccade202c9d3359259be6fb17f3bd66c96b33bc5b824793568c689b36f63bd6",
+  "fixture": "workers/rust/crates/desktop-runtime/examples/checkpoint_response_fault.rs",
+  "fixture_sha256": "e89cdd31039ff70916d29d7e2c4a48bf1ac87475ef98ae00731dd4baf4af1b21",
+  "api_source_sha256": "dbd4845e8592037bdc2856da110e8b0ed320794a7fbd52cd70a257c2b44bc686",
+  "frontend_entrypoint_sha256": "092133d6083cb70bff58349159f360794c249be1305ef0bc449b460589f49efd",
+  "installed_runtime_manifest_sha256": "87c3c6da93db0c11115d766b08411c2c573fd364a5a1f08624ea3bcf950742a5",
+  "checkpoint_receipts": "releases/usability-evidence/3.2.0/macos-response-fault-checkpoints.json",
+  "native_faults": [
+    {
+      "operation": "version",
+      "injection": "read the real complete 201 upstream response; forward headers and one body byte, then hold the connection for up to 25 seconds",
+      "observed_seconds": 15.038,
+      "observed_error": "WorkbenchRequestError: request timed out",
+      "request_key_reused": true,
+      "same_version_receipt": true,
+      "local_selection_preserved": true
+    },
+    {
+      "operation": "model/saveAs",
+      "injection": "read the real complete 201 upstream response; close downstream without sending the response",
+      "observed_seconds": 0.049,
+      "observed_error": "WorkbenchRequestError: Load failed",
+      "request_key_reused": true,
+      "same_model_and_initial_version_receipt": true,
+      "local_selection_preserved": true
+    }
+  ],
+  "independent_api_checks": {
+    "project_id": "3d6c33402e4e15ff",
+    "fixture_model_count": 2,
+    "baseline_model_id": "4b6e03a7f5709792",
+    "baseline_version_id": "ebd3c0719f8df2af",
+    "baseline_height_m": 1.25,
+    "recovered_version_id": "767bed29ff513135",
+    "recovered_height_m": 1.5,
+    "baseline_model_version_count": 2,
+    "fork_model_id": "9120b3d6d5b0a267",
+    "fork_version_id": "2debdd67b0711494",
+    "fork_model_version_count": 1,
+    "checkpoint_posts": 5,
+    "distinct_request_keys": 3,
+    "duplicate_versions": 0,
+    "job_id": "c4bf9896f41565ff",
+    "job_status": "completed",
+    "job_version_matches_fork": true,
+    "worker": "rust-agent-rpc@127.0.0.1:5001",
+    "apex_ux_m": -0.0000010714285714285716,
+    "apex_uy_m": -0.0000010714285714285716,
+    "apex_uz_m": -0.0000007142857142857143,
+    "vertical_member_force_N": -1000.0000000000001,
+    "displacement_absolute_tolerance_m": 1e-12,
+    "force_absolute_tolerance_N": 1e-8,
+    "analytical_oracle_pass": true
+  },
+  "native_markers": [
+    "MACOS_COMMITTED_RESPONSE_FAILED",
+    "MACOS_RESPONSE_FAULT_PASS",
+    "MACOS_ORIGINAL_BACKEND_CONFIRMED"
+  ],
+  "source_regressions": {
+    "new_lifecycle_cases": 10,
+    "failed_before_fix": 8,
+    "api_unit_tests_passed": 16,
+    "workflow_unit_tests_passed": 968,
+    "checkpoint_browser_tests_passed": 10,
+    "rust_fixture_tests_passed": 8,
+    "skipped": 0,
+    "typecheck": "pass",
+    "production_frontend_build": "pass"
+  },
+  "cleanup": {
+    "api_override_restored": true,
+    "proxy_stopped": true,
+    "managed_services_running": 4,
+    "temporary_prior_runtime_removed": true,
+    "database_replaced": false
+  },
+  "limits": [
+    "Faults were injected by a separate Rust loopback proxy, not production hooks or mocked persistence. The existing installed shell was reused with a newly sealed and installed static frontend.",
+    "Only one small linear truss journey was run. This is not sustained fault-rate, large-mesh or other solver-family qualification.",
+    "The server completed each commit before response injection. Pre-commit interruption, mid-transaction termination, power loss and automatic-key recovery after WebView closure remain open.",
+    "The fixture logged three additional request-read timeouts. All five checkpoint requests have complete upstream receipts; no conclusions are drawn about the timed-out connections.",
+    "No production Node server, host Python interpreter, database backup or migration was introduced. Windows remains deferred. macOS distribution notarization was not tested."
+  ]
+}

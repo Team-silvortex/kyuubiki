@@ -408,10 +408,15 @@ fn extract_local_hrefs(text: &str) -> Vec<String> {
 }
 
 fn resolve_local_href(source_file: &Path, href: &str) -> PathBuf {
+    // URL query/fragment components identify a view within the resource, not a file.
+    let resource = href.split(['?', '#']).next().unwrap_or_default();
+    if resource.is_empty() {
+        return source_file.to_path_buf();
+    }
     source_file
         .parent()
         .unwrap_or_else(|| Path::new("."))
-        .join(href)
+        .join(resource)
 }
 
 fn read_json(root: &Path, relative_path: &str) -> RunnerResult<Value> {

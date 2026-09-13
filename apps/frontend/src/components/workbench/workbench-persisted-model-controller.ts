@@ -11,6 +11,7 @@ import {
   type WorkbenchNoticeStateSetter,
 } from "@/components/workbench/workbench-notice-state";
 import type { ModelRecord, ModelVersionRecord } from "@/lib/api/project-types";
+import type { CheckpointVersionGuard } from "@/lib/workbench/checkpoint-recovery";
 import { parsePlaygroundModel } from "@/lib/models/model-import";
 import { saveWorkbenchMacroPreset, saveWorkbenchSnippetPreset } from "@/lib/scripting/workbench-script-runtime";
 import { isSensitivePresetSaveError } from "@/lib/scripting/workbench-script-preset-security";
@@ -293,7 +294,7 @@ export function openPersistedWorkbenchVersion(version: ModelVersionRecord, effec
   return openPersistedWorkbenchVersionById(version.version_id, effects);
 }
 
-export function openPersistedWorkbenchVersionById(versionId: string, effects: PersistedModelControllerDeps) {
+export function openPersistedWorkbenchVersionById(versionId: string, effects: PersistedModelControllerDeps, validate?: CheckpointVersionGuard) {
   let isCurrent = effects.projectContext.begin();
   const run = async (): Promise<WorkbenchOperationResult> => {
     try {
@@ -301,6 +302,7 @@ export function openPersistedWorkbenchVersionById(versionId: string, effects: Pe
       dismissWorkbenchNotice(effects.setImportNotice);
       const payload = await effects.fetchModelVersion(versionId);
       if (!isCurrent()) return workbenchOperationFailure(workbenchProjectContextChangedError(), effects.importFailedLabel);
+      validate?.(payload.version);
       effects.recordHistory(effects.historyActionLabel);
       applyPersistedWorkbenchPayload(payload.version.payload, payload.version.name, effects);
       isCurrent = effects.projectContext.update({ projectId: payload.version.project_id, modelId: payload.version.model_id,

@@ -169,6 +169,34 @@
           model reconstruction on macOS and Linux.</p>
       </section>
 
+      <section class="docs-card docs-section" id="checkpoint-recovery-storage">
+        <h2>Bounded desktop checkpoint recovery metadata</h2>
+        <p>The Workbench native host owns <code>desktop-checkpoint-recovery.json</code> under the
+          platform's Kyuubiki desktop-preferences root. Its version-1 record permits only 64 entries
+          and 64 KiB total serialized data. Entries contain a content/scope digest, operation,
+          parent ID, request ID and creation time, never credentials, backend URLs, model names or
+          geometry. This is not a snapshot, backup or unsaved-draft archive.</p>
+        <p>Each read-modify-write takes the fixed <code>desktop-checkpoint-recovery.lock</code>.
+          A single bounded <code>desktop-checkpoint-recovery.pending</code> file is synchronized
+          before atomic replacement, then the directory is synchronized. Unix files are created
+          mode 0600. Unsafe file types/symlinks, corruption and full capacity fail closed rather
+          than resetting the record or evicting uncertain saves. Stale staging is reused only
+          under the lock after regular-file validation; there is no growing backup series.</p>
+        <p>The embedded page can invoke only list, reserve and conditional remove through a
+          source-and-origin-pinned bridge, with a bounded queue and field validation on both sides.
+          It cannot provide a filesystem path or arbitrary native command. The recovery UI uses
+          read-only <code>GET /api/v1/checkpoints/:operation/:parent_id/:request_id</code> with the
+          existing read authorization and <code>Cache-Control: no-store</code>. Acknowledgement
+          removes only an exact confirmed or deleted identity; unknown outcomes remain pending.</p>
+        <p>Normal browser mode uses the bounded IndexedDB database
+          <code>kyuubiki-checkpoint-recovery</code>; desktop host failure never falls back to it.
+          Entries from a different backend/authentication scope remain isolated and still count
+          toward capacity. Do not delete the journal as routine cache cleanup: reconcile against
+          the original authority first. Current native evidence verifies clean macOS process exit,
+          not hard power loss, concurrent-window end-to-end reconciliation or all-platform storage.
+          See the <a href="./tutorial-pwdt-automation.html#checkpoint-retries">PWDT recovery tutorial</a>.</p>
+      </section>
+
       <section class="docs-card docs-section" id="project-migration">
         <h2>Implemented: offline project migration</h2>
         <p class="docs-copy">The native Rust library exposes

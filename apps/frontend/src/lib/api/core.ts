@@ -21,14 +21,17 @@ function buildTimeoutMessage(url: string) {
   return `request timed out: ${url}`;
 }
 
-async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
+async function fetchWithTimeout<T>(
+  url: string, init: RequestInit | undefined, timeoutMs: number | undefined,
+  consume: (response: Response) => Promise<T>,
+) {
   const controller = new AbortController();
   const abortState: { source: "external" | "timeout" | null } = { source: null };
   const timeoutId = globalThis.setTimeout(() => {
     if (abortState.source) return;
     abortState.source = "timeout";
     controller.abort();
-  }, timeoutMs);
+  }, timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS);
   const forwardAbort = () => {
     if (abortState.source) return;
     abortState.source = "external";
@@ -45,10 +48,13 @@ async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = DEF
   }
 
   try {
-    return await fetch(url, {
+    const response = await fetch(url, {
       ...init,
       signal: controller.signal,
     });
+    // Headers do not complete a request: body reads need the same timeout and
+    // caller cancellation, especially when a write committed before a stall.
+    return await consume(response);
   } catch (error) {
     if (abortState.source === "timeout") {
       throw new Error(buildTimeoutMessage(url), { cause: error });
@@ -63,22 +69,15 @@ async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = DEF
 
 async function readResponsePayload(response: Response) {
   const contentType = response.headers.get("content-type") ?? "";
-
-  if (contentType.includes("application/json")) {
-    try {
-      return await response.json();
-    } catch {
-      return null;
-    }
-  }
-
+  // Only parsing failures are tolerated. A broken/aborted transport is not an
+  // empty success and must reach the caller's recovery policy.
   const text = await response.text();
   if (!text.trim()) return null;
 
   try {
     return JSON.parse(text);
   } catch {
-    return text;
+    return contentType.includes("application/json") ? null : text;
   }
 }
 
@@ -99,43 +98,45 @@ export async function requestJsonWithContext<T>(
   });
 
   try {
-    const response = await fetchWithTimeout(
+    return await fetchWithTimeout(
       requestUrl,
       {
         ...init,
         headers,
       },
       timeoutMs,
+      async (response) => {
+        const payload = (await readResponsePayload(response)) as (T & { error?: string; message?: string }) | string | null;
+
+        if (!response.ok) {
+          if (payload && typeof payload === "object") {
+            throw createHttpWorkbenchRequestError({
+              message: payload.error ?? payload.message ?? `request failed: ${response.status}`,
+              responseMessage: payload.error ?? payload.message ?? null,
+              statusCode: response.status,
+              url: requestUrl,
+            });
+          }
+
+          if (typeof payload === "string" && payload.trim()) {
+            throw createHttpWorkbenchRequestError({
+              message: payload,
+              responseMessage: payload,
+              statusCode: response.status,
+              url: requestUrl,
+            });
+          }
+
+          throw createHttpWorkbenchRequestError({
+            message: `request failed: ${response.status}`,
+            statusCode: response.status,
+            url: requestUrl,
+          });
+        }
+
+        return (payload ?? {}) as T;
+      },
     );
-    const payload = (await readResponsePayload(response)) as (T & { error?: string; message?: string }) | string | null;
-
-    if (!response.ok) {
-      if (payload && typeof payload === "object") {
-        throw createHttpWorkbenchRequestError({
-          message: payload.error ?? payload.message ?? `request failed: ${response.status}`,
-          responseMessage: payload.error ?? payload.message ?? null,
-          statusCode: response.status,
-          url: requestUrl,
-        });
-      }
-
-      if (typeof payload === "string" && payload.trim()) {
-        throw createHttpWorkbenchRequestError({
-          message: payload,
-          responseMessage: payload,
-          statusCode: response.status,
-          url: requestUrl,
-        });
-      }
-
-      throw createHttpWorkbenchRequestError({
-        message: `request failed: ${response.status}`,
-        statusCode: response.status,
-        url: requestUrl,
-      });
-    }
-
-    return (payload ?? {}) as T;
   } catch (error) {
     throw normalizeWorkbenchRequestError(error, requestUrl);
   }
@@ -158,26 +159,28 @@ export async function requestTextWithContext(
   });
 
   try {
-    const response = await fetchWithTimeout(
+    return await fetchWithTimeout(
       requestUrl,
       {
         ...init,
         headers,
       },
       timeoutMs,
+      async (response) => {
+        const payload = await response.text();
+
+        if (!response.ok) {
+          throw createHttpWorkbenchRequestError({
+            message: payload || `request failed: ${response.status}`,
+            responseMessage: payload || null,
+            statusCode: response.status,
+            url: requestUrl,
+          });
+        }
+
+        return payload;
+      },
     );
-    const payload = await response.text();
-
-    if (!response.ok) {
-      throw createHttpWorkbenchRequestError({
-        message: payload || `request failed: ${response.status}`,
-        responseMessage: payload || null,
-        statusCode: response.status,
-        url: requestUrl,
-      });
-    }
-
-    return payload;
   } catch (error) {
     throw normalizeWorkbenchRequestError(error, requestUrl);
   }

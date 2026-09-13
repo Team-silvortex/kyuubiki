@@ -52,7 +52,7 @@
           <h2>Why this assessment is concrete</h2>
           <ul class="docs-list">
             <li><strong>viewport dispatch</strong>: <code>apps/frontend/src/components/workbench/workbench-viewport.tsx</code> selects SVG renderers for axial, line, and plane views, and a WebGL geometry layer with SVG picking for 3D trusses</li>
-            <li><strong>render strategy</strong>: progressive reveal uses <code>requestAnimationFrame</code> plus <code>renderBatchSize</code>; the 3D renderer retains its shader program and geometry buffers until scene replacement, context loss, or unmount</li>
+            <li><strong>render strategy</strong>: 2D/plane progressive reveal still uses animation-frame batches. The 3D line-mesh path instead queries a bounded spatial LOD index and reuses GPU buffers when visible membership is unchanged</li>
             <li><strong>field surface</strong>: result fields are already broad in <code>workbench-viewport-core.ts</code>, which means the data model is moving faster than the viewport substrate</li>
             <li><strong>result chunking</strong>: the bounded cache and chunk routes in <code>workers/rust/crates/desktop-runtime/src/direct_mesh_gateway.rs</code> keep large-result access outside the UI thread</li>
           </ul>
@@ -72,6 +72,54 @@
       </section>
 
       <section class="docs-stack" id="modeling-performance">
+        <article class="docs-card" id="large-model-lod">
+          <div class="docs-kicker">2026-09-13 / daji 3.2.0 development</div>
+          <h2>Large-model zoom and view-dependent detail</h2>
+          <p>The shared <code>truss_3d</code>, <code>thermal_truss_3d</code> and
+            <code>spring_3d</code> WebGL viewport no longer reveals a file prefix and
+            eventually uploads every node/member. An immutable spatial hierarchy
+            bounds camera queries, clips out-of-view cells and refines visible
+            cells when zooming. Geometry and SVG picking share the same limited
+            set of original objects. Model data, connectivity and solver inputs are
+            not simplified or replaced by the display samples.</p>
+          <ul class="docs-list">
+            <li><strong>Auto / Progressive:</strong> at most 1,200 node markers and 2,400 members.
+              The 3D Progressive option no longer means eventual full residency.</li>
+            <li><strong>Full:</strong> higher-detail LOD, capped at 2,400 nodes and 4,800 members;
+              the control explicitly carries an LOD suffix. It is not an uncapped all-node mode.</li>
+            <li><strong>Focus:</strong> at most 600 nodes and 1,200 members.</li>
+            <li><strong>Navigation:</strong> wheel zoom anchors the cursor, from 0.08x to 1,024x;
+              F / PWDT <code>viewport/focus3d</code> frames the selection, and R /
+              <code>viewport/reset3d</code> resets zoom and pan as well as orientation.</li>
+            <li><strong>Selection:</strong> the active node, selected member endpoints and link
+              draft have priority within the cap. A large multi-selection never bypasses
+              that cap. Box selection targets rendered nodes inside the viewport;
+              use PWDT query/batch selection when the intention is all model nodes.</li>
+            <li><strong>Numerics:</strong> global bounds and deformation gain do not change with
+              LOD. Perspective depth follows model scale. GPU positions are rebased to
+              the model center before Float32 conversion. Result-window IDs are resolved
+              explicitly, never confused with array offsets.</li>
+          </ul>
+          <p><strong>Bounded browser acceptance: PASS.</strong> The PWDT-driven 100,000-node /
+            99,999-member regression used actual browser WebGL with an isolated mock
+            backend. Overview retained 1,200 / 2,400 objects; focus on nodes 91,910-91,915
+            refined to 24 / 31 objects at 162x. Idle frames did not expand or upload the
+            full mesh. Cursor zoom, true-ID picking, reset and resize passed with no
+            WebGL errors. Saving afterwards retained all 100,000 nodes and 99,999 members.
+            Separate regression retains context-loss recovery and fullscreen controls.</p>
+          <pre><code>./scripts/kyuubiki frontend-unit-test workbench-truss3d workbench-modeling-performance
+node --test tests/integration/workbench-ui-large-model-lod.test.mjs
+node --test tests/integration/workbench-ui-modeling-performance.test.mjs</code></pre>
+          <p><strong>Limits:</strong> LOD is a visual approximation, not a certified full-field
+            inspection or an assertion that sampled stress extrema equal global extrema.
+            The full input and spatial index still reside in CPU memory; this is not
+            out-of-core model loading. Index construction and model-wide derived state
+            are not background-worker streamed yet. Result paging only exposes loaded
+            data, and cannot invent missing endpoints. Dense plane/solid fields,
+            million-node interactive frame rate, installed WKWebView performance and
+            other native platforms still need separate qualification. This source-level
+            change does not by itself update an already installed App.</p>
+        </article>
         <article class="docs-card">
           <h2>Fullscreen modeling workspace</h2>
           <p>The existing 3D fullscreen surface now contains the real batch, node,

@@ -23,6 +23,7 @@ test("desktop shell defines a least-privilege main-window capability", () => {
   assert.ok(capability.permissions.includes("allow-workbench-environment"));
   assert.ok(capability.permissions.includes("allow-get-workbench-panel-layout"));
   assert.ok(capability.permissions.includes("allow-set-workbench-panel-layout"));
+  assert.ok(capability.permissions.includes("allow-checkpoint-recovery"));
   assert.equal(capability.remote, undefined, "embedded pages must not gain native IPC capability");
   assert.match(permissions, /identifier = "allow-guarded-mutation-action"/);
   assert.match(permissions, /commands\.allow = \["guarded_mutation_action"\]/);
@@ -104,6 +105,9 @@ test("tauri backend exposes workbench runtime commands", () => {
     /workbench_environment/,
     /get_workbench_panel_layout/,
     /set_workbench_panel_layout/,
+    /list_checkpoint_intents/,
+    /reserve_checkpoint_intent/,
+    /remove_checkpoint_intent/,
   ]);
 });
 
@@ -112,6 +116,7 @@ test("native Workbench shell installs the scoped layout relay before loading its
   assert.match(js, /installWorkbenchPanelLayoutHost\(elements.frame, invokeTauri\)/);
   assert.match(js, /nextUrl.searchParams.set\("desktopLayout", "1"\)/);
   assert.ok(js.indexOf("installWorkbenchPanelLayoutHost(elements.frame") < js.indexOf("async function boot()"));
+  assert.ok(js.indexOf("installWorkbenchCheckpointHost(elements.frame") < js.indexOf("async function boot()"));
 });
 
 test("guarded Workbench mutations use the verified desktop provenance ledger", () => {
