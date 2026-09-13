@@ -28,6 +28,7 @@
           "tests/manual/pwdt-immersive-truss3d.py",
           "tests/manual/pwdt-immersive-recovery.py",
           "tests/manual/pwdt-checkpoint-acceptance.py",
+          "tests/manual/pwdt-checkpoint-retry-acceptance.py",
           "docs/acceptance-immersive-modeling.html",
           "apps/frontend/test/workflow/workbench-fullscreen.test.ts",
           "apps/frontend/test/workflow/workbench-truss3d-projection.test.ts",

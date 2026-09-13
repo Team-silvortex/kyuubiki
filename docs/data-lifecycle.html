@@ -408,8 +408,13 @@ mix kyuubiki.data restore path/to/snapshot.sqlite3 \
         <ol class="docs-list">
           <li><strong>Runtime database evolution:</strong> baseline ledger, checkpoint receipt revision 2
             and startup gate are implemented. SQLite additive upgrade, rollback and older-receipt
-            verification are tested; revision-2 PostgreSQL execution remains unqualified in this
-            local round. Qualify each future revision, rolling-version coexistence,
+            verification are tested. The September 13
+            <a href="./acceptance-immersive-modeling.html">installed macOS acceptance</a> also
+            upgraded the existing revision-1 store through a verified candidate, preserved existing
+            business rows, and replayed native PWDT checkpoint requests after a complete managed
+            runtime/WebView restart. This was an explicit offline switch, not automatic Installer
+            data activation. Revision-2 PostgreSQL execution remains unqualified in this local
+            round. Qualify each future revision, rolling-version coexistence,
             operational writer fencing and cross-release fixtures before adding new upgrades.</li>
           <li><strong>Consistent backup and restore:</strong> database-aware SQLite snapshots
             are implemented here. Add Postgres backup/restore, artifact/digest inventories,

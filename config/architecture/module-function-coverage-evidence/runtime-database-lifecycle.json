@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Scoped SQLite/PostgreSQL baseline ledger and startup gate, plus SQLite copy lifecycle and revision-2 checkpoint retry receipts. Revision-2 PostgreSQL execution, whole-system restore, online activation and power-loss qualification remain open.",
+  "summary": "Scoped SQLite/PostgreSQL baseline ledger and startup gate, SQLite copy lifecycle and revision-2 checkpoint retry receipts, including controlled installed-macOS migration and native PWDT replay after a clean managed-runtime/WebView restart. Revision-2 PostgreSQL execution, whole-system restore, online activation and power-loss qualification remain open.",
   "evidence_claims": [
     {
       "id": "runtime-database-baseline-and-sqlite-copy-lifecycle",
@@ -69,6 +69,29 @@
         "concurrent identical retries create exactly one model and one checkpoint",
         "revision-one snapshot receipts remain verifiable and upgrade without rewriting the source",
         "restart_replay_pass"
+      ]
+    },
+    {
+      "id": "native-macos-checkpoint-migration-and-replay",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["workbench-shell", "orchestra-control-plane", "verification-evidence"],
+      "paradigms": ["persistence_provenance", "validation"],
+      "dimensions": ["execution", "recovery"],
+      "files": [
+        "docs/acceptance-immersive-modeling.html",
+        "docs/data-lifecycle.html",
+        "tests/manual/pwdt-checkpoint-retry-acceptance.py",
+        "apps/web/lib/kyuubiki_web/storage/sqlite_lifecycle.ex",
+        "apps/web/lib/kyuubiki_web/library/checkpoint_request.ex"
+      ],
+      "required_text": [
+        "Native macOS checkpoint migration and replay: PASS.",
+        "all_existing_tables_identical=true",
+        "NATIVE_RETRY_PASS",
+        "NATIVE_RETRY_RELOAD_PASS",
+        "one new model, two versions, two durable",
+        "Automatic retry keys remain WebView-session-local"
       ]
     }
   ]

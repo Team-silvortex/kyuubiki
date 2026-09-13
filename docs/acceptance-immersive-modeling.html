@@ -22,6 +22,7 @@
         <div class="docs-links">
           <a class="docs-link" href="./tutorial-pwdt-automation.html#immersive-modeling">PWDT modeling tutorial</a>
           <a class="docs-link" href="./rendering-roadmap.html">Rendering roadmap</a>
+          <a class="docs-link" href="#checkpoint-native-upgrade">Installed checkpoint migration and replay</a>
         </div>
       </section>
       <section class="docs-stack">
@@ -234,12 +235,83 @@
             at most 64 unresolved writes. It fails closed instead of silently evicting unknown
             outcomes. Callers needing restart recovery can retain their own explicit request ID and
             unchanged input. This requires a matching backend and data revision 2; older services
-            may ignore the optional key. No PostgreSQL revision-2 run, installed-app migration,
-            large-mesh retry benchmark or exactly-once distributed-workflow guarantee is claimed.</p>
+            may ignore the optional key. At this source-qualification stage no installed-app
+            migration was claimed; the subsequent installed round below supplies that separate
+            evidence. PostgreSQL revision-2 execution, large-mesh retry benchmarks and exactly-once
+            distributed-workflow guarantees remain outside both rounds.</p>
           <p>Usage and recovery boundaries are in the
             <a href="./tutorial-pwdt-automation.html">PWDT tutorial</a>; activation and cleanup rules
             are in <a href="./data-lifecycle.html">data lifecycle</a>. Test databases are disposable;
             no user database or persistent backup set is created by this qualification.</p>
+        </article>
+        <article class="docs-card" id="checkpoint-native-upgrade">
+          <h2>September 13: installed database upgrade and durable replay</h2>
+          <p><strong>Native macOS checkpoint migration and replay: PASS.</strong> This follow-up
+            installed the new checkpoint frontend and Orchestra release through Installer, reused
+            the existing 3.2.0 Tauri shell, and explicitly upgraded the existing local SQLite store
+            from data revision 1 to 2. It did not initialize an empty replacement database. No Node
+            service, browser HTTP mock, native Python interpreter or Mix process was needed in the
+            installed acceptance path; PWDT ran Python 3.12.7 inside the actual WKWebView.</p>
+          <p>The sealed build and installed frontend entrypoint matched SHA-256
+            <code>b40da621b0e8489dbb8b6541fcf494e25b55bc86f2b0ffa2221cf9bab7810c9f</code>.
+            This identifies the entrypoint, not the complete application or runtime manifest.</p>
+          <ol class="docs-list">
+            <li>Checked that all eight existing jobs were terminal, closed Workbench and stopped
+              the managed frontend, Orchestra and both Rust agents. The new release's maintenance
+              process started Exqlite/crypto only and used <code>SqliteLifecycle.backup!</code>,
+              not a raw copy of a live SQLite main file.</li>
+            <li>The snapshot reported <code>upgrade_required</code>. Its reviewed SHA-256 was
+              <code>17a40a54eb516bf401b7bfd389452fc82320a074ef31fea3084cf0c8d8a90665</code>.
+              Copy-upgrade produced a separate candidate, followed by independent receipt/digest,
+              SQLite integrity, foreign-key and schema-plan verification. The verified candidate
+              was 188416 bytes with SHA-256
+              <code>509371d3fd13ba948080b8cf383baba654d0ec49162f12f5af19d0928a2a460e</code>.
+              Both snapshot and candidate publication confirmed directory synchronization.</li>
+            <li><code>all_existing_tables_identical=true</code>: before activation, all 13 existing
+              non-ledger tables matched row for row. Two projects, three models, five versions,
+              eight jobs and eight results were preserved. The unchanged baseline ledger retained
+              its checksum; revision 2 added the checkpoint receipt table.</li>
+            <li>Installed the sealed runtime, explicitly selected the verified candidate at the
+              managed database path, and started the local services. Startup accepted revision 2.
+              Necessary old-runtime/database copies were retained only through acceptance and then
+              removed; the active data and the small acceptance model remain available.</li>
+            <li>Actual PWDT repeatedly saved the same four-node, six-member tetrahedron with
+              explicit request IDs. It created one new model and one subsequent version, rejected
+              changed content with <code>checkpoint_request_conflict</code> without changing local
+              metadata, replayed the initial model receipt and restored the newer checkpoint.</li>
+            <li>Stopped and restarted all four managed services, closed and reopened the WebView,
+              then ran the same script with the same project, request IDs and geometry. It returned
+              the same model and version IDs. Both runs emitted <code>NATIVE_RETRY_PASS</code>.
+              Independent API and SQLite reads confirmed one new model, two versions, two durable
+              receipts and no latest-version-pointer rewind.</li>
+            <li>Native Library loaded v1 and visibly restored apex Z=1.25 m, then loaded v2 and
+              restored Z=1.50 m. Loading cleared the old result. PWDT submitted the reloaded version
+              without saving again and emitted <code>NATIVE_RETRY_RELOAD_PASS</code>. Version and
+              receipt counts remained two.</li>
+          </ol>
+          <p>Project <code>3d6c33402e4e15ff</code>; new model <code>23f6b1a1804e6fa1</code>;
+            v1 <code>1e983adce6a28528</code>; v2 <code>c5e10bdf8d17dd9e</code>.
+            Jobs: initial <code>ee0aa87abe84b372</code>, after restart
+            <code>7a09e9f6f3081039</code>, after Library reload <code>79756e216b19a983</code>.
+            All completed through a real local Rust agent, bound to v2.</p>
+          <p>The h=1.50 m analytical oracle passed: ux=uy=-1.0714285714285716e-6 m,
+            uz=-7.142857142857143e-7 m, vertical member force=-1000.0000000000001 N.
+            Tolerances were 1e-12 m and 1e-8 N. Final inventory: two projects, four models,
+            seven versions, eleven jobs/results and two retry receipts, with no duplicate
+            checkpoint writes during the replay or reload steps.</p>
+          <p>Repeatable script:
+            <a href="../tests/manual/pwdt-checkpoint-retry-acceptance.py">native PWDT durable retry acceptance</a>.
+            Select the isolated acceptance project before running it. Keep the request prefix
+            unchanged for a restart replay; use a new prefix only for a deliberately independent
+            run. Check the returned IDs, persisted counts, latest pointer and numerical result
+            independently, not just the script's success banner.</p>
+          <p>Limits: this is a controlled offline SQLite cutover and clean process restart, not an
+            automatic Installer database-upgrade UI, online writer fencing, hard power-loss test or
+            rollback-after-new-writes qualification. Native response-loss injection was not used;
+            that remains the isolated browser/storage evidence above. PostgreSQL revision 2,
+            other native platforms, large-mesh retries and cross-client reconciliation are still
+            unqualified here. Automatic retry keys remain WebView-session-local; cross-restart
+            recovery in this round intentionally retained explicit IDs in the script.</p>
         </article>
       </section>
     </main>

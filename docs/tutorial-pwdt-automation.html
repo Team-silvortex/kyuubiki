@@ -275,6 +275,12 @@ await ky.invoke("viewport/setUiState", {"immersiveViewport": False})</pre>
 
       <section class="docs-card docs-section" id="checkpoint-retries">
         <h2>Recovering an uncertain checkpoint write</h2>
+        <p>The <a href="./acceptance-immersive-modeling.html">installed acceptance report</a>
+          records a revision-1-to-2 local database migration and actual PWDT replay after both
+          Orchestra and the WebView restarted. The
+          <a href="../tests/manual/pwdt-checkpoint-retry-acceptance.py">repeatable native script</a>
+          creates a small isolated model with two versions and checks explicit-key reuse and
+          conflict rejection. Its scope and independent numerical/storage checks are in the report.</p>
         <p>GUI Save/Save As and PWDT share the checkpoint retry service. During the current WebView
           session, retrying unchanged content after a lost response reuses the request ID. Concurrent
           identical submissions share one in-flight write. A valid success receipt completes that
