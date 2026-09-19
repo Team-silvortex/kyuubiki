@@ -7,6 +7,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 mod audit_log;
+mod checkpoint_journal;
 mod direct_mesh_gateway;
 mod direct_mesh_rpc;
 mod frontend_http;
@@ -14,8 +15,10 @@ mod frontend_launch;
 mod frontend_proxy;
 mod frontend_server;
 mod panel_preferences;
-mod checkpoint_journal;
-pub use checkpoint_journal::{CheckpointIntent, CheckpointReservation, list_checkpoint_intents, reserve_checkpoint_intent, remove_checkpoint_intent};
+pub use checkpoint_journal::{
+    CheckpointIntent, CheckpointReservation, list_checkpoint_intents, remove_checkpoint_intent,
+    reserve_checkpoint_intent,
+};
 mod runtime_control;
 mod runtime_export;
 mod runtime_layout;

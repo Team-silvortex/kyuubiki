@@ -410,11 +410,28 @@ jobs:
       - working-directory: ${{ matrix.working_directory }}
         run: npm run test:smoke
 
-  desktop-gui-regression:
-    name: desktop-gui-regression
+  desktop-gui-regression-suite:
+    name: desktop-gui-${{ matrix.suite }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: ${{ matrix.timeout }}
     needs: [frontend]
+    strategy:
+      # A failure in one suite must not cancel coverage from the others.
+      fail-fast: false
+      matrix:
+        include:
+          - suite: desktop
+            target: test-integration-desktop-gui
+            timeout: 20
+          - suite: workflow
+            target: test-integration-ui-workflow
+            timeout: 40
+          - suite: mechanical
+            target: test-integration-ui-mechanical
+            timeout: 20
+          - suite: thermal
+            target: test-integration-ui-thermal
+            timeout: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -437,19 +454,23 @@ jobs:
         run: npm ci
       - working-directory: apps/frontend
         run: npx playwright install --with-deps chromium
-      - name: Run desktop and Workbench UI invocation regression gates
-        run: make test-integration-ui-invocation
+      - name: Check UI automation contract
+        run: make check-ui-automation-contract
+      - name: Run the complete regression suite
+        env:
+          REGRESSION_TARGET: ${{ matrix.target }}
+        run: make "$REGRESSION_TARGET"
       - name: Upload desktop GUI regression artifacts
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
-          name: desktop-gui-regression-artifacts-${{ github.run_attempt }}
+          name: desktop-gui-regression-artifacts-${{ matrix.suite }}-${{ github.run_attempt }}
           path: |
             tmp/desktop-gui-regression-artifacts
             tmp/run
           if-no-files-found: ignore
       - name: Summarize desktop GUI regression artifacts
-        if: failure()
+        if: failure() || cancelled()
         run: |
           {
             echo "## Desktop GUI Regression Artifacts"
@@ -510,3 +531,15 @@ jobs:
               echo "No desktop GUI regression artifacts were captured."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+  desktop-gui-regression:
+    name: desktop-gui-regression
+    if: ${{ always() }}
+    needs: [desktop-gui-regression-suite]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every desktop regression suite to pass
+        env:
+          SUITE_RESULT: ${{ needs.desktop-gui-regression-suite.result }}
+        run: test "$SUITE_RESULT" = success

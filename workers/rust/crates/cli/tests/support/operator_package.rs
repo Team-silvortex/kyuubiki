@@ -168,6 +168,15 @@ impl LiveAgent {
         orchestrator_url: &str,
         token: &str,
     ) -> Result<Self, Box<dyn Error>> {
+        Self::start_orchestrated_with_capacity(packages_root, orchestrator_url, token, 1)
+    }
+
+    pub fn start_orchestrated_with_capacity(
+        packages_root: &Path,
+        orchestrator_url: &str,
+        token: &str,
+        max_active_executions: usize,
+    ) -> Result<Self, Box<dyn Error>> {
         let port = reserve_port()?;
         let log_path =
             std::env::temp_dir().join(format!("kyuubiki-operator-fetch-live-{port}.log"));
@@ -195,6 +204,10 @@ impl LiveAgent {
                 "0",
             ])
             .env("KYUUBIKI_CLUSTER_API_TOKEN", token)
+            .env(
+                "KYUUBIKI_AGENT_MAX_ACTIVE_EXECUTIONS",
+                max_active_executions.to_string(),
+            )
             .stdout(Stdio::from(log.try_clone()?))
             .stderr(Stdio::from(log))
             .spawn()?;

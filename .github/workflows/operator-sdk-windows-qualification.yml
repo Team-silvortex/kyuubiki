@@ -2,6 +2,16 @@ name: Operator SDK Windows Qualification
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/operator-sdk-windows-qualification.yml"
+      - "config/architecture/operator-sdk-windows-operational-qualification.json"
+      - "schemas/operator-package-dynamic-smoke.schema.json"
+      - "schemas/operator-sdk-windows-operational-qualification-*.schema.json"
+      - "config/toolchains.json"
+      - "rust-toolchain.toml"
+      - "workers/rust/**"
   push:
     branches: [main]
     paths:
