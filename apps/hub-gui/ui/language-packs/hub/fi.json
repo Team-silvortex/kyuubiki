@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Finnish UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Avaa Workbench",
       "startLocal": "Käynnistä paikallinen pino",
       "validateEnv": "Vahvista ympäristö"
+    },
+    "bundles": {
+      "introTitle": "Projektipaketit",
+      "introCopy": "Tarkista, vertaile ja valmistele projektipaketit analyysia varten.",
+      "bundlePath": "Paketin polku",
+      "comparePath": "Vertailupolku",
+      "outputPath": "Tulospolku",
+      "inspect": "Tarkastele pakettia",
+      "validate": "Tarkista paketti",
+      "normalize": "Normalisoi paketti",
+      "unpack": "Pura paketti",
+      "pack": "Paketoi projekti",
+      "diff": "Vertaa paketteja",
+      "openWorkbench": "Avaa Workbench",
+      "desktopTools": "Työpöytätyökalut",
+      "recentBundles": "Viimeisimmät paketit",
+      "recentCompare": "Viimeisimmät vertailut",
+      "recentOutputs": "Viimeisimmät tulosteet",
+      "recentActions": "Viimeisimmät pakettitoiminnot",
+      "favorites": "Suosikit",
+      "ready": "Pakettityökalut ovat valmiina.",
+      "all": "Kaikki",
+      "failed": "Epäonnistuneet",
+      "keepFailed": "Säilytä vain epäonnistuneet",
+      "import": "Tuo JSON",
+      "export": "Vie JSON",
+      "clear": "Tyhjennä historia",
+      "recent": "Viimeisimmät",
+      "introLabel": "Projektipaketit"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "Projektipaketit"
+      }
     }
   }
 }

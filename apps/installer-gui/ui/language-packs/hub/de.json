@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "German UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Workbench öffnen",
       "startLocal": "Lokalen Stack starten",
       "validateEnv": "Umgebung prüfen"
+    },
+    "bundles": {
+      "introTitle": "Projektpakete",
+      "introCopy": "Projektpakete prüfen, vergleichen und für die Analyse vorbereiten.",
+      "bundlePath": "Paketpfad",
+      "comparePath": "Vergleichspfad",
+      "outputPath": "Ausgabepfad",
+      "inspect": "Paket untersuchen",
+      "validate": "Paket validieren",
+      "normalize": "Paket normalisieren",
+      "unpack": "Paket entpacken",
+      "pack": "Projekt packen",
+      "diff": "Pakete vergleichen",
+      "openWorkbench": "Workbench öffnen",
+      "desktopTools": "Desktop-Werkzeuge",
+      "recentBundles": "Zuletzt verwendete Pakete",
+      "recentCompare": "Letzte Vergleichspfade",
+      "recentOutputs": "Letzte Ausgaben",
+      "recentActions": "Letzte Paketaktionen",
+      "favorites": "Favoriten",
+      "ready": "Die Paketwerkzeuge sind bereit.",
+      "all": "Alle",
+      "failed": "Fehlgeschlagen",
+      "keepFailed": "Nur Fehler behalten",
+      "import": "JSON importieren",
+      "export": "JSON exportieren",
+      "clear": "Verlauf löschen",
+      "recent": "Zuletzt verwendet",
+      "introLabel": "Projektpakete"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "Projektpakete"
+      }
     }
   }
 }

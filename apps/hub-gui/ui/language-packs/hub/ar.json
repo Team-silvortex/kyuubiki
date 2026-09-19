@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Arabic UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "فتح Workbench",
       "startLocal": "تشغيل الحزمة المحلية",
       "validateEnv": "التحقق من البيئة"
+    },
+    "bundles": {
+      "introTitle": "حزم المشاريع",
+      "introCopy": "افحص حزم المشاريع وقارنها وجهّزها للتحليل.",
+      "bundlePath": "مسار الحزمة",
+      "comparePath": "مسار المقارنة",
+      "outputPath": "مسار الإخراج",
+      "inspect": "فحص الحزمة",
+      "validate": "التحقق من الحزمة",
+      "normalize": "توحيد بنية الحزمة",
+      "unpack": "فك الحزمة",
+      "pack": "حزم المشروع",
+      "diff": "مقارنة الحزم",
+      "openWorkbench": "فتح Workbench",
+      "desktopTools": "أدوات سطح المكتب",
+      "recentBundles": "الحزم الأخيرة",
+      "recentCompare": "المقارنات الأخيرة",
+      "recentOutputs": "المخرجات الأخيرة",
+      "recentActions": "إجراءات الحزم الأخيرة",
+      "favorites": "المفضلة",
+      "ready": "أدوات الحزم جاهزة.",
+      "all": "الكل",
+      "failed": "الفاشلة",
+      "keepFailed": "الاحتفاظ بالفاشلة فقط",
+      "import": "استيراد JSON",
+      "export": "تصدير JSON",
+      "clear": "مسح السجل",
+      "recent": "الأخيرة",
+      "introLabel": "حزم المشاريع"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "حزم المشاريع"
+      }
     }
   }
 }

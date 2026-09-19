@@ -3,7 +3,7 @@
   "language": "uk",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-22T02:45:29.645Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "Під загрозою",
     "stabilityScore": "Оцінка стійкості",
@@ -23,11 +23,11 @@
     "tabs": {
       "controls": "Керування",
       "jobs": "Завдання",
-      "models": "Моделі",
+      "models": "Робоча область",
       "projects": "Проєкти",
-      "results": "Результати",
+      "results": "Результат",
       "samples": "Приклади",
-      "summary": "Підсумок",
+      "summary": "Огляд",
       "tools": "Інструменти",
       "tree": "Перегляд"
     },

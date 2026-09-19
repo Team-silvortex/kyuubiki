@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Vietnamese UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Mở Workbench",
       "startLocal": "Khởi động stack cục bộ",
       "validateEnv": "Xác thực môi trường"
+    },
+    "bundles": {
+      "introTitle": "Gói dự án",
+      "introCopy": "Kiểm tra, so sánh và chuẩn bị gói dự án để phân tích.",
+      "bundlePath": "Đường dẫn gói",
+      "comparePath": "Đường dẫn so sánh",
+      "outputPath": "Đường dẫn đầu ra",
+      "inspect": "Kiểm tra gói",
+      "validate": "Xác thực gói",
+      "normalize": "Chuẩn hóa gói",
+      "unpack": "Giải nén gói",
+      "pack": "Đóng gói dự án",
+      "diff": "So sánh các gói",
+      "openWorkbench": "Mở Workbench",
+      "desktopTools": "Công cụ máy tính",
+      "recentBundles": "Gói gần đây",
+      "recentCompare": "So sánh gần đây",
+      "recentOutputs": "Đầu ra gần đây",
+      "recentActions": "Thao tác gói gần đây",
+      "favorites": "Yêu thích",
+      "ready": "Công cụ gói đã sẵn sàng.",
+      "all": "Tất cả",
+      "failed": "Thất bại",
+      "keepFailed": "Chỉ giữ mục thất bại",
+      "import": "Nhập JSON",
+      "export": "Xuất JSON",
+      "clear": "Xóa lịch sử",
+      "recent": "Gần đây",
+      "introLabel": "Gói dự án"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "Gói dự án"
+      }
     }
   }
 }

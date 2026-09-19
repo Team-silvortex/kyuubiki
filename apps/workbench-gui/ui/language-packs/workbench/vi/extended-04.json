@@ -3,7 +3,7 @@
   "language": "vi",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-20T09:11:57.332Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "Có nguy cơ",
     "stabilityScore": "Điểm ổn định",
@@ -23,11 +23,11 @@
     "tabs": {
       "controls": "Điều khiển",
       "jobs": "Việc làm",
-      "models": "Người mẫu",
+      "models": "Không gian làm việc",
       "projects": "Dự án",
       "results": "Kết quả",
       "samples": "Mẫu",
-      "summary": "Bản tóm tắt",
+      "summary": "Tổng quan",
       "tools": "Công cụ",
       "tree": "Duyệt qua"
     },

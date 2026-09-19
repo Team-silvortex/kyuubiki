@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Ukrainian UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Відкрити Workbench",
       "startLocal": "Запустити локальний стек",
       "validateEnv": "Перевірити середовище"
+    },
+    "bundles": {
+      "introTitle": "Пакети проєкту",
+      "introCopy": "Перевіряйте, порівнюйте та готуйте пакети проєкту до аналізу.",
+      "bundlePath": "Шлях до пакета",
+      "comparePath": "Шлях для порівняння",
+      "outputPath": "Шлях виводу",
+      "inspect": "Переглянути пакет",
+      "validate": "Перевірити пакет",
+      "normalize": "Нормалізувати пакет",
+      "unpack": "Розпакувати пакет",
+      "pack": "Упакувати проєкт",
+      "diff": "Порівняти пакети",
+      "openWorkbench": "Відкрити Workbench",
+      "desktopTools": "Інструменти робочого столу",
+      "recentBundles": "Останні пакети",
+      "recentCompare": "Останні порівняння",
+      "recentOutputs": "Останні вихідні файли",
+      "recentActions": "Останні дії з пакетами",
+      "favorites": "Обране",
+      "ready": "Інструменти пакетів готові.",
+      "all": "Усі",
+      "failed": "З помилками",
+      "keepFailed": "Залишити лише помилки",
+      "import": "Імпортувати JSON",
+      "export": "Експортувати JSON",
+      "clear": "Очистити історію",
+      "recent": "Нещодавні",
+      "introLabel": "Пакети проєкту"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "Пакети проєкту"
+      }
     }
   }
 }

@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Hindi UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Workbench खोलें",
       "startLocal": "स्थानीय स्टैक शुरू करें",
       "validateEnv": "पर्यावरण सत्यापित करें"
+    },
+    "bundles": {
+      "introTitle": "परियोजना पैकेज",
+      "introCopy": "विश्लेषण के लिए परियोजना पैकेज जाँचें, तुलना करें और तैयार करें।",
+      "bundlePath": "पैकेज पथ",
+      "comparePath": "तुलना पथ",
+      "outputPath": "आउटपुट पथ",
+      "inspect": "पैकेज निरीक्षण",
+      "validate": "पैकेज सत्यापन",
+      "normalize": "पैकेज सामान्यीकृत करें",
+      "unpack": "पैकेज खोलें",
+      "pack": "परियोजना पैक करें",
+      "diff": "पैकेजों की तुलना",
+      "openWorkbench": "Workbench खोलें",
+      "desktopTools": "डेस्कटॉप उपकरण",
+      "recentBundles": "हाल के पैकेज",
+      "recentCompare": "हाल की तुलनाएँ",
+      "recentOutputs": "हाल के आउटपुट",
+      "recentActions": "हाल की पैकेज कार्रवाइयाँ",
+      "favorites": "पसंदीदा",
+      "ready": "पैकेज उपकरण तैयार हैं।",
+      "all": "सभी",
+      "failed": "विफल",
+      "keepFailed": "केवल विफल रखें",
+      "import": "JSON आयात करें",
+      "export": "JSON निर्यात करें",
+      "clear": "इतिहास साफ़ करें",
+      "recent": "हाल के",
+      "introLabel": "परियोजना पैकेज"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "परियोजना पैकेज"
+      }
     }
   }
 }

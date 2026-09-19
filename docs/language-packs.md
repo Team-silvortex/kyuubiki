@@ -45,11 +45,24 @@ These files are release-line assets rather than built-in copy branches. Import
 them from the existing local language-pack panels today; future download-source
 flows can consume the same catalog and pack envelopes.
 
-The non-built-in packs now ship translated core UI coverage for the current
-language-pack contract: navigation, primary surfaces, shell actions, system
-language-pack controls, and high-traffic workflow labels are translated per
-locale. Deeper product-copy translation can still expand incrementally without
-changing the pack format.
+Pack availability is not full translation coverage. The 30 non-built-in packs
+are available locally, but older payloads still contain untranslated English,
+including English padded with invisible characters. The primary Workbench
+navigation, project actions and rendering controls now have reviewed local
+overrides; Hub project-package operations and Installer shell navigation and
+actions are covered separately. Deeper panels, explanatory text, runtime errors
+and some built-in Spanish copy still need translation.
+
+Installer retains the Hub pack availability adapter, but no longer borrows
+unrelated Hub captions for actions such as checking services or initializing a
+workspace. Its own shell translations are local modules under
+`apps/installer-gui/ui/installer-shell-locales/`; only the selected locale is
+imported. They do not require a model, Ollama, or network translation.
+
+An older catalog-installed Workbench pack no longer masks a newer shipped
+translation revision. This refresh happens in memory and leaves the stored
+snapshot untouched. Imported, newer, or unknown-revision packs retain priority;
+file imports cannot mark themselves as automatic catalog installations.
 
 Workbench also mirrors the catalog metadata in its System page so operators can
 install the shipped support packs from the built-in catalog even before remote
@@ -68,7 +81,7 @@ Workbench catalog, translated payload, and selector projections directly from
 their TypeScript sources; it does not launch Node. Frontend behavioral tests
 remain a separate development/CI lane rather than a product runtime dependency.
 
-Full visible-copy coverage and translation maintenance are native as well:
+Workbench dictionary coverage and translation maintenance use the native runner:
 
 ```sh
 make report-full-language-pack-coverage
@@ -80,6 +93,13 @@ make apply-language-pack-translation-batch INPUT=tmp/reviewed-de-extended-01.jso
 
 The report reads the literal Workbench English copy contract, merges every
 shipped pack fragment, and retains JSON plus Markdown evidence under `tmp/`.
+It does not measure the whole product, Hub, Installer, built-in Spanish, or
+feature-specific copy outside those two English source files. Invisible padding
+and whitespace do not make English count as translated; a digit in an English
+label is not an exemption either. Source-matched labels remain review items
+(some technical terms and shared spellings can legitimately be identical).
+The strict command is expected to fail until these outstanding items have been
+translated or explicitly reviewed; do not restore an artificial 100% score.
 The export/apply pair is deliberately review-oriented: applying a batch rejects
 unknown languages, changed source text, incomplete key sets, source-matched
 translations, and array-shape drift. The former network machine-translation
@@ -200,8 +220,8 @@ to replace the keys it cares about.
 
 - no remote catalog download flow yet
 - no signature or provenance chain yet
-- no standalone Installer language-pack catalog yet; Installer reuses Hub packs
-  through an adapter for now
+- no standalone Installer language-pack catalog yet; Installer reuses Hub pack
+  availability through an adapter and lazily loads its own shell translations
 - no full schema validator dependency in the browser yet; the importer currently
   does lightweight structural and unsafe-text checks, then relies on the
   override merge path

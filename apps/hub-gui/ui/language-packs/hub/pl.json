@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Polish UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Otwórz Workbench",
       "startLocal": "Uruchom lokalny stos",
       "validateEnv": "Sprawdź środowisko"
+    },
+    "bundles": {
+      "introTitle": "Pakiety projektu",
+      "introCopy": "Sprawdzaj, porównuj i przygotowuj pakiety projektu do analizy.",
+      "bundlePath": "Ścieżka pakietu",
+      "comparePath": "Ścieżka porównania",
+      "outputPath": "Ścieżka wyjściowa",
+      "inspect": "Sprawdź pakiet",
+      "validate": "Zweryfikuj pakiet",
+      "normalize": "Znormalizuj pakiet",
+      "unpack": "Rozpakuj pakiet",
+      "pack": "Spakuj projekt",
+      "diff": "Porównaj pakiety",
+      "openWorkbench": "Otwórz Workbench",
+      "desktopTools": "Narzędzia pulpitu",
+      "recentBundles": "Ostatnie pakiety",
+      "recentCompare": "Ostatnie porównania",
+      "recentOutputs": "Ostatnie pliki wyjściowe",
+      "recentActions": "Ostatnie działania na pakietach",
+      "favorites": "Ulubione",
+      "ready": "Narzędzia pakietów są gotowe.",
+      "all": "Wszystkie",
+      "failed": "Nieudane",
+      "keepFailed": "Zachowaj tylko nieudane",
+      "import": "Importuj JSON",
+      "export": "Eksportuj JSON",
+      "clear": "Wyczyść historię",
+      "recent": "Ostatnie",
+      "introLabel": "Pakiety projektu"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "Pakiety projektu"
+      }
     }
   }
 }

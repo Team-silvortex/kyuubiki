@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Thai UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "เปิด Workbench",
       "startLocal": "เริ่มสแตกภายใน",
       "validateEnv": "ตรวจสอบสภาพแวดล้อม"
+    },
+    "bundles": {
+      "introTitle": "แพ็กเกจโครงการ",
+      "introCopy": "ตรวจสอบ เปรียบเทียบ และเตรียมแพ็กเกจโครงการสำหรับการวิเคราะห์",
+      "bundlePath": "เส้นทางแพ็กเกจ",
+      "comparePath": "เส้นทางเปรียบเทียบ",
+      "outputPath": "เส้นทางผลลัพธ์",
+      "inspect": "ตรวจดูแพ็กเกจ",
+      "validate": "ตรวจสอบความถูกต้อง",
+      "normalize": "ปรับแพ็กเกจให้เป็นมาตรฐาน",
+      "unpack": "แตกแพ็กเกจ",
+      "pack": "บรรจุโครงการ",
+      "diff": "เปรียบเทียบแพ็กเกจ",
+      "openWorkbench": "เปิด Workbench",
+      "desktopTools": "เครื่องมือเดสก์ท็อป",
+      "recentBundles": "แพ็กเกจล่าสุด",
+      "recentCompare": "การเปรียบเทียบล่าสุด",
+      "recentOutputs": "ผลลัพธ์ล่าสุด",
+      "recentActions": "การดำเนินการแพ็กเกจล่าสุด",
+      "favorites": "รายการโปรด",
+      "ready": "เครื่องมือแพ็กเกจพร้อมใช้งาน",
+      "all": "ทั้งหมด",
+      "failed": "ล้มเหลว",
+      "keepFailed": "เก็บเฉพาะรายการที่ล้มเหลว",
+      "import": "นำเข้า JSON",
+      "export": "ส่งออก JSON",
+      "clear": "ล้างประวัติ",
+      "recent": "ล่าสุด",
+      "introLabel": "แพ็กเกจโครงการ"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "แพ็กเกจโครงการ"
+      }
     }
   }
 }

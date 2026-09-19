@@ -3,7 +3,7 @@
   "language": "ko",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-21T05:07:56.947Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "위험",
     "stabilityScore": "안정성 점수",
@@ -21,13 +21,13 @@
     "switchedTo2dStudio": "2D 워크벤치로 전환했습니다.",
     "switchedTo3dStudio": "3D 공간 스튜디오로 전환했습니다.",
     "tabs": {
-      "controls": "제어 항목",
+      "controls": "제어",
       "jobs": "작업",
-      "models": "모델",
+      "models": "작업 공간",
       "projects": "프로젝트",
       "results": "결과",
       "samples": "샘플",
-      "summary": "요약",
+      "summary": "개요",
       "tools": "도구",
       "tree": "찾아보기"
     },

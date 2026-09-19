@@ -90,6 +90,7 @@ function renderMainlineEntry(copy, setText) {
   setText("home-mainline-label", mainline.label);
   setText("home-mainline-title", mainline.title);
   setText("home-mainline-copy", mainline.copy);
+  document.querySelector(".hub-mainline-track")?.setAttribute("aria-label", mainline.label);
   mainline.steps.forEach((step, index) => {
     const id = index + 1;
     setText(`home-mainline-step${id}-index`, step.index);

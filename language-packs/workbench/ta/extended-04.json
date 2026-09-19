@@ -3,7 +3,7 @@
   "language": "ta",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-20T05:00:02.684Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "ஆபத்து ",
     "stabilityScore": "ஸ்திரத்தன்மை மதிப்பெண்",
@@ -20,14 +20,14 @@
     "supportYMissing": "செங்குத்து சறுக்கலைத் தடுக்க குறைந்தது ஒரு Y கட்டுப்பாட்டையாவது சேர்க்கவும்.",
     "switchedTo2dStudio": "2D வொர்க் பெஞ்சிற்கு மாற்றப்பட்டது.",
     "switchedTo3dStudio": "3D ஸ்பேஸ் ஸ்டுடியோவுக்கு மாற்றப்பட்டது.",
-  "tabs": {
+    "tabs": {
       "controls": "கட்டுப்பாடுகள்",
       "jobs": "வேலைகள்",
-      "models": "மாடல்கள்",
+      "models": "பணியிடம்",
       "projects": "திட்டங்கள்",
-      "results": "முடிவுகள்",
+      "results": "முடிவு",
       "samples": "மாதிரிகள்",
-      "summary": "சுருக்கத் தொகுப்பு",
+      "summary": "மேலோட்டம்",
       "tools": "கருவிகள்",
       "tree": "மர வரிசை"
     },

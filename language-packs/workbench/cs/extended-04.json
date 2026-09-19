@@ -3,7 +3,7 @@
   "language": "cs",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-21T04:08:32.931Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "Risk",
     "stabilityScore": "Stabilitetsbetyg",
@@ -21,13 +21,13 @@
     "switchedTo2dStudio": "Bytte till 2D-workbench.",
     "switchedTo3dStudio": "Bytte till 3D-rumstudio.",
     "tabs": {
-      "controls": "Kontroller",
+      "controls": "Ovládání",
       "jobs": "Jobb",
-      "models": "Modeller",
+      "models": "Pracovní prostor",
       "projects": "Projekt",
-      "results": "Resultat",
+      "results": "Výsledek",
       "samples": "Exempel",
-      "summary": "Sammanfattning",
+      "summary": "Přehled",
       "tools": "Verktyg",
       "tree": "Träd"
     },

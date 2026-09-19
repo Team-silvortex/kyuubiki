@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Korean UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Workbench 열기",
       "startLocal": "로컬 스택 시작",
       "validateEnv": "환경 검증"
+    },
+    "bundles": {
+      "introTitle": "프로젝트 패키지",
+      "introCopy": "프로젝트 패키지를 검사하고 비교하여 해석을 준비합니다.",
+      "bundlePath": "패키지 경로",
+      "comparePath": "비교 경로",
+      "outputPath": "출력 경로",
+      "inspect": "패키지 검사",
+      "validate": "패키지 검증",
+      "normalize": "패키지 정규화",
+      "unpack": "패키지 압축 해제",
+      "pack": "프로젝트 패키징",
+      "diff": "패키지 비교",
+      "openWorkbench": "Workbench 열기",
+      "desktopTools": "데스크톱 도구",
+      "recentBundles": "최근 패키지",
+      "recentCompare": "최근 비교",
+      "recentOutputs": "최근 출력",
+      "recentActions": "최근 패키지 작업",
+      "favorites": "즐겨찾기",
+      "ready": "패키지 도구가 준비되었습니다.",
+      "all": "전체",
+      "failed": "실패",
+      "keepFailed": "실패한 항목만 유지",
+      "import": "JSON 가져오기",
+      "export": "JSON 내보내기",
+      "clear": "기록 지우기",
+      "recent": "최근",
+      "introLabel": "프로젝트 패키지"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "프로젝트 패키지"
+      }
     }
   }
 }

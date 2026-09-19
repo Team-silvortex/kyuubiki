@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Turkish UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Workbench aç",
       "startLocal": "Yerel stack başlat",
       "validateEnv": "Ortamı doğrula"
+    },
+    "bundles": {
+      "introTitle": "Proje paketleri",
+      "introCopy": "Proje paketlerini denetleyin, karşılaştırın ve analize hazırlayın.",
+      "bundlePath": "Paket yolu",
+      "comparePath": "Karşılaştırma yolu",
+      "outputPath": "Çıktı yolu",
+      "inspect": "Paketi incele",
+      "validate": "Paketi doğrula",
+      "normalize": "Paketi normalleştir",
+      "unpack": "Paketi aç",
+      "pack": "Projeyi paketle",
+      "diff": "Paketleri karşılaştır",
+      "openWorkbench": "Workbench'i aç",
+      "desktopTools": "Masaüstü araçları",
+      "recentBundles": "Son paketler",
+      "recentCompare": "Son karşılaştırmalar",
+      "recentOutputs": "Son çıktılar",
+      "recentActions": "Son paket işlemleri",
+      "favorites": "Favoriler",
+      "ready": "Paket araçları hazır.",
+      "all": "Tümü",
+      "failed": "Başarısız",
+      "keepFailed": "Yalnızca başarısızları tut",
+      "import": "JSON içe aktar",
+      "export": "JSON dışa aktar",
+      "clear": "Geçmişi temizle",
+      "recent": "Son kullanılanlar",
+      "introLabel": "Proje paketleri"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "Proje paketleri"
+      }
     }
   }
 }

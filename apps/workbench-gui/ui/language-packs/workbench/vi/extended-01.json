@@ -3,7 +3,7 @@
   "language": "vi",
   "targetSurface": "workbench",
   "batch": "extended-01",
-  "updatedAt": "2026-07-20T08:40:42.122Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "addBranchNode": "Nút Nhánh",
     "addMember": "Thêm thành viên",
@@ -103,7 +103,7 @@
     "historyLoaded": "Đã tải một nghiên cứu đã được lưu từ lịch sử.",
     "hotspotNodes": "Hotspot nodes​",
     "importFailed": "Nhập khẩu thất bại",
-    "importProject": "Import project​",
+    "importProject": "Nhập dự án",
     "importProjectHint": "Tải kho lưu trữ .kyuubiki.json hoặc .kyuubiki vào thư viện dự án.",
     "importedModel": "Mô hình nhập khẩu",
     "initialFailed": "Không thể liên lạc với người điều phối dàn nhạc.",

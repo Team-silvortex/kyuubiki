@@ -92,6 +92,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
   };
   let brandConfig = null;
   let currentLanguage = "en";
+  let hasCompletionResult = false;
 
   mountIntegrityPanel(); mountUpdatePanel(); populateDesktopPlatformSelect(ui.releasePlatformSelect);
   const { currentCertificateIssuePayload, currentCertificatePolicyPayload, currentCertificateRevokePayload, getActiveCertificates, hydrateCertificateAuthority } = mountCertificatePanel();
@@ -114,6 +115,8 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     setText(ui.languageLabel, copy.language);
     populateInstallerLanguageSelect(ui.languageSelect, currentLanguage);
     setText("brand-installer-role-chip", copy.roleChip);
+    setText("brand-desktop-setup", copy.headings.wizard);
+    setText("brand-installer-console", copy.headings.output);
     setText("brand-installer-description", copy.description);
     setText("brand-installer-pwdt-status", copy.pwdtStatus);
     setText(document.querySelector(".hero-meta .meta-card:nth-child(2) > span"), copy.platform);
@@ -123,7 +126,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
       setText(tab.querySelector("span:last-child"), copy.tabs[index]);
     });
     setText(document.querySelector(".completion-banner strong"), copy.completion);
-    setText("completion-message", copy.ready);
+    if (!hasCompletionResult) setText("completion-message", copy.ready);
     setText(document.querySelector('[data-panel="wizard"] h2'), copy.headings.wizard);
     setText(document.querySelector('[data-panel="setup"] .section-header h2'), copy.headings.setup);
     setText(document.querySelector(".form-shell .panel-header h2"), copy.headings.environment);
@@ -179,6 +182,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
   };
 
   const showCompletion = (message) => {
+    hasCompletionResult = true;
     ui.completionMessage.textContent = message;
     ui.completionBanner.hidden = false;
     if (ui.completionGuide) ui.completionGuide.textContent = message;
@@ -359,7 +363,9 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     const packResult = await ensureInstallerLanguagePack(currentLanguage);
     renderDesktopLanguagePreference();
     const copy = installerShellCopyFor(currentLanguage);
-    showCompletion(`${packResult.message} ${copy.restartHint}`);
+    if (!hasCompletionResult || packResult.status === "missing" || packResult.status === "invalid") {
+      showCompletion(`${packResult.message} ${copy.restartHint}`);
+    }
   });
   watchDesktopLanguagePreference({
     getCurrentLanguage: () => currentLanguage,

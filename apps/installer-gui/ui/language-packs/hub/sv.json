@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Swedish UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Öppna Workbench",
       "startLocal": "Starta lokal stack",
       "validateEnv": "Validera miljö"
+    },
+    "bundles": {
+      "introTitle": "Projektpaket",
+      "introCopy": "Kontrollera, jämför och förbered projektpaket för analys.",
+      "bundlePath": "Paketsökväg",
+      "comparePath": "Jämförelsesökväg",
+      "outputPath": "Utdatasökväg",
+      "inspect": "Granska paket",
+      "validate": "Validera paket",
+      "normalize": "Normalisera paket",
+      "unpack": "Packa upp paket",
+      "pack": "Paketera projekt",
+      "diff": "Jämför paket",
+      "openWorkbench": "Öppna Workbench",
+      "desktopTools": "Skrivbordsverktyg",
+      "recentBundles": "Senaste paket",
+      "recentCompare": "Senaste jämförelser",
+      "recentOutputs": "Senaste utdata",
+      "recentActions": "Senaste paketåtgärder",
+      "favorites": "Favoriter",
+      "ready": "Paketverktygen är redo.",
+      "all": "Alla",
+      "failed": "Misslyckade",
+      "keepFailed": "Behåll endast misslyckade",
+      "import": "Importera JSON",
+      "export": "Exportera JSON",
+      "clear": "Rensa historik",
+      "recent": "Senaste",
+      "introLabel": "Projektpaket"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "Projektpaket"
+      }
     }
   }
 }

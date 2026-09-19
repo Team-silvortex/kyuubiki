@@ -58,6 +58,7 @@ test("workbench language pack import still installs safe overrides", () => {
       language: "en",
       name: "Safe pack",
       targetSurface: "workbench",
+      source: "downloaded",
       overrides: { workflowCatalogTitle: "Workflow catalog" },
     },
     language: "en",
@@ -67,5 +68,6 @@ test("workbench language pack import still installs safe overrides", () => {
 
   assert.equal(harness.packs.length, 1);
   assert.equal(harness.packs[0]?.id, "safe-pack");
+  assert.equal(harness.packs[0]?.source, "imported", "a file cannot identify itself as an automatic catalog install");
   assert.match(harness.message, /Language pack imported/);
 });

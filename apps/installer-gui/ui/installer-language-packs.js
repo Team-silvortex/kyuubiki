@@ -1,8 +1,5 @@
 import { describeDesktopLanguage, loadDesktopLanguagePack } from "./shared/language-pack-loader.js";
-
-function isPlainObject(value) {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
+import { loadInstallerShellTranslation } from "./installer-shell-translations.js";
 
 const PWDT_STATUS_BY_LANGUAGE = {
   ar: "Pwdt يعمل أولا في Workbench؛ يحتفظ Installer بتشخيصات مقيدة فقط.",
@@ -37,39 +34,14 @@ const PWDT_STATUS_BY_LANGUAGE = {
   "zh-TW": "Pwdt 以 Workbench 為主；Installer 只保留受限診斷入口。",
 };
 
-function installerShellCopyFromHubPack(pack, baseCopy) {
+async function installerShellCopyFromHubPack(pack, baseCopy) {
   const language = typeof pack?.language === "string" ? pack.language : "en";
-  const label = describeDesktopLanguage(language);
-  const overrides = isPlainObject(pack?.overrides) ? pack.overrides : {};
-  const shell = isPlainObject(overrides.shell) ? overrides.shell : {};
-  const sections = isPlainObject(overrides.sections) ? overrides.sections : {};
-  const deploy = isPlainObject(sections.deploy) ? sections.deploy : {};
-  const projects = isPlainObject(sections.projects) ? sections.projects : {};
+  const translation = await loadInstallerShellTranslation(language);
+  if (!translation) return null;
   return {
     ...baseCopy,
-    language: typeof shell.language === "string" ? shell.language : label,
-    roleChip: `${label} bootstrap shell`,
-    description:
-      typeof deploy.copy === "string"
-        ? deploy.copy
-        : typeof projects.copy === "string"
-          ? projects.copy
-          : pack?.description || baseCopy.description,
+    ...translation,
     pwdtStatus: PWDT_STATUS_BY_LANGUAGE[language] || baseCopy.pwdtStatus,
-    actions: {
-      ...baseCopy.actions,
-      serviceStatus: typeof shell.actionStatus === "string" ? shell.actionStatus : baseCopy.actions.serviceStatus,
-      validateEnv: typeof shell.validateEnv === "string" ? shell.validateEnv : baseCopy.actions.validateEnv,
-      bootstrap: typeof shell.startLocal === "string" ? shell.startLocal : baseCopy.actions.bootstrap,
-    },
-    headings: {
-      ...baseCopy.headings,
-      setup: typeof projects.title === "string" ? projects.title : baseCopy.headings.setup,
-      release: typeof deploy.title === "string" ? deploy.title : baseCopy.headings.release,
-    },
-    completion: `${label} language pack loaded.`,
-    ready: "Translated core UI coverage is active. Restart already-open desktop shells if a long-running view does not refresh.",
-    restartHint: "Restart already-open desktop shells if they do not refresh.",
   };
 }
 
@@ -90,12 +62,19 @@ export function createInstallerLanguagePackSupport({ installerShellCopy, normali
       return {
         status: "builtin",
         language: normalized,
-        message: installerLanguagePackMessage(normalized, "builtin"),
+        message: installerShellCopy[normalized].ready,
       };
     }
     const result = await loadDesktopLanguagePack("hub", normalized);
     if (result.status === "loaded" && result.pack) {
-      lazyInstallerShellCopy[normalized] = installerShellCopyFromHubPack(result.pack, installerShellCopy.en);
+      try {
+        const copy = await installerShellCopyFromHubPack(result.pack, installerShellCopy.en);
+        if (!copy) throw new Error("Installer translation is unavailable.");
+        lazyInstallerShellCopy[normalized] = copy;
+        return { ...result, message: copy.ready };
+      } catch (_error) {
+        return { status: "invalid", language: normalized, message: installerLanguagePackMessage(normalized, "missing") };
+      }
     }
     return {
       ...result,

@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Russian UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Открыть Workbench",
       "startLocal": "Запустить локальный стек",
       "validateEnv": "Проверить окружение"
+    },
+    "bundles": {
+      "introTitle": "Пакеты проекта",
+      "introCopy": "Проверяйте, сравнивайте и подготавливайте пакеты проекта к анализу.",
+      "bundlePath": "Путь к пакету",
+      "comparePath": "Путь для сравнения",
+      "outputPath": "Выходной путь",
+      "inspect": "Просмотреть пакет",
+      "validate": "Проверить пакет",
+      "normalize": "Нормализовать пакет",
+      "unpack": "Распаковать пакет",
+      "pack": "Упаковать проект",
+      "diff": "Сравнить пакеты",
+      "openWorkbench": "Открыть Workbench",
+      "desktopTools": "Инструменты рабочего стола",
+      "recentBundles": "Последние пакеты",
+      "recentCompare": "Последние сравнения",
+      "recentOutputs": "Последние выходные файлы",
+      "recentActions": "Последние действия с пакетами",
+      "favorites": "Избранное",
+      "ready": "Инструменты пакетов готовы.",
+      "all": "Все",
+      "failed": "С ошибками",
+      "keepFailed": "Оставить только ошибки",
+      "import": "Импортировать JSON",
+      "export": "Экспортировать JSON",
+      "clear": "Очистить историю",
+      "recent": "Недавние",
+      "introLabel": "Пакеты проекта"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "Пакеты проекта"
+      }
     }
   }
 }

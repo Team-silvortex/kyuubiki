@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Bengali UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Workbench খুলুন",
       "startLocal": "লোকাল স্ট্যাক চালু করুন",
       "validateEnv": "পরিবেশ যাচাই করুন"
+    },
+    "bundles": {
+      "introTitle": "প্রকল্পের প্যাকেজ",
+      "introCopy": "বিশ্লেষণের জন্য প্রকল্পের প্যাকেজ পরীক্ষা, তুলনা ও প্রস্তুত করুন।",
+      "bundlePath": "প্যাকেজের পথ",
+      "comparePath": "তুলনার পথ",
+      "outputPath": "আউটপুটের পথ",
+      "inspect": "প্যাকেজ পরিদর্শন করুন",
+      "validate": "প্যাকেজ যাচাই করুন",
+      "normalize": "প্যাকেজ মানসম্মত করুন",
+      "unpack": "প্যাকেজ খুলুন",
+      "pack": "প্রকল্প প্যাক করুন",
+      "diff": "প্যাকেজ তুলনা করুন",
+      "openWorkbench": "Workbench খুলুন",
+      "desktopTools": "ডেস্কটপ সরঞ্জাম",
+      "recentBundles": "সাম্প্রতিক প্যাকেজ",
+      "recentCompare": "সাম্প্রতিক তুলনা",
+      "recentOutputs": "সাম্প্রতিক আউটপুট",
+      "recentActions": "সাম্প্রতিক প্যাকেজ কার্যক্রম",
+      "favorites": "পছন্দের",
+      "ready": "প্যাকেজ সরঞ্জাম প্রস্তুত।",
+      "all": "সব",
+      "failed": "ব্যর্থ",
+      "keepFailed": "শুধু ব্যর্থগুলো রাখুন",
+      "import": "JSON আমদানি করুন",
+      "export": "JSON রপ্তানি করুন",
+      "clear": "ইতিহাস মুছুন",
+      "recent": "সাম্প্রতিক",
+      "introLabel": "প্রকল্পের প্যাকেজ"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "প্রকল্পের প্যাকেজ"
+      }
     }
   }
 }

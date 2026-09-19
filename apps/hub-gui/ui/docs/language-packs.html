@@ -31,13 +31,13 @@
         <article class="docs-card">
           <h2>Current product posture</h2>
           <ul class="docs-list">
-            <li><strong>Built-in languages</strong>: English, Chinese, Japanese, and Spanish remain first-class in the shipped UI.</li>
+            <li><strong>Built-in languages</strong>: English, Chinese, Japanese, and Spanish are selectable without downloading a pack; availability does not mean every screen is fully translated.</li>
             <li><strong>Shipped packs</strong>: daji 3.x currently ships 30 Workbench packs plus 30 Hub packs.</li>
             <li><strong>Growth path</strong>: future languages should prefer language packs over hard-coded repo-wide copy forks.</li>
             <li><strong>Current delivery</strong>: packs are local-first today, imported as JSON through the Workbench system surface.</li>
             <li><strong>Surface posture</strong>: <code>config/localization/surface-posture.json</code> records Workbench and Hub as shipped-pack surfaces, while Installer is an adapter surface.</li>
             <li><strong>Hub alignment</strong>: Hub now resolves copy through a local override registry so future pack delivery has the same deep-merge seam.</li>
-            <li><strong>Installer alignment</strong>: Installer reuses Hub packs through an adapter today, with local Installer-only copy for restricted diagnostics such as Pwdt status.</li>
+            <li><strong>Installer alignment</strong>: Hub packs provide availability metadata; Installer loads its own local shell translations on demand, without borrowing unrelated Hub action labels.</li>
             <li><strong>Surface guard</strong>: new packs can declare <code>targetSurface</code> as <code>workbench</code> or <code>hub</code> to prevent cross-surface imports.</li>
             <li><strong>Import safety</strong>: shipped packs, Workbench imports, and Hub override imports reject UI text that looks like HTML, JavaScript URLs, inline handlers, browser-storage access, or script evaluation.</li>
             <li><strong>Hub entry</strong>: the current management card lives at <strong>Home -> Guides -> Localization overrides</strong>.</li>
@@ -56,7 +56,7 @@
             <li>surface target: optional <code>targetSurface</code>, required by convention for new packs</li>
             <li>recommended metadata: <code>versionLine</code> and <code>targetAppVersion</code></li>
             <li>fallback rule: missing keys keep using the built-in copy</li>
-            <li>release gate: run <code>make check-language-packs</code> before treating shipped packs as ready</li>
+            <li>package validation: <code>make check-language-packs</code> checks metadata, safety and required keys, not complete translation quality</li>
           </ul>
           <p class="docs-copy">
             In Hub, the same panel now accepts either one language-pack envelope
@@ -81,15 +81,34 @@
           <h2>Installer posture</h2>
           <p class="docs-copy">
             Installer is not a third independent 30-pack surface yet. It uses
-            the Hub pack envelope as the translated shell source, then applies
-            Installer-owned copy for setup, lifecycle, and restricted Pwdt
-            diagnostics.
+            the Hub pack envelope for locale availability, then imports the
+            selected Installer-owned shell module. Navigation, action buttons,
+            headings and restricted Pwdt diagnostics have local translations.
+            Only the selected locale is loaded; no online translator or model
+            is required.
           </p>
           <ul class="docs-list">
             <li>Installer built-ins remain <code>en</code>, <code>zh</code>, <code>ja</code>, and <code>es</code>.</li>
             <li>The language selector still exposes the 30 mainstream locale targets.</li>
             <li>Future standalone Installer packs should use their own <code>targetSurface</code> once the surface grows beyond shell-level setup copy.</li>
           </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>Coverage and upgrades</h2>
+          <p class="docs-copy">
+            Workbench primary navigation, project actions and rendering controls
+            and Hub project-package operations have been reviewed across the
+            30 shipped locales. Detailed panels and explanatory copy still
+            contain gaps. The native coverage report measures only the literal
+            Workbench core and extended dictionaries, not the whole product.
+            English with invisible padding no longer counts as translated.
+          </p>
+          <p class="docs-copy">
+            Older catalog-installed Workbench snapshots no longer override a
+            newer shipped translation revision. Stored data is not rewritten;
+            imported, newer and unknown-revision packs keep their priority.
+          </p>
         </article>
 
         <article class="docs-card">

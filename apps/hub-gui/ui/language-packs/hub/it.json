@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Italian UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Apri Workbench",
       "startLocal": "Avvia stack locale",
       "validateEnv": "Valida ambiente"
+    },
+    "bundles": {
+      "introTitle": "Pacchetti di progetto",
+      "introCopy": "Verifica, confronta e prepara i pacchetti di progetto per l’analisi.",
+      "bundlePath": "Percorso del pacchetto",
+      "comparePath": "Percorso di confronto",
+      "outputPath": "Percorso di output",
+      "inspect": "Ispeziona pacchetto",
+      "validate": "Valida pacchetto",
+      "normalize": "Normalizza pacchetto",
+      "unpack": "Estrai pacchetto",
+      "pack": "Crea pacchetto del progetto",
+      "diff": "Confronta pacchetti",
+      "openWorkbench": "Apri Workbench",
+      "desktopTools": "Strumenti desktop",
+      "recentBundles": "Pacchetti recenti",
+      "recentCompare": "Confronti recenti",
+      "recentOutputs": "Output recenti",
+      "recentActions": "Azioni recenti sui pacchetti",
+      "favorites": "Preferiti",
+      "ready": "Gli strumenti dei pacchetti sono pronti.",
+      "all": "Tutti",
+      "failed": "Non riusciti",
+      "keepFailed": "Mantieni solo gli errori",
+      "import": "Importa JSON",
+      "export": "Esporta JSON",
+      "clear": "Cancella cronologia",
+      "recent": "Recenti",
+      "introLabel": "Pacchetti di progetto"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "Pacchetti di progetto"
+      }
     }
   }
 }

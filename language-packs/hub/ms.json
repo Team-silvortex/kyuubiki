@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Malay UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Buka Workbench",
       "startLocal": "Mulakan stack tempatan",
       "validateEnv": "Sahkan persekitaran"
+    },
+    "bundles": {
+      "introTitle": "Pakej projek",
+      "introCopy": "Semak, bandingkan dan sediakan pakej projek untuk analisis.",
+      "bundlePath": "Laluan pakej",
+      "comparePath": "Laluan perbandingan",
+      "outputPath": "Laluan output",
+      "inspect": "Periksa pakej",
+      "validate": "Sahkan pakej",
+      "normalize": "Normalkan pakej",
+      "unpack": "Ekstrak pakej",
+      "pack": "Bungkus projek",
+      "diff": "Bandingkan pakej",
+      "openWorkbench": "Buka Workbench",
+      "desktopTools": "Alat desktop",
+      "recentBundles": "Pakej terkini",
+      "recentCompare": "Perbandingan terkini",
+      "recentOutputs": "Output terkini",
+      "recentActions": "Tindakan pakej terkini",
+      "favorites": "Kegemaran",
+      "ready": "Alat pakej sedia.",
+      "all": "Semua",
+      "failed": "Gagal",
+      "keepFailed": "Simpan yang gagal sahaja",
+      "import": "Import JSON",
+      "export": "Eksport JSON",
+      "clear": "Kosongkan sejarah",
+      "recent": "Terkini",
+      "introLabel": "Pakej projek"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "Pakej projek"
+      }
     }
   }
 }

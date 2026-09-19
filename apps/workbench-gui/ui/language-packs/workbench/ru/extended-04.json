@@ -3,7 +3,7 @@
   "language": "ru",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-19T10:15:37.210Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "Риск",
     "stabilityScore": "Оценка устойчивости",
@@ -23,11 +23,11 @@
     "tabs": {
       "controls": "Управление",
       "jobs": "Задания",
-      "models": "Модели",
+      "models": "Рабочая область",
       "projects": "Проекты",
-      "results": "Результаты",
+      "results": "Результат",
       "samples": "Примеры",
-      "summary": "Сводка",
+      "summary": "Обзор",
       "tools": "Инструменты",
       "tree": "Обзор"
     },

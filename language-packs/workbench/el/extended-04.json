@@ -3,7 +3,7 @@
   "language": "el",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-20T12:00:09.389Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "Risk",
     "stabilityScore": "Stabilitetsbetyg",
@@ -21,13 +21,13 @@
     "switchedTo2dStudio": "Bytte till 2D-workbench.",
     "switchedTo3dStudio": "Bytte till 3D-rumstudio.",
     "tabs": {
-      "controls": "Kontroller",
+      "controls": "Στοιχεία ελέγχου",
       "jobs": "Jobb",
-      "models": "Modeller",
+      "models": "Χώρος εργασίας",
       "projects": "Projekt",
-      "results": "Resultat",
+      "results": "Αποτέλεσμα",
       "samples": "Exempel",
-      "summary": "Sammanfattning",
+      "summary": "Επισκόπηση",
       "tools": "Verktyg",
       "tree": "Träd"
     },

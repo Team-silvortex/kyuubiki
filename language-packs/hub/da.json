@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Danish UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Åbn Workbench",
       "startLocal": "Start lokal stack",
       "validateEnv": "Valider miljø"
+    },
+    "bundles": {
+      "introTitle": "Projektpakker",
+      "introCopy": "Kontrollér, sammenlign og forbered projektpakker til analyse.",
+      "bundlePath": "Pakkesti",
+      "comparePath": "Sammenligningssti",
+      "outputPath": "Outputsti",
+      "inspect": "Undersøg pakke",
+      "validate": "Validér pakke",
+      "normalize": "Normalisér pakke",
+      "unpack": "Udpak pakke",
+      "pack": "Pak projekt",
+      "diff": "Sammenlign pakker",
+      "openWorkbench": "Åbn Workbench",
+      "desktopTools": "Skrivebordsværktøjer",
+      "recentBundles": "Seneste pakker",
+      "recentCompare": "Seneste sammenligninger",
+      "recentOutputs": "Seneste output",
+      "recentActions": "Seneste pakkehandlinger",
+      "favorites": "Favoritter",
+      "ready": "Pakkeværktøjerne er klar.",
+      "all": "Alle",
+      "failed": "Mislykkede",
+      "keepFailed": "Behold kun mislykkede",
+      "import": "Importér JSON",
+      "export": "Eksportér JSON",
+      "clear": "Ryd historik",
+      "recent": "Seneste",
+      "introLabel": "Projektpakker"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "Projektpakker"
+      }
     }
   }
 }

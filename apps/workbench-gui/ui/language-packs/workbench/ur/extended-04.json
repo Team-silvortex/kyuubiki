@@ -3,7 +3,7 @@
   "language": "ur",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-20T07:54:20.015Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "ﮟﯿﻣ ﮮﺮﻄﺧ",
     "stabilityScore": "ﺭﻮﮑﺳﺍ ﺎﮐ ﻡﺎﮑﺤﺘﺳﺍ",
@@ -21,13 +21,13 @@
     "switchedTo2dStudio": "2D ۔ﺎﯿﮔ ﺎﯿﮐ ﭻﺋﻮﺳ ﺮﭘ ﭻﻨﯿﺑ ﮎﺭﻭ",
     "switchedTo3dStudio": "3D ۔ﺎﯿﮔ ﻮﮨ ﻞﻘﺘﻨﻣ ﮟﯿﻣ ﻮﯾﮈﻮﭩﺳﺍ ﺲﯿﭙﺳﺍ",
     "tabs": {
-      "controls": "Controls​",
+      "controls": "کنٹرولز",
       "jobs": "ﮞﺎﯾﺮﮐﻮﻧ",
-      "models": "ﮯﻧﻮﻤﻧ",
+      "models": "کام کی جگہ",
       "projects": "ﺲﭩﮑﯿﺟﻭﺮﭘ",
-      "results": "ﺞﺋﺎﺘﻧ",
+      "results": "نتیجہ",
       "samples": "Samples​",
-      "summary": "Summary​",
+      "summary": "جائزہ",
       "tools": "ﺭﺍﺯﻭﺍ",
       "tree": "Browse​"
     },

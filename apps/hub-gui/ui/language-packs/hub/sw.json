@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Swahili UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Fungua Workbench",
       "startLocal": "Anzisha stack ya ndani",
       "validateEnv": "Thibitisha mazingira"
+    },
+    "bundles": {
+      "introTitle": "Vifurushi vya mradi",
+      "introCopy": "Kagua, linganisha na andaa vifurushi vya mradi kwa uchambuzi.",
+      "bundlePath": "Njia ya kifurushi",
+      "comparePath": "Njia ya kulinganisha",
+      "outputPath": "Njia ya matokeo",
+      "inspect": "Kagua kifurushi",
+      "validate": "Thibitisha kifurushi",
+      "normalize": "Sanifisha kifurushi",
+      "unpack": "Fungua kifurushi",
+      "pack": "Funga mradi kwenye kifurushi",
+      "diff": "Linganisha vifurushi",
+      "openWorkbench": "Fungua Workbench",
+      "desktopTools": "Zana za eneo-kazi",
+      "recentBundles": "Vifurushi vya karibuni",
+      "recentCompare": "Ulinganisho wa karibuni",
+      "recentOutputs": "Matokeo ya karibuni",
+      "recentActions": "Vitendo vya karibuni vya vifurushi",
+      "favorites": "Vipendwa",
+      "ready": "Zana za vifurushi ziko tayari.",
+      "all": "Vyote",
+      "failed": "Vilivyoshindwa",
+      "keepFailed": "Hifadhi vilivyoshindwa tu",
+      "import": "Ingiza JSON",
+      "export": "Hamisha JSON",
+      "clear": "Futa historia",
+      "recent": "Karibuni",
+      "introLabel": "Vifurushi vya mradi"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "Vifurushi vya mradi"
+      }
     }
   }
 }

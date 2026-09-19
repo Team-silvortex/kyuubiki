@@ -3,7 +3,7 @@
   "language": "ro",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-21T03:27:46.193Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "Risk",
     "stabilityScore": "Stabilitetsbetyg",
@@ -21,13 +21,13 @@
     "switchedTo2dStudio": "Bytte till 2D-workbench.",
     "switchedTo3dStudio": "Bytte till 3D-rumstudio.",
     "tabs": {
-      "controls": "Kontroller",
+      "controls": "Comenzi",
       "jobs": "Jobb",
-      "models": "Modeller",
+      "models": "Spațiu de lucru",
       "projects": "Projekt",
-      "results": "Resultat",
+      "results": "Rezultat",
       "samples": "Exempel",
-      "summary": "Sammanfattning",
+      "summary": "Prezentare generală",
       "tools": "Verktyg",
       "tree": "Träd"
     },

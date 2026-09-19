@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Romanian UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Deschide Workbench",
       "startLocal": "Pornește stack-ul local",
       "validateEnv": "Validează mediul"
+    },
+    "bundles": {
+      "introTitle": "Pachete de proiect",
+      "introCopy": "Verifică, compară și pregătește pachete de proiect pentru analiză.",
+      "bundlePath": "Calea pachetului",
+      "comparePath": "Calea de comparat",
+      "outputPath": "Calea de ieșire",
+      "inspect": "Inspectează pachetul",
+      "validate": "Validează pachetul",
+      "normalize": "Normalizează pachetul",
+      "unpack": "Despachetează pachetul",
+      "pack": "Împachetează proiectul",
+      "diff": "Compară pachete",
+      "openWorkbench": "Deschide Workbench",
+      "desktopTools": "Instrumente desktop",
+      "recentBundles": "Pachete recente",
+      "recentCompare": "Comparații recente",
+      "recentOutputs": "Ieșiri recente",
+      "recentActions": "Acțiuni recente asupra pachetelor",
+      "favorites": "Favorite",
+      "ready": "Instrumentele pentru pachete sunt pregătite.",
+      "all": "Toate",
+      "failed": "Eșuate",
+      "keepFailed": "Păstrează doar eșecurile",
+      "import": "Importă JSON",
+      "export": "Exportă JSON",
+      "clear": "Șterge istoricul",
+      "recent": "Recente",
+      "introLabel": "Pachete de proiect"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "Pachete de proiect"
+      }
     }
   }
 }

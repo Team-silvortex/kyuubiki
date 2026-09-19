@@ -3,7 +3,7 @@
   "language": "fr",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-22T02:46:37.913Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "À risque",
     "stabilityScore": "Score de stabilité",
@@ -21,13 +21,13 @@
     "switchedTo2dStudio": "Passé à l'atelier 2D.",
     "switchedTo3dStudio": "Passé au studio spatial 3D.",
     "tabs": {
-      "controls": "Contrôles",
+      "controls": "Commandes",
       "jobs": "Emplois",
-      "models": "Modèles",
+      "models": "Espace de travail",
       "projects": "Projets",
-      "results": "Résultats",
+      "results": "Résultat",
       "samples": "Échantillons",
-      "summary": "Résumé",
+      "summary": "Vue d’ensemble",
       "tools": "Outils",
       "tree": "Parcourir"
     },

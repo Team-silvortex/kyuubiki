@@ -26,7 +26,7 @@ export const HUB_DOCS_I18N = {
     },
     dynamic: {
       endpointPolicyDefault:
-        "远程提供方请使用 https://，本地网关可使用 http://localhost / 127.0.0.1。API key 会直接发送到配置的 Base URL。",
+        "远程服务请使用 https://，本地网关可使用 http://localhost / 127.0.0.1。API 密钥会直接发送到配置的服务地址。",
     },
   },
   ja: {

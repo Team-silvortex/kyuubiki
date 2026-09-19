@@ -3,7 +3,7 @@
   "language": "pt-BR",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-22T02:40:19.378Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "Em risco",
     "stabilityScore": "Pontuação de estabilidade",
@@ -23,11 +23,11 @@
     "tabs": {
       "controls": "Controles",
       "jobs": "empregos",
-      "models": "Modelos",
+      "models": "Área de trabalho",
       "projects": "Projetos",
-      "results": "Resultados",
+      "results": "Resultado",
       "samples": "Amostras",
-      "summary": "Resumo",
+      "summary": "Visão geral",
       "tools": "Ferramentas",
       "tree": "Navegar"
     },

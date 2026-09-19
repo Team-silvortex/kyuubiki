@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Tamil UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Workbench திற",
       "startLocal": "உள்ளூர் stack தொடங்கு",
       "validateEnv": "சூழலை சரிபார்"
+    },
+    "bundles": {
+      "introTitle": "திட்டத் தொகுப்புகள்",
+      "introCopy": "திட்டத் தொகுப்புகளைச் சரிபார்த்து, ஒப்பிட்டு, பகுப்பாய்வுக்குத் தயாரிக்கவும்.",
+      "bundlePath": "தொகுப்பின் பாதை",
+      "comparePath": "ஒப்பீட்டுப் பாதை",
+      "outputPath": "வெளியீட்டுப் பாதை",
+      "inspect": "தொகுப்பை ஆய்வு செய்",
+      "validate": "தொகுப்பைச் சரிபார்",
+      "normalize": "தொகுப்பைச் சீராக்கு",
+      "unpack": "தொகுப்பைப் பிரி",
+      "pack": "திட்டத்தைத் தொகுப்பு செய்",
+      "diff": "தொகுப்புகளை ஒப்பிடு",
+      "openWorkbench": "Workbench திற",
+      "desktopTools": "கணினி பயன்பாட்டுக் கருவிகள்",
+      "recentBundles": "சமீபத்திய தொகுப்புகள்",
+      "recentCompare": "சமீபத்திய ஒப்பீடுகள்",
+      "recentOutputs": "சமீபத்திய வெளியீடுகள்",
+      "recentActions": "சமீபத்திய தொகுப்புச் செயல்கள்",
+      "favorites": "விருப்பமானவை",
+      "ready": "தொகுப்புக் கருவிகள் தயார்.",
+      "all": "அனைத்தும்",
+      "failed": "தோல்வியுற்றவை",
+      "keepFailed": "தோல்வியுற்றவற்றை மட்டும் வைத்திரு",
+      "import": "JSON இறக்குமதி செய்",
+      "export": "JSON ஏற்றுமதி செய்",
+      "clear": "வரலாற்றை அழி",
+      "recent": "சமீபத்தியவை",
+      "introLabel": "திட்டத் தொகுப்புகள்"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "திட்டத் தொகுப்புகள்"
+      }
     }
   }
 }

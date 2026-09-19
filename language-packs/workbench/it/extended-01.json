@@ -3,7 +3,7 @@
   "language": "it",
   "targetSurface": "workbench",
   "batch": "extended-01",
-  "updatedAt": "2026-07-22T02:47:17.265Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "addBranchNode": "Nodo di diramazione",
     "addMember": "Aggiungi membro",
@@ -61,7 +61,7 @@
     "exportHotspots": "Esporta hotspot",
     "exportJson": "JSON (IT)",
     "exportMemberForces": "Esportare le forze dei membri",
-    "exportProject": "Progetto di esportazione",
+    "exportProject": "Esporta progetto",
     "exportProjectJson": "Progetto JSON",
     "exportProjectZip": "Progetto ZIP",
     "fixCurrentNodeXAction": "Correggi il nodo corrente in X",

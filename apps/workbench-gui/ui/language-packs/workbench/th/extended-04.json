@@ -3,7 +3,7 @@
   "language": "th",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-21T04:28:52.816Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "ตกอยู่ในความเสี่ยง",
     "stabilityScore": "คะแนนความมั่นคง",
@@ -23,11 +23,11 @@
     "tabs": {
       "controls": "การควบคุม",
       "jobs": "งาน",
-      "models": "โมเดล",
+      "models": "พื้นที่ทำงาน",
       "projects": "โครงการ",
       "results": "ผลลัพธ์",
       "samples": "ตัวอย่าง",
-      "summary": "สรุป",
+      "summary": "ภาพรวม",
       "tools": "เครื่องมือ",
       "tree": "เรียกดู"
     },

@@ -111,11 +111,12 @@ export async function importWorkbenchLanguagePack(params: {
 
 export function installWorkbenchLanguagePackPayload(params: {
   raw: Partial<WorkbenchLanguagePack> & { overrides?: Record<string, unknown> };
+  source?: WorkbenchLanguagePack["source"];
   language: WorkbenchLanguage;
   setLanguagePacks: Dispatch<SetStateAction<WorkbenchLanguagePack[]>>;
   setMessage: (value: string) => void;
 }) {
-  const { raw, language, setLanguagePacks, setMessage } = params;
+  const { raw, language, setLanguagePacks, setMessage, source = "imported" } = params;
   if (!raw || typeof raw !== "object" || typeof raw.language !== "string" || typeof raw.name !== "string") {
     throw new Error("invalid-pack");
   }
@@ -143,7 +144,7 @@ export function installWorkbenchLanguagePackPayload(params: {
     versionLine: typeof raw.versionLine === "string" && raw.versionLine.trim() ? raw.versionLine.trim() : undefined,
     targetAppVersion:
       typeof raw.targetAppVersion === "string" && raw.targetAppVersion.trim() ? raw.targetAppVersion.trim() : undefined,
-    source: raw.source === "downloaded" ? "downloaded" : "imported",
+    source,
     updatedAt: typeof raw.updatedAt === "string" && raw.updatedAt.trim() ? raw.updatedAt.trim() : new Date().toISOString(),
     description: typeof raw.description === "string" ? raw.description : undefined,
     overrides:
@@ -182,7 +183,7 @@ export async function installBuiltinWorkbenchLanguagePack(params: {
     return;
   }
 
-  installWorkbenchLanguagePackPayload({ raw: pack, language, setLanguagePacks, setMessage });
+  installWorkbenchLanguagePackPayload({ raw: pack, language, setLanguagePacks, setMessage, source: "downloaded" });
 }
 
 export function removeWorkbenchLanguagePack(params: {

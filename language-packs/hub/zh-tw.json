@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Traditional Chinese UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "開啟 Workbench",
       "startLocal": "啟動本機堆疊",
       "validateEnv": "驗證環境"
+    },
+    "bundles": {
+      "introTitle": "專案套件",
+      "introCopy": "檢查、比較並準備專案套件，接著進行分析。",
+      "bundlePath": "套件路徑",
+      "comparePath": "比較路徑",
+      "outputPath": "輸出路徑",
+      "inspect": "檢查套件",
+      "validate": "驗證套件",
+      "normalize": "正規化套件",
+      "unpack": "解開套件",
+      "pack": "封裝專案",
+      "diff": "比較套件",
+      "openWorkbench": "開啟工作台",
+      "desktopTools": "桌面工具",
+      "recentBundles": "最近的套件",
+      "recentCompare": "最近的比較路徑",
+      "recentOutputs": "最近的輸出",
+      "recentActions": "最近的套件操作",
+      "favorites": "收藏",
+      "ready": "專案套件工具已就緒。",
+      "all": "全部",
+      "failed": "失敗",
+      "keepFailed": "僅保留失敗項目",
+      "import": "匯入 JSON",
+      "export": "匯出 JSON",
+      "clear": "清除歷史",
+      "recent": "最近",
+      "introLabel": "專案套件"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "專案套件"
+      }
     }
   }
 }

@@ -3,7 +3,7 @@
   "language": "zh-TW",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-21T05:40:10.578Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "有風險",
     "stabilityScore": "穩定性分數",
@@ -21,13 +21,13 @@
     "switchedTo2dStudio": "已切換至 2D 工作台。",
     "switchedTo3dStudio": "已切換至 3D 空間工作室。",
     "tabs": {
-      "controls": "控制項",
+      "controls": "控制",
       "jobs": "工作",
-      "models": "模型",
+      "models": "工作區",
       "projects": "專案",
       "results": "結果",
       "samples": "範例",
-      "summary": "摘要",
+      "summary": "概覽",
       "tools": "工具",
       "tree": "瀏覽"
     },

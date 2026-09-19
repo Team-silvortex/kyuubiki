@@ -6,6 +6,7 @@ import {
   createFixtureRoot,
 } from "../../desktop-shared/test/smoke-test-helpers.mjs";
 import "./action-lifecycle.test.mjs";
+import "./localization.test.mjs";
 
 const ROOT = createFixtureRoot(import.meta.url);
 const read = createFixtureReader(ROOT);
@@ -165,7 +166,8 @@ test("installer shell wires core install and runtime actions", () => {
   ]);
   assert.match(certificatePanel, /currentCertificatePolicyPayload/);
   assert.doesNotMatch(read("ui/installer-language-packs.js"), /starter language pack loaded/);
-  assert.match(read("ui/installer-language-packs.js"), /Translated core UI coverage is active/);
+  assert.match(read("ui/installer-language-packs.js"), /loadInstallerShellTranslation/);
+  assert.doesNotMatch(read("ui/installer-language-packs.js"), /serviceStatus: typeof shell.actionStatus/);
   assert.match(read("ui/installer-language-packs.js"), /PWDT_STATUS_BY_LANGUAGE/);
   assert.match(read("ui/installer-language-packs.js"), /pwdtStatus: PWDT_STATUS_BY_LANGUAGE/);
   assert.match(read("ui/installer-workflows.js"), /appendRemoteNodeWorkflowSnapshot/);

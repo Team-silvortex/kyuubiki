@@ -3,7 +3,7 @@
   "language": "sw",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-21T04:02:41.915Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "Risk",
     "stabilityScore": "Stabilitetsbetyg",
@@ -21,13 +21,13 @@
     "switchedTo2dStudio": "Bytte till 2D-workbench.",
     "switchedTo3dStudio": "Bytte till 3D-rumstudio.",
     "tabs": {
-      "controls": "Kontroller",
+      "controls": "Vidhibiti",
       "jobs": "Jobb",
-      "models": "Modeller",
+      "models": "Eneo la kazi",
       "projects": "Projekt",
-      "results": "Resultat",
+      "results": "Matokeo",
       "samples": "Exempel",
-      "summary": "Sammanfattning",
+      "summary": "Muhtasari",
       "tools": "Verktyg",
       "tree": "Träd"
     },

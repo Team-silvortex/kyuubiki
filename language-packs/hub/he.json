@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Hebrew UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "פתח Workbench",
       "startLocal": "הפעל מחסנית מקומית",
       "validateEnv": "אמת סביבה"
+    },
+    "bundles": {
+      "introTitle": "חבילות פרויקט",
+      "introCopy": "בדיקה, השוואה והכנת חבילות פרויקט לניתוח.",
+      "bundlePath": "נתיב החבילה",
+      "comparePath": "נתיב להשוואה",
+      "outputPath": "נתיב הפלט",
+      "inspect": "בדיקת החבילה",
+      "validate": "אימות החבילה",
+      "normalize": "נרמול החבילה",
+      "unpack": "חילוץ החבילה",
+      "pack": "אריזת הפרויקט",
+      "diff": "השוואת חבילות",
+      "openWorkbench": "פתיחת Workbench",
+      "desktopTools": "כלי שולחן עבודה",
+      "recentBundles": "חבילות אחרונות",
+      "recentCompare": "השוואות אחרונות",
+      "recentOutputs": "פלטים אחרונים",
+      "recentActions": "פעולות אחרונות בחבילות",
+      "favorites": "מועדפים",
+      "ready": "כלי החבילות מוכנים.",
+      "all": "הכול",
+      "failed": "נכשלו",
+      "keepFailed": "השארת כישלונות בלבד",
+      "import": "ייבוא JSON",
+      "export": "ייצוא JSON",
+      "clear": "ניקוי ההיסטוריה",
+      "recent": "אחרונים",
+      "introLabel": "חבילות פרויקט"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "חבילות פרויקט"
+      }
     }
   }
 }

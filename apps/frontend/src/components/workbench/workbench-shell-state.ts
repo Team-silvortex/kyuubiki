@@ -34,6 +34,7 @@ import type { DirectMeshExecutionState } from "@/components/workbench/workbench-
 import {
   buildWorkbenchLanguagePackCatalogRows,
   loadBuiltinWorkbenchLanguagePackForLanguage,
+  resolveInstalledWorkbenchLanguagePack,
 } from "@/components/workbench/workbench-language-pack-catalog";
 import { getWorkbenchLanguagePackSystemCopy } from "@/components/workbench/workbench-language-pack-system-copy";
 
@@ -147,8 +148,11 @@ export function useWorkbenchShellState({
   }, [setLoadedModelName, setMessage]);
 
   const activeLanguagePack = useMemo(
-    () => languagePacks.find((pack) => pack.language === language) ?? null,
-    [language, languagePacks],
+    () => resolveInstalledWorkbenchLanguagePack(
+      languagePacks.find((pack) => pack.language === language) ?? null,
+      catalogLanguagePack?.language === language ? catalogLanguagePack : null,
+    ),
+    [language, languagePacks, catalogLanguagePack],
   );
   const t = useMemo(() => {
     const base = mergeLanguagePack<WorkbenchCopy>(

@@ -59,7 +59,7 @@ const REMOTE_READY_STATUS = {
   ja: "翻訳済みパックをローカル取込可能・リモート配布源は今後接続",
 } as const;
 
-const UPDATED_AT = "2026-07-16T00:00:00.000Z";
+const UPDATED_AT = "2026-09-19T00:00:00.000Z";
 
 function languageSlug(language: string) {
   return language.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -163,4 +163,17 @@ export function loadBuiltinWorkbenchLanguagePackForLanguage(
       (entry) => entry.language.toLowerCase() === normalized,
     ),
   );
+}
+
+export function resolveInstalledWorkbenchLanguagePack(
+  installed: WorkbenchLanguagePack | null,
+  catalog: WorkbenchLanguagePack | null,
+): WorkbenchLanguagePack | null {
+  if (!installed || !catalog || installed.source !== "downloaded"
+    || installed.id !== catalog.id || installed.language !== catalog.language) return installed;
+  const installedRevision = Date.parse(installed.updatedAt);
+  const catalogRevision = Date.parse(catalog.updatedAt);
+  // Refresh old catalog snapshots in memory; never rewrite imported or unknown-provenance copy.
+  return Number.isFinite(installedRevision) && Number.isFinite(catalogRevision)
+    && installedRevision < catalogRevision ? catalog : installed;
 }

@@ -383,30 +383,49 @@ fn build_row(
 
 fn has_translation(value: Option<&Value>, source: &CopyValue) -> bool {
     match (value, source) {
-        (Some(Value::String(value)), CopyValue::String(_)) => !value.trim().is_empty(),
+        (Some(Value::String(value)), CopyValue::String(_)) => !visible_copy(value).is_empty(),
         (Some(Value::Array(values)), CopyValue::Strings(source)) => {
             values.len() == source.len()
-                && values
-                    .iter()
-                    .all(|value| value.as_str().is_some_and(|text| !text.trim().is_empty()))
+                && values.iter().all(|value| {
+                    value
+                        .as_str()
+                        .is_some_and(|text| !visible_copy(text).is_empty())
+                })
         }
         _ => false,
     }
 }
 
 fn is_source_translation(value: Option<&Value>, source: &CopyValue) -> bool {
-    if matches!(source, CopyValue::String(text) if text.chars().any(|value| value.is_ascii_digit()))
-    {
-        return false;
-    }
     match (value, source) {
-        (Some(Value::String(value)), CopyValue::String(source)) => value == source,
+        (Some(Value::String(value)), CopyValue::String(source)) => {
+            visible_copy(value) == visible_copy(source)
+        }
         (Some(Value::Array(values)), CopyValue::Strings(source)) => {
-            values.iter().filter_map(Value::as_str).eq(source.iter())
+            values
+                .iter()
+                .filter_map(Value::as_str)
+                .map(visible_copy)
+                .eq(source.iter().map(|text| visible_copy(text)))
                 && values.len() == source.len()
         }
         _ => false,
     }
+}
+
+fn visible_copy(text: &str) -> String {
+    // Ignore invisible padding when measuring coverage, without changing displayed text.
+    text.chars()
+        .filter(|ch| {
+            !matches!(
+                ch,
+                '\u{200b}' | '\u{200e}' | '\u{200f}' | '\u{2060}' | '\u{feff}'
+            )
+        })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn is_meaningful(value: Option<&Value>, source: &CopyValue) -> bool {
@@ -440,6 +459,8 @@ fn write_report(root: &Path, report: &Report) -> RunnerResult<()> {
             },
             report.required_keys.len()
         ),
+        String::new(),
+        "Scope: literal Workbench core/extended dictionaries only, not whole-product UI coverage. Source matches require review; shared technical terms may be intentional. Invisible padding is ignored.".into(),
         String::new(),
         "## Language Coverage".into(),
         String::new(),
@@ -719,9 +740,17 @@ mod tests {
         assert!(is_meaningful(Some(&json!("Ausführen")), &source));
         assert!(!is_meaningful(Some(&json!("Run")), &source));
         let invariant = CopyValue::String("1D beam".into());
-        assert!(is_meaningful(Some(&json!("1D beam")), &invariant));
+        assert!(!is_meaningful(Some(&json!("1D beam")), &invariant));
+        assert!(!is_meaningful(Some(&json!(" Run\u{200b} ")), &source));
+        assert!(!is_meaningful(Some(&json!("\u{2060}Run\u{feff}")), &source));
+        assert!(!has_translation(Some(&json!("\u{200b}")), &source));
         let rows = CopyValue::Strings(vec!["One".into(), "Two".into()]);
         assert!(!has_translation(Some(&json!(["Uno"])), &rows));
+        assert!(!is_meaningful(
+            Some(&json!(["One\u{200b}", " Two "])),
+            &rows
+        ));
+        assert!(is_meaningful(Some(&json!(["Uno", "Dos"])), &rows));
         assert_eq!(percentage(1, 3), 33.3);
     }
 }

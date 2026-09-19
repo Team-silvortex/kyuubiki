@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Greek UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Άνοιγμα Workbench",
       "startLocal": "Εκκίνηση τοπικής στοίβας",
       "validateEnv": "Έλεγχος περιβάλλοντος"
+    },
+    "bundles": {
+      "introTitle": "Πακέτα έργου",
+      "introCopy": "Ελέγξτε, συγκρίνετε και προετοιμάστε πακέτα έργου για ανάλυση.",
+      "bundlePath": "Διαδρομή πακέτου",
+      "comparePath": "Διαδρομή σύγκρισης",
+      "outputPath": "Διαδρομή εξόδου",
+      "inspect": "Επιθεώρηση πακέτου",
+      "validate": "Επικύρωση πακέτου",
+      "normalize": "Κανονικοποίηση πακέτου",
+      "unpack": "Αποσυμπίεση πακέτου",
+      "pack": "Συσκευασία έργου",
+      "diff": "Σύγκριση πακέτων",
+      "openWorkbench": "Άνοιγμα Workbench",
+      "desktopTools": "Εργαλεία επιφάνειας εργασίας",
+      "recentBundles": "Πρόσφατα πακέτα",
+      "recentCompare": "Πρόσφατες συγκρίσεις",
+      "recentOutputs": "Πρόσφατες έξοδοι",
+      "recentActions": "Πρόσφατες ενέργειες πακέτων",
+      "favorites": "Αγαπημένα",
+      "ready": "Τα εργαλεία πακέτων είναι έτοιμα.",
+      "all": "Όλα",
+      "failed": "Αποτυχημένα",
+      "keepFailed": "Διατήρηση μόνο αποτυχημένων",
+      "import": "Εισαγωγή JSON",
+      "export": "Εξαγωγή JSON",
+      "clear": "Εκκαθάριση ιστορικού",
+      "recent": "Πρόσφατα",
+      "introLabel": "Πακέτα έργου"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "Πακέτα έργου"
+      }
     }
   }
 }

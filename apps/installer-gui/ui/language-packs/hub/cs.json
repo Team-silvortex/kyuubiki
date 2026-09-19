@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Czech UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Otevřít Workbench",
       "startLocal": "Spustit lokální stack",
       "validateEnv": "Ověřit prostředí"
+    },
+    "bundles": {
+      "introTitle": "Projektové balíčky",
+      "introCopy": "Zkontrolujte, porovnejte a připravte projektové balíčky k analýze.",
+      "bundlePath": "Cesta balíčku",
+      "comparePath": "Cesta pro porovnání",
+      "outputPath": "Výstupní cesta",
+      "inspect": "Prohlédnout balíček",
+      "validate": "Ověřit balíček",
+      "normalize": "Normalizovat balíček",
+      "unpack": "Rozbalit balíček",
+      "pack": "Zabalit projekt",
+      "diff": "Porovnat balíčky",
+      "openWorkbench": "Otevřít Workbench",
+      "desktopTools": "Nástroje plochy",
+      "recentBundles": "Nedávné balíčky",
+      "recentCompare": "Nedávná porovnání",
+      "recentOutputs": "Nedávné výstupy",
+      "recentActions": "Nedávné akce s balíčky",
+      "favorites": "Oblíbené",
+      "ready": "Nástroje balíčků jsou připraveny.",
+      "all": "Všechny",
+      "failed": "Neúspěšné",
+      "keepFailed": "Ponechat jen neúspěšné",
+      "import": "Importovat JSON",
+      "export": "Exportovat JSON",
+      "clear": "Vymazat historii",
+      "recent": "Nedávné",
+      "introLabel": "Projektové balíčky"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "Projektové balíčky"
+      }
     }
   }
 }

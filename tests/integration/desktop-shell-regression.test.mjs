@@ -6,6 +6,7 @@ import {
 } from "./desktop-shell-regression.shared.mjs";
 import { assertHubRegression } from "./hub-shell-regression.shared.mjs";
 import { assertBundleCreationRegression } from "./hub-bundle-creation.shared.mjs";
+import { assertHubBundleLanguageMatrix, assertInstallerLanguageMatrix } from "./desktop-localization.shared.mjs";
 import { captureDesktopGuiArtifacts } from "./desktop-gui-artifacts.mjs";
 import { launchIntegrationBrowser } from "./playwright-browser.shared.mjs";
 
@@ -56,6 +57,21 @@ test(
         }
       });
 
+      await t.test("Hub and Installer render all 30 local language packs without altering user data", async () => {
+        const page = await browser.newPage({ viewport: { width: 1180, height: 920 } });
+        try {
+          await page.goto(environment.hubUrl, { waitUntil: "networkidle", timeout: 60_000 });
+          await assertHubBundleLanguageMatrix(page);
+          await page.goto(environment.installerUrl, { waitUntil: "networkidle", timeout: 60_000 });
+          await assertInstallerLanguageMatrix(page);
+        } catch (error) {
+          await captureDesktopGuiArtifacts(page, { suite: "desktop-localization", scenario: "language-matrix", error });
+          throw error;
+        } finally {
+          await page.close();
+        }
+      });
+
       await t.test("Installer startup, integrity, updates, and logs mount cleanly", async () => {
         const page = await browser.newPage();
         try {
@@ -85,5 +101,5 @@ test(
       await environment.cleanup();
     }
   },
-  { timeout: 180_000 },
+  { timeout: 240_000 },
 );

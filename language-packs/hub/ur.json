@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Urdu UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "Workbench کھولیں",
       "startLocal": "مقامی stack شروع کریں",
       "validateEnv": "ماحول کی توثیق کریں"
+    },
+    "bundles": {
+      "introTitle": "پروجیکٹ پیکجز",
+      "introCopy": "تجزیے کے لیے پروجیکٹ پیکجز جانچیں، موازنہ کریں اور تیار کریں۔",
+      "bundlePath": "پیکج کا راستہ",
+      "comparePath": "موازنے کا راستہ",
+      "outputPath": "آؤٹ پٹ کا راستہ",
+      "inspect": "پیکج کا معائنہ",
+      "validate": "پیکج کی تصدیق",
+      "normalize": "پیکج معیاری بنائیں",
+      "unpack": "پیکج کھولیں",
+      "pack": "پروجیکٹ پیک کریں",
+      "diff": "پیکجز کا موازنہ",
+      "openWorkbench": "Workbench کھولیں",
+      "desktopTools": "ڈیسک ٹاپ اوزار",
+      "recentBundles": "حالیہ پیکجز",
+      "recentCompare": "حالیہ موازنے",
+      "recentOutputs": "حالیہ آؤٹ پٹ",
+      "recentActions": "پیکج کے حالیہ اقدامات",
+      "favorites": "پسندیدہ",
+      "ready": "پیکج کے اوزار تیار ہیں۔",
+      "all": "سب",
+      "failed": "ناکام",
+      "keepFailed": "صرف ناکام رکھیں",
+      "import": "JSON درآمد کریں",
+      "export": "JSON برآمد کریں",
+      "clear": "تاریخچہ صاف کریں",
+      "recent": "حالیہ",
+      "introLabel": "پروجیکٹ پیکجز"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "پروجیکٹ پیکجز"
+      }
     }
   }
 }

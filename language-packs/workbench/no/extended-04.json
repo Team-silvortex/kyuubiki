@@ -3,7 +3,7 @@
   "language": "no",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-22T02:42:20.303Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "Risk",
     "stabilityScore": "Stabilitetsbetyg",
@@ -23,11 +23,11 @@
     "tabs": {
       "controls": "Kontroller",
       "jobs": "Jobb",
-      "models": "Modeller",
+      "models": "Arbeidsområde",
       "projects": "Projekt",
       "results": "Resultat",
       "samples": "Exempel",
-      "summary": "Sammanfattning",
+      "summary": "Oversikt",
       "tools": "Verktyg",
       "tree": "Träd"
     },

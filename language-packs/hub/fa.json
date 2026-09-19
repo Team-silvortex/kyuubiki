@@ -8,7 +8,7 @@
   "versionLine": "daji 3.x",
   "targetAppVersion": "3.2.0",
   "source": "downloaded",
-  "updatedAt": "2026-07-16T00:00:00.000Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "description": "Persian UI translations for Hub navigation, shell actions, and primary route labels.",
   "overrides": {
     "nav": {
@@ -39,6 +39,40 @@
       "openWorkbench": "باز کردن Workbench",
       "startLocal": "شروع پشته محلی",
       "validateEnv": "اعتبارسنجی محیط"
+    },
+    "bundles": {
+      "introTitle": "بسته‌های پروژه",
+      "introCopy": "بسته‌های پروژه را بررسی و مقایسه کنید و برای تحلیل آماده سازید.",
+      "bundlePath": "مسیر بسته",
+      "comparePath": "مسیر مقایسه",
+      "outputPath": "مسیر خروجی",
+      "inspect": "بازرسی بسته",
+      "validate": "اعتبارسنجی بسته",
+      "normalize": "استانداردسازی بسته",
+      "unpack": "باز کردن بسته",
+      "pack": "بسته‌بندی پروژه",
+      "diff": "مقایسه بسته‌ها",
+      "openWorkbench": "باز کردن Workbench",
+      "desktopTools": "ابزارهای دسکتاپ",
+      "recentBundles": "بسته‌های اخیر",
+      "recentCompare": "مقایسه‌های اخیر",
+      "recentOutputs": "خروجی‌های اخیر",
+      "recentActions": "عملیات اخیر بسته‌ها",
+      "favorites": "علاقه‌مندی‌ها",
+      "ready": "ابزارهای بسته آماده‌اند.",
+      "all": "همه",
+      "failed": "ناموفق",
+      "keepFailed": "فقط ناموفق‌ها بمانند",
+      "import": "درون‌ریزی JSON",
+      "export": "برون‌بری JSON",
+      "clear": "پاک کردن تاریخچه",
+      "recent": "اخیر",
+      "introLabel": "بسته‌های پروژه"
+    },
+    "home": {
+      "tabs": {
+        "bundles": "بسته‌های پروژه"
+      }
     }
   }
 }

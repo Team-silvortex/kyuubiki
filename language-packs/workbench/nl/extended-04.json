@@ -3,7 +3,7 @@
   "language": "nl",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-21T04:48:26.193Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "Risico",
     "stabilityScore": "Stabiliteitsscore",
@@ -21,13 +21,13 @@
     "switchedTo2dStudio": "Overgeschakeld naar de 2D-workbench.",
     "switchedTo3dStudio": "Overgeschakeld naar de 3D-ruimtestudio.",
     "tabs": {
-      "controls": "Besturing",
+      "controls": "Bediening",
       "jobs": "Taken",
-      "models": "Modellen",
+      "models": "Werkruimte",
       "projects": "Projecten",
-      "results": "Resultaten",
+      "results": "Resultaat",
       "samples": "Voorbeelden",
-      "summary": "Samenvatting",
+      "summary": "Overzicht",
       "tools": "Hulpmiddelen",
       "tree": "Bladeren"
     },

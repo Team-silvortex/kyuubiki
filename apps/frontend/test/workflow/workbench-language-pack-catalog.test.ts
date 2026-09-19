@@ -7,6 +7,7 @@ import {
   buildWorkbenchLanguagePackCatalogRows,
   loadBuiltinWorkbenchLanguagePack,
   WORKBENCH_MAINSTREAM_LANGUAGE_PACK_LOCALES,
+  resolveInstalledWorkbenchLanguagePack,
 } from "../../src/components/workbench/workbench-language-pack-catalog.ts";
 import {
   getPwdtSurfaceDescriptor,
@@ -100,7 +101,7 @@ test("workbench built-in support packs expose installable downloaded payloads", 
 
   assert.equal(french?.source, "downloaded");
   assert.equal(french?.targetSurface, "workbench");
-  assert.equal(french?.overrides.workflowCatalogTitle, "Catalogue de workflows");
+  assert.equal(french?.overrides.workflowCatalogTitle, "Catalogue des flux de travail");
   assert.equal(
     french?.overrides.workflowStorageWriteFailedLabel,
     "Impossible d’enregistrer les données locales du workflow. Vérifiez l’espace de stockage et réessayez.",
@@ -108,7 +109,7 @@ test("workbench built-in support packs expose installable downloaded payloads", 
   assert.equal(korean?.source, "downloaded");
   assert.equal(korean?.targetSurface, "workbench");
   assert.equal(korean?.overrides.workflowCatalogTitle, "워크플로 카탈로그");
-  assert.equal(korean?.overrides.roleLabel, "작업 공간");
+  assert.equal(korean?.overrides.roleLabel, "해석 환경");
   assert.equal(korean?.overrides.initialLoaded, "준비됨");
   assert.equal(traditionalChinese?.source, "downloaded");
   assert.equal(traditionalChinese?.targetSurface, "workbench");
@@ -123,6 +124,26 @@ test("workbench storage failure feedback covers every mainstream language pack",
     assert.equal(typeof message, "string", locale.language);
     assert.ok((message as string).trim().length > 0, locale.language);
   }
+});
+
+test("old catalog snapshots cannot hide shipped translations but custom or newer packs stay intact", async () => {
+  const catalog = await loadBuiltinWorkbenchLanguagePack("workbench-de-core-2.0");
+  assert.ok(catalog);
+  const old = { ...catalog, updatedAt: "2026-07-16T00:00:00.000Z", overrides: { report: "Report" } };
+  const saved = JSON.stringify(old);
+  assert.equal(resolveInstalledWorkbenchLanguagePack(old, catalog), catalog);
+  assert.equal(JSON.stringify(old), saved, "the user's stored data is not rewritten");
+  for (const custom of [
+    { ...old, source: "imported" as const },
+    { ...old, id: "custom-de" },
+    { ...old, updatedAt: "2027-01-01T00:00:00.000Z" },
+    { ...old, updatedAt: "unknown" },
+    { ...old, language: "fr" },
+  ]) {
+    assert.equal(resolveInstalledWorkbenchLanguagePack(custom, catalog), custom);
+  }
+  assert.equal(resolveInstalledWorkbenchLanguagePack(null, catalog), null);
+  assert.equal(resolveInstalledWorkbenchLanguagePack(old, null), old);
 });
 
 test("workbench language pack system copy covers mainstream feedback without English fallback", () => {

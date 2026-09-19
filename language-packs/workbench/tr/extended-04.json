@@ -3,7 +3,7 @@
   "language": "tr",
   "targetSurface": "workbench",
   "batch": "extended-04",
-  "updatedAt": "2026-07-21T05:33:32.256Z",
+  "updatedAt": "2026-09-19T00:00:00.000Z",
   "overrides": {
     "stabilityRisk": "Risk altında",
     "stabilityScore": "Kararlılık puanı",
@@ -23,11 +23,11 @@
     "tabs": {
       "controls": "Denetimler",
       "jobs": "İşler",
-      "models": "Modeller",
+      "models": "Çalışma alanı",
       "projects": "Projeler",
-      "results": "Sonuçlar",
+      "results": "Sonuç",
       "samples": "Örnekler",
-      "summary": "Özet",
+      "summary": "Genel bakış",
       "tools": "Araçlar",
       "tree": "Gözat"
     },
