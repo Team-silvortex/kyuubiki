@@ -383,8 +383,9 @@ fn agent_fetches_executes_and_safely_rotates_bound_orchestra_package() {
     let concurrent_fixture =
         CentralFixture::for_versions(entrypoint, &[PACKAGE_VERSION_V2, PACKAGE_VERSION_V2]);
     let (concurrent_url, concurrent_server) = concurrent_fixture.serve();
+    // Exercise concurrent cache eviction rather than the default single-slot admission limit.
     let concurrent_agent = Arc::new(
-        LiveAgent::start_orchestrated(&packages_root, &concurrent_url, TOKEN)
+        LiveAgent::start_orchestrated_with_capacity(&packages_root, &concurrent_url, TOKEN, 2)
             .expect("start Agent for concurrent disposable tasks"),
     );
     let barrier = Arc::new(Barrier::new(3));
