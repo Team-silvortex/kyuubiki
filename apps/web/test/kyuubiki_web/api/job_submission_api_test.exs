@@ -1,6 +1,30 @@
 defmodule KyuubikiWeb.Api.JobSubmissionApiTest do
   use KyuubikiWeb.TestSupport.ApiRouterCase
 
+  alias KyuubikiWeb.Playground.AgentExecutionGate
+
+  setup do
+    # Admission tests still launch real background RPC tasks. Keep their endpoint
+    # test-owned, and await completion before the shared stores and pool change.
+    {:ok, agent_pid} =
+      FakePlaygroundAgent.start_link(
+        {:capture, self(), [%{"ok" => true, "result" => %{"accepted" => true}}]}
+      )
+
+    on_exit(fn ->
+      monitor = Process.monitor(agent_pid)
+      Process.exit(agent_pid, :shutdown)
+      assert_receive {:DOWN, ^monitor, :process, ^agent_pid, _reason}, 1_000
+    end)
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "submission-fixture", host: "127.0.0.1", port: await_fake_agent_port()}]
+    )
+
+    :ok = AgentPool.reload()
+    :ok
+  end
+
   test "submits a spring 2d job" do
     conn =
       :post
@@ -35,6 +59,7 @@ defmodule KyuubikiWeb.Api.JobSubmissionApiTest do
 
     assert conn.status == 202
     assert Jason.decode!(conn.resp_body)["job"]["status"] in ["queued", "running", "completed"]
+    assert_submission_completed(conn)
   end
 
   test "submits a spring 3d job" do
@@ -77,6 +102,7 @@ defmodule KyuubikiWeb.Api.JobSubmissionApiTest do
 
     assert conn.status == 202
     assert Jason.decode!(conn.resp_body)["job"]["status"] in ["queued", "running", "completed"]
+    assert_submission_completed(conn)
   end
 
   test "submits a thermal truss 2d job" do
@@ -124,6 +150,7 @@ defmodule KyuubikiWeb.Api.JobSubmissionApiTest do
 
     assert conn.status == 202
     assert Jason.decode!(conn.resp_body)["job"]["status"] in ["queued", "running", "completed"]
+    assert_submission_completed(conn)
   end
 
   test "submits a thermal truss 3d job" do
@@ -190,6 +217,7 @@ defmodule KyuubikiWeb.Api.JobSubmissionApiTest do
 
     assert conn.status == 202
     assert Jason.decode!(conn.resp_body)["job"]["status"] in ["queued", "running", "completed"]
+    assert_submission_completed(conn)
   end
 
   test "submits a thermal beam 1d job" do
@@ -237,6 +265,7 @@ defmodule KyuubikiWeb.Api.JobSubmissionApiTest do
 
     assert conn.status == 202
     assert Jason.decode!(conn.resp_body)["job"]["status"] in ["queued", "running", "completed"]
+    assert_submission_completed(conn)
   end
 
   test "submits a thermal frame 2d job" do
@@ -292,6 +321,7 @@ defmodule KyuubikiWeb.Api.JobSubmissionApiTest do
 
     assert conn.status == 202
     assert Jason.decode!(conn.resp_body)["job"]["status"] in ["queued", "running", "completed"]
+    assert_submission_completed(conn)
   end
 
   test "submits a thermal frame 3d job" do
@@ -367,6 +397,7 @@ defmodule KyuubikiWeb.Api.JobSubmissionApiTest do
 
     assert conn.status == 202
     assert Jason.decode!(conn.resp_body)["job"]["status"] in ["queued", "running", "completed"]
+    assert_submission_completed(conn)
   end
 
   test "cancels an active job through the API" do
@@ -399,5 +430,26 @@ defmodule KyuubikiWeb.Api.JobSubmissionApiTest do
 
     assert {:ok, cancelled_job} = Store.get("job-cancel")
     assert cancelled_job.status == :cancelled
+  end
+
+  defp assert_submission_completed(conn) do
+    job_id = Jason.decode!(conn.resp_body)["job"]["job_id"]
+
+    method =
+      "solve_" <>
+        (conn.request_path
+         |> String.trim_leading("/api/v1/fem/")
+         |> String.trim_trailing("/jobs")
+         |> String.replace("-", "_"))
+
+    assert_receive {:fake_agent_request,
+                    %{"method" => ^method, "params" => %{"job_id" => ^job_id}}},
+                   1_000
+
+    payload = WorkflowApi.wait_for_job(job_id, @opts)
+    assert payload["job"]["status"] == "completed"
+    assert payload["job"]["worker_id"] == "rust-agent-rpc@submission-fixture"
+    assert payload["result"] == %{"accepted" => true}
+    assert %{active_lease_count: 0, queued_request_count: 0} = AgentExecutionGate.snapshot()
   end
 end
