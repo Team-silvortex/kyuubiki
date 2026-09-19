@@ -1,0 +1,119 @@
+name: Temporary Desktop CI Repair
+on:
+  push:
+    branches: [fix/ci-capacity-and-fmt-20260919]
+    paths: [.github/workflows/ci-desktop-repair.yml]
+permissions:
+  contents: read
+jobs:
+  prepare:
+    if: github.repository == 'Team-silvortex/kyuubiki'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: workers/rust
+      - working-directory: apps/frontend
+        run: npm ci
+      - working-directory: apps/frontend
+        run: npx playwright install --with-deps chromium
+      - name: Apply narrowly scoped patches with input SHA guards
+        run: |
+          python3 - <<'PY'
+          HELPER = '// Chromium rejects Browser.setWindowBounds while a native fullscreen element is active.\n// Keep the emulation session alive until its page/context closes: detaching it resets metrics.\nconst fullscreenViewportSessions = new WeakMap();\n\nexport async function resizeFullscreenViewport(page, { width, height }) {\n  assert.ok(Number.isInteger(width) && width > 0, "fullscreen viewport width must be positive");\n  assert.ok(Number.isInteger(height) && height > 0, "fullscreen viewport height must be positive");\n  assert.equal(await page.evaluate(() => !!document.fullscreenElement), true,\n    "fullscreen resize must exercise native fullscreen, not the window-local fallback");\n  let session = fullscreenViewportSessions.get(page);\n  if (!session) {\n    session = await page.context().newCDPSession(page);\n    fullscreenViewportSessions.set(page, session);\n  }\n  // Emulate the content viewport without asking Chromium to resize its fullscreen OS window.\n  // page.viewportSize() remains Playwright\'s original bookkeeping; use DOM metrics in this mode.\n  await session.send("Emulation.setDeviceMetricsOverride", {\n    width, height, screenWidth: width, screenHeight: height,\n    deviceScaleFactor: await page.evaluate(() => window.devicePixelRatio),\n    mobile: false,\n  });\n  await page.waitForFunction(([w, h]) => !!document.fullscreenElement &&\n    window.innerWidth === w && window.innerHeight === h, [width, height]);\n}\n'
+          HEADER = '  desktop-gui-regression-suite:\n    name: desktop-gui-EXPR matrix.suite }}\n    runs-on: ubuntu-latest\n    timeout-minutes: EXPR matrix.timeout }}\n    needs: [frontend]\n    strategy:\n      # A failure in one suite must not cancel coverage from the others.\n      fail-fast: false\n      matrix:\n        include:\n          - suite: desktop\n            target: test-integration-desktop-gui\n            timeout: 20\n          - suite: workflow\n            target: test-integration-ui-workflow\n            timeout: 40\n          - suite: mechanical\n            target: test-integration-ui-mechanical\n            timeout: 20\n          - suite: thermal\n            target: test-integration-ui-thermal\n            timeout: 20\n'
+          GATE = '  desktop-gui-regression:\n    name: desktop-gui-regression\n    if: EXPR always() }}\n    needs: [desktop-gui-regression-suite]\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    steps:\n      - name: Require every desktop regression suite to pass\n        env:\n          SUITE_RESULT: EXPR needs.desktop-gui-regression-suite.result }}\n        run: test "$SUITE_RESULT" = success\n'
+          from pathlib import Path
+          import subprocess
+
+          expected = {
+              "tests/integration/playwright-browser.shared.mjs": "ce3f89e6532fc108ff6fdeca8856e277d62083a9",
+              "tests/integration/workbench-ui-immersive-modeling.test.mjs": "1704f6beab7348be887726142bb6689649d797b6",
+              ".github/workflows/ci.yml": "02215d8d245b4ea4ce460bd57d038e6da1c8c199",
+          }
+          for path, sha in expected.items():
+              actual = subprocess.check_output(["git", "hash-object", path], text=True).strip()
+              assert actual == sha, f"unexpected input revision: {path}: {actual}"
+
+          path = Path("tests/integration/playwright-browser.shared.mjs")
+          path.write_text(path.read_text().rstrip() + "\n\n" + HELPER)
+          path = Path("tests/integration/workbench-ui-immersive-modeling.test.mjs")
+          source = path.read_text()
+          needle = 'import assert from "node:assert/strict";\n'
+          assert source.count(needle) == 1
+          source = source.replace(needle, needle + 'import { resizeFullscreenViewport } from "./playwright-browser.shared.mjs";\n', 1)
+          index = source.index('test("fullscreen study and multi-node controls are live; resize keeps canvas and Apply reachable"')
+          prefix, native = source[:index], source[index:]
+          assert prefix.count("await page.setViewportSize(") == 1
+          assert native.count("await page.setViewportSize(") == 4
+          native = native.replace("await page.setViewportSize(", "await resizeFullscreenViewport(page, ")
+          path.write_text(prefix + native)
+
+          path = Path(".github/workflows/ci.yml")
+          source = path.read_text()
+          old = "  desktop-gui-regression:\n    name: desktop-gui-regression\n    runs-on: ubuntu-latest\n    timeout-minutes: 20\n    needs: [frontend]\n"
+          assert source.count(old) == 1
+          head, body = source.split(old)
+          assert not any(line.startswith("  ") and not line.startswith("   ") and line.endswith(":") for line in body.splitlines()), "regression must remain the last job"
+          new = HEADER.replace("EXPR", "$" + "{{")
+          old_run = "      - name: Run desktop and Workbench UI invocation regression gates\n        run: make test-integration-ui-invocation\n"
+          assert body.count(old_run) == 1
+          body = body.replace(old_run, "      - name: Check UI automation contract\n        run: make check-ui-automation-contract\n      - name: Run the complete regression suite\n        env:\n          REGRESSION_TARGET: EXPR matrix.target }}\n        run: make \"$REGRESSION_TARGET\"\n".replace("EXPR", "$" + "{{"))
+          assert body.count("if: failure()") == 2
+          body = body.replace("if: failure()", "if: failure() || cancelled()")
+          body = body.replace("name: desktop-gui-regression-artifacts-", "name: desktop-gui-regression-artifacts-EXPR matrix.suite }}-".replace("EXPR", "$" + "{{"))
+          path.write_text(head + new + body.rstrip() + "\n\n" + GATE.replace("EXPR", "$" + "{{"))
+
+          subprocess.run(["git", "diff", "--check"], check=True)
+          Path("tmp/desktop-ci-repair").mkdir(parents=True, exist_ok=True)
+          Path("tmp/desktop-ci-repair/repair.diff").write_bytes(subprocess.check_output(["git", "diff", "--", *expected]))
+          PY
+      - name: Check JavaScript syntax
+        run: |
+          node --check tests/integration/playwright-browser.shared.mjs
+          node --check tests/integration/workbench-ui-immersive-modeling.test.mjs
+      - name: Run the complete native and fallback fullscreen regression file
+        timeout-minutes: 10
+        run: |
+          set -o pipefail
+          node --test tests/integration/workbench-ui-immersive-modeling.test.mjs 2>&1 | tee tmp/desktop-ci-repair/immersive.tap
+      - name: Create unattached blobs for review, never update refs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          paths = ["tests/integration/playwright-browser.shared.mjs", "tests/integration/workbench-ui-immersive-modeling.test.mjs", ".github/workflows/ci.yml"]
+          changed = subprocess.check_output(["git", "diff", "--name-only"], text=True).splitlines()
+          assert sorted(changed) == sorted(paths), changed
+          evidence = {"base_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(), "blobs": {}}
+          for path in paths:
+              payload = json.dumps({"content": Path(path).read_text(), "encoding": "utf-8"})
+              result = json.loads(subprocess.check_output(["gh", "api", "--method", "POST", "repos/Team-silvortex/kyuubiki/git/blobs", "--input", "-"], input=payload, text=True))
+              expected = subprocess.check_output(["git", "hash-object", path], text=True).strip()
+              assert result["sha"] == expected
+              evidence["blobs"][path] = result["sha"]
+          Path("tmp/desktop-ci-repair/blobs.json").write_text(json.dumps(evidence, indent=2) + "\n")
+          print(json.dumps(evidence, indent=2))
+          PY
+      - name: Preserve validation and diff evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-ci-repair-evidence
+          path: tmp/desktop-ci-repair
+          retention-days: 7
+          if-no-files-found: error
