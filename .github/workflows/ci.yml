@@ -1,4 +1,4 @@
-name: Web CI Diagnostic
+name: Web CI Repair Validation
 
 on:
   push:
@@ -8,24 +8,17 @@ permissions:
   contents: read
 
 jobs:
-  diagnose:
+  validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [133328, 0, 1, 42]
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-          fetch-depth: 2
-      - name: Preserve exact web source for diagnosis
-        run: |
-          mkdir -p tmp/web-ci-diagnostic
-          git rev-parse HEAD > tmp/web-ci-diagnostic/revision.txt
-          git archive 82198dcca7d432e70ab32109388d1e2976ad7884 apps/web > tmp/web-ci-diagnostic/web-source.tar
-      - uses: actions/upload-artifact@v4
-        with:
-          name: web-ci-diagnostic-source
-          path: tmp/web-ci-diagnostic
-          retention-days: 3
       - uses: erlef/setup-beam@v1
         with:
           elixir-version: "1.19.5"
@@ -40,20 +33,124 @@ jobs:
             ${{ runner.os }}-beam-web-
       - working-directory: apps/web
         run: mix deps.get
-      - name: Reproduce the original seed without retries masking results
-        working-directory: apps/web
+      - name: Apply the source patch with an exact input blob guard
         run: |
-          set +e
-          mix test --seed 133328 2>&1 | tee ../../tmp/web-ci-diagnostic/original-seed.log
-          code=${PIPESTATUS[0]}
-          echo "$code" > ../../tmp/web-ci-diagnostic/original-seed.exit
-          mix test --seed 133328 --trace 2>&1 | tee ../../tmp/web-ci-diagnostic/original-seed-trace.log
-          code=${PIPESTATUS[0]}
-          echo "$code" > ../../tmp/web-ci-diagnostic/original-seed-trace.exit
-          echo 'Diagnostic only: individual exit codes are retained; this is not an acceptance gate.' >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p tmp/web-ci-repair
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          p = Path('apps/web/test/kyuubiki_web/api/job_submission_api_test.exs')
+          expected = 'a1c6d12a95556681a9bb72a79f025cd79b80c7e7'
+          assert subprocess.check_output(['git', 'hash-object', str(p)], text=True).strip() == expected
+          text = p.read_text()
+          anchor = '  use KyuubikiWeb.TestSupport.ApiRouterCase\n'
+          setup = '''
+            alias KyuubikiWeb.Playground.AgentExecutionGate
+
+            setup do
+              # Admission tests still launch real background RPC tasks. Keep their endpoint
+              # test-owned, and await completion before the shared stores and pool change.
+              {:ok, agent_pid} =
+                FakePlaygroundAgent.start_link(
+                  {:capture, self(), [%{"ok" => true, "result" => %{"accepted" => true}}]}
+                )
+
+              on_exit(fn ->
+                monitor = Process.monitor(agent_pid)
+                Process.exit(agent_pid, :shutdown)
+                assert_receive {:DOWN, ^monitor, :process, ^agent_pid, _reason}, 1_000
+              end)
+
+              Application.put_env(:kyuubiki_web, AgentPool,
+                endpoints: [%{id: "submission-fixture", host: "127.0.0.1", port: await_fake_agent_port()}]
+              )
+
+              :ok = AgentPool.reload()
+              :ok
+            end
+          '''
+          assert text.count(anchor) == 1
+          text = text.replace(anchor, anchor + setup)
+          assertion = '    assert Jason.decode!(conn.resp_body)["job"]["status"] in ["queued", "running", "completed"]\n'
+          assert text.count(assertion) == 7
+          text = text.replace(assertion, assertion + '    assert_submission_completed(conn)\n')
+          helper = '''
+            defp assert_submission_completed(conn) do
+              job_id = Jason.decode!(conn.resp_body)["job"]["job_id"]
+
+              method =
+                "solve_" <>
+                  (conn.request_path
+                   |> String.trim_leading("/api/v1/fem/")
+                   |> String.trim_trailing("/jobs")
+                   |> String.replace("-", "_"))
+
+              assert_receive {:fake_agent_request,
+                              %{"method" => ^method, "params" => %{"job_id" => ^job_id}}},
+                             1_000
+
+              payload = WorkflowApi.wait_for_job(job_id, @opts)
+              assert payload["job"]["status"] == "completed"
+              assert payload["job"]["worker_id"] == "rust-agent-rpc@submission-fixture"
+              assert payload["result"] == %{"accepted" => true}
+              assert %{active_lease_count: 0, queued_request_count: 0} = AgentExecutionGate.snapshot()
+            end
+          '''
+          assert text.endswith('end\n')
+          p.write_text(text[:-4] + helper + 'end\n')
+          PY
+      - name: Format and inspect the exact patch
+        run: |
+          cd apps/web
+          mix format test/kyuubiki_web/api/job_submission_api_test.exs
+          mix format --check-formatted
+          cd ../..
+          git diff --check
+          git diff -- apps/web/test/kyuubiki_web/api/job_submission_api_test.exs | tee tmp/web-ci-repair/source.diff
+          cp apps/web/test/kyuubiki_web/api/job_submission_api_test.exs tmp/web-ci-repair/job_submission_api_test.exs
+          git hash-object apps/web/test/kyuubiki_web/api/job_submission_api_test.exs > tmp/web-ci-repair/blob.sha
+      - name: Run the full web suite without trace or automatic retries
+        working-directory: apps/web
+        env:
+          TEST_SEED: ${{ matrix.seed }}
+        run: |
+          set -o pipefail
+          mix test --seed "$TEST_SEED" 2>&1 | tee ../../tmp/web-ci-repair/tests.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: web-ci-diagnostic-results
-          path: tmp/web-ci-diagnostic
+          name: web-ci-repair-${{ matrix.seed }}
+          path: tmp/web-ci-repair
+          retention-days: 3
+
+  publish:
+    needs: [validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-ci-repair-133328
+          path: evidence
+      - name: Create only an unattached source blob for review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+          p = Path('evidence/job_submission_api_test.exs')
+          raw = p.read_bytes()
+          sha = hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest()
+          assert sha == Path('evidence/blob.sha').read_text().strip()
+          Path('payload.json').write_text(json.dumps({'encoding': 'utf-8', 'content': raw.decode()}))
+          PY
+          gh api --method POST repos/Team-silvortex/kyuubiki/git/blobs --input payload.json > evidence/published-blob.json
+          cat evidence/published-blob.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-ci-repair-verified-source
+          path: evidence
           retention-days: 3
