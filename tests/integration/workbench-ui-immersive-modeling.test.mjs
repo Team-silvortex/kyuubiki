@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { resizeFullscreenViewport } from "./playwright-browser.shared.mjs";
 import { test } from "node:test";
 import { usingWorkbench, invoke, openWorkbench, holdRequest, installProjectWorkbenchTestHooks } from "./workbench-ui-project-fixture.shared.mjs";
 
@@ -173,7 +174,7 @@ test("fullscreen study and multi-node controls are live; resize keeps canvas and
     await field(page, "pivot").selectOption("point");
     await field(page, "create-copy").check();
     for (const [width, height] of [[1440, 1000], [1024, 768], [800, 600], [640, 800]]) {
-      await page.setViewportSize({ width, height });
+      await resizeFullscreenViewport(page, { width, height });
       await page.waitForFunction(() => {
         const stage = document.querySelector('[data-workbench-viewport="stage"]')?.getBoundingClientRect();
         const apply = document.querySelector('[data-model-batch="apply"]')?.getBoundingClientRect();
@@ -200,7 +201,7 @@ test("fullscreen study and multi-node controls are live; resize keeps canvas and
       assert.ok(readout.bottom <= readout.clipBottom + 1 && readout.top >= readout.clipTop - 1,
         `selection readout cannot be clipped by the viewport: ${JSON.stringify(readout)}`);
     }
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await resizeFullscreenViewport(page, { width: 1440, height: 1000 });
     if (process.env.KYUUBIKI_IMMERSIVE_SCREENSHOT) await page.screenshot({ path: process.env.KYUUBIKI_IMMERSIVE_SCREENSHOT });
     await action(page, "study").click();
     await page.locator('[data-workbench-model-study-kind="select"]').selectOption("truss_2d");
@@ -367,7 +368,7 @@ test("fullscreen dock resizes with pointer and keyboard, cancels interrupted dra
     await page.mouse.up();
     assert.equal(await size(), preferred, "blur cancels, rather than persisting a half-completed drag");
     for (const [width, height] of [[800, 600], [640, 800], [640, 600]]) {
-      await page.setViewportSize({ width, height });
+      await resizeFullscreenViewport(page, { width, height });
       await page.waitForFunction((stacked) => document.querySelector('[data-workbench-immersive-resize="true"]')
         ?.getAttribute("aria-orientation") === (stacked ? "horizontal" : "vertical"), width <= 700);
       await handle.press("Home");
@@ -394,7 +395,7 @@ test("fullscreen dock resizes with pointer and keyboard, cancels interrupted dra
       await field(page, "angle").click();
       await field(page, "angle").fill("37");
     }
-    await page.setViewportSize({ width: 1440, height: 1000 });
+    await resizeFullscreenViewport(page, { width: 1440, height: 1000 });
     await handle.dblclick();
     assert.equal(await size(), initial, "double click restores the session default");
     assert.equal(await field(page, "angle").inputValue(), "37");
