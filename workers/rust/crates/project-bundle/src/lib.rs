@@ -16,6 +16,14 @@ use chrono::{SecondsFormat, Utc};
 use serde_json::{Value, json};
 use uuid::Uuid;
 
+pub fn create_project_bundle_in(directory: &str, name: &str) -> Result<String, String> {
+    let output = paths::named_bundle(directory, name)?;
+    let path = output
+        .to_str()
+        .ok_or_else(|| "project bundle path must be valid UTF-8".to_string())?;
+    create_project_bundle(path)
+}
+
 pub fn create_project_bundle(path: &str) -> Result<String, String> {
     let output = paths::new_bundle(path)?;
     let now = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);

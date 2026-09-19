@@ -1,0 +1,41 @@
+.hub-bundle-entry-actions, .hub-bundle-dialog-actions, .hub-bundle-directory-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.hub-bundle-entry-actions { margin-bottom: 18px; flex-wrap: wrap; }
+.hub-bundle-details { border-top: 1px solid var(--desktop-border, #444b55); padding: 12px 0; }
+.hub-bundle-details > summary { cursor: pointer; font-weight: 600; }
+.hub-bundle-details[open] > summary { margin-bottom: 14px; }
+.hub-bundle-feedback:empty { display: none; }
+.hub-bundle-create-dialog {
+  color: var(--text, #edf0f4);
+  background: var(--panel, #292e35);
+  border: 1px solid var(--desktop-border, #4e5968);
+  border-radius: 12px;
+  width: min(540px, calc(100vw - 48px));
+  max-height: calc(100dvh - 48px);
+  padding: 26px;
+  overflow: auto;
+  box-sizing: border-box;
+  box-shadow: 0 24px 80px #0008;
+}
+.hub-bundle-create-dialog::backdrop { background: #080c12a6; }
+.hub-bundle-create-dialog form { display: grid; gap: 18px; min-width: 0; }
+.hub-bundle-create-dialog h2, .hub-bundle-create-dialog p { margin: 0; }
+.hub-bundle-create-dialog .hub-field { width: 100%; min-width: 0; }
+.hub-bundle-create-dialog input { width: 100%; min-width: 0; box-sizing: border-box; }
+.hub-bundle-directory-row { width: 100%; min-width: 0; }
+.hub-bundle-directory-row > input { flex: 1 1 0; }
+.hub-bundle-directory-row > button { flex: 0 0 auto; }
+.hub-bundle-target { display: grid; gap: 6px; min-width: 0; }
+.hub-bundle-target output { display: block; overflow-wrap: anywhere; font: 12px/1.5 ui-monospace, monospace; }
+.hub-bundle-error { color: #ffa895; overflow-wrap: anywhere; font-size: 13px; }
+.hub-bundle-dialog-actions { justify-content: flex-end; flex-wrap: wrap; }
+.hub-bundle-create-dialog :focus-visible { outline: 2px solid #83c5f3; outline-offset: 2px; }
+.hub-bundle-create-dialog [aria-invalid="true"] { border-color: #ffa895; }
+@media (max-width: 600px) {
+  .hub-bundle-directory-row { align-items: stretch; flex-direction: column; }
+  .hub-bundle-directory-row > input { flex: auto; }
+  .hub-bundle-create-dialog { padding: 20px; }
+}

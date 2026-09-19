@@ -19,6 +19,7 @@ type UnknownRecord = Record<string, unknown>;
 
 type HubActionRunnerOptions = {
   skipConfirmation?: boolean;
+  bundleCreate?: { path: string; parentPath: string; name: string };
 };
 
 export type HubActionOutcomeStatus =
@@ -149,7 +150,8 @@ export function createHubActionRunner(context: HubActionRunnerContext) {
         setProjectsPage: context.setProjectsPage,
         setBusy: context.setBusy,
         runProjectBundleAction: context.runProjectBundleAction,
-        currentProjectBundlePayload: () => currentProjectBundlePayload(context.elements),
+        currentProjectBundlePayload: () => action === "project-create" && options.bundleCreate
+          ? options.bundleCreate : currentProjectBundlePayload(context.elements),
         currentProjectBundleOutputPayload: () => currentProjectBundleOutputPayload(context.elements),
         currentProjectBundleComparePayload: () => currentProjectBundleComparePayload(context.elements),
         setProjectBundlePath: context.setProjectBundlePath,

@@ -3,6 +3,24 @@
 Hub GUI is the desktop operator shell for workload entry, runtime posture, and
 project/workflow navigation.
 
+## Bundle Entry
+
+Bundle tools separates creating or opening a file from advanced archive work.
+Create opens a name/location dialog with a native folder chooser and destination
+preview; Open uses the native `.kyuubiki` file chooser. Existing files are never
+overwritten, cancellation keeps the current bundle, and failures retain the draft.
+Advanced tools, operation details, and recent history are initially collapsed.
+
+The fixed `project_bundle_pick_path` command only selects paths. File creation
+still goes through `guarded_mutation_action`, with directory/name validation in
+`kyuubiki-project-bundle`. PWDT keeps its existing raw-path creation route and
+does not require a modal or native chooser. No frontend filesystem scope or
+Node runtime dependency is added. The UI boot fallback cannot create files.
+
+See the [HTML walkthrough](../../docs/tutorial-first-research.html#hub-bundle-file).
+Browser regression coverage is in `tests/integration/hub-bundle-creation.shared.mjs`;
+native filesystem cases are in `workers/rust/crates/project-bundle/tests/create.rs`.
+
 ## UI Source Layout
 
 - `src/`

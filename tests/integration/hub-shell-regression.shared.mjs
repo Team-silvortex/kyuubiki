@@ -149,14 +149,18 @@ export async function assertHubRegression(page, viewport) {
   await page.locator("#projects-tab-bundles").click();
   await page.waitForSelector('[data-projects-pane="bundles"]:not(.hidden) #project-bundle-path');
   await page.locator("#project-bundle-path").fill("");
+  await page.locator("#bundles-action-create").click();
+  await page.locator("#bundle-create-name").fill("ui-created");
+  await page.locator("#bundle-create-browse").click();
+  await page.waitForFunction(() => document.querySelector("#bundle-create-directory")?.value === "/tmp");
   await assertActionInvokes(
     page,
     "project-create",
     "guarded_mutation_action",
     "project_bundle_create",
-    "#bundles-action-create",
-    { acceptConfirmation: true },
+    "#bundle-create-submit",
   );
+  await page.waitForSelector("#bundle-create-dialog", { state: "hidden" });
   assert.equal(
     await page.locator("#project-bundle-path").inputValue(),
     "/tmp/ui-created.kyuubiki",
@@ -179,6 +183,7 @@ export async function assertHubRegression(page, viewport) {
     undefined,
     "#bundles-action-validate",
   );
+  await page.locator("#bundle-advanced-tools > summary").click();
   await page.locator("#project-bundle-out-path").fill("/tmp/ui-output.kyuubiki");
   await page.locator("#project-bundle-compare-path").fill("/tmp/ui-compare.kyuubiki");
   await assertActionInvokes(

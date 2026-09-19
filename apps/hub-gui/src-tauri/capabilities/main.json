@@ -13,6 +13,7 @@
     "allow-desktop-status",
     "allow-guarded-mutation-action",
     "allow-project-bundle-inspect",
+    "allow-project-bundle-pick-path",
     "allow-project-bundle-validate",
     "allow-project-bundle-diff",
     "allow-launch-workbench-gui",

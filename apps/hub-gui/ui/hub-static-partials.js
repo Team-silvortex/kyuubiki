@@ -142,6 +142,10 @@
                   </div>
                   <p class="desktop-shell-note" id="bundles-intro-copy">Keep the repetitive archive work in one place, then move straight into analysis.</p>
                 </div>
+                <div class="hub-bundle-entry-actions">
+                  <button class="desktop-shell-button-primary" id="bundles-action-create" data-bundle-copy="create" type="button">Create bundle</button>
+                  <button id="bundles-action-browse" data-bundle-copy="open" type="button">Open bundle...</button>
+                </div>
                 <div class="hub-control-grid hub-control-grid--stacked">
                   <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
                     <label class="hub-field hub-field--stacked">
@@ -149,6 +153,16 @@
                       <input id="project-bundle-path" placeholder="/path/to/project.kyuubiki" type="text" />
                     </label>
                   </div>
+                </div>
+                <div class="hub-stack desktop-shell-action-row">
+                  <button data-action="project-inspect" id="bundles-action-inspect">Inspect .kyuubiki</button>
+                  <button data-action="project-validate" id="bundles-action-validate">Validate .kyuubiki</button>
+                  <button data-action="open-workbench" id="bundles-action-open-workbench">Open workbench</button>
+                </div>
+                <p class="desktop-shell-note hub-bundle-feedback" id="bundle-feedback" role="status"></p>
+                <details class="hub-bundle-details" id="bundle-advanced-tools">
+                  <summary data-bundle-copy="advanced">Advanced tools</summary>
+                  <div class="hub-control-grid hub-control-grid--stacked">
                   <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
                     <label class="hub-field hub-field--stacked">
                       <span id="bundles-compare-path-label">Compare path</span>
@@ -163,16 +177,19 @@
                   </div>
                 </div>
                 <div class="hub-stack desktop-shell-action-row">
-                  <button class="desktop-shell-button-primary" data-action="project-create" id="bundles-action-create">New bundle</button>
-                  <button class="desktop-shell-button-primary" data-action="project-inspect" id="bundles-action-inspect">Inspect .kyuubiki</button>
-                  <button data-action="project-validate" id="bundles-action-validate">Validate .kyuubiki</button>
                   <button data-action="project-normalize" id="bundles-action-normalize">Normalize bundle</button>
                   <button data-action="project-unpack" id="bundles-action-unpack">Unpack bundle</button>
                   <button data-action="project-pack" id="bundles-action-pack">Pack project</button>
                   <button data-action="project-diff" id="bundles-action-diff">Diff bundles</button>
-                  <button data-action="open-workbench" id="bundles-action-open-workbench">Open workbench</button>
                   <button data-target-section="tools" id="bundles-action-desktop-tools">Desktop tools</button>
                 </div>
+                </details>
+                <details class="hub-bundle-details" id="bundle-result-details">
+                  <summary data-bundle-copy="details">Operation details</summary>
+                  <pre class="hub-log hub-log--compact" id="project-bundle-output">Project bundle tools are ready.</pre>
+                </details>
+                <details class="hub-bundle-details" id="bundle-history-details">
+                  <summary data-bundle-copy="history">Recent paths and history</summary>
                 <div class="hub-recent-grid">
                   <section class="hub-recent-panel">
                     <div class="desktop-shell-note" id="bundles-recent-bundles-label">Recent bundles</div>
@@ -210,7 +227,33 @@
                     <div class="hub-history-list" id="recent-action-list"></div>
                   </section>
                 </section>
-                <pre class="hub-log hub-log--compact" id="project-bundle-output">Project bundle tools are ready.</pre>
+                </details>
+                <dialog class="hub-bundle-create-dialog" id="bundle-create-dialog" aria-labelledby="bundle-create-title" aria-describedby="bundle-create-note">
+                  <form id="bundle-create-form">
+                    <h2 id="bundle-create-title" data-bundle-copy="create">Create bundle</h2>
+                    <p class="desktop-shell-note" id="bundle-create-note" data-bundle-copy="note">Create an empty .kyuubiki file. Existing files are never replaced.</p>
+                    <label class="hub-field hub-field--stacked" for="bundle-create-name">
+                      <span data-bundle-copy="name">Name</span>
+                      <input id="bundle-create-name" type="text" autocomplete="off" required />
+                    </label>
+                    <div class="hub-field hub-field--stacked">
+                      <label for="bundle-create-directory" data-bundle-copy="location">Location</label>
+                      <div class="hub-bundle-directory-row">
+                        <input id="bundle-create-directory" type="text" autocomplete="off" spellcheck="false" required />
+                        <button id="bundle-create-browse" type="button" data-bundle-copy="folder">Choose folder...</button>
+                      </div>
+                    </div>
+                    <div class="hub-bundle-target">
+                      <span class="desktop-shell-note" data-bundle-copy="target">Will create</span>
+                      <output id="bundle-create-target" dir="auto"></output>
+                    </div>
+                    <p class="hub-bundle-error" id="bundle-create-error" role="alert" hidden></p>
+                    <div class="hub-bundle-dialog-actions">
+                      <button id="bundle-create-cancel" type="button" data-bundle-copy="cancel">Cancel</button>
+                      <button class="desktop-shell-button-primary" id="bundle-create-submit" data-action="project-create" data-bundle-create-submit="true" type="submit" data-bundle-copy="create" disabled>Create bundle</button>
+                    </div>
+                  </form>
+                </dialog>
               </article>
             </div>
           </div>

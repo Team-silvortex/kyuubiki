@@ -34,6 +34,11 @@ description = "Enables the guarded_mutation_action command."
 commands.allow = ["guarded_mutation_action"]
 
 [[permission]]
+identifier = "allow-project-bundle-pick-path"
+description = "Shows a native single-file or directory chooser; cancellation returns no path."
+commands.allow = ["project_bundle_pick_path"]
+
+[[permission]]
 identifier = "allow-project-bundle-inspect"
 description = "Enables the project_bundle_inspect command."
 commands.allow = ["project_bundle_inspect"]

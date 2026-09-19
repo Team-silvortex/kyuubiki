@@ -42,6 +42,13 @@ async function sweepDeclarativeActions(page, shell) {
   page.on("dialog", (dialog) => dialog.accept());
 
   for (const action of actions) {
+    if (shell === "hub" && action === "project-create") {
+      await page.locator("#nav-projects").click();
+      await page.locator("#projects-tab-bundles").click();
+      await page.locator("#bundles-action-create").click();
+      await page.locator("#bundle-create-name").fill("ui-created");
+      await page.locator("#bundle-create-directory").fill("/tmp");
+    }
     const trigger = await page.evaluate((currentAction) => {
       const element = [...document.querySelectorAll("[data-action]")]
         .find((candidate) => candidate.dataset.action === currentAction);

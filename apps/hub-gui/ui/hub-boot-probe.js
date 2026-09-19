@@ -59,26 +59,6 @@
         return () => invoke("desktop_status");
       case "run-doctor":
         return () => invoke("doctor_report");
-      case "project-create":
-        return async () => {
-          const pathInput = document.getElementById("project-bundle-path");
-          const result = await invoke("guarded_mutation_action", {
-            payload: {
-              action: "project_bundle_create",
-              path: pathInput?.value || "",
-            },
-          });
-          const created = JSON.parse(String(result));
-          if (pathInput) {
-            pathInput.value = String(created.path || "");
-            pathInput.dispatchEvent(new Event("input", { bubbles: true }));
-          }
-          const output = document.getElementById("project-bundle-output");
-          if (output) {
-            output.textContent = JSON.stringify(created, null, 2);
-          }
-          return `created ${created.path || "project bundle"}`;
-        };
       case "project-inspect":
         return () => runBundleRead("project_bundle_inspect");
       case "project-validate":

@@ -60,7 +60,11 @@ fn guarded_mutation_action(payload: GuardedMutationPayload) -> Result<String, St
         "hot_service_start" => desktop_hot_service_start(resolve_hot_service_mode(payload.mode.as_deref())),
         "hot_service_stop" => desktop_hot_service_stop(),
         "validate_env" => validate_env_file(),
-        "project_bundle_create" => create_project_bundle(payload.path.as_deref().unwrap_or("")),
+        "project_bundle_create" => match (&payload.parent_path, &payload.name) {
+            (Some(parent), Some(name)) => kyuubiki_project_bundle::create_project_bundle_in(parent, name),
+            (None, None) => create_project_bundle(payload.path.as_deref().unwrap_or("")),
+            _ => Err("project directory and name must be supplied together".to_string()),
+        },
         "project_bundle_normalize" => run_project_cli_with_output(
             "normalize",
             payload.path.as_deref().unwrap_or(""),
@@ -223,6 +227,7 @@ fn hub_environment() -> HubEnvironmentPayload {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             service_status,
             packaged_boot_ready,
@@ -232,6 +237,7 @@ fn main() {
             desktop_status,
             guarded_mutation_action,
             project_bundle_inspect,
+            project_bundle_pick_path,
             project_bundle_validate,
             project_bundle_diff,
             launch_workbench_gui,

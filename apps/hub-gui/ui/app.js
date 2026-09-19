@@ -101,6 +101,7 @@ import {
 } from "./hub-localization-panel.js";
 import { runHubStartupPhases } from "./hub-startup-phases.js";
 import { setupHubStreamingRuntime } from "./hub-streaming-setup.js";
+import { bindHubBundleCreation } from "./hub-bundle-creation.js";
 
 const state = createHubState();
 
@@ -465,6 +466,8 @@ const {
 
 function setProjectBundleOutput(value) {
   elements.projectBundleOutput.textContent = value;
+  const details = document.getElementById("bundle-result-details");
+  if (details) details.open = true;
 }
 
 function setProjectBundlePath(value) {
@@ -595,11 +598,16 @@ function buildHubAppEventsContext() {
     persistCurrentHotLogSettings, persistCurrentObserveRuntimeLogSettings,
     syncHotRuntimeLogPolling, syncObserveRuntimeLogPolling,
     renderHubRecents, renderToolsPlatformLabel, rerenderLocalizedHubShell, runAction,
+    submitBundleCreation: () => hubBundleCreation.submit(),
     setEventMessage, setOperationOutput, setPanelPage, setProjectBundleOutput, setProjectsPage, setSection,
     toggleHubDensityPanel,
   };
 }
 
+const hubBundleCreation = bindHubBundleCreation({
+  invokeTauri, runActionWithOptions, setProjectBundlePath,
+  language: () => state.language, isBusy: () => state.isBusy,
+});
 bindHubAppEvents(buildHubAppEventsContext());
 watchDesktopLanguagePreference({
   getCurrentLanguage: () => state.language,

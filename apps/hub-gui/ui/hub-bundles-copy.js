@@ -1,3 +1,4 @@
+import { renderBundleCreationCopy } from "./hub-bundle-creation.js";
 export function renderHubBundlesCopy(params) {
     const { elements, copy, isBusy, setText } = params;
     setText(elements.bundlesIntroLabel, copy.bundles.introLabel);
@@ -33,4 +34,5 @@ export function renderHubBundlesCopy(params) {
     if (elements.projectBundleOutput && !isBusy && !elements.projectBundleOutput.textContent?.trim()) {
         elements.projectBundleOutput.textContent = copy.bundles.ready;
     }
+    renderBundleCreationCopy(document.documentElement.lang);
 }

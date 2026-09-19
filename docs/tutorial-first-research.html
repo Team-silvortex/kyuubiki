@@ -39,6 +39,18 @@
         </ul>
       </section>
 
+      <section class="docs-card docs-section" id="hub-bundle-file">
+        <h2>Optional: prepare a bundle file in Hub</h2>
+        <ol class="docs-list">
+          <li>In Hub, open <strong>Bundle tools</strong>, then <strong>Create bundle</strong>.</li>
+          <li>Enter a name and use <strong>Choose folder</strong> to select an existing directory in the system dialog. Pasting an absolute directory is also supported.</li>
+          <li>Check the full destination preview. The <code>.kyuubiki</code> extension is added automatically.</li>
+          <li>Select <strong>Create bundle</strong> once. On success, the dialog closes and the created file becomes the active path for Inspect and Validate.</li>
+        </ol>
+        <p class="docs-note">Creation never replaces an existing file. Cancel leaves the active bundle unchanged; a failure keeps the dialog and draft available for correction. Use <strong>Open bundle</strong> to select an existing file. Advanced archive tools and recent history are collapsed until needed.</p>
+        <p class="docs-note">This creates an empty portable archive, not a populated Workbench project. Opening Workbench from Hub does not automatically import that archive. The project creation and model-saving steps below still apply.</p>
+      </section>
+
       <section class="docs-card docs-section">
         <div class="docs-kicker">Step 1</div>
         <h2>Create the research container</h2>

@@ -95,6 +95,41 @@ pub(crate) fn new_bundle(value: &str) -> Result<PathBuf, String> {
     Ok(candidate)
 }
 
+pub(crate) fn named_bundle(directory: &str, name: &str) -> Result<PathBuf, String> {
+    nonempty(directory, "project directory")?;
+    let directory = Path::new(directory);
+    if !directory.is_absolute() || !directory.is_dir() {
+        return Err("choose an existing absolute project directory".to_string());
+    }
+    let name = name.trim();
+    let name = if name.to_ascii_lowercase().ends_with(".kyuubiki") {
+        &name[..name.len() - ".kyuubiki".len()]
+    } else {
+        name
+    };
+    let stem = name.split('.').next().unwrap_or("").to_ascii_uppercase();
+    let reserved = matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+        || ["COM", "LPT"].iter().any(|prefix| {
+            stem.strip_prefix(prefix).is_some_and(|suffix| {
+                matches!(suffix, "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9")
+            })
+        });
+    if name.is_empty()
+        || name.len() > 200
+        || name.ends_with(['.', ' '])
+        || name
+            .chars()
+            .any(|ch| ch.is_control() || "/\\:*?\"<>|".contains(ch))
+        || reserved
+    {
+        return Err(
+            "use a portable project name without path separators or reserved characters"
+                .to_string(),
+        );
+    }
+    Ok(directory.join(format!("{name}.kyuubiki")))
+}
+
 fn default_bundle_root() -> PathBuf {
     std::env::var_os("HOME")
         .or_else(|| std::env::var_os("USERPROFILE"))

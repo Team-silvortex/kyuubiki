@@ -5,6 +5,7 @@ import {
   createDesktopShellRegressionEnvironment,
 } from "./desktop-shell-regression.shared.mjs";
 import { assertHubRegression } from "./hub-shell-regression.shared.mjs";
+import { assertBundleCreationRegression } from "./hub-bundle-creation.shared.mjs";
 import { captureDesktopGuiArtifacts } from "./desktop-gui-artifacts.mjs";
 import { launchIntegrationBrowser } from "./playwright-browser.shared.mjs";
 
@@ -37,6 +38,19 @@ test(
               throw error;
             }
           }
+        } finally {
+          await page.close();
+        }
+      });
+
+      await t.test("Hub bundle chooser, validation, cancellation and retry keep the active project safe", async () => {
+        const page = await browser.newPage({ viewport: { width: 1180, height: 920 } });
+        try {
+          await page.goto(environment.hubUrl, { waitUntil: "networkidle", timeout: 60_000 });
+          await assertBundleCreationRegression(page);
+        } catch (error) {
+          await captureDesktopGuiArtifacts(page, { suite: "hub-bundle-creation", scenario: "create-retry", error });
+          throw error;
         } finally {
           await page.close();
         }

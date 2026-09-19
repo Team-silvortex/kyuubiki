@@ -115,6 +115,8 @@ struct GuardedMutationPayload {
     out: Option<String>,
     left_path: Option<String>,
     right_path: Option<String>,
+    parent_path: Option<String>,
+    name: Option<String>,
 }
 
 fn audit_timestamp() -> String {
@@ -140,6 +142,8 @@ fn append_guarded_mutation_audit(
         "out": payload.out,
         "left_path": payload.left_path,
         "right_path": payload.right_path,
+        "parent_path": payload.parent_path,
+        "name": payload.name,
     });
     append_desktop_provenance_record(HUB_GUARDED_MUTATION_AUDIT_FILE, &record).map(|_| ())
 }

@@ -216,6 +216,8 @@ function hubMockSource() {
             return "workbench launch mock";
           case "doctor_report":
             return { rendered: "doctor ok" };
+          case "project_bundle_pick_path":
+            return payload?.payload?.kind === "directory" ? "/tmp" : "/tmp/existing.kyuubiki";
           case "guarded_mutation_action":
             return payload?.payload?.action === "project_bundle_create"
               ? JSON.stringify({
@@ -541,10 +543,12 @@ export async function assertTauriInvocations(page, expectedCommands) {
 
 export async function assertLanguageChange(page, language) {
   const before = await page.evaluate(
-    () =>
+    (expectedLanguage) =>
       (window.__mockInvocations || []).filter(
-        (entry) => entry.command === "set_global_language_preference",
+        (entry) => entry.command === "set_global_language_preference"
+          && entry.payload?.payload?.language === expectedLanguage,
       ).length,
+    language,
   );
   await page.locator("#shell-language-select").selectOption(language);
   await page.waitForFunction(

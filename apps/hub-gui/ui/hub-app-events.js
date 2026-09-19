@@ -35,6 +35,7 @@ export function bindHubAppEvents({
   requestHubAssistantPlan,
   rerenderLocalizedHubShell,
   runAction,
+  submitBundleCreation,
   saveDesktopLanguagePreference,
   saveHubRecents,
   setSection,
@@ -126,6 +127,11 @@ export function bindHubAppEvents({
       window.__kyuubikiHubDomClickAt = Date.now();
       window.__kyuubikiHubClaimedAction = action;
       setEventMessage?.(`button click: ${action}`, "dom:click");
+      if (button.dataset.bundleCreateSubmit === "true") {
+        event.preventDefault();
+        await submitBundleCreation();
+        return;
+      }
       await runAction(action);
     },
     true,

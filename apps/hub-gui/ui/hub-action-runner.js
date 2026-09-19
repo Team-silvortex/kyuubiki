@@ -57,7 +57,8 @@ export function createHubActionRunner(context) {
                 setProjectsPage: context.setProjectsPage,
                 setBusy: context.setBusy,
                 runProjectBundleAction: context.runProjectBundleAction,
-                currentProjectBundlePayload: () => currentProjectBundlePayload(context.elements),
+                currentProjectBundlePayload: () => action === "project-create" && options.bundleCreate
+                    ? options.bundleCreate : currentProjectBundlePayload(context.elements),
                 currentProjectBundleOutputPayload: () => currentProjectBundleOutputPayload(context.elements),
                 currentProjectBundleComparePayload: () => currentProjectBundleComparePayload(context.elements),
                 setProjectBundlePath: context.setProjectBundlePath,

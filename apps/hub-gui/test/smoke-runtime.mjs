@@ -110,7 +110,7 @@ test("hub shell registers section switching behavior", () => {
   assert.match(localizationPosture, /"hub"[\s\S]*"posture": "shipped-pack-surface"/);
   assert.match(localizationPosture, /"installer"[\s\S]*"posture": "adapter-surface"/);
   assert.match(appEvents, /function languageChangeSummary/);
-  assert.match(bootProbe, /project_bundle_create/);
+  assert.doesNotMatch(bootProbe, /project_bundle_create/);
   assert.match(bootProbe, /project_bundle_inspect/);
   assert.match(bootProbe, /project_bundle_validate/);
   assert.match(bootProbe, /project-bundle-path/);

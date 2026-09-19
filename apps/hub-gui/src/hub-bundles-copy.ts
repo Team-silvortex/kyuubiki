@@ -1,4 +1,5 @@
 import type { HubI18nCopy } from "./hub-i18n-types.js";
+import { renderBundleCreationCopy } from "./hub-bundle-creation.js";
 
 type HubBundlesCopyParams = {
   elements: Record<string, any>;
@@ -9,7 +10,6 @@ type HubBundlesCopyParams = {
 
 export function renderHubBundlesCopy(params: HubBundlesCopyParams): void {
   const { elements, copy, isBusy, setText } = params;
-
   setText(elements.bundlesIntroLabel, copy.bundles.introLabel);
   setText(elements.bundlesIntroTitle, copy.bundles.introTitle);
   setText(elements.bundlesIntroCopy, copy.bundles.introCopy);
@@ -43,4 +43,5 @@ export function renderHubBundlesCopy(params: HubBundlesCopyParams): void {
   if (elements.projectBundleOutput && !isBusy && !elements.projectBundleOutput.textContent?.trim()) {
     elements.projectBundleOutput.textContent = copy.bundles.ready;
   }
+  renderBundleCreationCopy(document.documentElement.lang);
 }

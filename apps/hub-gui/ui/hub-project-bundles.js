@@ -58,7 +58,7 @@ export async function runProjectBundleAction({
     const message = String(error);
     saveProjectBundleRecents({
       action,
-      bundlePath: elements.projectBundlePath?.value,
+      bundlePath: action === "project create" ? payload.path || elements.projectBundlePath?.value : elements.projectBundlePath?.value,
       comparePath: elements.projectBundleComparePath?.value,
       outputPath: elements.projectBundleOutPath?.value,
       status: "failed",
