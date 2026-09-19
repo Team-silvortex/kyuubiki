@@ -694,7 +694,7 @@ export async function assertInstallerRegression(page, viewport) {
     "init_env",
   );
   await page.locator('button[data-action="use-cloud-mode"]:visible').first().click();
-  await page.waitForFunction(() => /Cloud PostgreSQL profile selected/.test(
+  await page.waitForFunction(() => /已选择云端 PostgreSQL 配置/.test(
     document.querySelector("#completion-message")?.textContent || "",
   ));
 

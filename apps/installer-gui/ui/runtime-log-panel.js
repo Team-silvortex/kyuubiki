@@ -1,3 +1,5 @@
+import { builtinInstallerSetupCopy } from "./installer-setup-copy.js";
+
 export function createRuntimeLogController({
   invoke,
   listen,
@@ -5,15 +7,17 @@ export function createRuntimeLogController({
   liveTailToggle,
   renderRuntimeLog,
   showCompletion,
+  getCopy = () => builtinInstallerSetupCopy.en,
 }) {
   let logRefreshTimer = null;
   let stopLogListener = null;
   let streamedService = null;
+  const message = (key, service) => getCopy()[key].replaceAll("{service}", () => service);
 
   async function refreshRuntimeLog() {
     const report = await invoke("read_runtime_log", { service: logServiceSelect.value });
-    renderRuntimeLog(report.rendered || `${report.service} log is empty`);
-    return `loaded ${report.service} log`;
+    renderRuntimeLog(report.rendered || message("logEmpty", report.service));
+    return message("logLoaded", report.service);
   }
 
   async function stopRuntimeLogStream() {
@@ -39,23 +43,24 @@ export function createRuntimeLogController({
       stopLogListener = await listen("runtime-log-update", (event) => {
         const payload = event.payload || {};
         if (payload.service === service) {
-          renderRuntimeLog(payload.rendered || `${service} log is empty`);
+          renderRuntimeLog(payload.rendered || message("logEmpty", service));
         }
       });
       await invoke("start_log_stream", { service });
       streamedService = service;
-      showCompletion(`Live tail attached to ${service}.`);
       await refreshRuntimeLog();
     } catch (error) {
-      if (stopLogListener) {
-        stopLogListener();
-        stopLogListener = null;
-      }
+      await stopRuntimeLogStream();
       logRefreshTimer = window.setInterval(() => {
         refreshRuntimeLog().catch(() => {});
       }, 3000);
-      showCompletion(`Live tail API unavailable. Falling back to timed refresh for ${service}.`);
+      const status = message("logPolling", service);
+      showCompletion(status);
+      return status;
     }
+    const status = message("logAttached", service);
+    showCompletion(status);
+    return status;
   }
 
   liveTailToggle.addEventListener("change", async (event) => {

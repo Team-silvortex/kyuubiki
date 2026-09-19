@@ -65,6 +65,7 @@ import {
   selectedUpdateChannel,
 } from "./update-panel.js";
 import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/runtime-status-summary.js";
+import { renderInstallerSetupCopy } from "./installer-setup-copy.js";
 
 (function () {
   mountRemotePanel();
@@ -93,6 +94,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
   let brandConfig = null;
   let currentLanguage = "en";
   let hasCompletionResult = false;
+  const setupCopy = () => installerShellCopyFor(currentLanguage).setup;
 
   mountIntegrityPanel(); mountUpdatePanel(); populateDesktopPlatformSelect(ui.releasePlatformSelect);
   const { currentCertificateIssuePayload, currentCertificatePolicyPayload, currentCertificateRevokePayload, getActiveCertificates, hydrateCertificateAuthority } = mountCertificatePanel();
@@ -101,7 +103,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     currentMode,
     hydrateEnv,
     setModeCard,
-  } = createInstallerEnvState({ ids, ui, applyPreset });
+  } = createInstallerEnvState({ ids, ui, applyPreset, setupCopy });
 
   const releaseLabel = () => {
     const version = String(brandConfig?.releaseVersion || "").replace(/^v/u, "");
@@ -111,6 +113,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
 
   const renderDesktopLanguagePreference = () => {
     const copy = installerShellCopyFor(currentLanguage);
+    renderInstallerSetupCopy(document, copy.setup, { hasCompletionResult });
     document.documentElement.lang = currentLanguage;
     setText(ui.languageLabel, copy.language);
     populateInstallerLanguageSelect(ui.languageSelect, currentLanguage);
@@ -135,6 +138,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     setText(document.querySelector(".status-shell .panel-header h2"), copy.headings.status);
     setText(document.querySelector(".log-shell .panel-header h2"), copy.headings.logs);
     setText(document.querySelector('[data-panel="release"] .section-header h2'), copy.headings.release);
+    setText("release-platform-label", copy.platform);
     setText(document.querySelector('[data-panel="output"] .section-header h2'), copy.headings.output);
     document.querySelectorAll('[data-action="doctor"]').forEach((node) => setText(node, copy.actions.doctor));
     document.querySelectorAll('[data-action="bootstrap"]').forEach((node) => setText(node, copy.actions.bootstrap));
@@ -334,6 +338,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     liveTailToggle: ui.liveTailToggle,
     renderRuntimeLog,
     showCompletion,
+    getCopy: setupCopy,
   });
   const { renderRemoteNodeCards } = mountRemoteNodePanel({
     invoke,
@@ -475,22 +480,22 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
       hydrateEnv(await invoke("read_env_file"));
       return "reloaded current environment";
     }),
-    "use-local-mode": () => { applyPreset("local", DEFAULT_PRESET); setModeCard("local"); showCompletion("Local SQLite profile selected."); appendOutput("mode", "selected local SQLite profile"); },
-    "use-cloud-mode": () => { applyPreset("cloud", DEFAULT_PRESET); setModeCard("cloud"); showCompletion("Cloud PostgreSQL profile selected."); appendOutput("mode", "selected cloud PostgreSQL profile"); },
-    "use-distributed-mode": () => { applyPreset("distributed", DEFAULT_PRESET); setModeCard("distributed"); showCompletion("Distributed control-plane profile selected."); appendOutput("mode", "selected distributed control-plane profile"); },
+    "use-local-mode": () => { applyPreset("local", DEFAULT_PRESET); setModeCard("local"); showCompletion(setupCopy().localSelected); appendOutput("mode", setupCopy().localSelected); },
+    "use-cloud-mode": () => { applyPreset("cloud", DEFAULT_PRESET); setModeCard("cloud"); showCompletion(setupCopy().cloudSelected); appendOutput("mode", setupCopy().cloudSelected); },
+    "use-distributed-mode": () => { applyPreset("distributed", DEFAULT_PRESET); setModeCard("distributed"); showCompletion(setupCopy().distributedSelected); appendOutput("mode", setupCopy().distributedSelected); },
     "service-status": () => runAction("service-status", refreshServiceStatus),
-    "service-start-local": () => runAction("service-start-local", async () => { const result = await invokeGuardedMutation("service_start", { mode: "local" }); await refreshServiceStatus(); showCompletion("Local services started."); return result; }),
-    "service-restart-local": () => runAction("service-restart-local", async () => { const result = await invokeGuardedMutation("service_restart", { mode: "local" }); await refreshServiceStatus(); showCompletion("Local services restarted."); return result; }),
-    "service-start-cloud": () => runAction("service-start-cloud", async () => { const result = await invokeGuardedMutation("service_start", { mode: "cloud" }); await refreshServiceStatus(); showCompletion("Cloud services started."); return result; }),
-    "service-start-distributed": () => runAction("service-start-distributed", async () => { const result = await invokeGuardedMutation("service_start", { mode: "distributed" }); await refreshServiceStatus(); showCompletion("Distributed control plane started."); return result; }),
-    "service-restart-cloud": () => runAction("service-restart-cloud", async () => { const result = await invokeGuardedMutation("service_restart", { mode: "cloud" }); await refreshServiceStatus(); showCompletion("Cloud services restarted."); return result; }),
-    "service-stop": () => runAction("service-stop", async () => { const result = await invokeGuardedMutation("service_stop"); await refreshServiceStatus(); showCompletion("All services stopped."); return result; }),
-    "load-log": () => runAction("load-log", () => ui.liveTailToggle.checked ? startRuntimeLogStream().then(() => `attached live tail to ${ui.logServiceSelect.value}`) : refreshRuntimeLog()),
+    "service-start-local": () => runAction("service-start-local", async () => { const result = await invokeGuardedMutation("service_start", { mode: "local" }); await refreshServiceStatus(); showCompletion(setupCopy().localStarted); return result; }),
+    "service-restart-local": () => runAction("service-restart-local", async () => { const result = await invokeGuardedMutation("service_restart", { mode: "local" }); await refreshServiceStatus(); showCompletion(setupCopy().localRestarted); return result; }),
+    "service-start-cloud": () => runAction("service-start-cloud", async () => { const result = await invokeGuardedMutation("service_start", { mode: "cloud" }); await refreshServiceStatus(); showCompletion(setupCopy().cloudStarted); return result; }),
+    "service-start-distributed": () => runAction("service-start-distributed", async () => { const result = await invokeGuardedMutation("service_start", { mode: "distributed" }); await refreshServiceStatus(); showCompletion(setupCopy().distributedStarted); return result; }),
+    "service-restart-cloud": () => runAction("service-restart-cloud", async () => { const result = await invokeGuardedMutation("service_restart", { mode: "cloud" }); await refreshServiceStatus(); showCompletion(setupCopy().cloudRestarted); return result; }),
+    "service-stop": () => runAction("service-stop", async () => { const result = await invokeGuardedMutation("service_stop"); await refreshServiceStatus(); showCompletion(setupCopy().allStopped); return result; }),
+    "load-log": () => runAction("load-log", () => ui.liveTailToggle.checked ? startRuntimeLogStream() : refreshRuntimeLog()),
     "wizard-start-active": () => runAction("wizard-start-active", async () => {
       const mode = currentMode() === "distributed" ? "distributed" : currentMode() === "cloud" ? "cloud" : "local";
       const result = await invokeGuardedMutation("service_start", { mode });
       await refreshServiceStatus();
-      showCompletion(`Started ${mode} profile.`);
+      showCompletion(setupCopy()[{ local: "localStarted", cloud: "cloudStarted", distributed: "distributedStarted" }[mode]]);
       return result;
     }),
     "remote-bootstrap": () => runAction("remote-bootstrap", async () => {

@@ -110,6 +110,8 @@ button.primary {
 
 .panel {
   display: none;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   height: 100%;
   overflow: auto;
   gap: 16px;
@@ -117,6 +119,11 @@ button.primary {
 
 .panel-visible {
   display: grid;
+}
+
+[data-installer-setup-copy],
+[data-installer-setup-ready-copy] {
+  overflow-wrap: anywhere;
 }
 
 .panel--sectioned {

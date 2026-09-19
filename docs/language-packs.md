@@ -59,6 +59,41 @@ workspace. Its own shell translations are local modules under
 `apps/installer-gui/ui/installer-shell-locales/`; only the selected locale is
 imported. They do not require a model, Ollama, or network translation.
 
+The Installer setup, guidance and service controls share an explicit 125-key copy contract
+across all 34 selectable languages (the four built-ins plus 30 on-demand
+locales). It covers step instructions, deployment descriptions, welcome and
+post-setup guidance, build modes, discovery options, storage and security fields,
+advanced Orchestra lease settings, release controls, service cards and log-toolbar captions.
+Profile selection and service start/restart/stop results, empty-log hints,
+log-load receipts, live-stream attachment and polling fallback messages are
+also translated. These messages resolve the current language when produced;
+switching languages does not replay a service action or restart a log stream.
+Translations change captions and hints only, not paths, token
+values, option values, or backend action identifiers. Configured credentials
+keep a localized "leave blank to retain the current value" hint, including
+after reloading the environment.
+
+Installer smoke tests check the actual per-locale dictionaries before fallback;
+the desktop browser regression switches through all 34 languages and checks
+rendered form and guidance copy, retained edits, configured-secret hints, and
+lazy loading. Release targets, build choices and log-service identifiers retain
+their values when their captions change. The default post-setup hint is
+translated only until a real completion result is available; subsequent
+language changes preserve that result and the runtime logs.
+The service-action browser matrix executes six mock service operations in each
+of the 34 languages (204 calls), asserting both localized results and unchanged
+native action/mode payloads. Guided profile starts are also checked in Chinese,
+German and Arabic. Log controller tests cover all locales, raw-log preservation,
+stream-to-polling fallback, and listener/timer cleanup. A polling fallback is
+reported as polling, never as a successful live connection; failure of the
+initial read releases an already-started native stream before polling.
+Guidance and service-card layout checks exercise Chinese, German, Arabic and Tamil at
+1180px and 390px widths. Narrow windows use shrinkable single-column cards
+instead of retaining fixed minimum widths that clip translated content.
+This is not full Installer coverage: service-status diagnostics, remote/update details,
+regression-gate explanations, and backend diagnostic output still have
+untranslated text.
+
 An older catalog-installed Workbench pack no longer masks a newer shipped
 translation revision. This refresh happens in memory and leaves the stored
 snapshot untouched. Imported, newer, or unknown-revision packs retain priority;

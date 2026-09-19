@@ -1,4 +1,5 @@
 import { applyDesktopState } from "./shared/tauri-bridge.js";
+import { builtinInstallerSetupCopy, installerSensitivePlaceholder } from "./installer-setup-copy.js";
 
 export const DEFAULT_PRESET = {
   agentManifestPath: "./deploy/agents.local.example.json",
@@ -13,12 +14,12 @@ export const SENSITIVE_ENV_FIELD_IDS = [
   "direct-mesh-token",
 ];
 
-export function createInstallerEnvState({ ids, ui, applyPreset }) {
-  const setSensitiveFieldState = (input, configured, placeholders) => {
+export function createInstallerEnvState({ ids, ui, applyPreset, setupCopy = () => builtinInstallerSetupCopy.en }) {
+  const setSensitiveFieldState = (input, configured) => {
     if (!input) return;
     input.value = "";
     input.dataset.configured = configured ? "true" : "false";
-    input.placeholder = configured ? placeholders.configured : placeholders.empty;
+    input.placeholder = installerSensitivePlaceholder(input.id, configured, setupCopy());
   };
 
   const currentMode = () => ids("deployment-mode").value || "local";
@@ -73,10 +74,7 @@ export function createInstallerEnvState({ ids, ui, applyPreset }) {
     ids("agent-manifest-path").value = form.agent_manifest_path || DEFAULT_PRESET.agentManifestPath;
     ids("storage-mode").value = form.storage_backend || "sqlite";
     ids("sqlite-path").value = form.sqlite_database_path || DEFAULT_PRESET.sqliteDatabasePath;
-    setSensitiveFieldState(ids("database-url"), form.database_url_configured === true, {
-      configured: "configured; leave blank to keep current value",
-      empty: "ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev",
-    });
+    setSensitiveFieldState(ids("database-url"), form.database_url_configured === true);
     ids("orchestra-lease-name").value = form.orchestra_lease_name || "workflow-recovery";
     ids("orchestra-instance-id").value = form.orchestra_instance_id || "";
     ids("orchestra-lease-ttl").value = form.orchestra_lease_ttl_ms || "15000";
@@ -85,24 +83,15 @@ export function createInstallerEnvState({ ids, ui, applyPreset }) {
     ids("orchestra-lease-query-timeout").value =
       form.orchestra_lease_query_timeout_ms || "2000";
     ids("agent-endpoints").value = form.agent_endpoints || "127.0.0.1:5001,127.0.0.1:5002";
-    setSensitiveFieldState(ids("api-token"), form.kyuubiki_api_token_configured === true, {
-      configured: "configured; leave blank to keep current token",
-      empty: "optional shared token",
-    });
-    setSensitiveFieldState(ids("cluster-api-token"), form.kyuubiki_cluster_api_token_configured === true, {
-      configured: "configured; leave blank to keep current token",
-      empty: "optional cluster-only token",
-    });
+    setSensitiveFieldState(ids("api-token"), form.kyuubiki_api_token_configured === true);
+    setSensitiveFieldState(ids("cluster-api-token"), form.kyuubiki_cluster_api_token_configured === true);
     ids("cluster-allowed-agent-ids").value = form.kyuubiki_cluster_allowed_agent_ids || "";
     ids("cluster-allowed-cluster-ids").value = form.kyuubiki_cluster_allowed_cluster_ids || "";
     ids("cluster-require-fingerprint").value = form.kyuubiki_cluster_require_fingerprint ? "true" : "false";
     ids("cluster-timestamp-window").value = form.kyuubiki_cluster_timestamp_window_ms || "30000";
     ids("protect-reads").value = form.kyuubiki_protect_reads ? "true" : "false";
     ids("direct-mesh-enabled").value = form.kyuubiki_direct_mesh_enabled === false ? "false" : "true";
-    setSensitiveFieldState(ids("direct-mesh-token"), form.kyuubiki_direct_mesh_token_configured === true, {
-      configured: "configured; leave blank to keep current token",
-      empty: "optional direct-mesh token",
-    });
+    setSensitiveFieldState(ids("direct-mesh-token"), form.kyuubiki_direct_mesh_token_configured === true);
     setModeCard(form.deployment_mode || "local");
   };
 

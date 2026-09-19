@@ -1,8 +1,10 @@
 import { normalizeDesktopLanguage } from "./shared/tauri-bridge.js";
 import { createInstallerLanguagePackSupport } from "./installer-language-packs.js";
+import { builtinInstallerSetupCopy } from "./installer-setup-copy.js";
 
 const installerShellCopy = {
   en: {
+    setup: builtinInstallerSetupCopy.en,
     language: "Language",
     platform: "Platform",
     workspace: "Workspace",
@@ -37,6 +39,7 @@ const installerShellCopy = {
     restartHint: "Restart already-open desktop shells if they do not refresh.",
   },
   zh: {
+    setup: builtinInstallerSetupCopy.zh,
     language: "语言",
     platform: "平台",
     workspace: "工作区",
@@ -71,6 +74,7 @@ const installerShellCopy = {
     restartHint: "如果已打开的应用窗口没有更新语言，请重新启动对应应用。",
   },
   ja: {
+    setup: builtinInstallerSetupCopy.ja,
     language: "言語",
     platform: "プラットフォーム",
     workspace: "ワークスペース",
@@ -105,6 +109,7 @@ const installerShellCopy = {
     restartHint: "すでに開いているデスクトップシェルが更新されない場合は再起動してください。",
   },
   es: {
+    setup: builtinInstallerSetupCopy.es,
     language: "Idioma",
     platform: "Plataforma",
     workspace: "Espacio de trabajo",

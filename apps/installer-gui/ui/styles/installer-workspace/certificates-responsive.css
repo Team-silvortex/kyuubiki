@@ -113,6 +113,12 @@
 }
 
 @media (max-width: 720px) {
+  .mode-grid,
+  .wizard-grid,
+  .completion-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .field-grid {
     grid-template-columns: 1fr;
   }

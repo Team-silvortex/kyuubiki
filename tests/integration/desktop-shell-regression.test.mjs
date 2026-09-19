@@ -7,6 +7,7 @@ import {
 import { assertHubRegression } from "./hub-shell-regression.shared.mjs";
 import { assertBundleCreationRegression } from "./hub-bundle-creation.shared.mjs";
 import { assertHubBundleLanguageMatrix, assertInstallerLanguageMatrix } from "./desktop-localization.shared.mjs";
+import { assertInstallerServiceLanguageMatrix } from "./installer-service-localization.shared.mjs";
 import { captureDesktopGuiArtifacts } from "./desktop-gui-artifacts.mjs";
 import { launchIntegrationBrowser } from "./playwright-browser.shared.mjs";
 
@@ -57,7 +58,7 @@ test(
         }
       });
 
-      await t.test("Hub and Installer render all 30 local language packs without altering user data", async () => {
+      await t.test("Hub's 30 packs and Installer's 34 languages preserve project and deployment edits", async () => {
         const page = await browser.newPage({ viewport: { width: 1180, height: 920 } });
         try {
           await page.goto(environment.hubUrl, { waitUntil: "networkidle", timeout: 60_000 });
@@ -66,6 +67,19 @@ test(
           await assertInstallerLanguageMatrix(page);
         } catch (error) {
           await captureDesktopGuiArtifacts(page, { suite: "desktop-localization", scenario: "language-matrix", error });
+          throw error;
+        } finally {
+          await page.close();
+        }
+      });
+
+      await t.test("Installer service actions and log fallbacks use the selected language without changing native targets", async () => {
+        const page = await browser.newPage({ viewport: { width: 1180, height: 920 } });
+        try {
+          await page.goto(environment.installerUrl, { waitUntil: "networkidle", timeout: 60_000 });
+          await assertInstallerServiceLanguageMatrix(page);
+        } catch (error) {
+          await captureDesktopGuiArtifacts(page, { suite: "desktop-localization", scenario: "service-language-matrix", error });
           throw error;
         } finally {
           await page.close();

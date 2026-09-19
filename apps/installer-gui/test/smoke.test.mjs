@@ -7,6 +7,7 @@ import {
 } from "../../desktop-shared/test/smoke-test-helpers.mjs";
 import "./action-lifecycle.test.mjs";
 import "./localization.test.mjs";
+import "./runtime-log-panel.test.mjs";
 
 const ROOT = createFixtureRoot(import.meta.url);
 const read = createFixtureReader(ROOT);

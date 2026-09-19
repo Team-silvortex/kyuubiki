@@ -87,6 +87,39 @@
             Only the selected locale is loaded; no online translator or model
             is required.
           </p>
+          <p class="docs-copy">
+            Setup, guidance and service controls have a 125-key contract across all 34 selectable
+            languages, including the five installation steps, deployment
+            descriptions, welcome and post-setup guidance, environment fields,
+            advanced Orchestra leases, release controls, service cards and log-toolbar captions.
+            Profile selection, service start/restart/stop results, empty-log hints,
+            log-load receipts, live-stream attachment and polling fallback messages
+            also use the active language. Language changes do not replay actions
+            or restart log streams.
+            Switching languages preserves form values, backend enums
+            and diagnostic results. Configured credentials retain a localized
+            instruction to leave the field blank to keep the current value.
+            Default guidance is translated without replacing actual completion
+            results. Browser regressions exercise all 34 languages, release and
+            log selections, and environment reloads.
+            Chinese, German, Arabic and Tamil guidance and service cards are also checked at
+            1180px and 390px widths; narrow cards shrink and wrap rather than
+            clipping their contents.
+          </p>
+          <p class="docs-copy">
+            A separate service-action matrix executes six mock operations per
+            language (204 calls), checking localized results and unchanged native
+            action/mode payloads. Guided profile starts are tested in Chinese,
+            German and Arabic. Log tests retain raw backend text, exercise every
+            locale, and check stream fallback and resource cleanup. Polling is
+            reported as polling, not as a successful live connection; an initial
+            read failure releases the started native stream before polling.
+          </p>
+          <p class="docs-copy">
+            This does not mean the entire Installer is translated. Detailed
+            service-status diagnostics, regression-gate explanations, remote panels,
+            update panels and backend output still need further coverage.
+          </p>
           <ul class="docs-list">
             <li>Installer built-ins remain <code>en</code>, <code>zh</code>, <code>ja</code>, and <code>es</code>.</li>
             <li>The language selector still exposes the 30 mainstream locale targets.</li>
