@@ -45,3 +45,28 @@ export async function waitForVisibleOrPageError(page, locator, label, timeout = 
     page.off("pageerror", rejectPageError);
   }
 }
+
+// Chromium rejects Browser.setWindowBounds while a native fullscreen element is active.
+// Keep the emulation session alive until its page/context closes: detaching it resets metrics.
+const fullscreenViewportSessions = new WeakMap();
+
+export async function resizeFullscreenViewport(page, { width, height }) {
+  assert.ok(Number.isInteger(width) && width > 0, "fullscreen viewport width must be positive");
+  assert.ok(Number.isInteger(height) && height > 0, "fullscreen viewport height must be positive");
+  assert.equal(await page.evaluate(() => !!document.fullscreenElement), true,
+    "fullscreen resize must exercise native fullscreen, not the window-local fallback");
+  let session = fullscreenViewportSessions.get(page);
+  if (!session) {
+    session = await page.context().newCDPSession(page);
+    fullscreenViewportSessions.set(page, session);
+  }
+  // Emulate the content viewport without asking Chromium to resize its fullscreen OS window.
+  // page.viewportSize() remains Playwright's original bookkeeping; use DOM metrics in this mode.
+  await session.send("Emulation.setDeviceMetricsOverride", {
+    width, height, screenWidth: width, screenHeight: height,
+    deviceScaleFactor: await page.evaluate(() => window.devicePixelRatio),
+    mobile: false,
+  });
+  await page.waitForFunction(([w, h]) => !!document.fullscreenElement &&
+    window.innerWidth === w && window.innerHeight === h, [width, height]);
+}
