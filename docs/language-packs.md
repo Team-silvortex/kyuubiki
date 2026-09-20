@@ -56,19 +56,71 @@ and some built-in Spanish copy still need translation.
 
 The September 2026 wrong-language audit found Swedish prose copied into
 non-Swedish Workbench extension fragments. The four `extended-01` through
-`extended-04` fragments are corrected for `el`, `cs`, `da`, `fi`, `id`, `ms`,
-`no`, `ro`, and `sw`. Each locale covers 378 leaf strings, including validation
-errors, solver diagnostics, modeling tools and keyboard help. `ar`, `bn`, `fa`,
-`he`, and `hi` still require the same correction; do not describe all 30 packs
-as translation-complete. Feature-specific panels outside these fragments need
-their own review, and linguistic quality still benefits from native-speaker review.
+`extended-04` fragments are corrected for `ar`, `bn`, `cs`, `da`, `el`, `fa`,
+`fi`, `he`, `hi`, `id`, `ms`, `no`, `ro`, and `sw`. Each locale covers 378 leaf
+strings, including validation errors, solver diagnostics, modeling tools and
+keyboard help. The last five locales (`ar`, `bn`, `fa`, `he`, `hi`) were corrected
+on September 20. This closes the identified cross-language contamination batch,
+not all translation work across the product. Feature-specific panels outside
+these fragments need their own review, and linguistic quality still benefits
+from native-speaker review.
+
+Native macOS verification also exposed a separate base-pack defect: Arabic
+assistant and audit text padded with invisible characters, plus Arabic and
+Persian presentation-form text stored in visual order, sometimes truncated.
+The September 20 follow-up retranslates 170 Arabic and 479 Persian root strings
+from the English source, rather than reversing or normalizing damaged text.
+It also corrects engineering mistranslations of springs, beams, planar elements,
+control planes, runtime names, and execution receipts. Both 630-leaf root packs
+now pass checks for target-language script, logical Unicode, placeholders, and
+generated-payload parity. Protocol paths, header names, Rust, Elixir and axis
+identifiers remain intact. This closes those specific base-pack defects, not
+full-product language review or bidirectional-layout certification.
 
 The locale regression checks source fragments and generated dictionaries,
 interpolation tokens, units, shortcut arrays, stale official-pack refresh,
 and browser language-switch isolation. It rejects characteristic Swedish
 phrases and copied Swedish sentences while allowing genuine shared technical
-terms, numbers and Scandinavian spellings. This is a targeted contamination
-regression, not a general-purpose language detector or a full-product quality score.
+terms, numbers and Scandinavian spellings. Arabic, Persian, Hebrew, Hindi and
+Bengali fragments additionally require the corresponding writing system on every
+non-neutral label, with explicit exceptions for file formats and percentages.
+The corrected fragments reject invisible padding, and the Arabic and Persian
+fragments reject presentation forms; intentional Persian joining controls remain
+valid. This is a targeted contamination regression, not a general-purpose
+language detector or a full-product quality score.
+Browser coverage also switches the actual language selector and opens and closes
+the Arabic and Persian assistant before and after reload, starting from the
+previous official pack revision. It checks
+localized accessible labels, unchanged stored pack snapshots, return to English,
+and absence of model writes from these display-only interactions.
+Native macOS checks also exercise language changes through `ky.configure(...)`
+in PWDT and verify both assistant panels.
+
+PWDT has a separate feature-copy surface, outside the root language-pack
+overrides. The September 20 follow-up adds complete Arabic and Persian panel
+copy and replaces the Spanish panel's remaining English prose. Each language
+has 148 panel entries, 8 frontend DSL entries and 19 catalog-control entries.
+These cover runtime status, Python editing and execution, recording, timeline
+inspection, snapshot comparison, presets and sensitive-field warnings. Recipe
+and snippet captions are distinct. Product names, JSON, SDK, Python, action IDs
+and payload field names are not translated. Locale dictionaries remain in the
+existing System feature bundle; this is not selected-locale-only loading for
+PWDT. Catalog, inspection and SDK-bridge panels retain their lazy mounting, and
+opening the editor does not initialize Pyodide.
+
+The PWDT copy contract tests check complete keys, target writing systems,
+interpolation parameters, logical Unicode and region-tag normalization. Browser
+tests switch between English and each corrected locale during a held execution,
+checking localized status, unchanged Python/DSL drafts and raw output, retained
+recording state, localized invalid-parameter feedback and persistence after
+reload. The Python editor stays left-to-right for code in RTL locales. The
+runtime adapter in these tests validates GUI dispatch and state retention, not
+Python/WASM computation. Installed macOS WebView checks additionally execute
+real Pyodide `ky.configure(...)` calls for Arabic, Persian and Spanish, verify
+embedded/expanded controls, and restore Chinese and the original Python draft
+without creating solver jobs. These checks do not certify all 30 locales or all PWDT
+surfaces: SDK-bridge copy, generated action summaries, diagnostic details and
+other languages still need separate translation review.
 
 Installer retains the Hub pack availability adapter, but no longer borrows
 unrelated Hub captions for actions such as checking services or initializing a

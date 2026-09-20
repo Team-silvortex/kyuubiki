@@ -60,7 +60,7 @@ const REMOTE_READY_STATUS = {
 } as const;
 
 // Catalog content revision, independent of the app version, also refreshes saved official packs.
-const UPDATED_AT = "2026-09-19T02:00:00.000Z";
+const UPDATED_AT = "2026-09-20T03:00:00.000Z";
 
 function languageSlug(language: string) {
   return language.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");

@@ -353,6 +353,8 @@ const copies: Record<string, WorkbenchScriptWorkspaceCopy> = {
 };
 
 export function getWorkbenchScriptWorkspaceCopy(language: string): WorkbenchScriptWorkspaceCopy {
-  const key = language.toLowerCase();
-  return Object.hasOwn(copies, key) ? copies[key] : copies.en;
+  const key = language.trim().toLowerCase().replace(/_/g, "-");
+  if (Object.hasOwn(copies, key)) return copies[key];
+  const base = key.split("-")[0];
+  return Object.hasOwn(copies, base) ? copies[base] : copies.en;
 }

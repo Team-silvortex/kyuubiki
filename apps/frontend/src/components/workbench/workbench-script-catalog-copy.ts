@@ -62,14 +62,14 @@ const summaryByLanguage: Record<string, ScriptSummaryCopy> = {
   en: { action: "Action", macro: "Macro", snippet: "Snippet", recipe: "Recipe", configuredRecipe: "Runs the configured automation recipe." },
   zh: { action: "动作", macro: "宏", snippet: "配方", recipe: "工作流配方", configuredRecipe: "运行已配置的自动化配方。" },
   ja: { action: "アクション", macro: "マクロ", snippet: "スニペット", recipe: "レシピ", configuredRecipe: "設定済みの自動化レシピを実行します。" },
-  es: { action: "Acción", macro: "Macro", snippet: "Receta", recipe: "Receta", configuredRecipe: "Ejecuta la receta de automatización configurada." },
-  ar: { action: "إجراء", macro: "ماكرو", snippet: "وصفة", configuredRecipe: "يشغّل وصفة الأتمتة المهيأة." },
+  es: { action: "Acción", macro: "Macro", snippet: "Fragmento", recipe: "Receta", configuredRecipe: "Ejecuta la receta de automatización configurada." },
+  ar: { action: "إجراء", macro: "ماكرو", snippet: "مقطع شيفرة", recipe: "وصفة", configuredRecipe: "يشغّل وصفة الأتمتة المهيأة." },
   bn: { action: "অ্যাকশন", macro: "ম্যাক্রো", snippet: "স্নিপেট", configuredRecipe: "কনফিগার করা অটোমেশন রেসিপি চালায়।" },
   cs: { action: "Akce", macro: "Makro", snippet: "Snippet", configuredRecipe: "Spustí nastavený automatizační recept." },
   da: { action: "Handling", macro: "Makro", snippet: "Snippet", configuredRecipe: "Kører den konfigurerede automatiseringsopskrift." },
   de: { action: "Aktion", macro: "Makro", snippet: "Snippet", configuredRecipe: "Führt das konfigurierte Automationsrezept aus." },
   el: { action: "Ενέργεια", macro: "Μακροεντολή", snippet: "Snippet", configuredRecipe: "Εκτελεί τη ρυθμισμένη συνταγή αυτοματοποίησης." },
-  fa: { action: "کنش", macro: "ماکرو", snippet: "قطعه", configuredRecipe: "دستور خودکارسازی پیکربندی شده را اجرا می کند." },
+  fa: { action: "کنش", macro: "ماکرو", snippet: "قطعه‌کد", recipe: "دستور", configuredRecipe: "دستور خودکارسازی پیکربندی‌شده را اجرا می‌کند." },
   fi: { action: "Toiminto", macro: "Makro", snippet: "Snippet", configuredRecipe: "Suorittaa määritetyn automaatioreseptin." },
   fr: { action: "Action", macro: "Macro", snippet: "Snippet", configuredRecipe: "Exécute la recette d'automatisation configurée." },
   he: { action: "פעולה", macro: "מאקרו", snippet: "קטע", configuredRecipe: "מריץ את מתכון האוטומציה שהוגדר." },
@@ -152,35 +152,75 @@ const copyByLanguage: Record<string, WorkbenchScriptCatalogCopy> = {
   },
   es: {
     recipesMode: "Recetas",
-    snippetsMode: "Recetas",
-    categoryRuntime: "Runtime",
-    categoryWorkflow: "Workflow",
+    snippetsMode: "Fragmentos",
+    categoryRuntime: "Entorno de ejecución",
+    categoryWorkflow: "Flujo de trabajo",
     categoryInspection: "Inspección",
     categoryNavigation: "Navegación",
     categoryStudy: "Estudio",
-    snippetPreset: "Presets de receta",
+    snippetPreset: "Preajustes del fragmento",
     parameterJson: "JSON de parámetros",
-    payloadExample: "Ejemplo de payload",
+    payloadExample: "Ejemplo de datos enviados",
     requiredActions: "Acciones requeridas",
     expectedState: "Estado esperado",
     resultKeys: "Claves de resultado",
-    insertConfigured: "Insertar configurado",
+    insertConfigured: "Insertar con estos parámetros",
     loadRecipeDsl: "Cargar DSL",
-    savePreset: "Guardar preset",
-    emptyPreset: "Todavía no hay presets para este snippet.",
+    savePreset: "Guardar preajuste",
+    emptyPreset: "Aún no hay preajustes guardados para este fragmento.",
     jsonError: "El JSON de parámetros no es válido.",
-    importPreset: "Importar preset",
+    importPreset: "Importar preajuste",
+  },
+  ar: {
+    recipesMode: "الوصفات",
+    snippetsMode: "مقاطع الشيفرة",
+    categoryRuntime: "بيئة التشغيل",
+    categoryWorkflow: "سير العمل",
+    categoryInspection: "الفحص",
+    categoryNavigation: "التنقل",
+    categoryStudy: "الدراسة",
+    snippetPreset: "إعدادات مقطع الشيفرة المسبقة",
+    parameterJson: "المعاملات بصيغة JSON",
+    payloadExample: "مثال على البيانات المرسلة",
+    requiredActions: "الإجراءات المطلوبة",
+    expectedState: "الحالة المتوقعة",
+    resultKeys: "حقول النتيجة",
+    insertConfigured: "إدراج بالمعاملات الحالية",
+    loadRecipeDsl: "تحميل DSL",
+    savePreset: "حفظ الإعداد المسبق",
+    emptyPreset: "لا توجد إعدادات مسبقة محفوظة لهذا المقطع بعد.",
+    jsonError: "صيغة JSON للمعاملات غير صالحة.",
+    importPreset: "استيراد إعداد مسبق",
+  },
+  fa: {
+    recipesMode: "دستورها",
+    snippetsMode: "قطعه‌کدها",
+    categoryRuntime: "محیط اجرا",
+    categoryWorkflow: "گردش‌کار",
+    categoryInspection: "بررسی",
+    categoryNavigation: "ناوبری",
+    categoryStudy: "مطالعه",
+    snippetPreset: "پیش‌تنظیم‌های قطعه‌کد",
+    parameterJson: "پارامترها در قالب JSON",
+    payloadExample: "نمونهٔ داده‌های ارسالی",
+    requiredActions: "کنش‌های لازم",
+    expectedState: "وضعیت مورد انتظار",
+    resultKeys: "فیلدهای نتیجه",
+    insertConfigured: "درج با پارامترهای فعلی",
+    loadRecipeDsl: "بارگذاری DSL",
+    savePreset: "ذخیرهٔ پیش‌تنظیم",
+    emptyPreset: "هنوز پیش‌تنظیمی برای این قطعه‌کد ذخیره نشده است.",
+    jsonError: "پارامترهای JSON نامعتبر هستند.",
+    importPreset: "درون‌ریزی پیش‌تنظیم",
   },
 };
 
 const compactCopy: Record<string, Partial<WorkbenchScriptCatalogCopy>> = {
-  ar: { snippetsMode: "وصفات", categoryInspection: "فحص", categoryNavigation: "تنقل", insertConfigured: "إدراج", savePreset: "حفظ", importPreset: "استيراد" },
   bn: { snippetsMode: "স্নিপেট", categoryInspection: "পরীক্ষা", categoryNavigation: "নেভিগেশন", insertConfigured: "ইনসার্ট", savePreset: "সেভ", importPreset: "ইমপোর্ট" },
   cs: { snippetsMode: "Snippety", categoryInspection: "Kontrola", categoryNavigation: "Navigace", insertConfigured: "Vložit", savePreset: "Uložit", importPreset: "Import" },
   da: { snippetsMode: "Snippets", categoryInspection: "Inspektion", categoryNavigation: "Navigation", insertConfigured: "Indsæt", savePreset: "Gem", importPreset: "Importer" },
   de: { snippetsMode: "Snippets", categoryInspection: "Prüfung", categoryNavigation: "Navigation", insertConfigured: "Einfügen", savePreset: "Speichern", importPreset: "Importieren" },
   el: { snippetsMode: "Snippets", categoryInspection: "Έλεγχος", categoryNavigation: "Πλοήγηση", insertConfigured: "Εισαγωγή", savePreset: "Αποθήκευση", importPreset: "Εισαγωγή" },
-  fa: { snippetsMode: "قطعه ها", categoryInspection: "بازرسی", categoryNavigation: "ناوبری", insertConfigured: "درج", savePreset: "ذخیره", importPreset: "وارد کردن" },
   fi: { snippetsMode: "Snippets", categoryInspection: "Tarkastus", categoryNavigation: "Navigointi", insertConfigured: "Lisää", savePreset: "Tallenna", importPreset: "Tuo" },
   fr: { snippetsMode: "Snippets", categoryInspection: "Inspection", categoryNavigation: "Navigation", insertConfigured: "Insérer", savePreset: "Enregistrer", importPreset: "Importer" },
   he: { snippetsMode: "קטעים", categoryInspection: "בדיקה", categoryNavigation: "ניווט", insertConfigured: "הוסף", savePreset: "שמור", importPreset: "ייבא" },
@@ -221,7 +261,10 @@ for (const [language, copy] of Object.entries(compactCopy)) {
 }
 
 export function getWorkbenchScriptCatalogCopy(language: WorkbenchScriptLanguage): WorkbenchScriptCatalogCopy {
-  return copyByLanguage[language] ?? copyByLanguage[language.toLowerCase()] ?? en;
+  const key = normalizeLanguage(language);
+  if (Object.hasOwn(copyByLanguage, key)) return copyByLanguage[key];
+  const base = key.split("-")[0];
+  return Object.hasOwn(copyByLanguage, base) ? copyByLanguage[base] : en;
 }
 
 export function getWorkbenchScriptSnippetCategoryLabel(
@@ -244,7 +287,7 @@ export function getWorkbenchScriptRecipeCategoryLabel(
 }
 
 function normalizeLanguage(language: WorkbenchScriptLanguage) {
-  return language.toLowerCase();
+  return language.trim().toLowerCase().replace(/_/g, "-");
 }
 
 function splitScriptId(id: string) {

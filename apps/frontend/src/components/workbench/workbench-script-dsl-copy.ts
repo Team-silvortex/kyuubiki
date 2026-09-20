@@ -43,19 +43,38 @@ const copyByLanguage: Record<string, WorkbenchScriptDslCopy> = {
     macro: "現在のマクロ草稿を使う",
   },
   es: {
-    title: "DSL frontend",
-    subtitle: "Describe la automatización frontend wasm Python como pasos estructurados y compílala a Pyodide.",
-    hint: "El DSL usa JSON estable para conectar grabación, macros, snippets y contratos UI.",
+    title: "DSL de la interfaz",
+    subtitle: "Describe la automatización de la interfaz con Python WASM como pasos estructurados y compílalos para ejecutarlos en Pyodide.",
+    hint: "El DSL utiliza un formato JSON estable que conecta grabaciones, macros, fragmentos de código y contratos de la interfaz.",
     compile: "Compilar a script",
     run: "Ejecutar DSL",
     reset: "Cargar plantilla",
-    recipe: "Cargar receta truss",
-    macro: "Usar macro actual",
+    recipe: "Cargar receta de celosía",
+    macro: "Usar borrador de macro actual",
+  },
+  ar: {
+    title: "DSL الواجهة الأمامية",
+    subtitle: "صِف أتمتة الواجهة الأمامية باستخدام Python WASM كخطوات منظّمة، ثم حوّلها إلى طبقة تنفيذ Pyodide.",
+    hint: "تستخدم هذه اللغة صيغة JSON ثابتة لربط التسجيلات ووحدات الماكرو ومقاطع الشيفرة وعقود الواجهة بجسر مشترك.",
+    compile: "تحويل إلى برنامج نصي",
+    run: "تشغيل DSL",
+    reset: "تحميل القالب",
+    recipe: "تحميل وصفة الجملون",
+    macro: "استخدام مسودة الماكرو الحالية",
+  },
+  fa: {
+    title: "DSL رابط کاربری",
+    subtitle: "خودکارسازی رابط کاربری با Python WASM را به‌صورت گام‌های ساخت‌یافته توصیف کنید و سپس برای اجرای Pyodide کامپایل کنید.",
+    hint: "این زبان از قالب پایدار JSON استفاده می‌کند تا ضبط‌ها، ماکروها، قطعه‌کدها و قراردادهای رابط کاربری از یک پل مشترک بهره ببرند.",
+    compile: "کامپایل به اسکریپت",
+    run: "اجرای DSL",
+    reset: "بارگذاری الگو",
+    recipe: "بارگذاری دستور خرپا",
+    macro: "استفاده از پیش‌نویس ماکروی فعلی",
   },
 };
 
 const compactLabels: Record<string, Partial<WorkbenchScriptDslCopy>> = {
-  ar: { title: "DSL الواجهة", compile: "ترجمة", run: "تشغيل", reset: "قالب", recipe: "وصفة truss", macro: "مسودة macro" },
   bn: { title: "Frontend DSL", compile: "কম্পাইল", run: "রান", reset: "টেমপ্লেট", recipe: "ট্রাস রেসিপি", macro: "ম্যাক্রো খসড়া" },
   cs: { title: "Frontend DSL", compile: "Kompilovat", run: "Spustit", reset: "Šablona", recipe: "Recept truss", macro: "Návrh makra" },
   da: { title: "Frontend DSL", compile: "Kompiler", run: "Kør", reset: "Skabelon", recipe: "Truss-recept", macro: "Makrokladde" },
@@ -67,7 +86,6 @@ const compactLabels: Record<string, Partial<WorkbenchScriptDslCopy>> = {
     compile: "Μεταγλώττιση σε σκριπτ", run: "Εκτέλεση DSL", reset: "Φόρτωση προτύπου",
     recipe: "Φόρτωση διαδικασίας δικτυώματος", macro: "Χρήση τρέχοντος προσχεδίου μακροεντολής",
   },
-  fa: { title: "DSL رابط", compile: "کامپایل", run: "اجرا", reset: "قالب", recipe: "دستور خرپا", macro: "پیش نویس macro" },
   fi: { title: "Frontend DSL", compile: "Käännä", run: "Aja", reset: "Malli", recipe: "Truss-resepti", macro: "Makroluonnos" },
   fr: { title: "DSL frontend", compile: "Compiler", run: "Exécuter", reset: "Modèle", recipe: "Recette treillis", macro: "Brouillon macro" },
   he: { title: "DSL חזית", compile: "הדר", run: "הרץ", reset: "תבנית", recipe: "מתכון truss", macro: "טיוטת macro" },
@@ -103,5 +121,8 @@ for (const [language, copy] of Object.entries(compactLabels)) {
 }
 
 export function getWorkbenchScriptDslCopy(language: string): WorkbenchScriptDslCopy {
-  return copyByLanguage[language] ?? copyByLanguage[language.toLowerCase()] ?? en;
+  const key = language.trim().toLowerCase().replace(/_/g, "-");
+  if (Object.hasOwn(copyByLanguage, key)) return copyByLanguage[key];
+  const base = key.split("-")[0];
+  return Object.hasOwn(copyByLanguage, base) ? copyByLanguage[base] : en;
 }
