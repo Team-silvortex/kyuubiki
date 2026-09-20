@@ -1,3 +1,6 @@
+use crate::material_composite_heat_loads::{
+    add_uniform_quad_power, added_power, power_relative_error, sum_power, validate_seed_loads,
+};
 use kyuubiki_protocol::SolveHeatPlaneQuad2dRequest;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -53,7 +56,7 @@ pub fn project_composite_joule_heating_to_heat(
     coupling_temperatures_c: &[(String, f64)],
 ) -> Result<(SolveHeatPlaneQuad2dRequest, CompositeJouleHeatingProjection), String> {
     validate_spec(spec, coupling_temperatures_c)?;
-    let before = total_heat_load(heat_seed)?;
+    validate_seed_loads(heat_seed)?;
     let mut request = heat_seed.clone();
     let mut regions = Vec::with_capacity(spec.regions.len());
 
@@ -99,15 +102,7 @@ pub fn project_composite_joule_heating_to_heat(
                 ]
             })
             .ok_or_else(|| format!("heat model is missing Joule element {}", region.element_id))?;
-        for index in node_indices {
-            let node = request.nodes.get_mut(index).ok_or_else(|| {
-                format!(
-                    "Joule element {} references unknown node {index}",
-                    region.element_id
-                )
-            })?;
-            node.heat_load += power_w / 4.0;
-        }
+        let distributed_heat_load_w = add_uniform_quad_power(&mut request, node_indices, power_w)?;
         regions.push(CompositeJouleHeatingRegionProjection {
             element_id: region.element_id.clone(),
             coupling_temperature_c,
@@ -115,15 +110,15 @@ pub fn project_composite_joule_heating_to_heat(
             resistivity_ohm_m,
             resistance_ohm,
             power_w,
-            distributed_heat_load_w: power_w,
-            energy_balance_relative_error: 0.0,
+            distributed_heat_load_w,
+            energy_balance_relative_error: power_relative_error(distributed_heat_load_w, power_w),
         });
     }
 
-    let total_joule_loss_w = regions.iter().map(|region| region.power_w).sum::<f64>();
-    let distributed_total_heat_load_w = total_heat_load(&request)? - before;
+    let total_joule_loss_w = sum_power(regions.iter().map(|region| region.power_w))?;
+    let distributed_total_heat_load_w = added_power(heat_seed, &request)?;
     let energy_balance_relative_error =
-        relative_error(distributed_total_heat_load_w, total_joule_loss_w);
+        power_relative_error(distributed_total_heat_load_w, total_joule_loss_w);
     if energy_balance_relative_error > 1.0e-12 {
         return Err("composite Joule heat-load distribution lost energy".to_string());
     }
@@ -142,7 +137,7 @@ pub fn project_composite_joule_heating_to_heat(
                 "Each declared conductor follows a uniform prescribed-current path.".to_string(),
                 "Temperature-dependent scalar resistivity is linearized about its reference temperature."
                     .to_string(),
-                "Joule power is lumped consistently to the four nodes of each conductor element."
+                "Joule power is distributed equally to the four nodes of each conductor element; this is a lumped model, not subcell source quadrature."
                     .to_string(),
             ],
         },
@@ -181,22 +176,6 @@ fn validate_spec(
         return Err("Joule heating coupling temperatures are invalid".to_string());
     }
     Ok(())
-}
-
-fn total_heat_load(request: &SolveHeatPlaneQuad2dRequest) -> Result<f64, String> {
-    let total = request.nodes.iter().map(|node| node.heat_load).sum::<f64>();
-    if !total.is_finite() {
-        return Err("composite heat request contains non-finite nodal load".to_string());
-    }
-    Ok(total)
-}
-
-fn relative_error(actual: f64, expected: f64) -> f64 {
-    if expected.abs() <= f64::EPSILON {
-        actual.abs()
-    } else {
-        (actual - expected).abs() / expected.abs()
-    }
 }
 
 #[cfg(test)]

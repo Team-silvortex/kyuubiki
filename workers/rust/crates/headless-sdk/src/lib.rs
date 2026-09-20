@@ -28,6 +28,7 @@ mod material_composite_current;
 mod material_composite_electrothermal;
 mod material_composite_evidence;
 mod material_composite_feedback;
+mod material_composite_heat_loads;
 mod material_composite_heat_validation;
 mod material_composite_interfaces;
 mod material_composite_joule;

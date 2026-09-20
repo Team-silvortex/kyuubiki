@@ -1,3 +1,6 @@
+use crate::material_composite_heat_loads::{
+    add_uniform_quad_power, power_relative_error, sum_power,
+};
 use kyuubiki_protocol::{
     HeatPlaneQuadElementInput, SolveElectrostaticPlaneQuad2dResult, SolveHeatPlaneQuad2dRequest,
     SolveHeatPlaneQuad2dResult, SolveThermalPlaneQuad2dRequest,
@@ -91,8 +94,16 @@ pub fn project_composite_dielectric_loss_to_heat(
     {
         return Err("electrothermal source element must have finite positive geometry".to_string());
     }
-    if !field.electric_field_magnitude.is_finite() {
-        return Err("electrothermal source field must be finite".to_string());
+    if !field.electric_field_magnitude.is_finite()
+        || field.electric_field_magnitude < 0.0
+        || !field.electric_energy_density.is_finite()
+        || field.electric_energy_density < 0.0
+        || !input.permittivity.is_finite()
+        || input.permittivity <= 0.0
+    {
+        return Err(
+            "electrothermal source field and energy must be finite and non-negative".to_string(),
+        );
     }
     validate_matching_element_geometry(electrostatic, heat_seed, input, &spec.source_element_id)?;
 
@@ -101,16 +112,25 @@ pub fn project_composite_dielectric_loss_to_heat(
         * VACUUM_PERMITTIVITY_F_M
         * spec.relative_permittivity
         * spec.loss_tangent;
-    let volumetric_loss = effective_conductivity * field.electric_field_magnitude.powi(2);
+    // The result vector is an area mean, not an RMS. Integrated energy retains
+    // opposing subcell fields: <|E|^2> = 2 * <energy density> / permittivity.
+    let mean_squared_field = 2.0 * (field.electric_energy_density / input.permittivity);
+    let volumetric_loss = effective_conductivity * mean_squared_field;
     let source_volume = field.area * input.thickness;
     let total_loss = volumetric_loss * source_volume;
+    if !effective_conductivity.is_finite()
+        || !mean_squared_field.is_finite()
+        || !volumetric_loss.is_finite()
+        || !total_loss.is_finite()
+        || !source_volume.is_finite()
+        || source_volume <= 0.0
+        || field.electric_field_magnitude > mean_squared_field.sqrt() * (1.0 + 1.0e-12)
+    {
+        return Err("electrothermal source has inconsistent energy or unrepresentable loss".into());
+    }
     let heat_request = distribute_composite_dielectric_heat_load(heat_seed, total_loss)?;
-    let distributed_total = heat_request
-        .nodes
-        .iter()
-        .map(|node| node.heat_load)
-        .sum::<f64>();
-    let energy_balance_relative_error = relative_error(distributed_total, total_loss);
+    let distributed_total = sum_power(heat_request.nodes.iter().map(|node| node.heat_load))?;
+    let energy_balance_relative_error = power_relative_error(distributed_total, total_loss);
     let target_elements = dielectric_elements(&heat_request);
     let target_node_count = unique_node_indices(&target_elements).len();
     let target_element_count = target_elements.len();
@@ -125,7 +145,7 @@ pub fn project_composite_dielectric_loss_to_heat(
             relative_permittivity: spec.relative_permittivity,
             loss_tangent: spec.loss_tangent,
             effective_conductivity_s_m: effective_conductivity,
-            electric_field_rms_v_m: field.electric_field_magnitude,
+            electric_field_rms_v_m: mean_squared_field.sqrt(),
             volumetric_loss_w_m3: volumetric_loss,
             source_volume_m3: source_volume,
             total_loss_w: total_loss,
@@ -134,17 +154,19 @@ pub fn project_composite_dielectric_loss_to_heat(
             target_element_count,
             target_node_count,
             assumptions: vec![
-                "The solved electrostatic field magnitude is interpreted as an RMS harmonic field."
+                "The spatial RMS field is recovered from split-quad integrated electric energy; source voltages are interpreted as temporal RMS harmonic amplitudes."
                     .to_string(),
                 "Relative permittivity and loss tangent are scalar, isotropic, and frequency-local screening values."
                     .to_string(),
-                "Element dielectric loss is lumped consistently to its four thermal nodes."
+                "Dielectric heat loads replace seed loads, are volume weighted across the dielectric region, and are lumped equally to each element's four nodes; this is not subcell source quadrature."
                     .to_string(),
             ],
         },
     ))
 }
 
+/// Replaces seed nodal loads with the prescribed dielectric-region power.
+/// Use the additive Joule projectors afterwards to combine heating mechanisms.
 pub fn distribute_composite_dielectric_heat_load(
     heat_seed: &SolveHeatPlaneQuad2dRequest,
     total_heat_load_w: f64,
@@ -164,7 +186,7 @@ pub fn distribute_composite_dielectric_heat_load(
         }
         weighted.push((element, area * element.thickness));
     }
-    let total_volume = weighted.iter().map(|(_, volume)| volume).sum::<f64>();
+    let total_volume = sum_power(weighted.iter().map(|(_, volume)| *volume))?;
     if !total_volume.is_finite() || total_volume <= 0.0 {
         return Err("composite dielectric region must have positive volume".to_string());
     }
@@ -173,19 +195,11 @@ pub fn distribute_composite_dielectric_heat_load(
         node.heat_load = 0.0;
     }
     for (element, volume) in weighted {
-        let nodal_load = total_heat_load_w * volume / total_volume / 4.0;
-        for index in element_nodes(element) {
-            let node = request.nodes.get_mut(index).ok_or_else(|| {
-                format!(
-                    "heat element {} references unknown node {index}",
-                    element.id
-                )
-            })?;
-            node.heat_load += nodal_load;
-        }
+        let power = total_heat_load_w * (volume / total_volume);
+        add_uniform_quad_power(&mut request, element_nodes(element), power)?;
     }
-    let distributed = request.nodes.iter().map(|node| node.heat_load).sum::<f64>();
-    if relative_error(distributed, total_heat_load_w) > 1.0e-12 {
+    let distributed = sum_power(request.nodes.iter().map(|node| node.heat_load))?;
+    if power_relative_error(distributed, total_heat_load_w) > 1.0e-12 {
         return Err("composite dielectric heat-load distribution lost energy".to_string());
     }
     Ok(request)
@@ -327,7 +341,10 @@ fn quad_area(
         .iter()
         .zip(coordinates.iter().cycle().skip(1))
         .take(coordinates.len())
-        .map(|((x1, y1), (x2, y2))| x1 * y2 - x2 * y1)
+        .map(|((x1, y1), (x2, y2))| {
+            let (origin_x, origin_y) = coordinates[0];
+            (x1 - origin_x) * (y2 - origin_y) - (x2 - origin_x) * (y1 - origin_y)
+        })
         .sum::<f64>();
     let area = 0.5 * twice_area.abs();
     if !area.is_finite() || area <= 0.0 {
@@ -364,14 +381,6 @@ fn unique_node_indices(elements: &[&HeatPlaneQuadElementInput]) -> Vec<usize> {
     indices.sort_unstable();
     indices.dedup();
     indices
-}
-
-fn relative_error(actual: f64, expected: f64) -> f64 {
-    if expected.abs() <= f64::EPSILON {
-        actual.abs()
-    } else {
-        (actual - expected).abs() / expected.abs()
-    }
 }
 
 #[cfg(test)]
@@ -479,12 +488,12 @@ mod tests {
                 "potential_gradient_y": 0.0, "electric_field_x": 1000.0,
                 "electric_field_y": 0.0, "electric_field_magnitude": 1000.0,
                 "electric_flux_density_x": 0.0, "electric_flux_density_y": 0.0,
-                "electric_flux_density_magnitude": 0.0, "electric_energy_density": 0.0,
-                "stored_energy": 0.0
+                "electric_flux_density_magnitude": 0.0, "electric_energy_density": 1700000.0,
+                "stored_energy": 1.53
             }],
             "max_potential": 0.0, "max_electric_field": 1000.0,
-            "max_flux_density": 0.0, "max_electric_energy_density": 0.0,
-            "total_stored_energy": 0.0
+            "max_flux_density": 0.0, "max_electric_energy_density": 1700000.0,
+            "total_stored_energy": 1.53
         }))
         .expect("electrostatic result")
     }

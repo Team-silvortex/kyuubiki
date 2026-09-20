@@ -1,8 +1,33 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Bounded local scalar-plane and electric-conduction regression: reference invariance, split-quad energy, terminal/contact power recovery and explicit Joule-to-nodal-heat transfer. Includes a scalar precompute microbenchmark only. No installed, cross-platform, million-node or general material qualification claim.",
+  "summary": "Bounded local scalar-plane and SDK electrothermal projection regression: reference invariance, split-quad energy, terminal/contact power recovery, integrated dielectric loss and checked Joule-to-nodal-heat transfer. Includes a scalar precompute microbenchmark only. No installed, cross-platform, million-node or general material qualification claim.",
   "evidence_claims": [
+    {
+      "id": "composite-electrothermal-heat-projection",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/material_composite_electrothermal.rs",
+        "workers/rust/crates/headless-sdk/src/material_composite_current.rs",
+        "workers/rust/crates/headless-sdk/src/material_composite_joule.rs",
+        "workers/rust/crates/headless-sdk/src/material_composite_heat_loads.rs",
+        "workers/rust/crates/cli/tests/composite_heat_projection.rs",
+        "config/operator-validation-profiles/electromagnetic.json",
+        "reports/composite-heat-projection-20260920.md"
+      ],
+      "required_text": [
+        "opposing_subcell_fields_produce_nonzero_dielectric_heat_and_temperature",
+        "shared_nodes_accumulate_both_regions_without_double_counting_existing_loads",
+        "tiny_positive_power_is_never_mislabeled_as_a_conserved_zero",
+        "explicit terminal heat mappings",
+        "Eight of the first nine regressions failed before the fix.",
+        "No interface heat mapping or general material qualification is claimed."
+      ]
+    },
     {
       "id": "electric-conduction-reference-current-and-network-power",
       "status": "proven",

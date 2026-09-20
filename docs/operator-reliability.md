@@ -1103,6 +1103,19 @@ electrothermal feedback, a large-mesh benchmark, or broader qualification.
 See the [bounded regression report](../reports/electric-conduction-reference-20260920.md)
 for reproduction commands, tolerances, and floating-point limits.
 
+The Rust study-level heat projectors now carry the integrated-energy contract
+through to dielectric heating: spatial `E_rms^2 = 2 * energy_density / epsilon`,
+not the squared mean field vector. Joule projections check finite, non-negative
+source powers and actual per-node added loads, rejecting swallowed increments
+instead of allowing a `NaN` or tiny-power comparison to pass. Region and total
+power accounting use measured increments rather than unconditional zero errors.
+Unmapped contacts and finite-impedance terminals both fail explicitly. Equal
+four-node power lumping is retained; this is not subcell source quadrature or
+new interface heat-mapping support. Dielectric distribution replaces seed loads,
+then Joule heating adds to them. The
+[projection regression report](../reports/composite-heat-projection-20260920.md)
+records the local SDK/solver evidence without changing release qualifications.
+
 `solve.frame_3d` is now qualified for the current single-member cantilever
 scope. The retained evidence derives the Euler-Bernoulli displacement, slope,
 root moment, bending stress, and strain-energy formulas for an x-aligned 3D

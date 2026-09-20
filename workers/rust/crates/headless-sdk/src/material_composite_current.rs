@@ -1,3 +1,6 @@
+use crate::material_composite_heat_loads::{
+    add_uniform_quad_power, added_power, power_relative_error, sum_power, validate_seed_loads,
+};
 use kyuubiki_protocol::{
     ElectricConductionPlaneQuadElementInput, SolveElectricConductionPlaneQuad2dRequest,
     SolveElectricConductionPlaneQuad2dResult, SolveHeatPlaneQuad2dRequest,
@@ -78,7 +81,7 @@ pub fn temperature_adjusted_composite_current_request(
             + region.resistivity_temperature_coefficient_1_k
                 * (temperature - region.reference_temperature_c);
         let resistivity = region.reference_resistivity_ohm_m * scale;
-        if !resistivity.is_finite() || resistivity <= 0.0 {
+        if !resistivity.is_finite() || resistivity <= 0.0 || !resistivity.recip().is_finite() {
             return Err(format!(
                 "current feedback produced invalid resistivity for {}",
                 region.element_id
@@ -112,17 +115,19 @@ pub fn project_composite_solved_current_to_heat(
     String,
 > {
     validate_spec(spec)?;
-    if !current.contact_interfaces.is_empty() {
+    if !current.contact_interfaces.is_empty() || !current.input.contact_interfaces.is_empty() {
         return Err(
             "composite current-to-heat projection requires explicit contact heat mappings"
                 .to_string(),
         );
     }
-    let before = heat_seed
-        .nodes
-        .iter()
-        .map(|node| node.heat_load)
-        .sum::<f64>();
+    if !current.terminals.is_empty() || !current.input.terminals.is_empty() {
+        return Err(
+            "composite current-to-heat projection requires explicit terminal heat mappings".into(),
+        );
+    }
+    validate_seed_loads(heat_seed)?;
+    validate_current_summary(current)?;
     let mut request = heat_seed.clone();
     let mut regions = Vec::with_capacity(spec.regions.len());
     for region in &spec.regions {
@@ -148,14 +153,35 @@ pub fn project_composite_solved_current_to_heat(
                 )
             })?;
         validate_geometry(current, heat_seed, input, target)?;
-        let target_nodes = [target.node_i, target.node_j, target.node_k, target.node_l];
-        for index in target_nodes {
-            request
-                .nodes
-                .get_mut(index)
-                .ok_or_else(|| format!("heat element {} has an unknown node", target.id))?
-                .heat_load += source.joule_power_w / 4.0;
+        let source_volume_m3 = source.area_m2 * input.thickness;
+        if !input.electrical_conductivity_s_m.is_finite()
+            || input.electrical_conductivity_s_m <= 0.0
+            || !source.area_m2.is_finite()
+            || source.area_m2 <= 0.0
+            || !input.thickness.is_finite()
+            || input.thickness <= 0.0
+            || !source_volume_m3.is_finite()
+            || source_volume_m3 <= 0.0
+            || [
+                source.electric_field_magnitude_v_m,
+                source.rms_electric_field_magnitude_v_m,
+                source.peak_electric_field_magnitude_v_m,
+                source.current_density_magnitude_a_m2,
+                source.rms_current_density_magnitude_a_m2,
+                source.peak_current_density_magnitude_a_m2,
+                source.volumetric_joule_heating_w_m3,
+            ]
+            .iter()
+            .any(|value| !value.is_finite() || *value < 0.0)
+        {
+            return Err(format!(
+                "current element {} has invalid field or geometry",
+                region.element_id
+            ));
         }
+        let target_nodes = [target.node_i, target.node_j, target.node_k, target.node_l];
+        let distributed_heat_load_w =
+            add_uniform_quad_power(&mut request, target_nodes, source.joule_power_w)?;
         regions.push(CompositeCurrentRegionProjection {
             element_id: region.element_id.clone(),
             coupling_temperature_c: coupling_temperature(
@@ -170,20 +196,19 @@ pub fn project_composite_solved_current_to_heat(
             rms_current_density_magnitude_a_m2: source.rms_current_density_magnitude_a_m2,
             peak_current_density_magnitude_a_m2: source.peak_current_density_magnitude_a_m2,
             volumetric_joule_heating_w_m3: source.volumetric_joule_heating_w_m3,
-            source_volume_m3: source.area_m2 * input.thickness,
+            source_volume_m3,
             joule_power_w: source.joule_power_w,
-            distributed_heat_load_w: source.joule_power_w,
-            energy_balance_relative_error: 0.0,
+            distributed_heat_load_w,
+            energy_balance_relative_error: power_relative_error(
+                distributed_heat_load_w,
+                source.joule_power_w,
+            ),
         });
     }
-    let total_joule_loss_w = regions
-        .iter()
-        .map(|region| region.joule_power_w)
-        .sum::<f64>();
-    let after = request.nodes.iter().map(|node| node.heat_load).sum::<f64>();
-    let distributed_total_heat_load_w = after - before;
+    let total_joule_loss_w = sum_power(regions.iter().map(|region| region.joule_power_w))?;
+    let distributed_total_heat_load_w = added_power(heat_seed, &request)?;
     let energy_balance_relative_error =
-        relative_error(distributed_total_heat_load_w, total_joule_loss_w);
+        power_relative_error(distributed_total_heat_load_w, total_joule_loss_w);
     if energy_balance_relative_error > 1.0e-12 {
         return Err("solved current heat projection lost energy".to_string());
     }
@@ -194,6 +219,9 @@ pub fn project_composite_solved_current_to_heat(
         .collect::<Vec<_>>();
     let boundary_voltage_span_v = potentials.iter().copied().fold(f64::NEG_INFINITY, f64::max)
         - potentials.iter().copied().fold(f64::INFINITY, f64::min);
+    if !boundary_voltage_span_v.is_finite() || boundary_voltage_span_v < 0.0 {
+        return Err("current result requires a finite voltage span".into());
+    }
     Ok((
         request,
         CompositeCurrentToHeatProjection {
@@ -289,10 +317,30 @@ fn validate_geometry(
     Ok(())
 }
 
-fn relative_error(actual: f64, expected: f64) -> f64 {
-    if expected.abs() <= f64::EPSILON {
-        actual.abs()
-    } else {
-        (actual - expected).abs() / expected.abs()
+fn validate_current_summary(
+    current: &SolveElectricConductionPlaneQuad2dResult,
+) -> Result<(), String> {
+    if current
+        .nodes
+        .iter()
+        .any(|node| !node.electric_potential_v.is_finite())
+        || [
+            current.max_current_density_a_m2,
+            current.total_injected_current_a,
+            current.total_extracted_current_a,
+            current.current_balance_relative_error,
+            current.max_free_current_residual_a,
+            current.free_current_residual_relative_error,
+            current.total_electrical_input_power_w,
+            current.power_balance_relative_error,
+            current.total_source_power_w,
+            current.total_dissipated_power_w,
+            current.source_power_balance_relative_error,
+        ]
+        .iter()
+        .any(|value| !value.is_finite() || *value < 0.0)
+    {
+        return Err("current projection requires finite non-negative summary values".into());
     }
+    Ok(())
 }

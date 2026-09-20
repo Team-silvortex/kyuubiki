@@ -302,6 +302,26 @@ All three SDKs expose the same conceptual split:
 - `Session`
 - `AgentClient`
 
+## Rust Electrothermal Projection
+
+The study-level Rust helpers have an explicit load-order contract:
+
+1. `project_composite_dielectric_loss_to_heat` builds dielectric-only nodal
+   loads, replacing seed loads. Its spatial RMS field comes from integrated
+   electric energy, so opposing subcell fields do not erase dielectric heating.
+2. `project_composite_solved_current_to_heat` or
+   `project_composite_joule_heating_to_heat` adds selected conductor power to
+   those loads. Finite cooling loads remain valid; evidence reports actual
+   nodal increments rather than intended power alone.
+3. Submit the resulting heat model to the solver, then use the existing
+   thermal expansion projection or temperature-feedback helpers as needed.
+
+The helpers return errors for nonfinite/negative powers, unrepresentable
+increments, and missing contact/terminal heat mappings. They do not silently
+drop interface losses or mutate the input seed on failure. Equal four-node
+power lumping remains an approximation, not subcell source quadrature. See the
+[bounded regression report](../reports/composite-heat-projection-20260920.md).
+
 ## Design goals
 
 - protocol-driven rather than implementation-driven

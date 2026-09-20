@@ -128,7 +128,8 @@
         "rotated_orientation_regression",
         "material_parameter_provenance",
         "manufactured_linear_field_refinement",
-        "scalar_reference_and_split_quad_energy_regression"
+        "scalar_reference_and_split_quad_energy_regression",
+        "integrated_energy_to_dielectric_heat_projection"
       ],
       "formal_invariants": [
         "electric_field_equals_negative_potential_gradient",
@@ -138,7 +139,8 @@
         "stored_energy_scales_with_area_and_thickness",
         "refinement_preserves_electromagnetic_plane_field_flux_and_energy",
         "common_scalar_reference_preserves_fields_and_energy",
-        "split_quad_energy_integrates_each_triangle_before_averaging"
+        "split_quad_energy_integrates_each_triangle_before_averaging",
+        "dielectric_loss_uses_integrated_squared_field_not_squared_mean_vector"
       ],
       "evidence_paths": [
         "config/operator-reliability/electromagnetic.json",
@@ -154,7 +156,11 @@
         "workers/rust/crates/solver/tests/magnetostatic_plane_input_reliability.rs",
         "workers/rust/crates/solver/tests/magnetostatic_plane_triangle_2d_review.rs",
         "workers/rust/crates/solver/tests/magnetostatic_plane_quad_2d_review.rs",
-        "workers/rust/crates/solver/tests/scalar_plane_reference_invariance.rs"
+        "workers/rust/crates/solver/tests/scalar_plane_reference_invariance.rs",
+        "workers/rust/crates/headless-sdk/src/material_composite_electrothermal.rs",
+        "workers/rust/crates/headless-sdk/src/material_composite_heat_loads.rs",
+        "workers/rust/crates/cli/tests/composite_heat_projection.rs",
+        "reports/composite-heat-projection-20260920.md"
       ],
       "commands": [
         {
@@ -206,6 +212,11 @@
           "id": "scalar-plane-reference-and-energy",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test scalar_plane_reference_invariance -- --nocapture"
+        },
+        {
+          "id": "composite-heat-projection",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test composite_heat_projection -- --nocapture"
         }
       ]
     },
@@ -225,6 +236,7 @@
         "common_potential_reference_invariance",
         "sparse_current_driven_patch_with_all_preconditioners",
         "explicit_joule_to_nodal_heat_workflow",
+        "finite_conservative_nodal_heat_projection",
         "invalid_quad_topology_rejection",
         "rpc_and_workflow_contract"
       ],
@@ -239,6 +251,8 @@
         "common_potential_shift_preserves_fields_currents_and_network_power",
         "fixed_electrode_net_current_survives_large_source_reaction_cancellation",
         "invalid_relative_potential_range_and_nonfinite_interface_conductance_are_rejected",
+        "actual_nodal_heat_increments_are_finite_and_conserve_selected_joule_power",
+        "unmapped_contact_and_terminal_heating_is_rejected",
         "degenerate_repeated_and_self_intersecting_quads_fail_before_assembly",
         "every_connected_component_is_anchored_by_fixed_potential_or_finite_impedance_terminal"
       ],
@@ -255,7 +269,12 @@
         "workers/rust/crates/cli/src/tests/electric_conduction_rpc.rs",
         "workers/rust/crates/engine/tests/electric_conduction_operator.rs",
         "workers/rust/crates/headless-sdk/src/contract_tests.rs",
-        "reports/electric-conduction-reference-20260920.md"
+        "reports/electric-conduction-reference-20260920.md",
+        "workers/rust/crates/headless-sdk/src/material_composite_current.rs",
+        "workers/rust/crates/headless-sdk/src/material_composite_joule.rs",
+        "workers/rust/crates/headless-sdk/src/material_composite_heat_loads.rs",
+        "workers/rust/crates/cli/tests/composite_heat_projection.rs",
+        "reports/composite-heat-projection-20260920.md"
       ],
       "commands": [
         {
@@ -292,6 +311,11 @@
           "id": "electric-conduction-headless-contract",
           "kind": "contract",
           "command": "cd workers/rust && cargo test -p kyuubiki-headless-sdk direct_fem -- --nocapture"
+        },
+        {
+          "id": "composite-heat-projection",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test composite_heat_projection -- --nocapture"
         }
       ]
     }
