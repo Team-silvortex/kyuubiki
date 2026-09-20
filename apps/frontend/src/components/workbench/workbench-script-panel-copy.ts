@@ -1,4 +1,7 @@
+import { workbenchScriptPanelCopyEl } from "./workbench-script-panel-copy-el";
+
 export const workbenchScriptPanelCopy = {
+  el: workbenchScriptPanelCopyEl,
   en: {
     title: "Pwdt",
     subtitle: "Python WASM DSL Tooling powered by Pyodide and the registered browser action catalog.",
@@ -600,4 +603,12 @@ export const workbenchScriptPanelCopy = {
       history: "History",
       viewport: "Viewport", data: "Data", macro: "Macro",
     },},} as const;
-export type WorkbenchScriptPanelCopyEntry = (typeof workbenchScriptPanelCopy)["en"];
+type WidenText<T> = { [K in keyof T]: T[K] extends string ? string : WidenText<T[K]> };
+export type WorkbenchScriptPanelCopyEntry = WidenText<(typeof workbenchScriptPanelCopy)["en"]>;
+
+const scriptPanelCopies: Record<string, WorkbenchScriptPanelCopyEntry> = workbenchScriptPanelCopy;
+
+export function getWorkbenchScriptPanelCopy(language: string): WorkbenchScriptPanelCopyEntry {
+  const key = language.trim().toLowerCase().replace(/_/g, "-");
+  return scriptPanelCopies[key] ?? scriptPanelCopies[key.split("-")[0]] ?? scriptPanelCopies.en;
+}

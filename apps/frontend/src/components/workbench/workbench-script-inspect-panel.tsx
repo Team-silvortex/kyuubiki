@@ -9,6 +9,7 @@ import type { WorkbenchScriptActionLogEntry, WorkbenchScriptSnapshot } from "@/l
 type InspectMode = "output" | "timeline" | "snapshot";
 
 type WorkbenchScriptInspectPanelProps = {
+  initialMode?: InspectMode;
   actionCatalogCount: number;
   actionLog: WorkbenchScriptActionLogEntry[];
   continueTimelineFromEntry: (entry: WorkbenchScriptActionLogEntry) => void;
@@ -24,6 +25,7 @@ type WorkbenchScriptInspectPanelProps = {
 };
 
 export function WorkbenchScriptInspectPanel({
+  initialMode = "output",
   actionCatalogCount,
   actionLog,
   continueTimelineFromEntry,
@@ -37,7 +39,7 @@ export function WorkbenchScriptInspectPanel({
   scriptCode,
   snapshot,
 }: WorkbenchScriptInspectPanelProps) {
-  const [mode, setMode] = useState<InspectMode>("output");
+  const [mode, setMode] = useState<InspectMode>(initialMode);
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
   const [includedEntryIds, setIncludedEntryIds] = useState<string[]>([]);
   const selectedEntry = actionLog.find((entry) => entry.id === selectedActionId) ?? actionLog[0] ?? null;

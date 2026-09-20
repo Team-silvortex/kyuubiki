@@ -1,6 +1,9 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
+import { WorkbenchListPager, WorkbenchSubpanelNav } from "../workbench-compact-panels";
+import { getWorkbenchCompactPanelCopy } from "../workbench-compact-panel-copy";
+import type { WorkbenchCopy } from "../workbench-copy";
 
 type SecurityAuditEntryRow = {
   id: string;
@@ -13,6 +16,8 @@ type SecurityAuditEntryRow = {
 };
 
 type WorkbenchSecurityAuditCardProps = {
+  language: string;
+  ui: Pick<WorkbenchCopy, "previousPage" | "nextPage" | "clearFilters" | "exportData">;
   title: string;
   countLabel: string;
   emptyLabel: string;
@@ -60,6 +65,8 @@ type WorkbenchSecurityAuditCardProps = {
 };
 
 export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCard({
+  language,
+  ui,
   title,
   countLabel,
   emptyLabel,
@@ -105,17 +112,48 @@ export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCa
   onExportCsv,
   entries,
 }: WorkbenchSecurityAuditCardProps) {
+  const [page, setPage] = useState("events");
+  const [listPage, setListPage] = useState(0);
+  const compact = getWorkbenchCompactPanelCopy(language);
+  const pages = Math.max(1, Math.ceil(entries.length / 10));
+  const visiblePage = Math.min(listPage, pages - 1);
+  useEffect(() => setListPage(0), [windowValue, sourceValue, riskValue, statusValue, actionValue]);
+  const activeFilters = [
+    { label: windowLabel, value: windowValue, options: windowOptions },
+    { label: sourceLabel, value: sourceValue, options: sourceOptions },
+    { label: riskLabel, value: riskValue, options: riskOptions },
+    { label: statusLabel, value: statusValue, options: statusOptions },
+    { label: actionLabel, value: actionValue, options: [] },
+  ].filter((filter) => filter.value);
   return (
-    <section className="sidebar-card sidebar-card--compact">
+    <section className="sidebar-card sidebar-card--compact workbench-audit-card" data-workbench-audit="panel">
       <div className="card-head">
         <h2>{title}</h2>
         <span>{countLabel}</span>
       </div>
-      <p className="card-copy">{sessionLabel}</p>
+      <div className="audit-primary-actions">
+        <button className="ghost-button ghost-button--compact" data-workbench-audit-action="refresh" onClick={onRefresh} type="button">{refreshLabel}</button>
+        <details className="audit-export-menu">
+          <summary className="ghost-button ghost-button--compact" data-workbench-audit-action="exports-toggle">{ui.exportData}</summary>
+          <div className="button-row">
+            <button className="ghost-button ghost-button--compact" data-workbench-audit-action="export-json" onClick={onExport} type="button">{exportLabel}</button>
+            <button className="ghost-button ghost-button--compact" data-workbench-audit-action="export-csv" onClick={onExportCsv} type="button">{exportCsvLabel}</button>
+          </div>
+        </details>
+      </div>
+      <WorkbenchSubpanelNav label={title} value={page} onChange={setPage} attribute="data-workbench-audit-page"
+        pages={[{ id: "events", label: compact.events }, { id: "filters", label: `${compact.filters} (${activeFilters.length})` },
+          { id: "summary", label: summaryTitle }, { id: "facets", label: compact.facets }]} />
+      {activeFilters.length ? <div className="workbench-audit-filter-summary" data-workbench-audit="active-filters">
+        {activeFilters.map((filter) => <span className="protocol-chip" key={filter.label}>
+          {filter.label}: {filter.options.find((option) => option.value === filter.value)?.label ?? filter.value}
+        </span>)}
+      </div> : null}
+      {page === "filters" ? <div data-workbench-audit-content="filters">
       <div className="form-grid compact">
         <label>
           <span>{windowLabel}</span>
-          <select value={windowValue} onChange={(event) => onWindowChange(event.target.value)}>
+          <select data-workbench-audit-filter="window" value={windowValue} onChange={(event) => onWindowChange(event.target.value)}>
             {windowOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -125,7 +163,7 @@ export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCa
         </label>
         <label>
           <span>{sourceLabel}</span>
-          <select value={sourceValue} onChange={(event) => onSourceChange(event.target.value)}>
+          <select data-workbench-audit-filter="source" value={sourceValue} onChange={(event) => onSourceChange(event.target.value)}>
             {sourceOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -135,7 +173,7 @@ export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCa
         </label>
         <label>
           <span>{riskLabel}</span>
-          <select value={riskValue} onChange={(event) => onRiskChange(event.target.value)}>
+          <select data-workbench-audit-filter="risk" value={riskValue} onChange={(event) => onRiskChange(event.target.value)}>
             {riskOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -145,7 +183,7 @@ export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCa
         </label>
         <label>
           <span>{statusLabel}</span>
-          <select value={statusValue} onChange={(event) => onStatusChange(event.target.value)}>
+          <select data-workbench-audit-filter="status" value={statusValue} onChange={(event) => onStatusChange(event.target.value)}>
             {statusOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -155,9 +193,15 @@ export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCa
         </label>
         <label>
           <span>{actionLabel}</span>
-          <input value={actionValue} onChange={(event) => onActionChange(event.target.value)} />
+          <input data-workbench-audit-filter="action" value={actionValue} onChange={(event) => onActionChange(event.target.value)} />
         </label>
       </div>
+      <button className="ghost-button ghost-button--compact" data-workbench-audit-action="clear-filters" type="button"
+        disabled={!activeFilters.length} onClick={() => {
+          onWindowChange(""); onSourceChange(""); onRiskChange(""); onStatusChange(""); onActionChange("");
+        }}>{ui.clearFilters}</button>
+      </div> : null}
+      {page === "summary" ? <div data-workbench-audit-content="summary">
       <div className="card-section">
         <div className="card-head">
           <h3>{summaryTitle}</h3>
@@ -193,100 +237,41 @@ export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCa
           <p className="card-copy">{trendEmptyLabel}</p>
         )}
       </div>
-      <div className="card-section">
-        <div className="card-head">
-          <h3>{sourceStatusTitle}</h3>
-        </div>
-        {sourceStatusFacets.length > 0 ? (
-          <div className="protocol-chip-row">
-            {sourceStatusFacets.map((facet) => (
-              <span className="protocol-chip" key={facet.key}>
-                {`${facet.label} · ${facet.value}`}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <p className="card-copy">{facetEmptyLabel}</p>
-        )}
-      </div>
-      <div className="card-section">
-        <div className="card-head">
-          <h3>{studyFacetTitle}</h3>
-        </div>
-        {studyFacets.length > 0 ? (
-          <div className="protocol-chip-row">
-            {studyFacets.map((facet) => (
-              <span className="protocol-chip" key={facet.key}>
-                {`${facet.label} · ${facet.value}`}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <p className="card-copy">{facetEmptyLabel}</p>
-        )}
-      </div>
-      <div className="card-section">
-        <div className="card-head">
-          <h3>{projectFacetTitle}</h3>
-        </div>
-        {projectFacets.length > 0 ? (
-          <div className="protocol-chip-row">
-            {projectFacets.map((facet) => (
-              <span className="protocol-chip" key={facet.key}>
-                {`${facet.label} · ${facet.value}`}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <p className="card-copy">{facetEmptyLabel}</p>
-        )}
-      </div>
-      <div className="card-section">
-        <div className="card-head">
-          <h3>{modelVersionFacetTitle}</h3>
-        </div>
-        {modelVersionFacets.length > 0 ? (
-          <div className="protocol-chip-row">
-            {modelVersionFacets.map((facet) => (
-              <span className="protocol-chip" key={facet.key}>
-                {`${facet.label} · ${facet.value}`}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <p className="card-copy">{facetEmptyLabel}</p>
-        )}
-      </div>
-      <div className="button-row">
-        <button className="ghost-button ghost-button--compact" onClick={onRefresh} type="button">
-          {refreshLabel}
-        </button>
-        <button className="ghost-button ghost-button--compact" onClick={onExport} type="button">
-          {exportLabel}
-        </button>
-        <button className="ghost-button ghost-button--compact" onClick={onExportCsv} type="button">
-          {exportCsvLabel}
-        </button>
-      </div>
+      </div> : null}
+      {page === "facets" ? <div data-workbench-audit-content="facets">
+        {[
+          { id: "source", title: sourceStatusTitle, facets: sourceStatusFacets },
+          { id: "study", title: studyFacetTitle, facets: studyFacets },
+          { id: "project", title: projectFacetTitle, facets: projectFacets },
+          { id: "version", title: modelVersionFacetTitle, facets: modelVersionFacets },
+        ].map((group) => <section className="card-section" key={group.id}>
+          <div className="card-head"><h3>{group.title}</h3></div>
+          {group.facets.length ? <div className="protocol-chip-row">
+            {group.facets.map((facet) => <span className="protocol-chip" key={facet.key}>
+              {`${facet.label} · ${facet.value}`}
+            </span>)}
+          </div> : <p className="card-copy">{facetEmptyLabel}</p>}
+        </section>)}
+      </div> : null}
+      {page === "events" ? <div data-workbench-audit-content="events">
+      <p className="card-copy">{sessionLabel}</p>
+      <WorkbenchListPager page={visiblePage} pages={pages} previousLabel={ui.previousPage} nextLabel={ui.nextPage} onChange={setListPage} />
       {entries.length === 0 ? (
         <p className="card-copy">{emptyLabel}</p>
       ) : (
         <div className="script-panel__catalog">
-          {entries.map((entry) => (
-            <article className="script-panel__action" key={entry.id}>
-              <div className="script-panel__action-head">
-                <strong>{entry.action}</strong>
-                <span>{entry.status}</span>
-              </div>
-              <p className="card-copy">{entry.note}</p>
-              <div className="script-panel__payload">
-                <span>{entry.source}</span>
-                <code>{`${entry.risk} · ${entry.at}`}</code>
-              </div>
+          {entries.slice(visiblePage * 10, (visiblePage + 1) * 10).map((entry) => (
+            <article className="script-panel__action" key={entry.id} data-workbench-audit-event={entry.id}>
+              <details>
+                <summary className="audit-event-summary"><strong>{entry.action}</strong><small>{entry.status} · {entry.at}</small></summary>
+                <p className="card-copy">{entry.note}</p>
+                <div className="script-panel__payload"><span>{entry.source}</span><code>{entry.risk}</code></div>
+              </details>
             </article>
           ))}
         </div>
       )}
+      </div> : null}
     </section>
   );
 });

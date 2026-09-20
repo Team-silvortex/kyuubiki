@@ -3,9 +3,15 @@
 import { useMemo, useState } from "react";
 import type { FrontendMacroAssetRecord } from "@/components/workbench/workbench-headless-workflow-panel";
 import type { WorkbenchScriptPanelCopyEntry } from "@/components/workbench/workbench-script-panel-copy";
+import { WorkbenchCodeEditor } from "./workbench-code-editor";
 
 type WorkbenchScriptAuthorPanelProps = {
   copy: WorkbenchScriptPanelCopyEntry;
+  mode: AuthorMode;
+  language: string;
+  onRunScript: () => void;
+  busy: boolean;
+  onToggleRecording: () => void;
   deriveFrontendMacroAsset: (asset: FrontendMacroAssetRecord) => void;
   exportMacroDraftJson: () => void;
   frontendMacroAssets: FrontendMacroAssetRecord[];
@@ -31,6 +37,11 @@ function stablePayload(value: Record<string, unknown> | undefined) {
 
 export function WorkbenchScriptAuthorPanel({
   copy,
+  mode,
+  language,
+  onRunScript,
+  busy,
+  onToggleRecording,
   deriveFrontendMacroAsset,
   exportMacroDraftJson,
   frontendMacroAssets,
@@ -41,7 +52,6 @@ export function WorkbenchScriptAuthorPanel({
   scriptCode,
   setScriptCode,
 }: WorkbenchScriptAuthorPanelProps) {
-  const [mode, setMode] = useState<AuthorMode>("script");
   const [compareLeftId, setCompareLeftId] = useState<string | null>(null);
   const [compareRightId, setCompareRightId] = useState<string | null>(null);
   const compareLeftAsset = frontendMacroAssets.find((asset) => asset.assetId === compareLeftId) ?? null;
@@ -73,34 +83,21 @@ export function WorkbenchScriptAuthorPanel({
   const changedStepCount = comparisonRows.filter((row) => row.status !== "same").length;
 
   return (
-    <section className="sidebar-card sidebar-card--compact">
+    <section className="sidebar-card sidebar-card--compact pwdt-author-card">
       <div className="card-head">
-        <h2>{copy.author}</h2>
+        <h2>{mode === "script" ? copy.editor : copy.recordMode}</h2>
         <span>{mode === "script" ? "Pyodide" : copy.recordMode}</span>
       </div>
-      <div className="panel-tabs panel-tabs--wide">
-        <button className={`panel-tab${mode === "script" ? " panel-tab--active" : ""}`} onClick={() => setMode("script")} type="button">
-          {copy.scriptMode}
-        </button>
-        <button className={`panel-tab${mode === "record" ? " panel-tab--active" : ""}`} onClick={() => setMode("record")} type="button">
-          {copy.recordMode}
-        </button>
-      </div>
       {mode === "script" ? (
-        <>
-          <p className="card-copy">{copy.authorScriptHint}</p>
-          <textarea
-            className="script-panel__editor"
-            rows={18}
-            spellCheck={false}
-            value={scriptCode}
-            onChange={(event) => setScriptCode(event.target.value)}
-          />
-        </>
+        <WorkbenchCodeEditor value={scriptCode} onChange={setScriptCode} language={language}
+          syntax="python" label={copy.editor} onRun={onRunScript} busy={busy} />
       ) : (
         <>
           <p className="card-copy">{copy.authorRecordHint}</p>
           <div className="button-row">
+            <button className={`ghost-button${recordingMode ? " ghost-button--active" : ""}`} onClick={onToggleRecording} type="button">
+              {recordingMode ? copy.stopRecording : copy.startRecording}
+            </button>
             <button className="ghost-button" onClick={insertMacroDraftFromLog} type="button">
               {copy.insertMacroDraft}
             </button>

@@ -48,10 +48,27 @@ flows can consume the same catalog and pack envelopes.
 Pack availability is not full translation coverage. The 30 non-built-in packs
 are available locally, but older payloads still contain untranslated English,
 including English padded with invisible characters. The primary Workbench
-navigation, project actions and rendering controls now have reviewed local
-overrides; Hub project-package operations and Installer shell navigation and
+navigation, project actions and rendering controls have local
+overrides, but their key coverage does not certify language correctness;
+Hub project-package operations and Installer shell navigation and
 actions are covered separately. Deeper panels, explanatory text, runtime errors
 and some built-in Spanish copy still need translation.
+
+The September 2026 wrong-language audit found Swedish prose copied into
+non-Swedish Workbench extension fragments. The four `extended-01` through
+`extended-04` fragments are corrected for `el`, `cs`, `da`, `fi`, `id`, `ms`,
+`no`, `ro`, and `sw`. Each locale covers 378 leaf strings, including validation
+errors, solver diagnostics, modeling tools and keyboard help. `ar`, `bn`, `fa`,
+`he`, and `hi` still require the same correction; do not describe all 30 packs
+as translation-complete. Feature-specific panels outside these fragments need
+their own review, and linguistic quality still benefits from native-speaker review.
+
+The locale regression checks source fragments and generated dictionaries,
+interpolation tokens, units, shortcut arrays, stale official-pack refresh,
+and browser language-switch isolation. It rejects characteristic Swedish
+phrases and copied Swedish sentences while allowing genuine shared technical
+terms, numbers and Scandinavian spellings. This is a targeted contamination
+regression, not a general-purpose language detector or a full-product quality score.
 
 Installer retains the Hub pack availability adapter, but no longer borrows
 unrelated Hub captions for actions such as checking services or initializing a

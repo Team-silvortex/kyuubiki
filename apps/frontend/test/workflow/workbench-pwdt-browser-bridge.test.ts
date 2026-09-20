@@ -136,6 +136,16 @@ test("Pwdt browser bridge resolves UI contract selectors for stable automation",
     assert.equal(bridge.uiSelector("storeManifestEntry", "solve.bar_1d"), '[data-workbench-store-manifest-entry-id="solve.bar_1d"]');
     assert.equal(bridge.uiSelector("storeManifestAction", "remove"), '[data-workbench-store-manifest-action="remove"]');
     assert.equal(bridge.uiSelector("systemSettingsPage", "overview"), '[data-workbench-system-settings-page="overview"]');
+    assert.equal(bridge.uiSelector("pwdtWorkspace"), '[data-workbench-pwdt="workspace"]');
+    assert.equal(bridge.uiSelector("pwdtExpand"), '[data-workbench-pwdt-expand="true"]');
+    assert.equal(bridge.uiSelector("pwdtPage", "script"), '[data-workbench-pwdt-page="script"]');
+    assert.equal(bridge.uiSelector("materialPage", "browse"), '[data-workbench-material-page="browse"]');
+    assert.equal(bridge.uiSelector("materialControl", "name"), '[data-workbench-material-control="name"]');
+    assert.equal(bridge.uiSelector("runtimeStackPage", "storage"), '[data-workbench-runtime-stack-page="storage"]');
+    assert.equal(bridge.uiSelector("runtimeNavigation"), '[data-workbench-runtime-menu="toggle"]');
+    assert.equal(bridge.uiSelector("auditPage", "filters"), '[data-workbench-audit-page="filters"]');
+    assert.equal(bridge.uiSelector("auditFilter", "source"), '[data-workbench-audit-filter="source"]');
+    assert.equal(bridge.uiSelector("auditAction", "export-csv"), '[data-workbench-audit-action="export-csv"]');
     assert.equal(bridge.uiSelector("libraryProjectsPanel"), '[data-workbench-library-projects="panel"]');
     assert.equal(bridge.uiSelector("libraryProjectAction", "create"), '[data-workbench-library-project-action="create"]');
     assert.equal(bridge.uiSelector("libraryProjectField", "name"), '[data-workbench-library-project-field="name"]');

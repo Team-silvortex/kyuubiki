@@ -202,6 +202,7 @@ const material: Record<string, MaterialCopy> = {
 };
 
 const materialLibrary: Record<string, WorkbenchMaterialLibraryCopy> = {
+  el: { title: "Βιβλιοθήκη υλικών", addMaterial: "Προσθήκη υλικού", newCustom: "Νέο προσαρμοσμένο υλικό", importMaterials: "Εισαγωγή υλικών", importHint: "Υποστηρίζονται βιβλιοθήκες υλικών JSON / CSV.", show: "Εμφάνιση", hide: "Απόκρυψη", applySelected: "Εφαρμογή στο επιλεγμένο", applyAll: "Εφαρμογή σε όλα", deleteMaterial: "Διαγραφή υλικού" },
   en: { title: "Material Library", addMaterial: "Add material", newCustom: "New custom", importMaterials: "Import materials", importHint: "Accepts JSON / CSV material libraries.", show: "Show", hide: "Hide", applySelected: "Apply to selected", applyAll: "Apply to all", deleteMaterial: "Delete material" },
   zh: { title: "材料库", addMaterial: "添加材料", newCustom: "新建自定义", importMaterials: "导入材料库", importHint: "支持 JSON / CSV 材料文件。", show: "显示", hide: "隐藏", applySelected: "赋给当前单元", applyAll: "赋给全部单元", deleteMaterial: "删除材料" },
   ja: { title: "材料ライブラリ", addMaterial: "材料を追加", newCustom: "カスタム作成", importMaterials: "材料ライブラリを読み込む", importHint: "JSON / CSV の材料ライブラリに対応します。", show: "表示", hide: "非表示", applySelected: "選択要素に適用", applyAll: "全要素に適用", deleteMaterial: "材料を削除" },
@@ -214,6 +215,7 @@ const materialLibrary: Record<string, WorkbenchMaterialLibraryCopy> = {
 };
 
 const scriptErrors: Record<string, WorkbenchScriptErrorCopy> = {
+  el: { macroMissing: "Δεν βρέθηκε η ζητούμενη μακροεντολή.", linkedContextMissing: "Δεν ήταν δυνατή η εύρεση του πλαισίου της συνδεδεμένης εγγραφής δεδομένων.", linkedVersionMissing: "Αυτή η εγγραφή δεν έχει συνδεδεμένη έκδοση μοντέλου.", linkedProjectMissing: "Αυτή η εγγραφή δεν έχει συνδεδεμένο έργο." },
   en: { macroMissing: "Could not find the requested macro.", linkedContextMissing: "Could not resolve the linked data record context.", linkedVersionMissing: "This record does not have a linked model version.", linkedProjectMissing: "This record does not have a linked project." },
   zh: { macroMissing: "找不到指定的宏动作。", linkedContextMissing: "找不到关联的数据记录上下文。", linkedVersionMissing: "这条记录没有关联模型版本。", linkedProjectMissing: "这条记录没有关联项目。" },
   ja: { macroMissing: "指定されたマクロが見つかりませんでした。", linkedContextMissing: "関連するデータレコード文脈を解決できませんでした。", linkedVersionMissing: "このレコードには関連モデルバージョンがありません。", linkedProjectMissing: "このレコードには関連プロジェクトがありません。" },
@@ -226,6 +228,7 @@ const scriptErrors: Record<string, WorkbenchScriptErrorCopy> = {
 };
 
 const inspect: Record<string, WorkbenchScriptInspectCopy> = {
+  el: { layoutSummary: "Σύνοψη διάταξης", reportedAt: "Χρόνος αναφοράς", failureCode: "Κωδικός αποτυχίας", failure: "Αποτυχία", recovery: "Ανάκτηση", anchors: "Σημεία αναφοράς", activeSidebar: "Ενεργή πλευρική στήλη", runtimeTabs: "Καρτέλες περιβάλλοντος εκτέλεσης", immersive: "Καθηλωτική προβολή", overviewTab: "Καρτέλα επισκόπησης", selection3d: "Επιλογή 3D", time: "Χρόνος" },
   en: { layoutSummary: "Layout Summary", reportedAt: "reported at", failureCode: "failure code", failure: "failure", recovery: "recovery", anchors: "anchors", activeSidebar: "active sidebar", runtimeTabs: "runtime tabs", immersive: "immersive", overviewTab: "overview tab", selection3d: "3d selection", time: "Time" },
   zh: { layoutSummary: "布局摘要", reportedAt: "报告时间", failureCode: "失败代码", failure: "失败原因", recovery: "恢复建议", anchors: "锚点", activeSidebar: "当前侧栏", runtimeTabs: "运行时标签", immersive: "沉浸模式", overviewTab: "概览标签", selection3d: "3D 选择", time: "时间" },
   ja: { layoutSummary: "レイアウト要約", reportedAt: "報告時刻", failureCode: "失敗コード", failure: "失敗", recovery: "復旧", anchors: "アンカー", activeSidebar: "アクティブサイドバー", runtimeTabs: "ランタイムタブ", immersive: "没入", overviewTab: "概要タブ", selection3d: "3D 選択", time: "時刻" },
@@ -238,6 +241,7 @@ const inspect: Record<string, WorkbenchScriptInspectCopy> = {
 };
 
 const protocolAgent: Record<string, Omit<WorkbenchProtocolAgentCopy, "countLabel">> = {
+  el: { reachableAgents: "Προσβάσιμοι agents", activeLeases: "Ενεργές μισθώσεις", staleLeases: "Ληγμένες μισθώσεις" },
   en: { reachableAgents: "Reachable agents", activeLeases: "Active leases", staleLeases: "Stale leases" },
   zh: { reachableAgents: "可达代理", activeLeases: "活跃租约", staleLeases: "过期租约" },
   ja: { reachableAgents: "到達可能エージェント", activeLeases: "アクティブリース", staleLeases: "期限切れリース" },
@@ -259,6 +263,31 @@ const auditEmpty: Record<string, string> = {
   ko: "현재 필터와 일치하는 보안 이벤트가 없습니다.",
   ru: "Нет событий безопасности для текущих фильтров.",
   "zh-tw": "目前篩選下沒有安全事件。",
+  ar: "لا توجد أحداث أمنية تطابق عوامل التصفية الحالية.",
+  bn: "বর্তমান ফিল্টারের সঙ্গে মেলে এমন কোনো নিরাপত্তা ঘটনা নেই।",
+  cs: "Aktuálním filtrům neodpovídají žádné bezpečnostní události.",
+  da: "Ingen sikkerhedshændelser matcher de aktuelle filtre.",
+  el: "Δεν υπάρχουν συμβάντα ασφαλείας που να αντιστοιχούν στα τρέχοντα φίλτρα.",
+  fa: "هیچ رویداد امنیتی با فیلترهای فعلی مطابقت ندارد.",
+  fi: "Nykyisiä suodattimia vastaavia tietoturvatapahtumia ei ole.",
+  he: "אין אירועי אבטחה התואמים למסננים הנוכחיים.",
+  hi: "वर्तमान फ़िल्टर से मेल खाने वाली कोई सुरक्षा घटना नहीं है।",
+  id: "Tidak ada peristiwa keamanan yang cocok dengan filter saat ini.",
+  it: "Nessun evento di sicurezza corrisponde ai filtri attuali.",
+  ms: "Tiada peristiwa keselamatan yang sepadan dengan penapis semasa.",
+  nl: "Geen beveiligingsgebeurtenissen komen overeen met de huidige filters.",
+  no: "Ingen sikkerhetshendelser samsvarer med de gjeldende filtrene.",
+  pl: "Brak zdarzeń bezpieczeństwa pasujących do bieżących filtrów.",
+  "pt-br": "Nenhum evento de segurança corresponde aos filtros atuais.",
+  ro: "Niciun eveniment de securitate nu corespunde filtrelor curente.",
+  sv: "Inga säkerhetshändelser matchar de aktuella filtren.",
+  sw: "Hakuna matukio ya usalama yanayolingana na vichujio vya sasa.",
+  ta: "தற்போதைய வடிப்பான்களுக்குப் பொருந்தும் பாதுகாப்பு நிகழ்வுகள் எதுவும் இல்லை.",
+  th: "ไม่มีเหตุการณ์ด้านความปลอดภัยที่ตรงกับตัวกรองปัจจุบัน",
+  tr: "Geçerli filtrelerle eşleşen güvenlik olayı yok.",
+  uk: "Немає подій безпеки, що відповідають поточним фільтрам.",
+  ur: "موجودہ فلٹرز سے مطابقت رکھنے والا کوئی حفاظتی واقعہ نہیں ہے۔",
+  vi: "Không có sự kiện bảo mật nào khớp với các bộ lọc hiện tại.",
 };
 
 const projectFlow: Record<string, WorkbenchProjectFlowCopy> = {
@@ -481,7 +510,7 @@ export function getWorkbenchProtocolAgentCopy(language?: string): WorkbenchProto
 
 export function getWorkbenchRuntimeAuditEmptyLabel(language?: string): string {
   const key = normalize(language);
-  return auditEmpty[key] ?? auditEmpty[key.split("-")[0]] ?? getWorkbenchRuntimeAuditCopy(language).failed;
+  return auditEmpty[key] ?? auditEmpty[key.split("-")[0]] ?? auditEmpty.en;
 }
 
 export function getWorkbenchProjectFlowCopy(language?: string): WorkbenchProjectFlowCopy {

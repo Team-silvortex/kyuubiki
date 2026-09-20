@@ -357,6 +357,9 @@ test("Workbench System navigation preserves controlled state across deep page ro
       "Runtime panel",
     );
     for (const runtimeTab of ["overview", "control", "stack", "security", "agents", "audit", "watchdog"]) {
+      if (!(await page.locator(`[data-workbench-runtime-tab="${runtimeTab}"]`).isVisible())) {
+        await click(page, '[data-workbench-runtime-menu="toggle"]', "Runtime section menu");
+      }
       const target = await click(
         page,
         `[data-workbench-runtime-tab="${runtimeTab}"]`,
@@ -761,6 +764,9 @@ test("Workbench Pwdt preserves hydrated script and DSL sessions", async () => {
       '[data-workbench-system-settings-page="scripts"]',
       "System scripts page",
     );
+    await page.waitForFunction((source) =>
+      document.querySelector('[data-workbench-pwdt-content="script"] textarea')?.value === source, scriptCode);
+    await click(page, '[data-workbench-pwdt-page="dsl"]', "PWDT DSL subpage");
     await page.waitForFunction(
       ({ scriptCode, dslCode }) => {
         const values = [...document.querySelectorAll("textarea.script-panel__editor")]

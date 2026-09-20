@@ -1,8 +1,7 @@
 "use client";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { workbenchScriptSession } from "@/lib/scripting/workbench-script-session";
 import { WorkbenchAlertStrip } from "@/components/workbench/workbench-alert-strip";
-import { WorkbenchHeadlessWorkflowPanel } from "@/components/workbench/workbench-headless-workflow-panel";
 import type { FrontendMacroAssetRecord } from "@/components/workbench/workbench-headless-workflow-panel";
 import {
   buildDerivedMacroDraftId,
@@ -13,16 +12,15 @@ import {
   downloadTextFile,
 } from "@/components/workbench/workbench-script-panel-helpers";
 import { WorkbenchScriptAuthorPanel } from "@/components/workbench/workbench-script-author-panel";
-import { WorkbenchScriptCatalogPanel } from "@/components/workbench/workbench-script-catalog-panel";
 import { WorkbenchScriptDslCard } from "@/components/workbench/workbench-script-dsl-card";
-import { WorkbenchScriptInspectPanel } from "@/components/workbench/workbench-script-inspect-panel";
+import { WorkbenchScriptWorkspace, type WorkbenchScriptPage } from "./workbench-script-workspace";
 import { WorkbenchScriptLaunchCard } from "@/components/workbench/workbench-script-launch-card";
 import { executeWorkbenchPythonSource } from "@/components/workbench/workbench-script-panel-runtime";
 import {
   safeWorkbenchPanelStorageGetResult,
   writeWorkbenchPanelStorage,
 } from "@/components/workbench/workbench-script-panel-storage";
-import { workbenchScriptPanelCopy, type WorkbenchScriptPanelCopyEntry } from "@/components/workbench/workbench-script-panel-copy";
+import { getWorkbenchScriptPanelCopy } from "@/components/workbench/workbench-script-panel-copy";
 import {
   buildWorkbenchRecordedMacroDraft,
   buildWorkbenchRecordedMacroDraftFromEntries,
@@ -67,6 +65,9 @@ import {
   describeSensitivePresetSaveError,
 } from "@/lib/scripting/workbench-script-preset-security";
 import { serializeWorkbenchPythonLiteral } from "@/lib/scripting/workbench-script-python-format";
+const WorkbenchScriptCatalogPanel = lazy(() => import("./workbench-script-catalog-panel").then((module) => ({ default: module.WorkbenchScriptCatalogPanel })));
+const WorkbenchScriptInspectPanel = lazy(() => import("./workbench-script-inspect-panel").then((module) => ({ default: module.WorkbenchScriptInspectPanel })));
+const WorkbenchHeadlessWorkflowPanel = lazy(() => import("./workbench-headless-workflow-panel").then((module) => ({ default: module.WorkbenchHeadlessWorkflowPanel })));
 type WorkbenchScriptPanelProps = {
   language: WorkbenchScriptLanguage;
   snapshot: WorkbenchScriptSnapshot;
@@ -82,14 +83,20 @@ function stringifyPayload(payload: Record<string, unknown> | undefined): string 
   return serializeWorkbenchPythonLiteral(payload ?? {});
 }
 export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLog, recordingMode, onToggleRecordingMode, onInvokeAction }: WorkbenchScriptPanelProps) {
-  const t = (workbenchScriptPanelCopy[language as keyof typeof workbenchScriptPanelCopy] ?? workbenchScriptPanelCopy.en) as WorkbenchScriptPanelCopyEntry;
+  const t = getWorkbenchScriptPanelCopy(language);
   const [headlessFrontendMacroAssets, setHeadlessFrontendMacroAssets] = useState<FrontendMacroAssetRecord[]>([]);
   const [scriptCode, setScriptCode] = useState(DEFAULT_WORKBENCH_PYTHON);
   const [dslCode, setDslCode] = useState(DEFAULT_WORKBENCH_FRONTEND_DSL);
+  const [activePage, setActivePage] = useState<WorkbenchScriptPage>("script");
   const { output, runtimeStatus, runtimeError } = useSyncExternalStore(
     workbenchScriptSession.subscribe, workbenchScriptSession.getSnapshot, workbenchScriptSession.getServerSnapshot,
   );
   const { setOutput, setRuntimeStatus, setRuntimeError } = workbenchScriptSession;
+  const busy = runtimeStatus === "loading" || runtimeStatus === "running";
+  const insertScript = (source: string) => {
+    setScriptCode((current) => `${current.trimEnd()}\n\n${source.trimEnd()}\n`);
+    setActivePage("script");
+  };
   const [dslError, setDslError] = useState<string | null>(null);
   const [scriptStorageStatus, setScriptStorageStatus] = useState<PanelStorageStatus>("loading");
   const [dslStorageStatus, setDslStorageStatus] = useState<PanelStorageStatus>("loading");
@@ -236,19 +243,20 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     }
   };
   const insertAction = (action: WorkbenchScriptActionDefinition) => {
-    setScriptCode((current) => `${current.trimEnd()}\n\nawait ky.invoke("${action.id}", ${stringifyPayload(action.payloadExample)})\n`);
+    insertScript(`await ky.invoke("${action.id}", ${stringifyPayload(action.payloadExample)})`);
   };
   const insertMacro = (macroId: string, payload?: Record<string, unknown>) => {
-    setScriptCode((current) => `${current.trimEnd()}\n\nawait ky.run_macro("${macroId}", ${stringifyPayload(payload)})\n`);
+    insertScript(`await ky.run_macro("${macroId}", ${stringifyPayload(payload)})`);
   };
   const insertSnippet = (snippet: WorkbenchScriptSnippetDefinition, parameters?: WorkbenchScriptSnippetParameters) => {
-    setScriptCode((current) => `${current.trimEnd()}\n\n${renderWorkbenchScriptSnippet(snippet, parameters)}`);
+    insertScript(renderWorkbenchScriptSnippet(snippet, parameters));
     appendOutput(`[snippet] ${snippet.id}`);
   };
   const loadRecipeDsl = (recipe: WorkbenchScriptRecipeDefinition) => {
     const document = buildWorkbenchFrontendDslFromRecipe(recipe);
     setDslCode(JSON.stringify(document, null, 2));
     setDslError(null);
+    setActivePage("dsl");
     appendOutput(`[recipe] ${recipe.id}`);
   };
   const saveSnippetPreset = (snippet: WorkbenchScriptSnippetDefinition, parameters: WorkbenchScriptSnippetParameters) => {
@@ -319,7 +327,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       return;
     }
     setMacroDraftBuffer(draft);
-    setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(draft)}\n`);
+    insertScript(serializeWorkbenchMacroPythonSnippet(draft));
     appendOutput(`[macro] ${t.macroDraftInserted}`);
   };
   const exportMacroDraftJson = () => {
@@ -337,7 +345,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     try {
       const imported = parseWorkbenchMacroImportDocument(JSON.parse(await file.text()) as unknown);
       setMacroDraftBuffer(imported.draft);
-      setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(imported.draft)}\n`);
+      insertScript(serializeWorkbenchMacroPythonSnippet(imported.draft));
       appendOutput(`[macro] ${imported.source === "headless-workflow" ? t.headlessWorkflowImported : t.macroJsonImported}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -373,7 +381,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
   const insertPreset = (preset: WorkbenchMacroPresetRecord) => {
     setMacroDraftBuffer(preset.macro);
     setPresetName(preset.name);
-    setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(preset.macro)}\n`);
+    insertScript(serializeWorkbenchMacroPythonSnippet(preset.macro));
     appendOutput(`[preset] ${t.presetInserted}`);
   };
   const exportPresetJson = (preset: WorkbenchMacroPresetRecord) => {
@@ -388,7 +396,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
   };
   const insertExternalMacroDraft = (draft: ReturnType<typeof parseWorkbenchRecordedMacroDraft>) => {
     setMacroDraftBuffer(draft);
-    setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(draft)}\n`);
+    insertScript(serializeWorkbenchMacroPythonSnippet(draft));
     appendOutput(`[macro] ${t.macroDraftInserted}`);
   };
   const useCurrentMacroDraftAsDsl = () => {
@@ -400,11 +408,12 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     const document = buildWorkbenchFrontendDslFromMacroDraft(draft);
     setDslCode(JSON.stringify(document, null, 2));
     setDslError(null);
+    setActivePage("dsl");
     appendOutput(`[dsl] ${document.name}`);
   };
   const insertFrontendMacroAsset = (asset: FrontendMacroAssetRecord) => {
     setMacroDraftBuffer(asset.draft);
-    setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(asset.draft)}\n`);
+    insertScript(serializeWorkbenchMacroPythonSnippet(asset.draft));
     appendOutput(`[macro] ${t.frontendMacroAssetInserted}`);
   };
   const deriveFrontendMacroAsset = (asset: FrontendMacroAssetRecord) => {
@@ -417,21 +426,21 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     };
     setMacroDraftBuffer(derivedDraft);
     pushHeadlessFrontendMacroAsset(derivedDraft, "snapshot_derived");
-    setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(derivedDraft)}\n`);
+    insertScript(serializeWorkbenchMacroPythonSnippet(derivedDraft));
     appendOutput(`[macro] ${t.frontendMacroAssetDerived}`);
   };
   const restoreBridgeMacroToFrontend = (draft: ReturnType<typeof parseWorkbenchRecordedMacroDraft>) => {
     setMacroDraftBuffer(draft);
     pushHeadlessFrontendMacroAsset(draft, "bridge_restore");
-    setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(draft)}\n`);
+    insertScript(serializeWorkbenchMacroPythonSnippet(draft));
     appendOutput(`[macro] ${t.restoreBridgeMacroToFrontend}`);
   };
   const insertTimelineStep = (entry: WorkbenchScriptActionLogEntry) => {
-    setScriptCode((current) => `${current.trimEnd()}\n\n${buildTimelineReplaySnippet(entry)}\n`);
+    insertScript(buildTimelineReplaySnippet(entry));
     appendOutput(`[macro] ${t.insertActionStep}`);
   };
   const continueTimelineFromEntry = (entry: WorkbenchScriptActionLogEntry) => {
-    setScriptCode((current) => `${current.trimEnd()}\n\n${buildTimelineContinuationSnippet(actionLog, entry)}\n`);
+    insertScript(buildTimelineContinuationSnippet(actionLog, entry));
     appendOutput(`[macro] ${t.continueFromStep}`);
   };
   const insertTimelineMacroDraft = (entry: WorkbenchScriptActionLogEntry, includedEntryIds?: string[]) => {
@@ -446,7 +455,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       return;
     }
     setMacroDraftBuffer(draft);
-    setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(draft)}\n`);
+    insertScript(serializeWorkbenchMacroPythonSnippet(draft));
     appendOutput(`[macro] ${t.timelineMacroDraftInserted}`);
   };
   const saveTimelineMacroPreset = (entry: WorkbenchScriptActionLogEntry, includedEntryIds?: string[]) => {
@@ -493,121 +502,91 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     }
     setMacroDraftBuffer(draft);
     pushHeadlessFrontendMacroAsset(draft, "timeline_selection");
+    setActivePage("headless");
     appendOutput(`[macro] ${t.sendTimelineMacroToHeadless}`);
   };
+  const authorProps = {
+    copy: t, language, busy, onRunScript: () => void runScript(), onToggleRecording: onToggleRecordingMode,
+    deriveFrontendMacroAsset, exportMacroDraftJson, frontendMacroAssets: headlessFrontendMacroAssets,
+    importMacroJson, insertFrontendMacroAsset, insertMacroDraftFromLog, recordingMode, scriptCode, setScriptCode,
+  };
+  const outputCard = (
+    <section className="sidebar-card sidebar-card--compact pwdt-output-card">
+      <div className="card-head">
+        <h2>{t.output}</h2>
+        <button className="ghost-button ghost-button--compact" onClick={() => setOutput([])} type="button">{t.clearOutput}</button>
+      </div>
+      {output.length ? <pre className="script-panel__output">{output.join("\n")}</pre> : <p className="card-copy">{t.noOutput}</p>}
+    </section>
+  );
+  const loading = <p className="card-copy" role="status">{t.loading}</p>;
   return (
-    <>
-      {presetSecurityNotice ? (
-        <section className="sidebar-card sidebar-card--compact">
-          <div className="card-head">
-            <h2>{t.projectPresets}</h2>
-            <span>{t.riskSensitive}</span>
+    <WorkbenchScriptWorkspace language={language} activePage={activePage} onPageChange={setActivePage}
+      help={<><p className="card-copy">{t.subtitle}</p><p className="card-copy">{t.frontendSurfaceHint}</p><p className="card-copy">{t.firstRun}</p></>}
+      notice={<>
+        <WorkbenchAlertStrip alerts={[
+          ...(presetSecurityNotice ? [{ id: "preset-security-notice", message: presetSecurityNotice, tone: "warning" as const }] : []),
+          ...(activePage !== "script" && runtimeError && runtimeError !== presetSecurityNotice
+            ? [{ id: "script-runtime-error", message: runtimeError, tone: "error" as const }] : []),
+        ]} />
+        {recordingMode && activePage !== "record" ? <button className="ghost-button ghost-button--compact ghost-button--active"
+          onClick={onToggleRecordingMode} title={t.recordingActive} type="button">{t.stopRecording}</button> : null}
+      </>}
+      pages={{
+        script: (
+          <div className="pwdt-workspace__python">
+            <WorkbenchScriptLaunchCard copy={t} loadRuntime={() => void loadRuntime()}
+              resetScript={() => setScriptCode(DEFAULT_WORKBENCH_PYTHON)} runScript={() => void runScript()}
+              runtimeError={runtimeError === presetSecurityNotice ? null : runtimeError} runtimeStatus={runtimeStatus} />
+            <WorkbenchScriptAuthorPanel {...authorProps} mode="script" />
+            {outputCard}
           </div>
-          <WorkbenchAlertStrip
-            alerts={[
-              {
-                id: "preset-security-notice",
-                message: presetSecurityNotice,
-                tone: "warning",
-              },
-            ]}
-          />
-        </section>
-      ) : null}
-      <WorkbenchScriptLaunchCard
-        clearOutput={() => setOutput([])}
-        copy={t}
-        loadRuntime={() => void loadRuntime()}
-        recordingMode={recordingMode}
-        resetScript={() => setScriptCode(DEFAULT_WORKBENCH_PYTHON)}
-        runScript={() => void runScript()}
-        runtimeError={runtimeError === presetSecurityNotice ? null : runtimeError}
-        runtimeStatus={runtimeStatus}
-        toggleRecordingMode={onToggleRecordingMode}
-      />
-      <WorkbenchScriptAuthorPanel
-        copy={t}
-        deriveFrontendMacroAsset={deriveFrontendMacroAsset}
-        exportMacroDraftJson={exportMacroDraftJson}
-        frontendMacroAssets={headlessFrontendMacroAssets}
-        importMacroJson={importMacroJson}
-        insertFrontendMacroAsset={insertFrontendMacroAsset}
-        insertMacroDraftFromLog={insertMacroDraftFromLog}
-        recordingMode={recordingMode}
-        scriptCode={scriptCode}
-        setScriptCode={setScriptCode}
-      />
-      <WorkbenchScriptDslCard
-        dslCode={dslCode}
-        dslError={dslError}
-        language={language}
-        onCompileDsl={compileDslToScript}
-        onLoadDslTemplate={() => {
-          setDslCode(DEFAULT_WORKBENCH_FRONTEND_DSL);
-          setDslError(null);
-        }}
-        onLoadRecipeTemplate={() => {
-          setDslCode(CLOSED_LOOP_TRUSS_WORKBENCH_FRONTEND_DSL);
-          setDslError(null);
-        }}
-        onRunDsl={() => void runDsl()}
-        onUseCurrentMacroDraft={useCurrentMacroDraftAsDsl}
-        setDslCode={setDslCode}
-      />
-      <WorkbenchScriptInspectPanel
-        actionCatalogCount={WORKBENCH_SCRIPT_ACTIONS.length}
-        actionLog={actionLog}
-        continueTimelineFromEntry={continueTimelineFromEntry}
-        copy={t}
-        insertTimelineStep={insertTimelineStep}
-        insertTimelineMacroDraft={insertTimelineMacroDraft}
-        sendTimelineMacroToHeadless={sendTimelineMacroToHeadless}
-        saveTimelineMacroPreset={saveTimelineMacroPreset}
-        macroCatalogCount={WORKBENCH_SCRIPT_MACROS.length}
-        output={output}
-        scriptCode={scriptCode}
-        snapshot={snapshot}
-      />
-      <WorkbenchScriptCatalogPanel
-        actions={WORKBENCH_SCRIPT_ACTIONS}
-        copy={t}
-        deletePreset={deletePreset}
-        exportPresetJson={exportPresetJson}
-        exportSnippetPresetJson={exportSnippetPresetJson}
-        importSnippetPresetJson={importSnippetPresetJson}
-        insertAction={insertAction}
-        insertMacro={insertMacro}
-        insertPreset={insertPreset}
-        insertSnippetPreset={insertSnippetPreset}
-        insertSnippet={insertSnippet}
-        language={language}
-        loadRecipeDsl={loadRecipeDsl}
-        macros={WORKBENCH_SCRIPT_MACROS}
-        deleteSnippetPreset={deleteSnippetPreset}
-        presetName={presetName}
-        presetRecords={presetRecords}
-        saveSnippetPreset={saveSnippetPreset}
-        saveCurrentPreset={saveCurrentPreset}
-        selectedProjectId={snapshot.selectedProjectId}
-        setPresetName={setPresetName}
-        recipes={WORKBENCH_SCRIPT_RECIPES}
-        snippets={WORKBENCH_SCRIPT_SNIPPETS}
-        snippetPresetRecords={snippetPresetRecords}
-      />
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{t.headlessSurface}</h2>
-          <span>SDK</span>
-        </div>
-        <p className="card-copy">{t.headlessSurfaceHint}</p>
-      </section>
-      <WorkbenchHeadlessWorkflowPanel
-        frontendMacroAssets={headlessFrontendMacroAssets}
-        language={language}
-        onDeriveFrontendMacro={deriveFrontendMacroAsset}
-        onInsertMacroDraft={insertExternalMacroDraft}
-        onRestoreFrontendMacro={restoreBridgeMacroToFrontend}
-      />
-    </>
+        ),
+        dsl: (
+          <div className="pwdt-workspace__dsl">
+            <WorkbenchScriptDslCard dslCode={dslCode} dslError={dslError} language={language} busy={busy}
+              onCompileDsl={() => { if (compileDslToScript()) setActivePage("script"); }}
+              onLoadDslTemplate={() => { setDslCode(DEFAULT_WORKBENCH_FRONTEND_DSL); setDslError(null); }}
+              onLoadRecipeTemplate={() => { setDslCode(CLOSED_LOOP_TRUSS_WORKBENCH_FRONTEND_DSL); setDslError(null); }}
+              onRunDsl={() => void runDsl()} onUseCurrentMacroDraft={useCurrentMacroDraftAsDsl} setDslCode={setDslCode} />
+            {outputCard}
+          </div>
+        ),
+        record: <WorkbenchScriptAuthorPanel {...authorProps} mode="record" />,
+        inspect: (
+          <Suspense fallback={loading}>
+            <WorkbenchScriptInspectPanel initialMode="timeline"
+              actionCatalogCount={WORKBENCH_SCRIPT_ACTIONS.length} actionLog={actionLog}
+              continueTimelineFromEntry={continueTimelineFromEntry} copy={t} insertTimelineStep={insertTimelineStep}
+              insertTimelineMacroDraft={insertTimelineMacroDraft} sendTimelineMacroToHeadless={sendTimelineMacroToHeadless}
+              saveTimelineMacroPreset={saveTimelineMacroPreset} macroCatalogCount={WORKBENCH_SCRIPT_MACROS.length}
+              output={output} scriptCode={scriptCode} snapshot={snapshot} />
+          </Suspense>
+        ),
+        catalog: (
+          <Suspense fallback={loading}>
+            <WorkbenchScriptCatalogPanel actions={WORKBENCH_SCRIPT_ACTIONS} copy={t} deletePreset={deletePreset}
+              exportPresetJson={exportPresetJson} exportSnippetPresetJson={exportSnippetPresetJson}
+              importSnippetPresetJson={importSnippetPresetJson} insertAction={insertAction} insertMacro={insertMacro}
+              insertPreset={insertPreset} insertSnippetPreset={insertSnippetPreset} insertSnippet={insertSnippet}
+              language={language} loadRecipeDsl={loadRecipeDsl} macros={WORKBENCH_SCRIPT_MACROS}
+              deleteSnippetPreset={deleteSnippetPreset} presetName={presetName} presetRecords={presetRecords}
+              saveSnippetPreset={saveSnippetPreset} saveCurrentPreset={saveCurrentPreset} selectedProjectId={snapshot.selectedProjectId}
+              setPresetName={setPresetName} recipes={WORKBENCH_SCRIPT_RECIPES} snippets={WORKBENCH_SCRIPT_SNIPPETS}
+              snippetPresetRecords={snippetPresetRecords} />
+          </Suspense>
+        ),
+        headless: (
+          <Suspense fallback={loading}>
+            <section className="sidebar-card sidebar-card--compact">
+              <div className="card-head"><h2>{t.headlessSurface}</h2><span>SDK</span></div>
+              <p className="card-copy">{t.headlessSurfaceHint}</p>
+            </section>
+            <WorkbenchHeadlessWorkflowPanel frontendMacroAssets={headlessFrontendMacroAssets} language={language}
+              onDeriveFrontendMacro={deriveFrontendMacroAsset} onInsertMacroDraft={insertExternalMacroDraft}
+              onRestoreFrontendMacro={restoreBridgeMacroToFrontend} />
+          </Suspense>
+        ),
+      }} />
   );
 }

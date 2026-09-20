@@ -1,16 +1,4 @@
 /* Fullscreen tools stay inside the fullscreen element, not the hidden workspace sidebar. */
-[data-workbench-fullscreen-ancestor] { contain: none !important; transform: none !important; filter: none !important; }
-.workbench-shell [data-workbench-window-fullscreen] {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-  width: 100%;
-  height: 100dvh;
-  max-height: none;
-  border-radius: 0;
-  margin: 0;
-  background: var(--panel);
-}
 .canvas-panel--immersive:-webkit-full-screen {
   width: 100%; height: 100%; max-height: none; border-radius: 0; margin: 0; background: var(--panel);
 }

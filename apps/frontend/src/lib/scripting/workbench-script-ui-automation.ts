@@ -47,6 +47,8 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
       modelStudyKind: workbenchAutomationSelectors.modelStudyKind,
       modelStudyRun: workbenchAutomationSelectors.modelStudyRun,
       modelBatchPanel: workbenchAutomationSelectors.modelBatchPanel,
+      materialPanel: workbenchAutomationSelectors.materialPanel,
+      auditPanel: workbenchAutomationSelectors.auditPanel,
       workflowSurface: workbenchAutomationSelectors.workflowSurface,
       workflowCatalogSearch: workbenchAutomationSelectors.workflowCatalogSearch,
       workflowBuilder: workbenchAutomationSelectors.workflowBuilder,
@@ -57,7 +59,10 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
       workflowControlEmptyAction: workbenchAutomationSelectors.workflowControlEmptyAction,
       runtimePanel: workbenchAutomationSelectors.runtimePanel,
       runtimeTabs: workbenchAutomationSelectors.runtimeTabs,
+      runtimeNavigation: workbenchAutomationSelectors.runtimeNavigation,
       systemSidebar: workbenchAutomationSelectors.systemSidebar,
+      pwdtWorkspace: workbenchAutomationSelectors.pwdtWorkspace,
+      pwdtExpand: workbenchAutomationSelectors.pwdtExpand,
       dataAdminPanel: workbenchAutomationSelectors.dataAdminPanel,
       libraryPanel: workbenchAutomationSelectors.libraryPanel,
       libraryProjectsPanel: workbenchAutomationSelectors.libraryProjectsPanel,
@@ -154,6 +159,8 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
         parameter: "page",
         template: workbenchAutomationSelectors.runtimeTab(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${page}"),
       },
+      ...(["materialPage", "materialControl", "runtimeStackPage", "auditPage", "auditFilter", "auditAction"] as const)
+        .map((key) => ({ key, parameter: "value", template: workbenchAutomationSelectors[key](SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${value}") })),
       {
         key: "systemSurfaceTab",
         parameter: "tab",
@@ -163,6 +170,11 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
         key: "systemSettingsPage",
         parameter: "page",
         template: workbenchAutomationSelectors.systemSettingsPage(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${page}"),
+      },
+      {
+        key: "pwdtPage",
+        parameter: "page",
+        template: workbenchAutomationSelectors.pwdtPage(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${page}"),
       },
       {
         key: "dataTab",

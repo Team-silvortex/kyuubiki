@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, type ReactNode } from "react";
+import { memo, useRef, useState, type ReactNode } from "react";
 import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
 import { WorkbenchRouteJourney } from "@/components/workbench/workbench-route-journey";
 
@@ -19,6 +19,7 @@ import { WorkbenchProtocolAgentsCard } from "@/components/workbench/system/workb
 import { WorkbenchSecurityAuditCard } from "@/components/workbench/system/workbench-security-audit-card";
 import { WorkbenchSystemMetricsCard } from "@/components/workbench/system/workbench-system-metrics-card";
 import { WorkbenchSystemStorageCard } from "@/components/workbench/system/workbench-system-storage-card";
+import { WorkbenchSubpanelNav } from "../workbench-compact-panels";
 
 type MetricRow = {
   label: string;
@@ -50,6 +51,7 @@ type ProtocolAgentCardRow = {
 };
 
 type WorkbenchSystemRuntimePanelProps = {
+  language: string;
   storageCopy: WorkbenchCopy;
   overviewTabLabel: string;
   stackTabLabel: string;
@@ -137,6 +139,7 @@ type WorkbenchSystemRuntimePanelProps = {
 };
 
 export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimePanel({
+  language,
   storageCopy,
   overviewTabLabel,
   stackTabLabel,
@@ -212,6 +215,13 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
 }: WorkbenchSystemRuntimePanelProps) {
   const [page, setPage] = useState<"overview" | "control" | "stack" | "security" | "agents" | "audit" | "watchdog">("overview");
   const [snapshotOverride, setSnapshotOverride] = useState<WorkbenchSystemTopologySnapshot | null>(null);
+  const [stackPage, setStackPage] = useState("backend");
+  const menuRef = useRef<HTMLDetailsElement>(null);
+  const runtimePages = [
+    { id: "control", label: controlWindow.copy.pageLabel }, { id: "stack", label: stackTabLabel },
+    { id: "security", label: securityTabLabel }, { id: "agents", label: agentsTabLabel },
+    { id: "audit", label: auditTabLabel }, { id: "watchdog", label: watchdogTabLabel },
+  ] as const;
 
   const effectiveSnapshot = snapshotOverride ?? controlWindow.snapshot;
   const effectiveTopology = snapshotOverride
@@ -295,14 +305,22 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
           />
         </>
       ) : (
-        <div className="panel-tabs panel-tabs--wide" data-workbench-runtime="tabs">
+        <div className="runtime-page-navigation" data-workbench-runtime="tabs">
           <button className="panel-tab" data-workbench-runtime-tab="overview" onClick={() => setPage("overview")} type="button">{overviewTabLabel}</button>
-          <button className={`panel-tab${page === "control" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="control" onClick={() => setPage("control")} type="button">{controlWindow.copy.pageLabel}</button>
-          <button className={`panel-tab${page === "stack" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="stack" onClick={() => setPage("stack")} type="button">{stackTabLabel}</button>
-          <button className={`panel-tab${page === "security" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="security" onClick={() => setPage("security")} type="button">{securityTabLabel}</button>
-          <button className={`panel-tab${page === "agents" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="agents" onClick={() => setPage("agents")} type="button">{agentsTabLabel}</button>
-          <button className={`panel-tab${page === "audit" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="audit" onClick={() => setPage("audit")} type="button">{auditTabLabel}</button>
-          <button className={`panel-tab${page === "watchdog" ? " panel-tab--active" : ""}`} data-workbench-runtime-tab="watchdog" onClick={() => setPage("watchdog")} type="button">{watchdogTabLabel}</button>
+          <details ref={menuRef} className="runtime-page-menu">
+            <summary className="panel-tab panel-tab--active" data-workbench-runtime-menu="toggle">{runtimePages.find((entry) => entry.id === page)?.label}</summary>
+            <div className="panel-tabs workbench-subpanel-nav">
+              {runtimePages.map((entry) => <button key={entry.id} type="button"
+                className={`panel-tab${page === entry.id ? " panel-tab--active" : ""}`} aria-pressed={page === entry.id}
+                data-workbench-runtime-tab={entry.id} onClick={() => {
+                  setPage(entry.id);
+                  if (menuRef.current) {
+                    menuRef.current.open = false;
+                    menuRef.current.querySelector("summary")?.focus();
+                  }
+                }}>{entry.label}</button>)}
+            </div>
+          </details>
         </div>
       )}
       {page === "control" ? (
@@ -316,9 +334,12 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
         />
       ) : null}
       {page === "stack" ? (
-        <>
-          <WorkbenchSystemMetricsCard title={backendTitle} status={backendStatus} rows={backendRows} />
-          <WorkbenchSystemMetricsCard
+        <div data-workbench-runtime-stack="panel">
+          <WorkbenchSubpanelNav label={stackTabLabel} value={stackPage} onChange={setStackPage} attribute="data-workbench-runtime-stack-page"
+            pages={[{ id: "backend", label: backendTitle }, { id: "protocols", label: protocolsTitle },
+              { id: "storage", label: storageCopy.workflowPackageInstallRulesStorageLabel }]} />
+          {stackPage === "backend" ? <WorkbenchSystemMetricsCard title={backendTitle} status={backendStatus} rows={backendRows} /> : null}
+          {stackPage === "protocols" ? <WorkbenchSystemMetricsCard
             title={protocolsTitle}
             status={protocolsStatus}
             rows={protocolRows}
@@ -333,9 +354,9 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
                 </div>
               ) : null
             }
-          />
-          <WorkbenchSystemStorageCard copy={storageCopy} />
-        </>
+          /> : null}
+          {stackPage === "storage" ? <WorkbenchSystemStorageCard copy={storageCopy} /> : null}
+        </div>
       ) : null}
       {page === "security" ? (
         <WorkbenchSystemMetricsCard
@@ -347,6 +368,8 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
       ) : null}
       {page === "audit" ? (
         <WorkbenchSecurityAuditCard
+          language={language}
+          ui={storageCopy}
           title={auditTitle}
           countLabel={auditCountLabel}
           emptyLabel={auditEmptyLabel}

@@ -322,6 +322,7 @@ export function buildWorkbenchModelContent(props: Record<string, any>) {
     !isAxial && !isBeam && !isTorsion && !isHeatBar && !isThermalBar ? (
       <WorkbenchMaterialLibraryCard
         language={language}
+        ui={t}
         materialLabel={t.material}
         modulusLabel={t.modulus}
         poissonRatioLabel={t.poissonRatio}

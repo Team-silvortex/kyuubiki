@@ -1,11 +1,13 @@
 "use client";
 
 import { getWorkbenchScriptDslCopy } from "@/components/workbench/workbench-script-dsl-copy";
+import { WorkbenchCodeEditor } from "./workbench-code-editor";
 
 type WorkbenchScriptDslCardProps = {
   dslCode: string;
   dslError: string | null;
   language: string;
+  busy: boolean;
   onCompileDsl: () => void;
   onLoadDslTemplate: () => void;
   onLoadRecipeTemplate: () => void;
@@ -18,6 +20,7 @@ export function WorkbenchScriptDslCard({
   dslCode,
   dslError,
   language,
+  busy,
   onCompileDsl,
   onLoadDslTemplate,
   onLoadRecipeTemplate,
@@ -36,16 +39,11 @@ export function WorkbenchScriptDslCard({
       <p className="card-copy">{copy.subtitle}</p>
       <p className="card-copy">{copy.hint}</p>
       {dslError ? <p className="card-copy">{dslError}</p> : null}
-      <textarea
-        className="script-panel__editor"
-        rows={14}
-        spellCheck={false}
-        value={dslCode}
-        onChange={(event) => setDslCode(event.target.value)}
-      />
+      <WorkbenchCodeEditor value={dslCode} onChange={setDslCode} language={language}
+        syntax="json" label={copy.title} onRun={onRunDsl} busy={busy} />
       <div className="button-row">
         <button className="ghost-button" onClick={onCompileDsl} type="button">{copy.compile}</button>
-        <button className="ghost-button" onClick={onRunDsl} type="button">{copy.run}</button>
+        <button className="ghost-button" disabled={busy} onClick={onRunDsl} type="button">{copy.run}</button>
         <button className="ghost-button" onClick={onLoadDslTemplate} type="button">{copy.reset}</button>
         <button className="ghost-button" onClick={onLoadRecipeTemplate} type="button">{copy.recipe}</button>
         <button className="ghost-button" onClick={onUseCurrentMacroDraft} type="button">{copy.macro}</button>

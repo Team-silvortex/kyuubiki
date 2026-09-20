@@ -349,6 +349,7 @@ export function WorkbenchSystemSidebarMount({
       }
       runtimeContent={
         <WorkbenchSystemRuntimePanel
+          language={language}
           storageCopy={t}
           recoveryCard={runtimeRecoveryCard}
           overviewTabLabel={t.overview}

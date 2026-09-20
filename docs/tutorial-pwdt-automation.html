@@ -40,9 +40,36 @@
         <p>PWDT's UI contract exposes <code>sidebarResize</code>, <code>inspectorResize</code>, <code>reportResize</code>, and <code>layoutReset</code>. Existing panel and action selectors remain unchanged: resizing does not make the product-owned UI extensible.</p>
       </section>
       <section class="docs-card docs-section">
+        <h2 id="pwdt-workspace">A dedicated PWDT workspace</h2>
+        <p>Open <strong>System / Settings / Scripts</strong>. PWDT groups its controls into six subpages rather than stacking every tool in one long sidebar. Python is the default page; help stays collapsed until needed.</p>
+        <ul class="docs-list">
+          <li><strong>Python:</strong> load the runtime, edit and run the script, and inspect its output together. Clearing output does not erase the script.</li>
+          <li><strong>DSL:</strong> edit structured automation steps, compile them into Python, or run them through the same runtime. Successful compilation returns to Python; an invalid draft stays in DSL for correction.</li>
+          <li><strong>Record:</strong> start and stop recording, then inspect or compare recorded automation assets.</li>
+          <li><strong>Inspect:</strong> review the action timeline, snapshots and output without crowding the editor.</li>
+          <li><strong>Catalog:</strong> browse presets, actions, macros, recipes and snippets. Inserting a script returns to the Python editor.</li>
+          <li><strong>SDK bridge:</strong> explicitly assemble or restore headless workflow steps. This is a handoff tool, not an extension of PWDT's frontend runtime into backend execution.</li>
+        </ul>
+        <p>The embedded Python and JSON editors provide line numbers, Tab/Shift+Tab indentation, automatic line indentation, undo/redo, and Ctrl/Cmd+Enter to run. Press Escape and then Tab to leave indentation mode and navigate to the next control. These are lightweight editors, not a Python language server or a syntax-validation IDE. Execution remains locked while the runtime is busy.</p>
+        <p><strong>Expand workspace</strong> gives PWDT its own full-window editor. On desktop, Python and output share the space side by side; narrower windows use a stacked layout. Restore the panel with the header button or Escape. Native fullscreen is used when available; WebViews without that API use the window-local fallback, which restores focus and interaction when closed.</p>
+        <p>Switching subpages retains Python, DSL and SDK drafts. Catalog, inspection and SDK modules load on first use, and visited pages remain mounted to preserve in-progress work. This is not a promise of SDK draft persistence across closing Scripts, reloading, or restarting the app. Script sources retain their existing session-storage behavior; code-editor undo history is local to the mounted editor. While recording continues, a Stop recording control remains visible on other subpages.</p>
+        <p>The fixed UI selector contract includes <code>pwdtWorkspace</code>, <code>pwdtExpand</code> and parameterized <code>pwdtPage</code> (<code>script</code>, <code>dsl</code>, <code>record</code>, <code>inspect</code>, <code>catalog</code>, <code>headless</code>). These are product-owned navigation anchors; existing execution actions and SDK boundaries are unchanged.</p>
+        <p>Qualification uses isolated browser tests with a mock backend and a mocked Python runtime for execution dispatch. It covers subpage navigation, draft retention, keyboard editing, compile/insert handoffs, busy-state protection, and window-local expansion at desktop and phone widths. It does not certify actual WASM computation or an installed native application build.</p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2 id="compact-tool-panels">Use focused material and runtime panels</h2>
+        <p><strong>Workspace / Tools / Materials</strong> separates browsing, editing, and adding/importing. Search by material name or ID; at most eight list entries render per page. Selecting an entry opens only that material's form and does not assign it to elements. Name, modulus, visibility, assignment and deletion still use the original model-edit and history paths. New materials open in the editor; deleting one returns to the list. Reimporting a colliding ID keeps the original and gives the new entry a unique suffix, rather than silently overwriting a material.</p>
+        <p><strong>System / Runtime</strong> shows Overview and the current section menu instead of keeping seven navigation buttons expanded. Open that menu to change section. Stack separates backend, protocols and browser-storage inspection into subpages; visiting backend status does not mount storage inspection. The stack subpage remains selected when returning from another runtime section.</p>
+        <p><strong>Audit</strong> has Events, Filters, Event summary and Breakdown subpages. Filter values survive subpage changes, and active filters remain visible above the content. Events render ten records per page; expand an individual event to read its note and source/risk details. Refresh is always available; JSON and CSV downloads are in the Export Data menu. Pagination only controls presentation: exports retain the existing backend-filtered scope and limits, not just the currently visible ten records. Clear filters resets every filter to its unfiltered value.</p>
+        <p>Fixed selectors now include <code>materialPanel</code>, <code>materialPage</code>, <code>materialControl</code>, <code>runtimeNavigation</code>, <code>runtimeStackPage</code>, <code>auditPanel</code>, <code>auditPage</code>, <code>auditFilter</code> and <code>auditAction</code>. Existing <code>runtimeTab</code> selectors still identify sections; outside Overview, open <code>runtimeNavigation</code> before selecting one. Audit export actions require opening <code>auditAction("exports-toggle")</code>. Subpanel buttons support arrow and Home/End navigation in addition to ordinary Tab navigation.</p>
+        <p>Browser qualification uses real UI controls with an isolated mock backend, including a 1,000-material library, add/edit/apply/delete/undo, repeated imports, multi-page audit filtering and export, and desktop/narrow/phone-width checks. These are interaction and bounded-rendering checks, not solver accuracy, native-device, or frame-rate certification.</p>
+      </section>
+
+      <section class="docs-card docs-section">
         <h2>Open and inspect before running</h2>
         <ol class="docs-list">
-          <li>Open <strong>System -> Scripts / PWDT</strong> in Workbench.</li>
+          <li>Open <strong>System / Settings / Scripts / Python</strong> in Workbench.</li>
           <li>Inspect <code>state</code>, <code>actions</code>, <code>macros</code>, <code>recipes</code>, and <code>ui_contract</code>.</li>
           <li>Confirm required actions or recipes exist before invoking them.</li>
           <li>Use action ids and recipe ids as contracts; localized labels are presentation only.</li>

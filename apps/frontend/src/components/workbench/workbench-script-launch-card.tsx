@@ -6,32 +6,26 @@ import type { WorkbenchScriptPanelCopyEntry } from "@/components/workbench/workb
 type RuntimeStatus = "idle" | "loading" | "ready" | "running" | "error";
 
 type WorkbenchScriptLaunchCardProps = {
-  clearOutput: () => void;
   copy: WorkbenchScriptPanelCopyEntry;
   loadRuntime: () => void;
-  recordingMode: boolean;
   resetScript: () => void;
   runScript: () => void;
   runtimeError: string | null;
   runtimeStatus: RuntimeStatus;
-  toggleRecordingMode: () => void;
 };
 
 export function WorkbenchScriptLaunchCard({
-  clearOutput,
   copy,
   loadRuntime,
-  recordingMode,
   resetScript,
   runScript,
   runtimeError,
   runtimeStatus,
-  toggleRecordingMode,
 }: WorkbenchScriptLaunchCardProps) {
   return (
-    <section className="sidebar-card sidebar-card--compact">
+    <section className="sidebar-card sidebar-card--compact pwdt-launch-card">
       <div className="card-head">
-        <h2>{copy.launch}</h2>
+        <h2>{copy.runtime}</h2>
         <span className={`status-chip status-chip--${runtimeStatus === "error" ? "risk" : runtimeStatus === "ready" ? "good" : "watch"}`}>
           {runtimeStatus === "loading"
             ? copy.loading
@@ -44,10 +38,6 @@ export function WorkbenchScriptLaunchCard({
                   : copy.idle}
         </span>
       </div>
-      <p className="card-copy">{copy.title}</p>
-      <p className="card-copy">{copy.subtitle}</p>
-      <p className="card-copy">{copy.frontendSurfaceHint}</p>
-      <p className="card-copy">{copy.firstRun}</p>
       <WorkbenchAlertStrip
         alerts={
           runtimeError
@@ -71,14 +61,7 @@ export function WorkbenchScriptLaunchCard({
         <button className="ghost-button" disabled={runtimeStatus === "loading" || runtimeStatus === "running"} onClick={runScript} type="button">
           {copy.runScript}
         </button>
-        <button className={`ghost-button${recordingMode ? " ghost-button--active" : ""}`} onClick={toggleRecordingMode} type="button">
-          {recordingMode ? copy.stopRecording : copy.startRecording}
-        </button>
-        <button className="ghost-button" onClick={clearOutput} type="button">
-          {copy.clearOutput}
-        </button>
       </div>
-      {recordingMode ? <p className="card-copy">{copy.recordingActive}</p> : null}
     </section>
   );
 }

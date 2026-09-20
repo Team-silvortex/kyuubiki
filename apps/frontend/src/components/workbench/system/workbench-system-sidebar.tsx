@@ -49,7 +49,8 @@ export function WorkbenchSystemSidebar({
       : "overview";
 
   return (
-    <WorkbenchPanelPages data-workbench-system-sidebar="root" pageKey={systemPanelTab} navigation={
+    <WorkbenchPanelPages data-workbench-system-sidebar="root" pageKey={systemPanelTab}
+      contentClassName={systemPanelTab === "scripts" ? "sidebar-stack pwdt-system-content" : "sidebar-stack"} navigation={
       <div className="panel-tabs panel-tabs--editor">
         <button
           className={`panel-tab${surfaceTab === "settings" ? " panel-tab--active" : ""}`}
@@ -113,7 +114,7 @@ export function WorkbenchSystemSidebar({
             />
           </>
         ) : (
-          <section className="sidebar-card sidebar-card--compact">
+          <section className={`sidebar-card sidebar-card--compact${settingsPage === "scripts" ? " pwdt-settings-page" : ""}`}>
             <div className="panel-tabs panel-tabs--wide">
               <button
                 className="panel-tab"

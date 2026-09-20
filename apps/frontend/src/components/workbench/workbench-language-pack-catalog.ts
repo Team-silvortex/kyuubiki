@@ -59,7 +59,8 @@ const REMOTE_READY_STATUS = {
   ja: "翻訳済みパックをローカル取込可能・リモート配布源は今後接続",
 } as const;
 
-const UPDATED_AT = "2026-09-19T00:00:00.000Z";
+// Catalog content revision, independent of the app version, also refreshes saved official packs.
+const UPDATED_AT = "2026-09-19T02:00:00.000Z";
 
 function languageSlug(language: string) {
   return language.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");

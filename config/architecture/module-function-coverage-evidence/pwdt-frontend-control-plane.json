@@ -73,6 +73,8 @@
           "apps/frontend/test/workflow/workbench-pwdt-recipe-boundaries.test.ts",
           "apps/frontend/test/workflow/workbench-pyodide-loader.test.ts",
           "tests/integration/workbench-ui-pwdt-runtime.test.mjs",
+          "tests/integration/workbench-ui-pwdt-workspace.test.mjs",
+          "apps/frontend/test/workflow/workbench-code-edit.test.ts",
           "tests/integration/workbench-ui-pwdt-projection.test.mjs",
           "tests/integration/workbench-ui-pwdt-projection-fixture.shared.mjs",
           "tests/integration/workbench-ui-history-observation.test.mjs",
