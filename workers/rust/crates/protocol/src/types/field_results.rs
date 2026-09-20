@@ -62,6 +62,7 @@ pub struct MagnetostaticPlaneQuadElementResult {
     pub magnetic_flux_density_x: f64,
     pub magnetic_flux_density_y: f64,
     pub magnetic_flux_density_magnitude: f64,
+    /// Area mean of the subtriangle energies, not energy of the mean flux.
     pub magnetic_energy_density: f64,
     pub stored_energy: f64,
 }

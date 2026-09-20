@@ -12,6 +12,7 @@ use crate::linear_algebra::{
     solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
+use crate::scalar_plane_kernel::{mean_squared_gradient, shift_prescribed_reference};
 use kyuubiki_protocol::{
     ElectrostaticPlaneNodeResult, ElectrostaticPlaneQuadElementResult,
     ElectrostaticPlaneTriangleElementResult, SolveElectrostaticPlaneQuad2dRequest,
@@ -74,13 +75,14 @@ fn solve_electrostatic_plane_triangle_2d_internal(
         }
     }
 
-    let prescribed = request
+    let mut prescribed = request
         .nodes
         .iter()
         .enumerate()
         .filter_map(|(index, node)| node.fix_potential.then_some((index, node.potential)))
         .collect::<Vec<_>>();
 
+    let reference = shift_prescribed_reference(&mut prescribed)?;
     let (reduced_stiffness, reduced_source, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed)?;
     let reduced_potentials =
@@ -104,7 +106,11 @@ fn solve_electrostatic_plane_triangle_2d_internal(
             id: node.id.clone(),
             x: node.x,
             y: node.y,
-            potential: potentials[index],
+            potential: if node.fix_potential {
+                node.potential
+            } else {
+                potentials[index] + reference
+            },
             charge_density: node.charge_density,
         })
         .collect::<Vec<_>>();
@@ -146,7 +152,7 @@ fn solve_electrostatic_plane_triangle_2d_internal(
                 node_j: element.node_j,
                 node_k: element.node_k,
                 area: computed.area,
-                average_potential: element_potentials.iter().sum::<f64>() / 3.0,
+                average_potential: element_potentials.iter().sum::<f64>() / 3.0 + reference,
                 potential_gradient_x: gradient[0],
                 potential_gradient_y: gradient[1],
                 electric_field_x,
@@ -256,13 +262,14 @@ fn solve_electrostatic_plane_quad_2d_internal(
         }
     }
 
-    let prescribed = request
+    let mut prescribed = request
         .nodes
         .iter()
         .enumerate()
         .filter_map(|(index, node)| node.fix_potential.then_some((index, node.potential)))
         .collect::<Vec<_>>();
 
+    let reference = shift_prescribed_reference(&mut prescribed)?;
     let (reduced_stiffness, reduced_source, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed)?;
     let reduced_potentials =
@@ -286,7 +293,11 @@ fn solve_electrostatic_plane_quad_2d_internal(
             id: node.id.clone(),
             x: node.x,
             y: node.y,
-            potential: potentials[index],
+            potential: if node.fix_potential {
+                node.potential
+            } else {
+                potentials[index] + reference
+            },
             charge_density: node.charge_density,
         })
         .collect::<Vec<_>>();
@@ -333,8 +344,14 @@ fn solve_electrostatic_plane_quad_2d_internal(
                 * electric_flux_density_x
                 + electric_flux_density_y * electric_flux_density_y)
                 .sqrt();
-            let electric_energy_density =
-                0.5 * element.permittivity * electric_field_magnitude * electric_field_magnitude;
+            let electric_energy_density = 0.5
+                * element.permittivity
+                * mean_squared_gradient(
+                    first_gradient,
+                    second_gradient,
+                    computed.first.area,
+                    computed.second.area,
+                );
             let stored_energy = electric_energy_density * total_area * element.thickness;
 
             ElectrostaticPlaneQuadElementResult {
@@ -349,7 +366,8 @@ fn solve_electrostatic_plane_quad_2d_internal(
                     + potentials[element.node_j]
                     + potentials[element.node_k]
                     + potentials[element.node_l])
-                    / 4.0,
+                    / 4.0
+                    + reference,
                 potential_gradient_x,
                 potential_gradient_y,
                 electric_field_x,

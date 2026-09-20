@@ -74,6 +74,32 @@ quad:     U_m = u_m * 1.0 * 0.1 = 0.0006283185307179585
 
 ## Tolerance Boundary
 
+### Nonuniform Split-Quad Regression (2026-09-20)
+
+The formulas above apply directly to a constant-gradient patch. For a quad
+split into two constant-gradient triangles, the reported field vector remains
+area-averaged but the energy must be integrated before averaging:
+
+```text
+c = epsilon (electrostatic) or 1 / mu (magnetostatic)
+U = thickness * c / 2 * (area_1 * |grad_1|^2 + area_2 * |grad_2|^2)
+u = U / (thickness * (area_1 + area_2))
+```
+
+For the unit square with alternating scalar values 0, 1, 0, 1 around its
+boundary, gradients are (1, -1) and (-1, 1). Each area is 0.5. With c = 2.5
+and thickness = 0.25, the integrated energy is 0.625, even though the averaged
+field vector is zero. The old squared-average implementation incorrectly
+returned zero. For areas 1 and 0.5 with gradients (0.5, -0.5) and (-2, 2),
+the corresponding analytic energy is 1.40625, not the equal-area average.
+
+Both examples are checked against explicit triangle meshes and reversed
+connectivity in `workers/rust/crates/solver/tests/scalar_plane_reference_invariance.rs`.
+This is additional regression evidence, not retrospective extension of the
+original review packet's qualification scope.
+
+### Retained Review Tolerances
+
 The review fixtures use tight floating-point tolerances because the current
 patches are compact and closed-form. Reusing these tolerances for rotated
 patches, multi-element meshes, nonlinear materials, time-varying fields, or

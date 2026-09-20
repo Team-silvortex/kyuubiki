@@ -88,6 +88,7 @@ mod plane_2d_quad;
 mod plane_2d_summary;
 mod plane_2d_validation;
 mod rigid_body_restraints_3d;
+mod scalar_plane_kernel;
 mod solid_tetra_3d;
 mod solid_tetra_3d_element;
 mod solid_tetra_3d_validation;
@@ -267,6 +268,9 @@ impl MockSolver {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod scalar_plane_benchmark;
 
 #[cfg(test)]
 mod solver_preparation_tests;

@@ -11,6 +11,7 @@ use crate::magnetostatic_plane_2d_element::{
 use crate::magnetostatic_plane_2d_validation::{
     validate_magnetostatic_plane_quad_request, validate_magnetostatic_plane_triangle_request,
 };
+use crate::scalar_plane_kernel::{mean_squared_gradient, shift_prescribed_reference};
 use kyuubiki_protocol::{
     MagnetostaticPlaneNodeResult, MagnetostaticPlaneQuadElementResult,
     MagnetostaticPlaneTriangleElementResult, SolveMagnetostaticPlaneQuad2dRequest,
@@ -76,7 +77,7 @@ fn solve_magnetostatic_plane_triangle_2d_internal(
         }
     }
 
-    let prescribed = request
+    let mut prescribed = request
         .nodes
         .iter()
         .enumerate()
@@ -86,6 +87,7 @@ fn solve_magnetostatic_plane_triangle_2d_internal(
         })
         .collect::<Vec<_>>();
 
+    let reference = shift_prescribed_reference(&mut prescribed)?;
     let (reduced_stiffness, reduced_source, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed)?;
     let reduced_potentials =
@@ -109,7 +111,11 @@ fn solve_magnetostatic_plane_triangle_2d_internal(
             id: node.id.clone(),
             x: node.x,
             y: node.y,
-            vector_potential: vector_potentials[index],
+            vector_potential: if node.fix_vector_potential {
+                node.vector_potential
+            } else {
+                vector_potentials[index] + reference
+            },
             current_density: node.current_density,
         })
         .collect::<Vec<_>>();
@@ -153,7 +159,7 @@ fn solve_magnetostatic_plane_triangle_2d_internal(
                 node_j: element.node_j,
                 node_k: element.node_k,
                 area: computed.area,
-                average_vector_potential: element_potentials.iter().sum::<f64>() / 3.0,
+                average_vector_potential: element_potentials.iter().sum::<f64>() / 3.0 + reference,
                 vector_potential_gradient_x: gradient[0],
                 vector_potential_gradient_y: gradient[1],
                 magnetic_field_strength_x,
@@ -258,7 +264,7 @@ fn solve_magnetostatic_plane_quad_2d_internal(
         }
     }
 
-    let prescribed = request
+    let mut prescribed = request
         .nodes
         .iter()
         .enumerate()
@@ -267,6 +273,7 @@ fn solve_magnetostatic_plane_quad_2d_internal(
                 .then_some((index, node.vector_potential))
         })
         .collect::<Vec<_>>();
+    let reference = shift_prescribed_reference(&mut prescribed)?;
     let (reduced_stiffness, reduced_source, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed)?;
     let reduced_potentials =
@@ -281,7 +288,7 @@ fn solve_magnetostatic_plane_quad_2d_internal(
         vector_potentials[dof] = reduced_potentials[index];
     }
 
-    let nodes = build_node_results(request.nodes.iter(), &vector_potentials);
+    let nodes = build_node_results(request.nodes.iter(), &vector_potentials, reference);
     let elements = request
         .elements
         .iter()
@@ -328,8 +335,13 @@ fn solve_magnetostatic_plane_quad_2d_internal(
                 * magnetic_flux_density_x
                 + magnetic_flux_density_y * magnetic_flux_density_y)
                 .sqrt();
-            let magnetic_energy_density =
-                0.5 * magnetic_flux_density_magnitude * magnetic_field_strength_magnitude;
+            let magnetic_energy_density = 0.5 / element.permeability
+                * mean_squared_gradient(
+                    first_gradient,
+                    second_gradient,
+                    computed.first.area,
+                    computed.second.area,
+                );
             let stored_energy = magnetic_energy_density * total_area * element.thickness;
 
             MagnetostaticPlaneQuadElementResult {
@@ -344,7 +356,8 @@ fn solve_magnetostatic_plane_quad_2d_internal(
                     + vector_potentials[element.node_j]
                     + vector_potentials[element.node_k]
                     + vector_potentials[element.node_l])
-                    / 4.0,
+                    / 4.0
+                    + reference,
                 vector_potential_gradient_x: gradient[0],
                 vector_potential_gradient_y: gradient[1],
                 magnetic_field_strength_x,
@@ -386,6 +399,7 @@ fn solve_magnetostatic_plane_quad_2d_internal(
 fn build_node_results<'a>(
     nodes: impl Iterator<Item = &'a kyuubiki_protocol::MagnetostaticPlaneNodeInput>,
     vector_potentials: &[f64],
+    reference: f64,
 ) -> Vec<MagnetostaticPlaneNodeResult> {
     nodes
         .enumerate()
@@ -394,7 +408,11 @@ fn build_node_results<'a>(
             id: node.id.clone(),
             x: node.x,
             y: node.y,
-            vector_potential: vector_potentials[index],
+            vector_potential: if node.fix_vector_potential {
+                node.vector_potential
+            } else {
+                vector_potentials[index] + reference
+            },
             current_density: node.current_density,
         })
         .collect()

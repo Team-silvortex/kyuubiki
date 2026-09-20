@@ -10,6 +10,7 @@ use crate::linear_algebra::{
     solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
+use crate::scalar_plane_kernel::shift_prescribed_reference;
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 use crate::solver_postprocess::{collect_results, fold_results, max_results, restore_solution};
 use kyuubiki_protocol::{
@@ -95,13 +96,14 @@ fn solve_heat_plane_triangle_2d_internal(
         )?;
     }
 
-    let prescribed = request
+    let mut prescribed = request
         .nodes
         .iter()
         .enumerate()
         .filter_map(|(index, node)| node.fix_temperature.then_some((index, node.temperature)))
         .collect::<Vec<_>>();
 
+    let reference = shift_prescribed_reference(&mut prescribed)?;
     let (reduced_stiffness, reduced_heat, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &heat_vector, &prescribed)?;
     let reduced_temperatures =
@@ -120,7 +122,11 @@ fn solve_heat_plane_triangle_2d_internal(
                 id: node.id.clone(),
                 x: node.x,
                 y: node.y,
-                temperature: temperatures[index],
+                temperature: if node.fix_temperature {
+                    node.temperature
+                } else {
+                    temperatures[index] + reference
+                },
                 heat_load: node.heat_load,
             }),
     )?;
@@ -155,7 +161,7 @@ fn solve_heat_plane_triangle_2d_internal(
                     node_j: element.node_j,
                     node_k: element.node_k,
                     area: computed.area,
-                    average_temperature: element_temperatures.iter().sum::<f64>() / 3.0,
+                    average_temperature: element_temperatures.iter().sum::<f64>() / 3.0 + reference,
                     temperature_gradient_x: gradient[0],
                     temperature_gradient_y: gradient[1],
                     heat_flux_x,
@@ -309,7 +315,7 @@ fn solve_heat_plane_quad_2d_internal(
         )?;
     }
 
-    let prescribed = request
+    let mut prescribed = request
         .nodes
         .iter()
         .enumerate()
@@ -323,6 +329,7 @@ fn solve_heat_plane_quad_2d_internal(
         stage_started.elapsed(),
     );
     stage_started = Instant::now();
+    let reference = shift_prescribed_reference(&mut prescribed)?;
     let (reduced_stiffness, reduced_heat, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &heat_vector, &prescribed)?;
     push_heat_plane_quad_memory_stage(
@@ -368,7 +375,11 @@ fn solve_heat_plane_quad_2d_internal(
                 id: node.id.clone(),
                 x: node.x,
                 y: node.y,
-                temperature: temperatures[index],
+                temperature: if node.fix_temperature {
+                    node.temperature
+                } else {
+                    temperatures[index] + reference
+                },
                 heat_load: node.heat_load,
             }),
     )?;
@@ -424,7 +435,8 @@ fn solve_heat_plane_quad_2d_internal(
                         + temperatures[element.node_j]
                         + temperatures[element.node_k]
                         + temperatures[element.node_l])
-                        / 4.0,
+                        / 4.0
+                        + reference,
                     temperature_gradient_x: weighted(first_gradient[0], second_gradient[0]),
                     temperature_gradient_y: weighted(first_gradient[1], second_gradient[1]),
                     heat_flux_x,

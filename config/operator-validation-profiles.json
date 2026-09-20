@@ -193,7 +193,8 @@
         "material_parameter_provenance",
         "bilinear_isoparametric_thermoelastic_quad",
         "distorted_free_expansion_invariance",
-        "gauss_point_temperature_interpolation"
+        "gauss_point_temperature_interpolation",
+        "scalar_reference_shift_regression"
       ],
       "formal_invariants": [
         "fixed_hot_and_cold_boundaries",
@@ -204,7 +205,8 @@
         "stored_strain_energy_is_non_negative",
         "distorted_q4_mesh_preserves_free_uniform_thermal_expansion",
         "linear_nodal_temperature_is_integrated_at_q4_gauss_points",
-        "inverted_thermal_q4_jacobian_is_rejected"
+        "inverted_thermal_q4_jacobian_is_rejected",
+        "constant_temperature_reference_preserves_gradient_and_flux"
       ],
       "evidence_paths": [
         "config/operator-reliability/thermal.json",
@@ -218,7 +220,8 @@
         "workers/rust/crates/solver/tests/thermal_plane_input_reliability.rs",
         "workers/rust/crates/solver/tests/thermal_plane_triangle_2d_review.rs",
         "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs",
-        "workers/rust/crates/solver/tests/thermal_plane_quad_isoparametric.rs"
+        "workers/rust/crates/solver/tests/thermal_plane_quad_isoparametric.rs",
+        "workers/rust/crates/solver/tests/scalar_plane_reference_invariance.rs"
       ],
       "commands": [
         {
@@ -255,6 +258,11 @@
           "id": "thermal-plane-input-reliability",
           "kind": "boundary_regression",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_input_reliability -- --nocapture"
+        },
+        {
+          "id": "heat-plane-reference-invariance",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test scalar_plane_reference_invariance heat_ -- --nocapture"
         }
       ]
     },

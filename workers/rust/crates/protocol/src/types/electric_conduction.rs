@@ -59,6 +59,8 @@ pub struct ElectricConductionPlaneNodeResult {
     pub electric_potential_v: f64,
     pub current_source_a: f64,
     pub reaction_current_a: f64,
+    /// Net bulk/contact injection. At fixed nodes this is recovered directly
+    /// from voltage differences, not by cancelling source and reaction values.
     pub net_injected_current_a: f64,
 }
 
@@ -110,7 +112,10 @@ pub struct ElectricConductionTerminalResult {
     pub impedance_ohm: f64,
     pub current_into_domain_a: f64,
     pub impedance_joule_power_w: f64,
+    /// Individual terminal work uses the reported absolute node potential;
+    /// unlike balanced network totals, it changes with the voltage reference.
     pub power_delivered_to_domain_w: f64,
+    /// External potential times current, using the caller's absolute reference.
     pub source_power_w: f64,
 }
 
@@ -129,12 +134,15 @@ pub struct SolveElectricConductionPlaneQuad2dResult {
     pub current_balance_relative_error: f64,
     pub max_free_current_residual_a: f64,
     pub free_current_residual_relative_error: f64,
+    /// Net work on the bulk/contact domain, accumulated in a relative reference.
     pub total_electrical_input_power_w: f64,
     pub total_bulk_joule_power_w: f64,
     pub total_contact_joule_power_w: f64,
     pub total_joule_power_w: f64,
     pub power_balance_relative_error: f64,
     pub total_terminal_impedance_power_w: f64,
+    /// Domain input plus terminal voltage-drop work. This stable regrouping
+    /// avoids cancellation between large source and fixed-electrode powers.
     pub total_source_power_w: f64,
     pub total_dissipated_power_w: f64,
     pub source_power_balance_relative_error: f64,

@@ -1,6 +1,6 @@
 use crate::electric_conduction_interfaces::{
-    assemble_interfaces, recover_contacts, recover_terminals, terminal_currents_by_node,
-    validate_interfaces,
+    assemble_interfaces, recover_contacts, recover_terminals, relative_potential_v,
+    terminal_currents_by_node, validate_interfaces,
 };
 use crate::electric_conduction_topology::validate_anchored_components;
 use crate::heat_plane_2d_element::{
@@ -49,6 +49,20 @@ fn solve_electric_conduction_plane_quad_2d_internal(
     options: SpdSolveOptions,
 ) -> Result<SolveElectricConductionPlaneQuad2dResult, String> {
     validate_request(request.as_ref())?;
+    // Terminal conductances break K*1 = 0. Shift their external voltages along
+    // with prescribed nodes, then retain the relative solution for recovery.
+    let reference = request
+        .nodes
+        .iter()
+        .find(|node| node.fix_electric_potential)
+        .map(|node| node.electric_potential_v)
+        .or_else(|| {
+            request
+                .terminals
+                .first()
+                .map(|terminal| terminal.external_potential_v)
+        })
+        .unwrap_or(0.0);
     let computed_elements = request
         .elements
         .iter()
@@ -66,23 +80,25 @@ fn solve_electric_conduction_plane_quad_2d_internal(
         })
         .collect::<Result<Vec<_>, String>>()?;
     let (global_conductance, applied_currents) =
-        assemble_system(request.as_ref(), &computed_elements);
+        assemble_system(request.as_ref(), &computed_elements, reference)?;
     let potentials = solve_potentials(
         request.as_ref(),
         &global_conductance,
         &applied_currents,
         options,
+        reference,
     )?;
-    let terminals = recover_terminals(request.as_ref(), &potentials);
+    let terminals = recover_terminals(request.as_ref(), &potentials, reference);
     let terminal_currents = terminal_currents_by_node(request.nodes.len(), &terminals);
     let nodes = recover_node_currents(
         request.as_ref(),
         &global_conductance,
-        &applied_currents,
         &potentials,
         &terminal_currents,
+        reference,
     );
-    let elements = recover_element_fields(request.as_ref(), &computed_elements, &potentials);
+    let elements =
+        recover_element_fields(request.as_ref(), &computed_elements, &potentials, reference);
     let contact_interfaces = recover_contacts(request.as_ref(), &potentials);
     let total_injected_current_a = nodes
         .iter()
@@ -103,9 +119,12 @@ fn solve_electric_conduction_plane_quad_2d_internal(
         / total_injected_current_a
             .max(total_extracted_current_a)
             .max(1.0e-30);
+    // Total injected current is balanced: a common voltage reference does no
+    // net work. Sum relative work rather than cancelling large absolute powers.
     let total_electrical_input_power_w = nodes
         .iter()
-        .map(|node| node.electric_potential_v * node.net_injected_current_a)
+        .zip(&potentials)
+        .map(|(node, potential)| potential * node.net_injected_current_a)
         .sum::<f64>();
     let total_bulk_joule_power_w = elements.iter().map(|element| element.joule_power_w).sum();
     let total_contact_joule_power_w = contact_interfaces
@@ -119,20 +138,16 @@ fn solve_electric_conduction_plane_quad_2d_internal(
         .iter()
         .map(|terminal| terminal.impedance_joule_power_w)
         .sum::<f64>();
-    let total_source_power_w = nodes
-        .iter()
-        .map(|node| {
-            let constraint_current = if node.fix_electric_potential {
-                node.reaction_current_a
-            } else {
-                0.0
-            };
-            node.electric_potential_v * (node.current_source_a + constraint_current)
-        })
-        .sum::<f64>()
+    // Regroup source work into domain input plus terminal voltage-drop work.
+    // A large source cancelled by an electrode reaction must not erase the
+    // small conductive current; bulk/contact dissipation remains independent.
+    let total_source_power_w = total_electrical_input_power_w
         + terminals
             .iter()
-            .map(|terminal| terminal.source_power_w)
+            .map(|terminal| {
+                ((terminal.external_potential_v - reference) - potentials[terminal.node])
+                    * terminal.current_into_domain_a
+            })
             .sum::<f64>();
     let total_dissipated_power_w = total_joule_power_w + total_terminal_impedance_power_w;
     let source_power_balance_relative_error =
@@ -180,7 +195,8 @@ fn conduction_point(request: &SolveElectricConductionPlaneQuad2dRequest, node: u
 fn assemble_system(
     request: &SolveElectricConductionPlaneQuad2dRequest,
     computed_elements: &[HeatPlaneQuadComputed],
-) -> (SparseMatrix, Vec<f64>) {
+    reference: f64,
+) -> Result<(SparseMatrix, Vec<f64>), String> {
     let mut conductance = SparseMatrix::with_uniform_row_capacity(request.nodes.len(), 12);
     for (element, computed) in request.elements.iter().zip(computed_elements) {
         let triangles = [
@@ -211,8 +227,8 @@ fn assemble_system(
         .iter()
         .map(|node| node.current_source_a)
         .collect::<Vec<_>>();
-    assemble_interfaces(request, &mut conductance, &mut currents);
-    (conductance, currents)
+    assemble_interfaces(request, &mut conductance, &mut currents, reference)?;
+    Ok((conductance, currents))
 }
 
 fn solve_potentials(
@@ -220,16 +236,20 @@ fn solve_potentials(
     conductance: &SparseMatrix,
     currents: &[f64],
     options: SpdSolveOptions,
+    reference: f64,
 ) -> Result<Vec<f64>, String> {
     let prescribed = request
         .nodes
         .iter()
         .enumerate()
-        .filter_map(|(index, node)| {
-            node.fix_electric_potential
-                .then_some((index, node.electric_potential_v))
+        .filter(|(_, node)| node.fix_electric_potential)
+        .map(|(index, node)| {
+            Ok((
+                index,
+                relative_potential_v(node.electric_potential_v, reference)?,
+            ))
         })
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, String>>()?;
     let (reduced, reduced_currents, free) =
         reduce_sparse_system_with_prescribed(conductance, currents, &prescribed)?;
     let solved = solve_spd_system_profile_with_options(&reduced, &reduced_currents, options)
@@ -248,9 +268,9 @@ fn solve_potentials(
 fn recover_node_currents(
     request: &SolveElectricConductionPlaneQuad2dRequest,
     conductance: &SparseMatrix,
-    applied_currents: &[f64],
     potentials: &[f64],
     terminal_currents: &[f64],
+    reference: f64,
 ) -> Vec<ElectricConductionPlaneNodeResult> {
     request
         .nodes
@@ -260,20 +280,28 @@ fn recover_node_currents(
             let conductive_current_a = conductance
                 .row_entries(index)
                 .iter()
-                .map(|(column, value)| value * potentials[*column])
+                // Terminal conductance is diagonal. The off-diagonal differences
+                // recover bulk/contact current without a common-mode cancellation.
+                .filter(|(column, _)| *column != index)
+                .map(|(column, value)| value * (potentials[*column] - potentials[index]))
                 .sum::<f64>();
-            let reaction_current_a = conductive_current_a - applied_currents[index];
+            let reaction_current_a =
+                conductive_current_a - node.current_source_a - terminal_currents[index];
             ElectricConductionPlaneNodeResult {
                 index,
                 id: node.id.clone(),
                 x: node.x,
                 y: node.y,
                 fix_electric_potential: node.fix_electric_potential,
-                electric_potential_v: potentials[index],
+                electric_potential_v: if node.fix_electric_potential {
+                    node.electric_potential_v
+                } else {
+                    potentials[index] + reference
+                },
                 current_source_a: node.current_source_a,
                 reaction_current_a,
                 net_injected_current_a: if node.fix_electric_potential {
-                    node.current_source_a + terminal_currents[index] + reaction_current_a
+                    conductive_current_a
                 } else {
                     node.current_source_a + terminal_currents[index]
                 },
@@ -286,6 +314,7 @@ fn recover_element_fields(
     request: &SolveElectricConductionPlaneQuad2dRequest,
     computed_elements: &[HeatPlaneQuadComputed],
     potentials: &[f64],
+    reference: f64,
 ) -> Vec<ElectricConductionPlaneQuadElementResult> {
     request
         .elements
@@ -293,7 +322,7 @@ fn recover_element_fields(
         .zip(computed_elements)
         .enumerate()
         .map(|(index, (element, computed))| {
-            recover_element_field(index, element, computed, potentials)
+            recover_element_field(index, element, computed, potentials, reference)
         })
         .collect()
 }
@@ -303,6 +332,7 @@ fn recover_element_field(
     element: &ElectricConductionPlaneQuadElementInput,
     computed: &HeatPlaneQuadComputed,
     potentials: &[f64],
+    reference: f64,
 ) -> ElectricConductionPlaneQuadElementResult {
     let first = triangle_field(
         &computed.first,
@@ -343,7 +373,8 @@ fn recover_element_field(
             + potentials[element.node_j]
             + potentials[element.node_k]
             + potentials[element.node_l])
-            / 4.0,
+            / 4.0
+            + reference,
         electric_potential_gradient_x_v_m: -electric_field_x_v_m,
         electric_potential_gradient_y_v_m: -electric_field_y_v_m,
         electric_field_x_v_m,

@@ -9,7 +9,8 @@ pub(crate) fn assemble_interfaces(
     request: &SolveElectricConductionPlaneQuad2dRequest,
     conductance: &mut SparseMatrix,
     applied_currents: &mut [f64],
-) {
+    reference: f64,
+) -> Result<(), String> {
     for contact in &request.contact_interfaces {
         let value = contact.contact_resistance_ohm.recip();
         add_at(conductance, contact.node_i, contact.node_i, value);
@@ -20,8 +21,18 @@ pub(crate) fn assemble_interfaces(
     for terminal in &request.terminals {
         let value = terminal.impedance_ohm.recip();
         add_at(conductance, terminal.node, terminal.node, value);
-        applied_currents[terminal.node] += value * terminal.external_potential_v;
+        applied_currents[terminal.node] +=
+            value * relative_potential_v(terminal.external_potential_v, reference)?;
     }
+    Ok(())
+}
+
+pub(crate) fn relative_potential_v(value: f64, reference: f64) -> Result<f64, String> {
+    let relative = value - reference;
+    if !relative.is_finite() {
+        return Err("electric conduction relative potential range must be finite".into());
+    }
+    Ok(relative)
 }
 
 pub(crate) fn recover_contacts(
@@ -52,14 +63,21 @@ pub(crate) fn recover_contacts(
 pub(crate) fn recover_terminals(
     request: &SolveElectricConductionPlaneQuad2dRequest,
     potentials: &[f64],
+    reference: f64,
 ) -> Vec<ElectricConductionTerminalResult> {
     request
         .terminals
         .iter()
         .enumerate()
         .map(|(index, terminal)| {
-            let node_potential_v = potentials[terminal.node];
-            let voltage_drop_v = terminal.external_potential_v - node_potential_v;
+            let node = &request.nodes[terminal.node];
+            let node_potential_v = if node.fix_electric_potential {
+                node.electric_potential_v
+            } else {
+                potentials[terminal.node] + reference
+            };
+            let voltage_drop_v =
+                (terminal.external_potential_v - reference) - potentials[terminal.node];
             let current_into_domain_a = voltage_drop_v / terminal.impedance_ohm;
             ElectricConductionTerminalResult {
                 index,
@@ -101,6 +119,7 @@ pub(crate) fn validate_interfaces(
             || contact.node_i == contact.node_j
             || !contact.contact_resistance_ohm.is_finite()
             || contact.contact_resistance_ohm <= 0.0
+            || !contact.contact_resistance_ohm.recip().is_finite()
     }) {
         return Err("electric conduction contact interface parameters are invalid".to_string());
     }
@@ -112,6 +131,7 @@ pub(crate) fn validate_interfaces(
             || !terminal.external_potential_v.is_finite()
             || !terminal.impedance_ohm.is_finite()
             || terminal.impedance_ohm <= 0.0
+            || !terminal.impedance_ohm.recip().is_finite()
     }) {
         return Err("electric conduction terminal parameters are invalid".to_string());
     }

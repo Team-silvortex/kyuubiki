@@ -1,0 +1,80 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded local scalar-plane and electric-conduction regression: reference invariance, split-quad energy, terminal/contact power recovery and explicit Joule-to-nodal-heat transfer. Includes a scalar precompute microbenchmark only. No installed, cross-platform, million-node or general material qualification claim.",
+  "evidence_claims": [
+    {
+      "id": "electric-conduction-reference-current-and-network-power",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/solver/src/electric_conduction_plane_2d.rs",
+        "workers/rust/crates/solver/src/electric_conduction_interfaces.rs",
+        "workers/rust/crates/solver/tests/electric_conduction_reference_invariance.rs",
+        "workers/rust/crates/engine/tests/electric_conduction_operator.rs",
+        "config/operator-validation-profiles/electromagnetic.json",
+        "evidence/operator-screening/electric-conduction-plane-quad-2d.md",
+        "reports/electric-conduction-reference-20260920.md"
+      ],
+      "required_text": [
+        "relative_potential_v",
+        "a_large_source_cancelled_by_a_fixed_electrode_does_not_erase_domain_current",
+        "sparse_current_driven_patch_preserves_ohms_law_with_all_preconditioners",
+        "reference_shift_preserves_current_driven_joule_to_heat_chain",
+        "All 11 new solver integration tests passed.",
+        "This is bounded component evidence, not release qualification"
+      ]
+    },
+    {
+      "id": "scalar-plane-reference-and-integrated-energy",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/solver/src/scalar_plane_kernel.rs",
+        "workers/rust/crates/solver/src/heat_plane_2d.rs",
+        "workers/rust/crates/solver/src/electrostatic_plane_2d.rs",
+        "workers/rust/crates/solver/src/magnetostatic_plane_2d.rs",
+        "workers/rust/crates/solver/tests/scalar_plane_reference_invariance.rs",
+        "config/operator-validation-profiles.json",
+        "config/operator-validation-profiles/electromagnetic.json",
+        "docs/operator-reliability.md",
+        "reports/scalar-plane-kernel-20260920.md"
+      ],
+      "required_text": [
+        "shift_prescribed_reference",
+        "mean_squared_gradient",
+        "heat_sources_and_heterogeneous_materials_are_reference_and_orientation_invariant",
+        "electrostatic_sources_and_heterogeneous_materials_are_reference_and_orientation_invariant",
+        "magnetostatic_sources_and_heterogeneous_materials_are_reference_and_orientation_invariant",
+        "unequal_area_quad_energy_matches_analytic_subtriangle_integral",
+        "All eight original regression tests failed before the fix and passed after it."
+      ]
+    },
+    {
+      "id": "scalar-plane-quad-precompute-local-benchmark",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["benchmark"],
+      "dimensions": ["benchmark"],
+      "files": [
+        "workers/rust/crates/solver/src/scalar_plane_benchmark.rs",
+        "workers/rust/crates/solver/src/scalar_plane_kernel.rs",
+        "reports/scalar-plane-kernel-20260920.md"
+      ],
+      "required_text": [
+        "scalar_plane_quad_precompute_benchmark",
+        "median_ns_per_element",
+        "183.835",
+        "156.862",
+        "No global speedup bound is claimed."
+      ]
+    }
+  ]
+}

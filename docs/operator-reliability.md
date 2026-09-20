@@ -314,6 +314,39 @@ the orientation regression lives at
 The manufactured electrostatic and magnetostatic plane refinement tests now
 close the same packet's convergence dimension.
 
+### Scalar Reference And Split-Quad Energy
+
+Heat, electrostatic and magnetostatic triangle/split-quad solvers share a scalar
+element kernel. Prescribed values are shifted by a fixed reference before
+constraint reduction; gradients are evaluated from relative values and nodal
+differences. Absolute nodal values and element averages are restored only at
+the result boundary. Adding a common constant must not create heat flux,
+electric field, magnetic flux or stored energy. This cannot recover differences
+already rounded away in the input `f64` values, and the reported absolute nodal
+values remain limited by their floating-point resolution.
+
+Split quads keep area-averaged gradient/field vectors for visualization, but
+energy density is the area-weighted average of the two subtriangle densities:
+`sum(area_i * coefficient * |grad_i|^2 / 2) / sum(area_i)`, with coefficient
+`permittivity` for electrostatics and `1 / permeability` for magnetostatics.
+Do not reconstruct energy by squaring the averaged vector: opposing fields can
+have zero mean and positive stored energy. Total energy is density times area
+times thickness. This is still the two-triangle discretization, not a new Q4
+isoparametric element. Nonuniform quad energies may differ from older results
+because the old squared-average formula understated them. Disposable development
+outputs may be discarded without migration or bulk recomputation. Only results
+that will still be used for this diagnostic need a fresh solve; retained results
+are not silently rewritten. Keep the solver, example definitions and regression
+tests as described in `data-lifecycle.html#development-retention`.
+
+`workers/rust/crates/solver/tests/scalar_plane_reference_invariance.rs` covers
+constant/linear skew patches, positive and negative reference shifts, nonzero
+sources, heterogeneous coefficients, reversed connectivity, dense and sparse
+solves, and equal/unequal-area energy integrals. The bounded local evidence and
+precompute microbenchmark are recorded in
+`reports/scalar-plane-kernel-20260920.md`; neither extends production material
+qualification or proves an end-to-end/1M-node performance improvement.
+
 ## Thermal Plane Review Scope
 
 The 2D heat-plane and thermoelastic-plane operators are now qualification grade
@@ -1055,6 +1088,20 @@ orientation before assembly. This is screening evidence only; nonlinear,
 anisotropic, transient, induction/skin-effect, and coupled thermal feedback
 claims remain outside the operator, and release promotion still requires
 versioned provenance plus reviewer-approved retained evidence.
+
+The conduction profile also retains common-potential shifts of `+/-2^40 V`
+for current-driven, contact, finite-impedance, and mixed-boundary models.
+Assembly shifts terminal external voltages together with prescribed values;
+field/current recovery and balanced network work use the relative solution.
+Fixed-electrode net injection is recovered from voltage differences rather
+than cancellation of a large current source and its reaction. Reported nodal
+potentials and individual terminal powers retain the caller's absolute
+reference. A 1,225-node current-driven patch covers all three sparse
+preconditioners, and an Engine test explicitly transfers Joule power into
+nodal thermal loads. This is not automatic volumetric projection, nonlinear
+electrothermal feedback, a large-mesh benchmark, or broader qualification.
+See the [bounded regression report](../reports/electric-conduction-reference-20260920.md)
+for reproduction commands, tolerances, and floating-point limits.
 
 `solve.frame_3d` is now qualified for the current single-member cantilever
 scope. The retained evidence derives the Euler-Bernoulli displacement, slope,

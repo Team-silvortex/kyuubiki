@@ -39,6 +39,13 @@
             packages can be removed after checking ownership and active use. Do not create
             a cleanup backup. Keep only a small relevant failure fixture while investigating
             an unresolved defect, not every generation of the entire run.</li>
+          <li><strong>Discard obsolete results, not capabilities:</strong> after a solver
+            fix, disposable development outputs may be deleted without bulk recomputation,
+            migration or an old-result compatibility layer. Recompute only when a result is
+            needed again. Keep the operator implementations, reproducible example definitions,
+            fixture generators, regression tests and persistence/import/export/recovery
+            capabilities. If referenced evidence is pruned, update its report and coverage
+            status instead of leaving a claim that the deleted artifact is still retained.</li>
           <li><strong>Rebuild disposable legacy stores:</strong> stop all writers, select a
             fresh empty test database and initialize it with the current runtime. Remove
             the explicitly identified old test store when it is no longer in use; do not
