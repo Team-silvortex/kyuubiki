@@ -1,5 +1,28 @@
 # Changelog
 
+## daji 3.3.0 development checkpoint
+
+September 20, 2026. This entry summarizes recent source changes carried forward
+from 3.2.x; it is not a package publication or installed-release qualification.
+
+- Added a focused Hub bundle-creation flow with native directory selection.
+- Reorganized PWDT into a dedicated workspace with an embedded editor and
+  grouped controls; compacted dense material, runtime, and security panels.
+- Corrected mixed-language Workbench root and extended language-pack copy and
+  completed the bounded Arabic, Persian, and Spanish PWDT copy contracts.
+- Added localization regressions for locale switching, retained drafts and
+  execution state, accessible labels, and installed macOS Pyodide controls.
+- Aligned the central HTML book, Hub documentation shelf, model onboarding,
+  and current architecture metadata to the 3.3.0 development checkpoint.
+
+The packaged baseline remains `3.2.0`. Historical evidence, schema versions,
+and open readiness gates are unchanged. Translation is not yet certified for
+every surface in all 30 locales. See [current progress](docs/current-line.md)
+and [language-pack scope](docs/language-packs.md) for the detailed boundaries.
+
+Older entries below are retained snapshots, not a complete intervening history.
+Use Git history and the linked current-line documentation for later development.
+
 ## tamamono 1.8.1 workflow reliability snapshot
 
 ### Changed

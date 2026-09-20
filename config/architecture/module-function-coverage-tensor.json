@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.module-function-coverage-tensor/v5",
-  "version_line": "daji 3.2.x",
+  "version_line": "daji 3.3.x",
   "topology": "config/architecture/module-topology.json",
   "matrix": "config/architecture/module-function-coverage-matrix.json",
   "runtime_api_client_contract": "config/architecture/contracts-runtime-api-surface.json",

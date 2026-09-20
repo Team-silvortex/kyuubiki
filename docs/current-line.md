@@ -1,7 +1,36 @@
 # daji 3.x
 
 This is the single entrypoint for the active Kyuubiki product line.
-The current development point in this line is `daji 3.2.0`.
+The current development point in this line is `daji 3.3.0`.
+The packaged baseline remains `daji 3.2.0`; documentation and source progress
+do not imply that a new App bundle or downloadable runtime has been published.
+
+## Daji 3.3.0 Checkpoint
+
+This checkpoint records the source state on September 20, 2026, including the
+recent 3.2.x work carried into 3.3.0:
+
+- Hub project creation now has a focused bundle-creation flow and a native
+  directory picker, rather than requiring every destination to be typed.
+  See the [first research tutorial](tutorial-first-research.html).
+- Workbench PWDT has a dedicated workspace, embedded Python editor, and grouped
+  execution and inspection panels. Dense material-library, runtime, and security
+  panels use compact grouping rather than one long stack. See the
+  [PWDT tutorial](tutorial-pwdt-automation.html).
+- Local language-pack repairs cover mixed-language root and extended copy.
+  Arabic, Persian, and Spanish PWDT copy now covers 148 panel entries, eight DSL
+  entries, and 19 catalog-control entries per language. This is a bounded copy
+  contract, not proof of complete translation across all 30 locales.
+- Localization checks distinguish unit/browser state-retention tests from actual
+  Pyodide calls in the installed macOS WebView. SDK-bridge copy, generated action
+  summaries, diagnostics, and other locale surfaces still need separate review.
+  See [language-pack coverage and limits](language-packs.md).
+
+This documentation checkpoint adds no new numerical, scale, or installed-release
+qualification. The coverage tensor keeps its dated calibration, evidence grades,
+and open scenario requirements; its current version label is not a new test run.
+The next work remains complete, recoverable research journeys and closure of the
+[evidence-backed weak coordinates](weakness-roadmap.md#current-tensor-status).
 
 ## What Changed
 

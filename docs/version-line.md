@@ -8,8 +8,9 @@ The active product identity is defined by the
 
 - codename: `daji`
 - active line: `3.x`
-- current development point: `daji 3.2.0`
-- current documentation target: `daji 3.2.x` line
+- current development point: `daji 3.3.0`
+- current documentation target: `daji 3.3.x` line
+- current packaged baseline: `daji 3.2.0`
 - first version: `3.0.0`
 - terminal version: `3.20.9`
 - cadence: minor positions `0..20`, patch positions `0..9`
@@ -23,8 +24,10 @@ stabilization window is retained in `archived_lines`; it no longer constrains
 the active Daji line. This transition does not assert that every planned moxi
 patch was shipped.
 
-All shipping packages, first-party SDKs, brand mirrors, update channels,
-language-pack targets, and current documentation align on `3.2.0`.
+Current development documentation follows `docs/book-manifest.json` and is
+aligned on `3.3.0`. Shipping packages, first-party SDK package metadata, brand
+mirrors, update channels, and language-pack targets retain the `3.2.0` packaged
+baseline. Advancing documentation does not rebuild or publish those artifacts.
 Protocol/schema versions and persistent storage identifiers do not follow
 product SemVer mechanically.
 

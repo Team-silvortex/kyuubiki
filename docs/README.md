@@ -3,6 +3,11 @@
 Use this directory as the current source of truth for product shape, protocol
 boundaries, deployment modes, and engineering workflow.
 
+The current documentation checkpoint is **daji 3.3.0**. Start with the
+[current-line summary](current-line.md#daji-330-checkpoint) for recent progress.
+Packaged artifacts remain at `3.2.0`; dated acceptance records retain their
+original versions and are not fresh 3.3.0 qualification.
+
 ## Ownership
 
 - `docs/`
@@ -36,7 +41,7 @@ Read these first, in order:
 17. `minimal-industrial-closure.md`
 18. `weakness-roadmap.md`
 
-For the current `2.18.x` hardening path, keep five threads mentally linked:
+For the current `3.3.x` hardening path, keep six threads mentally linked:
 
 - centralized docs book and Hub shelf mirrors
 - headless live execution checks

@@ -142,15 +142,17 @@ test commands nor contract evidence are reported as `weak_evidence`, so a
 module cannot look healthy only because the two-dimensional matrix says it is
 covered.
 
-Tensor v5 recalibrates the current `daji 3.2.x` hardening profile. A registered
-command is a test plan, not evidence of execution. The coordinate grade is the
+The current `daji 3.3.x` documentation retains the tensor v5 calibration of the
+`daji 3.2.x` hardening profile. A registered command is a test plan, not evidence
+of execution. The coordinate grade is the
 minimum proven strength across its required dimensions, not its best single
 claim. `best_available_grade` preserves that stronger retained claim without
 broadcasting it to other dimensions. P0/P1/P2 criticality and external release
 decisions remain separate from structural `ok`.
 
-The current source checkpoint is `daji 3.2.0`. This recalibration does not bump
-the application. The profile stays advisory until an explicit gate-mode
+The calibration source checkpoint remains `daji 3.2.0`; current development is
+`daji 3.3.0`. Updating the documentation neither reruns qualification nor bumps
+the packaged application. The profile stays advisory until an explicit gate-mode
 decision changes it to `enforced`; only then does an unready profile fail the
 command rather than produce a hardening queue.
 

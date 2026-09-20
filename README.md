@@ -5,11 +5,14 @@ simulation runtime. Its long-term direction is to become a Blender-like
 engineering environment for finite-element research: visual when that helps,
 headless when automation matters, and open at every protocol boundary.
 
-> The current packaged version is **daji 3.2.0**, in the **daji 3.x** line.
-> Desktop applications, runtimes, official SDKs, language packs, and release
-> contracts share this version. Historical moxi evidence remains unchanged.
-> The version transition is a milestone, not a blanket industrial-certification
-> or general-availability claim; public distribution remains evidence-gated.
+> The current development and documentation version is **daji 3.3.0**.
+> The packaged baseline remains **daji 3.2.0**: this documentation update does
+> not rebuild applications, change download artifacts, or publish a release.
+> Historical evidence keeps its original version and scope. A version number
+> is not industrial certification; public distribution remains evidence-gated.
+
+See the [3.3.0 checkpoint](docs/current-line.md#daji-330-checkpoint) for recent
+project-creation, compact-workspace, PWDT, and localization progress and limits.
 
 Early Daji prioritizes hardening an **agent-driven industrial research system**,
 not increasing feature count. Research agents use the Headless SDKs to run
