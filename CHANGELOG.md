@@ -1,5 +1,18 @@
 # Changelog
 
+## daji 3.3.0 local packaging follow-up
+
+- Grouped study setup, modeling, inline checkpoint save, execution, and result
+  review near the modeling viewport, reusing existing save and PWDT contracts.
+- Added duplicate-submit protection across panel switches, live cancellation,
+  failed-call recovery, compact-layout, and RTL browser regression coverage.
+  Fullscreen uses the existing controls without duplication.
+- Aligned desktop/runtime packages, SDK metadata, and local language packs to
+  3.3.0. This is a local macOS rebuild, not public or registry publication.
+
+Build and installation outcomes belong to `releases/snapshots/3.3.0.json`.
+The preceding documentation-only checkpoint below retains its original scope.
+
 ## daji 3.3.0 development checkpoint
 
 September 20, 2026. This entry summarizes recent source changes carried forward

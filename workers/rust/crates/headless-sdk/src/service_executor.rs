@@ -6,9 +6,10 @@ use std::fmt;
 use std::io::{Read, Write};
 
 use crate::service_executor_artifact::prepare_direct_fem_request_body;
+use crate::service_executor_deadline::{read_before_deadline, write_before_deadline};
 use crate::service_executor_health::with_discovered_solver_endpoints;
 use crate::service_executor_http::{
-    REQUEST_IO_TIMEOUT, connect_service_stream, decode_http_response_body,
+    REQUEST_IO_TIMEOUT, connect_service_stream_with_deadline, decode_http_response_body,
 };
 use crate::service_executor_job_wait::execute_job_wait;
 #[cfg(test)]
@@ -21,6 +22,7 @@ use crate::service_executor_solve::{
     execute_direct_mesh_solve, execute_solve_and_wait_from_model_version,
     execute_solve_from_model_version,
 };
+use std::time::Instant;
 
 pub(crate) const MAX_INLINE_JSON_BYTES: usize = 8_000_000;
 
@@ -413,6 +415,17 @@ pub(crate) fn request_json(
     path: &str,
     body: Option<Value>,
 ) -> Result<Value, HeadlessExecutorError> {
+    request_json_with_deadline(base_url, api_token, method, path, body, None)
+}
+
+pub(crate) fn request_json_with_deadline(
+    base_url: &str,
+    api_token: Option<&str>,
+    method: &str,
+    path: &str,
+    body: Option<Value>,
+    deadline: Option<Instant>,
+) -> Result<Value, HeadlessExecutorError> {
     let endpoint = parse_http_url(base_url)?;
     let request_path = sanitize_request_path(if path.starts_with('/') {
         path.to_string()
@@ -427,11 +440,12 @@ pub(crate) fn request_json(
             message: error.to_string(),
         })?;
     validate_inline_json_size(&request_path, body_text.as_deref().map_or(0, str::len))?;
-    let mut stream = connect_service_stream(
+    let mut stream = connect_service_stream_with_deadline(
         &endpoint.host,
         endpoint.port,
         REQUEST_IO_TIMEOUT,
         "service request",
+        deadline,
     )?;
     let request = build_request(
         method,
@@ -440,6 +454,16 @@ pub(crate) fn request_json(
         body_text.as_deref(),
         api_token.as_deref(),
     );
+    if let Some(deadline) = deadline {
+        write_before_deadline(
+            &mut stream,
+            request.as_bytes(),
+            deadline,
+            REQUEST_IO_TIMEOUT,
+        )?;
+        let response = read_before_deadline(&mut stream, deadline, REQUEST_IO_TIMEOUT)?;
+        return parse_json_response(&response, path);
+    }
     stream
         .write_all(request.as_bytes())
         .map_err(|error| HeadlessExecutorError {
@@ -648,18 +672,6 @@ fn pick_string<'a>(payload: &'a Value, keys: &[&str]) -> Option<&'a str> {
             .and_then(Value::as_str)
             .map(str::trim)
             .filter(|value| !value.is_empty())
-    })
-}
-
-pub(crate) fn pick_u64(payload: &Value, keys: &[&str]) -> Option<u64> {
-    keys.iter().find_map(|key| {
-        payload.get(*key).and_then(|value| {
-            value.as_u64().or_else(|| {
-                value
-                    .as_str()
-                    .and_then(|text| text.trim().parse::<u64>().ok())
-            })
-        })
     })
 }
 

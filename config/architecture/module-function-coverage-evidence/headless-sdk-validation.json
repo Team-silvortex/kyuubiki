@@ -87,6 +87,31 @@
     ],
     "validation": [
       {
+        "id": "native-headless-wait-deadline-boundaries",
+        "modules": ["sdk-headless"],
+        "files": [
+          "workers/rust/crates/headless-sdk/src/service_executor_deadline.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_deadline_tests.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_job_wait.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_job_wait_tests.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_solve.rs",
+          "workers/rust/crates/cli/tests/headless_wait_recovery.rs",
+          "docs/headless-sdks.md"
+        ],
+        "required_text": [
+          "rejects_a_completed_response_arriving_after_the_wait_budget",
+          "a_slow_drip_response_cannot_reset_the_wait_budget",
+          "fixed_wait_does_not_issue_an_extra_poll_after_sleep_exhausts_the_window",
+          "timed_out_observation_can_resume_the_same_job_without_submission_or_cancel",
+          "server_authorized_resume_still_bounds_a_stalled_response_by_the_total_budget",
+          "missing_or_expired_server_timing_does_not_authorize_another_request",
+          "connection_refusal_backoff_obeys_the_same_wait_deadline",
+          "solve_and_wait_validates_timing_before_loading_or_submitting_a_model",
+          "repeated_dns_timeouts_cannot_create_unbounded_resolver_threads",
+          "native_cli_persists_wait_failure_and_resumes_without_resubmitting"
+        ]
+      },
+      {
         "id": "headless-summary-validation-boundaries",
         "modules": [
           "sdk-headless"

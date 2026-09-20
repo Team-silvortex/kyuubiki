@@ -1,0 +1,43 @@
+{
+  "schema_version": "kyuubiki.packaged-desktop-smoke-report/v1",
+  "generated_at": "2026-09-20T03:54:05Z",
+  "platform": "macos",
+  "bundle_root": "@external/Applications",
+  "expected_version": "3.3.0",
+  "timeout_secs": 25,
+  "status": "pass",
+  "passed": 3,
+  "failed": 0,
+  "surfaces": [
+    {
+      "surface": "hub",
+      "app_path": "@bundle-root/Kyuubiki Hub.app",
+      "executable_path": "@bundle-root/Kyuubiki Hub.app/Contents/MacOS/kyuubiki-hub-gui",
+      "log_path": "tmp/packaged-desktop-smoke/hub.log",
+      "status": "pass",
+      "elapsed_ms": 1258,
+      "pid": 94048,
+      "detail": "interactive startup receipt accepted for hub 3.3.0"
+    },
+    {
+      "surface": "installer",
+      "app_path": "@bundle-root/Kyuubiki Installer.app",
+      "executable_path": "@bundle-root/Kyuubiki Installer.app/Contents/MacOS/kyuubiki-installer-gui",
+      "log_path": "tmp/packaged-desktop-smoke/installer.log",
+      "status": "pass",
+      "elapsed_ms": 1044,
+      "pid": 94059,
+      "detail": "interactive startup receipt accepted for installer 3.3.0"
+    },
+    {
+      "surface": "workbench",
+      "app_path": "@bundle-root/Kyuubiki Workbench.app",
+      "executable_path": "@bundle-root/Kyuubiki Workbench.app/Contents/MacOS/kyuubiki-workbench-gui",
+      "log_path": "tmp/packaged-desktop-smoke/workbench.log",
+      "status": "pass",
+      "elapsed_ms": 941,
+      "pid": 94113,
+      "detail": "interactive startup receipt accepted for workbench 3.3.0"
+    }
+  ]
+}

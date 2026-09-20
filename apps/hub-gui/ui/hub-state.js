@@ -23,6 +23,7 @@ export function createHubState() {
         assistantPlan: null,
         hotLogRefreshInFlight: false,
         runtimeLogRefreshInFlight: false,
+        assistantRuntimeReport: null,
         density: { ...HUB_DENSITY_DEFAULTS },
         releaseVersion: "",
         releaseCodename: "",

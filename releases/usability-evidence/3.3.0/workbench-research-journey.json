@@ -1,0 +1,49 @@
+{
+  "schema_version": "kyuubiki.workbench-research-journey-report/v1",
+  "version": "3.3.0",
+  "date": "2026-09-20",
+  "status": "pass",
+  "source_baseline": "1137f84a57c2b6635adf80d8ad039902494008c0",
+  "source_note": "Includes uncommitted layout, regression and packaging changes from this rebuild.",
+  "browser_regressions": {
+    "command": "node --test --test-concurrency=1 tests/integration/workbench-ui-research-actions.test.mjs tests/integration/workbench-ui-immersive-modeling.test.mjs tests/integration/workbench-ui-viewport-priority.test.mjs",
+    "passed": 18,
+    "failed": 0,
+    "coverage": [
+      "study/model navigation, inline checkpoint save, run and result focus without leaving the model",
+      "same-turn duplicate submission and delayed submission across panel remounts",
+      "failed submission retry and cancellation while a run is observing its job",
+      "normal viewport dominance from 390x844 through 1470x820",
+      "compact and RTL research controls in zh, de, ar and es",
+      "fullscreen and window-local modeling, save recovery, batch editing and dock resize"
+    ],
+    "backend": "isolated synthetic API; not numerical qualification"
+  },
+  "installed_acceptance": {
+    "platform": "macos-aarch64",
+    "surface": "installed Workbench WebView",
+    "model_preparation": "real Pyodide/PWDT helper generated four truss bays, span 12 m, height 2 m, load_y -800 N",
+    "input": { "nodes": 9, "elements": 15 },
+    "operations": [
+      "create dedicated acceptance project through PWDT",
+      "save a model checkpoint through the nearby Save form",
+      "submit once through the nearby Run button",
+      "observe completed job from installed Rust Agent through installed Orchestra",
+      "open result inspector with nearby Result button; model viewport remains fully visible"
+    ],
+    "job_status": "completed",
+    "result": {
+      "max_displacement_m": 0.000009334521456203627,
+      "max_stress_pa": 112499.99999999964,
+      "nodes": 9,
+      "elements": 15
+    },
+    "cleanup": "temporary project, model, checkpoint, job and result removed; original script template restored",
+    "final_payload_note": "The installed interactive journey preceded the final panel-remount lock hardening. The final production payload includes that hardening and passed all 18 browser regressions."
+  },
+  "limitations": [
+    "This report qualifies a bounded UI journey, not all GUI operations or numerical solver accuracy.",
+    "Only macOS installed execution was checked; Linux and Windows native acceptance remains separate.",
+    "No public distribution, notarization or SDK registry publication was performed."
+  ]
+}

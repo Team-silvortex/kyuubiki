@@ -5,6 +5,8 @@ export function renderAssistantShellCopy(params) {
     setText(elements.assistantIntroCopy, copy.assistant.introCopy);
     setText(elements.assistantClose, copy.assistant.close);
     setText(elements.assistantEngineLabel, copy.assistant.engine);
+    setText("assistant-mode-local", copy.assistant.localMode);
+    setText("assistant-mode-llm", copy.assistant.llmMode);
     setText(elements.assistantContextSectionLabel, copy.assistant.section);
     setText(elements.assistantContextRuntimeLabel, copy.assistant.runtime);
     setText(elements.assistantContextBundleLabel, copy.assistant.bundle);

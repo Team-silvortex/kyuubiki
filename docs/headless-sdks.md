@@ -457,6 +457,30 @@ Polling uses `/api/v1/jobs/:job_id/status`, which never embeds solver results;
 mirror. Full values remain available for downstream step bindings, while run
 reports summarize oversized arrays. This prevents report size from scaling with
 repeated copies of a solver result.
+In the native Rust service executor, the wait deadline also bounds DNS,
+connection retry backoff, writes, and reads; receiving a few more bytes does
+not restart the budget. Fixed waits never issue another poll after their
+window expires or accept a completion that arrives after that deadline.
+For `server_deadline`, a previously observed, still-active server timing grant
+can authorize an in-flight read across a soft window, but never beyond
+`max_total_timeout_ms`. That grant ages locally while the client waits; stale
+timing cannot indefinitely renew observation. No timing means no extension.
+System DNS lookups are not cancellable, so at most four may remain outstanding
+per process; late DNS answers are discarded and cannot send requests. Job
+status responses are limited to 8,000,000 bytes including HTTP headers.
+
+A wait timeout ends observation, not server-side execution. Retain the
+accepted `job_id`, inspect `job_fetch`, and resume `job_wait` on that ID if
+appropriate. Do not replay the submit step or the whole
+`solve_and_wait_from_model_version` action to recover a polling timeout.
+Malformed timing values, zero budgets, and conflicting timing aliases fail
+validation rather than silently falling back to defaults. The composite
+solve-and-wait action validates these options before loading or submitting a
+model; both snake_case and camelCase wait keys retain the same behavior.
+These transport guarantees currently describe the native Rust service
+executor used by the reference runner, not a new cross-language parity claim
+for the independent clients in `sdks/`.
+
 Inspect `job.status_detail.timing` for `effective_timeout_ms`,
 `job_submission_deadline`, `execution_started_at`, and `effective_deadline`.
 The timing object also exposes `queue_wait_ms`, `execution_elapsed_ms`, and

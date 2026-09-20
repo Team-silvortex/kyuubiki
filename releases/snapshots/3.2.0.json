@@ -2,7 +2,7 @@
   "version": "3.2.0",
   "codename": "daji",
   "line": "3.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-09-09",
   "git_commit": "388e061e48c0a7b4d63366471c8095cf11b86c8e",
   "summary": "Daji 3.2.0 desktop rebuild with aligned native runtimes, SDK metadata, language packs, and current documentation. Includes the committed project-version transaction, result-persistence, and workflow-recovery fixes.",

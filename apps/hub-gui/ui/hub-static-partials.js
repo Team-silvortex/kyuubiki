@@ -469,9 +469,25 @@
             <button class="desktop-shell-button-primary" data-assistant-mode="local" id="assistant-mode-local">Local guide</button>
             <button data-assistant-mode="llm" id="assistant-mode-llm">Model assist</button>
           </div>
-          <div class="hub-metrics">
+          <div class="hub-assistant-context">
             <div class="desktop-shell-metric-row"><span id="assistant-context-section-label">Section</span><strong id="assistant-context-section">projects</strong></div>
-            <div class="desktop-shell-metric-row"><span id="assistant-context-runtime-label">Runtime</span><strong id="assistant-context-runtime">ready</strong></div>
+            <details class="hub-assistant-runtime" id="assistant-runtime-details">
+              <summary><span id="assistant-context-runtime-label">Runtime</span><strong id="assistant-context-runtime">Not checked yet</strong></summary>
+              <div class="hub-assistant-runtime__body">
+                <section data-runtime-service-group hidden>
+                  <div class="hub-card__eyebrow" data-runtime-services-label>Services</div>
+                  <ul class="hub-assistant-runtime__services" data-runtime-services></ul>
+                </section>
+                <details data-runtime-configuration hidden>
+                  <summary data-runtime-configuration-label>Configuration &amp; paths</summary>
+                  <dl class="hub-assistant-runtime__fields" data-runtime-fields></dl>
+                </details>
+                <details>
+                  <summary data-runtime-raw-label>Raw diagnostics</summary>
+                  <pre class="hub-assistant-runtime__raw" data-runtime-raw dir="auto"></pre>
+                </details>
+              </div>
+            </details>
             <div class="desktop-shell-metric-row"><span id="assistant-context-bundle-label">Bundle</span><strong id="assistant-context-bundle">--</strong></div>
           </div>
 

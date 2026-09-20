@@ -45,6 +45,8 @@ export const workbenchAutomationSelectors = {
   modelStudyDomain: (domain: string) => `[data-workbench-model-study-domain="${domain}"]`,
   modelStudyKind: '[data-workbench-model-study-kind="select"]',
   modelStudyRun: '[data-workbench-model-study-run="true"]',
+  researchToolbar: '[data-workbench-research="toolbar"]',
+  researchAction: (action: string) => `[data-workbench-research-action="${action}"]`,
   modelBatchPanel: '[data-model-batch="panel"]',
   modelBatchControl: (control: string) => `[data-model-batch="${control}"]`,
   materialPanel: '[data-workbench-materials="panel"]',

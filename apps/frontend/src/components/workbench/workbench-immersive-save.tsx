@@ -48,8 +48,8 @@ export function useWorkbenchImmersiveSave(storage: ImmersiveModelStorage) {
   };
 }
 
-export function WorkbenchImmersiveSave({ controller, t }: {
-  controller: ReturnType<typeof useWorkbenchImmersiveSave>; t: WorkbenchCopy;
+export function WorkbenchImmersiveSave({ controller, t, compact = false }: {
+  controller: ReturnType<typeof useWorkbenchImmersiveSave>; t: WorkbenchCopy; compact?: boolean;
 }) {
   const c = controller;
   return <div className="sidebar-stack immersive-save" data-workbench-immersive-save="panel" aria-busy={c.busy}>
@@ -73,11 +73,12 @@ export function WorkbenchImmersiveSave({ controller, t }: {
     </div>
     <p className="card-copy" role="status" data-workbench-immersive-save="status">
       {c.busy ? t.busy : c.feedback?.error ? `${t.auditStatusOptions.failed}: ${c.feedback.error}`
-        : c.feedback?.receipt ? `${t.auditStatusOptions.completed}: ${JSON.stringify(c.feedback.receipt)}` : t.ready}
+        : c.feedback?.receipt ? compact ? t.auditStatusOptions.completed
+          : `${t.auditStatusOptions.completed}: ${JSON.stringify(c.feedback.receipt)}` : t.ready}
     </p>
-    <dl className="immersive-save__context">
+    {!compact ? <dl className="immersive-save__context">
       <dt>{t.modelName}</dt><dd>{c.selectedModelId ?? t.none}</dd>
       <dt>{t.versions}</dt><dd>{c.selectedVersionId ?? t.none}</dd>
-    </dl>
+    </dl> : null}
   </div>;
 }

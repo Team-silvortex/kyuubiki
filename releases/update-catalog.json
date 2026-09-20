@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-09-09T06:31:15Z",
-  "shipping_version": "3.2.0",
+  "generated_at": "2026-09-20T03:48:45Z",
+  "shipping_version": "3.3.0",
   "default_channel": "stable",
   "line": "daji 3.x",
   "source": {
@@ -16,14 +16,14 @@
       "aliases": [
         "daji:latest",
         "daji:3",
-        "daji:3.2",
-        "daji:3.2.0"
+        "daji:3.3",
+        "daji:3.3.0"
       ],
       "line": "3.x",
       "status": "current",
-      "version": "3.2.0",
-      "summary": "Daji 3.2.0 desktop rebuild with aligned native runtimes, SDK metadata, language packs, and current documentation. Includes the committed project-version transaction, result-persistence, and workflow-recovery fixes.",
-      "date": "2026-09-09",
+      "version": "3.3.0",
+      "summary": "Daji 3.3.0 local desktop rebuild: nearby study, modeling, checkpoint, run and result actions; compact PWDT and dense panels; corrected local language packs. Public distribution and numerical qualification remain separate gates.",
+      "date": "2026-09-20",
       "notes": [
         "Primary operator-facing update track for the current daji 3.x line.",
         "Targets standard installs that follow the visible installation contract."
@@ -65,67 +65,66 @@
         "managed_path_policy": "workspace_relative",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/3.2.0.json",
+      "snapshot_path": "releases/snapshots/3.3.0.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
         "packaging": "docs/packaging-and-deployment.md",
-        "desktop_release_checklist": "docs/desktop-release-checklist.md",
-        "data_lifecycle": "docs/data-lifecycle.html"
+        "desktop_release_checklist": "docs/desktop-release-checklist.md"
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "3.2.0",
+          "version": "3.3.0",
           "notes": [
-            "Static UI shipped with the native runtime payload; no runtime Node service."
+            "Static frontend with nearby research actions; no runtime Node server."
           ]
         },
         "hub_gui": {
-          "version": "3.2.0",
+          "version": "3.3.0",
           "notes": [
-            "Native desktop system entrypoint."
+            "Independent native Hub shell."
           ]
         },
         "workbench_gui": {
-          "version": "3.2.0",
+          "version": "3.3.0",
           "notes": [
-            "Native desktop workflow and visualization shell."
+            "Independent native Workbench shell."
           ]
         },
         "installer_gui": {
-          "version": "3.2.0",
+          "version": "3.3.0",
           "notes": [
-            "Native installation, runtime activation, and integrity management."
+            "Independent native Installer shell."
           ]
         },
         "web_api": {
-          "version": "3.2.0",
+          "version": "3.3.0",
           "notes": [
-            "Self-contained Orchestra release includes committed persistence and checkpoint fixes."
+            "Self-contained Orchestra release."
           ]
         },
         "rust_headless_sdk": {
-          "version": "3.2.0",
+          "version": "3.3.0",
           "notes": [
-            "Version metadata aligned; registry publication is separate."
+            "Metadata aligned; registry publication not performed."
           ]
         },
         "python_headless_sdk": {
-          "version": "3.2.0",
+          "version": "3.3.0",
           "notes": [
-            "Version metadata aligned; registry publication is separate."
+            "Metadata aligned; registry publication not performed."
           ]
         },
         "elixir_headless_sdk": {
-          "version": "3.2.0",
+          "version": "3.3.0",
           "notes": [
-            "Version metadata aligned; registry publication is separate."
+            "Metadata aligned; registry publication not performed."
           ]
         },
         "rust_worker_sdk": {
-          "version": "3.2.0",
+          "version": "3.3.0",
           "notes": [
-            "Operator extension SDK remains distinct from headless control SDKs."
+            "Operator extensions remain separate from headless control."
           ]
         }
       },
@@ -156,12 +155,12 @@
   ],
   "versions": [
     {
-      "version": "3.2.0",
+      "version": "3.3.0",
       "line": "3.x",
       "status": "current",
-      "date": "2026-09-09",
-      "summary": "Daji 3.2.0 desktop rebuild with aligned native runtimes, SDK metadata, language packs, and current documentation. Includes the committed project-version transaction, result-persistence, and workflow-recovery fixes.",
-      "snapshot_path": "releases/snapshots/3.2.0.json",
+      "date": "2026-09-20",
+      "summary": "Daji 3.3.0 local desktop rebuild: nearby study, modeling, checkpoint, run and result actions; compact PWDT and dense panels; corrected local language packs. Public distribution and numerical qualification remain separate gates.",
+      "snapshot_path": "releases/snapshots/3.3.0.json",
       "channels": [
         "stable"
       ],
@@ -169,9 +168,98 @@
         "daji:stable",
         "daji:latest",
         "daji:3",
-        "daji:3.2",
-        "daji:3.2.0"
+        "daji:3.3",
+        "daji:3.3.0"
       ],
+      "product_surfaces": {
+        "frontend_workbench": {
+          "version": "3.3.0",
+          "notes": [
+            "Static frontend with nearby research actions; no runtime Node server."
+          ]
+        },
+        "hub_gui": {
+          "version": "3.3.0",
+          "notes": [
+            "Independent native Hub shell."
+          ]
+        },
+        "workbench_gui": {
+          "version": "3.3.0",
+          "notes": [
+            "Independent native Workbench shell."
+          ]
+        },
+        "installer_gui": {
+          "version": "3.3.0",
+          "notes": [
+            "Independent native Installer shell."
+          ]
+        },
+        "web_api": {
+          "version": "3.3.0",
+          "notes": [
+            "Self-contained Orchestra release."
+          ]
+        },
+        "rust_headless_sdk": {
+          "version": "3.3.0",
+          "notes": [
+            "Metadata aligned; registry publication not performed."
+          ]
+        },
+        "python_headless_sdk": {
+          "version": "3.3.0",
+          "notes": [
+            "Metadata aligned; registry publication not performed."
+          ]
+        },
+        "elixir_headless_sdk": {
+          "version": "3.3.0",
+          "notes": [
+            "Metadata aligned; registry publication not performed."
+          ]
+        },
+        "rust_worker_sdk": {
+          "version": "3.3.0",
+          "notes": [
+            "Operator extensions remain separate from headless control."
+          ]
+        }
+      },
+      "desktop_artifacts": [
+        {
+          "product": "hub",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
+          "exists": true
+        },
+        {
+          "product": "installer",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
+          "exists": true
+        },
+        {
+          "product": "workbench",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "version": "3.2.0",
+      "line": "3.x",
+      "status": "archived",
+      "date": "2026-09-09",
+      "summary": "Daji 3.2.0 desktop rebuild with aligned native runtimes, SDK metadata, language packs, and current documentation. Includes the committed project-version transaction, result-persistence, and workflow-recovery fixes.",
+      "snapshot_path": "releases/snapshots/3.2.0.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {
         "frontend_workbench": {
           "version": "3.2.0",
@@ -365,7 +453,7 @@
           "kind": "dmg",
           "platform": "macos",
           "path": "target/desktop-cache/macos/release/bundle/dmg/Kyuubiki Workbench_3.0.0_aarch64.dmg",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",

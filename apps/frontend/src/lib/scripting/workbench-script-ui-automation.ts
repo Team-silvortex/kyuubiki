@@ -46,6 +46,7 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
       modelStudyPanel: workbenchAutomationSelectors.modelStudyPanel,
       modelStudyKind: workbenchAutomationSelectors.modelStudyKind,
       modelStudyRun: workbenchAutomationSelectors.modelStudyRun,
+      researchToolbar: workbenchAutomationSelectors.researchToolbar,
       modelBatchPanel: workbenchAutomationSelectors.modelBatchPanel,
       materialPanel: workbenchAutomationSelectors.materialPanel,
       auditPanel: workbenchAutomationSelectors.auditPanel,
@@ -78,6 +79,10 @@ export function buildWorkbenchUiAutomationContractSnapshot(): WorkbenchUiAutomat
       controlWindowResetButton: workbenchAutomationSelectors.controlWindowResetButton,
     },
     parameterizedSelectors: [
+      {
+        key: "researchAction", parameter: "action",
+        template: workbenchAutomationSelectors.researchAction(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${action}"),
+      },
       {
         key: "immersiveSave", parameter: "control",
         template: workbenchAutomationSelectors.immersiveSave(SELECTOR_ARGUMENT_TOKEN).replace(SELECTOR_ARGUMENT_TOKEN, "${control}"),

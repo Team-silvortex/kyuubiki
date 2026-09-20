@@ -23,6 +23,8 @@
     "modelStudyDomain(domain)": "[data-workbench-model-study-domain=\"${domain}\"]",
     "modelStudyKind": "[data-workbench-model-study-kind=\"select\"]",
     "modelStudyRun": "[data-workbench-model-study-run=\"true\"]",
+    "researchToolbar": "[data-workbench-research=\"toolbar\"]",
+    "researchAction(action)": "[data-workbench-research-action=\"${action}\"]",
     "libraryTab(tab)": "[data-workbench-library-tab=\"${tab}\"]",
     "librarySamplePage(page)": "[data-workbench-library-sample-page=\"${page}\"]",
     "libraryProjectPage(page)": "[data-workbench-library-project-page=\"${page}\"]",

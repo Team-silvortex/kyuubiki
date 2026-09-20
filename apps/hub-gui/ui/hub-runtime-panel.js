@@ -73,6 +73,7 @@ export function createHubRuntimePanel(context) {
       localRuntimeStatus: context.elements.localRuntimeStatus,
       observeRuntimeStatus: context.elements.observeRuntimeStatus,
       runtimeStatusPlane: context.elements.runtimeStatusPlane,
+      onRuntimeReport: (report) => { context.state.assistantRuntimeReport = report; },
     });
     context.renderAssistantContext();
     context.renderHubAssistantLocalCards();

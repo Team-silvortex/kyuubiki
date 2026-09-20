@@ -23,6 +23,14 @@ native filesystem cases are in `workers/rust/crates/project-bundle/tests/create.
 
 ## UI Source Layout
 
+The assistant runtime context starts collapsed with a short running/total count.
+Expanding it reveals a service list; configuration/paths and raw diagnostics have
+their own disclosures. Native structured states drive both the count and guide
+recommendations, while raw output remains selectable text. Refresh and language
+changes preserve disclosure state. A failed refresh clears stale service states.
+See `test/hub-assistant-runtime.test.mjs` and
+`tests/integration/desktop-hub-assistant-context.test.mjs` for regression coverage.
+
 - `src/`
   TypeScript source for Hub-owned UI contracts as they are migrated.
   Current migrated sources include `hub-app-config.ts`, `hub-state.ts`,

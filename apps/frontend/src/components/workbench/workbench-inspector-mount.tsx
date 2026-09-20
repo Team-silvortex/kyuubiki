@@ -12,6 +12,7 @@ type LineElementInput = { material_id?: string };
 type TrussDiagnosticsLike = { suggestions: Array<{ id: string }> } | null;
 
 type InspectorMountProps = {
+  resultRequest?: number;
   t: WorkbenchInspectorProps["t"];
   reportScopeLabel?: string;
   reportScopeHint?: string;
@@ -242,6 +243,7 @@ export function WorkbenchInspectorMount(props: InspectorMountProps) {
 
   return (
     <WorkbenchInspector
+      resultRequest={props.resultRequest}
       t={t}
       reportScopeLabel={reportScopeLabel}
       reportScopeHint={reportScopeHint}

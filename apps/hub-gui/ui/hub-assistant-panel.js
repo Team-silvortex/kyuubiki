@@ -16,8 +16,10 @@ import {
   extractAssistantJsonBlock as extractAssistantJsonBlockModule,
   renderHubAssistantLocalCards as renderHubAssistantLocalCardsModule,
 } from "./hub-assistant-local.js";
+import { assistantRuntimeModel, createAssistantRuntimeView } from "./hub-assistant-runtime.js";
 
 export function createHubAssistantPanel(context) {
+  const renderRuntime = createAssistantRuntimeView(context.elements.assistantRuntimeDetails);
   function renderAssistantPanel() {
     const open = context.state.assistantOpen === true;
     context.elements.assistantPanel?.classList.toggle("hidden", !open);
@@ -39,6 +41,7 @@ export function createHubAssistantPanel(context) {
     return {
       activeSection: context.state.activeSection,
       runtimeStatus: context.elements.localRuntimeStatus?.textContent?.trim() || "unknown",
+      runtimeReady: assistantRuntimeModel(context.state.assistantRuntimeReport ?? null).ready,
       profile: context.elements.currentProfile?.textContent?.trim() || "unknown",
       bundlePath: context.elements.projectBundlePath?.value?.trim() || "",
       comparePath: context.elements.projectBundleComparePath?.value?.trim() || "",
@@ -50,7 +53,7 @@ export function createHubAssistantPanel(context) {
   function renderAssistantContext() {
     const snapshot = currentAssistantSnapshot();
     context.setText(context.elements.assistantContextSection, snapshot.activeSection);
-    context.setText(context.elements.assistantContextRuntime, snapshot.runtimeStatus);
+    renderRuntime(context.state.assistantRuntimeReport ?? null, context.state.language);
     context.setText(context.elements.assistantContextBundle, snapshot.bundlePath || "--");
   }
 

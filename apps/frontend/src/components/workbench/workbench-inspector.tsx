@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { WorkbenchPanelPages } from "./workbench-panel-pages";
 import {
   WorkbenchInspectorActionsExportPanel,
@@ -26,6 +26,7 @@ function formatInspectorMetric(value: number | undefined) {
 }
 
 function WorkbenchInspectorInner({
+  resultRequest = 0,
   t,
   reportScopeLabel,
   reportScopeHint,
@@ -117,6 +118,14 @@ function WorkbenchInspectorInner({
   const [resultPage, setResultPage] = useState<ResultPage>("summary");
   const [frameForceSort, setFrameForceSort] = useState<FrameForceSort>("index");
   const [planeHeatSort, setPlaneHeatSort] = useState<PlaneHeatSort>("index");
+  const panelRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!resultRequest) return;
+    setInspectorTab("result");
+    setResultPage("summary");
+    panelRef.current?.focus({ preventScroll: true });
+    panelRef.current?.scrollIntoView({ block: "nearest" });
+  }, [resultRequest]);
   const isTruss = studyKind === "truss_2d" || studyKind === "thermal_truss_2d";
   const isTruss3d = studyKind === "truss_3d" || studyKind === "thermal_truss_3d";
   const isSpring3d = studyKind === "spring_3d";
@@ -140,6 +149,8 @@ function WorkbenchInspectorInner({
 
   return (
     <aside
+      ref={panelRef}
+      tabIndex={-1}
       className="workspace-inspector panel"
       data-workbench-panel="inspector"
       data-workbench-surface="built-in"

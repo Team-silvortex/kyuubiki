@@ -6,8 +6,8 @@ engineering environment for finite-element research: visual when that helps,
 headless when automation matters, and open at every protocol boundary.
 
 > The current development and documentation version is **daji 3.3.0**.
-> The packaged baseline remains **daji 3.2.0**: this documentation update does
-> not rebuild applications, change download artifacts, or publish a release.
+> The local desktop and runtime packaging target is also **daji 3.3.0**.
+> Building or installing locally does not publish download artifacts or SDKs.
 > Historical evidence keeps its original version and scope. A version number
 > is not industrial certification; public distribution remains evidence-gated.
 

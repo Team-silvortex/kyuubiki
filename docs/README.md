@@ -5,7 +5,7 @@ boundaries, deployment modes, and engineering workflow.
 
 The current documentation checkpoint is **daji 3.3.0**. Start with the
 [current-line summary](current-line.md#daji-330-checkpoint) for recent progress.
-Packaged artifacts remain at `3.2.0`; dated acceptance records retain their
+Local packaging now targets `3.3.0`; dated acceptance records retain their
 original versions and are not fresh 3.3.0 qualification.
 
 ## Ownership

@@ -107,13 +107,9 @@ fn strict_constructor_accepts_plain_authority_with_trailing_slash() {
 }
 
 #[test]
-fn picks_string_and_u64_values() {
-    let payload = json!({
-        "job_id": "job_123",
-        "interval_ms": "25"
-    });
+fn picks_string_values() {
+    let payload = json!({"job_id": "job_123"});
     assert_eq!(pick_string(&payload, &["job_id"]), Some("job_123"));
-    assert_eq!(pick_u64(&payload, &["interval_ms"]), Some(25));
 }
 
 #[test]

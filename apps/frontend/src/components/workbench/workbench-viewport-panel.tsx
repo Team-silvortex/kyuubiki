@@ -12,6 +12,7 @@ type WorkbenchViewportPanelProps = {
   title: string;
   language?: string;
   headActions?: ReactNode;
+  researchActions?: ReactNode;
   hasViewportDock: boolean;
   dockContent?: ReactNode;
   resultWindowBar?: ReactNode;
@@ -31,6 +32,7 @@ export function WorkbenchViewportPanel({
   title,
   language,
   headActions,
+  researchActions,
   hasViewportDock,
   dockContent,
   resultWindowBar,
@@ -78,6 +80,7 @@ export function WorkbenchViewportPanel({
           role="separator" tabIndex={0} aria-label="workbench-immersive-resize" aria-orientation="vertical"
           title={getWorkbenchPanelLayoutCopy(language).resize} /> : null}
         <div className="canvas-layout__main">
+          {researchActions}
           {hasChrome ? (
             <div className="canvas-layout__chrome">
               {resultWindowBar}

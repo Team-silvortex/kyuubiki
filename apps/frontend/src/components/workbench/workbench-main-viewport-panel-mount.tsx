@@ -9,6 +9,7 @@ import { WorkbenchViewportHeadActions } from "@/components/workbench/workbench-v
 import { WorkbenchViewportMount } from "@/components/workbench/workbench-viewport-mount";
 import { WorkbenchViewportPanel } from "@/components/workbench/workbench-viewport-panel";
 import { useWorkbenchImmersiveSave } from "./workbench-immersive-save";
+import { WorkbenchResearchActions, useWorkbenchResearchExecution } from "./workbench-research-actions";
 import type { ViewportRenderDiagnostics } from "@/components/workbench/workbench-render-diagnostics";
 
 type WorkbenchMainViewportPanelMountProps = Record<string, any>;
@@ -16,6 +17,9 @@ type WorkbenchMainViewportPanelMountProps = Record<string, any>;
 export function WorkbenchMainViewportPanelMount(props: WorkbenchMainViewportPanelMountProps) {
   const [renderDiagnostics, setRenderDiagnostics] = useState<ViewportRenderDiagnostics | null>(null);
   const immersiveSave = useWorkbenchImmersiveSave(props.immersiveModelStorage);
+  const researchExecution = useWorkbenchResearchExecution({
+    save: immersiveSave, pending: props.isPending, jobActive: props.jobIsActive,
+  });
 
   return (
     <WorkbenchViewportPanel
@@ -23,6 +27,18 @@ export function WorkbenchMainViewportPanelMount(props: WorkbenchMainViewportPane
       immersiveViewport={props.immersiveViewport}
       title={props.title}
       language={props.language}
+      researchActions={props.sidebarSection === "model" && !props.immersiveViewport ? <WorkbenchResearchActions
+        t={props.t} save={immersiveSave}
+        execution={researchExecution} jobActive={props.jobIsActive} hasResult={props.hasAnyResult}
+        activePage={props.modelTab === "tools" ? props.modelToolsPage : ""}
+        onStudy={() => {
+          props.setModelTab("tools"); props.setModelToolsPage("study");
+        }}
+        onModel={() => {
+          props.setModelTab("tools"); props.setModelToolsPage("studio");
+        }}
+        onResult={props.onInspectResult}
+      /> : null}
       headActions={
         <WorkbenchViewportHeadActions
           t={props.t}

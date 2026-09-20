@@ -2,7 +2,7 @@ use crate::service_executor::{
     execute_direct_fem_submit, execute_result_fetch, normalize_job_submission_result, request_json,
     required_path_segment,
 };
-use crate::service_executor_job_wait::execute_job_wait;
+use crate::service_executor_job_wait::{execute_job_wait, validate_job_wait_options};
 use crate::{HeadlessExecutorError, HeadlessExecutorOutcome, direct_fem_submit_route};
 use serde_json::{Map, Value, json};
 use std::collections::HashMap;
@@ -192,6 +192,7 @@ pub(crate) fn execute_solve_and_wait_from_model_version(
     api_token: Option<&str>,
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
+    validate_job_wait_options(payload)?;
     let solved = execute_solve_from_model_version(base_url, api_token, payload)?;
     let job_id = solved
         .result
@@ -211,6 +212,10 @@ pub(crate) fn execute_solve_and_wait_from_model_version(
             "timeout_ms",
             "resume_policy",
             "max_total_timeout_ms",
+            "intervalMs",
+            "timeoutMs",
+            "resumePolicy",
+            "maxTotalTimeoutMs",
         ],
     );
     let waited = execute_job_wait(base_url, api_token, &Value::Object(wait_payload))?;

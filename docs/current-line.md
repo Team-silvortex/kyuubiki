@@ -2,14 +2,22 @@
 
 This is the single entrypoint for the active Kyuubiki product line.
 The current development point in this line is `daji 3.3.0`.
-The packaged baseline remains `daji 3.2.0`; documentation and source progress
-do not imply that a new App bundle or downloadable runtime has been published.
+The local desktop and runtime packaging target is also `daji 3.3.0`.
+Local installation does not imply that public downloads or SDK packages have
+been published; platform acceptance remains separately scoped.
 
 ## Daji 3.3.0 Checkpoint
 
 This checkpoint records the source state on September 20, 2026, including the
 recent 3.2.x work carried into 3.3.0:
 
+- The normal modeling viewport now keeps study setup, modeling, inline checkpoint
+  save, execution, and result review together in a compact action strip. Saving
+  uses the same project/version controller as immersive mode; execution uses the
+  existing PWDT action path. The fullscreen workspace retains its own tool strip
+  without another duplicate row. Empty results and duplicate runs are guarded,
+  including delayed submissions across panel switches; cancellation remains
+  available while execution is being observed.
 - Hub project creation now has a focused bundle-creation flow and a native
   directory picker, rather than requiring every destination to be typed.
   See the [first research tutorial](tutorial-first-research.html).
@@ -26,8 +34,9 @@ recent 3.2.x work carried into 3.3.0:
   summaries, diagnostics, and other locale surfaces still need separate review.
   See [language-pack coverage and limits](language-packs.md).
 
-This documentation checkpoint adds no new numerical, scale, or installed-release
-qualification. The coverage tensor keeps its dated calibration, evidence grades,
+The local macOS rebuild has a scoped installed startup and research-journey report
+in `releases/snapshots/3.3.0.json`, plus 18 focused browser regressions. It adds no
+new numerical, scale, or non-macOS qualification. The coverage tensor keeps its dated calibration, evidence grades,
 and open scenario requirements; its current version label is not a new test run.
 The next work remains complete, recoverable research journeys and closure of the
 [evidence-backed weak coordinates](weakness-roadmap.md#current-tensor-status).

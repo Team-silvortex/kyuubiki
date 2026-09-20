@@ -1,6 +1,6 @@
 "use client";
 
-import { lazy, Suspense, useEffect, useRef, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   type WorkbenchUiChunkId,
 } from "@/components/workbench/workbench-ui-streaming";
@@ -34,6 +34,7 @@ const WorkbenchMainViewportPanelMount = lazy(() =>
 type WorkbenchMainShellMountProps = Record<string, any>;
 
 export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
+  const [resultRequest, setResultRequest] = useState(0);
   const getScriptSnapshotRef = useRef(props.getScriptSnapshot);
   const invokeScriptActionRef = useRef(props.invokeScriptAction);
   getScriptSnapshotRef.current = props.getScriptSnapshot;
@@ -102,6 +103,13 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
           props.sidebarSection,
           "workspace.viewport",
           <WorkbenchMainViewportPanelMount
+          isPending={props.isPending}
+          jobIsActive={props.jobIsActive}
+          hasAnyResult={props.hasAnyResult}
+          onInspectResult={async () => {
+            if (props.immersiveViewport) await props.handleToggleImmersiveViewport();
+            setResultRequest((request) => request + 1);
+          }}
           batchModelController={props.batchModelController}
           modelBatchDraftCache={props.modelBatchDraftCache}
           immersiveStudyContent={props.immersiveStudyContent}
@@ -338,6 +346,7 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
         props.sidebarSection,
         "workspace.inspector",
         <WorkbenchInspectorMount
+        resultRequest={resultRequest}
         t={props.t}
         reportScopeLabel={props.currentStudyFamilyLabel}
         reportScopeHint={props.currentStudyFamilyHint}

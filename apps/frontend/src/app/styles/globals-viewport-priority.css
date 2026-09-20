@@ -14,6 +14,17 @@
   min-height: 0;
 }
 
+.workbench-shell .canvas-panel:not(.canvas-panel--immersive) > .panel-head {
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+}
+
+.workbench-shell .canvas-panel:not(.canvas-panel--immersive) > .panel-head h2 {
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
 .workbench-shell .canvas-layout {
   grid-template-rows: minmax(0, 1fr);
   align-items: stretch;

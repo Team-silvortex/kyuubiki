@@ -1,4 +1,5 @@
 import { detectDesktopPlatform } from "./shared/platform.js";
+import type { AssistantRuntimeReport } from "./hub-assistant-runtime.js";
 import {
   loadHubAssistantTrustedHosts,
   loadHubTrustedHosts,
@@ -27,6 +28,7 @@ export type HubState = {
   assistantPlan: Record<string, unknown> | null;
   hotLogRefreshInFlight: boolean;
   runtimeLogRefreshInFlight: boolean;
+  assistantRuntimeReport: AssistantRuntimeReport | null;
   density: Record<string, boolean>;
   releaseVersion: string;
   releaseCodename: string;
@@ -60,6 +62,7 @@ export function createHubState(): HubState {
     assistantPlan: null,
     hotLogRefreshInFlight: false,
     runtimeLogRefreshInFlight: false,
+    assistantRuntimeReport: null,
     density: { ...HUB_DENSITY_DEFAULTS },
     releaseVersion: "",
     releaseCodename: "",

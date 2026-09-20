@@ -1,8 +1,9 @@
 use crate::HeadlessExecutorError;
+use crate::service_executor_deadline::{remaining_timeout, resolve_before_deadline};
 use std::io;
 use std::net::{TcpStream, ToSocketAddrs};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const CONNECT_RETRY_DELAYS: [Duration; 3] = [
@@ -19,12 +20,26 @@ pub(crate) fn connect_service_stream(
     io_timeout: Duration,
     context: &str,
 ) -> Result<TcpStream, HeadlessExecutorError> {
-    let addresses = (host, port)
-        .to_socket_addrs()
-        .map_err(|error| HeadlessExecutorError {
-            message: format!("failed to resolve {host}:{port} for {context}: {error}"),
-        })?
-        .collect::<Vec<_>>();
+    connect_service_stream_with_deadline(host, port, io_timeout, context, None)
+}
+
+pub(crate) fn connect_service_stream_with_deadline(
+    host: &str,
+    port: u16,
+    io_timeout: Duration,
+    context: &str,
+    deadline: Option<Instant>,
+) -> Result<TcpStream, HeadlessExecutorError> {
+    let addresses = if let Some(deadline) = deadline {
+        resolve_before_deadline(host, port, deadline)?
+    } else {
+        (host, port)
+            .to_socket_addrs()
+            .map_err(|error| HeadlessExecutorError {
+                message: format!("failed to resolve {host}:{port} for {context}: {error}"),
+            })?
+            .collect::<Vec<_>>()
+    };
     if addresses.is_empty() {
         return Err(HeadlessExecutorError {
             message: format!("no network addresses resolved for {host}:{port}"),
@@ -36,8 +51,16 @@ pub(crate) fn connect_service_stream(
     for attempt in 0..=CONNECT_RETRY_DELAYS.len() {
         attempt_count += 1;
         for address in &addresses {
-            match TcpStream::connect_timeout(address, CONNECT_TIMEOUT) {
+            let connect_timeout = deadline
+                .map(|deadline| remaining_timeout(deadline, CONNECT_TIMEOUT))
+                .transpose()?
+                .unwrap_or(CONNECT_TIMEOUT);
+            match TcpStream::connect_timeout(address, connect_timeout) {
                 Ok(stream) => {
+                    let io_timeout = deadline
+                        .map(|deadline| remaining_timeout(deadline, io_timeout))
+                        .transpose()?
+                        .unwrap_or(io_timeout);
                     stream
                         .set_read_timeout(Some(io_timeout))
                         .and_then(|_| stream.set_write_timeout(Some(io_timeout)))
@@ -55,7 +78,11 @@ pub(crate) fn connect_service_stream(
         if !last_error.as_ref().is_some_and(retryable_connect_error) {
             break;
         }
-        thread::sleep(*delay);
+        let delay = deadline
+            .map(|deadline| remaining_timeout(deadline, *delay))
+            .transpose()?
+            .unwrap_or(*delay);
+        thread::sleep(delay);
     }
 
     Err(HeadlessExecutorError {

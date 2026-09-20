@@ -1,5 +1,5 @@
 use crate::service_executor::{
-    normalize_job_state_result, pick_u64, request_json, required_path_segment,
+    normalize_job_state_result, request_json_with_deadline, required_path_segment,
 };
 use crate::{HeadlessExecutorError, HeadlessExecutorOutcome};
 use serde_json::{Value, json};
@@ -19,18 +19,31 @@ enum ResumePolicy {
 
 impl ResumePolicy {
     fn parse(payload: &Value) -> Result<Self, HeadlessExecutorError> {
-        match payload
-            .get("resume_policy")
-            .or_else(|| payload.get("resumePolicy"))
-            .and_then(Value::as_str)
-            .unwrap_or("fixed")
-        {
-            "fixed" | "none" => Ok(Self::Fixed),
-            "server_deadline" => Ok(Self::ServerDeadline),
-            other => Err(validation_error(format!(
-                "unsupported resume_policy {other}; expected fixed or server_deadline"
-            ))),
+        let mut selected = None;
+        for key in ["resume_policy", "resumePolicy"] {
+            let Some(value) = payload.get(key) else {
+                continue;
+            };
+            let policy = match value
+                .as_str()
+                .ok_or_else(|| validation_error("resume_policy must be a string".into()))?
+            {
+                "fixed" | "none" => Self::Fixed,
+                "server_deadline" => Self::ServerDeadline,
+                other => {
+                    return Err(validation_error(format!(
+                        "unsupported resume_policy {other}; expected fixed or server_deadline"
+                    )));
+                }
+            };
+            if selected.is_some_and(|previous| previous != policy) {
+                return Err(validation_error(
+                    "conflicting resume_policy|resumePolicy aliases".into(),
+                ));
+            }
+            selected = Some(policy);
         }
+        Ok(selected.unwrap_or(Self::Fixed))
     }
 
     fn label(self) -> &'static str {
@@ -45,6 +58,147 @@ impl ResumePolicy {
 struct ServerWindow {
     phase: Option<String>,
     remaining_ms: Option<u64>,
+    observed_at: Option<Instant>,
+}
+
+impl ServerWindow {
+    fn deadline(&self) -> Option<Instant> {
+        self.observed_at?
+            .checked_add(Duration::from_millis(self.remaining_ms?))
+    }
+
+    fn remaining_at(&self, now: Instant) -> Self {
+        Self {
+            phase: self.phase.clone(),
+            remaining_ms: self
+                .deadline()
+                .map(|deadline| duration_ms(deadline.saturating_duration_since(now)))
+                .or(self.remaining_ms),
+            observed_at: Some(now),
+        }
+    }
+}
+
+struct WaitOptions {
+    interval_ms: u64,
+    timeout_ms: u64,
+    max_total_timeout_ms: u64,
+    resume_policy: ResumePolicy,
+}
+
+impl WaitOptions {
+    fn parse(payload: &Value) -> Result<Self, HeadlessExecutorError> {
+        let interval_ms =
+            wait_integer(payload, &["interval_ms", "intervalMs"], DEFAULT_INTERVAL_MS)?;
+        let timeout_ms = wait_integer(payload, &["timeout_ms", "timeoutMs"], DEFAULT_TIMEOUT_MS)?;
+        let max_total_timeout_ms = wait_integer(
+            payload,
+            &["max_total_timeout_ms", "maxTotalTimeoutMs"],
+            timeout_ms,
+        )?;
+        validate_wait_budget(interval_ms, timeout_ms, max_total_timeout_ms)?;
+        Ok(Self {
+            interval_ms,
+            timeout_ms,
+            max_total_timeout_ms,
+            resume_policy: ResumePolicy::parse(payload)?,
+        })
+    }
+}
+
+pub(crate) fn validate_job_wait_options(payload: &Value) -> Result<(), HeadlessExecutorError> {
+    WaitOptions::parse(payload).map(|_| ())
+}
+
+fn wait_integer(
+    payload: &Value,
+    keys: &[&str],
+    default: u64,
+) -> Result<u64, HeadlessExecutorError> {
+    let mut selected = None;
+    for key in keys {
+        let Some(value) = payload.get(*key) else {
+            continue;
+        };
+        let parsed = value
+            .as_u64()
+            .or_else(|| value.as_str()?.trim().parse::<u64>().ok())
+            .ok_or_else(|| validation_error(format!("{key} must be a positive integer")))?;
+        if selected.is_some_and(|previous| previous != parsed) {
+            return Err(validation_error(format!(
+                "conflicting wait timing aliases: {}",
+                keys.join("|")
+            )));
+        }
+        selected = Some(parsed);
+    }
+    Ok(selected.unwrap_or(default))
+}
+
+struct WaitProgress {
+    started_at: Instant,
+    hard_deadline: Instant,
+    window_deadline: Instant,
+    poll_attempts: u64,
+    resume_count: u64,
+    status: String,
+    server_window: ServerWindow,
+}
+
+impl WaitProgress {
+    fn timeout_error(&self, job_id: &str, policy: ResumePolicy) -> HeadlessExecutorError {
+        let now = Instant::now();
+        wait_timeout_error(
+            job_id,
+            &self.status,
+            policy,
+            self.poll_attempts,
+            self.resume_count,
+            now.duration_since(self.started_at),
+            now >= self.hard_deadline,
+            &self.server_window.remaining_at(now),
+        )
+    }
+
+    fn advance_window(
+        &mut self,
+        job_id: &str,
+        options: &WaitOptions,
+    ) -> Result<(), HeadlessExecutorError> {
+        let now = Instant::now();
+        if now < self.window_deadline && now < self.hard_deadline {
+            return Ok(());
+        }
+        let server_deadline = self
+            .server_window
+            .deadline()
+            .filter(|deadline| *deadline > now);
+        if options.resume_policy != ResumePolicy::ServerDeadline || now >= self.hard_deadline {
+            return Err(self.timeout_error(job_id, options.resume_policy));
+        }
+        let Some(server_deadline) = server_deadline else {
+            return Err(self.timeout_error(job_id, options.resume_policy));
+        };
+        self.resume_count += 1;
+        self.window_deadline = (now + Duration::from_millis(options.timeout_ms))
+            .min(self.hard_deadline)
+            .min(server_deadline);
+        Ok(())
+    }
+
+    fn request_deadline(&self, policy: ResumePolicy) -> Instant {
+        // A previously observed server deadline may authorize an in-flight read
+        // across a soft window, but can never extend the caller's total budget.
+        let allowed = if policy == ResumePolicy::ServerDeadline {
+            self.server_window
+                .deadline()
+                .unwrap_or(self.window_deadline)
+                .max(self.window_deadline)
+        } else {
+            self.window_deadline
+        };
+        allowed.min(self.hard_deadline)
+    }
 }
 
 pub(crate) fn execute_job_wait(
@@ -53,41 +207,53 @@ pub(crate) fn execute_job_wait(
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
     let job_id = required_path_segment(payload, &["job_id", "jobId"])?;
-    let interval_ms =
-        pick_u64(payload, &["interval_ms", "intervalMs"]).unwrap_or(DEFAULT_INTERVAL_MS);
-    let timeout_ms = pick_u64(payload, &["timeout_ms", "timeoutMs"]).unwrap_or(DEFAULT_TIMEOUT_MS);
-    let resume_policy = ResumePolicy::parse(payload)?;
-    let max_total_timeout_ms =
-        pick_u64(payload, &["max_total_timeout_ms", "maxTotalTimeoutMs"]).unwrap_or(timeout_ms);
-    validate_wait_budget(interval_ms, timeout_ms, max_total_timeout_ms)?;
-
+    let options = WaitOptions::parse(payload)?;
     let started_at = Instant::now();
-    let hard_deadline = started_at + Duration::from_millis(max_total_timeout_ms);
-    let mut window_deadline = (started_at + Duration::from_millis(timeout_ms)).min(hard_deadline);
-    let mut poll_attempts = 0_u64;
-    let mut resume_count = 0_u64;
+    let mut progress = WaitProgress {
+        started_at,
+        hard_deadline: started_at + Duration::from_millis(options.max_total_timeout_ms),
+        window_deadline: started_at + Duration::from_millis(options.timeout_ms),
+        poll_attempts: 0,
+        resume_count: 0,
+        status: "unknown".into(),
+        server_window: ServerWindow::default(),
+    };
 
     loop {
-        let result = request_json(
+        progress.advance_window(job_id, &options)?;
+        let request_deadline = progress.request_deadline(options.resume_policy);
+        let request_started_at = Instant::now();
+        progress.poll_attempts += 1;
+        let response = request_json_with_deadline(
             base_url,
             api_token,
             "GET",
             &format!("/api/v1/jobs/{job_id}/status"),
             None,
-        )?;
-        poll_attempts += 1;
+            Some(request_deadline),
+        );
+        if Instant::now() >= request_deadline {
+            return Err(progress.timeout_error(job_id, options.resume_policy));
+        }
+        let result = response.map_err(|error| HeadlessExecutorError {
+            message: format!("failed while waiting for job {job_id}: {}", error.message),
+        })?;
         let mut normalized = normalize_job_state_result(result);
+        if Instant::now() >= request_deadline {
+            return Err(progress.timeout_error(job_id, options.resume_policy));
+        }
         let status = normalized
             .get("status")
             .and_then(Value::as_str)
             .unwrap_or("unknown");
         if TERMINAL_JOB_STATUSES.contains(&status) {
+            progress.advance_window(job_id, &options)?;
             reject_unsuccessful_terminal_job(job_id, &normalized)?;
             attach_wait_metadata(
                 &mut normalized,
-                resume_policy,
-                poll_attempts,
-                resume_count,
+                options.resume_policy,
+                progress.poll_attempts,
+                progress.resume_count,
                 started_at.elapsed(),
             );
             return Ok(HeadlessExecutorOutcome {
@@ -96,42 +262,18 @@ pub(crate) fn execute_job_wait(
             });
         }
 
-        let now = Instant::now();
-        let server_window = server_window(&normalized);
-        if now >= window_deadline {
-            let can_resume = resume_policy == ResumePolicy::ServerDeadline
-                && now < hard_deadline
-                && server_window
-                    .remaining_ms
-                    .is_some_and(|remaining| remaining > 0);
-            if !can_resume {
-                return Err(wait_timeout_error(
-                    job_id,
-                    status,
-                    resume_policy,
-                    poll_attempts,
-                    resume_count,
-                    started_at.elapsed(),
-                    now >= hard_deadline,
-                    &server_window,
-                ));
-            }
-            resume_count += 1;
-            let server_remaining_ms = server_window.remaining_ms.unwrap_or(timeout_ms);
-            let next_window_ms = timeout_ms.min(server_remaining_ms).max(1);
-            window_deadline = (now + Duration::from_millis(next_window_ms)).min(hard_deadline);
-        }
-
-        let sleep_until = window_deadline.min(hard_deadline);
-        let sleep_ms = interval_ms.min(
-            sleep_until
-                .saturating_duration_since(Instant::now())
-                .as_millis()
-                .try_into()
-                .unwrap_or(interval_ms),
+        progress.status = status.to_string();
+        progress.server_window = server_window(&normalized);
+        progress.server_window.observed_at = Some(request_started_at);
+        progress.advance_window(job_id, &options)?;
+        let sleep = Duration::from_millis(options.interval_ms).min(
+            progress
+                .window_deadline
+                .min(progress.hard_deadline)
+                .saturating_duration_since(Instant::now()),
         );
-        if sleep_ms > 0 {
-            thread::sleep(Duration::from_millis(sleep_ms));
+        if !sleep.is_zero() {
+            thread::sleep(sleep);
         }
     }
 }
@@ -201,6 +343,7 @@ fn server_window(result: &Value) -> ServerWindow {
     ServerWindow {
         phase,
         remaining_ms,
+        observed_at: None,
     }
 }
 
@@ -270,6 +413,10 @@ fn validation_error(message: String) -> HeadlessExecutorError {
 }
 
 #[cfg(test)]
+#[path = "service_executor_job_wait_tests.rs"]
+mod deadline_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::io::{Read, Write};
@@ -289,7 +436,7 @@ mod tests {
                         .starts_with("GET /api/v1/jobs/job-long/status HTTP/1.1")
                 );
                 if index == 1 {
-                    std::thread::sleep(Duration::from_millis(20));
+                    std::thread::sleep(Duration::from_millis(150));
                 }
                 let body = json!({
                     "job": {
@@ -298,8 +445,8 @@ mod tests {
                         "progress": index as f64 / 2.0,
                         "status_detail": {"timing": {
                             "phase": "execution",
-                            "effective_timeout_ms": 1_000,
-                            "execution_elapsed_ms": index * 20
+                            "effective_timeout_ms": 10_000,
+                            "execution_elapsed_ms": index * 150
                         }}
                     }
                 })
@@ -313,10 +460,10 @@ mod tests {
             None,
             &json!({
                 "job_id": "job-long",
-                "interval_ms": 15,
-                "timeout_ms": 10,
+                "interval_ms": 150,
+                "timeout_ms": 100,
                 "resume_policy": "server_deadline",
-                "max_total_timeout_ms": 100
+                "max_total_timeout_ms": 1_200
             }),
         )
         .expect("server deadline policy should resume polling");

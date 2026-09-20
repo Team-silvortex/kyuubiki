@@ -305,6 +305,7 @@ export type InspectorLabels = {
 };
 
 export type WorkbenchInspectorProps = {
+  resultRequest?: number;
   t: InspectorLabels;
   reportScopeLabel?: string;
   reportScopeHint?: string;

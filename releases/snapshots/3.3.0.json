@@ -1,0 +1,78 @@
+{
+  "version": "3.3.0",
+  "codename": "daji",
+  "line": "3.x",
+  "status": "current",
+  "date": "2026-09-20",
+  "git_commit": "1137f84a57c2b6635adf80d8ad039902494008c0",
+  "summary": "Daji 3.3.0 local desktop rebuild: nearby study, modeling, checkpoint, run and result actions; compact PWDT and dense panels; corrected local language packs. Public distribution and numerical qualification remain separate gates.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": { "version": "3.3.0", "notes": ["Static frontend with nearby research actions; no runtime Node server."] },
+    "hub_gui": { "version": "3.3.0", "notes": ["Independent native Hub shell."] },
+    "workbench_gui": { "version": "3.3.0", "notes": ["Independent native Workbench shell."] },
+    "installer_gui": { "version": "3.3.0", "notes": ["Independent native Installer shell."] },
+    "web_api": { "version": "3.3.0", "notes": ["Self-contained Orchestra release."] },
+    "rust_headless_sdk": { "version": "3.3.0", "notes": ["Metadata aligned; registry publication not performed."] },
+    "python_headless_sdk": { "version": "3.3.0", "notes": ["Metadata aligned; registry publication not performed."] },
+    "elixir_headless_sdk": { "version": "3.3.0", "notes": ["Metadata aligned; registry publication not performed."] },
+    "rust_worker_sdk": { "version": "3.3.0", "notes": ["Operator extensions remain separate from headless control."] }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": ["Existing execution contracts retained; this rebuild improves the model research journey without claiming new solver qualification."]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": ["Existing Rust operator and language-neutral task contracts retained."]
+  },
+  "desktop_artifacts": {
+    "hub_macos_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
+    "installer_macos_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
+    "workbench_macos_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app"
+  },
+  "verification": {
+    "source_revision_role": "Committed documentation baseline plus uncommitted layout and packaging changes; no commit created by this rebuild.",
+    "desktop_packaging": {
+      "status": "passed", "platform": "macos-aarch64", "kind": "app",
+      "installed_in_applications": true,
+      "signature_integrity": "codesign --verify --deep --strict passed for all three installed apps; ad-hoc signatures",
+      "packaged_interactive_boot": { "passed": 3, "failed": 0 },
+      "retained_report": "releases/usability-evidence/3.3.0/macos-installed-desktop-smoke.json"
+    },
+    "runtime_payload": {
+      "status": "sealed, verified, installed, and activated", "version": "3.3.0",
+      "sealed_file_count": 1654,
+      "services": ["two Rust Agents", "Orchestra release", "native static frontend server"],
+      "health": "two agents ready; Orchestra watchdog healthy; native frontend API proxy healthy",
+      "frontend_build": "production static export and TypeScript validation passed",
+      "node_runtime_required": false
+    },
+    "research_journey": {
+      "browser_regressions": { "passed": 18, "failed": 0 },
+      "installed_macos": "PWDT generated a 9-node, 15-element truss; inline checkpoint save, native Agent execution and result inspector handoff passed",
+      "retained_report": "releases/usability-evidence/3.3.0/workbench-research-journey.json"
+    },
+    "data_preservation": {
+      "method": "stopped writers; SQLite VACUUM INTO through the existing SqliteLifecycle library; integrity and foreign-key checks passed",
+      "schema_status": "current; data version 2",
+      "retained_counts": { "projects": 2, "models": 12, "versions": 20, "jobs": 17, "results": 17 },
+      "temporary_acceptance_data_removed": true
+    },
+    "metadata_checks": {
+      "exact_version_contracts": 224, "mismatches": 0,
+      "docs_book_html_files": 26, "docs_inventory": "passed",
+      "desktop_shared_assets": "passed", "ui_automation_contract": "passed",
+      "project_organization": "passed; source limit 800, document limit 2000"
+    },
+    "public_distribution": "not performed",
+    "notarized": false,
+    "linux_and_windows": "Metadata aligned only; native host builds not performed in this macOS rebuild.",
+    "qualification": "Historical evidence retains its original version and scope. Local packaging is not full-system or numerical qualification."
+  }
+}

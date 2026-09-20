@@ -18,7 +18,7 @@ export function buildHubAssistantLocalCards(options) {
     });
   }
 
-  if (!/ready|healthy/i.test(snapshot.runtimeStatus)) {
+  if (snapshot.runtimeReady !== true) {
     cards.push({
       id: "start-local",
       title: options.hubDynamic("cardStartLocalTitle"),
@@ -138,7 +138,7 @@ export function buildLocalGuideContext(options) {
   const snapshot = options.currentAssistantSnapshot();
   return {
     section: snapshot.activeSection,
-    runtimeReady: /ready|healthy/i.test(snapshot.runtimeStatus),
+    runtimeReady: snapshot.runtimeReady === true,
     hasBundle: Boolean(snapshot.bundlePath),
     hasCompare: Boolean(snapshot.comparePath),
     hasOutput: Boolean(snapshot.outputPath),

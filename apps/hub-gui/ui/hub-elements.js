@@ -360,6 +360,7 @@ export function collectHubElements(document) {
   assistantEngineState: document.getElementById("assistant-engine-state"),
   assistantContextSection: document.getElementById("assistant-context-section"),
   assistantContextRuntime: document.getElementById("assistant-context-runtime"),
+  assistantRuntimeDetails: document.getElementById("assistant-runtime-details"),
   assistantContextBundle: document.getElementById("assistant-context-bundle"),
   assistantLocalPanel: document.getElementById("assistant-local-panel"),
   assistantLocalCards: document.getElementById("assistant-local-cards"),

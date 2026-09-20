@@ -50,6 +50,7 @@ export async function refreshRuntimeStatusPanel({
   localRuntimeStatus,
   observeRuntimeStatus,
   runtimeStatusPlane,
+  onRuntimeReport,
 }) {
   try {
     const payload = await invokeTauri("service_status");
@@ -64,12 +65,14 @@ export async function refreshRuntimeStatusPanel({
     );
     applyDesktopState(localRuntimeStatus, payload.rendered, { kind: "health" });
     applyDesktopState(observeRuntimeStatus, payload.rendered, { kind: "health" });
+    onRuntimeReport?.({ rendered: payload.rendered, summary: payload.summary });
   } catch (error) {
     const message = String(error);
     renderRuntimeStatusPlane(runtimeStatusPlane, null);
     setRuntimeStatusOutput(message);
     applyDesktopState(localRuntimeStatus, message, { kind: "health" });
     applyDesktopState(observeRuntimeStatus, message, { kind: "health" });
+    onRuntimeReport?.({ rendered: message, summary: null, failed: true });
   }
 }
 

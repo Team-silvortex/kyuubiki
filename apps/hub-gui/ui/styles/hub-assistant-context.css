@@ -1,0 +1,153 @@
+.hub-assistant-sheet {
+  min-width: 0;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.hub-assistant-fab[aria-expanded="true"] {
+  z-index: 38;
+}
+
+.hub-assistant-sheet > .hub-card__intro {
+  position: sticky;
+  top: -1px;
+  z-index: 1;
+  padding-block: 0.5rem;
+  background: #353940;
+}
+
+.hub-assistant-context {
+  margin-block: 0.65rem;
+  font-size: 0.85rem;
+}
+
+.hub-assistant-context .desktop-shell-metric-row > span,
+#assistant-context-runtime-label {
+  color: var(--muted);
+}
+
+.hub-assistant-context .desktop-shell-metric-row {
+  display: grid;
+  grid-template-columns: minmax(5rem, 26%) minmax(0, 1fr);
+  padding-block: 0.5rem;
+}
+
+.hub-assistant-context .desktop-shell-metric-row strong {
+  min-width: 0;
+  text-align: end;
+  font-size: inherit;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.hub-assistant-runtime {
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.hub-assistant-runtime summary {
+  cursor: pointer;
+  padding-block: 0.6rem;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.hub-assistant-runtime summary:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+.hub-assistant-runtime > summary strong {
+  margin-inline-start: 0.75rem;
+  font-weight: 600;
+  font-size: inherit;
+}
+
+.hub-assistant-runtime__body {
+  max-height: min(34vh, 19rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-inline: 0.5rem;
+  padding-bottom: 0.45rem;
+  border-inline-start: 2px solid var(--line);
+}
+
+.hub-assistant-runtime__services {
+  padding: 0;
+  margin-block: 0.35rem 0.5rem;
+  list-style: none;
+}
+
+.hub-assistant-runtime__services li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 0.75rem;
+  padding-block: 0.4rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.hub-assistant-runtime__services code,
+.hub-assistant-runtime__fields,
+.hub-assistant-runtime__raw {
+  font-family: var(--desktop-mono-font-family);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.hub-assistant-runtime__state {
+  text-align: end;
+  overflow-wrap: anywhere;
+}
+
+.hub-assistant-runtime__services .hub-assistant-runtime__state[data-state="running"] {
+  color: #8cd3a8;
+}
+
+.hub-assistant-runtime__services .hub-assistant-runtime__state[data-state="blocked"],
+.hub-assistant-runtime__services .hub-assistant-runtime__state[data-state="stopped"] {
+  color: #efba85;
+}
+
+.hub-assistant-runtime__fields {
+  margin: 0;
+}
+
+.hub-assistant-runtime__fields > div {
+  padding-block: 0.45rem;
+  border-top: 1px solid var(--line);
+}
+
+.hub-assistant-runtime__fields dt {
+  color: var(--muted);
+}
+
+.hub-assistant-runtime__fields dd {
+  margin: 0.2rem 0 0;
+  font-weight: 400;
+}
+
+.hub-assistant-runtime__raw {
+  margin: 0;
+  padding: 0.6rem;
+  border-radius: 6px;
+  background: rgba(10, 12, 15, 0.4);
+}
+
+.hub-assistant-sheet .hub-side-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.hub-assistant-sheet .hub-side-shortcuts button {
+  min-width: 0;
+  padding: 0.6rem 0.7rem;
+  text-align: start;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
