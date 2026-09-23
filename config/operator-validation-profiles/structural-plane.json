@@ -25,7 +25,9 @@
         "quad_2x2_gauss_patch_matches_affine_reference",
         "distorted_quad_refinement_preserves_affine_patch",
         "inverted_quad_jacobian_is_rejected",
-        "strain_energy_matches_density_area_thickness_sum"
+        "strain_energy_matches_density_area_thickness_sum",
+        "representable_stress_metrics_survive_modulus_scale_changes",
+        "unrepresentable_output_fails_and_cancelled_recovery_does_not_publish_partial_success"
       ],
       "evidence_paths": [
         "config/operator-reliability/structural-plane.json",
@@ -35,9 +37,32 @@
         "workers/rust/crates/solver/tests/plane_quad_2d_review.rs",
         "workers/rust/crates/solver/tests/plane_2d_closed_form.rs",
         "workers/rust/crates/solver/tests/plane_quad_isoparametric.rs",
-        "workers/rust/crates/solver/tests/plane_input_reliability.rs"
+        "workers/rust/crates/solver/tests/plane_input_reliability.rs",
+        "workers/rust/crates/solver/tests/multiphysics_output_range.rs",
+        "workers/rust/crates/cli/tests/mechanical_output_operator.rs",
+        "reports/multiphysics-output-reliability-20260923.md"
       ],
       "commands": [
+        {
+          "id": "mechanical-output-range",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test multiphysics_output_range mechanical_ -- --nocapture"
+        },
+        {
+          "id": "plane-stress-metric-range",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib plane_2d_math::output_range_tests -- --nocapture"
+        },
+        {
+          "id": "plane-energy-product-range",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib plane_2d_summary::tests -- --nocapture"
+        },
+        {
+          "id": "mechanical-headless-output-range",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test mechanical_output_operator -- --nocapture"
+        },
         {
           "id": "plane-triangle-2d-review",
           "kind": "cross_check",

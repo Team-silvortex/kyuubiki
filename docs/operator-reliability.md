@@ -86,6 +86,15 @@ The first validation profiles cover:
 - `heat-plane-patch`: triangle/quad temperature-gradient and heat-flux patch
   checks
 
+The 2026-09-23 [multiphysics output-range regression](../reports/multiphysics-output-reliability-20260923.md)
+adds bounded numerical-range checks to the plane-mechanical, solid-tetra,
+electromagnetic-plane and Stokes screening profiles. It covers analytical
+stress/field magnitudes, mechanical output rejection, cancellation and clean
+in-process headless replay. These checks do not qualify nonlinear mechanics,
+general CFD, installed transport or arbitrary floating-point input ranges.
+The tensor records this as scoped `verified` evidence, not a blanket maturity
+upgrade for the operator families.
+
 For `daji 3.x`, the manifest also declares
 `minimum_coverage_level: qualification`. `make check-operator-reliability`
 treats this as a release gate, so future edits cannot silently downgrade a
@@ -421,6 +430,48 @@ The native thermoelastic Q4 formulas are retained at
 mesh/refinement regression lives at
 `workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs`.
 
+## Harmonic Spring Reliability
+
+The linear `solve.harmonic_spring_1d` operator solves the requested frequency
+samples of `(K - omega^2 M + i omega C) u = f`. The
+2026-09-23 [harmonic spring regression](../reports/harmonic-spring-reliability-20260923.md)
+checks finite displacement, derived velocity/acceleration and element-force
+amplitudes before publishing a successful sweep. A failing frequency reports
+its zero-based index and value; earlier frames do not become partial success.
+Residual validation scales each free equation and its incident displacements,
+avoiding overflowing denominators and the loss of independent soft equations
+beside much stiffer components. Complex elimination remains an internal
+solver module; engine dispatch and SDK contracts are unchanged.
+
+The `harmonic-spring-local-reliability` component profile covers damped
+resonance, independent analytical path/cycle decompositions, average input
+power versus damping dissipation, numerical range, cooperative cancellation
+and clean replay through the Rust headless route. Evidence is bounded and
+in-process, not general mechanical qualification or a remote benchmark.
+`peak_frequency_hz` is a peak among supplied samples, not a continuous
+resonance search. Non-path networks retain the 512-free-DOF dense limit;
+large-path overhead, near-singular conditioning, arbitrary subnormal products
+and distributed recovery are not certified by these checks.
+
+## Transient Spring Reliability
+
+The constant-load linear `solve.transient_spring_1d` operator retains the
+average-acceleration Newmark scheme and a reused sparse factorization. The
+2026-09-23 [transient spring regression](../reports/transient-spring-reliability-20260923.md)
+recasts time stepping in velocity increments, avoiding the subtraction of
+nearly equal total displacements to recover acceleration. Per-step finite
+energy validation is independent of `history_stride`; only snapshot storage
+is sampled. An unrepresentable intermediate energy fails the solve even when
+that step would not be saved.
+
+The `transient-spring-local-reliability` component profile checks preload and
+rigid-translation invariance, damped analytical time refinement, discrete work
+and dissipation balance, cancellation/replay and constant-load continuation
+from returned displacement/velocity through the Rust headless route. This is
+bounded in-process evidence, not general transient FEM qualification or
+durable distributed checkpoint/restart. The endpoint `max_force` remains a
+final-state statistic; it is not a peak over the entire time history.
+
 ## Modal Frame Review Scope
 
 The 2D and 3D modal-frame operators are review-grade cantilever modal checks.
@@ -455,6 +506,19 @@ current modal evidence lives at
 `evidence/operator-qualification/modal-frame-normalization-policy.md`,
 `evidence/operator-qualification/modal-frame-frequency-convergence.md`, and
 `workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs`.
+
+The 2026-09-23 [modal spectrum reliability regression](../reports/modal-spectrum-reliability-20260923.md)
+adds bounded checks for heterogeneous stiffness, disconnected component restraint
+rank, single-/multi-mode agreement, cancellation and headless error/replay. Soft
+positive modes are no longer filtered using the largest eigenvalue, and the
+Jacobi coupling threshold is local to each diagonal pair. Restrained-frame
+requests reject orphan nodes and unrestrained component rigid motions instead
+of silently returning only the positive part of an invalid spectrum. This does
+not introduce free-free analysis. Small single-mode problems can use a complete
+spectrum check; general sparse inverse iteration uses two deterministic probes.
+Those probes and residual checks are not a global lowest-eigenvalue certificate
+for arbitrary large models. Existing cantilever qualification remains scoped;
+no additional material or large-mesh qualification is implied.
 
 ## Current State
 

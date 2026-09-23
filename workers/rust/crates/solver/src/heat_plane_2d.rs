@@ -1,23 +1,25 @@
 use crate::heat_plane_2d_element::{
-    plane_triangle_scalar_gradient, precompute_heat_plane_quad_element,
-    precompute_heat_plane_triangle_element,
+    precompute_heat_plane_quad_element, precompute_heat_plane_triangle_element,
 };
 use crate::heat_plane_2d_validation::{
     validate_heat_plane_quad_request, validate_heat_plane_triangle_request,
 };
+use crate::heat_plane_balance::{recover_with_heat_balance, validate_heat_contact_balance};
 use crate::heat_plane_contact::{
     assemble_heat_contacts, prepare_heat_contacts, recover_heat_contacts,
 };
+use crate::heat_plane_results::{recover_nodes, recover_quad, recover_triangle, total_heat_flow};
 use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
-    solve_spd_system_profile_with_options,
+    solve_spd_system_profile_with_options, sparse_residual_norm,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
 use crate::scalar_plane_kernel::shift_prescribed_reference;
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
-use crate::solver_postprocess::{collect_results, fold_results, max_results, restore_solution};
+use crate::solver_postprocess::{
+    collect_results, max_results, restore_solution, try_collect_results,
+};
 use kyuubiki_protocol::{
-    HeatPlaneNodeResult, HeatPlaneQuadElementResult, HeatPlaneTriangleElementResult,
     SolveHeatPlaneQuad2dRequest, SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dRequest,
     SolveHeatPlaneTriangle2dResult,
 };
@@ -121,31 +123,42 @@ fn solve_heat_plane_triangle_2d_internal(
     let (reduced_stiffness, reduced_heat, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &heat_vector, &prescribed)?;
     let reduced_temperatures =
-        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_heat, options)?.solution;
+        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_heat, options.clone())?
+            .solution;
 
-    let temperatures = restore_solution(dof_count, &prescribed, &free, &reduced_temperatures)?;
+    let mut temperatures = restore_solution(dof_count, &prescribed, &free, &reduced_temperatures)?;
 
-    let nodes = collect_results(
-        SolverStage::ResultNodes,
-        request
-            .nodes
-            .iter()
-            .enumerate()
-            .map(|(index, node)| HeatPlaneNodeResult {
-                index,
-                id: node.id.clone(),
-                x: node.x,
-                y: node.y,
-                temperature: if node.fix_temperature {
-                    node.temperature
-                } else {
-                    temperatures[index] + reference
-                },
-                heat_load: node.heat_load,
-            }),
+    let recovery = recover_with_heat_balance(
+        &mut temperatures,
+        &free,
+        &reduced_stiffness,
+        &reduced_heat,
+        options,
+        |temperatures| {
+            let contact_interfaces =
+                recover_heat_contacts(&request.contact_interfaces, &contacts, temperatures)?;
+            validate_heat_contact_balance(
+                &request.nodes,
+                temperatures,
+                &contact_interfaces,
+                request
+                    .elements
+                    .iter()
+                    .zip(&computed_elements)
+                    .map(|(element, computed)| {
+                        (
+                            [element.node_i, element.node_j, element.node_k],
+                            &computed.stiffness,
+                        )
+                    }),
+                request.elements.len(),
+            )?;
+            Ok(contact_interfaces)
+        },
     )?;
 
-    let elements = collect_results(
+    let nodes = recover_nodes(&request.nodes, &temperatures, reference)?;
+    let elements = try_collect_results(
         SolverStage::ResultElements,
         request
             .elements
@@ -153,36 +166,7 @@ fn solve_heat_plane_triangle_2d_internal(
             .zip(computed_elements.iter())
             .enumerate()
             .map(|(index, (element, computed))| {
-                let element_temperatures = [
-                    temperatures[element.node_i],
-                    temperatures[element.node_j],
-                    temperatures[element.node_k],
-                ];
-                let gradient = plane_triangle_scalar_gradient(
-                    &computed.gradient_x,
-                    &computed.gradient_y,
-                    &element_temperatures,
-                );
-                let heat_flux_x = -element.conductivity * gradient[0];
-                let heat_flux_y = -element.conductivity * gradient[1];
-                let heat_flux_magnitude =
-                    (heat_flux_x * heat_flux_x + heat_flux_y * heat_flux_y).sqrt();
-
-                HeatPlaneTriangleElementResult {
-                    index,
-                    id: element.id.clone(),
-                    node_i: element.node_i,
-                    node_j: element.node_j,
-                    node_k: element.node_k,
-                    area: computed.area,
-                    average_temperature: element_temperatures.iter().sum::<f64>() / 3.0 + reference,
-                    temperature_gradient_x: gradient[0],
-                    temperature_gradient_y: gradient[1],
-                    heat_flux_x,
-                    heat_flux_y,
-                    heat_flux_magnitude,
-                    heat_flow_rate: heat_flux_magnitude * computed.area * element.thickness,
-                }
+                recover_triangle(index, element, computed, &temperatures, reference)
             }),
     )?;
 
@@ -192,17 +176,11 @@ fn solve_heat_plane_triangle_2d_internal(
     let max_heat_flux = max_results(SolverStage::ResultElementSummary, &elements, |element| {
         element.heat_flux_magnitude.abs()
     })?;
-    let total_abs_heat_flow_rate = fold_results(
-        SolverStage::ResultTotals,
-        elements.iter().map(|element| element.heat_flow_rate.abs()),
-        -0.0_f64,
-        |sum, value| sum + value,
-    )?;
+    let total_abs_heat_flow_rate =
+        total_heat_flow(elements.iter().map(|element| element.heat_flow_rate))?;
 
-    let contact_interfaces =
-        recover_heat_contacts(&request.contact_interfaces, &contacts, &temperatures)?;
     Ok(SolveHeatPlaneTriangle2dResult {
-        contact_interfaces,
+        contact_interfaces: recovery.contacts,
         input: request.into_owned(),
         nodes,
         elements,
@@ -372,11 +350,14 @@ fn solve_heat_plane_quad_2d_internal(
         stage_started.elapsed(),
     );
     stage_started = Instant::now();
-    let solve_profile =
-        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_heat, solve_options)?;
-    let solver_iterations = solve_profile.iterations;
+    let solve_profile = solve_spd_system_profile_with_options(
+        &reduced_stiffness,
+        &reduced_heat,
+        solve_options.clone(),
+    )?;
+    let mut solver_iterations = solve_profile.iterations;
     let solver_matrix_non_zero_count = solve_profile.matrix_non_zero_count;
-    let solver_residual_norm = solve_profile.residual_norm;
+    let mut solver_residual_norm = solve_profile.residual_norm;
     let reduced_temperatures = solve_profile.solution;
     push_heat_plane_quad_memory_stage(
         &mut memory_stages,
@@ -395,29 +376,65 @@ fn solve_heat_plane_quad_2d_internal(
     }
     stage_started = Instant::now();
 
-    let temperatures = restore_solution(dof_count, &prescribed, &free, &reduced_temperatures)?;
+    let mut temperatures = restore_solution(dof_count, &prescribed, &free, &reduced_temperatures)?;
 
-    let nodes = collect_results(
-        SolverStage::ResultNodes,
-        request
-            .nodes
-            .iter()
-            .enumerate()
-            .map(|(index, node)| HeatPlaneNodeResult {
-                index,
-                id: node.id.clone(),
-                x: node.x,
-                y: node.y,
-                temperature: if node.fix_temperature {
-                    node.temperature
-                } else {
-                    temperatures[index] + reference
-                },
-                heat_load: node.heat_load,
-            }),
-    )?;
+    let balance_started = Instant::now();
+    let recovery =
+        recover_with_heat_balance(
+            &mut temperatures,
+            &free,
+            &reduced_stiffness,
+            &reduced_heat,
+            solve_options,
+            |temperatures| {
+                let contact_interfaces =
+                    recover_heat_contacts(&request.contact_interfaces, &contacts, temperatures)?;
+                validate_heat_contact_balance(
+                    &request.nodes,
+                    temperatures,
+                    &contact_interfaces,
+                    request.elements.iter().zip(&computed_elements).flat_map(
+                        |(element, computed)| {
+                            [
+                                (
+                                    [element.node_i, element.node_j, element.node_k],
+                                    &computed.first.stiffness,
+                                ),
+                                (
+                                    [element.node_i, element.node_k, element.node_l],
+                                    &computed.second.stiffness,
+                                ),
+                            ]
+                        },
+                    ),
+                    request.elements.len().saturating_mul(2),
+                )?;
+                Ok(contact_interfaces)
+            },
+        )?;
+    solver_iterations += recovery.refinement_iterations;
+    if recovery.refinement_passes > 0 {
+        let refined = collect_results(
+            SolverStage::ResidualValidate,
+            free.iter().map(|&index| temperatures[index]),
+        )?;
+        solver_residual_norm = sparse_residual_norm(&reduced_stiffness, &reduced_heat, &refined)?;
+    }
+    if !contacts.is_empty() {
+        push_heat_plane_quad_memory_stage(
+            &mut memory_stages,
+            collect_memory_stages,
+            if recovery.refinement_passes > 0 {
+                "contact_balance_refinement"
+            } else {
+                "contact_balance"
+            },
+            balance_started.elapsed(),
+        );
+    }
 
-    let elements = collect_results(
+    let nodes = recover_nodes(&request.nodes, &temperatures, reference)?;
+    let elements = try_collect_results(
         SolverStage::ResultElements,
         request
             .elements
@@ -425,58 +442,7 @@ fn solve_heat_plane_quad_2d_internal(
             .zip(computed_elements.iter())
             .enumerate()
             .map(|(index, (element, computed))| {
-                let first_temperatures = [
-                    temperatures[element.node_i],
-                    temperatures[element.node_j],
-                    temperatures[element.node_k],
-                ];
-                let second_temperatures = [
-                    temperatures[element.node_i],
-                    temperatures[element.node_k],
-                    temperatures[element.node_l],
-                ];
-                let first_gradient = plane_triangle_scalar_gradient(
-                    &computed.first.gradient_x,
-                    &computed.first.gradient_y,
-                    &first_temperatures,
-                );
-                let second_gradient = plane_triangle_scalar_gradient(
-                    &computed.second.gradient_x,
-                    &computed.second.gradient_y,
-                    &second_temperatures,
-                );
-                let total_area = computed.first.area + computed.second.area;
-                let weighted = |left: f64, right: f64| -> f64 {
-                    ((left * computed.first.area) + (right * computed.second.area)) / total_area
-                };
-                let heat_flux_x =
-                    -element.conductivity * weighted(first_gradient[0], second_gradient[0]);
-                let heat_flux_y =
-                    -element.conductivity * weighted(first_gradient[1], second_gradient[1]);
-                let heat_flux_magnitude =
-                    (heat_flux_x * heat_flux_x + heat_flux_y * heat_flux_y).sqrt();
-
-                HeatPlaneQuadElementResult {
-                    index,
-                    id: element.id.clone(),
-                    node_i: element.node_i,
-                    node_j: element.node_j,
-                    node_k: element.node_k,
-                    node_l: element.node_l,
-                    area: total_area,
-                    average_temperature: (temperatures[element.node_i]
-                        + temperatures[element.node_j]
-                        + temperatures[element.node_k]
-                        + temperatures[element.node_l])
-                        / 4.0
-                        + reference,
-                    temperature_gradient_x: weighted(first_gradient[0], second_gradient[0]),
-                    temperature_gradient_y: weighted(first_gradient[1], second_gradient[1]),
-                    heat_flux_x,
-                    heat_flux_y,
-                    heat_flux_magnitude,
-                    heat_flow_rate: heat_flux_magnitude * total_area * element.thickness,
-                }
+                recover_quad(index, element, computed, &temperatures, reference)
             }),
     )?;
 
@@ -486,12 +452,8 @@ fn solve_heat_plane_quad_2d_internal(
     let max_heat_flux = max_results(SolverStage::ResultElementSummary, &elements, |element| {
         element.heat_flux_magnitude.abs()
     })?;
-    let total_abs_heat_flow_rate = fold_results(
-        SolverStage::ResultTotals,
-        elements.iter().map(|element| element.heat_flow_rate.abs()),
-        -0.0_f64,
-        |sum, value| sum + value,
-    )?;
+    let total_abs_heat_flow_rate =
+        total_heat_flow(elements.iter().map(|element| element.heat_flow_rate))?;
 
     push_heat_plane_quad_memory_stage(
         &mut memory_stages,
@@ -500,11 +462,9 @@ fn solve_heat_plane_quad_2d_internal(
         stage_started.elapsed(),
     );
 
-    let contact_interfaces =
-        recover_heat_contacts(&request.contact_interfaces, &contacts, &temperatures)?;
     Ok(HeatPlaneQuadProfile {
         result: SolveHeatPlaneQuad2dResult {
-            contact_interfaces,
+            contact_interfaces: recovery.contacts,
             input: request.into_owned(),
             nodes,
             elements,

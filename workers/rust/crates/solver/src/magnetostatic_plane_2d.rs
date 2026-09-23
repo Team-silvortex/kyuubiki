@@ -140,14 +140,10 @@ fn solve_magnetostatic_plane_triangle_2d_internal(
             let magnetic_flux_density_y = -gradient[0];
             let magnetic_field_strength_x = magnetic_flux_density_x / element.permeability;
             let magnetic_field_strength_y = magnetic_flux_density_y / element.permeability;
-            let magnetic_field_strength_magnitude = (magnetic_field_strength_x
-                * magnetic_field_strength_x
-                + magnetic_field_strength_y * magnetic_field_strength_y)
-                .sqrt();
-            let magnetic_flux_density_magnitude = (magnetic_flux_density_x
-                * magnetic_flux_density_x
-                + magnetic_flux_density_y * magnetic_flux_density_y)
-                .sqrt();
+            let magnetic_field_strength_magnitude =
+                magnetic_field_strength_x.hypot(magnetic_field_strength_y);
+            let magnetic_flux_density_magnitude =
+                magnetic_flux_density_x.hypot(magnetic_flux_density_y);
             let magnetic_energy_density =
                 0.5 * magnetic_flux_density_magnitude * magnetic_field_strength_magnitude;
             let stored_energy = magnetic_energy_density * computed.area * element.thickness;
@@ -327,14 +323,10 @@ fn solve_magnetostatic_plane_quad_2d_internal(
             let magnetic_flux_density_y = -gradient[0];
             let magnetic_field_strength_x = magnetic_flux_density_x / element.permeability;
             let magnetic_field_strength_y = magnetic_flux_density_y / element.permeability;
-            let magnetic_field_strength_magnitude = (magnetic_field_strength_x
-                * magnetic_field_strength_x
-                + magnetic_field_strength_y * magnetic_field_strength_y)
-                .sqrt();
-            let magnetic_flux_density_magnitude = (magnetic_flux_density_x
-                * magnetic_flux_density_x
-                + magnetic_flux_density_y * magnetic_flux_density_y)
-                .sqrt();
+            let magnetic_field_strength_magnitude =
+                magnetic_field_strength_x.hypot(magnetic_field_strength_y);
+            let magnetic_flux_density_magnitude =
+                magnetic_flux_density_x.hypot(magnetic_flux_density_y);
             let magnetic_energy_density = 0.5 / element.permeability
                 * mean_squared_gradient(
                     first_gradient,

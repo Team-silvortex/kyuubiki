@@ -142,9 +142,9 @@ fn reduced_matrix_and_prescribed_rhs_match_an_independent_dense_reference() {
         let expected_free: Vec<_> = (0..256).filter(|i| !fixed.contains(i)).collect();
         assert_eq!(free, expected_free);
         let mut dense = vec![vec![0.0; 256]; 256];
-        for row in 0..256 {
+        for (row, entries) in dense.iter_mut().enumerate() {
             for &(col, value) in matrix.row_entries(row) {
-                dense[row][col] = value;
+                entries[col] = value;
             }
         }
         for (row, &global) in free.iter().enumerate() {

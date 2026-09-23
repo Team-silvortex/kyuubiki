@@ -171,14 +171,26 @@ pub(super) fn derive_planar_stress_metrics(
     sigma_y: f64,
     tau_xy: f64,
 ) -> PlanarStressMetrics {
-    let center = 0.5 * (sigma_x + sigma_y);
-    let radius = (((0.5 * (sigma_x - sigma_y)).powi(2)) + tau_xy.powi(2)).sqrt();
-    let principal_stress_1 = center + radius;
-    let principal_stress_2 = center - radius;
+    let half_difference = sigma_x.midpoint(-sigma_y).abs();
+    let radius = half_difference.hypot(tau_xy);
+    // Rationalize radius - half_difference to retain a small second eigenvalue.
+    let shift = if radius == 0.0 {
+        0.0
+    } else {
+        tau_xy.abs() * ((tau_xy.abs() / radius) / (1.0 + half_difference / radius))
+    };
+    let principal_stress_1 = sigma_x.max(sigma_y) + shift;
+    let principal_stress_2 = sigma_x.min(sigma_y) - shift;
     let max_in_plane_shear = radius;
-    let von_mises =
-        ((sigma_x * sigma_x) - (sigma_x * sigma_y) + (sigma_y * sigma_y) + 3.0 * tau_xy * tau_xy)
-            .sqrt();
+    let scale = sigma_x.abs().max(sigma_y.abs()).max(tau_xy.abs());
+    let von_mises = if scale == 0.0 {
+        0.0
+    } else {
+        let x = sigma_x / scale;
+        let y = sigma_y / scale;
+        let shear = tau_xy / scale;
+        (x * x - x * y + y * y + 3.0 * shear * shear).sqrt() * scale
+    };
 
     PlanarStressMetrics {
         principal_stress_1,
@@ -268,4 +280,34 @@ pub(super) fn thermal_plane_triangle_equivalent_load(
     }
 
     equivalent_load
+}
+
+#[cfg(test)]
+mod output_range_tests {
+    use super::derive_planar_stress_metrics;
+
+    #[test]
+    fn planar_metrics_preserve_pure_shear_and_biaxial_scales() {
+        for scale in [1e-300, 1e-200, 1.0, 1e200, 1e300] {
+            let shear = derive_planar_stress_metrics(0.0, 0.0, scale);
+            assert_eq!(shear.principal_stress_1, scale);
+            assert_eq!(shear.principal_stress_2, -scale);
+            assert!((shear.von_mises / scale - 3.0_f64.sqrt()).abs() < 1e-14);
+            let biaxial = derive_planar_stress_metrics(scale, scale, 0.0);
+            assert_eq!(biaxial.principal_stress_1, scale);
+            assert_eq!(biaxial.principal_stress_2, scale);
+            assert_eq!(biaxial.von_mises, scale);
+        }
+    }
+
+    #[test]
+    fn principal_stress_preserves_small_eigenvalue_without_center_cancellation() {
+        let diagonal = derive_planar_stress_metrics(1e200, 1.0, 0.0);
+        assert_eq!(diagonal.principal_stress_2, 1.0);
+        let coupled = derive_planar_stress_metrics(1e200, 1.0, 5e99);
+        assert!((coupled.principal_stress_2 - 0.75).abs() < 1e-14);
+        let near_limit = derive_planar_stress_metrics(1e308, 1e308, 0.0);
+        assert_eq!(near_limit.principal_stress_1, 1e308);
+        assert_eq!(near_limit.principal_stress_2, 1e308);
+    }
 }

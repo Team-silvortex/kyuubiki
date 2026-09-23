@@ -3,6 +3,8 @@ use std::borrow::Cow;
 use crate::linear_algebra::{SparseMatrix, reduce_sparse_system, solve_spd_system};
 use crate::solid_tetra_3d_element::{SolidTetra3dElementKernel, element_dof_map};
 use crate::solid_tetra_3d_validation::{mesh_component_count, validate_request};
+use crate::solver_control::{SolverStage, checkpoint};
+use crate::solver_postprocess::try_collect_results;
 use kyuubiki_protocol::{
     SolidTetra3dElementResult, SolidTetra3dEquilibriumResult, SolidTetra3dNodeResult,
     SolidTetra3dQualityResult, SolveSolidTetra3dRequest, SolveSolidTetra3dResult,
@@ -71,16 +73,38 @@ fn solve_solid_tetra_3d_internal(
         &displacements,
         &constrained,
     );
-
-    let nodes = request
-        .nodes
+    if equilibrium
+        .applied_force
         .iter()
-        .enumerate()
-        .map(|(index, node)| {
+        .chain(&equilibrium.reaction_force)
+        .chain(&equilibrium.balance_error)
+        .chain(&[
+            equilibrium.applied_force_scale,
+            equilibrium.max_free_residual_force,
+            equilibrium.free_residual_relative_error,
+            equilibrium.force_balance_relative_error,
+        ])
+        .any(|value| !value.is_finite())
+    {
+        return Err("solid tetra equilibrium diagnostics are not representable".into());
+    }
+
+    let nodes = try_collect_results(
+        SolverStage::ResultNodes,
+        request.nodes.iter().enumerate().map(|(index, node)| {
             let ux = displacements[index * 3];
             let uy = displacements[index * 3 + 1];
             let uz = displacements[index * 3 + 2];
-            SolidTetra3dNodeResult {
+            let displacement_magnitude = ux.hypot(uy).hypot(uz);
+            if !displacement_magnitude.is_finite()
+                || reactions[index].iter().any(|v| !v.is_finite())
+            {
+                return Err(format!(
+                    "solid tetra node {}: recovered state is not representable",
+                    node.id
+                ));
+            }
+            Ok(SolidTetra3dNodeResult {
                 index,
                 id: node.id.clone(),
                 x: node.x,
@@ -89,27 +113,58 @@ fn solve_solid_tetra_3d_internal(
                 ux,
                 uy,
                 uz,
-                displacement_magnitude: (ux * ux + uy * uy + uz * uz).sqrt(),
+                displacement_magnitude,
                 reaction_x: reactions[index][0],
                 reaction_y: reactions[index][1],
                 reaction_z: reactions[index][2],
-            }
-        })
-        .collect::<Vec<_>>();
-    let elements = request
-        .elements
-        .iter()
-        .zip(&kernels)
-        .enumerate()
-        .map(|(index, (element, kernel))| {
-            kernel.result(index, element, &element_dof_map(element), &displacements)
-        })
-        .collect::<Vec<_>>();
+            })
+        }),
+    )?;
+    let elements = try_collect_results(
+        SolverStage::ResultElements,
+        request
+            .elements
+            .iter()
+            .zip(&kernels)
+            .enumerate()
+            .map(|(index, (element, kernel))| {
+                let result =
+                    kernel.result(index, element, &element_dof_map(element), &displacements);
+                if [
+                    result.volume,
+                    result.strain_x,
+                    result.strain_y,
+                    result.strain_z,
+                    result.gamma_xy,
+                    result.gamma_yz,
+                    result.gamma_zx,
+                    result.stress_x,
+                    result.stress_y,
+                    result.stress_z,
+                    result.shear_xy,
+                    result.shear_yz,
+                    result.shear_zx,
+                    result.von_mises_stress,
+                    result.strain_energy_density,
+                    result.mean_ratio_quality,
+                ]
+                .iter()
+                .any(|value| !value.is_finite())
+                {
+                    return Err(format!(
+                        "solid tetra element {}: recovered state or energy is not representable",
+                        element.id
+                    ));
+                }
+                Ok(result)
+            }),
+    )?;
     let quality = summarize_quality(request.as_ref(), &elements);
+    let (total_volume, total_strain_energy) = result_totals(&elements)?;
 
     Ok(SolveSolidTetra3dResult {
         input: request.into_owned(),
-        total_volume: elements.iter().map(|element| element.volume).sum(),
+        total_volume,
         max_displacement: nodes
             .iter()
             .map(|node| node.displacement_magnitude)
@@ -118,10 +173,7 @@ fn solve_solid_tetra_3d_internal(
             .iter()
             .map(|element| element.von_mises_stress)
             .fold(0.0_f64, f64::max),
-        total_strain_energy: elements
-            .iter()
-            .map(|element| element.strain_energy_density * element.volume)
-            .sum(),
+        total_strain_energy,
         max_strain_energy_density: elements
             .iter()
             .map(|element| element.strain_energy_density.abs())
@@ -131,6 +183,34 @@ fn solve_solid_tetra_3d_internal(
         nodes,
         elements,
     })
+}
+
+fn result_totals(elements: &[SolidTetra3dElementResult]) -> Result<(f64, f64), String> {
+    checkpoint(SolverStage::ResultTotals, 0)?;
+    let mut volume = 0.0;
+    let mut energy = 0.0;
+    for (index, element) in elements.iter().enumerate() {
+        let contribution = element.strain_energy_density * element.volume;
+        if !contribution.is_finite()
+            || contribution < 0.0
+            || (element.strain_energy_density != 0.0 && contribution == 0.0)
+        {
+            return Err(format!(
+                "solid tetra element {}: strain energy is not representable",
+                element.id
+            ));
+        }
+        volume += element.volume;
+        energy += contribution;
+        if !volume.is_finite() || !energy.is_finite() {
+            return Err("solid tetra result totals are not representable".into());
+        }
+        if (index + 1) % 64 == 0 {
+            checkpoint(SolverStage::ResultTotals, index + 1)?;
+        }
+    }
+    checkpoint(SolverStage::ResultTotals, elements.len())?;
+    Ok((volume, energy))
 }
 
 fn summarize_quality(
@@ -243,7 +323,7 @@ fn recover_equilibrium(
 }
 
 fn vector_norm(vector: [f64; 3]) -> f64 {
-    vector.iter().map(|value| value * value).sum::<f64>().sqrt()
+    vector[0].hypot(vector[1]).hypot(vector[2])
 }
 
 fn element_points(

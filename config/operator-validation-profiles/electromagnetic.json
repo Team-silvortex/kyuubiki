@@ -140,7 +140,8 @@
         "refinement_preserves_electromagnetic_plane_field_flux_and_energy",
         "common_scalar_reference_preserves_fields_and_energy",
         "split_quad_energy_integrates_each_triangle_before_averaging",
-        "dielectric_loss_uses_integrated_squared_field_not_squared_mean_vector"
+        "dielectric_loss_uses_integrated_squared_field_not_squared_mean_vector",
+        "representable_electric_flux_and_magnetic_field_norms_survive_material_scale_changes"
       ],
       "evidence_paths": [
         "config/operator-reliability/electromagnetic.json",
@@ -160,7 +161,9 @@
         "workers/rust/crates/headless-sdk/src/material_composite_electrothermal.rs",
         "workers/rust/crates/headless-sdk/src/material_composite_heat_loads.rs",
         "workers/rust/crates/cli/tests/composite_heat_projection.rs",
-        "reports/composite-heat-projection-20260920.md"
+        "reports/composite-heat-projection-20260920.md",
+        "workers/rust/crates/solver/tests/multiphysics_output_range.rs",
+        "reports/multiphysics-output-reliability-20260923.md"
       ],
       "commands": [
         {
@@ -197,6 +200,11 @@
           "id": "electromagnetic-orientation-regression",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test electromagnetic_plane_orientation_regression -- --nocapture"
+        },
+        {
+          "id": "electromagnetic-output-range",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test multiphysics_output_range electromagnetic_ -- --nocapture"
         },
         {
           "id": "electrostatic-plane-input-reliability",

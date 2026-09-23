@@ -15,7 +15,10 @@
         "linear_generalized_eigenproblem_reference",
         "frequency_length_scaling",
         "mode_order_regression",
-        "mode_shape_normalization"
+        "mode_shape_normalization",
+        "heterogeneous_stiffness_spectrum_reference",
+        "connected_component_restraint_rank",
+        "headless_engine_error_replay"
       ],
       "formal_invariants": [
         "positive_finite_natural_frequencies",
@@ -23,7 +26,11 @@
         "restrained_dofs_are_zero",
         "participation_norm_is_unit",
         "uniform_stiffness_density_scaling_matches_rayleigh_reference",
-        "shorter_cantilever_has_higher_frequency"
+        "shorter_cantilever_has_higher_frequency",
+        "resolved_soft_modes_survive_stiff_neighbors",
+        "each_component_restrains_rigid_body_motion",
+        "single_mode_matches_bounded_reference_spectrum",
+        "modal_cancellation_does_not_poison_replay"
       ],
       "evidence_paths": [
         "evidence/operator-qualification/modal-frame-reference-note.md",
@@ -32,7 +39,11 @@
         "workers/rust/crates/solver/tests/modal_frame_2d_review.rs",
         "workers/rust/crates/solver/tests/modal_frame_3d_review.rs",
         "workers/rust/crates/solver/tests/modal_frame_input_reliability.rs",
-        "workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs"
+        "workers/rust/crates/solver/tests/modal_frame_sanity_regression.rs",
+        "workers/rust/crates/solver/tests/modal_spectrum_reliability.rs",
+        "workers/rust/crates/solver/src/modal_sparse_iteration.rs",
+        "workers/rust/crates/cli/tests/modal_spectrum_operator.rs",
+        "reports/modal-spectrum-reliability-20260923.md"
       ],
       "commands": [
         {
@@ -54,6 +65,21 @@
           "id": "modal-frame-input-reliability",
           "kind": "boundary_regression",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test modal_frame_input_reliability -- --nocapture"
+        },
+        {
+          "id": "modal-spectrum-reliability",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test modal_spectrum_reliability -- --nocapture"
+        },
+        {
+          "id": "modal-sparse-probe-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib modal_sparse_iteration -- --nocapture"
+        },
+        {
+          "id": "modal-spectrum-headless-route",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test modal_spectrum_operator -- --nocapture"
         }
       ]
     }

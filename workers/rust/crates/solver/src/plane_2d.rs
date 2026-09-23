@@ -11,9 +11,11 @@ use crate::plane_2d_quad::{PlaneQuadComputed, plane_quad_state, precompute_plane
 use crate::plane_2d_summary::{
     max_plane_displacement, max_quad_strain_energy_density, max_quad_stress,
     max_triangle_strain_energy_density, max_triangle_stress, quad_total_strain_energy,
-    triangle_total_strain_energy,
+    triangle_total_strain_energy, validate_plane_result,
 };
 use crate::plane_2d_validation::{validate_plane_quad_request, validate_plane_request};
+use crate::solver_control::SolverStage;
+use crate::solver_postprocess::try_collect_results;
 use kyuubiki_protocol::{
     PlaneNodeInput, PlaneNodeResult, PlaneQuadElementResult, PlaneTriangleElementResult,
     SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest,
@@ -116,43 +118,62 @@ fn solve_plane_triangle_2d_internal(
     }
 
     stage_started = Instant::now();
-    let nodes = build_plane_nodes(&request.nodes, &displacements);
-    let elements = request
-        .elements
-        .iter()
-        .zip(computed_elements.iter())
-        .enumerate()
-        .map(|(index, (element, computed))| {
-            let element_displacements = triangle_displacements(
-                &displacements,
-                element.node_i,
-                element.node_j,
-                element.node_k,
-            );
-            let state = plane_triangle_state(computed, &element_displacements);
+    let nodes = build_plane_nodes(&request.nodes, &displacements)?;
+    let elements = try_collect_results(
+        SolverStage::ResultElements,
+        request
+            .elements
+            .iter()
+            .zip(computed_elements.iter())
+            .enumerate()
+            .map(|(index, (element, computed))| {
+                let element_displacements = triangle_displacements(
+                    &displacements,
+                    element.node_i,
+                    element.node_j,
+                    element.node_k,
+                );
+                let state = plane_triangle_state(computed, &element_displacements);
+                validate_plane_result(
+                    &element.id,
+                    &[
+                        computed.area,
+                        state.strain[0],
+                        state.strain[1],
+                        state.strain[2],
+                        state.stress[0],
+                        state.stress[1],
+                        state.stress[2],
+                        state.principal_stress_1,
+                        state.principal_stress_2,
+                        state.max_in_plane_shear,
+                        state.von_mises,
+                        state.strain_energy_density,
+                    ],
+                )?;
 
-            PlaneTriangleElementResult {
-                index,
-                id: element.id.clone(),
-                node_i: element.node_i,
-                node_j: element.node_j,
-                node_k: element.node_k,
-                area: computed.area,
-                strain_x: state.strain[0],
-                strain_y: state.strain[1],
-                gamma_xy: state.strain[2],
-                stress_x: state.stress[0],
-                stress_y: state.stress[1],
-                tau_xy: state.stress[2],
-                principal_stress_1: state.principal_stress_1,
-                principal_stress_2: state.principal_stress_2,
-                max_in_plane_shear: state.max_in_plane_shear,
-                von_mises: state.von_mises,
-                strain_energy_density: state.strain_energy_density,
-            }
-        })
-        .collect::<Vec<_>>();
-    let total_strain_energy = triangle_total_strain_energy(&elements, &request.elements);
+                Ok(PlaneTriangleElementResult {
+                    index,
+                    id: element.id.clone(),
+                    node_i: element.node_i,
+                    node_j: element.node_j,
+                    node_k: element.node_k,
+                    area: computed.area,
+                    strain_x: state.strain[0],
+                    strain_y: state.strain[1],
+                    gamma_xy: state.strain[2],
+                    stress_x: state.stress[0],
+                    stress_y: state.stress[1],
+                    tau_xy: state.stress[2],
+                    principal_stress_1: state.principal_stress_1,
+                    principal_stress_2: state.principal_stress_2,
+                    max_in_plane_shear: state.max_in_plane_shear,
+                    von_mises: state.von_mises,
+                    strain_energy_density: state.strain_energy_density,
+                })
+            }),
+    )?;
+    let total_strain_energy = triangle_total_strain_energy(&elements, &request.elements)?;
     let max_strain_energy_density = max_triangle_strain_energy_density(&elements);
     push_plane_profile_stage(&mut stages, collect_stages, "assemble", stage_started);
 
@@ -277,9 +298,9 @@ fn solve_plane_quad_2d_internal(
     }
 
     stage_started = Instant::now();
-    let nodes = build_plane_nodes(&request.nodes, &displacements);
-    let elements = build_plane_quad_elements(request.as_ref(), &computed_elements, &displacements);
-    let total_strain_energy = quad_total_strain_energy(&elements, &request.elements);
+    let nodes = build_plane_nodes(&request.nodes, &displacements)?;
+    let elements = build_plane_quad_elements(request.as_ref(), &computed_elements, &displacements)?;
+    let total_strain_energy = quad_total_strain_energy(&elements, &request.elements)?;
     let max_strain_energy_density = max_quad_strain_energy_density(&elements);
     push_plane_profile_stage(&mut stages, collect_stages, "assemble", stage_started);
 
@@ -304,66 +325,94 @@ fn build_plane_quad_elements(
     request: &SolvePlaneQuad2dRequest,
     computed_elements: &[PlaneQuadComputed],
     displacements: &[f64],
-) -> Vec<PlaneQuadElementResult> {
-    request
-        .elements
-        .iter()
-        .zip(computed_elements.iter())
-        .enumerate()
-        .map(|(index, (element, computed))| {
-            let state = plane_quad_state(
-                computed,
-                &quad_displacements(
-                    displacements,
-                    element.node_i,
-                    element.node_j,
-                    element.node_k,
-                    element.node_l,
-                ),
-            );
+) -> Result<Vec<PlaneQuadElementResult>, String> {
+    try_collect_results(
+        SolverStage::ResultElements,
+        request
+            .elements
+            .iter()
+            .zip(computed_elements.iter())
+            .enumerate()
+            .map(|(index, (element, computed))| {
+                let state = plane_quad_state(
+                    computed,
+                    &quad_displacements(
+                        displacements,
+                        element.node_i,
+                        element.node_j,
+                        element.node_k,
+                        element.node_l,
+                    ),
+                );
+                validate_plane_result(
+                    &element.id,
+                    &[
+                        computed.area,
+                        state.strain[0],
+                        state.strain[1],
+                        state.strain[2],
+                        state.stress[0],
+                        state.stress[1],
+                        state.stress[2],
+                        state.principal_stress_1,
+                        state.principal_stress_2,
+                        state.max_in_plane_shear,
+                        state.von_mises,
+                        state.strain_energy_density,
+                    ],
+                )?;
 
-            PlaneQuadElementResult {
-                index,
-                id: element.id.clone(),
-                node_i: element.node_i,
-                node_j: element.node_j,
-                node_k: element.node_k,
-                node_l: element.node_l,
-                area: computed.area,
-                strain_x: state.strain[0],
-                strain_y: state.strain[1],
-                gamma_xy: state.strain[2],
-                stress_x: state.stress[0],
-                stress_y: state.stress[1],
-                tau_xy: state.stress[2],
-                principal_stress_1: state.principal_stress_1,
-                principal_stress_2: state.principal_stress_2,
-                max_in_plane_shear: state.max_in_plane_shear,
-                von_mises: state.von_mises,
-                strain_energy_density: state.strain_energy_density,
-            }
-        })
-        .collect()
+                Ok(PlaneQuadElementResult {
+                    index,
+                    id: element.id.clone(),
+                    node_i: element.node_i,
+                    node_j: element.node_j,
+                    node_k: element.node_k,
+                    node_l: element.node_l,
+                    area: computed.area,
+                    strain_x: state.strain[0],
+                    strain_y: state.strain[1],
+                    gamma_xy: state.strain[2],
+                    stress_x: state.stress[0],
+                    stress_y: state.stress[1],
+                    tau_xy: state.stress[2],
+                    principal_stress_1: state.principal_stress_1,
+                    principal_stress_2: state.principal_stress_2,
+                    max_in_plane_shear: state.max_in_plane_shear,
+                    von_mises: state.von_mises,
+                    strain_energy_density: state.strain_energy_density,
+                })
+            }),
+    )
 }
 
-fn build_plane_nodes(nodes: &[PlaneNodeInput], displacements: &[f64]) -> Vec<PlaneNodeResult> {
-    nodes
-        .iter()
-        .enumerate()
-        .map(|(index, node)| {
+fn build_plane_nodes(
+    nodes: &[PlaneNodeInput],
+    displacements: &[f64],
+) -> Result<Vec<PlaneNodeResult>, String> {
+    try_collect_results(
+        SolverStage::ResultNodes,
+        nodes.iter().enumerate().map(|(index, node)| {
             let ux = displacements[index * 2];
             let uy = displacements[index * 2 + 1];
-            PlaneNodeResult {
+            let displacement_magnitude = ux.hypot(uy);
+            if !displacement_magnitude.is_finite() {
+                return Err(format!(
+                    "plane node {}: displacement is not representable",
+                    node.id
+                ));
+            }
+            Ok(PlaneNodeResult {
                 index,
                 id: node.id.clone(),
                 x: node.x,
                 y: node.y,
                 ux,
                 uy,
-                displacement_magnitude: (ux * ux + uy * uy).sqrt(),
-            }
-        })
-        .collect()
+                displacement_magnitude,
+            })
+        }),
+    )
 }
 
 fn triangle_dof_map(node_i: usize, node_j: usize, node_k: usize) -> [usize; 6] {

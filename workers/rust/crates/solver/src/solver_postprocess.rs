@@ -18,6 +18,23 @@ pub(crate) fn collect_results<T>(
     Ok(result)
 }
 
+pub(crate) fn try_collect_results<T>(
+    stage: SolverStage,
+    mut values: impl ExactSizeIterator<Item = Result<T, String>>,
+) -> Result<Vec<T>, String> {
+    checkpoint(stage, 0)?;
+    let count = values.len();
+    let mut result = Vec::with_capacity(count);
+    for start in (0..count).step_by(CHUNK) {
+        let end = (start + CHUNK).min(count);
+        for value in values.by_ref().take(end - start) {
+            result.push(value?);
+        }
+        checkpoint(stage, end)?;
+    }
+    Ok(result)
+}
+
 pub(crate) fn fold_results<T, A>(
     stage: SolverStage,
     mut values: impl ExactSizeIterator<Item = T>,

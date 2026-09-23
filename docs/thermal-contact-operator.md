@@ -97,6 +97,57 @@ existing SDK projector handles coincident positions with distinct IDs without
 averaging the temperatures. Thermal contact does not imply a mechanical bond:
 the structural model must define its own connectivity and constraints.
 
+## Numerical acceptance
+
+A small assembled-matrix residual is not sufficient for very stiff contact:
+large contact coefficients can mask an inaccurate temperature jump and its heat
+flow. Before publishing a result, the operator independently reconstructs heat
+balance at each free interface node, combining bulk element transfer, signed
+contact endpoint contributions and the applied nodal source.
+
+Bulk terms use `K_ij * (T_j - T_i)` before combining them with contact transfer,
+not a second multiplication of the assembled bulk/contact matrix by absolute
+temperature. The acceptance residual is the absolute net imbalance divided by
+the sum of absolute contributions at that node, with tolerance `1e-8`. Scaled,
+compensated accumulation avoids overflow and an arbitrary absolute-watt floor.
+Unrelated high-power bodies cannot set the tolerance for a weaker interface.
+Prescribed-temperature nodes exchange heat with external reservoirs and are
+not required to have zero net flow. Interior bulk equations retain the existing
+linear solver's convergence checks.
+
+If the interface check fails, the operator may perform at most two residual
+correction solves on the same reduced linear system, then recover and check the
+contact fields again. Resistance, materials, supports and the acceptance
+tolerance are never changed. Invalid recovery and cancellation propagate
+immediately; unresolved balance returns an error identifying the node rather
+than a successful study. A later clean request can be retried normally.
+
+The quad profile includes correction iterations in `solver_iterations` and
+recomputes `solver_residual_norm` for the final solution. The optional memory/
+timing trace records `contact_balance`, or `contact_balance_refinement` when a
+correction was needed. These are numerical corrections, not physical time steps.
+Models without contacts skip balance allocation, scanning and refinement.
+
+Both heat-plane element types also validate the recovered bulk output before
+returning success, whether or not contacts exist. Flux magnitudes use `hypot`;
+temperature means use scaled compensated sums; split-quad gradients use
+normalized area weights. Element flow-rate products combine the extreme
+factors first to avoid a spurious intermediate overflow or underflow.
+Unrepresentable node temperatures, fluxes, element flow rates or total flow
+rates return a diagnostic instead of nonfinite numbers serialized as `null`.
+A nonzero gradient whose conductive flux collapses to zero is rejected; an
+exact constant-temperature field remains a valid zero-flow case.
+
+These checks retain the historical output convention: a split quad reports
+the area-weighted mean flux vector, and `heat_flow_rate` is its magnitude times
+element area and thickness. Summing that element metric is not a signed
+boundary-power integral or an independent proof of global conservation. See
+the [output-range regression](../reports/heat-plane-output-reliability-20260923.md).
+
+See the [balance and refinement regression](../reports/heat-contact-balance-20260923.md)
+for the bounded multi-material and sparse-solver fixtures. This does not turn
+arbitrarily high conductivity contrasts into resolvable double-precision models.
+
 ## Deployment and limits
 
 Use a rebuilt worker that actually advertises `thermal-contact-resistance`.

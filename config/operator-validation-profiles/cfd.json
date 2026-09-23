@@ -26,7 +26,8 @@
         "explicit_non_navier_stokes_scope",
         "linear_field_refinement_preserves_divergence",
         "linear_field_refinement_preserves_shear",
-        "viscosity_scales_viscous_stress_and_dissipation"
+        "viscosity_scales_viscous_stress_and_dissipation",
+        "uniform_velocity_magnitude_and_reynolds_number_survive_representable_scale_changes"
       ],
       "evidence_paths": [
         "config/operator-reliability/cfd.json",
@@ -37,9 +38,16 @@
         "workers/rust/crates/solver/tests/stokes_flow_mesh_convergence.rs",
         "workers/rust/crates/solver/tests/stokes_flow_reliability.rs",
         "workers/rust/crates/solver/tests/stokes_flow_triangle_2d_review.rs",
-        "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs"
+        "workers/rust/crates/solver/tests/stokes_flow_triangle_reliability.rs",
+        "workers/rust/crates/solver/tests/multiphysics_output_range.rs",
+        "reports/multiphysics-output-reliability-20260923.md"
       ],
       "commands": [
+        {
+          "id": "stokes-output-range",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test multiphysics_output_range stokes_ -- --nocapture"
+        },
         {
           "id": "stokes-review-fixture",
           "kind": "cross_check",

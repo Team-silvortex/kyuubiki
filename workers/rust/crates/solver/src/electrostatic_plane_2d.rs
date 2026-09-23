@@ -135,12 +135,9 @@ fn solve_electrostatic_plane_triangle_2d_internal(
             let electric_field_y = -gradient[1];
             let electric_flux_density_x = element.permittivity * electric_field_x;
             let electric_flux_density_y = element.permittivity * electric_field_y;
-            let electric_field_magnitude =
-                (electric_field_x * electric_field_x + electric_field_y * electric_field_y).sqrt();
-            let electric_flux_density_magnitude = (electric_flux_density_x
-                * electric_flux_density_x
-                + electric_flux_density_y * electric_flux_density_y)
-                .sqrt();
+            let electric_field_magnitude = electric_field_x.hypot(electric_field_y);
+            let electric_flux_density_magnitude =
+                electric_flux_density_x.hypot(electric_flux_density_y);
             let electric_energy_density =
                 0.5 * element.permittivity * electric_field_magnitude * electric_field_magnitude;
             let stored_energy = electric_energy_density * computed.area * element.thickness;
@@ -338,12 +335,9 @@ fn solve_electrostatic_plane_quad_2d_internal(
             let electric_field_y = -potential_gradient_y;
             let electric_flux_density_x = element.permittivity * electric_field_x;
             let electric_flux_density_y = element.permittivity * electric_field_y;
-            let electric_field_magnitude =
-                (electric_field_x * electric_field_x + electric_field_y * electric_field_y).sqrt();
-            let electric_flux_density_magnitude = (electric_flux_density_x
-                * electric_flux_density_x
-                + electric_flux_density_y * electric_flux_density_y)
-                .sqrt();
+            let electric_field_magnitude = electric_field_x.hypot(electric_field_y);
+            let electric_flux_density_magnitude =
+                electric_flux_density_x.hypot(electric_flux_density_y);
             let electric_energy_density = 0.5
                 * element.permittivity
                 * mean_squared_gradient(

@@ -31,7 +31,7 @@ pub(crate) fn sparse_residual_norm(
     Ok(norm.finish())
 }
 
-pub(super) fn sparse_residual_vector(
+pub(crate) fn sparse_residual_vector(
     matrix: &SparseMatrix,
     rhs: &[f64],
     solution: &[f64],

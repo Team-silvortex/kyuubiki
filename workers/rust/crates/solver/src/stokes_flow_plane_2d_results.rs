@@ -153,7 +153,7 @@ pub(super) fn triangle_element_result(
 }
 
 pub(super) fn magnitude(x: f64, y: f64) -> f64 {
-    (x * x + y * y).sqrt()
+    x.hypot(y)
 }
 
 fn summarize_flow(

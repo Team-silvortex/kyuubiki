@@ -3,6 +3,123 @@
   "version_line": "daji 3.0.x",
   "profiles": [
     {
+      "profile_id": "harmonic-spring-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "harmonic-spring-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.harmonic_spring_1d"],
+      "validation_methods": [
+        "damped_resonance_closed_form",
+        "independent_network_modal_decomposition",
+        "average_input_dissipation_balance",
+        "complex_output_range_regression",
+        "frequency_failure_cancellation_replay",
+        "headless_engine_route"
+      ],
+      "formal_invariants": [
+        "finite_success_includes_derived_velocity_acceleration_and_force",
+        "local_residual_scaling_preserves_independent_soft_rows",
+        "bounded_complex_division_does_not_overflow_before_its_finite_quotient",
+        "path_and_cycle_response_match_analytical_mode_decomposition",
+        "average_applied_power_equals_damping_dissipation",
+        "zero_frequency_has_zero_velocity_and_acceleration",
+        "singular_frequency_identifies_its_sweep_position",
+        "cancelled_sweep_cannot_publish_earlier_frames_as_success",
+        "frequency_order_and_duplicates_are_preserved"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/harmonic_spring_1d.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_linear.rs",
+        "workers/rust/crates/solver/tests/harmonic_spring_balance.rs",
+        "workers/rust/crates/solver/tests/harmonic_spring_reliability.rs",
+        "workers/rust/crates/solver/tests/dynamic_spring_closed_form.rs",
+        "workers/rust/crates/cli/tests/harmonic_spring_operator.rs",
+        "reports/harmonic-spring-reliability-20260923.md"
+      ],
+      "commands": [
+        {
+          "id": "harmonic-complex-residual-kernels",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib harmonic_spring -- --nocapture"
+        },
+        {
+          "id": "harmonic-spring-balance",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test harmonic_spring_balance -- --nocapture"
+        },
+        {
+          "id": "harmonic-spring-input-topology",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test harmonic_spring_reliability -- --nocapture"
+        },
+        {
+          "id": "harmonic-dynamic-closed-form",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test dynamic_spring_closed_form -- --nocapture"
+        },
+        {
+          "id": "harmonic-spring-headless-route",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test harmonic_spring_operator -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "transient-spring-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "transient-spring-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.transient_spring_1d"],
+      "validation_methods": [
+        "static_equilibrium_invariance",
+        "rigid_translation_invariance",
+        "continuous_damped_oscillator_reference",
+        "discrete_work_energy_balance",
+        "sampled_history_failure_replay",
+        "headless_engine_state_continuation"
+      ],
+      "formal_invariants": [
+        "static_preload_does_not_generate_velocity_or_acceleration",
+        "rigid_translation_does_not_generate_internal_force",
+        "time_refinement_retains_second_order_accuracy",
+        "undamped_free_motion_preserves_discrete_energy",
+        "external_work_equals_energy_change_plus_dissipation",
+        "history_stride_changes_storage_not_validation",
+        "constant_load_state_restart_matches_uninterrupted_run",
+        "cancelled_unsaved_steps_do_not_return_partial_success"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/transient_spring_1d.rs",
+        "workers/rust/crates/solver/tests/transient_spring_balance.rs",
+        "workers/rust/crates/solver/tests/transient_spring_reliability.rs",
+        "workers/rust/crates/solver/tests/dynamic_spring_closed_form.rs",
+        "workers/rust/crates/cli/tests/transient_spring_operator.rs",
+        "reports/transient-spring-reliability-20260923.md"
+      ],
+      "commands": [
+        {
+          "id": "transient-spring-balance",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test transient_spring_balance -- --nocapture"
+        },
+        {
+          "id": "transient-spring-input-history",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test transient_spring_reliability -- --nocapture"
+        },
+        {
+          "id": "dynamic-spring-closed-form",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test dynamic_spring_closed_form -- --nocapture"
+        },
+        {
+          "id": "transient-spring-headless-route",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test transient_spring_operator -- --nocapture"
+        }
+      ]
+    },
+    {
       "profile_id": "contact-gap-1d-closed-form",
       "profile_role": "release_candidate",
       "qualification_candidate_id": "contact-gap-1d-closed-form",

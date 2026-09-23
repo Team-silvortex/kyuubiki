@@ -196,7 +196,9 @@
         "gauss_point_temperature_interpolation",
         "scalar_reference_shift_regression",
         "identity_safe_heat_to_structural_projection",
-        "layered_heat_flux_and_temperature_rise_cross_check"
+        "layered_heat_flux_and_temperature_rise_cross_check",
+        "heat_output_representable_range_and_overflow_regression",
+        "fallible_result_collection_cancellation_and_cleanup"
       ],
       "formal_invariants": [
         "fixed_hot_and_cold_boundaries",
@@ -213,7 +215,9 @@
         "ambiguous_or_nonfinite_temperature_handoffs_fail_before_structural_solve",
         "ambient_temperature_cannot_hide_missing_source_temperature_rise",
         "each_regional_heat_source_survives_shared_node_assembly",
-        "ideal_shared_interface_flux_and_outlet_power_match_fourier_balance"
+        "ideal_shared_interface_flux_and_outlet_power_match_fourier_balance",
+        "representable_heat_flux_and_means_survive_intermediate_range_loss",
+        "unrepresentable_heat_results_fail_before_successful_serialization"
       ],
       "evidence_paths": [
         "config/operator-reliability/thermal.json",
@@ -237,7 +241,12 @@
         "workers/rust/crates/headless-sdk/src/material_composite_heat_validation.rs",
         "workers/rust/crates/headless-sdk/tests/composite_heat_validation_reliability.rs",
         "workers/rust/crates/cli/tests/composite_heat_interfaces.rs",
-        "reports/composite-heat-interface-validation-20260923.md"
+        "reports/composite-heat-interface-validation-20260923.md",
+        "workers/rust/crates/solver/src/heat_plane_results.rs",
+        "workers/rust/crates/solver/src/solver_postprocess.rs",
+        "workers/rust/crates/solver/tests/heat_plane_output_reliability.rs",
+        "workers/rust/crates/cli/tests/heat_plane_output_operator.rs",
+        "reports/heat-plane-output-reliability-20260923.md"
       ],
       "commands": [
         {
@@ -294,6 +303,26 @@
           "id": "composite-heat-interfaces",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-cli --test composite_heat_interfaces -- --nocapture"
+        },
+        {
+          "id": "heat-plane-output-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test heat_plane_output_reliability -- --nocapture"
+        },
+        {
+          "id": "heat-plane-output-operator",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test heat_plane_output_operator -- --nocapture"
+        },
+        {
+          "id": "heat-plane-output-kernel",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib heat_plane_results -- --nocapture"
+        },
+        {
+          "id": "heat-plane-output-collection",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib fallible_collection -- --nocapture"
         }
       ]
     },

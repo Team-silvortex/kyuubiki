@@ -3,6 +3,7 @@ use crate::linear_algebra::{
     solve_spd_system_profile_with_options, solve_tridiagonal_system, stable_l2_norm,
 };
 use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
+pub(crate) use crate::modal_sparse_iteration::inverse_power_iteration;
 
 /// Configuration for the linear-memory inverse iteration used by sparse modal solvers.
 #[derive(Clone, Copy, Debug)]
@@ -298,81 +299,6 @@ pub(crate) fn reduce_sparse_modal_system(
         free_dofs,
         stiffness: reduced_stiffness,
     })
-}
-
-/// Finds the smallest eigenpair of a positive-definite operator through inverse iteration.
-/// The caller owns sparse storage and the shifted linear solve, so this routine retains only
-/// a handful of vectors regardless of model size.
-pub(crate) fn inverse_power_iteration(
-    size: usize,
-    options: InverseIterationOptions,
-    apply_operator: impl Fn(&[f64]) -> Result<Vec<f64>, String>,
-    solve_inverse: impl Fn(&[f64]) -> Result<Vec<f64>, String>,
-) -> Result<SparseEigenpair, String> {
-    if size == 0 {
-        return Err("sparse modal operator must have at least one degree of freedom".to_string());
-    }
-    if options.max_iterations == 0 || !options.tolerance.is_finite() || options.tolerance <= 0.0 {
-        return Err("sparse modal inverse iteration options are invalid".to_string());
-    }
-
-    let mut vector = vec![1.0 / (size as f64).sqrt(); size];
-    let mut last_eigenvalue = f64::NAN;
-    let mut last_residual_norm = f64::NAN;
-    for iteration in 0..=options.max_iterations {
-        let applied = apply_operator(&vector)?;
-        if applied.len() != size {
-            return Err("sparse modal operator returned an invalid vector size".to_string());
-        }
-        let eigenvalue = dot(&vector, &applied);
-        let residual_norm = stable_l2_norm(
-            applied
-                .iter()
-                .zip(&vector)
-                .map(|(value, component)| value - eigenvalue * component),
-        );
-        let residual_scale = l2_norm(&applied).max(eigenvalue.abs());
-        if !eigenvalue.is_finite() || !residual_norm.is_finite() {
-            return Err("sparse modal iteration produced a non-finite eigenpair".to_string());
-        }
-        if !(residual_scale.is_finite() && residual_scale > 0.0) {
-            return Err("sparse modal operator has zero or non-finite scale".to_string());
-        }
-        last_eigenvalue = eigenvalue;
-        last_residual_norm = residual_norm;
-        // Modal residuals scale with the eigenvalue; an absolute threshold would reject
-        // otherwise accurate high-frequency modes solely because their units are larger.
-        if residual_norm <= options.tolerance * residual_scale {
-            return Ok(SparseEigenpair {
-                eigenvalue,
-                iterations: iteration,
-                residual_norm,
-                vector,
-            });
-        }
-        if iteration == options.max_iterations {
-            break;
-        }
-        let next = solve_inverse(&vector)?;
-        if next.len() != size {
-            return Err("sparse modal inverse solve returned an invalid vector size".to_string());
-        }
-        let norm = l2_norm(&next);
-        if !norm.is_finite() || norm <= 0.0 {
-            return Err(
-                "sparse modal inverse solve returned a zero or non-finite vector".to_string(),
-            );
-        }
-        vector = next.into_iter().map(|value| value / norm).collect();
-    }
-    Err(format!(
-        "sparse modal inverse iteration did not converge within {} iterations (eigenvalue={last_eigenvalue:.6e}, residual={last_residual_norm:.6e})",
-        options.max_iterations,
-    ))
-}
-
-fn dot(left: &[f64], right: &[f64]) -> f64 {
-    left.iter().zip(right).map(|(a, b)| a * b).sum()
 }
 
 fn l2_norm(values: &[f64]) -> f64 {

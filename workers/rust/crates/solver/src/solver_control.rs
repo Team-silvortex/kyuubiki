@@ -66,6 +66,14 @@ pub enum SolverStage {
     ResultElementSummary,
     ResultTotals,
     ResultRhsNorm,
+    ModalSweep,
+    ModalIteration,
+    ModalValidation,
+    TransientStep,
+    TransientState,
+    TransientEnergy,
+    HarmonicSweep,
+    HarmonicResidual,
 }
 
 impl SolverStage {
@@ -129,6 +137,14 @@ impl SolverStage {
             Self::ResultElementSummary => "result_element_summary",
             Self::ResultTotals => "result_totals",
             Self::ResultRhsNorm => "result_rhs_norm",
+            Self::ModalSweep => "modal_sweep",
+            Self::ModalIteration => "modal_iteration",
+            Self::ModalValidation => "modal_validation",
+            Self::TransientStep => "transient_step",
+            Self::TransientState => "transient_state",
+            Self::TransientEnergy => "transient_energy",
+            Self::HarmonicSweep => "harmonic_sweep",
+            Self::HarmonicResidual => "harmonic_residual",
         }
     }
 
@@ -192,6 +208,14 @@ impl SolverStage {
             Self::ResultElementSummary,
             Self::ResultTotals,
             Self::ResultRhsNorm,
+            Self::ModalSweep,
+            Self::ModalIteration,
+            Self::ModalValidation,
+            Self::TransientStep,
+            Self::TransientState,
+            Self::TransientEnergy,
+            Self::HarmonicSweep,
+            Self::HarmonicResidual,
         ]
         .into_iter()
         .find(|stage| *stage as u8 == value)

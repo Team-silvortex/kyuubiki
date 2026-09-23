@@ -3,14 +3,10 @@ use crate::frame_3d_math::{
     transform_frame3d_stiffness,
 };
 use crate::linear_algebra::{SparseMatrix, add_at};
+use crate::modal_frame_spectrum::{checked_mode_shape, frame_eigenpairs};
 use crate::modal_frame_validation::validate_modal_frame_3d_request;
-use crate::modal_math::{
-    ensure_dense_modal_size, expand_mode_shape, jacobi_eigenpairs,
-    relative_positive_eigenvalue_floor,
-};
-use crate::modal_sparse::{
-    InverseIterationOptions, inverse_power_iteration, reduce_sparse_modal_system,
-};
+use crate::modal_sparse::reduce_sparse_modal_system;
+use crate::solver_control::{SolverStage, checkpoint_chunk};
 use kyuubiki_protocol::{
     ModalFrame3dModeResult, SolveModalFrame3dRequest, SolveModalFrame3dResult,
 };
@@ -38,13 +34,18 @@ fn solve_modal_frame_3d_internal(
     let mut mass = vec![0.0; dof_count];
     let mut total_mass = 0.0;
 
-    for element in &request.elements {
+    for (index, element) in request.elements.iter().enumerate() {
+        checkpoint_chunk(
+            SolverStage::ElementPrecompute,
+            index,
+            request.elements.len(),
+        )?;
         let node_i = &request.nodes[element.node_i];
         let node_j = &request.nodes[element.node_j];
         let dx = node_j.x - node_i.x;
         let dy = node_j.y - node_i.y;
         let dz = node_j.z - node_i.z;
-        let length = (dx * dx + dy * dy + dz * dz).sqrt();
+        let length = dx.hypot(dy).hypot(dz);
         let rotation = frame3d_rotation(dx, dy, dz, length)?;
         let local_stiffness = frame3d_local_stiffness(
             element.area,
@@ -85,51 +86,37 @@ fn solve_modal_frame_3d_internal(
         }
     }
 
+    if !total_mass.is_finite() || total_mass <= 0.0 {
+        return Err("modal frame total mass must be finite and positive".into());
+    }
     let constrained = constrained_modal_frame_3d_dofs(request.as_ref());
     let sparse_system = reduce_sparse_modal_system(&stiffness, &mass, &constrained)?;
     let free_dofs = sparse_system.free_dofs.clone();
-    let eigenpairs = if request.mode_count == Some(1) {
-        let options = InverseIterationOptions::default();
-        let pair = sparse_system
-            .operator
-            .smallest_tridiagonal_eigenpair(options.tolerance)
-            .unwrap_or_else(|| {
-                inverse_power_iteration(
-                    free_dofs.len(),
-                    options,
-                    |vector| sparse_system.operator.apply(vector),
-                    |rhs| sparse_system.solve_normalized_inverse(rhs),
-                )
-            })?;
-        vec![(pair.eigenvalue, pair.vector)]
-    } else {
-        ensure_dense_modal_size(dof_count, "modal frame 3d")?;
-        jacobi_eigenpairs(sparse_system.operator.dense_fallback_matrix()?)?
-    };
-    let mode_limit = request.mode_count.unwrap_or(6).max(1).min(eigenpairs.len());
-    let positive_eigenvalue_floor =
-        relative_positive_eigenvalue_floor(eigenpairs.iter().map(|(value, _)| *value));
+    let eigenpairs = frame_eigenpairs(&sparse_system, request.mode_count)?;
 
     let modes = eigenpairs
         .into_iter()
-        .filter(|(eigenvalue, _)| eigenvalue.is_finite() && *eigenvalue > positive_eigenvalue_floor)
-        .take(mode_limit)
         .enumerate()
         .map(|(index, (eigenvalue, vector))| {
             let natural_frequency_rad_s = eigenvalue.sqrt();
             let natural_frequency_hz = natural_frequency_rad_s / std::f64::consts::TAU;
-            let shape = expand_mode_shape(&vector, &mass, &free_dofs, dof_count);
-            ModalFrame3dModeResult {
+            let period_s = 1.0 / natural_frequency_hz;
+            if !period_s.is_finite() {
+                return Err("modal frame period is not representable".to_string());
+            }
+            let (shape, participation_norm) =
+                checked_mode_shape(&vector, &mass, &free_dofs, dof_count)?;
+            Ok(ModalFrame3dModeResult {
                 index,
                 eigenvalue_rad_s_squared: eigenvalue,
                 natural_frequency_rad_s,
                 natural_frequency_hz,
-                period_s: 1.0 / natural_frequency_hz,
-                participation_norm: shape.iter().map(|value| value * value).sum::<f64>().sqrt(),
+                period_s,
+                participation_norm,
                 shape,
-            }
+            })
         })
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, String>>()?;
 
     if modes.is_empty() {
         return Err("modal frame 3d did not produce a positive finite mode".to_string());

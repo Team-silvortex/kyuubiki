@@ -5,6 +5,59 @@ use std::cell::Cell;
 const LENGTHS: [usize; 11] = [0, 1, 63, 64, 65, 127, 128, 129, 1023, 1024, 1025];
 
 #[test]
+fn fallible_collection_polls_boundaries_without_visiting_the_cancelled_tail() {
+    for size in LENGTHS {
+        for stage in [SolverStage::ResultNodes, SolverStage::ResultElements] {
+            for steps in [0, size.min(64), size] {
+                let visited = Cell::new(0);
+                interrupted(stage, steps, || {
+                    try_collect_results(
+                        stage,
+                        (0..size).map(|i| {
+                            visited.set(visited.get() + 1);
+                            Ok(i)
+                        }),
+                    )
+                });
+                assert_eq!(visited.get(), steps);
+            }
+            assert_eq!(
+                try_collect_results(stage, (0..size).map(Ok)).unwrap(),
+                (0..size).collect::<Vec<_>>()
+            );
+        }
+    }
+}
+
+#[test]
+fn fallible_collection_stops_at_the_error_and_drops_partial_results() {
+    struct Item<'a>(&'a Cell<usize>);
+    impl Drop for Item<'_> {
+        fn drop(&mut self) {
+            self.0.set(self.0.get() + 1);
+        }
+    }
+    for error_at in [0, 1, 63, 64, 65, 128] {
+        let visited = Cell::new(0);
+        let drops = Cell::new(0);
+        let result = try_collect_results(
+            SolverStage::ResultElements,
+            (0..129).map(|i| {
+                visited.set(visited.get() + 1);
+                if i == error_at {
+                    Err("invalid result".into())
+                } else {
+                    Ok(Item(&drops))
+                }
+            }),
+        );
+        assert_eq!(result.err().unwrap(), "invalid result");
+        assert_eq!(visited.get(), error_at + 1);
+        assert_eq!(drops.get(), error_at);
+    }
+}
+
+#[test]
 fn collection_polls_entry_interior_and_final_blocks_without_visiting_the_tail() {
     for size in LENGTHS {
         for stage in [SolverStage::ResultNodes, SolverStage::ResultElements] {
@@ -13,9 +66,8 @@ fn collection_polls_entry_interior_and_final_blocks_without_visiting_the_tail() 
                 interrupted(stage, steps, || {
                     collect_results(
                         stage,
-                        (0..size).map(|i| {
+                        (0..size).inspect(|_| {
                             visited.set(visited.get() + 1);
-                            i
                         }),
                     )
                 });

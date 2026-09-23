@@ -1,8 +1,125 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Scoped planar heat and thermal-stress result construction: cooperative cancellation, old/new physical reference equality, installed Agent cancel/disconnect/replay, and paired result-kernel overhead. Retained-input cloning, serialization, and other operators remain separate coverage.",
+  "summary": "Scoped planar heat and thermal-stress result construction retains installed recovery and paired overhead evidence. Separate bounded local mechanical, electrostatic, magnetostatic and Stokes output-range regression, frame modal-spectrum regression, transient-spring time-stepping and harmonic-spring sweep regression are verified only in process, without broad physics qualification. Retained-input cloning, serialization, and other operator scopes remain separate coverage.",
   "evidence_claims": [
+    {
+      "id": "harmonic-spring-local-sweep-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/harmonic_spring_1d.rs",
+        "workers/rust/crates/solver/src/harmonic_spring_linear.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/tests/harmonic_spring_balance.rs",
+        "workers/rust/crates/cli/tests/harmonic_spring_operator.rs",
+        "config/operator-validation-profiles/structural.json",
+        "reports/harmonic-spring-reliability-20260923.md"
+      ],
+      "required_text": [
+        "finite_displacement_cannot_publish_infinite_acceleration",
+        "finite_response_is_not_rejected_by_overflow_in_the_residual_denominator",
+        "residual_validation_does_not_erase_an_independent_soft_row",
+        "complex_division_preserves_large_finite_quotients",
+        "path_response_matches_modal_decomposition_and_average_power_balance",
+        "dense_cycle_response_matches_modal_decomposition_and_average_power_balance",
+        "factor_residual_and_result_stages_can_cancel_and_replay_without_shared_state",
+        "headless_unrepresentable_acceleration_is_an_error_not_a_null_success",
+        "This is bounded local harmonic-spring validation, not general mechanical or frequency-domain FEM qualification."
+      ]
+    },
+    {
+      "id": "transient-spring-local-time-stepping-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/transient_spring_1d.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/tests/transient_spring_balance.rs",
+        "workers/rust/crates/cli/tests/transient_spring_operator.rs",
+        "config/operator-validation-profiles/structural.json",
+        "reports/transient-spring-reliability-20260923.md"
+      ],
+      "required_text": [
+        "static_preload_does_not_create_acceleration_when_the_time_step_shrinks",
+        "rigid_translation_retains_velocity_without_spurious_internal_dynamics",
+        "sparse_history_cannot_conceal_an_unrepresentable_intermediate_energy",
+        "damped_response_converges_quadratically_to_an_independent_continuous_solution",
+        "heterogeneous_chain_preserves_work_balance_and_sampling_does_not_change_the_solve",
+        "cancellation_interrupts_unsaved_steps_and_result_recovery_without_poisoning_replay",
+        "headless_result_state_can_seed_the_next_transient_batch",
+        "This is bounded local transient-spring validation, not general dynamic FEM qualification."
+      ]
+    },
+    {
+      "id": "modal-spectrum-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_frame_2d.rs",
+        "workers/rust/crates/solver/src/modal_frame_3d.rs",
+        "workers/rust/crates/solver/src/modal_frame_topology.rs",
+        "workers/rust/crates/solver/src/modal_frame_spectrum.rs",
+        "workers/rust/crates/solver/src/modal_math.rs",
+        "workers/rust/crates/solver/src/modal_sparse_iteration.rs",
+        "workers/rust/crates/solver/tests/modal_spectrum_reliability.rs",
+        "workers/rust/crates/cli/tests/modal_spectrum_operator.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-spectrum-reliability-20260923.md"
+      ],
+      "required_text": [
+        "modal_count_does_not_remove_a_resolved_soft_branch",
+        "soft_bending_block_is_not_approximated_as_diagonal_beside_a_stiff_branch",
+        "rotated_frame_first_mode_is_transverse_not_the_uniform_axial_seed",
+        "floating_components_cannot_hide_behind_the_positive_modes_of_an_anchored_body",
+        "modal_cancellation_is_observed_inside_each_phase_and_replay_is_clean",
+        "engine_returns_restraint_errors_and_the_corrected_model_can_replay",
+        "This is bounded local modal-spectrum validation, not general mechanical or large-mesh qualification."
+      ]
+    },
+    {
+      "id": "multiphysics-output-range-local-regression",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/solver/src/plane_2d.rs",
+        "workers/rust/crates/solver/src/plane_2d_math.rs",
+        "workers/rust/crates/solver/src/plane_2d_summary.rs",
+        "workers/rust/crates/solver/src/solid_tetra_3d.rs",
+        "workers/rust/crates/solver/src/solid_tetra_3d_element.rs",
+        "workers/rust/crates/solver/src/electrostatic_plane_2d.rs",
+        "workers/rust/crates/solver/src/magnetostatic_plane_2d.rs",
+        "workers/rust/crates/solver/src/stokes_flow_plane_2d_results.rs",
+        "workers/rust/crates/solver/tests/multiphysics_output_range.rs",
+        "workers/rust/crates/cli/tests/mechanical_output_operator.rs",
+        "config/operator-validation-profiles/structural-plane.json",
+        "config/operator-validation-profiles/structural-solid.json",
+        "config/operator-validation-profiles/electromagnetic.json",
+        "config/operator-validation-profiles/cfd.json",
+        "reports/multiphysics-output-reliability-20260923.md"
+      ],
+      "required_text": [
+        "mechanical_plane_uniaxial_patch_preserves_stress_and_energy_across_scales",
+        "equivalent_stress_preserves_deviatoric_scales_and_hydrostatic_invariance",
+        "electromagnetic_constitutive_vector_magnitudes_preserve_representable_scales",
+        "stokes_uniform_velocity_magnitude_and_reynolds_number_survive_scale_changes",
+        "mechanical_result_stages_cancel_without_partial_success_and_replay_cleanly",
+        "mechanical_overflow_is_an_engine_error_and_does_not_poison_replay",
+        "This is bounded local output-range validation, not general mechanical, electromagnetic or CFD qualification."
+      ]
+    },
     {
       "id": "planar-postprocess-installed-thermal-recovery",
       "status": "proven",

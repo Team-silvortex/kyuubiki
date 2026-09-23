@@ -228,9 +228,36 @@ fn multiply_6x6_6(a: &[[f64; 6]; 6], vector: &[f64; 6]) -> [f64; 6] {
 
 fn von_mises_stress(stress: &[f64; 6]) -> f64 {
     let [sx, sy, sz, txy, tyz, tzx] = *stress;
-    (0.5 * ((sx - sy).powi(2) + (sy - sz).powi(2) + (sz - sx).powi(2))
-        + 3.0 * (txy * txy + tyz * tyz + tzx * tzx))
-        .sqrt()
+    let differences = [sx - sy, sy - sz, sz - sx];
+    let scale = if differences.iter().all(|value| value.is_finite()) {
+        // Scale the deviatoric components, not a potentially huge hydrostatic pressure.
+        differences
+            .iter()
+            .chain(stress[3..].iter())
+            .map(|value| value.abs())
+            .fold(0.0_f64, f64::max)
+    } else {
+        stress
+            .iter()
+            .map(|value| value.abs())
+            .fold(0.0_f64, f64::max)
+    };
+    if scale == 0.0 {
+        return 0.0;
+    }
+    let differences = if differences.iter().all(|value| value.is_finite()) {
+        differences.map(|value| value / scale)
+    } else {
+        [
+            sx / scale - sy / scale,
+            sy / scale - sz / scale,
+            sz / scale - sx / scale,
+        ]
+    };
+    (0.5 * differences.iter().map(|value| value * value).sum::<f64>()
+        + 3.0 * ((txy / scale).powi(2) + (tyz / scale).powi(2) + (tzx / scale).powi(2)))
+    .sqrt()
+        * scale
 }
 
 fn strain_energy_density(stress: &[f64; 6], strain: &[f64; 6]) -> f64 {
@@ -288,7 +315,23 @@ fn invert4(matrix: [[f64; 4]; 4]) -> Result<[[f64; 4]; 4], String> {
 
 #[cfg(test)]
 mod tests {
-    use super::tetra_mean_ratio_quality;
+    use super::{tetra_mean_ratio_quality, von_mises_stress};
+
+    #[test]
+    fn equivalent_stress_preserves_deviatoric_scales_and_hydrostatic_invariance() {
+        for scale in [1e-300, 1e-200, 1.0, 1e200, 1e300] {
+            assert_eq!(von_mises_stress(&[scale, 0.0, 0.0, 0.0, 0.0, 0.0]), scale);
+            assert_eq!(von_mises_stress(&[scale, scale, scale, 0.0, 0.0, 0.0]), 0.0);
+            let shear = von_mises_stress(&[1e308, 1e308, 1e308, scale, 0.0, 0.0]);
+            assert!((shear / scale - 3.0_f64.sqrt()).abs() < 1e-14);
+        }
+    }
+
+    #[test]
+    fn opposite_extreme_normals_have_representable_equivalent_stress() {
+        let actual = von_mises_stress(&[1e308, -1e308, 0.0, 0.0, 0.0, 0.0]);
+        assert!((actual / 1e308 - 3.0_f64.sqrt()).abs() < 1e-14);
+    }
 
     #[test]
     fn mean_ratio_is_one_for_a_regular_tetra_and_scale_invariant() {

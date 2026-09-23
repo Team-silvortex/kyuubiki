@@ -1,4 +1,5 @@
 use crate::linear_algebra::stable_l2_norm;
+use crate::solver_control::{SolverStage, checkpoint};
 
 const MAX_DENSE_MODAL_DOFS: usize = 4_096;
 const JACOBI_RELATIVE_TOLERANCE: f64 = 1.0e-12;
@@ -53,6 +54,7 @@ fn jacobi_eigenpairs_with_max_sweeps(
     max_sweeps: usize,
 ) -> Result<Vec<(f64, Vec<f64>)>, String> {
     let size = matrix.len();
+    checkpoint(SolverStage::ModalSweep, 0)?;
     if size == 0 || matrix.iter().any(|row| row.len() != size) {
         return Err("symmetric Jacobi matrix must be square and non-empty".to_string());
     }
@@ -83,28 +85,26 @@ fn jacobi_eigenpairs_with_max_sweeps(
         row[index] = 1.0;
     }
 
-    let mut converged = largest_offdiag_magnitude(&matrix) <= JACOBI_RELATIVE_TOLERANCE;
-    for _ in 0..max_sweeps {
+    let mut converged = couplings_resolved(&matrix);
+    for sweep in 0..max_sweeps {
         if converged {
             break;
         }
         for p in 0..size {
+            checkpoint(SolverStage::ModalSweep, sweep * size + p)?;
             for q in p + 1..size {
                 let coupling = matrix[p][q];
-                if coupling.abs() <= JACOBI_RELATIVE_TOLERANCE {
+                if coupling_resolved(coupling, matrix[p][p], matrix[q][q]) {
                     continue;
                 }
-                let tau = (matrix[q][q] - matrix[p][p]) / (2.0 * coupling);
-                let t = if tau >= 0.0 {
-                    1.0 / (tau + tau.hypot(1.0))
-                } else {
-                    -1.0 / (-tau + tau.hypot(1.0))
-                };
+                let half_difference = (matrix[q][q] - matrix[p][p]) * 0.5;
+                let radius = half_difference.hypot(coupling);
+                let t = coupling / (half_difference + radius.copysign(half_difference));
                 let c = 1.0 / (1.0 + t * t).sqrt();
                 rotate(&mut matrix, &mut vectors, p, q, c, t * c);
             }
         }
-        converged = largest_offdiag_magnitude(&matrix) <= JACOBI_RELATIVE_TOLERANCE;
+        converged = couplings_resolved(&matrix);
     }
     if !converged {
         return Err(format!(
@@ -121,6 +121,23 @@ fn jacobi_eigenpairs_with_max_sweeps(
         .collect::<Vec<_>>();
     pairs.sort_by(|left, right| left.0.total_cmp(&right.0));
     Ok(pairs)
+}
+
+fn coupling_resolved(value: f64, left: f64, right: f64) -> bool {
+    // A stiff disconnected block must not set the convergence tolerance of a soft block.
+    value.abs() <= JACOBI_RELATIVE_TOLERANCE * left.abs().sqrt() * right.abs().sqrt()
+}
+
+fn couplings_resolved(matrix: &[Vec<f64>]) -> bool {
+    (0..matrix.len()).all(|row| {
+        (row + 1..matrix.len()).all(|column| {
+            coupling_resolved(
+                matrix[row][column],
+                matrix[row][row],
+                matrix[column][column],
+            )
+        })
+    })
 }
 
 fn largest_offdiag_magnitude(matrix: &[Vec<f64>]) -> f64 {

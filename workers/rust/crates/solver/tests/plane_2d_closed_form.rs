@@ -520,8 +520,21 @@ fn assert_planar_metrics(
 ) {
     let center = 0.5 * (sigma_x + sigma_y);
     let radius = (((0.5 * (sigma_x - sigma_y)).powi(2)) + tau_xy.powi(2)).sqrt();
-    assert_close(principal_1, center + radius, 1.0e-12);
-    assert_close(principal_2, center - radius, 1.0e-12);
+    // Eigenvalue roundoff scales with the tensor, not a nearly zero eigenvalue.
+    let scale = sigma_x.abs().max(sigma_y.abs()).max(tau_xy.abs()).max(1.0);
+    let tolerance = 32.0 * f64::EPSILON;
+    assert_close(principal_1 / scale, (center + radius) / scale, tolerance);
+    assert_close(principal_2 / scale, (center - radius) / scale, tolerance);
+    assert_close(
+        (principal_1 + principal_2) / scale,
+        (sigma_x + sigma_y) / scale,
+        tolerance,
+    );
+    assert_close(
+        (principal_1 / scale) * (principal_2 / scale),
+        (sigma_x / scale) * (sigma_y / scale) - (tau_xy / scale).powi(2),
+        tolerance,
+    );
     assert_close(max_shear, radius, 1.0e-12);
     assert_close(
         von_mises,

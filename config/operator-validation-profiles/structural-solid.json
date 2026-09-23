@@ -43,7 +43,10 @@
         "every_connected_component_restrains_all_six_rigid_body_modes",
         "orphan_nodes_and_floating_components_fail_before_factorization",
         "independently_restrained_components_solve_in_one_block_system",
-        "node_and_element_index_reordering_preserves_physical_response"
+        "node_and_element_index_reordering_preserves_physical_response",
+        "representable_equivalent_stress_and_force_scale_survive_extreme_moduli",
+        "hydrostatic_pressure_does_not_erase_representable_shear_in_von_mises",
+        "unrepresentable_solid_output_is_rejected_before_success"
       ],
       "evidence_paths": [
         "config/operator-reliability/structural-solid.json",
@@ -56,9 +59,22 @@
         "workers/rust/crates/solver/tests/mechanical_convergence/solid.rs",
         "workers/rust/crates/solver/tests/solid_tetra_3d_mesh_patch.rs",
         "workers/rust/crates/solver/tests/solid_tetra_3d_bending_convergence.rs",
-        "workers/rust/crates/solver/tests/solid_tetra_topology_reliability.rs"
+        "workers/rust/crates/solver/tests/solid_tetra_topology_reliability.rs",
+        "workers/rust/crates/solver/tests/multiphysics_output_range.rs",
+        "workers/rust/crates/solver/src/solid_tetra_3d_element.rs",
+        "reports/multiphysics-output-reliability-20260923.md"
       ],
       "commands": [
+        {
+          "id": "solid-output-range",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test multiphysics_output_range mechanical_solid -- --nocapture"
+        },
+        {
+          "id": "solid-deviatoric-range",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib solid_tetra_3d_element::tests -- --nocapture"
+        },
         {
           "id": "solid-tetra-3d-review",
           "kind": "cross_check",

@@ -1,8 +1,59 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Bounded local scalar-plane and SDK electrothermal/thermoelastic regression: reference invariance, split-quad energy, terminal/contact power recovery, integrated dielectric loss, checked heat transfer, scale-independent feedback, identity-safe structural temperature mapping, ideal layered heat-interface validation and separate steady matching-edge thermal-contact screening. Includes local scalar precompute and nodal mapping microbenchmarks only. No installed, cross-platform, million-node or general material qualification claim.",
+  "summary": "Bounded local scalar-plane and SDK electrothermal/thermoelastic regression: reference invariance, split-quad energy, terminal/contact power recovery, integrated dielectric loss, checked heat transfer, scale-independent feedback, identity-safe structural temperature mapping, ideal layered heat-interface validation and separate steady matching-edge thermal-contact screening with independent interface balance and bounded residual refinement. Includes local scalar precompute and nodal mapping microbenchmarks only. No installed, cross-platform, million-node or general material qualification claim.",
   "evidence_claims": [
+    {
+      "id": "heat-plane-output-representability-and-failure-propagation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/solver/src/heat_plane_results.rs",
+        "workers/rust/crates/solver/src/solver_postprocess.rs",
+        "workers/rust/crates/solver/src/solver_postprocess_kernel_tests.rs",
+        "workers/rust/crates/solver/tests/heat_plane_output_reliability.rs",
+        "workers/rust/crates/cli/tests/heat_plane_output_operator.rs",
+        "config/operator-validation-profiles.json",
+        "reports/heat-plane-output-reliability-20260923.md"
+      ],
+      "required_text": [
+        "representable_heat_flux_survives_square_overflow_and_underflow",
+        "finite_element_flows_cannot_overflow_the_total_silently",
+        "fallible_collection_stops_at_the_error_and_drops_partial_results",
+        "unrepresentable_heat_fields_fail_through_the_headless_plan_and_allow_clean_replay",
+        "This is bounded local heat-output validation, not general material or release qualification."
+      ]
+    },
+    {
+      "id": "heat-contact-physical-balance-and-bounded-refinement",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/solver/src/heat_plane_balance.rs",
+        "workers/rust/crates/solver/tests/heat_plane_contact_reliability.rs",
+        "workers/rust/crates/cli/tests/heat_contact_operator.rs",
+        "config/operator-validation-profiles/thermal-structural.json",
+        "docs/thermal-contact-operator.md",
+        "reports/heat-contact-balance-20260923.md"
+      ],
+      "required_text": [
+        "very_conductive_contact_cannot_succeed_with_inconsistent_heat_flows",
+        "interface_sources_and_sinks_enter_balance_once_and_preserve_signed_flow",
+        "unrelated_high_power_branch_cannot_hide_an_unresolved_contact",
+        "twenty_layer_contact_chain_preserves_temperatures_and_serial_power",
+        "sparse_contact_patch_satisfies_balance_with_all_preconditioners",
+        "unresolved_balance_stops_after_two_corrections",
+        "cancellation_stops_refinement_and_a_clean_replay_succeeds",
+        "unresolved_contact_heat_balance_is_an_operator_failure_not_a_successful_study",
+        "This is local interface-balance screening, not general material or release qualification."
+      ]
+    },
     {
       "id": "steady-heat-matching-edge-contact-resistance",
       "status": "proven",

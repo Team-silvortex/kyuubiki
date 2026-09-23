@@ -90,6 +90,20 @@ fn invalid_contact_propagates_an_operator_error_and_clean_retry_succeeds() {
 }
 
 #[test]
+fn unresolved_contact_heat_balance_is_an_operator_failure_not_a_successful_study() {
+    let mut input = model();
+    input["contact_interfaces"][0]["thermal_resistance_m2_k_w"] = json!(1e-12);
+    let error = run_solve_operator("solve.heat_plane_quad_2d", input).unwrap_err();
+    assert!(error.contains("thermal contact heat balance"), "{error}");
+    assert!(error.contains("node"), "{error}");
+    let result = run_solve_operator("solve.heat_plane_quad_2d", model()).unwrap();
+    let flow = result["contact_interfaces"][0]["heat_flow_a_to_b_w"]
+        .as_f64()
+        .unwrap();
+    assert!((flow - 20.0 / 3.5).abs() < 1e-12);
+}
+
+#[test]
 fn sdk_thermal_transfer_preserves_the_jump_between_coincident_but_independent_nodes() {
     let heat: SolveHeatPlaneQuad2dResult =
         serde_json::from_value(run_solve_operator("solve.heat_plane_quad_2d", model()).unwrap())

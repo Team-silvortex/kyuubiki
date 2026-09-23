@@ -28,7 +28,19 @@ pub(crate) fn validate_modal_frame_2d_request(
     for element in &request.elements {
         validate_modal_frame_2d_element(request, element)?;
     }
-    Ok(())
+    crate::modal_frame_topology::validate_restraints(
+        request.nodes.len(),
+        request.elements.iter().map(|e| (e.node_i, e.node_j)),
+        |i| {
+            let n = &request.nodes[i];
+            [n.x, n.y, 0.0]
+        },
+        |i| {
+            let n = &request.nodes[i];
+            [n.fix_x, n.fix_y, n.fix_rz, false, false, false]
+        },
+        false,
+    )
 }
 
 pub(crate) fn validate_modal_frame_3d_request(
@@ -59,7 +71,19 @@ pub(crate) fn validate_modal_frame_3d_request(
     for element in &request.elements {
         validate_modal_frame_3d_element(request, element)?;
     }
-    Ok(())
+    crate::modal_frame_topology::validate_restraints(
+        request.nodes.len(),
+        request.elements.iter().map(|e| (e.node_i, e.node_j)),
+        |i| {
+            let n = &request.nodes[i];
+            [n.x, n.y, n.z]
+        },
+        |i| {
+            let n = &request.nodes[i];
+            [n.fix_x, n.fix_y, n.fix_z, n.fix_rx, n.fix_ry, n.fix_rz]
+        },
+        true,
+    )
 }
 
 fn validate_modal_frame_2d_element(
