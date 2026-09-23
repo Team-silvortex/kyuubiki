@@ -322,6 +322,55 @@ drop interface losses or mutate the input seed on failure. Equal four-node
 power lumping remains an approximation, not subcell source quadrature. See the
 [bounded regression report](../reports/composite-heat-projection-20260920.md).
 
+For temperature feedback, `composite_feedback_relative_change` preserves
+`abs(current - previous) / previous` for finite non-negative values with a
+positive previous value, even below machine epsilon. Zero-to-zero is `0`;
+zero-to-positive is explicitly `1`. Invalid inputs or an unrepresentable ratio
+return infinity and cannot satisfy convergence. This is not a dimensional
+absolute-power tolerance.
+
+`assess_composite_electrothermal_feedback` recomputes temperature residuals,
+combined dielectric/Joule loss changes, and per-region conductivity changes
+from the trace before accepting its convergence flag. An inconsistent trace is
+an error; an empty trace is `missing`; a valid unconverged trace is `fail`.
+The native study runner reports the failed iteration/stage and does not mutate
+the input models. A failed iteration budget is not proof of convergence. See
+the [feedback regression report](../reports/composite-feedback-convergence-20260923.md)
+for an analytic fixed-point cross-check and the limits of this validation.
+
+`project_composite_heat_to_thermal` and
+`project_composite_temperature_dependent_expansion` share a same-mesh identity
+contract: complete nonempty node sets, unique nonblank IDs, result indices that
+match the retained heat input, finite temperatures and matching coordinates
+within `1e-12 m`. Reordering arrays does not change node identity. Expansion
+also checks unique element IDs and matching cyclic quad connectivity rather
+than comparing raw array indices. This is not remeshing/interpolation.
+
+Temperature differences and adjusted expansion coefficients must remain
+representable. Zero coefficients remain valid; silent underflow of a nonzero
+coefficient is rejected. The current thermal-plane solver requires non-negative
+expansion coefficients, so unsupported negative reference/adjusted coefficients
+now fail in the SDK rather than after dispatch. See the
+[temperature-transfer regression report](../reports/composite-thermal-projection-20260923.md)
+for real heat-to-structural solves and a bounded local mapping microbenchmark.
+
+The `composite_heat_cross_validation*` and `composite_heat_mesh_convergence*`
+assessments normalize temperature errors by the analytic rise above the fixed
+35 C boundary, not the total Celsius temperature. True zero heat requires an
+exact reference-temperature match; positive heat whose predicted rise cannot
+be represented above that reference cannot pass as zero heat. Invalid material
+values, negative generation and malformed/nonfinite mesh samples are `fail`;
+an otherwise valid, incomplete refinement prefix is `missing`.
+
+The fallible distributed/regional heat-refinement builders reject invalid
+conductivities and unrepresentable source assembly. Regional power is checked
+at each nodal increment, per layer and over the whole model; a small source
+cannot silently disappear at a shared interface behind a larger source. The
+legacy infallible interface-load fixture builder still returns model requests;
+the solver validates those requests before execution. These are fixed-geometry,
+ideal shared-node interfaces, not contact-resistance or cooling models. See the
+[layered heat validation report](../reports/composite-heat-interface-validation-20260923.md).
+
 ## Design goals
 
 - protocol-driven rather than implementation-driven

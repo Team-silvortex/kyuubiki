@@ -207,7 +207,9 @@ pub fn composite_heat_element_mean_temperature(
     if temperatures.iter().any(|value| !value.is_finite()) {
         return Err("heat feedback temperatures must be finite".to_string());
     }
-    Ok(temperatures.iter().sum::<f64>() / temperatures.len() as f64)
+    Ok(temperatures[0]
+        .midpoint(temperatures[1])
+        .midpoint(temperatures[2].midpoint(temperatures[3])))
 }
 
 pub fn assess_composite_electrothermal_feedback(
@@ -219,13 +221,11 @@ pub fn assess_composite_electrothermal_feedback(
         || iterations.iter().enumerate().any(|(index, sample)| {
             sample.iteration != index + 1
                 || !valid_iteration(feedback, sample)
-                || sample.converged
-                    != composite_feedback_iteration_converged(
-                        feedback,
-                        sample.temperature_residual_c,
-                        sample.loss_relative_change,
-                        sample.max_conductivity_relative_change,
-                    )
+                || !valid_iteration_metrics(
+                    feedback,
+                    sample,
+                    index.checked_sub(1).map(|i| &iterations[i]),
+                )
                 || (sample.converged && index + 1 != iterations.len())
         })
     {
@@ -266,18 +266,29 @@ pub fn composite_feedback_iteration_converged(
     loss_relative_change: Option<f64>,
     conductivity_relative_change: Option<f64>,
 ) -> bool {
-    temperature_residual_c <= feedback.temperature_residual_tolerance_c
+    let within =
+        |value: f64, tolerance: f64| value.is_finite() && value >= 0.0 && value <= tolerance;
+    validate_feedback_spec(feedback).is_ok()
+        && within(
+            temperature_residual_c,
+            feedback.temperature_residual_tolerance_c,
+        )
         && loss_relative_change
-            .is_some_and(|change| change <= feedback.loss_relative_change_tolerance)
+            .is_some_and(|change| within(change, feedback.loss_relative_change_tolerance))
         && conductivity_relative_change
-            .is_some_and(|change| change <= feedback.conductivity_relative_change_tolerance)
+            .is_some_and(|change| within(change, feedback.conductivity_relative_change_tolerance))
 }
 
+/// Relative change for non-negative finite material coefficients or power values.
+/// Zero-to-zero is stable; leaving zero is a unit change, regardless of units.
+/// Invalid inputs or an unrepresentable ratio return infinity (never convergence).
 pub fn composite_feedback_relative_change(current: f64, previous: f64) -> f64 {
-    if previous.abs() <= f64::EPSILON {
-        (current - previous).abs()
+    if !current.is_finite() || current < 0.0 || !previous.is_finite() || previous < 0.0 {
+        f64::INFINITY
+    } else if previous == 0.0 {
+        if current == 0.0 { 0.0 } else { 1.0 }
     } else {
-        (current - previous).abs() / previous.abs()
+        (current - previous).abs() / previous
     }
 }
 
@@ -384,9 +395,72 @@ fn valid_conductivity_update(update: &CompositeThermalConductivityFeedbackIterat
             .is_none_or(|value| value.is_finite() && value >= 0.0)
 }
 
+fn valid_iteration_metrics(
+    feedback: &CompositeElectrothermalFeedbackSpec,
+    sample: &CompositeElectrothermalFeedbackIteration,
+    previous: Option<&CompositeElectrothermalFeedbackIteration>,
+) -> bool {
+    let total_loss = sample.total_loss_w + sample.total_joule_loss_w;
+    if !total_loss.is_finite() {
+        return false;
+    }
+    let residual = sample.thermal_conductivity_updates.iter().fold(
+        (sample.dielectric_mean_temperature_c - sample.coupling_temperature_c).abs(),
+        |residual, update| {
+            residual.max((update.measured_mean_temperature_c - update.coupling_temperature_c).abs())
+        },
+    );
+    let loss_change = previous.map(|previous| {
+        composite_feedback_relative_change(
+            total_loss,
+            previous.total_loss_w + previous.total_joule_loss_w,
+        )
+    });
+    let mut max_conductivity_change = previous.map(|_| 0.0_f64);
+    for update in &sample.thermal_conductivity_updates {
+        let change = previous.and_then(|previous| {
+            previous
+                .thermal_conductivity_updates
+                .iter()
+                .find(|value| value.element_id == update.element_id)
+                .map(|value| {
+                    composite_feedback_relative_change(
+                        update.conductivity_w_mk,
+                        value.conductivity_w_mk,
+                    )
+                })
+        });
+        if !option_f64_matches(update.conductivity_relative_change, change) {
+            return false;
+        }
+        if let (Some(maximum), Some(change)) = (&mut max_conductivity_change, change) {
+            *maximum = maximum.max(change);
+        }
+    }
+    f64_matches(sample.temperature_residual_c, residual)
+        && option_f64_matches(sample.loss_relative_change, loss_change)
+        && option_f64_matches(
+            sample.max_conductivity_relative_change,
+            max_conductivity_change,
+        )
+        && sample.converged
+            == composite_feedback_iteration_converged(
+                feedback,
+                residual,
+                loss_change,
+                max_conductivity_change,
+            )
+}
+
+fn f64_matches(left: f64, right: f64) -> bool {
+    left.is_finite()
+        && right.is_finite()
+        && (left == right || (left - right).abs() / left.abs().max(right.abs()) <= 1.0e-12)
+}
+
 fn option_f64_matches(left: Option<f64>, right: Option<f64>) -> bool {
     match (left, right) {
-        (Some(left), Some(right)) => (left - right).abs() <= 1.0e-12 * right.abs().max(1.0),
+        (Some(left), Some(right)) => f64_matches(left, right),
         (None, None) => true,
         _ => false,
     }

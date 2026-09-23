@@ -237,6 +237,7 @@
         "sparse_current_driven_patch_with_all_preconditioners",
         "explicit_joule_to_nodal_heat_workflow",
         "finite_conservative_nodal_heat_projection",
+        "scale_independent_temperature_feedback_convergence",
         "invalid_quad_topology_rejection",
         "rpc_and_workflow_contract"
       ],
@@ -253,6 +254,9 @@
         "invalid_relative_potential_range_and_nonfinite_interface_conductance_are_rejected",
         "actual_nodal_heat_increments_are_finite_and_conserve_selected_joule_power",
         "unmapped_contact_and_terminal_heating_is_rejected",
+        "feedback_changes_remain_relative_at_small_power_scales",
+        "feedback_trace_metrics_match_recorded_temperatures_losses_and_conductivities",
+        "exhausted_feedback_budget_is_not_reported_as_convergence",
         "degenerate_repeated_and_self_intersecting_quads_fail_before_assembly",
         "every_connected_component_is_anchored_by_fixed_potential_or_finite_impedance_terminal"
       ],
@@ -274,7 +278,12 @@
         "workers/rust/crates/headless-sdk/src/material_composite_joule.rs",
         "workers/rust/crates/headless-sdk/src/material_composite_heat_loads.rs",
         "workers/rust/crates/cli/tests/composite_heat_projection.rs",
-        "reports/composite-heat-projection-20260920.md"
+        "reports/composite-heat-projection-20260920.md",
+        "workers/rust/crates/headless-sdk/src/material_composite_feedback.rs",
+        "workers/rust/crates/headless-sdk/tests/composite_feedback_reliability.rs",
+        "workers/rust/crates/cli/src/composite_runtime_feedback.rs",
+        "workers/rust/crates/cli/src/composite_runtime_feedback_tests.rs",
+        "reports/composite-feedback-convergence-20260923.md"
       ],
       "commands": [
         {
@@ -316,6 +325,16 @@
           "id": "composite-heat-projection",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-cli --test composite_heat_projection -- --nocapture"
+        },
+        {
+          "id": "composite-feedback-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-headless-sdk --test composite_feedback_reliability -- --nocapture"
+        },
+        {
+          "id": "composite-feedback-analytic-fixed-point",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --lib composite_runtime_feedback::tests -- --nocapture"
         }
       ]
     }

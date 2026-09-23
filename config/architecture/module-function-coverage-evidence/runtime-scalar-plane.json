@@ -1,8 +1,99 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Bounded local scalar-plane and SDK electrothermal projection regression: reference invariance, split-quad energy, terminal/contact power recovery, integrated dielectric loss and checked Joule-to-nodal-heat transfer. Includes a scalar precompute microbenchmark only. No installed, cross-platform, million-node or general material qualification claim.",
+  "summary": "Bounded local scalar-plane and SDK electrothermal/thermoelastic regression: reference invariance, split-quad energy, terminal/contact power recovery, integrated dielectric loss, checked heat transfer, scale-independent feedback, identity-safe structural temperature mapping and ideal layered heat-interface validation. Includes local scalar precompute and nodal mapping microbenchmarks only. No installed, cross-platform, million-node or general material qualification claim.",
   "evidence_claims": [
+    {
+      "id": "composite-layered-heat-rise-and-interface-balance",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/material_composite_heat_validation.rs",
+        "workers/rust/crates/headless-sdk/src/material_composite_heat_loads.rs",
+        "workers/rust/crates/headless-sdk/tests/composite_heat_validation_reliability.rs",
+        "workers/rust/crates/cli/tests/composite_heat_interfaces.rs",
+        "config/operator-validation-profiles.json",
+        "reports/composite-heat-interface-validation-20260923.md"
+      ],
+      "required_text": [
+        "missing_small_temperature_rise_cannot_pass_against_the_ambient_reference",
+        "regional_distribution_cannot_hide_small_interface_load_behind_large_layer",
+        "regional_generation_matches_nodal_temperatures_interface_flux_and_outlet_balance",
+        "interface_point_source_has_temperature_continuity_and_the_correct_flux_jump",
+        "No thermal contact resistance, interface temperature jump, or general material qualification is claimed."
+      ]
+    },
+    {
+      "id": "composite-heat-to-structural-temperature-mapping",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/material_composite_temperature_map.rs",
+        "workers/rust/crates/headless-sdk/src/material_composite_electrothermal.rs",
+        "workers/rust/crates/headless-sdk/src/material_composite_thermal_expansion.rs",
+        "workers/rust/crates/cli/tests/composite_thermal_projection.rs",
+        "config/operator-validation-profiles.json",
+        "reports/composite-thermal-projection-20260923.md"
+      ],
+      "required_text": [
+        "reordered_nodes_and_rotated_connectivity_preserve_free_expansion",
+        "nonuniform_temperatures_follow_node_ids_through_both_projections",
+        "shared_nodes_and_reordered_regions_preserve_local_material_coefficients",
+        "finite_temperatures_with_unrepresentable_difference_are_rejected",
+        "This is a same-mesh transfer, not remeshing or interpolation.",
+        "Negative thermal expansion remains outside the existing plane solver's supported domain."
+      ]
+    },
+    {
+      "id": "composite-heat-to-thermal-mapping-local-benchmark",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["benchmark"],
+      "dimensions": ["benchmark"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/material_composite_temperature_map.rs",
+        "workers/rust/crates/cli/tests/composite_thermal_projection.rs",
+        "reports/composite-thermal-projection-20260923.md"
+      ],
+      "required_text": [
+        "heat_to_thermal_mapping_microbenchmark",
+        "median_ms",
+        "169.096042",
+        "2.108709",
+        "No end-to-end solver speedup is claimed."
+      ]
+    },
+    {
+      "id": "composite-electrothermal-feedback-convergence",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/material_composite_feedback.rs",
+        "workers/rust/crates/headless-sdk/tests/composite_feedback_reliability.rs",
+        "workers/rust/crates/cli/src/composite_runtime_feedback.rs",
+        "workers/rust/crates/cli/src/composite_runtime_feedback_tests.rs",
+        "config/operator-validation-profiles/electromagnetic.json",
+        "reports/composite-feedback-convergence-20260923.md"
+      ],
+      "required_text": [
+        "low_power_feedback_matches_the_unit_scale_analytic_fixed_point",
+        "exhausted_iteration_budget_is_a_failed_convergence_not_a_success",
+        "invalid_iteration_budget_returns_an_error_without_panicking",
+        "rounding_tolerance_cannot_turn_a_failed_threshold_into_a_pass",
+        "All three thickness scales converge in 13 iterations.",
+        "This is bounded numerical screening, not general material qualification."
+      ]
+    },
     {
       "id": "composite-electrothermal-heat-projection",
       "status": "proven",

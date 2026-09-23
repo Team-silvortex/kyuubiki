@@ -194,7 +194,9 @@
         "bilinear_isoparametric_thermoelastic_quad",
         "distorted_free_expansion_invariance",
         "gauss_point_temperature_interpolation",
-        "scalar_reference_shift_regression"
+        "scalar_reference_shift_regression",
+        "identity_safe_heat_to_structural_projection",
+        "layered_heat_flux_and_temperature_rise_cross_check"
       ],
       "formal_invariants": [
         "fixed_hot_and_cold_boundaries",
@@ -206,7 +208,12 @@
         "distorted_q4_mesh_preserves_free_uniform_thermal_expansion",
         "linear_nodal_temperature_is_integrated_at_q4_gauss_points",
         "inverted_thermal_q4_jacobian_is_rejected",
-        "constant_temperature_reference_preserves_gradient_and_flux"
+        "constant_temperature_reference_preserves_gradient_and_flux",
+        "node_reordering_preserves_temperature_expansion_and_thermoelastic_response",
+        "ambiguous_or_nonfinite_temperature_handoffs_fail_before_structural_solve",
+        "ambient_temperature_cannot_hide_missing_source_temperature_rise",
+        "each_regional_heat_source_survives_shared_node_assembly",
+        "ideal_shared_interface_flux_and_outlet_power_match_fourier_balance"
       ],
       "evidence_paths": [
         "config/operator-reliability/thermal.json",
@@ -221,7 +228,16 @@
         "workers/rust/crates/solver/tests/thermal_plane_triangle_2d_review.rs",
         "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs",
         "workers/rust/crates/solver/tests/thermal_plane_quad_isoparametric.rs",
-        "workers/rust/crates/solver/tests/scalar_plane_reference_invariance.rs"
+        "workers/rust/crates/solver/tests/scalar_plane_reference_invariance.rs",
+        "workers/rust/crates/headless-sdk/src/material_composite_temperature_map.rs",
+        "workers/rust/crates/headless-sdk/src/material_composite_electrothermal.rs",
+        "workers/rust/crates/headless-sdk/src/material_composite_thermal_expansion.rs",
+        "workers/rust/crates/cli/tests/composite_thermal_projection.rs",
+        "reports/composite-thermal-projection-20260923.md",
+        "workers/rust/crates/headless-sdk/src/material_composite_heat_validation.rs",
+        "workers/rust/crates/headless-sdk/tests/composite_heat_validation_reliability.rs",
+        "workers/rust/crates/cli/tests/composite_heat_interfaces.rs",
+        "reports/composite-heat-interface-validation-20260923.md"
       ],
       "commands": [
         {
@@ -263,6 +279,21 @@
           "id": "heat-plane-reference-invariance",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test scalar_plane_reference_invariance heat_ -- --nocapture"
+        },
+        {
+          "id": "composite-thermal-projection",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test composite_thermal_projection -- --nocapture"
+        },
+        {
+          "id": "composite-heat-validation-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-headless-sdk --test composite_heat_validation_reliability -- --nocapture"
+        },
+        {
+          "id": "composite-heat-interfaces",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test composite_heat_interfaces -- --nocapture"
         }
       ]
     },

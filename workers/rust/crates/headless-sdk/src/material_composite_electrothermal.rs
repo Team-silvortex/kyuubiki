@@ -1,6 +1,7 @@
 use crate::material_composite_heat_loads::{
     add_uniform_quad_power, power_relative_error, sum_power,
 };
+use crate::material_composite_temperature_map::map_composite_temperatures;
 use kyuubiki_protocol::{
     HeatPlaneQuadElementInput, SolveElectrostaticPlaneQuad2dResult, SolveHeatPlaneQuad2dRequest,
     SolveHeatPlaneQuad2dResult, SolveThermalPlaneQuad2dRequest,
@@ -219,33 +220,20 @@ pub fn project_composite_heat_to_thermal(
     if !reference_temperature_c.is_finite() {
         return Err("thermal projection reference temperature must be finite".to_string());
     }
-    if heat.nodes.len() != thermal_seed.nodes.len() {
-        return Err("heat and thermal projections require equal node counts".to_string());
-    }
+    let mapping = map_composite_temperatures(heat, thermal_seed)?;
     let mut request = thermal_seed.clone();
     let mut minimum_delta = f64::INFINITY;
     let mut maximum_delta = f64::NEG_INFINITY;
-    let mut maximum_coordinate_error = 0.0_f64;
-    for target in &mut request.nodes {
-        let source = heat
-            .nodes
-            .iter()
-            .find(|node| node.id == target.id)
-            .ok_or_else(|| format!("heat result is missing thermal node {}", target.id))?;
-        let coordinate_error = (source.x - target.x).hypot(source.y - target.y);
-        if !coordinate_error.is_finite() || coordinate_error > COORDINATE_TOLERANCE_M {
+    for (target, source) in request.nodes.iter_mut().zip(&mapping.nodes) {
+        target.temperature_delta = source.temperature - reference_temperature_c;
+        if !target.temperature_delta.is_finite() {
             return Err(format!(
-                "heat and thermal node {} coordinates do not match",
+                "thermal node {} temperature difference is not representable",
                 target.id
             ));
         }
-        if !source.temperature.is_finite() {
-            return Err(format!("heat node {} temperature is not finite", target.id));
-        }
-        target.temperature_delta = source.temperature - reference_temperature_c;
         minimum_delta = minimum_delta.min(target.temperature_delta);
         maximum_delta = maximum_delta.max(target.temperature_delta);
-        maximum_coordinate_error = maximum_coordinate_error.max(coordinate_error);
     }
     Ok((
         request,
@@ -255,7 +243,7 @@ pub fn project_composite_heat_to_thermal(
             mapped_node_count: heat.nodes.len(),
             minimum_temperature_delta_c: minimum_delta,
             maximum_temperature_delta_c: maximum_delta,
-            maximum_coordinate_error_m: maximum_coordinate_error,
+            maximum_coordinate_error_m: mapping.maximum_coordinate_error_m,
         },
     ))
 }
@@ -443,7 +431,8 @@ mod tests {
     #[test]
     fn heat_projection_requires_matching_thermal_coordinates() {
         let heat: SolveHeatPlaneQuad2dResult = serde_json::from_value(json!({
-            "input": {"nodes": [], "elements": []},
+            "input": {"nodes": [{"id": "n0", "x": 0.0, "y": 0.0,
+                "fix_temperature": true, "temperature": 42.5}], "elements": []},
             "nodes": [{
                 "index": 0, "id": "n0", "x": 0.0, "y": 0.0,
                 "temperature": 42.5, "heat_load": 0.1

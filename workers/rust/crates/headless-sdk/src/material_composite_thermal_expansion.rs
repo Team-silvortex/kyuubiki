@@ -1,7 +1,8 @@
-use crate::composite_heat_element_mean_temperature;
+use crate::composite_feedback_relative_change;
+use crate::material_composite_temperature_map::map_composite_temperatures;
 use kyuubiki_protocol::{SolveHeatPlaneQuad2dResult, SolveThermalPlaneQuad2dRequest};
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 pub const COMPOSITE_THERMAL_EXPANSION_PROJECTION_SCHEMA_VERSION: &str =
     "kyuubiki.composite-thermal-expansion-projection/v1";
@@ -53,61 +54,111 @@ pub fn project_composite_temperature_dependent_expansion(
     String,
 > {
     validate_spec(spec)?;
+    let mapping = map_composite_temperatures(heat, thermal_seed)?;
+    let heat_elements = heat
+        .input
+        .elements
+        .iter()
+        .map(|element| (element.id.as_str(), element))
+        .collect::<HashMap<_, _>>();
+    let thermal_elements = thermal_seed
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, element)| (element.id.as_str(), index))
+        .collect::<HashMap<_, _>>();
+    if heat_elements.len() != heat.input.elements.len()
+        || thermal_elements.len() != thermal_seed.elements.len()
+        || heat_elements
+            .keys()
+            .chain(thermal_elements.keys())
+            .any(|id| id.trim().is_empty())
+    {
+        return Err("thermal expansion element IDs must be nonempty and unique".into());
+    }
     let mut request = thermal_seed.clone();
     let mut updates = Vec::with_capacity(spec.regions.len());
     for region in &spec.regions {
-        let heat_element = heat
-            .input
-            .elements
-            .iter()
-            .find(|element| element.id == region.element_id)
+        let heat_element = heat_elements
+            .get(region.element_id.as_str())
             .ok_or_else(|| {
                 format!(
                     "thermal expansion projection is missing heat element {}",
                     region.element_id
                 )
             })?;
-        let thermal_element = request
-            .elements
-            .iter_mut()
-            .find(|element| element.id == region.element_id)
+        let target_index = thermal_elements
+            .get(region.element_id.as_str())
             .ok_or_else(|| {
                 format!(
                     "thermal expansion projection is missing structural element {}",
                     region.element_id
                 )
             })?;
-        if [
+        let thermal_element = &mut request.elements[*target_index];
+        let source_indices = [
             heat_element.node_i,
             heat_element.node_j,
             heat_element.node_k,
             heat_element.node_l,
-        ] != [
+        ];
+        let target_indices = [
             thermal_element.node_i,
             thermal_element.node_j,
             thermal_element.node_k,
             thermal_element.node_l,
-        ] {
+        ];
+        let mut mapped_indices = [0; 4];
+        let mut temperatures = [0.0; 4];
+        for (position, index) in target_indices.into_iter().enumerate() {
+            let source = mapping.nodes.get(index).ok_or_else(|| {
+                format!(
+                    "thermal expansion element {} references an unknown node",
+                    region.element_id
+                )
+            })?;
+            mapped_indices[position] = source.index;
+            temperatures[position] = source.temperature;
+        }
+        if !matching_quad_cycle(source_indices, mapped_indices) {
             return Err(format!(
                 "thermal expansion projection element {} topology does not match",
                 region.element_id
             ));
         }
-        let mean_temperature_c = composite_heat_element_mean_temperature(heat, &region.element_id)?;
+        let mean_temperature_c = temperatures[0]
+            .midpoint(temperatures[1])
+            .midpoint(temperatures[2].midpoint(temperatures[3]));
         let reference = thermal_element.thermal_expansion;
-        if !reference.is_finite() {
+        if !reference.is_finite() || reference < 0.0 {
             return Err(format!(
-                "thermal expansion projection element {} has invalid reference coefficient",
+                "thermal expansion projection element {} requires a finite non-negative reference coefficient for the thermal plane solver",
                 region.element_id
             ));
         }
-        let scale = 1.0
-            + region.temperature_coefficient_1_k
-                * (mean_temperature_c - region.reference_temperature_c);
+        let temperature_delta = mean_temperature_c - region.reference_temperature_c;
+        let scale = 1.0 + region.temperature_coefficient_1_k * temperature_delta;
         let adjusted = reference * scale;
-        if !adjusted.is_finite() {
+        if !temperature_delta.is_finite()
+            || !scale.is_finite()
+            || !adjusted.is_finite()
+            || (reference != 0.0 && scale != 0.0 && adjusted == 0.0)
+        {
             return Err(format!(
                 "thermal expansion projection element {} produced an invalid coefficient",
+                region.element_id
+            ));
+        }
+        if adjusted < 0.0 {
+            return Err(format!(
+                "thermal expansion projection element {} produced a negative coefficient unsupported by the thermal plane solver",
+                region.element_id
+            ));
+        }
+        let relative_change = composite_feedback_relative_change(adjusted, reference);
+        if !relative_change.is_finite() {
+            return Err(format!(
+                "thermal expansion element {} relative change is not representable",
                 region.element_id
             ));
         }
@@ -117,7 +168,7 @@ pub fn project_composite_temperature_dependent_expansion(
             mean_temperature_c,
             reference_thermal_expansion_1_k: reference,
             adjusted_thermal_expansion_1_k: adjusted,
-            relative_change: relative_change(adjusted, reference),
+            relative_change,
         });
     }
     let max_relative_change = updates
@@ -158,12 +209,18 @@ fn validate_spec(spec: &CompositeThermalExpansionFeedbackSpec) -> Result<(), Str
     Ok(())
 }
 
-fn relative_change(current: f64, reference: f64) -> f64 {
-    if reference.abs() <= f64::EPSILON {
-        (current - reference).abs()
-    } else {
-        (current - reference).abs() / reference.abs()
+fn matching_quad_cycle(source: [usize; 4], mapped: [usize; 4]) -> bool {
+    if source
+        .iter()
+        .enumerate()
+        .any(|(index, node)| source[..index].contains(node))
+    {
+        return false;
     }
+    (0..4).any(|offset| {
+        (0..4).all(|index| source[index] == mapped[(offset + index) % 4])
+            || (0..4).all(|index| source[index] == mapped[(offset + 4 - index) % 4])
+    })
 }
 
 #[cfg(test)]
@@ -179,7 +236,12 @@ mod tests {
     fn projects_local_temperature_into_structural_expansion() {
         let heat: SolveHeatPlaneQuad2dResult = serde_json::from_value(json!({
             "input": {
-                "nodes": [],
+                "nodes": [
+                    {"id": "n0", "x": 0.0, "y": 0.0, "fix_temperature": true, "temperature": 45.0},
+                    {"id": "n1", "x": 1.0, "y": 0.0, "fix_temperature": true, "temperature": 45.0},
+                    {"id": "n2", "x": 1.0, "y": 1.0, "fix_temperature": true, "temperature": 45.0},
+                    {"id": "n3", "x": 0.0, "y": 1.0, "fix_temperature": true, "temperature": 45.0}
+                ],
                 "elements": [{"id": "core", "node_i": 0, "node_j": 1, "node_k": 2, "node_l": 3, "thickness": 1.0, "conductivity": 1.0}]
             },
             "nodes": [
@@ -195,7 +257,10 @@ mod tests {
         }))
         .expect("heat result");
         let thermal: SolveThermalPlaneQuad2dRequest = serde_json::from_value(json!({
-            "nodes": [],
+            "nodes": heat.nodes.iter().map(|node| json!({
+                "id": node.id, "x": node.x, "y": node.y, "fix_x": true, "fix_y": true,
+                "load_x": 0.0, "load_y": 0.0
+            })).collect::<Vec<_>>(),
             "elements": [{"id": "core", "node_i": 0, "node_j": 1, "node_k": 2, "node_l": 3, "thickness": 1.0, "youngs_modulus": 1.0, "poisson_ratio": 0.3, "thermal_expansion": 10.0e-6}]
         }))
         .expect("thermal request");

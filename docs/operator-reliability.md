@@ -1116,6 +1116,43 @@ then Joule heating adds to them. The
 [projection regression report](../reports/composite-heat-projection-20260920.md)
 records the local SDK/solver evidence without changing release qualifications.
 
+The separate Rust study-level electrothermal feedback loop also checks scale-
+independent relative changes, not absolute differences below machine epsilon.
+Its trace assessment recomputes temperature residuals and successive combined
+loss/per-region conductivity changes before accepting convergence. A unit-square
+Ohmic-to-heat fixed point is checked at thickness scales `1e-20`, `1`, and
+`1e20`, including insufficient iteration budgets, invalid budgets, and clean
+retry after material feedback failure. Both heating mechanisms and temperature-
+dependent thermal conductivity are exercised together as well. This bounded
+study-loop evidence does not extend the linear conduction operator's physical
+scope or establish general nonlinear stability. See the
+[feedback convergence report](../reports/composite-feedback-convergence-20260923.md).
+
+The subsequent heat-to-structural handoff uses a shared one-to-one nodal map
+instead of repeated linear searches or raw index equality. Source records must
+agree with their retained heat mesh, and reordered structural nodes/elements
+must retain IDs, coordinates and cyclic connectivity. Empty/ambiguous fields,
+nonfinite or overflowed temperature differences, and unrepresentable expansion
+coefficients fail explicitly. Real-solver tests retain restrained stress,
+stress-free expansion, nonuniform temperature transfer and shared-node regional
+materials. Unsupported negative expansion coefficients are rejected before
+structural dispatch; the solver's physical domain is not broadened. See the
+[thermal projection report](../reports/composite-thermal-projection-20260923.md)
+for bounds, a local mapping microbenchmark, and reproducible commands.
+
+The layered composite heat reference now judges the predicted temperature rise,
+not the ambient-inclusive Celsius value. Regional source assembly rejects
+overflow, underflow and lost shared-node increments rather than accepting a
+small absolute whole-model error. Real heat solves check three conductivity
+sets, three regional source patterns and four mesh levels against an independent
+Fourier-law integration at every node and element. Shared-face flux, source
+jumps and total outlet heat are checked separately; scaling conductivity and
+source power together preserves temperature and scales flux. This evidence is
+limited to the three-layer ideal shared-node fixture. Contact thermal resistance,
+interface temperature discontinuities, arbitrary geometries and nonlinear
+material qualification are not covered. See the
+[layered heat validation report](../reports/composite-heat-interface-validation-20260923.md).
+
 `solve.frame_3d` is now qualified for the current single-member cantilever
 scope. The retained evidence derives the Euler-Bernoulli displacement, slope,
 root moment, bending stress, and strain-energy formulas for an x-aligned 3D

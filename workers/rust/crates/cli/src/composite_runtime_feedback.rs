@@ -20,6 +20,10 @@ use kyuubiki_solver::{
     solve_heat_plane_quad_2d,
 };
 
+#[cfg(test)]
+#[path = "composite_runtime_feedback_tests.rs"]
+mod tests;
+
 pub(crate) struct CompositeElectrothermalSolve {
     pub electrostatic: SolveElectrostaticPlaneQuad2dResult,
     pub electric_conduction: SolveElectricConductionPlaneQuad2dResult,
@@ -45,56 +49,58 @@ pub(crate) fn solve_composite_electrothermal_feedback(
         .map(|model| (model.element_id.clone(), model.reference_temperature_c))
         .collect::<Vec<_>>();
     let mut previous_conductivities = None::<Vec<(String, f64)>>;
-    let mut iterations = Vec::with_capacity(feedback_spec.max_iterations);
+    // The first feedback update validates the budget before any iteration storage grows.
+    let mut iterations = Vec::new();
     let mut final_result = None;
 
     for iteration in 1..=feedback_spec.max_iterations {
+        let stage_error = |stage: &str, error: String| {
+            format!("composite electrothermal iteration {iteration} failed {stage}: {error}")
+        };
         let loss_spec = temperature_adjusted_composite_loss_spec(
             base_loss_spec,
             feedback_spec,
             coupling_temperature_c,
-        )?;
+        )
+        .map_err(|error| stage_error("dielectric feedback", error))?;
         let electrostatic_request =
-            apply_composite_dielectric_permittivity(electrostatic_seed, &loss_spec)?;
-        let electrostatic = solve_electrostatic_plane_quad_2d(&electrostatic_request).map_err(
-            |error| {
-                format!(
-                    "composite electrothermal iteration {iteration} failed electrostatic solve: {error}"
-                )
-            },
-        )?;
+            apply_composite_dielectric_permittivity(electrostatic_seed, &loss_spec)
+                .map_err(|error| stage_error("dielectric material mapping", error))?;
+        let electrostatic = solve_electrostatic_plane_quad_2d(&electrostatic_request)
+            .map_err(|error| stage_error("electrostatic solve", error))?;
         let adjusted_heat_seed = temperature_adjusted_composite_heat_request(
             heat_seed,
             feedback_spec,
             &conductivity_temperatures_c,
-        )?;
+        )
+        .map_err(|error| stage_error("thermal conductivity feedback", error))?;
         let (heat_request, loss_projection) = project_composite_dielectric_loss_to_heat(
             &electrostatic,
             &adjusted_heat_seed,
             &loss_spec,
-        )?;
+        )
+        .map_err(|error| stage_error("dielectric heat projection", error))?;
         let electric_conduction_request = temperature_adjusted_composite_current_request(
             electric_conduction_seed,
             current_feedback_spec,
             &conductivity_temperatures_c,
-        )?;
-        let electric_conduction = solve_electric_conduction_plane_quad_2d(
-            &electric_conduction_request,
         )
-        .map_err(|error| {
-            format!("composite electrothermal iteration {iteration} failed current solve: {error}")
-        })?;
+        .map_err(|error| stage_error("current feedback", error))?;
+        let electric_conduction =
+            solve_electric_conduction_plane_quad_2d(&electric_conduction_request)
+                .map_err(|error| stage_error("current solve", error))?;
         let (heat_request, joule_heating_projection) = project_composite_solved_current_to_heat(
             &electric_conduction,
             &heat_request,
             current_feedback_spec,
             &conductivity_temperatures_c,
-        )?;
-        let heat = solve_heat_plane_quad_2d(&heat_request).map_err(|error| {
-            format!("composite electrothermal iteration {iteration} failed heat solve: {error}")
-        })?;
+        )
+        .map_err(|error| stage_error("Joule heat projection", error))?;
+        let heat = solve_heat_plane_quad_2d(&heat_request)
+            .map_err(|error| stage_error("heat solve", error))?;
         let dielectric_mean_temperature_c =
-            composite_dielectric_mean_temperature(&heat, &base_loss_spec.source_element_id)?;
+            composite_dielectric_mean_temperature(&heat, &base_loss_spec.source_element_id)
+                .map_err(|error| stage_error("dielectric temperature recovery", error))?;
         let thermal_conductivity_updates = feedback_spec
             .thermal_conductivity_models
             .iter()
@@ -135,7 +141,8 @@ pub(crate) fn solve_composite_electrothermal_feedback(
                     conductivity_relative_change,
                 })
             })
-            .collect::<Result<Vec<_>, String>>()?;
+            .collect::<Result<Vec<_>, String>>()
+            .map_err(|error| stage_error("regional temperature recovery", error))?;
         let temperature_residual_c = thermal_conductivity_updates
             .iter()
             .map(|update| {
@@ -147,6 +154,12 @@ pub(crate) fn solve_composite_electrothermal_feedback(
             );
         let total_electrical_loss_w =
             loss_projection.total_loss_w + joule_heating_projection.total_joule_loss_w;
+        if !temperature_residual_c.is_finite() || !total_electrical_loss_w.is_finite() {
+            return Err(stage_error(
+                "feedback metrics",
+                "temperature residual or total loss is not finite".into(),
+            ));
+        }
         let loss_relative_change = previous_loss_w
             .map(|previous| composite_feedback_relative_change(total_electrical_loss_w, previous));
         let max_conductivity_relative_change = thermal_conductivity_updates

@@ -40,6 +40,7 @@ mod material_composite_models;
 mod material_composite_quality;
 mod material_composite_stress_recovery;
 mod material_composite_structural_validation;
+mod material_composite_temperature_map;
 #[cfg(test)]
 mod material_composite_tests;
 mod material_composite_thermal_expansion;

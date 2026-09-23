@@ -1,3 +1,6 @@
+use crate::material_composite_heat_loads::{
+    add_uniform_quad_power, power_relative_error, sum_power,
+};
 use kyuubiki_protocol::{
     HeatPlaneNodeInput, HeatPlaneQuadElementInput, SolveHeatPlaneQuad2dRequest,
 };
@@ -27,6 +30,7 @@ pub struct CompositeHeatCrossValidation {
     pub expected_max_temperature_c: f64,
     pub fem_max_temperature_c: Option<f64>,
     pub absolute_error_c: Option<f64>,
+    /// Error relative to the analytic rise above the fixed boundary, not absolute Celsius.
     pub relative_error: Option<f64>,
     pub relative_error_tolerance: f64,
     pub status: String,
@@ -38,6 +42,7 @@ pub struct CompositeHeatMeshConvergenceSample {
     pub node_count: usize,
     pub element_count: usize,
     pub max_temperature_c: f64,
+    /// Both error metrics are normalized by the analytic temperature rise.
     pub analytic_relative_error: f64,
     pub relative_change_from_previous: Option<f64>,
 }
@@ -84,13 +89,12 @@ pub fn composite_heat_cross_validation_for_regional_loads(
     regional_heat_loads_w: [f64; 3],
     fem_max_temperature_c: Option<f64>,
 ) -> CompositeHeatCrossValidation {
-    let expected_max_temperature_c =
-        expected_max_temperature_for_regional_loads(conductivities_w_mk, regional_heat_loads_w);
+    let reference = regional_reference(conductivities_w_mk, regional_heat_loads_w);
     validation_from_expected(
         conductivities_w_mk,
         regional_heat_loads_w.iter().sum(),
         fem_max_temperature_c,
-        expected_max_temperature_c,
+        reference,
         "layered_thermal_resistance_with_regional_generation_closed_form",
     )
 }
@@ -101,16 +105,16 @@ fn build_cross_validation(
     fem_max_temperature_c: Option<f64>,
     distributed_dielectric_load: bool,
 ) -> CompositeHeatCrossValidation {
-    let expected_max_temperature_c = if distributed_dielectric_load {
-        expected_max_temperature_for_distributed_load(conductivities_w_mk, total_heat_load_w)
+    let reference = if distributed_dielectric_load {
+        distributed_reference(conductivities_w_mk, total_heat_load_w)
     } else {
-        expected_max_temperature(conductivities_w_mk)
+        interface_reference(conductivities_w_mk)
     };
     validation_from_expected(
         conductivities_w_mk,
         total_heat_load_w,
         fem_max_temperature_c,
-        expected_max_temperature_c,
+        reference,
         if distributed_dielectric_load {
             "layered_thermal_resistance_with_uniform_dielectric_generation_closed_form"
         } else {
@@ -123,16 +127,23 @@ fn validation_from_expected(
     conductivities_w_mk: [f64; 3],
     total_heat_load_w: f64,
     fem_max_temperature_c: Option<f64>,
-    expected_max_temperature_c: f64,
+    reference: Result<HeatReference, String>,
     method: &str,
 ) -> CompositeHeatCrossValidation {
-    let absolute_error_c =
-        fem_max_temperature_c.map(|value| (value - expected_max_temperature_c).abs());
-    let relative_error = absolute_error_c.map(|error| error / expected_max_temperature_c.abs());
-    let status = match relative_error {
-        Some(error) if error <= RELATIVE_ERROR_TOLERANCE => "pass",
-        Some(_) => "fail",
-        None => "missing",
+    let expected_max_temperature_c = reference
+        .as_ref()
+        .map_or(f64::NAN, |reference| reference.max_temperature_c);
+    let absolute_error_c = reference.as_ref().ok().and_then(|reference| {
+        fem_max_temperature_c.map(|value| (value - reference.max_temperature_c).abs())
+    });
+    let relative_error = reference
+        .as_ref()
+        .ok()
+        .and_then(|reference| absolute_error_c.map(|error| reference.relative_error(error)));
+    let status = match (reference.is_ok(), relative_error) {
+        (true, Some(error)) if error <= RELATIVE_ERROR_TOLERANCE => "pass",
+        (true, None) => "missing",
+        _ => "fail",
     };
     CompositeHeatCrossValidation {
         schema_version: COMPOSITE_HEAT_CROSS_VALIDATION_SCHEMA_VERSION.to_string(),
@@ -162,6 +173,7 @@ pub fn composite_heat_refinement_requests_for_distributed_load(
     conductivities_w_mk: [f64; 3],
     total_heat_load_w: f64,
 ) -> Result<Vec<(usize, SolveHeatPlaneQuad2dRequest)>, String> {
+    validate_conductivities(conductivities_w_mk)?;
     COMPOSITE_HEAT_REFINEMENT_LEVELS
         .iter()
         .map(|level| {
@@ -176,7 +188,8 @@ pub fn composite_heat_refinement_requests_for_regional_loads(
     conductivities_w_mk: [f64; 3],
     regional_heat_loads_w: [f64; 3],
 ) -> Result<Vec<(usize, SolveHeatPlaneQuad2dRequest)>, String> {
-    validate_regional_loads(regional_heat_loads_w)?;
+    validate_conductivities(conductivities_w_mk)?;
+    sum_power(regional_heat_loads_w)?;
     COMPOSITE_HEAT_REFINEMENT_LEVELS
         .iter()
         .map(|level| {
@@ -195,42 +208,50 @@ pub fn composite_heat_mesh_convergence(
     max_temperatures_by_level: &[(usize, f64)],
 ) -> CompositeHeatMeshConvergence {
     build_mesh_convergence(
-        expected_max_temperature(conductivities_w_mk),
+        interface_reference(conductivities_w_mk),
         max_temperatures_by_level,
     )
 }
 
 fn build_mesh_convergence(
-    expected: f64,
+    reference: Result<HeatReference, String>,
     max_temperatures_by_level: &[(usize, f64)],
 ) -> CompositeHeatMeshConvergence {
     let mut previous = None;
     let samples = max_temperatures_by_level
         .iter()
         .map(|(level, temperature)| {
-            let columns = 3 * level;
-            let relative_change_from_previous =
-                previous.map(|value: f64| (temperature - value).abs() / expected.abs());
+            // Unknown levels must not reach dimension arithmetic on untrusted usize values.
+            let (node_count, element_count) = if COMPOSITE_HEAT_REFINEMENT_LEVELS.contains(level) {
+                (2 * (3 * level + 1), 3 * level)
+            } else {
+                (0, 0)
+            };
+            let relative_change_from_previous = previous.and_then(|value: f64| {
+                reference
+                    .as_ref()
+                    .ok()
+                    .map(|reference| reference.relative_error((temperature - value).abs()))
+            });
             previous = Some(*temperature);
             CompositeHeatMeshConvergenceSample {
                 elements_per_layer: *level,
-                node_count: 2 * (columns + 1),
-                element_count: columns,
+                node_count,
+                element_count,
                 max_temperature_c: *temperature,
-                analytic_relative_error: (temperature - expected).abs() / expected.abs(),
+                analytic_relative_error: reference.as_ref().map_or(f64::INFINITY, |reference| {
+                    reference.relative_error((temperature - reference.max_temperature_c).abs())
+                }),
                 relative_change_from_previous,
             }
         })
         .collect::<Vec<_>>();
-    let complete = samples.len() == COMPOSITE_HEAT_REFINEMENT_LEVELS.len()
-        && samples
-            .iter()
-            .zip(COMPOSITE_HEAT_REFINEMENT_LEVELS)
-            .all(|(sample, level)| {
-                sample.elements_per_layer == level
-                    && sample.max_temperature_c.is_finite()
-                    && sample.analytic_relative_error.is_finite()
-            });
+    let valid = reference.is_ok()
+        && samples.iter().enumerate().all(|(index, sample)| {
+            COMPOSITE_HEAT_REFINEMENT_LEVELS.get(index) == Some(&sample.elements_per_layer)
+                && sample.max_temperature_c.is_finite()
+        });
+    let complete = valid && samples.len() == COMPOSITE_HEAT_REFINEMENT_LEVELS.len();
     let max_analytic_relative_error = complete.then(|| {
         samples
             .iter()
@@ -244,14 +265,18 @@ fn build_mesh_convergence(
                 .and_then(|sample| sample.relative_change_from_previous)
         })
         .flatten();
-    let status = match (max_analytic_relative_error, finest_pair_relative_change) {
-        (Some(error), Some(change))
+    let status = match (
+        valid,
+        max_analytic_relative_error,
+        finest_pair_relative_change,
+    ) {
+        (true, Some(error), Some(change))
             if error <= MESH_CONVERGENCE_TOLERANCE && change <= MESH_CONVERGENCE_TOLERANCE =>
         {
             "pass"
         }
-        (Some(_), Some(_)) => "fail",
-        _ => "missing",
+        (true, None, None) => "missing",
+        _ => "fail",
     };
     CompositeHeatMeshConvergence {
         schema_version: COMPOSITE_HEAT_MESH_CONVERGENCE_SCHEMA_VERSION.to_string(),
@@ -271,7 +296,7 @@ pub fn composite_heat_mesh_convergence_for_distributed_load(
     max_temperatures_by_level: &[(usize, f64)],
 ) -> CompositeHeatMeshConvergence {
     build_mesh_convergence(
-        expected_max_temperature_for_distributed_load(conductivities_w_mk, total_heat_load_w),
+        distributed_reference(conductivities_w_mk, total_heat_load_w),
         max_temperatures_by_level,
     )
 }
@@ -282,56 +307,112 @@ pub fn composite_heat_mesh_convergence_for_regional_loads(
     max_temperatures_by_level: &[(usize, f64)],
 ) -> CompositeHeatMeshConvergence {
     build_mesh_convergence(
-        expected_max_temperature_for_regional_loads(conductivities_w_mk, regional_heat_loads_w),
+        regional_reference(conductivities_w_mk, regional_heat_loads_w),
         max_temperatures_by_level,
     )
 }
 
-fn expected_max_temperature(conductivities_w_mk: [f64; 3]) -> f64 {
-    let cross_section_m2 = PANEL_HEIGHT_M * PANEL_THICKNESS_M;
-    let downstream_thermal_resistance_k_w = (LAYER_WIDTH_M / conductivities_w_mk[1]
-        + LAYER_WIDTH_M / conductivities_w_mk[2])
-        / cross_section_m2;
-    FIXED_TEMPERATURE_C + 2.0 * HEAT_LOAD_PER_INTERFACE_NODE_W * downstream_thermal_resistance_k_w
+struct HeatReference {
+    temperature_rise_c: f64,
+    max_temperature_c: f64,
 }
 
-fn expected_max_temperature_for_distributed_load(
+impl HeatReference {
+    fn new(temperature_rise_c: f64) -> Result<Self, String> {
+        let max_temperature_c = FIXED_TEMPERATURE_C + temperature_rise_c;
+        if !temperature_rise_c.is_finite()
+            || temperature_rise_c < 0.0
+            || !max_temperature_c.is_finite()
+            || (temperature_rise_c > 0.0 && max_temperature_c == FIXED_TEMPERATURE_C)
+        {
+            return Err("composite heat reference temperature rise is not representable".into());
+        }
+        Ok(Self {
+            temperature_rise_c,
+            max_temperature_c,
+        })
+    }
+
+    fn relative_error(&self, absolute_error: f64) -> f64 {
+        if !absolute_error.is_finite() {
+            f64::INFINITY
+        } else if self.temperature_rise_c == 0.0 {
+            if absolute_error == 0.0 {
+                0.0
+            } else {
+                f64::INFINITY
+            }
+        } else {
+            absolute_error / self.temperature_rise_c
+        }
+    }
+}
+
+fn interface_reference(conductivities_w_mk: [f64; 3]) -> Result<HeatReference, String> {
+    let resistances = thermal_resistances(conductivities_w_mk)?;
+    let power = 2.0 * HEAT_LOAD_PER_INTERFACE_NODE_W;
+    HeatReference::new(sum_power([
+        heat_drop(power, resistances[1])?,
+        heat_drop(power, resistances[2])?,
+    ])?)
+}
+
+fn distributed_reference(
     conductivities_w_mk: [f64; 3],
     total_heat_load_w: f64,
-) -> f64 {
-    let cross_section_m2 = PANEL_HEIGHT_M * PANEL_THICKNESS_M;
-    let dielectric_resistance = LAYER_WIDTH_M / (conductivities_w_mk[1] * cross_section_m2);
-    let substrate_resistance = LAYER_WIDTH_M / (conductivities_w_mk[2] * cross_section_m2);
-    FIXED_TEMPERATURE_C + total_heat_load_w * (0.5 * dielectric_resistance + substrate_resistance)
+) -> Result<HeatReference, String> {
+    regional_reference(conductivities_w_mk, [0.0, total_heat_load_w, 0.0])
 }
 
-fn expected_max_temperature_for_regional_loads(
+fn regional_reference(
     conductivities_w_mk: [f64; 3],
     regional_heat_loads_w: [f64; 3],
-) -> f64 {
-    let cross_section_m2 = PANEL_HEIGHT_M * PANEL_THICKNESS_M;
+) -> Result<HeatReference, String> {
+    sum_power(regional_heat_loads_w)?;
+    let resistances = thermal_resistances(conductivities_w_mk)?;
     let mut upstream_power_w = 0.0;
-    let temperature_rise_c = conductivities_w_mk
-        .iter()
+    let mut contributions = [0.0; 6];
+    for (layer, (resistance, power)) in resistances
+        .into_iter()
         .zip(regional_heat_loads_w)
-        .map(|(conductivity, regional_power_w)| {
-            let resistance_k_w = LAYER_WIDTH_M / (conductivity * cross_section_m2);
-            let contribution = resistance_k_w * (upstream_power_w + 0.5 * regional_power_w);
-            upstream_power_w += regional_power_w;
-            contribution
-        })
-        .sum::<f64>();
-    FIXED_TEMPERATURE_C + temperature_rise_c
+        .enumerate()
+    {
+        contributions[2 * layer] = heat_drop(upstream_power_w, resistance)?;
+        contributions[2 * layer + 1] = heat_drop(power, 0.5 * resistance)?;
+        upstream_power_w += power;
+    }
+    HeatReference::new(sum_power(contributions)?)
 }
 
-fn validate_regional_loads(regional_heat_loads_w: [f64; 3]) -> Result<(), String> {
-    if regional_heat_loads_w
+fn validate_conductivities(conductivities_w_mk: [f64; 3]) -> Result<(), String> {
+    if conductivities_w_mk
         .iter()
-        .any(|load| !load.is_finite() || *load < 0.0)
+        .any(|value| !value.is_finite() || *value <= 0.0)
     {
-        return Err("regional composite heat loads must be finite and non-negative".to_string());
+        return Err("composite heat conductivities must be finite and positive".into());
     }
     Ok(())
+}
+
+fn thermal_resistances(conductivities_w_mk: [f64; 3]) -> Result<[f64; 3], String> {
+    validate_conductivities(conductivities_w_mk)?;
+    let geometry = LAYER_WIDTH_M / (PANEL_HEIGHT_M * PANEL_THICKNESS_M);
+    let resistances = conductivities_w_mk.map(|conductivity| geometry / conductivity);
+    if resistances
+        .iter()
+        .any(|value| !value.is_finite() || *value <= 0.0)
+    {
+        return Err("composite heat layer resistance is not representable".into());
+    }
+    Ok(resistances)
+}
+
+fn heat_drop(power: f64, resistance: f64) -> Result<f64, String> {
+    let rise = power * resistance;
+    if !rise.is_finite() || (power > 0.0 && rise == 0.0) {
+        return Err("composite heat layer temperature drop is not representable".into());
+    }
+    Ok(rise)
 }
 
 fn distribute_regional_loads(
@@ -342,30 +423,32 @@ fn distribute_regional_loads(
     for node in &mut request.nodes {
         node.heat_load = 0.0;
     }
+    let expected = sum_power(regional_heat_loads_w)?;
     for (layer, regional_power_w) in regional_heat_loads_w.into_iter().enumerate() {
-        let nodal_load_w = regional_power_w / elements_per_layer as f64 / 4.0;
-        for element in request
-            .elements
-            .iter()
-            .filter(|element| element.id.starts_with(&format!("layer_{layer}_element_")))
-        {
-            for index in [
+        let element_power = regional_power_w / elements_per_layer as f64;
+        let mut added = Vec::with_capacity(elements_per_layer);
+        for index in layer * elements_per_layer..(layer + 1) * elements_per_layer {
+            let element = &request.elements[index];
+            let indices = [
                 element.node_i,
                 element.node_j,
                 element.node_k,
                 element.node_l,
-            ] {
-                request
-                    .nodes
-                    .get_mut(index)
-                    .ok_or_else(|| format!("heat element {} has an unknown node", element.id))?
-                    .heat_load += nodal_load_w;
-            }
+            ];
+            added.push(add_uniform_quad_power(
+                &mut request,
+                indices,
+                element_power,
+            )?);
+        }
+        if power_relative_error(sum_power(added)?, regional_power_w) > 1.0e-12 {
+            return Err(format!(
+                "composite heat layer {layer} lost regional source power"
+            ));
         }
     }
-    let expected = regional_heat_loads_w.iter().sum::<f64>();
-    let distributed = request.nodes.iter().map(|node| node.heat_load).sum::<f64>();
-    if (distributed - expected).abs() > 1.0e-12 * expected.abs().max(1.0) {
+    let distributed = sum_power(request.nodes.iter().map(|node| node.heat_load))?;
+    if power_relative_error(distributed, expected) > 1.0e-12 {
         return Err("regional composite heat-load distribution lost energy".to_string());
     }
     Ok(request)
