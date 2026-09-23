@@ -45,6 +45,7 @@ fn serializes_coupled_workflow_envelope_with_a_stable_route_tag() {
 fn serializes_heat_to_thermo_plane_quad_workflow_round_trip() {
     let request = HeatToThermoPlaneQuad2dWorkflowRequest {
         heat_model: SolveHeatPlaneQuad2dRequest {
+            contact_interfaces: vec![],
             nodes: vec![
                 HeatPlaneNodeInput {
                     id: "h0".to_string(),
@@ -118,6 +119,7 @@ fn serializes_heat_to_thermo_plane_quad_workflow_round_trip() {
     let result = HeatToThermoPlaneQuad2dWorkflowResult {
         workflow_id: "workflow.heat-to-thermo-quad-2d".to_string(),
         heat_result: SolveHeatPlaneQuad2dResult {
+            contact_interfaces: vec![],
             input: decoded.heat_model.clone(),
             nodes: vec![HeatPlaneNodeResult {
                 index: 0,
@@ -203,6 +205,7 @@ fn serializes_heat_to_thermo_plane_quad_workflow_round_trip() {
 fn serializes_heat_to_thermo_plane_triangle_workflow_round_trip() {
     let request = HeatToThermoPlaneTriangle2dWorkflowRequest {
         heat_model: SolveHeatPlaneTriangle2dRequest {
+            contact_interfaces: vec![],
             nodes: vec![
                 HeatPlaneNodeInput {
                     id: "h0".to_string(),
@@ -292,6 +295,7 @@ fn serializes_heat_to_thermo_plane_triangle_workflow_round_trip() {
     let result = HeatToThermoPlaneTriangle2dWorkflowResult {
         workflow_id: "workflow.heat-to-thermo-triangle-2d".to_string(),
         heat_result: SolveHeatPlaneTriangle2dResult {
+            contact_interfaces: vec![],
             input: decoded.heat_model.clone(),
             nodes: vec![HeatPlaneNodeResult {
                 index: 0,

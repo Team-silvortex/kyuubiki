@@ -157,6 +157,7 @@ fn runs_magnetostatic_guard_and_benchmark_transforms_through_sdk_registry() {
 fn runs_bridge_operator_through_sdk_registry() {
     let solved = solve(EngineSolveRequest::HeatPlaneQuad2d(
         SolveHeatPlaneQuad2dRequest {
+            contact_interfaces: vec![],
             nodes: vec![
                 HeatPlaneNodeInput {
                     id: "h0".to_string(),

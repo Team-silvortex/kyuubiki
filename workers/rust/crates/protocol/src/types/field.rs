@@ -189,6 +189,8 @@ pub struct HeatPlaneTriangleElementInput {
 pub struct SolveHeatPlaneTriangle2dRequest {
     pub nodes: Vec<HeatPlaneNodeInput>,
     pub elements: Vec<HeatPlaneTriangleElementInput>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact_interfaces: Vec<crate::HeatPlaneContactInput>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -300,6 +302,8 @@ pub struct HeatPlaneQuadElementInput {
 pub struct SolveHeatPlaneQuad2dRequest {
     pub nodes: Vec<HeatPlaneNodeInput>,
     pub elements: Vec<HeatPlaneQuadElementInput>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact_interfaces: Vec<crate::HeatPlaneContactInput>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

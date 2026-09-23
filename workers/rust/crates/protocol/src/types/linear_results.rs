@@ -225,6 +225,8 @@ pub struct HeatPlaneTriangleElementResult {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveHeatPlaneTriangle2dResult {
     pub input: SolveHeatPlaneTriangle2dRequest,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact_interfaces: Vec<crate::HeatPlaneContactResult>,
     pub nodes: Vec<HeatPlaneNodeResult>,
     pub elements: Vec<HeatPlaneTriangleElementResult>,
     pub max_temperature: f64,
@@ -253,6 +255,8 @@ pub struct HeatPlaneQuadElementResult {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SolveHeatPlaneQuad2dResult {
     pub input: SolveHeatPlaneQuad2dRequest,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub contact_interfaces: Vec<crate::HeatPlaneContactResult>,
     pub nodes: Vec<HeatPlaneNodeResult>,
     pub elements: Vec<HeatPlaneQuadElementResult>,
     pub max_temperature: f64,

@@ -63,6 +63,7 @@ mod harmonic_spring_1d;
 mod heat_plane_2d;
 mod heat_plane_2d_element;
 mod heat_plane_2d_validation;
+mod heat_plane_contact;
 mod linear_algebra;
 mod linear_banded;
 mod linear_dense;

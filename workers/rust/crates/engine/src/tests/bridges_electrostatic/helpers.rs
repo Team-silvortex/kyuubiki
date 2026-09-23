@@ -79,6 +79,7 @@ pub(super) fn triangle_result_nodes() -> Vec<ElectrostaticPlaneNodeResult> {
 
 pub(super) fn triangle_heat_seed_model() -> SolveHeatPlaneTriangle2dRequest {
     SolveHeatPlaneTriangle2dRequest {
+        contact_interfaces: vec![],
         nodes: vec![
             HeatPlaneNodeInput {
                 id: "h0".to_string(),

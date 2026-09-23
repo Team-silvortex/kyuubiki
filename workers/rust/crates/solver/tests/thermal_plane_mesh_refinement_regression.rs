@@ -414,6 +414,7 @@ fn assert_thermal_quad_summary(result: &SolveThermalPlaneQuad2dResult) {
 
 fn heat_triangle_patch() -> SolveHeatPlaneTriangle2dRequest {
     SolveHeatPlaneTriangle2dRequest {
+        contact_interfaces: vec![],
         nodes: heat_nodes(),
         elements: vec![heat_tri("lower", 0, 1, 2), heat_tri("upper", 0, 2, 3)],
     }
@@ -421,6 +422,7 @@ fn heat_triangle_patch() -> SolveHeatPlaneTriangle2dRequest {
 
 fn heat_quad_patch() -> SolveHeatPlaneQuad2dRequest {
     SolveHeatPlaneQuad2dRequest {
+        contact_interfaces: vec![],
         nodes: heat_nodes(),
         elements: vec![HeatPlaneQuadElementInput {
             id: "quad".to_string(),
@@ -451,6 +453,7 @@ fn heat_quad_mesh(subdivisions: usize) -> SolveHeatPlaneQuad2dRequest {
     }
 
     SolveHeatPlaneQuad2dRequest {
+        contact_interfaces: vec![],
         nodes: heat_grid_nodes(subdivisions),
         elements,
     }
@@ -480,6 +483,7 @@ fn heat_triangle_mesh(subdivisions: usize) -> SolveHeatPlaneTriangle2dRequest {
     }
 
     SolveHeatPlaneTriangle2dRequest {
+        contact_interfaces: vec![],
         nodes: heat_grid_nodes(subdivisions),
         elements,
     }
@@ -520,6 +524,7 @@ fn heat_triangle_cross_diagonal_patch_with_material(
     thickness: f64,
 ) -> SolveHeatPlaneTriangle2dRequest {
     SolveHeatPlaneTriangle2dRequest {
+        contact_interfaces: vec![],
         nodes: heat_nodes(),
         elements: vec![
             heat_tri_with_material("left", 0, 1, 3, conductivity, thickness),

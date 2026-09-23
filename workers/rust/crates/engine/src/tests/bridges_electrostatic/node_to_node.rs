@@ -42,6 +42,7 @@ fn bridges_electrostatic_quad_potential_node_to_node_into_heat_temperature() {
             total_stored_energy: 0.0,
         },
         &SolveHeatPlaneQuad2dRequest {
+            contact_interfaces: vec![],
             nodes: heat_quad_nodes(),
             elements: vec![
                 HeatPlaneQuadElementInput {
@@ -107,6 +108,7 @@ fn bridges_electrostatic_triangle_charge_density_node_to_node_into_heat_load() {
             total_stored_energy: 0.0,
         },
         &SolveHeatPlaneTriangle2dRequest {
+            contact_interfaces: vec![],
             nodes: heat_triangle_nodes(),
             elements: vec![
                 HeatPlaneTriangleElementInput {

@@ -241,6 +241,7 @@ fn quad_magnetostatic_model() -> kyuubiki_protocol::SolveMagnetostaticPlaneQuad2
 
 fn quad_heat_seed_model() -> kyuubiki_protocol::SolveHeatPlaneQuad2dRequest {
     kyuubiki_protocol::SolveHeatPlaneQuad2dRequest {
+        contact_interfaces: vec![],
         nodes: vec![
             HeatPlaneNodeInput {
                 id: "h0".to_string(),
@@ -386,6 +387,7 @@ fn triangle_electrostatic_model() -> kyuubiki_protocol::SolveElectrostaticPlaneT
 
 fn triangle_heat_seed_model() -> kyuubiki_protocol::SolveHeatPlaneTriangle2dRequest {
     kyuubiki_protocol::SolveHeatPlaneTriangle2dRequest {
+        contact_interfaces: vec![],
         nodes: vec![
             HeatPlaneNodeInput {
                 id: "h0".to_string(),

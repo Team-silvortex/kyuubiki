@@ -1,8 +1,36 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Bounded local scalar-plane and SDK electrothermal/thermoelastic regression: reference invariance, split-quad energy, terminal/contact power recovery, integrated dielectric loss, checked heat transfer, scale-independent feedback, identity-safe structural temperature mapping and ideal layered heat-interface validation. Includes local scalar precompute and nodal mapping microbenchmarks only. No installed, cross-platform, million-node or general material qualification claim.",
+  "summary": "Bounded local scalar-plane and SDK electrothermal/thermoelastic regression: reference invariance, split-quad energy, terminal/contact power recovery, integrated dielectric loss, checked heat transfer, scale-independent feedback, identity-safe structural temperature mapping, ideal layered heat-interface validation and separate steady matching-edge thermal-contact screening. Includes local scalar precompute and nodal mapping microbenchmarks only. No installed, cross-platform, million-node or general material qualification claim.",
   "evidence_claims": [
+    {
+      "id": "steady-heat-matching-edge-contact-resistance",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/protocol/src/types/heat_contact.rs",
+        "workers/rust/crates/solver/src/heat_plane_contact.rs",
+        "workers/rust/crates/solver/tests/heat_plane_contact.rs",
+        "workers/rust/crates/cli/tests/heat_contact_operator.rs",
+        "apps/web/test/kyuubiki_web/fem_model_normalizer_test.exs",
+        "config/operator-validation-profiles/thermal-structural.json",
+        "docs/thermal-contact-operator.md",
+        "reports/heat-plane-contact-20260923.md"
+      ],
+      "required_text": [
+        "nonuniform_free_interface_solves_the_independent_four_unknown_system",
+        "concave_quad_contact_uses_the_actual_adjacent_subtriangle",
+        "split_contact_edges_preserve_total_power_under_mesh_refinement_and_rotation",
+        "headless_plan_and_existing_engine_operator_preserve_the_contact_contract",
+        "sdk_thermal_transfer_preserves_the_jump_between_coincident_but_independent_nodes",
+        "passes thermal contact data without merging coincident temperature nodes",
+        "The engine does not assemble or interpret the thermal contact law.",
+        "This is local component screening, not contact-model release qualification."
+      ]
+    },
     {
       "id": "composite-layered-heat-rise-and-interface-balance",
       "status": "proven",

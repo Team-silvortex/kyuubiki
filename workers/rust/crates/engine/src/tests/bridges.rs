@@ -16,6 +16,7 @@ use kyuubiki_protocol::{
 fn bridges_heat_quad_temperatures_into_thermo_model() {
     let solved = solve(EngineSolveRequest::HeatPlaneQuad2d(
         SolveHeatPlaneQuad2dRequest {
+            contact_interfaces: vec![],
             nodes: vec![
                 HeatPlaneNodeInput {
                     id: "h0".to_string(),
@@ -138,6 +139,7 @@ fn runs_heat_to_thermo_plane_quad_workflow() {
     let result =
         run_heat_to_thermo_plane_quad_2d_workflow(HeatToThermoPlaneQuad2dWorkflowRequest {
             heat_model: SolveHeatPlaneQuad2dRequest {
+                contact_interfaces: vec![],
                 nodes: vec![
                     HeatPlaneNodeInput {
                         id: "h0".to_string(),
@@ -251,6 +253,7 @@ fn runs_heat_to_thermo_plane_quad_workflow() {
 fn bridges_heat_triangle_temperatures_into_thermo_model() {
     let solved = solve(EngineSolveRequest::HeatPlaneTriangle2d(
         SolveHeatPlaneTriangle2dRequest {
+            contact_interfaces: vec![],
             nodes: vec![
                 HeatPlaneNodeInput {
                     id: "h0".to_string(),
@@ -353,6 +356,7 @@ fn runs_heat_to_thermo_plane_triangle_workflow() {
     let result =
         run_heat_to_thermo_plane_triangle_2d_workflow(HeatToThermoPlaneTriangle2dWorkflowRequest {
             heat_model: SolveHeatPlaneTriangle2dRequest {
+                contact_interfaces: vec![],
                 nodes: vec![
                     HeatPlaneNodeInput {
                         id: "h0".to_string(),
@@ -446,6 +450,7 @@ fn runs_heat_to_thermo_plane_triangle_workflow() {
 fn heat_to_thermo_transform_respects_contract_and_seed_model_wrapper() {
     let solved = solve(EngineSolveRequest::HeatPlaneQuad2d(
         SolveHeatPlaneQuad2dRequest {
+            contact_interfaces: vec![],
             nodes: vec![
                 HeatPlaneNodeInput {
                     id: "h0".to_string(),

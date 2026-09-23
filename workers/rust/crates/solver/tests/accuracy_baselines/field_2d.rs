@@ -156,6 +156,7 @@ fn accuracy_baseline_electrostatic_plane_quad_2d_patch() {
 #[test]
 fn accuracy_baseline_heat_plane_quad_2d_single_patch() {
     let result = solve_heat_plane_quad_2d(&SolveHeatPlaneQuad2dRequest {
+        contact_interfaces: vec![],
         nodes: vec![
             HeatPlaneNodeInput {
                 id: "h0".to_string(),
@@ -237,6 +238,7 @@ fn accuracy_baseline_heat_plane_quad_2d_single_patch() {
 #[test]
 fn accuracy_baseline_heat_plane_triangle_2d_sample_fixture() {
     let result = solve_heat_plane_triangle_2d(&SolveHeatPlaneTriangle2dRequest {
+        contact_interfaces: vec![],
         nodes: vec![
             HeatPlaneNodeInput {
                 id: "h0".to_string(),

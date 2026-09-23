@@ -246,7 +246,11 @@ pub(crate) fn generate_heat_quad_panel_mesh(
         }
     }
 
-    SolveHeatPlaneQuad2dRequest { nodes, elements }
+    SolveHeatPlaneQuad2dRequest {
+        nodes,
+        elements,
+        contact_interfaces: vec![],
+    }
 }
 
 pub(crate) fn generate_lattice_truss_10k(

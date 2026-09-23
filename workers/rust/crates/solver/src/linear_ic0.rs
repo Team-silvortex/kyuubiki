@@ -1,14 +1,20 @@
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 
 #[derive(Debug, Clone)]
+struct LowerTranspose {
+    offsets: Vec<usize>,
+    // Entries point into the lower factor's values; rows identify its source rows.
+    factor_entries: Vec<u32>,
+    source_rows: Vec<u32>,
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct IncompleteCholesky {
     diagonal: Vec<f64>,
     lower_columns: Vec<u32>,
     lower_offsets: Vec<usize>,
     lower_values: Vec<f64>,
-    transpose_offsets: Vec<usize>,
-    transpose_entries: Vec<u32>,
-    transpose_rows: Vec<u32>,
+    transpose: LowerTranspose,
 }
 
 impl IncompleteCholesky {
@@ -63,16 +69,13 @@ impl IncompleteCholesky {
             checkpoint_chunk(SolverStage::IncompleteCholeskyFactor, row + 1, size)?;
         }
 
-        let (transpose_offsets, transpose_entries, transpose_rows) =
-            transpose_lower(size, &lower_offsets, &lower_columns)?;
+        let transpose = transpose_lower(size, &lower_offsets, &lower_columns)?;
         Ok(Self {
             diagonal: factor_diagonal,
             lower_columns,
             lower_offsets,
             lower_values,
-            transpose_offsets,
-            transpose_entries,
-            transpose_rows,
+            transpose,
         })
     }
 
@@ -95,10 +98,10 @@ impl IncompleteCholesky {
         checkpoint(SolverStage::Ic0Backward, 0)?;
         for row in (0..self.diagonal.len()).rev() {
             let mut sum = forward[row];
-            for entry in self.transpose_offsets[row]..self.transpose_offsets[row + 1] {
-                let factor_entry = self.transpose_entries[entry] as usize;
-                sum -=
-                    self.lower_values[factor_entry] * result[self.transpose_rows[entry] as usize];
+            for entry in self.transpose.offsets[row]..self.transpose.offsets[row + 1] {
+                let factor_entry = self.transpose.factor_entries[entry] as usize;
+                sum -= self.lower_values[factor_entry]
+                    * result[self.transpose.source_rows[entry] as usize];
             }
             result[row] = sum / self.diagonal[row];
             checkpoint_chunk(
@@ -143,7 +146,7 @@ fn transpose_lower(
     size: usize,
     lower_offsets: &[usize],
     lower_columns: &[u32],
-) -> Result<(Vec<usize>, Vec<u32>, Vec<u32>), String> {
+) -> Result<LowerTranspose, String> {
     checkpoint(SolverStage::IncompleteCholeskyTranspose, 0)?;
     let mut counts = vec![0usize; size];
     for row in 0..size {
@@ -163,8 +166,8 @@ fn transpose_lower(
         )?;
     }
     let mut next = offsets[..size].to_vec();
-    let mut entries = vec![0u32; offsets[size]];
-    let mut rows = vec![0u32; offsets[size]];
+    let mut factor_entries = vec![0u32; offsets[size]];
+    let mut source_rows = vec![0u32; offsets[size]];
     for row in 0..size {
         let start = lower_offsets[row];
         let end = lower_offsets[row + 1];
@@ -172,8 +175,8 @@ fn transpose_lower(
             let entry = start + offset;
             let column = lower_column as usize;
             let target = next[column];
-            entries[target] = entry as u32;
-            rows[target] = row as u32;
+            factor_entries[target] = entry as u32;
+            source_rows[target] = row as u32;
             next[column] += 1;
         }
         checkpoint_chunk(
@@ -182,5 +185,58 @@ fn transpose_lower(
             size * 3,
         )?;
     }
-    Ok((offsets, entries, rows))
+    Ok(LowerTranspose {
+        offsets,
+        factor_entries,
+        source_rows,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{IncompleteCholesky, transpose_lower};
+
+    #[test]
+    fn transpose_retains_factor_entry_and_source_row_mapping() {
+        let transpose = transpose_lower(5, &[0, 0, 1, 2, 4, 6], &[0, 1, 0, 2, 1, 3]).unwrap();
+        assert_eq!(transpose.offsets, [0, 2, 4, 5, 6, 6]);
+        assert_eq!(transpose.factor_entries, [0, 2, 1, 4, 3, 5]);
+        assert_eq!(transpose.source_rows, [1, 3, 2, 4, 3, 4]);
+    }
+
+    #[test]
+    fn empty_and_diagonal_only_factors_have_empty_transposes() {
+        for size in [0, 1, 4] {
+            let offsets = vec![0; size + 1];
+            let transpose = transpose_lower(size, &offsets, &[]).unwrap();
+            assert_eq!(transpose.offsets, offsets);
+            assert!(transpose.factor_entries.is_empty());
+            assert!(transpose.source_rows.is_empty());
+        }
+    }
+
+    #[test]
+    fn factor_application_matches_known_solution_and_reuses_workspace() {
+        // A = L L^T with L = [[2,0,0], [1,3,0], [-1,2,4]].
+        let factor = IncompleteCholesky::build(
+            &[0, 3, 6, 9],
+            &[0, 4, 8],
+            &[0, 1, 2, 0, 1, 2, 0, 1, 2],
+            &[4.0, 2.0, -2.0, 2.0, 10.0, 5.0, -2.0, 5.0, 21.0],
+            &[4.0, 10.0, 21.0],
+        )
+        .unwrap();
+        let mut result = [123.0; 3];
+        let mut forward = [-456.0; 3];
+        for (residual, expected) in [
+            ([10.0, 17.0, -13.0], [1.0, 2.0, -1.0]),
+            ([-13.0, 16.0, 69.5], [-2.0, 0.5, 3.0]),
+            ([0.0; 3], [0.0; 3]),
+        ] {
+            factor.apply(&residual, &mut result, &mut forward).unwrap();
+            for (actual, expected) in result.iter().zip(expected) {
+                assert!((actual - expected).abs() < 1.0e-12);
+            }
+        }
+    }
 }

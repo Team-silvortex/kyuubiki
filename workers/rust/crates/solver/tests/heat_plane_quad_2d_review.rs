@@ -8,6 +8,7 @@ const TOL: f64 = 1.0e-10;
 #[test]
 fn heat_plane_quad_2d_review_bundle_checks_boundary_field_and_flux_diagnostics() {
     let result = solve_heat_plane_quad_2d(&SolveHeatPlaneQuad2dRequest {
+        contact_interfaces: vec![],
         nodes: vec![
             node("hot_lower", 0.0, 0.0, true, 100.0),
             node("free_lower", 1.0, 0.0, false, 0.0),

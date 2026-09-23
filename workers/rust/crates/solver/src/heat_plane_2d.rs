@@ -5,6 +5,9 @@ use crate::heat_plane_2d_element::{
 use crate::heat_plane_2d_validation::{
     validate_heat_plane_quad_request, validate_heat_plane_triangle_request,
 };
+use crate::heat_plane_contact::{
+    assemble_heat_contacts, prepare_heat_contacts, recover_heat_contacts,
+};
 use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system_with_prescribed,
     solve_spd_system_profile_with_options,
@@ -47,6 +50,16 @@ fn solve_heat_plane_triangle_2d_internal(
     options: SpdSolveOptions,
 ) -> Result<SolveHeatPlaneTriangle2dResult, String> {
     validate_heat_plane_triangle_request(request.as_ref())?;
+    let contacts = prepare_heat_contacts(
+        &request.nodes,
+        &request.contact_interfaces,
+        request.elements.iter().map(|element| {
+            (
+                [element.node_i, element.node_j, element.node_k],
+                element.thickness,
+            )
+        }),
+    )?;
     checkpoint(SolverStage::ElementPrecompute, 0)?;
 
     let dof_count = request.nodes.len();
@@ -96,6 +109,7 @@ fn solve_heat_plane_triangle_2d_internal(
         )?;
     }
 
+    assemble_heat_contacts(&contacts, &mut global_stiffness)?;
     let mut prescribed = request
         .nodes
         .iter()
@@ -185,7 +199,10 @@ fn solve_heat_plane_triangle_2d_internal(
         |sum, value| sum + value,
     )?;
 
+    let contact_interfaces =
+        recover_heat_contacts(&request.contact_interfaces, &contacts, &temperatures)?;
     Ok(SolveHeatPlaneTriangle2dResult {
+        contact_interfaces,
         input: request.into_owned(),
         nodes,
         elements,
@@ -244,6 +261,21 @@ fn solve_heat_plane_quad_2d_internal(
     solve_options: SpdSolveOptions,
 ) -> Result<HeatPlaneQuadProfile, String> {
     validate_heat_plane_quad_request(request.as_ref())?;
+    let contacts = prepare_heat_contacts(
+        &request.nodes,
+        &request.contact_interfaces,
+        request.elements.iter().map(|element| {
+            (
+                [
+                    element.node_i,
+                    element.node_j,
+                    element.node_k,
+                    element.node_l,
+                ],
+                element.thickness,
+            )
+        }),
+    )?;
     checkpoint(SolverStage::ElementPrecompute, 0)?;
 
     let dof_count = request.nodes.len();
@@ -315,6 +347,7 @@ fn solve_heat_plane_quad_2d_internal(
         )?;
     }
 
+    assemble_heat_contacts(&contacts, &mut global_stiffness)?;
     let mut prescribed = request
         .nodes
         .iter()
@@ -467,8 +500,11 @@ fn solve_heat_plane_quad_2d_internal(
         stage_started.elapsed(),
     );
 
+    let contact_interfaces =
+        recover_heat_contacts(&request.contact_interfaces, &contacts, &temperatures)?;
     Ok(HeatPlaneQuadProfile {
         result: SolveHeatPlaneQuad2dResult {
+            contact_interfaces,
             input: request.into_owned(),
             nodes,
             elements,

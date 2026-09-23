@@ -201,6 +201,9 @@ Then branch by intent:
   Machine-readable reliability manifest policy for solve operators, including
   trust levels, evidence expectations, and the current release minimum coverage
   gate.
+- `thermal-contact-operator.md`
+  Steady planar matching-edge contact resistance: data contract, operator-owned
+  integration, temperature-jump transfer, verification and deployment limits.
 - `operator-category-taxonomy.md`
   Operator-family taxonomy for keeping the growing operator catalog organized.
 - `operator-library-centralization.md`

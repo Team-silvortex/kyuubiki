@@ -308,7 +308,9 @@ fn runs_electrostatic_to_heat_to_thermo_triangle_workflow_with_contract_bridges(
 
 fn heat_triangle_result() -> SolveHeatPlaneTriangle2dResult {
     SolveHeatPlaneTriangle2dResult {
+        contact_interfaces: vec![],
         input: SolveHeatPlaneTriangle2dRequest {
+            contact_interfaces: vec![],
             nodes: vec![],
             elements: vec![
                 HeatPlaneTriangleElementInput {

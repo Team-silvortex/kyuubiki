@@ -22,6 +22,7 @@ mod types {
     pub mod field;
     pub mod field_results;
     pub mod fluid_results;
+    pub mod heat_contact;
     pub mod linear_results;
     pub mod linear_structural;
     pub mod nonlinear_structural;
@@ -86,6 +87,7 @@ pub use types::electrostatic_plane_results::*;
 pub use types::field::*;
 pub use types::field_results::*;
 pub use types::fluid_results::*;
+pub use types::heat_contact::*;
 pub use types::linear_results::*;
 pub use types::linear_structural::*;
 pub use types::nonlinear_structural::*;

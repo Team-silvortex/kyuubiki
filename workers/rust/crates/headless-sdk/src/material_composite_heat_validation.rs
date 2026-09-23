@@ -507,7 +507,11 @@ fn build_refined_heat_model(
             conductivity: conductivities_w_mk[column / elements_per_layer],
         })
         .collect();
-    SolveHeatPlaneQuad2dRequest { nodes, elements }
+    SolveHeatPlaneQuad2dRequest {
+        nodes,
+        elements,
+        contact_interfaces: vec![],
+    }
 }
 
 #[cfg(test)]

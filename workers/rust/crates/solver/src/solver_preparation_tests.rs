@@ -164,7 +164,11 @@ pub(super) fn heat_quad(n: usize) -> SolveHeatPlaneQuad2dRequest {
             })
         })
         .collect();
-    SolveHeatPlaneQuad2dRequest { nodes, elements }
+    SolveHeatPlaneQuad2dRequest {
+        nodes,
+        elements,
+        contact_interfaces: vec![],
+    }
 }
 
 pub(super) fn heat_triangle(n: usize) -> SolveHeatPlaneTriangle2dRequest {
@@ -194,6 +198,7 @@ pub(super) fn heat_triangle(n: usize) -> SolveHeatPlaneTriangle2dRequest {
         })
         .collect();
     SolveHeatPlaneTriangle2dRequest {
+        contact_interfaces: vec![],
         nodes: quad.nodes,
         elements,
     }

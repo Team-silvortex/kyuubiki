@@ -371,6 +371,14 @@ the solver validates those requests before execution. These are fixed-geometry,
 ideal shared-node interfaces, not contact-resistance or cooling models. See the
 [layered heat validation report](../reports/composite-heat-interface-validation-20260923.md).
 
+For actual finite interface resistance, the existing planar heat operators now
+accept `contact_interfaces` describing matching edges with independent nodes.
+The headless payload/plan path is unchanged, and temperature handoff preserves
+the jump between coincident nodes with distinct IDs. See the
+[thermal contact operator contract](thermal-contact-operator.md) for SI units,
+the complete input model, output fields, deployment requirements and limits.
+This is separate from the ideal-interface three-layer analytic reference above.
+
 ## Design goals
 
 - protocol-driven rather than implementation-driven

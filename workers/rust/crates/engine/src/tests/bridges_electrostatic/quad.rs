@@ -74,6 +74,7 @@ fn bridges_electrostatic_quad_fields_into_heat_model() {
     let (bridged, _) = bridge_electrostatic_result_to_heat_plane_quad_model(
         &electrostatic_result,
         &SolveHeatPlaneQuad2dRequest {
+            contact_interfaces: vec![],
             nodes: vec![
                 HeatPlaneNodeInput {
                     id: "h0".to_string(),
@@ -196,6 +197,7 @@ fn bridges_electrostatic_quad_average_potential_into_heat_temperature() {
     let (bridged, _) = bridge_electrostatic_result_to_heat_plane_quad_model(
         &electrostatic_result,
         &SolveHeatPlaneQuad2dRequest {
+            contact_interfaces: vec![],
             nodes: vec![
                 HeatPlaneNodeInput {
                     id: "h0".to_string(),
@@ -293,6 +295,7 @@ fn bridges_electrostatic_quad_energy_density_into_heat_model() {
             total_stored_energy: 8.0,
         },
         &SolveHeatPlaneQuad2dRequest {
+            contact_interfaces: vec![],
             nodes: vec![
                 heat_node("h0", 0.0, 0.0),
                 heat_node("h1", 1.0, 0.0),

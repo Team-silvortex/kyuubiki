@@ -3,6 +3,50 @@
   "version_line": "daji 3.0.x",
   "profiles": [
     {
+      "profile_id": "heat-plane-contact-screening",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "thermal-plane-patch",
+      "trust_goal": "review_cross_check",
+      "operators": ["solve.heat_plane_triangle_2d", "solve.heat_plane_quad_2d"],
+      "validation_methods": [
+        "series_bulk_contact_resistance_closed_form",
+        "consistent_linear_edge_integration",
+        "independent_nonuniform_four_unknown_system",
+        "contact_edge_refinement_and_reference_invariance",
+        "headless_engine_thermal_handoff_cross_check"
+      ],
+      "formal_invariants": [
+        "contact_transfers_equal_and_opposite_heat_without_generation",
+        "finite_resistance_allows_a_temperature_jump",
+        "split_matching_edges_preserve_total_contact_power",
+        "coincident_nodes_on_independent_sides_keep_distinct_temperatures",
+        "nonfinite_ambiguous_or_unanchored_contacts_fail_explicitly"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/protocol/src/types/heat_contact.rs",
+        "workers/rust/crates/protocol/fixtures/heat-plane-contact-quad.json",
+        "workers/rust/crates/solver/src/heat_plane_contact.rs",
+        "workers/rust/crates/solver/src/heat_plane_2d.rs",
+        "workers/rust/crates/solver/tests/heat_plane_contact.rs",
+        "workers/rust/crates/cli/tests/heat_contact_operator.rs",
+        "apps/web/test/kyuubiki_web/fem_model_normalizer_test.exs",
+        "docs/thermal-contact-operator.md",
+        "reports/heat-plane-contact-20260923.md"
+      ],
+      "commands": [
+        {
+          "id": "heat-plane-contact",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test heat_plane_contact -- --nocapture"
+        },
+        {
+          "id": "heat-contact-operator",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test heat_contact_operator -- --nocapture"
+        }
+      ]
+    },
+    {
       "profile_id": "thermal-beam-1d-closed-form",
       "profile_role": "release_candidate",
       "qualification_candidate_id": "thermal-beam-1d-closed-form",

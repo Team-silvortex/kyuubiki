@@ -151,6 +151,7 @@ fn triangle_result() -> SolveElectrostaticPlaneTriangle2dResult {
 
 fn triangle_heat_seed_model() -> SolveHeatPlaneTriangle2dRequest {
     SolveHeatPlaneTriangle2dRequest {
+        contact_interfaces: vec![],
         nodes: vec![
             heat_node("h0", 0.0, 0.0),
             heat_node("h1", 1.0, 0.0),

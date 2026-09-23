@@ -1153,6 +1153,16 @@ interface temperature discontinuities, arbitrary geometries and nonlinear
 material qualification are not covered. See the
 [layered heat validation report](../reports/composite-heat-interface-validation-20260923.md).
 
+Finite contact resistance is a separate, locally screened extension of the
+planar heat operators. Matching boundary edges use consistent linear interface
+integration, with independent temperatures and equal/opposite transfer. The
+new `heat-plane-contact-screening` profile tests series resistance, nonuniform
+free interface temperatures, edge refinement, shifted/rotated geometry, malformed
+contacts and the headless-to-engine-to-structural chain. It does not extend the
+historical ideal-interface release qualification. See the
+[operator contract](thermal-contact-operator.md) and
+[contact regression report](../reports/heat-plane-contact-20260923.md).
+
 `solve.frame_3d` is now qualified for the current single-member cantilever
 scope. The retained evidence derives the Euler-Bernoulli displacement, slope,
 root moment, bending stress, and strain-energy formulas for an x-aligned 3D

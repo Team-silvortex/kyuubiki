@@ -42,6 +42,7 @@ fn electrostatic_plane_rejects_non_finite_node_inputs_and_duplicate_nodes() {
 
 fn heat_triangle_request() -> SolveHeatPlaneTriangle2dRequest {
     SolveHeatPlaneTriangle2dRequest {
+        contact_interfaces: vec![],
         nodes: vec![
             heat_node("n0", 0.0, 0.0, true, 100.0),
             heat_node("n1", 1.0, 0.0, false, 0.0),
@@ -60,6 +61,7 @@ fn heat_triangle_request() -> SolveHeatPlaneTriangle2dRequest {
 
 fn heat_quad_request() -> SolveHeatPlaneQuad2dRequest {
     SolveHeatPlaneQuad2dRequest {
+        contact_interfaces: vec![],
         nodes: vec![
             heat_node("n0", 0.0, 0.0, true, 100.0),
             heat_node("n1", 1.0, 0.0, false, 0.0),

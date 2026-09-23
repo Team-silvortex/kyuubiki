@@ -66,6 +66,7 @@ fn bridges_electrostatic_triangle_fields_into_heat_model() {
     let (bridged, _) = bridge_electrostatic_result_to_heat_plane_triangle_model(
         &electrostatic_result,
         &kyuubiki_protocol::SolveHeatPlaneTriangle2dRequest {
+            contact_interfaces: vec![],
             nodes: vec![
                 HeatPlaneNodeInput {
                     id: "h0".to_string(),
@@ -167,6 +168,7 @@ fn bridges_electrostatic_triangle_flux_alias_into_heat_model() {
     let (bridged, _) = bridge_electrostatic_result_to_heat_plane_triangle_model(
         &electrostatic_result,
         &kyuubiki_protocol::SolveHeatPlaneTriangle2dRequest {
+            contact_interfaces: vec![],
             nodes: vec![
                 HeatPlaneNodeInput {
                     id: "h0".to_string(),

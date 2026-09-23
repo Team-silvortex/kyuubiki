@@ -164,7 +164,11 @@ pub(crate) fn generate_heat_triangle_panel(
         thickness: 0.02,
         conductivity: 45.0,
     });
-    SolveHeatPlaneTriangle2dRequest { nodes, elements }
+    SolveHeatPlaneTriangle2dRequest {
+        nodes,
+        elements,
+        contact_interfaces: vec![],
+    }
 }
 
 pub(crate) fn generate_electrostatic_quad_panel(

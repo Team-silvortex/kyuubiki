@@ -292,6 +292,7 @@ fn electrostatic_quad_request() -> SolveElectrostaticPlaneQuad2dRequest {
 
 fn heat_plane_quad_request() -> SolveHeatPlaneQuad2dRequest {
     SolveHeatPlaneQuad2dRequest {
+        contact_interfaces: vec![],
         nodes: vec![
             heat_plane_node("n0", 0.0, 0.0, true, 100.0),
             heat_plane_node("n1", 1.0, 0.0, true, 20.0),

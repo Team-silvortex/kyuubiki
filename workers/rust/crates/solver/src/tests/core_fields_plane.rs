@@ -123,6 +123,7 @@ fn solves_a_small_electrostatic_plane_quad_2d_patch() {
 #[test]
 fn solves_a_small_heat_plane_triangle_2d_patch() {
     let result = solve_heat_plane_triangle_2d(&SolveHeatPlaneTriangle2dRequest {
+        contact_interfaces: vec![],
         nodes: vec![
             HeatPlaneNodeInput {
                 id: "n0".to_string(),
@@ -169,6 +170,7 @@ fn solves_a_small_heat_plane_triangle_2d_patch() {
 #[test]
 fn solves_a_small_heat_plane_quad_2d_patch() {
     let result = solve_heat_plane_quad_2d(&SolveHeatPlaneQuad2dRequest {
+        contact_interfaces: vec![],
         nodes: vec![
             HeatPlaneNodeInput {
                 id: "n0".to_string(),

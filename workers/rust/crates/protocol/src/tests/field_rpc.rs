@@ -420,6 +420,7 @@ fn serializes_heat_plane_triangle_2d_rpc_round_trip() {
         id: "rpc-heat-plane-triangle".to_string(),
         method: RpcMethod::SolveHeatPlaneTriangle2d,
         params: serde_json::to_value(SolveHeatPlaneTriangle2dRequest {
+            contact_interfaces: vec![],
             nodes: vec![
                 HeatPlaneNodeInput {
                     id: "n0".to_string(),
@@ -472,6 +473,7 @@ fn serializes_heat_plane_quad_2d_rpc_round_trip() {
         id: "rpc-heat-plane-quad".to_string(),
         method: RpcMethod::SolveHeatPlaneQuad2d,
         params: serde_json::to_value(SolveHeatPlaneQuad2dRequest {
+            contact_interfaces: vec![],
             nodes: vec![
                 HeatPlaneNodeInput {
                     id: "n0".to_string(),
