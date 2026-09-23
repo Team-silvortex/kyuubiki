@@ -288,6 +288,130 @@ fn self_equilibrated_initial_stress_shifts_the_buckling_baseline() {
     );
 }
 
+#[test]
+fn yielded_path_preserves_displacements_and_material_states_under_common_scaling() {
+    let baseline = solve_frame_2d_material_p_delta(&request(1.3)).unwrap();
+    for scale in [1e145, 1e160] {
+        let mut scaled = request(1.3);
+        for element in &mut scaled.stability.buckling.frame.elements {
+            element.youngs_modulus *= scale;
+        }
+        for node in &mut scaled.stability.buckling.frame.nodes {
+            node.load_y *= scale;
+        }
+        for material in &mut scaled.materials {
+            material.yield_strength *= scale;
+        }
+        let result = solve_frame_2d_material_p_delta(&scaled).unwrap();
+        assert!(result.stability_result.converged, "scale={scale:e}");
+        assert_relative(
+            result.stability_result.final_displacements[ELEMENT_COUNT * 3 + 1],
+            baseline.stability_result.final_displacements[ELEMENT_COUNT * 3 + 1],
+            2e-7,
+        );
+        for (actual, expected) in result.material_states.iter().zip(&baseline.material_states) {
+            assert_relative(actual.axial_stress / scale, expected.axial_stress, 2e-7);
+            assert_relative(
+                actual.tangent_modulus / scale,
+                expected.tangent_modulus,
+                2e-7,
+            );
+            assert_relative(
+                actual.equivalent_plastic_strain,
+                expected.equivalent_plastic_strain,
+                2e-7,
+            );
+        }
+    }
+}
+
+#[test]
+fn failed_reversal_keeps_the_last_converged_plastic_state() {
+    let mut input = request(1.3);
+    input.stability.maximum_load_factor = None;
+    input.stability.load_steps = None;
+    input.stability.max_iterations = Some(3);
+    input.stability.max_step_cutbacks = Some(0);
+    input.load_factor_schedule = Some(vec![1.3, -10.0]);
+    let result = solve_frame_2d_material_p_delta(&input).unwrap();
+    assert_eq!(
+        result.material_history.len(),
+        2,
+        "{:#?}",
+        result.stability_result.steps
+    );
+    assert!(result.material_history[0].converged);
+    assert!(!result.material_history[1].converged);
+    assert!(!result.stability_result.converged);
+    assert_eq!(result.material_history[1].achieved_load_factor, 1.3);
+    assert!(result.max_equivalent_plastic_strain > 0.0);
+    assert_eq!(
+        serde_json::to_value(&result.material_states).unwrap(),
+        serde_json::to_value(&result.material_history[0].material_states).unwrap()
+    );
+    assert_eq!(
+        serde_json::to_value(&result.material_history[1].material_states).unwrap(),
+        serde_json::to_value(&result.material_history[0].material_states).unwrap()
+    );
+    input.load_factor_schedule = Some(vec![1.3]);
+    let replay = solve_frame_2d_material_p_delta(&input).unwrap();
+    assert_eq!(
+        serde_json::to_value(&replay.material_states).unwrap(),
+        serde_json::to_value(&result.material_states).unwrap()
+    );
+}
+
+#[test]
+fn owned_and_borrowed_cyclic_paths_preserve_the_same_history() {
+    let mut input = request(1.3);
+    input.stability.maximum_load_factor = None;
+    input.stability.load_steps = None;
+    input.load_factor_schedule = Some(vec![1.3, 0.0, -1.3, 0.0, 1.3]);
+    let baseline = solve_frame_2d_material_p_delta(&input).unwrap();
+    let owned = kyuubiki_solver::solve_frame_2d_material_p_delta_owned(input.clone()).unwrap();
+    assert!(baseline.stability_result.converged);
+    assert_eq!(
+        serde_json::to_value(baseline).unwrap(),
+        serde_json::to_value(owned).unwrap()
+    );
+    assert_eq!(input.load_factor_schedule.as_ref().unwrap().len(), 5);
+}
+
+#[test]
+fn parallel_perfect_plastic_members_report_zero_loading_and_elastic_unloading_tangent() {
+    let mut input = residual_stress_request();
+    input.load_factor_schedule = Some(vec![1.0, 0.0]);
+    for (index, material) in input.materials.iter_mut().enumerate() {
+        material.initial_axial_stress = 0.0;
+        if index % 2 == 0 {
+            material.yield_strength *= 0.25;
+            material.hardening_ratio = 0.0;
+        }
+    }
+    let result = solve_frame_2d_material_p_delta(&input).unwrap();
+    assert!(result.stability_result.converged);
+    for (index, loaded) in result.material_history[0]
+        .material_states
+        .iter()
+        .enumerate()
+    {
+        if index % 2 == 0 {
+            assert!(loaded.yielded);
+            assert_eq!(loaded.tangent_modulus, 0.0);
+            assert_relative(loaded.axial_stress, -0.25 * YIELD_STRENGTH, 1e-12);
+        } else {
+            assert!(!loaded.yielded);
+            assert_eq!(loaded.tangent_modulus, YOUNGS_MODULUS);
+        }
+        let unloaded = &result.material_history[1].material_states[index];
+        assert_eq!(unloaded.tangent_modulus, YOUNGS_MODULUS);
+        assert_eq!(
+            unloaded.equivalent_plastic_strain,
+            loaded.equivalent_plastic_strain
+        );
+    }
+}
+
 fn request(maximum_load_factor: f64) -> SolveFrame2dMaterialPDeltaRequest {
     let segment = LENGTH / ELEMENT_COUNT as f64;
     let nodes = (0..=ELEMENT_COUNT)

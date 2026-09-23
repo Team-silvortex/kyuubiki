@@ -126,7 +126,8 @@ fn element_internal_force(
         phi_i,
         phi_j,
         committed,
-    );
+    )
+    .map_err(|error| format!("frame 2d element '{}': {error}", element.id))?;
     let axial_force = section.axial_force;
     let moment_i = section.moment_i;
     let moment_j = section.moment_j;
@@ -178,7 +179,8 @@ fn analytic_tangent(
         phi_i,
         phi_j,
         committed,
-    );
+    )
+    .map_err(|error| format!("frame 2d element '{}': {error}", element.id))?;
     let axial_force = section.axial_force;
     let moment_i = section.moment_i;
     let moment_j = section.moment_j;

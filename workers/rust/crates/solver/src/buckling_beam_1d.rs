@@ -1,6 +1,8 @@
-use crate::buckling_math::mode_direction_diagnostics;
+use crate::buckling_math::{checked_mode_shape, mode_direction_diagnostics};
 use crate::buckling_sparse::hybrid_generalized_eigenpairs;
 use crate::linear_algebra::{SparseMatrix, add_at, reduce_sparse_system};
+use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
+use crate::solver_postprocess::try_collect_results;
 use kyuubiki_protocol::{
     BUCKLING_MODE_CLUSTER_RELATIVE_TOLERANCE, BucklingBeam1dModeResult, SolveBucklingBeam1dRequest,
     SolveBucklingBeam1dResult,
@@ -23,21 +25,33 @@ fn solve_buckling_beam_1d_internal(
     request: Cow<'_, SolveBucklingBeam1dRequest>,
 ) -> Result<SolveBucklingBeam1dResult, String> {
     validate(request.as_ref())?;
+    checkpoint(SolverStage::ElementAssembly, 0)?;
     let dof_count = request.nodes.len() * 2;
     let mut elastic = SparseMatrix::new(dof_count);
     let mut geometric = SparseMatrix::new(dof_count);
 
-    for element in &request.elements {
-        let length = (request.nodes[element.node_j].x - request.nodes[element.node_i].x).abs();
+    for (index, element) in request.elements.iter().enumerate() {
+        // Beam rotations are derivatives along global +x, not the input edge order.
+        let (left, right) = if request.nodes[element.node_i].x < request.nodes[element.node_j].x {
+            (element.node_i, element.node_j)
+        } else {
+            (element.node_j, element.node_i)
+        };
+        let length = request.nodes[right].x - request.nodes[left].x;
         let local_elastic =
             elastic_stiffness(element.youngs_modulus * element.moment_of_inertia, length);
         let local_geometric = geometric_stiffness(element.reference_compressive_force, length);
-        let map = [
-            element.node_i * 2,
-            element.node_i * 2 + 1,
-            element.node_j * 2,
-            element.node_j * 2 + 1,
-        ];
+        if local_elastic
+            .iter()
+            .chain(&local_geometric)
+            .flatten()
+            .any(|value| !value.is_finite())
+        {
+            return Err(format!(
+                "buckling beam 1d element {index} stiffness exceeds the finite numeric range"
+            ));
+        }
+        let map = [left * 2, left * 2 + 1, right * 2, right * 2 + 1];
         for row in 0..4 {
             for column in 0..4 {
                 add_at(
@@ -54,6 +68,11 @@ fn solve_buckling_beam_1d_internal(
                 );
             }
         }
+        checkpoint_chunk(
+            SolverStage::ElementAssembly,
+            index + 1,
+            request.elements.len(),
+        )?;
     }
 
     let constrained = constrained_dofs(request.as_ref());
@@ -71,22 +90,23 @@ fn solve_buckling_beam_1d_internal(
             .map(|pair| pair.eigenvalue)
             .collect::<Vec<_>>(),
     );
-    let modes = eigenpairs
-        .into_iter()
-        .zip(diagnostics)
-        .enumerate()
-        .map(|(index, (pair, diagnostic))| {
-            let shape = expand_and_normalize(&pair.vector, &free_dofs, dof_count);
-            BucklingBeam1dModeResult {
-                index,
-                load_factor: pair.eigenvalue,
-                residual_norm: pair.residual_norm,
-                relative_gap_to_next: diagnostic.relative_gap_to_next,
-                direction_assessment: diagnostic.assessment,
-                shape,
-            }
-        })
-        .collect::<Vec<_>>();
+    let modes =
+        try_collect_results(
+            SolverStage::ResultTotals,
+            eigenpairs.into_iter().zip(diagnostics).enumerate().map(
+                |(index, (pair, diagnostic))| {
+                    let shape = checked_mode_shape(&pair, &free_dofs, dof_count)?;
+                    Ok(BucklingBeam1dModeResult {
+                        index,
+                        load_factor: pair.eigenvalue,
+                        residual_norm: pair.residual_norm,
+                        relative_gap_to_next: diagnostic.relative_gap_to_next,
+                        direction_assessment: diagnostic.assessment,
+                        shape,
+                    })
+                },
+            ),
+        )?;
     if modes.is_empty() {
         return Err("buckling beam 1d did not produce a positive finite mode".to_string());
     }
@@ -186,14 +206,4 @@ fn constrained_dofs(request: &SolveBucklingBeam1dRequest) -> Vec<usize> {
             .flatten()
         })
         .collect()
-}
-
-fn expand_and_normalize(reduced: &[f64], free: &[usize], size: usize) -> Vec<f64> {
-    let mut shape = vec![0.0; size];
-    for (index, &dof) in free.iter().enumerate() {
-        shape[dof] = reduced[index];
-    }
-    let norm = shape.iter().map(|value| value * value).sum::<f64>().sqrt();
-    shape.iter_mut().for_each(|value| *value /= norm);
-    shape
 }

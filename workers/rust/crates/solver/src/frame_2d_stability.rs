@@ -4,6 +4,7 @@ use crate::frame_2d_math::{
     transform_frame_stiffness,
 };
 use crate::linear_algebra::{SparseMatrix, add_at};
+use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 use kyuubiki_protocol::{
     BucklingFrame2dElementPreloadResult, SolveBucklingFrame2dRequest, SolveFrame2dResult,
 };
@@ -21,6 +22,7 @@ pub(crate) fn assemble_frame_2d_stability(
     request: &SolveBucklingFrame2dRequest,
 ) -> Result<Frame2dStabilitySystem, String> {
     let static_result = solve_frame_2d(&request.frame)?;
+    checkpoint(SolverStage::ElementAssembly, 0)?;
     let dof_count = request.frame.nodes.len() * 3;
     let mut elastic = SparseMatrix::new(dof_count);
     let mut geometric = SparseMatrix::new(dof_count);
@@ -31,13 +33,18 @@ pub(crate) fn assemble_frame_2d_stability(
         reference_force[index * 3] = node.load_x;
         reference_force[index * 3 + 1] = node.load_y;
         reference_force[index * 3 + 2] = node.moment_z;
+        checkpoint_chunk(
+            SolverStage::ConstraintMap,
+            index + 1,
+            request.frame.nodes.len(),
+        )?;
     }
     for (index, element) in request.frame.elements.iter().enumerate() {
         let node_i = &request.frame.nodes[element.node_i];
         let node_j = &request.frame.nodes[element.node_j];
         let dx = node_j.x - node_i.x;
         let dy = node_j.y - node_i.y;
-        let length = (dx * dx + dy * dy).sqrt();
+        let length = dx.hypot(dy);
         let transform = frame_transform(dx / length, dy / length);
         let local_elastic = frame_local_stiffness(
             element.area,
@@ -47,10 +54,40 @@ pub(crate) fn assemble_frame_2d_stability(
         );
         let static_element = &static_result.elements[index];
         let signed_axial_force =
-            0.5 * (static_element.axial_force_i - static_element.axial_force_j);
-        let reference_compressive_force = signed_axial_force.max(0.0);
-        let active = reference_compressive_force > 1.0e-12;
+            0.5 * static_element.axial_force_i - 0.5 * static_element.axial_force_j;
+        let displacement_i = &static_result.nodes[element.node_i];
+        let displacement_j = &static_result.nodes[element.node_j];
+        let displacement_scale = displacement_i
+            .ux
+            .hypot(displacement_i.uy)
+            .max(displacement_j.ux.hypot(displacement_j.uy));
+        // Local recovery resolution scales with stiffness and displacement, not
+        // the units or loads on unrelated members. Keep the raw signed force.
+        let force_resolution =
+            (64.0 * f64::EPSILON * local_elastic[0][0].abs()) * displacement_scale;
+        if !signed_axial_force.is_finite() || !force_resolution.is_finite() {
+            return Err(format!(
+                "buckling frame 2d element {index} axial preload or its resolution is non-finite"
+            ));
+        }
+        let reference_compressive_force = if signed_axial_force > force_resolution {
+            signed_axial_force
+        } else {
+            0.0
+        };
+        // The diagnostic must describe the same compression used to assemble Kg.
+        let active = reference_compressive_force > 0.0;
         let local_geometric = frame_local_geometric_stiffness(reference_compressive_force, length);
+        if local_elastic
+            .iter()
+            .chain(&local_geometric)
+            .flatten()
+            .any(|value| !value.is_finite())
+        {
+            return Err(format!(
+                "buckling frame 2d element {index} stiffness exceeds the finite numeric range"
+            ));
+        }
         let map = frame_dof_map(element.node_i, element.node_j);
         assemble(
             &mut elastic,
@@ -69,6 +106,11 @@ pub(crate) fn assemble_frame_2d_stability(
             reference_compressive_force,
             active_in_geometric_stiffness: active,
         });
+        checkpoint_chunk(
+            SolverStage::ElementAssembly,
+            index + 1,
+            request.frame.elements.len(),
+        )?;
     }
     if !element_preloads
         .iter()

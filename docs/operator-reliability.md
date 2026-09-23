@@ -430,6 +430,138 @@ The native thermoelastic Q4 formulas are retained at
 mesh/refinement regression lives at
 `workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs`.
 
+## Adaptive Fiber-Integration Reliability
+
+The 2026-09-23 [adaptive fiber regression](../reports/frame-fiber-adaptive-reliability-20260923.md)
+fixes unit-dependent and range-dependent error estimation for
+`solve.frame_2d_material_p_delta`. The previous force/moment Euclidean norm
+could hide a bending discrepancy beside a large axial force, underflow to
+zero or overflow, and depend on unused parent material defaults.
+
+Candidate comparisons now evaluate axial force and both end moments
+separately, using each component's own absolute accumulation scale. A scaled
+symmetric relative discrepancy avoids squaring large/small values or mixing
+force and moment units. A point-count-scaled roundoff allowance and a local
+`1e-12` cancellation denominator floor prevent roundoff from forcing unnecessary
+quadrature promotion; neither changes the requested integration tolerance.
+Every candidate's response and history must be finite before order selection,
+with the failed order included in the error. The existing 2/3/4/8/12-point
+rules, fixed history identities and 29 evaluated stations per fiber remain.
+
+The serialized `longitudinal_integration_error` field is unchanged, but its
+value now represents the maximum componentwise estimate. Do not compare its
+numbers directly with historical mixed-unit Euclidean estimates. Reaching the
+12-point cap may still leave the estimate above the requested tolerance; that
+diagnostic remains visible. Newton convergence is not an integration-tolerance
+certificate. This estimate does not bound global mesh error, tangent error or
+damage-softening localization, and is not a formal forward-error proof.
+
+The `frame-fiber-integration-local-reliability` component profile covers force
+scales and length-unit changes, unused parent defaults, candidate rejection,
+retained dense cyclic references, and real in-process Rust headless mixed-fiber
+paths. No remote benchmark, installed-app check or material-family promotion
+is claimed by this local evidence.
+
+## Frame Material-History Reliability
+
+The 2026-09-23 [material-history regression](../reports/frame-material-history-reliability-20260923.md)
+strengthens `solve.frame_2d_material_p_delta` without adding physics to the
+engine dispatcher or changing the Rust headless task/result protocol.
+
+The bilinear kinematic return map cancels the plastic-modulus expressions
+analytically: the plastic increment uses `(yield_excess / E) * (1 - r)`,
+the backstress increment uses `yield_excess * r`, and the tangent is `E * r`.
+Recovering stress on the updated yield surface avoids subtracting two large
+trial values. Tests cover very small/large material scales and hardening
+ratios near one; these are floating-point range controls, not material data.
+
+Committed perfect-plastic points keep a zero loading tangent instead of being
+mistaken for virgin elastic points. Unloading still uses the elastic tangent.
+Virgin mixed-fiber sections report their area-weighted material moduli, not
+the parent element's fallback modulus. Section forces, tangents, diagnostics
+and all evaluated material histories must be finite before assembly, commit
+or reporting, including inactive adaptive quadrature histories.
+
+The `frame-material-local-history-reliability` component profile checks
+cyclic analytical references, finite-difference tangents, failed-reversal
+rollback after an already yielded step, owned/borrowed agreement, and real
+in-process Rust headless plans through the engine route. A failed path remains
+nonconverged and retains the last accepted material state; fresh replay is
+tested, not durable restart from an exported material checkpoint.
+
+This is local numerical-validation/recovery evidence only. It does not qualify
+arbitrary cyclic plasticity, damage softening, fatigue, collapse, all scales,
+remote Agent execution or installed GUI behavior. Existing solver tolerances
+and absolute convergence floors are unchanged.
+
+## P-Delta Path Reliability
+
+The 2026-09-23 [P-Delta path regression](../reports/frame-p-delta-path-reliability-20260923.md)
+checks the transition from buckling modes to `solve.frame_2d_p_delta` results.
+Explicit imperfection vectors are directions: multiplying them by a nonzero
+positive scalar does not change the requested amplitude in the tested range.
+Translation normalization no longer squares dimensional input directly or
+rejects a direction solely because its magnitude is below a fixed threshold.
+Unrepresentable scaled DOFs and unavailable mode indices return errors.
+
+Linearized P-Delta, corotational and arc-length results share finite,
+scale-stable imperfection projection and translation-norm recovery. The
+linearized path additionally checks each reduced equilibrium equation using
+componentwise backward error before publishing `converged=true`. Its reported
+residual retains `||Ku-f|| / max(||f||, 1)` with stable norm evaluation. The
+banded route reuses its factor for up to three iterative corrections rather
+than relaxing near-zero-row validation; unresolved failures remain errors. The
+shared nonlinear residual rejects nonfinite inputs and avoids overflowing its
+normalization denominator; its existing load scale and convergence tolerance
+are otherwise unchanged.
+
+The `frame-p-delta-local-path-reliability` component profile covers secant
+amplification, shape and common stiffness/load scaling, numerical range,
+invalid indices, local weak-equation negative controls and Rust headless
+cancellation/replay. `StabilityStep` and `StabilityRecovery` are appended solver
+observation stages, not persistent restart points. Cancellation after a completed
+linearized step returns an error rather than a shortened successful path.
+
+Extreme-amplitude tests are floating-point stress tests, not valid
+large-deformation P-Delta research models. This evidence does not qualify all
+nonlinear material histories, postbuckling branches, arbitrary condition numbers
+or failure diagnostics. Task/result protocols and engine routing are unchanged.
+
+## Buckling Assembly Reliability
+
+The linear screening operators `solve.buckling_beam_1d` and
+`solve.buckling_frame_2d` retain their existing generalized eigenproblem and
+dense/sparse routes. The 2026-09-23
+[buckling assembly regression](../reports/buckling-assembly-reliability-20260923.md)
+corrects beam assembly to use global positive-x rotation conventions regardless
+of endpoint numbering. Reversing individual edges no longer changes the
+critical load or mode shape. Reference compressive-force signs are unchanged.
+
+Frame preload activity now matches the positive compression actually assembled
+into geometric stiffness, without a unit-dependent absolute force cutoff.
+Recovery-scale roundoff is suppressed using each member's axial stiffness and
+endpoint translation norms; the original signed axial force remains available.
+Portal beams with only numerical axial noise stay inactive under common scaling
+and rigid rotation, while an independently supported weakly loaded member is
+not filtered out by a large load elsewhere in the model.
+Uniformly scaling stiffness and reference loads together preserves load factors;
+scaling only the reference load inversely scales the factor. Zero and tensile
+reference states remain rejected in the tested compression-only scope.
+
+The `buckling-assembly-local-reliability` component profile checks numbering,
+coordinate reflection/rotation, heterogeneous members, Euler limits, restraint
+failures, finite unit-normalized mode recovery, cancellation and Rust headless
+error/replay. Element stiffness overflow reports its index. Beam and frame
+mode recovery share the same scale-stable normalization and finite checks.
+Reported residuals retain the existing reduced-eigensolver normalization;
+this is not a new normalized backward-error certificate.
+
+This is bounded local evidence, not nonlinear collapse, arbitrary preload
+accuracy, a global lowest-mode guarantee or a new large-scale qualification.
+The existing compression-only frame geometric-stiffness approximation and
+near-zero preload roundoff limitations remain. Engine dispatch, SDK payloads
+and result schemas are unchanged.
+
 ## Harmonic Spring Reliability
 
 The linear `solve.harmonic_spring_1d` operator solves the requested frequency

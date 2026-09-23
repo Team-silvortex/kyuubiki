@@ -16,6 +16,10 @@ use kyuubiki_protocol::{
     SolveFrame2dMaterialPDeltaRequest, SolveFrame2dMaterialPDeltaResult,
 };
 
+#[cfg(test)]
+#[path = "frame_2d_material_reliability_tests.rs"]
+mod reliability_tests;
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct CompiledFrame2dPointMaterial {
     pub(crate) youngs_modulus: f64,
@@ -139,14 +143,19 @@ impl CompiledFrame2dPointMaterial {
                 history,
             };
         }
-        let plastic_modulus = youngs_modulus * self.hardening_ratio
-            / (1.0 - self.hardening_ratio).max(f64::MIN_POSITIVE);
-        let plastic_increment = yield_excess / (youngs_modulus + plastic_modulus);
+        // H = E*r/(1-r); cancel H analytically before floating-point evaluation.
+        let plastic_increment = (yield_excess / youngs_modulus) * (1.0 - self.hardening_ratio);
+        let plastic_increment = if plastic_increment.is_finite() {
+            plastic_increment
+        } else {
+            (yield_excess * (1.0 - self.hardening_ratio)) / youngs_modulus
+        };
         let direction = relative_trial.signum();
         let plastic_strain = committed.plastic_strain + plastic_increment * direction;
-        let backstress = committed.backstress + plastic_modulus * plastic_increment * direction;
-        let tangent_modulus = youngs_modulus * plastic_modulus / (youngs_modulus + plastic_modulus);
-        let stress = trial_stress - youngs_modulus * plastic_increment * direction;
+        let backstress = committed.backstress + (yield_excess * self.hardening_ratio) * direction;
+        let tangent_modulus = youngs_modulus * self.hardening_ratio;
+        // Recover on the yield surface instead of subtracting two large trial stresses.
+        let stress = backstress + direction * self.yield_strength;
         BilinearResponse {
             stress,
             tangent_modulus,
@@ -275,13 +284,20 @@ fn material_state_results(
                 deformation.phi_i,
                 deformation.phi_j,
                 &history,
-            );
+            )
+            .map_err(|error| format!("frame 2d material element '{}': {error}", element.id))?;
             let tangent_modulus = committed_effective_axial_tangent(
                 material,
                 element.youngs_modulus,
                 element.area,
                 &history,
             );
+            if !tangent_modulus.is_finite() {
+                return Err(format!(
+                    "frame 2d material element '{}': non-finite committed tangent",
+                    element.id
+                ));
+            }
             Ok(Frame2dMaterialStateResult {
                 element_index,
                 element_id: element.id.clone(),
@@ -340,6 +356,7 @@ pub(crate) fn update_material_histories(
             deformation.phi_j,
             &updated[element_index],
         )
+        .map_err(|error| format!("frame 2d material element '{}': {error}", element.id))?
         .history;
     }
     Ok(updated)

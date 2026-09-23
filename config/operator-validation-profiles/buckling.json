@@ -1,0 +1,129 @@
+{
+  "schema_version": "kyuubiki.operator-validation-profiles/v1",
+  "version_line": "daji 3.0.x",
+  "profiles": [
+    {
+      "profile_id": "frame-p-delta-local-path-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "frame-p-delta-local-path-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.frame_2d_p_delta"],
+      "validation_methods": [
+        "imperfection_scale_invariance",
+        "precritical_secant_amplification",
+        "local_equilibrium_negative_control",
+        "nonlinear_residual_finite_guard",
+        "headless_path_cancellation_replay"
+      ],
+      "formal_invariants": [
+        "explicit_shape_magnitude_does_not_change_the_normalized_imperfection",
+        "modal_imperfection_projection_preserves_the_secant_reference_across_tested_amplitudes",
+        "local_equilibrium_validation_does_not_hide_a_weak_equation",
+        "nonfinite_residuals_and_overflowing_scales_cannot_be_false_convergence",
+        "unavailable_mode_indices_return_domain_errors_not_panics",
+        "cancellation_after_one_completed_step_cannot_publish_partial_success"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/frame_2d_p_delta.rs",
+        "workers/rust/crates/solver/src/frame_2d_stability_metrics.rs",
+        "workers/rust/crates/solver/src/frame_2d_corotational.rs",
+        "workers/rust/crates/solver/src/frame_2d_arc_length.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/tests/frame_2d_p_delta_reliability.rs",
+        "workers/rust/crates/cli/tests/frame_2d_p_delta_operator.rs",
+        "reports/frame-p-delta-path-reliability-20260923.md"
+      ],
+      "commands": [
+        {
+          "id": "frame-stability-metric-kernels",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_stability_metrics::tests -- --nocapture"
+        },
+        {
+          "id": "frame-p-delta-path-invariants",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_p_delta_reliability -- --nocapture"
+        },
+        {
+          "id": "frame-p-delta-retained-analytic-paths",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_p_delta_closed_form --test frame_2d_p_delta_explicit_imperfection -- --nocapture"
+        },
+        {
+          "id": "frame-p-delta-retained-material-branches",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_material_p_delta_closed_form --test frame_2d_branch_continuation -- --nocapture"
+        },
+        {
+          "id": "frame-p-delta-headless-path",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test frame_2d_p_delta_operator -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "buckling-assembly-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "buckling-assembly-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.buckling_beam_1d", "solve.buckling_frame_2d"],
+      "validation_methods": [
+        "endpoint_node_element_permutation",
+        "reflection_rotation_covariance",
+        "preload_stiffness_scale_invariance",
+        "local_preload_roundoff_negative_controls",
+        "dense_sparse_euler_reference",
+        "finite_mode_recovery",
+        "headless_error_cancellation_replay"
+      ],
+      "formal_invariants": [
+        "beam_endpoint_order_does_not_change_critical_factors_or_global_shapes",
+        "global_x_reflection_changes_rotation_sign_not_the_buckling_factor",
+        "common_stiffness_preload_scaling_preserves_factors",
+        "reference_force_scaling_preserves_the_physical_critical_force",
+        "compressive_activity_matches_the_geometric_stiffness_assembly",
+        "local_roundoff_is_not_compression_and_unrelated_large_loads_do_not_hide_small_compression",
+        "zero_and_tensile_reference_loads_do_not_create_compression",
+        "returned_modes_are_finite_nonzero_and_unit_normalized",
+        "assembly_and_mode_recovery_cancellation_cannot_return_partial_success"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/buckling_beam_1d.rs",
+        "workers/rust/crates/solver/src/buckling_frame_2d.rs",
+        "workers/rust/crates/solver/src/buckling_math.rs",
+        "workers/rust/crates/solver/src/frame_2d_stability.rs",
+        "workers/rust/crates/solver/tests/buckling_assembly_reliability.rs",
+        "workers/rust/crates/solver/tests/buckling_frame_2d_portal.rs",
+        "workers/rust/crates/cli/tests/buckling_assembly_operator.rs",
+        "reports/buckling-assembly-reliability-20260923.md"
+      ],
+      "commands": [
+        {
+          "id": "buckling-recovered-mode-kernels",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib buckling_math::tests::recovered_ -- --nocapture"
+        },
+        {
+          "id": "buckling-assembly-invariants",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_assembly_reliability --test buckling_frame_2d_portal -- --nocapture"
+        },
+        {
+          "id": "buckling-retained-euler-references",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_beam_1d_closed_form --test buckling_frame_2d_closed_form --test buckling_beam_frame_crosscheck -- --nocapture"
+        },
+        {
+          "id": "buckling-retained-input-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test buckling_beam_1d_input_reliability --test buckling_frame_2d_input_reliability -- --nocapture"
+        },
+        {
+          "id": "buckling-assembly-headless-route",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test buckling_assembly_operator -- --nocapture"
+        }
+      ]
+    }
+  ]
+}

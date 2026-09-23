@@ -54,6 +54,7 @@ mod frame_2d_residual_stress;
 mod frame_2d_section_library;
 mod frame_2d_section_polygon;
 mod frame_2d_stability;
+mod frame_2d_stability_metrics;
 mod frame_2d_transition_refinement;
 mod frame_2d_validation;
 mod frame_3d;

@@ -1,5 +1,6 @@
 use crate::linear_algebra::stable_l2_norm;
 use crate::modal_math::{jacobi_eigenpairs, relative_positive_eigenvalue_floor};
+use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 use kyuubiki_protocol::{
     BUCKLING_MODE_CLUSTER_RELATIVE_TOLERANCE, BucklingModeDirectionAssessment,
 };
@@ -13,6 +14,43 @@ pub(crate) struct GeneralizedEigenpair {
 pub(crate) struct ModeDirectionDiagnostic {
     pub relative_gap_to_next: Option<f64>,
     pub assessment: BucklingModeDirectionAssessment,
+}
+
+pub(crate) fn checked_mode_shape(
+    pair: &GeneralizedEigenpair,
+    free: &[usize],
+    size: usize,
+) -> Result<Vec<f64>, String> {
+    checkpoint(SolverStage::ResultFreeDofs, 0)?;
+    if pair.vector.len() != free.len()
+        || !pair.eigenvalue.is_finite()
+        || pair.eigenvalue <= 0.0
+        || !pair.residual_norm.is_finite()
+        || pair.residual_norm < 0.0
+    {
+        return Err("buckling mode has invalid dimensions, load factor or residual".into());
+    }
+    let mut scale = 0.0_f64;
+    for (index, &value) in pair.vector.iter().enumerate() {
+        if !value.is_finite() {
+            return Err("buckling mode shape must be finite".into());
+        }
+        scale = scale.max(value.abs());
+        checkpoint_chunk(SolverStage::ResultNodeSummary, index + 1, pair.vector.len())?;
+    }
+    if scale == 0.0 {
+        return Err("buckling mode shape must be non-zero".into());
+    }
+    let norm = stable_l2_norm(pair.vector.iter().map(|value| value / scale));
+    let mut shape = vec![0.0; size];
+    for (index, &dof) in free.iter().enumerate() {
+        let target = shape
+            .get_mut(dof)
+            .ok_or("buckling mode free DOF is out of range")?;
+        *target = (pair.vector[index] / scale) / norm;
+        checkpoint_chunk(SolverStage::ResultFreeDofs, index + 1, free.len())?;
+    }
+    Ok(shape)
 }
 
 pub(crate) fn mode_direction_diagnostics(factors: &[f64]) -> Vec<ModeDirectionDiagnostic> {
@@ -299,7 +337,54 @@ fn generalized_residual(
 mod tests {
     use kyuubiki_protocol::BucklingModeDirectionAssessment;
 
-    use super::{generalized_eigenpairs, mode_direction_diagnostics};
+    use super::{
+        GeneralizedEigenpair, checked_mode_shape, generalized_eigenpairs,
+        mode_direction_diagnostics,
+    };
+
+    #[test]
+    fn recovered_mode_shape_normalization_is_stable_across_finite_scales() {
+        for scale in [1e-320, 1.0, 1e308] {
+            let pair = GeneralizedEigenpair {
+                eigenvalue: 2.0,
+                residual_norm: 0.0,
+                vector: vec![scale, -scale, scale],
+            };
+            let shape = checked_mode_shape(&pair, &[1, 3, 5], 6).unwrap();
+            for dof in [0, 2, 4] {
+                assert_eq!(shape[dof], 0.0);
+            }
+            for dof in [1, 3, 5] {
+                assert!((shape[dof].abs() - 1.0 / 3.0_f64.sqrt()).abs() < 1e-14);
+            }
+        }
+    }
+
+    #[test]
+    fn recovered_modes_reject_invalid_scalars_shapes_and_mapping() {
+        for (factor, residual, vector) in [
+            (f64::INFINITY, 0.0, vec![1.0]),
+            (0.0, 0.0, vec![1.0]),
+            (1.0, f64::INFINITY, vec![1.0]),
+            (1.0, -1.0, vec![1.0]),
+            (1.0, 0.0, vec![f64::NAN]),
+            (1.0, 0.0, vec![0.0]),
+            (1.0, 0.0, vec![]),
+        ] {
+            let pair = GeneralizedEigenpair {
+                eigenvalue: factor,
+                residual_norm: residual,
+                vector,
+            };
+            assert!(checked_mode_shape(&pair, &[0], 1).is_err());
+        }
+        let pair = GeneralizedEigenpair {
+            eigenvalue: 1.0,
+            residual_norm: 0.0,
+            vector: vec![1.0],
+        };
+        assert!(checked_mode_shape(&pair, &[1], 1).is_err());
+    }
 
     #[test]
     fn direction_diagnostics_distinguish_clusters_and_unassessed_tail() {

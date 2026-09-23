@@ -458,6 +458,116 @@ fn fiber_section_contract_rejects_inconsistent_geometry_and_stress_sources() {
     assert!(error.contains("require section_fibers"));
 }
 
+#[test]
+fn adaptive_axial_bending_path_is_covariant_under_length_unit_changes() {
+    let mut baseline_input = request(0.6, REFERENCE_MOMENT, [0.0; 4]);
+    for material in &mut baseline_input.materials {
+        material.adaptive_longitudinal_integration = true;
+    }
+    let baseline = solve_frame_2d_material_p_delta(&baseline_input).unwrap();
+    assert!(baseline.stability_result.converged);
+    for scale in [1e-3_f64, 1e3] {
+        let mut input = baseline_input.clone();
+        input.stability.imperfection_amplitude *= scale;
+        for node in &mut input.stability.buckling.frame.nodes {
+            node.x *= scale;
+            node.y *= scale;
+            node.moment_z *= scale;
+        }
+        for element in &mut input.stability.buckling.frame.elements {
+            element.area *= scale.powi(2);
+            element.moment_of_inertia *= scale.powi(4);
+            element.section_modulus *= scale.powi(3);
+            element.youngs_modulus /= scale.powi(2);
+        }
+        for material in &mut input.materials {
+            material.yield_strength /= scale.powi(2);
+            for fiber in &mut material.section_fibers {
+                fiber.y *= scale;
+                fiber.area *= scale.powi(2);
+            }
+        }
+        let result = solve_frame_2d_material_p_delta(&input).unwrap();
+        assert!(result.stability_result.converged, "length scale={scale:e}");
+        for (actual, expected) in result.material_states.iter().zip(&baseline.material_states) {
+            assert_relative(
+                actual.section_axial_force.unwrap(),
+                expected.section_axial_force.unwrap(),
+                2e-6,
+            );
+            assert_relative(
+                actual.section_end_moment_j.unwrap() / scale,
+                expected.section_end_moment_j.unwrap(),
+                2e-6,
+            );
+            assert_relative(
+                actual.equivalent_plastic_strain,
+                expected.equivalent_plastic_strain,
+                2e-6,
+            );
+            assert_eq!(
+                actual.active_longitudinal_integration_points,
+                expected.active_longitudinal_integration_points
+            );
+            assert_absolute(
+                actual.longitudinal_integration_error.unwrap(),
+                expected.longitudinal_integration_error.unwrap(),
+                2e-6,
+            );
+        }
+    }
+}
+
+#[test]
+fn adaptive_full_solver_keeps_finite_diagnostics_at_large_material_scales() {
+    let mut baseline_input = request(0.6, REFERENCE_MOMENT, [0.0; 4]);
+    for material in &mut baseline_input.materials {
+        material.adaptive_longitudinal_integration = true;
+    }
+    let baseline = solve_frame_2d_material_p_delta(&baseline_input).unwrap();
+    for scale in [1e145, 1e160] {
+        let mut input = baseline_input.clone();
+        for node in &mut input.stability.buckling.frame.nodes {
+            node.load_y *= scale;
+            node.moment_z *= scale;
+        }
+        for element in &mut input.stability.buckling.frame.elements {
+            element.youngs_modulus *= scale;
+        }
+        for material in &mut input.materials {
+            material.yield_strength *= scale;
+        }
+        let result = solve_frame_2d_material_p_delta(&input).unwrap();
+        assert!(result.stability_result.converged, "force scale={scale:e}");
+        for (actual, expected) in result.material_states.iter().zip(&baseline.material_states) {
+            assert_relative(
+                actual.section_axial_force.unwrap() / scale,
+                expected.section_axial_force.unwrap(),
+                2e-6,
+            );
+            assert_relative(
+                actual.section_end_moment_j.unwrap() / scale,
+                expected.section_end_moment_j.unwrap(),
+                2e-6,
+            );
+            assert_relative(
+                actual.equivalent_plastic_strain,
+                expected.equivalent_plastic_strain,
+                2e-6,
+            );
+            assert_eq!(
+                actual.active_longitudinal_integration_points,
+                expected.active_longitudinal_integration_points
+            );
+            assert_absolute(
+                actual.longitudinal_integration_error.unwrap(),
+                expected.longitudinal_integration_error.unwrap(),
+                2e-6,
+            );
+        }
+    }
+}
+
 fn request(
     maximum_load_factor: f64,
     reference_moment: f64,

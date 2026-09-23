@@ -74,6 +74,8 @@ pub enum SolverStage {
     TransientEnergy,
     HarmonicSweep,
     HarmonicResidual,
+    StabilityStep,
+    StabilityRecovery,
 }
 
 impl SolverStage {
@@ -145,6 +147,8 @@ impl SolverStage {
             Self::TransientEnergy => "transient_energy",
             Self::HarmonicSweep => "harmonic_sweep",
             Self::HarmonicResidual => "harmonic_residual",
+            Self::StabilityStep => "stability_step",
+            Self::StabilityRecovery => "stability_recovery",
         }
     }
 
@@ -216,6 +220,8 @@ impl SolverStage {
             Self::TransientEnergy,
             Self::HarmonicSweep,
             Self::HarmonicResidual,
+            Self::StabilityStep,
+            Self::StabilityRecovery,
         ]
         .into_iter()
         .find(|stage| *stage as u8 == value)

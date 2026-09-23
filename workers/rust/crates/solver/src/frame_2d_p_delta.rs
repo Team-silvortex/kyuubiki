@@ -10,11 +10,16 @@ use crate::frame_2d_corotational_element::assemble_tangent_and_internal_with_mat
 use crate::frame_2d_material_p_delta::{CompiledFrame2dMaterial, Frame2dMaterialHistory};
 use crate::frame_2d_path_events::annotate_path_events;
 use crate::frame_2d_stability::assemble_frame_2d_stability;
+use crate::frame_2d_stability_metrics::{
+    imperfection_amplification, linearized_residual, max_translation, scale_imperfection,
+};
 use crate::linear_algebra::{
     SparseMatrix, add_at, reduce_sparse_system, solve_spd_system_profile_with_options,
+    sparse_residual_vector,
 };
 use crate::linear_banded::SymmetricBandCholesky;
 use crate::linear_solver_profile::SpdSolveOptions;
+use crate::solver_control::{SolverStage, check_cancellation, checkpoint};
 use kyuubiki_protocol::{
     FRAME_2D_P_DELTA_CRITICAL_FACTOR_LIMIT_RATIO, Frame2dBranchSwitchSelection,
     Frame2dImperfectionSource, Frame2dPDeltaStepResult, Frame2dStabilityKinematics,
@@ -24,6 +29,7 @@ use std::borrow::Cow;
 
 const DEFAULT_LOAD_STEPS: usize = 10;
 const DEFAULT_MAXIMUM_CRITICAL_FACTOR_RATIO: f64 = 0.8;
+const MAX_PRECRITICAL_REFINEMENTS: usize = 3;
 type Frame2dPDeltaMaterialSolve = (
     SolveFrame2dPDeltaResult,
     Vec<Frame2dMaterialHistory>,
@@ -67,7 +73,9 @@ fn solve_frame_2d_p_delta_with_materials_internal(
     let required_modes = if request.imperfection_shape.is_some() {
         1
     } else {
-        mode_index + 1
+        mode_index.checked_add(1).ok_or_else(|| {
+            format!("frame 2d p-delta imperfection mode {mode_index} is unavailable")
+        })?
     };
     buckling_request.mode_count =
         Some(buckling_request.mode_count.unwrap_or(3).max(required_modes));
@@ -109,11 +117,8 @@ fn solve_frame_2d_p_delta_with_materials_internal(
             Frame2dImperfectionSource::BucklingMode,
         ),
     };
-    let initial_imperfection_shape = scale_imperfection(
-        imperfection_shape,
-        request.imperfection_amplitude,
-        buckling_request.frame.nodes.len(),
-    )?;
+    let initial_imperfection_shape =
+        scale_imperfection(imperfection_shape, request.imperfection_amplitude)?;
     let geometric_imperfection = multiply(&system.geometric, &initial_imperfection_shape);
     let load_steps = load_factor_schedule.map_or_else(
         || {
@@ -127,7 +132,7 @@ fn solve_frame_2d_p_delta_with_materials_internal(
     let load_factors = load_factor_schedule.map_or_else(
         || {
             (1..=load_steps)
-                .map(|step| maximum_load_factor * step as f64 / load_steps as f64)
+                .map(|step| maximum_load_factor * (step as f64 / load_steps as f64))
                 .collect::<Vec<_>>()
         },
         <[f64]>::to_vec,
@@ -260,21 +265,22 @@ fn solve_linearized_steps(
     load_steps: usize,
 ) -> Result<Vec<Frame2dPDeltaStepResult>, String> {
     let mut steps = Vec::with_capacity(load_steps);
+    checkpoint(SolverStage::StabilityStep, 0)?;
     for step in 1..=load_steps {
-        let load_factor = maximum_load_factor * step as f64 / load_steps as f64;
+        let step_error = |error| format!("frame 2d p-delta step {step}: {error}");
+        let load_factor = maximum_load_factor * (step as f64 / load_steps as f64);
         let tangent = combined_matrix(&system.elastic, &system.geometric, -load_factor);
         let force = system
             .reference_force
             .iter()
             .zip(geometric_imperfection)
-            .map(|(external, imperfection)| load_factor * (external + imperfection))
+            .map(|(external, imperfection)| load_factor * external + load_factor * imperfection)
             .collect::<Vec<_>>();
         let (reduced_tangent, reduced_force, free_dofs) =
-            reduce_sparse_system(&tangent, &force, &system.constrained_dofs)?;
-        let reduced_displacements = solve_precritical_tangent(&reduced_tangent, &reduced_force)?;
+            reduce_sparse_system(&tangent, &force, &system.constrained_dofs).map_err(step_error)?;
+        let (reduced_displacements, residual_norm) =
+            solve_precritical_tangent(&reduced_tangent, &reduced_force).map_err(step_error)?;
         let displacements = expand(&reduced_displacements, &free_dofs, tangent.size());
-        let residual_norm =
-            relative_residual(&reduced_tangent, &reduced_displacements, &reduced_force);
         steps.push(Frame2dPDeltaStepResult {
             step,
             load_factor,
@@ -308,20 +314,45 @@ fn solve_linearized_steps(
             imperfection_amplification: imperfection_amplification(
                 initial_imperfection,
                 &displacements,
-            ),
-            max_incremental_displacement: max_translation(&displacements),
+            )
+            .map_err(step_error)?,
+            max_incremental_displacement: max_translation(&displacements).map_err(step_error)?,
             displacements,
         });
+        checkpoint(SolverStage::StabilityStep, step)?;
     }
     Ok(steps)
 }
 
-fn solve_precritical_tangent(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, String> {
+fn solve_precritical_tangent(
+    matrix: &SparseMatrix,
+    rhs: &[f64],
+) -> Result<(Vec<f64>, f64), String> {
     if let Some(factor) = SymmetricBandCholesky::try_factor(matrix, 8_000_000)? {
-        return factor.solve(rhs);
+        let mut solution = factor.solve(rhs)?;
+        // Reuse the factor to correct roundoff instead of relaxing weak-row checks.
+        for refinement in 0..=MAX_PRECRITICAL_REFINEMENTS {
+            match linearized_residual(matrix, &solution, rhs) {
+                Ok(norm) => return Ok((solution, norm)),
+                Err(error) => {
+                    check_cancellation()?;
+                    if refinement == MAX_PRECRITICAL_REFINEMENTS {
+                        return Err(error);
+                    }
+                }
+            }
+            let residual = sparse_residual_vector(matrix, rhs, &solution)?;
+            let correction = factor.solve(&residual)?;
+            for (value, correction) in solution.iter_mut().zip(correction) {
+                *value += correction;
+            }
+        }
+        unreachable!("bounded refinement returns at its final validation")
     }
-    solve_spd_system_profile_with_options(matrix, rhs, SpdSolveOptions::default())
-        .map(|profile| profile.solution)
+    let solution =
+        solve_spd_system_profile_with_options(matrix, rhs, SpdSolveOptions::default())?.solution;
+    let norm = linearized_residual(matrix, &solution, rhs)?;
+    Ok((solution, norm))
 }
 
 fn validate_request(request: &SolveFrame2dPDeltaRequest) -> Result<(), String> {
@@ -532,19 +563,6 @@ fn validate_request(request: &SolveFrame2dPDeltaRequest) -> Result<(), String> {
     Ok(())
 }
 
-fn scale_imperfection(mode: &[f64], amplitude: f64, node_count: usize) -> Result<Vec<f64>, String> {
-    let maximum = (0..node_count)
-        .map(|node| (mode[node * 3].powi(2) + mode[node * 3 + 1].powi(2)).sqrt())
-        .fold(0.0_f64, f64::max);
-    if !(maximum.is_finite() && maximum > 1.0e-14) {
-        return Err("frame 2d p-delta selected mode has no translational imperfection".into());
-    }
-    Ok(mode
-        .iter()
-        .map(|value| value * amplitude / maximum)
-        .collect())
-}
-
 fn combined_matrix(elastic: &SparseMatrix, geometric: &SparseMatrix, scale: f64) -> SparseMatrix {
     let mut result = SparseMatrix::new(elastic.size());
     for row in 0..elastic.size() {
@@ -576,39 +594,4 @@ fn expand(reduced: &[f64], free_dofs: &[usize], size: usize) -> Vec<f64> {
         result[dof] = reduced[index];
     }
     result
-}
-
-fn relative_residual(matrix: &SparseMatrix, solution: &[f64], rhs: &[f64]) -> f64 {
-    let residual = multiply(matrix, solution)
-        .into_iter()
-        .zip(rhs)
-        .map(|(left, right)| left - right)
-        .map(|value| value * value)
-        .sum::<f64>()
-        .sqrt();
-    let scale = rhs
-        .iter()
-        .map(|value| value * value)
-        .sum::<f64>()
-        .sqrt()
-        .max(1.0);
-    residual / scale
-}
-
-fn imperfection_amplification(initial: &[f64], displacement: &[f64]) -> f64 {
-    let mut numerator = 0.0;
-    let mut denominator = 0.0;
-    for node in 0..initial.len() / 3 {
-        for offset in 0..2 {
-            numerator += initial[node * 3 + offset] * displacement[node * 3 + offset];
-            denominator += initial[node * 3 + offset].powi(2);
-        }
-    }
-    1.0 + numerator / denominator.max(f64::MIN_POSITIVE)
-}
-
-fn max_translation(displacements: &[f64]) -> f64 {
-    (0..displacements.len() / 3)
-        .map(|node| (displacements[node * 3].powi(2) + displacements[node * 3 + 1].powi(2)).sqrt())
-        .fold(0.0_f64, f64::max)
 }

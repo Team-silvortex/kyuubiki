@@ -6,6 +6,7 @@ use crate::frame_2d_material_p_delta::{
     CompiledFrame2dMaterial, Frame2dMaterialHistory, update_material_histories,
 };
 use crate::frame_2d_stability::Frame2dStabilitySystem;
+use crate::frame_2d_stability_metrics::{imperfection_amplification, max_translation};
 use crate::linear_algebra::{SparseMatrix, reduce_sparse_system};
 use crate::linear_symmetric_tangent::solve_symmetric_tangent;
 use crate::solver_control::check_cancellation;
@@ -139,8 +140,8 @@ pub(crate) fn solve_corotational_steps_with_materials(
             imperfection_amplification: imperfection_amplification(
                 initial_imperfection,
                 &displacement,
-            ),
-            max_incremental_displacement: max_translation(&displacement),
+            )?,
+            max_incremental_displacement: max_translation(&displacement)?,
             displacements: displacement.clone(),
         });
         if !adaptive.converged {
@@ -578,26 +579,16 @@ fn residual(external: &[f64], internal: &[f64], load_factor: f64) -> Vec<f64> {
 }
 
 pub(crate) fn normalized_residual(residual: &[f64], external: &[f64], load_factor: f64) -> f64 {
+    if !load_factor.is_finite()
+        || residual
+            .iter()
+            .chain(external)
+            .any(|value| !value.is_finite())
+    {
+        return f64::INFINITY;
+    }
     let numerator = residual.iter().map(|value| value.abs()).fold(0.0, f64::max);
     let reference_norm = external.iter().map(|value| value.abs()).fold(1.0, f64::max);
-    let denominator = reference_norm * load_factor.abs().max(1.0);
-    numerator / denominator
-}
-
-pub(crate) fn imperfection_amplification(initial: &[f64], displacement: &[f64]) -> f64 {
-    let mut numerator = 0.0;
-    let mut denominator = 0.0;
-    for node in 0..initial.len() / 3 {
-        for offset in 0..2 {
-            numerator += initial[node * 3 + offset] * displacement[node * 3 + offset];
-            denominator += initial[node * 3 + offset].powi(2);
-        }
-    }
-    1.0 + numerator / denominator.max(f64::MIN_POSITIVE)
-}
-
-pub(crate) fn max_translation(displacements: &[f64]) -> f64 {
-    (0..displacements.len() / 3)
-        .map(|node| (displacements[node * 3].powi(2) + displacements[node * 3 + 1].powi(2)).sqrt())
-        .fold(0.0_f64, f64::max)
+    // Both divisors are at least one; dividing separately cannot overflow.
+    (numerator / reference_norm) / load_factor.abs().max(1.0)
 }

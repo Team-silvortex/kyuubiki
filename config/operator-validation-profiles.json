@@ -3,6 +3,7 @@
   "version_line": "daji 3.0.x",
   "profile_shards": [
     "config/operator-validation-profiles/acoustic.json",
+    "config/operator-validation-profiles/buckling.json",
     "config/operator-validation-profiles/cfd.json",
     "config/operator-validation-profiles/electromagnetic.json",
     "config/operator-validation-profiles/line-field.json",

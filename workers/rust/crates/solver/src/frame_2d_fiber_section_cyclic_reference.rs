@@ -38,7 +38,8 @@ fn adaptive_cyclic_path_tracks_an_independent_dense_history_reference() {
             phi_i,
             phi_j,
             &adaptive_history,
-        );
+        )
+        .unwrap();
         let reference =
             dense_reference_response(&material, extension, phi_i, phi_j, &mut dense_history);
         let actual = [response.axial_force, response.moment_i, response.moment_j];

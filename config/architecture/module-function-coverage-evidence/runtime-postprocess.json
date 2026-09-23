@@ -1,8 +1,121 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Scoped planar heat and thermal-stress result construction retains installed recovery and paired overhead evidence. Separate bounded local mechanical, electrostatic, magnetostatic and Stokes output-range regression, frame modal-spectrum regression, transient-spring time-stepping and harmonic-spring sweep regression are verified only in process, without broad physics qualification. Retained-input cloning, serialization, and other operator scopes remain separate coverage.",
+  "summary": "Scoped planar heat and thermal-stress result construction retains installed recovery and paired overhead evidence. Separate bounded local mechanical, electrostatic, magnetostatic and Stokes output-range regression, frame modal-spectrum regression, transient-spring time-stepping, harmonic-spring sweep, beam/frame buckling assembly, P-Delta path diagnostics, frame material-history recovery and adaptive fiber integration are verified only in process, without broad physics qualification. Retained-input cloning, serialization, and other operator scopes remain separate coverage.",
   "evidence_claims": [
+    {
+      "id": "frame-fiber-integration-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/frame_2d_fiber_section.rs",
+        "workers/rust/crates/solver/src/frame_2d_fiber_adaptive_tests.rs",
+        "workers/rust/crates/solver/tests/frame_2d_fiber_section_closed_form.rs",
+        "workers/rust/crates/cli/tests/frame_2d_material_operator.rs",
+        "config/operator-validation-profiles/structural-nonlinear.json",
+        "reports/frame-fiber-adaptive-reliability-20260923.md"
+      ],
+      "required_text": [
+        "large_axial_force_cannot_hide_bending_quadrature_error",
+        "changing_length_units_preserves_adaptive_order_and_error",
+        "unused_parent_strength_cannot_mask_mixed_fiber_error",
+        "a_nonfinite_inactive_high_order_response_is_rejected_with_its_order",
+        "adaptive_full_solver_keeps_finite_diagnostics_at_large_material_scales",
+        "headless_adaptive_mixed_fibers_keep_finite_scale_invariant_diagnostics",
+        "This is bounded local adaptive fiber-integration validation, not a global discretization-error certificate or general damage/collapse qualification."
+      ]
+    },
+    {
+      "id": "frame-material-local-history-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/frame_2d_material_p_delta.rs",
+        "workers/rust/crates/solver/src/frame_2d_fiber_section.rs",
+        "workers/rust/crates/solver/src/frame_2d_corotational_element.rs",
+        "workers/rust/crates/solver/src/frame_2d_material_reliability_tests.rs",
+        "workers/rust/crates/solver/tests/frame_2d_material_p_delta_closed_form.rs",
+        "workers/rust/crates/cli/tests/frame_2d_material_operator.rs",
+        "config/operator-validation-profiles/structural-nonlinear.json",
+        "reports/frame-material-history-reliability-20260923.md"
+      ],
+      "required_text": [
+        "return_mapping_preserves_stress_and_tangent_across_material_scales",
+        "perfect_plastic_stress_is_not_lost_to_subtraction_cancellation",
+        "committed_perfect_plastic_fiber_tangent_is_zero_not_elastic",
+        "virgin_mixed_fibers_report_their_own_weighted_modulus",
+        "adaptive_inactive_histories_cannot_hide_nonfinite_accumulated_plasticity",
+        "failed_reversal_keeps_the_last_converged_plastic_state",
+        "headless_cyclic_material_history_is_finite_and_scale_invariant",
+        "This is bounded local frame material-history validation, not general cyclic plasticity, fatigue or collapse qualification."
+      ]
+    },
+    {
+      "id": "frame-p-delta-local-path-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/frame_2d_p_delta.rs",
+        "workers/rust/crates/solver/src/frame_2d_stability_metrics.rs",
+        "workers/rust/crates/solver/src/frame_2d_corotational.rs",
+        "workers/rust/crates/solver/src/frame_2d_arc_length.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/tests/frame_2d_p_delta_reliability.rs",
+        "workers/rust/crates/cli/tests/frame_2d_p_delta_operator.rs",
+        "config/operator-validation-profiles/buckling.json",
+        "reports/frame-p-delta-path-reliability-20260923.md"
+      ],
+      "required_text": [
+        "explicit_imperfection_shape_scaling_does_not_change_the_path",
+        "tiny_modal_imperfection_retains_secant_amplification",
+        "large_finite_imperfection_does_not_publish_nonfinite_metrics",
+        "unavailable_extreme_mode_index_returns_error_without_panicking",
+        "residual_validation_cannot_hide_a_weak_equation_beside_a_strong_one",
+        "nonlinear_residual_does_not_turn_nonfinite_input_or_scale_overflow_into_convergence",
+        "headless_in_path_cancellation_is_not_a_successful_shortened_path",
+        "This is bounded local P-Delta path validation, not general nonlinear structural or collapse qualification."
+      ]
+    },
+    {
+      "id": "buckling-assembly-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/buckling_beam_1d.rs",
+        "workers/rust/crates/solver/src/buckling_frame_2d.rs",
+        "workers/rust/crates/solver/src/buckling_math.rs",
+        "workers/rust/crates/solver/src/frame_2d_stability.rs",
+        "workers/rust/crates/solver/tests/buckling_assembly_reliability.rs",
+        "workers/rust/crates/solver/tests/buckling_frame_2d_portal.rs",
+        "workers/rust/crates/cli/tests/buckling_assembly_operator.rs",
+        "config/operator-validation-profiles/buckling.json",
+        "reports/buckling-assembly-reliability-20260923.md"
+      ],
+      "required_text": [
+        "reversing_individual_beam_elements_preserves_critical_loads_and_shapes",
+        "heterogeneous_beam_is_invariant_to_node_element_and_endpoint_order",
+        "scaling_frame_stiffness_and_preload_together_preserves_compression_and_factors",
+        "portal_compression_activity_ignores_roundoff_across_scales_and_rotations",
+        "a_strongly_loaded_component_does_not_hide_an_independent_tiny_compression",
+        "sparse_mixed_orientation_beam_retains_the_euler_limit",
+        "recovered_mode_shape_normalization_is_stable_across_finite_scales",
+        "assembly_eigensolve_and_mode_recovery_cancel_inside_both_operators",
+        "headless_small_scaled_frame_keeps_compressive_preloads_and_load_factors",
+        "This is bounded local buckling-assembly validation, not general structural stability or nonlinear collapse qualification."
+      ]
+    },
     {
       "id": "harmonic-spring-local-sweep-reliability",
       "status": "proven",

@@ -1,7 +1,9 @@
-use crate::buckling_math::mode_direction_diagnostics;
+use crate::buckling_math::{checked_mode_shape, mode_direction_diagnostics};
 use crate::buckling_sparse::hybrid_generalized_eigenpairs;
 use crate::frame_2d_stability::{Frame2dStabilitySystem, assemble_frame_2d_stability};
 use crate::linear_algebra::reduce_sparse_system;
+use crate::solver_control::SolverStage;
+use crate::solver_postprocess::try_collect_results;
 use kyuubiki_protocol::{
     BUCKLING_MODE_CLUSTER_RELATIVE_TOLERANCE, BucklingFrame2dElementPreloadResult,
     BucklingFrame2dModeResult, SolveBucklingFrame2dRequest, SolveBucklingFrame2dResult,
@@ -71,19 +73,22 @@ fn solve_buckling_modes(
             .map(|pair| pair.eigenvalue)
             .collect::<Vec<_>>(),
     );
-    let modes = eigenpairs
-        .into_iter()
-        .zip(diagnostics)
-        .enumerate()
-        .map(|(index, (pair, diagnostic))| BucklingFrame2dModeResult {
-            index,
-            load_factor: pair.eigenvalue,
-            residual_norm: pair.residual_norm,
-            relative_gap_to_next: diagnostic.relative_gap_to_next,
-            direction_assessment: diagnostic.assessment,
-            shape: expand_and_normalize(&pair.vector, &free_dofs, dof_count),
-        })
-        .collect::<Vec<_>>();
+    let modes =
+        try_collect_results(
+            SolverStage::ResultTotals,
+            eigenpairs.into_iter().zip(diagnostics).enumerate().map(
+                |(index, (pair, diagnostic))| {
+                    Ok(BucklingFrame2dModeResult {
+                        index,
+                        load_factor: pair.eigenvalue,
+                        residual_norm: pair.residual_norm,
+                        relative_gap_to_next: diagnostic.relative_gap_to_next,
+                        direction_assessment: diagnostic.assessment,
+                        shape: checked_mode_shape(&pair, &free_dofs, dof_count)?,
+                    })
+                },
+            ),
+        )?;
     Ok((modes, free_dofs))
 }
 
@@ -103,16 +108,4 @@ fn build_result(
         free_dofs,
         mode_cluster_relative_tolerance: BUCKLING_MODE_CLUSTER_RELATIVE_TOLERANCE,
     }
-}
-
-fn expand_and_normalize(reduced: &[f64], free: &[usize], size: usize) -> Vec<f64> {
-    let mut shape = vec![0.0; size];
-    for (index, &dof) in free.iter().enumerate() {
-        shape[dof] = reduced[index];
-    }
-    let norm = shape.iter().map(|value| value * value).sum::<f64>().sqrt();
-    if norm > 0.0 {
-        shape.iter_mut().for_each(|value| *value /= norm);
-    }
-    shape
 }

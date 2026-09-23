@@ -50,6 +50,35 @@ fn portal_buckling_is_objective_under_rigid_rotation() {
     }
 }
 
+#[test]
+fn portal_compression_activity_ignores_roundoff_across_scales_and_rotations() {
+    let baseline = solve_buckling_frame_2d(&portal_request(0.0)).unwrap();
+    for angle in [0.0, 0.731, -1.23] {
+        for scale in [1e-20, 1.0, 1e20] {
+            let mut request = portal_request(angle);
+            for node in &mut request.frame.nodes {
+                node.load_x *= scale;
+                node.load_y *= scale;
+            }
+            for element in &mut request.frame.elements {
+                element.youngs_modulus *= scale;
+            }
+            let result = solve_buckling_frame_2d(&request).unwrap();
+            let beam = preload(&result, "beam");
+            assert!(!beam.active_in_geometric_stiffness, "{angle}, {scale}");
+            assert_eq!(beam.reference_compressive_force, 0.0);
+            for id in ["left-column", "right-column"] {
+                let column = preload(&result, id);
+                assert!(column.active_in_geometric_stiffness);
+                assert_relative(column.reference_compressive_force / scale, 80_000.0, 1e-9);
+            }
+            for (actual, expected) in result.modes.iter().zip(&baseline.modes) {
+                assert_relative(actual.load_factor, expected.load_factor, 2e-8);
+            }
+        }
+    }
+}
+
 fn portal_request(angle: f64) -> SolveBucklingFrame2dRequest {
     let points = [(0.0, 0.0), (4.0, 0.0), (0.0, 3.0), (4.0, 3.0)];
     let nodes = points

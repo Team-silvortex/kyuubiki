@@ -8,11 +8,10 @@ use crate::frame_2d_branch_switch::{
     unavailable_pairwise_branch_switches, unavailable_weighted_branch_switches,
 };
 use crate::frame_2d_continuation_state::{export_continuation_state, prepare_continuation_state};
-use crate::frame_2d_corotational::{
-    imperfection_amplification, max_translation, normalized_residual, solve_tangent,
-};
+use crate::frame_2d_corotational::{normalized_residual, solve_tangent};
 use crate::frame_2d_corotational_element::assemble_tangent_and_internal;
 use crate::frame_2d_stability::Frame2dStabilitySystem;
+use crate::frame_2d_stability_metrics::{imperfection_amplification, max_translation};
 use crate::frame_2d_transition_refinement::{
     TransitionRefinementContext, refine_tangent_transition,
 };
@@ -409,8 +408,8 @@ pub(crate) fn solve_arc_length_steps(
             imperfection_amplification: imperfection_amplification(
                 initial_imperfection,
                 &state.displacement,
-            ),
-            max_incremental_displacement: max_translation(&state.displacement),
+            )?,
+            max_incremental_displacement: max_translation(&state.displacement)?,
             displacements: state.displacement.clone(),
         });
         if !attempt.converged {

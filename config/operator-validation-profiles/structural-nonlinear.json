@@ -4,6 +4,117 @@
   "domain": "structural",
   "profiles": [
     {
+      "profile_id": "frame-fiber-integration-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "frame-fiber-integration-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.frame_2d_material_p_delta"],
+      "validation_methods": [
+        "componentwise_quadrature_error_negative_control",
+        "force_scale_and_length_unit_covariance",
+        "fully_overridden_material_default_independence",
+        "inactive_quadrature_candidate_finite_guard",
+        "retained_dense_cyclic_reference",
+        "headless_adaptive_mixed_fiber_route"
+      ],
+      "formal_invariants": [
+        "an_unrelated_large_axial_force_cannot_hide_a_resolvable_moment_integration_error",
+        "tested_force_and_length_unit_changes_preserve_adaptive_order_and_error",
+        "unused_parent_material_defaults_do_not_control_fully_overridden_fiber_integration",
+        "nonfinite_candidates_fail_with_their_order_before_quadrature_selection",
+        "local_accumulation_roundoff_is_not_mistaken_for_a_resolvable_component_error"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/frame_2d_fiber_section.rs",
+        "workers/rust/crates/solver/src/frame_2d_fiber_adaptive_tests.rs",
+        "workers/rust/crates/solver/src/frame_2d_fiber_section_cyclic_reference.rs",
+        "workers/rust/crates/solver/tests/frame_2d_fiber_section_closed_form.rs",
+        "workers/rust/crates/cli/tests/frame_2d_material_operator.rs",
+        "reports/frame-fiber-adaptive-reliability-20260923.md"
+      ],
+      "commands": [
+        {
+          "id": "frame-fiber-adaptive-kernels",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_fiber -- --nocapture"
+        },
+        {
+          "id": "frame-fiber-adaptive-public-paths",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_fiber_section_closed_form --test frame_2d_material_p_delta_closed_form -- --nocapture"
+        },
+        {
+          "id": "frame-fiber-adaptive-headless-route",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test frame_2d_material_operator -- --nocapture"
+        },
+        {
+          "id": "frame-fiber-adaptive-workflow-route",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test frame_2d_p_delta_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "frame-material-local-history-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "frame-material-local-history-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.frame_2d_material_p_delta"],
+      "validation_methods": [
+        "bilinear_return_mapping_scale_invariance",
+        "reversal_tangent_finite_difference",
+        "perfect_plastic_and_mixed_fiber_tangent",
+        "failed_reversal_committed_history_replay",
+        "nonfinite_section_history_negative_controls",
+        "headless_cyclic_material_route"
+      ],
+      "formal_invariants": [
+        "finite_material_scales_preserve_the_tested_bilinear_stress_and_tangent",
+        "perfect_plastic_loading_has_zero_tangent_and_elastic_unloading_restores_E",
+        "virgin_mixed_fibers_use_their_own_area_weighted_moduli",
+        "a_failed_reversal_cannot_commit_trial_plasticity",
+        "nonfinite_section_values_and_inactive_adaptive_histories_cannot_be_published_as_valid_states"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/frame_2d_material_p_delta.rs",
+        "workers/rust/crates/solver/src/frame_2d_fiber_section.rs",
+        "workers/rust/crates/solver/src/frame_2d_corotational_element.rs",
+        "workers/rust/crates/solver/src/frame_2d_material_reliability_tests.rs",
+        "workers/rust/crates/solver/src/frame_2d_fiber_section_tests.rs",
+        "workers/rust/crates/solver/tests/frame_2d_material_p_delta_closed_form.rs",
+        "workers/rust/crates/cli/tests/frame_2d_material_operator.rs",
+        "reports/frame-material-history-reliability-20260923.md"
+      ],
+      "commands": [
+        {
+          "id": "frame-material-return-mapping-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_material_p_delta::reliability_tests -- --nocapture"
+        },
+        {
+          "id": "frame-material-cyclic-closed-forms",
+          "kind": "analytic",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_material_p_delta_closed_form --test frame_2d_fiber_section_closed_form -- --nocapture"
+        },
+        {
+          "id": "frame-material-fiber-kernels",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_fiber -- --nocapture"
+        },
+        {
+          "id": "frame-material-headless-history-route",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test frame_2d_material_operator -- --nocapture"
+        },
+        {
+          "id": "frame-material-retained-workflow-route",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test frame_2d_p_delta_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
       "profile_id": "nonlinear-spring-1d-closed-form",
       "profile_role": "release_candidate",
       "qualification_candidate_id": "nonlinear-spring-1d-closed-form",
