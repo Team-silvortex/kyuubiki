@@ -16,14 +16,13 @@ source "$LAB_ROOT/scripts/lib/labctl_common.sh"
 usage() {
   cat <<'EOF'
 Usage:
-  ./labctl.sh list
-  ./labctl.sh run <module_name> [--run-id <id>] [--workspace <path>] [--label <text>] [--set KEY=VALUE ...]
+  bash scripts/labctl.sh list
+  bash scripts/labctl.sh run <module_name> [--run-id <id>] [--workspace <path>] [--label <text>] [--set KEY=VALUE ...]
 
 Examples:
-  ./labctl.sh list
-  ./labctl.sh run material-explore
-  ./labctl.sh run headless-template-matrix --set HEADLESS_ROUNDS=2 --set HEADLESS_MAX_VOLTAGE=3500
-  ./labctl.sh run headless-workflow --run-id research_001 --label "closed-loop smoke"
+  bash scripts/labctl.sh list
+  bash scripts/labctl.sh run headless-research-matrix
+  bash scripts/labctl.sh run headless-workflow --run-id research_001 --label "closed-loop smoke"
 
 Note:
   - 模块脚本默认会在 runs/<module>/<run_id>/ 创建隔离工作区；
@@ -122,7 +121,7 @@ execute_module() {
   local module_file="$MODULE_DIR/$module_name.sh"
   if [ ! -f "$module_file" ]; then
     echo "module not found: $module_name"
-    echo "run './labctl.sh list' first."
+    echo "run 'bash scripts/labctl.sh list' first."
     exit 1
   fi
 
@@ -157,7 +156,7 @@ execute_module() {
   local command_hint
 
   started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  command_hint="./labctl.sh run $module_name"
+  command_hint="bash scripts/labctl.sh run $module_name"
   if [ "${#module_args[@]}" -gt 0 ]; then
     command_hint="$command_hint $(printf '%s ' "${module_args[@]}")"
   fi

@@ -358,7 +358,10 @@ mod tests {
             !root.join("scripts").join(&legacy_name).exists(),
             "legacy Node catalog generator must stay deleted"
         );
-        for relative in ["make/build.mk", "scripts/validate-language-packs.mjs"] {
+        for relative in [
+            "make/build.mk",
+            "workers/rust/crates/script-runner/src/language_packs.rs",
+        ] {
             let source = fs::read_to_string(root.join(relative)).expect("build caller should load");
             assert!(
                 !source.contains(&legacy_name),

@@ -19,7 +19,7 @@ Before the repo claims `1.7.0`, we want three things to be true:
 Run the version audit before touching any versioned surface:
 
 ```bash
-node ./scripts/audit-version-line.mjs --expected 1.6.0 --next 1.7.0
+./scripts/kyuubiki audit-version-line --expected 1.6.0 --next 1.7.0
 ```
 
 That audit gives us two views:
@@ -70,8 +70,8 @@ node ./scripts/create-release-snapshot.mjs 1.7.0 --status staged --dry-run
 5. Rebuild generated release docs after contract changes:
 
 ```bash
-node ./scripts/build-update-catalog.mjs
-node ./scripts/build-installation-integrity-docs.mjs
+./scripts/kyuubiki build-update-catalog
+./scripts/kyuubiki build-installation-integrity-docs
 ```
 
 6. Run the audit again with the new expected version.
@@ -81,7 +81,7 @@ node ./scripts/build-installation-integrity-docs.mjs
 The important part is not just the next version bump. The important part is
 that future `1.x` transitions stop depending on memory and manual grep passes.
 
-`scripts/audit-version-line.mjs` is now the first checkpoint before:
+`./scripts/kyuubiki audit-version-line` is the first checkpoint before:
 
 - promoting a staged snapshot to current
 - rebuilding desktop-facing release docs

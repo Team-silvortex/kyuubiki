@@ -4,6 +4,169 @@
   "domain": "structural",
   "profiles": [
     {
+      "profile_id": "frame-equation-balance-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "frame-equation-balance-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.frame_2d_p_delta", "solve.frame_2d_material_p_delta"],
+      "validation_methods": [
+        "disconnected_mixed_scale_false_convergence_negative_controls",
+        "row_local_tangent_cancellation_scale_checks",
+        "frozen_predictor_line_search_metric",
+        "arc_length_equilibrium_cross_check_at_achieved_load",
+        "retained_cyclic_unloading_and_failed_history_replay",
+        "rust_headless_mixed_scale_routes"
+      ],
+      "formal_invariants": [
+        "tested_unrelated_large_free_load_does_not_erase_the_small_cantilever_response",
+        "row_guard_is_additional_to_the_existing_free_load_residual_requirement",
+        "line_search_trials_cannot_inflate_their_own_equation_scale",
+        "invalid_tangent_products_and_metric_dimensions_fail_closed",
+        "tested_failed_material_trials_do_not_commit_plastic_history"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/frame_2d_equilibrium_metrics.rs",
+        "workers/rust/crates/solver/src/frame_2d_equilibrium_row_tests.rs",
+        "workers/rust/crates/solver/src/frame_2d_equilibrium_tests.rs",
+        "workers/rust/crates/solver/tests/frame_2d_equilibrium_reliability.rs",
+        "workers/rust/crates/solver/tests/frame_2d_material_p_delta_closed_form.rs",
+        "workers/rust/crates/cli/tests/frame_2d_material_operator.rs",
+        "workers/rust/crates/cli/tests/frame_2d_p_delta_operator.rs",
+        "workers/rust/crates/cli/tests/support/frame_2d_equilibrium.rs",
+        "reports/frame-equation-balance-reliability-20260924.md"
+      ],
+      "commands": [
+        {
+          "id": "frame-equation-balance-kernels",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib frame_2d_equilibrium_metrics -- --nocapture"
+        },
+        {
+          "id": "frame-equation-balance-public-paths",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_equilibrium_reliability --test frame_2d_material_p_delta_closed_form --test frame_2d_p_delta_explicit_imperfection --test frame_2d_branch_controls --test frame_2d_branch_reference --test frame_2d_branch_continuation -- --nocapture"
+        },
+        {
+          "id": "frame-equation-balance-headless",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test frame_2d_material_operator --test frame_2d_p_delta_operator -- --nocapture"
+        },
+        {
+          "id": "frame-equation-balance-workflows",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test frame_2d_p_delta_workflow --test frame_2d_branch_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "frame-nonlinear-equilibrium-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "frame-nonlinear-equilibrium-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.frame_2d_p_delta", "solve.frame_2d_material_p_delta"],
+      "validation_methods": [
+        "constrained_load_false_convergence_negative_controls",
+        "load_control_and_arc_length_path_invariance",
+        "reduced_equation_map_validation",
+        "failed_trial_material_commit_control",
+        "retained_branch_and_parameter_continuation_regression",
+        "headless_support_load_and_cyclic_history_checks"
+      ],
+      "formal_invariants": [
+        "constrained_reference_loads_do_not_enlarge_free_equation_equilibrium_tolerance",
+        "line_search_and_final_convergence_use_the_same_free_dof_map",
+        "support_loads_do_not_turn_iteration_exhaustion_into_convergence",
+        "cyclic_material_history_is_independent_of_loads_carried_directly_by_constraints",
+        "malformed_reduced_maps_and_nonfinite_values_cannot_report_zero_residual"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/frame_2d_equilibrium_metrics.rs",
+        "workers/rust/crates/solver/src/frame_2d_corotational.rs",
+        "workers/rust/crates/solver/src/frame_2d_arc_length.rs",
+        "workers/rust/crates/solver/src/frame_2d_branch_constraints.rs",
+        "workers/rust/crates/solver/src/frame_2d_equilibrium_tests.rs",
+        "workers/rust/crates/solver/tests/frame_2d_equilibrium_reliability.rs",
+        "workers/rust/crates/cli/tests/frame_2d_material_operator.rs",
+        "workers/rust/crates/cli/tests/frame_2d_p_delta_operator.rs",
+        "reports/frame-nonlinear-equilibrium-reliability-20260923.md"
+      ],
+      "commands": [
+        {
+          "id": "frame-nonlinear-equilibrium-kernels",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib equilibrium_tests -- --nocapture"
+        },
+        {
+          "id": "frame-nonlinear-equilibrium-public-paths",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_equilibrium_reliability --test frame_2d_material_p_delta_closed_form --test frame_2d_p_delta_explicit_imperfection --test frame_2d_branch_controls --test frame_2d_branch_reference --test frame_2d_branch_continuation -- --nocapture"
+        },
+        {
+          "id": "frame-nonlinear-equilibrium-headless",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test frame_2d_material_operator --test frame_2d_p_delta_operator -- --nocapture"
+        },
+        {
+          "id": "frame-nonlinear-equilibrium-workflows",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test frame_2d_p_delta_workflow --test frame_2d_branch_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "frame-initial-stress-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "frame-initial-stress-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.frame_2d_material_p_delta"],
+      "validation_methods": [
+        "node_local_initial_equilibrium_negative_controls",
+        "separate_force_and_moment_length_unit_checks",
+        "unused_parent_and_unrelated_member_independence",
+        "self_equilibrated_fiber_and_support_reaction_controls",
+        "nonfinite_assembly_rejection",
+        "headless_error_and_fresh_replay"
+      ],
+      "formal_invariants": [
+        "unused_parent_strength_cannot_hide_fully_overridden_initial_fiber_stress",
+        "unrelated_nodes_do_not_supply_an_initial_equilibrium_scale",
+        "tiny_resolvable_initial_imbalance_is_not_hidden_by_an_absolute_force_floor",
+        "moment_residuals_are_not_normalized_by_translational_force_units",
+        "balanced_residual_stress_and_constrained_reactions_remain_legal",
+        "nonfinite_initial_force_or_scale_is_rejected_before_load_steps"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/frame_2d_corotational.rs",
+        "workers/rust/crates/solver/src/frame_2d_corotational_element.rs",
+        "workers/rust/crates/solver/src/frame_2d_initial_balance_tests.rs",
+        "workers/rust/crates/solver/tests/frame_2d_initial_stress_reliability.rs",
+        "workers/rust/crates/cli/tests/frame_2d_material_operator.rs",
+        "reports/frame-initial-stress-reliability-20260923.md"
+      ],
+      "commands": [
+        {
+          "id": "frame-initial-stress-kernels",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib initial_balance_tests -- --nocapture"
+        },
+        {
+          "id": "frame-initial-stress-public-paths",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_initial_stress_reliability --test frame_2d_material_p_delta_closed_form --test frame_2d_fiber_section_closed_form --test frame_2d_composite_section_closed_form -- --nocapture"
+        },
+        {
+          "id": "frame-initial-stress-headless-route",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test frame_2d_material_operator -- --nocapture"
+        },
+        {
+          "id": "frame-initial-stress-retained-workflow",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test frame_2d_p_delta_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
       "profile_id": "frame-fiber-integration-local-reliability",
       "profile_role": "component_profile",
       "qualification_candidate_id": "frame-fiber-integration-local-reliability",

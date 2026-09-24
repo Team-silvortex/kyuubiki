@@ -1,4 +1,8 @@
-## kyuubiki-playground 模块说明
+## 保留的研究回归包装模块
+
+这里不是产品的算子库或架构模块注册表，只保留仍有实际脚本入口的研究回归包装。
+原先从研究工作区复制、但目标脚本已不存在的八个包装已移除；不再把它们列成可运行能力。
+产品自动化优先使用 `scripts/kyuubiki` 的原生入口及 `make` 回归目标。
 
 模块目录采用“一个研究场景一个模块”的结构，每个模块文件只做三件事：
 
@@ -15,20 +19,13 @@
 
 ### 已注册模块
 
-- `material-explore` -> `run_dielectric_screening.sh`
 - `headless-workflow` -> `run_headless_workflow_regression.sh`
-- `headless-template-matrix` -> `run_headless_template_matrix.sh`
-- `chain-next-regression` -> `run_chain_next_regression.sh`
-- `headless-fault-injection` -> `run_headless_fault_injection_regression.sh`
-- `boundary-regression` -> `run_material_explore_boundary_regression.sh`
-- `large-mesh-auto-fallback` -> `run_large_mesh_auto_fallback.sh`
-- `headless-service-rerun` -> `run_headless_service_rerun_fixed.sh`
-- `service-port-matrix` -> `run_service_port_matrix.sh`
+- `headless-research-matrix` -> `run_headless_research_matrix.sh`
 
 ### 运行标准
 
-1. `./labctl.sh list`：列出模块能力
-2. `./labctl.sh run <module>`：执行模块
+1. `bash scripts/labctl.sh list`：列出保留的研究包装
+2. `bash scripts/labctl.sh run <module>`：执行模块
 3. 输出落在 `runs/<module>/<run_id>/`
 4. 每次运行都会生成：
    - `steps/<step>.out|.err|.status`
@@ -37,6 +34,6 @@
 
 ### 设计约束
 
-- 旧脚本仍保留，避免大规模重写
-- 模块通过标准入口调用旧脚本，便于快速把新实验“入队列”
+- 不注册指向缺失脚本的模块，不复制产品原生执行逻辑
+- 这两个研究包装不代表产品全部功能或回归覆盖率
 - 推荐在 `--set` 中显式指定环境变量（例如 `HEADLESS_ROUNDS`）保证复现性

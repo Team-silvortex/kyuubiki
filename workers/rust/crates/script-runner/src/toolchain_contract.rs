@@ -146,7 +146,7 @@ fn validate_toolchain_contract(root: &Path, contract: &Value) -> RunnerResult<Ve
     require_file_tokens(
         root,
         &mut issues,
-        "scripts/check-elixir-self-host.mjs",
+        "workers/rust/crates/script-runner/src/elixir_self_host.rs",
         &[
             ("config/toolchains.json", "shared toolchain contract"),
             ("apps/web/mix.exs", "web Mix contract"),

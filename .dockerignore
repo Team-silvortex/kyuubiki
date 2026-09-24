@@ -15,8 +15,14 @@ deps
 apps/web/deps
 target
 workers/rust/target
-tmp/run
-tmp/direct-mesh-benchmark-container
+tmp
+results
+runs
+headless-loop
+chain-next-regression
+.env
+.env.*
+!.env.example
 apps/frontend/tsconfig.tsbuildinfo
 coverage
 cover

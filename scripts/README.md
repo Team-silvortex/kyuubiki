@@ -2,6 +2,12 @@
 
 This directory contains host-native operational entry points.
 
+Use `./scripts/kyuubiki <command>` (or `kyuubiki.cmd` on Windows) for the native
+commands below. Replaced Node implementations for repository audits, docs,
+language-pack validation, material research, and benchmark comparison have been
+removed; do not restore them as unused compatibility copies. Git history keeps
+their implementation history. UI build/browser-test tooling remains separate.
+
 - `kyuubiki`
   Thin compatibility shim for the native Rust `kyuubiki-script-runner`
   binary. Its freshness check covers workspace Rust sources, manifests, and
@@ -27,10 +33,10 @@ This directory contains host-native operational entry points.
   and Rust workspace source versions to match the requested version before the
   snapshot is written, so release metadata cannot capture stale product-surface
   versions.
-- `build-update-catalog.mjs`
+- `kyuubiki-script-runner build-update-catalog`
   Generate the shared update catalog JSON plus HTML docs from release snapshots
   and the human-owned channel contract.
-- `build-installation-integrity-docs.mjs`
+- `kyuubiki-script-runner build-installation-integrity-docs`
   Generate the installation integrity HTML docs for both the repository-level
   book and the Hub-facing mirror shelf.
 - `upload-desktop-release-remote.sh`
@@ -43,8 +49,7 @@ This directory contains host-native operational entry points.
   release points. The exact-contract lane includes release metadata, package
   metadata, generated docs mirrors, update catalogs, shipped language-pack
   catalog versions, and hand-maintained Markdown facts such as
-  `current-line.md` and `version-line.md`. The retained `.mjs` script is only a
-  parity reference.
+  `current-line.md` and `version-line.md`.
 - `kyuubiki-script-runner rust-line-audit`
   Native Rust source line-count audit, currently `800` lines per file by
   default, so crate and test modules stay split before they become hard to
@@ -64,8 +69,7 @@ This directory contains host-native operational entry points.
 - `kyuubiki-script-runner check-doc-book`
   Native docs-book and Hub mirror check. It replaces the Make-level Node
   invocation for centralized book version alignment, required chapter markers,
-  local-link validation, and legacy wording rejection. The old
-  `check-doc-book.mjs` remains as a compatibility script for direct callers.
+  local-link validation, and legacy wording rejection.
 - `kyuubiki-script-runner check-doc-inventory`
   Native inventory guard that verifies every local `docs/*.md/html/json` file
   is mentioned in `docs/README.md` and every Hub shelf page is mentioned in
@@ -77,8 +81,7 @@ This directory contains host-native operational entry points.
 - `kyuubiki-script-runner check-toolchain-contract`
   Native toolchain drift check for `config/toolchains.json`, Rust toolchain
   pins, Docker bases, Elixir constraints, embedded runtime references, remote
-  defaults, and package Node engines. The legacy
-  `check-toolchain-contract.mjs` remains available for direct compatibility.
+  defaults, and package Node engines.
 - `kyuubiki-script-runner check-install-update-disk-hygiene`
   Native install/update disk-use contract check. It keeps release upload,
   remote artifact authority, local purge allowlists, rollback visibility, and
@@ -103,8 +106,7 @@ This directory contains host-native operational entry points.
   validates tensor lane mappings and contract evidence, derives gap severity,
   marks required covered cells as `strong`, `medium`, or `thin`, and writes the
   retained JSON/Markdown tensor report while preserving `--out` and
-  `--self-test`. The retained Node script mirrors these fields for compatibility
-  while Make uses the native runner.
+  `--self-test`. Make uses the native runner as the single implementation.
 - `kyuubiki-script-runner check-desktop-ui-validation`
   Native desktop UI qualification report owner. It executes the configured
   Node browser tests with TAP output, validates three-shell action thresholds
@@ -116,7 +118,8 @@ This directory contains host-native operational entry points.
   line ceiling, while explicitly tracked historical debt files are allowed only
   up to their current debt limit. It also keeps installer `tests.rs` as a
   module index instead of a growing test bucket. Use `--self-test` to verify
-  the audit helper rules themselves.
+  the audit helper rules themselves. Tracked generated/local files matched by
+  `.gitignore` are rejected even when they live inside an owned source folder.
 - `kyuubiki-script-runner audit-dependencies`
   Run the security dependency audit lanes that require lockfiles: npm
   production audits for frontend/desktop packages plus RustSec audits for the
@@ -128,10 +131,6 @@ This directory contains host-native operational entry points.
   the repository organization audit self-test and scan, dependency audits,
   external operator package preflight, docs manifest JSON validation, focused
   Operator TaskIR API tests, and the Rust headless live operator task test.
-- `check-doc-book.mjs`
-  Legacy compatibility entry for the docs-book check. Prefer
-  `./scripts/kyuubiki check-doc-book` or `make check-doc-book` for new
-  automation.
 - `kyuubiki-script-runner check-elixir-self-host`
   Verify the Elixir/Mix/OTP runtime plus the orchestrator self-host
   environment contract before a machine is treated as installer-managed.
@@ -147,8 +146,7 @@ This directory contains host-native operational entry points.
   path safety, required override-key coverage, and unsafe-text rejection for UI
   copy. It also checks that all 30 locale rows, translated payloads, and language
   options are projected into the Workbench TypeScript runtime without spawning
-  Node. Make uses this native runner; the retained `.mjs` script is only a
-  parity reference.
+  Node. Make and direct callers use this native runner.
 - `kyuubiki-script-runner build-workbench-language-pack-catalog`
   Native deterministic generator for the built-in Workbench TypeScript catalog.
   It validates fragment identity, safe paths, timestamps, and unsafe text before
@@ -171,8 +169,7 @@ This directory contains host-native operational entry points.
 - `kyuubiki-script-runner check-ui-automation-contract`
   Verify the product-owned Workbench UI automation selector contract across the
   JSON contract, HTML documentation, TypeScript helper, and implementation
-  files. Make now uses the native runner; the retained `.mjs` script is only a
-  parity reference.
+  files. Make and direct callers use the native runner.
 - `kyuubiki-script-runner check-gui-runtime-capability-contract`
   Verify GUI-to-runtime capability manifests, mobile WebView boundaries,
   frontend capability helpers, and Workbench backend-service indirection. Make
@@ -247,8 +244,7 @@ This directory contains host-native operational entry points.
 - `kyuubiki-script-runner check-verification-evidence-surface`
   Verify the verification-evidence runtime surface, including stable evidence
   commands, generated artifacts under `tmp/`, and the central readiness report
-  generation/check pair. The retained `.mjs` script is kept only as a parity
-  reference while Make uses the native runner.
+  generation/check pair through the native runner.
 - `run-central-database-smoke.mjs`
   Run the central-store database smoke wrapper. It always runs readiness first;
   by default it is a dry-run, and only executes Postgres-backed Elixir tests
@@ -262,8 +258,7 @@ This directory contains host-native operational entry points.
   Verify the product-owned Workbench automation selector contract. It compares
   `docs/ui-automation-contract.json`, the frontend TS selector constants, and
   the component implementation anchors used by wasm-python and UI smoke tests.
-  Use `--self-test` when changing selector coverage. The retained `.mjs` script
-  is only a parity reference.
+  Use `--self-test` when changing selector coverage.
 - `kyuubiki-script-runner check-operator-task-ir-contract`
   Verify the language-neutral TaskIR schema extension and shipped TaskIR
   examples. It checks that mirrored fields such as operator kind, package ref,
@@ -301,14 +296,12 @@ This directory contains host-native operational entry points.
   Verify the shared material candidate materialization plan schema, fixture,
   and SDK documentation links. It keeps reviewed agent/lab materialization
   output aligned with the solver-rerun runner contract before SDK parity work
-  consumes the same artifact. Make now uses the native runner; the retained
-  `.mjs` script is only a parity reference.
+  consumes the same artifact. Make and direct callers use the native runner.
 - `kyuubiki-script-runner check-material-study-execution-plan-contract`
   Verify the shared non-executing material study execution plan schema,
   fixture, and SDK documentation links. It keeps `--plan-study` output aligned
   with headless SDK and remote scheduler expectations before solver dispatch.
-  Make now uses the native runner; the retained `.mjs` script is only a parity
-  reference.
+  Make and direct callers use the native runner.
 - `kyuubiki-script-runner build-material-research-bundle`,
   `kyuubiki-script-runner check-material-research-bundle`,
   `kyuubiki-script-runner build-material-research-bundle-index`, and
@@ -340,8 +333,8 @@ This directory contains host-native operational entry points.
   `schemas/material-research-bundle-index.schema.json`,
   `schemas/examples.material-research-bundle.json`,
   `schemas/examples.material-research-bundle-index.json`, and documentation links in
-  sync without running the solver. Make now uses the native runner for runtime
-  and contract checks; retained `.mjs` checkers are only parity references.
+  sync without running the solver. Make and direct callers use the native
+  runner for runtime and contract checks.
 - `operator-reliability-*.mjs` and `check-operator-reliability*.mjs`
   Operator reliability gate family. `operator-reliability-contracts.mjs`
   centralizes config/schema paths and schema versions,
@@ -424,10 +417,6 @@ This directory contains host-native operational entry points.
   Verify the narrower `moxi 2.x` minimum industrial closure manifest
   against its Markdown gate, including gate count, evidence links, supported
   state values, and the shared exit statement.
-- `sync-doc-book-version.mjs`
-  Update the hand-maintained book entry pages to the current development version,
-  shipping-version chip, current-prep chip, and book manifest shipping version
-  without touching the generated installation or update-catalog pages.
 - `release-metadata.mjs`
   Shared release-path, JSON, artifact, and shipping-version helpers used by the
   release and installation-doc generators.
@@ -513,8 +502,7 @@ Useful checks:
   Run only the operator reliability schema/config version smoke without loading
   benchmark catalogs, workflow payloads, or evidence files. This covers
   schema-version alignment and required-field presence, not full JSON Schema
-  validation. Make now uses the native runner; the retained `.mjs` script is
-  only a parity reference.
+  validation. Make and direct callers use the native runner.
 - `make check-materialization-plan-contract`
   Run the zero-dependency materialized candidate plan contract check and its
   self-test. Use this after changing
@@ -526,15 +514,15 @@ Useful checks:
   self-test. Use this after changing
   `schemas/material-exploration-chain.schema.json`,
   `schemas/examples.material-exploration-chain.json`, chain convergence
-  fields, optimization trace fields, or SDK chain documentation. Make now uses
-  the native runner; the retained `.mjs` script is only a parity reference.
+  fields, optimization trace fields, or SDK chain documentation. Make and direct
+  callers use the native runner.
 - `make check-material-research-bundle-contract`
   Run the zero-dependency retained material research bundle contract check and
   its self-test. Use this after changing
   `schemas/material-research-bundle.schema.json`,
   `schemas/examples.material-research-bundle.json`, retained summary fields,
   next-round execution-plan fields, or bundle documentation. Make now uses the
-  native runner; the retained `.mjs` script is only a parity reference. Add
+  native runner. Add
   contract negative fixtures to
   `workers/rust/crates/script-runner/src/material_research_bundle_contract_self_test.rs`
   instead of growing the main checker module.

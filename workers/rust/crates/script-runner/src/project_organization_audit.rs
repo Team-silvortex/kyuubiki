@@ -110,6 +110,13 @@ fn audit(
     let mut violations = Vec::new();
     let project_files = project_files(root)?;
     violations.extend(root_hygiene_violations(&project_files));
+    violations.extend(tracked_ignored_violations(
+        &git_lines(
+            root,
+            &["ls-files", "--cached", "--ignored", "--exclude-standard"],
+        )?,
+        &|relative_path| root.join(relative_path).symlink_metadata().is_ok(),
+    ));
     for relative_path in project_files {
         if !should_check(&relative_path) {
             continue;
@@ -153,6 +160,21 @@ fn root_hygiene_violations(paths: &[String]) -> Vec<Violation> {
                 path,
                 "repository-root-allowlist",
                 "path is outside the repository root ownership map; move it into an owned module or an ignored runtime directory",
+            )
+        })
+        .collect()
+}
+
+fn tracked_ignored_violations(paths: &[String], exists: &dyn Fn(&str) -> bool) -> Vec<Violation> {
+    paths
+        .iter()
+        // Unstaged deletions are expected during cleanup; restored caches must fail again.
+        .filter(|path| exists(path))
+        .map(|path| {
+            custom_violation(
+                path,
+                "tracked-ignored-artifact",
+                "tracked file matches gitignore; remove generated/local state from version control or declare an intentional exception",
             )
         })
         .collect()
@@ -556,6 +578,13 @@ fn run_self_test() -> RunnerResult<()> {
         root_hygiene_violations(&["PLACEHOLDER".to_string()]),
         "repository-root-allowlist",
     )?;
+    assert_limit(
+        tracked_ignored_violations(&["apps/frontend/tsconfig.tsbuildinfo".into()], &|_| true),
+        "tracked-ignored-artifact",
+    )?;
+    if !tracked_ignored_violations(&["deleted-cache".into()], &|_| false).is_empty() {
+        return Err("self-test expected removed generated files to pass".to_string());
+    }
     let valid_readme = README_REQUIRED_MARKERS.join("\n");
     if !readme_identity_violations(&valid_readme).is_empty() {
         return Err("self-test expected Kyuubiki README anchors to pass".to_string());
@@ -579,7 +608,7 @@ fn assert_limit(violations: Vec<Violation>, expected: &str) -> RunnerResult<()> 
 mod tests {
     use super::{
         installer_test_index_violations, is_allowed_repository_path, is_ignored_path,
-        line_count_like_node, line_limit_for_path, module_declaration,
+        line_count_like_node, line_limit_for_path, module_declaration, tracked_ignored_violations,
     };
 
     #[test]
@@ -620,6 +649,85 @@ mod tests {
         assert!(is_allowed_repository_path("apps/frontend/package.json"));
         assert!(!is_allowed_repository_path("PLACEHOLDER"));
         assert!(!is_allowed_repository_path("research-scripts/run.sh"));
+    }
+
+    #[test]
+    fn tracked_ignored_files_fail_even_inside_owned_source_directories() {
+        let violations = tracked_ignored_violations(
+            &[
+                "apps/frontend/tsconfig.tsbuildinfo".into(),
+                "workers/rust/target/local-artifact".into(),
+                "tmp/deleted-cache".into(),
+            ],
+            &|path| path != "tmp/deleted-cache",
+        );
+        assert_eq!(violations.len(), 2);
+        assert!(
+            violations
+                .iter()
+                .all(|v| v.limit == "tracked-ignored-artifact")
+        );
+    }
+
+    #[test]
+    fn git_inventory_detects_forced_cache_but_preserves_lockfile_exceptions() {
+        use std::{fs, process::Command};
+
+        struct Scratch(std::path::PathBuf);
+        impl Drop for Scratch {
+            fn drop(&mut self) {
+                let _ = fs::remove_dir_all(&self.0);
+            }
+        }
+        let mut nonce = [0_u8; 16];
+        getrandom::fill(&mut nonce).unwrap();
+        let scratch = Scratch(std::env::temp_dir().join(format!(
+            "kyuubiki-organization-{:032x}",
+            u128::from_le_bytes(nonce)
+        )));
+        let root = &scratch.0;
+        fs::create_dir(root).unwrap();
+        fs::create_dir_all(root.join("workers/rust")).unwrap();
+        fs::write(
+            root.join(".gitignore"),
+            "*.tsbuildinfo\nCargo.lock\n!workers/rust/Cargo.lock\n",
+        )
+        .unwrap();
+        fs::write(root.join("cache.tsbuildinfo"), "generated").unwrap();
+        fs::write(root.join("workers/rust/Cargo.lock"), "owned").unwrap();
+        for args in [
+            vec!["init", "--quiet"],
+            vec![
+                "add",
+                "--force",
+                ".gitignore",
+                "cache.tsbuildinfo",
+                "workers/rust/Cargo.lock",
+            ],
+        ] {
+            let output = Command::new("git")
+                .args(args)
+                .current_dir(root)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+        let ignored = super::git_lines(
+            root,
+            &["ls-files", "--cached", "--ignored", "--exclude-standard"],
+        )
+        .unwrap();
+        assert_eq!(ignored, ["cache.tsbuildinfo"]);
+        let exists = |path: &str| root.join(path).symlink_metadata().is_ok();
+        assert_eq!(tracked_ignored_violations(&ignored, &exists).len(), 1);
+        fs::remove_file(root.join("cache.tsbuildinfo")).unwrap();
+        assert!(tracked_ignored_violations(&ignored, &exists).is_empty());
+        fs::write(root.join("cache.tsbuildinfo"), "regenerated").unwrap();
+        assert_eq!(tracked_ignored_violations(&ignored, &exists).len(), 1);
     }
 
     #[test]

@@ -1,6 +1,6 @@
 use crate::frame_2d_branch_switch::BranchSwitchContext;
-use crate::frame_2d_corotational::normalized_residual;
 use crate::frame_2d_corotational_element::{assemble_internal, assemble_tangent_and_internal};
+use crate::frame_2d_equilibrium_metrics::EquilibriumMetric;
 use crate::linear_algebra::{reduce_sparse_system, sparse_to_dense};
 use crate::linear_dense::solve_linear_system;
 
@@ -65,11 +65,14 @@ pub(crate) fn solve_modal_constraints(
         let (reduced_tangent, reduced_residual, free) =
             reduce_sparse_system(&tangent, &residual, &context.system.constrained_dofs)?;
         debug_assert_eq!(free, context.free_dofs);
-        state.residual_norm = normalized_residual(
-            &reduced_residual,
+        state.residual_norm = EquilibriumMetric::new(
+            &tangent,
+            &state.displacement,
             &context.system.reference_force,
             state.load_factor,
-        );
+            &free,
+        )?
+        .norm(&reduced_residual);
         let constraint_residuals =
             constraint_residuals(&state.displacement, critical_displacement, constraints);
         state.constraint_error =
@@ -83,15 +86,28 @@ pub(crate) fn solve_modal_constraints(
             &reduced_reference,
             &reduced_modes,
             constraints,
-            reduced_residual,
+            reduced_residual.clone(),
             constraint_residuals,
         )?;
+        let search_metric = EquilibriumMetric::for_increment(
+            &tangent,
+            &state.displacement,
+            &context.system.reference_force,
+            state.load_factor,
+            &free,
+            &correction[..free.len()],
+        )?;
+        let current_objective = search_metric
+            .norm(&reduced_residual)
+            .max(state.constraint_error);
         if !apply_backtracked_correction(
             context,
             critical_displacement,
             constraints,
             constraint_scale,
             &correction,
+            &search_metric,
+            current_objective,
             state,
         )? {
             return Err("branch-switch line search failed to reduce the coupled residual".into());
@@ -173,15 +189,17 @@ fn orthogonal_gauge_modes(
         .collect())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn apply_backtracked_correction(
     context: &BranchSwitchContext<'_>,
     critical_displacement: &[f64],
     constraints: &[ModalConstraint<'_>],
     constraint_scale: f64,
     correction: &[f64],
+    metric: &EquilibriumMetric,
+    current_objective: f64,
     state: &mut BranchState,
 ) -> Result<bool, String> {
-    let current_objective = state.residual_norm.max(state.constraint_error);
     let displacement_correction = &correction[..context.free_dofs.len()];
     let load_correction = correction[context.free_dofs.len()];
     let mut scale = 1.0;
@@ -212,11 +230,7 @@ fn apply_backtracked_correction(
             .iter()
             .map(|&dof| trial_residual[dof])
             .collect::<Vec<_>>();
-        let residual_norm = normalized_residual(
-            &reduced_residual,
-            &context.system.reference_force,
-            trial_load_factor,
-        );
+        let residual_norm = metric.norm(&reduced_residual);
         let constraint_residuals =
             constraint_residuals(&trial_displacement, critical_displacement, constraints);
         let constraint_error = normalized_constraint_error(&constraint_residuals, constraint_scale);

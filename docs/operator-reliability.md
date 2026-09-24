@@ -430,6 +430,106 @@ The native thermoelastic Q4 formulas are retained at
 mesh/refinement regression lives at
 `workers/rust/crates/solver/tests/thermal_plane_mesh_refinement_regression.rs`.
 
+## Frame Equation-Balance Reliability
+
+The 2026-09-24 [equation-balance regression](../reports/frame-equation-balance-reliability-20260924.md)
+extends the support-load fix to a bounded mixed-free-equation case. A very
+large load on a disconnected axial member previously hid residuals in a
+small cantilever, including end moments. Three negative controls reproduced
+changed displacements and false acceptance of an exhausted Newton budget.
+
+The shared `EquilibriumMetric` now checks each free equation using its own
+reference load and absolute `K_ij * u_j` terms, in addition to the retained
+global free-load residual. Terms in a moment row therefore have moment units,
+not an unrelated model-wide force scale. Absolute tangent terms preserve a
+local cancellation scale for unloaded equations. The metric uses scaled sums
+and rejects nonfinite terms, malformed dimensions and invalid free mappings.
+
+Load control, arc length, parameter continuation and modal correction share
+this guard. Backtracking freezes a metric from the current state and full
+Newton predictor before trying any step length; a trial cannot relax its own
+scale by increasing displacement or load factor. No extra tangent solve or
+section integration is introduced by this metric. Storage is linear in the
+number of DOFs and the traversal uses existing sparse tangent rows.
+
+The `frame-equation-balance-local-reliability` profile covers disconnected
+strong/weak loads, force/moment controls, frozen search scales, cyclic history,
+failed-state replay and in-process Rust headless/workflow routes. Arc paths
+are compared with independently load-controlled solutions at their achieved
+load factors, not assumed to have unchanged arc parameterization.
+
+This is an additional local convergence guard, not a displacement-error,
+mesh-error or constitutive-accuracy certificate. The existing absolute and
+load-factor floors remain; complete unit invariance, arbitrary reference-load
+reparameterization, near-singular coupled-system accuracy and large-scale
+performance qualification remain separate work. Public schemas and material
+commit policy are unchanged.
+
+## Frame Nonlinear-Equilibrium Reliability
+
+The 2026-09-23 [nonlinear-equilibrium regression](../reports/frame-nonlinear-equilibrium-reliability-20260923.md)
+fixes support-load contamination of `solve.frame_2d_p_delta` and
+`solve.frame_2d_material_p_delta` convergence. The old check normalized a
+reduced free-equation residual by the entire reference load vector. Large
+loads at constrained DOFs could therefore certify an unequilibrated trial,
+alter arc-length adaptation or prevent cyclic plasticity from being computed.
+
+The shared normalization now requires the free-DOF map and derives its
+reference scale only from those equations. Load-control convergence and
+backtracking, arc-length correction, parameter continuation, and branch-modal
+correction/backtracking all pass the same reduced mapping used by their
+linear systems. Invalid map dimensions or indices fail closed; nonfinite
+input remains invalid even when it belongs to a support.
+
+Public schemas, solver tolerances, load-factor normalization floors and
+history commit policy are unchanged. This removes support loads from the
+scale; it does not remove them from the model or suppress their reactions.
+The `frame-nonlinear-equilibrium-local-reliability` profile retains constrained
+load negative controls, ordinary linearized paths, cyclic histories, failed
+trial/replay checks, and in-process Rust headless and workflow routes.
+
+This is bounded support-load isolation evidence. The subsequent equation-balance
+guard above adds mixed-scale negative controls; neither check is a general
+force/moment accuracy certificate. Length-unit nondimensionalization and
+arbitrary reference-load/load-factor reparameterization remain separate work.
+No general nonlinear qualification, remote execution or performance gain is
+claimed here.
+
+## Frame Initial-Stress Reliability
+
+The 2026-09-23 [initial-stress regression](../reports/frame-initial-stress-reliability-20260923.md)
+corrects the zero-load equilibrium preflight for
+`solve.frame_2d_material_p_delta`. Previously, a global maximum of element
+area times parent yield strength, with an absolute floor, could accept a
+nonequilibrated initial stress. Fully overridden parent material defaults or
+an unrelated member could alter acceptance. Comparing moments against that
+force scale also made the decision depend on length units.
+
+Initial assembly now retains both signed forces and local absolute section
+contributions. Each node's free translational residual is normalized by its
+incident force contributions; its free rotational residual uses the incident
+end-moment contributions separately. The force scale is an orientation-free
+bound from axial force and end moments divided by member length. Fiber sums
+remain available even when their section resultants cancel. Constraint
+reactions are not tested as free-equation residuals.
+
+The relative preflight threshold remains `1e-9`, with no absolute force floor
+or yield-strength denominator. Normalize before evaluating the translation
+norm; reject nonfinite forces or scales before comparison. Errors identify
+the node index, translation/rotation component, relative residual and local
+scale. Both the reference buckling baseline and imperfect initial geometry
+use this guard. Newton tolerances, material commit policy and public task
+and result formats are unchanged.
+
+The `frame-initial-stress-local-reliability` component profile includes
+tiny uniform prestress, mixed-fiber overrides, supported-member isolation,
+length-unit changes, self-equilibrated residual-stress controls, constrained
+reactions, finite-range guards and in-process Rust headless rejection/replay.
+This is a relative node-local force-norm check, not exact equilibrium or a
+separate bound for each translational component. It does not certify global
+accuracy, prestress-relaxation workflows, arbitrary residual-stress fields,
+durable restart, remote execution or installed GUI behavior.
+
 ## Adaptive Fiber-Integration Reliability
 
 The 2026-09-23 [adaptive fiber regression](../reports/frame-fiber-adaptive-reliability-20260923.md)

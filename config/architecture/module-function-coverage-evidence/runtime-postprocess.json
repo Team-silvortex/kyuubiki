@@ -1,8 +1,94 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Scoped planar heat and thermal-stress result construction retains installed recovery and paired overhead evidence. Separate bounded local mechanical, electrostatic, magnetostatic and Stokes output-range regression, frame modal-spectrum regression, transient-spring time-stepping, harmonic-spring sweep, beam/frame buckling assembly, P-Delta path diagnostics, frame material-history recovery and adaptive fiber integration are verified only in process, without broad physics qualification. Retained-input cloning, serialization, and other operator scopes remain separate coverage.",
+  "summary": "Scoped planar heat and thermal-stress result construction retains installed recovery and paired overhead evidence. Separate bounded local mechanical, electrostatic, magnetostatic and Stokes output-range regression, frame modal-spectrum regression, transient-spring time-stepping, harmonic-spring sweep, beam/frame buckling assembly, P-Delta path diagnostics, frame material-history recovery, adaptive fiber integration, initial-stress preflight, nonlinear support-load isolation and mixed-scale equation guards are verified only in process, without broad physics qualification. Retained-input cloning, serialization, and other operator scopes remain separate coverage.",
   "evidence_claims": [
+    {
+      "id": "frame-equation-balance-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/frame_2d_equilibrium_metrics.rs",
+        "workers/rust/crates/solver/src/frame_2d_equilibrium_row_tests.rs",
+        "workers/rust/crates/solver/tests/frame_2d_equilibrium_reliability.rs",
+        "workers/rust/crates/solver/tests/frame_2d_material_p_delta_closed_form.rs",
+        "workers/rust/crates/cli/tests/frame_2d_material_operator.rs",
+        "workers/rust/crates/cli/tests/frame_2d_p_delta_operator.rs",
+        "workers/rust/crates/cli/tests/support/frame_2d_equilibrium.rs",
+        "config/operator-validation-profiles/structural-nonlinear.json",
+        "reports/frame-equation-balance-reliability-20260924.md"
+      ],
+      "required_text": [
+        "row_metric_never_relaxes_the_existing_global_residual_requirement",
+        "row_metric_is_frozen_while_trials_are_compared",
+        "unrelated_large_free_force_cannot_mask_free_moment_equilibrium",
+        "arc_length_keeps_the_weak_branch_in_equilibrium_at_its_actual_load_factor",
+        "headless_unrelated_free_load_does_not_erase_cyclic_material_history",
+        "headless_unrelated_free_load_cannot_commit_an_unbalanced_material_trial",
+        "headless_mixed_scale_load_and_arc_paths_preserve_the_small_branch",
+        "This is bounded local equation-balance validation, not a general nonlinear error certificate or structural qualification."
+      ]
+    },
+    {
+      "id": "frame-nonlinear-equilibrium-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/frame_2d_equilibrium_metrics.rs",
+        "workers/rust/crates/solver/src/frame_2d_corotational.rs",
+        "workers/rust/crates/solver/src/frame_2d_arc_length.rs",
+        "workers/rust/crates/solver/src/frame_2d_branch_constraints.rs",
+        "workers/rust/crates/solver/src/frame_2d_equilibrium_tests.rs",
+        "workers/rust/crates/solver/tests/frame_2d_equilibrium_reliability.rs",
+        "workers/rust/crates/cli/tests/frame_2d_material_operator.rs",
+        "workers/rust/crates/cli/tests/frame_2d_p_delta_operator.rs",
+        "config/operator-validation-profiles/structural-nonlinear.json",
+        "reports/frame-nonlinear-equilibrium-reliability-20260923.md"
+      ],
+      "required_text": [
+        "nonlinear_equilibrium_normalization_ignores_constrained_reference_loads",
+        "nonlinear_equilibrium_rejects_invalid_reduced_dimensions_and_indices",
+        "constrained_loads_cannot_falsely_converge_the_corotational_path",
+        "constrained_loads_do_not_change_arc_length_equilibrium_or_step_adaptation",
+        "headless_support_loads_do_not_erase_cyclic_material_history",
+        "headless_support_loads_cannot_certify_a_failed_trial_or_commit_its_material_state",
+        "headless_nonlinear_paths_use_free_loads_for_equilibrium",
+        "This is bounded local support-load isolation validation, not general nonlinear equilibrium or mixed-scale accuracy qualification."
+      ]
+    },
+    {
+      "id": "frame-initial-stress-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/frame_2d_corotational.rs",
+        "workers/rust/crates/solver/src/frame_2d_corotational_element.rs",
+        "workers/rust/crates/solver/src/frame_2d_initial_balance_tests.rs",
+        "workers/rust/crates/solver/tests/frame_2d_initial_stress_reliability.rs",
+        "workers/rust/crates/cli/tests/frame_2d_material_operator.rs",
+        "config/operator-validation-profiles/structural-nonlinear.json",
+        "reports/frame-initial-stress-reliability-20260923.md"
+      ],
+      "required_text": [
+        "tiny_uniform_prestress_is_not_hidden_by_yield_strength_or_an_absolute_floor",
+        "unused_parent_strength_cannot_mask_overridden_fiber_prestress",
+        "unrelated_supported_member_cannot_relax_free_node_initial_equilibrium",
+        "unbalanced_initial_moment_is_rejected_in_every_tested_length_unit",
+        "initial_assembly_rejects_overflow_in_force_or_absolute_contribution_sums",
+        "headless_rejects_tiny_initial_imbalance_then_replays_a_valid_plan",
+        "headless_balanced_mixed_fiber_prestress_remains_observable",
+        "This is bounded local initial-stress equilibrium validation, not general prestress or nonlinear structural qualification."
+      ]
+    },
     {
       "id": "frame-fiber-integration-local-reliability",
       "status": "proven",

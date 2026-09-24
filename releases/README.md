@@ -94,7 +94,7 @@ advances:
 Regenerate the unified update catalog after channel or snapshot changes with:
 
 ```bash
-node ./scripts/build-update-catalog.mjs
+./scripts/kyuubiki build-update-catalog
 ```
 
 ## Current policy

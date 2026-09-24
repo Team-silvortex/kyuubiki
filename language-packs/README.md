@@ -45,5 +45,5 @@ HTML, JavaScript URLs, inline event handlers, browser-storage access, or script
 evaluation. Workbench and Hub local import paths mirror the same unsafe-text
 rule before a pack or override registry can enter UI copy state.
 
-The retained Node entrypoint `node ./scripts/validate-language-packs.mjs` is
-kept for local compatibility, but the Make target is the release gate.
+Direct callers use `./scripts/kyuubiki validate-language-packs`; the Make target
+runs the same native release gate. The obsolete Node validator was removed.

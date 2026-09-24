@@ -10,7 +10,7 @@ pub(crate) struct Frame2dSectionResponse {
     pub(crate) axial_force: f64,
     pub(crate) moment_i: f64,
     pub(crate) moment_j: f64,
-    absolute_force_sums: [f64; 3],
+    pub(crate) absolute_force_sums: [f64; 3],
     pub(crate) tangent: [[f64; 3]; 3],
     pub(crate) history: Frame2dMaterialHistory,
     pub(crate) average_stress: f64,

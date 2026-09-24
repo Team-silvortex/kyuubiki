@@ -2,6 +2,7 @@ use crate::frame_2d_fiber_section::section_response;
 use crate::frame_2d_material_p_delta::{CompiledFrame2dMaterial, Frame2dMaterialHistory};
 use crate::frame_2d_math::frame_dof_map;
 use crate::linear_algebra::{SparseMatrix, add_at};
+use crate::solver_control::check_cancellation;
 use kyuubiki_protocol::Frame2dElementInput;
 
 pub(crate) fn assemble_tangent_and_internal(
@@ -101,6 +102,53 @@ fn element_internal_force(
     material: Option<&CompiledFrame2dMaterial>,
     committed: &Frame2dMaterialHistory,
 ) -> Result<[f64; 6], String> {
+    element_internal_force_with_scales(positions, element, displacement, material, committed, None)
+}
+
+pub(crate) fn assemble_initial_material_forces(
+    positions: &[(f64, f64)],
+    elements: &[Frame2dElementInput],
+    displacement: &[f64],
+    materials: &[Option<CompiledFrame2dMaterial>],
+    histories: &[Frame2dMaterialHistory],
+) -> Result<(Vec<f64>, Vec<f64>), String> {
+    let mut internal = vec![0.0; displacement.len()];
+    let mut scales = vec![0.0; displacement.len()];
+    for (index, element) in elements.iter().enumerate() {
+        check_cancellation()?;
+        let map = frame_dof_map(element.node_i, element.node_j);
+        let history = histories.get(index).cloned().unwrap_or_default();
+        let mut local_scales = [0.0; 6];
+        let force = element_internal_force_with_scales(
+            positions,
+            element,
+            &gather(displacement, &map),
+            materials.get(index).and_then(Option::as_ref),
+            &history,
+            Some(&mut local_scales),
+        )?;
+        for row in 0..6 {
+            internal[map[row]] += force[row];
+            scales[map[row]] += local_scales[row];
+            if !internal[map[row]].is_finite() || !scales[map[row]].is_finite() {
+                return Err(format!(
+                    "frame 2d element '{}' initial material force or scale is non-finite at DOF {}",
+                    element.id, map[row]
+                ));
+            }
+        }
+    }
+    Ok((internal, scales))
+}
+
+fn element_internal_force_with_scales(
+    positions: &[(f64, f64)],
+    element: &Frame2dElementInput,
+    displacement: &[f64; 6],
+    material: Option<&CompiledFrame2dMaterial>,
+    committed: &Frame2dMaterialHistory,
+    scales: Option<&mut [f64; 6]>,
+) -> Result<[f64; 6], String> {
     let (xi, yi) = positions[element.node_i];
     let (xj, yj) = positions[element.node_j];
     let dx0 = xj - xi;
@@ -134,6 +182,22 @@ fn element_internal_force(
     let c = dx / length;
     let s = dy / length;
     let shear = (moment_i + moment_j) / length;
+    if let Some(scales) = scales {
+        let axial = section.absolute_force_sums[0].max(axial_force.abs());
+        let moment_i = section.absolute_force_sums[1].max(moment_i.abs());
+        let moment_j = section.absolute_force_sums[2].max(moment_j.abs());
+        // Keep force and moment units separate. Absolute fiber contributions
+        // retain a meaningful scale even when section resultants cancel.
+        let translation = axial + moment_i / length + moment_j / length;
+        *scales = [
+            translation,
+            translation,
+            moment_i,
+            translation,
+            translation,
+            moment_j,
+        ];
+    }
     Ok([
         -axial_force * c - shear * s,
         -axial_force * s + shear * c,

@@ -330,7 +330,10 @@ fn failed_reversal_keeps_the_last_converged_plastic_state() {
     let mut input = request(1.3);
     input.stability.maximum_load_factor = None;
     input.stability.load_steps = None;
-    input.stability.max_iterations = Some(3);
+    // Keep a converged plastic preload and a genuinely unresolved reversal
+    // under the row-local criterion, without relaxing its tolerance.
+    input.stability.max_iterations = Some(4);
+    input.stability.imperfection_amplitude = 0.01;
     input.stability.max_step_cutbacks = Some(0);
     input.load_factor_schedule = Some(vec![1.3, -10.0]);
     let result = solve_frame_2d_material_p_delta(&input).unwrap();
@@ -343,6 +346,8 @@ fn failed_reversal_keeps_the_last_converged_plastic_state() {
     assert!(result.material_history[0].converged);
     assert!(!result.material_history[1].converged);
     assert!(!result.stability_result.converged);
+    assert!(result.stability_result.steps[0].residual_norm <= input.stability.tolerance.unwrap());
+    assert!(result.stability_result.steps[1].residual_norm > input.stability.tolerance.unwrap());
     assert_eq!(result.material_history[1].achieved_load_factor, 1.3);
     assert!(result.max_equivalent_plastic_strain > 0.0);
     assert_eq!(

@@ -8,8 +8,9 @@ use crate::frame_2d_branch_switch::{
     unavailable_pairwise_branch_switches, unavailable_weighted_branch_switches,
 };
 use crate::frame_2d_continuation_state::{export_continuation_state, prepare_continuation_state};
-use crate::frame_2d_corotational::{normalized_residual, solve_tangent};
+use crate::frame_2d_corotational::solve_tangent;
 use crate::frame_2d_corotational_element::assemble_tangent_and_internal;
+use crate::frame_2d_equilibrium_metrics::EquilibriumMetric;
 use crate::frame_2d_stability::Frame2dStabilitySystem;
 use crate::frame_2d_stability_metrics::{imperfection_amplification, max_translation};
 use crate::frame_2d_transition_refinement::{
@@ -508,8 +509,14 @@ pub(crate) fn solve_arc_length_step(
             .collect::<Vec<_>>();
         let (reduced_tangent, reduced_residual, _) =
             reduce_sparse_system(&tangent, &residual, &system.constrained_dofs)?;
-        residual_norm =
-            normalized_residual(&reduced_residual, &system.reference_force, load_factor);
+        residual_norm = EquilibriumMetric::new(
+            &tangent,
+            &displacement,
+            &system.reference_force,
+            load_factor,
+            free,
+        )?
+        .norm(&reduced_residual);
         let constraint = dot(&displacement_increment, &displacement_increment)
             + (load_scale * load_increment).powi(2)
             - radius.powi(2);

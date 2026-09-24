@@ -43,6 +43,7 @@ mod frame_2d_branch_switch;
 mod frame_2d_continuation_state;
 mod frame_2d_corotational;
 mod frame_2d_corotational_element;
+mod frame_2d_equilibrium_metrics;
 mod frame_2d_fiber_damage;
 mod frame_2d_fiber_section;
 mod frame_2d_material_p_delta;

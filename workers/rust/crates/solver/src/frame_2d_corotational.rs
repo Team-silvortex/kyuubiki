@@ -1,7 +1,8 @@
 use crate::frame_2d_corotational_element::{
-    assemble_internal_with_materials, assemble_tangent_and_internal,
-    assemble_tangent_and_internal_with_materials,
+    assemble_initial_material_forces, assemble_internal_with_materials,
+    assemble_tangent_and_internal, assemble_tangent_and_internal_with_materials,
 };
+use crate::frame_2d_equilibrium_metrics::EquilibriumMetric;
 use crate::frame_2d_material_p_delta::{
     CompiledFrame2dMaterial, Frame2dMaterialHistory, update_material_histories,
 };
@@ -19,6 +20,10 @@ const DEFAULT_MAX_ITERATIONS: usize = 32;
 const DEFAULT_RESIDUAL_TOLERANCE: f64 = 1.0e-7;
 const DEFAULT_MAX_STEP_CUTBACKS: usize = 12;
 const MAX_DENSE_FALLBACK_DOFS: usize = 1_024;
+
+#[cfg(test)]
+#[path = "frame_2d_initial_balance_tests.rs"]
+mod initial_balance_tests;
 
 struct EquilibriumAttempt {
     displacement: Vec<f64>,
@@ -171,33 +176,69 @@ pub(crate) fn validate_initial_material_equilibrium(
     {
         return Ok(());
     }
-    let internal =
-        assemble_internal_with_materials(positions, elements, displacement, materials, histories)?;
-    let mut constrained = vec![false; displacement.len()];
-    for &dof in &system.constrained_dofs {
-        constrained[dof] = true;
+    let (internal, scales) =
+        assemble_initial_material_forces(positions, elements, displacement, materials, histories)?;
+    validate_initial_force_balance(&internal, &scales, &system.constrained_dofs)
+}
+
+fn validate_initial_force_balance(
+    internal: &[f64],
+    scales: &[f64],
+    constrained_dofs: &[usize],
+) -> Result<(), String> {
+    if internal.len() != scales.len() || !internal.len().is_multiple_of(3) {
+        return Err("frame 2d initial material force and scale dimensions differ".into());
     }
-    let max_unbalanced = internal
-        .iter()
-        .enumerate()
-        .filter(|(dof, _)| !constrained[*dof])
-        .map(|(_, force)| force.abs())
-        .fold(0.0_f64, f64::max);
-    let force_scale = elements
-        .iter()
-        .zip(materials)
-        .filter_map(|(element, material)| {
-            material
-                .as_ref()
-                .map(|material| element.area * material.yield_strength)
-        })
-        .fold(1.0_f64, f64::max);
-    let tolerance = force_scale * 1.0e-9;
-    if max_unbalanced > tolerance {
-        return Err(format!(
-            "frame 2d initial material stress is not self-equilibrated on free DOFs: \
-             maximum residual {max_unbalanced:.6e} exceeds tolerance {tolerance:.6e}"
-        ));
+    if internal.iter().any(|value| !value.is_finite())
+        || scales
+            .iter()
+            .any(|scale| !scale.is_finite() || *scale < 0.0)
+    {
+        return Err("frame 2d initial material force or scale is non-finite or invalid".into());
+    }
+    let mut constrained = vec![false; internal.len()];
+    for &dof in constrained_dofs {
+        *constrained
+            .get_mut(dof)
+            .ok_or("frame 2d initial material constraint is out of range")? = true;
+    }
+    const RELATIVE_TOLERANCE: f64 = 1.0e-9;
+    for (node, force) in internal.chunks_exact(3).enumerate() {
+        let offset = node * 3;
+        let free = std::array::from_fn::<_, 3, _>(|axis| {
+            if constrained[offset + axis] {
+                0.0
+            } else {
+                force[axis]
+            }
+        });
+        let force_scale = scales[offset].max(scales[offset + 1]);
+        let moment_scale = scales[offset + 2];
+        let relative = |value: f64, scale: f64| {
+            if value == 0.0 {
+                0.0
+            } else if scale > 0.0 {
+                value / scale
+            } else {
+                f64::INFINITY
+            }
+        };
+        // Normalize before hypot: neither extreme force scales nor length units
+        // may create an absolute floor or mix moment residuals with force scales.
+        let force_ratio = relative(free[0], force_scale).hypot(relative(free[1], force_scale));
+        let moment_ratio = relative(free[2], moment_scale).abs();
+        for (component, ratio, scale) in [
+            ("translation", force_ratio, force_scale),
+            ("rotation", moment_ratio, moment_scale),
+        ] {
+            if ratio > RELATIVE_TOLERANCE {
+                return Err(format!(
+                    "frame 2d initial material stress is not self-equilibrated on free DOFs: \
+                     node {node} {component} relative residual {ratio:.6e} exceeds \
+                     {RELATIVE_TOLERANCE:.6e} (local contribution scale {scale:.6e})"
+                ));
+            }
+        }
     }
     Ok(())
 }
@@ -350,8 +391,14 @@ fn solve_equilibrium(
         let residual = residual(&system.reference_force, &internal, load_factor);
         let (reduced_tangent, reduced_residual, free) =
             reduce_sparse_system(&tangent, &residual, &system.constrained_dofs)?;
-        residual_norm =
-            normalized_residual(&reduced_residual, &system.reference_force, load_factor);
+        residual_norm = EquilibriumMetric::new(
+            &tangent,
+            &displacement,
+            &system.reference_force,
+            load_factor,
+            &free,
+        )?
+        .norm(&reduced_residual);
         if residual_norm <= tolerance {
             converged = true;
             break;
@@ -365,6 +412,14 @@ fn solve_equilibrium(
                 break;
             }
         };
+        let search_metric = EquilibriumMetric::for_increment(
+            &tangent,
+            &displacement,
+            &system.reference_force,
+            load_factor,
+            &free,
+            &delta,
+        )?;
         if !apply_backtracked_increment(
             positions,
             elements,
@@ -372,7 +427,8 @@ fn solve_equilibrium(
             &free,
             &delta,
             load_factor,
-            residual_norm,
+            search_metric.norm(&reduced_residual),
+            &search_metric,
             &mut displacement,
             materials,
             committed_material_histories,
@@ -458,8 +514,14 @@ pub(crate) fn correct_parameter_continuation_equilibrium(
         let residual = residual(&system.reference_force, &internal, load_factor);
         let (reduced_tangent, reduced_residual, free) =
             reduce_sparse_system(&tangent, &residual, &system.constrained_dofs)?;
-        let residual_norm =
-            normalized_residual(&reduced_residual, &system.reference_force, load_factor);
+        let residual_norm = EquilibriumMetric::new(
+            &tangent,
+            &displacement,
+            &system.reference_force,
+            load_factor,
+            &free,
+        )?
+        .norm(&reduced_residual);
         let displacement_offset = free
             .iter()
             .map(|&dof| displacement[dof] - initial_displacement[dof])
@@ -531,6 +593,7 @@ fn apply_backtracked_increment(
     delta: &[f64],
     load_factor: f64,
     current_norm: f64,
+    metric: &EquilibriumMetric,
     displacement: &mut Vec<f64>,
     materials: &[Option<CompiledFrame2dMaterial>],
     committed_material_histories: &[Frame2dMaterialHistory],
@@ -556,7 +619,7 @@ fn apply_backtracked_increment(
             .iter()
             .map(|&dof| trial_residual[dof])
             .collect::<Vec<_>>();
-        if normalized_residual(&reduced, external, load_factor) < current_norm {
+        if metric.norm(&reduced) < current_norm {
             *displacement = trial;
             return Ok(true);
         }
@@ -576,19 +639,4 @@ fn residual(external: &[f64], internal: &[f64], load_factor: f64) -> Vec<f64> {
         .zip(internal)
         .map(|(external, internal)| load_factor * external - internal)
         .collect()
-}
-
-pub(crate) fn normalized_residual(residual: &[f64], external: &[f64], load_factor: f64) -> f64 {
-    if !load_factor.is_finite()
-        || residual
-            .iter()
-            .chain(external)
-            .any(|value| !value.is_finite())
-    {
-        return f64::INFINITY;
-    }
-    let numerator = residual.iter().map(|value| value.abs()).fold(0.0, f64::max);
-    let reference_norm = external.iter().map(|value| value.abs()).fold(1.0, f64::max);
-    // Both divisors are at least one; dividing separately cannot overflow.
-    (numerator / reference_norm) / load_factor.abs().max(1.0)
 }

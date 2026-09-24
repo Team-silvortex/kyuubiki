@@ -152,8 +152,10 @@ Current source-side posture:
   static Hub section should follow that boundary instead of growing
   `apps/hub-gui/ui/index.html`.
 - The old `scripts/kyuubiki-legacy-*.zsh` shell modules have been removed.
-  Long-lived command behavior belongs in the native Rust script runner or a
-  narrow Node utility when JavaScript ecosystem integration is required.
+  Long-lived operational command behavior belongs in the native Rust script
+  runner. JavaScript tooling is limited to frontend development and UI tests.
+  Do not keep a second operational implementation as an unused parity copy
+  after its native entrypoint and regression checks have replaced it.
 - Workflow templates should split entry metadata, graph assembly, graph nodes,
   and runtime helpers into separate modules once a file starts mixing those
   responsibilities.
@@ -170,6 +172,9 @@ Current source-side posture:
   `make audit-dependencies` exist and are not ignored by git. Keep the shared
   lane contract in `config/dependency-audit-lockfiles.json` synchronized with
   shipped app, SDK, and runtime surfaces.
+- The organization audit rejects existing tracked files matched by `.gitignore`.
+  Adding an ignore rule alone does not untrack an existing cache. Remove the
+  artifact, or add a narrow ignore exception for an intentionally owned file.
 
 Allowed large-file categories:
 
@@ -185,13 +190,30 @@ decisions:
 
 - `workers/rust/target`
 - `sdks/rust/target`
+- `target/desktop-cache` (shared desktop builds)
+- `apps/*-gui/src-tauri/target` (ad-hoc desktop builds)
 - `apps/frontend/.next`
 - `apps/web/_build`
 - `apps/web/deps`
 - `tmp`
+- `dist` and `results`
 
 They are already covered by `.gitignore`. Clean them when local disk pressure
 matters; do not move source boundaries just to reduce generated output.
+Prefer dropping old incremental/object output and duplicate desktop caches
+before removing reusable dependency libraries. Keep the current shared desktop
+cache when packaging speed matters. The first build after a cleanup may take
+longer. Never clean a target directory while its compiler or tests are running.
+
+Temporary run reports are not regression-test source. Keep test fixtures,
+benchmark baselines, schemas, lockfiles, and release qualification evidence
+unless their replacement is verified. Do not delete tests merely because they
+describe an old bug. Keep only intentionally retained summaries in `reports/`
+or `releases/`; do not back up generated output inside the repository.
+
+Repository cleanup does not uninstall desktop apps or manage installed runtime
+data. Use Installer lifecycle/storage operations for those separate locations.
+Container build contexts exclude temporary research outputs and local env files.
 
 ## Refactor Priority
 
@@ -205,8 +227,8 @@ matters; do not move source boundaries just to reduce generated output.
    visibly separate.
 5. Prefer adding examples and golden fixtures for protocol changes before
    expanding UI affordances.
-6. Treat `docs/minimal-industrial-closure.md` as the `1.16` to `1.20`
-   bridge. New TaskIR, installer, agent, operator-reliability, persistence,
+6. Treat `docs/minimal-industrial-closure.md` as a retained minimum-closure
+   contract, not the current release roadmap. New TaskIR, installer, agent, operator-reliability, persistence,
    security, UX, and benchmark work should either close one of its gates or
    explicitly remain outside the minimum industrial loop.
 
@@ -220,8 +242,9 @@ matters; do not move source boundaries just to reduce generated output.
 - Run `make check-ui-automation-contract` before changing product-owned
   Workbench shell, rail, library, runtime, viewport, or control-window anchors.
 - Keep Hub static partial smoke coverage aligned with every new shell partial.
-- Keep legacy shell modules below the shared line ceiling until native commands
-  can retire them.
+- Retire duplicate operational tools only after verifying the native command,
+  its callers, and regression coverage. Update current docs and evidence paths
+  in the same change; keep historical release snapshots unchanged.
 - Keep Make target logic under `make/*.mk`, with the root `Makefile` limited to
   shared variables and includes.
 - Move remaining operator TaskIR API examples into schema examples.

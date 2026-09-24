@@ -246,15 +246,20 @@ mod tests {
 
     #[test]
     fn nonlinear_residual_does_not_turn_nonfinite_input_or_scale_overflow_into_convergence() {
-        use crate::frame_2d_corotational::normalized_residual;
-        assert_eq!(normalized_residual(&[1e308], &[1e308], 2.0), 0.5);
+        use crate::frame_2d_equilibrium_metrics::EquilibriumMetric;
+        let normalized_residual =
+            |residual: &[f64], external: &[f64], load_factor, free: &[usize]| {
+                EquilibriumMetric::new(&SparseMatrix::new(1), &[0.0], external, load_factor, free)
+                    .map_or(f64::INFINITY, |metric| metric.norm(residual))
+            };
+        assert_eq!(normalized_residual(&[1e308], &[1e308], 2.0, &[0]), 0.5);
         for (residual, external, load_factor) in [
             (f64::NAN, 1.0, 1.0),
             (0.0, f64::INFINITY, 1.0),
             (0.0, 1.0, f64::NAN),
         ] {
             assert_eq!(
-                normalized_residual(&[residual], &[external], load_factor),
+                normalized_residual(&[residual], &[external], load_factor, &[0]),
                 f64::INFINITY
             );
         }

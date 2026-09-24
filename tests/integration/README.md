@@ -106,7 +106,7 @@ changing the indexer code:
 
 To compare an existing workflow catalog benchmark report against that baseline:
 
-- `node ./scripts/compare-workflow-catalog-benchmark.mjs --current tmp/workflow-catalog-benchmark.json --baseline tests/integration/benchmarks/workflow-catalog-benchmark-baseline.json --report-out tmp/workflow-catalog-benchmark.compare.md --json-out tmp/workflow-catalog-benchmark.compare.json`
+- `./scripts/kyuubiki compare-workflow-catalog-benchmark --current tmp/workflow-catalog-benchmark.json --baseline tests/integration/benchmarks/workflow-catalog-benchmark-baseline.json --report-out tmp/workflow-catalog-benchmark.compare.md --json-out tmp/workflow-catalog-benchmark.compare.json`
 - `make test-integration-workflow-catalog-compare CURRENT=tmp/workflow-catalog-benchmark.json`
 
 To run a fresh workflow catalog benchmark and emit current-vs-baseline reports:

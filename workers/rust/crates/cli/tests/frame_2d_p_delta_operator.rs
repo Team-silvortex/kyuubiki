@@ -5,6 +5,9 @@ use kyuubiki_headless_sdk::{
 use kyuubiki_solver::solver_control::{SolverControl, SolverStage, with_solver_observer};
 use serde_json::{Value, json};
 
+#[path = "support/frame_2d_equilibrium.rs"]
+mod equilibrium_support;
+
 fn model() -> Value {
     json!({
         "buckling": {"frame": {
@@ -131,4 +134,72 @@ fn headless_in_path_cancellation_is_not_a_successful_shortened_path() {
     .unwrap_err();
     assert!(error.contains("cancelled"), "{error}");
     assert_eq!(planned_solve(model()).unwrap(), baseline);
+}
+
+#[test]
+fn headless_nonlinear_paths_use_free_loads_for_equilibrium() {
+    for path_control in ["load_control", "arc_length"] {
+        let mut input = model();
+        input["kinematics"] = json!("corotational");
+        input["path_control"] = json!(path_control);
+        input["maximum_load_factor"] = json!(2.0);
+        input["imperfection_amplitude"] = json!(0.03);
+        input["max_iterations"] = json!(64);
+        input["tolerance"] = json!(1e-10);
+        let baseline = planned_solve(input.clone()).unwrap();
+        assert_eq!(baseline["converged"], true);
+        input["buckling"]["frame"]["nodes"][0]["load_x"] = json!(1e100);
+        input["buckling"]["frame"]["nodes"][0]["load_y"] = json!(-1e100);
+        let result = planned_solve(input).unwrap();
+        assert_eq!(result["converged"], true);
+        assert_eq!(result["steps"], baseline["steps"], "{path_control}");
+        assert_eq!(
+            result["final_displacements"],
+            baseline["final_displacements"]
+        );
+    }
+}
+
+#[test]
+fn headless_mixed_scale_load_and_arc_paths_preserve_the_small_branch() {
+    for path_control in ["load_control", "arc_length"] {
+        let mut input = model();
+        input["kinematics"] = json!("corotational");
+        input["path_control"] = json!(path_control);
+        input["maximum_load_factor"] = json!(2.0);
+        input["imperfection_amplitude"] = json!(0.03);
+        input["max_iterations"] = json!(64);
+        input["tolerance"] = json!(1e-10);
+        let baseline = planned_solve(input.clone()).unwrap();
+        input["imperfection_shape"] = baseline["initial_imperfection_shape"].clone();
+        let mut combined = input.clone();
+        equilibrium_support::add_independent_axial_member(&mut combined);
+        let actual = planned_solve(combined).unwrap();
+        assert_eq!(actual["converged"], true);
+        for step in actual["steps"].as_array().unwrap() {
+            let mut reference = input.clone();
+            reference["path_control"] = json!("load_control");
+            reference["load_steps"] = json!(1);
+            reference["maximum_load_factor"] = step["load_factor"].clone();
+            let reference = planned_solve(reference).unwrap();
+            assert_eq!(reference["converged"], true);
+            assert_eq!(
+                step["displacements"].as_array().unwrap().len(),
+                reference["final_displacements"].as_array().unwrap().len() + 6
+            );
+            for (actual, expected) in step["displacements"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .zip(reference["final_displacements"].as_array().unwrap())
+            {
+                let actual = actual.as_f64().unwrap();
+                let expected = expected.as_f64().unwrap();
+                assert!(
+                    (actual - expected).abs() <= 1e-7 * expected.abs().max(1e-6),
+                    "{path_control}: {actual} vs {expected}"
+                );
+            }
+        }
+    }
 }
