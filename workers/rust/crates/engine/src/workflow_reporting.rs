@@ -1,3 +1,4 @@
+use crate::workflow_result_admission::require_converged_result;
 use serde_json::Value;
 
 pub use crate::workflow_summary_transforms::merge_summary_pair;
@@ -6,6 +7,7 @@ pub fn extract_result_summary(payload: Value, config: Value) -> Result<Value, St
     let object = payload
         .as_object()
         .ok_or_else(|| "extract.result_summary expects an object payload".to_string())?;
+    require_converged_result(object, "extract.result_summary", "payload")?;
 
     let requested_fields = config
         .get("fields")
@@ -44,6 +46,7 @@ pub fn extract_field_statistics(payload: Value, config: Value) -> Result<Value, 
     let object = payload
         .as_object()
         .ok_or_else(|| "extract.field_statistics expects an object payload".to_string())?;
+    require_converged_result(object, "extract.field_statistics", "payload")?;
     let source = config
         .get("source")
         .and_then(Value::as_str)
@@ -122,6 +125,7 @@ pub fn extract_field_hotspots(payload: Value, config: Value) -> Result<Value, St
     let object = payload
         .as_object()
         .ok_or_else(|| "extract.field_hotspots expects an object payload".to_string())?;
+    require_converged_result(object, "extract.field_hotspots", "payload")?;
     let source = config
         .get("source")
         .and_then(Value::as_str)

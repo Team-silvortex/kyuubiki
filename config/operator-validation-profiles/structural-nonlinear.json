@@ -4,6 +4,112 @@
   "domain": "structural",
   "profiles": [
     {
+      "profile_id": "nonlinear-spring-committed-recovery",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "nonlinear-spring-committed-recovery",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.nonlinear_spring_1d", "solve.contact_gap_1d"],
+      "validation_methods": [
+        "final_permitted_correction_equilibrium_check",
+        "failed_step_rollback_and_nonzero_committed_residual",
+        "cancellation_and_clean_in_process_replay",
+        "headless_workflow_and_legacy_result_contract",
+        "benchmark_nonconvergence_negative_controls"
+      ],
+      "formal_invariants": [
+        "tested_returned_physical_state_belongs_to_achieved_load_factor",
+        "failed_trial_residual_is_evaluated_after_the_last_allowed_correction",
+        "finite_nonconvergence_does_not_commit_trial_displacement_or_contact_activation",
+        "legacy_missing_achieved_load_is_unknown_not_assumed_complete",
+        "nonconverged_spring_benchmarks_cannot_report_success"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/nonlinear_spring_1d.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_recovery.rs",
+        "workers/rust/crates/protocol/src/types/nonlinear_structural.rs",
+        "workers/rust/crates/protocol/tests/nonlinear_spring_result_contract.rs",
+        "workers/rust/crates/cli/tests/nonlinear_spring_range_operator.rs",
+        "workers/rust/crates/engine/tests/nonlinear_spring_recovery_workflow.rs",
+        "workers/rust/crates/benchmark/src/runner_structural.rs",
+        "workers/rust/crates/benchmark/src/tests/spring_recovery.rs",
+        "reports/nonlinear-spring-recovery-20260924.md"
+      ],
+      "commands": [
+        {
+          "id": "spring-committed-recovery-public",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test nonlinear_spring_recovery --test nonlinear_spring_range_reliability --test nonlinear_spring_reliability --test contact_gap_reliability --test nonlinear_spring_1d_review --test nonlinear_spring_1d_closed_form --test contact_gap_1d_review --test contact_gap_1d_closed_form --test contact_gap_1d_refinement --test mechanical_convergence -- --nocapture"
+        },
+        {
+          "id": "spring-committed-recovery-protocol",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-protocol --test nonlinear_spring_result_contract -- --nocapture"
+        },
+        {
+          "id": "spring-committed-recovery-headless",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test nonlinear_spring_range_operator -- --nocapture"
+        },
+        {
+          "id": "spring-committed-recovery-workflow",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test nonlinear_spring_recovery_workflow --test nonlinear_spring_workflow --test contact_gap_workflow -- --nocapture"
+        },
+        {
+          "id": "spring-committed-recovery-benchmark",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-benchmark spring_recovery -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "nonlinear-spring-range-local-reliability",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "nonlinear-spring-range-local-reliability",
+      "trust_goal": "bounded_regression",
+      "operators": ["solve.nonlinear_spring_1d", "solve.contact_gap_1d"],
+      "validation_methods": [
+        "finite_linear_limit_and_weighted_cubic_closed_form",
+        "zero_residual_assembly_overflow_negative_controls",
+        "final_trial_and_contact_penalty_output_validation",
+        "constrained_load_isolation",
+        "cooperative_cancellation_and_clean_in_process_replay",
+        "rust_headless_plan_bridge_and_real_operator_execution"
+      ],
+      "formal_invariants": [
+        "tested_representable_cubic_response_does_not_require_unweighted_displacement_powers",
+        "nonfinite_assembled_state_cannot_claim_zero_residual_convergence",
+        "nonfinite_final_trial_or_contact_output_fails_before_serialization",
+        "support_loads_do_not_enter_the_free_equilibrium_residual",
+        "tested_assembly_and_result_cancellation_cannot_publish_partial_success"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/solver/src/nonlinear_spring_1d.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_range_reliability.rs",
+        "workers/rust/crates/cli/tests/nonlinear_spring_range_operator.rs",
+        "workers/rust/crates/engine/tests/nonlinear_spring_workflow.rs",
+        "workers/rust/crates/engine/tests/contact_gap_workflow.rs",
+        "reports/nonlinear-spring-range-reliability-20260924.md"
+      ],
+      "commands": [
+        {
+          "id": "nonlinear-spring-range-public-paths",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test nonlinear_spring_range_reliability --test nonlinear_spring_reliability --test contact_gap_reliability --test nonlinear_spring_1d_review --test nonlinear_spring_1d_closed_form --test contact_gap_1d_review --test contact_gap_1d_closed_form --test contact_gap_1d_refinement --test mechanical_convergence -- --nocapture"
+        },
+        {
+          "id": "nonlinear-spring-range-headless",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test nonlinear_spring_range_operator -- --nocapture"
+        },
+        {
+          "id": "nonlinear-spring-range-workflows",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test nonlinear_spring_workflow --test contact_gap_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
       "profile_id": "frame-equation-balance-local-reliability",
       "profile_role": "component_profile",
       "qualification_candidate_id": "frame-equation-balance-local-reliability",

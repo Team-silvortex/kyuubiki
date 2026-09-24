@@ -1,0 +1,257 @@
+{
+  "schema_version": "kyuubiki.operator-validation-profiles/v1",
+  "version_line": "daji 3.0.x",
+  "domain": "workflow",
+  "profiles": [
+    {
+      "profile_id": "workflow-metric-integrity",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-metric-integrity",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "extract.stokes_flow_result_diagnostics",
+        "transform.score_structural_quality", "transform.evaluate_structural_guard", "transform.benchmark_structural_pair",
+        "transform.score_thermal_quality", "transform.evaluate_thermal_guard", "transform.benchmark_coupled_heat_pair",
+        "transform.score_acoustic_quality", "transform.evaluate_acoustic_guard", "transform.benchmark_acoustic_pair",
+        "transform.score_modal_quality", "transform.evaluate_modal_guard", "transform.benchmark_modal_pair",
+        "transform.score_dynamic_quality", "transform.evaluate_dynamic_guard", "transform.benchmark_dynamic_pair",
+        "transform.score_electrostatic_quality", "transform.evaluate_electrostatic_guard", "transform.benchmark_electrostatic_pair",
+        "transform.score_magnetostatic_quality", "transform.evaluate_magnetostatic_guard", "transform.benchmark_magnetostatic_pair",
+        "transform.score_transport_quality", "transform.evaluate_transport_guard", "transform.benchmark_transport_pair",
+        "transform.score_cfd_quality", "transform.evaluate_cfd_guard", "transform.benchmark_cfd_pair",
+        "transform.compose_quality_objective"
+      ],
+      "validation_methods": [
+        "nine_domain_corrupt_alias_precedence_negative_controls",
+        "frequency_node_and_modal_sample_integrity_checks",
+        "cfd_per_sample_field_and_result_admission_checks",
+        "stable_hypot_and_streaming_statistic_positive_controls",
+        "cfd_and_dynamic_workflow_failure_recovery_and_replay"
+      ],
+      "formal_invariants": [
+        "tested_selected_alias_corruption_cannot_fall_through_to_healthy_data",
+        "tested_array_reductions_consume_all_required_samples_or_fail",
+        "tested_cfd_empty_or_malformed_collections_cannot_invent_zero_evidence",
+        "tested_cfd_norm_span_mean_and_total_outputs_are_finite",
+        "tested_metric_failures_cannot_publish_partial_summaries_or_objectives"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/engine/src/workflow_metric_resolver.rs",
+        "workers/rust/crates/engine/src/workflow_metric_resolver/aliases.rs",
+        "workers/rust/crates/engine/src/cfd_diagnostics.rs",
+        "workers/rust/crates/engine/src/tests/workflow_metric_integrity.rs",
+        "workers/rust/crates/engine/tests/metric_integrity_workflow.rs",
+        "reports/workflow-metric-integrity-20260924.md"
+      ],
+      "commands": [
+        {
+          "id": "workflow-metric-integrity-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_metric -- --nocapture"
+        },
+        {
+          "id": "workflow-metric-quality-compatibility",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib quality -- --nocapture"
+        },
+        {
+          "id": "workflow-metric-guard-compatibility",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_guard_validation -- --nocapture"
+        },
+        {
+          "id": "workflow-metric-integrity-recovery",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test metric_integrity_workflow --test domain_quality_validation_workflow --test guard_validation_workflow --test result_admission_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "workflow-domain-quality-validation",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-domain-quality-validation",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "transform.score_structural_quality", "transform.score_thermal_quality",
+        "transform.score_acoustic_quality", "transform.score_modal_quality",
+        "transform.score_dynamic_quality", "transform.score_electrostatic_quality",
+        "transform.score_magnetostatic_quality", "transform.score_cfd_quality",
+        "transform.score_transport_quality", "transform.compose_quality_objective"
+      ],
+      "validation_methods": [
+        "nine_domain_term_selection_and_numeric_configuration_negative_controls",
+        "finite_metric_ratio_penalty_and_total_checks_before_serialization",
+        "retained_alias_optional_term_zero_weight_and_grade_positive_controls",
+        "missing_metric_blocking_propagation_through_composite_objectives",
+        "workflow_branch_recovery_and_corrected_quality_replay"
+      ],
+      "formal_invariants": [
+        "tested_explicit_invalid_options_cannot_silently_activate_defaults",
+        "tested_selected_metrics_are_known_unique_and_evaluated",
+        "tested_nonfinite_penalties_cannot_disappear_from_quality_totals",
+        "invalid_explicit_metrics_do_not_fall_back_to_valid_aliases",
+        "zero_weight_does_not_skip_metric_presence_or_type_validation",
+        "invalid_quality_evidence_cannot_publish_a_composite_objective_during_recovery"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/engine/src/workflow_domain_quality.rs",
+        "workers/rust/crates/engine/src/tests/workflow_domain_quality_validation.rs",
+        "workers/rust/crates/engine/tests/domain_quality_validation_workflow.rs",
+        "reports/workflow-domain-quality-validation-20260924.md"
+      ],
+      "commands": [
+        {
+          "id": "workflow-domain-quality-boundaries-and-compatibility",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib quality -- --nocapture"
+        },
+        {
+          "id": "workflow-domain-quality-recovery-and-admission",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test domain_quality_validation_workflow --test guard_validation_workflow --test result_admission_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "workflow-guard-validation",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-guard-validation",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "transform.evaluate_structural_guard", "transform.benchmark_structural_pair",
+        "transform.evaluate_thermal_guard", "transform.benchmark_coupled_heat_pair",
+        "transform.evaluate_acoustic_guard", "transform.benchmark_acoustic_pair",
+        "transform.evaluate_modal_guard", "transform.benchmark_modal_pair",
+        "transform.evaluate_dynamic_guard", "transform.benchmark_dynamic_pair",
+        "transform.evaluate_electrostatic_guard", "transform.benchmark_electrostatic_pair",
+        "transform.evaluate_magnetostatic_guard", "transform.benchmark_magnetostatic_pair",
+        "transform.evaluate_cfd_guard", "transform.benchmark_cfd_pair",
+        "transform.evaluate_transport_guard", "transform.benchmark_transport_pair"
+      ],
+      "validation_methods": [
+        "missing_metric_and_malformed_rule_negative_controls",
+        "default_alias_and_comparison_boundary_positive_controls",
+        "finite_derived_metric_delta_and_weighted_total_checks",
+        "distinct_candidate_label_and_reserved_sentinel_checks",
+        "workflow_branch_recovery_and_corrected_evidence_replay"
+      ],
+      "formal_invariants": [
+        "tested_guard_success_requires_every_configured_rule_to_be_evaluated",
+        "tested_pair_success_requires_every_configured_criterion_for_both_candidates",
+        "present_invalid_options_do_not_silently_become_defaults",
+        "invalid_explicit_metrics_do_not_fall_back_to_valid_aliases",
+        "tested_nonfinite_metrics_deltas_or_totals_cannot_produce_successful_json_null",
+        "invalid_evidence_cannot_publish_a_verdict_during_branch_recovery"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/engine/src/workflow_guard_contract.rs",
+        "workers/rust/crates/engine/src/workflow_guard_transforms.rs",
+        "workers/rust/crates/engine/src/tests/workflow_guard_validation.rs",
+        "workers/rust/crates/engine/tests/guard_validation_workflow.rs",
+        "reports/workflow-guard-validation-20260924.md"
+      ],
+      "commands": [
+        {
+          "id": "workflow-guard-validation-consumers",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_guard_validation -- --nocapture"
+        },
+        {
+          "id": "workflow-guard-validation-recovery",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test guard_validation_workflow --test result_admission_workflow -- --nocapture"
+        },
+        {
+          "id": "workflow-guard-result-admission-compatibility",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_result_admission -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "workflow-result-admission",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-result-admission",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "solve.nonlinear_spring_1d",
+        "solve.contact_gap_1d",
+        "extract.result_summary",
+        "extract.field_statistics",
+        "extract.field_hotspots",
+        "transform.evaluate_structural_guard",
+        "transform.score_structural_quality",
+        "transform.benchmark_structural_pair",
+        "transform.evaluate_thermal_guard",
+        "transform.score_thermal_quality",
+        "transform.benchmark_coupled_heat_pair",
+        "transform.evaluate_acoustic_guard",
+        "transform.score_acoustic_quality",
+        "transform.benchmark_acoustic_pair",
+        "transform.evaluate_modal_guard",
+        "transform.score_modal_quality",
+        "transform.benchmark_modal_pair",
+        "transform.evaluate_dynamic_guard",
+        "transform.score_dynamic_quality",
+        "transform.benchmark_dynamic_pair",
+        "transform.evaluate_electrostatic_guard",
+        "transform.score_electrostatic_quality",
+        "transform.benchmark_electrostatic_pair",
+        "transform.evaluate_magnetostatic_guard",
+        "transform.score_magnetostatic_quality",
+        "transform.benchmark_magnetostatic_pair",
+        "transform.evaluate_cfd_guard",
+        "transform.score_cfd_quality",
+        "transform.benchmark_cfd_pair",
+        "transform.evaluate_transport_guard",
+        "transform.score_transport_quality",
+        "transform.benchmark_transport_pair",
+        "transform.merge_summary_pair",
+        "transform.compare_summary_pair",
+        "transform.aggregate_summary_collection",
+        "transform.normalize_summary_fields",
+        "transform.select_best_summary",
+        "transform.validate_summary_tolerance",
+        "transform.compose_quality_objective",
+        "transform.rank_quality_candidates",
+        "transform.prepare_quality_next_round_request"
+      ],
+      "validation_methods": [
+        "real_partial_solver_result_negative_controls",
+        "nine_domain_registered_guard_quality_and_pair_admission",
+        "summary_reduction_and_candidate_ranking_failure_propagation",
+        "malformed_marker_and_nested_stability_contract_checks",
+        "workflow_fail_fast_opt_in_branch_recovery_and_clean_replay"
+      ],
+      "formal_invariants": [
+        "tested_explicit_nonconvergence_cannot_become_pass_ready_or_winner",
+        "tested_summary_reducers_cannot_erase_explicit_failure",
+        "trial_history_failure_does_not_override_final_success",
+        "load_factor_scales_are_not_reinterpreted_by_generic_consumers",
+        "tested_branch_recovery_preserves_raw_results_without_publishing_quality",
+        "rejected_quality_candidate_keeps_ranking_incomplete"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/engine/src/workflow_result_admission.rs",
+        "workers/rust/crates/engine/src/workflow_guard_transforms.rs",
+        "workers/rust/crates/engine/src/workflow_reporting.rs",
+        "workers/rust/crates/engine/src/workflow_quality_terms.rs",
+        "workers/rust/crates/engine/src/tests/workflow_result_admission.rs",
+        "workers/rust/crates/engine/tests/result_admission_workflow.rs",
+        "reports/workflow-result-admission-20260924.md"
+      ],
+      "commands": [
+        {
+          "id": "workflow-result-admission-consumers",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_result_admission -- --nocapture"
+        },
+        {
+          "id": "workflow-result-admission-recovery",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test result_admission_workflow --test nonlinear_spring_recovery_workflow --test nonlinear_spring_workflow --test contact_gap_workflow -- --nocapture"
+        }
+      ]
+    }
+  ]
+}

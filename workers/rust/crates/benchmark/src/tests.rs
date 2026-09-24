@@ -18,6 +18,9 @@ mod tests {
     #[path = "tests_performance.rs"]
     mod performance;
 
+    #[path = "spring_recovery.rs"]
+    mod spring_recovery;
+
     #[test]
     fn exposes_default_benchmark_config() {
         let config = BenchmarkConfig::default();

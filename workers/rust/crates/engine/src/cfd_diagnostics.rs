@@ -1,42 +1,73 @@
-use crate::workflow_metric_resolver::metric_value;
+use crate::workflow_domain_quality::{QualityGoal, QualityScore, QualityTerm, score_quality_terms};
+use crate::workflow_metric_resolver::{checked_metric_value, display_metric_value};
+use crate::workflow_result_admission::require_converged_result;
 use serde_json::{Map, Value};
 
 pub fn extract_stokes_flow_result_diagnostics(
     payload: Value,
     config: Value,
 ) -> Result<Value, String> {
-    let object = payload.as_object().ok_or_else(|| {
-        "extract.stokes_flow_result_diagnostics expects an object payload".to_string()
-    })?;
-    let nodes = object
-        .get("nodes")
-        .and_then(Value::as_array)
-        .ok_or_else(|| "extract.stokes_flow_result_diagnostics expects nodes array".to_string())?;
-    let elements = object
-        .get("elements")
-        .and_then(Value::as_array)
-        .ok_or_else(|| {
-            "extract.stokes_flow_result_diagnostics expects elements array".to_string()
-        })?;
-    if nodes.is_empty() && elements.is_empty() {
-        return Err(
-            "extract.stokes_flow_result_diagnostics expects non-empty nodes or elements".into(),
-        );
-    }
+    let operator = "extract.stokes_flow_result_diagnostics";
+    let object = payload
+        .as_object()
+        .ok_or_else(|| format!("{operator} expects an object payload"))?;
+    require_converged_result(object, operator, "payload")?;
+    extract_diagnostics(object, &config).map_err(|error| format!("{operator}: {error}"))
+}
 
+fn extract_diagnostics(object: &Map<String, Value>, config: &Value) -> Result<Value, String> {
+    let nodes = samples(object, "nodes")?;
+    let elements = samples(object, "elements")?;
     let prefix = config
         .get("output_prefix")
         .and_then(Value::as_str)
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .unwrap_or("cfd");
-    let velocity_values = numeric_values(nodes, cfd_node_value, "velocity_magnitude");
-    let pressure_values = numeric_values(nodes, cfd_node_value, "pressure");
-    let divergence_values = numeric_values(elements, cfd_element_value, "divergence_error");
-    let reynolds_values = numeric_values(elements, cfd_element_value, "reynolds_number");
-    let dissipation_values = numeric_values(elements, cfd_element_value, "viscous_dissipation");
-    let mut summary = Map::new();
+    let mut velocity = MetricStats::default();
+    let mut pressure = MetricStats::default();
+    for (index, entry) in nodes.iter().enumerate() {
+        let row = sample_object(entry, "nodes", index)?;
+        velocity.observe(
+            entry,
+            sample_metric(row, "velocity_magnitude", "nodes", index)?,
+            index + 1,
+        );
+        pressure.observe(
+            entry,
+            sample_metric(row, "pressure", "nodes", index)?,
+            index + 1,
+        );
+    }
 
+    let mut divergence = MetricStats::default();
+    let mut reynolds = MetricStats::default();
+    let mut dissipation = MetricStats::default();
+    let total_field = format!("{prefix}_viscous_dissipation_total");
+    let mut total = 0.0;
+    for (index, entry) in elements.iter().enumerate() {
+        let row = sample_object(entry, "elements", index)?;
+        divergence.observe(
+            entry,
+            sample_metric(row, "divergence_error", "elements", index)?,
+            index + 1,
+        );
+        reynolds.observe(
+            entry,
+            sample_metric(row, "reynolds_number", "elements", index)?,
+            index + 1,
+        );
+        let value = sample_metric(row, "viscous_dissipation", "elements", index)?;
+        dissipation.observe(entry, value, index + 1);
+        total += value;
+        if !total.is_finite() {
+            return Err(format!(
+                "{total_field} became non-finite at payload.elements[{index}]"
+            ));
+        }
+    }
+
+    let mut summary = Map::new();
     summary.insert(
         "diagnostic_contract".into(),
         Value::String("kyuubiki.workflow_diagnostics/v1".into()),
@@ -52,58 +83,20 @@ pub fn extract_stokes_flow_result_diagnostics(
         "diagnostic_element_count".into(),
         Value::from(elements.len()),
     );
-    merge_min_max(
-        &mut summary,
-        &format!("{prefix}_velocity"),
-        &velocity_values,
-    );
-    merge_min_max(
-        &mut summary,
-        &format!("{prefix}_pressure"),
-        &pressure_values,
-    );
-    merge_peak(
-        &mut summary,
-        &format!("{prefix}_divergence_error"),
-        elements,
-        "divergence_error",
-        cfd_element_value,
-    );
-    merge_peak(
-        &mut summary,
-        &format!("{prefix}_reynolds_number"),
-        elements,
-        "reynolds_number",
-        cfd_element_value,
-    );
-    merge_peak(
-        &mut summary,
-        &format!("{prefix}_viscous_dissipation"),
-        elements,
-        "viscous_dissipation",
-        cfd_element_value,
-    );
-    summary.insert(
-        format!("{prefix}_velocity_mean"),
-        Value::from(mean_or_zero(&velocity_values)),
-    );
-    summary.insert(
-        format!("{prefix}_pressure_mean"),
-        Value::from(mean_or_zero(&pressure_values)),
-    );
-    summary.insert(
-        format!("{prefix}_divergence_error_mean"),
-        Value::from(mean_or_zero(&divergence_values)),
-    );
-    summary.insert(
-        format!("{prefix}_reynolds_number_mean"),
-        Value::from(mean_or_zero(&reynolds_values)),
-    );
-    summary.insert(
-        format!("{prefix}_viscous_dissipation_total"),
-        Value::from(dissipation_values.iter().sum::<f64>()),
-    );
-
+    velocity.insert_bounds(&mut summary, &format!("{prefix}_velocity"))?;
+    pressure.insert_bounds(&mut summary, &format!("{prefix}_pressure"))?;
+    divergence.insert_peak(&mut summary, &format!("{prefix}_divergence_error"))?;
+    reynolds.insert_peak(&mut summary, &format!("{prefix}_reynolds_number"))?;
+    dissipation.insert_peak(&mut summary, &format!("{prefix}_viscous_dissipation"))?;
+    for (field, value) in [
+        ("velocity_mean", velocity.mean),
+        ("pressure_mean", pressure.mean),
+        ("divergence_error_mean", divergence.mean),
+        ("reynolds_number_mean", reynolds.mean),
+    ] {
+        insert_finite(&mut summary, format!("{prefix}_{field}"), value)?;
+    }
+    insert_finite(&mut summary, total_field, total)?;
     Ok(Value::Object(summary))
 }
 
@@ -111,40 +104,24 @@ pub fn score_cfd_quality(payload: Value, config: Value) -> Result<Value, String>
     let object = payload
         .as_object()
         .ok_or_else(|| "transform.score_cfd_quality expects an object payload".to_string())?;
-    let terms = quality_terms(&config);
-    let score_terms = terms
-        .iter()
-        .map(|term| score_quality_term(object, &config, term))
-        .collect::<Vec<_>>();
-    let missing_count = score_terms
-        .iter()
-        .filter(|term| term.get("status").and_then(Value::as_str) == Some("missing"))
-        .count();
-    let watch_count = score_terms
-        .iter()
-        .filter(|term| term.get("status").and_then(Value::as_str) == Some("watch"))
-        .count();
-    let score = score_terms
-        .iter()
-        .filter_map(|term| term.get("penalty").and_then(Value::as_f64))
-        .sum::<f64>();
-    let max_ready_score = config_number(&config, "max_ready_score", 8.0);
-    let grade = quality_grade(score, missing_count, max_ready_score);
-    let dominant_term = dominant_quality_term(&score_terms);
-    let blocking_terms = if grade == "block" {
-        score_terms
-            .iter()
-            .filter(|term| {
-                matches!(
-                    term.get("status").and_then(Value::as_str),
-                    Some("missing" | "watch")
-                )
-            })
-            .map(compact_quality_term)
-            .collect::<Vec<_>>()
-    } else {
-        Vec::new()
-    };
+    require_converged_result(object, "transform.score_cfd_quality", "payload")?;
+    let QualityScore {
+        score_terms,
+        score,
+        missing_count,
+        watch_count,
+        max_ready_score,
+        grade,
+        dominant_term,
+        blocking_terms,
+    } = score_quality_terms(
+        object,
+        &config,
+        &default_quality_terms(),
+        quality_term_for,
+        8.0,
+    )
+    .map_err(|error| format!("transform.score_cfd_quality: {error}"))?;
 
     Ok(serde_json::json!({
         "cfd_quality_contract": "kyuubiki.cfd_quality_score/v1",
@@ -169,14 +146,6 @@ pub fn score_cfd_quality(payload: Value, config: Value) -> Result<Value, String>
     }))
 }
 
-#[derive(Clone, Copy)]
-struct QualityTerm {
-    field: &'static str,
-    label: &'static str,
-    target: f64,
-    weight: f64,
-}
-
 fn default_quality_terms() -> [QualityTerm; 5] {
     [
         QualityTerm {
@@ -184,47 +153,37 @@ fn default_quality_terms() -> [QualityTerm; 5] {
             label: "Divergence peak",
             target: 0.05,
             weight: 4.0,
+            goal: QualityGoal::Min,
         },
         QualityTerm {
             field: "cfd_reynolds_number_peak",
             label: "Reynolds peak",
             target: 10.0,
             weight: 2.0,
+            goal: QualityGoal::Min,
         },
         QualityTerm {
             field: "cfd_viscous_dissipation_total",
             label: "Viscous dissipation",
             target: 1.0,
             weight: 1.0,
+            goal: QualityGoal::Min,
         },
         QualityTerm {
             field: "cfd_velocity_span",
             label: "Velocity span",
             target: 2.0,
             weight: 0.5,
+            goal: QualityGoal::Min,
         },
         QualityTerm {
             field: "cfd_pressure_span",
             label: "Pressure span",
             target: 5.0,
             weight: 0.5,
+            goal: QualityGoal::Min,
         },
     ]
-}
-
-fn quality_terms(config: &Value) -> Vec<QualityTerm> {
-    config
-        .get("enabled_terms")
-        .and_then(Value::as_array)
-        .map(|terms| {
-            terms
-                .iter()
-                .filter_map(Value::as_str)
-                .filter_map(quality_term_for)
-                .collect::<Vec<_>>()
-        })
-        .filter(|terms| !terms.is_empty())
-        .unwrap_or_else(|| default_quality_terms().to_vec())
 }
 
 fn quality_term_for(field: &str) -> Option<QualityTerm> {
@@ -233,157 +192,94 @@ fn quality_term_for(field: &str) -> Option<QualityTerm> {
         .find(|term| term.field == field)
 }
 
-fn score_quality_term(object: &Map<String, Value>, config: &Value, term: &QualityTerm) -> Value {
-    let target = configured_term_number(config, "targets", term.field, term.target).max(1e-12);
-    let weight = configured_term_number(config, "weights", term.field, term.weight).max(0.0);
-    let value = numeric_field(object, term.field);
-
-    match value {
-        Some(value) if value.is_finite() => {
-            let penalty = (value.abs() / target) * weight;
-            serde_json::json!({
-                "field": term.field,
-                "label": term.label,
-                "value": value,
-                "target": target,
-                "weight": weight,
-                "goal": "min",
-                "penalty": penalty,
-                "status": if value.abs() <= target { "ok" } else { "watch" },
-            })
-        }
-        _ => serde_json::json!({
-            "field": term.field,
-            "label": term.label,
-            "target": target,
-            "weight": weight,
-            "penalty": 0.0,
-            "status": "missing",
-        }),
-    }
-}
-
 fn numeric_field(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    metric_value(object, field)
+    display_metric_value(object, field)
 }
 
-fn dominant_quality_term(terms: &[Value]) -> Value {
-    terms
-        .iter()
-        .max_by(|left, right| {
-            let left_penalty = left.get("penalty").and_then(Value::as_f64).unwrap_or(0.0);
-            let right_penalty = right.get("penalty").and_then(Value::as_f64).unwrap_or(0.0);
-            left_penalty
-                .partial_cmp(&right_penalty)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
-        .map(compact_quality_term)
-        .unwrap_or(Value::Null)
-}
-
-fn compact_quality_term(term: &Value) -> Value {
-    serde_json::json!({
-        "field": term.get("field").cloned().unwrap_or(Value::Null),
-        "label": term.get("label").cloned().unwrap_or(Value::Null),
-        "status": term.get("status").cloned().unwrap_or(Value::Null),
-        "penalty": term.get("penalty").cloned().unwrap_or(Value::Null),
-    })
-}
-
-fn merge_min_max(summary: &mut Map<String, Value>, key: &str, values: &[f64]) {
-    let min = values.iter().copied().reduce(f64::min).unwrap_or(0.0);
-    let max = values.iter().copied().reduce(f64::max).unwrap_or(0.0);
-    summary.insert(format!("{key}_min"), Value::from(min));
-    summary.insert(format!("{key}_max"), Value::from(max));
-    summary.insert(format!("{key}_span"), Value::from(max - min));
-}
-
-fn merge_peak(
-    summary: &mut Map<String, Value>,
-    key: &str,
-    elements: &[Value],
-    field: &str,
-    value_fn: fn(&Map<String, Value>, &str) -> Option<f64>,
-) {
-    let peak = elements
-        .iter()
-        .filter_map(Value::as_object)
-        .filter_map(|element| Some((element, value_fn(element, field)?)))
-        .max_by(|(_, left), (_, right)| {
-            left.abs()
-                .partial_cmp(&right.abs())
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-
-    match peak {
-        Some((element, value)) => {
-            summary.insert(format!("{key}_peak"), Value::from(value));
-            summary.insert(
-                format!("{key}_peak_element_id"),
-                element.get("id").cloned().unwrap_or(Value::Null),
-            );
-        }
-        None => {
-            summary.insert(format!("{key}_peak"), Value::from(0.0));
-            summary.insert(format!("{key}_peak_element_id"), Value::Null);
-        }
-    }
-}
-
-fn numeric_values(
-    values: &[Value],
-    value_fn: fn(&Map<String, Value>, &str) -> Option<f64>,
-    field: &str,
-) -> Vec<f64> {
-    values
-        .iter()
-        .filter_map(Value::as_object)
-        .filter_map(|value| value_fn(value, field))
-        .collect()
-}
-
-fn cfd_node_value(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    metric_value(object, field)
-}
-
-fn cfd_element_value(object: &Map<String, Value>, field: &str) -> Option<f64> {
-    metric_value(object, field)
-}
-
-fn mean_or_zero(values: &[f64]) -> f64 {
-    if values.is_empty() {
-        0.0
-    } else {
-        values.iter().sum::<f64>() / values.len() as f64
-    }
-}
-
-fn configured_term_number(config: &Value, group: &str, field: &str, default_value: f64) -> f64 {
-    config
-        .get(group)
-        .and_then(Value::as_object)
-        .and_then(|values| values.get(field))
-        .and_then(Value::as_f64)
-        .filter(|value| value.is_finite())
-        .unwrap_or(default_value)
-}
-
-fn config_number(config: &Value, field: &str, default_value: f64) -> f64 {
-    config
+fn samples<'a>(object: &'a Map<String, Value>, field: &str) -> Result<&'a [Value], String> {
+    object
         .get(field)
-        .and_then(Value::as_f64)
-        .filter(|value| value.is_finite() && *value >= 0.0)
-        .unwrap_or(default_value)
+        .and_then(Value::as_array)
+        .filter(|values| !values.is_empty())
+        .map(Vec::as_slice)
+        .ok_or_else(|| format!("payload.{field} must be a non-empty array"))
 }
 
-fn quality_grade(score: f64, missing_count: usize, max_ready_score: f64) -> &'static str {
-    if missing_count > 0 || score > max_ready_score {
-        "block"
-    } else if score > max_ready_score * 0.7 {
-        "review"
-    } else if score > max_ready_score * 0.35 {
-        "good"
-    } else {
-        "excellent"
+fn sample_object<'a>(
+    value: &'a Value,
+    source: &str,
+    index: usize,
+) -> Result<&'a Map<String, Value>, String> {
+    value
+        .as_object()
+        .ok_or_else(|| format!("payload.{source}[{index}] must be an object"))
+}
+
+fn sample_metric(
+    object: &Map<String, Value>,
+    field: &str,
+    source: &str,
+    index: usize,
+) -> Result<f64, String> {
+    checked_metric_value(object, field)
+        .map_err(|error| format!("payload.{source}[{index}].{error}"))?
+        .ok_or_else(|| format!("payload.{source}[{index}].{field} is missing a numeric sample"))
+}
+
+#[derive(Default)]
+struct MetricStats<'a> {
+    min: f64,
+    max: f64,
+    mean: f64,
+    peak: Option<(&'a Value, f64)>,
+}
+
+impl<'a> MetricStats<'a> {
+    fn observe(&mut self, entry: &'a Value, value: f64, count: usize) {
+        if count == 1 {
+            self.min = value;
+            self.max = value;
+            self.mean = value;
+        } else {
+            self.min = self.min.min(value);
+            self.max = self.max.max(value);
+            // The mean need not share the numeric range of an unused raw sum.
+            let count = count as f64;
+            self.mean = self.mean * ((count - 1.0) / count) + value / count;
+        }
+        if self
+            .peak
+            .is_none_or(|(_, prior)| value.abs().total_cmp(&prior.abs()).is_ge())
+        {
+            self.peak = Some((entry, value));
+        }
     }
+
+    fn insert_bounds(&self, summary: &mut Map<String, Value>, field: &str) -> Result<(), String> {
+        insert_finite(summary, format!("{field}_min"), self.min)?;
+        insert_finite(summary, format!("{field}_max"), self.max)?;
+        insert_finite(summary, format!("{field}_span"), self.max - self.min)
+    }
+
+    fn insert_peak(&self, summary: &mut Map<String, Value>, field: &str) -> Result<(), String> {
+        let (entry, value) = self.peak.ok_or_else(|| format!("{field} has no samples"))?;
+        insert_finite(summary, format!("{field}_peak"), value)?;
+        summary.insert(
+            format!("{field}_peak_element_id"),
+            entry.get("id").cloned().unwrap_or(Value::Null),
+        );
+        Ok(())
+    }
+}
+
+fn insert_finite(
+    summary: &mut Map<String, Value>,
+    field: String,
+    value: f64,
+) -> Result<(), String> {
+    if !value.is_finite() {
+        return Err(format!("{field} is non-finite"));
+    }
+    summary.insert(field, Value::from(value));
+    Ok(())
 }

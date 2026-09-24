@@ -1,8 +1,168 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Scoped planar heat and thermal-stress result construction retains installed recovery and paired overhead evidence. Separate bounded local mechanical, electrostatic, magnetostatic and Stokes output-range regression, frame modal-spectrum regression, transient-spring time-stepping, harmonic-spring sweep, beam/frame buckling assembly, P-Delta path diagnostics, frame material-history recovery, adaptive fiber integration, initial-stress preflight, nonlinear support-load isolation and mixed-scale equation guards are verified only in process, without broad physics qualification. Retained-input cloning, serialization, and other operator scopes remain separate coverage.",
+  "summary": "Scoped planar heat and thermal-stress result construction retains installed recovery and paired overhead evidence. Separate bounded local mechanical, electrostatic, magnetostatic and Stokes output-range regression, frame modal-spectrum regression, transient-spring time-stepping, harmonic-spring sweep, beam/frame buckling assembly, P-Delta path diagnostics, frame material-history recovery, adaptive fiber integration, initial-stress preflight, nonlinear support-load isolation, mixed-scale equation guards and nonlinear-spring/contact finite-range and committed-load recovery are verified only in process, without broad physics qualification. Retained-input cloning, serialization, and other operator scopes remain separate coverage.",
   "evidence_claims": [
+    {
+      "id": "workflow-metric-integrity",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_metric_resolver.rs",
+        "workers/rust/crates/engine/src/workflow_metric_resolver/aliases.rs",
+        "workers/rust/crates/engine/src/cfd_diagnostics.rs",
+        "workers/rust/crates/engine/src/tests/workflow_metric_integrity.rs",
+        "workers/rust/crates/engine/tests/metric_integrity_workflow.rs",
+        "config/operator-validation-profiles/workflow.json",
+        "reports/workflow-metric-integrity-20260924.md"
+      ],
+      "required_text": [
+        "corrupt_first_alias_cannot_fall_through_to_a_healthy_later_alias",
+        "transient_node_reduction_rejects_every_bad_or_missing_sample",
+        "modal_bounds_require_complete_frequency_evidence",
+        "cfd_empty_collections_cannot_invent_zero_measurements",
+        "representable_velocity_norm_avoids_intermediate_square_overflow_and_underflow",
+        "representable_cfd_mean_does_not_require_a_representable_unused_sum",
+        "metric_failure_recovery_keeps_raw_inputs_and_independent_work",
+        "corrected_samples_replay_through_cfd_and_dynamic_quality_chains",
+        "This is bounded local shared-metric and CFD diagnostic integrity evidence, not complete extraction or industrial physics qualification."
+      ]
+    },
+    {
+      "id": "workflow-domain-quality-validation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_domain_quality.rs",
+        "workers/rust/crates/engine/src/tests/workflow_domain_quality_validation.rs",
+        "workers/rust/crates/engine/tests/domain_quality_validation_workflow.rs",
+        "config/operator-validation-profiles/workflow.json",
+        "reports/workflow-domain-quality-validation-20260924.md"
+      ],
+      "required_text": [
+        "unknown_or_malformed_terms_cannot_be_silently_dropped",
+        "invalid_canonical_metric_cannot_hide_behind_a_healthy_alias",
+        "overflowed_penalties_cannot_disappear_from_the_score",
+        "finite_penalties_cannot_overflow_the_total",
+        "zero_weights_remain_explicit_and_do_not_skip_metric_validation",
+        "quality_branch_recovery_preserves_raw_evidence_without_a_false_objective",
+        "corrected_quality_replay_restores_the_complete_objective_chain",
+        "This is bounded local domain-quality validation, not complete metric extraction, optimization or industrial physics qualification."
+      ]
+    },
+    {
+      "id": "workflow-guard-validation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_guard_contract.rs",
+        "workers/rust/crates/engine/src/workflow_guard_transforms.rs",
+        "workers/rust/crates/engine/src/tests/workflow_guard_validation.rs",
+        "workers/rust/crates/engine/tests/guard_validation_workflow.rs",
+        "config/operator-validation-profiles/workflow.json",
+        "reports/workflow-guard-validation-20260924.md"
+      ],
+      "required_text": [
+        "missing_guard_metric_cannot_pass_or_count_as_checked",
+        "missing_pair_criterion_cannot_reduce_the_denominator_and_declare_a_winner",
+        "invalid_pair_weight_is_not_replaced_by_one",
+        "pair_delta_overflow_is_not_serialized_as_successful_null",
+        "pair_total_score_overflow_fails_before_serializing_a_winner",
+        "invalid_rule_recovery_preserves_raw_inputs_and_independent_work_without_a_verdict",
+        "corrected_evidence_replay_checks_every_rule_and_criterion",
+        "This is bounded local guard and pair-comparison validation, not complete optimization or industrial physics qualification."
+      ]
+    },
+    {
+      "id": "workflow-result-admission",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_result_admission.rs",
+        "workers/rust/crates/engine/src/workflow_guard_transforms.rs",
+        "workers/rust/crates/engine/src/workflow_reporting.rs",
+        "workers/rust/crates/engine/src/workflow_summary_transforms.rs",
+        "workers/rust/crates/engine/src/workflow_quality_terms.rs",
+        "workers/rust/crates/engine/src/tests/workflow_result_admission.rs",
+        "workers/rust/crates/engine/tests/result_admission_workflow.rs",
+        "config/operator-validation-profiles/workflow.json",
+        "reports/workflow-result-admission-20260924.md"
+      ],
+      "required_text": [
+        "guard_rejects_uncommitted_spring_despite_zero_displacement_and_residual",
+        "quality_rejects_committed_but_incomplete_contact_result",
+        "extractors_cannot_erase_nonconvergence_before_quality_scoring",
+        "quality_ranking_reports_rejected_partial_candidate_instead_of_selecting_it",
+        "explicit_recovery_keeps_diagnostics_and_independent_work_without_a_false_quality_result",
+        "full_load_replay_after_failure_completes_direct_and_summary_quality_chains",
+        "This is bounded local result-admission validation, not complete research-workflow or industrial physics qualification."
+      ]
+    },
+    {
+      "id": "nonlinear-spring-committed-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/nonlinear_spring_1d.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_recovery.rs",
+        "workers/rust/crates/protocol/tests/nonlinear_spring_result_contract.rs",
+        "workers/rust/crates/cli/tests/nonlinear_spring_range_operator.rs",
+        "workers/rust/crates/engine/tests/nonlinear_spring_recovery_workflow.rs",
+        "workers/rust/crates/benchmark/src/tests/spring_recovery.rs",
+        "config/operator-validation-profiles/structural-nonlinear.json",
+        "reports/nonlinear-spring-recovery-20260924.md"
+      ],
+      "required_text": [
+        "final_allowed_correction_is_checked_before_declaring_budget_exhaustion",
+        "failed_contact_activation_restores_the_last_equilibrated_load_step",
+        "hardening_spring_failure_restores_its_own_nonzero_committed_state",
+        "legacy_spring_results_do_not_invent_a_committed_load_factor",
+        "headless_partial_contact_load_is_explicit_and_replay_can_reach_the_target",
+        "workflow_preserves_partial_load_and_failed_trial_diagnostics",
+        "nonconverged_spring_benchmarks_are_failures_not_fast_successes",
+        "This is bounded local spring/contact committed-state validation, not durable restart, general nonlinear convergence or industrial contact qualification."
+      ]
+    },
+    {
+      "id": "nonlinear-spring-range-local-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/nonlinear_spring_1d.rs",
+        "workers/rust/crates/solver/tests/nonlinear_spring_range_reliability.rs",
+        "workers/rust/crates/cli/tests/nonlinear_spring_range_operator.rs",
+        "config/operator-validation-profiles/structural-nonlinear.json",
+        "reports/nonlinear-spring-range-reliability-20260924.md"
+      ],
+      "required_text": [
+        "zero_cubic_law_does_not_evaluate_overflowing_displacement_powers",
+        "small_cubic_coefficient_preserves_a_representable_cubic_force_and_tangent",
+        "zero_residual_does_not_hide_overflow_in_the_assembled_tangent",
+        "support_loads_cannot_overflow_an_equation_removed_by_constraints",
+        "contact_penalty_overflow_is_rejected_during_assembly_and_final_output",
+        "large_chain_checks_cancellation_inside_assembly_and_result_batches",
+        "headless_rejects_final_trial_overflow_instead_of_publishing_json_null",
+        "This is bounded local spring/contact numerical-range validation, not general nonlinear or industrial contact qualification."
+      ]
+    },
     {
       "id": "frame-equation-balance-local-reliability",
       "status": "proven",

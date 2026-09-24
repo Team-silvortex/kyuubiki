@@ -27,7 +27,7 @@ use crate::runner_preconditioner::{
 };
 use crate::runner_progress::{print_case_done, print_case_start};
 use crate::runner_shape::workload_shape;
-use crate::runner_structural::run_thermal_structural_workload;
+use crate::runner_structural::{run_thermal_structural_workload, spring_path_diagnostics};
 use crate::runner_util::{current_peak_rss_kib, percentile, unix_timestamp};
 
 pub(crate) fn build_report(
@@ -276,27 +276,39 @@ pub(crate) fn run_case_with_preconditioner(
                     })
                 }
                 BenchmarkWorkload::NonlinearSpring1d(request) => {
-                    solve(EngineSolveRequest::NonlinearSpring1d(request.clone())).map(|result| {
+                    solve(EngineSolveRequest::NonlinearSpring1d(request.clone())).and_then(|result| {
                         let AnalysisResult::NonlinearSpring1d(result) = result else {
                             unreachable!("nonlinear spring solve should return nonlinear result")
                         };
+                        let (iterations, residual) = spring_path_diagnostics(
+                            "nonlinear spring", result.converged, result.achieved_load_factor, &result.steps,
+                        )?;
+                        solver_iterations = Some(iterations);
+                        solver_residual_norm = Some(residual);
                         node_count = result.nodes.len();
                         element_count = result.elements.len();
                         dof_count = result.nodes.len();
                         max_displacement = result.max_displacement;
                         max_stress = result.max_force;
+                        Ok(())
                     })
                 }
                 BenchmarkWorkload::ContactGap1d(request) => {
-                    solve(EngineSolveRequest::ContactGap1d(request.clone())).map(|result| {
+                    solve(EngineSolveRequest::ContactGap1d(request.clone())).and_then(|result| {
                         let AnalysisResult::ContactGap1d(result) = result else {
                             unreachable!("contact gap solve should return contact result")
                         };
+                        let (iterations, residual) = spring_path_diagnostics(
+                            "contact gap", result.converged, result.achieved_load_factor, &result.steps,
+                        )?;
+                        solver_iterations = Some(iterations);
+                        solver_residual_norm = Some(residual);
                         node_count = result.nodes.len();
                         element_count = result.elements.len();
                         dof_count = result.nodes.len();
                         max_displacement = result.max_displacement;
                         max_stress = result.max_contact_force;
+                        Ok(())
                     })
                 }
                 BenchmarkWorkload::Beam1d(request) => {

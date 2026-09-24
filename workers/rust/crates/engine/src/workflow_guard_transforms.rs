@@ -1,4 +1,7 @@
-use crate::workflow_metric_resolver::metric_value;
+use crate::workflow_guard_contract::{
+    Goal, GuardRule, PairCriterion, finite_value, pair_labels, required_metric,
+};
+use crate::workflow_result_admission::require_converged_result;
 use serde_json::Value;
 
 pub fn evaluate_thermal_guard(payload: Value, config: Value) -> Result<Value, String> {
@@ -143,6 +146,7 @@ fn evaluate_threshold_guard(
     let object = payload
         .as_object()
         .ok_or_else(|| format!("{operator_id} expects an object payload"))?;
+    require_converged_result(object, operator_id, "payload")?;
     let rules = config
         .get("rules")
         .and_then(Value::as_array)
@@ -151,10 +155,14 @@ fn evaluate_threshold_guard(
         return Err(format!("{operator_id} requires at least one rule"));
     }
 
-    let triggers = rules
-        .iter()
-        .filter_map(|rule| evaluate_guard_rule(object, rule))
-        .collect::<Vec<_>>();
+    let mut triggers = Vec::new();
+    for (index, rule) in rules.iter().enumerate() {
+        let trigger = evaluate_guard_rule(object, rule, index)
+            .map_err(|error| format!("{operator_id}: {error}"))?;
+        if let Some(trigger) = trigger {
+            triggers.push(trigger);
+        }
+    }
     let block_count = triggers
         .iter()
         .filter(|trigger| trigger["severity"].as_str() == Some("block"))
@@ -202,6 +210,7 @@ fn benchmark_pair(
     let object = payload
         .as_object()
         .ok_or_else(|| format!("{operator_id} expects an object payload"))?;
+    require_converged_result(object, operator_id, "payload")?;
     let left = object
         .get("left")
         .and_then(Value::as_object)
@@ -210,6 +219,8 @@ fn benchmark_pair(
         .get("right")
         .and_then(Value::as_object)
         .ok_or_else(|| format!("{operator_id} expects payload.right"))?;
+    require_converged_result(left, operator_id, "payload.left")?;
+    require_converged_result(right, operator_id, "payload.right")?;
     let criteria = config
         .get("criteria")
         .and_then(Value::as_array)
@@ -218,54 +229,25 @@ fn benchmark_pair(
         return Err(format!("{operator_id} requires at least one criterion"));
     }
 
-    let left_label = normalize_label(config.get("left_label").and_then(Value::as_str), "left");
-    let right_label = normalize_label(config.get("right_label").and_then(Value::as_str), "right");
-    let breakdown = criteria
-        .iter()
-        .filter_map(|criterion| {
-            benchmark_criterion(left, right, criterion, &left_label, &right_label)
-        })
-        .collect::<Vec<_>>();
-    if breakdown.is_empty() {
-        return Err(format!(
-            "{operator_id} did not find any comparable numeric fields"
-        ));
+    let (left_label, right_label) =
+        pair_labels(&config).map_err(|error| format!("{operator_id}: {error}"))?;
+    let mut breakdown = Vec::with_capacity(criteria.len());
+    let (mut left_score, mut right_score) = (0.0, 0.0);
+    let (mut left_win_count, mut right_win_count) = (0, 0);
+    for (index, criterion) in criteria.iter().enumerate() {
+        let (entry, left_points, right_points) =
+            benchmark_criterion(left, right, criterion, left_label, right_label, index)
+                .map_err(|error| format!("{operator_id}: {error}"))?;
+        left_score = finite_value(left_score + left_points, "left_score")
+            .map_err(|error| format!("{operator_id} config.criteria[{index}]: {error}"))?;
+        right_score = finite_value(right_score + right_points, "right_score")
+            .map_err(|error| format!("{operator_id} config.criteria[{index}]: {error}"))?;
+        left_win_count += usize::from(left_points > right_points);
+        right_win_count += usize::from(right_points > left_points);
+        breakdown.push(entry);
     }
-
-    let left_score = breakdown
-        .iter()
-        .filter_map(|item| item.get("left_score").and_then(Value::as_f64))
-        .sum::<f64>();
-    let right_score = breakdown
-        .iter()
-        .filter_map(|item| item.get("right_score").and_then(Value::as_f64))
-        .sum::<f64>();
-    let left_win_count = breakdown
-        .iter()
-        .filter(|item| {
-            item.get("left_score")
-                .and_then(Value::as_f64)
-                .unwrap_or(0.0)
-                > item
-                    .get("right_score")
-                    .and_then(Value::as_f64)
-                    .unwrap_or(0.0)
-        })
-        .count();
-    let right_win_count = breakdown
-        .iter()
-        .filter(|item| {
-            item.get("right_score")
-                .and_then(Value::as_f64)
-                .unwrap_or(0.0)
-                > item
-                    .get("left_score")
-                    .and_then(Value::as_f64)
-                    .unwrap_or(0.0)
-        })
-        .count();
     let tie_count = breakdown.len() - left_win_count - right_win_count;
-    let winner = benchmark_winner(left_score, right_score, &left_label, &right_label);
+    let winner = benchmark_winner(left_score, right_score, left_label, right_label);
 
     Ok(serde_json::json!({
         format!("{left_label}_score"): left_score,
@@ -277,27 +259,32 @@ fn benchmark_pair(
         "benchmark_right_win_count": right_win_count,
         "benchmark_tie_count": tie_count,
         "benchmark_breakdown": breakdown,
-        "benchmark_recommendation": benchmark_recommendation(&winner, &left_label, &right_label),
-        "benchmark_summary": benchmark_summary(&winner, left_score, right_score, &left_label, &right_label, breakdown.len()),
+        "benchmark_recommendation": benchmark_recommendation(&winner, left_label, right_label),
+        "benchmark_summary": benchmark_summary(&winner, left_score, right_score, left_label, right_label, breakdown.len()),
     }))
 }
 
-fn evaluate_guard_rule(payload: &serde_json::Map<String, Value>, rule: &Value) -> Option<Value> {
-    let rule_object = rule.as_object()?;
-    let field = rule_object.get("field")?.as_str()?;
-    let value = metric_value(payload, field)?;
-    if !guard_triggered(value, rule_object) {
-        return None;
+fn evaluate_guard_rule(
+    payload: &serde_json::Map<String, Value>,
+    rule: &Value,
+    index: usize,
+) -> Result<Option<Value>, String> {
+    let path = format!("config.rules[{index}]");
+    let rule = GuardRule::parse(rule, &path)?;
+    let value = required_metric(payload, rule.field, "payload")
+        .map_err(|error| format!("{path}: {error}"))?;
+    if !rule.triggered(value) {
+        return Ok(None);
     }
 
-    Some(serde_json::json!({
-        "field": field,
+    Ok(Some(serde_json::json!({
+        "field": rule.field,
         "value": value,
-        "threshold": rule_threshold(rule_object),
-        "comparison": rule_comparison(rule_object),
-        "severity": normalize_severity(rule_object.get("severity").and_then(Value::as_str)),
-        "label": rule_object.get("label").and_then(Value::as_str).unwrap_or(field),
-    }))
+        "threshold": rule.threshold,
+        "comparison": rule.comparison,
+        "severity": rule.severity,
+        "label": rule.label,
+    })))
 }
 
 fn benchmark_criterion(
@@ -306,99 +293,39 @@ fn benchmark_criterion(
     criterion: &Value,
     left_label: &str,
     right_label: &str,
-) -> Option<Value> {
-    let criterion = criterion.as_object()?;
-    let left_field = criterion_field(criterion, "left_field")?;
-    let right_field = criterion_field(criterion, "right_field")?;
-    let label_field = criterion
-        .get("field")
-        .and_then(Value::as_str)
-        .unwrap_or(left_field);
-    let left_value = metric_value(left, left_field)?;
-    let right_value = metric_value(right, right_field)?;
-    let weight = normalize_weight(criterion.get("weight").and_then(Value::as_f64));
-    let goal = normalize_goal(criterion.get("goal").and_then(Value::as_str));
-    let (left_score, right_score) = score_benchmark_pair(left_value, right_value, goal, weight);
+    index: usize,
+) -> Result<(Value, f64, f64), String> {
+    let path = format!("config.criteria[{index}]");
+    let criterion = PairCriterion::parse(criterion, &path)?;
+    let left_value = required_metric(left, criterion.left_field, "payload.left")
+        .map_err(|error| format!("{path}: {error}"))?;
+    let right_value = required_metric(right, criterion.right_field, "payload.right")
+        .map_err(|error| format!("{path}: {error}"))?;
+    let delta = finite_value(right_value - left_value, &format!("{path}.delta"))?;
+    let (left_score, right_score) =
+        score_benchmark_pair(left_value, right_value, criterion.goal, criterion.weight);
 
-    Some(serde_json::json!({
-        "field": label_field,
-        "left_field": left_field,
-        "right_field": right_field,
-        "goal": goal,
-        "weight": weight,
-        format!("{left_label}_value"): left_value,
-        format!("{right_label}_value"): right_value,
-        "delta": right_value - left_value,
-        "left_score": left_score,
-        "right_score": right_score,
-    }))
+    Ok((
+        serde_json::json!({
+            "field": criterion.field,
+            "left_field": criterion.left_field,
+            "right_field": criterion.right_field,
+            "goal": criterion.goal,
+            "weight": criterion.weight,
+            format!("{left_label}_value"): left_value,
+            format!("{right_label}_value"): right_value,
+            "delta": delta,
+            "left_score": left_score,
+            "right_score": right_score,
+        }),
+        left_score,
+        right_score,
+    ))
 }
 
-fn guard_triggered(value: f64, rule: &serde_json::Map<String, Value>) -> bool {
-    match (rule_comparison(rule), rule_threshold(rule)) {
-        ("gt", Some(threshold)) => value > threshold,
-        ("gte", Some(threshold)) => value >= threshold,
-        ("lt", Some(threshold)) => value < threshold,
-        ("lte", Some(threshold)) => value <= threshold,
-        ("eq", Some(threshold)) => value == threshold,
-        _ => false,
-    }
-}
-
-fn rule_comparison(rule: &serde_json::Map<String, Value>) -> &str {
-    match rule
-        .get("comparison")
-        .and_then(Value::as_str)
-        .unwrap_or("gte")
-    {
-        "gt" | "gte" | "lt" | "lte" | "eq" => rule
-            .get("comparison")
-            .and_then(Value::as_str)
-            .unwrap_or("gte"),
-        _ => "gte",
-    }
-}
-
-fn rule_threshold(rule: &serde_json::Map<String, Value>) -> Option<f64> {
-    rule.get("threshold")
-        .and_then(Value::as_f64)
-        .or_else(|| rule.get("value").and_then(Value::as_f64))
-}
-
-fn normalize_severity(severity: Option<&str>) -> &'static str {
-    match severity.unwrap_or("warn") {
-        "block" => "block",
-        _ => "warn",
-    }
-}
-
-fn normalize_goal(goal: Option<&str>) -> &'static str {
-    match goal.unwrap_or("min") {
-        "max" => "max",
-        _ => "min",
-    }
-}
-
-fn normalize_weight(weight: Option<f64>) -> f64 {
-    match weight {
-        Some(value) if value > 0.0 => value,
-        _ => 1.0,
-    }
-}
-
-fn criterion_field<'a>(
-    criterion: &'a serde_json::Map<String, Value>,
-    key: &str,
-) -> Option<&'a str> {
-    criterion
-        .get(key)
-        .and_then(Value::as_str)
-        .or_else(|| criterion.get("field").and_then(Value::as_str))
-}
-
-fn score_benchmark_pair(left_value: f64, right_value: f64, goal: &str, weight: f64) -> (f64, f64) {
+fn score_benchmark_pair(left_value: f64, right_value: f64, goal: Goal, weight: f64) -> (f64, f64) {
     match goal {
-        "max" => {
+        Goal::Max => {
             if left_value > right_value {
                 (weight, 0.0)
             } else if right_value > left_value {
@@ -407,7 +334,7 @@ fn score_benchmark_pair(left_value: f64, right_value: f64, goal: &str, weight: f
                 (weight * 0.5, weight * 0.5)
             }
         }
-        _ => {
+        Goal::Min => {
             if left_value < right_value {
                 (weight, 0.0)
             } else if right_value < left_value {
@@ -457,14 +384,6 @@ fn benchmark_summary(
     format!(
         "{winner} across {criteria_count} criteria ({left_label}={left_score}, {right_label}={right_score})."
     )
-}
-
-fn normalize_label(label: Option<&str>, default_value: &str) -> String {
-    label
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .unwrap_or(default_value)
-        .to_string()
 }
 
 fn guard_recommendation(status: &str) -> &'static str {

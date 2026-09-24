@@ -1,3 +1,4 @@
+use crate::workflow_result_admission::require_converged_result;
 use serde_json::Value;
 use std::collections::BTreeSet;
 
@@ -5,6 +6,7 @@ pub fn validate_summary_tolerance(payload: Value, config: Value) -> Result<Value
     let object = payload.as_object().ok_or_else(|| {
         "transform.validate_summary_tolerance expects an object payload".to_string()
     })?;
+    require_converged_result(object, "transform.validate_summary_tolerance", "payload")?;
     let left = object
         .get("left")
         .and_then(Value::as_object)
@@ -17,6 +19,12 @@ pub fn validate_summary_tolerance(payload: Value, config: Value) -> Result<Value
         .ok_or_else(|| {
             "transform.validate_summary_tolerance expects object payload.right".to_string()
         })?;
+    require_converged_result(left, "transform.validate_summary_tolerance", "payload.left")?;
+    require_converged_result(
+        right,
+        "transform.validate_summary_tolerance",
+        "payload.right",
+    )?;
     // An omitted workflow node config arrives as null, not an empty object.
     if !config.is_null() && !config.is_object() {
         return Err("transform.validate_summary_tolerance config must be an object".to_string());

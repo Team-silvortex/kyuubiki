@@ -12,6 +12,33 @@ use kyuubiki_solver::{
 use crate::models::{BenchmarkMemoryStage, BenchmarkWorkload};
 use crate::runner_preconditioner::parse_preconditioner;
 
+pub(crate) fn spring_path_diagnostics(
+    label: &str,
+    converged: bool,
+    achieved: Option<f64>,
+    steps: &[kyuubiki_protocol::NonlinearSpring1dStepResult],
+) -> Result<(usize, f64), String> {
+    let last = steps
+        .last()
+        .ok_or_else(|| format!("{label} benchmark returned no load steps"))?;
+    if !converged {
+        return Err(format!(
+            "{label} benchmark did not converge at step {}: target={}, achieved={}, residual={}, iterations={}",
+            last.step,
+            last.load_factor,
+            achieved
+                .map(|value| value.to_string())
+                .unwrap_or_else(|| "unknown".into()),
+            last.residual_norm,
+            last.iterations,
+        ));
+    }
+    Ok((
+        steps.iter().map(|step| step.iterations).sum(),
+        last.residual_norm,
+    ))
+}
+
 pub(crate) struct WorkloadMetrics {
     pub(crate) node_count: usize,
     pub(crate) element_count: usize,

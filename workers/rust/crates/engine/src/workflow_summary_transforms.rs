@@ -1,9 +1,11 @@
+use crate::workflow_result_admission::require_converged_result;
 use serde_json::Value;
 
 pub fn merge_summary_pair(payload: Value, config: Value) -> Result<Value, String> {
     let object = payload
         .as_object()
         .ok_or_else(|| "transform.merge_summary_pair expects an object payload".to_string())?;
+    require_converged_result(object, "transform.merge_summary_pair", "payload")?;
     let left = object
         .get("left")
         .and_then(Value::as_object)
@@ -12,6 +14,8 @@ pub fn merge_summary_pair(payload: Value, config: Value) -> Result<Value, String
         .get("right")
         .and_then(Value::as_object)
         .ok_or_else(|| "transform.merge_summary_pair expects object payload.right".to_string())?;
+    require_converged_result(left, "transform.merge_summary_pair", "payload.left")?;
+    require_converged_result(right, "transform.merge_summary_pair", "payload.right")?;
 
     let left_prefix = config
         .get("left_prefix")
@@ -43,6 +47,7 @@ pub fn compare_summary_pair(payload: Value, config: Value) -> Result<Value, Stri
     let object = payload
         .as_object()
         .ok_or_else(|| "transform.compare_summary_pair expects an object payload".to_string())?;
+    require_converged_result(object, "transform.compare_summary_pair", "payload")?;
     let left = object
         .get("left")
         .and_then(Value::as_object)
@@ -51,6 +56,8 @@ pub fn compare_summary_pair(payload: Value, config: Value) -> Result<Value, Stri
         .get("right")
         .and_then(Value::as_object)
         .ok_or_else(|| "transform.compare_summary_pair expects object payload.right".to_string())?;
+    require_converged_result(left, "transform.compare_summary_pair", "payload.left")?;
+    require_converged_result(right, "transform.compare_summary_pair", "payload.right")?;
 
     let left_prefix = config
         .get("left_prefix")
@@ -202,6 +209,13 @@ pub fn aggregate_summary_collection(payload: Value, config: Value) -> Result<Val
             "transform.aggregate_summary_collection expects named object summaries".to_string(),
         );
     }
+    for (source_id, summary) in &source_entries {
+        require_converged_result(
+            summary,
+            "transform.aggregate_summary_collection",
+            &format!("payload.{source_id}"),
+        )?;
+    }
 
     let fields = if requested_fields.is_empty() {
         let mut discovered = source_entries
@@ -282,6 +296,7 @@ pub fn normalize_summary_fields(payload: Value, config: Value) -> Result<Value, 
     let object = payload.as_object().ok_or_else(|| {
         "transform.normalize_summary_fields expects an object payload".to_string()
     })?;
+    require_converged_result(object, "transform.normalize_summary_fields", "payload")?;
     let rules = config
         .get("rules")
         .and_then(Value::as_array)
@@ -377,6 +392,11 @@ pub fn select_best_summary(payload: Value, config: Value) -> Result<Value, Strin
     let mut scored = source_entries
         .iter()
         .map(|(source_id, summary)| {
+            require_converged_result(
+                summary,
+                "transform.select_best_summary",
+                &format!("payload.{source_id}"),
+            )?;
             let (score, breakdown) = score_summary_entry(summary, criteria)?;
             Ok((
                 (*source_id).to_string(),

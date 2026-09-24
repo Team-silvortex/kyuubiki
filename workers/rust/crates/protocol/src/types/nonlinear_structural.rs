@@ -37,7 +37,9 @@ pub struct SolveNonlinearSpring1dRequest {
 pub struct NonlinearSpring1dStepResult {
     pub step: usize,
     pub load_factor: f64,
+    /// Newton corrections applied; final residual validation is not another correction.
     pub iterations: usize,
+    /// Residual of the last evaluated trial at this target load, including failed trials.
     pub residual_norm: f64,
     pub converged: bool,
 }
@@ -69,6 +71,10 @@ pub struct SolveNonlinearSpring1dResult {
     pub elements: Vec<NonlinearSpring1dElementResult>,
     pub steps: Vec<NonlinearSpring1dStepResult>,
     pub converged: bool,
+    /// Load factor of the returned committed state. None denotes an older result contract.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub achieved_load_factor: Option<f64>,
+    /// Residual of the returned state at achieved_load_factor, not a failed step's trial.
     pub residual_norm: f64,
     pub max_displacement: f64,
     pub max_force: f64,
@@ -687,6 +693,10 @@ pub struct SolveContactGap1dResult {
     pub contacts: Vec<ContactGap1dContactResult>,
     pub steps: Vec<NonlinearSpring1dStepResult>,
     pub converged: bool,
+    /// Load factor of the returned committed state. None denotes an older result contract.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub achieved_load_factor: Option<f64>,
+    /// Residual of the returned state at achieved_load_factor, not a failed step's trial.
     pub residual_norm: f64,
     pub max_displacement: f64,
     pub max_force: f64,

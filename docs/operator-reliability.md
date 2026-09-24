@@ -1073,6 +1073,13 @@ penetration, contact force, and active branch count. This does not claim
 multidimensional contact, friction, impact, large deformation, or industrial
 contact search.
 
+The 2026-09-24 [spring/contact numerical-range regression](../reports/nonlinear-spring-range-reliability-20260924.md)
+adds finite-state guards to the shared spring and penalty assembly, including
+zero-residual convergence and final output after an exhausted iteration budget.
+It retains large-displacement active/inactive force splits, rejects penalty
+overflow, and checks cancellation followed by clean in-process replay. This
+does not add friction, contact search or a nonlinear globalization strategy.
+
 The truss 2D operator is now qualified for the retained symmetric two-bar
 scope. Its closed-form evidence checks fixed supports, apex symmetry, vertical
 displacement, equal axial member force, stress, strain, and strain energy.
@@ -1263,6 +1270,108 @@ load, linear-stiffness, and cubic-stiffness perturbations, while the boundary
 lane rejects non-finite node data and zero-length elements before Newton
 iteration. This is a monotone one-dimensional hardening qualification, not a
 hysteresis, softening, snap-through, or dynamics claim.
+
+The `nonlinear-spring-range-local-reliability` profile adds weighted cubic
+evaluation so the tested finite force/tangent responses do not depend on
+representability of unweighted displacement powers. Non-finite element,
+assembled, residual or output values fail before success/serialization;
+constrained loads do not enter free residual subtraction. Twelve public
+regressions and five Rust headless plan-to-engine tests supplement the retained
+analytic checks. Absolute tolerance and finite non-converged trial semantics
+were retained in that round; this is not arbitrary-scale or general nonlinear accuracy
+qualification. See the [bounded evidence and limits](../reports/nonlinear-spring-range-reliability-20260924.md).
+
+The follow-up `nonlinear-spring-committed-recovery` profile replaces the
+non-converged trial output with the last committed state for both spring and
+gap contact. `achieved_load_factor` explicitly identifies that state's load;
+missing legacy metadata remains unknown. Root `residual_norm` belongs to that
+state, whereas a failed step's residual belongs to its last evaluated trial.
+Always inspect `converged`: zero root residual at a partial load is not
+full-target acceptance. `iterations` now counts Newton corrections; the final
+allowed correction is checked, and an already equilibrated step uses zero.
+Only two displacement buffers are retained, with no per-step full snapshots.
+The benchmark adapter rejects partial completion rather than reporting fast
+success. The [recovery evidence](../reports/nonlinear-spring-recovery-20260924.md)
+also covers headless and workflow propagation, cancellation and clean replay.
+This is not a durable checkpoint/resume API or an adaptive continuation claim.
+
+The `workflow-result-admission` component profile closes the next boundary:
+explicit `converged: false` cannot become a passing guard, a ready quality score,
+or a winning pair comparison. Shared admission covers nine domain consumers,
+the three generic result extractors, summary reduction/selection/validation,
+and composite quality sources. The material-frame `stability_result.converged`
+wrapper is checked as well. Invalid marker types fail closed; missing markers
+remain accepted for existing metric-only contracts, not certified as converged.
+Load factors have operator-specific scales and are reported rather than compared
+against a universal target. Trial histories are not scanned.
+Incomplete results can still be exported intact for diagnosis. The default
+workflow fails at the rejecting consumer; explicit `on_error: "skip"` retains
+independent work and raw result outputs without publishing a quality result.
+Candidate-ranking rejection keeps the ranking incomplete and requires replanning.
+See the [admission regression and limits](../reports/workflow-result-admission-20260924.md).
+This is local result-consumption evidence, not nonlinear physics qualification
+or a guarantee for custom transforms that remove status metadata themselves.
+
+The `workflow-guard-validation` profile additionally rejects missing or invalid
+metrics in all nine domain guards and paired benchmarks. Successful checked-rule
+and criterion counts now correspond to complete evaluation, not entries that were
+silently skipped. Invalid explicit options do not become defaults: comparisons,
+severity, goals, positive weights and nonblank fields/labels are validated before
+use. The existing `value` threshold alias remains valid, but conflicting aliases
+are rejected. Default `gte`, `warn`, `min`, unit weight and `left`/`right` labels
+apply only when the corresponding option is omitted. Invalid explicit numeric
+fields cannot hide behind valid fallback aliases. Derived non-finite metrics,
+overflowing deltas and score totals fail before a verdict can be serialized.
+Candidate labels must be distinct after trimming and cannot use the `tie` sentinel.
+The [guard evidence](../reports/workflow-guard-validation-20260924.md) includes
+branch-local recovery and corrected-input replay. It does not certify the
+completeness of every domain-specific metric reducer or quality-score configuration.
+
+The follow-up `workflow-domain-quality-validation` profile closes quality-score
+configuration and arithmetic across the same nine domains. Explicit term lists
+must be nonempty, known and unique; unknown entries cannot silently disappear.
+Targets must be finite and positive, weights and ready limits finite and
+nonnegative. Defaults apply only to absent options; null top-level config still
+means defaults. Known inactive overrides remain reusable but are also validated.
+Positive targets are used exactly, without the former hidden `1e-12` target floor.
+Zero weight remains supported, but cannot hide a missing or malformed metric.
+An absent selected metric still returns an explicit blocking assessment; an
+invalid canonical numeric value cannot be replaced with a healthy alias.
+Ratios, penalties and totals are checked before JSON serialization, so overflow
+cannot become `null`, disappear from a sum, and produce an excellent score.
+The nine domain wrappers retain their defaults, optional terms and output fields
+while sharing typed evaluation and aggregation. No physics-specific scheduling
+rule is added to the engine. The [quality evidence](../reports/workflow-domain-quality-validation-20260924.md)
+covers default fail-fast behavior, opt-in branch recovery, corrected-input replay
+and missing-metric propagation through composite scoring. Score formulas,
+the inverse-goal denominator regularization, grade cutoffs and domain heuristics
+are not independently qualified by this contract validation; generic alias and
+sample-array reducers still require their own completeness audit.
+
+The `workflow-metric-integrity` follow-up checks the shared resolver used by
+the nine domain guards, quality scorers and paired comparisons. The selected
+canonical value or first present alias must be numeric and finite; invalid
+data cannot fall through to a later healthy alias. Frequency-response extrema,
+peak-response frequency, transient one-axis node extrema and modal frequency
+bounds require every consumed row and field. Errors identify the source array,
+index and field. Absent or empty selected collections remain unavailable rather
+than switching to a different source. Explicit valid summaries retain precedence
+over raw arrays; this is not an independent recomputation or provenance check.
+Optional display metadata uses a separately named best-effort API, not the
+checked decision path. The first-mode participation metric inspects the first
+mode, not participation values from unselected modes.
+
+The Stokes/CFD diagnostic extractor also checks convergence admission and every
+required velocity, pressure, divergence, Reynolds and dissipation sample. Both
+node and element collections must be nonempty; incomplete collections cannot
+invent zero diagnostics. Two streaming passes use constant auxiliary statistical
+state instead of five temporary numeric arrays. Velocity magnitude uses `hypot`;
+the mean no longer requires an unused raw sum to fit the numeric range. Derived
+spans, means and dissipation totals must be finite before publication. The
+[metric-integrity evidence](../reports/workflow-metric-integrity-20260924.md)
+includes fail-fast, branch recovery and corrected-sample replay through CFD and
+dynamic quality chains. Thermal, thermo-mechanical, electrostatic, magnetostatic,
+transport and generic field-extraction reducers still need separate scoped audits.
 
 `solve.cohesive_interface_1d` now has a retained component-level screening
 profile for a scalar Mode-I bilinear traction-separation history. The analytic

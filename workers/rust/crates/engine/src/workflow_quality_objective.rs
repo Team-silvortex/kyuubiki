@@ -3,12 +3,16 @@ use crate::workflow_quality_terms::{
     config_number, dominant_composite_term, finite_quality_value, next_round_action,
     quality_entries, quality_iteration_hint, quality_term, validate_quality_config,
 };
+use crate::workflow_result_admission::require_converged_result;
 use serde_json::Value;
 
 pub fn compose_quality_objective(payload: Value, config: Value) -> Result<Value, String> {
     let object = payload.as_object().ok_or_else(|| {
         "transform.compose_quality_objective expects an object payload".to_string()
     })?;
+    if object.contains_key("qualities") {
+        require_converged_result(object, "transform.compose_quality_objective", "payload")?;
+    }
     let entries = quality_entries(object)?;
     validate_quality_config(&config)?;
     let missing_metric_penalty = config_number(&config, "missing_metric_penalty", 5.0)?;

@@ -14,7 +14,8 @@
     "config/operator-validation-profiles/structural-plane.json",
     "config/operator-validation-profiles/structural-solid.json",
     "config/operator-validation-profiles/thermal-structural.json",
-    "config/operator-validation-profiles/transport.json"
+    "config/operator-validation-profiles/transport.json",
+    "config/operator-validation-profiles/workflow.json"
   ],
   "profiles": [
     {

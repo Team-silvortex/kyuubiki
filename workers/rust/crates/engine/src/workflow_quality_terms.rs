@@ -1,3 +1,4 @@
+use crate::workflow_result_admission::require_converged_result;
 use serde_json::{Map, Value};
 use std::collections::BTreeSet;
 
@@ -185,6 +186,11 @@ pub(crate) fn quality_term(
     missing_metric_penalty: f64,
     not_ready_penalty: f64,
 ) -> Result<QualityTerm, String> {
+    require_converged_result(
+        summary,
+        "transform.compose_quality_objective",
+        &format!("qualities.{source_id}"),
+    )?;
     if summary
         .get("validation_contract")
         .and_then(Value::as_str)
