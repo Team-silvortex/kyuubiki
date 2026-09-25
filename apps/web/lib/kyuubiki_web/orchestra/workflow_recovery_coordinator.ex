@@ -13,6 +13,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Orchestra.LeaseStore
   alias KyuubikiWeb.Orchestra.WorkflowJobRunner
+  alias KyuubikiWeb.Orchestra.WorkflowNodeProgress
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership, as: Ownership
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope
 
@@ -165,9 +166,14 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   def handle_call({:record_progress, job_id, claim, progress}, _from, state) do
-    if Ownership.owner?(state) and persist_progress?(progress, Map.get(state.progress, job_id)) do
+    if Ownership.owner?(state) and
+         WorkflowNodeProgress.persist?(progress, Map.get(state.progress, job_id)) do
       result = record_progress_if_owned(job_id, claim, progress, state.lease)
-      next_state = if result == :ok, do: remember_progress(state, job_id, progress), else: state
+
+      next_state =
+        if result == :ok,
+          do: WorkflowNodeProgress.remember(state, job_id, progress),
+          else: state
 
       {:reply, result, Ownership.after_write(next_state, result)}
     else
@@ -468,62 +474,53 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     end)
   end
 
-  defp record_progress_if_owned(
-         job_id,
-         claim,
-         %{
-           "node_id" => node_id,
-           "completed_nodes" => completed_nodes,
-           "total_nodes" => total_nodes
-         },
-         lease
-       )
-       when is_binary(node_id) and is_integer(completed_nodes) and is_integer(total_nodes) and
-              total_nodes > 0 do
-    LeaseStore.with_lease(lease, fn ->
-      with {:ok, job} <- active_job(job_id),
-           {:ok, runtime, recovery} <- fetch_runtime(job_id),
-           true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim),
-           execution_progress <- min(completed_nodes / total_nodes, 0.98),
-           replay? <- claim["generation"] > 1,
-           progress <-
-             if(replay?, do: max(job.progress, execution_progress), else: execution_progress),
-           progress_event <- progress_event(node_id, completed_nodes, total_nodes, progress),
-           progress_event <-
-             Map.merge(progress_event, %{
-               "generation" => claim["generation"],
-               "attempt" => claim["attempt"],
-               "execution_progress" => execution_progress
-             }),
-           updated_runtime <-
-             runtime
-             |> Map.put("current_node", node_id)
-             |> Map.update("progress_events", [progress_event], fn events ->
-               (List.wrap(events) ++ [progress_event]) |> Enum.take(-25)
-             end),
-           :ok <- AnalysisResultStore.compare_and_swap(job_id, runtime, updated_runtime),
-           {:ok, _updated_job} <-
-             Store.apply_progress(%{
-               job_id: job_id,
-               stage: "solving",
-               progress: progress,
-               iteration:
-                 if(replay?, do: max(job.iteration || 0, completed_nodes), else: completed_nodes),
-               message: "completed workflow node #{node_id}"
-             }) do
-        _ = job
-        :ok
-      else
-        false -> {:error, :stale_workflow_execution_claim}
-        {:error, _reason} = error -> error
-        :error -> {:error, {:workflow_recovery_not_found, job_id}}
-        {:legacy_workflow, _runtime} -> {:error, :legacy_workflow_recovery_unavailable}
-      end
-    end)
-  end
+  defp record_progress_if_owned(job_id, claim, update, lease) do
+    with {:ok, update} <- WorkflowNodeProgress.normalize(update) do
+      node_id = update["node_id"]
+      resolved_nodes = update["resolved_nodes"]
 
-  defp record_progress_if_owned(_job_id, _claim, _progress, _lease),
-    do: {:error, :invalid_workflow_progress}
+      LeaseStore.with_lease(lease, fn ->
+        with {:ok, job} <- active_job(job_id),
+             {:ok, runtime, recovery} <- fetch_runtime(job_id),
+             true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim),
+             execution_progress <- min(resolved_nodes / update["total_nodes"], 0.98),
+             replay? <- claim["generation"] > 1,
+             progress <-
+               if(replay?, do: max(job.progress, execution_progress), else: execution_progress),
+             progress_event <- WorkflowNodeProgress.event(update, progress),
+             progress_event <-
+               Map.merge(progress_event, %{
+                 "generation" => claim["generation"],
+                 "attempt" => claim["attempt"],
+                 "execution_progress" => execution_progress
+               }),
+             updated_runtime <-
+               runtime
+               |> Map.put("current_node", node_id)
+               |> Map.update("progress_events", [progress_event], fn events ->
+                 (List.wrap(events) ++ [progress_event]) |> Enum.take(-25)
+               end),
+             :ok <- AnalysisResultStore.compare_and_swap(job_id, runtime, updated_runtime),
+             {:ok, _updated_job} <-
+               Store.apply_progress(%{
+                 job_id: job_id,
+                 stage: "solving",
+                 progress: progress,
+                 iteration:
+                   if(replay?, do: max(job.iteration || 0, resolved_nodes), else: resolved_nodes),
+                 message: "#{update["status"]} workflow node #{node_id}"
+               }) do
+          _ = job
+          :ok
+        else
+          false -> {:error, :stale_workflow_execution_claim}
+          {:error, _reason} = error -> error
+          :error -> {:error, {:workflow_recovery_not_found, job_id}}
+          {:legacy_workflow, _runtime} -> {:error, :legacy_workflow_recovery_unavailable}
+        end
+      end)
+    end
+  end
 
   defp commit_result_if_owned(job_id, claim, result, lease) do
     LeaseStore.with_lease(lease, fn ->
@@ -542,8 +539,19 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
              |> Map.put("response_options", Map.get(runtime, "response_options", %{}))
              |> Map.put(WorkflowRecoveryEnvelope.internal_key(), completed),
            :ok <- AnalysisResultStore.compare_and_swap(job_id, runtime, final),
+           failed_count <- length(Map.get(result, "failed_nodes", [])),
            {:ok, _job} <-
-             Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0}) do
+             Store.apply_progress(%{
+               job_id: job_id,
+               stage: "completed",
+               progress: 1.0,
+               message:
+                 if(failed_count == 0,
+                   do: "workflow completed",
+                   else:
+                     "workflow completed with #{failed_count} failed node(s); inspect node_failures"
+                 )
+             }) do
         :ok
       else
         false -> {:error, :stale_workflow_execution_claim}
@@ -710,36 +718,6 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
         }
     end
   end
-
-  defp progress_event(node_id, completed_nodes, total_nodes, progress) do
-    %{
-      "node_id" => node_id,
-      "completed_nodes" => completed_nodes,
-      "total_nodes" => total_nodes,
-      "progress" => progress,
-      "emitted_at" => DateTime.utc_now(:second) |> DateTime.to_iso8601()
-    }
-  end
-
-  defp persist_progress?(%{"completed_nodes" => completed, "total_nodes" => total}, previous)
-       when is_integer(completed) and is_integer(total) and total > 0 do
-    now = System.monotonic_time(:millisecond)
-    stride = max(div(total, 100), 1)
-
-    is_nil(previous) or completed == total or completed - previous.completed >= stride or
-      now - previous.persisted_at_ms >= 250
-  end
-
-  defp persist_progress?(_progress, _previous), do: true
-
-  defp remember_progress(state, job_id, %{"completed_nodes" => completed}) do
-    put_in(state, [:progress, job_id], %{
-      completed: completed,
-      persisted_at_ms: System.monotonic_time(:millisecond)
-    })
-  end
-
-  defp remember_progress(state, _job_id, _progress), do: state
 
   defp forget_progress(state, job_id),
     do: %{

@@ -54,6 +54,8 @@ defmodule KyuubikiWeb.WorkflowGraphResponse do
       "dataset_contract" => Map.get(graph, "dataset_contract"),
       "completed_nodes" => Map.get(result, "completed_nodes", []),
       "skipped_nodes" => Map.get(result, "skipped_nodes", []),
+      "failed_nodes" => Map.get(result, "failed_nodes", []),
+      "node_failures" => Map.get(result, "node_failures", []),
       "performance" => Map.get(result, "performance", %{})
     }
     |> maybe_put("branch_decisions", options, result)

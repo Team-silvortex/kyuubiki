@@ -5,8 +5,10 @@ defmodule KyuubikiWeb.WorkflowGraphScheduler do
     %{
       completed: MapSet.new(),
       skipped: MapSet.new(),
+      failed: MapSet.new(),
       ordered_completed: [],
       ordered_skipped: [],
+      ordered_failed: [],
       branch_decisions: [],
       node_runs: [],
       artifact_lineage: [],
@@ -46,7 +48,8 @@ defmodule KyuubikiWeb.WorkflowGraphScheduler do
   end
 
   def resolved?(state, node_id) do
-    MapSet.member?(state.completed, node_id) or MapSet.member?(state.skipped, node_id)
+    MapSet.member?(state.completed, node_id) or MapSet.member?(state.skipped, node_id) or
+      MapSet.member?(state.failed, node_id)
   end
 
   def pending_node_ids(indexes, state) do
@@ -56,7 +59,8 @@ defmodule KyuubikiWeb.WorkflowGraphScheduler do
   end
 
   def complete?(indexes, state) do
-    MapSet.size(state.completed) + MapSet.size(state.skipped) == indexes.node_count
+    MapSet.size(state.completed) + MapSet.size(state.skipped) + MapSet.size(state.failed) ==
+      indexes.node_count
   end
 
   defp node_order(nodes) do
@@ -69,5 +73,6 @@ defmodule KyuubikiWeb.WorkflowGraphScheduler do
     Enum.reduce(edges, %{}, fn edge, acc ->
       Map.update(acc, get_in(edge, path), [edge], &[edge | &1])
     end)
+    |> Map.new(fn {node_id, grouped} -> {node_id, Enum.reverse(grouped)} end)
   end
 end

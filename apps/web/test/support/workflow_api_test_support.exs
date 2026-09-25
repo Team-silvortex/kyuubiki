@@ -134,7 +134,19 @@ defmodule KyuubikiWeb.TestSupport.WorkflowApi do
     ExUnit.Assertions.assert(result_payload["job"]["status"] == "completed")
     ExUnit.Assertions.assert(result_payload["result"]["workflow_id"] == workflow_id)
     ExUnit.Assertions.assert(length(result_payload["result"]["completed_nodes"]) == 7)
-    ExUnit.Assertions.assert(length(result_payload["result"]["progress_events"]) == 7)
+    events = result_payload["result"]["progress_events"]
+    ExUnit.Assertions.assert(Enum.count(events, &(&1["status"] == "completed")) == 7)
+    ExUnit.Assertions.assert(result_payload["result"]["failed_nodes"] == [])
+
+    ExUnit.Assertions.assert(
+      Enum.filter(events, &(&1["status"] == "skipped"))
+      |> Enum.map(& &1["node_id"])
+      |> Enum.sort() == Enum.sort(result_payload["result"]["skipped_nodes"])
+    )
+
+    ExUnit.Assertions.assert(
+      List.last(events)["resolved_nodes"] == List.last(events)["total_nodes"]
+    )
 
     ExUnit.Assertions.assert(
       Enum.member?(result_payload["result"]["completed_nodes"], "field_hotspots")

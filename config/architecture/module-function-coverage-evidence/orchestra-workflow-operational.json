@@ -28,6 +28,69 @@
   },
   "evidence_claims": [
     {
+      "id": "workflow-branch-recovery-local-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "tests/fixtures/workflow-report-contract.json",
+        "tests/fixtures/workflow-recovery-policies.json",
+        "apps/web/lib/kyuubiki_web/workflow_graph_recovery.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_scheduler.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner_metrics.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_response.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_node_progress.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/test/kyuubiki_web/workflow_branch_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_node_progress_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_branch_recovery_api_test.exs",
+        "workers/rust/crates/engine/tests/shared_branch_recovery.rs",
+        "config/operator-validation-profiles/workflow.json",
+        "reports/workflow-branch-recovery-20260925.md"
+      ],
+      "required_text": [
+        "shared_recovery_policies_isolate_only_explicitly_recoverable_failures",
+        "shared_fallback_selection_uses_declared_priority_after_dependencies_resolve",
+        "compact and custom responses cannot discard failure receipts",
+        "asynchronous jobs persist isolated failure receipts and honest terminal progress",
+        "This is bounded local branch-recovery evidence, not distributed execution or industrial physics qualification."
+      ]
+    },
+    {
+      "id": "workflow-reporting-cross-runtime-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "numerical_validation", "recovery"],
+      "files": [
+        "tests/fixtures/workflow-field-contract.json",
+        "tests/fixtures/workflow-bundle-contract.json",
+        "tests/fixtures/workflow-report-contract.json",
+        "apps/web/lib/kyuubiki_web/workflow_reporting_checks.ex",
+        "apps/web/lib/kyuubiki_web/workflow_field_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_diagnostic_bundle_runtime.ex",
+        "apps/web/test/kyuubiki_web/workflow_field_bundle_contract_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_reporting_integrity_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_reporting_integrity_api_test.exs",
+        "workers/rust/crates/engine/src/tests/workflow_field_bundle_contract.rs",
+        "workers/rust/crates/engine/tests/shared_reporting_contract.rs",
+        "config/operator-validation-profiles/workflow.json",
+        "reports/workflow-reporting-cross-runtime-20260925.md"
+      ],
+      "required_text": [
+        "shared_field_contract_matches_elixir_fixture_expectations",
+        "shared_bundle_contract_matches_elixir_fixture_expectations",
+        "shared_reporting_graph_rejects_corrupt_evidence_before_export_and_replays_cleanly",
+        "operator task IR cannot bypass reporting validation",
+        "graph API rejects invalid reporting evidence and remains usable after corrected replay",
+        "This is bounded local Rust/Elixir reporting-contract evidence, not whole-runtime equivalence or industrial physics qualification."
+      ]
+    },
+    {
       "id": "orchestra-workflow-remote-linux-operational",
       "status": "proven",
       "grade": "operational",

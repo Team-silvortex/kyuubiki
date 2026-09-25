@@ -149,7 +149,7 @@ pub(crate) fn finite_value(value: f64, path: &str) -> Result<f64, String> {
     }
 }
 
-fn optional_text<'a>(
+pub(crate) fn optional_text<'a>(
     object: &'a Map<String, Value>,
     key: &str,
     path: &str,

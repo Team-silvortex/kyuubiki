@@ -114,7 +114,7 @@ dataset contracts, input artifacts, and output artifacts. This keeps GUI,
 headless SDK, and agent/orchestra execution paths behind the same first safety
 gate.
 
-Workflow execution is still fail-fast by default. A non-core node can opt into
+Rust workflow execution is still fail-fast by default. A non-core node can opt into
 node-level recovery with `config.on_error: "skip"` or
 `config.recovery.on_error: "skip"`; `fail` is also accepted as an explicit
 fail-fast policy. Other recovery policy values are rejected during workflow
@@ -124,6 +124,13 @@ back artifacts written by the failed node, skips downstream nodes that cannot
 resolve artifacts, and continues independent branches. This prevents
 recoverable analysis/reporting failures from cascading across the whole graph
 without hiding the failure from SDK or GUI callers.
+
+Elixir Orchestra now implements the same explicit policy for returned operator
+errors and validates declared policies before execution. It does not catch
+arbitrary exceptions, process exits or workflow cancellation as recoverable
+operator errors. Its graph responses always retain `failed_nodes` and compact
+`node_failures` receipts, even when detailed traces and artifacts are omitted.
+See the bounded branch-recovery contract below for evidence and limitations.
 
 The qualification roadmap lives at
 `config/operator-qualification-roadmap.json`. The same checker validates that
@@ -1370,8 +1377,157 @@ the mean no longer requires an unused raw sum to fit the numeric range. Derived
 spans, means and dissipation totals must be finite before publication. The
 [metric-integrity evidence](../reports/workflow-metric-integrity-20260924.md)
 includes fail-fast, branch recovery and corrected-sample replay through CFD and
-dynamic quality chains. Thermal, thermo-mechanical, electrostatic, magnetostatic,
-transport and generic field-extraction reducers still need separate scoped audits.
+dynamic quality chains. The scoped audits below cover thermal, electrostatic,
+magnetostatic, thermo-mechanical and transport diagnostics. The later
+`workflow-field-bundle-integrity` profile extends the local Rust audit to generic
+fields and diagnostic bundles. The scoped cross-runtime profile below checks
+the four corresponding Elixir operations, not blanket runtime equivalence.
+
+The `workflow-diagnostic-integrity` profile checks those three dedicated
+diagnostic extractors through a shared sample-validation and reduction kernel.
+The domain wrappers retain their physical field names and aliases; the solver
+equations, engine scheduling and external SDK interfaces are unchanged. Explicit
+nonconvergence is rejected before reduction. Both source collections must be
+arrays and every record must be an object. A wholly absent optional metric group
+is omitted, not filled with zeros; a group present in only some records is an
+error. Metadata and object counts alone cannot constitute diagnostic evidence.
+Empty collections remain usable only when another collection supplies an actual
+metric and no explicit field mapping requires samples from the empty source.
+
+Default aliases are selected per record in declared order; a present invalid
+value cannot fall through to a healthy alias. Explicit `*_field` mappings select
+exactly that field and require it, rather than silently falling back to default
+names. Configured sources/fields/prefixes must be nonempty strings; a prefix
+must also retain an ASCII letter or digit after normalization. `null` or omitted
+configuration retains defaults. Unconfigured optional third components are not
+inferred. Explicit third components are required and included in derived norms.
+Magnitude-only records remain valid; absent magnitudes require both configured
+planar components, while present selected components must still be numeric.
+
+Streaming reductions retain bounded auxiliary state instead of arrays of
+all scalar values and per-record vector allocations. Required sums, means,
+spans and norms must be finite; chained `hypot` avoids squaring overflow and
+underflow for representable vector norms. Peaks preserve their existing aliases,
+signed scalar maximum and last-record tie identity. Magnetic `stored_energy`
+retains its legacy whole-group fallback only when density evidence is wholly
+absent; it cannot fill missing density rows. This fallback still uses the legacy
+output label and is not a dimensional conversion or an independently qualified
+energy-density measurement.
+
+The [diagnostic integrity report](../reports/workflow-diagnostic-integrity-20260924.md)
+covers three-domain failure isolation, corrected-input replay, visible blocking
+for wholly absent quality metrics, and six real triangle/quad solver-to-diagnostic
+quality chains. These are local in-process contracts, not remote restart,
+large-mesh performance, unit reconciliation, compensated-sum accuracy or general
+physics qualification.
+
+The `workflow-thermo-transport-integrity` follow-up extends checked samples and
+convergence admission to thermo-mechanical and transport diagnostics. Thermo
+retains temperature-delta distributions, displacement norms and its scalar
+stress/strain outputs. Default stress aliases are selected per record. A global
+`max_stress` is considered only if the whole default element stress group is
+absent; selected invalid/partial stress cannot fall through to that summary or
+component data. Explicit stress/strain field mappings are mandatory. Default
+strain scalars precede component fallback. Every present component axis requires
+complete samples; absolute component peaks retain their sign and existing
+`x`, `y`, `z`, `xy` ordering. This is not tensor-norm or equivalent-strain
+reconstruction. Unselected component aliases and summaries are not reconciled.
+
+Transport no longer invents zero concentration means or source totals/counts
+when those groups are absent. Actual zero source samples remain valid; missing
+source evidence keeps default quality and composite objectives blocked. Signed
+scalar fluxes retain precedence and absolute-magnitude peak ranking. Only absent
+scalar flux uses the two-component vector fallback, with both finite components
+required. The concentration mean avoids an unused overflowing raw sum; exported
+spans and source sums must remain finite. Transport keeps its literal trimmed
+output prefix rather than adopting the other domains' prefix normalization.
+
+The [thermo/transport integrity report](../reports/workflow-thermo-transport-integrity-20260925.md)
+records boundary controls and three real thermo-triangle, thermo-quad and
+transport-bar solver-to-quality chains, including corruption, branch recovery
+and corrected-result replay. Shared sample mechanics remain separate from
+domain-specific field meanings; no solver equations, task scheduling or SDK
+interfaces change. This does not qualify the existing signed-metric scoring
+heuristics, arbitrary 3D strain tensors, units, remote recovery or large meshes.
+
+The `workflow-field-bundle-integrity` follow-up covers Rust field statistics,
+hotspots, diagnostic-bundle composition and bundle guards. The selected array
+must be nonempty and every row must provide a finite selected value. Invalid
+explicit field, threshold, percentile, sort or sampling options are errors, not
+silent default substitutions. Requested percentiles must be valid and unique
+after output-key normalization. Valid threshold precedence, stable tied-sample
+ordering and the 32-record sample cap remain unchanged.
+
+Statistics use checked required sums and scaled `hypot` deviations rather than
+squaring large or tiny differences. Percentile samples are sorted once, only
+when requested. Hotspot means do not require an unused raw sum; sorting borrows
+records and only the bounded published samples clone full records. Hotspot IDs
+remain an unbounded output list as before. These changes are not a measured
+speedup or a general floating-point error bound.
+
+Bundle sources claiming the diagnostic contract must have valid metadata and
+actual numeric measurements. Root and selected-source convergence checks run
+even if payload retention is disabled. Missing node/element counts become
+`null` (unknown), not invented zeros; complete totals use checked integer
+addition. Present invalid counts cannot fall through to legacy prefixed counts.
+Bundle guards validate every configured rule against an exact finite published
+field. Missing sources, missing metrics and invalid rules cannot be counted as
+passed checks. Genuine threshold violations still produce a valid blocked or
+warning report. On opt-in branch recovery, invalid evidence prevents report
+export while raw inputs and independent work remain available.
+
+The [field/bundle integrity report](../reports/workflow-field-bundle-integrity-20260925.md)
+records positive controls, corruption/replay and fully prescribed heat/electric
+patch results fed through the reporting graph. This does not validate arbitrary
+hand-authored report provenance, generic result summaries or CSV exports.
+The follow-up `workflow-reporting-cross-runtime-contract` profile now exercises
+65 shared JSON cases in both the Rust engine and Elixir Orchestra paths. The
+Elixir reporting/summary facades delegate these four operations to checked field
+and bundle modules; their obsolete permissive implementations are removed.
+Dispatch preserves malformed explicit configuration for validation instead of
+turning `false` into defaults. Default p90 hotspot selection, full-precision
+percentile keys, null hotspot IDs, deterministic source ordering and unknown
+counts now follow the checked Rust contract. BEAM arithmetic overflow becomes a
+path-bearing contract error; unrelated exceptions are not swallowed.
+
+The [cross-runtime report](../reports/workflow-reporting-cross-runtime-20260925.md)
+also records the shared reporting graph, local TaskIR execution, API rejection
+and fresh corrected replay. Comparison uses explicit expected fields and
+relative floating-point tolerances, not bitwise whole-output equality. Markdown
+preserves unknown counts as `null` instead of blank or invented zero. This is
+still in-process evidence: no remote Agent, installed GUI or durable restart is
+claimed for that reporting profile. Dedicated domain diagnostics, quality
+scoring and other duplicate reducers still require their own cross-runtime
+audits. Do not extend that profile to those paths.
+
+The follow-up `workflow-branch-recovery-contract` profile closes the local
+Elixir branch-recovery gap. Twenty shared policy cases run against six reporting
+faults and two node orders in both runtimes. Exact `skip` is opt-in; absent policy
+or explicit `fail` remains fail-fast. A top-level policy takes precedence over
+the nested policy, but both declared values must be valid `skip`/`fail` strings.
+Malformed policy values are rejected before any operator runs, even if the
+node's input would otherwise succeed.
+
+Failed nodes have no published outputs; dependent nodes without their inputs
+are skipped, not retried. Independent raw artifacts remain available. A
+`transform.first_available` merge waits until its upstream nodes are resolved
+and selects the first available source in graph edge order, matching the Rust
+topological runner rather than racing a pending preferred input. If no source
+survives, it is skipped without inventing a result.
+
+Elixir full, compact and automatic-compact responses preserve `failed_nodes`
+and `node_failures` (`node_id`, `kind`, `operator_id`, `error_message`). Progress
+tracks successful `completed_nodes` separately from `skipped_nodes` and
+`failed_nodes`; `resolved_nodes` is their sum. Async jobs retain the failure
+receipts and explicitly warn in the completion message. Job `completed` means
+the scheduling run ended, not that every node succeeded or physics were valid;
+consumers must inspect these receipts and numerical guard decisions.
+
+The [branch-recovery report](../reports/workflow-branch-recovery-20260925.md)
+records direct runner, synchronous API, async persistence, cancellation and
+existing application-restart regression checks. It does not claim remote Agent
+recovery, installed GUI warning display, arbitrary plugin side-effect rollback,
+whole-runtime equivalence or qualification of any additional physics solver.
 
 `solve.cohesive_interface_1d` now has a retained component-level screening
 profile for a scalar Mode-I bilinear traction-separation history. The analytic

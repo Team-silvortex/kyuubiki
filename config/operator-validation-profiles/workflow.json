@@ -4,6 +4,302 @@
   "domain": "workflow",
   "profiles": [
     {
+      "profile_id": "workflow-branch-recovery-contract",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-branch-recovery-contract",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "extract.field_statistics", "transform.compose_diagnostics_bundle",
+        "transform.evaluate_diagnostics_bundle_guard", "transform.first_available"
+      ],
+      "validation_methods": [
+        "shared_rust_elixir_recovery_policy_and_reporting_graph_controls",
+        "dependency_failure_isolation_and_declared_fallback_priority",
+        "compact_failure_receipts_and_corrected_replay",
+        "elixir_cancellation_exception_and_terminal_progress_controls"
+      ],
+      "formal_invariants": [
+        "tested_invalid_recovery_policies_are_rejected_before_execution",
+        "tested_opt_in_failures_never_publish_report_artifacts",
+        "tested_independent_raw_evidence_survives_recoverable_failure",
+        "tested_compact_responses_cannot_hide_failed_nodes_or_reasons",
+        "tested_pending_preferred_inputs_cannot_be_overtaken_by_fallbacks",
+        "tested_terminal_progress_does_not_count_failures_as_successful_nodes"
+      ],
+      "evidence_paths": [
+        "tests/fixtures/workflow-report-contract.json",
+        "tests/fixtures/workflow-recovery-policies.json",
+        "apps/web/lib/kyuubiki_web/workflow_graph_recovery.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_scheduler.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_node_progress.ex",
+        "apps/web/test/kyuubiki_web/workflow_branch_recovery_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_node_progress_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_branch_recovery_api_test.exs",
+        "workers/rust/crates/engine/tests/shared_branch_recovery.rs",
+        "reports/workflow-branch-recovery-20260925.md"
+      ],
+      "commands": [
+        {
+          "id": "branch-recovery-elixir-contract",
+          "kind": "boundary_regression",
+          "command": "make test-workflow-branch-recovery"
+        },
+        {
+          "id": "branch-recovery-shared-rust-graph",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test shared_branch_recovery -- --nocapture"
+        },
+        {
+          "id": "branch-recovery-rust-compatibility",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_recovery -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "workflow-reporting-cross-runtime-contract",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-reporting-cross-runtime-contract",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "extract.field_statistics", "extract.field_hotspots",
+        "transform.compose_diagnostics_bundle", "transform.evaluate_diagnostics_bundle_guard"
+      ],
+      "validation_methods": [
+        "shared_rust_elixir_positive_and_negative_json_contract_fixtures",
+        "dispatcher_and_direct_entrypoint_contract_checks",
+        "shared_graph_fail_fast_corrected_replay_and_blocked_report_controls",
+        "local_task_ir_execution_and_bounded_hotspot_sampling_controls"
+      ],
+      "formal_invariants": [
+        "tested_invalid_samples_options_and_rules_cannot_disappear_or_pass",
+        "tested_unknown_counts_are_not_zero_and_known_totals_cannot_wrap",
+        "tested_valid_reports_retain_decisions_and_unknown_count_semantics",
+        "tested_corrupt_reporting_evidence_cannot_reach_export",
+        "tested_corrected_reruns_do_not_retain_failure_state"
+      ],
+      "evidence_paths": [
+        "tests/fixtures/workflow-field-contract.json",
+        "tests/fixtures/workflow-bundle-contract.json",
+        "tests/fixtures/workflow-report-contract.json",
+        "apps/web/lib/kyuubiki_web/workflow_reporting_checks.ex",
+        "apps/web/lib/kyuubiki_web/workflow_field_runtime.ex",
+        "apps/web/lib/kyuubiki_web/workflow_diagnostic_bundle_runtime.ex",
+        "apps/web/test/kyuubiki_web/workflow_field_bundle_contract_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_reporting_integrity_test.exs",
+        "workers/rust/crates/engine/src/tests/workflow_field_bundle_contract.rs",
+        "workers/rust/crates/engine/tests/shared_reporting_contract.rs",
+        "reports/workflow-reporting-cross-runtime-20260925.md"
+      ],
+      "commands": [
+        {
+          "id": "reporting-elixir-shared-contract-and-entrypoints",
+          "kind": "boundary_regression",
+          "command": "make test-workflow-reporting-contract"
+        },
+        {
+          "id": "reporting-rust-shared-contract",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_field_bundle_contract -- --nocapture"
+        },
+        {
+          "id": "reporting-rust-shared-graph",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test shared_reporting_contract -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "workflow-field-bundle-integrity",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-field-bundle-integrity",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "extract.field_statistics",
+        "extract.field_hotspots",
+        "transform.compose_diagnostics_bundle",
+        "transform.evaluate_diagnostics_bundle_guard"
+      ],
+      "validation_methods": [
+        "selected_sample_percentile_and_sampling_configuration_negative_controls",
+        "finite_statistics_stable_deviation_and_hotspot_mean_range_regression",
+        "bundle_admission_unknown_counts_and_checked_integer_total_controls",
+        "exact_metric_guard_rules_and_retained_source_validation",
+        "real_heat_and_electrostatic_result_to_report_chains",
+        "workflow_failure_isolation_raw_evidence_retention_and_corrected_replay"
+      ],
+      "formal_invariants": [
+        "tested_selected_corrupt_samples_cannot_disappear_from_field_reductions",
+        "tested_invalid_explicit_options_cannot_silently_activate_defaults",
+        "tested_absent_bundle_counts_remain_unknown_not_zero",
+        "tested_bundle_integer_overflow_returns_an_error_not_a_panic_or_wrapped_total",
+        "tested_missing_metrics_or_invalid_rules_cannot_count_as_passed_checks",
+        "tested_nonconvergence_cannot_be_erased_by_bundle_composition",
+        "tested_recovery_keeps_raw_and_independent_work_without_a_false_pass_report"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/engine/src/workflow_field_extracts.rs",
+        "workers/rust/crates/engine/src/workflow_bundle_integrity.rs",
+        "workers/rust/crates/engine/src/workflow_bundle_transforms.rs",
+        "workers/rust/crates/engine/src/tests/workflow_field_integrity.rs",
+        "workers/rust/crates/engine/src/tests/workflow_bundle_integrity.rs",
+        "workers/rust/crates/engine/tests/field_bundle_integrity_workflow.rs",
+        "reports/workflow-field-bundle-integrity-20260925.md"
+      ],
+      "commands": [
+        {
+          "id": "workflow-field-integrity-boundaries-and-compatibility",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_field -- --nocapture"
+        },
+        {
+          "id": "workflow-bundle-integrity-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_bundle_integrity -- --nocapture"
+        },
+        {
+          "id": "workflow-field-bundle-diagnostic-compatibility",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_diagnostics -- --nocapture"
+        },
+        {
+          "id": "workflow-field-bundle-hotspot-compatibility",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_hotspot -- --nocapture"
+        },
+        {
+          "id": "workflow-field-bundle-integrity-recovery",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test field_bundle_integrity_workflow --test diagnostic_integrity_workflow --test thermo_transport_integrity_workflow --test guard_validation_workflow --test result_admission_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "workflow-thermo-transport-integrity",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-thermo-transport-integrity",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "extract.thermo_result_diagnostics",
+        "extract.transport_result_diagnostics",
+        "transform.score_thermal_quality",
+        "transform.score_transport_quality",
+        "transform.compose_quality_objective"
+      ],
+      "validation_methods": [
+        "thermo_stress_strain_displacement_and_transport_sample_negative_controls",
+        "signed_peak_alias_precedence_and_absent_source_positive_controls",
+        "finite_statistics_and_stable_norm_range_regression",
+        "real_thermo_triangle_quad_and_transport_bar_quality_chains",
+        "workflow_failure_isolation_raw_evidence_retention_and_corrected_replay"
+      ],
+      "formal_invariants": [
+        "tested_invalid_or_partial_groups_cannot_publish_partial_diagnostics",
+        "tested_absent_sources_cannot_become_zero_quality_evidence",
+        "tested_primary_stress_corruption_cannot_fall_back_to_global_summaries",
+        "tested_signed_component_peaks_are_not_reinterpreted_as_vector_norms",
+        "tested_explicit_nonconvergence_cannot_be_erased_by_diagnostic_reduction",
+        "tested_required_numeric_outputs_remain_finite_before_publication",
+        "tested_recovery_keeps_independent_work_without_false_objectives"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/engine/src/workflow_diagnostic_samples.rs",
+        "workers/rust/crates/engine/src/thermo_diagnostics.rs",
+        "workers/rust/crates/engine/src/transport_diagnostics.rs",
+        "workers/rust/crates/engine/src/tests/workflow_thermo_integrity.rs",
+        "workers/rust/crates/engine/src/tests/workflow_transport_integrity.rs",
+        "workers/rust/crates/engine/tests/support/diagnostic_chain.rs",
+        "workers/rust/crates/engine/tests/thermo_transport_integrity_workflow.rs",
+        "reports/workflow-thermo-transport-integrity-20260925.md"
+      ],
+      "commands": [
+        {
+          "id": "workflow-thermo-integrity-boundaries",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_thermo -- --nocapture"
+        },
+        {
+          "id": "workflow-transport-integrity-boundaries-and-quality",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_transport -- --nocapture"
+        },
+        {
+          "id": "workflow-thermo-transport-diagnostic-compatibility",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_diagnostics -- --nocapture"
+        },
+        {
+          "id": "workflow-thermo-thermal-quality-compatibility",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_thermal_guard -- --nocapture"
+        },
+        {
+          "id": "workflow-thermo-transport-integrity-recovery",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test thermo_transport_integrity_workflow --test diagnostic_integrity_workflow --test metric_integrity_workflow --test result_admission_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "workflow-diagnostic-integrity",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-diagnostic-integrity",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "extract.thermal_result_diagnostics",
+        "extract.electrostatic_result_diagnostics",
+        "extract.magnetostatic_result_diagnostics",
+        "transform.score_thermal_quality",
+        "transform.score_electrostatic_quality",
+        "transform.score_magnetostatic_quality",
+        "transform.compose_quality_objective"
+      ],
+      "validation_methods": [
+        "three_domain_sample_completeness_alias_and_configuration_negative_controls",
+        "finite_distribution_and_stable_vector_norm_checks",
+        "optional_group_custom_mapping_and_peak_identity_positive_controls",
+        "real_triangle_and_quad_solver_diagnostic_quality_chains",
+        "workflow_failure_isolation_and_corrected_input_replay"
+      ],
+      "formal_invariants": [
+        "tested_invalid_or_partial_metric_groups_cannot_publish_partial_statistics",
+        "tested_metadata_only_payloads_cannot_count_as_measurement_evidence",
+        "tested_nonconvergence_cannot_be_erased_by_diagnostic_reduction",
+        "tested_present_invalid_aliases_cannot_fall_through_to_valid_data",
+        "tested_magnetic_total_energy_fallback_cannot_fill_partial_density_samples",
+        "tested_required_numeric_outputs_are_finite_before_publication",
+        "tested_recovery_keeps_independent_work_without_false_quality_evidence"
+      ],
+      "evidence_paths": [
+        "workers/rust/crates/engine/src/workflow_diagnostic_samples.rs",
+        "workers/rust/crates/engine/src/thermal_diagnostics.rs",
+        "workers/rust/crates/engine/src/electrostatic_diagnostics.rs",
+        "workers/rust/crates/engine/src/magnetostatic_diagnostics.rs",
+        "workers/rust/crates/engine/src/tests/workflow_diagnostics_integrity.rs",
+        "workers/rust/crates/engine/tests/support/diagnostic_chain.rs",
+        "workers/rust/crates/engine/tests/diagnostic_integrity_workflow.rs",
+        "reports/workflow-diagnostic-integrity-20260924.md"
+      ],
+      "commands": [
+        {
+          "id": "workflow-diagnostic-integrity-boundaries-and-compatibility",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_diagnostics -- --nocapture"
+        },
+        {
+          "id": "workflow-diagnostic-coupled-compatibility",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_coupled -- --nocapture"
+        },
+        {
+          "id": "workflow-diagnostic-integrity-recovery",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --test diagnostic_integrity_workflow --test metric_integrity_workflow --test result_admission_workflow --test magnetostatic_plane_workflow -- --nocapture"
+        }
+      ]
+    },
+    {
       "profile_id": "workflow-metric-integrity",
       "profile_role": "component_profile",
       "qualification_candidate_id": "workflow-metric-integrity",

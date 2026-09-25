@@ -4,6 +4,93 @@
   "summary": "Scoped planar heat and thermal-stress result construction retains installed recovery and paired overhead evidence. Separate bounded local mechanical, electrostatic, magnetostatic and Stokes output-range regression, frame modal-spectrum regression, transient-spring time-stepping, harmonic-spring sweep, beam/frame buckling assembly, P-Delta path diagnostics, frame material-history recovery, adaptive fiber integration, initial-stress preflight, nonlinear support-load isolation, mixed-scale equation guards and nonlinear-spring/contact finite-range and committed-load recovery are verified only in process, without broad physics qualification. Retained-input cloning, serialization, and other operator scopes remain separate coverage.",
   "evidence_claims": [
     {
+      "id": "workflow-field-bundle-integrity",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_field_extracts.rs",
+        "workers/rust/crates/engine/src/workflow_bundle_integrity.rs",
+        "workers/rust/crates/engine/src/workflow_bundle_transforms.rs",
+        "workers/rust/crates/engine/src/tests/workflow_field_integrity.rs",
+        "workers/rust/crates/engine/src/tests/workflow_bundle_integrity.rs",
+        "workers/rust/crates/engine/tests/field_bundle_integrity_workflow.rs",
+        "config/operator-validation-profiles/workflow.json",
+        "reports/workflow-field-bundle-integrity-20260925.md"
+      ],
+      "required_text": [
+        "field_reductions_do_not_filter_malformed_or_missing_samples",
+        "population_stddev_preserves_representable_large_and_small_scales",
+        "hotspot_mean_does_not_need_an_unexported_sum",
+        "absent_bundle_counts_remain_unknown_not_zero_measurements",
+        "bundle_count_overflow_returns_an_error_not_a_panic_or_wrapped_total",
+        "missing_bundle_guard_metrics_and_sources_cannot_pass",
+        "reporting_recovery_preserves_raw_inputs_without_a_false_pass_document",
+        "real_heat_and_electrostatic_results_complete_statistics_and_hotspot_report_chains",
+        "This is bounded local Rust field and diagnostic-bundle integrity evidence, not cross-runtime parity or industrial physics qualification."
+      ]
+    },
+    {
+      "id": "workflow-thermo-transport-integrity",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_diagnostic_samples.rs",
+        "workers/rust/crates/engine/src/thermo_diagnostics.rs",
+        "workers/rust/crates/engine/src/transport_diagnostics.rs",
+        "workers/rust/crates/engine/src/tests/workflow_thermo_integrity.rs",
+        "workers/rust/crates/engine/src/tests/workflow_transport_integrity.rs",
+        "workers/rust/crates/engine/tests/support/diagnostic_chain.rs",
+        "workers/rust/crates/engine/tests/thermo_transport_integrity_workflow.rs",
+        "config/operator-validation-profiles/workflow.json",
+        "reports/workflow-thermo-transport-integrity-20260925.md"
+      ],
+      "required_text": [
+        "partial_stress_group_cannot_fall_back_to_a_healthy_global_summary",
+        "every_strain_component_axis_is_validated_without_skipping_rows",
+        "missing_sources_remain_unavailable_instead_of_becoming_zero",
+        "mixed_transport_aliases_match_independent_reductions_across_sample_counts",
+        "thermo_and_transport_recovery_retains_raw_evidence_and_independent_work",
+        "missing_transport_source_keeps_the_composite_objective_blocked",
+        "real_thermo_and_transport_solvers_feed_checked_quality_and_recover_after_corruption",
+        "This is bounded local thermo-mechanical and transport diagnostic integrity evidence, not complete extraction or industrial physics qualification."
+      ]
+    },
+    {
+      "id": "workflow-diagnostic-integrity",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/engine/src/workflow_diagnostic_samples.rs",
+        "workers/rust/crates/engine/src/thermal_diagnostics.rs",
+        "workers/rust/crates/engine/src/electrostatic_diagnostics.rs",
+        "workers/rust/crates/engine/src/magnetostatic_diagnostics.rs",
+        "workers/rust/crates/engine/src/tests/workflow_diagnostics_integrity.rs",
+        "workers/rust/crates/engine/tests/support/diagnostic_chain.rs",
+        "workers/rust/crates/engine/tests/diagnostic_integrity_workflow.rs",
+        "config/operator-validation-profiles/workflow.json",
+        "reports/workflow-diagnostic-integrity-20260924.md"
+      ],
+      "required_text": [
+        "metadata_and_empty_collections_are_not_measurement_evidence",
+        "incomplete_scalar_groups_do_not_shrink_the_sample_count",
+        "diagnostic_reduction_cannot_erase_explicit_solver_failure",
+        "magnetic_total_energy_fallback_cannot_fill_partial_density_evidence",
+        "overflowing_distribution_outputs_are_not_serialized_as_successful_nulls",
+        "diagnostic_recovery_preserves_raw_evidence_and_independent_branches",
+        "real_triangle_and_quad_solvers_feed_checked_diagnostics_and_quality",
+        "This is bounded local thermal, electrostatic and magnetostatic diagnostic integrity evidence, not complete extraction or industrial physics qualification."
+      ]
+    },
+    {
       "id": "workflow-metric-integrity",
       "status": "proven",
       "grade": "verified",

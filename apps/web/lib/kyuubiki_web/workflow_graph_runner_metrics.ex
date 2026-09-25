@@ -13,6 +13,11 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
     %{
       "completed_nodes" => Enum.reverse(state.ordered_completed),
       "skipped_nodes" => Enum.reverse(state.ordered_skipped),
+      "failed_nodes" => Enum.reverse(state.ordered_failed),
+      "node_failures" =>
+        node_runs
+        |> Enum.filter(&(&1["status"] == "failed"))
+        |> Enum.map(&Map.take(&1, ["node_id", "kind", "operator_id", "error_message"])),
       "performance" => %{
         "total_elapsed_ms" => total_elapsed_ms,
         "node_execution_elapsed_ms" => node_execution_elapsed_ms,
@@ -21,6 +26,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
         "artifact_count" => map_size(state.artifacts),
         "completed_node_count" => MapSet.size(state.completed),
         "skipped_node_count" => MapSet.size(state.skipped),
+        "failed_node_count" => MapSet.size(state.failed),
         "node_kind_breakdown" => node_kind_breakdown(node_runs),
         "slowest_nodes" => slowest_nodes(node_runs)
       }
@@ -103,6 +109,33 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
         node_runs: [run | state.node_runs]
     }
   end
+
+  def mark_failed(state, node, consumed_artifacts, reason, duration_ms, result_options) do
+    node_id = Map.get(node, "id")
+
+    run =
+      minimal_run(node_id, node, "failed", duration_ms)
+      |> Map.put("error_message", format_reason(reason))
+      |> maybe_put_task_ir_ref(node)
+
+    run =
+      if detailed_node_runs?(result_options) do
+        Map.merge(run, %{"consumed_artifacts" => consumed_artifacts, "produced_artifacts" => []})
+      else
+        run
+      end
+
+    %{
+      state
+      | failed: MapSet.put(state.failed, node_id),
+        ordered_failed: [node_id | state.ordered_failed],
+        node_runs: [run | state.node_runs]
+    }
+  end
+
+  defp format_reason(reason) when is_binary(reason), do: reason
+  defp format_reason(reason) when is_atom(reason), do: Atom.to_string(reason)
+  defp format_reason(reason), do: inspect(reason)
 
   defp completed_run(state, node_id, node, incoming, duration_ms, result_options, resolvers) do
     if detailed_node_runs?(result_options) do
@@ -198,12 +231,14 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
     |> Enum.into(%{}, fn {kind, runs} ->
       completed_count = Enum.count(runs, &(Map.get(&1, "status") == "completed"))
       skipped_count = Enum.count(runs, &(Map.get(&1, "status") == "skipped"))
+      failed_count = Enum.count(runs, &(Map.get(&1, "status") == "failed"))
 
       {kind,
        %{
          "count" => length(runs),
          "completed_count" => completed_count,
          "skipped_count" => skipped_count,
+         "failed_count" => failed_count,
          "elapsed_ms" => total_node_duration_ms(runs)
        }}
     end)
@@ -211,7 +246,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
 
   defp slowest_nodes(node_runs) do
     node_runs
-    |> Enum.filter(&(Map.get(&1, "status") == "completed"))
+    |> Enum.filter(&(Map.get(&1, "status") in ["completed", "failed"]))
     |> Enum.sort_by(&numeric_duration(Map.get(&1, "duration_ms")), :desc)
     |> Enum.take(5)
     |> Enum.map(fn run ->
@@ -219,6 +254,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunnerMetrics do
         "node_id" => Map.get(run, "node_id"),
         "kind" => Map.get(run, "kind"),
         "operator_id" => Map.get(run, "operator_id"),
+        "status" => Map.get(run, "status"),
         "duration_ms" => numeric_duration(Map.get(run, "duration_ms"))
       }
     end)

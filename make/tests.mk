@@ -17,11 +17,19 @@
 .PHONY: test-integration-workflow-catalog-nightly
 .PHONY: test-integration-ui-mechanical test-integration-ui-thermal test-integration-ui-workflow test-integration-ui-invocation
 .PHONY: format format-web format-rust tdd-web tdd-rust
+.PHONY: test-workflow-reporting-contract
+.PHONY: test-workflow-branch-recovery
 
 test: test-web test-rust test-frontend test-sdk test-playground
 
 test-web:
 	@cd apps/web && mix test
+
+test-workflow-reporting-contract:
+	@cd apps/web && mix test --no-start test/kyuubiki_web/workflow_field_bundle_contract_test.exs test/kyuubiki_web/workflow_reporting_integrity_test.exs test/kyuubiki_web/workflow_operator_summary_runtime_test.exs test/kyuubiki_web/workflow_diagnostics_bundle_runtime_test.exs test/kyuubiki_web/workflow_diagnostics_bundle_guard_runtime_test.exs test/kyuubiki_web/workflow_diagnostics_bundle_export_runtime_test.exs test/kyuubiki_web/workflow_diagnostics_report_payload_runtime_test.exs
+
+test-workflow-branch-recovery:
+	@cd apps/web && mix test --no-start test/kyuubiki_web/workflow_branch_recovery_test.exs test/kyuubiki_web/orchestra/workflow_node_progress_test.exs test/kyuubiki_web/workflow_graph_response_test.exs
 
 test-rust:
 	@$(ENTRYPOINT) rust-test

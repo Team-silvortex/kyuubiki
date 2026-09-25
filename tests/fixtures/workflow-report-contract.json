@@ -1,0 +1,41 @@
+{
+  "graph": {
+    "schema_version": "kyuubiki.workflow-graph/v1",
+    "id": "field-report-contract", "name": "Checked field reporting", "version": "1.0.0",
+    "entry_nodes": ["input", "extra"], "output_nodes": ["output", "raw"],
+    "nodes": [
+      {"id":"input","kind":"input","inputs":[],"outputs":[{"id":"payload","artifact_type":"artifact/json"}]},
+      {"id":"extra","kind":"input","inputs":[],"outputs":[{"id":"payload","artifact_type":"artifact/json"}]},
+      {"id":"field","kind":"extract","operator_id":"extract.field_statistics",
+       "config":{"source":"nodes","field":"v","percentile":50},
+       "inputs":[{"id":"payload","artifact_type":"artifact/json"}],"outputs":[{"id":"summary","artifact_type":"artifact/json"}]},
+      {"id":"bundle","kind":"transform","operator_id":"transform.compose_diagnostics_bundle",
+       "config":{"include_non_diagnostics":true},
+       "inputs":[{"id":"field","artifact_type":"artifact/json"},{"id":"extra","artifact_type":"artifact/json"}],"outputs":[{"id":"summary","artifact_type":"artifact/json"}]},
+      {"id":"guard","kind":"transform","operator_id":"transform.evaluate_diagnostics_bundle_guard",
+       "config":{"rules":[{"source":"field","field":"v_max","threshold":10,"severity":"block"}]},
+       "inputs":[{"id":"payload","artifact_type":"artifact/json"}],"outputs":[{"id":"summary","artifact_type":"artifact/json"}]},
+      {"id":"report","kind":"transform","operator_id":"transform.compose_diagnostics_report_payload",
+       "inputs":[{"id":"bundle","artifact_type":"artifact/json"},{"id":"guard","artifact_type":"artifact/json"}],"outputs":[{"id":"summary","artifact_type":"artifact/json"}]},
+      {"id":"export","kind":"export","operator_id":"export.summary_json",
+       "inputs":[{"id":"payload","artifact_type":"artifact/json"}],"outputs":[{"id":"summary","artifact_type":"artifact/json"}]},
+      {"id":"output","kind":"output","inputs":[{"id":"summary","artifact_type":"artifact/json"}],"outputs":[]},
+      {"id":"raw","kind":"output","inputs":[{"id":"payload","artifact_type":"artifact/json"}],"outputs":[]}
+    ],
+    "edges": [
+      {"id":"e0","from":{"node":"input","port":"payload"},"to":{"node":"field","port":"payload"},"artifact_type":"artifact/json"},
+      {"id":"e1","from":{"node":"input","port":"payload"},"to":{"node":"raw","port":"payload"},"artifact_type":"artifact/json"},
+      {"id":"e2","from":{"node":"field","port":"summary"},"to":{"node":"bundle","port":"field"},"artifact_type":"artifact/json"},
+      {"id":"e3","from":{"node":"extra","port":"payload"},"to":{"node":"bundle","port":"extra"},"artifact_type":"artifact/json"},
+      {"id":"e4","from":{"node":"bundle","port":"summary"},"to":{"node":"guard","port":"payload"},"artifact_type":"artifact/json"},
+      {"id":"e5","from":{"node":"bundle","port":"summary"},"to":{"node":"report","port":"bundle"},"artifact_type":"artifact/json"},
+      {"id":"e6","from":{"node":"guard","port":"summary"},"to":{"node":"report","port":"guard"},"artifact_type":"artifact/json"},
+      {"id":"e7","from":{"node":"report","port":"summary"},"to":{"node":"export","port":"payload"},"artifact_type":"artifact/json"},
+      {"id":"e8","from":{"node":"export","port":"summary"},"to":{"node":"output","port":"summary"},"artifact_type":"artifact/json"}
+    ]
+  },
+  "input_artifacts": {
+    "input": {"nodes":[{"id":"n0","v":1},{"id":"n1","v":2},{"id":"n2","v":3}]},
+    "extra": {"diagnostic_contract":"kyuubiki.workflow_diagnostics/v1","metric":2,"diagnostic_node_count":2}
+  }
+}

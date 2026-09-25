@@ -140,6 +140,12 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
     end
   end
 
+  def run_transform_operator("transform.compose_diagnostics_bundle", payload, config),
+    do: WorkflowSummaryRuntime.compose_diagnostics_bundle(payload, config)
+
+  def run_transform_operator("transform.evaluate_diagnostics_bundle_guard", payload, config),
+    do: WorkflowSummaryRuntime.evaluate_diagnostics_bundle_guard(payload, config)
+
   def run_transform_operator("transform.first_available", payload, _config), do: {:ok, payload}
 
   def run_transform_operator(operator_id, payload, nil) when is_map(payload),
@@ -240,9 +246,6 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "transform.extract_material_pareto_frontier" when is_map(config) ->
         WorkflowMaterialRuntime.extract_material_pareto_frontier(payload, config)
 
-      "transform.compose_diagnostics_bundle" when is_map(config) ->
-        WorkflowSummaryRuntime.compose_diagnostics_bundle(payload, config)
-
       "transform.compose_diagnostics_report_payload" when is_map(config) ->
         WorkflowBundleRuntime.compose_diagnostics_report_payload(payload, config)
 
@@ -260,9 +263,6 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
 
       "transform.execute_focus_bridge_execution" when is_map(config) ->
         execute_focus_bridge_execution(payload, config)
-
-      "transform.evaluate_diagnostics_bundle_guard" when is_map(config) ->
-        WorkflowSummaryRuntime.evaluate_diagnostics_bundle_guard(payload, config)
 
       "transform.evaluate_thermal_guard" when is_map(config) ->
         WorkflowThermalRuntime.evaluate_thermal_guard(payload, config)
@@ -345,16 +345,16 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
     end
   end
 
+  def run_extract_operator("extract.field_statistics", payload, config),
+    do: WorkflowReportingRuntime.extract_field_statistics(payload, config)
+
+  def run_extract_operator("extract.field_hotspots", payload, config),
+    do: WorkflowReportingRuntime.extract_field_hotspots(payload, config)
+
   def run_extract_operator(operator_id, payload, config) when is_map(payload) do
     case operator_id do
       "extract.result_summary" ->
         WorkflowReportingRuntime.extract_result_summary(payload, config || %{})
-
-      "extract.field_statistics" ->
-        WorkflowReportingRuntime.extract_field_statistics(payload, config || %{})
-
-      "extract.field_hotspots" ->
-        WorkflowReportingRuntime.extract_field_hotspots(payload, config || %{})
 
       "extract.electrostatic_result_diagnostics" ->
         WorkflowElectrostaticRuntime.extract_electrostatic_result_diagnostics(

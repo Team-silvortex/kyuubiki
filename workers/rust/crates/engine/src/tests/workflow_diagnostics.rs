@@ -52,10 +52,10 @@ fn extracts_transport_result_diagnostics() {
     );
     assert_eq!(diagnostics["transport_source_sum"].as_f64(), Some(1.5));
     assert_eq!(diagnostics["transport_source_count"].as_u64(), Some(3));
-    assert_eq!(diagnostics["transport_total_flux_peak"].as_f64(), Some(1.4));
-    assert_eq!(
+    approx_eq(diagnostics["transport_total_flux_peak"].as_f64(), 1.4);
+    approx_eq(
         diagnostics["transport_total_flux_peak_magnitude"].as_f64(),
-        Some(1.4)
+        1.4,
     );
     assert_eq!(
         diagnostics["transport_total_flux_peak_id"].as_str(),

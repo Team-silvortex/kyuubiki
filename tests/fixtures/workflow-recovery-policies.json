@@ -1,0 +1,22 @@
+[
+  {"id":"default","config":{},"recover":false},
+  {"id":"explicit-skip","config":{"on_error":"skip"},"recover":true},
+  {"id":"nested-skip","config":{"recovery":{"on_error":"skip"}},"recover":true},
+  {"id":"canonical-wins","config":{"on_error":"skip","recovery":{"on_error":"fail"}},"recover":true},
+  {"id":"canonical-null","config":{"on_error":null,"recovery":{"on_error":"skip"}},"recover":false,"error_path":"config.on_error"},
+  {"id":"canonical-false","config":{"on_error":false,"recovery":{"on_error":"skip"}},"recover":false,"error_path":"config.on_error"},
+  {"id":"canonical-true","config":{"on_error":true,"recovery":{"on_error":"skip"}},"recover":false,"error_path":"config.on_error"},
+  {"id":"canonical-fail","config":{"on_error":"fail","recovery":{"on_error":"skip"}},"recover":false},
+  {"id":"canonical-empty","config":{"on_error":"","recovery":{"on_error":"skip"}},"recover":false,"error_path":"config.on_error"},
+  {"id":"canonical-array","config":{"on_error":["skip"],"recovery":{"on_error":"skip"}},"recover":false,"error_path":"config.on_error"},
+  {"id":"canonical-object","config":{"on_error":{"value":"skip"},"recovery":{"on_error":"skip"}},"recover":false,"error_path":"config.on_error"},
+  {"id":"canonical-number","config":{"on_error":1,"recovery":{"on_error":"skip"}},"recover":false,"error_path":"config.on_error"},
+  {"id":"case-sensitive","config":{"on_error":"SKIP"},"recover":false,"error_path":"config.on_error"},
+  {"id":"no-trimming","config":{"on_error":" skip "},"recover":false,"error_path":"config.on_error"},
+  {"id":"canonical-valid-nested-invalid","config":{"on_error":"skip","recovery":{"on_error":true}},"recover":false,"error_path":"config.recovery.on_error"},
+  {"id":"nested-invalid-policy","config":{"recovery":{"on_error":"retry"}},"recover":false,"error_path":"config.recovery.on_error"},
+  {"id":"nested-null","config":{"recovery":null},"recover":false},
+  {"id":"nested-array","config":{"recovery":[{"on_error":"skip"}]},"recover":false},
+  {"id":"nested-false","config":{"recovery":false},"recover":false},
+  {"id":"nested-string","config":{"recovery":"skip"},"recover":false}
+]

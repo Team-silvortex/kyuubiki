@@ -96,6 +96,8 @@ only. The organization gate reports no source/document size-limit debt.
   large-scale benchmark, process-kill or durable restart claim.
 - No audit of every dedicated thermal, thermo-mechanical, electrostatic,
   magnetostatic, transport, generic field or bundle diagnostic reducer.
+  A subsequent [three-domain diagnostic audit](workflow-diagnostic-integrity-20260924.md)
+  supplies separate thermal, electrostatic and magnetostatic evidence.
 - Raw arrays are not cross-validated against an authoritative finite summary;
   first-mode participation only consumes the first mode. Conflicting but finite
   aliases retain precedence rather than being independently reconciled.

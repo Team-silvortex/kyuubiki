@@ -1,5 +1,6 @@
 defmodule KyuubikiWeb.WorkflowGraphRunner do
   @moduledoc false
+  alias KyuubikiWeb.WorkflowGraphRecovery
   alias KyuubikiWeb.WorkflowGraphRunnerMetrics
   alias KyuubikiWeb.WorkflowGraphScheduler
   def run(graph, input_artifacts, opts \\ [])
@@ -13,7 +14,8 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
            Keyword.get(opts, :execute_transform),
          execute_extract when is_function(execute_extract, 3) <-
            Keyword.get(opts, :execute_extract),
-         execute_export when is_function(execute_export, 3) <- Keyword.get(opts, :execute_export) do
+         execute_export when is_function(execute_export, 3) <- Keyword.get(opts, :execute_export),
+         :ok <- WorkflowGraphRecovery.validate(nodes) do
       run_ordered_workflow_graph(
         WorkflowGraphScheduler.indexes(nodes, edges),
         input_artifacts,
@@ -21,6 +23,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
         opts
       )
     else
+      {:error, _reason} = error -> error
       _ -> {:error, :invalid_workflow_graph}
     end
   end
@@ -107,7 +110,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
       WorkflowGraphScheduler.resolved?(state, node_id) ->
         {:ok, state, false}
 
-      kind == "input" or workflow_node_ready?(node, incoming, state.artifacts) ->
+      kind == "input" or workflow_node_ready?(node, incoming, state) ->
         started_at_us = System.monotonic_time(:microsecond)
 
         case execute_workflow_node(node, incoming, input_artifacts, state, opts) do
@@ -122,15 +125,31 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
                 opts
               )
 
-            maybe_emit_progress(updated, indexes.node_count, opts)
+            maybe_emit_progress(updated, node_id, "completed", indexes.node_count, opts)
             {:ok, updated, true}
 
           {:error, reason} ->
-            throw({:workflow_node_error, node_id, reason})
+            if WorkflowGraphRecovery.skip_on_error?(Map.get(node, "config")) do
+              updated =
+                WorkflowGraphRunnerMetrics.mark_failed(
+                  state,
+                  node,
+                  incoming_artifact_keys(incoming, state.artifacts),
+                  reason,
+                  (System.monotonic_time(:microsecond) - started_at_us) / 1000.0,
+                  Keyword.get(opts, :result_options, %{})
+                )
+
+              maybe_emit_progress(updated, node_id, "failed", indexes.node_count, opts)
+              {:ok, updated, true}
+            else
+              throw({:workflow_node_error, node_id, reason})
+            end
         end
 
-      unresolved_missing_inputs?(incoming, state.artifacts, state.completed, state.skipped) ->
+      unresolved_missing_inputs?(incoming, state) ->
         updated = mark_skipped(state, node_id, node, incoming, opts)
+        maybe_emit_progress(updated, node_id, "skipped", indexes.node_count, opts)
         {:ok, updated, true}
 
       true ->
@@ -157,11 +176,13 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
   defp stalled_workflow(indexes, state),
     do: {:error, {:workflow_stalled, WorkflowGraphScheduler.pending_node_ids(indexes, state)}}
 
-  defp workflow_node_ready?(node, incoming, artifacts) do
+  defp workflow_node_ready?(node, incoming, state) do
     if transform_operator_accepts_partial_inputs?(node) do
-      Enum.any?(incoming, &Map.has_key?(artifacts, edge_from_key(&1)))
+      # Match the Rust topological runner: do not choose a fallback while a preferred input is pending.
+      Enum.all?(incoming, &WorkflowGraphScheduler.resolved?(state, get_in(&1, ["from", "node"]))) and
+        Enum.any?(incoming, &Map.has_key?(state.artifacts, edge_from_key(&1)))
     else
-      Enum.all?(incoming, &Map.has_key?(artifacts, edge_from_key(&1)))
+      Enum.all?(incoming, &Map.has_key?(state.artifacts, edge_from_key(&1)))
     end
   end
 
@@ -194,17 +215,16 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
 
   defp transform_operator_requires_port_map?(_node), do: false
 
-  defp unresolved_missing_inputs?(incoming, artifacts, completed, skipped) do
+  defp unresolved_missing_inputs?(incoming, state) do
     Enum.any?(incoming, fn edge ->
       key = edge_from_key(edge)
-      not Map.has_key?(artifacts, key)
+      not Map.has_key?(state.artifacts, key)
     end) and
       Enum.all?(incoming, fn edge ->
         key = edge_from_key(edge)
         from_node = get_in(edge, ["from", "node"])
 
-        Map.has_key?(artifacts, key) or MapSet.member?(completed, from_node) or
-          MapSet.member?(skipped, from_node)
+        Map.has_key?(state.artifacts, key) or WorkflowGraphScheduler.resolved?(state, from_node)
       end)
   end
 
@@ -590,12 +610,17 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
         &incoming_artifact_keys/2
       )
 
-  defp maybe_emit_progress(state, node_count, opts) do
+  defp maybe_emit_progress(state, node_id, status, node_count, opts) do
     case Keyword.get(opts, :progress_callback) do
       callback when is_function(callback, 1) ->
         callback.(%{
-          "node_id" => hd(state.ordered_completed),
-          "completed_nodes" => length(state.ordered_completed),
+          "node_id" => node_id,
+          "status" => status,
+          "completed_nodes" => MapSet.size(state.completed),
+          "skipped_nodes" => MapSet.size(state.skipped),
+          "failed_nodes" => MapSet.size(state.failed),
+          "resolved_nodes" =>
+            MapSet.size(state.completed) + MapSet.size(state.skipped) + MapSet.size(state.failed),
           "total_nodes" => node_count
         })
 

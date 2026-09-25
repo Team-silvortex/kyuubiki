@@ -1,144 +1,94 @@
 use crate::workflow_bundle_focus::{
     report_focus_context, report_focus_metrics, report_focus_payloads,
 };
+use crate::workflow_bundle_integrity::{
+    check_bundle_admission, configured_bool, diagnostic_sources, total_count,
+};
+use crate::workflow_guard_contract::{GuardRule, optional_text};
 use serde_json::Value;
 
 pub fn compose_diagnostics_bundle(payload: Value, config: Value) -> Result<Value, String> {
-    let object = payload.as_object().ok_or_else(|| {
-        "transform.compose_diagnostics_bundle expects an object payload".to_string()
-    })?;
-    let include_non_diagnostics = config
-        .get("include_non_diagnostics")
-        .and_then(Value::as_bool)
-        .unwrap_or(false);
-    let include_payloads = config
-        .get("include_payloads")
-        .and_then(Value::as_bool)
-        .unwrap_or(true);
-    let include_numeric_fields = config
-        .get("include_numeric_fields")
-        .and_then(Value::as_bool)
-        .unwrap_or(true);
-
-    let diagnostics = object
-        .iter()
-        .filter(|(_, entry)| entry.is_object())
-        .filter(|(_, entry)| diagnostic_entry(entry, include_non_diagnostics))
-        .collect::<Vec<_>>();
-    if diagnostics.is_empty() {
-        return Err(
-            "transform.compose_diagnostics_bundle did not find any diagnostics payloads"
-                .to_string(),
-        );
-    }
-
-    let items = diagnostics
-        .iter()
-        .map(|(source_id, entry)| {
-            let entry = entry.as_object().expect("filtered diagnostics entry");
+    const OPERATOR: &str = "transform.compose_diagnostics_bundle";
+    let compose = || -> Result<Value, String> {
+        let object = payload.as_object().ok_or("expects an object payload")?;
+        let include_non_diagnostics = configured_bool(&config, "include_non_diagnostics", false)?;
+        let include_payloads = configured_bool(&config, "include_payloads", true)?;
+        let include_numeric_fields = configured_bool(&config, "include_numeric_fields", true)?;
+        let diagnostics = diagnostic_sources(object, include_non_diagnostics, OPERATOR)?;
+        let items = diagnostics.iter().map(|source| {
+            let entry = source.object;
             serde_json::json!({
-                "source": source_id,
-                "domain": entry.get("diagnostic_domain").cloned().unwrap_or(Value::Null),
-                "subject": entry.get("diagnostic_subject").cloned().unwrap_or(Value::Null),
-                "prefix": entry.get("diagnostic_prefix").cloned().unwrap_or(Value::Null),
-                "node_count": entry.get("diagnostic_node_count").cloned().unwrap_or(Value::from(0)),
-                "element_count": entry.get("diagnostic_element_count").cloned().unwrap_or(Value::from(0)),
-                "metric_groups": entry.get("diagnostic_metric_groups").cloned().unwrap_or(Value::Array(Vec::new())),
+                "source":source.id,
+                "domain":entry.get("diagnostic_domain"),
+                "subject":entry.get("diagnostic_subject"),
+                "prefix":entry.get("diagnostic_prefix"),
+                "node_count":source.node_count,
+                "element_count":source.element_count,
+                "metric_groups":entry.get("diagnostic_metric_groups").cloned().unwrap_or_else(||serde_json::json!([]))
             })
-        })
-        .collect::<Vec<_>>();
-
-    let mut numeric_fields = diagnostics
-        .iter()
-        .flat_map(|(_, entry)| {
-            entry
-                .as_object()
-                .into_iter()
-                .flat_map(|object| object.iter())
+        }).collect::<Vec<_>>();
+        let numeric_fields = sorted_unique_strings(
+            diagnostics
+                .iter()
+                .flat_map(|source| source.object.iter())
                 .filter(|(_, value)| value.is_number())
-                .map(|(field, _)| field.clone())
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-    numeric_fields.sort();
-    numeric_fields.dedup();
-
-    let domains = sorted_unique_strings(items.iter().filter_map(|item| {
-        item.get("domain")
-            .and_then(Value::as_str)
-            .map(ToString::to_string)
-    }));
-    let subjects = sorted_unique_strings(items.iter().filter_map(|item| {
-        item.get("subject")
-            .and_then(Value::as_str)
-            .map(ToString::to_string)
-    }));
-    let metric_groups = sorted_unique_strings(items.iter().flat_map(|item| {
-        item.get("metric_groups")
-            .and_then(Value::as_array)
-            .into_iter()
-            .flat_map(|groups| groups.iter())
-            .filter_map(Value::as_str)
-            .map(ToString::to_string)
-            .collect::<Vec<_>>()
-    }));
-    let mut domain_counts = serde_json::Map::new();
-    for domain in items
-        .iter()
-        .filter_map(|item| item.get("domain").and_then(Value::as_str))
-    {
-        let current = domain_counts
-            .get(domain)
-            .and_then(Value::as_u64)
-            .unwrap_or(0);
-        domain_counts.insert(domain.to_string(), Value::from(current + 1));
-    }
-
-    let total_node_count = items
-        .iter()
-        .filter_map(|item| item.get("node_count").and_then(Value::as_u64))
-        .sum::<u64>();
-    let total_element_count = items
-        .iter()
-        .filter_map(|item| item.get("element_count").and_then(Value::as_u64))
-        .sum::<u64>();
-
-    let mut bundle = serde_json::json!({
-        "bundle_contract": "kyuubiki.workflow_diagnostics_bundle/v1",
-        "bundle_kind": "workflow_diagnostics_bundle",
-        "bundle_source_count": items.len(),
-        "bundle_sources": items.iter().filter_map(|item| item.get("source").and_then(Value::as_str)).collect::<Vec<_>>(),
-        "bundle_domains": domains,
-        "bundle_subjects": subjects,
-        "bundle_domain_counts": domain_counts,
-        "bundle_metric_groups": metric_groups,
-        "bundle_items": items,
-        "bundle_total_node_count": total_node_count,
-        "bundle_total_element_count": total_element_count,
-        "bundle_numeric_field_count": numeric_fields.len(),
-    });
-
-    if let Some(object) = bundle.as_object_mut() {
+                .map(|(field, _)| field.clone()),
+        );
+        let domains = sorted_unique_strings(items.iter().filter_map(|item| {
+            item.get("domain")
+                .and_then(Value::as_str)
+                .map(ToString::to_string)
+        }));
+        let subjects = sorted_unique_strings(items.iter().filter_map(|item| {
+            item.get("subject")
+                .and_then(Value::as_str)
+                .map(ToString::to_string)
+        }));
+        let metric_groups = sorted_unique_strings(items.iter().flat_map(|item| {
+            item["metric_groups"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(ToString::to_string)
+        }));
+        let mut domain_counts = serde_json::Map::new();
+        for domain in items
+            .iter()
+            .filter_map(|item| item.get("domain").and_then(Value::as_str))
+        {
+            let count = domain_counts
+                .get(domain)
+                .and_then(Value::as_u64)
+                .unwrap_or(0);
+            domain_counts.insert(domain.to_string(), Value::from(count + 1));
+        }
+        let mut bundle = serde_json::json!({
+            "bundle_contract":"kyuubiki.workflow_diagnostics_bundle/v1",
+            "bundle_kind":"workflow_diagnostics_bundle",
+            "bundle_source_count":items.len(),
+            "bundle_sources":diagnostics.iter().map(|source|source.id).collect::<Vec<_>>(),
+            "bundle_domains":domains,"bundle_subjects":subjects,
+            "bundle_domain_counts":domain_counts,"bundle_metric_groups":metric_groups,
+            "bundle_items":items,
+            "bundle_total_node_count":total_count(&diagnostics, "node")?,
+            "bundle_total_element_count":total_count(&diagnostics, "element")?,
+            "bundle_numeric_field_count":numeric_fields.len(),
+        });
         if include_payloads {
-            object.insert(
-                "bundle_payloads".to_string(),
-                Value::Object(
-                    diagnostics
-                        .iter()
-                        .map(|(source_id, entry)| ((*source_id).clone(), (*entry).clone()))
-                        .collect(),
-                ),
+            bundle["bundle_payloads"] = Value::Object(
+                diagnostics
+                    .iter()
+                    .map(|source| (source.id.to_string(), source.payload.clone()))
+                    .collect(),
             );
         }
         if include_numeric_fields {
-            object.insert(
-                "bundle_numeric_fields".to_string(),
-                Value::Array(numeric_fields.into_iter().map(Value::from).collect()),
-            );
+            bundle["bundle_numeric_fields"] = serde_json::json!(numeric_fields);
         }
-    }
-
-    Ok(bundle)
+        Ok(bundle)
+    };
+    compose().map_err(|error| format!("{OPERATOR}: {error}"))
 }
 
 pub fn evaluate_diagnostics_bundle_guard(payload: Value, config: Value) -> Result<Value, String> {
@@ -157,10 +107,15 @@ pub fn evaluate_diagnostics_bundle_guard(payload: Value, config: Value) -> Resul
         );
     }
 
-    let triggers = rules
-        .iter()
-        .filter_map(|rule| evaluate_bundle_guard_rule(object, rule))
-        .collect::<Vec<_>>();
+    check_bundle_admission(object, "transform.evaluate_diagnostics_bundle_guard")?;
+    let mut triggers = Vec::new();
+    for (index, rule) in rules.iter().enumerate() {
+        if let Some(trigger) = evaluate_bundle_guard_rule(object, rule, index)
+            .map_err(|error| format!("transform.evaluate_diagnostics_bundle_guard: {error}"))?
+        {
+            triggers.push(trigger);
+        }
+    }
     let block_count = triggers
         .iter()
         .filter(|trigger| trigger["severity"].as_str() == Some("block"))
@@ -363,12 +318,6 @@ fn push_highlight(
     }));
 }
 
-fn diagnostic_entry(entry: &Value, include_non_diagnostics: bool) -> bool {
-    include_non_diagnostics
-        || entry.get("diagnostic_contract").and_then(Value::as_str)
-            == Some("kyuubiki.workflow_diagnostics/v1")
-}
-
 fn sorted_unique_strings<I>(values: I) -> Vec<String>
 where
     I: IntoIterator<Item = String>,
@@ -382,84 +331,45 @@ where
 fn evaluate_bundle_guard_rule(
     payload: &serde_json::Map<String, Value>,
     rule: &Value,
-) -> Option<Value> {
-    let rule = rule.as_object()?;
-    let field = rule.get("field")?.as_str()?;
-    let (value, source_ref) = fetch_bundle_guard_value(payload, rule, field)?;
-    if !bundle_guard_triggered(value, rule) {
-        return None;
-    }
-
-    Some(serde_json::json!({
-        "field": field,
-        "source": source_ref,
-        "value": value,
-        "threshold": bundle_guard_threshold(rule),
-        "comparison": bundle_guard_comparison(rule),
-        "severity": bundle_guard_severity(rule.get("severity").and_then(Value::as_str)),
-        "label": rule.get("label").and_then(Value::as_str).unwrap_or(field),
-    }))
-}
-
-fn fetch_bundle_guard_value(
-    payload: &serde_json::Map<String, Value>,
-    rule: &serde_json::Map<String, Value>,
-    field: &str,
-) -> Option<(f64, String)> {
-    if let Some(source) = rule.get("source").and_then(Value::as_str) {
-        let source_payload = payload
+    index: usize,
+) -> Result<Option<Value>, String> {
+    let path = format!("config.rules[{index}]");
+    let parsed = GuardRule::parse(rule, &path)?;
+    let rule = rule
+        .as_object()
+        .ok_or_else(|| format!("{path} must be an object rule"))?;
+    let source = optional_text(rule, "source", &path)?;
+    let (object, source_path) = if let Some(source) = source {
+        let source_path = format!("payload.bundle_payloads.{source}");
+        let object = payload
             .get("bundle_payloads")
-            .and_then(Value::as_object)?
-            .get(source)
-            .and_then(Value::as_object)?;
-        source_payload
-            .get(field)
-            .and_then(Value::as_f64)
-            .map(|value| (value, source.to_string()))
+            .and_then(Value::as_object)
+            .and_then(|sources| sources.get(source))
+            .and_then(Value::as_object)
+            .ok_or_else(|| format!("{path}: {source_path} must be an object source"))?;
+        (object, source_path)
     } else {
-        payload
-            .get(field)
-            .and_then(Value::as_f64)
-            .map(|value| (value, "bundle".to_string()))
-    }
-}
-
-fn bundle_guard_triggered(value: f64, rule: &serde_json::Map<String, Value>) -> bool {
-    match (bundle_guard_comparison(rule), bundle_guard_threshold(rule)) {
-        ("gt", Some(threshold)) => value > threshold,
-        ("gte", Some(threshold)) => value >= threshold,
-        ("lt", Some(threshold)) => value < threshold,
-        ("lte", Some(threshold)) => value <= threshold,
-        ("eq", Some(threshold)) => value == threshold,
-        _ => false,
-    }
-}
-
-fn bundle_guard_comparison(rule: &serde_json::Map<String, Value>) -> &str {
-    match rule
-        .get("comparison")
-        .and_then(Value::as_str)
-        .unwrap_or("gte")
-    {
-        "gt" | "gte" | "lt" | "lte" | "eq" => rule
-            .get("comparison")
-            .and_then(Value::as_str)
-            .unwrap_or("gte"),
-        _ => "gte",
-    }
-}
-
-fn bundle_guard_threshold(rule: &serde_json::Map<String, Value>) -> Option<f64> {
-    rule.get("threshold")
+        (payload, "payload".to_string())
+    };
+    // Bundle rules address exact published fields, not the domain resolver's aliases.
+    let value = object
+        .get(parsed.field)
         .and_then(Value::as_f64)
-        .or_else(|| rule.get("value").and_then(Value::as_f64))
-}
-
-fn bundle_guard_severity(severity: Option<&str>) -> &'static str {
-    match severity.unwrap_or("warn") {
-        "block" => "block",
-        _ => "warn",
+        .filter(|value| value.is_finite())
+        .ok_or_else(|| {
+            format!(
+                "{path}: {source_path}.{} must be a finite numeric metric",
+                parsed.field
+            )
+        })?;
+    if !parsed.triggered(value) {
+        return Ok(None);
     }
+    Ok(Some(serde_json::json!({
+        "field":parsed.field,"source":source.unwrap_or("bundle"),"value":value,
+        "threshold":parsed.threshold,"comparison":parsed.comparison,
+        "severity":parsed.severity,"label":parsed.label
+    })))
 }
 
 fn bundle_guard_recommendation(status: &str) -> &'static str {

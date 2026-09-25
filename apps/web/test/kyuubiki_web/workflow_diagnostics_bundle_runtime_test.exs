@@ -73,7 +73,8 @@ defmodule KyuubikiWeb.WorkflowDiagnosticsBundleRuntimeTest do
         "diagnostic_prefix" => "thermal",
         "diagnostic_node_count" => 2,
         "diagnostic_element_count" => 1,
-        "diagnostic_metric_groups" => ["temperature"]
+        "diagnostic_metric_groups" => ["temperature"],
+        "thermal_temperature_max" => 0.0
       }
     }
 
@@ -90,9 +91,13 @@ defmodule KyuubikiWeb.WorkflowDiagnosticsBundleRuntimeTest do
 
   test "generic material summaries do not invent a nil diagnostic domain" do
     payload = %{
-      "ranking" => %{"best_candidate" => "sample-a"},
-      "pareto" => %{"diagnostic_domain" => nil, "candidate_count" => 2},
-      "thermal" => %{"diagnostic_domain" => "thermal"}
+      "ranking" => %{"best_candidate" => "sample-a", "candidate_count" => 2},
+      "pareto" => %{"candidate_count" => 2},
+      "thermal" => %{
+        "diagnostic_contract" => "kyuubiki.workflow_diagnostics/v1",
+        "diagnostic_domain" => "thermal",
+        "thermal_temperature_max" => 20.0
+      }
     }
 
     assert {:ok, bundle} =
