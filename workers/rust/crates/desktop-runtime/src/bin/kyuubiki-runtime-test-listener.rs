@@ -13,7 +13,6 @@ fn main() {
     }
     let port = argument
         .parse::<u16>()
-        .ok()
         .expect("listener requires a TCP port");
     let listener = TcpListener::bind(("127.0.0.1", port)).expect("failed to bind test listener");
     for stream in listener.incoming() {

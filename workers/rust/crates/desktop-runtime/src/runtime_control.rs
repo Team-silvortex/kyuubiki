@@ -258,7 +258,7 @@ pub(super) fn hot_service_stop() -> Result<String, String> {
 }
 
 fn start_services(paths: &RuntimePaths, requested_mode: &str) -> Result<String, String> {
-    ensure_runtime_dirs(&paths)?;
+    ensure_runtime_dirs(paths)?;
     let mut env = runtime_env(&paths.root);
     paths.apply_writable_state_env(&mut env)?;
     let mode = resolve_mode(requested_mode, &env)?;
@@ -286,7 +286,7 @@ fn start_services(paths: &RuntimePaths, requested_mode: &str) -> Result<String, 
     env.insert("KYUUBIKI_AGENT_ENDPOINTS".to_string(), endpoints.clone());
     env.entry("KYUUBIKI_AGENT_DISCOVERY".to_string())
         .or_insert_with(|| "static".to_string());
-    augment_path(&paths, &mut env);
+    augment_path(paths, &mut env);
 
     let mut reused = false;
     if mode != "distributed" && !options.orchestrator_only {
@@ -322,7 +322,7 @@ fn start_services(paths: &RuntimePaths, requested_mode: &str) -> Result<String, 
         for port in agent_ports(&paths.root, &env) {
             let pid = paths.run.join(format!("agent-{port}.pid"));
             let previous_pid = read_pid(&pid);
-            let result = start_agent(&paths, port, &env);
+            let result = start_agent(paths, port, &env);
             record_started(
                 &mut started,
                 &pid,
@@ -335,7 +335,7 @@ fn start_services(paths: &RuntimePaths, requested_mode: &str) -> Result<String, 
     }
     let orchestrator_pid = options.orchestrator_pid(&paths.run);
     let previous_pid = read_pid(&orchestrator_pid);
-    let result = start_orchestrator(&paths, &env, &mode, options);
+    let result = start_orchestrator(paths, &env, &mode, options);
     record_started(
         &mut started,
         &orchestrator_pid,
@@ -347,7 +347,7 @@ fn start_services(paths: &RuntimePaths, requested_mode: &str) -> Result<String, 
     if !options.orchestrator_only && !options.frontend_disabled {
         let pid = options.frontend_pid(&paths.run);
         let previous_pid = read_pid(&pid);
-        let result = start_frontend(&paths, &env, options);
+        let result = start_frontend(paths, &env, options);
         record_started(
             &mut started,
             &pid,

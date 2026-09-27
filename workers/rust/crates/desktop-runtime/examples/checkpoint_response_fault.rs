@@ -79,7 +79,7 @@ fn allowed_write(request: &HttpRequest, project: &str, state: &State, body: &Val
         || !body["name"]
             .as_str()
             .is_some_and(|name| name.starts_with(PREFIX))
-        || !body["request_id"].as_str().is_some_and(|id| !id.is_empty())
+        || body["request_id"].as_str().is_none_or(|id| id.is_empty())
         || body["kind"] != "truss_3d"
         || body["payload"]["nodes"].as_array().map(Vec::len) != Some(4)
         || body["payload"]["elements"].as_array().map(Vec::len) != Some(6)

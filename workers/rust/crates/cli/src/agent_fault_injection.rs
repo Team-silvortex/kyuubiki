@@ -78,7 +78,7 @@ pub(crate) fn wait_for_release(
 
 fn hold_at_marker(execution_guard: &agent_lifecycle::ExecutionGuard, path: &Path, job_id: &str) {
     let deadline = Instant::now() + MAX_HOLD;
-    while marker_matches(&path, job_id)
+    while marker_matches(path, job_id)
         && Instant::now() < deadline
         && !execution_guard.cancellation_requested()
     {
