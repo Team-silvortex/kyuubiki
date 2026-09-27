@@ -19,6 +19,10 @@ defmodule KyuubikiWeb.Persistence do
     Path.join(data_dir(), "results.json")
   end
 
+  def analysis_state_path do
+    Path.join(data_dir(), "analysis-state.json")
+  end
+
   def security_events_path do
     Path.join(data_dir(), "security_events.json")
   end

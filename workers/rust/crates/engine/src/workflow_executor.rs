@@ -1,3 +1,4 @@
+pub(crate) use crate::workflow_condition::evaluate_condition_operator;
 use crate::{
     operator_sdk_runtime::{
         run_registered_export_operator, run_registered_extract_operator,
@@ -126,100 +127,34 @@ pub fn transform_operator_accepts_partial_inputs(operator_id: &str) -> bool {
 }
 
 pub fn transform_operator_requires_port_map(operator_id: &str) -> bool {
-    operator_id == "transform.merge_summary_pair"
+    transform_operator_accepts_input_envelope(operator_id)
+        || operator_id == "transform.merge_summary_pair"
         || operator_id == "transform.compare_summary_pair"
         || operator_id == "transform.validate_summary_tolerance"
         || operator_id == "transform.aggregate_summary_collection"
         || operator_id == "transform.select_best_summary"
         || operator_id == "transform.compose_quality_objective"
         || operator_id == "transform.compose_quality_lineage_report"
-        || operator_id == "transform.join_parameter_sweep_results"
         || operator_id == "transform.evaluate_coupled_readiness"
         || operator_id == "transform.compose_diagnostics_bundle"
         || operator_id == "transform.compose_diagnostics_report_payload"
         || operator_id == "transform.resolve_focus_bridge_execution"
 }
 
-pub fn evaluate_condition_operator(payload: &Value, config: &Value) -> Result<bool, String> {
-    let predicate = config
-        .get("predicate")
-        .and_then(Value::as_object)
-        .cloned()
-        .unwrap_or_default();
-    let operator = predicate
-        .get("operator")
-        .and_then(Value::as_str)
-        .unwrap_or("gt");
-    let target = predicate
-        .get("path")
-        .and_then(Value::as_str)
-        .map(|path| resolve_condition_target(payload, path))
-        .unwrap_or(payload);
-
-    match operator {
-        "truthy" => Ok(is_truthy(target)),
-        "falsy" => Ok(!is_truthy(target)),
-        "eq" => Ok(target == predicate.get("value").unwrap_or(&Value::Null)),
-        "neq" => Ok(target != predicate.get("value").unwrap_or(&Value::Null)),
-        "gt" | "gte" | "lt" | "lte" => {
-            let left = target
-                .as_f64()
-                .ok_or_else(|| format!("condition operator {operator} expects numeric input"))?;
-            let right = predicate
-                .get("value")
-                .and_then(Value::as_f64)
-                .ok_or_else(|| {
-                    format!("condition operator {operator} expects numeric config.value")
-                })?;
-            Ok(match operator {
-                "gt" => left > right,
-                "gte" => left >= right,
-                "lt" => left < right,
-                "lte" => left <= right,
-                _ => unreachable!(),
-            })
-        }
-        "contains" => {
-            let right = predicate.get("value").unwrap_or(&Value::Null);
-            match target {
-                Value::String(text) => {
-                    Ok(right.as_str().is_some_and(|needle| text.contains(needle)))
-                }
-                Value::Array(items) => Ok(items.iter().any(|item| item == right)),
-                _ => Err("condition operator contains expects string or array input".to_string()),
-            }
-        }
-        _ => Err(format!(
-            "unsupported condition operator in first executor: {operator}"
-        )),
-    }
-}
-
-fn resolve_condition_target<'a>(payload: &'a Value, path: &str) -> &'a Value {
-    let mut current = payload;
-    for segment in path.split('.').filter(|segment| !segment.is_empty()) {
-        current = match current {
-            Value::Object(map) => map.get(segment).unwrap_or(&Value::Null),
-            Value::Array(items) => segment
-                .parse::<usize>()
-                .ok()
-                .and_then(|index| items.get(index))
-                .unwrap_or(&Value::Null),
-            _ => &Value::Null,
-        };
-    }
-    current
-}
-
-fn is_truthy(value: &Value) -> bool {
-    match value {
-        Value::Null => false,
-        Value::Bool(flag) => *flag,
-        Value::Number(number) => number.as_f64().is_some_and(|entry| entry != 0.0),
-        Value::String(text) => !text.is_empty(),
-        Value::Array(items) => !items.is_empty(),
-        Value::Object(map) => !map.is_empty(),
-    }
+pub(crate) fn transform_operator_accepts_input_envelope(operator_id: &str) -> bool {
+    matches!(
+        operator_id,
+        "transform.benchmark_structural_pair"
+            | "transform.benchmark_acoustic_pair"
+            | "transform.benchmark_modal_pair"
+            | "transform.benchmark_dynamic_pair"
+            | "transform.benchmark_transport_pair"
+            | "transform.benchmark_coupled_heat_pair"
+            | "transform.benchmark_electrostatic_pair"
+            | "transform.benchmark_magnetostatic_pair"
+            | "transform.benchmark_cfd_pair"
+            | "transform.join_parameter_sweep_results"
+    )
 }
 
 pub fn run_transform_operator(

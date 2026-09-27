@@ -3,6 +3,34 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelopeTest do
 
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope
 
+  test "execution fencing rejects incomplete identities and mismatched attempts" do
+    valid = %{
+      "state" => "running",
+      "generation" => 1,
+      "attempt" => 1,
+      "owner_session_id" => "session"
+    }
+
+    claim = Map.drop(valid, ["state"])
+    assert WorkflowRecoveryEnvelope.fenced?(valid, claim)
+    refute WorkflowRecoveryEnvelope.fenced?(%{"state" => "running"}, %{})
+
+    for key <- ["generation", "attempt", "owner_session_id"] do
+      refute WorkflowRecoveryEnvelope.fenced?(Map.delete(valid, key), claim)
+      refute WorkflowRecoveryEnvelope.fenced?(valid, Map.delete(claim, key))
+    end
+
+    for {key, value} <- [
+          {"generation", 1.0},
+          {"generation", 0},
+          {"attempt", 2},
+          {"attempt", 1.0},
+          {"owner_session_id", ""}
+        ] do
+      refute WorkflowRecoveryEnvelope.fenced?(valid, Map.put(claim, key, value))
+    end
+  end
+
   test "digest-binds an idempotent workflow and fences stale generations" do
     assert {:ok, recovery} =
              WorkflowRecoveryEnvelope.new(idempotent_graph(), input_artifacts(), %{}, %{})

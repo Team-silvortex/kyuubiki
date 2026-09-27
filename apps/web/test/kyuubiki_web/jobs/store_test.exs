@@ -4,6 +4,7 @@ defmodule KyuubikiWeb.Jobs.StoreTest do
   alias KyuubikiWeb.AnalysisResultStore
   alias KyuubikiWeb.AnalysisResultMemoryBackend
   alias KyuubikiWeb.Jobs.Store
+  alias KyuubikiWeb.Storage.AnalysisMemoryState
 
   setup do
     original_data_dir = System.get_env("KYUUBIKI_DATA_DIR")
@@ -126,8 +127,8 @@ defmodule KyuubikiWeb.Jobs.StoreTest do
   end
 
   test "memory result store compare-and-swap is atomic and fail-closed" do
-    if is_nil(Process.whereis(AnalysisResultMemoryBackend)) do
-      start_supervised!({AnalysisResultMemoryBackend, []})
+    if is_nil(Process.whereis(AnalysisMemoryState)) do
+      start_supervised!({AnalysisMemoryState, []})
     end
 
     initial = %{"generation" => 3}

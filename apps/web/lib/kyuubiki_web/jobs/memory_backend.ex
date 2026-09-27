@@ -1,29 +1,20 @@
 defmodule KyuubikiWeb.Jobs.MemoryBackend do
   @moduledoc false
 
-  use Agent
-
-  alias KyuubikiWeb.Persistence
   alias KyuubikiWeb.Jobs.{Job, ProgressEvent}
-
-  def start_link(_opts) do
-    Agent.start_link(fn -> load_jobs() end, name: __MODULE__)
-  end
+  alias KyuubikiWeb.Storage.AnalysisMemoryState
 
   def create(attrs) do
     with {:ok, job} <- Job.new(attrs) do
-      Agent.update(__MODULE__, fn jobs ->
+      AnalysisMemoryState.update(:jobs, fn jobs ->
         updated = Map.put(jobs, job.job_id, job)
-        persist_jobs(updated)
-        updated
+        {{:ok, job}, updated}
       end)
-
-      {:ok, job}
     end
   end
 
   def get(job_id) do
-    Agent.get(__MODULE__, fn jobs ->
+    AnalysisMemoryState.get(:jobs, fn jobs ->
       case Map.fetch(jobs, job_id) do
         {:ok, job} -> {:ok, job}
         :error -> :error
@@ -32,7 +23,7 @@ defmodule KyuubikiWeb.Jobs.MemoryBackend do
   end
 
   def list do
-    Agent.get(__MODULE__, fn jobs ->
+    AnalysisMemoryState.get(:jobs, fn jobs ->
       jobs
       |> Map.values()
       |> Enum.sort_by(& &1.updated_at, {:desc, DateTime})
@@ -40,78 +31,106 @@ defmodule KyuubikiWeb.Jobs.MemoryBackend do
   end
 
   def update_metadata(job_id, attrs) when is_binary(job_id) and is_map(attrs) do
-    Agent.get_and_update(__MODULE__, fn jobs ->
-      case Map.fetch(jobs, job_id) do
-        {:ok, %Job{} = job} ->
-          updated_job = %Job{
-            job
-            | project_id: Map.get(attrs, "project_id", job.project_id),
-              model_version_id: Map.get(attrs, "model_version_id", job.model_version_id),
-              simulation_case_id: Map.get(attrs, "simulation_case_id", job.simulation_case_id),
-              message: Map.get(attrs, "message", job.message),
-              updated_at: DateTime.utc_now(:second)
-          }
-
-          updated_jobs = Map.put(jobs, job_id, updated_job)
-          persist_jobs(updated_jobs)
-          {{:ok, updated_job}, updated_jobs}
-
-        :error ->
-          {{:error, {:job_not_found, job_id}}, jobs}
-      end
-    end)
+    update_job(job_id, &Job.update_metadata(&1, attrs))
   end
 
   def delete(job_id) when is_binary(job_id) do
-    Agent.get_and_update(__MODULE__, fn jobs ->
+    AnalysisMemoryState.update(:jobs, fn jobs ->
       case Map.pop(jobs, job_id) do
         {nil, current} ->
           {{:error, {:job_not_found, job_id}}, current}
 
         {job, current} ->
-          persist_jobs(current)
           {{:ok, job}, current}
       end
     end)
   end
 
   def reset do
-    Agent.update(__MODULE__, fn _ ->
-      persist_jobs(%{})
-      %{}
-    end)
+    AnalysisMemoryState.update(:jobs, fn _ -> {:ok, %{}} end)
   end
 
   def apply_progress(attrs) do
+    with {:ok, event} <- ProgressEvent.new(attrs) do
+      update_job(event.job_id, &Job.apply_progress(&1, event))
+    end
+  end
+
+  def apply_progress_if_current(attrs, %Job{} = expected) do
     with {:ok, event} <- ProgressEvent.new(attrs),
-         {:ok, updated_job} <- update_job(event) do
-      {:ok, updated_job}
+         {:ok, updated} <- Job.apply_progress(expected, event) do
+      update_job(expected.job_id, fn current ->
+        if current == expected,
+          do: {:ok, updated},
+          else: {:error, {:stale_job_snapshot, expected.job_id}}
+      end)
     end
   end
 
   def assign_worker(job_id, worker_id) when is_binary(worker_id) and byte_size(worker_id) > 0 do
-    Agent.get_and_update(__MODULE__, fn jobs ->
-      case Map.fetch(jobs, job_id) do
-        {:ok, job} ->
-          updated_job = %{job | worker_id: worker_id, updated_at: DateTime.utc_now(:second)}
-          updated_jobs = Map.put(jobs, job_id, updated_job)
-          persist_jobs(updated_jobs)
-          {{:ok, updated_job}, updated_jobs}
+    update_job(job_id, &Job.assign_worker(&1, worker_id))
+  end
 
-        :error ->
-          {{:error, {:job_not_found, job_id}}, jobs}
+  def complete_with_result(job_id, worker_id, result) do
+    AnalysisMemoryState.transaction(fn state ->
+      with {:ok, job} <- Map.fetch(state.jobs, job_id),
+           {:ok, completed} <- Job.complete(job, worker_id),
+           false <- Map.has_key?(state.results, job_id) do
+        updated = %{
+          jobs: Map.put(state.jobs, job_id, completed),
+          results: Map.put(state.results, job_id, result)
+        }
+
+        {{:ok, completed}, updated}
+      else
+        :error -> {{:error, {:job_not_found, job_id}}, state}
+        true -> {{:error, {:result_already_exists, job_id}}, state}
+        {:error, _reason} = error -> {error, state}
       end
     end)
   end
 
-  defp update_job(%ProgressEvent{} = event) do
-    Agent.get_and_update(__MODULE__, fn jobs ->
-      case Map.fetch(jobs, event.job_id) do
+  def apply_progress_with_result(attrs, expected, result, replacement) do
+    with {:ok, event} <- ProgressEvent.new(attrs),
+         {:ok, updated} <- Job.apply_progress(expected, event) do
+      AnalysisMemoryState.transaction(fn state ->
+        id = expected.job_id
+
+        cond do
+          not Map.has_key?(state.jobs, id) ->
+            {{:error, {:job_not_found, id}}, state}
+
+          state.jobs[id] !== expected ->
+            {{:error, {:stale_job_snapshot, id}}, state}
+
+          not Map.has_key?(state.results, id) ->
+            {{:error, {:result_not_found, id}}, state}
+
+          state.results[id] !== result ->
+            {{:error, :stale_analysis_result}, state}
+
+          true ->
+            {{:ok, updated},
+             %{
+               state
+               | jobs: Map.put(state.jobs, id, updated),
+                 results: Map.put(state.results, id, replacement)
+             }}
+        end
+      end)
+    end
+  end
+
+  defp update_job(job_id, change) do
+    AnalysisMemoryState.update(:jobs, fn jobs ->
+      case Map.fetch(jobs, job_id) do
         {:ok, job} ->
-          case Job.apply_progress(job, event) do
+          case change.(job) do
+            {:ok, ^job} ->
+              {{:ok, job}, jobs}
+
             {:ok, updated_job} ->
-              updated_jobs = Map.put(jobs, event.job_id, updated_job)
-              persist_jobs(updated_jobs)
+              updated_jobs = Map.put(jobs, job_id, updated_job)
               {{:ok, updated_job}, updated_jobs}
 
             {:error, reason} ->
@@ -119,27 +138,8 @@ defmodule KyuubikiWeb.Jobs.MemoryBackend do
           end
 
         :error ->
-          {{:error, {:job_not_found, event.job_id}}, jobs}
+          {{:error, {:job_not_found, job_id}}, jobs}
       end
     end)
-  end
-
-  defp load_jobs do
-    Persistence.read_json(Persistence.jobs_path(), %{})
-    |> Enum.reduce(%{}, fn
-      {job_id, attrs}, acc ->
-        case Job.from_persisted_map(attrs) do
-          {:ok, job} -> Map.put(acc, job_id, job)
-          {:error, _reason} -> acc
-        end
-    end)
-  end
-
-  defp persist_jobs(jobs) do
-    payload =
-      jobs
-      |> Enum.into(%{}, fn {job_id, job} -> {job_id, Job.to_persisted_map(job)} end)
-
-    Persistence.write_json!(Persistence.jobs_path(), payload)
   end
 end

@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.Orchestra.LeaseStore do
   """
 
   alias KyuubikiWeb.Storage
+  alias KyuubikiWeb.Storage.FailureBoundary
 
   @identity_key {__MODULE__, :instance_id}
 
@@ -20,19 +21,21 @@ defmodule KyuubikiWeb.Orchestra.LeaseStore do
   @spec acquire(String.t(), String.t(), pos_integer()) ::
           {:ok, token()} | {:error, {:lease_held, token()}} | {:error, term()}
   def acquire(lease_name, owner_instance_id, ttl_ms),
-    do: backend().acquire(lease_name, owner_instance_id, ttl_ms)
+    do: guarded(fn -> backend().acquire(lease_name, owner_instance_id, ttl_ms) end)
 
   @spec renew(token(), pos_integer()) :: {:ok, token()} | {:error, term()}
-  def renew(token, ttl_ms), do: backend().renew(token, ttl_ms)
+  def renew(token, ttl_ms), do: guarded(fn -> backend().renew(token, ttl_ms) end)
 
   @spec with_lease(token(), (-> result)) :: result | {:error, term()} when result: term()
-  def with_lease(token, callback), do: backend().with_lease(token, callback)
+  def with_lease(token, callback), do: guarded(fn -> backend().with_lease(token, callback) end)
 
   @spec release(token()) :: :ok | {:error, term()}
-  def release(token), do: backend().release(token)
+  def release(token), do: guarded(fn -> backend().release(token) end)
 
   @spec current(String.t()) :: {:ok, token()} | :error | {:error, term()}
-  def current(lease_name), do: backend().current(lease_name)
+  def current(lease_name), do: guarded(fn -> backend().current(lease_name) end)
+
+  defp guarded(callback), do: FailureBoundary.run(callback, :orchestra_lease_store_unavailable)
 
   @doc "Returns a stable identity for the lifetime of this BEAM instance."
   @spec instance_id() :: String.t()

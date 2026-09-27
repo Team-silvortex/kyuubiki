@@ -44,10 +44,12 @@ defmodule KyuubikiWeb.Router do
   get "/api/health" do
     with_auth(conn, :read, fn conn ->
       agent_endpoints = KyuubikiWeb.Playground.AgentPool.endpoints()
+      watchdog = KyuubikiWeb.Jobs.Watchdog.status_snapshot()
+      storage_ready = watchdog.available and not match?(%{available: false}, watchdog.last_scan)
 
       respond_json(conn, 200, %{
         "service" => "kyuubiki-orchestrator",
-        "status" => "ok",
+        "status" => if(storage_ready, do: "ok", else: "degraded"),
         "protocol" => Protocol.descriptor(),
         "security" => Security.descriptor(),
         "deployment" => KyuubikiWeb.Playground.AgentPool.deployment_info(),
@@ -55,7 +57,7 @@ defmodule KyuubikiWeb.Router do
         "agent_execution_gate" =>
           KyuubikiWeb.Playground.AgentExecutionGate.snapshot(agent_endpoints),
         "workflow_recovery" => WorkflowRecoveryCoordinator.snapshot(),
-        "watchdog" => KyuubikiWeb.Jobs.Watchdog.status_snapshot(),
+        "watchdog" => watchdog,
         "transport" => %{
           "http" => 4000,
           "model_artifacts" => ModelArtifactStore.descriptor(),

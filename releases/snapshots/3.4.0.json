@@ -2,7 +2,7 @@
   "version": "3.4.0",
   "codename": "daji",
   "line": "3.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-09-27",
   "git_commit": "b7eadf93007aeeee59f43d603b1094389341d2b0",
   "summary": "Daji 3.4.0 workflow reliability and local desktop rebuild: bounded graph admission, validated artifact publication, deterministic diagnostics, and CI contract repairs. Public distribution and numerical qualification remain separate gates.",

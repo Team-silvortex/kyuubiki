@@ -335,10 +335,12 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
   const latestWatchdogIssueLabel = latestWatchdogIssue
     ? `${latestWatchdogIssue.job_id.slice(0, 8)} ${resolveJobStatusDetailLabel(latestWatchdogIssue.status_detail) ?? latestWatchdogIssue.status}`
     : t.none;
+  const watchdogCount = (count: number | null | undefined) =>
+    health?.watchdog?.available === false ? "--" : count ?? "--";
   const runtimeWatchdogRows = [
-    { label: t.activeJobs, value: health?.watchdog?.active_jobs ?? 0 },
-    { label: t.stalledJobs, value: health?.watchdog?.stalled_jobs ?? 0 },
-    { label: t.timedOutJobs, value: health?.watchdog?.timed_out_jobs ?? 0 },
+    { label: t.activeJobs, value: watchdogCount(health?.watchdog?.active_jobs) },
+    { label: t.stalledJobs, value: watchdogCount(health?.watchdog?.stalled_jobs) },
+    { label: t.timedOutJobs, value: watchdogCount(health?.watchdog?.timed_out_jobs) },
     {
       label: `${t.watchdog} · ${t.tabs.jobs}`,
       value: recentWatchdogIssueJobs.length,

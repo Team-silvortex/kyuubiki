@@ -1,5 +1,30 @@
 # Changelog
 
+## daji 3.4.1
+
+September 27, 2026. Workflow publication and storage recovery hardening.
+
+- Aligned Rust and Elixir workflow conditions and named-input routing through
+  shared fixtures, including exact numeric comparisons and branch isolation.
+- Made job updates compare the full observed snapshot, preserving concurrent
+  metadata and preventing stale watchdog transitions from overwriting new work.
+- Publish solver completion and its result atomically. Premature Agent progress
+  stays in postprocessing until the final response is validated and committed.
+- Commit workflow runtime, recovery envelopes, and job progress together, with
+  stale-claim rejection and rollback coverage on SQLite and memory backends.
+- Consolidated memory job/result persistence into one integrity-checked snapshot
+  generation, with bounded recovery files and one-time legacy import.
+- Keep recovery coordination and watchdog scans alive through scoped storage
+  outages. Health reports degraded state and unknown counts rather than false
+  success; normal programming errors are not swallowed.
+- Aligned product, SDK, desktop, language-pack, and current documentation metadata
+  to 3.4.1 without changing protocol identifiers or relabeling historical evidence.
+- Show an explicit empty state when a source release declares no desktop packages.
+
+See `releases/snapshots/3.4.1.json` for verification and scope. This is a source
+release, not a new desktop installation, binary download, or registry publication.
+The last locally built and installed desktop/runtime baseline remains 3.4.0.
+
 ## daji 3.4.0
 
 September 27, 2026. Workflow reliability and coordinated local packaging.

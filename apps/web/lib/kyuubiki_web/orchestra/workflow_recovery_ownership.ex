@@ -62,7 +62,11 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership do
   end
 
   def after_write(state, {:error, reason})
-      when reason in [:orchestra_lease_lost, :orchestra_lease_store_unavailable],
+      when reason in [
+             :orchestra_lease_lost,
+             :orchestra_lease_store_unavailable,
+             :analysis_store_unavailable
+           ],
       do: lose(state, reason)
 
   def after_write(state, _result), do: state
@@ -81,7 +85,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership do
       last_lease_error: reason,
       refs: %{},
       jobs: %{},
-      progress: %{}
+      progress: %{},
+      activity: %{}
     })
     |> schedule()
   end
@@ -103,7 +108,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership do
     %{
       "status" => "standby",
       "lease_name" => state.lease_name,
-      "active_jobs" => 0,
+      "reason" => state.last_lease_error && format_reason(state.last_lease_error),
+      "active_jobs" => nil,
       "recovered" => 0,
       "blocked" => 0,
       "skipped" => 0

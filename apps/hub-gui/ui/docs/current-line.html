@@ -10,15 +10,17 @@
     <main class="docs-shell">
       <section class="docs-hero">
         <div class="docs-kicker">Current Line Mirror · Chapter 2</div>
-        <h1>daji 3.4.0</h1>
+        <h1>daji 3.4.1</h1>
         <p class="docs-copy">
           Early Daji prioritizes hardening an agent-driven industrial research
           system: bounded studies, real execution, numerical trust, safe recovery,
           and reproducible evidence rather than a larger feature catalog.
         </p>
         <p class="docs-copy">
-          The current development point is <code>daji 3.4.0</code>.
-          Local desktop and runtime packaging also targets <code>daji 3.4.0</code>;
+          The current development point is <code>daji 3.4.1</code>.
+          Source package metadata targets <code>3.4.1</code>; the last locally built
+          and installed desktop/runtime baseline remains <code>daji 3.4.0</code>.
+          This patch does not rebuild or install binaries;
           public distribution remains a separate, evidence-gated action.
           Daji succeeds the <code>moxi 2.x</code> development line;
           historical qualification keeps its original version and scope.
@@ -47,8 +49,11 @@
         </article>
 
         <article class="docs-card">
-          <h2>Current 3.4.0 checkpoint</h2>
+          <h2>Current 3.4.1 checkpoint</h2>
           <ul class="docs-list">
+            <li>Rust and Elixir share condition and named-input routing contracts. Full-snapshot job updates reject stale progress.</li>
+            <li>Solver results and completion publish atomically; workflow runtime, recovery envelopes, and job transitions also commit together.</li>
+            <li>Memory jobs/results share one integrity-checked generation. Scoped storage outages preserve watchdog/coordinator availability and expose degraded health with unknown counts.</li>
             <li>Workflow graphs pass bounded topology and JSON validation before execution. Operator results pass publication checks before downstream consumption.</li>
             <li>Explicit branch skipping preserves failure receipts; deterministic diagnostics and shared Rust/Elixir fixtures strengthen replay consistency.</li>
             <li>CI repairs cover split metric aliases, real quality-score output, terminal job receipts, and a bounded pre-page browser startup retry.</li>

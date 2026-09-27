@@ -4,6 +4,84 @@
   "domain": "workflow",
   "profiles": [
     {
+      "profile_id": "workflow-named-input-contract",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-named-input-contract",
+      "trust_goal": "bounded_regression",
+      "operators": [
+        "transform.benchmark_structural_pair", "transform.benchmark_acoustic_pair",
+        "transform.benchmark_modal_pair", "transform.benchmark_dynamic_pair",
+        "transform.benchmark_transport_pair", "transform.benchmark_coupled_heat_pair",
+        "transform.benchmark_electrostatic_pair", "transform.benchmark_magnetostatic_pair",
+        "transform.benchmark_cfd_pair", "transform.join_parameter_sweep_results"
+      ],
+      "validation_methods": [
+        "shared_rust_elixir_graph_vs_direct_operator_regression",
+        "named_port_reordering_and_envelope_compatibility",
+        "fanout_transient_retention_and_failure_isolation",
+        "local_http_and_sqlite_receipt_regression"
+      ],
+      "formal_invariants": [
+        "tested_pair_nodes_consume_both_target_port_bindings",
+        "tested_nested_fields_cannot_substitute_for_a_second_input",
+        "tested_input_envelopes_require_one_declared_input_or_payload_port",
+        "tested_legacy_single_field_source_port_envelopes_remain_usable",
+        "tested_rejected_second_inputs_publish_no_winner_or_lineage",
+        "tested_shared_source_fanout_does_not_consume_artifacts_prematurely"
+      ],
+      "evidence_paths": [
+        "tests/fixtures/workflow-named-input-contract.json",
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
+        "apps/web/test/support/workflow_named_input_contract.exs",
+        "apps/web/test/kyuubiki_web/workflow_named_input_contract_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_named_input_contract_api_test.exs",
+        "workers/rust/crates/engine/src/workflow.rs",
+        "workers/rust/crates/engine/src/workflow_executor.rs",
+        "workers/rust/crates/engine/tests/shared_named_input_contract.rs",
+        "reports/workflow-named-input-contract-20260927.md"
+      ],
+      "commands": [
+        {"id": "named-input-cross-runtime", "kind": "boundary_regression", "command": "make test-workflow-named-input-contract"}
+      ]
+    },
+    {
+      "profile_id": "workflow-condition-contract",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-condition-contract",
+      "trust_goal": "bounded_regression",
+      "operators": ["transform.first_available"],
+      "validation_methods": [
+        "shared_rust_elixir_condition_decision_and_error_fixtures",
+        "integer_and_mixed_numeric_order_against_exact_bounded_oracles",
+        "fail_fast_and_opt_in_failure_isolation_with_clean_replay",
+        "local_http_and_sqlite_failure_receipt_regression"
+      ],
+      "formal_invariants": [
+        "tested_invalid_array_indexes_never_alias_the_last_element",
+        "tested_invalid_predicate_shapes_return_node_errors_without_branch_publication",
+        "tested_integer_comparison_preserves_distinctions_above_float_precision",
+        "tested_json_equality_and_array_contains_use_the_same_numeric_equivalence",
+        "tested_failed_conditions_do_not_invoke_blocked_consumers",
+        "tested_compact_results_and_persisted_jobs_retain_failure_receipts"
+      ],
+      "evidence_paths": [
+        "tests/fixtures/workflow-condition-contract.json",
+        "apps/web/lib/kyuubiki_web/workflow_condition.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
+        "apps/web/test/support/workflow_condition_contract.exs",
+        "apps/web/test/kyuubiki_web/workflow_condition_contract_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_condition_contract_api_test.exs",
+        "workers/rust/crates/engine/src/workflow_condition.rs",
+        "workers/rust/crates/engine/tests/shared_condition_contract.rs",
+        "reports/workflow-condition-contract-20260927.md"
+      ],
+      "commands": [
+        {"id": "condition-elixir-contract", "kind": "boundary_regression", "command": "make test-workflow-condition-contract"},
+        {"id": "condition-shared-rust-graph", "kind": "contract", "command": "cd workers/rust && cargo test -p kyuubiki-engine --test shared_condition_contract -- --nocapture"},
+        {"id": "condition-numeric-oracles", "kind": "invariant", "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_condition -- --nocapture"}
+      ]
+    },
+    {
       "profile_id": "workflow-artifact-publication-contract",
       "profile_role": "component_profile",
       "qualification_candidate_id": "workflow-artifact-publication-contract",

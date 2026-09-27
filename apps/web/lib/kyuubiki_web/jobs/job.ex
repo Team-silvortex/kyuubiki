@@ -141,6 +141,48 @@ defmodule KyuubikiWeb.Jobs.Job do
     end
   end
 
+  @spec update_metadata(t(), map()) :: {:ok, t()} | {:error, term()}
+  def update_metadata(%__MODULE__{} = job, attrs) do
+    changes =
+      attrs
+      |> Map.take(["project_id", "model_version_id", "simulation_case_id", "message"])
+      |> Map.new(fn {key, value} -> {String.to_existing_atom(key), value} end)
+
+    job
+    |> Map.from_struct()
+    |> Map.merge(changes)
+    |> Map.put(:updated_at, mutation_time(job))
+    |> new()
+  end
+
+  @spec assign_worker(t(), String.t()) :: {:ok, t()}
+  def assign_worker(%__MODULE__{} = job, worker_id) do
+    {:ok, %{job | worker_id: worker_id, updated_at: mutation_time(job)}}
+  end
+
+  @doc false
+  def complete(%__MODULE__{status: status}, _worker_id)
+      when status in [:completed, :failed, :cancelled],
+      do: {:error, {:job_already_terminal, status}}
+
+  def complete(%__MODULE__{} = job, worker_id) do
+    with {:ok, event} <-
+           KyuubikiWeb.Jobs.ProgressEvent.new(%{
+             job_id: job.job_id,
+             stage: :completed,
+             progress: 1.0,
+             emitted_at: mutation_time(job)
+           }),
+         {:ok, completed} <- apply_progress(job, event) do
+      {:ok, %{completed | worker_id: worker_id}}
+    end
+  end
+
+  defp mutation_time(job) do
+    now = DateTime.utc_now()
+    if DateTime.compare(now, job.updated_at) == :lt, do: job.updated_at, else: now
+  end
+
   @spec to_persisted_map(t()) :: map()
   def to_persisted_map(%__MODULE__{} = job) do
     %{

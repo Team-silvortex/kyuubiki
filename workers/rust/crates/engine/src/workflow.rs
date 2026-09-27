@@ -3,8 +3,8 @@ use crate::workflow_contract::validate_workflow_dataset_contract;
 use crate::workflow_execution_plan::{WorkflowExecutionPlan, WorkflowPlannedEdge};
 use crate::workflow_executor::{
     artifact_key, evaluate_condition_operator, run_export_operator, run_extract_operator,
-    run_solve_operator, run_transform_operator, transform_operator_accepts_partial_inputs,
-    transform_operator_requires_port_map,
+    run_solve_operator, run_transform_operator, transform_operator_accepts_input_envelope,
+    transform_operator_accepts_partial_inputs, transform_operator_requires_port_map,
 };
 use crate::workflow_security::{validate_workflow_artifact_budget, validate_workflow_security};
 use kyuubiki_protocol::{
@@ -575,6 +575,19 @@ fn resolve_named_input_payloads_for_execution(
     artifacts: &mut BTreeMap<String, Value>,
     retention: &WorkflowArtifactRetention,
 ) -> Result<Value, String> {
+    // Only a sole declared envelope port bypasses assembly. Named ports still
+    // assemble even when one input is missing or resembles an entire payload.
+    if node
+        .operator_id
+        .as_deref()
+        .is_some_and(transform_operator_accepts_input_envelope)
+        && node.inputs.len() == 1
+        && incoming.len() == 1
+        && matches!(node.inputs[0].id.as_str(), "input" | "payload")
+        && incoming[0].edge().to.port == node.inputs[0].id
+    {
+        return resolve_single_input_payload_for_execution(node, incoming, artifacts, retention);
+    }
     if incoming.is_empty() {
         return Err(format!(
             "workflow node {} requires at least one resolved named input artifact",
@@ -584,7 +597,7 @@ fn resolve_named_input_payloads_for_execution(
     let mut payload = serde_json::Map::new();
     for planned_edge in incoming {
         let edge = planned_edge.edge();
-        let artifact = retention
+        let mut artifact = retention
             .take_if_last_transient(planned_edge.source_key(), artifacts)
             .or_else(|| artifacts.get(planned_edge.source_key()).cloned())
             .ok_or_else(|| {
@@ -593,6 +606,18 @@ fn resolve_named_input_payloads_for_execution(
                     node.id, edge.from.node, edge.from.port
                 )
             })?;
+        // A single-field source-port envelope is a supported legacy shape.
+        // A complete result with sibling data/status must remain intact.
+        if node
+            .operator_id
+            .as_deref()
+            .is_some_and(transform_operator_accepts_input_envelope)
+            && let Value::Object(object) = &mut artifact
+            && object.len() == 1
+            && let Some(value) = object.remove(&edge.from.port)
+        {
+            artifact = value;
+        }
         payload.insert(edge.to.port.clone(), artifact);
     }
     Ok(Value::Object(payload))

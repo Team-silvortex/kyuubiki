@@ -10,6 +10,7 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
   alias KyuubikiWeb.Playground.AgentExecutionGate
   alias KyuubikiWeb.Playground.AgentPool
   alias KyuubikiWeb.Playground.AgentRegistry
+  alias KyuubikiWeb.Storage.FailureBoundary
 
   @active_statuses [:queued, :preprocessing, :partitioning, :solving, :postprocessing]
   @stale_statuses [:preprocessing, :partitioning, :solving, :postprocessing]
@@ -24,14 +25,39 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
   end
 
   def status_snapshot do
-    state = config()
-    jobs = Store.list()
+    GenServer.call(__MODULE__, :status_snapshot, 30_000)
+  end
+
+  defp build_snapshot(state) do
+    case FailureBoundary.run(&Store.list/0) do
+      {:error, :analysis_store_unavailable} ->
+        %{
+          available: false,
+          reason: "analysis_store_unavailable",
+          watchdog_state: "unknown",
+          scan_interval_ms: state.scan_interval_ms,
+          stale_job_ms: state.stale_job_ms,
+          queue_timeout_ms: state.queue_timeout_ms,
+          job_timeout_ms: state.job_timeout_ms,
+          active_jobs: nil,
+          stalled_jobs: nil,
+          timed_out_jobs: nil,
+          agent_load: summarize_agent_load(safe_agent_runtime(), state)
+        }
+
+      jobs when is_list(jobs) ->
+        status_snapshot(jobs, state)
+    end
+  end
+
+  defp status_snapshot(jobs, state) do
     agent_runtime = safe_agent_runtime()
     orchestra_load = summarize_orchestra_load(jobs, state)
     agent_load = summarize_agent_load(agent_runtime, state)
     operator_load = summarize_operator_load(jobs, state)
 
     %{
+      available: true,
       scan_interval_ms: state.scan_interval_ms,
       stale_job_ms: state.stale_job_ms,
       queue_timeout_ms: state.queue_timeout_ms,
@@ -56,7 +82,7 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
 
   @impl true
   def init(_opts) do
-    state = config()
+    state = Map.put(config(), :last_scan, nil)
     schedule_scan(state.scan_interval_ms)
     {:ok, state}
   end
@@ -64,15 +90,28 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
   @impl true
   def handle_call(:scan_now, _from, _state) do
     refreshed = config()
-    {:reply, run_scan(refreshed), refreshed}
+    result = run_scan(refreshed)
+    {:reply, result, Map.put(refreshed, :last_scan, result)}
+  end
+
+  def handle_call(:status_snapshot, _from, state) do
+    last_scan = Map.get(state, :last_scan)
+    snapshot = config() |> build_snapshot() |> Map.put(:last_scan, last_scan)
+
+    snapshot =
+      if match?(%{available: false}, last_scan),
+        do: Map.put(snapshot, :watchdog_state, "unknown"),
+        else: snapshot
+
+    {:reply, snapshot, state}
   end
 
   @impl true
   def handle_info(:scan, _state) do
     refreshed = config()
-    _ = run_scan(refreshed)
+    result = run_scan(refreshed)
     schedule_scan(refreshed.scan_interval_ms)
-    {:noreply, refreshed}
+    {:noreply, Map.put(refreshed, :last_scan, result)}
   end
 
   defp config do
@@ -97,47 +136,89 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
   end
 
   defp run_scan(state) do
+    case FailureBoundary.run(&Store.list/0) do
+      {:error, :analysis_store_unavailable} ->
+        %{available: false, reason: "analysis_store_unavailable", timed_out: 0, stalled: 0}
+
+      jobs when is_list(jobs) ->
+        scan_jobs(jobs, state)
+    end
+  end
+
+  defp scan_jobs(jobs, state) do
     now = DateTime.utc_now()
 
-    Store.list()
-    |> Enum.reduce(%{timed_out: 0, stalled: 0}, fn job, acc ->
-      cond do
-        job.status not in @active_statuses ->
-          acc
+    Enum.reduce_while(jobs, %{available: true, timed_out: 0, stalled: 0}, fn job, acc ->
+      updated =
+        cond do
+          job.status not in @active_statuses ->
+            acc
 
-        job.status == :queued and
-            older_than?(job.created_at, now, queue_timeout_ms(job, state)) ->
-          timeout_ms = queue_timeout_ms(job, state)
-          mark_failed(job, timeout_message("queue", timeout_ms, job.created_at))
-          %{acc | timed_out: acc.timed_out + 1}
+          job.status == :queued and
+              older_than?(job.created_at, now, queue_timeout_ms(job, state)) ->
+            timeout_ms = queue_timeout_ms(job, state)
 
-        job.status != :queued and
-            older_than?(execution_started_at(job), now, execution_timeout_ms(job, state)) ->
-          timeout_ms = execution_timeout_ms(job, state)
-          mark_failed(job, timeout_message("execution", timeout_ms, execution_started_at(job)))
-          %{acc | timed_out: acc.timed_out + 1}
+            mark_failed(
+              job,
+              timeout_message("queue", timeout_ms, job.created_at),
+              acc,
+              :timed_out
+            )
 
-        job.status in @stale_statuses and
-            older_than?(job.updated_at, now, state.stale_job_ms) ->
-          mark_failed(job, stall_message(state.stale_job_ms))
-          %{acc | stalled: acc.stalled + 1}
+          job.status != :queued and
+              older_than?(execution_started_at(job), now, execution_timeout_ms(job, state)) ->
+            timeout_ms = execution_timeout_ms(job, state)
 
-        true ->
-          acc
-      end
+            mark_failed(
+              job,
+              timeout_message("execution", timeout_ms, execution_started_at(job)),
+              acc,
+              :timed_out
+            )
+
+          job.status in @stale_statuses and
+              older_than?(job.updated_at, now, state.stale_job_ms) ->
+            mark_failed(job, stall_message(state.stale_job_ms), acc, :stalled)
+
+          true ->
+            acc
+        end
+
+      if updated.available, do: {:cont, updated}, else: {:halt, updated}
     end)
   end
 
-  defp mark_failed(job, message) do
-    _ =
-      Store.apply_progress(%{
-        job_id: job.job_id,
-        stage: "failed",
-        progress: clamp_progress(job.progress),
-        message: message
-      })
+  defp mark_failed(job, message, stats, counter) do
+    result =
+      FailureBoundary.run(fn ->
+        Store.apply_progress_if_current(
+          %{
+            job_id: job.job_id,
+            stage: "failed",
+            progress: clamp_progress(job.progress),
+            message: message
+          },
+          job
+        )
+      end)
 
-    :ok
+    case result do
+      {:ok, _job} ->
+        Map.update!(stats, counter, &(&1 + 1))
+
+      {:error, {reason, _id}} when reason in [:stale_job_snapshot, :job_not_found] ->
+        stats
+
+      {:error, reason} ->
+        Map.merge(stats, %{
+          available: false,
+          reason:
+            if(reason == :analysis_store_unavailable,
+              do: "analysis_store_unavailable",
+              else: "job_progress_write_failed"
+            )
+        })
+    end
   end
 
   defp older_than?(%DateTime{} = timestamp, %DateTime{} = now, limit_ms)

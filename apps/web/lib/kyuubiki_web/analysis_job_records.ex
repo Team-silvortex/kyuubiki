@@ -74,18 +74,10 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
         if job.status in [:completed, :failed, :cancelled] do
           {:ok, serialize_payload(job)}
         else
-          _ = WorkflowRecoveryCoordinator.cancel(job_id)
-
-          _ =
-            Store.apply_progress(%{
-              job_id: job_id,
-              stage: "cancelled",
-              progress: job.progress,
-              message: "job cancelled by operator"
-            })
-
-          _ = AgentClient.cancel_job(job_id)
-          fetch_job(job_id)
+          with :ok <- WorkflowRecoveryCoordinator.cancel(job_id) do
+            _ = AgentClient.cancel_job(job_id)
+            fetch_job(job_id)
+          end
         end
 
       :error ->

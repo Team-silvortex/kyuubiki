@@ -78,12 +78,20 @@ export type HealthPayload = {
     cluster_routes_protected: boolean;
   };
   watchdog?: {
+    available?: boolean;
+    reason?: string;
+    last_scan?: {
+      available: boolean;
+      reason?: string;
+      stalled: number;
+      timed_out: number;
+    } | null;
     scan_interval_ms: number;
     stale_job_ms: number;
     job_timeout_ms: number;
-    active_jobs: number;
-    stalled_jobs: number;
-    timed_out_jobs: number;
+    active_jobs: number | null;
+    stalled_jobs: number | null;
+    timed_out_jobs: number | null;
     watchdog_state?: "unknown" | "healthy" | "watch" | "critical";
     orchestra_load?: {
       state: "healthy" | "watch" | "critical";

@@ -1,12 +1,37 @@
 # daji 3.x
 
 This is the single entrypoint for the active Kyuubiki product line.
-The current development point in this line is `daji 3.4.0`.
-The local desktop and runtime packaging target is also `daji 3.4.0`.
+The current development point in this line is `daji 3.4.1`.
+Source package metadata targets `3.4.1`; the last locally built and installed
+desktop/runtime baseline remains `daji 3.4.0`.
 Local installation does not imply that public downloads or SDK packages have
 been published; platform acceptance remains separately scoped.
 
-## Daji 3.4.0 Checkpoint
+## Daji 3.4.1 Checkpoint
+
+September 27, 2026. This source patch hardens the existing research execution
+path rather than adding more physical operators:
+
+- Shared Rust/Elixir contracts align workflow conditions, numeric comparisons,
+  and named-input routing before downstream execution.
+- Job transitions compare full observed snapshots; stale watchdog writes cannot
+  overwrite newer progress. Solver completion is published with its validated
+  result, not inferred from an intermediate Agent message.
+- Workflow runtime, recovery envelopes, and job updates share an atomic commit
+  boundary. Memory jobs/results persist in one integrity-checked generation;
+  legacy import and recovery files stay bounded.
+- Scoped storage failures leave watchdog and recovery coordinator processes
+  alive. Replay still obeys idempotency/checkpoint policy and ownership claims.
+  Health reports degraded state and unknown counts without masking programming
+  errors or claiming that failed writes succeeded.
+
+See `releases/snapshots/3.4.1.json` and the
+[storage outage report](../reports/storage-outage-recovery-20260927.md).
+Local SQLite/memory regression evidence is not live PostgreSQL, remote failover,
+power-loss, numerical, or installed-GUI qualification. Existing tensor gaps remain
+open. This patch does not rebuild desktop apps or publish downloadable packages.
+
+## Daji 3.4.0 Checkpoint (Historical)
 
 September 27, 2026. This checkpoint carries the 3.3.x operator and workflow
 hardening into a coordinated desktop/runtime rebuild:

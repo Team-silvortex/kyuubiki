@@ -1,10 +1,25 @@
 defmodule KyuubikiWeb.WorkflowGraphRunner do
   @moduledoc false
+  alias KyuubikiWeb.WorkflowCondition
   alias KyuubikiWeb.WorkflowGraphRecovery
   alias KyuubikiWeb.WorkflowGraphPreflight
   alias KyuubikiWeb.WorkflowGraphRunnerMetrics
   alias KyuubikiWeb.WorkflowGraphScheduler
   alias KyuubikiWeb.WorkflowJsonBudget
+
+  @enveloped_multi_input_operators [
+    "transform.benchmark_structural_pair",
+    "transform.benchmark_acoustic_pair",
+    "transform.benchmark_modal_pair",
+    "transform.benchmark_dynamic_pair",
+    "transform.benchmark_transport_pair",
+    "transform.benchmark_coupled_heat_pair",
+    "transform.benchmark_electrostatic_pair",
+    "transform.benchmark_magnetostatic_pair",
+    "transform.benchmark_cfd_pair",
+    "transform.join_parameter_sweep_results"
+  ]
+
   def run(graph, input_artifacts, opts \\ [])
 
   def run(graph, input_artifacts, opts)
@@ -200,19 +215,19 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
          "kind" => "transform",
          "operator_id" => operator_id
        })
-       when operator_id in [
-              "transform.merge_summary_pair",
-              "transform.compare_summary_pair",
-              "transform.aggregate_summary_collection",
-              "transform.select_best_summary",
-              "transform.compose_quality_objective",
-              "transform.compose_diagnostics_bundle",
-              "transform.compose_diagnostics_report_payload",
-              "transform.resolve_focus_bridge_execution",
-              "transform.benchmark_coupled_heat_pair",
-              "transform.validate_electrostatic_heat_bridge",
-              "transform.validate_heat_thermo_bridge"
-            ],
+       when operator_id in @enveloped_multi_input_operators or
+              operator_id in [
+                "transform.merge_summary_pair",
+                "transform.compare_summary_pair",
+                "transform.aggregate_summary_collection",
+                "transform.select_best_summary",
+                "transform.compose_quality_objective",
+                "transform.compose_diagnostics_bundle",
+                "transform.compose_diagnostics_report_payload",
+                "transform.resolve_focus_bridge_execution",
+                "transform.validate_electrostatic_heat_bridge",
+                "transform.validate_heat_thermo_bridge"
+              ],
        do: true
 
   defp transform_operator_requires_port_map?(_node), do: false
@@ -303,7 +318,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
 
   defp execute_workflow_node(%{"kind" => "condition"} = node, incoming, _inputs, state, _opts) do
     with {:ok, payload} <- resolve_single_input_payload(node, incoming, state.artifacts),
-         {:ok, predicate_result} <- evaluate_condition_operator(payload, Map.get(node, "config")),
+         {:ok, predicate_result} <- WorkflowCondition.evaluate(payload, Map.get(node, "config")),
          {:ok, selected_output} <- select_condition_output(node, predicate_result) do
       artifact_key = artifact_key(Map.get(node, "id"), Map.get(selected_output, "id"))
       source_artifacts = incoming_artifact_keys(incoming, state.artifacts)
@@ -372,7 +387,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
         edge -> {:ok, Map.fetch!(artifacts, edge_from_key(edge))}
       end
     else
-      if transform_operator_requires_port_map?(node) do
+      if transform_operator_requires_port_map?(node) and not input_envelope?(node, incoming) do
         resolve_named_transform_payload(node, incoming, artifacts)
       else
         resolve_single_input_payload(node, incoming, artifacts)
@@ -380,7 +395,15 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
     end
   end
 
-  defp resolve_named_transform_payload(%{"id" => node_id}, incoming, artifacts) do
+  # A single explicit envelope port preserves direct invocation; a missing named
+  # input must never be mistaken for an already assembled multi-input payload.
+  defp input_envelope?(%{"operator_id" => operator_id, "inputs" => [%{"id" => port}]}, [edge])
+       when operator_id in @enveloped_multi_input_operators and port in ["input", "payload"],
+       do: get_in(edge, ["to", "port"]) == port
+
+  defp input_envelope?(_node, _incoming), do: false
+
+  defp resolve_named_transform_payload(%{"id" => node_id} = node, incoming, artifacts) do
     payload =
       Enum.reduce_while(incoming, %{}, fn edge, acc ->
         key = edge_from_key(edge)
@@ -391,7 +414,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
              Map.put(
                acc,
                get_in(edge, ["to", "port"]),
-               unwrap_named_transform_input(value, edge)
+               named_transform_input(value, edge, node)
              )}
 
           :error ->
@@ -410,6 +433,17 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
         {:ok, payload}
     end
   end
+
+  # Keep single-field legacy port envelopes, but never discard sibling data or
+  # status fields merely because an artifact contains a same-named JSON key.
+  defp named_transform_input(value, edge, %{"operator_id" => operator_id})
+       when operator_id in @enveloped_multi_input_operators do
+    if is_map(value) and map_size(value) == 1,
+      do: unwrap_named_transform_input(value, edge),
+      else: value
+  end
+
+  defp named_transform_input(value, edge, _node), do: unwrap_named_transform_input(value, edge)
 
   defp unwrap_named_transform_input(value, edge) when is_map(value) do
     case get_in(edge, ["from", "port"]) do
@@ -461,92 +495,6 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
       {:error, :missing_condition_outputs}
     end
   end
-
-  defp evaluate_condition_operator(payload, config) when is_map(config) do
-    predicate = Map.get(config, "predicate", %{})
-    operator = Map.get(predicate, "operator", "gt")
-    target = predicate |> Map.get("path") |> resolve_condition_target(payload)
-
-    case operator do
-      "truthy" ->
-        {:ok, truthy?(target)}
-
-      "falsy" ->
-        {:ok, not truthy?(target)}
-
-      "eq" ->
-        {:ok, target == Map.get(predicate, "value")}
-
-      "neq" ->
-        {:ok, target != Map.get(predicate, "value")}
-
-      numeric when numeric in ["gt", "gte", "lt", "lte"] ->
-        compare_numeric_condition(numeric, target, Map.get(predicate, "value"))
-
-      "contains" ->
-        contains_condition(target, Map.get(predicate, "value"))
-
-      _ ->
-        {:error, {:unsupported_condition_operator, operator}}
-    end
-  end
-
-  defp evaluate_condition_operator(payload, _config), do: {:ok, truthy?(payload)}
-
-  defp resolve_condition_target(nil, payload), do: payload
-
-  defp resolve_condition_target(path, payload) when is_binary(path) do
-    path
-    |> String.split(".", trim: true)
-    |> Enum.reduce(payload, fn segment, current ->
-      cond do
-        is_map(current) -> Map.get(current, segment)
-        is_list(current) -> current |> Enum.at(parse_array_index(segment))
-        true -> nil
-      end
-    end)
-  end
-
-  defp resolve_condition_target(_path, payload), do: payload
-
-  defp parse_array_index(segment) do
-    case Integer.parse(segment) do
-      {index, ""} -> index
-      _ -> -1
-    end
-  end
-
-  defp compare_numeric_condition(operator, left, right)
-       when is_number(left) and is_number(right) do
-    result =
-      case operator do
-        "gt" -> left > right
-        "gte" -> left >= right
-        "lt" -> left < right
-        "lte" -> left <= right
-      end
-
-    {:ok, result}
-  end
-
-  defp compare_numeric_condition(operator, _left, _right),
-    do: {:error, {:invalid_condition_numeric_operand, operator}}
-
-  defp contains_condition(target, value) when is_binary(target) and is_binary(value),
-    do: {:ok, String.contains?(target, value)}
-
-  defp contains_condition(target, value) when is_list(target),
-    do: {:ok, Enum.member?(target, value)}
-
-  defp contains_condition(_target, _value), do: {:error, :invalid_condition_contains_operand}
-
-  defp truthy?(nil), do: false
-  defp truthy?(false), do: false
-  defp truthy?(""), do: false
-  defp truthy?(value) when is_number(value), do: value != 0
-  defp truthy?(value) when is_list(value), do: value != []
-  defp truthy?(value) when is_map(value), do: map_size(value) > 0
-  defp truthy?(_value), do: true
 
   defp publish_operator_result(state, node, {:ok, value}, source_artifacts) do
     # Validate once before publishing any port or lineage, even for zero-output nodes.

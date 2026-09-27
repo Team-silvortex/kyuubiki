@@ -1,10 +1,18 @@
 {
   "line": "daji 3.x",
-  "current_version": "3.4.0",
+  "current_version": "3.4.1",
   "snapshots": [
     {
-      "version": "3.4.0",
+      "version": "3.4.1",
       "status": "current",
+      "date": "2026-09-27",
+      "codename": "daji",
+      "line": "3.x",
+      "snapshot_path": "snapshots/3.4.1.json"
+    },
+    {
+      "version": "3.4.0",
+      "status": "archived",
       "date": "2026-09-27",
       "codename": "daji",
       "line": "3.x",

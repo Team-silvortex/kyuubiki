@@ -2,7 +2,6 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
   @moduledoc false
 
   alias KyuubikiWeb.AnalysisJobSupport
-  alias KyuubikiWeb.AnalysisResultStore
   alias KyuubikiWeb.FemModelNormalizer
   alias KyuubikiWeb.Jobs.{Job, Store}
   alias KyuubikiWeb.ModelArtifactStore
@@ -10,6 +9,7 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
 
   @large_model_execution_timeout_ms 1_800_000
   @default_queue_timeout_ms 1_800_000
+  @max_agent_progress 0.99
   @active_stage_order %{
     "queued" => 0,
     "preprocessing" => 1,
@@ -422,19 +422,19 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
       end)
 
     case Task.yield(task, total_timeout_ms) || Task.shutdown(task, :brutal_kill) do
-      {:ok, {:ok, result, endpoint}} ->
-        unless terminal?(job_id) do
-          _ = Store.assign_worker(job_id, AgentClient.worker_id(endpoint))
+      {:ok, {:ok, result, endpoint}} when is_map(result) ->
+        case Store.complete_with_result(job_id, AgentClient.worker_id(endpoint), result) do
+          {:ok, _completed} ->
+            :ok
 
-          case AnalysisResultStore.put(job_id, result) do
-            :ok ->
-              _ = Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0})
-
-            {:error, reason} ->
-              unless terminal?(job_id),
-                do: fail_job(job_id, "result persistence failed: #{inspect(reason)}")
-          end
+          {:error, reason} ->
+            unless terminal?(job_id),
+              do: fail_job(job_id, "result persistence failed: #{inspect(reason)}")
         end
+
+      {:ok, {:ok, _invalid_result, _endpoint}} ->
+        unless terminal?(job_id),
+          do: fail_job(job_id, "invalid solver result: expected a JSON object")
 
       {:ok, {:error, {:rpc_error, "cancelled", message}}} ->
         cancel_job_with_message(job_id, message)
@@ -496,6 +496,10 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
 
     Map.update(attrs, :stage, current, fn
       "recovering" -> current
+      # Attempt notifications cannot publish the control-plane terminal state.
+      # Completion requires a final RPC response and successful result storage.
+      incoming when incoming in ["completed", :completed] -> "postprocessing"
+      incoming when incoming in ["failed", "cancelled", :failed, :cancelled] -> current
       incoming -> monotonic_active_stage(current, incoming)
     end)
   end
@@ -514,9 +518,11 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
 
   defp project_monotonic_progress(attrs, job) do
     Map.update(attrs, :progress, job.progress, fn
-      value when is_integer(value) -> max(value * 1.0, job.progress)
-      value when is_float(value) -> max(value, job.progress)
-      value -> value
+      value when is_number(value) and value >= 0 and value <= 1 ->
+        max(min(value * 1.0, @max_agent_progress), job.progress)
+
+      value ->
+        value
     end)
   end
 

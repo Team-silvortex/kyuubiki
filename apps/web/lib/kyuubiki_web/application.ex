@@ -31,8 +31,7 @@ defmodule KyuubikiWeb.Application do
       ]
     else
       [
-        {KyuubikiWeb.Jobs.MemoryBackend, []},
-        {KyuubikiWeb.AnalysisResultMemoryBackend, []},
+        {KyuubikiWeb.Storage.AnalysisMemoryState, []},
         {KyuubikiWeb.Orchestra.LeaseMemoryBackend, []},
         {KyuubikiWeb.Library.MemoryBackend, []},
         {KyuubikiWeb.SecurityEvents.MemoryBackend, []}

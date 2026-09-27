@@ -16,6 +16,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   alias KyuubikiWeb.Orchestra.WorkflowNodeProgress
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership, as: Ownership
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope
+  alias KyuubikiWeb.Orchestra.WorkflowRecoveryScan
+  alias KyuubikiWeb.Storage.FailureBoundary
 
   @active_job_statuses [:queued, :preprocessing, :partitioning, :solving, :postprocessing]
   @call_timeout 30_000
@@ -241,13 +243,11 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   def handle_info(:acquire_lease, state) do
-    state = %{state | lease_timer_ref: nil}
-    {:noreply, if(Ownership.owner?(state), do: state, else: Ownership.acquire(state))}
+    next = if Ownership.owner?(state), do: state, else: Ownership.acquire(state)
+    {:noreply, next}
   end
 
   def handle_info({:renew_lease, fencing_token, expires_at_ms}, state) do
-    state = %{state | lease_timer_ref: nil}
-
     case state.lease do
       %{fencing_token: ^fencing_token, expires_at_ms: ^expires_at_ms} = lease ->
         case LeaseStore.renew(lease, state.lease_ttl_ms) do
@@ -310,38 +310,22 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     :ok
   end
 
-  defp recover_active_jobs(state) do
-    active_jobs = Enum.filter(Store.list(), &(&1.status in @active_job_statuses))
-
-    {counts, next_state} =
-      Enum.reduce(active_jobs, {%{recovered: 0, blocked: 0, skipped: 0}, state}, fn job,
-                                                                                    {counts, acc} ->
-        case recover_job(job.job_id, :process_restart, acc) do
-          {:recovered, updated} -> {%{counts | recovered: counts.recovered + 1}, updated}
-          {:blocked, updated} -> {%{counts | blocked: counts.blocked + 1}, updated}
-          {:skipped, updated} -> {%{counts | skipped: counts.skipped + 1}, updated}
-        end
-      end)
-
-    next_state = %{
-      next_state
-      | recovery_runs: next_state.recovery_runs + 1,
-        recovered_jobs: next_state.recovered_jobs + counts.recovered,
-        blocked_jobs: next_state.blocked_jobs + counts.blocked
-    }
-
-    {%{
-       "active_jobs" => length(active_jobs),
-       "recovered" => counts.recovered,
-       "blocked" => counts.blocked,
-       "skipped" => counts.skipped
-     }, next_state}
-  end
+  defp recover_active_jobs(state), do: WorkflowRecoveryScan.run(state, &recover_job/3)
 
   defp recover_job(_job_id, _reason, %{lease_status: status} = state) when status != :owner,
     do: {:skipped, state}
 
   defp recover_job(job_id, reason, state) do
+    case FailureBoundary.run(fn -> do_recover_job(job_id, reason, state) end) do
+      {:error, :analysis_store_unavailable} ->
+        {:skipped, Ownership.lose(state, :analysis_store_unavailable)}
+
+      result ->
+        result
+    end
+  end
+
+  defp do_recover_job(job_id, reason, state) do
     case WorkflowJobRunner.running(job_id) do
       {:ok, pid} ->
         {:skipped, track_runner(job_id, pid, state)}
@@ -365,12 +349,15 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
               {{:error, {:workflow_replay_blocked, _}}, updated} ->
                 {:blocked, updated}
 
+              {{:error, {:workflow_recovery_blocked, _}}, updated} ->
+                {:blocked, updated}
+
               {{:error, lease_error} = error, updated}
               when lease_error in [:orchestra_lease_lost, :orchestra_lease_store_unavailable] ->
                 {:skipped, Ownership.after_write(updated, error)}
 
               {{:error, _reason}, updated} ->
-                {:blocked, updated}
+                {:skipped, updated}
             end
 
           {:legacy_workflow, runtime} ->
@@ -380,7 +367,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
             result =
               Ownership.guarded_write(state, fn -> mark_job_failed(job_id, runtime, message) end)
 
-            {:blocked, Ownership.after_write(state, result)}
+            outcome = if match?({:ok, _job}, result), do: :blocked, else: :skipped
+            {outcome, Ownership.after_write(state, result)}
 
           :error ->
             {:skipped, state}
@@ -389,6 +377,16 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   defp dispatch_job(job_id, reason, state) do
+    case FailureBoundary.run(fn -> dispatch_available_job(job_id, reason, state) end) do
+      {:error, :analysis_store_unavailable} = error ->
+        {error, Ownership.after_write(state, error)}
+
+      result ->
+        result
+    end
+  end
+
+  defp dispatch_available_job(job_id, reason, state) do
     case WorkflowJobRunner.running(job_id) do
       {:ok, pid} ->
         {{:ok, pid}, track_runner(job_id, pid, state)}
@@ -454,13 +452,16 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
            true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim) do
         if persist? do
           # A live operator is not a completed graph node and cannot reset the execution deadline.
-          case Store.apply_progress(%{
-                 job_id: job_id,
-                 stage: Atom.to_string(job.status),
-                 progress: job.progress,
-                 iteration: job.iteration,
-                 message: "workflow node #{node_id} active"
-               }) do
+          case Store.apply_progress_if_current(
+                 %{
+                   job_id: job_id,
+                   stage: Atom.to_string(job.status),
+                   progress: job.progress,
+                   iteration: job.iteration,
+                   message: "workflow node #{node_id} active"
+                 },
+                 job
+               ) do
             {:ok, _job} -> :ok
             error -> error
           end
@@ -500,17 +501,23 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
                |> Map.update("progress_events", [progress_event], fn events ->
                  (List.wrap(events) ++ [progress_event]) |> Enum.take(-25)
                end),
-             :ok <- AnalysisResultStore.compare_and_swap(job_id, runtime, updated_runtime),
              {:ok, _updated_job} <-
-               Store.apply_progress(%{
-                 job_id: job_id,
-                 stage: "solving",
-                 progress: progress,
-                 iteration:
-                   if(replay?, do: max(job.iteration || 0, resolved_nodes), else: resolved_nodes),
-                 message: "#{update["status"]} workflow node #{node_id}"
-               }) do
-          _ = job
+               Store.apply_progress_with_result(
+                 %{
+                   job_id: job_id,
+                   stage: "solving",
+                   progress: progress,
+                   iteration:
+                     if(replay?,
+                       do: max(job.iteration || 0, resolved_nodes),
+                       else: resolved_nodes
+                     ),
+                   message: "#{update["status"]} workflow node #{node_id}"
+                 },
+                 job,
+                 runtime,
+                 updated_runtime
+               ) do
           :ok
         else
           false -> {:error, :stale_workflow_execution_claim}
@@ -524,9 +531,10 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   defp commit_result_if_owned(job_id, claim, result, lease) do
     LeaseStore.with_lease(lease, fn ->
-      with {:ok, _job} <- active_job(job_id),
+      with {:ok, job} <- active_job(job_id),
            {:ok, runtime, recovery} <- fetch_runtime(job_id),
            true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim),
+           {:ok, failed_count} <- failed_node_count(result),
            completed <-
              WorkflowRecoveryEnvelope.transition(recovery, "completed", %{
                "committed_generation" => claim["generation"]
@@ -538,20 +546,23 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
              |> Map.put("progress_events", Map.get(runtime, "progress_events", []))
              |> Map.put("response_options", Map.get(runtime, "response_options", %{}))
              |> Map.put(WorkflowRecoveryEnvelope.internal_key(), completed),
-           :ok <- AnalysisResultStore.compare_and_swap(job_id, runtime, final),
-           failed_count <- length(Map.get(result, "failed_nodes", [])),
            {:ok, _job} <-
-             Store.apply_progress(%{
-               job_id: job_id,
-               stage: "completed",
-               progress: 1.0,
-               message:
-                 if(failed_count == 0,
-                   do: "workflow completed",
-                   else:
-                     "workflow completed with #{failed_count} failed node(s); inspect node_failures"
-                 )
-             }) do
+             Store.apply_progress_with_result(
+               %{
+                 job_id: job_id,
+                 stage: "completed",
+                 progress: 1.0,
+                 message:
+                   if(failed_count == 0,
+                     do: "workflow completed",
+                     else:
+                       "workflow completed with #{failed_count} failed node(s); inspect node_failures"
+                   )
+               },
+               job,
+               runtime,
+               final
+             ) do
         :ok
       else
         false -> {:error, :stale_workflow_execution_claim}
@@ -564,20 +575,12 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   defp fail_if_owned(job_id, claim, message, lease) do
     LeaseStore.with_lease(lease, fn ->
-      with {:ok, runtime, recovery} <- fetch_runtime(job_id),
+      with {:ok, job} <- active_job(job_id),
+           {:ok, runtime, recovery} <- fetch_runtime(job_id),
            true <- WorkflowRecoveryEnvelope.fenced?(recovery, claim),
            failed <-
-             WorkflowRecoveryEnvelope.transition(recovery, "failed", %{"message" => message}),
-           :ok <- put_runtime_recovery_unfenced(job_id, runtime, failed) do
-        _ =
-          Store.apply_progress(%{
-            job_id: job_id,
-            stage: "failed",
-            progress: 1.0,
-            message: message
-          })
-
-        :ok
+             WorkflowRecoveryEnvelope.transition(recovery, "failed", %{"message" => message}) do
+        update_recovery(job, runtime, failed, %{stage: "failed", progress: 1.0, message: message})
       else
         false -> {:error, :stale_workflow_execution_claim}
         {:error, _reason} = error -> error
@@ -588,13 +591,29 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   defp cancel_recovery(job_id) do
-    case fetch_runtime(job_id) do
-      {:ok, runtime, recovery} ->
-        cancelled = WorkflowRecoveryEnvelope.transition(recovery, "cancelled")
-        put_runtime_recovery_unfenced(job_id, runtime, cancelled)
+    case active_job(job_id) do
+      {:ok, job} ->
+        attrs = %{
+          stage: "cancelled",
+          progress: job.progress,
+          message: "job cancelled by operator"
+        }
 
-      _ ->
+        case fetch_runtime(job_id) do
+          {:ok, runtime, recovery} ->
+            cancelled = WorkflowRecoveryEnvelope.transition(recovery, "cancelled")
+            update_recovery(job, runtime, cancelled, attrs)
+
+          _ ->
+            Store.apply_progress_if_current(Map.put(attrs, :job_id, job_id), job)
+            |> progress_reply()
+        end
+
+      {:error, {:workflow_job_terminal, _status}} ->
         :ok
+
+      error ->
+        error
     end
   end
 
@@ -610,8 +629,13 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
           })
 
         LeaseStore.with_lease(lease, fn ->
-          with :ok <- put_runtime_recovery_unfenced(job_id, runtime, blocked) do
-            _ = mark_job_failed(job_id, runtime, message)
+          with {:ok, job} <- active_job(job_id),
+               :ok <-
+                 update_recovery(job, runtime, blocked, %{
+                   stage: "failed",
+                   progress: 1.0,
+                   message: message
+                 }) do
             {:error, normalize_block_reason(reason)}
           end
         end)
@@ -641,17 +665,25 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   defp put_runtime_recovery(job_id, runtime, recovery, lease) do
     LeaseStore.with_lease(lease, fn ->
-      put_runtime_recovery_unfenced(job_id, runtime, recovery)
+      with {:ok, job} <- active_job(job_id), do: update_recovery(job, runtime, recovery)
     end)
   end
 
-  defp put_runtime_recovery_unfenced(job_id, runtime, recovery),
-    do:
-      AnalysisResultStore.compare_and_swap(
-        job_id,
-        runtime,
-        Map.put(runtime, WorkflowRecoveryEnvelope.internal_key(), recovery)
-      )
+  defp update_recovery(job, runtime, recovery, changes \\ %{}) do
+    attrs = Map.merge(%{job_id: job.job_id, stage: job.status, progress: job.progress}, changes)
+    replacement = Map.put(runtime, WorkflowRecoveryEnvelope.internal_key(), recovery)
+    Store.apply_progress_with_result(attrs, job, runtime, replacement) |> progress_reply()
+  end
+
+  defp failed_node_count(result) do
+    case Map.get(result, "failed_nodes", []) do
+      nodes when is_list(nodes) -> {:ok, length(nodes)}
+      _ -> {:error, {:invalid_workflow_result, :failed_nodes}}
+    end
+  end
+
+  defp progress_reply({:ok, _job}), do: :ok
+  defp progress_reply(error), do: error
 
   defp active_job(job_id) do
     case Store.get(job_id) do
@@ -673,13 +705,11 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
     do: {:error, :workflow_recovery_attempts_exhausted}
 
   defp reconcile_terminal_job(job_id, "completed", _recovery) do
-    _ = Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0})
-    :ok
+    Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0}) |> progress_reply()
   end
 
   defp reconcile_terminal_job(job_id, "cancelled", _recovery) do
-    _ = Store.apply_progress(%{job_id: job_id, stage: "cancelled", progress: 1.0})
-    :ok
+    Store.apply_progress(%{job_id: job_id, stage: "cancelled", progress: 1.0}) |> progress_reply()
   end
 
   defp reconcile_terminal_job(job_id, terminal, recovery) do
@@ -693,8 +723,8 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
         _ -> "workflow execution ended in #{terminal} state"
       end
 
-    _ = Store.apply_progress(%{job_id: job_id, stage: "failed", progress: 1.0, message: message})
-    :ok
+    Store.apply_progress(%{job_id: job_id, stage: "failed", progress: 1.0, message: message})
+    |> progress_reply()
   end
 
   defp mark_job_failed(job_id, _runtime, message) do

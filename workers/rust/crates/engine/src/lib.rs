@@ -35,6 +35,7 @@ mod workflow_bundle_exports;
 mod workflow_bundle_focus;
 mod workflow_bundle_integrity;
 mod workflow_bundle_transforms;
+mod workflow_condition;
 mod workflow_contract;
 mod workflow_coupled_readiness;
 mod workflow_diagnostic_samples;

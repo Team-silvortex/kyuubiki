@@ -30,10 +30,10 @@ The module/function/evidence tensor is now the first navigation gate for this
 roadmap. Run `make check-module-function-coverage-tensor` before claiming a
 roadmap area is closed.
 
-The current documentation checkpoint is `daji 3.4.0`. The dated calibration
+The current documentation checkpoint is `daji 3.4.1`. The dated calibration
 below and its follow-ups remain the evidence baseline; updating the current
 version labels does not rerun qualification or close any scenario. See the
-[3.4.0 progress summary](current-line.md#daji-340-checkpoint) for recent source
+[3.4.1 progress summary](current-line.md#daji-341-checkpoint) for recent source
 changes that must not be confused with release readiness.
 
 Recalibrated on September 13, 2026 using tensor v5 and the `daji 3.2.x`

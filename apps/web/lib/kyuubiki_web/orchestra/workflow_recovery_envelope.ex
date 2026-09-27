@@ -157,10 +157,19 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryEnvelope do
   end
 
   @spec fenced?(map(), map()) :: boolean()
-  def fenced?(recovery, claim) when is_map(recovery) and is_map(claim) do
-    recovery["state"] == "running" and
-      recovery["generation"] == claim["generation"] and
-      recovery["owner_session_id"] == claim["owner_session_id"]
+  def fenced?(
+        %{
+          "state" => "running",
+          "generation" => generation,
+          "attempt" => attempt,
+          "owner_session_id" => owner
+        },
+        claim
+      )
+      when is_integer(generation) and generation > 0 and is_integer(attempt) and attempt > 0 and
+             is_binary(owner) and owner != "" and is_map(claim) do
+    Map.take(claim, ["generation", "attempt", "owner_session_id"]) ===
+      %{"generation" => generation, "attempt" => attempt, "owner_session_id" => owner}
   end
 
   def fenced?(_recovery, _claim), do: false

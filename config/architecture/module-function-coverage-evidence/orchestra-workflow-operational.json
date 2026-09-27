@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Remote Linux Orchestra workflow execution across orchestrated and offline-mesh modes, including restart retention, admission boundaries, numerical assertions, Agent TaskIR recovery, process-loss policy, and residue-free cleanup.",
+  "summary": "Retained remote Linux Orchestra workflow qualification plus separately scoped local workflow, receipt, persistence, and storage-outage contracts.",
   "paradigm_contract_evidence": {
     "workflow_composition": [
       {
@@ -27,6 +27,228 @@
     ]
   },
   "evidence_claims": [
+    {
+      "id": "orchestra-storage-outage-local-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/storage/failure_boundary.ex",
+        "apps/web/lib/kyuubiki_web/jobs/watchdog.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_scan.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_ownership.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/lease_store.ex",
+        "apps/web/lib/kyuubiki_web/router.ex",
+        "apps/frontend/src/lib/api/runtime-types.ts",
+        "apps/frontend/src/components/workbench/workbench-sidebar-derived.ts",
+        "apps/web/test/kyuubiki_web/jobs/watchdog_outage_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_storage_outage_test.exs",
+        "apps/web/test/kyuubiki_web/storage/failure_boundary_test.exs",
+        "apps/web/test/kyuubiki_web/api/storage_outage_health_test.exs",
+        "apps/web/test/support/storage_outage_fixture.exs",
+        "apps/web/test/support/storage_outage_workflow.exs",
+        "reports/storage-outage-recovery-20260927.md"
+      ],
+      "required_text": [
+        "a failed recovery read preserves the coordinator and reports unknown work",
+        "periodic scans survive an outage and resume without restarting the watchdog",
+        "a failed watchdog write stops the scan without failing unrelated jobs",
+        "stale lease messages cannot discard the current heartbeat or retry timer",
+        "health remains reachable but degraded while storage is unavailable",
+        "ordinary exceptions cannot masquerade as a storage outage",
+        "This is local storage-outage containment evidence, not distributed failover, PostgreSQL, power-loss, or numerical qualification."
+      ]
+    },
+    {
+      "id": "orchestra-workflow-atomic-commit-local-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/jobs/store.ex",
+        "apps/web/lib/kyuubiki_web/jobs/postgres_backend.ex",
+        "apps/web/lib/kyuubiki_web/jobs/memory_backend.ex",
+        "apps/web/lib/kyuubiki_web/storage/analysis_memory_state.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_envelope.ex",
+        "apps/web/lib/kyuubiki_web/analysis_job_records.ex",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_commit_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_commit_sql_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_commit_memory_test.exs",
+        "apps/web/test/kyuubiki_web/jobs/joint_snapshot_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_recovery_envelope_test.exs",
+        "apps/web/test/support/workflow_commit_fixture.exs",
+        "apps/web/test/support/analysis_commit_fault.exs",
+        "reports/workflow-atomic-commit-20260927.md"
+      ],
+      "required_text": [
+        "apply_progress_with_result",
+        "rejected progress cannot publish a node receipt ahead of the job",
+        "the cancellation API cannot ignore a rejected workflow commit",
+        "process loss rolls back the joint write and releases the SQL lease transaction",
+        "a failed recovery-block commit is not counted as a durable blocked job",
+        "a changed attempt cannot borrow a valid generation and session",
+        "This is local workflow commit evidence, not PostgreSQL, distributed failover, or numerical qualification."
+      ]
+    },
+    {
+      "id": "orchestra-solver-atomic-publication-local-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/jobs/store.ex",
+        "apps/web/lib/kyuubiki_web/jobs/postgres_backend.ex",
+        "apps/web/lib/kyuubiki_web/jobs/memory_backend.ex",
+        "apps/web/lib/kyuubiki_web/storage/analysis_memory_state.ex",
+        "apps/web/lib/kyuubiki_web/analysis_solver_submissions.ex",
+        "apps/web/test/kyuubiki_web/jobs/atomic_completion_test.exs",
+        "apps/web/test/kyuubiki_web/jobs/atomic_completion_sql_test.exs",
+        "apps/web/test/kyuubiki_web/storage/analysis_memory_state_test.exs",
+        "apps/web/test/kyuubiki_web/api/solver_completion_receipt_api_test.exs",
+        "apps/web/test/support/analysis_commit_fault.exs",
+        "reports/solver-atomic-publication-20260927.md"
+      ],
+      "required_text": [
+        "complete_with_result",
+        "killing a publisher between its job and result writes rolls back both",
+        "concurrent publishers elect exactly one matching worker and result",
+        "a filesystem write failure leaves both collections unchanged and the store alive",
+        "unrecoverable shared state fails closed instead of importing stale legacy files",
+        "This is local atomic solver-publication evidence, not PostgreSQL, distributed recovery, or numerical qualification."
+      ]
+    },
+    {
+      "id": "workflow-named-input-routing-local-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "tests/fixtures/workflow-named-input-contract.json",
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
+        "apps/web/test/support/workflow_named_input_contract.exs",
+        "apps/web/test/kyuubiki_web/workflow_named_input_contract_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_named_input_contract_api_test.exs",
+        "workers/rust/crates/engine/src/workflow.rs",
+        "workers/rust/crates/engine/src/workflow_executor.rs",
+        "workers/rust/crates/engine/tests/shared_named_input_contract.rs",
+        "config/operator-validation-profiles/workflow.json",
+        "reports/workflow-named-input-contract-20260927.md"
+      ],
+      "required_text": [
+        "shared_named_inputs_match_direct_operators_in_full_and_outputs_modes",
+        "same_source_fanout_preserves_both_bindings_under_transient_retention",
+        "invalid_second_inputs_never_publish_a_winner_and_replay_cleanly",
+        "async named-input result and both source receipts survive storage",
+        "This is bounded local input-routing evidence, not numerical or distributed qualification."
+      ]
+    },
+    {
+      "id": "orchestra-progress-delete-race-local-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/jobs/postgres_backend.ex",
+        "apps/web/lib/kyuubiki_web/jobs/watchdog.ex",
+        "apps/web/test/kyuubiki_web/jobs/progress_race_test.exs",
+        "reports/job-snapshot-reliability-20260927.md"
+      ],
+      "required_text": [
+        "compare_and_swap",
+        "progress update reports a missing job when it disappears after its read",
+        "watchdog survives a deleted job without counting it as a successful failure write",
+        "This is bounded local job-snapshot evidence, not PostgreSQL or distributed recovery qualification."
+      ]
+    },
+    {
+      "id": "orchestra-job-snapshot-local-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/jobs/job.ex",
+        "apps/web/lib/kyuubiki_web/jobs/store.ex",
+        "apps/web/lib/kyuubiki_web/jobs/postgres_backend.ex",
+        "apps/web/lib/kyuubiki_web/jobs/memory_backend.ex",
+        "apps/web/lib/kyuubiki_web/jobs/watchdog.ex",
+        "apps/web/test/support/job_query_race.exs",
+        "apps/web/test/kyuubiki_web/jobs/progress_concurrency_test.exs",
+        "apps/web/test/kyuubiki_web/jobs/snapshot_test.exs",
+        "reports/job-snapshot-reliability-20260927.md"
+      ],
+      "required_text": [
+        "apply_progress_if_current",
+        "equal timestamps still detect concurrent progress regression",
+        "persistent contention stops after four snapshot attempts without partial progress",
+        "watchdog does not fail a task whose same-progress heartbeat arrived after its scan",
+        "only one concurrent conditional writer can consume a snapshot",
+        "This is bounded local job-snapshot evidence, not PostgreSQL or distributed recovery qualification."
+      ]
+    },
+    {
+      "id": "orchestra-solver-completion-local-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/analysis_solver_submissions.ex",
+        "apps/web/test/kyuubiki_web/analysis_solver_submissions_test.exs",
+        "apps/web/test/kyuubiki_web/api/solver_completion_receipt_api_test.exs",
+        "apps/web/test/support/controlled_solver_agent.exs",
+        "reports/solver-completion-reliability-20260927.md"
+      ],
+      "required_text": [
+        "invalid solver result: expected a JSON object",
+        "completed progress cannot cause the final solver result to be discarded",
+        "a delayed final response keeps the job active until its result is stored",
+        "missing final result is diagnosed and a following request can complete",
+        "This is local solver completion-receipt evidence, not atomic result publication or numerical qualification."
+      ]
+    },
+    {
+      "id": "workflow-condition-decision-local-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation"],
+      "dimensions": ["contract", "numerical_validation", "recovery"],
+      "files": [
+        "tests/fixtures/workflow-condition-contract.json",
+        "apps/web/lib/kyuubiki_web/workflow_condition.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
+        "apps/web/test/support/workflow_condition_contract.exs",
+        "apps/web/test/kyuubiki_web/workflow_condition_contract_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_condition_contract_api_test.exs",
+        "workers/rust/crates/engine/src/workflow_condition.rs",
+        "workers/rust/crates/engine/tests/shared_condition_contract.rs",
+        "config/operator-validation-profiles/workflow.json",
+        "reports/workflow-condition-contract-20260927.md"
+      ],
+      "required_text": [
+        "shared_condition_decisions_and_validation_match_contract",
+        "integer_order_matches_i128_oracle_without_float_rounding",
+        "mixed_order_matches_exact_quarter_oracle_in_both_directions",
+        "invalid conditions isolate without publishing decisions or invoking blocked consumers",
+        "async condition failure retains honest progress and compact failure receipts",
+        "This is bounded local condition-decision evidence, not whole-runtime equivalence or distributed recovery qualification."
+      ]
+    },
     {
       "id": "workflow-artifact-publication-local-contract",
       "status": "proven",

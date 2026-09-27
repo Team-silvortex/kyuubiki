@@ -1,0 +1,71 @@
+{
+  "version": "3.4.1",
+  "codename": "daji",
+  "line": "3.x",
+  "status": "current",
+  "date": "2026-09-27",
+  "git_commit": "b0148c620764cd2f183a457a5de026a94bddfb03",
+  "summary": "Daji 3.4.1 source reliability patch: shared workflow conditions and named inputs, snapshot-safe progress, atomic solver/workflow publication, and scoped storage-outage recovery. No desktop rebuild, binary publication, or new numerical qualification.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "reliability": "docs/operator-reliability.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": { "version": "3.4.1", "notes": ["Unknown health counts are not rendered as zero."] },
+    "hub_gui": { "version": "3.4.1", "notes": ["Source metadata only; no new desktop artifact."] },
+    "workbench_gui": { "version": "3.4.1", "notes": ["Source metadata only; no new desktop artifact."] },
+    "installer_gui": { "version": "3.4.1", "notes": ["Source metadata only; no new desktop artifact."] },
+    "web_api": { "version": "3.4.1", "notes": ["Atomic publication and bounded storage-availability boundaries."] },
+    "rust_headless_sdk": { "version": "3.4.1", "notes": ["Registry publication not performed."] },
+    "python_headless_sdk": { "version": "3.4.1", "notes": ["Registry publication not performed."] },
+    "elixir_headless_sdk": { "version": "3.4.1", "notes": ["Registry publication not performed."] },
+    "rust_worker_sdk": { "version": "3.4.1", "notes": ["Operator extension API unchanged; separate from Headless control."] }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": [
+      "Shared Rust/Elixir condition and named-input contracts.",
+      "Snapshot-safe progress, atomic completion/result publication, and stale workflow claim rejection.",
+      "Storage outage containment with replay-policy checks and truthful health visibility."
+    ]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": ["Existing Rust operator and language-neutral task contracts retained; no new numerical kernels."]
+  },
+  "desktop_artifacts": {},
+  "verification": {
+    "source_revision_role": "Base commit plus the 3.4.1 working-tree changes included in this release commit; not a clean-commit binary build claim.",
+    "platform": "macos-aarch64",
+    "rust_engine": { "passed": 722, "failed": 0, "ignored": 1 },
+    "elixir_sqlite": { "tests": 1098, "failed": 0, "skipped": 20, "seed": 42 },
+    "elixir_memory": { "tests": 1098, "failed": 0, "skipped": 48, "seed": 42 },
+    "update_catalog_unit": { "passed": 4, "failed": 0 },
+    "exact_version_contracts": { "checks": 224, "mismatched": 0 },
+    "frontend_typecheck": "passed",
+    "documentation_and_desktop_mirrors": "passed",
+    "language_pack_metadata": "60 canonical packs validated for 3.4.1; not a new full-translation qualification",
+    "project_organization": "passed; source limit 800, documentation limit 2000, tracked debt 0",
+    "test_isolation": "SQLite and memory suites used independent disposable data directories, not installed runtime data. Elixir warnings are treated as errors.",
+    "reports": [
+      "reports/workflow-condition-contract-20260927.md",
+      "reports/workflow-named-input-contract-20260927.md",
+      "reports/job-snapshot-reliability-20260927.md",
+      "reports/solver-completion-reliability-20260927.md",
+      "reports/solver-atomic-publication-20260927.md",
+      "reports/workflow-atomic-commit-20260927.md",
+      "reports/storage-outage-recovery-20260927.md"
+    ],
+    "report_provenance": "These scoped reports retain the 3.4.0 source identity under which evidence was first collected. The full suites listed above were rerun after metadata advanced to 3.4.1.",
+    "desktop_packaging": { "status": "not performed", "last_local_installed_version": "3.4.0" },
+    "runtime_payload": { "status": "not rebuilt or replaced", "last_local_installed_version": "3.4.0" },
+    "ci": { "status": "remote result is tracked separately for the pushed release commit" },
+    "public_distribution": "not performed",
+    "registry_publication": "not performed",
+    "notarized": false,
+    "qualification": "No new PostgreSQL, remote failover, physical power-loss, large-scale, numerical, or installed-GUI qualification. Tensor evidence remains scoped and open readiness gates are not promoted by this version bump."
+  }
+}

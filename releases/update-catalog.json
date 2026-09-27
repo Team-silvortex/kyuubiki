@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-09-27T03:08:50Z",
-  "shipping_version": "3.4.0",
+  "generated_at": "2026-09-27T09:11:04Z",
+  "shipping_version": "3.4.1",
   "default_channel": "stable",
   "line": "daji 3.x",
   "source": {
@@ -17,12 +17,12 @@
         "daji:latest",
         "daji:3",
         "daji:3.4",
-        "daji:3.4.0"
+        "daji:3.4.1"
       ],
       "line": "3.x",
       "status": "current",
-      "version": "3.4.0",
-      "summary": "Daji 3.4.0 workflow reliability and local desktop rebuild: bounded graph admission, validated artifact publication, deterministic diagnostics, and CI contract repairs. Public distribution and numerical qualification remain separate gates.",
+      "version": "3.4.1",
+      "summary": "Daji 3.4.1 source reliability patch: shared workflow conditions and named inputs, snapshot-safe progress, atomic solver/workflow publication, and scoped storage-outage recovery. No desktop rebuild, binary publication, or new numerical qualification.",
       "date": "2026-09-27",
       "notes": [
         "Primary operator-facing update track for the current daji 3.x line.",
@@ -65,102 +65,81 @@
         "managed_path_policy": "workspace_relative",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/3.4.0.json",
+      "snapshot_path": "releases/snapshots/3.4.1.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
+        "reliability": "docs/operator-reliability.md",
         "packaging": "docs/packaging-and-deployment.md",
         "desktop_release_checklist": "docs/desktop-release-checklist.md"
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "3.4.0",
+          "version": "3.4.1",
           "notes": [
-            "Static frontend; no runtime Node server."
+            "Unknown health counts are not rendered as zero."
           ]
         },
         "hub_gui": {
-          "version": "3.4.0",
+          "version": "3.4.1",
           "notes": [
-            "Independent native Hub shell."
+            "Source metadata only; no new desktop artifact."
           ]
         },
         "workbench_gui": {
-          "version": "3.4.0",
+          "version": "3.4.1",
           "notes": [
-            "Independent native Workbench shell."
+            "Source metadata only; no new desktop artifact."
           ]
         },
         "installer_gui": {
-          "version": "3.4.0",
+          "version": "3.4.1",
           "notes": [
-            "Independent native Installer shell."
+            "Source metadata only; no new desktop artifact."
           ]
         },
         "web_api": {
-          "version": "3.4.0",
+          "version": "3.4.1",
           "notes": [
-            "Self-contained Orchestra release."
+            "Atomic publication and bounded storage-availability boundaries."
           ]
         },
         "rust_headless_sdk": {
-          "version": "3.4.0",
+          "version": "3.4.1",
           "notes": [
             "Registry publication not performed."
           ]
         },
         "python_headless_sdk": {
-          "version": "3.4.0",
+          "version": "3.4.1",
           "notes": [
             "Registry publication not performed."
           ]
         },
         "elixir_headless_sdk": {
-          "version": "3.4.0",
+          "version": "3.4.1",
           "notes": [
             "Registry publication not performed."
           ]
         },
         "rust_worker_sdk": {
-          "version": "3.4.0",
+          "version": "3.4.1",
           "notes": [
-            "Operator extensions stay separate from headless control."
+            "Operator extension API unchanged; separate from Headless control."
           ]
         }
       },
-      "desktop_artifacts": [
-        {
-          "product": "hub",
-          "kind": "app",
-          "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": true
-        },
-        {
-          "product": "installer",
-          "kind": "app",
-          "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": true
-        },
-        {
-          "product": "workbench",
-          "kind": "app",
-          "platform": "macos",
-          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": true
-        }
-      ]
+      "desktop_artifacts": []
     }
   ],
   "versions": [
     {
-      "version": "3.4.0",
+      "version": "3.4.1",
       "line": "3.x",
       "status": "current",
       "date": "2026-09-27",
-      "summary": "Daji 3.4.0 workflow reliability and local desktop rebuild: bounded graph admission, validated artifact publication, deterministic diagnostics, and CI contract repairs. Public distribution and numerical qualification remain separate gates.",
-      "snapshot_path": "releases/snapshots/3.4.0.json",
+      "summary": "Daji 3.4.1 source reliability patch: shared workflow conditions and named inputs, snapshot-safe progress, atomic solver/workflow publication, and scoped storage-outage recovery. No desktop rebuild, binary publication, or new numerical qualification.",
+      "snapshot_path": "releases/snapshots/3.4.1.json",
       "channels": [
         "stable"
       ],
@@ -169,8 +148,75 @@
         "daji:latest",
         "daji:3",
         "daji:3.4",
-        "daji:3.4.0"
+        "daji:3.4.1"
       ],
+      "product_surfaces": {
+        "frontend_workbench": {
+          "version": "3.4.1",
+          "notes": [
+            "Unknown health counts are not rendered as zero."
+          ]
+        },
+        "hub_gui": {
+          "version": "3.4.1",
+          "notes": [
+            "Source metadata only; no new desktop artifact."
+          ]
+        },
+        "workbench_gui": {
+          "version": "3.4.1",
+          "notes": [
+            "Source metadata only; no new desktop artifact."
+          ]
+        },
+        "installer_gui": {
+          "version": "3.4.1",
+          "notes": [
+            "Source metadata only; no new desktop artifact."
+          ]
+        },
+        "web_api": {
+          "version": "3.4.1",
+          "notes": [
+            "Atomic publication and bounded storage-availability boundaries."
+          ]
+        },
+        "rust_headless_sdk": {
+          "version": "3.4.1",
+          "notes": [
+            "Registry publication not performed."
+          ]
+        },
+        "python_headless_sdk": {
+          "version": "3.4.1",
+          "notes": [
+            "Registry publication not performed."
+          ]
+        },
+        "elixir_headless_sdk": {
+          "version": "3.4.1",
+          "notes": [
+            "Registry publication not performed."
+          ]
+        },
+        "rust_worker_sdk": {
+          "version": "3.4.1",
+          "notes": [
+            "Operator extension API unchanged; separate from Headless control."
+          ]
+        }
+      },
+      "desktop_artifacts": []
+    },
+    {
+      "version": "3.4.0",
+      "line": "3.x",
+      "status": "archived",
+      "date": "2026-09-27",
+      "summary": "Daji 3.4.0 workflow reliability and local desktop rebuild: bounded graph admission, validated artifact publication, deterministic diagnostics, and CI contract repairs. Public distribution and numerical qualification remain separate gates.",
+      "snapshot_path": "releases/snapshots/3.4.0.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {
         "frontend_workbench": {
           "version": "3.4.0",
@@ -514,7 +560,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -549,7 +595,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -584,7 +630,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -696,7 +742,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -717,7 +763,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -738,7 +784,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -850,7 +896,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -871,7 +917,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -892,7 +938,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -1005,7 +1051,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -1026,7 +1072,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -1047,7 +1093,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -1159,7 +1205,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -1180,7 +1226,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -1201,7 +1247,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -1313,7 +1359,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -1334,7 +1380,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -1355,7 +1401,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -1467,7 +1513,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -1488,7 +1534,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -1509,7 +1555,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -1588,7 +1634,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -1623,7 +1669,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -1658,7 +1704,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -1744,7 +1790,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -1779,7 +1825,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -1814,7 +1860,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -1900,7 +1946,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -1935,7 +1981,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -1970,7 +2016,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -2054,7 +2100,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -2089,7 +2135,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -2124,7 +2170,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -2203,7 +2249,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -2238,7 +2284,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -2273,7 +2319,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -2352,7 +2398,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -2387,7 +2433,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -2422,7 +2468,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -2501,7 +2547,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -2536,7 +2582,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -2571,7 +2617,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -2650,7 +2696,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -2685,7 +2731,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -2720,7 +2766,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -2803,7 +2849,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -2838,7 +2884,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -2873,7 +2919,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -2956,7 +3002,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -2991,7 +3037,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -3026,7 +3072,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -3107,7 +3153,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -3142,7 +3188,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -3177,7 +3223,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -3258,7 +3304,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -3293,7 +3339,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -3328,7 +3374,7 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",

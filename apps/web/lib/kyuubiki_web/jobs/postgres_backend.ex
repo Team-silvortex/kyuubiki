@@ -5,7 +5,9 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
 
   alias KyuubikiWeb.Jobs.{Job, ProgressEvent}
   alias KyuubikiWeb.Storage
-  alias KyuubikiWeb.Storage.JobRecord
+  alias KyuubikiWeb.Storage.{JobRecord, ResultRecord}
+
+  @write_attempts 4
 
   def create(attrs) do
     with {:ok, job} <- Job.new(attrs) do
@@ -46,24 +48,7 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   def update_metadata(job_id, attrs) when is_binary(job_id) and is_map(attrs) do
-    case repo_get(JobRecord, job_id) do
-      %JobRecord{} = record ->
-        changes =
-          attrs
-          |> Map.take(["project_id", "model_version_id", "simulation_case_id", "message"])
-          |> Enum.into(%{}, fn {key, value} -> {String.to_existing_atom(key), value} end)
-          |> Map.put(:updated_at, DateTime.utc_now())
-
-        updated =
-          record
-          |> Ecto.Changeset.change(changes)
-          |> repo_update!()
-
-        repo_record_to_job(updated)
-
-      nil ->
-        {:error, {:job_not_found, job_id}}
-    end
+    mutate(job_id, &Job.update_metadata(&1, attrs))
   end
 
   def delete(job_id) when is_binary(job_id) do
@@ -85,27 +70,109 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   def apply_progress(attrs) do
+    with {:ok, event} <- ProgressEvent.new(attrs) do
+      # Parse once: a retry must not refresh an old event's emitted_at.
+      mutate(event.job_id, &Job.apply_progress(&1, event))
+    end
+  end
+
+  def apply_progress_if_current(attrs, %Job{} = expected) do
     with {:ok, event} <- ProgressEvent.new(attrs),
-         %JobRecord{} = record <- repo_get(JobRecord, event.job_id),
-         {:ok, job} <- repo_record_to_job(record),
-         {:ok, updated_job} <- Job.apply_progress(job, event),
-         {:ok, _record} <- update_record(updated_job) do
-      {:ok, updated_job}
-    else
-      nil -> {:error, {:job_not_found, attrs[:job_id] || attrs["job_id"]}}
-      {:error, _reason} = error -> error
+         {:ok, updated} <- Job.apply_progress(expected, event) do
+      case compare_and_swap(job_attrs(expected), updated) do
+        :ok -> {:ok, updated}
+        :stale -> snapshot_miss(expected.job_id)
+      end
     end
   end
 
   def assign_worker(job_id, worker_id) when is_binary(worker_id) and byte_size(worker_id) > 0 do
+    mutate(job_id, &Job.assign_worker(&1, worker_id))
+  end
+
+  def complete_with_result(job_id, worker_id, result) do
+    atomic_change(fn ->
+      with {:ok, completed} <- mutate(job_id, &Job.complete(&1, worker_id)),
+           :ok <- insert_completion_result(job_id, result),
+           do: {:ok, completed}
+    end)
+  end
+
+  def apply_progress_with_result(attrs, expected, result, replacement) do
+    with {:ok, event} <- ProgressEvent.new(attrs),
+         {:ok, updated} <- Job.apply_progress(expected, event) do
+      atomic_change(fn ->
+        case compare_and_swap(job_attrs(expected), updated, true) do
+          :ok ->
+            with :ok <-
+                   KyuubikiWeb.AnalysisResultPostgresBackend.compare_and_swap(
+                     expected.job_id,
+                     result,
+                     replacement
+                   ),
+                 do: {:ok, updated}
+
+          :stale ->
+            snapshot_miss(expected.job_id)
+        end
+      end)
+    end
+  end
+
+  defp atomic_change(change) do
+    # SQLite must reserve its writer before reading. PostgreSQL's conditional
+    # job UPDATE serializes competing completions/cancellation on that row.
+    options = if Storage.sqlite?(), do: [mode: :immediate], else: []
+
+    commit = fn ->
+      case change.() do
+        {:ok, value} -> value
+        {:error, reason} -> apply(repo(), :rollback, [reason])
+      end
+    end
+
+    # A workflow lease already owns the SQL transaction. Roll back that boundary
+    # directly instead of hiding an aborted nested transaction behind an error tuple.
+    if apply(repo(), :in_transaction?, []),
+      do: {:ok, commit.()},
+      else: apply(repo(), :transaction, [commit, options])
+  rescue
+    error ->
+      reason = {:completion_persistence_failed, Exception.message(error)}
+
+      if apply(repo(), :in_transaction?, []),
+        do: apply(repo(), :rollback, [reason]),
+        else: {:error, reason}
+  end
+
+  defp insert_completion_result(job_id, result) do
+    case repo_get(ResultRecord, job_id) do
+      nil ->
+        %ResultRecord{}
+        |> Ecto.Changeset.change(%{job_id: job_id, payload: result})
+        |> repo_insert()
+        |> case do
+          {:ok, _record} -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+
+      %ResultRecord{} ->
+        {:error, {:result_already_exists, job_id}}
+    end
+  end
+
+  defp mutate(job_id, change, attempts \\ @write_attempts) do
     case repo_get(JobRecord, job_id) do
       %JobRecord{} = record ->
-        with {:ok, job} <- repo_record_to_job(record) do
-          updated_job = %{job | worker_id: worker_id, updated_at: DateTime.utc_now()}
+        with {:ok, job} <- repo_record_to_job(record),
+             {:ok, updated} <- change.(job) do
+          expected = Map.take(record, JobRecord.__schema__(:fields))
 
-          case update_record(updated_job) do
-            {:ok, _record} -> {:ok, updated_job}
-            {:error, changeset} -> {:error, changeset}
+          cond do
+            updated == job -> {:ok, job}
+            compare_and_swap(expected, updated) == :ok -> {:ok, updated}
+            attempts > 1 -> mutate(job_id, change, attempts - 1)
+            true -> {:error, {:job_write_conflict, job_id}}
           end
         end
 
@@ -114,21 +181,40 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
     end
   end
 
-  defp update_record(%Job{} = job) do
-    case repo_get(JobRecord, job.job_id) do
-      %JobRecord{} = record ->
-        record
-        |> Ecto.Changeset.change(
-          job
-          |> Job.to_persisted_map()
-          |> persisted_map_to_repo_attrs()
-        )
-        |> repo_update()
+  defp compare_and_swap(expected, updated, lock_unchanged? \\ false) do
+    # Match every persisted field, not just time: equal-time progress, ownership
+    # and metadata writes must also invalidate the snapshot used for validation.
+    query =
+      Enum.reduce(expected, JobRecord, fn
+        {key, nil}, query -> where(query, [job], is_nil(field(job, ^key)))
+        {key, value}, query -> where(query, [job], field(job, ^key) == ^value)
+      end)
 
-      nil ->
-        {:error, {:job_not_found, job.job_id}}
+    changes = Enum.reject(job_attrs(updated), fn {key, value} -> expected[key] == value end)
+    # A result-only replacement still needs the job row locked until commit.
+    changes =
+      if changes == [] and lock_unchanged?, do: [progress: expected.progress], else: changes
+
+    case changes do
+      [] ->
+        if apply(repo(), :exists?, [query]), do: :ok, else: :stale
+
+      _ ->
+        case apply(repo(), :update_all, [query, [set: changes]]) do
+          {1, _} -> :ok
+          {0, _} -> :stale
+        end
     end
   end
+
+  defp snapshot_miss(job_id) do
+    case repo_get(JobRecord, job_id) do
+      nil -> {:error, {:job_not_found, job_id}}
+      %JobRecord{} -> {:error, {:stale_job_snapshot, job_id}}
+    end
+  end
+
+  defp job_attrs(job), do: job |> Job.to_persisted_map() |> persisted_map_to_repo_attrs()
 
   defp persisted_map_to_repo_attrs(attrs) do
     %{
@@ -152,7 +238,8 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
 
   defp parse_datetime!(value) when is_binary(value) do
     {:ok, datetime, _offset} = DateTime.from_iso8601(value)
-    datetime
+    # utc_datetime_usec requires six-digit precision, including whole seconds.
+    %{datetime | microsecond: {elem(datetime.microsecond, 0), 6}}
   end
 
   defp repo_record_to_job(%JobRecord{} = record) do
@@ -182,8 +269,7 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   defp repo_get(schema, id), do: apply(repo(), :get, [schema, id])
   defp repo_all(queryable), do: apply(repo(), :all, [queryable])
   defp repo_insert(changeset), do: apply(repo(), :insert, [changeset])
-  defp repo_update(changeset), do: apply(repo(), :update, [changeset])
-  defp repo_update!(changeset), do: apply(repo(), :update!, [changeset])
+
   defp repo_delete!(struct), do: apply(repo(), :delete!, [struct])
   defp repo_delete_all(queryable), do: apply(repo(), :delete_all, [queryable])
 

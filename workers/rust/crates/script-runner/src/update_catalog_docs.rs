@@ -371,6 +371,9 @@ fn render_rules(rules: &[Value]) -> String {
 }
 
 fn render_artifacts(artifacts: &[Value]) -> String {
+    if artifacts.is_empty() {
+        return "<li>No desktop artifacts are declared for this source snapshot.</li>".to_string();
+    }
     artifacts
         .iter()
         .map(|artifact| {
@@ -529,12 +532,28 @@ fn run_self_test() -> RunnerResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{artifact_entry, escape_html, infer_platform, run_self_test, string_field};
+    use super::{
+        artifact_entry, escape_html, infer_platform, render_channels, run_self_test, string_field,
+    };
+    use serde_json::json;
     use std::path::Path;
 
     #[test]
     fn self_test_renders_update_catalog_tokens() {
         run_self_test().unwrap();
+    }
+
+    #[test]
+    fn source_only_snapshot_has_an_explicit_artifact_empty_state() {
+        let html = render_channels(&[json!({
+            "visible_rules": [{ "label": "publication", "value": "separate action" }],
+            "desktop_artifacts": []
+        })]);
+        assert!(
+            html.contains("<li>No desktop artifacts are declared for this source snapshot.</li>")
+        );
+        assert!(!html.lines().any(|line| line.ends_with(' ')));
+        assert!(!html.contains("target/desktop-cache"));
     }
 
     #[test]

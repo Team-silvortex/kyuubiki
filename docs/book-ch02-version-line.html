@@ -13,7 +13,7 @@
         <h1>What daji 3.x is optimizing for</h1>
         <p class="docs-copy">
           Early Daji is hardening an agent-driven industrial research system,
-          not maximizing feature count. At the current 3.4.0 checkpoint, progress
+          not maximizing feature count. At the current 3.4.1 checkpoint, progress
           means complete research journeys: bounded objectives, real execution,
           validated results, safe recovery, and reproducible evidence. Industrial
           reliability is the goal; each claim still requires its own proof.
@@ -26,22 +26,23 @@
       </section>
 
       <section class="docs-card docs-section" id="current-checkpoint">
-        <h2>Daji 3.4.0 checkpoint</h2>
+        <h2>Daji 3.4.1 checkpoint</h2>
         <ul class="docs-list">
-          <li>Graph preflight validates topology and JSON budgets before job creation or operator callbacks.</li>
-          <li>Operator output is validated before publication. Explicit skip policy isolates invalid branches and preserves honest failure receipts.</li>
-          <li>Rust and Elixir share graph, artifact, field, and diagnostic fixtures; source ordering no longer depends on JSON library feature flags.</li>
-          <li>CI contract checks follow split modules and verify actual quality-scoring output. A bounded browser startup retry never retries application assertions.</li>
-          <li>The compact modeling, bundle-creation, PWDT, and local language-pack work from 3.3.x remains available. Translation and numerical qualification retain their bounded evidence.</li>
+          <li>Rust and Elixir share workflow condition and named-input contracts, including exact numeric comparisons and branch isolation.</li>
+          <li>Job progress compares full snapshots; solver completion and validated results are published atomically.</li>
+          <li>Workflow runtime, recovery envelopes, and job transitions commit together. Memory jobs/results share one integrity-checked persistence generation.</li>
+          <li>Watchdog and recovery coordination survive scoped storage outages. Retry obeys ownership and replay policy; health exposes degraded state and unknown counts.</li>
+          <li>Existing graph/artifact admission, compact modeling, bundle creation, PWDT, and language-pack capabilities remain available with their original qualification limits.</li>
         </ul>
         <p class="docs-copy">
-          Documentation, source, and local packaging now target <code>daji 3.4.0</code>.
-          Local rebuilding does not publish packages or relabel older acceptance
-          runs. Tensor calibration and open
-          qualification requirements keep their original scope.
+          Source and package metadata now target <code>daji 3.4.1</code>.
+          This patch does not rebuild or install binaries; the last local desktop
+          and runtime baseline remains <code>3.4.0</code>. SQLite/memory regressions
+          do not establish PostgreSQL, remote failover, power-loss, numerical, or
+          installed-GUI qualification. Tensor gaps remain open.
         </p>
         <div class="docs-links">
-          <a class="docs-link" href="./current-line.md#daji-340-checkpoint">Source checkpoint and limits</a>
+          <a class="docs-link" href="./current-line.md#daji-341-checkpoint">Source checkpoint and limits</a>
           <a class="docs-link" href="./tutorial-first-research.html">Create a research bundle</a>
           <a class="docs-link" href="./tutorial-pwdt-automation.html">Use the PWDT workspace</a>
           <a class="docs-link" href="./language-packs.md">Translation coverage</a>

@@ -25,6 +25,70 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissionsTest do
     %{job: running}
   end
 
+  for stage <- ["completed", "failed", "cancelled"] do
+    test "agent #{stage} progress is not a final job receipt", %{job: job} do
+      assert :ok =
+               AnalysisSolverSubmissions.apply_agent_progress(job.job_id, %{
+                 "stage" => unquote(stage),
+                 "progress" => 1.0,
+                 "iteration" => 9,
+                 "residual" => 0.01,
+                 "message" => "agent attempt ended"
+               })
+
+      assert {:ok, current} = Store.get(job.job_id)
+      assert current.status in [:solving, :postprocessing]
+      assert current.progress < 1.0
+      assert current.progress >= job.progress
+      assert current.iteration == 9
+      assert current.residual == 0.01
+    end
+  end
+
+  test "ordinary progress also reserves completion for the final result receipt", %{job: job} do
+    assert :ok =
+             AnalysisSolverSubmissions.apply_agent_progress(job.job_id, %{
+               "stage" => "postprocessing",
+               "progress" => 1.0
+             })
+
+    assert {:ok, %{status: :postprocessing, progress: progress}} = Store.get(job.job_id)
+    assert progress < 1.0
+  end
+
+  for {label, value} <- [{"negative", -1}, {"excessive", 1.1}, {"text", "1.0"}, {"null", nil}] do
+    test "#{label} progress is rejected rather than clamped into a valid receipt", %{job: job} do
+      assert {:error, _reason} =
+               AnalysisSolverSubmissions.apply_agent_progress(job.job_id, %{
+                 "stage" => "completed",
+                 "progress" => unquote(value)
+               })
+
+      assert {:ok, ^job} = Store.get(job.job_id)
+    end
+  end
+
+  test "late attempt notifications cannot change an already cancelled job", %{job: job} do
+    assert {:ok, cancelled} =
+             Store.apply_progress(%{
+               job_id: job.job_id,
+               stage: :cancelled,
+               progress: job.progress,
+               message: "operator cancelled"
+             })
+
+    for stage <- ["completed", "failed", "cancelled", "solving"] do
+      assert :ok =
+               AnalysisSolverSubmissions.apply_agent_progress(job.job_id, %{
+                 "stage" => stage,
+                 "progress" => 1.0,
+                 "message" => "too late"
+               })
+
+      assert {:ok, ^cancelled} = Store.get(job.job_id)
+    end
+  end
+
   test "projects failover signals without regressing the persisted job", %{job: job} do
     assert :ok =
              AnalysisSolverSubmissions.apply_agent_progress(job.job_id, %{

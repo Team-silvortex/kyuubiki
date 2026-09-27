@@ -1850,6 +1850,99 @@ approves promotion against the graduation gate, so `solve.beam_1d`,
 `solve.torsion_1d`, and `solve.frame_2d` now carry `evidence.qualification`
 entries in the structural reliability shard.
 
+## Condition Decision Reliability
+
+The `workflow-condition-contract` profile compares Rust and Elixir against 64
+shared condition cases, in both node orders, with fail-fast and explicit skip
+controls. It also enumerates bounded exact numeric oracles and retains local
+HTTP/SQLite failure-recovery tests. Invalid array indexes cannot select the last
+element; malformed configuration becomes a node error; integer comparisons do
+not collapse through `f64` rounding. JSON equality and array containment use the
+same recursive numeric equivalence, without conflating booleans and numbers.
+
+Missing paths still yield null, and missing operators default to `gt`; explicit
+`falsy`/`eq null` remains allowed. This is neither a physical-tolerance policy
+nor arbitrary-precision decimal support. Failures retain their diagnostic and
+publish no branch outputs; only explicit skip permits independent work to
+continue. Unrelated callback exceptions and cancellation are not swallowed.
+
+Run `make test-workflow-condition-contract` for storage-independent Elixir
+regression or use the native validation profile for Rust/Elixir checks together.
+The [condition reliability report](../reports/workflow-condition-contract-20260927.md)
+records the scoped results and isolated-database API procedure. This adds local
+`verified` tensor evidence, not distributed or numerical qualification.
+
+## Named Input Reliability
+
+The `workflow-named-input-contract` profile exercises nine domain benchmark-pair
+operators and `transform.join_parameter_sweep_results` through both Rust and
+Elixir graphs, rather than testing only their direct operator calls. Named inputs
+are assembled by target port, independent of edge or node order. A single
+declared `input` or `payload` port accepts an already assembled operator payload;
+one remaining edge on a multi-port node is not an envelope fallback.
+
+For these operators, a legacy artifact containing only its source-port key is
+unwrapped once. Multi-field artifacts retain all sibling data and status fields.
+The tests cover raw-result retention, same-source fan-out, failed second inputs,
+clean replay, HTTP invocation, and persisted asynchronous receipts. Existing
+input behavior for other operators and custom callbacks is unchanged.
+
+Run `make test-workflow-named-input-contract` for storage-independent regression.
+See the [routing reliability report](../reports/workflow-named-input-contract-20260927.md)
+for isolated-SQLite API tests and the accompanying deleted-job progress race fix.
+This is local contract/recovery evidence, not numerical solver qualification.
+
+## Concurrent Job Receipts
+
+Progress, worker, and metadata SQL writes now compare the complete validated
+snapshot atomically. Conflicts allow at most four reread/revalidation attempts;
+implicit event timestamps are not refreshed, and terminal replays do not write.
+The watchdog uses `Store.apply_progress_if_current/2` without rebasing: a newer
+heartbeat, terminal receipt, or execution phase invalidates its old decision.
+Only actual watchdog writes count as stalls/timeouts; deleted jobs do not stop
+the scan. The memory backend implements the same conditional snapshot contract.
+
+The [job snapshot report](../reports/job-snapshot-reliability-20260927.md) records
+deterministic races, concurrent writers, isolated backend tests, and timestamp
+boundaries. This is local contract/recovery evidence, not PostgreSQL, remote
+recovery, persistent incarnation fencing, or physical solver qualification.
+
+## Solver Completion Receipts
+
+For asynchronous solver submissions, Agent progress is not a final job receipt:
+`completed` progress means postprocessing, while the final RPC response and
+result storage determine completion. Missing/non-object results fail explicitly
+instead of stranding the background job. The
+[solver completion report](../reports/solver-completion-reliability-20260927.md)
+records the initial local HTTP/TCP regressions. Final solver publication now uses
+`Store.complete_with_result/3`: worker, result, and completed state commit together,
+and an existing terminal job or result cannot be overwritten by a late response.
+SQL uses one transaction; the lightweight memory backend uses one digest-verified
+`analysis-state.json` generation for both collections, importing legacy files
+only on its first start. See the
+[atomic publication report](../reports/solver-atomic-publication-20260927.md)
+for rollback, process-loss, concurrent-writer, migration, and recovery evidence.
+This solver evidence does not qualify external checkpoint transactions,
+PostgreSQL, host power loss, exactly-once computation, or physical correctness.
+
+## Atomic Workflow State Commits
+
+`Store.apply_progress_with_result/4` conditionally commits the job and its
+existing workflow runtime/recovery record together. Progress, completion,
+failure, cancellation, recovery blocking, and claim publication use this boundary;
+stale job/result snapshots cannot be rebased or partly published. SQL joins the
+owning lease transaction, and memory persists one combined generation. Execution
+claims must match generation, attempt, and owner. Cancellation propagates commit
+errors, while rejected recovery-block writes are not counted as durable blocks.
+The [workflow commit report](../reports/workflow-atomic-commit-20260927.md) records
+rollback, stale-claim, process-loss, filesystem-fault, and retry tests. This covers
+local runtime records, not external solver checkpoints, live PostgreSQL,
+distributed failover, exactly-once execution, or numerical qualification.
+
+The [storage-outage report](../reports/storage-outage-recovery-20260927.md) adds
+local scan containment, policy-checked retry, and explicit degraded health;
+unknown counts are not zero, and failed scans remain visible until recovery.
+
 ## Smoke-Level Gaps
 
 There are currently no smoke-only operators in `physics-coverage`.

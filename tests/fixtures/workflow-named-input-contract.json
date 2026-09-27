@@ -1,0 +1,59 @@
+{
+  "schema_version": "kyuubiki.workflow-named-input-contract/v1",
+  "pair_operators": [
+    "transform.benchmark_structural_pair",
+    "transform.benchmark_acoustic_pair",
+    "transform.benchmark_modal_pair",
+    "transform.benchmark_dynamic_pair",
+    "transform.benchmark_transport_pair",
+    "transform.benchmark_coupled_heat_pair",
+    "transform.benchmark_electrostatic_pair",
+    "transform.benchmark_magnetostatic_pair",
+    "transform.benchmark_cfd_pair"
+  ],
+  "pair": {
+    "ports": ["left", "right"],
+    "values": [{"cost": 10}, {"cost": 4}],
+    "config": {"criteria": [{"field": "cost", "left_field": "cost", "right_field": "cost", "goal": "min", "weight": 2}]},
+    "expected": {"benchmark_winner": "right", "benchmark_criteria_count": 1, "left_score": 0, "right_score": 2}
+  },
+  "sweep": {
+    "operator_id": "transform.join_parameter_sweep_results",
+    "ports": ["cases", "results"],
+    "values": [
+      [{"id": "a", "model": {"tag": "first"}}, {"id": "b", "model": {"tag": "second"}}],
+      [{"case_id": "b", "summary": {"cost": 4}}, {"case_id": "a", "summary": {"cost": 10}}]
+    ],
+    "config": {"strict": true},
+    "expected": {"case_count": 2, "joined_summary_count": 2, "missing_summary_count": 0, "missing_case_ids": []}
+  },
+  "request": {
+    "graph": {
+      "schema_version": "kyuubiki.workflow-graph/v1",
+      "id": "named-input-contract",
+      "name": "Named input routing contract",
+      "version": "1.0.0",
+      "entry_nodes": ["left", "right"],
+      "output_nodes": ["result", "raw"],
+      "nodes": [
+        {"id": "left", "kind": "input", "inputs": [], "outputs": [{"id": "payload", "artifact_type": "artifact/result_summary"}]},
+        {"id": "right", "kind": "input", "inputs": [], "outputs": [{"id": "payload", "artifact_type": "artifact/result_summary"}]},
+        {
+          "id": "combine", "kind": "transform",
+          "operator_id": "transform.benchmark_structural_pair",
+          "inputs": [{"id": "left", "artifact_type": "artifact/result_summary"}, {"id": "right", "artifact_type": "artifact/result_summary"}],
+          "outputs": [{"id": "summary", "artifact_type": "artifact/result_summary"}]
+        },
+        {"id": "result", "kind": "output", "inputs": [{"id": "summary", "artifact_type": "artifact/result_summary"}], "outputs": []},
+        {"id": "raw", "kind": "output", "inputs": [{"id": "payload", "artifact_type": "artifact/result_summary"}], "outputs": []}
+      ],
+      "edges": [
+        {"id": "left-combine", "from": {"node": "left", "port": "payload"}, "to": {"node": "combine", "port": "left"}, "artifact_type": "artifact/result_summary"},
+        {"id": "right-combine", "from": {"node": "right", "port": "payload"}, "to": {"node": "combine", "port": "right"}, "artifact_type": "artifact/result_summary"},
+        {"id": "combine-result", "from": {"node": "combine", "port": "summary"}, "to": {"node": "result", "port": "summary"}, "artifact_type": "artifact/result_summary"},
+        {"id": "left-raw", "from": {"node": "left", "port": "payload"}, "to": {"node": "raw", "port": "payload"}, "artifact_type": "artifact/result_summary"}
+      ]
+    },
+    "input_artifacts": {}
+  }
+}
