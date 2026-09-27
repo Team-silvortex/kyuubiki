@@ -1,0 +1,37 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded 1D mechanical and thermal beam moment-field, energy, connectivity, numerical-range and cancellation regressions with in-process Rust headless dispatch. This does not qualify frames, nonlinear beams, installed Agents or end-to-end performance.",
+  "evidence_claims": [
+    {
+      "id": "beam-field-energy-finite-output-and-replay",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/beam_1d.rs",
+        "workers/rust/crates/solver/src/beam_1d_element.rs",
+        "workers/rust/crates/solver/src/beam_1d_system.rs",
+        "workers/rust/crates/solver/src/beam_1d_validation.rs",
+        "workers/rust/crates/solver/tests/beam_output_reliability.rs",
+        "workers/rust/crates/cli/tests/beam_output_operator.rs",
+        "config/operator-validation-profiles.json",
+        "config/operator-validation-profiles/thermal-structural.json",
+        "reports/beam-output-reliability-20260927.md"
+      ],
+      "required_text": [
+        "simply_supported_uniform_beam_recovers_interior_moment_and_stress",
+        "restrained_thermal_curvature_stores_elastic_energy_without_displacement",
+        "connectivity_reversal_preserves_global_displacements_and_endpoint_actions",
+        "uniform_load_field_recovery_is_invariant_under_mesh_refinement",
+        "thermal_element_and_total_energy_overflow_are_both_rejected",
+        "beam_assembly_and_recovery_cancel_at_chunk_boundaries",
+        "headless_uniform_beam_recovers_interior_moment_and_energy",
+        "headless_beam_numerical_failure_is_not_success_and_normal_input_replays",
+        "This is bounded beam-field output validation, not general structural qualification."
+      ]
+    }
+  ]
+}

@@ -2,7 +2,7 @@
   "version": "3.4.2",
   "codename": "daji",
   "line": "3.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-09-27",
   "git_commit": "d7de8968d0eba5e3ed5c08c2ed82ab67ba8aed36",
   "summary": "Daji 3.4.2 source reliability patch: atomic workflow admission/deletion and guarded result administration, signed CST gradients, stable Q4/tetrahedral geometry, and range-aware thermal-plane output. Scoped kernel benchmarks and regression evidence; no desktop rebuild or binary publication.",

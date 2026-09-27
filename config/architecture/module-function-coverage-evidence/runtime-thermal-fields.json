@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Bounded CST/Q4 thermoelastic field-recovery, temperature-mean, norm, energy-volume, failure and cancellation evidence. In-process headless dispatch and Linux release regressions do not qualify general multiphysics, installed Agents, or end-to-end performance.",
+  "summary": "Bounded CST/Q4 and 2D/3D thermal-truss output, temperature-mean, norm, energy-volume, failure and cancellation evidence. In-process headless dispatch and Linux release regressions do not qualify general multiphysics, installed Agents, or end-to-end performance.",
   "evidence_claims": [
     {
       "id": "thermal-plane-finite-output-and-replay",
@@ -30,6 +30,34 @@
         "thermal_profile_rhs_norm_preserves_representable_large_and_small_forces",
         "headless_thermal_energy_overflow_returns_an_error_and_normal_patch_replays",
         "This is bounded thermoelastic output validation, not general multiphysics qualification."
+      ]
+    },
+    {
+      "id": "thermal-truss-finite-output-and-replay",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/thermal_truss.rs",
+        "workers/rust/crates/solver/src/thermal_truss_validation.rs",
+        "workers/rust/crates/solver/src/truss_numerics.rs",
+        "workers/rust/crates/solver/src/solver_postprocess.rs",
+        "workers/rust/crates/solver/src/plane_2d_summary.rs",
+        "workers/rust/crates/solver/tests/thermal_truss_output_reliability.rs",
+        "workers/rust/crates/cli/tests/thermal_truss_output_operator.rs",
+        "config/operator-validation-profiles/thermal-structural.json",
+        "reports/thermal-truss-output-reliability-20260927.md"
+      ],
+      "required_text": [
+        "thermal_truss_temperature_mean_preserves_finite_extremes",
+        "thermal_truss_volume_products_preserve_representable_energy",
+        "thermal_truss_fixed_supports_cannot_hide_assembled_stiffness_overflow",
+        "thermal_truss_small_deformation_guard_is_translation_and_scale_objective",
+        "thermal_truss_assembly_and_recovery_cancel_at_chunk_boundaries",
+        "headless_thermal_truss_nonfinite_energy_is_an_error_and_normal_input_replays",
+        "This is bounded thermal-truss output validation, not general thermoelastic qualification."
       ]
     }
   ]

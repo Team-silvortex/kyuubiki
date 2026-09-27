@@ -3,16 +3,22 @@ use kyuubiki_protocol::{
 };
 
 pub(crate) fn validate_request(request: &SolveThermalFrame3dRequest) -> Result<(), String> {
+    checkpoint(SolverStage::ElementPrecompute, 0)?;
     if request.nodes.len() < 2 {
         return Err("thermal 3d frame must define at least two nodes".to_string());
     }
     if request.elements.is_empty() {
         return Err("thermal 3d frame must define at least one element".to_string());
     }
-    if constrained_dof_count(request) < 6 {
-        return Err("thermal 3d frame must restrain at least six degrees of freedom".to_string());
-    }
-
+    let count = request.nodes.len()
+        + request.elements.len()
+        + request.directional_springs.len()
+        + request.directional_rotational_springs.len()
+        + request.directional_constraints.len()
+        + request.directional_rotational_constraints.len();
+    let mut completed = 0;
+    let mut constrained =
+        request.directional_constraints.len() + request.directional_rotational_constraints.len();
     for (index, node) in request.nodes.iter().enumerate() {
         if !node.x.is_finite() || !node.y.is_finite() || !node.z.is_finite() {
             return Err(format!(
@@ -29,10 +35,28 @@ pub(crate) fn validate_request(request: &SolveThermalFrame3dRequest) -> Result<(
             return Err("thermal 3d frame node temperature_delta must be finite".to_string());
         }
         validate_nodal_constraint_loads(index, node)?;
+        constrained += [
+            node.fix_x,
+            node.fix_y,
+            node.fix_z,
+            node.fix_rx,
+            node.fix_ry,
+            node.fix_rz,
+        ]
+        .into_iter()
+        .filter(|v| *v)
+        .count();
+        completed += 1;
+        checkpoint_chunk(SolverStage::ElementPrecompute, completed, count)?;
     }
 
+    if constrained < 6 {
+        return Err("thermal 3d frame must restrain at least six degrees of freedom".to_string());
+    }
     for element in &request.elements {
         validate_element(request, element)?;
+        completed += 1;
+        checkpoint_chunk(SolverStage::ElementPrecompute, completed, count)?;
     }
     for spring in &request.directional_springs {
         validate_directional_spring(
@@ -42,6 +66,8 @@ pub(crate) fn validate_request(request: &SolveThermalFrame3dRequest) -> Result<(
             request.nodes.len(),
             "directional spring",
         )?;
+        completed += 1;
+        checkpoint_chunk(SolverStage::ElementPrecompute, completed, count)?;
     }
     for spring in &request.directional_rotational_springs {
         validate_directional_spring(
@@ -51,6 +77,8 @@ pub(crate) fn validate_request(request: &SolveThermalFrame3dRequest) -> Result<(
             request.nodes.len(),
             "directional rotational spring",
         )?;
+        completed += 1;
+        checkpoint_chunk(SolverStage::ElementPrecompute, completed, count)?;
     }
     for constraint in &request.directional_constraints {
         validate_directional_constraint(
@@ -59,6 +87,8 @@ pub(crate) fn validate_request(request: &SolveThermalFrame3dRequest) -> Result<(
             request.nodes.len(),
             "directional constraint",
         )?;
+        completed += 1;
+        checkpoint_chunk(SolverStage::ElementPrecompute, completed, count)?;
     }
     for constraint in &request.directional_rotational_constraints {
         validate_directional_constraint(
@@ -67,6 +97,8 @@ pub(crate) fn validate_request(request: &SolveThermalFrame3dRequest) -> Result<(
             request.nodes.len(),
             "directional rotational constraint",
         )?;
+        completed += 1;
+        checkpoint_chunk(SolverStage::ElementPrecompute, completed, count)?;
     }
     Ok(())
 }
@@ -104,19 +136,7 @@ fn validate_directional_constraint(
             "thermal 3d frame {kind} references an out-of-range node"
         ));
     }
-    if direction.iter().any(|value| !value.is_finite()) {
-        return Err(format!("thermal 3d frame {kind} direction must be finite"));
-    }
-    let norm = direction
-        .iter()
-        .map(|value| value * value)
-        .sum::<f64>()
-        .sqrt();
-    if norm <= 1.0e-12 {
-        return Err(format!(
-            "thermal 3d frame {kind} direction must be non-zero"
-        ));
-    }
+    normalized_direction(direction).map_err(|error| format!("thermal 3d frame {kind} {error}"))?;
     Ok(())
 }
 
@@ -137,19 +157,7 @@ fn validate_directional_spring(
             "thermal 3d frame {kind} stiffness must be positive"
         ));
     }
-    if direction.iter().any(|value| !value.is_finite()) {
-        return Err(format!("thermal 3d frame {kind} direction must be finite"));
-    }
-    let norm = direction
-        .iter()
-        .map(|value| value * value)
-        .sum::<f64>()
-        .sqrt();
-    if norm <= 1.0e-12 {
-        return Err(format!(
-            "thermal 3d frame {kind} direction must be non-zero"
-        ));
-    }
+    normalized_direction(direction).map_err(|error| format!("thermal 3d frame {kind} {error}"))?;
     Ok(())
 }
 
@@ -185,41 +193,11 @@ fn validate_element(
     let dx = node_j.x - node_i.x;
     let dy = node_j.y - node_i.y;
     let dz = node_j.z - node_i.z;
-    let length = (dx * dx + dy * dy + dz * dz).sqrt();
+    let length = dx.hypot(dy).hypot(dz);
     if !(length.is_finite() && length > 1.0e-12) {
         return Err("3d frame element length must be positive".to_string());
     }
-    validate_local_y_axis(
-        element.local_y_axis,
-        [dx / length, dy / length, dz / length],
-    )?;
-    Ok(())
-}
-
-fn validate_local_y_axis(local_y_axis: Option<[f64; 3]>, local_x: [f64; 3]) -> Result<(), String> {
-    let Some(axis) = local_y_axis else {
-        return Ok(());
-    };
-    if axis.iter().any(|component| !component.is_finite()) {
-        return Err("thermal 3d frame element local_y_axis must be finite".to_string());
-    }
-    let projection = axis[0] * local_x[0] + axis[1] * local_x[1] + axis[2] * local_x[2];
-    let transverse = [
-        axis[0] - projection * local_x[0],
-        axis[1] - projection * local_x[1],
-        axis[2] - projection * local_x[2],
-    ];
-    let norm = transverse
-        .iter()
-        .map(|value| value * value)
-        .sum::<f64>()
-        .sqrt();
-    if norm <= 1.0e-12 {
-        return Err(
-            "thermal 3d frame element local_y_axis must not be parallel to the element axis"
-                .to_string(),
-        );
-    }
+    frame3d_rotation_with_local_y(dx, dy, dz, length, element.local_y_axis)?;
     Ok(())
 }
 
@@ -241,18 +219,5 @@ fn validate_positive_frame_properties(element: &ThermalFrame3dElementInput) -> R
     Ok(())
 }
 
-fn constrained_dof_count(request: &SolveThermalFrame3dRequest) -> usize {
-    let fixed = request
-        .nodes
-        .iter()
-        .map(|node| {
-            node.fix_x as usize
-                + node.fix_y as usize
-                + node.fix_z as usize
-                + node.fix_rx as usize
-                + node.fix_ry as usize
-                + node.fix_rz as usize
-        })
-        .sum::<usize>();
-    fixed + request.directional_constraints.len() + request.directional_rotational_constraints.len()
-}
+use crate::frame_3d_math::{frame3d_rotation_with_local_y, normalized_direction};
+use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};

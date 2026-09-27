@@ -1,52 +1,17 @@
-pub(super) fn frame3d_thermal_uniform_vector(
-    area: f64,
-    youngs_modulus: f64,
-    thermal_expansion: f64,
-    average_temperature_delta: f64,
-) -> [f64; 12] {
-    let thermal_force = youngs_modulus * area * thermal_expansion * average_temperature_delta;
-    [
-        -thermal_force,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        thermal_force,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-    ]
-}
-
-pub(super) fn frame3d_thermal_gradient_vector(
-    youngs_modulus: f64,
-    moments_of_inertia: [f64; 2],
-    thermal_expansion: f64,
-    section_depths: [f64; 2],
-    temperature_gradients: [f64; 2],
-) -> [f64; 12] {
-    let thermal_curvature_y = thermal_expansion * temperature_gradients[0] / section_depths[0];
-    let thermal_curvature_z = thermal_expansion * temperature_gradients[1] / section_depths[1];
-    let thermal_moment_z = youngs_modulus * moments_of_inertia[1] * thermal_curvature_y;
-    let thermal_moment_y = youngs_modulus * moments_of_inertia[0] * thermal_curvature_z;
-
-    [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        -thermal_moment_y,
-        -thermal_moment_z,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        thermal_moment_y,
-        thermal_moment_z,
-    ]
+pub(super) fn normalized_direction(direction: [f64; 3]) -> Result<[f64; 3], String> {
+    if direction.iter().any(|v| !v.is_finite()) {
+        return Err("direction must be finite".into());
+    }
+    let scale = direction.iter().map(|v| v.abs()).fold(0.0_f64, f64::max);
+    if scale == 0.0 {
+        return Err("direction must be non-zero".into());
+    }
+    let scaled = direction.map(|v| v / scale);
+    let norm = norm3(scaled);
+    if scale <= 1e-12 && scale * norm <= 1e-12 {
+        return Err("direction must be non-zero".into());
+    }
+    Ok(scaled.map(|v| v / norm))
 }
 
 pub(super) fn frame3d_rotation(
@@ -65,19 +30,31 @@ pub(super) fn frame3d_rotation_with_local_y(
     length: f64,
     local_y_axis: Option<[f64; 3]>,
 ) -> Result<[[f64; 3]; 3], String> {
-    if length <= 1.0e-12 {
+    if !length.is_finite() || length <= 1.0e-12 {
         return Err("3d frame element length must be positive".to_string());
     }
 
-    let local_x = [dx / length, dy / length, dz / length];
+    let local_x = normalized_direction([dx, dy, dz])
+        .map_err(|_| "3d frame element length must be positive".to_string())?;
     let mut local_y = if let Some(axis) = local_y_axis {
         if axis.iter().any(|component| !component.is_finite()) {
             return Err("3d frame local_y_axis must be finite".to_string());
         }
-        let projection = dot3(axis, local_x);
-        subtract3(axis, scale3(local_x, projection))
+        let mut axis = normalized_direction(axis).map_err(|_| {
+            "3d frame local_y_axis must not be parallel to the element axis".to_string()
+        })?;
+        // A single projection can amplify axial roundoff when the hint is
+        // nearly parallel. Remove that component again before normalization.
+        for _ in 0..2 {
+            let projection = dot3(axis, local_x);
+            for component in 0..3 {
+                axis[component] = (-projection).mul_add(local_x[component], axis[component]);
+            }
+        }
+        axis
     } else {
-        let reference = if local_x[2].abs() < 0.9 {
+        // Preserve the existing implicit roll at floating-point branch ties.
+        let reference = if (dz / length).abs() < 0.9 {
             [0.0, 0.0, 1.0]
         } else {
             [0.0, 1.0, 0.0]
@@ -90,7 +67,9 @@ pub(super) fn frame3d_rotation_with_local_y(
         return Err("3d frame local_y_axis must not be parallel to the element axis".to_string());
     }
     local_y = scale3(local_y, 1.0 / local_y_norm);
-    let local_z = cross3(local_x, local_y);
+    let local_z = normalized_direction(cross3(local_x, local_y))?;
+    // Close the right-handed triad rather than retaining normalization drift.
+    let local_y = cross3(local_z, local_x);
 
     Ok([local_x, local_y, local_z])
 }
@@ -107,15 +86,19 @@ pub(super) fn frame3d_local_stiffness(
     let axial = youngs_modulus * area / length;
     let torsion = shear_modulus * torsion_constant / length;
 
-    let by1 = 12.0 * youngs_modulus * moment_of_inertia_y / length.powi(3);
-    let by2 = 6.0 * youngs_modulus * moment_of_inertia_y / length.powi(2);
-    let by3 = 4.0 * youngs_modulus * moment_of_inertia_y / length;
-    let by4 = 2.0 * youngs_modulus * moment_of_inertia_y / length;
+    let by = youngs_modulus * moment_of_inertia_y / length;
+    let by_coupling = by / length;
+    let by1 = 12.0 * (by_coupling / length);
+    let by2 = 6.0 * by_coupling;
+    let by3 = 4.0 * by;
+    let by4 = 2.0 * by;
 
-    let bz1 = 12.0 * youngs_modulus * moment_of_inertia_z / length.powi(3);
-    let bz2 = 6.0 * youngs_modulus * moment_of_inertia_z / length.powi(2);
-    let bz3 = 4.0 * youngs_modulus * moment_of_inertia_z / length;
-    let bz4 = 2.0 * youngs_modulus * moment_of_inertia_z / length;
+    let bz = youngs_modulus * moment_of_inertia_z / length;
+    let bz_coupling = bz / length;
+    let bz1 = 12.0 * (bz_coupling / length);
+    let bz2 = 6.0 * bz_coupling;
+    let bz3 = 4.0 * bz;
+    let bz4 = 2.0 * bz;
 
     let mut k = [[0.0; 12]; 12];
     k[0][0] = axial;
@@ -230,22 +213,6 @@ pub(super) fn multiply_matrix_vector_12x12(
     output
 }
 
-pub(super) fn subtract_vector_12(lhs: &[f64; 12], rhs: &[f64; 12]) -> [f64; 12] {
-    let mut output = [0.0; 12];
-    for index in 0..12 {
-        output[index] = lhs[index] - rhs[index];
-    }
-    output
-}
-
-pub(super) fn add_vector_12(lhs: &[f64; 12], rhs: &[f64; 12]) -> [f64; 12] {
-    let mut output = [0.0; 12];
-    for index in 0..12 {
-        output[index] = lhs[index] + rhs[index];
-    }
-    output
-}
-
 fn cross3(lhs: [f64; 3], rhs: [f64; 3]) -> [f64; 3] {
     [
         lhs[1] * rhs[2] - lhs[2] * rhs[1],
@@ -255,17 +222,17 @@ fn cross3(lhs: [f64; 3], rhs: [f64; 3]) -> [f64; 3] {
 }
 
 fn norm3(vector: [f64; 3]) -> f64 {
-    (vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]).sqrt()
+    vector[0].hypot(vector[1]).hypot(vector[2])
 }
 
 fn dot3(lhs: [f64; 3], rhs: [f64; 3]) -> f64 {
     lhs[0] * rhs[0] + lhs[1] * rhs[1] + lhs[2] * rhs[2]
 }
 
-fn subtract3(lhs: [f64; 3], rhs: [f64; 3]) -> [f64; 3] {
-    [lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]]
-}
-
 fn scale3(vector: [f64; 3], scalar: f64) -> [f64; 3] {
     [vector[0] * scalar, vector[1] * scalar, vector[2] * scalar]
 }
+
+#[cfg(test)]
+#[path = "frame_3d_orientation_tests.rs"]
+mod orientation_tests;

@@ -13,6 +13,7 @@
     "config/operator-validation-profiles/structural-nonlinear.json",
     "config/operator-validation-profiles/structural-plane.json",
     "config/operator-validation-profiles/structural-solid.json",
+    "config/operator-validation-profiles/structural-spatial-frame.json",
     "config/operator-validation-profiles/thermal-structural.json",
     "config/operator-validation-profiles/transport.json",
     "config/operator-validation-profiles/workflow.json"
@@ -391,7 +392,11 @@
         "beam_frame_cross_check",
         "mesh_refinement_invariance",
         "torsion_closed_form",
-        "sign_convention_scope"
+        "sign_convention_scope",
+        "beam_distributed_load_field_recovery",
+        "beam_finite_output_and_cancellation",
+        "frame_2d_complete_curvature_energy",
+        "frame_2d_finite_output_and_cancellation"
       ],
       "formal_invariants": [
         "cantilever_tip_displacement_matches_closed_form",
@@ -399,7 +404,12 @@
         "frame_2d_matches_equivalent_beam_cantilever",
         "beam_and_frame_refinement_preserve_closed_form_response",
         "torsion_twist_matches_t_l_over_gj",
-        "sign_convention_documented_for_force_moment_rotation_and_torsion"
+        "sign_convention_documented_for_force_moment_rotation_and_torsion",
+        "beam_interior_moment_and_field_energy_match_uniform_load_closed_forms",
+        "beam_reversed_connectivity_preserves_global_actions",
+        "beam_unrepresentable_results_fail_and_cancelled_calls_replay",
+        "frame_2d_energy_matches_nodal_work_and_planar_thermal_reduction",
+        "frame_2d_unrepresentable_results_fail_and_cancelled_calls_replay"
       ],
       "evidence_paths": [
         "evidence/operator-qualification/beam-frame-classic-reference-note.md",
@@ -407,6 +417,12 @@
         "workers/rust/crates/solver/tests/beam_frame_classic_regression.rs",
         "workers/rust/crates/solver/tests/mechanical_convergence/beam_frame.rs",
         "workers/rust/crates/solver/tests/beam_1d_review.rs",
+        "workers/rust/crates/solver/tests/beam_output_reliability.rs",
+        "workers/rust/crates/cli/tests/beam_output_operator.rs",
+        "reports/beam-output-reliability-20260927.md",
+        "workers/rust/crates/solver/tests/frame_2d_output_reliability.rs",
+        "workers/rust/crates/cli/tests/frame_2d_output_operator.rs",
+        "reports/frame-2d-output-reliability-20260927.md",
         "workers/rust/crates/solver/tests/beam_torsion_input_reliability.rs",
         "workers/rust/crates/solver/tests/frame_input_reliability.rs",
         "workers/rust/crates/solver/tests/torsion_1d_review.rs",
@@ -430,6 +446,16 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test beam_1d_review -- --nocapture"
         },
         {
+          "id": "beam-output-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test beam_output_reliability -- --nocapture"
+        },
+        {
+          "id": "beam-output-headless-dispatch",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test beam_output_operator -- --nocapture"
+        },
+        {
           "id": "torsion-review-fixture",
           "kind": "analytic",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test torsion_1d_review -- --nocapture"
@@ -438,6 +464,16 @@
           "id": "frame-review-fixture",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_review -- --nocapture"
+        },
+        {
+          "id": "frame-2d-output-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test frame_2d_output_reliability -- --nocapture"
+        },
+        {
+          "id": "frame-2d-output-headless-dispatch",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test frame_2d_output_operator -- --nocapture"
         },
         {
           "id": "beam-torsion-input-reliability",

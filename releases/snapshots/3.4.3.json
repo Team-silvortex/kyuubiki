@@ -1,0 +1,90 @@
+{
+  "version": "3.4.3",
+  "codename": "daji",
+  "line": "3.x",
+  "status": "current",
+  "date": "2026-09-28",
+  "git_commit": "6ab4c2ddc0fed7c91748b4bf3abe788b2db9bd20",
+  "summary": "Daji 3.4.3 source reliability patch: checked truss/beam/frame fields, corrected planar and spatial thermal-frame energy, stable exact-support reactions, and orthonormal section orientation. Scoped Solver and Rust Headless regression evidence; no desktop rebuild or binary publication.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "reliability": "docs/operator-reliability.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": { "version": "3.4.3", "notes": ["Metadata aligned; no new GUI behavior in this patch."] },
+    "hub_gui": { "version": "3.4.3", "notes": ["Source metadata only; no new desktop artifact."] },
+    "workbench_gui": { "version": "3.4.3", "notes": ["Source metadata only; no new desktop artifact."] },
+    "installer_gui": { "version": "3.4.3", "notes": ["Source metadata only; no new desktop artifact."] },
+    "web_api": { "version": "3.4.3", "notes": ["Metadata aligned; existing control-plane behavior retained."] },
+    "rust_headless_sdk": { "version": "3.4.3", "notes": ["Existing plan/bridge/Engine operator routes exercised; registry publication not performed."] },
+    "python_headless_sdk": { "version": "3.4.3", "notes": ["Registry publication not performed."] },
+    "elixir_headless_sdk": { "version": "3.4.3", "notes": ["Registry publication not performed."] },
+    "rust_worker_sdk": { "version": "3.4.3", "notes": ["Operator extension API unchanged; separate from Headless control."] }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": ["Existing language-neutral execution and publication contracts retained."]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": [
+      "Checked truss, thermal-truss, beam, and frame assembly and physical outputs.",
+      "Corrected planar bending-field and spatial thermal-frame elastic energy.",
+      "Stable spatial direction, exact-support, reaction, and section-orientation bases.",
+      "Analytical, orientation, refinement, cancellation, and fresh-replay regression coverage."
+    ]
+  },
+  "desktop_artifacts": {},
+  "verification": {
+    "source_revision_role": "Base commit plus the 3.4.3 working-tree changes included in this release commit; not a clean-commit binary build claim.",
+    "platform": "macos-aarch64",
+    "release_checks": {
+      "source_version": "3.4.3",
+      "toolchain": "Rust 1.88.0; Cargo tests use --locked --offline",
+      "macos_solver": { "result_groups": 180, "passed": 1114, "failed": 0, "ignored": 9 },
+      "macos_structural_headless": { "targets": 5, "passed": 23, "failed": 0 },
+      "strict_clippy": "Solver all-targets and all five structural CLI regression targets passed with -D warnings",
+      "exact_version_contracts": { "checks": 224, "mismatched": 0 },
+      "release_version_and_catalog_self_tests": "passed",
+      "documentation_and_desktop_mirrors": "passed",
+      "language_pack_metadata": "60 canonical packs validated for 3.4.3; not a new full-translation qualification",
+      "operator_validation": "self-test and all 59 profile definitions passed; prior executed spatial profiles retain their dated provenance",
+      "project_organization": "passed; source limit 800, documentation limit 2000, tracked debt 0",
+      "tensor": "self-test, structure, and commands passed; 4 maturity, 16 evidence-grade, and 11 P0 gaps remain; release status blocked",
+      "formatting": "Rust workspace formatting and patch whitespace checks passed",
+      "rust_sdk_metadata": "standalone manifest resolves with --locked --offline --no-deps"
+    },
+    "prior_scoped_evidence": {
+      "source_version": "3.4.2 working-tree overlay",
+      "macos_solver": { "passed": 1114, "failed": 0, "ignored": 9 },
+      "linux_release_solver_selected": { "passed": 480, "failed": 0, "ignored": 9 },
+      "macos_spatial_headless": { "passed": 9, "failed": 0 },
+      "linux_release_spatial_headless": { "passed": 9, "failed": 0 },
+      "spatial_validation_profile": { "commands_passed": 9, "failed": 0 },
+      "thermal_spatial_validation_profile": { "commands_passed": 13, "failed": 0 },
+      "strict_clippy": "Solver all-targets and spatial CLI regression target passed with -D warnings",
+      "scope": "Final-snapshot runs documented in the orientation report. Overlapping lanes are not additive coverage; ignored opt-in tests are not benchmark evidence."
+    },
+    "reports": [
+      "reports/truss-output-reliability-20260927.md",
+      "reports/thermal-truss-output-reliability-20260927.md",
+      "reports/beam-output-reliability-20260927.md",
+      "reports/frame-2d-output-reliability-20260927.md",
+      "reports/frame-3d-output-reliability-20260927.md",
+      "reports/frame-3d-support-reliability-20260927.md",
+      "reports/frame-3d-orientation-reliability-20260927.md"
+    ],
+    "report_provenance": "Scoped reports retain their 3.4.2 base revision and working-tree evidence. Version alignment does not relabel them as clean 3.4.3 builds.",
+    "recompute_policy": "Recompute affected historical energy, extreme-range, support, and near-parallel section-hint results before research reuse; stored data is not rewritten.",
+    "desktop_packaging": { "status": "not performed", "last_local_installed_version": "3.4.0" },
+    "runtime_payload": { "status": "not rebuilt or replaced", "last_local_installed_version": "3.4.0" },
+    "ci": { "status": "remote result is tracked separately for the pushed release commit" },
+    "public_distribution": "not performed",
+    "registry_publication": "not performed",
+    "notarized": false,
+    "qualification": "No new external-solver, general physical, Windows, installed-Agent, installed-GUI, or scale qualification. Engine/operator interfaces remain decoupled; tensor readiness gaps remain open."
+  }
+}

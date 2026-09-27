@@ -40,7 +40,7 @@ pub(crate) fn validate_truss_request(request: &SolveTruss2dRequest) -> Result<()
 
         let node_i = &request.nodes[element.node_i];
         let node_j = &request.nodes[element.node_j];
-        let length = ((node_j.x - node_i.x).powi(2) + (node_j.y - node_i.y).powi(2)).sqrt();
+        let length = (node_j.x - node_i.x).hypot(node_j.y - node_i.y);
         if !length.is_finite() || length <= 1.0e-12 {
             return Err("truss element length must be positive".to_string());
         }
@@ -89,10 +89,9 @@ pub(crate) fn validate_truss_3d_request(request: &SolveTruss3dRequest) -> Result
         }
         let node_i = &request.nodes[element.node_i];
         let node_j = &request.nodes[element.node_j];
-        let length = ((node_j.x - node_i.x).powi(2)
-            + (node_j.y - node_i.y).powi(2)
-            + (node_j.z - node_i.z).powi(2))
-        .sqrt();
+        let length = (node_j.x - node_i.x)
+            .hypot(node_j.y - node_i.y)
+            .hypot(node_j.z - node_i.z);
         if !length.is_finite() || length <= 1.0e-12 {
             return Err("3d truss element length must be positive".to_string());
         }

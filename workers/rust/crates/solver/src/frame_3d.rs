@@ -1,13 +1,13 @@
 use std::borrow::Cow;
 
-use crate::frame_3d_math::{
-    frame3d_dof_map, frame3d_local_stiffness, frame3d_rotation_with_local_y, frame3d_transform,
-    multiply_matrix_vector_12x12, transform_frame3d_stiffness,
-};
+use crate::frame_3d_element::{FrameElement, finite_fields, norm3, total_energy, validate_matrix};
+use crate::frame_3d_math::frame3d_rotation_with_local_y;
 use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system_profile_with_options,
+    SparseMatrix, reduce_sparse_system, solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
+use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
+use crate::solver_postprocess::{max_results, restore_solution, try_collect_results};
 use kyuubiki_protocol::{
     Frame3dElementResult, Frame3dNodeResult, SolveFrame3dRequest, SolveFrame3dResult,
 };
@@ -31,79 +31,59 @@ fn solve_frame_3d_internal(
     request: Cow<'_, SolveFrame3dRequest>,
     options: SpdSolveOptions,
 ) -> Result<SolveFrame3dResult, String> {
-    validate_frame_3d_request(request.as_ref())?;
-
+    validate_frame_3d_request(&request)?;
+    checkpoint(SolverStage::LinearPrepare, 0)?;
     let dof_count = request.nodes.len() * 6;
-    let mut global_stiffness = SparseMatrix::new(dof_count);
-    let mut force_vector = vec![0.0; dof_count];
-
+    let mut stiffness = SparseMatrix::new(dof_count);
+    let mut forces = vec![0.0; dof_count];
     for (index, node) in request.nodes.iter().enumerate() {
-        force_vector[index * 6] = node.load_x;
-        force_vector[index * 6 + 1] = node.load_y;
-        force_vector[index * 6 + 2] = node.load_z;
-        force_vector[index * 6 + 3] = node.moment_x;
-        force_vector[index * 6 + 4] = node.moment_y;
-        force_vector[index * 6 + 5] = node.moment_z;
+        forces[index * 6..index * 6 + 6].copy_from_slice(&[
+            node.load_x,
+            node.load_y,
+            node.load_z,
+            node.moment_x,
+            node.moment_y,
+            node.moment_z,
+        ]);
+        checkpoint_chunk(SolverStage::LinearPrepare, index + 1, request.nodes.len())?;
     }
-
-    for element in &request.elements {
-        let node_i = &request.nodes[element.node_i];
-        let node_j = &request.nodes[element.node_j];
-        let dx = node_j.x - node_i.x;
-        let dy = node_j.y - node_i.y;
-        let dz = node_j.z - node_i.z;
-        let length = (dx * dx + dy * dy + dz * dz).sqrt();
-        let rotation = frame3d_rotation_with_local_y(dx, dy, dz, length, element.local_y_axis)?;
-        let local_stiffness = frame3d_local_stiffness(
-            element.area,
-            element.youngs_modulus,
-            element.shear_modulus,
-            element.torsion_constant,
-            element.moment_of_inertia_y,
-            element.moment_of_inertia_z,
-            length,
-        );
-        let transform = frame3d_transform(&rotation);
-        let global_element_stiffness = transform_frame3d_stiffness(&local_stiffness, &transform);
-        let map = frame3d_dof_map(element.node_i, element.node_j);
-
-        for row in 0..12 {
-            for column in 0..12 {
-                add_at(
-                    &mut global_stiffness,
-                    map[row],
-                    map[column],
-                    global_element_stiffness[row][column],
-                );
-            }
-        }
+    checkpoint(SolverStage::ElementAssembly, 0)?;
+    for (index, element) in request.elements.iter().enumerate() {
+        FrameElement::mechanical(&request, element)?.assemble(&mut stiffness, &mut forces)?;
+        checkpoint_chunk(
+            SolverStage::ElementAssembly,
+            index + 1,
+            request.elements.len(),
+        )?;
     }
+    validate_matrix(&stiffness, dof_count)?;
+    let constrained = constrained_frame_3d_dofs(&request);
+    let (reduced, force, free) = reduce_sparse_system(&stiffness, &forces, &constrained)?;
+    let solution = solve_spd_system_profile_with_options(&reduced, &force, options)?.solution;
+    let displacements = restore_solution(dof_count, &[], &free, &solution)?;
 
-    let constrained = constrained_frame_3d_dofs(request.as_ref());
-    let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(&global_stiffness, &force_vector, &constrained)?;
-    let reduced_displacements =
-        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?
-            .solution;
-
-    let mut displacements = vec![0.0; dof_count];
-    for (index, &dof) in free.iter().enumerate() {
-        displacements[dof] = reduced_displacements[index];
-    }
-
-    let nodes = request
-        .nodes
-        .iter()
-        .enumerate()
-        .map(|(index, node)| {
-            let ux = displacements[index * 6];
-            let uy = displacements[index * 6 + 1];
-            let uz = displacements[index * 6 + 2];
-            let rx = displacements[index * 6 + 3];
-            let ry = displacements[index * 6 + 4];
-            let rz = displacements[index * 6 + 5];
-
-            Frame3dNodeResult {
+    let nodes = try_collect_results(
+        SolverStage::ResultNodes,
+        request.nodes.iter().enumerate().map(|(index, node)| {
+            let [ux, uy, uz, rx, ry, rz] =
+                std::array::from_fn(|dof| displacements[index * 6 + dof]);
+            let displacement_magnitude = norm3([ux, uy, uz]);
+            let rotation_magnitude = norm3([rx, ry, rz]);
+            finite_fields(
+                &node.id,
+                "displacements",
+                &[
+                    ux,
+                    uy,
+                    uz,
+                    rx,
+                    ry,
+                    rz,
+                    displacement_magnitude,
+                    rotation_magnitude,
+                ],
+            )?;
+            Ok(Frame3dNodeResult {
                 index,
                 id: node.id.clone(),
                 x: node.x,
@@ -115,126 +95,76 @@ fn solve_frame_3d_internal(
                 rx,
                 ry,
                 rz,
-                displacement_magnitude: (ux * ux + uy * uy + uz * uz).sqrt(),
-                rotation_magnitude: (rx * rx + ry * ry + rz * rz).sqrt(),
-            }
-        })
-        .collect::<Vec<_>>();
-
-    let elements = request
-        .elements
-        .iter()
-        .enumerate()
-        .map(|(index, element)| {
-            let node_i = &request.nodes[element.node_i];
-            let node_j = &request.nodes[element.node_j];
-            let dx = node_j.x - node_i.x;
-            let dy = node_j.y - node_i.y;
-            let dz = node_j.z - node_i.z;
-            let length = (dx * dx + dy * dy + dz * dz).sqrt();
-            let rotation = frame3d_rotation_with_local_y(dx, dy, dz, length, element.local_y_axis)
-                .expect("validated 3d frame element should define a stable local axis");
-            let local_stiffness = frame3d_local_stiffness(
-                element.area,
-                element.youngs_modulus,
-                element.shear_modulus,
-                element.torsion_constant,
-                element.moment_of_inertia_y,
-                element.moment_of_inertia_z,
-                length,
-            );
-            let transform = frame3d_transform(&rotation);
-            let map = frame3d_dof_map(element.node_i, element.node_j);
-            let global_displacements = std::array::from_fn(|i| displacements[map[i]]);
-            let local_displacements =
-                multiply_matrix_vector_12x12(&transform, &global_displacements);
-            let local_forces = multiply_matrix_vector_12x12(&local_stiffness, &local_displacements);
-            let strain_energy = frame3d_strain_energy(&local_forces, &local_displacements);
-            let axial_stress = local_forces[0].abs().max(local_forces[6].abs()) / element.area;
-            let bending_stress_y =
-                local_forces[4].abs().max(local_forces[10].abs()) / element.section_modulus_y;
-            let bending_stress_z =
-                local_forces[5].abs().max(local_forces[11].abs()) / element.section_modulus_z;
-            let max_bending_stress = bending_stress_y + bending_stress_z;
-            let max_combined_stress = axial_stress + max_bending_stress;
-
-            Frame3dElementResult {
+                displacement_magnitude,
+                rotation_magnitude,
+            })
+        }),
+    )?;
+    let elements = try_collect_results(
+        SolverStage::ResultElements,
+        request.elements.iter().enumerate().map(|(index, e)| {
+            let kernel = FrameElement::mechanical(&request, e)?;
+            let r = kernel.recover(&displacements)?;
+            let f = r.forces;
+            Ok(Frame3dElementResult {
                 index,
-                id: element.id.clone(),
-                node_i: element.node_i,
-                node_j: element.node_j,
-                length,
-                axial_force_i: local_forces[0],
-                shear_force_y_i: local_forces[1],
-                shear_force_z_i: local_forces[2],
-                torsion_i: local_forces[3],
-                moment_y_i: local_forces[4],
-                moment_z_i: local_forces[5],
-                axial_force_j: local_forces[6],
-                shear_force_y_j: local_forces[7],
-                shear_force_z_j: local_forces[8],
-                torsion_j: local_forces[9],
-                moment_y_j: local_forces[10],
-                moment_z_j: local_forces[11],
-                axial_stress,
-                max_bending_stress,
-                max_combined_stress,
-                strain_energy,
-            }
-        })
-        .collect::<Vec<_>>();
-
+                id: e.id.clone(),
+                node_i: e.node_i,
+                node_j: e.node_j,
+                length: kernel.length,
+                axial_force_i: f[0],
+                shear_force_y_i: f[1],
+                shear_force_z_i: f[2],
+                torsion_i: f[3],
+                moment_y_i: f[4],
+                moment_z_i: f[5],
+                axial_force_j: f[6],
+                shear_force_y_j: f[7],
+                shear_force_z_j: f[8],
+                torsion_j: f[9],
+                moment_y_j: f[10],
+                moment_z_j: f[11],
+                axial_stress: r.axial_stress,
+                max_bending_stress: r.bending_stress,
+                max_combined_stress: r.combined_stress,
+                strain_energy: r.energy,
+            })
+        }),
+    )?;
     Ok(SolveFrame3dResult {
         input: request.into_owned(),
-        max_displacement: nodes
-            .iter()
-            .map(|node| node.displacement_magnitude)
-            .fold(0.0_f64, f64::max),
-        max_rotation: nodes
-            .iter()
-            .map(|node| node.rotation_magnitude)
-            .fold(0.0_f64, f64::max),
-        max_moment: elements
-            .iter()
-            .flat_map(|element| {
-                [
-                    element.moment_y_i.abs(),
-                    element.moment_z_i.abs(),
-                    element.moment_y_j.abs(),
-                    element.moment_z_j.abs(),
-                ]
-            })
-            .fold(0.0_f64, f64::max),
-        max_stress: elements
-            .iter()
-            .map(|element| element.max_combined_stress)
-            .fold(0.0_f64, f64::max),
-        total_strain_energy: elements.iter().map(|element| element.strain_energy).sum(),
+        max_displacement: max_results(SolverStage::ResultNodeSummary, &nodes, |n| {
+            n.displacement_magnitude
+        })?,
+        max_rotation: max_results(SolverStage::ResultNodeSummary, &nodes, |n| {
+            n.rotation_magnitude
+        })?,
+        max_moment: max_results(SolverStage::ResultElementSummary, &elements, |e| {
+            e.moment_y_i
+                .abs()
+                .max(e.moment_z_i.abs())
+                .max(e.moment_y_j.abs())
+                .max(e.moment_z_j.abs())
+        })?,
+        max_stress: max_results(SolverStage::ResultElementSummary, &elements, |e| {
+            e.max_combined_stress
+        })?,
+        total_strain_energy: total_energy(elements.iter().map(|e| e.strain_energy))?,
         nodes,
         elements,
     })
 }
 
 pub(super) fn validate_frame_3d_request(request: &SolveFrame3dRequest) -> Result<(), String> {
+    checkpoint(SolverStage::ElementPrecompute, 0)?;
     if request.nodes.len() < 2 {
-        return Err("3d frame must define at least two nodes".to_string());
+        return Err("3d frame must define at least two nodes".into());
     }
     if request.elements.is_empty() {
-        return Err("3d frame must define at least one element".to_string());
+        return Err("3d frame must define at least one element".into());
     }
-
-    let constrained_dofs = request.nodes.iter().fold(0, |sum, node| {
-        sum + usize::from(node.fix_x)
-            + usize::from(node.fix_y)
-            + usize::from(node.fix_z)
-            + usize::from(node.fix_rx)
-            + usize::from(node.fix_ry)
-            + usize::from(node.fix_rz)
-    });
-    if constrained_dofs < 6 {
-        return Err("3d frame must restrain at least six degrees of freedom".to_string());
-    }
-
+    let mut constrained = 0;
+    let count = request.nodes.len() + request.elements.len();
     for (index, node) in request.nodes.iter().enumerate() {
         if !node.x.is_finite() || !node.y.is_finite() || !node.z.is_finite() {
             return Err(format!("3d frame node {index} has invalid coordinates"));
@@ -245,12 +175,53 @@ pub(super) fn validate_frame_3d_request(request: &SolveFrame3dRequest) -> Result
         if !node.moment_x.is_finite() || !node.moment_y.is_finite() || !node.moment_z.is_finite() {
             return Err(format!("3d frame node {index} has invalid moment"));
         }
+        constrained += [
+            node.fix_x,
+            node.fix_y,
+            node.fix_z,
+            node.fix_rx,
+            node.fix_ry,
+            node.fix_rz,
+        ]
+        .into_iter()
+        .filter(|v| *v)
+        .count();
+        checkpoint_chunk(SolverStage::ElementPrecompute, index + 1, count)?;
     }
-
-    for element in &request.elements {
-        validate_frame_3d_element(request, element)?;
+    if constrained < 6 {
+        return Err("3d frame must restrain at least six degrees of freedom".into());
     }
-
+    for (index, e) in request.elements.iter().enumerate() {
+        if e.node_i >= request.nodes.len() || e.node_j >= request.nodes.len() {
+            return Err("3d frame element references an out-of-range node".into());
+        }
+        if e.node_i == e.node_j {
+            return Err("3d frame element must connect two distinct nodes".into());
+        }
+        for (name, value) in [
+            ("area", e.area),
+            ("youngs_modulus", e.youngs_modulus),
+            ("shear_modulus", e.shear_modulus),
+            ("torsion_constant", e.torsion_constant),
+            ("moment_of_inertia_y", e.moment_of_inertia_y),
+            ("moment_of_inertia_z", e.moment_of_inertia_z),
+            ("section_modulus_y", e.section_modulus_y),
+            ("section_modulus_z", e.section_modulus_z),
+        ] {
+            if !value.is_finite() || value <= 0.0 {
+                return Err(format!("3d frame element {name} must be positive"));
+            }
+        }
+        let a = &request.nodes[e.node_i];
+        let b = &request.nodes[e.node_j];
+        let delta = [b.x - a.x, b.y - a.y, b.z - a.z];
+        frame3d_rotation_with_local_y(delta[0], delta[1], delta[2], norm3(delta), e.local_y_axis)?;
+        checkpoint_chunk(
+            SolverStage::ElementPrecompute,
+            request.nodes.len() + index + 1,
+            count,
+        )?;
+    }
     Ok(())
 }
 
@@ -261,67 +232,16 @@ pub(super) fn constrained_frame_3d_dofs(request: &SolveFrame3dRequest) -> Vec<us
         .enumerate()
         .flat_map(|(index, node)| {
             [
-                node.fix_x.then_some(index * 6),
-                node.fix_y.then_some(index * 6 + 1),
-                node.fix_z.then_some(index * 6 + 2),
-                node.fix_rx.then_some(index * 6 + 3),
-                node.fix_ry.then_some(index * 6 + 4),
-                node.fix_rz.then_some(index * 6 + 5),
+                node.fix_x,
+                node.fix_y,
+                node.fix_z,
+                node.fix_rx,
+                node.fix_ry,
+                node.fix_rz,
             ]
             .into_iter()
-            .flatten()
+            .enumerate()
+            .filter_map(move |(dof, fixed)| fixed.then_some(index * 6 + dof))
         })
         .collect()
-}
-
-fn validate_frame_3d_element(
-    request: &SolveFrame3dRequest,
-    element: &kyuubiki_protocol::Frame3dElementInput,
-) -> Result<(), String> {
-    if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
-        return Err("3d frame element references an out-of-range node".to_string());
-    }
-    if element.node_i == element.node_j {
-        return Err("3d frame element must connect two distinct nodes".to_string());
-    }
-    if !(element.area.is_finite() && element.area > 0.0) {
-        return Err("3d frame element area must be positive".to_string());
-    }
-    if !(element.youngs_modulus.is_finite() && element.youngs_modulus > 0.0) {
-        return Err("3d frame element youngs_modulus must be positive".to_string());
-    }
-    if !(element.shear_modulus.is_finite() && element.shear_modulus > 0.0) {
-        return Err("3d frame element shear_modulus must be positive".to_string());
-    }
-    if !(element.torsion_constant.is_finite() && element.torsion_constant > 0.0) {
-        return Err("3d frame element torsion_constant must be positive".to_string());
-    }
-    if !(element.moment_of_inertia_y.is_finite() && element.moment_of_inertia_y > 0.0) {
-        return Err("3d frame element moment_of_inertia_y must be positive".to_string());
-    }
-    if !(element.moment_of_inertia_z.is_finite() && element.moment_of_inertia_z > 0.0) {
-        return Err("3d frame element moment_of_inertia_z must be positive".to_string());
-    }
-    if !(element.section_modulus_y.is_finite() && element.section_modulus_y > 0.0) {
-        return Err("3d frame element section_modulus_y must be positive".to_string());
-    }
-    if !(element.section_modulus_z.is_finite() && element.section_modulus_z > 0.0) {
-        return Err("3d frame element section_modulus_z must be positive".to_string());
-    }
-
-    let node_i = &request.nodes[element.node_i];
-    let node_j = &request.nodes[element.node_j];
-    let dx = node_j.x - node_i.x;
-    let dy = node_j.y - node_i.y;
-    let dz = node_j.z - node_i.z;
-    let length = (dx * dx + dy * dy + dz * dz).sqrt();
-    frame3d_rotation_with_local_y(dx, dy, dz, length, element.local_y_axis)?;
-
-    Ok(())
-}
-
-fn frame3d_strain_energy(local_forces: &[f64; 12], local_displacements: &[f64; 12]) -> f64 {
-    0.5 * (0..12)
-        .map(|index| local_forces[index] * local_displacements[index])
-        .sum::<f64>()
 }

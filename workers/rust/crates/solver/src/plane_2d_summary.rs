@@ -1,4 +1,4 @@
-use crate::solver_control::{SolverStage, checkpoint};
+use crate::solver_postprocess::sum_strain_energy;
 use kyuubiki_protocol::{
     PlaneNodeResult, PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
     PlaneTriangleElementResult,
@@ -65,28 +65,7 @@ pub(super) fn quad_total_strain_energy(
 pub(super) fn total_energy<'a>(
     elements: impl ExactSizeIterator<Item = (&'a str, f64, f64, f64)>,
 ) -> Result<f64, String> {
-    checkpoint(SolverStage::ResultTotals, 0)?;
-    let count = elements.len();
-    let mut total = 0.0;
-    for (index, (id, density, area, thickness)) in elements.enumerate() {
-        let mut factors = [density, area, thickness];
-        factors.sort_unstable_by(f64::total_cmp);
-        let energy = (factors[0] * factors[2]) * factors[1];
-        if !energy.is_finite() || energy < 0.0 || (density != 0.0 && energy == 0.0) {
-            return Err(format!(
-                "plane element {id}: strain energy is not representable"
-            ));
-        }
-        total += energy;
-        if !total.is_finite() {
-            return Err("plane total strain energy is not representable".into());
-        }
-        if (index + 1) % 64 == 0 {
-            checkpoint(SolverStage::ResultTotals, index + 1)?;
-        }
-    }
-    checkpoint(SolverStage::ResultTotals, count)?;
-    Ok(total)
+    sum_strain_energy("plane", elements)
 }
 
 pub(super) fn max_triangle_strain_energy_density(elements: &[PlaneTriangleElementResult]) -> f64 {

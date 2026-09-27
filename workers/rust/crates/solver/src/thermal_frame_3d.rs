@@ -1,13 +1,13 @@
 use std::borrow::Cow;
 
-use crate::frame_3d_math::{
-    add_vector_12, frame3d_dof_map, frame3d_local_stiffness, frame3d_rotation_with_local_y,
-    frame3d_thermal_gradient_vector, frame3d_thermal_uniform_vector, frame3d_transform,
-    multiply_matrix_vector_12x12, subtract_vector_12, transform_frame3d_stiffness, transpose_12x12,
+use crate::frame_3d_element::{
+    FrameElement, elastic_energy, finite_fields, norm3, total_energy, validate_matrix,
 };
-use crate::frame_energy::thermal_frame3d_strain_energy;
+use crate::frame_3d_math::normalized_direction;
 use crate::linear_algebra::{SparseMatrix, add_at, solve_spd_system_profile_with_options};
 use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
+use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
+use crate::solver_postprocess::{max_results, try_collect_results};
 use crate::thermal_frame_3d_constraints::ThermalFrame3dConstraintSystem;
 use crate::thermal_frame_3d_validation::validate_request;
 use kyuubiki_protocol::{
@@ -45,259 +45,85 @@ fn solve_thermal_frame_3d_internal(
     request: Cow<'_, SolveThermalFrame3dRequest>,
     options: SpdSolveOptions,
 ) -> Result<SolveThermalFrame3dResult, String> {
-    validate_request(request.as_ref())?;
-    let constraint_system = ThermalFrame3dConstraintSystem::build(request.as_ref())?;
-
+    validate_request(&request)?;
+    let constraints = ThermalFrame3dConstraintSystem::build(&request)?;
+    checkpoint(SolverStage::LinearPrepare, 0)?;
     let dof_count = request.nodes.len() * 6;
-    let mut global_stiffness = SparseMatrix::new(dof_count);
-    let mut force_vector = vec![0.0; dof_count];
-
+    let mut stiffness = SparseMatrix::new(dof_count);
+    let mut forces = vec![0.0; dof_count];
     for (index, node) in request.nodes.iter().enumerate() {
-        force_vector[index * 6] = node.load_x;
-        force_vector[index * 6 + 1] = node.load_y;
-        force_vector[index * 6 + 2] = node.load_z;
-        force_vector[index * 6 + 3] = node.moment_x;
-        force_vector[index * 6 + 4] = node.moment_y;
-        force_vector[index * 6 + 5] = node.moment_z;
+        forces[index * 6..index * 6 + 6].copy_from_slice(&[
+            node.load_x,
+            node.load_y,
+            node.load_z,
+            node.moment_x,
+            node.moment_y,
+            node.moment_z,
+        ]);
+        checkpoint_chunk(SolverStage::LinearPrepare, index + 1, request.nodes.len())?;
     }
-
+    checkpoint(SolverStage::ElementAssembly, 0)?;
+    let count = request.elements.len()
+        + request.directional_springs.len()
+        + request.directional_rotational_springs.len();
+    let mut completed = 0;
     for spring in &request.directional_springs {
-        assemble_directional_spring(
-            &mut global_stiffness,
+        assemble_spring(
+            &mut stiffness,
             spring.node * 6,
             spring.direction,
             spring.stiffness,
-        );
+        )?;
+        completed += 1;
+        checkpoint_chunk(SolverStage::ElementAssembly, completed, count)?;
     }
     for spring in &request.directional_rotational_springs {
-        assemble_directional_spring(
-            &mut global_stiffness,
+        assemble_spring(
+            &mut stiffness,
             spring.node * 6 + 3,
             spring.direction,
             spring.stiffness,
-        );
+        )?;
+        completed += 1;
+        checkpoint_chunk(SolverStage::ElementAssembly, completed, count)?;
     }
-
-    for element in &request.elements {
-        let node_i = &request.nodes[element.node_i];
-        let node_j = &request.nodes[element.node_j];
-        let dx = node_j.x - node_i.x;
-        let dy = node_j.y - node_i.y;
-        let dz = node_j.z - node_i.z;
-        let length = (dx * dx + dy * dy + dz * dz).sqrt();
-        let rotation = frame3d_rotation_with_local_y(dx, dy, dz, length, element.local_y_axis)?;
-        let local_stiffness = local_stiffness_for(element, length);
-        let transform = frame3d_transform(&rotation);
-        let global_element_stiffness = transform_frame3d_stiffness(&local_stiffness, &transform);
-        let equivalent_local = equivalent_thermal_load(element, node_i, node_j);
-        let equivalent_global =
-            multiply_matrix_vector_12x12(&transpose_12x12(&transform), &equivalent_local);
-        let map = frame3d_dof_map(element.node_i, element.node_j);
-
-        for row in 0..12 {
-            force_vector[map[row]] += equivalent_global[row];
-            for column in 0..12 {
-                add_at(
-                    &mut global_stiffness,
-                    map[row],
-                    map[column],
-                    global_element_stiffness[row][column],
-                );
-            }
-        }
+    for e in &request.elements {
+        FrameElement::thermal(&request, e)?.assemble(&mut stiffness, &mut forces)?;
+        completed += 1;
+        checkpoint_chunk(SolverStage::ElementAssembly, completed, count)?;
     }
-
-    let (reduced_stiffness, reduced_force) =
-        constraint_system.project(&global_stiffness, &force_vector);
-    let reduced_displacements = if reduced_force.is_empty() {
+    // Constrained rows must be valid too: projection must not hide bad assembly.
+    validate_matrix(&stiffness, dof_count)?;
+    let (reduced, force) = constraints.project(&stiffness, &forces)?;
+    let solution = if force.is_empty() {
         Vec::new()
     } else {
-        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?.solution
+        solve_spd_system_profile_with_options(&reduced, &force, options)?.solution
     };
-    let displacements = constraint_system.restore(&reduced_displacements);
+    let displacements = constraints.restore(&solution)?;
 
-    let nodes = build_thermal_frame_3d_nodes(request.as_ref(), &displacements);
-    let elements = build_thermal_frame_3d_elements(request.as_ref(), &displacements);
-    let directional_springs = build_directional_spring_results(request.as_ref(), &displacements);
-    let directional_rotational_springs =
-        build_directional_rotational_spring_results(request.as_ref(), &displacements);
-    let (directional_constraints, directional_rotational_constraints) = constraint_system
-        .build_results(
-            request.as_ref(),
-            &global_stiffness,
-            &force_vector,
-            &displacements,
-        )?;
-    let total_strain_energy = elements
-        .iter()
-        .map(|element| element.strain_energy)
-        .sum::<f64>()
-        + directional_springs
-            .iter()
-            .map(|spring| spring.strain_energy)
-            .sum::<f64>()
-        + directional_rotational_springs
-            .iter()
-            .map(|spring| spring.strain_energy)
-            .sum::<f64>();
-
-    Ok(SolveThermalFrame3dResult {
-        input: request.into_owned(),
-        max_displacement: nodes
-            .iter()
-            .map(|node| node.displacement_magnitude)
-            .fold(0.0_f64, f64::max),
-        max_rotation: nodes
-            .iter()
-            .map(|node| node.rotation_magnitude)
-            .fold(0.0_f64, f64::max),
-        max_moment: elements
-            .iter()
-            .flat_map(|element| {
-                [
-                    element.moment_y_i.abs(),
-                    element.moment_z_i.abs(),
-                    element.moment_y_j.abs(),
-                    element.moment_z_j.abs(),
-                ]
-            })
-            .fold(0.0_f64, f64::max),
-        max_stress: elements
-            .iter()
-            .map(|element| element.max_combined_stress)
-            .fold(0.0_f64, f64::max),
-        max_axial_force: elements
-            .iter()
-            .flat_map(|element| [element.axial_force_i.abs(), element.axial_force_j.abs()])
-            .fold(0.0_f64, f64::max),
-        max_temperature_delta: nodes
-            .iter()
-            .map(|node| node.temperature_delta.abs())
-            .fold(0.0_f64, f64::max),
-        max_temperature_gradient: elements
-            .iter()
-            .flat_map(|element| {
-                [
-                    element.temperature_gradient_y.abs(),
-                    element.temperature_gradient_z.abs(),
-                ]
-            })
-            .fold(0.0_f64, f64::max),
-        total_strain_energy,
-        nodes,
-        elements,
-        directional_springs,
-        directional_rotational_springs,
-        directional_constraints,
-        directional_rotational_constraints,
-    })
-}
-
-fn assemble_directional_spring(
-    global_stiffness: &mut SparseMatrix,
-    dof_offset: usize,
-    raw_direction: [f64; 3],
-    stiffness: f64,
-) {
-    let direction = normalized_direction(raw_direction);
-    for row in 0..3 {
-        for column in 0..3 {
-            add_at(
-                global_stiffness,
-                dof_offset + row,
-                dof_offset + column,
-                stiffness * direction[row] * direction[column],
-            );
-        }
-    }
-}
-
-fn build_directional_spring_results(
-    request: &SolveThermalFrame3dRequest,
-    displacements: &[f64],
-) -> Vec<ThermalFrame3dDirectionalSpringResult> {
-    request
-        .directional_springs
-        .iter()
-        .enumerate()
-        .map(|(index, spring)| {
-            let direction = normalized_direction(spring.direction);
-            let offset = spring.node * 6;
-            let displacement = direction[0] * displacements[offset]
-                + direction[1] * displacements[offset + 1]
-                + direction[2] * displacements[offset + 2];
-            ThermalFrame3dDirectionalSpringResult {
-                index,
-                id: spring.id.clone(),
-                node: spring.node,
-                direction,
-                displacement,
-                reaction_force: -spring.stiffness * displacement,
-                stiffness: spring.stiffness,
-                strain_energy: 0.5 * spring.stiffness * displacement * displacement,
-            }
-        })
-        .collect()
-}
-
-fn build_directional_rotational_spring_results(
-    request: &SolveThermalFrame3dRequest,
-    displacements: &[f64],
-) -> Vec<ThermalFrame3dDirectionalRotationalSpringResult> {
-    request
-        .directional_rotational_springs
-        .iter()
-        .enumerate()
-        .map(|(index, spring)| {
-            let direction = normalized_direction(spring.direction);
-            let offset = spring.node * 6 + 3;
-            let rotation = direction[0] * displacements[offset]
-                + direction[1] * displacements[offset + 1]
-                + direction[2] * displacements[offset + 2];
-            ThermalFrame3dDirectionalRotationalSpringResult {
-                index,
-                id: spring.id.clone(),
-                node: spring.node,
-                direction,
-                rotation,
-                reaction_moment: -spring.stiffness * rotation,
-                stiffness: spring.stiffness,
-                strain_energy: 0.5 * spring.stiffness * rotation * rotation,
-            }
-        })
-        .collect()
-}
-
-fn normalized_direction(direction: [f64; 3]) -> [f64; 3] {
-    let norm = direction
-        .iter()
-        .map(|value| value * value)
-        .sum::<f64>()
-        .sqrt();
-    [
-        direction[0] / norm,
-        direction[1] / norm,
-        direction[2] / norm,
-    ]
-}
-
-fn build_thermal_frame_3d_nodes(
-    request: &SolveThermalFrame3dRequest,
-    displacements: &[f64],
-) -> Vec<ThermalFrame3dNodeResult> {
-    request
-        .nodes
-        .iter()
-        .enumerate()
-        .map(|(index, node)| {
-            let ux = displacements[index * 6];
-            let uy = displacements[index * 6 + 1];
-            let uz = displacements[index * 6 + 2];
-            let rx = displacements[index * 6 + 3];
-            let ry = displacements[index * 6 + 4];
-            let rz = displacements[index * 6 + 5];
-
-            ThermalFrame3dNodeResult {
+    let nodes = try_collect_results(
+        SolverStage::ResultNodes,
+        request.nodes.iter().enumerate().map(|(index, node)| {
+            let [ux, uy, uz, rx, ry, rz] =
+                std::array::from_fn(|dof| displacements[index * 6 + dof]);
+            let displacement_magnitude = norm3([ux, uy, uz]);
+            let rotation_magnitude = norm3([rx, ry, rz]);
+            finite_fields(
+                &node.id,
+                "displacements",
+                &[
+                    ux,
+                    uy,
+                    uz,
+                    rx,
+                    ry,
+                    rz,
+                    displacement_magnitude,
+                    rotation_magnitude,
+                ],
+            )?;
+            Ok(ThermalFrame3dNodeResult {
                 index,
                 id: node.id.clone(),
                 x: node.x,
@@ -309,144 +135,182 @@ fn build_thermal_frame_3d_nodes(
                 rx,
                 ry,
                 rz,
-                displacement_magnitude: (ux * ux + uy * uy + uz * uz).sqrt(),
-                rotation_magnitude: (rx * rx + ry * ry + rz * rz).sqrt(),
+                displacement_magnitude,
+                rotation_magnitude,
                 temperature_delta: node.temperature_delta,
-            }
-        })
-        .collect()
-}
-
-fn build_thermal_frame_3d_elements(
-    request: &SolveThermalFrame3dRequest,
-    displacements: &[f64],
-) -> Vec<ThermalFrame3dElementResult> {
-    request
-        .elements
-        .iter()
-        .enumerate()
-        .map(|(index, element)| {
-            let node_i = &request.nodes[element.node_i];
-            let node_j = &request.nodes[element.node_j];
-            let dx = node_j.x - node_i.x;
-            let dy = node_j.y - node_i.y;
-            let dz = node_j.z - node_i.z;
-            let length = (dx * dx + dy * dy + dz * dz).sqrt();
-            let rotation = frame3d_rotation_with_local_y(dx, dy, dz, length, element.local_y_axis)
-                .expect("validated thermal 3d frame element should define a stable local axis");
-            let local_stiffness = local_stiffness_for(element, length);
-            let transform = frame3d_transform(&rotation);
-            let map = frame3d_dof_map(element.node_i, element.node_j);
-            let global_displacements = std::array::from_fn(|i| displacements[map[i]]);
-            let local_displacements =
-                multiply_matrix_vector_12x12(&transform, &global_displacements);
-            let equivalent_local = equivalent_thermal_load(element, node_i, node_j);
-            let local_forces = subtract_vector_12(
-                &multiply_matrix_vector_12x12(&local_stiffness, &local_displacements),
-                &equivalent_local,
-            );
-            let average_temperature_delta =
-                0.5 * (node_i.temperature_delta + node_j.temperature_delta);
-            let thermal_strain = element.thermal_expansion * average_temperature_delta;
-            let total_strain = (local_displacements[6] - local_displacements[0]) / length;
-            let thermal_curvature_y = element.thermal_expansion * element.temperature_gradient_y
-                / element.section_depth_y;
-            let thermal_curvature_z = element.thermal_expansion * element.temperature_gradient_z
-                / element.section_depth_z;
-            let mechanical_strain = total_strain - thermal_strain;
-            let initial_thermal_energy = 0.5
-                * element.youngs_modulus
-                * length
-                * (element.area * thermal_strain.powi(2)
-                    + element.moment_of_inertia_z * thermal_curvature_y.powi(2)
-                    + element.moment_of_inertia_y * thermal_curvature_z.powi(2));
-            let strain_energy = thermal_frame3d_strain_energy(
-                &local_stiffness,
-                &equivalent_local,
-                &local_displacements,
-                initial_thermal_energy,
-            );
-            let axial_stress = local_forces[0].abs().max(local_forces[6].abs()) / element.area;
-            let bending_stress_y =
-                local_forces[4].abs().max(local_forces[10].abs()) / element.section_modulus_y;
-            let bending_stress_z =
-                local_forces[5].abs().max(local_forces[11].abs()) / element.section_modulus_z;
-            let max_bending_stress = bending_stress_y + bending_stress_z;
-
-            ThermalFrame3dElementResult {
+            })
+        }),
+    )?;
+    let elements = try_collect_results(
+        SolverStage::ResultElements,
+        request.elements.iter().enumerate().map(|(index, e)| {
+            let kernel = FrameElement::thermal(&request, e)?;
+            let r = kernel.recover(&displacements)?;
+            let f = r.forces;
+            Ok(ThermalFrame3dElementResult {
                 index,
-                id: element.id.clone(),
-                node_i: element.node_i,
-                node_j: element.node_j,
-                length,
-                average_temperature_delta,
-                thermal_strain,
-                mechanical_strain,
-                total_strain,
-                temperature_gradient_y: element.temperature_gradient_y,
-                temperature_gradient_z: element.temperature_gradient_z,
-                thermal_curvature_y,
-                thermal_curvature_z,
-                axial_force_i: local_forces[0],
-                shear_force_y_i: local_forces[1],
-                shear_force_z_i: local_forces[2],
-                torsion_i: local_forces[3],
-                moment_y_i: local_forces[4],
-                moment_z_i: local_forces[5],
-                axial_force_j: local_forces[6],
-                shear_force_y_j: local_forces[7],
-                shear_force_z_j: local_forces[8],
-                torsion_j: local_forces[9],
-                moment_y_j: local_forces[10],
-                moment_z_j: local_forces[11],
-                axial_stress,
-                max_bending_stress,
-                max_combined_stress: axial_stress + max_bending_stress,
-                strain_energy,
-            }
-        })
-        .collect()
+                id: e.id.clone(),
+                node_i: e.node_i,
+                node_j: e.node_j,
+                length: kernel.length,
+                average_temperature_delta: kernel.temperature,
+                thermal_strain: kernel.thermal_strain,
+                mechanical_strain: r.mechanical_strain,
+                total_strain: r.total_strain,
+                temperature_gradient_y: e.temperature_gradient_y,
+                temperature_gradient_z: e.temperature_gradient_z,
+                thermal_curvature_y: kernel.thermal_curvatures[0],
+                thermal_curvature_z: kernel.thermal_curvatures[1],
+                axial_force_i: f[0],
+                shear_force_y_i: f[1],
+                shear_force_z_i: f[2],
+                torsion_i: f[3],
+                moment_y_i: f[4],
+                moment_z_i: f[5],
+                axial_force_j: f[6],
+                shear_force_y_j: f[7],
+                shear_force_z_j: f[8],
+                torsion_j: f[9],
+                moment_y_j: f[10],
+                moment_z_j: f[11],
+                axial_stress: r.axial_stress,
+                max_bending_stress: r.bending_stress,
+                max_combined_stress: r.combined_stress,
+                strain_energy: r.energy,
+            })
+        }),
+    )?;
+    let directional_springs = try_collect_results(
+        SolverStage::ResultElements,
+        request
+            .directional_springs
+            .iter()
+            .enumerate()
+            .map(|(index, s)| {
+                let (direction, displacement, reaction_force, strain_energy) =
+                    spring_state(&s.id, s.node * 6, s.direction, s.stiffness, &displacements)?;
+                Ok(ThermalFrame3dDirectionalSpringResult {
+                    index,
+                    id: s.id.clone(),
+                    node: s.node,
+                    direction,
+                    displacement,
+                    reaction_force,
+                    stiffness: s.stiffness,
+                    strain_energy,
+                })
+            }),
+    )?;
+    let directional_rotational_springs = try_collect_results(
+        SolverStage::ResultElements,
+        request
+            .directional_rotational_springs
+            .iter()
+            .enumerate()
+            .map(|(index, s)| {
+                let (direction, rotation, reaction_moment, strain_energy) = spring_state(
+                    &s.id,
+                    s.node * 6 + 3,
+                    s.direction,
+                    s.stiffness,
+                    &displacements,
+                )?;
+                Ok(ThermalFrame3dDirectionalRotationalSpringResult {
+                    index,
+                    id: s.id.clone(),
+                    node: s.node,
+                    direction,
+                    rotation,
+                    reaction_moment,
+                    stiffness: s.stiffness,
+                    strain_energy,
+                })
+            }),
+    )?;
+    let (directional_constraints, directional_rotational_constraints) =
+        constraints.build_results(&request, &stiffness, &forces, &displacements)?;
+    let total_strain_energy = total_energy(elements.iter().map(|e| e.strain_energy))?
+        + total_energy(directional_springs.iter().map(|s| s.strain_energy))?
+        + total_energy(
+            directional_rotational_springs
+                .iter()
+                .map(|s| s.strain_energy),
+        )?;
+    finite_fields("summary", "total strain energy", &[total_strain_energy])?;
+    Ok(SolveThermalFrame3dResult {
+        input: request.into_owned(),
+        max_displacement: max_results(SolverStage::ResultNodeSummary, &nodes, |n| {
+            n.displacement_magnitude
+        })?,
+        max_rotation: max_results(SolverStage::ResultNodeSummary, &nodes, |n| {
+            n.rotation_magnitude
+        })?,
+        max_moment: max_results(SolverStage::ResultElementSummary, &elements, |e| {
+            e.moment_y_i
+                .abs()
+                .max(e.moment_z_i.abs())
+                .max(e.moment_y_j.abs())
+                .max(e.moment_z_j.abs())
+        })?,
+        max_stress: max_results(SolverStage::ResultElementSummary, &elements, |e| {
+            e.max_combined_stress
+        })?,
+        max_axial_force: max_results(SolverStage::ResultElementSummary, &elements, |e| {
+            e.axial_force_i.abs().max(e.axial_force_j.abs())
+        })?,
+        max_temperature_delta: max_results(SolverStage::ResultNodeSummary, &nodes, |n| {
+            n.temperature_delta.abs()
+        })?,
+        max_temperature_gradient: max_results(SolverStage::ResultElementSummary, &elements, |e| {
+            e.temperature_gradient_y
+                .abs()
+                .max(e.temperature_gradient_z.abs())
+        })?,
+        total_strain_energy,
+        nodes,
+        elements,
+        directional_springs,
+        directional_rotational_springs,
+        directional_constraints,
+        directional_rotational_constraints,
+    })
 }
 
-fn local_stiffness_for(
-    element: &kyuubiki_protocol::ThermalFrame3dElementInput,
-    length: f64,
-) -> [[f64; 12]; 12] {
-    frame3d_local_stiffness(
-        element.area,
-        element.youngs_modulus,
-        element.shear_modulus,
-        element.torsion_constant,
-        element.moment_of_inertia_y,
-        element.moment_of_inertia_z,
-        length,
-    )
+fn assemble_spring(
+    matrix: &mut SparseMatrix,
+    offset: usize,
+    raw_direction: [f64; 3],
+    stiffness: f64,
+) -> Result<(), String> {
+    let direction = normalized_direction(raw_direction)?;
+    for row in 0..3 {
+        for column in 0..3 {
+            add_at(
+                matrix,
+                offset + row,
+                offset + column,
+                stiffness * direction[row] * direction[column],
+            );
+        }
+    }
+    Ok(())
 }
 
-fn equivalent_thermal_load(
-    element: &kyuubiki_protocol::ThermalFrame3dElementInput,
-    node_i: &kyuubiki_protocol::ThermalFrame3dNodeInput,
-    node_j: &kyuubiki_protocol::ThermalFrame3dNodeInput,
-) -> [f64; 12] {
-    let average_temperature_delta = 0.5 * (node_i.temperature_delta + node_j.temperature_delta);
-    add_vector_12(
-        &frame3d_thermal_uniform_vector(
-            element.area,
-            element.youngs_modulus,
-            element.thermal_expansion,
-            average_temperature_delta,
-        ),
-        &frame3d_thermal_gradient_vector(
-            element.youngs_modulus,
-            [element.moment_of_inertia_y, element.moment_of_inertia_z],
-            element.thermal_expansion,
-            [element.section_depth_y, element.section_depth_z],
-            [
-                element.temperature_gradient_y,
-                element.temperature_gradient_z,
-            ],
-        ),
-    )
+fn spring_state(
+    id: &str,
+    offset: usize,
+    raw_direction: [f64; 3],
+    stiffness: f64,
+    displacements: &[f64],
+) -> Result<([f64; 3], f64, f64, f64), String> {
+    let direction = normalized_direction(raw_direction)?;
+    let displacement = (0..3)
+        .map(|i| direction[i] * displacements[offset + i])
+        .sum::<f64>();
+    let reaction = -stiffness * displacement;
+    finite_fields(id, "spring response", &[displacement, reaction])?;
+    let energy = elastic_energy(id, displacement, stiffness, 1.0)?;
+    Ok((direction, displacement, reaction, energy))
 }
 
 fn default_thermal_frame_options(node_count: usize) -> SpdSolveOptions {

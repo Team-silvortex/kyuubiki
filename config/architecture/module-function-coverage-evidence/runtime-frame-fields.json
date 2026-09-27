@@ -1,0 +1,130 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Separately scoped planar and spatial mechanical/thermal frame field-energy, section orientation, support-basis, numerical-range and cancellation regressions, including in-process Rust headless dispatch. These are bounded numerical/recovery checks, not general frame qualification, installed-Agent recovery or performance evidence.",
+  "evidence_claims": [
+    {
+      "id": "planar-frame-field-energy-finite-output-and-replay",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/frame_2d.rs",
+        "workers/rust/crates/solver/src/frame_2d_element.rs",
+        "workers/rust/crates/solver/src/frame_2d_system.rs",
+        "workers/rust/crates/solver/src/frame_2d_math.rs",
+        "workers/rust/crates/solver/src/frame_2d_validation.rs",
+        "workers/rust/crates/solver/src/frame_energy.rs",
+        "workers/rust/crates/solver/tests/frame_2d_output_reliability.rs",
+        "workers/rust/crates/cli/tests/frame_2d_output_operator.rs",
+        "config/operator-validation-profiles.json",
+        "config/operator-validation-profiles/thermal-structural.json",
+        "reports/frame-2d-output-reliability-20260927.md"
+      ],
+      "required_text": [
+        "thermal_frame_transverse_load_energy_includes_curvature_variation",
+        "free_thermal_expansion_and_curvature_preserve_mechanical_field_energy",
+        "planar_thermal_energy_matches_mechanical_and_spatial_reductions",
+        "thermal_frame_portal_zero_temperature_energy_matches_external_work",
+        "fixed_frame_supports_cannot_hide_invalid_element_or_assembled_stiffness",
+        "frame_energy_total_cannot_overflow_after_finite_member_energies",
+        "frame_assembly_and_recovery_cancel_at_chunk_boundaries",
+        "headless_frame_numerical_failure_is_not_success_and_valid_input_replays",
+        "This is bounded planar-frame output validation, not general frame qualification."
+      ]
+    },
+    {
+      "id": "spatial-frame-field-energy-directions-and-replay",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/frame_3d.rs",
+        "workers/rust/crates/solver/src/frame_3d_element.rs",
+        "workers/rust/crates/solver/src/frame_3d_math.rs",
+        "workers/rust/crates/solver/src/thermal_frame_3d.rs",
+        "workers/rust/crates/solver/src/thermal_frame_3d_validation.rs",
+        "workers/rust/crates/solver/src/thermal_frame_3d_constraints.rs",
+        "workers/rust/crates/solver/tests/frame_3d_output_reliability.rs",
+        "workers/rust/crates/cli/tests/frame_3d_output_operator.rs",
+        "config/operator-validation-profiles/structural-spatial-frame.json",
+        "config/operator-validation-profiles/thermal-structural.json",
+        "reports/frame-3d-output-reliability-20260927.md"
+      ],
+      "required_text": [
+        "spatial_thermal_background_does_not_erase_small_mechanical_energy",
+        "spatial_frame_mixed_loads_match_closed_form_and_nodal_work",
+        "spatial_frame_rotation_and_reversed_connectivity_preserve_response",
+        "spatial_directional_spring_is_invariant_under_finite_direction_scaling",
+        "spatial_exact_directional_constraints_preserve_scaled_reactions",
+        "spatial_frame_finite_member_energies_cannot_overflow_total",
+        "spatial_frame_chunk_cancellation_includes_constraint_projection",
+        "headless_spatial_frame_numerical_failure_propagates_and_replays",
+        "This is bounded spatial-frame output validation, not general frame qualification."
+      ]
+    },
+    {
+      "id": "spatial-frame-support-basis-reactions-and-replay",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/thermal_frame_3d_constraint_basis.rs",
+        "workers/rust/crates/solver/src/thermal_frame_3d_constraints.rs",
+        "workers/rust/crates/solver/tests/frame_3d_support_reliability.rs",
+        "workers/rust/crates/cli/tests/frame_3d_output_operator.rs",
+        "config/operator-validation-profiles/thermal-structural.json",
+        "reports/frame-3d-support-reliability-20260927.md"
+      ],
+      "required_text": [
+        "independent_near_parallel_supports_recover_analytic_reactions",
+        "rotated_support_plane_preserves_free_motion_energy_and_reaction_balance",
+        "three_oblique_supports_remove_all_three_physical_dofs",
+        "four_support_directions_reject_before_constructing_a_negative_free_dimension",
+        "support_reparameterization_preserves_thermal_and_spring_response",
+        "finite_member_and_spring_energy_groups_cannot_overflow_total",
+        "support_reaction_factorization_and_substitution_cancel_and_replay",
+        "headless_spatial_near_parallel_supports_preserve_reactions",
+        "headless_spatial_dependent_supports_fail_and_valid_input_replays",
+        "headless_spatial_unrepresentable_support_reactions_propagate_failure",
+        "This is bounded spatial-frame support validation, not general frame qualification."
+      ]
+    },
+    {
+      "id": "spatial-frame-orthonormal-section-basis",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/frame_3d_math.rs",
+        "workers/rust/crates/solver/src/frame_3d_orientation_tests.rs",
+        "workers/rust/crates/solver/tests/frame_3d_orientation_reliability.rs",
+        "workers/rust/crates/cli/tests/frame_3d_output_operator.rs",
+        "config/operator-validation-profiles/structural-spatial-frame.json",
+        "config/operator-validation-profiles/thermal-structural.json",
+        "reports/frame-3d-orientation-reliability-20260927.md"
+      ],
+      "required_text": [
+        "near_parallel_section_hint_still_builds_a_right_handed_orthonormal_triad",
+        "section_hint_cannot_give_an_infinitesimal_rigid_rotation_elastic_force",
+        "default_section_axes_keep_the_reference_convention_at_poles_and_branch_boundary",
+        "mechanical_section_hint_axial_component_cannot_change_response",
+        "thermal_section_hint_axial_component_cannot_change_coupled_response",
+        "free_uniform_thermal_expansion_remains_parallel_to_the_member",
+        "equivalent_section_hints_preserve_refined_frame_fields",
+        "reversed_section_hint_preserves_physics_when_local_thermal_gradients_follow_it",
+        "implicit_modal_axes_preserve_the_free_cantilever_spectrum_under_rotation",
+        "headless_spatial_parallel_section_hint_fails_and_valid_model_replays",
+        "This is bounded spatial-frame orientation validation, not general frame qualification."
+      ]
+    }
+  ]
+}

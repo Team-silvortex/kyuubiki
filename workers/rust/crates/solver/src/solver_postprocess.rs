@@ -95,6 +95,37 @@ pub(crate) fn restore_solution(
     Ok(full)
 }
 
+pub(crate) fn sum_strain_energy<'a>(
+    context: &str,
+    elements: impl ExactSizeIterator<Item = (&'a str, f64, f64, f64)>,
+) -> Result<f64, String> {
+    checkpoint(SolverStage::ResultTotals, 0)?;
+    let count = elements.len();
+    let mut total = 0.0;
+    for (index, (id, density, area, length)) in elements.enumerate() {
+        // Balance nonnegative factors before multiplying the remaining scale.
+        let mut factors = [density, area, length];
+        factors.sort_unstable_by(f64::total_cmp);
+        let energy = (factors[0] * factors[2]) * factors[1];
+        if !energy.is_finite() || energy < 0.0 || (density != 0.0 && energy == 0.0) {
+            return Err(format!(
+                "{context} element {id}: strain energy is not representable"
+            ));
+        }
+        total += energy;
+        if !total.is_finite() {
+            return Err(format!(
+                "{context} total strain energy is not representable"
+            ));
+        }
+        if (index + 1) % CHUNK == 0 {
+            checkpoint(SolverStage::ResultTotals, index + 1)?;
+        }
+    }
+    checkpoint(SolverStage::ResultTotals, count)?;
+    Ok(total)
+}
+
 #[cfg(test)]
 #[path = "solver_postprocess_kernel_tests.rs"]
 mod tests;

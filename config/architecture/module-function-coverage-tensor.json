@@ -30,6 +30,8 @@
     "config/architecture/module-function-coverage-evidence/runtime-recovery.json",
     "config/architecture/module-function-coverage-evidence/runtime-postprocess.json",
     "config/architecture/module-function-coverage-evidence/runtime-thermal-fields.json",
+    "config/architecture/module-function-coverage-evidence/runtime-beam-fields.json",
+    "config/architecture/module-function-coverage-evidence/runtime-frame-fields.json",
     "config/architecture/module-function-coverage-evidence/runtime-scalar-plane.json",
     "config/architecture/module-function-coverage-evidence/project-data-lifecycle.json",
     "config/architecture/module-function-coverage-evidence/runtime-database-lifecycle.json",

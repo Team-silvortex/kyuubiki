@@ -1,13 +1,46 @@
 # daji 3.x
 
 This is the single entrypoint for the active Kyuubiki product line.
-The current development point in this line is `daji 3.4.2`.
-Source package metadata targets `3.4.2`; the last locally built and installed
+The current development point in this line is `daji 3.4.3`.
+Source package metadata targets `3.4.3`; the last locally built and installed
 desktop/runtime baseline remains `daji 3.4.0`.
 Local installation does not imply that public downloads or SDK packages have
 been published; platform acceptance remains separately scoped.
 
-## Daji 3.4.2 Checkpoint
+## Daji 3.4.3 Checkpoint
+
+September 28, 2026. This source patch hardens existing structural and
+thermal-structural operators while retaining the Engine/Solver boundary:
+
+- Truss, thermal-truss, beam, and frame paths check assembly and recovered
+  physical fields. Range-aware arithmetic preserves representable outputs;
+  invalid values fail even when every degree of freedom is restrained.
+- Planar thermal-frame energy includes bending-field variation. Spatial
+  thermal-frame energy avoids subtracting large, almost equal totals.
+- Spatial directions use scale-first normalization. Exact thermal-frame
+  support constraints and recovered reactions share a stable basis; redundant
+  or overcomplete support directions fail without a rank-underflow panic.
+- Explicit spatial section hints form a right-handed orthonormal basis.
+  Equivalent hints retain mechanical/thermal fields and rigid modes, while
+  the default reference-axis convention is preserved.
+- Public Solver and Rust Headless plan/bridge/Engine regressions cover closed
+  forms, orientation, refinement, cancellation, and fresh valid replay.
+
+See `releases/snapshots/3.4.3.json` and the
+[truss](../reports/truss-output-reliability-20260927.md),
+[thermal truss](../reports/thermal-truss-output-reliability-20260927.md),
+[beam](../reports/beam-output-reliability-20260927.md),
+[planar frame](../reports/frame-2d-output-reliability-20260927.md),
+[spatial frame](../reports/frame-3d-output-reliability-20260927.md),
+[support](../reports/frame-3d-support-reliability-20260927.md), and
+[orientation](../reports/frame-3d-orientation-reliability-20260927.md) reports.
+Those reports retain their 3.4.2 working-tree test provenance. Recompute affected
+historical results before research reuse. Scoped macOS/Linux regressions are
+not external-solver correlation, general physical qualification, installed-Agent
+or GUI acceptance, Windows qualification, or a new large-scale benchmark.
+Tensor readiness gaps remain open; no binaries are rebuilt or published here.
+
+## Daji 3.4.2 Checkpoint (Historical)
 
 September 27, 2026. This source patch strengthens existing workflow and physical
 execution paths without coupling operator implementations to the engine:

@@ -1,8 +1,9 @@
+use crate::beam_1d_element::{BeamElement, finite_fields};
+use crate::beam_1d_system::solve_system;
 use crate::beam_1d_validation::{validate_beam_1d_request, validate_thermal_beam_1d_request};
-use crate::linear_algebra::{
-    SparseMatrix, add_at, reduce_sparse_system, solve_spd_system_profile_with_options,
-};
 use crate::linear_solver_profile::SpdSolveOptions;
+use crate::solver_control::SolverStage;
+use crate::solver_postprocess::{fold_results, max_results, try_collect_results};
 use kyuubiki_protocol::{
     Beam1dElementResult, Beam1dNodeResult, SolveBeam1dRequest, SolveBeam1dResult,
     SolveThermalBeam1dRequest, SolveThermalBeam1dResult, ThermalBeam1dElementResult,
@@ -30,151 +31,63 @@ fn solve_beam_1d_internal(
     options: SpdSolveOptions,
 ) -> Result<SolveBeam1dResult, String> {
     validate_beam_1d_request(request.as_ref())?;
-
-    let dof_count = request.nodes.len() * 2;
-    let mut global_stiffness = SparseMatrix::new(dof_count);
-    let mut force_vector = vec![0.0; dof_count];
-
-    for (index, node) in request.nodes.iter().enumerate() {
-        force_vector[index * 2] = node.load_y;
-        force_vector[index * 2 + 1] = node.moment_z;
-    }
-
-    for element in &request.elements {
-        let node_i = &request.nodes[element.node_i];
-        let node_j = &request.nodes[element.node_j];
-        let length = (node_j.x - node_i.x).abs();
-        let local_stiffness =
-            beam_local_stiffness(element.youngs_modulus, element.moment_of_inertia, length);
-        let equivalent_load = beam_uniform_load_vector(length, element.distributed_load_y);
-        let map = [
-            element.node_i * 2,
-            element.node_i * 2 + 1,
-            element.node_j * 2,
-            element.node_j * 2 + 1,
-        ];
-
-        for row in 0..4 {
-            force_vector[map[row]] += equivalent_load[row];
-        }
-
-        for row in 0..4 {
-            for column in 0..4 {
-                add_at(
-                    &mut global_stiffness,
-                    map[row],
-                    map[column],
-                    local_stiffness[row][column],
-                );
-            }
-        }
-    }
-
-    let constrained = request
-        .nodes
-        .iter()
-        .enumerate()
-        .flat_map(|(index, node)| {
-            let mut dofs = Vec::new();
-            if node.fix_y {
-                dofs.push(index * 2);
-            }
-            if node.fix_rz {
-                dofs.push(index * 2 + 1);
-            }
-            dofs
-        })
-        .collect::<Vec<_>>();
-
-    let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(&global_stiffness, &force_vector, &constrained)?;
-    let reduced_displacements =
-        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?
-            .solution;
-
-    let mut displacements = vec![0.0; dof_count];
-    for (index, &dof) in free.iter().enumerate() {
-        displacements[dof] = reduced_displacements[index];
-    }
-
-    let nodes = request
-        .nodes
-        .iter()
-        .enumerate()
-        .map(|(index, node)| {
+    let displacements = solve_system(
+        request
+            .nodes
+            .iter()
+            .map(|n| (n.load_y, n.moment_z, n.fix_y, n.fix_rz)),
+        request
+            .elements
+            .iter()
+            .map(|e| BeamElement::mechanical(&request, e)),
+        options,
+    )?;
+    let nodes = try_collect_results(
+        SolverStage::ResultNodes,
+        request.nodes.iter().enumerate().map(|(index, node)| {
             let uy = displacements[index * 2];
             let rz = displacements[index * 2 + 1];
-
-            Beam1dNodeResult {
+            finite_fields(&node.id, "displacements", &[uy, rz])?;
+            Ok(Beam1dNodeResult {
                 index,
                 id: node.id.clone(),
                 x: node.x,
                 uy,
                 rz,
                 displacement_magnitude: uy.abs(),
-            }
-        })
-        .collect::<Vec<_>>();
-
-    let elements = request
-        .elements
-        .iter()
-        .enumerate()
-        .map(|(index, element)| {
-            let node_i = &request.nodes[element.node_i];
-            let node_j = &request.nodes[element.node_j];
-            let length = (node_j.x - node_i.x).abs();
-            let local_stiffness =
-                beam_local_stiffness(element.youngs_modulus, element.moment_of_inertia, length);
-            let local_displacements = [
-                displacements[element.node_i * 2],
-                displacements[element.node_i * 2 + 1],
-                displacements[element.node_j * 2],
-                displacements[element.node_j * 2 + 1],
-            ];
-            let equivalent_load = beam_uniform_load_vector(length, element.distributed_load_y);
-            let local_forces = subtract_vector_4(
-                &multiply_matrix_vector_4x4(&local_stiffness, &local_displacements),
-                &equivalent_load,
-            );
-            let strain_energy = beam_strain_energy(&local_forces, &local_displacements);
-            let max_bending_stress =
-                local_forces[1].abs().max(local_forces[3].abs()) / element.section_modulus;
-
-            Beam1dElementResult {
+            })
+        }),
+    )?;
+    let mut max_moment = 0.0_f64;
+    let elements = try_collect_results(
+        SolverStage::ResultElements,
+        request.elements.iter().enumerate().map(|(index, element)| {
+            let kernel = BeamElement::mechanical(&request, element)?;
+            let recovered = kernel.recover(&displacements, element.section_modulus)?;
+            max_moment = max_moment.max(recovered.max_moment);
+            Ok(Beam1dElementResult {
                 index,
                 id: element.id.clone(),
                 node_i: element.node_i,
                 node_j: element.node_j,
-                length,
-                shear_force_i: local_forces[0],
-                moment_i: local_forces[1],
-                shear_force_j: local_forces[2],
-                moment_j: local_forces[3],
-                max_bending_stress,
-                strain_energy,
-            }
-        })
-        .collect::<Vec<_>>();
-
-    let max_displacement = nodes
-        .iter()
-        .map(|node| node.displacement_magnitude)
-        .fold(0.0_f64, f64::max);
-    let max_rotation = nodes
-        .iter()
-        .map(|node| node.rz.abs())
-        .fold(0.0_f64, f64::max);
-    let max_moment = elements
-        .iter()
-        .flat_map(|element| [element.moment_i.abs(), element.moment_j.abs()])
-        .fold(0.0_f64, f64::max);
-    let max_stress = elements
-        .iter()
-        .map(|element| element.max_bending_stress)
-        .fold(0.0_f64, f64::max);
-    let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
-
+                length: kernel.length,
+                shear_force_i: recovered.forces[0],
+                moment_i: recovered.forces[1],
+                shear_force_j: recovered.forces[2],
+                moment_j: recovered.forces[3],
+                max_bending_stress: recovered.max_stress,
+                strain_energy: recovered.energy,
+            })
+        }),
+    )?;
+    let max_displacement = max_results(SolverStage::ResultNodeSummary, &nodes, |n| {
+        n.displacement_magnitude
+    })?;
+    let max_rotation = max_results(SolverStage::ResultNodeSummary, &nodes, |n| n.rz.abs())?;
+    let max_stress = max_results(SolverStage::ResultElementSummary, &elements, |e| {
+        e.max_bending_stress
+    })?;
+    let total_strain_energy = total_energy(elements.iter().map(|e| e.strain_energy))?;
     Ok(SolveBeam1dResult {
         input: request.into_owned(),
         nodes,
@@ -211,176 +124,69 @@ fn solve_thermal_beam_1d_internal(
     options: SpdSolveOptions,
 ) -> Result<SolveThermalBeam1dResult, String> {
     validate_thermal_beam_1d_request(request.as_ref())?;
-
-    let dof_count = request.nodes.len() * 2;
-    let mut global_stiffness = SparseMatrix::new(dof_count);
-    let mut force_vector = vec![0.0; dof_count];
-
-    for (index, node) in request.nodes.iter().enumerate() {
-        force_vector[index * 2] = node.load_y;
-        force_vector[index * 2 + 1] = node.moment_z;
-    }
-
-    for element in &request.elements {
-        let node_i = &request.nodes[element.node_i];
-        let node_j = &request.nodes[element.node_j];
-        let length = (node_j.x - node_i.x).abs();
-        let local_stiffness =
-            beam_local_stiffness(element.youngs_modulus, element.moment_of_inertia, length);
-        let equivalent_load = add_vector_4(
-            &beam_uniform_load_vector(length, element.distributed_load_y),
-            &beam_thermal_gradient_vector(
-                element.youngs_modulus,
-                element.moment_of_inertia,
-                element.thermal_expansion,
-                element.section_depth,
-                element.temperature_gradient_y,
-            ),
-        );
-        let map = [
-            element.node_i * 2,
-            element.node_i * 2 + 1,
-            element.node_j * 2,
-            element.node_j * 2 + 1,
-        ];
-
-        for row in 0..4 {
-            force_vector[map[row]] += equivalent_load[row];
-        }
-
-        for row in 0..4 {
-            for column in 0..4 {
-                add_at(
-                    &mut global_stiffness,
-                    map[row],
-                    map[column],
-                    local_stiffness[row][column],
-                );
-            }
-        }
-    }
-
-    let constrained = request
-        .nodes
-        .iter()
-        .enumerate()
-        .flat_map(|(index, node)| {
-            let mut dofs = Vec::new();
-            if node.fix_y {
-                dofs.push(index * 2);
-            }
-            if node.fix_rz {
-                dofs.push(index * 2 + 1);
-            }
-            dofs
-        })
-        .collect::<Vec<_>>();
-
-    let (reduced_stiffness, reduced_force, free) =
-        reduce_sparse_system(&global_stiffness, &force_vector, &constrained)?;
-    let reduced_displacements =
-        solve_spd_system_profile_with_options(&reduced_stiffness, &reduced_force, options)?
-            .solution;
-
-    let mut displacements = vec![0.0; dof_count];
-    for (index, &dof) in free.iter().enumerate() {
-        displacements[dof] = reduced_displacements[index];
-    }
-
-    let nodes = request
-        .nodes
-        .iter()
-        .enumerate()
-        .map(|(index, node)| {
+    let displacements = solve_system(
+        request
+            .nodes
+            .iter()
+            .map(|n| (n.load_y, n.moment_z, n.fix_y, n.fix_rz)),
+        request
+            .elements
+            .iter()
+            .map(|e| BeamElement::thermal(&request, e)),
+        options,
+    )?;
+    let nodes = try_collect_results(
+        SolverStage::ResultNodes,
+        request.nodes.iter().enumerate().map(|(index, node)| {
             let uy = displacements[index * 2];
             let rz = displacements[index * 2 + 1];
-
-            ThermalBeam1dNodeResult {
+            finite_fields(&node.id, "displacements", &[uy, rz])?;
+            Ok(ThermalBeam1dNodeResult {
                 index,
                 id: node.id.clone(),
                 x: node.x,
                 uy,
                 rz,
                 displacement_magnitude: uy.abs(),
-            }
-        })
-        .collect::<Vec<_>>();
-
-    let elements = request
-        .elements
-        .iter()
-        .enumerate()
-        .map(|(index, element)| {
-            let node_i = &request.nodes[element.node_i];
-            let node_j = &request.nodes[element.node_j];
-            let length = (node_j.x - node_i.x).abs();
-            let local_stiffness =
-                beam_local_stiffness(element.youngs_modulus, element.moment_of_inertia, length);
-            let local_displacements = [
-                displacements[element.node_i * 2],
-                displacements[element.node_i * 2 + 1],
-                displacements[element.node_j * 2],
-                displacements[element.node_j * 2 + 1],
-            ];
-            let equivalent_load = add_vector_4(
-                &beam_uniform_load_vector(length, element.distributed_load_y),
-                &beam_thermal_gradient_vector(
-                    element.youngs_modulus,
-                    element.moment_of_inertia,
-                    element.thermal_expansion,
-                    element.section_depth,
-                    element.temperature_gradient_y,
-                ),
-            );
-            let local_forces = subtract_vector_4(
-                &multiply_matrix_vector_4x4(&local_stiffness, &local_displacements),
-                &equivalent_load,
-            );
-            let strain_energy = beam_strain_energy(&local_forces, &local_displacements);
-            let max_bending_stress =
-                local_forces[1].abs().max(local_forces[3].abs()) / element.section_modulus;
-
-            ThermalBeam1dElementResult {
+            })
+        }),
+    )?;
+    let mut max_moment = 0.0_f64;
+    let elements = try_collect_results(
+        SolverStage::ResultElements,
+        request.elements.iter().enumerate().map(|(index, element)| {
+            let kernel = BeamElement::thermal(&request, element)?;
+            let recovered = kernel.recover(&displacements, element.section_modulus)?;
+            max_moment = max_moment.max(recovered.max_moment);
+            Ok(ThermalBeam1dElementResult {
                 index,
                 id: element.id.clone(),
                 node_i: element.node_i,
                 node_j: element.node_j,
-                length,
+                length: kernel.length,
                 temperature_gradient_y: element.temperature_gradient_y,
-                thermal_curvature: element.thermal_expansion * element.temperature_gradient_y
-                    / element.section_depth,
-                shear_force_i: local_forces[0],
-                moment_i: local_forces[1],
-                shear_force_j: local_forces[2],
-                moment_j: local_forces[3],
-                max_bending_stress,
-                strain_energy,
-            }
-        })
-        .collect::<Vec<_>>();
-
-    let max_displacement = nodes
-        .iter()
-        .map(|node| node.displacement_magnitude)
-        .fold(0.0_f64, f64::max);
-    let max_rotation = nodes
-        .iter()
-        .map(|node| node.rz.abs())
-        .fold(0.0_f64, f64::max);
-    let max_moment = elements
-        .iter()
-        .flat_map(|element| [element.moment_i.abs(), element.moment_j.abs()])
-        .fold(0.0_f64, f64::max);
-    let max_stress = elements
-        .iter()
-        .map(|element| element.max_bending_stress)
-        .fold(0.0_f64, f64::max);
-    let max_temperature_gradient = elements
-        .iter()
-        .map(|element| element.temperature_gradient_y.abs())
-        .fold(0.0_f64, f64::max);
-    let total_strain_energy = elements.iter().map(|element| element.strain_energy).sum();
-
+                thermal_curvature: kernel.thermal_curvature,
+                shear_force_i: recovered.forces[0],
+                moment_i: recovered.forces[1],
+                shear_force_j: recovered.forces[2],
+                moment_j: recovered.forces[3],
+                max_bending_stress: recovered.max_stress,
+                strain_energy: recovered.energy,
+            })
+        }),
+    )?;
+    let max_displacement = max_results(SolverStage::ResultNodeSummary, &nodes, |n| {
+        n.displacement_magnitude
+    })?;
+    let max_rotation = max_results(SolverStage::ResultNodeSummary, &nodes, |n| n.rz.abs())?;
+    let max_stress = max_results(SolverStage::ResultElementSummary, &elements, |e| {
+        e.max_bending_stress
+    })?;
+    let max_temperature_gradient =
+        max_results(SolverStage::ResultElementSummary, &elements, |e| {
+            e.temperature_gradient_y.abs()
+        })?;
+    let total_strain_energy = total_energy(elements.iter().map(|e| e.strain_energy))?;
     Ok(SolveThermalBeam1dResult {
         input: request.into_owned(),
         nodes,
@@ -394,89 +200,10 @@ fn solve_thermal_beam_1d_internal(
     })
 }
 
-fn beam_local_stiffness(youngs_modulus: f64, moment_of_inertia: f64, length: f64) -> [[f64; 4]; 4] {
-    let flexural = youngs_modulus * moment_of_inertia;
-    let l2 = length * length;
-    let l3 = l2 * length;
-
-    [
-        [
-            12.0 * flexural / l3,
-            6.0 * flexural / l2,
-            -12.0 * flexural / l3,
-            6.0 * flexural / l2,
-        ],
-        [
-            6.0 * flexural / l2,
-            4.0 * flexural / length,
-            -6.0 * flexural / l2,
-            2.0 * flexural / length,
-        ],
-        [
-            -12.0 * flexural / l3,
-            -6.0 * flexural / l2,
-            12.0 * flexural / l3,
-            -6.0 * flexural / l2,
-        ],
-        [
-            6.0 * flexural / l2,
-            2.0 * flexural / length,
-            -6.0 * flexural / l2,
-            4.0 * flexural / length,
-        ],
-    ]
-}
-
-fn beam_uniform_load_vector(length: f64, distributed_load_y: f64) -> [f64; 4] {
-    let l2 = length * length;
-
-    [
-        distributed_load_y * length / 2.0,
-        distributed_load_y * l2 / 12.0,
-        distributed_load_y * length / 2.0,
-        -distributed_load_y * l2 / 12.0,
-    ]
-}
-
-fn beam_thermal_gradient_vector(
-    youngs_modulus: f64,
-    moment_of_inertia: f64,
-    thermal_expansion: f64,
-    section_depth: f64,
-    temperature_gradient_y: f64,
-) -> [f64; 4] {
-    let thermal_curvature = thermal_expansion * temperature_gradient_y / section_depth;
-    let thermal_moment = youngs_modulus * moment_of_inertia * thermal_curvature;
-
-    [0.0, -thermal_moment, 0.0, thermal_moment]
-}
-
-fn multiply_matrix_vector_4x4(matrix: &[[f64; 4]; 4], vector: &[f64; 4]) -> [f64; 4] {
-    let mut output = [0.0; 4];
-    for row in 0..4 {
-        output[row] = (0..4).map(|index| matrix[row][index] * vector[index]).sum();
-    }
-    output
-}
-
-fn subtract_vector_4(lhs: &[f64; 4], rhs: &[f64; 4]) -> [f64; 4] {
-    let mut output = [0.0; 4];
-    for index in 0..4 {
-        output[index] = lhs[index] - rhs[index];
-    }
-    output
-}
-
-fn beam_strain_energy(local_forces: &[f64; 4], local_displacements: &[f64; 4]) -> f64 {
-    0.5 * (0..4)
-        .map(|index| local_forces[index] * local_displacements[index])
-        .sum::<f64>()
-}
-
-fn add_vector_4(lhs: &[f64; 4], rhs: &[f64; 4]) -> [f64; 4] {
-    let mut output = [0.0; 4];
-    for index in 0..4 {
-        output[index] = lhs[index] + rhs[index];
-    }
-    output
+fn total_energy(values: impl ExactSizeIterator<Item = f64>) -> Result<f64, String> {
+    let total = fold_results(SolverStage::ResultTotals, values, 0.0, |sum, value| {
+        sum + value
+    })?;
+    finite_fields("summary", "total strain energy", &[total])?;
+    Ok(total)
 }

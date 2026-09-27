@@ -6,43 +6,44 @@ pub(crate) fn frame_local_stiffness(
 ) -> [[f64; 6]; 6] {
     let axial = youngs_modulus * area / length;
     let flexural = youngs_modulus * moment_of_inertia;
-    let l2 = length * length;
-    let l3 = l2 * length;
+    let bending = flexural / length;
+    let coupling = bending / length;
+    let transverse = coupling / length;
 
     [
         [axial, 0.0, 0.0, -axial, 0.0, 0.0],
         [
             0.0,
-            12.0 * flexural / l3,
-            6.0 * flexural / l2,
+            12.0 * transverse,
+            6.0 * coupling,
             0.0,
-            -12.0 * flexural / l3,
-            6.0 * flexural / l2,
+            -12.0 * transverse,
+            6.0 * coupling,
         ],
         [
             0.0,
-            6.0 * flexural / l2,
-            4.0 * flexural / length,
+            6.0 * coupling,
+            4.0 * bending,
             0.0,
-            -6.0 * flexural / l2,
-            2.0 * flexural / length,
+            -6.0 * coupling,
+            2.0 * bending,
         ],
         [-axial, 0.0, 0.0, axial, 0.0, 0.0],
         [
             0.0,
-            -12.0 * flexural / l3,
-            -6.0 * flexural / l2,
+            -12.0 * transverse,
+            -6.0 * coupling,
             0.0,
-            12.0 * flexural / l3,
-            -6.0 * flexural / l2,
+            12.0 * transverse,
+            -6.0 * coupling,
         ],
         [
             0.0,
-            6.0 * flexural / l2,
-            2.0 * flexural / length,
+            6.0 * coupling,
+            2.0 * bending,
             0.0,
-            -6.0 * flexural / l2,
-            4.0 * flexural / length,
+            -6.0 * coupling,
+            4.0 * bending,
         ],
     ]
 }
@@ -78,28 +79,6 @@ pub(crate) fn frame_dof_map(node_i: usize, node_j: usize) -> [usize; 6] {
         node_j * 3 + 1,
         node_j * 3 + 2,
     ]
-}
-
-pub(super) fn frame_thermal_uniform_vector(
-    area: f64,
-    youngs_modulus: f64,
-    thermal_expansion: f64,
-    average_temperature_delta: f64,
-) -> [f64; 6] {
-    let thermal_force = youngs_modulus * area * thermal_expansion * average_temperature_delta;
-    [-thermal_force, 0.0, 0.0, thermal_force, 0.0, 0.0]
-}
-
-pub(super) fn frame_thermal_gradient_vector(
-    youngs_modulus: f64,
-    moment_of_inertia: f64,
-    thermal_expansion: f64,
-    section_depth: f64,
-    temperature_gradient_y: f64,
-) -> [f64; 6] {
-    let thermal_curvature = thermal_expansion * temperature_gradient_y / section_depth;
-    let thermal_moment = youngs_modulus * moment_of_inertia * thermal_curvature;
-    [0.0, 0.0, -thermal_moment, 0.0, 0.0, thermal_moment]
 }
 
 pub(crate) fn frame_transform(c: f64, s: f64) -> [[f64; 6]; 6] {
@@ -148,22 +127,6 @@ pub(super) fn multiply_matrix_vector_6x6(matrix: &[[f64; 6]; 6], vector: &[f64; 
     let mut output = [0.0; 6];
     for row in 0..6 {
         output[row] = (0..6).map(|index| matrix[row][index] * vector[index]).sum();
-    }
-    output
-}
-
-pub(super) fn subtract_vector_6(lhs: &[f64; 6], rhs: &[f64; 6]) -> [f64; 6] {
-    let mut output = [0.0; 6];
-    for index in 0..6 {
-        output[index] = lhs[index] - rhs[index];
-    }
-    output
-}
-
-pub(super) fn add_vector_6(lhs: &[f64; 6], rhs: &[f64; 6]) -> [f64; 6] {
-    let mut output = [0.0; 6];
-    for index in 0..6 {
-        output[index] = lhs[index] + rhs[index];
     }
     output
 }

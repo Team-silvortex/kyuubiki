@@ -1,28 +1,31 @@
+use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 use kyuubiki_protocol::{
     Frame2dNodeInput, SolveFrame2dRequest, SolveThermalFrame2dRequest, ThermalFrame2dNodeInput,
 };
 
 pub(crate) fn validate_frame_2d_request(request: &SolveFrame2dRequest) -> Result<(), String> {
+    checkpoint(SolverStage::ElementPrecompute, 0)?;
     if request.nodes.len() < 2 {
         return Err("2d frame must define at least two nodes".to_string());
     }
     if request.elements.is_empty() {
         return Err("2d frame must define at least one element".to_string());
     }
-    if !request
-        .nodes
-        .iter()
-        .any(|node| node.fix_x || node.fix_y || node.fix_rz)
-    {
-        return Err("2d frame must include at least one support".to_string());
-    }
-    if frame_2d_constrained_dofs(&request.nodes) < 3 {
-        return Err("2d frame must restrain at least three degrees of freedom".to_string());
-    }
+    let total = request.nodes.len() + request.elements.len();
+    let mut constrained_dofs = 0;
     for (index, node) in request.nodes.iter().enumerate() {
         validate_frame_2d_node(index, node)?;
+        constrained_dofs +=
+            usize::from(node.fix_x) + usize::from(node.fix_y) + usize::from(node.fix_rz);
+        checkpoint_chunk(SolverStage::ElementPrecompute, index + 1, total)?;
     }
-    for element in &request.elements {
+    if constrained_dofs == 0 {
+        return Err("2d frame must include at least one support".to_string());
+    }
+    if constrained_dofs < 3 {
+        return Err("2d frame must restrain at least three degrees of freedom".to_string());
+    }
+    for (index, element) in request.elements.iter().enumerate() {
         validate_frame_2d_element(request, element.node_i, element.node_j)?;
         if !(element.area.is_finite() && element.area > 0.0) {
             return Err("2d frame element area must be positive".to_string());
@@ -36,6 +39,11 @@ pub(crate) fn validate_frame_2d_request(request: &SolveFrame2dRequest) -> Result
         if !(element.section_modulus.is_finite() && element.section_modulus > 0.0) {
             return Err("2d frame element section_modulus must be positive".to_string());
         }
+        checkpoint_chunk(
+            SolverStage::ElementPrecompute,
+            request.nodes.len() + index + 1,
+            total,
+        )?;
     }
     Ok(())
 }
@@ -43,23 +51,24 @@ pub(crate) fn validate_frame_2d_request(request: &SolveFrame2dRequest) -> Result
 pub(crate) fn validate_thermal_frame_2d_request(
     request: &SolveThermalFrame2dRequest,
 ) -> Result<(), String> {
+    checkpoint(SolverStage::ElementPrecompute, 0)?;
     if request.nodes.len() < 2 {
         return Err("thermal frame must define at least two nodes".to_string());
     }
     if request.elements.is_empty() {
         return Err("thermal frame must define at least one element".to_string());
     }
-    if !request
-        .nodes
-        .iter()
-        .any(|node| node.fix_x || node.fix_y || node.fix_rz)
-    {
-        return Err("thermal frame must include at least one support".to_string());
-    }
+    let total = request.nodes.len() + request.elements.len();
+    let mut has_support = false;
     for (index, node) in request.nodes.iter().enumerate() {
         validate_thermal_frame_2d_node(index, node)?;
+        has_support |= node.fix_x || node.fix_y || node.fix_rz;
+        checkpoint_chunk(SolverStage::ElementPrecompute, index + 1, total)?;
     }
-    for element in &request.elements {
+    if !has_support {
+        return Err("thermal frame must include at least one support".to_string());
+    }
+    for (index, element) in request.elements.iter().enumerate() {
         validate_thermal_frame_2d_element(request, element.node_i, element.node_j)?;
         if !(element.area.is_finite() && element.area > 0.0) {
             return Err("thermal frame element area must be positive".to_string());
@@ -82,6 +91,11 @@ pub(crate) fn validate_thermal_frame_2d_request(
         if !element.temperature_gradient_y.is_finite() {
             return Err("thermal frame element temperature_gradient_y must be finite".to_string());
         }
+        checkpoint_chunk(
+            SolverStage::ElementPrecompute,
+            request.nodes.len() + index + 1,
+            total,
+        )?;
     }
     Ok(())
 }
@@ -151,15 +165,9 @@ fn validate_thermal_frame_2d_element(
 }
 
 fn validate_length(dx: f64, dy: f64, message: &str) -> Result<(), String> {
-    let length = (dx * dx + dy * dy).sqrt();
+    let length = dx.hypot(dy);
     if !(length.is_finite() && length > 0.0) {
         return Err(message.to_string());
     }
     Ok(())
-}
-
-fn frame_2d_constrained_dofs(nodes: &[Frame2dNodeInput]) -> usize {
-    nodes.iter().fold(0, |sum, node| {
-        sum + usize::from(node.fix_x) + usize::from(node.fix_y) + usize::from(node.fix_rz)
-    })
 }

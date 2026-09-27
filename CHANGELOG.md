@@ -1,5 +1,32 @@
 # Changelog
 
+## daji 3.4.3
+
+September 28, 2026. Structural and thermal-structural numerical reliability.
+
+- Harden truss and thermal-truss geometry, temperature averaging, recovered
+  fields, displacement norms, and strain energy against range loss.
+- Split beam and frame element/system assembly into checked Solver-local
+  modules while keeping the Engine and operator interfaces independent.
+- Validate assembled and recovered values even for fully restrained systems;
+  invalid arithmetic fails instead of becoming a successful null-valued result.
+- Recover full planar bending-field energy and avoid subtractive cancellation
+  in spatial thermal-frame elastic energy.
+- Normalize spatial directions without squared-norm overflow; use a stable
+  exact-constraint basis for thermal-frame supports and reaction recovery.
+- Reorthogonalize explicit spatial section hints without changing the default
+  reference-axis convention; retain rigid modes and equivalent-hint fields.
+- Add analytical, orientation, refinement, cancellation, and fresh-replay tests,
+  including Rust Headless plan/bridge/Engine execution on macOS and Linux.
+- Align package, SDK, language-pack, installation, and documentation metadata
+  to 3.4.3 without changing protocol versions or relabeling historical evidence.
+
+See `releases/snapshots/3.4.3.json` for verification and limits. Recompute affected
+historical energy, extreme-range, support, or near-parallel section-hint results
+before research reuse. This source release does not rebuild desktop applications,
+publish registry packages, or certify new physical/scale coverage; the last local
+desktop/runtime installation remains 3.4.0 and tensor readiness gaps remain open.
+
 ## daji 3.4.2
 
 September 27, 2026. Atomic workflow administration and solver-kernel reliability.

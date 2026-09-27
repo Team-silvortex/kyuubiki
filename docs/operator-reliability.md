@@ -948,111 +948,126 @@ displacement, member force, strain energy, and axis-projected node displacement.
 This does not claim nonlinear springs, contact, transient dynamics, or general
 mesh-convergence behavior for arbitrary spring networks.
 
-The thermal beam 1D operator is now qualified for the retained linear
-free-curvature scope. Its closed-form evidence checks thermal curvature, tip
-rotation, tip displacement, zero-gradient response, and near-zero internal
-force for a single fixed-free member. The retained scaling regression verifies
-that temperature-gradient and thermal-expansion changes linearly scale
-curvature, tip rotation, and tip displacement, while section-depth changes
-inversely scale those same free-curvature diagnostics. It also verifies length
-scaling for the same free-curvature case: curvature stays fixed, tip rotation
-scales linearly, and tip displacement scales quadratically, without
-introducing internal moment or strain energy. Every retained branch also checks
-that total strain energy equals the sum of member `strain_energy` diagnostics,
-so free-curvature zero-energy behavior is enforced at both summary and element
-levels. Every retained branch also re-derives node displacement magnitude,
-node id/coordinate passthrough, max displacement, max rotation, max moment, max
-stress, max temperature gradient, thermal curvature, and total strain energy
-from public node and element fields.
-The retained free-curvature refinement ladder now splits the same thermal beam
-into 1, 2, 4, 8, and 16 elements while preserving the quadratic displacement
-field, linear rotation field, thermal curvature, near-zero internal force, and
-zero strain energy. This does not claim thermal frame assemblies, nonlinear
-material behavior, transient heat transfer, buckling, or plasticity.
+The thermal beam 1D operator remains qualified for the retained linear
+free-curvature scope. Closed-form checks cover root constraints, thermal
+curvature, tip rotation/displacement, zero-gradient response, and near-zero
+internal force and energy. Gradient and expansion scale the free response
+linearly; section depth scales it inversely. Length scales rotation linearly
+and displacement quadratically while preserving curvature. The `1/2/4/8/16`
+refinement ladder retains the quadratic displacement and linear rotation
+fields. Node identity/coordinates, maxima, and summed element energy are checked.
+This does not qualify thermal frame assemblies, nonlinear materials, transient
+heat transfer, buckling, or plasticity.
 
-The thermal truss 3D operator is now qualified for the retained fully
-restrained uniform-temperature scope. Its closed-form evidence checks zero
-node displacement, thermal/mechanical strain split, compressive stress, axial
-force, and member energy summation. The retained scaling regression verifies
-that temperature and thermal-expansion changes scale thermal strain, stress,
-and axial force while scaling strain energy quadratically, that Young's
-modulus changes scale stress, axial force, and energy without changing thermal
-strain, and that area changes scale axial force and total energy without
-changing stress or energy density. It also verifies uniform geometry scaling
-where member lengths and total energy scale linearly while thermal strain,
-stress, axial force, and energy density remain fixed. Every retained scaling
-branch also re-sums member energy from
-`strain_energy_density * area * length` and checks max energy density against
-the element set. Every retained branch also re-derives average element
-temperature delta, node id/coordinate/temperature passthrough, thermal strain,
-mechanical strain, Hooke-law stress, axial force, max displacement, max
-temperature delta, max stress, max axial force, and total strain energy from
-public node and element fields. This does not claim partial restraint,
-temperature gradients, buckling, plasticity, contact, or dynamic response.
+The bounded mechanical/thermal beam output regressions now also cover uniform
+loads on cantilever, pinned-pinned and fixed-fixed members, restrained thermal
+curvature, mixed loads, nonuniform lengths and piecewise stiffness. Element
+energy integrates the equilibrium-recovered moment field `M(x)^2/(2EI)`,
+including the uniform-load particular solution; neither end-force work nor
+the cubic nodal interpolant alone is the reported physical field energy.
+`max_moment` and `max_bending_stress` include interior extrema. Displacement
+and rotation maxima remain **nodal** samples, not continuum extrema: a single
+pinned-pinned element can have zero nodal deflection and nonzero bending energy.
+Connectivity reversal preserves global `uy/rz` and endpoint action identities.
+Unrepresentable stiffness, loads, recovered fields and energy totals fail rather
+than serialize nonfinite values; preparation, assembly and result stages are
+cooperatively cancellable and valid calls replay after failure/cancellation.
+The Rust headless batch-to-engine route uses the same kernel without a protocol
+change. These checks do not expand the retained qualification scopes or prove
+remote installed-Agent behavior. See
+[beam output regressions](../reports/beam-output-reliability-20260927.md).
 
-The thermal truss 2D operator is now qualified for the retained fully
-restrained uniform-temperature scope. Its closed-form evidence mirrors the 3D
-thermal truss lane by checking fixed node displacement, thermal/mechanical
-strain split, compressive stress, axial force, and member energy summation.
-The retained 2D scaling regression applies the same temperature,
-thermal-expansion, Young's-modulus, area, and uniform geometry checks to the
-planar restrained triangle, including total member-energy re-summation and max
-energy-density checks across every retained scaling branch. Every retained
-branch also re-derives average element temperature delta, node
-id/coordinate/temperature passthrough, thermal strain, mechanical strain,
-Hooke-law stress, axial force, max displacement, max temperature delta, max
-stress, max axial force, and total strain energy from public node and element
-fields. This does not claim partial restraint, mixed thermal loading,
-temperature gradients, buckling, plasticity, contact, or dynamic response.
+The thermal truss 2D and 3D operators are qualified only for the retained fully
+restrained uniform-temperature scope, with the planar restrained triangle
+mirroring the spatial lane. Closed-form evidence checks zero displacement,
+thermal/mechanical strain split, compressive stress, axial force, and energy.
+Temperature and thermal expansion linearly scale strain, stress, and force,
+and quadratically scale energy. Young's modulus scales stress, force, and
+energy without changing thermal strain; area scales force and total energy
+without changing stress or energy density. Uniform geometry scaling changes
+length and total energy linearly, leaving strain, stress, force, and density
+fixed. Every branch re-sums `strain_energy_density * area * length`, checks
+maximum energy density, and re-derives mean temperature, thermal/mechanical
+strain, Hooke-law stress, axial force, all public maxima, and total energy.
+Node id/coordinate/temperature passthrough is also checked. This qualification
+does not cover general partial restraint, mixed thermal loading, temperature
+gradients, buckling, plasticity, contact, or dynamics.
 
-The thermal frame 2D operator is now qualified for the retained fully
-restrained uniform-temperature single-member scope. Its closed-form evidence
-checks fixed end displacement and rotation, thermal/mechanical strain split,
-axial force, axial stress, zero-gradient moment and shear response, and strain
-energy. The retained scaling regression verifies that temperature changes
-and thermal-expansion changes scale thermal strain, axial force, and axial
-stress while scaling strain energy quadratically, that area changes scale
-axial force and energy without changing stress, and that modulus changes scale
-force, stress, and energy without changing thermal strain. It also verifies
-length scaling where thermal strain, stress, and axial force remain fixed while
-strain energy scales linearly with member length. Every retained branch also
-checks that total strain energy equals the sum of member `strain_energy`
-diagnostics. Every retained branch also re-derives node displacement magnitude,
-node id/coordinate/temperature passthrough, max displacement, max rotation,
-average temperature delta, thermal strain, mechanical strain, thermal
-curvature, axial stress, axial force, combined stress, max temperature delta,
-max temperature gradient, max moment, max stress, and total strain energy from
-public node and element fields. The retained frame input reliability regression
-rejects non-finite thermal frame coordinates, loads, and nodal temperatures
-before release evidence is accepted. This does not claim partial restraint,
-temperature gradients, frame assemblies, geometric nonlinearity, buckling,
-plasticity, contact, or dynamic response.
+The separate [thermal-truss output regression](../reports/thermal-truss-output-reliability-20260927.md)
+adds stable temperature means/norms, balanced energy-volume products, and
+finite assembly/recovery checks even behind fully fixed supports. The existing
+25%-of-extent displacement heuristic now uses actual model bounds rather than
+an implicit origin/unit extent. Entry, terminal, and 64-item cancellation plus
+replay are checked, with in-process Rust headless failure propagation and
+Linux release regressions. These are bounded `verified` numerical/recovery
+claims, not an expansion of the qualified physical scope or a performance,
+installed-Agent, nonlinear, or general rotation-invariant limit claim.
 
-The thermal frame 3D operator is now qualified for the retained fully
-restrained single-member scope with uniform temperature and linear gradients.
-Its closed-form evidence checks fixed end translations and rotations,
-thermal/mechanical strain split, thermal curvatures, axial force, bending
-moments, combined stress, and strain energy. The retained scaling regression
-verifies that uniform temperature and gradient scaling drives thermal strain,
-thermal curvatures, axial force, bending moments, and energy by the expected
-linear/quadratic factors, thermal-expansion scaling drives the same retained
-thermal strain, curvature, force, moment, and energy factors, Young's modulus
-scales force, moment, and energy without changing thermal strain or curvature,
-and inertia scaling changes bending moments without changing thermal curvature
-or axial force. It also verifies length scaling where thermal strain,
-curvatures, axial force, and bending moments remain fixed while strain energy
-scales linearly with member length. Every retained branch also checks that
-total strain energy equals the sum of member `strain_energy` diagnostics. Every
-retained branch also re-derives node displacement and rotation magnitudes, max
-displacement, node id/coordinate/temperature passthrough, max rotation, average
-temperature delta, thermal strain, mechanical strain, both thermal curvatures,
-axial stress, axial force, bending moments, bending stress, combined stress,
-temperature summaries, moment summary, stress summary, and total strain energy
-from public node and element
-fields. This does not claim partial restraint,
-arbitrary 3D frame
-assemblies, torsion-dominant response, geometric nonlinearity, buckling,
-plasticity, contact, or dynamic response.
+The thermal frame 2D qualification remains the retained fully restrained,
+uniform-temperature single-member scope. Its closed forms check zero fixed
+translations/rotations, thermal/mechanical strain, axial force/stress,
+zero-gradient bending/shear and energy. Temperature and expansion scaling give
+linear force/stress and quadratic energy; area scales force/energy but not
+stress; modulus scales force/stress/energy but not strain; length scales energy
+but not strain/stress/force. Each branch re-derives all public summaries and
+member energy totals, checks node identity/coordinate/temperature passthrough,
+and rejects non-finite coordinates, loads and temperatures. This qualification
+does not extend to general partial restraint, gradients, assemblies,
+nonlinearity, buckling, plasticity, contact or dynamics.
+
+The separate [planar-frame output regression](../reports/frame-2d-output-reliability-20260927.md)
+repairs the thermal energy's missing curvature-variation term. A single-element
+transversely loaded cantilever previously lost 25% of its bending energy.
+Mechanical and thermal 2D frames now share checked field-energy recovery,
+finite full-matrix/load validation, stable temperature means/displacement norms,
+and cooperative assembly/recovery cancellation. Closed forms, nodal work,
+refinement, thermal superposition, connectivity reversal and a planar 3D
+reduction cross-check the fix; raw cancellation and Rust headless failures
+must not become successful results and fresh inputs must replay normally.
+Thermal gradients remain element-local: reversing connectivity also reverses
+the local-y gradient for the same physical field. Public schemas and nodal
+maximum sampling are unchanged. These are bounded `verified` numerical and
+recovery claims, not general 3D qualification or installed-Agent/performance
+evidence. Previously affected energy results need recalculation.
+
+The thermal frame 3D qualification remains the retained fully restrained
+single-member scope with uniform temperature and linear gradients. Its closed
+forms check zero fixed translations/rotations, thermal/mechanical strain,
+both curvatures, axial force, bending moments, combined stress and energy.
+Temperature, gradient and expansion scaling give linear strain/force/moment
+and quadratic energy; modulus scales force/moment/energy without changing
+strain/curvature; inertia scales bending moment/energy but not curvature/axial
+force; length scales energy but not strain/force/moment. Each branch re-derives
+all public summaries, member energy totals and node passthrough fields. This
+qualification does not extend to arbitrary assemblies, partial restraint,
+torsion-dominant response, nonlinearity, buckling, plasticity, contact or dynamics.
+
+The separate [spatial-frame output regression](../reports/frame-3d-output-reliability-20260927.md)
+replaces cancellation-prone thermal-work subtraction with positive axial,
+torsional and dual-bending field-energy terms. Checked mechanical/thermal
+recovery retains small elastic responses under free thermal expansion,
+finite temperature averages, tiny displacement/rotation norms and explicit
+numeric-range errors. Scale-first direction normalization prevents large
+finite axes, directional springs and exact constraints from losing their
+orientation. Full assembly checks run before constraints remove rows; result
+collection and constraint projection observe cooperative cancellation.
+Closed forms, work, refinement, rotation, reversal and Rust headless replay
+support bounded `verified` claims, not general 3D qualification, installed-Agent
+or performance claims. The length/direction floors and nodal maxima remain;
+nearly parallel section axes are tested relative to a normalized direction.
+Affected saved energy and scaled-direction results need recalculation.
+
+The [spatial-support regression](../reports/frame-3d-support-reliability-20260927.md)
+uses a reorthogonalized direction basis and QR reaction recovery instead of
+normal equations. Near-parallel independent supports retain analytic reactions;
+dependent or overcomplete blocks fail before constructing the free map.
+Thermal/spring equivalence, energy-range checks and raw cancellation/replay
+remain bounded numerical/recovery evidence, not broader physical qualification.
+
+The [section-orientation regression](../reports/frame-3d-orientation-reliability-20260927.md)
+restores an orthonormal, right-handed frame for accepted near-parallel hints.
+Rigid-mode, thermal expansion, refinement and headless checks retain the
+parallelism floor and legacy implicit-roll branch, without broadening qualification.
 
 The contact gap 1D operator is now qualified for the retained penalty stop
 scope. Its closed-form evidence checks inactive gap response, active penalty
@@ -1087,47 +1102,31 @@ It retains large-displacement active/inactive force splits, rejects penalty
 overflow, and checks cancellation followed by clean in-process replay. This
 does not add friction, contact search or a nonlinear globalization strategy.
 
-The truss 2D operator is now qualified for the retained symmetric two-bar
-scope. Its closed-form evidence checks fixed supports, apex symmetry, vertical
-displacement, equal axial member force, stress, strain, and strain energy.
-The retained scaling regression also verifies that load changes linearly scale
-apex displacement, axial force, and stress while scaling energy quadratically,
-and that area changes inversely scale displacement, stress, and energy while
-preserving axial force. It also verifies that Young's modulus changes
-inversely scale displacement and strain energy while preserving
-load-controlled axial force and stress, and that similar-geometry scaling
-linearly scales member length, apex displacement, and strain energy while
-preserving axial force and stress. It also asserts
-`total_strain_energy = 0.5 * apex_load * apex_displacement` across the retained
-closed-form and scaling cases. Every retained branch also re-derives maximum
-nodal displacement, node id/coordinate passthrough, max stress, max
-strain-energy density, total strain energy, Hooke-law stress, axial force,
-element energy density, and global external work from public node and element
-fields. The retained area-partition refinement ladder now splits each physical
-member into 1, 2, 4, 8, and 16 parallel area partitions while preserving apex
-displacement, stress, strain, member axial-force sums, and total strain energy.
-This does not claim arbitrary truss topology, geometric nonlinearity, buckling,
-dynamic response, damaged members, or 3D space truss behavior.
+Mechanical truss qualification remains limited to the retained symmetric
+two-bar 2D and symmetric tripod 3D scopes. Their closed forms check fixed
+supports, zero lateral apex motion, vertical displacement, equal member force,
+stress, strain, and energy. Load scales displacement, force, and stress
+linearly and energy quadratically. Area inversely scales displacement, stress,
+and energy while preserving force. Young's modulus inversely scales
+displacement and energy while preserving load-controlled force and stress.
+Similar-geometry scaling changes length, displacement, and energy linearly,
+leaving force and stress fixed. Both lanes check
+`total_strain_energy = 0.5 * apex_load * apex_displacement`, reconstruct public
+maxima and element states, verify node id/coordinate passthrough, and re-sum
+global external work. Splitting each member into 1, 2, 4, 8, and 16 parallel
+area partitions preserves apex displacement, stress, strain, summed member
+force, and total energy. These scopes do not claim arbitrary truss/space-frame
+topology, geometric nonlinearity, buckling, damaged members, joint eccentricity,
+or dynamics; the 2D evidence alone does not qualify 3D behavior.
 
-The truss 3D operator is now qualified for the retained symmetric tripod scope.
-Its closed-form evidence checks fixed base supports, zero lateral apex motion,
-vertical displacement, equal axial leg force, stress, strain, and strain
-energy. The retained tripod scaling regression applies the same load and area
-checks to the 3D leg-force/stress/energy response, and now also verifies
-Young's-modulus inverse displacement and energy scaling while preserving
-load-controlled leg force and stress. It also checks similar-geometry scaling
-across leg length, apex displacement, and strain energy while preserving leg
-force and stress, plus
-`total_strain_energy = 0.5 * apex_load * apex_displacement` for the retained
-vertical load/displacement pair. Every retained branch also re-derives maximum
-3D nodal displacement, node id/coordinate passthrough, max stress, max
-strain-energy density, total strain energy, Hooke-law stress, axial force,
-element energy density, and global external work from public node and element
-fields. The retained tripod area-partition refinement ladder now splits each
-leg into 1, 2, 4, 8, and 16 parallel area partitions while preserving apex
-displacement, stress, strain, leg axial-force sums, and total strain energy.
-This does not claim arbitrary space-frame topology, geometric nonlinearity,
-buckling, damaged members, joint eccentricity, or dynamic response.
+The [mechanical-truss output regression](../reports/truss-output-reliability-20260927.md)
+adds finite stiffness/state/energy guards, stable norms, actual-coordinate
+model extents, and borrowed-solver cancellation with replay. Owned/borrowed
+parity and profiling errors are also checked. Mechanical and thermal trusses
+share Solver-local numeric checks, not Engine-specific logic. In-process Rust
+headless routes retain failure propagation and small representable results.
+This is bounded `verified` numerical/recovery evidence, not a new nonlinear,
+large-mesh, installed-service or performance qualification.
 
 The first qualification evidence collection track, `line-field-closed-form`,
 is now approved for qualification. Its versioned baseline artifact lives at

@@ -185,7 +185,11 @@
         "symmetric_two_bar_closed_form",
         "member_force_balance",
         "strain_energy_balance",
-        "member_area_partition_refinement"
+        "member_area_partition_refinement",
+        "finite_output_and_arithmetic_scale_regression",
+        "translated_small_deformation_guard",
+        "chunk_cancellation_and_replay",
+        "headless_engine_failure_propagation"
       ],
       "formal_invariants": [
         "fixed_support_displacements_are_zero",
@@ -193,7 +197,11 @@
         "member_axial_forces_match_vertical_equilibrium",
         "stress_and_strain_match_axial_force",
         "total_strain_energy_matches_member_energy_sum",
-        "area_partition_preserves_apex_displacement_stress_and_total_energy"
+        "area_partition_preserves_apex_displacement_stress_and_total_energy",
+        "fixed_supports_do_not_hide_invalid_stiffness",
+        "nonzero_density_energy_does_not_silently_underflow",
+        "small_deformation_decision_uses_actual_model_extent",
+        "cancelled_recovery_does_not_publish_success"
       ],
       "evidence_paths": [
         "config/operator-reliability/structural.json",
@@ -202,7 +210,10 @@
         "workers/rust/crates/solver/tests/truss_2d_review.rs",
         "workers/rust/crates/solver/tests/truss_2d_closed_form.rs",
         "workers/rust/crates/solver/tests/truss_2d_refinement.rs",
-        "workers/rust/crates/solver/tests/truss_input_reliability.rs"
+        "workers/rust/crates/solver/tests/truss_input_reliability.rs",
+        "workers/rust/crates/solver/tests/truss_output_reliability.rs",
+        "workers/rust/crates/cli/tests/truss_output_operator.rs",
+        "reports/truss-output-reliability-20260927.md"
       ],
       "commands": [
         {
@@ -224,6 +235,16 @@
           "id": "truss-input-reliability",
           "kind": "boundary_regression",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test truss_input_reliability -- --nocapture"
+        },
+        {
+          "id": "truss-output-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test truss_output_reliability -- --nocapture"
+        },
+        {
+          "id": "truss-headless-output",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test truss_output_operator -- --nocapture"
         }
       ]
     },
@@ -239,7 +260,11 @@
         "symmetric_tripod_closed_form",
         "member_force_balance_3d",
         "strain_energy_balance",
-        "member_area_partition_refinement"
+        "member_area_partition_refinement",
+        "finite_output_and_arithmetic_scale_regression",
+        "translated_small_deformation_guard",
+        "chunk_cancellation_and_replay",
+        "headless_engine_failure_propagation"
       ],
       "formal_invariants": [
         "fixed_base_displacements_are_zero",
@@ -247,7 +272,11 @@
         "member_axial_forces_match_vertical_equilibrium",
         "stress_and_strain_match_axial_force",
         "total_strain_energy_matches_three_member_energy_sum",
-        "area_partition_preserves_apex_displacement_stress_and_total_energy"
+        "area_partition_preserves_apex_displacement_stress_and_total_energy",
+        "fixed_supports_do_not_hide_invalid_stiffness",
+        "nonzero_density_energy_does_not_silently_underflow",
+        "small_deformation_decision_uses_actual_model_extent",
+        "cancelled_recovery_does_not_publish_success"
       ],
       "evidence_paths": [
         "config/operator-reliability/structural.json",
@@ -256,7 +285,10 @@
         "workers/rust/crates/solver/tests/truss_3d_review.rs",
         "workers/rust/crates/solver/tests/truss_3d_closed_form.rs",
         "workers/rust/crates/solver/tests/truss_3d_refinement.rs",
-        "workers/rust/crates/solver/tests/truss_input_reliability.rs"
+        "workers/rust/crates/solver/tests/truss_input_reliability.rs",
+        "workers/rust/crates/solver/tests/truss_output_reliability.rs",
+        "workers/rust/crates/cli/tests/truss_output_operator.rs",
+        "reports/truss-output-reliability-20260927.md"
       ],
       "commands": [
         {
@@ -278,6 +310,16 @@
           "id": "truss-input-reliability",
           "kind": "boundary_regression",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test truss_input_reliability -- --nocapture"
+        },
+        {
+          "id": "truss-output-reliability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test truss_output_reliability -- --nocapture"
+        },
+        {
+          "id": "truss-headless-output",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test truss_output_operator -- --nocapture"
         }
       ]
     }

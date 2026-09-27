@@ -13,7 +13,7 @@
         <h1>What daji 3.x is optimizing for</h1>
         <p class="docs-copy">
           Early Daji is hardening an agent-driven industrial research system,
-          not maximizing feature count. At the current 3.4.2 checkpoint, progress
+          not maximizing feature count. At the current 3.4.3 checkpoint, progress
           means complete research journeys: bounded objectives, real execution,
           validated results, safe recovery, and reproducible evidence. Industrial
           reliability is the goal; each claim still requires its own proof.
@@ -26,25 +26,25 @@
       </section>
 
       <section class="docs-card docs-section" id="current-checkpoint">
-        <h2>Daji 3.4.2 checkpoint</h2>
+        <h2>Daji 3.4.3 checkpoint</h2>
         <ul class="docs-list">
-          <li>Workflow admission and deletion commit job/result pairs atomically under Orchestra ownership; failures retain the prior state.</li>
-          <li>Result administration rejects private recovery injection, preserves workflow identity, and cannot recreate a missing receipt.</li>
-          <li>CST signed gradients fix clockwise and mixed-orientation mechanical/thermal fields. Recompute historical affected results before research reuse.</li>
-          <li>Q4 and tetrahedral geometry are translation-stable, with reused stiffness intermediates and finite coefficient guards. Kernel benchmarks are not whole-solve speedups.</li>
-          <li>Thermal-plane interpolation, recovered fields, energy, and norms receive range-aware checks and scoped macOS/Linux regression coverage.</li>
+          <li>Truss, thermal-truss, beam, and frame paths validate assembly and recovered fields, including fully restrained systems and arithmetic extremes.</li>
+          <li>Planar thermal-frame energy includes bending-field variation; spatial thermal-frame energy avoids subtractive cancellation.</li>
+          <li>Spatial directions use scale-first normalization. Thermal-frame exact supports and reaction recovery share a stable constraint basis.</li>
+          <li>Explicit section hints produce a right-handed orthonormal basis while preserving the default reference-axis convention. Recompute affected historical results before research reuse.</li>
+          <li>Analytical, orientation, refinement, cancellation, and replay regressions exercise public Solver and Rust Headless execution paths on macOS and Linux.</li>
           <li>Existing graph/artifact admission, compact modeling, bundle creation, PWDT, and language-pack capabilities remain available with their original qualification limits.</li>
         </ul>
         <p class="docs-copy">
-          Source and package metadata now target <code>daji 3.4.2</code>.
+          Source and package metadata now target <code>daji 3.4.3</code>.
           This patch does not rebuild or install binaries; the last local desktop
-          and runtime baseline remains <code>3.4.0</code>. SQLite/memory and scoped
-          solver regressions do not establish live PostgreSQL, remote failover,
-          power-loss, all-physics, large-scale, or installed-GUI qualification.
+          and runtime baseline remains <code>3.4.0</code>. Scoped numerical
+          regressions do not establish external-solver correlation, general
+          physical qualification, Windows, installed-Agent, GUI, or scale acceptance.
           Tensor gaps remain open.
         </p>
         <div class="docs-links">
-          <a class="docs-link" href="./current-line.md#daji-342-checkpoint">Source checkpoint and limits</a>
+          <a class="docs-link" href="./current-line.md#daji-343-checkpoint">Source checkpoint and limits</a>
           <a class="docs-link" href="./tutorial-first-research.html">Create a research bundle</a>
           <a class="docs-link" href="./tutorial-pwdt-automation.html">Use the PWDT workspace</a>
           <a class="docs-link" href="./language-packs.md">Translation coverage</a>

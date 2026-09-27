@@ -8,6 +8,9 @@ use crate::linear_algebra::{
     solve_spd_system_profile_with_options,
 };
 use crate::linear_solver_profile::SpdSolveOptions;
+use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
+use crate::solver_postprocess::{restore_solution, try_collect_results};
+use crate::truss_numerics::{validate_assembled_stiffness, validate_fields, validate_stiffness};
 use crate::truss_summary::{
     max_truss_2d_displacement, max_truss_3d_displacement, max_truss_3d_strain_energy_density,
     max_truss_3d_stress, max_truss_strain_energy_density, max_truss_stress,
@@ -75,15 +78,17 @@ fn solve_truss_2d_internal(
         force_vector[index * 2 + 1] = node.load_y;
     }
 
-    for element in &request.elements {
+    checkpoint(SolverStage::ElementAssembly, 0)?;
+    for (index, element) in request.elements.iter().enumerate() {
         let node_i = &request.nodes[element.node_i];
         let node_j = &request.nodes[element.node_j];
         let dx = node_j.x - node_i.x;
         let dy = node_j.y - node_i.y;
-        let length = (dx * dx + dy * dy).sqrt();
+        let length = dx.hypot(dy);
         let c = dx / length;
         let s = dy / length;
         let k = element.youngs_modulus * element.area / length;
+        validate_stiffness("truss", &element.id, k)?;
 
         let local = [
             [c * c, c * s, -c * c, -c * s],
@@ -109,7 +114,13 @@ fn solve_truss_2d_internal(
                 );
             }
         }
+        checkpoint_chunk(
+            SolverStage::ElementAssembly,
+            index + 1,
+            request.elements.len(),
+        )?;
     }
+    validate_assembled_stiffness("truss", &global_stiffness)?;
     push_truss_2d_stage(
         &mut stages,
         collect_stages,
@@ -167,35 +178,33 @@ fn solve_truss_2d_internal(
     );
 
     stage_started = Instant::now();
-    let mut displacements = vec![0.0; dof_count];
-    for (index, &dof) in free.iter().enumerate() {
-        displacements[dof] = reduced_displacements[index];
-    }
+    let displacements = restore_solution(dof_count, &[], &free, &reduced_displacements)?;
 
-    let nodes = request
-        .nodes
-        .iter()
-        .enumerate()
-        .map(|(index, node)| TrussNodeResult {
-            index,
-            id: node.id.clone(),
-            x: node.x,
-            y: node.y,
-            ux: displacements[index * 2],
-            uy: displacements[index * 2 + 1],
-        })
-        .collect::<Vec<_>>();
+    let nodes = try_collect_results(
+        SolverStage::ResultNodes,
+        request.nodes.iter().enumerate().map(|(index, node)| {
+            let ux = displacements[index * 2];
+            let uy = displacements[index * 2 + 1];
+            validate_fields("truss", &node.id, "displacement", &[ux.hypot(uy)])?;
+            Ok(TrussNodeResult {
+                index,
+                id: node.id.clone(),
+                x: node.x,
+                y: node.y,
+                ux,
+                uy,
+            })
+        }),
+    )?;
 
-    let elements = request
-        .elements
-        .iter()
-        .enumerate()
-        .map(|(index, element)| {
+    let elements = try_collect_results(
+        SolverStage::ResultElements,
+        request.elements.iter().enumerate().map(|(index, element)| {
             let node_i = &request.nodes[element.node_i];
             let node_j = &request.nodes[element.node_j];
             let dx = node_j.x - node_i.x;
             let dy = node_j.y - node_i.y;
-            let length = (dx * dx + dy * dy).sqrt();
+            let length = dx.hypot(dy);
             let c = dx / length;
             let s = dy / length;
 
@@ -207,8 +216,15 @@ fn solve_truss_2d_internal(
             let strain = axial_extension / length;
             let stress = element.youngs_modulus * strain;
             let strain_energy_density = 0.5 * stress * strain;
+            let axial_force = stress * element.area;
+            validate_fields(
+                "truss",
+                &element.id,
+                "recovered state or energy",
+                &[strain, stress, axial_force, strain_energy_density],
+            )?;
 
-            TrussElementResult {
+            Ok(TrussElementResult {
                 index,
                 id: element.id.clone(),
                 node_i: element.node_i,
@@ -216,16 +232,16 @@ fn solve_truss_2d_internal(
                 length,
                 strain,
                 stress,
-                axial_force: stress * element.area,
+                axial_force,
                 strain_energy_density,
-            }
-        })
-        .collect::<Vec<_>>();
+            })
+        }),
+    )?;
 
-    let max_displacement = max_truss_2d_displacement(&nodes);
-    let max_stress = max_truss_stress(&elements);
-    let total_strain_energy = total_truss_2d_strain_energy(request.as_ref(), &elements);
-    let max_strain_energy_density = max_truss_strain_energy_density(&elements);
+    let max_displacement = max_truss_2d_displacement(&nodes)?;
+    let max_stress = max_truss_stress(&elements)?;
+    let total_strain_energy = total_truss_2d_strain_energy(request.as_ref(), &elements)?;
+    let max_strain_energy_density = max_truss_strain_energy_density(&elements)?;
 
     validate_small_displacement_truss(request.as_ref(), max_displacement)?;
     push_truss_2d_stage(
@@ -320,17 +336,19 @@ fn solve_truss_3d_internal(
         force_vector[index * 3 + 2] = node.load_z;
     }
 
-    for element in &request.elements {
+    checkpoint(SolverStage::ElementAssembly, 0)?;
+    for (index, element) in request.elements.iter().enumerate() {
         let node_i = &request.nodes[element.node_i];
         let node_j = &request.nodes[element.node_j];
         let dx = node_j.x - node_i.x;
         let dy = node_j.y - node_i.y;
         let dz = node_j.z - node_i.z;
-        let length = (dx * dx + dy * dy + dz * dz).sqrt();
+        let length = dx.hypot(dy).hypot(dz);
         let l = dx / length;
         let m = dy / length;
         let n = dz / length;
         let k = element.youngs_modulus * element.area / length;
+        validate_stiffness("3d truss", &element.id, k)?;
 
         let local = [
             [l * l, l * m, l * n, -l * l, -l * m, -l * n],
@@ -360,7 +378,13 @@ fn solve_truss_3d_internal(
                 );
             }
         }
+        checkpoint_chunk(
+            SolverStage::ElementAssembly,
+            index + 1,
+            request.elements.len(),
+        )?;
     }
+    validate_assembled_stiffness("3d truss", &global_stiffness)?;
 
     let constrained = request
         .nodes
@@ -385,38 +409,42 @@ fn solve_truss_3d_internal(
         reduce_sparse_system(&global_stiffness, &force_vector, &constrained)?;
     let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
 
-    let mut displacements = vec![0.0; dof_count];
-    for (index, &dof) in free.iter().enumerate() {
-        displacements[dof] = reduced_displacements[index];
-    }
+    let displacements = restore_solution(dof_count, &[], &free, &reduced_displacements)?;
 
-    let nodes = request
-        .nodes
-        .iter()
-        .enumerate()
-        .map(|(index, node)| Truss3dNodeResult {
-            index,
-            id: node.id.clone(),
-            x: node.x,
-            y: node.y,
-            z: node.z,
-            ux: displacements[index * 3],
-            uy: displacements[index * 3 + 1],
-            uz: displacements[index * 3 + 2],
-        })
-        .collect::<Vec<_>>();
+    let nodes = try_collect_results(
+        SolverStage::ResultNodes,
+        request.nodes.iter().enumerate().map(|(index, node)| {
+            let ux = displacements[index * 3];
+            let uy = displacements[index * 3 + 1];
+            let uz = displacements[index * 3 + 2];
+            validate_fields(
+                "3d truss",
+                &node.id,
+                "displacement",
+                &[ux.hypot(uy).hypot(uz)],
+            )?;
+            Ok(Truss3dNodeResult {
+                index,
+                id: node.id.clone(),
+                x: node.x,
+                y: node.y,
+                z: node.z,
+                ux,
+                uy,
+                uz,
+            })
+        }),
+    )?;
 
-    let elements = request
-        .elements
-        .iter()
-        .enumerate()
-        .map(|(index, element)| {
+    let elements = try_collect_results(
+        SolverStage::ResultElements,
+        request.elements.iter().enumerate().map(|(index, element)| {
             let node_i = &request.nodes[element.node_i];
             let node_j = &request.nodes[element.node_j];
             let dx = node_j.x - node_i.x;
             let dy = node_j.y - node_i.y;
             let dz = node_j.z - node_i.z;
-            let length = (dx * dx + dy * dy + dz * dz).sqrt();
+            let length = dx.hypot(dy).hypot(dz);
             let l = dx / length;
             let m = dy / length;
             let n = dz / length;
@@ -431,8 +459,15 @@ fn solve_truss_3d_internal(
             let strain = axial_extension / length;
             let stress = element.youngs_modulus * strain;
             let strain_energy_density = 0.5 * stress * strain;
+            let axial_force = stress * element.area;
+            validate_fields(
+                "3d truss",
+                &element.id,
+                "recovered state or energy",
+                &[strain, stress, axial_force, strain_energy_density],
+            )?;
 
-            Truss3dElementResult {
+            Ok(Truss3dElementResult {
                 index,
                 id: element.id.clone(),
                 node_i: element.node_i,
@@ -440,16 +475,16 @@ fn solve_truss_3d_internal(
                 length,
                 strain,
                 stress,
-                axial_force: stress * element.area,
+                axial_force,
                 strain_energy_density,
-            }
-        })
-        .collect::<Vec<_>>();
+            })
+        }),
+    )?;
 
-    let max_displacement = max_truss_3d_displacement(&nodes);
-    let max_stress = max_truss_3d_stress(&elements);
-    let total_strain_energy = total_truss_3d_strain_energy(request.as_ref(), &elements);
-    let max_strain_energy_density = max_truss_3d_strain_energy_density(&elements);
+    let max_displacement = max_truss_3d_displacement(&nodes)?;
+    let max_stress = max_truss_3d_stress(&elements)?;
+    let total_strain_energy = total_truss_3d_strain_energy(request.as_ref(), &elements)?;
+    let max_strain_energy_density = max_truss_3d_strain_energy_density(&elements)?;
 
     validate_small_displacement_truss_3d(request.as_ref(), max_displacement)?;
 

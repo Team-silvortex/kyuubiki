@@ -1,11 +1,13 @@
+use crate::frame_3d_element::finite_fields;
+use crate::frame_3d_math::normalized_direction as normalize;
 use crate::linear_algebra::{SparseMatrix, add_at};
-use crate::linear_dense::solve_linear_system;
+use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
+use crate::solver_postprocess::try_collect_results;
+use crate::thermal_frame_3d_constraint_basis::{dot, free_basis, reaction_coefficients};
 use kyuubiki_protocol::{
     SolveThermalFrame3dRequest, ThermalFrame3dDirectionalConstraintResult,
     ThermalFrame3dDirectionalRotationalConstraintResult,
 };
-
-const DIRECTION_TOLERANCE: f64 = 1.0e-10;
 
 pub(crate) struct ThermalFrame3dConstraintSystem {
     physical_to_reduced: Vec<Vec<(usize, f64)>>,
@@ -17,6 +19,7 @@ pub(crate) struct ThermalFrame3dConstraintSystem {
 
 impl ThermalFrame3dConstraintSystem {
     pub(crate) fn build(request: &SolveThermalFrame3dRequest) -> Result<Self, String> {
+        checkpoint(SolverStage::ConstraintIndex, 0)?;
         let mut block_constraints = vec![Vec::new(); request.nodes.len() * 2];
         for (node_index, node) in request.nodes.iter().enumerate() {
             push_fixed_axes(
@@ -27,26 +30,46 @@ impl ThermalFrame3dConstraintSystem {
                 &mut block_constraints[node_index * 2 + 1],
                 [node.fix_rx, node.fix_ry, node.fix_rz],
             );
+            checkpoint_chunk(
+                SolverStage::ConstraintIndex,
+                node_index + 1,
+                request.nodes.len(),
+            )?;
         }
 
         let mut translational_slots = Vec::with_capacity(request.directional_constraints.len());
-        for constraint in &request.directional_constraints {
+        for (index, constraint) in request.directional_constraints.iter().enumerate() {
             let block = constraint.node * 2;
             let slot = block_constraints[block].len();
-            block_constraints[block].push(normalize(constraint.direction));
+            block_constraints[block].push(normalize(constraint.direction)?);
             translational_slots.push((block, slot));
+            checkpoint_chunk(
+                SolverStage::ConstraintIndex,
+                index + 1,
+                request.directional_constraints.len(),
+            )?;
         }
         let mut rotational_slots =
             Vec::with_capacity(request.directional_rotational_constraints.len());
-        for constraint in &request.directional_rotational_constraints {
+        for (index, constraint) in request
+            .directional_rotational_constraints
+            .iter()
+            .enumerate()
+        {
             let block = constraint.node * 2 + 1;
             let slot = block_constraints[block].len();
-            block_constraints[block].push(normalize(constraint.direction));
+            block_constraints[block].push(normalize(constraint.direction)?);
             rotational_slots.push((block, slot));
+            checkpoint_chunk(
+                SolverStage::ConstraintIndex,
+                index + 1,
+                request.directional_rotational_constraints.len(),
+            )?;
         }
 
         let mut physical_to_reduced = vec![Vec::new(); request.nodes.len() * 6];
         let mut reduced_size = 0;
+        checkpoint(SolverStage::ConstraintMap, 0)?;
         for (block, constraints) in block_constraints.iter().enumerate() {
             let free_basis = free_basis(constraints)
                 .map_err(|error| format!("thermal 3d frame constraint block {block} {error}"))?;
@@ -60,6 +83,11 @@ impl ThermalFrame3dConstraintSystem {
                 }
                 reduced_size += 1;
             }
+            checkpoint_chunk(
+                SolverStage::ConstraintMap,
+                block + 1,
+                block_constraints.len(),
+            )?;
         }
 
         Ok(Self {
@@ -71,7 +99,12 @@ impl ThermalFrame3dConstraintSystem {
         })
     }
 
-    pub(crate) fn project(&self, matrix: &SparseMatrix, force: &[f64]) -> (SparseMatrix, Vec<f64>) {
+    pub(crate) fn project(
+        &self,
+        matrix: &SparseMatrix,
+        force: &[f64],
+    ) -> Result<(SparseMatrix, Vec<f64>), String> {
+        checkpoint(SolverStage::ConstraintReduce, 0)?;
         let mut reduced = SparseMatrix::new(self.reduced_size);
         let mut reduced_force = vec![0.0; self.reduced_size];
         for (physical_row, &physical_force) in force.iter().enumerate() {
@@ -90,20 +123,24 @@ impl ThermalFrame3dConstraintSystem {
                     }
                 }
             }
+            checkpoint_chunk(SolverStage::ConstraintReduce, physical_row + 1, force.len())?;
         }
-        (reduced, reduced_force)
+        finite_fields("constraint projection", "load", &reduced_force)?;
+        Ok((reduced, reduced_force))
     }
 
-    pub(crate) fn restore(&self, reduced: &[f64]) -> Vec<f64> {
-        self.physical_to_reduced
-            .iter()
-            .map(|terms| {
-                terms
+    pub(crate) fn restore(&self, reduced: &[f64]) -> Result<Vec<f64>, String> {
+        try_collect_results(
+            SolverStage::ResultFreeDofs,
+            self.physical_to_reduced.iter().map(|terms| {
+                let value = terms
                     .iter()
                     .map(|(index, weight)| weight * reduced[*index])
-                    .sum()
-            })
-            .collect()
+                    .sum();
+                finite_fields("constraint restore", "displacement", &[value])?;
+                Ok(value)
+            }),
+        )
     }
 
     pub(crate) fn build_results(
@@ -119,50 +156,69 @@ impl ThermalFrame3dConstraintSystem {
         ),
         String,
     > {
-        let residual = residual_vector(matrix, force, displacement);
-        let block_reactions = self
-            .block_constraints
-            .iter()
-            .enumerate()
-            .map(|(block, constraints)| {
-                reaction_coefficients(constraints, block_vector(&residual, block))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let residual = residual_vector(matrix, force, displacement)?;
+        let block_reactions = try_collect_results(
+            SolverStage::ResultElements,
+            self.block_constraints
+                .iter()
+                .enumerate()
+                .map(|(block, constraints)| {
+                    reaction_coefficients(constraints, block_vector(&residual, block))
+                }),
+        )?;
 
-        let translational = request
-            .directional_constraints
-            .iter()
-            .zip(&self.translational_slots)
-            .enumerate()
-            .map(|(index, (constraint, &(block, slot)))| {
-                let direction = normalize(constraint.direction);
-                ThermalFrame3dDirectionalConstraintResult {
-                    index,
-                    id: constraint.id.clone(),
-                    node: constraint.node,
-                    direction,
-                    displacement: dot(direction, block_vector(displacement, block)),
-                    reaction_force: block_reactions[block][slot],
-                }
-            })
-            .collect();
-        let rotational = request
-            .directional_rotational_constraints
-            .iter()
-            .zip(&self.rotational_slots)
-            .enumerate()
-            .map(|(index, (constraint, &(block, slot)))| {
-                let direction = normalize(constraint.direction);
-                ThermalFrame3dDirectionalRotationalConstraintResult {
-                    index,
-                    id: constraint.id.clone(),
-                    node: constraint.node,
-                    direction,
-                    rotation: dot(direction, block_vector(displacement, block)),
-                    reaction_moment: block_reactions[block][slot],
-                }
-            })
-            .collect();
+        let translational = try_collect_results(
+            SolverStage::ResultElements,
+            request
+                .directional_constraints
+                .iter()
+                .zip(&self.translational_slots)
+                .enumerate()
+                .map(|(index, (constraint, &(block, slot)))| {
+                    let direction = normalize(constraint.direction)?;
+                    let displacement = dot(direction, block_vector(displacement, block));
+                    let reaction_force = block_reactions[block][slot];
+                    finite_fields(
+                        &constraint.id,
+                        "constraint response",
+                        &[displacement, reaction_force],
+                    )?;
+                    Ok(ThermalFrame3dDirectionalConstraintResult {
+                        index,
+                        id: constraint.id.clone(),
+                        node: constraint.node,
+                        direction,
+                        displacement,
+                        reaction_force,
+                    })
+                }),
+        )?;
+        let rotational = try_collect_results(
+            SolverStage::ResultElements,
+            request
+                .directional_rotational_constraints
+                .iter()
+                .zip(&self.rotational_slots)
+                .enumerate()
+                .map(|(index, (constraint, &(block, slot)))| {
+                    let direction = normalize(constraint.direction)?;
+                    let rotation = dot(direction, block_vector(displacement, block));
+                    let reaction_moment = block_reactions[block][slot];
+                    finite_fields(
+                        &constraint.id,
+                        "constraint response",
+                        &[rotation, reaction_moment],
+                    )?;
+                    Ok(ThermalFrame3dDirectionalRotationalConstraintResult {
+                        index,
+                        id: constraint.id.clone(),
+                        node: constraint.node,
+                        direction,
+                        rotation,
+                        reaction_moment,
+                    })
+                }),
+        )?;
         Ok((translational, rotational))
     }
 }
@@ -175,86 +231,27 @@ fn push_fixed_axes(constraints: &mut Vec<[f64; 3]>, fixed: [bool; 3]) {
     }
 }
 
-fn free_basis(constraints: &[[f64; 3]]) -> Result<Vec<[f64; 3]>, String> {
-    let mut constrained_basis = Vec::with_capacity(constraints.len());
-    for &direction in constraints {
-        let candidate = orthogonalize(direction, &constrained_basis);
-        let norm = dot(candidate, candidate).sqrt();
-        if norm <= DIRECTION_TOLERANCE {
-            return Err("contains linearly dependent directions".to_string());
-        }
-        constrained_basis.push(scale(candidate, norm.recip()));
-    }
-
-    let mut full_basis = constrained_basis.clone();
-    let mut free = Vec::with_capacity(3 - constrained_basis.len());
-    for axis in 0..3 {
-        let candidate = orthogonalize(
-            std::array::from_fn(|index| (index == axis) as u8 as f64),
-            &full_basis,
-        );
-        let norm = dot(candidate, candidate).sqrt();
-        if norm > DIRECTION_TOLERANCE {
-            let unit = scale(candidate, norm.recip());
-            full_basis.push(unit);
-            free.push(unit);
-        }
-    }
-    Ok(free)
-}
-
-fn orthogonalize(mut vector: [f64; 3], basis: &[[f64; 3]]) -> [f64; 3] {
-    for &axis in basis {
-        let projection = dot(vector, axis);
-        for index in 0..3 {
-            vector[index] -= projection * axis[index];
-        }
-    }
-    vector
-}
-
-fn reaction_coefficients(constraints: &[[f64; 3]], residual: [f64; 3]) -> Result<Vec<f64>, String> {
-    if constraints.is_empty() {
-        return Ok(Vec::new());
-    }
-    let gram = constraints
-        .iter()
-        .map(|&left| constraints.iter().map(|&right| dot(left, right)).collect())
-        .collect();
-    let projected = constraints
-        .iter()
-        .map(|&direction| dot(direction, residual))
-        .collect();
-    solve_linear_system(gram, projected)
-        .map_err(|error| format!("could not recover exact constraint reactions: {error}"))
-}
-
-fn residual_vector(matrix: &SparseMatrix, force: &[f64], displacement: &[f64]) -> Vec<f64> {
-    (0..force.len())
-        .map(|row| {
-            matrix
+fn residual_vector(
+    matrix: &SparseMatrix,
+    force: &[f64],
+    displacement: &[f64],
+) -> Result<Vec<f64>, String> {
+    try_collect_results(
+        SolverStage::ResidualValidate,
+        (0..force.len()).map(|row| {
+            let value = matrix
                 .row_entries(row)
                 .iter()
                 .map(|(column, value)| value * displacement[*column])
                 .sum::<f64>()
-                - force[row]
-        })
-        .collect()
+                - force[row];
+            finite_fields("constraint reaction", "residual", &[value])?;
+            Ok(value)
+        }),
+    )
 }
 
 fn block_vector(vector: &[f64], block: usize) -> [f64; 3] {
     let offset = (block / 2) * 6 + (block % 2) * 3;
     [vector[offset], vector[offset + 1], vector[offset + 2]]
-}
-
-fn normalize(direction: [f64; 3]) -> [f64; 3] {
-    scale(direction, dot(direction, direction).sqrt().recip())
-}
-
-fn dot(left: [f64; 3], right: [f64; 3]) -> f64 {
-    left.into_iter().zip(right).map(|(a, b)| a * b).sum()
-}
-
-fn scale(vector: [f64; 3], scalar: f64) -> [f64; 3] {
-    vector.map(|value| value * scalar)
 }

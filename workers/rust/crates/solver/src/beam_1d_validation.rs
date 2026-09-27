@@ -1,6 +1,8 @@
+use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 use kyuubiki_protocol::{SolveBeam1dRequest, SolveThermalBeam1dRequest};
 
 pub(crate) fn validate_beam_1d_request(request: &SolveBeam1dRequest) -> Result<(), String> {
+    checkpoint(SolverStage::ElementPrecompute, 0)?;
     if request.nodes.len() < 2 {
         return Err("1d beam must define at least two nodes".to_string());
     }
@@ -9,13 +11,8 @@ pub(crate) fn validate_beam_1d_request(request: &SolveBeam1dRequest) -> Result<(
         return Err("1d beam must define at least one element".to_string());
     }
 
-    let constrained_dofs = request.nodes.iter().fold(0, |sum, node| {
-        sum + usize::from(node.fix_y) + usize::from(node.fix_rz)
-    });
-    if constrained_dofs < 2 {
-        return Err("1d beam must restrain at least two degrees of freedom".to_string());
-    }
-
+    let total = request.nodes.len() + request.elements.len();
+    let mut constrained_dofs = 0;
     for (index, node) in request.nodes.iter().enumerate() {
         if !node.x.is_finite() {
             return Err(format!("1d beam node {index} has invalid x"));
@@ -23,9 +20,14 @@ pub(crate) fn validate_beam_1d_request(request: &SolveBeam1dRequest) -> Result<(
         if !node.load_y.is_finite() || !node.moment_z.is_finite() {
             return Err(format!("1d beam node {index} has invalid load"));
         }
+        constrained_dofs += usize::from(node.fix_y) + usize::from(node.fix_rz);
+        checkpoint_chunk(SolverStage::ElementPrecompute, index + 1, total)?;
+    }
+    if constrained_dofs < 2 {
+        return Err("1d beam must restrain at least two degrees of freedom".to_string());
     }
 
-    for element in &request.elements {
+    for (index, element) in request.elements.iter().enumerate() {
         if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
             return Err("1d beam element references an out-of-range node".to_string());
         }
@@ -51,6 +53,11 @@ pub(crate) fn validate_beam_1d_request(request: &SolveBeam1dRequest) -> Result<(
         if !length.is_finite() || length <= 1.0e-12 {
             return Err("1d beam element length must be positive".to_string());
         }
+        checkpoint_chunk(
+            SolverStage::ElementPrecompute,
+            request.nodes.len() + index + 1,
+            total,
+        )?;
     }
 
     Ok(())
@@ -59,6 +66,7 @@ pub(crate) fn validate_beam_1d_request(request: &SolveBeam1dRequest) -> Result<(
 pub(crate) fn validate_thermal_beam_1d_request(
     request: &SolveThermalBeam1dRequest,
 ) -> Result<(), String> {
+    checkpoint(SolverStage::ElementPrecompute, 0)?;
     if request.nodes.len() < 2 {
         return Err("thermal beam requires at least two nodes".to_string());
     }
@@ -67,6 +75,7 @@ pub(crate) fn validate_thermal_beam_1d_request(
         return Err("thermal beam requires at least one element".to_string());
     }
 
+    let total = request.nodes.len() + request.elements.len();
     for (index, node) in request.nodes.iter().enumerate() {
         if !node.x.is_finite() {
             return Err(format!("thermal beam node {index} has invalid x"));
@@ -74,6 +83,7 @@ pub(crate) fn validate_thermal_beam_1d_request(
         if !node.load_y.is_finite() || !node.moment_z.is_finite() {
             return Err(format!("thermal beam node {index} has invalid load"));
         }
+        checkpoint_chunk(SolverStage::ElementPrecompute, index + 1, total)?;
     }
 
     for (index, element) in request.elements.iter().enumerate() {
@@ -118,6 +128,11 @@ pub(crate) fn validate_thermal_beam_1d_request(
                 "thermal beam element {index} has invalid thermal load data"
             ));
         }
+        checkpoint_chunk(
+            SolverStage::ElementPrecompute,
+            request.nodes.len() + index + 1,
+            total,
+        )?;
     }
 
     Ok(())

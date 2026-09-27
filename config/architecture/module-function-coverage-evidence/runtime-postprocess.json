@@ -4,6 +4,34 @@
   "summary": "Scoped planar heat and thermal-stress result construction retains installed recovery and paired overhead evidence. Separate bounded local mechanical, electrostatic, magnetostatic and Stokes output-range regression, frame modal-spectrum regression, transient-spring time-stepping, harmonic-spring sweep, beam/frame buckling assembly, P-Delta path diagnostics, frame material-history recovery, adaptive fiber integration, initial-stress preflight, nonlinear support-load isolation, mixed-scale equation guards and nonlinear-spring/contact finite-range and committed-load recovery are verified only in process, without broad physics qualification. Retained-input cloning, serialization, and other operator scopes remain separate coverage.",
   "evidence_claims": [
     {
+      "id": "mechanical-truss-finite-output-and-replay",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/truss.rs",
+        "workers/rust/crates/solver/src/truss_numerics.rs",
+        "workers/rust/crates/solver/src/truss_summary.rs",
+        "workers/rust/crates/solver/src/truss_validation.rs",
+        "workers/rust/crates/solver/src/solver_postprocess.rs",
+        "workers/rust/crates/solver/tests/truss_output_reliability.rs",
+        "workers/rust/crates/cli/tests/truss_output_operator.rs",
+        "config/operator-validation-profiles/structural.json",
+        "reports/truss-output-reliability-20260927.md"
+      ],
+      "required_text": [
+        "mechanical_truss_volume_product_retains_representable_energy",
+        "mechanical_truss_fixed_supports_cannot_hide_invalid_stiffness",
+        "mechanical_truss_displacement_guard_uses_actual_translated_scaled_extent",
+        "mechanical_truss_profile_matches_public_result_and_rejects_invalid_output",
+        "mechanical_truss_assembly_and_recovery_cancel_at_chunk_boundaries",
+        "headless_mechanical_truss_energy_failure_is_not_success_and_valid_input_replays",
+        "This is bounded mechanical-truss output validation, not general structural qualification."
+      ]
+    },
+    {
       "id": "workflow-field-bundle-integrity",
       "status": "proven",
       "grade": "verified",
