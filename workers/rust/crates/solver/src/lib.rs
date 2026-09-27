@@ -100,6 +100,7 @@ mod rigid_body_restraints_3d;
 mod scalar_plane_kernel;
 mod solid_tetra_3d;
 mod solid_tetra_3d_element;
+mod solid_tetra_3d_geometry;
 mod solid_tetra_3d_validation;
 pub mod solver_control;
 mod solver_postprocess;

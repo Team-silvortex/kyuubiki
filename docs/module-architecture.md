@@ -151,7 +151,7 @@ broadcasting it to other dimensions. P0/P1/P2 criticality and external release
 decisions remain separate from structural `ok`.
 
 The calibration source checkpoint remains `daji 3.2.0`; current development is
-`daji 3.4.1`. Updating the documentation neither reruns qualification nor bumps
+`daji 3.4.2`. Updating the documentation neither reruns qualification nor bumps
 the packaged application. The profile stays advisory until an explicit gate-mode
 decision changes it to `enforced`; only then does an unready profile fail the
 command rather than produce a hardening queue.

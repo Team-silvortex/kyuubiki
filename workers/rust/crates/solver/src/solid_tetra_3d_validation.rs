@@ -1,4 +1,5 @@
 use crate::rigid_body_restraints_3d::rigid_body_restraint_rank;
+use crate::solid_tetra_3d_geometry::TetraGeometry;
 use kyuubiki_protocol::{SolidTetra3dElementInput, SolveSolidTetra3dRequest};
 use std::collections::BTreeMap;
 
@@ -94,28 +95,7 @@ fn validate_positive_volume(
         let node = &request.nodes[index];
         [node.x, node.y, node.z]
     });
-    let volume = tetra_volume(points);
-    if !(volume.is_finite() && volume > 0.0) {
-        return Err(format!(
-            "solid tetra element {} has zero volume",
-            element.id
-        ));
-    }
-    Ok(())
-}
-
-fn tetra_volume(points: [[f64; 3]; 4]) -> f64 {
-    let ax = points[1][0] - points[0][0];
-    let ay = points[1][1] - points[0][1];
-    let az = points[1][2] - points[0][2];
-    let bx = points[2][0] - points[0][0];
-    let by = points[2][1] - points[0][1];
-    let bz = points[2][2] - points[0][2];
-    let cx = points[3][0] - points[0][0];
-    let cy = points[3][1] - points[0][1];
-    let cz = points[3][2] - points[0][2];
-    let triple = ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx);
-    triple.abs() / 6.0
+    TetraGeometry::new(points, &element.id).map(|_| ())
 }
 
 pub(crate) fn mesh_component_count(request: &SolveSolidTetra3dRequest) -> usize {

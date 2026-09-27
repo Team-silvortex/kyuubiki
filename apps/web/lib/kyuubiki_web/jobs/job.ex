@@ -113,6 +113,10 @@ defmodule KyuubikiWeb.Jobs.Job do
     end
   end
 
+  @doc false
+  def validate_initial_runtime(%__MODULE__{status: :queued}), do: :ok
+  def validate_initial_runtime(%__MODULE__{job_id: id}), do: {:error, {:job_not_queued, id}}
+
   @spec apply_progress(t(), KyuubikiWeb.Jobs.ProgressEvent.t()) ::
           {:ok, t()} | {:error, term()}
   def apply_progress(%__MODULE__{} = job, %KyuubikiWeb.Jobs.ProgressEvent{} = event) do

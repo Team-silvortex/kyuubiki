@@ -12,6 +12,7 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   alias KyuubikiWeb.AnalysisResultStore
   alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Orchestra.LeaseStore
+  alias KyuubikiWeb.Orchestra.WorkflowAdmission
   alias KyuubikiWeb.Orchestra.WorkflowJobRunner
   alias KyuubikiWeb.Orchestra.WorkflowNodeProgress
   alias KyuubikiWeb.Orchestra.WorkflowRecoveryOwnership, as: Ownership
@@ -24,6 +25,14 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
+  end
+
+  @spec admit(map(), map(), map(), map(), map()) ::
+          {:ok, KyuubikiWeb.Jobs.Job.t()} | {:error, term()}
+  def admit(attrs, graph, inputs, context, options)
+      when is_map(attrs) and is_map(graph) and is_map(inputs) and is_map(context) and
+             is_map(options) do
+    GenServer.call(__MODULE__, {:admit, attrs, graph, inputs, context, options}, @call_timeout)
   end
 
   @spec initialize(String.t(), map(), map(), map(), map()) :: :ok | {:error, term()}
@@ -63,6 +72,16 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   @spec cancel(String.t()) :: :ok | {:error, term()}
   def cancel(job_id) when is_binary(job_id) do
     GenServer.call(__MODULE__, {:cancel, job_id}, @call_timeout)
+  end
+
+  @spec delete(String.t()) :: {:ok, KyuubikiWeb.Jobs.Job.t()} | {:error, term()}
+  def delete(job_id) when is_binary(job_id) do
+    GenServer.call(__MODULE__, {:delete, job_id}, @call_timeout)
+  end
+
+  @spec edit_result(String.t(), :delete | {:replace, map()}) :: {:ok, map()} | {:error, term()}
+  def edit_result(job_id, action) when is_binary(job_id) do
+    GenServer.call(__MODULE__, {:edit_result, job_id, action}, @call_timeout)
   end
 
   @spec recover_now() :: map()
@@ -108,31 +127,19 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
   end
 
   @impl true
-  def handle_call(
-        {:initialize, job_id, graph, input_artifacts, orchestration_context, response_options},
-        _from,
-        state
-      ) do
+  def handle_call({:admit, attrs, graph, inputs, context, options}, _from, state) do
     result =
       Ownership.guarded_write(state, fn ->
-        with {:ok, recovery} <-
-               WorkflowRecoveryEnvelope.new(
-                 graph,
-                 input_artifacts,
-                 Map.put(orchestration_context, "job_id", job_id),
-                 response_options
-               ) do
-          AnalysisResultStore.put(job_id, %{
-            "workflow_id" => Map.get(graph, "id"),
-            "current_node" => nil,
-            "progress_events" => [],
-            "completed_nodes" => [],
-            "artifacts" => %{},
-            "response_options" => response_options,
-            "orchestration_context" => orchestration_context,
-            WorkflowRecoveryEnvelope.internal_key() => recovery
-          })
-        end
+        WorkflowAdmission.admit(attrs, graph, inputs, context, options)
+      end)
+
+    {:reply, result, Ownership.after_write(state, result)}
+  end
+
+  def handle_call({:initialize, job_id, graph, inputs, context, options}, _from, state) do
+    result =
+      Ownership.guarded_write(state, fn ->
+        WorkflowAdmission.initialize(job_id, graph, inputs, context, options)
       end)
 
     {:reply, result, Ownership.after_write(state, result)}
@@ -207,6 +214,25 @@ defmodule KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator do
 
   def handle_call({:cancel, job_id}, _from, state) do
     reply = Ownership.guarded_write(state, fn -> cancel_recovery(job_id) end)
+    {:reply, reply, Ownership.after_write(state, reply)}
+  end
+
+  def handle_call({:delete, job_id}, _from, state) do
+    reply = Ownership.guarded_write(state, fn -> Store.delete_with_result(job_id) end)
+
+    if match?({:ok, _job}, reply) do
+      case Map.get(state.jobs, job_id) do
+        %{pid: pid} -> Process.exit(pid, :shutdown)
+        nil -> :ok
+      end
+    end
+
+    next = if match?({:ok, _job}, reply), do: forget_progress(state, job_id), else: state
+    {:reply, reply, Ownership.after_write(next, reply)}
+  end
+
+  def handle_call({:edit_result, job_id, action}, _from, state) do
+    reply = Ownership.guarded_write(state, fn -> Store.edit_result(job_id, action) end)
     {:reply, reply, Ownership.after_write(state, reply)}
   end
 

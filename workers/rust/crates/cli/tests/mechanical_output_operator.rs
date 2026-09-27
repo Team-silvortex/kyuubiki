@@ -92,3 +92,66 @@ fn mechanical_overflow_is_an_engine_error_and_does_not_poison_replay() {
         assert!((result["total_strain_energy"].as_f64().unwrap() / 5e-7 - 1.0).abs() < 1e-10);
     }
 }
+
+#[test]
+fn triangle_mixed_orientation_keeps_signed_stress_through_headless_plan() {
+    for mask in 0..4 {
+        let mut input = model(false, 1200.0, 1e-3);
+        for (i, element) in input["elements"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .enumerate()
+        {
+            if mask & (1 << i) != 0 {
+                let j = element["node_j"].clone();
+                element["node_j"] = element["node_k"].clone();
+                element["node_k"] = j;
+            }
+        }
+        let result = planned_solve(false, input).unwrap();
+        for element in result["elements"].as_array().unwrap() {
+            assert!((element["stress_x"].as_f64().unwrap() - 1.2).abs() < 1e-11);
+        }
+        assert!((result["total_strain_energy"].as_f64().unwrap() / 0.0006 - 1.0).abs() < 1e-11);
+    }
+}
+
+#[test]
+fn q4_translation_preserves_analytical_response_through_headless_plan() {
+    for offset in [2f64.powi(40), -2f64.powi(40)] {
+        let mut input = model(true, 1200.0, 1e-3);
+        for node in input["nodes"].as_array_mut().unwrap() {
+            node["x"] = json!(node["x"].as_f64().unwrap() + offset);
+            node["y"] = json!(node["y"].as_f64().unwrap() - offset);
+        }
+        let result = planned_solve(true, input).unwrap();
+        for (key, expected) in [
+            ("max_displacement", 1e-3),
+            ("max_stress", 1.2),
+            ("total_strain_energy", 0.0006),
+        ] {
+            let actual = result[key]
+                .as_f64()
+                .expect("successful output must be numeric");
+            assert!(
+                (actual / expected - 1.0).abs() < 1e-11,
+                "{key}: {actual} != {expected}"
+            );
+        }
+    }
+}
+
+#[test]
+fn q4_coefficient_overflow_is_identified_before_assembly_and_headless_replay_succeeds() {
+    let mut invalid = model(true, 1200.0, 1e-3);
+    invalid["elements"][0]["youngs_modulus"] = json!(f64::MAX);
+    invalid["elements"][0]["poisson_ratio"] = json!(0.49);
+    let error = planned_solve(true, invalid).unwrap_err();
+    assert!(
+        error.contains("bulk") && error.contains("coefficients are not representable"),
+        "{error}"
+    );
+    let result = planned_solve(true, model(true, 1200.0, 1e-3)).unwrap();
+    assert!((result["total_strain_energy"].as_f64().unwrap() / 0.0006 - 1.0).abs() < 1e-11);
+}

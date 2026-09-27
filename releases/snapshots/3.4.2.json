@@ -1,0 +1,94 @@
+{
+  "version": "3.4.2",
+  "codename": "daji",
+  "line": "3.x",
+  "status": "current",
+  "date": "2026-09-27",
+  "git_commit": "d7de8968d0eba5e3ed5c08c2ed82ab67ba8aed36",
+  "summary": "Daji 3.4.2 source reliability patch: atomic workflow admission/deletion and guarded result administration, signed CST gradients, stable Q4/tetrahedral geometry, and range-aware thermal-plane output. Scoped kernel benchmarks and regression evidence; no desktop rebuild or binary publication.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "reliability": "docs/operator-reliability.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": { "version": "3.4.2", "notes": ["Metadata aligned; no new GUI behavior in this patch."] },
+    "hub_gui": { "version": "3.4.2", "notes": ["Source metadata only; no new desktop artifact."] },
+    "workbench_gui": { "version": "3.4.2", "notes": ["Source metadata only; no new desktop artifact."] },
+    "installer_gui": { "version": "3.4.2", "notes": ["Source metadata only; no new desktop artifact."] },
+    "web_api": { "version": "3.4.2", "notes": ["Atomic admission/deletion and guarded result administration under Orchestra ownership."] },
+    "rust_headless_sdk": { "version": "3.4.2", "notes": ["Existing SDK/engine routes exercised; registry publication not performed."] },
+    "python_headless_sdk": { "version": "3.4.2", "notes": ["Registry publication not performed."] },
+    "elixir_headless_sdk": { "version": "3.4.2", "notes": ["Registry publication not performed."] },
+    "rust_worker_sdk": { "version": "3.4.2", "notes": ["Operator extension API unchanged; separate from Headless control."] }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": [
+      "Insert-only atomic workflow admission and initial recovery state.",
+      "Joint job/result deletion, tracked local runner retirement, and late-publication rejection.",
+      "Guarded result mutation without private recovery injection or missing-result resurrection."
+    ]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": [
+      "Existing language-neutral task and operator interfaces retained.",
+      "Signed CST mechanical/thermal gradients, stable Q4/tetrahedral geometry, finite coefficients, and range-aware thermal output.",
+      "Kernel reference, permutation, closed-form, cancellation, and Rust headless route regressions."
+    ]
+  },
+  "desktop_artifacts": {},
+  "verification": {
+    "source_revision_role": "Base commit plus the 3.4.2 working-tree changes included in this release commit; not a clean-commit binary build claim.",
+    "platform": "macos-aarch64",
+    "release_checks": {
+      "source_version": "3.4.2",
+      "macos_solver": { "passed": 1017, "failed": 0, "ignored": 9 },
+      "headless_mechanical_tetra_thermal": { "passed": 10, "failed": 0 },
+      "elixir_sqlite": { "tests": 1191, "failed": 0, "skipped": 30, "seed": 42 },
+      "elixir_memory": { "tests": 1191, "failed": 0, "skipped": 63, "seed": 42 },
+      "update_catalog_unit": { "passed": 5, "failed": 0 },
+      "update_catalog_self_test": "passed; fixed dependence on retained local desktop artifacts",
+      "exact_version_contracts": { "checks": 224, "mismatched": 0 },
+      "release_and_version_self_tests": "passed",
+      "documentation_and_desktop_mirrors": "passed",
+      "language_pack_metadata": "60 canonical packs validated for 3.4.2; not a new full-translation qualification",
+      "project_organization": "passed; source limit 800, documentation limit 2000, tracked debt 0",
+      "tensor": "self-test, structure, and commands passed; 4 maturity, 16 evidence-grade, and 11 P0 gaps remain; release status blocked",
+      "formatting": "Rust and Elixir checks passed",
+      "strict_clippy": "Solver and native script-runner all-target checks passed with -D warnings",
+      "test_isolation": "SQLite and memory suites used fresh disposable data directories, not installed runtime data; warnings treated as errors."
+    },
+    "prior_scoped_evidence": {
+      "source_version": "3.4.1 working-tree overlay",
+      "macos_solver": { "passed": 1017, "failed": 0, "ignored": 9 },
+      "linux_release_solver_selected": { "passed": 407, "failed": 0, "ignored": 9 },
+      "thermal_headless_routes": { "passed": 3, "failed": 0 },
+      "elixir_sqlite": { "tests": 1191, "failed": 0, "skipped": 30, "seed": 42 },
+      "elixir_memory": { "tests": 1191, "failed": 0, "skipped": 63, "seed": 42 },
+      "thermal_validation_profile": { "commands_passed": 20, "failed": 0 },
+      "scope": "Overlapping runs are not summed coverage. Linux evidence and kernel benchmark measurements retain their original report identities."
+    },
+    "reports": [
+      "reports/workflow-admission-reliability-20260927.md",
+      "reports/workflow-deletion-reliability-20260927.md",
+      "reports/result-administration-reliability-20260927.md",
+      "reports/solid-tetra-kernel-20260927.md",
+      "reports/plane-q4-kernel-20260927.md",
+      "reports/plane-triangle-kernel-20260927.md",
+      "reports/thermal-plane-output-reliability-20260927.md"
+    ],
+    "report_provenance": "Scoped reports retain their 3.4.1 base revision and working-tree evidence. Version alignment does not relabel those runs as clean 3.4.2 builds.",
+    "recompute_policy": "Recompute historical clockwise/mixed-orientation CST results and results with null physical fields or affected arithmetic extremes before research reuse.",
+    "desktop_packaging": { "status": "not performed", "last_local_installed_version": "3.4.0" },
+    "runtime_payload": { "status": "not rebuilt or replaced", "last_local_installed_version": "3.4.0" },
+    "ci": { "status": "remote result is tracked separately for the pushed release commit" },
+    "public_distribution": "not performed",
+    "registry_publication": "not performed",
+    "notarized": false,
+    "qualification": "No new live PostgreSQL, remote failover, physical power-loss, large-scale, all-physics, or installed-GUI qualification. Kernel benchmark improvements are not end-to-end solve speedups. Tensor readiness gaps remain open."
+  }
+}

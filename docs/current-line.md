@@ -1,13 +1,44 @@
 # daji 3.x
 
 This is the single entrypoint for the active Kyuubiki product line.
-The current development point in this line is `daji 3.4.1`.
-Source package metadata targets `3.4.1`; the last locally built and installed
+The current development point in this line is `daji 3.4.2`.
+Source package metadata targets `3.4.2`; the last locally built and installed
 desktop/runtime baseline remains `daji 3.4.0`.
 Local installation does not imply that public downloads or SDK packages have
 been published; platform acceptance remains separately scoped.
 
-## Daji 3.4.1 Checkpoint
+## Daji 3.4.2 Checkpoint
+
+September 27, 2026. This source patch strengthens existing workflow and physical
+execution paths without coupling operator implementations to the engine:
+
+- Workflow admission and deletion commit the job/result pair atomically inside
+  the existing ownership boundary. Failed writes preserve the prior state;
+  successful deletion retires tracked local runners and rejects late publication.
+- Result administration uses one guarded mutation. Missing receipts are not
+  recreated, private recovery data cannot be injected, and terminal edits retain
+  workflow identity. This is not acknowledged remote Agent cancellation.
+- CST triangle gradients retain orientation, correcting clockwise and mixed
+  meshes in mechanical and thermal solves. Historical affected results must be
+  recomputed before research reuse.
+- Q4 and tetrahedral geometry use local coordinates, with finite coefficient
+  guards and reused stiffness intermediates. Paired Linux benchmarks measure
+  individual kernels, not an end-to-end solver speedup.
+- Thermal-plane recovery uses range-aware averaging, checked energy accumulation,
+  and stable displacement norms. Invalid fields fail instead of reaching a
+  successful JSON result as null.
+
+See `releases/snapshots/3.4.2.json`, the
+[workflow admission](../reports/workflow-admission-reliability-20260927.md),
+[deletion](../reports/workflow-deletion-reliability-20260927.md),
+[result administration](../reports/result-administration-reliability-20260927.md),
+and [thermal output](../reports/thermal-plane-output-reliability-20260927.md) reports.
+Local SQLite/memory and scoped macOS/Linux solver regressions do not establish
+live PostgreSQL, remote failover, power-loss, all-physics, large-scale, or
+installed-GUI qualification. Tensor readiness gaps remain open. This patch does
+not rebuild desktop apps or publish downloadable packages.
+
+## Daji 3.4.1 Checkpoint (Historical)
 
 September 27, 2026. This source patch hardens the existing research execution
 path rather than adding more physical operators:

@@ -1,5 +1,33 @@
 # Changelog
 
+## daji 3.4.2
+
+September 27, 2026. Atomic workflow administration and solver-kernel reliability.
+
+- Admit workflow jobs and initial recovery state atomically; reject duplicate or
+  invalid initialization without overwriting existing execution receipts.
+- Delete jobs and results together under the Orchestra lease, stop tracked local
+  runners only after commit, and reject late publication of deleted work.
+- Guard result editing/deletion with one storage mutation: retain workflow
+  identity, reject private recovery injection, and never recreate missing results.
+- Correct signed CST triangle gradients for clockwise/mixed-orientation meshes,
+  including thermal expansion and recovered mechanical fields.
+- Stabilize Q4 and tetrahedral geometry under large coordinate translations;
+  reuse stiffness intermediates and reject nonfinite element coefficients.
+- Harden thermal-plane temperature interpolation, recovered fields, energy totals,
+  and displacement norms against representable-range overflow and cancellation.
+- Add closed-form, permutation, fault-injection, headless, and Linux regression
+  evidence. Kernel benchmark gains are not whole-solve performance claims.
+- Make update-catalog self-tests independent of retained local desktop builds,
+  with explicit declared/present artifact rendering coverage.
+- Align product, SDK, desktop, language-pack, and current documentation metadata
+  to 3.4.2; preserve protocol identifiers and original evidence versions.
+
+See `releases/snapshots/3.4.2.json` for verification and scope. Recompute historical
+clockwise/mixed-orientation CST results before research reuse. This is a source
+release, not a desktop rebuild, binary download, or registry publication; the last
+locally built and installed desktop/runtime baseline remains 3.4.0.
+
 ## daji 3.4.1
 
 September 27, 2026. Workflow publication and storage recovery hardening.

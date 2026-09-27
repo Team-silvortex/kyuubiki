@@ -1,6 +1,7 @@
 defmodule KyuubikiWeb.Jobs.MemoryBackend do
   @moduledoc false
 
+  alias KyuubikiWeb.AnalysisResultMutation
   alias KyuubikiWeb.Jobs.{Job, ProgressEvent}
   alias KyuubikiWeb.Storage.AnalysisMemoryState
 
@@ -11,6 +12,43 @@ defmodule KyuubikiWeb.Jobs.MemoryBackend do
         {{:ok, job}, updated}
       end)
     end
+  end
+
+  def create_with_result(attrs, result) do
+    with {:ok, job} <- Job.new(attrs),
+         :ok <- Job.validate_initial_runtime(job) do
+      AnalysisMemoryState.transaction(fn state ->
+        cond do
+          Map.has_key?(state.jobs, job.job_id) ->
+            {{:error, {:job_already_exists, job.job_id}}, state}
+
+          Map.has_key?(state.results, job.job_id) ->
+            {{:error, {:result_already_exists, job.job_id}}, state}
+
+          true ->
+            {{:ok, job},
+             %{
+               state
+               | jobs: Map.put(state.jobs, job.job_id, job),
+                 results: Map.put(state.results, job.job_id, result)
+             }}
+        end
+      end)
+    end
+  end
+
+  def initialize_result(job_id, result) do
+    AnalysisMemoryState.transaction(fn state ->
+      with {:ok, job} <- Map.fetch(state.jobs, job_id),
+           :ok <- Job.validate_initial_runtime(job),
+           false <- Map.has_key?(state.results, job_id) do
+        {{:ok, job}, %{state | results: Map.put(state.results, job_id, result)}}
+      else
+        :error -> {{:error, {:job_not_found, job_id}}, state}
+        true -> {{:error, {:result_already_exists, job_id}}, state}
+        {:error, _reason} = error -> {error, state}
+      end
+    end)
   end
 
   def get(job_id) do
@@ -50,10 +88,42 @@ defmodule KyuubikiWeb.Jobs.MemoryBackend do
     AnalysisMemoryState.update(:jobs, fn _ -> {:ok, %{}} end)
   end
 
+  def delete_with_result(job_id) do
+    AnalysisMemoryState.transaction(fn state ->
+      case Map.pop(state.jobs, job_id) do
+        {nil, _jobs} ->
+          {{:error, {:job_not_found, job_id}}, state}
+
+        {job, jobs} ->
+          {{:ok, job}, %{state | jobs: jobs, results: Map.delete(state.results, job_id)}}
+      end
+    end)
+  end
+
   def apply_progress(attrs) do
     with {:ok, event} <- ProgressEvent.new(attrs) do
       update_job(event.job_id, &Job.apply_progress(&1, event))
     end
+  end
+
+  def edit_result(job_id, action) do
+    AnalysisMemoryState.transaction(fn state ->
+      with {:job, {:ok, job}} <- {:job, Map.fetch(state.jobs, job_id)},
+           {:result, {:ok, current}} <- {:result, Map.fetch(state.results, job_id)},
+           {:ok, result} <- AnalysisResultMutation.prepare(job, current, action) do
+        results =
+          case action do
+            :delete -> Map.delete(state.results, job_id)
+            {:replace, _} -> Map.put(state.results, job_id, result)
+          end
+
+        {{:ok, result}, %{state | results: results}}
+      else
+        {:job, :error} -> {{:error, {:job_not_found, job_id}}, state}
+        {:result, :error} -> {{:error, {:result_not_found, job_id}}, state}
+        {:error, _reason} = error -> {error, state}
+      end
+    end)
   end
 
   def apply_progress_if_current(attrs, %Job{} = expected) do

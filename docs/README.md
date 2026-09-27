@@ -3,9 +3,9 @@
 Use this directory as the current source of truth for product shape, protocol
 boundaries, deployment modes, and engineering workflow.
 
-The current documentation checkpoint is **daji 3.4.1**. Start with the
-[current-line summary](current-line.md#daji-341-checkpoint) for recent progress.
-Source package metadata targets `3.4.1`; the last local desktop/runtime build
+The current documentation checkpoint is **daji 3.4.2**. Start with the
+[current-line summary](current-line.md#daji-342-checkpoint) for recent progress.
+Source package metadata targets `3.4.2`; the last local desktop/runtime build
 and installation remains `3.4.0`. Dated acceptance records retain their original
 versions and do not become fresh qualification when documentation advances.
 

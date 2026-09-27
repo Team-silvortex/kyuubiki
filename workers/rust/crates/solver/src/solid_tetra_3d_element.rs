@@ -1,6 +1,7 @@
 use kyuubiki_protocol::{SolidTetra3dElementInput, SolidTetra3dElementResult};
 
 use crate::linear_algebra::{MatrixAssembler, add_at};
+use crate::solid_tetra_3d_geometry::TetraGeometry;
 
 pub(crate) struct SolidTetra3dElementKernel {
     volume: f64,
@@ -26,6 +27,16 @@ impl SolidTetra3dElementKernel {
         let d = elasticity_matrix(element.youngs_modulus, element.poisson_ratio);
         let db = multiply_6x6_6x12(&d, &b);
         let stiffness = multiply_12x6_6x12(&b, &db, volume);
+        if d.iter()
+            .flatten()
+            .chain(stiffness.iter().flatten())
+            .any(|value| !value.is_finite())
+        {
+            return Err(format!(
+                "solid tetra element {} constitutive or stiffness coefficients are not representable",
+                element.id
+            ));
+        }
         Ok(Self {
             volume,
             mean_ratio_quality,
@@ -125,48 +136,20 @@ fn validate_properties(element: &SolidTetra3dElementInput) -> Result<(), String>
 }
 
 fn geometry(points: [[f64; 3]; 4], id: &str) -> Result<(f64, f64, [[f64; 12]; 6]), String> {
-    let matrix = points.map(|point| [1.0, point[0], point[1], point[2]]);
-    let determinant = det4(&matrix);
-    let volume = determinant.abs() / 6.0;
-    if volume == 0.0 {
-        return Err(format!("solid tetra element {id} has zero volume"));
-    }
-    let mean_ratio_quality = tetra_mean_ratio_quality(&points, volume);
+    let geometry = TetraGeometry::new(points, id)?;
+    let mean_ratio_quality = geometry.mean_ratio_quality();
     if !mean_ratio_quality.is_finite() || mean_ratio_quality <= 1.0e-12 {
         return Err(format!(
             "solid tetra element {id} is near-degenerate (mean_ratio_quality={mean_ratio_quality:.6e})"
         ));
     }
-    let inverse = invert4(matrix)?;
-    let mut b = [[0.0; 12]; 6];
-    for node in 0..4 {
-        let bx = inverse[1][node];
-        let by = inverse[2][node];
-        let bz = inverse[3][node];
-        let offset = node * 3;
-        b[0][offset] = bx;
-        b[1][offset + 1] = by;
-        b[2][offset + 2] = bz;
-        b[3][offset] = by;
-        b[3][offset + 1] = bx;
-        b[4][offset + 1] = bz;
-        b[4][offset + 2] = by;
-        b[5][offset] = bz;
-        b[5][offset + 2] = bx;
+    let b = geometry.strain_matrix();
+    if b.iter().flatten().any(|value| !value.is_finite()) {
+        return Err(format!(
+            "solid tetra element {id} shape gradients are not representable"
+        ));
     }
-    Ok((volume, mean_ratio_quality, b))
-}
-
-fn tetra_mean_ratio_quality(points: &[[f64; 3]; 4], volume: f64) -> f64 {
-    let edge_squared_sum = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
-        .into_iter()
-        .map(|(a, b)| {
-            (0..3)
-                .map(|axis| (points[a][axis] - points[b][axis]).powi(2))
-                .sum::<f64>()
-        })
-        .sum::<f64>();
-    12.0 * (3.0 * volume).powf(2.0 / 3.0) / edge_squared_sum
+    Ok((geometry.volume, mean_ratio_quality, b))
 }
 
 fn elasticity_matrix(youngs_modulus: f64, poisson_ratio: f64) -> [[f64; 6]; 6] {
@@ -266,56 +249,21 @@ fn strain_energy_density(stress: &[f64; 6], strain: &[f64; 6]) -> f64 {
         .sum::<f64>()
 }
 
-fn det4(matrix: &[[f64; 4]; 4]) -> f64 {
-    (0..4)
-        .map(|column| {
-            let sign = if column % 2 == 0 { 1.0 } else { -1.0 };
-            sign * matrix[0][column] * det3(minor3(matrix, 0, column))
-        })
-        .sum()
-}
+#[cfg(test)]
+#[path = "solid_tetra_3d_geometry_tests.rs"]
+mod geometry_tests;
 
-fn det3(matrix: [[f64; 3]; 3]) -> f64 {
-    matrix[0][0] * (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[2][1])
-        - matrix[0][1] * (matrix[1][0] * matrix[2][2] - matrix[1][2] * matrix[2][0])
-        + matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0])
-}
+#[cfg(test)]
+#[path = "solid_tetra_3d_reference.rs"]
+mod reference;
 
-fn minor3(matrix: &[[f64; 4]; 4], skip_row: usize, skip_column: usize) -> [[f64; 3]; 3] {
-    let mut result = [[0.0; 3]; 3];
-    let mut output_row = 0;
-    for (row, values) in matrix.iter().enumerate() {
-        if row == skip_row {
-            continue;
-        }
-        let mut output_column = 0;
-        for (column, value) in values.iter().enumerate() {
-            if column != skip_column {
-                result[output_row][output_column] = *value;
-                output_column += 1;
-            }
-        }
-        output_row += 1;
-    }
-    result
-}
-
-fn invert4(matrix: [[f64; 4]; 4]) -> Result<[[f64; 4]; 4], String> {
-    let determinant = det4(&matrix);
-    if determinant == 0.0 {
-        return Err("solid tetra coordinate matrix is singular".to_string());
-    }
-    Ok(std::array::from_fn(|row| {
-        std::array::from_fn(|column| {
-            let sign = if (row + column) % 2 == 0 { 1.0 } else { -1.0 };
-            sign * det3(minor3(&matrix, column, row)) / determinant
-        })
-    }))
-}
+#[cfg(test)]
+#[path = "solid_tetra_3d_benchmark.rs"]
+mod benchmark;
 
 #[cfg(test)]
 mod tests {
-    use super::{tetra_mean_ratio_quality, von_mises_stress};
+    use super::{geometry, von_mises_stress};
 
     #[test]
     fn equivalent_stress_preserves_deviatoric_scales_and_hydrostatic_invariance() {
@@ -341,13 +289,12 @@ mod tests {
             [0.5, 3.0_f64.sqrt() / 2.0, 0.0],
             [0.5, 3.0_f64.sqrt() / 6.0, (2.0_f64 / 3.0).sqrt()],
         ];
-        let volume = 2.0_f64.sqrt() / 12.0;
-        let quality = tetra_mean_ratio_quality(&regular, volume);
+        let quality = geometry(regular, "regular").unwrap().1;
         assert!((quality - 1.0).abs() <= 1.0e-14);
 
         let scale = 1.0e-9;
         let microscopic = regular.map(|point| point.map(|coordinate| coordinate * scale));
-        let microscopic_quality = tetra_mean_ratio_quality(&microscopic, volume * scale.powi(3));
+        let microscopic_quality = geometry(microscopic, "microscopic").unwrap().1;
         assert!((microscopic_quality - quality).abs() <= 1.0e-14);
     }
 }

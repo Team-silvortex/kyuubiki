@@ -603,6 +603,146 @@
       ]
     },
     {
+      "id": "solid-tetra-normalized-geometry-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/solid_tetra_3d_geometry.rs",
+        "workers/rust/crates/solver/src/solid_tetra_3d_element.rs",
+        "workers/rust/crates/solver/src/solid_tetra_3d_validation.rs",
+        "workers/rust/crates/solver/src/solid_tetra_3d_geometry_tests.rs",
+        "workers/rust/crates/solver/src/solid_tetra_3d_reference.rs",
+        "workers/rust/crates/solver/tests/solid_tetra_geometry_reliability.rs",
+        "workers/rust/crates/solver/tests/cohesive_interface_mesh_3d_closed_form.rs",
+        "workers/rust/crates/cli/tests/solid_tetra_geometry_operator.rs",
+        "config/operator-validation-profiles/structural-solid.json",
+        "reports/solid-tetra-kernel-20260927.md"
+      ],
+      "required_text": [
+        "tetra_geometry_is_invariant_under_exact_large_coordinate_translations",
+        "tetra_kernel_matches_independent_cofactors_on_skewed_oriented_material_cases",
+        "solid_operator_retains_representable_huge_volume_and_rejects_overflow_then_replays",
+        "translated_tetra_host_keeps_cohesive_equilibrium_and_invalid_host_can_replay",
+        "solid_geometry_translation_survives_headless_plan_and_engine_dispatch",
+        "solid_invalid_coefficients_fail_in_engine_without_poisoning_next_request",
+        "This is bounded tetrahedral geometry validation, not general mechanical or large-mesh qualification."
+      ]
+    },
+    {
+      "id": "solid-tetra-linux-paired-precompute",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "verification-evidence"],
+      "paradigms": ["validation"],
+      "dimensions": ["benchmark"],
+      "files": [
+        "workers/rust/crates/solver/src/solid_tetra_3d_benchmark.rs",
+        "workers/rust/crates/solver/src/solid_tetra_3d_reference.rs",
+        "workers/rust/crates/solver/src/solid_tetra_3d_geometry.rs",
+        "reports/solid-tetra-kernel-20260927.md"
+      ],
+      "required_text": [
+        "tetra_precompute_paired_benchmark",
+        "previous_ns", "current_ns",
+        "This is a precompute microbenchmark, not end-to-end solver throughput or a 1M-node qualification."
+      ]
+    },
+    {
+      "id": "q4-local-geometry-and-shared-kernel-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/plane_2d_quad.rs",
+        "workers/rust/crates/solver/src/thermal_plane_2d_quad.rs",
+        "workers/rust/crates/solver/src/plane_quad_kernel_tests.rs",
+        "workers/rust/crates/solver/src/plane_quad_kernel_reference.rs",
+        "workers/rust/crates/solver/tests/plane_quad_geometry_reliability.rs",
+        "workers/rust/crates/solver/tests/cohesive_interface_mesh_2d_closed_form.rs",
+        "workers/rust/crates/cli/tests/mechanical_output_operator.rs",
+        "config/operator-validation-profiles/structural-plane.json",
+        "config/operator-validation-profiles.json",
+        "reports/plane-q4-kernel-20260927.md"
+      ],
+      "required_text": [
+        "q4_factored_stiffness_matches_nine_term_reference_and_rigid_modes",
+        "q4_translated_affine_strain_is_correct_at_every_gauss_point_and_cyclic_order",
+        "translated_thermal_q4_keeps_free_expansion_and_restrained_temperature_integration",
+        "translated_host_quad_preserves_cohesive_response_and_rejects_invalid_coefficients",
+        "q4_coefficient_overflow_is_identified_before_assembly_and_headless_replay_succeeds",
+        "This is bounded Q4 kernel validation, not general mechanical or thermoelastic qualification."
+      ]
+    },
+    {
+      "id": "q4-linux-paired-precompute",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "verification-evidence"],
+      "paradigms": ["validation"],
+      "dimensions": ["benchmark"],
+      "files": [
+        "workers/rust/crates/solver/src/plane_quad_kernel_benchmark.rs",
+        "workers/rust/crates/solver/src/plane_quad_kernel_reference.rs",
+        "workers/rust/crates/solver/src/plane_2d_quad.rs",
+        "reports/plane-q4-kernel-20260927.md"
+      ],
+      "required_text": [
+        "q4_precompute_paired_benchmark", "previous_ns", "current_ns",
+        "This is a Q4 precompute microbenchmark, not end-to-end solver throughput or a 1M-node qualification."
+      ]
+    },
+    {
+      "id": "triangle-orientation-and-shared-kernel-reliability",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/plane_2d_math.rs",
+        "workers/rust/crates/solver/src/thermal_plane_2d.rs",
+        "workers/rust/crates/solver/src/plane_triangle_kernel_tests.rs",
+        "workers/rust/crates/solver/src/plane_triangle_kernel_reference.rs",
+        "workers/rust/crates/solver/tests/plane_triangle_orientation_reliability.rs",
+        "workers/rust/crates/solver/tests/cohesive_interface_mesh_2d_closed_form.rs",
+        "workers/rust/crates/cli/tests/mechanical_output_operator.rs",
+        "config/operator-validation-profiles/structural-plane.json",
+        "config/operator-validation-profiles.json",
+        "reports/plane-triangle-kernel-20260927.md"
+      ],
+      "required_text": [
+        "triangle_affine_strain_and_signed_stress_survive_all_orders_and_translations",
+        "triangle_thermal_load_obeys_affine_virtual_work_and_node_permutation",
+        "mixed_orientation_thermal_triangles_expand_instead_of_contracting",
+        "triangle_mixed_orientation_keeps_signed_stress_through_headless_plan",
+        "triangle_coefficient_overflow_identifies_element_and_does_not_poison_replay",
+        "This is bounded CST kernel validation, not general mechanical or thermoelastic qualification."
+      ]
+    },
+    {
+      "id": "triangle-linux-paired-precompute",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver", "verification-evidence"],
+      "paradigms": ["validation"],
+      "dimensions": ["benchmark"],
+      "files": [
+        "workers/rust/crates/solver/src/plane_triangle_kernel_benchmark.rs",
+        "workers/rust/crates/solver/src/plane_triangle_kernel_reference.rs",
+        "workers/rust/crates/solver/src/plane_2d_math.rs",
+        "reports/plane-triangle-kernel-20260927.md"
+      ],
+      "required_text": [
+        "triangle_precompute_paired_benchmark", "previous_ns", "current_ns",
+        "This is a CST precompute microbenchmark, not end-to-end solver throughput or a 1M-node qualification."
+      ]
+    },
+    {
       "id": "planar-postprocess-paired-cancellation-overhead",
       "status": "proven",
       "grade": "qualified",

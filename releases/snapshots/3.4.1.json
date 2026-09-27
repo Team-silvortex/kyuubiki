@@ -2,7 +2,7 @@
   "version": "3.4.1",
   "codename": "daji",
   "line": "3.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-09-27",
   "git_commit": "b0148c620764cd2f183a457a5de026a94bddfb03",
   "summary": "Daji 3.4.1 source reliability patch: shared workflow conditions and named inputs, snapshot-safe progress, atomic solver/workflow publication, and scoped storage-outage recovery. No desktop rebuild, binary publication, or new numerical qualification.",

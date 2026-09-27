@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Retained remote Linux Orchestra workflow qualification plus separately scoped local workflow, receipt, persistence, and storage-outage contracts.",
+  "summary": "Retained remote Linux Orchestra workflow qualification plus separately scoped local admission, deletion, result administration, workflow, receipt, persistence, and storage-outage contracts.",
   "paradigm_contract_evidence": {
     "workflow_composition": [
       {
@@ -27,6 +27,108 @@
     ]
   },
   "evidence_claims": [
+    {
+      "id": "orchestra-result-administration-local-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/analysis_job_records.ex",
+        "apps/web/lib/kyuubiki_web/jobs/store.ex",
+        "apps/web/lib/kyuubiki_web/jobs/postgres_backend.ex",
+        "apps/web/lib/kyuubiki_web/jobs/memory_backend.ex",
+        "apps/web/lib/kyuubiki_web/results/mutation.ex",
+        "apps/web/lib/kyuubiki_web/results/postgres_backend.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/lib/kyuubiki_web/router.ex",
+        "apps/web/test/kyuubiki_web/results/administration_test.exs",
+        "apps/web/test/kyuubiki_web/results/administration_sql_test.exs",
+        "apps/web/test/kyuubiki_web/results/administration_memory_test.exs",
+        "apps/web/test/kyuubiki_web/api/result_administration_api_test.exs",
+        "apps/web/test/support/result_read_probe.exs",
+        "apps/web/test/support/analysis_commit_fault.exs",
+        "reports/result-administration-reliability-20260927.md"
+      ],
+      "required_text": [
+        "updating a missing result is not an upsert",
+        "public editing rejects injected internal recovery metadata",
+        "cannot bypass a revoked Orchestra lease",
+        "a result replacement racing deletion cannot resurrect the removed record",
+        "and a concurrent workflow claim cannot both consume a mutable snapshot",
+        "successful #{action} survives a fresh store process without modifying the job",
+        "GET then PATCH preserves terminal identity and derives the real recovery summary",
+        "This is local result-administration evidence, not PostgreSQL, distributed failover, power-loss, or numerical qualification."
+      ]
+    },
+    {
+      "id": "orchestra-workflow-deletion-local-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/analysis_job_records.ex",
+        "apps/web/lib/kyuubiki_web/jobs/store.ex",
+        "apps/web/lib/kyuubiki_web/jobs/postgres_backend.ex",
+        "apps/web/lib/kyuubiki_web/jobs/memory_backend.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/test/kyuubiki_web/jobs/atomic_deletion_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_deletion_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_deletion_sql_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_deletion_memory_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_deletion_api_test.exs",
+        "apps/web/test/support/analysis_commit_fault.exs",
+        "reports/workflow-deletion-reliability-20260927.md"
+      ],
+      "required_text": [
+        "a revoked Orchestra lease cannot delete the job or its recovery record",
+        "concurrent deletions produce exactly one successful removal",
+        "successful deletion stops a tracked local runner and does not recover it",
+        "process loss after DELETE rolls back both records and releases the lease transaction",
+        "deletion persists one whole generation rather than a resultless intermediate job",
+        "failed API deletion preserves the running task and permits a complete retry",
+        "This is local workflow-deletion evidence, not PostgreSQL, distributed failover, power-loss, remote Agent cancellation, or numerical qualification."
+      ]
+    },
+    {
+      "id": "orchestra-workflow-admission-local-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["workflow_composition", "persistence_provenance", "validation"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/analysis.ex",
+        "apps/web/lib/kyuubiki_web/analysis_job_support.ex",
+        "apps/web/lib/kyuubiki_web/jobs/job.ex",
+        "apps/web/lib/kyuubiki_web/jobs/store.ex",
+        "apps/web/lib/kyuubiki_web/jobs/postgres_backend.ex",
+        "apps/web/lib/kyuubiki_web/jobs/memory_backend.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_admission.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_job_runner.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/workflow_recovery_coordinator.ex",
+        "apps/web/test/kyuubiki_web/jobs/atomic_admission_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_admission_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_admission_sql_test.exs",
+        "apps/web/test/kyuubiki_web/orchestra/workflow_admission_memory_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_admission_api_test.exs",
+        "apps/web/test/support/analysis_commit_fault.exs",
+        "reports/workflow-admission-reliability-20260927.md"
+      ],
+      "required_text": [
+        "concurrent admissions have one winner and preserve its exact result",
+        "initialization cannot erase a completed workflow receipt",
+        "rejected runtime insertion needs no compensating job delete",
+        "process loss after the job insert rolls back admission and frees its lease transaction",
+        "failed admission leaves the shared snapshot unchanged and can be retried",
+        "an admitted but undispatched workflow resumes after coordinator restart",
+        "failed admission is an API error with no partial task and a clean retry succeeds",
+        "This is local workflow-admission evidence, not PostgreSQL, distributed failover, power-loss, or numerical qualification."
+      ]
+    },
     {
       "id": "orchestra-storage-outage-local-contract",
       "status": "proven",

@@ -7,7 +7,6 @@ defmodule KyuubikiWeb.Analysis do
   alias KyuubikiWeb.AnalysisJobRecords
   alias KyuubikiWeb.AnalysisJobSupport
   alias KyuubikiWeb.AnalysisSolverSubmissions
-  alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Orchestra.Engine, as: OrchestraEngine
   alias KyuubikiWeb.Orchestra.WorkflowJobRunner
   alias KyuubikiWeb.WorkflowGraphResponse
@@ -136,11 +135,10 @@ defmodule KyuubikiWeb.Analysis do
          response_options <-
            WorkflowGraphResponse.resolve_options(graph, Map.get(normalized, "response_options")),
          {:ok, job_context} <- AnalysisJobSupport.derive_job_context(params),
-         {:ok, job} <- AnalysisJobSupport.create_job(job_context),
          orchestration_context <- WorkflowJobRunner.orchestration_context_from_params(params),
-         :ok <-
-           initialize_workflow_runtime(
-             job,
+         {:ok, job} <-
+           WorkflowJobRunner.admit(
+             AnalysisJobSupport.new_job_attrs(job_context),
              graph,
              input_artifacts,
              orchestration_context,
@@ -153,29 +151,6 @@ defmodule KyuubikiWeb.Analysis do
       [] -> {:error, :invalid_workflow_graph_request}
       {:error, _reason} = error -> error
       _ -> {:error, :invalid_workflow_graph_request}
-    end
-  end
-
-  defp initialize_workflow_runtime(
-         job,
-         graph,
-         input_artifacts,
-         orchestration_context,
-         response_options
-       ) do
-    case WorkflowJobRunner.initialize_runtime(
-           job.job_id,
-           graph,
-           input_artifacts,
-           orchestration_context,
-           response_options
-         ) do
-      :ok ->
-        :ok
-
-      {:error, _reason} = error ->
-        _ = Store.delete(job.job_id)
-        error
     end
   end
 

@@ -54,11 +54,13 @@ pub(crate) fn solve_thermal_plane_displacements(
     let solver_residual_norm = solve_profile.residual_norm;
     let solver_rhs_norm = fold_results(
         SolverStage::ResultRhsNorm,
-        reduced_force.iter().map(|value| value * value),
-        -0.0_f64,
-        |sum, value| sum + value,
-    )?
-    .sqrt();
+        reduced_force.iter().copied(),
+        0.0_f64,
+        f64::hypot,
+    )?;
+    if !solver_rhs_norm.is_finite() {
+        return Err("thermal plane RHS norm is not representable".into());
+    }
     let reduced_displacements = solve_profile.solution;
     push_thermal_plane_stage(
         stages,

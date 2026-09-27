@@ -315,24 +315,36 @@ fn invalid_host_truss_contracts_are_rejected() {
 
 #[test]
 fn host_plane_triangle_shares_equilibrium_with_the_cohesive_interface() {
-    let result = solve_cohesive_interface_mesh_2d(&host_plane_request())
-        .expect("host plane triangle and cohesive interface should co-assemble");
+    for order in [
+        [2, 3, 4],
+        [3, 4, 2],
+        [4, 2, 3],
+        [2, 4, 3],
+        [4, 3, 2],
+        [3, 2, 4],
+    ] {
+        let mut request = host_plane_request();
+        let triangle = &mut request.host_plane_triangles[0];
+        [triangle.node_i, triangle.node_j, triangle.node_k] = order;
+        let result = solve_cohesive_interface_mesh_2d(&request)
+            .expect("host plane triangle and cohesive interface should co-assemble");
 
-    assert!(result.converged);
-    assert_close(result.nodes[2].displacement[1], 0.005);
-    assert_close(result.nodes[3].displacement[1], 0.005);
-    assert_close(result.nodes[4].displacement[1], 0.015);
-    assert_close(result.nodes[4].reaction[1], 5.0);
-    assert_close(result.elements[0].local_traction[1], 5.0);
-    assert_close(result.max_host_plane_stress, 5.0);
-    let host = &result.host_plane_triangles[0];
-    assert_close(host.area, 0.5);
-    assert_close(host.strain_x, 0.0);
-    assert_close(host.strain_y, 0.01);
-    assert_close(host.stress_x, 0.0);
-    assert_close(host.stress_y, 5.0);
-    assert_close(host.von_mises, 5.0);
-    assert_close(host.strain_energy_density, 0.025);
+        assert!(result.converged);
+        assert_close(result.nodes[2].displacement[1], 0.005);
+        assert_close(result.nodes[3].displacement[1], 0.005);
+        assert_close(result.nodes[4].displacement[1], 0.015);
+        assert_close(result.nodes[4].reaction[1], 5.0);
+        assert_close(result.elements[0].local_traction[1], 5.0);
+        assert_close(result.max_host_plane_stress, 5.0);
+        let host = &result.host_plane_triangles[0];
+        assert_close(host.area, 0.5);
+        assert_close(host.strain_x, 0.0);
+        assert_close(host.strain_y, 0.01);
+        assert_close(host.stress_x, 0.0);
+        assert_close(host.stress_y, 5.0);
+        assert_close(host.von_mises, 5.0);
+        assert_close(host.strain_energy_density, 0.025);
+    }
 }
 
 #[test]
@@ -380,6 +392,45 @@ fn host_plane_quad_shares_equilibrium_with_the_cohesive_interface() {
     assert_close(host.stress_y, 5.0);
     assert_close(host.von_mises, 5.0);
     assert_close(host.strain_energy_density, 0.025);
+}
+
+#[test]
+fn translated_host_quad_preserves_cohesive_response_and_rejects_invalid_coefficients() {
+    let reference = solve_cohesive_interface_mesh_2d(&host_plane_quad_request()).unwrap();
+    for offset in [2f64.powi(40), -2f64.powi(40)] {
+        let mut request = host_plane_quad_request();
+        for node in &mut request.nodes {
+            node.x += offset;
+            node.y -= offset;
+        }
+        let result = solve_cohesive_interface_mesh_2d(&request).unwrap();
+        assert!(result.converged);
+        assert_close(
+            result.max_host_plane_stress,
+            reference.max_host_plane_stress,
+        );
+        assert_close(result.elements[0].local_traction[1], 5.0);
+        assert_close(result.host_plane_quads[0].strain_energy_density, 0.025);
+        for (actual, expected) in result.nodes.iter().zip(&reference.nodes) {
+            for axis in 0..2 {
+                assert_close(actual.displacement[axis], expected.displacement[axis]);
+                assert_close(actual.reaction[axis], expected.reaction[axis]);
+            }
+        }
+        request.host_plane_quads[0].youngs_modulus = f64::MAX;
+        request.host_plane_quads[0].poisson_ratio = 0.49;
+        let error = solve_cohesive_interface_mesh_2d(&request).unwrap_err();
+        assert!(error.contains("host-plane-quad-0"), "{error}");
+        assert!(
+            error.contains("coefficients are not representable"),
+            "{error}"
+        );
+    }
+    assert!(
+        solve_cohesive_interface_mesh_2d(&host_plane_quad_request())
+            .unwrap()
+            .converged
+    );
 }
 
 #[test]

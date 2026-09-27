@@ -471,7 +471,7 @@ fn wants_help(args: &[OsString]) -> bool {
 }
 
 fn run_self_test() -> RunnerResult<()> {
-    let artifact = artifact_entry(
+    let mut artifact = artifact_entry(
         Path::new("."),
         "hub_macos_manifest",
         "dist/macos/desktop/hub-gui/manifest.json",
@@ -482,6 +482,8 @@ fn run_self_test() -> RunnerResult<()> {
     {
         return Err(format!("artifact inference drifted: {artifact}"));
     }
+    // Rendering fixtures must not depend on retained local desktop builds.
+    artifact["exists"] = json!(false);
     let catalog = json!({
         "schema_version": "kyuubiki.update-catalog/v1",
         "shipping_version": "2.0.0",
@@ -533,7 +535,8 @@ fn run_self_test() -> RunnerResult<()> {
 #[cfg(test)]
 mod tests {
     use super::{
-        artifact_entry, escape_html, infer_platform, render_channels, run_self_test, string_field,
+        artifact_entry, escape_html, infer_platform, render_artifacts, render_channels,
+        run_self_test, string_field,
     };
     use serde_json::json;
     use std::path::Path;
@@ -541,6 +544,24 @@ mod tests {
     #[test]
     fn self_test_renders_update_catalog_tokens() {
         run_self_test().unwrap();
+    }
+
+    #[test]
+    fn artifact_presence_labels_follow_the_payload() {
+        for (exists, expected, unexpected) in [
+            (false, "declared", "present"),
+            (true, "present", "declared"),
+        ] {
+            let html = render_artifacts(&[json!({
+                "product": "hub",
+                "platform": "macos",
+                "kind": "manifest",
+                "path": "dist/macos/desktop/hub-gui/manifest.json",
+                "exists": exists
+            })]);
+            assert!(html.ends_with(&format!("{expected}</li>")));
+            assert!(!html.contains(unexpected));
+        }
     }
 
     #[test]

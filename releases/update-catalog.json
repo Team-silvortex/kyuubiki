@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-09-27T09:11:04Z",
-  "shipping_version": "3.4.1",
+  "generated_at": "2026-09-27T12:20:24Z",
+  "shipping_version": "3.4.2",
   "default_channel": "stable",
   "line": "daji 3.x",
   "source": {
@@ -17,12 +17,12 @@
         "daji:latest",
         "daji:3",
         "daji:3.4",
-        "daji:3.4.1"
+        "daji:3.4.2"
       ],
       "line": "3.x",
       "status": "current",
-      "version": "3.4.1",
-      "summary": "Daji 3.4.1 source reliability patch: shared workflow conditions and named inputs, snapshot-safe progress, atomic solver/workflow publication, and scoped storage-outage recovery. No desktop rebuild, binary publication, or new numerical qualification.",
+      "version": "3.4.2",
+      "summary": "Daji 3.4.2 source reliability patch: atomic workflow admission/deletion and guarded result administration, signed CST gradients, stable Q4/tetrahedral geometry, and range-aware thermal-plane output. Scoped kernel benchmarks and regression evidence; no desktop rebuild or binary publication.",
       "date": "2026-09-27",
       "notes": [
         "Primary operator-facing update track for the current daji 3.x line.",
@@ -65,7 +65,7 @@
         "managed_path_policy": "workspace_relative",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/3.4.1.json",
+      "snapshot_path": "releases/snapshots/3.4.2.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
@@ -75,55 +75,55 @@
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "3.4.1",
+          "version": "3.4.2",
           "notes": [
-            "Unknown health counts are not rendered as zero."
+            "Metadata aligned; no new GUI behavior in this patch."
           ]
         },
         "hub_gui": {
-          "version": "3.4.1",
+          "version": "3.4.2",
           "notes": [
             "Source metadata only; no new desktop artifact."
           ]
         },
         "workbench_gui": {
-          "version": "3.4.1",
+          "version": "3.4.2",
           "notes": [
             "Source metadata only; no new desktop artifact."
           ]
         },
         "installer_gui": {
-          "version": "3.4.1",
+          "version": "3.4.2",
           "notes": [
             "Source metadata only; no new desktop artifact."
           ]
         },
         "web_api": {
-          "version": "3.4.1",
+          "version": "3.4.2",
           "notes": [
-            "Atomic publication and bounded storage-availability boundaries."
+            "Atomic admission/deletion and guarded result administration under Orchestra ownership."
           ]
         },
         "rust_headless_sdk": {
-          "version": "3.4.1",
+          "version": "3.4.2",
           "notes": [
-            "Registry publication not performed."
+            "Existing SDK/engine routes exercised; registry publication not performed."
           ]
         },
         "python_headless_sdk": {
-          "version": "3.4.1",
+          "version": "3.4.2",
           "notes": [
             "Registry publication not performed."
           ]
         },
         "elixir_headless_sdk": {
-          "version": "3.4.1",
+          "version": "3.4.2",
           "notes": [
             "Registry publication not performed."
           ]
         },
         "rust_worker_sdk": {
-          "version": "3.4.1",
+          "version": "3.4.2",
           "notes": [
             "Operator extension API unchanged; separate from Headless control."
           ]
@@ -134,12 +134,12 @@
   ],
   "versions": [
     {
-      "version": "3.4.1",
+      "version": "3.4.2",
       "line": "3.x",
       "status": "current",
       "date": "2026-09-27",
-      "summary": "Daji 3.4.1 source reliability patch: shared workflow conditions and named inputs, snapshot-safe progress, atomic solver/workflow publication, and scoped storage-outage recovery. No desktop rebuild, binary publication, or new numerical qualification.",
-      "snapshot_path": "releases/snapshots/3.4.1.json",
+      "summary": "Daji 3.4.2 source reliability patch: atomic workflow admission/deletion and guarded result administration, signed CST gradients, stable Q4/tetrahedral geometry, and range-aware thermal-plane output. Scoped kernel benchmarks and regression evidence; no desktop rebuild or binary publication.",
+      "snapshot_path": "releases/snapshots/3.4.2.json",
       "channels": [
         "stable"
       ],
@@ -148,8 +148,75 @@
         "daji:latest",
         "daji:3",
         "daji:3.4",
-        "daji:3.4.1"
+        "daji:3.4.2"
       ],
+      "product_surfaces": {
+        "frontend_workbench": {
+          "version": "3.4.2",
+          "notes": [
+            "Metadata aligned; no new GUI behavior in this patch."
+          ]
+        },
+        "hub_gui": {
+          "version": "3.4.2",
+          "notes": [
+            "Source metadata only; no new desktop artifact."
+          ]
+        },
+        "workbench_gui": {
+          "version": "3.4.2",
+          "notes": [
+            "Source metadata only; no new desktop artifact."
+          ]
+        },
+        "installer_gui": {
+          "version": "3.4.2",
+          "notes": [
+            "Source metadata only; no new desktop artifact."
+          ]
+        },
+        "web_api": {
+          "version": "3.4.2",
+          "notes": [
+            "Atomic admission/deletion and guarded result administration under Orchestra ownership."
+          ]
+        },
+        "rust_headless_sdk": {
+          "version": "3.4.2",
+          "notes": [
+            "Existing SDK/engine routes exercised; registry publication not performed."
+          ]
+        },
+        "python_headless_sdk": {
+          "version": "3.4.2",
+          "notes": [
+            "Registry publication not performed."
+          ]
+        },
+        "elixir_headless_sdk": {
+          "version": "3.4.2",
+          "notes": [
+            "Registry publication not performed."
+          ]
+        },
+        "rust_worker_sdk": {
+          "version": "3.4.2",
+          "notes": [
+            "Operator extension API unchanged; separate from Headless control."
+          ]
+        }
+      },
+      "desktop_artifacts": []
+    },
+    {
+      "version": "3.4.1",
+      "line": "3.x",
+      "status": "archived",
+      "date": "2026-09-27",
+      "summary": "Daji 3.4.1 source reliability patch: shared workflow conditions and named inputs, snapshot-safe progress, atomic solver/workflow publication, and scoped storage-outage recovery. No desktop rebuild, binary publication, or new numerical qualification.",
+      "snapshot_path": "releases/snapshots/3.4.1.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {
         "frontend_workbench": {
           "version": "3.4.1",

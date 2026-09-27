@@ -3,6 +3,8 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
 
   import Ecto.Query
 
+  alias KyuubikiWeb.AnalysisResultMutation
+  alias KyuubikiWeb.AnalysisResultPostgresBackend, as: Results
   alias KyuubikiWeb.Jobs.{Job, ProgressEvent}
   alias KyuubikiWeb.Storage
   alias KyuubikiWeb.Storage.{JobRecord, ResultRecord}
@@ -24,6 +26,41 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
         {:error, changeset} -> {:error, changeset}
       end
     end
+  end
+
+  def create_with_result(attrs, result) do
+    with {:ok, proposed} <- Job.new(attrs),
+         :ok <- Job.validate_initial_runtime(proposed) do
+      atomic_change(fn ->
+        if is_nil(repo_get(JobRecord, proposed.job_id)) do
+          with {:ok, job} <- create(attrs),
+               :ok <- insert_completion_result(job.job_id, result),
+               do: {:ok, job}
+        else
+          {:error, {:job_already_exists, proposed.job_id}}
+        end
+      end)
+    end
+  end
+
+  def initialize_result(job_id, result) do
+    atomic_change(fn ->
+      with {:ok, job} <- get(job_id),
+           :ok <- Job.validate_initial_runtime(job) do
+        # Even without changing job fields, hold its row lock until the initial
+        # result is committed so cancellation/deletion cannot pass between them.
+        case compare_and_swap(job_attrs(job), job, true) do
+          :ok ->
+            with :ok <- insert_completion_result(job_id, result), do: {:ok, job}
+
+          :stale ->
+            snapshot_miss(job_id)
+        end
+      else
+        :error -> {:error, {:job_not_found, job_id}}
+        {:error, _reason} = error -> error
+      end
+    end)
   end
 
   def get(job_id) do
@@ -69,12 +106,56 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
     :ok
   end
 
+  def delete_with_result(job_id) do
+    atomic_change(fn ->
+      with {:ok, job} <- get(job_id) do
+        case compare_and_swap(job_attrs(job), job, true) do
+          :ok ->
+            # The FK cascade removes the result in this same transaction. Lock
+            # the observed job first so concurrent publication cannot pass it.
+            {1, _} = repo_delete_all(where(JobRecord, [record], record.job_id == ^job_id))
+            {:ok, job}
+
+          :stale ->
+            snapshot_miss(job_id)
+        end
+      else
+        :error -> {:error, {:job_not_found, job_id}}
+        {:error, _reason} = error -> error
+      end
+    end)
+  end
+
   def apply_progress(attrs) do
     with {:ok, event} <- ProgressEvent.new(attrs) do
       # Parse once: a retry must not refresh an old event's emitted_at.
       mutate(event.job_id, &Job.apply_progress(&1, event))
     end
   end
+
+  def edit_result(job_id, action) do
+    atomic_change(fn ->
+      with {:job, {:ok, job}} <- {:job, get(job_id)},
+           :ok <- compare_and_swap(job_attrs(job), job, true),
+           {:result, {:ok, current}} <- {:result, Results.get(job_id)},
+           {:ok, result} <- AnalysisResultMutation.prepare(job, current, action),
+           :ok <- commit_result_edit(job_id, current, action, result) do
+        {:ok, result}
+      else
+        {:job, :error} -> {:error, {:job_not_found, job_id}}
+        {:job, {:error, _} = error} -> error
+        {:result, :error} -> {:error, {:result_not_found, job_id}}
+        :stale -> snapshot_miss(job_id)
+        {:error, _reason} = error -> error
+      end
+    end)
+  end
+
+  defp commit_result_edit(job_id, current, :delete, _result),
+    do: Results.delete_if_current(job_id, current)
+
+  defp commit_result_edit(job_id, current, {:replace, _}, result),
+    do: Results.compare_and_swap(job_id, current, result)
 
   def apply_progress_if_current(attrs, %Job{} = expected) do
     with {:ok, event} <- ProgressEvent.new(attrs),

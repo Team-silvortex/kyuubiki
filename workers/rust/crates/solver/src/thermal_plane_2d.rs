@@ -7,7 +7,7 @@ use crate::plane_2d_math::{
     thermal_plane_triangle_equivalent_load,
 };
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
-use crate::solver_postprocess::collect_results;
+use crate::solver_postprocess::try_collect_results;
 use crate::thermal_plane_2d_profile::{
     ThermalPlaneQuadProfile, ThermalPlaneTriangleProfile, push_thermal_plane_stage,
 };
@@ -20,7 +20,7 @@ use crate::thermal_plane_2d_results::{
     max_thermal_quad_strain_energy_density, max_thermal_quad_stress,
     max_thermal_triangle_strain_energy_density, max_thermal_triangle_stress,
     thermal_plane_triangle_state, thermal_quad_total_strain_energy,
-    thermal_triangle_total_strain_energy,
+    thermal_triangle_total_strain_energy, weighted_average,
 };
 use crate::thermal_plane_2d_solve::solve_thermal_plane_displacements;
 use crate::thermal_plane_2d_util::{
@@ -115,7 +115,7 @@ fn solve_thermal_plane_triangle_2d_internal(
         .zip(computed_elements.iter())
         .enumerate()
     {
-        assemble_thermal_triangle(element, computed, &mut global_stiffness, &mut force_vector);
+        assemble_thermal_triangle(element, computed, &mut global_stiffness, &mut force_vector)?;
         checkpoint_chunk(
             SolverStage::ElementAssembly,
             index + 1,
@@ -249,7 +249,7 @@ fn solve_thermal_plane_quad_2d_internal(
         .zip(computed_elements.iter())
         .enumerate()
     {
-        assemble_thermal_plane_quad(element, computed, &mut global_stiffness, &mut force_vector);
+        assemble_thermal_plane_quad(element, computed, &mut global_stiffness, &mut force_vector)?;
         checkpoint_chunk(
             SolverStage::ElementAssembly,
             index + 1,
@@ -320,7 +320,7 @@ fn assemble_thermal_triangle(
     computed: &ThermalPlaneTriangleComputed,
     global_stiffness: &mut SparseMatrix,
     force_vector: &mut [f64],
-) {
+) -> Result<(), String> {
     assemble_thermal_triangle_nodes(
         [element.node_i, element.node_j, element.node_k],
         computed,
@@ -328,7 +328,8 @@ fn assemble_thermal_triangle(
         element.thermal_expansion,
         global_stiffness,
         force_vector,
-    );
+    )
+    .map_err(|error| format!("thermal plane element {}: {error}", element.id))
 }
 
 fn assemble_thermal_triangle_nodes(
@@ -338,7 +339,7 @@ fn assemble_thermal_triangle_nodes(
     thermal_expansion: f64,
     global_stiffness: &mut SparseMatrix,
     force_vector: &mut [f64],
-) {
+) -> Result<(), String> {
     let map = triangle_dof_map(nodes[0], nodes[1], nodes[2]);
     let equivalent_load = thermal_plane_triangle_equivalent_load(
         &computed.b_matrix,
@@ -348,9 +349,15 @@ fn assemble_thermal_triangle_nodes(
         thermal_expansion,
         computed.average_temperature_delta,
     );
+    if equivalent_load.iter().any(|value| !value.is_finite()) {
+        return Err("equivalent thermal load is not representable".into());
+    }
 
     for row in 0..6 {
         force_vector[map[row]] += equivalent_load[row];
+        if !force_vector[map[row]].is_finite() {
+            return Err("assembled thermal force is not representable".into());
+        }
         for column in 0..6 {
             add_at(
                 global_stiffness,
@@ -360,6 +367,7 @@ fn assemble_thermal_triangle_nodes(
             );
         }
     }
+    Ok(())
 }
 
 fn build_thermal_triangle_elements(
@@ -367,7 +375,7 @@ fn build_thermal_triangle_elements(
     computed_elements: &[ThermalPlaneTriangleComputed],
     displacements: &[f64],
 ) -> Result<Vec<ThermalPlaneTriangleElementResult>, String> {
-    collect_results(
+    try_collect_results(
         SolverStage::ResultElements,
         request
             .elements
@@ -386,8 +394,9 @@ fn build_thermal_triangle_elements(
                     &element_displacements,
                     element.thermal_expansion,
                 );
+                state.validate(&element.id)?;
 
-                ThermalPlaneTriangleElementResult {
+                Ok(ThermalPlaneTriangleElementResult {
                     index,
                     id: element.id.clone(),
                     node_i: element.node_i,
@@ -409,7 +418,7 @@ fn build_thermal_triangle_elements(
                     max_in_plane_shear: state.max_in_plane_shear,
                     von_mises: state.von_mises,
                     strain_energy_density: state.strain_energy_density,
-                }
+                })
             }),
     )
 }
@@ -419,7 +428,7 @@ fn build_thermal_quad_elements(
     computed_elements: &[ThermalPlaneQuadComputed],
     displacements: &[f64],
 ) -> Result<Vec<ThermalPlaneQuadElementResult>, String> {
-    collect_results(
+    try_collect_results(
         SolverStage::ResultElements,
         request
             .elements
@@ -460,11 +469,19 @@ fn precompute_thermal_plane_triangle_element(
         element.thickness,
         element.youngs_modulus,
         element.poisson_ratio,
-    )?;
-    let average_temperature_delta = (request.nodes[element.node_i].temperature_delta
-        + request.nodes[element.node_j].temperature_delta
-        + request.nodes[element.node_k].temperature_delta)
-        / 3.0;
+    )
+    .map_err(|error| format!("thermal plane triangle element {}: {error}", element.id))?;
+    let average_temperature_delta = weighted_average(
+        [element.node_i, element.node_j, element.node_k]
+            .map(|i| request.nodes[i].temperature_delta),
+        [1.0; 3],
+    );
+    if !average_temperature_delta.is_finite() {
+        return Err(format!(
+            "thermal plane element {}: temperature mean is not representable",
+            element.id
+        ));
+    }
 
     Ok(ThermalPlaneTriangleComputed {
         stiffness,

@@ -194,12 +194,14 @@
         "thermoelastic_stress_cross_check",
         "material_parameter_provenance",
         "bilinear_isoparametric_thermoelastic_quad",
+        "exact_large_coordinate_translation_and_shared_kernel_replay",
         "distorted_free_expansion_invariance",
         "gauss_point_temperature_interpolation",
         "scalar_reference_shift_regression",
         "identity_safe_heat_to_structural_projection",
         "layered_heat_flux_and_temperature_rise_cross_check",
         "heat_output_representable_range_and_overflow_regression",
+        "thermoelastic_scaled_mean_norm_and_energy_range_regression",
         "fallible_result_collection_cancellation_and_cleanup"
       ],
       "formal_invariants": [
@@ -212,6 +214,12 @@
         "distorted_q4_mesh_preserves_free_uniform_thermal_expansion",
         "linear_nodal_temperature_is_integrated_at_q4_gauss_points",
         "inverted_thermal_q4_jacobian_is_rejected",
+        "thermal_q4_free_expansion_and_temperature_integration_are_translation_invariant",
+        "thermal_q4_nonfinite_coefficients_fail_before_assembly_and_replay_cleanly",
+        "thermal_triangle_mixed_orientation_preserves_free_expansion_and_restrained_compression",
+        "thermal_means_norms_and_energy_products_preserve_representable_scales",
+        "nonfinite_thermal_states_and_loads_fail_before_successful_serialization",
+        "thermal_result_cancellation_and_failure_allow_clean_headless_replay",
         "constant_temperature_reference_preserves_gradient_and_flux",
         "node_reordering_preserves_temperature_expansion_and_thermoelastic_response",
         "ambiguous_or_nonfinite_temperature_handoffs_fail_before_structural_solve",
@@ -234,6 +242,21 @@
         "workers/rust/crates/solver/tests/thermal_plane_triangle_2d_review.rs",
         "workers/rust/crates/solver/tests/thermal_plane_quad_2d_review.rs",
         "workers/rust/crates/solver/tests/thermal_plane_quad_isoparametric.rs",
+        "workers/rust/crates/solver/tests/plane_quad_geometry_reliability.rs",
+        "workers/rust/crates/solver/src/plane_2d_quad.rs",
+        "workers/rust/crates/solver/src/thermal_plane_2d_quad.rs",
+        "reports/plane-q4-kernel-20260927.md",
+        "workers/rust/crates/solver/src/plane_2d_math.rs",
+        "workers/rust/crates/solver/src/thermal_plane_2d.rs",
+        "workers/rust/crates/solver/tests/plane_triangle_orientation_reliability.rs",
+        "reports/plane-triangle-kernel-20260927.md",
+        "workers/rust/crates/solver/src/thermal_plane_2d_results.rs",
+        "workers/rust/crates/solver/src/thermal_plane_2d_solve.rs",
+        "workers/rust/crates/solver/src/plane_2d_summary.rs",
+        "workers/rust/crates/solver/src/thermal_plane_output_kernel_tests.rs",
+        "workers/rust/crates/solver/tests/thermal_plane_output_reliability.rs",
+        "workers/rust/crates/cli/tests/thermal_plane_output_operator.rs",
+        "reports/thermal-plane-output-reliability-20260927.md",
         "workers/rust/crates/solver/tests/scalar_plane_reference_invariance.rs",
         "workers/rust/crates/headless-sdk/src/material_composite_temperature_map.rs",
         "workers/rust/crates/headless-sdk/src/material_composite_electrothermal.rs",
@@ -267,6 +290,26 @@
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_triangle_2d_review -- --nocapture"
         },
         {
+          "id": "thermal-triangle-mixed-orientation-and-replay",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test plane_triangle_orientation_reliability -- --nocapture"
+        },
+        {
+          "id": "thermal-output-kernel-range",
+          "kind": "invariant",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib thermal_plane_2d_results::tests -- --nocapture"
+        },
+        {
+          "id": "thermal-output-range-and-replay",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_output_reliability -- --nocapture"
+        },
+        {
+          "id": "thermal-output-headless-route",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test thermal_plane_output_operator -- --nocapture"
+        },
+        {
           "id": "thermal-quad-review",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_quad_2d_review -- --nocapture"
@@ -275,6 +318,11 @@
           "id": "thermal-quad-isoparametric",
           "kind": "cross_check",
           "command": "cd workers/rust && cargo test -p kyuubiki-solver --test thermal_plane_quad_isoparametric -- --nocapture"
+        },
+        {
+          "id": "thermal-q4-translation-and-replay",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test plane_quad_geometry_reliability -- --nocapture"
         },
         {
           "id": "thermal-plane-mesh-refinement-regression",

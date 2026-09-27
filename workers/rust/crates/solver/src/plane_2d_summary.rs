@@ -62,7 +62,7 @@ pub(super) fn quad_total_strain_energy(
     }))
 }
 
-fn total_energy<'a>(
+pub(super) fn total_energy<'a>(
     elements: impl ExactSizeIterator<Item = (&'a str, f64, f64, f64)>,
 ) -> Result<f64, String> {
     checkpoint(SolverStage::ResultTotals, 0)?;

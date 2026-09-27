@@ -22,18 +22,14 @@ defmodule KyuubikiWeb.Orchestra.WorkflowJobRunner do
     |> maybe_put_orchestration_value("cluster_id", Map.get(normalized, "cluster_id"))
   end
 
+  @spec admit(map(), map(), map(), map(), map()) ::
+          {:ok, KyuubikiWeb.Jobs.Job.t()} | {:error, term()}
+  defdelegate admit(attrs, graph, inputs, context, options), to: WorkflowRecoveryCoordinator
+
   @spec initialize_runtime(String.t(), map(), map(), map(), map()) :: :ok | {:error, term()}
-  def initialize_runtime(job_id, graph, input_artifacts, orchestration_context, response_options)
-      when is_binary(job_id) and is_map(graph) and is_map(input_artifacts) and
-             is_map(orchestration_context) and is_map(response_options) do
-    WorkflowRecoveryCoordinator.initialize(
-      job_id,
-      graph,
-      input_artifacts,
-      orchestration_context,
-      response_options
-    )
-  end
+  defdelegate initialize_runtime(job_id, graph, inputs, context, options),
+    to: WorkflowRecoveryCoordinator,
+    as: :initialize
 
   @spec start(String.t()) :: {:ok, pid()} | {:error, term()}
   def start(job_id) when is_binary(job_id), do: WorkflowRecoveryCoordinator.dispatch(job_id)

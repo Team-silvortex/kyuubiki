@@ -95,6 +95,18 @@ defmodule KyuubikiWeb.AnalysisResultPostgresBackend do
     end
   end
 
+  def delete_if_current(job_id, expected) when is_binary(job_id) and is_map(expected) do
+    query =
+      from(record in ResultRecord,
+        where: record.job_id == ^job_id and record.payload == ^expected
+      )
+
+    case repo_delete_all(query) do
+      {1, _records} -> :ok
+      {0, _records} -> compare_and_swap_miss(job_id)
+    end
+  end
+
   def reset do
     repo_delete_all(ResultRecord)
     :ok

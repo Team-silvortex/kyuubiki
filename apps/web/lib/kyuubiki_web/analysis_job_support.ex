@@ -8,15 +8,18 @@ defmodule KyuubikiWeb.AnalysisJobSupport do
   alias KyuubikiWeb.Library
 
   @spec create_job(map()) :: {:ok, term()} | {:error, term()}
-  def create_job(attrs) when is_map(attrs) do
-    Store.create(%{
+  def create_job(attrs) when is_map(attrs), do: Store.create(new_job_attrs(attrs))
+
+  @doc false
+  def new_job_attrs(attrs) when is_map(attrs) do
+    %{
       job_id: random_id(),
       project_id: Map.get(attrs, :project_id, random_id()),
       model_version_id: Map.get(attrs, :model_version_id),
       simulation_case_id: Map.get(attrs, :simulation_case_id, random_id()),
       queue_timeout_ms: Map.get(attrs, :queue_timeout_ms),
       execution_timeout_ms: Map.get(attrs, :execution_timeout_ms)
-    })
+    }
   end
 
   @spec derive_job_context(map()) :: {:ok, map()} | {:error, term()}

@@ -16,7 +16,11 @@
         "direct_stiffness_patch_reference",
         "constant_strain_triangle_invariant",
         "bilinear_isoparametric_quad",
-        "distorted_patch_refinement_invariance"
+        "distorted_patch_refinement_invariance",
+        "exact_large_coordinate_translation_invariance",
+        "factored_symmetric_stiffness_cross_check",
+        "headless_and_cohesive_shared_q4_kernel_replay",
+        "triangle_all_node_permutations_and_mixed_orientation_patch"
       ],
       "formal_invariants": [
         "fixed_support_displacements_are_zero",
@@ -27,7 +31,12 @@
         "inverted_quad_jacobian_is_rejected",
         "strain_energy_matches_density_area_thickness_sum",
         "representable_stress_metrics_survive_modulus_scale_changes",
-        "unrepresentable_output_fails_and_cancelled_recovery_does_not_publish_partial_success"
+        "unrepresentable_output_fails_and_cancelled_recovery_does_not_publish_partial_success",
+        "q4_translation_preserves_every_gauss_point_affine_strain_and_public_response",
+        "q4_factored_stiffness_matches_nine_term_reference_and_has_three_rigid_modes",
+        "nonfinite_q4_geometry_and_coefficients_fail_before_assembly_with_clean_replay",
+        "triangle_signed_strain_stress_and_thermal_work_are_orientation_invariant",
+        "triangle_nonfinite_coefficients_fail_with_element_context_and_clean_replay"
       ],
       "evidence_paths": [
         "config/operator-reliability/structural-plane.json",
@@ -40,9 +49,45 @@
         "workers/rust/crates/solver/tests/plane_input_reliability.rs",
         "workers/rust/crates/solver/tests/multiphysics_output_range.rs",
         "workers/rust/crates/cli/tests/mechanical_output_operator.rs",
-        "reports/multiphysics-output-reliability-20260923.md"
+        "reports/multiphysics-output-reliability-20260923.md",
+        "workers/rust/crates/solver/src/plane_2d_quad.rs",
+        "workers/rust/crates/solver/src/plane_quad_kernel_tests.rs",
+        "workers/rust/crates/solver/src/plane_quad_kernel_reference.rs",
+        "workers/rust/crates/solver/tests/plane_quad_geometry_reliability.rs",
+        "workers/rust/crates/solver/tests/cohesive_interface_mesh_2d_closed_form.rs",
+        "reports/plane-q4-kernel-20260927.md",
+        "workers/rust/crates/solver/src/plane_2d_math.rs",
+        "workers/rust/crates/solver/src/plane_triangle_kernel_tests.rs",
+        "workers/rust/crates/solver/src/plane_triangle_kernel_reference.rs",
+        "workers/rust/crates/solver/tests/plane_triangle_orientation_reliability.rs",
+        "reports/plane-triangle-kernel-20260927.md"
       ],
       "commands": [
+        {
+          "id": "triangle-orientation-and-stiffness-crosscheck",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib plane_2d_math::kernel_tests -- --nocapture"
+        },
+        {
+          "id": "triangle-mixed-orientation-and-representability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test plane_triangle_orientation_reliability -- --nocapture"
+        },
+        {
+          "id": "q4-local-geometry-and-stiffness-crosscheck",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib plane_2d_quad::kernel_tests -- --nocapture"
+        },
+        {
+          "id": "q4-translation-and-representability",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test plane_quad_geometry_reliability -- --nocapture"
+        },
+        {
+          "id": "q4-cohesive-host-replay",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test cohesive_interface_mesh_2d_closed_form -- --nocapture"
+        },
         {
           "id": "mechanical-output-range",
           "kind": "boundary_regression",

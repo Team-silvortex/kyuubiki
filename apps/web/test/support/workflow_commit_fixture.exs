@@ -54,6 +54,16 @@ defmodule KyuubikiWeb.TestSupport.WorkflowCommitFixture do
   def progress(node \\ "node-a"),
     do: %{"node_id" => node, "completed_nodes" => 1, "total_nodes" => 4}
 
+  def terminal_job(status \\ :completed) do
+    fixture = claimed_job()
+    assert {:ok, job} = Store.apply_progress(%{job_id: fixture.id, stage: status, progress: 1.0})
+    key = WorkflowRecoveryEnvelope.internal_key()
+    recovery = WorkflowRecoveryEnvelope.transition(fixture.runtime[key], Atom.to_string(status))
+    runtime = Map.put(fixture.runtime, key, recovery)
+    assert :ok = AnalysisResultStore.put(fixture.id, runtime)
+    %{fixture | job: job, runtime: runtime}
+  end
+
   def result, do: %{"artifacts" => %{"output" => 42}, "failed_nodes" => []}
 
   def unchanged(fixture) do

@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded CST/Q4 thermoelastic field-recovery, temperature-mean, norm, energy-volume, failure and cancellation evidence. In-process headless dispatch and Linux release regressions do not qualify general multiphysics, installed Agents, or end-to-end performance.",
+  "evidence_claims": [
+    {
+      "id": "thermal-plane-finite-output-and-replay",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless", "runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/thermal_plane_2d.rs",
+        "workers/rust/crates/solver/src/thermal_plane_2d_quad.rs",
+        "workers/rust/crates/solver/src/thermal_plane_2d_results.rs",
+        "workers/rust/crates/solver/src/thermal_plane_2d_solve.rs",
+        "workers/rust/crates/solver/src/plane_2d_summary.rs",
+        "workers/rust/crates/solver/src/thermal_plane_output_kernel_tests.rs",
+        "workers/rust/crates/solver/tests/thermal_plane_output_reliability.rs",
+        "workers/rust/crates/cli/tests/thermal_plane_output_operator.rs",
+        "config/operator-validation-profiles.json",
+        "reports/thermal-plane-output-reliability-20260927.md"
+      ],
+      "required_text": [
+        "thermal_means_preserve_constants_cancellation_and_unequal_weights",
+        "thermal_energy_volume_product_preserves_representable_results",
+        "thermal_result_stages_cancel_before_returning_success_and_allow_replay",
+        "nonfinite_equivalent_load_cannot_hide_behind_fully_fixed_supports",
+        "thermal_profile_rhs_norm_preserves_representable_large_and_small_forces",
+        "headless_thermal_energy_overflow_returns_an_error_and_normal_patch_replays",
+        "This is bounded thermoelastic output validation, not general multiphysics qualification."
+      ]
+    }
+  ]
+}

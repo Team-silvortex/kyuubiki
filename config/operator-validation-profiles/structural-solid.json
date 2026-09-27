@@ -22,6 +22,9 @@
         "manufactured_pure_bending_convergence",
         "warped_interior_mesh_convergence",
         "scale_independent_shape_quality",
+        "normalized_local_geometry_cofactor_cross_check",
+        "exact_large_translation_and_affine_permutation_invariance",
+        "headless_engine_and_cohesive_host_geometry_replay",
         "near_incompressible_risk_reporting",
         "per_component_rigid_body_rank_preflight",
         "multi_component_block_system",
@@ -46,7 +49,11 @@
         "node_and_element_index_reordering_preserves_physical_response",
         "representable_equivalent_stress_and_force_scale_survive_extreme_moduli",
         "hydrostatic_pressure_does_not_erase_representable_shear_in_von_mises",
-        "unrepresentable_solid_output_is_rejected_before_success"
+        "unrepresentable_solid_output_is_rejected_before_success",
+        "exact_coordinate_translation_preserves_geometry_stress_energy_and_reactions",
+        "all_node_permutations_recover_analytic_affine_strain_and_stress",
+        "finite_volume_is_not_lost_to_overflow_of_six_times_volume",
+        "unrepresentable_geometry_or_stiffness_fails_before_assembly_without_poisoning_replay"
       ],
       "evidence_paths": [
         "config/operator-reliability/structural-solid.json",
@@ -62,9 +69,36 @@
         "workers/rust/crates/solver/tests/solid_tetra_topology_reliability.rs",
         "workers/rust/crates/solver/tests/multiphysics_output_range.rs",
         "workers/rust/crates/solver/src/solid_tetra_3d_element.rs",
-        "reports/multiphysics-output-reliability-20260923.md"
+        "reports/multiphysics-output-reliability-20260923.md",
+        "workers/rust/crates/solver/src/solid_tetra_3d_geometry.rs",
+        "workers/rust/crates/solver/src/solid_tetra_3d_geometry_tests.rs",
+        "workers/rust/crates/solver/src/solid_tetra_3d_reference.rs",
+        "workers/rust/crates/solver/tests/solid_tetra_geometry_reliability.rs",
+        "workers/rust/crates/solver/tests/cohesive_interface_mesh_3d_closed_form.rs",
+        "workers/rust/crates/cli/tests/solid_tetra_geometry_operator.rs",
+        "reports/solid-tetra-kernel-20260927.md"
       ],
       "commands": [
+        {
+          "id": "solid-normalized-geometry-crosscheck",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib solid_tetra_3d_element::geometry_tests -- --nocapture"
+        },
+        {
+          "id": "solid-geometry-range-replay",
+          "kind": "boundary_regression",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test solid_tetra_geometry_reliability -- --nocapture"
+        },
+        {
+          "id": "solid-geometry-headless-engine",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test solid_tetra_geometry_operator -- --nocapture"
+        },
+        {
+          "id": "solid-cohesive-host-geometry",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --test cohesive_interface_mesh_3d_closed_form -- --nocapture"
+        },
         {
           "id": "solid-output-range",
           "kind": "boundary_regression",

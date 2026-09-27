@@ -1,5 +1,17 @@
 use kyuubiki_protocol::{PlaneNodeInput, PlaneTriangleElementInput, SolvePlaneTriangle2dRequest};
 
+#[cfg(test)]
+#[path = "plane_triangle_kernel_tests.rs"]
+mod kernel_tests;
+
+#[cfg(test)]
+#[path = "plane_triangle_kernel_reference.rs"]
+mod reference;
+
+#[cfg(test)]
+#[path = "plane_triangle_kernel_benchmark.rs"]
+mod benchmark;
+
 #[derive(Debug, Clone)]
 pub(super) struct PlaneTriangleComputed {
     pub(super) stiffness: [[f64; 6]; 6],
@@ -49,6 +61,7 @@ pub(super) fn precompute_plane_triangle_element_from_nodes(
         element.youngs_modulus,
         element.poisson_ratio,
     )
+    .map_err(|error| format!("plane triangle element {}: {error}", element.id))
 }
 
 pub(super) fn precompute_plane_triangle_element_from_coordinates(
@@ -117,7 +130,11 @@ fn triangle_element_data(
     poisson_ratio: f64,
 ) -> Result<PlaneTriangleElementData, String> {
     let [node_i, node_j, node_k] = coordinates;
-    let area = signed_triangle_area_from_coordinates(coordinates).abs();
+    let signed_area = signed_triangle_area_from_coordinates(coordinates);
+    let area = signed_area.abs();
+    if !area.is_finite() {
+        return Err("plane triangle area is not representable".to_string());
+    }
     if area <= 1.0e-12 {
         return Err("plane element area must be positive".to_string());
     }
@@ -128,7 +145,8 @@ fn triangle_element_data(
     let c1 = node_k[0] - node_j[0];
     let c2 = node_i[0] - node_k[0];
     let c3 = node_j[0] - node_i[0];
-    let factor = 1.0 / (2.0 * area);
+    // Shape gradients retain orientation; only the integration measure is unsigned.
+    let factor = 0.5 / signed_area;
     let b_matrix = [
         [b1 * factor, 0.0, b2 * factor, 0.0, b3 * factor, 0.0],
         [0.0, c1 * factor, 0.0, c2 * factor, 0.0, c3 * factor],
@@ -141,17 +159,52 @@ fn triangle_element_data(
             b3 * factor,
         ],
     ];
+    if b_matrix.iter().flatten().any(|value| !value.is_finite()) {
+        return Err("plane triangle shape gradients are not representable".to_string());
+    }
 
     let d_matrix = plane_stress_d_matrix(youngs_modulus, poisson_ratio);
-
-    let bt = transpose_3x6(&b_matrix);
-    let bt_d = multiply_matrix_6x3_3x3(&bt, &d_matrix);
-    let mut stiffness = multiply_matrix_6x3_3x6(&bt_d, &b_matrix);
+    if d_matrix.iter().flatten().any(|value| !value.is_finite()) {
+        return Err("plane triangle constitutive coefficients are not representable".to_string());
+    }
     let scale = thickness * area;
-    for row in &mut stiffness {
-        for value in row {
-            *value *= scale;
+    let mut stiffness = [[0.0; 6]; 6];
+    // Isotropic D and CST B have known zero entries. Form symmetric 2x2
+    // nodal blocks without dense products through those zeros.
+    for i in 0..3 {
+        let x = 2 * i;
+        let y = x + 1;
+        let dx = b_matrix[0][x];
+        let dy = b_matrix[1][y];
+        let nx = d_matrix[0][0] * dx;
+        let ny = d_matrix[1][1] * dy;
+        let nux = d_matrix[0][1] * dx;
+        let nuy = d_matrix[1][0] * dy;
+        let sx = d_matrix[2][2] * dx;
+        let sy = d_matrix[2][2] * dy;
+        for j in i..3 {
+            let u = 2 * j;
+            let v = u + 1;
+            let dxj = b_matrix[0][u];
+            let dyj = b_matrix[1][v];
+            let xx = (nx * dxj + sy * dyj) * scale;
+            let yy = (sx * dxj + ny * dyj) * scale;
+            let xy = (nux * dyj + sy * dxj) * scale;
+            stiffness[x][u] = xx;
+            stiffness[u][x] = xx;
+            stiffness[y][v] = yy;
+            stiffness[v][y] = yy;
+            stiffness[x][v] = xy;
+            stiffness[v][x] = xy;
+            if i != j {
+                let yx = (sx * dyj + nuy * dxj) * scale;
+                stiffness[y][u] = yx;
+                stiffness[u][y] = yx;
+            }
         }
+    }
+    if stiffness.iter().flatten().any(|value| !value.is_finite()) {
+        return Err("plane triangle stiffness coefficients are not representable".to_string());
     }
 
     Ok((stiffness, area, b_matrix, d_matrix))
@@ -205,30 +258,6 @@ fn transpose_3x6(input: &[[f64; 6]; 3]) -> [[f64; 3]; 6] {
     for (row, input_row) in input.iter().enumerate() {
         for (column, value) in input_row.iter().enumerate() {
             output[column][row] = *value;
-        }
-    }
-    output
-}
-
-fn multiply_matrix_6x3_3x3(lhs: &[[f64; 3]; 6], rhs: &[[f64; 3]; 3]) -> [[f64; 3]; 6] {
-    let mut output = [[0.0; 3]; 6];
-    for row in 0..6 {
-        for column in 0..3 {
-            output[row][column] = (0..3)
-                .map(|index| lhs[row][index] * rhs[index][column])
-                .sum();
-        }
-    }
-    output
-}
-
-fn multiply_matrix_6x3_3x6(lhs: &[[f64; 3]; 6], rhs: &[[f64; 6]; 3]) -> [[f64; 6]; 6] {
-    let mut output = [[0.0; 6]; 6];
-    for row in 0..6 {
-        for column in 0..6 {
-            output[row][column] = (0..3)
-                .map(|index| lhs[row][index] * rhs[index][column])
-                .sum();
         }
     }
     output

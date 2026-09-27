@@ -60,6 +60,7 @@ pub(super) fn precompute_plane_quad_element(
         element.youngs_modulus,
         element.poisson_ratio,
     )
+    .map_err(|error| format!("plane quad element {}: {error}", element.id))
 }
 
 pub(crate) fn precompute_plane_quad_element_from_coordinates(
@@ -68,7 +69,17 @@ pub(crate) fn precompute_plane_quad_element_from_coordinates(
     youngs_modulus: f64,
     poisson_ratio: f64,
 ) -> Result<PlaneQuadComputed, String> {
+    // Shape derivatives sum to zero. Remove the origin before summation so
+    // large absolute coordinates do not erase exactly represented local edges.
+    let origin = coordinates[0];
+    let coordinates = coordinates.map(|[x, y]| [x - origin[0], y - origin[1]]);
+    if coordinates.iter().flatten().any(|value| !value.is_finite()) {
+        return Err("plane quad coordinate differences are not representable".to_string());
+    }
     let d_matrix = plane_stress_d_matrix(youngs_modulus, poisson_ratio);
+    if d_matrix.iter().flatten().any(|value| !value.is_finite()) {
+        return Err("plane quad constitutive coefficients are not representable".to_string());
+    }
     let gauss_points = [
         quad_gauss_point(coordinates, -GAUSS_COORDINATE, -GAUSS_COORDINATE)?,
         quad_gauss_point(coordinates, GAUSS_COORDINATE, -GAUSS_COORDINATE)?,
@@ -76,16 +87,31 @@ pub(crate) fn precompute_plane_quad_element_from_coordinates(
         quad_gauss_point(coordinates, -GAUSS_COORDINATE, GAUSS_COORDINATE)?,
     ];
 
+    let area = gauss_points
+        .iter()
+        .map(|point| point.det_jacobian)
+        .sum::<f64>();
+    if !area.is_finite() {
+        return Err("plane quad integrated area is not representable".to_string());
+    }
+    if gauss_points
+        .iter()
+        .flat_map(|point| point.b_matrix.iter().flatten())
+        .any(|value| !value.is_finite())
+    {
+        return Err("plane quad shape gradients are not representable".to_string());
+    }
     let mut stiffness = [[0.0; 8]; 8];
-    let mut area = 0.0;
     for point in &gauss_points {
-        area += point.det_jacobian;
         accumulate_stiffness(
             &mut stiffness,
             &point.b_matrix,
             &d_matrix,
             thickness * point.det_jacobian,
         );
+    }
+    if stiffness.iter().flatten().any(|value| !value.is_finite()) {
+        return Err("plane quad stiffness coefficients are not representable".to_string());
     }
 
     Ok(PlaneQuadComputed {
@@ -195,16 +221,20 @@ fn accumulate_stiffness(
     d_matrix: &[[f64; 3]; 3],
     scale: f64,
 ) {
-    for (row, stiffness_row) in stiffness.iter_mut().enumerate() {
-        for (column, stiffness_value) in stiffness_row.iter_mut().enumerate() {
+    let db: [[f64; 8]; 3] = std::array::from_fn(|row| {
+        std::array::from_fn(|column| (0..3).map(|k| d_matrix[row][k] * b_matrix[k][column]).sum())
+    });
+    // Isotropic plane-stress D is symmetric. Integrate each pair once.
+    for row in 0..8 {
+        for column in row..8 {
             let value = (0..3)
-                .flat_map(|left| {
-                    (0..3).map(move |right| {
-                        b_matrix[left][row] * d_matrix[left][right] * b_matrix[right][column]
-                    })
-                })
-                .sum::<f64>();
-            *stiffness_value += value * scale;
+                .map(|k| b_matrix[k][row] * db[k][column])
+                .sum::<f64>()
+                * scale;
+            stiffness[row][column] += value;
+            if row != column {
+                stiffness[column][row] += value;
+            }
         }
     }
 }
@@ -216,3 +246,15 @@ pub(crate) fn multiply_matrix_vector_3x8(matrix: &[[f64; 8]; 3], vector: &[f64; 
             .sum()
     })
 }
+
+#[cfg(test)]
+#[path = "plane_quad_kernel_tests.rs"]
+mod kernel_tests;
+
+#[cfg(test)]
+#[path = "plane_quad_kernel_reference.rs"]
+mod reference;
+
+#[cfg(test)]
+#[path = "plane_quad_kernel_benchmark.rs"]
+mod benchmark;

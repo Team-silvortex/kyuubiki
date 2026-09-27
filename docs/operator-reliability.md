@@ -374,15 +374,15 @@ parameter provenance, and the same mesh/refinement equivalence. They still do
 not claim arbitrary mixed-boundary heat-transfer coverage or production
 thermo-mechanical qualification outside the retained patch envelope.
 
-The `thermal-plane-patch` qualification packet has reviewer sign-off over
-boundary coverage, material-parameter provenance, and mesh/refinement
-equivalence. Its validation profile executes the heat and thermoelastic
-triangle/quad review fixtures together, then checks that a two-triangle split
-matches the quad patch response for heat flow and restrained thermal stress.
+The `thermal-plane-patch` packet retains reviewer sign-off over compact boundary,
+material-provenance and refinement fixtures, not arbitrary meshes. Its profile
+checks triangle/quad heat and restrained-stress equivalence. The [CST orientation repair](../reports/plane-triangle-kernel-20260927.md)
+adds all-six node orders, mixed-orientation expansion and signed stress checks.
+Previously computed clockwise/mixed-orientation mechanical or thermoelastic triangle results must be recomputed before reuse.
 On the current daji 3.x line, `solve.thermal_plane_quad_2d` is a native
 bilinear isoparametric Q4 rather than a pair of constant-strain triangles. It
 uses full 2x2 Gauss integration for stiffness, nodal-temperature interpolation,
-thermal equivalent loads, stress recovery, and strain-energy recovery.
+thermal equivalent loads, stress recovery, and strain-energy recovery; see [Q4 kernel validation and timing](../reports/plane-q4-kernel-20260927.md).
 Distorted 1x1, 2x2, and 4x4 meshes retain exact free uniform thermal expansion;
 a restrained distorted patch integrates a linear temperature field over the
 physical element area; inverted Gauss-point Jacobians are rejected.
@@ -400,14 +400,14 @@ the refinement ladder. The retained executable check also re-derives maximum
 temperature, maximum heat flux, average element temperature, Fourier heat-flux
 components, element geometry area, element heat-flow rate, and total absolute
 heat-flow rate from the reported node and element fields.
-The retained thermoelastic patch also checks temperature-delta and thickness
-scaling: restrained thermal stress scales linearly with temperature delta,
-strain-energy density and total energy scale quadratically with temperature
-delta, and thickness leaves stress plus energy density fixed while scaling
-total energy linearly. Its retained regression also re-derives displacement,
-temperature-delta, von Mises stress, in-plane shear, thermal strain,
-element geometry area, strain-energy density, and total strain-energy summaries
-from public result fields.
+The retained thermoelastic patch checks temperature-delta and thickness scaling:
+restrained stress is linear in temperature delta, energy is quadratic, and
+thickness scales total energy without changing stress or energy density.
+Public displacement, temperature, stress, strain, area and energy summaries are
+re-derived. [Thermal output range and recovery](../reports/thermal-plane-output-reliability-20260927.md)
+also checks compensated temperature means, stable norms, energy-volume products,
+nonfinite-result rejection and cancellation/replay through the native SDK route.
+Arithmetic stress tests do not extend the validated physical material envelope.
 An independent triangle/quad refinement regression now applies the same fully
 restrained uniform temperature rise on 1x1, 2x2, 4x4, and 8x8 meshes. It keeps
 zero displacement, thermal strain, peak stress, energy density, and total
@@ -1251,10 +1251,10 @@ six-mode rigid-body restraint rank for every connected component. It rejects
 both a rank-`5/6` hidden rotation and a floating second component before
 factorization. Separately restrained components solve as one block system and
 report their component count; remapped node and element indices preserve the
-physical response. A general unstructured mesh generator and broad
-connectivity-family corpus, stabilized near-incompressibility, plasticity,
-contact, native body/surface load integration, and large deformation remain
-outside the claim.
+physical response. [Normalized geometry and Linux timing](../reports/solid-tetra-kernel-20260927.md) also cover
+exact translations, finite-range rejection and cohesive-host reuse. General unstructured
+meshing, broad connectivity families, stabilized near-incompressibility, plasticity,
+contact, native body/surface load integration and large deformation remain outside the claim.
 
 `solve.nonlinear_spring_1d` is now qualified for the current single hardening
 spring scope. The retained evidence derives the Cardano root for
@@ -1939,9 +1939,10 @@ rollback, stale-claim, process-loss, filesystem-fault, and retry tests. This cov
 local runtime records, not external solver checkpoints, live PostgreSQL,
 distributed failover, exactly-once execution, or numerical qualification.
 
-The [storage-outage report](../reports/storage-outage-recovery-20260927.md) adds
-local scan containment, policy-checked retry, and explicit degraded health;
-unknown counts are not zero, and failed scans remain visible until recovery.
+The [storage-outage report](../reports/storage-outage-recovery-20260927.md) adds local scan containment, policy-checked retry, and degraded health with explicitly unknown counts.
+The [admission report](../reports/workflow-admission-reliability-20260927.md) covers atomic creation, insert-once initialization, and recovery.
+The [deletion report](../reports/workflow-deletion-reliability-20260927.md) covers atomic job/result removal and post-commit local runner shutdown.
+The [result administration report](../reports/result-administration-reliability-20260927.md) covers lease-guarded, atomic edits/deletion of existing results without recovery-metadata injection or snapshot races.
 
 ## Smoke-Level Gaps
 

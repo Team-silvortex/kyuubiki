@@ -498,6 +498,9 @@ defmodule KyuubikiWeb.Router do
         {:error, {:result_not_found, _}} ->
           respond_json(conn, 404, %{"error" => "result_not_found"})
 
+        {:error, {:job_not_found, _}} ->
+          respond_json(conn, 404, %{"error" => "job_not_found"})
+
         {:error, reason} ->
           unprocessable(conn, reason)
       end
@@ -764,6 +767,9 @@ defmodule KyuubikiWeb.Router do
 
   defp respond_success({conn, {:error, {:job_not_found, _job_id}}}, _status),
     do: respond_json(conn, 404, %{"error" => "job_not_found"})
+
+  defp respond_success({conn, {:error, {:result_not_found, _job_id}}}, _status),
+    do: respond_json(conn, 404, %{"error" => "result_not_found"})
 
   defp respond_success({conn, {:error, reason}}, _status), do: unprocessable(conn, reason)
 

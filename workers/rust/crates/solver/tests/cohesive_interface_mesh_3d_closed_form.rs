@@ -69,20 +69,7 @@ fn committed_damage_survives_a_prescribed_unloading_path() {
 
 #[test]
 fn tetra_host_and_interface_share_one_global_equilibrium_system() {
-    let mut request = base_request();
-    request.nodes.push(node("apex", 0.0, 0.0, 1.0, [true; 3]));
-    request.nodes[3].fixed = [true, true, false];
-    request.nodes[3].load[2] = 2.5;
-    request.host_tetrahedra.push(SolidTetra3dElementInput {
-        id: "host-tetra".to_string(),
-        node_a: 3,
-        node_b: 4,
-        node_c: 5,
-        node_d: 6,
-        youngs_modulus: 1000.0,
-        poisson_ratio: 0.0,
-    });
-
+    let request = host_request();
     let result = solve_cohesive_interface_mesh_3d(&request)
         .expect("cohesive and solid host coassembly should solve");
 
@@ -99,6 +86,64 @@ fn tetra_host_and_interface_share_one_global_equilibrium_system() {
     assert_close(result.host_tetrahedra[0].shear_yz, -3.0);
     assert_close(result.host_tetrahedra[0].shear_zx, -3.0);
     assert_close(result.max_host_von_mises_stress, 90.0_f64.sqrt());
+}
+
+#[test]
+fn translated_tetra_host_keeps_cohesive_equilibrium_and_invalid_host_can_replay() {
+    let reference = solve_cohesive_interface_mesh_3d(&host_request()).unwrap();
+    for offset in [2f64.powi(40), -2f64.powi(40)] {
+        let mut request = host_request();
+        for node in &mut request.nodes {
+            node.x += offset;
+            node.y -= offset;
+            node.z += offset;
+        }
+        let result = solve_cohesive_interface_mesh_3d(&request).unwrap();
+        assert!(result.converged);
+        assert_close(
+            result.max_host_von_mises_stress,
+            reference.max_host_von_mises_stress,
+        );
+        assert_close(
+            result.elements[0].local_traction[2],
+            reference.elements[0].local_traction[2],
+        );
+        for (actual, expected) in result.nodes.iter().zip(&reference.nodes) {
+            for axis in 0..3 {
+                assert_close(actual.displacement[axis], expected.displacement[axis]);
+                assert_close(actual.reaction[axis], expected.reaction[axis]);
+            }
+        }
+        request.host_tetrahedra[0].youngs_modulus = f64::MAX;
+        request.host_tetrahedra[0].poisson_ratio = 0.49;
+        let error = solve_cohesive_interface_mesh_3d(&request).unwrap_err();
+        assert!(
+            error.contains("host-tetra") && error.contains("coefficients are not representable"),
+            "{error}"
+        );
+        assert!(
+            solve_cohesive_interface_mesh_3d(&host_request())
+                .unwrap()
+                .converged
+        );
+    }
+}
+
+fn host_request() -> SolveCohesiveInterfaceMesh3dRequest {
+    let mut request = base_request();
+    request.nodes.push(node("apex", 0.0, 0.0, 1.0, [true; 3]));
+    request.nodes[3].fixed = [true, true, false];
+    request.nodes[3].load[2] = 2.5;
+    request.host_tetrahedra.push(SolidTetra3dElementInput {
+        id: "host-tetra".to_string(),
+        node_a: 3,
+        node_b: 4,
+        node_c: 5,
+        node_d: 6,
+        youngs_modulus: 1000.0,
+        poisson_ratio: 0.0,
+    });
+    request
 }
 
 #[test]
