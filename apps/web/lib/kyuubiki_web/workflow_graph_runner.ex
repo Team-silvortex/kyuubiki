@@ -1,21 +1,23 @@
 defmodule KyuubikiWeb.WorkflowGraphRunner do
   @moduledoc false
   alias KyuubikiWeb.WorkflowGraphRecovery
+  alias KyuubikiWeb.WorkflowGraphPreflight
   alias KyuubikiWeb.WorkflowGraphRunnerMetrics
   alias KyuubikiWeb.WorkflowGraphScheduler
+  alias KyuubikiWeb.WorkflowJsonBudget
   def run(graph, input_artifacts, opts \\ [])
 
   def run(graph, input_artifacts, opts)
       when is_map(graph) and is_map(input_artifacts) and is_list(opts) do
-    with nodes when is_list(nodes) <- Map.get(graph, "nodes"),
+    with :ok <- WorkflowGraphPreflight.validate(graph, input_artifacts),
+         nodes when is_list(nodes) <- Map.get(graph, "nodes"),
          edges when is_list(edges) <- Map.get(graph, "edges", []),
          execute_solve when is_function(execute_solve, 3) <- Keyword.get(opts, :execute_solve),
          execute_transform when is_function(execute_transform, 3) <-
            Keyword.get(opts, :execute_transform),
          execute_extract when is_function(execute_extract, 3) <-
            Keyword.get(opts, :execute_extract),
-         execute_export when is_function(execute_export, 3) <- Keyword.get(opts, :execute_export),
-         :ok <- WorkflowGraphRecovery.validate(nodes) do
+         execute_export when is_function(execute_export, 3) <- Keyword.get(opts, :execute_export) do
       run_ordered_workflow_graph(
         WorkflowGraphScheduler.indexes(nodes, edges),
         input_artifacts,
@@ -246,59 +248,56 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
 
   defp execute_workflow_node(%{"kind" => "solve"} = node, incoming, _inputs, state, opts) do
     with {:ok, operator_id} <- fetch_operator_id(node),
-         {:ok, payload} <- resolve_single_input_payload(node, incoming, state.artifacts),
-         {:ok, result} <- Keyword.fetch!(opts, :execute_solve).(operator_id, payload, node) do
-      {:ok,
-       publish_node_outputs(
-         state,
-         node,
-         result,
-         incoming_artifact_keys(incoming, state.artifacts)
-       )}
+         {:ok, payload} <- resolve_single_input_payload(node, incoming, state.artifacts) do
+      result = Keyword.fetch!(opts, :execute_solve).(operator_id, payload, node)
+
+      publish_operator_result(
+        state,
+        node,
+        result,
+        incoming_artifact_keys(incoming, state.artifacts)
+      )
     end
   end
 
   defp execute_workflow_node(%{"kind" => "transform"} = node, incoming, _inputs, state, opts) do
     with {:ok, operator_id} <- fetch_operator_id(node),
-         {:ok, payload} <- resolve_transform_payload(node, incoming, state.artifacts),
-         {:ok, result} <-
-           Keyword.fetch!(opts, :execute_transform).(
-             operator_id,
-             payload,
-             Map.get(node, "config")
-           ) do
+         {:ok, payload} <- resolve_transform_payload(node, incoming, state.artifacts) do
+      result =
+        Keyword.fetch!(opts, :execute_transform).(operator_id, payload, Map.get(node, "config"))
+
       consumed = consumed_artifacts_for_node(node, incoming, state.artifacts)
-      {:ok, publish_node_outputs(state, node, result, consumed)}
+      publish_operator_result(state, node, result, consumed)
     end
   end
 
   defp execute_workflow_node(%{"kind" => "extract"} = node, incoming, _inputs, state, opts) do
     with {:ok, operator_id} <- fetch_operator_id(node),
-         {:ok, payload} <- resolve_single_input_payload(node, incoming, state.artifacts),
-         {:ok, result} <-
-           Keyword.fetch!(opts, :execute_extract).(operator_id, payload, Map.get(node, "config")) do
-      {:ok,
-       publish_node_outputs(
-         state,
-         node,
-         result,
-         incoming_artifact_keys(incoming, state.artifacts)
-       )}
+         {:ok, payload} <- resolve_single_input_payload(node, incoming, state.artifacts) do
+      result =
+        Keyword.fetch!(opts, :execute_extract).(operator_id, payload, Map.get(node, "config"))
+
+      publish_operator_result(
+        state,
+        node,
+        result,
+        incoming_artifact_keys(incoming, state.artifacts)
+      )
     end
   end
 
   defp execute_workflow_node(%{"kind" => "export"} = node, incoming, _inputs, state, opts) do
     with {:ok, operator_id} <- fetch_operator_id(node),
-         {:ok, payload} <- resolve_single_input_payload(node, incoming, state.artifacts),
-         {:ok, result} <-
-           Keyword.fetch!(opts, :execute_export).(operator_id, payload, Map.get(node, "config")) do
-      {:ok,
-       publish_node_outputs(
-         state,
-         node,
-         result,
-         incoming_artifact_keys(incoming, state.artifacts)
-       )}
+         {:ok, payload} <- resolve_single_input_payload(node, incoming, state.artifacts) do
+      result =
+        Keyword.fetch!(opts, :execute_export).(operator_id, payload, Map.get(node, "config"))
+
+      publish_operator_result(
+        state,
+        node,
+        result,
+        incoming_artifact_keys(incoming, state.artifacts)
+      )
     end
   end
 
@@ -548,6 +547,17 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
   defp truthy?(value) when is_list(value), do: value != []
   defp truthy?(value) when is_map(value), do: map_size(value) > 0
   defp truthy?(_value), do: true
+
+  defp publish_operator_result(state, node, {:ok, value}, source_artifacts) do
+    # Validate once before publishing any port or lineage, even for zero-output nodes.
+    with :ok <- WorkflowJsonBudget.validate_output(value, "workflow node #{node["id"]} output"),
+         do: {:ok, publish_node_outputs(state, node, value, source_artifacts)}
+  end
+
+  defp publish_operator_result(_state, _node, {:error, _} = error, _sources), do: error
+
+  defp publish_operator_result(_state, _node, _invalid, _sources),
+    do: {:error, :invalid_operator_result}
 
   defp publish_node_outputs(state, node, value, source_artifacts) do
     Enum.reduce(Map.get(node, "outputs", []), state, fn output, acc ->

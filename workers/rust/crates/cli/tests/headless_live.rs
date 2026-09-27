@@ -572,10 +572,9 @@ fn rust_headless_cli_executes_live_workflow_graph_submit() {
             .as_f64()
             .is_some_and(|value| value > 0.0)
     );
-    assert!(
-        workflow_payload["steps"][2]["result_preview"]["job"]["message"]
-            .as_str()
-            .is_some_and(|value| value.contains("completed workflow node result_output"))
+    assert_eq!(
+        workflow_payload["steps"][2]["result_preview"]["job"]["message"],
+        "workflow completed"
     );
 
     let _ = fs::remove_file(workflow_path);

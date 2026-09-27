@@ -140,7 +140,7 @@ fn verify_heat_result(
     elements: usize,
     response: &Value,
 ) -> Result<(), Box<dyn Error>> {
-    let result = successful_result(&response, "healthy-next");
+    let result = successful_result(response, "healthy-next");
     let nodes = result["nodes"].as_array().unwrap();
     assert_eq!(nodes.len(), (n + 1) * (n + 1));
     assert_eq!(result["elements"].as_array().unwrap().len(), elements);
@@ -152,7 +152,7 @@ fn verify_heat_result(
             "node {i}: {value} != {expected}"
         );
     }
-    record(agent, "healthy-next", &response)?;
+    record(agent, "healthy-next", response)?;
     Ok(())
 }
 

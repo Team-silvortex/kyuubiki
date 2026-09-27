@@ -131,9 +131,10 @@ defmodule KyuubikiWeb.Analysis do
     normalized = AnalysisJobSupport.stringify_keys(params)
 
     with %{} = graph <- Map.get(normalized, "graph"),
+         %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
+         :ok <- KyuubikiWeb.WorkflowGraphPreflight.validate(graph, input_artifacts),
          response_options <-
            WorkflowGraphResponse.resolve_options(graph, Map.get(normalized, "response_options")),
-         %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
          {:ok, job_context} <- AnalysisJobSupport.derive_job_context(params),
          {:ok, job} <- AnalysisJobSupport.create_job(job_context),
          orchestration_context <- WorkflowJobRunner.orchestration_context_from_params(params),

@@ -14,10 +14,21 @@ export async function launchIntegrationBrowser(chromium, options = {}) {
   try {
     return await chromium.launch({ headless: true, ...options });
   } catch (error) {
-    if (!isMissingBundledBrowser(error)) throw error;
-
-    const channel = process.env.KYUUBIKI_PLAYWRIGHT_CHANNEL?.trim() || "chrome";
-    return chromium.launch({ headless: true, ...options, channel });
+    if (isMissingBundledBrowser(error)) {
+      const channel = process.env.KYUUBIKI_PLAYWRIGHT_CHANNEL?.trim() || "chrome";
+      return chromium.launch({ headless: true, ...options, channel });
+    }
+    const message = String(error?.message || error || "");
+    // A Linux libdbus startup crash precedes every test/page. Never retry test failures.
+    if (!message.includes("browserType.launch:") ||
+        !message.includes("libdbus") ||
+        !(message.includes("SIGSEGV") || message.includes("Received signal 11"))) throw error;
+    console.warn("Chromium crashed in libdbus before opening a page; retrying launch once.");
+    try {
+      return await chromium.launch({ headless: true, ...options });
+    } catch (retryError) {
+      throw new AggregateError([error, retryError], "Chromium startup failed twice", { cause: retryError });
+    }
   }
 }
 

@@ -6,6 +6,7 @@ use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -14,6 +15,15 @@ pub(crate) const MAX_FRAME_BYTES: usize = 16 * 1024 * 1024;
 
 // Serialize port selection through readiness, not the live tests themselves.
 static STARTUP: Mutex<()> = Mutex::new(());
+static AGENT_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+fn agent_run_id(timestamp: u128) -> String {
+    let sequence = AGENT_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    format!(
+        "lifecycle-live-{}-{timestamp}-{sequence}",
+        std::process::id()
+    )
+}
 
 pub(crate) struct LiveAgent {
     pub(crate) child: Option<Child>,
@@ -81,15 +91,13 @@ impl LiveAgent {
         solver_hold: Option<(String, String)>,
     ) -> Result<Self, Box<dyn Error>> {
         let unique = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
+        let agent_id = agent_run_id(unique);
         let evidence_root = std::env::var_os("KYUUBIKI_TEST_AGENT_EVIDENCE_DIR").map(PathBuf::from);
-        let root = evidence_root
-            .clone()
-            .unwrap_or_else(std::env::temp_dir)
-            .join(format!(
-                "kyuubiki-agent-lifecycle-live-{}-{unique}",
-                std::process::id()
-            ));
-        fs::create_dir_all(&root)?;
+        let parent = evidence_root.clone().unwrap_or_else(std::env::temp_dir);
+        let root = parent.join(format!("kyuubiki-agent-{agent_id}"));
+        fs::create_dir_all(parent)?;
+        // Clock precision is not a uniqueness guarantee for concurrent live tests.
+        fs::create_dir(&root)?;
         let log_path = root.join("agent.log");
         let hold_path = root.join("execution.hold");
         let mut agent = Self {
@@ -98,7 +106,7 @@ impl LiveAgent {
             log_path,
             hold_path,
             port: 0,
-            agent_id: format!("lifecycle-live-{}-{unique}", std::process::id()),
+            agent_id,
             reply_timeout_ms: reply_timeout_ms.into(),
             shutdown_timeout_ms: shutdown_timeout_ms.into(),
             capacity: capacity.into(),
@@ -253,34 +261,6 @@ impl LiveAgent {
     }
 }
 
-#[cfg(test)]
-mod readiness_tests {
-    use super::*;
-
-    #[test]
-    fn another_agents_listener_cannot_mask_a_rejected_child() -> Result<(), Box<dyn Error>> {
-        let owner = LiveAgent::start()?;
-        let mut rejected = LiveAgent::start()?;
-        rejected.stop_process()?;
-        rejected.port = owner.port;
-        rejected.solver_hold = Some(("linear_prepare".into(), "solve_heat_plane_quad_2d".into()));
-        let error = rejected
-            .start_process()
-            .expect_err("foreign listener accepted as child readiness");
-        assert!(
-            error
-                .to_string()
-                .contains("KYUUBIKI_AGENT_FAULT_INJECTION_SOLVER_STAGE")
-        );
-        let response = owner.request("still-owned", "describe_agent", json!({}))?;
-        assert_eq!(
-            response["result"]["deployment_readiness"]["agent_id"],
-            owner.agent_id
-        );
-        Ok(())
-    }
-}
-
 impl Drop for LiveAgent {
     fn drop(&mut self) {
         let _ = self.stop_process();
@@ -377,4 +357,39 @@ pub(crate) fn wait_for_lifecycle(
         "agent never reached lifecycle state {expected_state} with {expected_active} active executions"
     )
     .into())
+}
+
+#[cfg(test)]
+mod readiness_tests {
+    use super::*;
+
+    #[test]
+    fn identical_clock_samples_do_not_share_agent_scratch_directories() {
+        let identities: std::collections::BTreeSet<_> =
+            (0..100).map(|_| agent_run_id(123)).collect();
+        assert_eq!(identities.len(), 100);
+    }
+
+    #[test]
+    fn another_agents_listener_cannot_mask_a_rejected_child() -> Result<(), Box<dyn Error>> {
+        let owner = LiveAgent::start()?;
+        let mut rejected = LiveAgent::start()?;
+        rejected.stop_process()?;
+        rejected.port = owner.port;
+        rejected.solver_hold = Some(("linear_prepare".into(), "solve_heat_plane_quad_2d".into()));
+        let error = rejected
+            .start_process()
+            .expect_err("foreign listener accepted as child readiness");
+        assert!(
+            error
+                .to_string()
+                .contains("KYUUBIKI_AGENT_FAULT_INJECTION_SOLVER_STAGE")
+        );
+        let response = owner.request("still-owned", "describe_agent", json!({}))?;
+        assert_eq!(
+            response["result"]["deployment_readiness"]["agent_id"],
+            owner.agent_id
+        );
+        Ok(())
+    }
 }

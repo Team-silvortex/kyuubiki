@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-09-20T03:48:45Z",
-  "shipping_version": "3.3.0",
+  "generated_at": "2026-09-27T03:08:50Z",
+  "shipping_version": "3.4.0",
   "default_channel": "stable",
   "line": "daji 3.x",
   "source": {
@@ -16,14 +16,14 @@
       "aliases": [
         "daji:latest",
         "daji:3",
-        "daji:3.3",
-        "daji:3.3.0"
+        "daji:3.4",
+        "daji:3.4.0"
       ],
       "line": "3.x",
       "status": "current",
-      "version": "3.3.0",
-      "summary": "Daji 3.3.0 local desktop rebuild: nearby study, modeling, checkpoint, run and result actions; compact PWDT and dense panels; corrected local language packs. Public distribution and numerical qualification remain separate gates.",
-      "date": "2026-09-20",
+      "version": "3.4.0",
+      "summary": "Daji 3.4.0 workflow reliability and local desktop rebuild: bounded graph admission, validated artifact publication, deterministic diagnostics, and CI contract repairs. Public distribution and numerical qualification remain separate gates.",
+      "date": "2026-09-27",
       "notes": [
         "Primary operator-facing update track for the current daji 3.x line.",
         "Targets standard installs that follow the visible installation contract."
@@ -65,7 +65,7 @@
         "managed_path_policy": "workspace_relative",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/3.3.0.json",
+      "snapshot_path": "releases/snapshots/3.4.0.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
@@ -74,57 +74,57 @@
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "3.3.0",
+          "version": "3.4.0",
           "notes": [
-            "Static frontend with nearby research actions; no runtime Node server."
+            "Static frontend; no runtime Node server."
           ]
         },
         "hub_gui": {
-          "version": "3.3.0",
+          "version": "3.4.0",
           "notes": [
             "Independent native Hub shell."
           ]
         },
         "workbench_gui": {
-          "version": "3.3.0",
+          "version": "3.4.0",
           "notes": [
             "Independent native Workbench shell."
           ]
         },
         "installer_gui": {
-          "version": "3.3.0",
+          "version": "3.4.0",
           "notes": [
             "Independent native Installer shell."
           ]
         },
         "web_api": {
-          "version": "3.3.0",
+          "version": "3.4.0",
           "notes": [
             "Self-contained Orchestra release."
           ]
         },
         "rust_headless_sdk": {
-          "version": "3.3.0",
+          "version": "3.4.0",
           "notes": [
-            "Metadata aligned; registry publication not performed."
+            "Registry publication not performed."
           ]
         },
         "python_headless_sdk": {
-          "version": "3.3.0",
+          "version": "3.4.0",
           "notes": [
-            "Metadata aligned; registry publication not performed."
+            "Registry publication not performed."
           ]
         },
         "elixir_headless_sdk": {
-          "version": "3.3.0",
+          "version": "3.4.0",
           "notes": [
-            "Metadata aligned; registry publication not performed."
+            "Registry publication not performed."
           ]
         },
         "rust_worker_sdk": {
-          "version": "3.3.0",
+          "version": "3.4.0",
           "notes": [
-            "Operator extensions remain separate from headless control."
+            "Operator extensions stay separate from headless control."
           ]
         }
       },
@@ -155,12 +155,12 @@
   ],
   "versions": [
     {
-      "version": "3.3.0",
+      "version": "3.4.0",
       "line": "3.x",
       "status": "current",
-      "date": "2026-09-20",
-      "summary": "Daji 3.3.0 local desktop rebuild: nearby study, modeling, checkpoint, run and result actions; compact PWDT and dense panels; corrected local language packs. Public distribution and numerical qualification remain separate gates.",
-      "snapshot_path": "releases/snapshots/3.3.0.json",
+      "date": "2026-09-27",
+      "summary": "Daji 3.4.0 workflow reliability and local desktop rebuild: bounded graph admission, validated artifact publication, deterministic diagnostics, and CI contract repairs. Public distribution and numerical qualification remain separate gates.",
+      "snapshot_path": "releases/snapshots/3.4.0.json",
       "channels": [
         "stable"
       ],
@@ -168,9 +168,98 @@
         "daji:stable",
         "daji:latest",
         "daji:3",
-        "daji:3.3",
-        "daji:3.3.0"
+        "daji:3.4",
+        "daji:3.4.0"
       ],
+      "product_surfaces": {
+        "frontend_workbench": {
+          "version": "3.4.0",
+          "notes": [
+            "Static frontend; no runtime Node server."
+          ]
+        },
+        "hub_gui": {
+          "version": "3.4.0",
+          "notes": [
+            "Independent native Hub shell."
+          ]
+        },
+        "workbench_gui": {
+          "version": "3.4.0",
+          "notes": [
+            "Independent native Workbench shell."
+          ]
+        },
+        "installer_gui": {
+          "version": "3.4.0",
+          "notes": [
+            "Independent native Installer shell."
+          ]
+        },
+        "web_api": {
+          "version": "3.4.0",
+          "notes": [
+            "Self-contained Orchestra release."
+          ]
+        },
+        "rust_headless_sdk": {
+          "version": "3.4.0",
+          "notes": [
+            "Registry publication not performed."
+          ]
+        },
+        "python_headless_sdk": {
+          "version": "3.4.0",
+          "notes": [
+            "Registry publication not performed."
+          ]
+        },
+        "elixir_headless_sdk": {
+          "version": "3.4.0",
+          "notes": [
+            "Registry publication not performed."
+          ]
+        },
+        "rust_worker_sdk": {
+          "version": "3.4.0",
+          "notes": [
+            "Operator extensions stay separate from headless control."
+          ]
+        }
+      },
+      "desktop_artifacts": [
+        {
+          "product": "hub",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
+          "exists": true
+        },
+        {
+          "product": "installer",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
+          "exists": true
+        },
+        {
+          "product": "workbench",
+          "kind": "app",
+          "platform": "macos",
+          "path": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app",
+          "exists": true
+        }
+      ]
+    },
+    {
+      "version": "3.3.0",
+      "line": "3.x",
+      "status": "archived",
+      "date": "2026-09-20",
+      "summary": "Daji 3.3.0 local desktop rebuild: nearby study, modeling, checkpoint, run and result actions; compact PWDT and dense panels; corrected local language packs. Public distribution and numerical qualification remain separate gates.",
+      "snapshot_path": "releases/snapshots/3.3.0.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {
         "frontend_workbench": {
           "version": "3.3.0",
@@ -425,21 +514,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -460,21 +549,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -495,21 +584,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -607,63 +696,63 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -761,63 +850,63 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -916,63 +1005,63 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -1070,63 +1159,63 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -1224,63 +1313,63 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -1378,63 +1467,63 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -1499,21 +1588,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -1534,21 +1623,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -1569,21 +1658,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -1655,21 +1744,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -1690,21 +1779,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -1725,21 +1814,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -1811,21 +1900,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -1846,21 +1935,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -1881,21 +1970,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -1965,21 +2054,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -2000,21 +2089,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -2035,21 +2124,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -2114,21 +2203,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -2149,21 +2238,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -2184,21 +2273,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -2263,21 +2352,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -2298,21 +2387,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -2333,21 +2422,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -2412,21 +2501,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -2447,21 +2536,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -2482,21 +2571,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -2561,21 +2650,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -2596,21 +2685,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -2631,21 +2720,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -2714,21 +2803,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -2749,21 +2838,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -2784,21 +2873,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -2867,21 +2956,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -2902,21 +2991,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -2937,21 +3026,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -3018,21 +3107,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -3053,21 +3142,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -3088,21 +3177,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },
@@ -3169,21 +3258,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -3204,21 +3293,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -3239,21 +3328,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     }

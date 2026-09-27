@@ -224,7 +224,7 @@ The tensor is the three-axis review map:
 - evidence depth
 
 Tensor v5 splits evidence depth into required-dimension strength, explicit
-scenario qualification, and release criticality. The current `daji 3.3.x`
+scenario qualification, and release criticality. The current `daji 3.4.x`
 documentation retains the dated `daji 3.2.x` hardening profile rather than
 claiming a new calibration. It does not promote registered test commands into
 execution evidence, and takes the weakest required dimension rather than the

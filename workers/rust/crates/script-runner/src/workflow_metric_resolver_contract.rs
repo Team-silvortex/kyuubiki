@@ -24,7 +24,23 @@ use quality_terms::{
 
 type RunnerResult<T> = Result<T, String>;
 
+fn run_quality_probe(domain: &str, payload: serde_json::Value) -> RunnerResult<serde_json::Value> {
+    let registry = kyuubiki_engine::built_in_operator_registry(
+        kyuubiki_engine::BuiltInOperatorRegistryKind::Transform,
+    );
+    registry
+        .run(kyuubiki_protocol::OperatorRunRequest {
+            operator_id: format!("transform.score_{domain}_quality"),
+            input: serde_json::json!({"payload": payload, "config": {}}),
+            context: Default::default(),
+        })
+        .map(|result| result.summary)
+        .map_err(|error| error.to_string())
+}
+
 const RUST_RESOLVER_PATH: &str = "workers/rust/crates/engine/src/workflow_metric_resolver.rs";
+const RUST_RESOLVER_ALIASES_PATH: &str =
+    "workers/rust/crates/engine/src/workflow_metric_resolver/aliases.rs";
 const WEB_RESOLVER_PATH: &str = "apps/web/lib/kyuubiki_web/workflow_domain_metric_resolver.ex";
 const WEB_QUALITY_RUNTIME_PATH: &str =
     "apps/web/lib/kyuubiki_web/workflow_domain_quality_runtime.ex";
@@ -129,8 +145,10 @@ pub(crate) fn run_check_workflow_metric_resolver_contract(
     }
 
     let summary = check_contract(root)?;
-    if let Some(issue) = summary.issues.first() {
-        eprintln!("workflow metric resolver contract failed: {issue}");
+    if !summary.issues.is_empty() {
+        for issue in &summary.issues {
+            eprintln!("workflow metric resolver contract failed: {issue}");
+        }
         return Ok(1);
     }
     println!(
@@ -165,7 +183,11 @@ fn check_contract(root: &Path) -> RunnerResult<ContractSummary> {
     let web_quality_source = read_text(root, WEB_QUALITY_RUNTIME_PATH)?;
     let web_test_source = read_text(root, WEB_RESOLVER_TEST_PATH)?;
     let web_quality_test_source = read_text(root, WEB_QUALITY_RUNTIME_TEST_PATH)?;
-    let rust_fields = rust_metric_fields(&rust_source);
+    let mut rust_fields = rust_metric_fields(&rust_source);
+    rust_fields.extend(rust_metric_fields(&read_text(
+        root,
+        RUST_RESOLVER_ALIASES_PATH,
+    )?));
     let web_fields = web_metric_fields(&web_source);
     let mut issues = compare_metric_fields(&rust_fields, &web_fields);
     let rust_quality_mirrors = rust_quality_mirrors(root)?;
@@ -287,8 +309,15 @@ fn check_contract(root: &Path) -> RunnerResult<ContractSummary> {
 fn rust_metric_fields(source: &str) -> BTreeSet<String> {
     source
         .lines()
-        .filter_map(first_quoted_string_with_tail)
-        .filter_map(|(value, tail)| tail.trim_start().starts_with("=>").then_some(value))
+        .filter_map(|line| line.trim_start().split_once("=>"))
+        .flat_map(|(pattern, _)| pattern.split('|'))
+        .filter_map(|pattern| {
+            let pattern = pattern.trim();
+            pattern
+                .strip_prefix('"')?
+                .strip_suffix('"')
+                .map(str::to_string)
+        })
         .collect()
 }
 
@@ -465,4 +494,27 @@ fn tilde_word_list(line: &str) -> Vec<String> {
 
 fn read_text(root: &Path, relative: &str) -> RunnerResult<String> {
     fs::read_to_string(root.join(relative)).map_err(|error| format!("{relative}: {error}"))
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn repository_contract_covers_split_aliases_and_shared_scorer() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../..");
+        let summary = super::check_contract(&root).expect("read and execute quality contracts");
+        assert!(summary.issues.is_empty(), "{:?}", summary.issues);
+        assert_eq!(
+            summary.quality_domain_count,
+            super::RUST_QUALITY_SOURCES.len()
+        );
+        assert_eq!(
+            summary.term_entry_schema_count,
+            super::RUST_QUALITY_SOURCES.len() * 3
+        );
+    }
+
+    #[test]
+    fn resolver_contract_negative_controls_remain_enforced() {
+        super::self_tests::run_self_test().expect("negative contract controls");
+    }
 }

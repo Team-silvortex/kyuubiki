@@ -107,6 +107,8 @@ pub(crate) fn diagnostic_sources<'a>(
     if sources.is_empty() {
         return Err("did not find any diagnostics payloads".into());
     }
+    // serde_json's workspace-unified preserve_order feature must not change the contract.
+    sources.sort_unstable_by_key(|source| source.id);
     Ok(sources)
 }
 

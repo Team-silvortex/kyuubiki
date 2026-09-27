@@ -1,12 +1,36 @@
 # daji 3.x
 
 This is the single entrypoint for the active Kyuubiki product line.
-The current development point in this line is `daji 3.3.0`.
-The local desktop and runtime packaging target is also `daji 3.3.0`.
+The current development point in this line is `daji 3.4.0`.
+The local desktop and runtime packaging target is also `daji 3.4.0`.
 Local installation does not imply that public downloads or SDK packages have
 been published; platform acceptance remains separately scoped.
 
-## Daji 3.3.0 Checkpoint
+## Daji 3.4.0 Checkpoint
+
+September 27, 2026. This checkpoint carries the 3.3.x operator and workflow
+hardening into a coordinated desktop/runtime rebuild:
+
+- Graph preflight rejects malformed topology, ambiguous inputs, cycles, and
+  oversized JSON before jobs, indexes, or operator callbacks are created.
+- Operator results are validated before artifact publication and lineage.
+  Invalid callback envelopes or oversized output fail the producing node;
+  explicit skip policy isolates the branch instead of reporting false success.
+- Rust and Elixir share graph, artifact, field, and diagnostic-bundle fixtures.
+  Diagnostic source ordering is explicit even when the workspace enables
+  JSON insertion-order preservation.
+- CI checks include split metric-alias modules and the terminal workflow
+  receipt. The GUI harness retries only one identified pre-page libdbus crash,
+  preserving both errors on repeated failure; test assertions are not retried.
+- Product, SDK, language-pack, installation, and documentation metadata align
+  to 3.4.0. TaskIR and exchange schema identifiers remain unchanged.
+
+Build and validation outcomes are recorded in `releases/snapshots/3.4.0.json`.
+Graph and artifact checks do not prove numerical validity, process memory
+isolation, an aggregate response-size cap, or new scale/platform qualification.
+The coverage tensor retains its dated evidence and open acceptance gates.
+
+## Daji 3.3.0 Checkpoint (Historical)
 
 This checkpoint records the source state on September 20, 2026, including the
 recent 3.2.x work carried into 3.3.0:

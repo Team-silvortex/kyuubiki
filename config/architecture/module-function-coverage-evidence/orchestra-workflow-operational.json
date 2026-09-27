@@ -28,6 +28,65 @@
   },
   "evidence_claims": [
     {
+      "id": "workflow-artifact-publication-local-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation", "security"],
+      "dimensions": ["contract", "security", "recovery"],
+      "files": [
+        "tests/fixtures/workflow-artifact-contract.json",
+        "apps/web/lib/kyuubiki_web/workflow_json_budget.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_preflight.ex",
+        "apps/web/test/support/workflow_artifact_contract.exs",
+        "apps/web/test/kyuubiki_web/workflow_artifact_budget_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_artifact_publication_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_artifact_publication_api_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_graph_preflight_test.exs",
+        "workers/rust/crates/engine/src/tests/workflow_artifact_contract.rs",
+        "config/operator-validation-profiles/workflow.json",
+        "reports/workflow-artifact-publication-20260927.md"
+      ],
+      "required_text": [
+        "shared_output_artifact_budget_boundaries",
+        "shared_output_publication_is_atomic_under_recovery_and_projection",
+        "invalid callback envelope is a node error, not a case-clause crash",
+        "async output rejection persists honest failure and a subsequent healthy job remains usable",
+        "This is bounded local output-publication evidence, not distributed recovery or whole-runtime memory qualification."
+      ]
+    },
+    {
+      "id": "workflow-graph-preflight-local-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "runtime-engine-solver"],
+      "paradigms": ["workflow_composition", "validation", "security"],
+      "dimensions": ["contract", "security"],
+      "files": [
+        "tests/fixtures/workflow-graph-preflight.json",
+        "apps/web/lib/kyuubiki_web/workflow_graph_preflight.ex",
+        "apps/web/lib/kyuubiki_web/workflow_json_budget.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/engine.ex",
+        "apps/web/lib/kyuubiki_web/analysis.ex",
+        "apps/web/test/support/workflow_preflight_contract.exs",
+        "apps/web/test/kyuubiki_web/workflow_graph_preflight_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_graph_budget_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_preflight_api_test.exs",
+        "workers/rust/crates/engine/src/tests/workflow_preflight_contract.rs",
+        "config/operator-validation-profiles/workflow.json",
+        "reports/workflow-graph-preflight-20260927.md"
+      ],
+      "required_text": [
+        "shared_graph_preflight_structure",
+        "shared_graph_preflight_budgets",
+        "invalid graphs are rejected before dispatch and leave no job or result rows",
+        "every built-in template remains structurally admissible without executing a solver",
+        "This is bounded local graph-admission evidence, not whole-runtime equivalence or distributed execution qualification."
+      ]
+    },
+    {
       "id": "workflow-branch-recovery-local-contract",
       "status": "proven",
       "grade": "verified",

@@ -27,7 +27,7 @@ fn check_resolver_fields() -> RunnerResult<()> {
 fn domain_alias_field(field: &str) {
     match field {
         "max_stress" => Some(1.0),
-        "max_velocity" => Some(2.0),
+        "max_velocity" | "max_acceleration" => Some(2.0),
         "velocity_magnitude" => Some(3.0),
         "frequency_span_hz" => Some(4.0),
         _ => None,
@@ -35,7 +35,7 @@ fn domain_alias_field(field: &str) {
 }
 "#;
     let web = r#"
-@dynamic_amplitude_fields ~w(max_velocity)
+@dynamic_amplitude_fields ~w(max_velocity max_acceleration)
 def metric_value(payload, "frequency_span_hz"), do: payload
 defp domain_alias_value(payload, "max_stress"), do: payload
 defp domain_alias_value(payload, "velocity_magnitude"), do: payload

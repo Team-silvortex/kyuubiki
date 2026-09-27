@@ -21,14 +21,26 @@ impl QualityDomainMetadata {
 }
 
 pub(super) fn rust_quality_domain_metadata(
-    root: &Path,
+    _root: &Path,
 ) -> RunnerResult<BTreeMap<String, QualityDomainMetadata>> {
     let mut metadata = BTreeMap::new();
-    for (domain, relative_path) in RUST_QUALITY_SOURCES {
-        let source = read_text(root, relative_path)?;
-        if let Some(signature) = rust_quality_domain_metadata_from_source(&source) {
-            metadata.insert((*domain).to_string(), signature);
-        }
+    for (domain, _) in RUST_QUALITY_SOURCES {
+        let result = super::run_quality_probe(domain, serde_json::json!({}))?;
+        let ready = result
+            .get(format!("{domain}_quality_max_ready_score"))
+            .filter(|value| value.is_number())
+            .ok_or_else(|| format!("{domain}: missing numeric default readiness threshold"))?;
+        let contract = result
+            .get(format!("{domain}_quality_contract"))
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| format!("{domain}: missing quality contract"))?;
+        metadata.insert(
+            (*domain).to_string(),
+            QualityDomainMetadata {
+                ready: ready.to_string(),
+                contract: contract.to_string(),
+            },
+        );
     }
     Ok(metadata)
 }

@@ -1,5 +1,27 @@
 # Changelog
 
+## daji 3.4.0
+
+September 27, 2026. Workflow reliability and coordinated local packaging.
+
+- Added bounded graph preflight and operator-output publication contracts,
+  with shared Rust/Elixir fixtures and API recovery coverage.
+- Made diagnostic bundle ordering independent of serde_json feature unification.
+- Fixed CI metric-contract scanning after module splitting and updated the
+  headless terminal-receipt assertion to the current completion contract.
+- Added one bounded retry for the identified Chromium/libdbus pre-page startup
+  crash, retaining failure diagnostics without retrying application assertions.
+- Isolated live operator-task test databases, retained startup diagnostics, and
+  made parallel Agent test directories exclusive even at identical timestamps.
+- Cleared native runtime, Agent, and test/example Clippy warnings without lint
+  suppression; the four-package strict all-target check passed.
+- Aligned desktop shells, native runtime, SDK metadata, language packs, and
+  current documentation to 3.4.0; protocol versions remain unchanged.
+
+See `releases/snapshots/3.4.0.json` for actual build and verification outcomes.
+Historical evidence is not relabeled, and this is not registry publication,
+notarization, or automatic deployment to other machines.
+
 ## daji 3.3.0 local packaging follow-up
 
 - Grouped study setup, modeling, inline checkpoint save, execution, and result

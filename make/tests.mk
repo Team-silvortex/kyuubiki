@@ -19,6 +19,8 @@
 .PHONY: format format-web format-rust tdd-web tdd-rust
 .PHONY: test-workflow-reporting-contract
 .PHONY: test-workflow-branch-recovery
+.PHONY: test-workflow-graph-preflight
+.PHONY: test-workflow-artifact-publication
 
 test: test-web test-rust test-frontend test-sdk test-playground
 
@@ -30,6 +32,12 @@ test-workflow-reporting-contract:
 
 test-workflow-branch-recovery:
 	@cd apps/web && mix test --no-start test/kyuubiki_web/workflow_branch_recovery_test.exs test/kyuubiki_web/orchestra/workflow_node_progress_test.exs test/kyuubiki_web/workflow_graph_response_test.exs
+
+test-workflow-graph-preflight:
+	@cd apps/web && mix test --no-start test/kyuubiki_web/workflow_graph_preflight_test.exs test/kyuubiki_web/workflow_graph_budget_test.exs
+
+test-workflow-artifact-publication:
+	@cd apps/web && mix test --no-start test/kyuubiki_web/workflow_artifact_budget_test.exs test/kyuubiki_web/workflow_artifact_publication_test.exs
 
 test-rust:
 	@$(ENTRYPOINT) rust-test

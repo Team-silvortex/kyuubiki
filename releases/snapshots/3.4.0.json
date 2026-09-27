@@ -1,0 +1,75 @@
+{
+  "version": "3.4.0",
+  "codename": "daji",
+  "line": "3.x",
+  "status": "current",
+  "date": "2026-09-27",
+  "git_commit": "b7eadf93007aeeee59f43d603b1094389341d2b0",
+  "summary": "Daji 3.4.0 workflow reliability and local desktop rebuild: bounded graph admission, validated artifact publication, deterministic diagnostics, and CI contract repairs. Public distribution and numerical qualification remain separate gates.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": { "version": "3.4.0", "notes": ["Static frontend; no runtime Node server."] },
+    "hub_gui": { "version": "3.4.0", "notes": ["Independent native Hub shell."] },
+    "workbench_gui": { "version": "3.4.0", "notes": ["Independent native Workbench shell."] },
+    "installer_gui": { "version": "3.4.0", "notes": ["Independent native Installer shell."] },
+    "web_api": { "version": "3.4.0", "notes": ["Self-contained Orchestra release."] },
+    "rust_headless_sdk": { "version": "3.4.0", "notes": ["Registry publication not performed."] },
+    "python_headless_sdk": { "version": "3.4.0", "notes": ["Registry publication not performed."] },
+    "elixir_headless_sdk": { "version": "3.4.0", "notes": ["Registry publication not performed."] },
+    "rust_worker_sdk": { "version": "3.4.0", "notes": ["Operator extensions stay separate from headless control."] }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": ["Bounded graph admission, validated artifact publication, and isolated branch failure receipts."]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": ["Existing Rust operator and language-neutral task contracts retained."]
+  },
+  "desktop_artifacts": {
+    "hub_macos_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Hub.app",
+    "installer_macos_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Installer.app",
+    "workbench_macos_app": "target/desktop-cache/macos/release/bundle/macos/Kyuubiki Workbench.app"
+  },
+  "verification": {
+    "source_revision_role": "Base commit plus current 3.4.0 working-tree changes; not a clean-commit build claim.",
+    "desktop_packaging": {
+      "status": "built and installed",
+      "platform": "macos-aarch64",
+      "kind": "app",
+      "independent_shells": 3,
+      "local_signature_verification": "passed; ad-hoc signing",
+      "interactive_startup_passed": 3,
+      "startup_report": "releases/usability-evidence/3.4.0/macos-installed-desktop-smoke.json"
+    },
+    "runtime_payload": {
+      "status": "sealed, installed, activated, and restarted",
+      "version": "3.4.0",
+      "node_runtime_required": false,
+      "real_service_solve": "direct_bar_1d via installed Headless, Orchestra, and Rust Agent; analytical displacement, stress, and reaction checked",
+      "restart_persistence": "exact result equality after restart",
+      "existing_data_transfer": "SQLite snapshot integrity passed; 2 projects, 12 models, 17 jobs, and 17 results preserved before smoke execution"
+    },
+    "ci": {
+      "baseline_run": 36091493644,
+      "status": "local failure-path regressions passed; remote CI status is tracked separately for the release commit",
+      "rust_workspace": { "passed": 3283, "failed": 0, "ignored": 33 },
+      "rust_engine_standalone": { "passed": 635, "failed": 0, "ignored": 1 },
+      "elixir": { "tests": 873, "failed": 0, "skipped": 8 },
+      "gui_workflow": { "passed": 256, "failed": 0 },
+      "browser_launch_unit": { "passed": 4, "failed": 0 },
+      "exact_version_contracts": { "checks": 224, "mismatched": 0 },
+      "report": "reports/daji-3.4.0-local-rebuild-20260927.md"
+    },
+    "additional_lint_boundary": "Source-only follow-up resolved six needless-borrow findings and two desktop-runtime test/example idiom warnings without lint suppression. Strict all-target Clippy passed for kyuubiki-cli, kyuubiki-script-runner, kyuubiki-engine, and kyuubiki-desktop-runtime with -D warnings. Desktop-runtime regression: 79 passed, 0 failed, 1 ignored; CLI/Agent follow-up: 226 passed, 0 failed. The installed immutable runtime payload was not rebuilt or replaced for these lint repairs.",
+    "public_distribution": "not performed",
+    "notarized": false,
+    "linux_and_windows": "Metadata alignment only; native host builds not part of this macOS rebuild.",
+    "qualification": "Historical evidence retains its original version and scope. Local packaging is not full-system or numerical qualification."
+  }
+}

@@ -4,6 +4,93 @@
   "domain": "workflow",
   "profiles": [
     {
+      "profile_id": "workflow-artifact-publication-contract",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-artifact-publication-contract",
+      "trust_goal": "bounded_regression",
+      "operators": ["transform.first_available", "export.summary_json"],
+      "validation_methods": [
+        "shared_rust_elixir_output_budget_boundary_recipes",
+        "four_callback_kinds_with_non_json_and_invalid_return_injection",
+        "real_export_expansion_and_atomic_multiport_publication",
+        "fail_fast_explicit_recovery_and_clean_followup",
+        "compact_and_projected_failure_receipts"
+      ],
+      "formal_invariants": [
+        "tested_invalid_success_values_never_reach_downstream_operators",
+        "tested_rejected_output_publishes_no_ports_or_lineage",
+        "tested_valid_output_is_not_silently_truncated",
+        "tested_malformed_callback_envelopes_are_node_errors",
+        "tested_raw_forwarding_preserves_the_separate_input_budget"
+      ],
+      "evidence_paths": [
+        "tests/fixtures/workflow-artifact-contract.json",
+        "apps/web/lib/kyuubiki_web/workflow_json_budget.ex",
+        "apps/web/lib/kyuubiki_web/workflow_graph_runner.ex",
+        "apps/web/test/support/workflow_artifact_contract.exs",
+        "apps/web/test/kyuubiki_web/workflow_artifact_budget_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_artifact_publication_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_artifact_publication_api_test.exs",
+        "workers/rust/crates/engine/src/tests/workflow_artifact_contract.rs",
+        "reports/workflow-artifact-publication-20260927.md"
+      ],
+      "commands": [
+        {
+          "id": "artifact-publication-elixir",
+          "kind": "boundary_regression",
+          "command": "make test-workflow-artifact-publication"
+        },
+        {
+          "id": "artifact-publication-shared-rust",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_artifact_contract -- --nocapture"
+        }
+      ]
+    },
+    {
+      "profile_id": "workflow-graph-preflight-contract",
+      "profile_role": "component_profile",
+      "qualification_candidate_id": "workflow-graph-preflight-contract",
+      "trust_goal": "bounded_regression",
+      "operators": ["transform.first_available"],
+      "validation_methods": [
+        "shared_rust_elixir_graph_structure_and_budget_controls",
+        "zero_callback_and_progress_before_structural_admission",
+        "built_in_template_structural_admission",
+        "custom_callback_operator_decoupling"
+      ],
+      "formal_invariants": [
+        "tested_invalid_graphs_are_rejected_before_operator_execution",
+        "tested_cycles_include_disconnected_components",
+        "tested_explicit_skip_cannot_bypass_structural_validation",
+        "tested_json_and_graph_limits_accept_boundary_and_reject_overflow",
+        "missing_input_artifacts_remain_subject_to_execution_recovery_policy"
+      ],
+      "evidence_paths": [
+        "tests/fixtures/workflow-graph-preflight.json",
+        "apps/web/lib/kyuubiki_web/workflow_graph_preflight.ex",
+        "apps/web/lib/kyuubiki_web/workflow_json_budget.ex",
+        "apps/web/test/support/workflow_preflight_contract.exs",
+        "apps/web/test/kyuubiki_web/workflow_graph_preflight_test.exs",
+        "apps/web/test/kyuubiki_web/workflow_graph_budget_test.exs",
+        "apps/web/test/kyuubiki_web/api/workflow_preflight_api_test.exs",
+        "workers/rust/crates/engine/src/tests/workflow_preflight_contract.rs",
+        "reports/workflow-graph-preflight-20260927.md"
+      ],
+      "commands": [
+        {
+          "id": "graph-preflight-elixir",
+          "kind": "boundary_regression",
+          "command": "make test-workflow-graph-preflight"
+        },
+        {
+          "id": "graph-preflight-shared-rust",
+          "kind": "contract",
+          "command": "cd workers/rust && cargo test -p kyuubiki-engine --lib workflow_preflight_contract -- --nocapture"
+        }
+      ]
+    },
+    {
       "profile_id": "workflow-branch-recovery-contract",
       "profile_role": "component_profile",
       "qualification_candidate_id": "workflow-branch-recovery-contract",

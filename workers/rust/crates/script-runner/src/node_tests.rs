@@ -108,6 +108,7 @@ pub(crate) fn run_node_command(
         "integration-ui-workflow-node-test" => run_node_test_serial(
             &paths.root,
             &[
+                "tests/integration/workbench-ui-browser-launch.test.mjs",
                 "tests/integration/workbench-ui-workflow-invocation.test.mjs",
                 "tests/integration/workbench-ui-layout-flow.test.mjs",
                 "tests/integration/workbench-ui-viewport-priority.test.mjs",

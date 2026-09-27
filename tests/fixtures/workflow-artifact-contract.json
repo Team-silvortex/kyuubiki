@@ -1,0 +1,49 @@
+{
+  "request": {
+    "graph": {
+      "schema_version": "kyuubiki.workflow-graph/v1",
+      "id": "workflow.artifact-publication",
+      "name": "Atomic artifact publication",
+      "version": "1",
+      "entry_nodes": ["input"],
+      "output_nodes": ["output", "raw"],
+      "nodes": [
+        {"id": "input", "kind": "input", "inputs": [], "outputs": [{"id": "payload", "artifact_type": "artifact/json"}]},
+        {"id": "producer", "kind": "transform", "operator_id": "transform.first_available", "config": {"on_error": "skip"}, "inputs": [{"id": "payload", "artifact_type": "artifact/json"}], "outputs": [{"id": "payload", "artifact_type": "artifact/json"}, {"id": "aux", "artifact_type": "artifact/json"}]},
+        {"id": "consumer", "kind": "transform", "operator_id": "transform.first_available", "inputs": [{"id": "payload", "artifact_type": "artifact/json"}], "outputs": [{"id": "payload", "artifact_type": "artifact/json"}]},
+        {"id": "output", "kind": "output", "inputs": [{"id": "payload", "artifact_type": "artifact/json"}], "outputs": []},
+        {"id": "raw", "kind": "output", "inputs": [{"id": "payload", "artifact_type": "artifact/json"}], "outputs": []}
+      ],
+      "edges": [
+        {"id": "input-producer", "from": {"node": "input", "port": "payload"}, "to": {"node": "producer", "port": "payload"}, "artifact_type": "artifact/json"},
+        {"id": "producer-consumer", "from": {"node": "producer", "port": "payload"}, "to": {"node": "consumer", "port": "payload"}, "artifact_type": "artifact/json"},
+        {"id": "consumer-output", "from": {"node": "consumer", "port": "payload"}, "to": {"node": "output", "port": "payload"}, "artifact_type": "artifact/json"},
+        {"id": "input-raw", "from": {"node": "input", "port": "payload"}, "to": {"node": "raw", "port": "payload"}, "artifact_type": "artifact/json"}
+      ]
+    },
+    "input_artifacts": {"input": {"value": 42}}
+  },
+  "cases": [
+    {"id": "null", "kind": "literal", "value": null, "accept": true},
+    {"id": "false", "kind": "literal", "value": false, "accept": true},
+    {"id": "finite-number", "kind": "literal", "value": 1.5e100, "accept": true},
+    {"id": "empty-object", "kind": "literal", "value": {}, "accept": true},
+    {"id": "empty-array", "kind": "literal", "value": [], "accept": true},
+    {"id": "nested-json", "kind": "literal", "value": {"items": [null, false, 2, "text", {"value": -3.5}]}, "accept": true},
+    {"id": "string-at", "kind": "string", "size": 500000, "accept": true},
+    {"id": "string-over", "kind": "string", "size": 500001, "accept": false, "error": "length security budget"},
+    {"id": "utf8-string-at", "kind": "string", "text": "\u00e9", "size": 250000, "accept": true},
+    {"id": "utf8-string-over", "kind": "string", "text": "\u00e9", "size": 250001, "accept": false, "error": "length security budget"},
+    {"id": "nodes-at", "kind": "array", "size": 499999, "accept": true},
+    {"id": "nodes-over", "kind": "array", "size": 500000, "accept": false, "error": "JSON node security budget"},
+    {"id": "depth-at", "kind": "nested", "size": 64, "accept": true},
+    {"id": "depth-over", "kind": "nested", "size": 65, "accept": false, "error": "JSON depth security budget"},
+    {"id": "key-at", "kind": "key", "size": 256, "accept": true},
+    {"id": "key-over", "kind": "key", "size": 257, "accept": false, "error": "length security budget"},
+    {"id": "utf8-key-at", "kind": "key", "text": "\u00e9", "size": 128, "accept": true},
+    {"id": "utf8-key-over", "kind": "key", "text": "\u00e9", "size": 129, "accept": false, "error": "length security budget"},
+    {"id": "nul-value", "kind": "literal", "value": {"text": "no\u0000"}, "accept": false, "error": "NUL"},
+    {"id": "nul-key", "kind": "literal", "value": {"bad\u0000key": 0}, "accept": false, "error": "NUL"},
+    {"id": "late-invalid-leaf", "kind": "late_nul", "size": 10000, "accept": false, "error": "NUL"}
+  ]
+}

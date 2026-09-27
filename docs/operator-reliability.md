@@ -1529,6 +1529,53 @@ existing application-restart regression checks. It does not claim remote Agent
 recovery, installed GUI warning display, arbitrary plugin side-effect rollback,
 whole-runtime equivalence or qualification of any additional physics solver.
 
+The `workflow-graph-preflight-contract` follow-up moves structural admission in
+front of Elixir callback execution and async job creation. Duplicate node/edge
+IDs, ambiguous incoming ports, missing endpoints, artifact-type mismatches and
+cycles (including disconnected components) are rejected before progress or
+operator callbacks run. A node's `on_error: skip` does not bypass this gate.
+Invalid async submissions return an error without leaving job or result rows.
+
+The [graph-preflight report](../reports/workflow-graph-preflight-20260927.md)
+retains 51 shared structural cases in both node orders and 26 shared budget
+boundary cases. Limits match the tested Rust contract: 2,048 workflow nodes,
+4,096 edges, 32 ports per direction, depth 64, 20,000 JSON values per config
+and 500,000 per supplied input artifact. These are workflow and wire-data
+budgets, not a finite-element mesh-node capacity claim. JSON strings and keys
+are byte-bounded and cannot contain NUL. All 71 built-in templates pass the
+structural check; missing input values remain an execution/recovery decision.
+
+The Elixir gate is intentionally independent of operator implementations and
+allows custom callback operators with valid identifiers. Rust's built-in
+capability check, full typed metadata decoding, output-publication budgets,
+installed desktop behavior and remote Agent behavior are not covered by this
+shared admission claim. Elixir also retains its existing omitted-array
+defaults; this is not blanket equivalence with Rust's typed request decoder.
+The native validation profile is storage-independent; API checks require a
+separate disposable database as described in the report.
+
+The separate `workflow-artifact-publication-contract` profile now closes the
+Elixir generated-output gap for solve, transform, extract and export callbacks.
+An `{:ok, value}` is checked before any port or lineage is published: at most
+500,000 JSON values, depth 64, 500,000 bytes per string and 256 bytes per key;
+NUL, invalid UTF-8 and native non-JSON terms are rejected. This validation runs
+once per returned value, including nodes without declared output ports, and
+does not silently truncate successful data. Malformed callback envelopes
+become `invalid_operator_result`; raised exceptions, exits and cancellation
+retain their existing handling rather than being swallowed.
+
+The [output-publication report](../reports/workflow-artifact-publication-20260927.md)
+records 21 shared Rust/Elixir recipes, injected callback failures, real JSON
+export expansion, full/compact responses and async failure persistence. An
+explicit skip retains independent raw evidence, publishes no failed outputs
+and skips blocked descendants. A completed async job may still contain failed
+nodes; its receipts must be inspected. Plain input/condition/output forwarding
+keeps the separate input budget, matching Rust, so this is not a universal
+500,000-byte response limit. Callback allocation, aggregate retained memory,
+external side-effect rollback and remote/installed qualification remain out
+of scope. Native improper lists now produce contract errors in the JSON walker
+and direct graph preflight instead of crashing those validators.
+
 `solve.cohesive_interface_1d` now has a retained component-level screening
 profile for a scalar Mode-I bilinear traction-separation history. The analytic
 regression checks onset, peak, linear softening, complete tensile failure, and

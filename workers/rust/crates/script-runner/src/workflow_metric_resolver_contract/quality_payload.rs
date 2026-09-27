@@ -88,12 +88,48 @@ fn web_quality_domains(source: &str) -> BTreeSet<String> {
 }
 
 pub(super) fn rust_quality_term_entry_schemas(
-    root: &Path,
+    _root: &Path,
 ) -> RunnerResult<BTreeMap<(String, String), BTreeSet<String>>> {
     let mut schemas = BTreeMap::new();
-    for (domain, relative_path) in RUST_QUALITY_SOURCES {
-        let source = read_text(root, relative_path)?;
-        schemas.extend(rust_quality_term_entry_schemas_from_source(domain, &source));
+    let populated = serde_json::Value::Object(
+        super::REQUIRED_CONTRACT_FIELDS
+            .iter()
+            .map(|field| ((*field).to_string(), serde_json::json!(1.0)))
+            .collect(),
+    );
+    // Observe actual shared scorer output, not the layout of its private helpers.
+    for (domain, _) in RUST_QUALITY_SOURCES {
+        for (variant, payload) in [
+            ("present", populated.clone()),
+            ("missing", serde_json::json!({})),
+        ] {
+            let result = super::run_quality_probe(domain, payload)?;
+            let terms = result
+                .get(format!("{domain}_quality_terms"))
+                .and_then(serde_json::Value::as_array)
+                .filter(|terms| !terms.is_empty())
+                .ok_or_else(|| format!("{domain}: missing score terms for {variant}"))?;
+            let mut keys = BTreeSet::new();
+            for term in terms {
+                let object = term.as_object().ok_or("quality term must be an object")?;
+                let status = object.get("status").and_then(serde_json::Value::as_str);
+                if (variant == "missing") != (status == Some("missing")) {
+                    return Err(format!(
+                        "{domain}: {variant} probe did not exercise expected term status"
+                    ));
+                }
+                keys.extend(object.keys().cloned());
+            }
+            schemas.insert(((*domain).to_string(), variant.to_string()), keys);
+            let compact = result
+                .get(format!("{domain}_quality_dominant_term"))
+                .and_then(serde_json::Value::as_object)
+                .ok_or_else(|| format!("{domain}: missing compact dominant term"))?;
+            schemas.insert(
+                ((*domain).to_string(), "compact".to_string()),
+                compact.keys().cloned().collect(),
+            );
+        }
     }
     Ok(schemas)
 }

@@ -201,7 +201,9 @@ defmodule KyuubikiWeb.Orchestra.LeaseStoreTest do
                "graph" => %{
                  "schema_version" => "kyuubiki.workflow-graph/v1",
                  "id" => "workflow.standby-rollback-test",
-                 "nodes" => [],
+                 "nodes" => [
+                   %{"id" => "output", "kind" => "output", "inputs" => [], "outputs" => []}
+                 ],
                  "edges" => []
                },
                "input_artifacts" => %{}

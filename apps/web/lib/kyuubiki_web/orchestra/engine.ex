@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.Orchestra.Engine do
   """
 
   alias KyuubikiWeb.AnalysisJobSupport
+  alias KyuubikiWeb.WorkflowGraphPreflight
   alias KyuubikiWeb.WorkflowGraphResponse
   alias KyuubikiWeb.WorkflowGraphRunner
   alias KyuubikiWeb.WorkflowOperatorCatalog
@@ -40,9 +41,10 @@ defmodule KyuubikiWeb.Orchestra.Engine do
     normalized = AnalysisJobSupport.stringify_keys(params)
 
     with %{} = graph <- Map.get(normalized, "graph"),
+         %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
+         :ok <- WorkflowGraphPreflight.validate(graph, input_artifacts),
          response_options <-
            WorkflowGraphResponse.resolve_options(graph, Map.get(normalized, "response_options")),
-         %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
          {:ok, result} <-
            execute_workflow_graph(graph, input_artifacts, %{}, nil, response_options) do
       {:ok, WorkflowGraphResponse.shape(graph, result, response_options)}
