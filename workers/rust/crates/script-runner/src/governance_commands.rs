@@ -5,7 +5,7 @@ use crate::{
     central_store_contract, commercial_readiness, component_integrity_protocol,
     contracts_runtime_api_surface, contracts_validation_qualification, dependency_audit,
     desktop_bundle_operational_qualification, desktop_deployment_update_validation,
-    desktop_ui_validation, desktop_usability_journeys,
+    desktop_ui_validation, desktop_usability_journeys, development_disk,
     distributed_task_recovery_operational_qualification, doc_inventory, docs_book,
     fleet_scheduling_operational_qualification, fleet_update_operational_qualification,
     frontend_checks, gui_runtime_capability_contract, headless_sdk_operational,
@@ -41,6 +41,7 @@ pub(crate) fn run_governance_command(
     args: Vec<OsString>,
 ) -> Option<RunnerResult<u8>> {
     Some(match command {
+        "dev-disk" => development_disk::run(root, args),
         "check-make-modules" => make_modules::run_check_make_modules(root, args),
         "check-doc-book" => docs_book::run_check_doc_book(root, args),
         "check-doc-inventory" => doc_inventory::run_check_doc_inventory(root, args),

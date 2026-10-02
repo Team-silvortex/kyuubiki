@@ -1,9 +1,10 @@
 use super::{OPERATOR_TASK_MODE_EXECUTE, OperatorTaskRuntimeError};
 use kyuubiki_engine::{EngineSolveRequest, solve};
 use kyuubiki_protocol::{
-    AnalysisResult, OperatorTaskExecutionSummary, SolveBarRequest, SolverExecutionCapability,
-    check_operator_task_execution_capability,
+    AnalysisResult, OperatorTaskExecutionSummary, SolveBarRequest, SolveModalFrame2dRequest,
+    SolveModalFrame3dRequest, SolverExecutionCapability, check_operator_task_execution_capability,
 };
+use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
 
 pub(super) const AGENT_ENGINE_SOLVER_STATUS: &str = "agent_engine_solver_executed";
@@ -69,16 +70,19 @@ fn dispatch_engine_solver(
         )
     })?;
     let request = match operator_id {
-        "solve.bar_1d" => serde_json::from_value::<SolveBarRequest>(input)
-            .map(EngineSolveRequest::Bar1d)
-            .map_err(|error| {
-                OperatorTaskRuntimeError::with_task(
-                    "operator_task_solver_input_invalid",
-                    format!("invalid solve.bar_1d input_artifact: {error}"),
-                    "decode_solver_input",
-                    Some(task_ir),
-                )
-            })?,
+        "solve.bar_1d" => {
+            EngineSolveRequest::Bar1d(decode::<SolveBarRequest>(input, operator_id, task_ir)?)
+        }
+        "solve.modal_frame_2d" => EngineSolveRequest::ModalFrame2d(decode::<
+            SolveModalFrame2dRequest,
+        >(
+            input, operator_id, task_ir
+        )?),
+        "solve.modal_frame_3d" => EngineSolveRequest::ModalFrame3d(decode::<
+            SolveModalFrame3dRequest,
+        >(
+            input, operator_id, task_ir
+        )?),
         _ => {
             return Err(OperatorTaskRuntimeError::with_task(
                 "operator_task_solver_capability_rejected",
@@ -89,22 +93,22 @@ fn dispatch_engine_solver(
         }
     };
 
-    match solve(request).map_err(|error| {
+    let result = solve(request).map_err(|error| {
         OperatorTaskRuntimeError::with_task(
             "operator_task_solver_execution_failed",
             error,
             "dispatch_engine_solver",
             Some(task_ir),
         )
-    })? {
-        AnalysisResult::Bar1d(result) => serde_json::to_value(result).map_err(|error| {
-            OperatorTaskRuntimeError::with_task(
-                "operator_task_solver_result_invalid",
-                format!("failed to serialize solve.bar_1d result: {error}"),
-                "serialize_solver_result",
-                Some(task_ir),
-            )
-        }),
+    })?;
+    match (operator_id, result) {
+        ("solve.bar_1d", AnalysisResult::Bar1d(result)) => encode(result, operator_id, task_ir),
+        ("solve.modal_frame_2d", AnalysisResult::ModalFrame2d(result)) => {
+            encode(result, operator_id, task_ir)
+        }
+        ("solve.modal_frame_3d", AnalysisResult::ModalFrame3d(result)) => {
+            encode(result, operator_id, task_ir)
+        }
         _ => Err(OperatorTaskRuntimeError::with_task(
             "operator_task_solver_result_invalid",
             "Agent engine returned a mismatched solver result variant",
@@ -112,4 +116,34 @@ fn dispatch_engine_solver(
             Some(task_ir),
         )),
     }
+}
+
+fn decode<T: DeserializeOwned>(
+    input: Value,
+    operator_id: &str,
+    task_ir: &Value,
+) -> Result<T, OperatorTaskRuntimeError> {
+    serde_json::from_value(input).map_err(|error| {
+        OperatorTaskRuntimeError::with_task(
+            "operator_task_solver_input_invalid",
+            format!("invalid {operator_id} input_artifact: {error}"),
+            "decode_solver_input",
+            Some(task_ir),
+        )
+    })
+}
+
+fn encode(
+    result: impl Serialize,
+    operator_id: &str,
+    task_ir: &Value,
+) -> Result<Value, OperatorTaskRuntimeError> {
+    serde_json::to_value(result).map_err(|error| {
+        OperatorTaskRuntimeError::with_task(
+            "operator_task_solver_result_invalid",
+            format!("failed to serialize {operator_id} result: {error}"),
+            "serialize_solver_result",
+            Some(task_ir),
+        )
+    })
 }

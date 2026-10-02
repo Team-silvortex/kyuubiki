@@ -1,5 +1,36 @@
 # Changelog
 
+## daji 3.4.4
+
+October 2, 2026. Modal numerical reliability and bounded Agent execution.
+
+- Check full physical frame assembly before support reduction, and share
+  range-aware mass normalization between dense and prepared inverse paths.
+- Preserve soft modal components, weak couplings, repeated-root subspaces,
+  physical shape normalization, and original stiffness/mass residual gates.
+- Improve bounded sparse inverse iteration, prepared factor reuse, chain
+  recognition and tridiagonal recovery without relaxing convergence budgets.
+- Separate exceptional sparse-product scales into binary mantissas/exponents;
+  avoid representable-result loss from intermediate underflow or overflow,
+  while ordinary products retain their existing arithmetic order.
+- Enable only planar and spatial modal built-ins alongside the bar route in
+  Agent TaskIR admission. Validate matching built-in entrypoints and dispatch
+  through Engine rather than adding numerical implementations to Agent.
+- Preserve numeric JSON round trips and task digests; test live TCP admission,
+  cancellation, failure isolation, same-connection recovery and fresh replay.
+- Add native development-cache inspection and allowlisted cleanup. Reduce
+  development debug data without changing release profiles or installed apps.
+- Align product, SDK, language-pack, installation and documentation metadata
+  to 3.4.4; keep protocol versions and historical test provenance unchanged.
+
+See `releases/snapshots/3.4.4.json` and the dated modal reports for verification.
+Recompute affected historical modal results before research reuse. The retained
+128-element bending case still fails closed within its original budget. Local
+debug microbenchmarks are not release throughput or whole-solve speedup claims.
+This source release does not rebuild desktop apps, publish packages or certify
+new platform/scale coverage. The installed baseline remains 3.4.0, and tensor
+readiness gaps remain open.
+
 ## daji 3.4.3
 
 September 28, 2026. Structural and thermal-structural numerical reliability.

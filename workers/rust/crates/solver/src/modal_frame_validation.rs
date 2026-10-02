@@ -109,7 +109,7 @@ fn validate_modal_frame_2d_element(
     }
     let node_i = &request.nodes[element.node_i];
     let node_j = &request.nodes[element.node_j];
-    let length = ((node_j.x - node_i.x).powi(2) + (node_j.y - node_i.y).powi(2)).sqrt();
+    let length = (node_j.x - node_i.x).hypot(node_j.y - node_i.y);
     if !(length.is_finite() && length > 1.0e-12) {
         return Err("modal frame 2d element length must be positive".to_string());
     }
@@ -144,7 +144,7 @@ fn validate_modal_frame_3d_element(
     let dx = node_j.x - node_i.x;
     let dy = node_j.y - node_i.y;
     let dz = node_j.z - node_i.z;
-    let length = (dx * dx + dy * dy + dz * dz).sqrt();
+    let length = dx.hypot(dy).hypot(dz);
     if !(length.is_finite() && length > 1.0e-12) {
         return Err("modal frame 3d element length must be positive".to_string());
     }

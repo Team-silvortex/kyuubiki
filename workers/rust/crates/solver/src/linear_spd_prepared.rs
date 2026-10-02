@@ -31,6 +31,13 @@ enum PreparedBackend {
 
 impl PreparedSpdSolver {
     pub(crate) fn factor(matrix: SparseMatrix) -> Result<Self, String> {
+        Self::factor_with_options(matrix, SpdSolveOptions::default())
+    }
+
+    pub(crate) fn factor_with_options(
+        matrix: SparseMatrix,
+        options: SpdSolveOptions,
+    ) -> Result<Self, String> {
         checkpoint(SolverStage::LinearPrepare, 0)?;
         scaling::validate_sparse_system_finite(&matrix, &[])?;
         let size = matrix.size();
@@ -50,7 +57,6 @@ impl PreparedSpdSolver {
         } else if size <= 1024 {
             PreparedBackend::Dense(DenseLu::factor(sparse_to_dense(&matrix))?)
         } else {
-            let options = SpdSolveOptions::default();
             let scaling = scaling::diagonal_sparse_scaling(&matrix)?;
             let diagonal_scale =
                 scaling::average_scaled_diagonal_magnitude(&matrix, &scaling)?.max(1.0);

@@ -36,6 +36,7 @@ mod desktop_runtime_payload;
 mod desktop_shared_sync;
 mod desktop_ui_validation;
 mod desktop_usability_journeys;
+mod development_disk;
 mod direct_mesh_benchmark_compare;
 mod direct_mesh_container;
 mod direct_mesh_remote;
@@ -214,7 +215,6 @@ fn run() -> RunnerResult<u8> {
     if let Some(result) = runtime_commands::run_runtime_command(&command, rest.clone()) {
         return result;
     }
-
     match command.as_str() {
         "help" | "--help" | "-h" => {
             print_help();

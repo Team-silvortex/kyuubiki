@@ -278,3 +278,160 @@ fn modal_cancellation_is_observed_inside_each_phase_and_replay_is_clean() {
         close(eigenvalue(&solve(true, input).unwrap(), 0), 240.0);
     }
 }
+
+fn extreme_components(space: bool, mode_count: usize) -> Value {
+    let mut input = two_branches(space, 1.0e200, mode_count);
+    input["elements"][0] = frame_element(space, "soft", 0, 1, 1.0e-200);
+    for index in [1, 3] {
+        for key in ["fix_y", "fix_rz"] {
+            input["nodes"][index][key] = json!(false);
+        }
+        if space {
+            for key in ["fix_z", "fix_rx", "fix_ry"] {
+                input["nodes"][index][key] = json!(false);
+            }
+        }
+    }
+    input
+}
+
+fn expected_component_spectrum(space: bool) -> Vec<f64> {
+    let lower = 0.01 * (60.0 - 12.0 * 21.0_f64.sqrt());
+    let upper = 0.01 * (60.0 + 12.0 * 21.0_f64.sqrt());
+    if space {
+        vec![lower, lower, 0.096, upper, upper, 2.0]
+    } else {
+        vec![lower, upper, 2.0]
+    }
+}
+
+fn check_extreme_component_spectrum(space: bool, result: &Value) {
+    let modes = result["modes"].as_array().unwrap();
+    let expected: Vec<_> = [1.0e-200, 1.0e200]
+        .into_iter()
+        .flat_map(|scale| {
+            expected_component_spectrum(space)
+                .into_iter()
+                .map(move |value| value * scale)
+        })
+        .collect();
+    assert_eq!(modes.len(), expected.len());
+    close(result["total_mass"].as_f64().unwrap(), 2.0);
+    for (index, (mode, expected)) in modes.iter().zip(expected).enumerate() {
+        assert_eq!(mode["index"].as_u64().unwrap(), index as u64);
+        close(eigenvalue(result, index), expected);
+        let radians = mode["natural_frequency_rad_s"].as_f64().unwrap();
+        let hz = mode["natural_frequency_hz"].as_f64().unwrap();
+        let period = mode["period_s"].as_f64().unwrap();
+        close(radians, expected.sqrt());
+        close(hz, radians / std::f64::consts::TAU);
+        close(period * hz, 1.0);
+        let shape = mode["shape"].as_array().unwrap();
+        close(
+            shape
+                .iter()
+                .map(|x| x.as_f64().unwrap().powi(2))
+                .sum::<f64>(),
+            1.0,
+        );
+        close(mode["participation_norm"].as_f64().unwrap(), 1.0);
+    }
+    close(
+        result["min_frequency_hz"].as_f64().unwrap(),
+        modes[0]["natural_frequency_hz"].as_f64().unwrap(),
+    );
+    close(
+        result["max_frequency_hz"].as_f64().unwrap(),
+        modes.last().unwrap()["natural_frequency_hz"]
+            .as_f64()
+            .unwrap(),
+    );
+}
+
+#[test]
+fn extreme_modal_components_keep_all_modes_and_the_same_lowest_mode() {
+    for space in [false, true] {
+        let full = solve(space, extreme_components(space, 12)).unwrap();
+        check_extreme_component_spectrum(space, &full);
+        let first = solve(space, extreme_components(space, 1)).unwrap();
+        assert_eq!(first["modes"].as_array().unwrap().len(), 1);
+        close(eigenvalue(&first, 0), eigenvalue(&full, 0));
+        let dofs = if space { 6 } else { 3 };
+        for (index, mode) in full["modes"].as_array().unwrap().iter().enumerate() {
+            let active_tip = if index < dofs { 1 } else { 3 };
+            for (dof, value) in mode["shape"].as_array().unwrap().iter().enumerate() {
+                if dof / dofs != active_tip {
+                    assert_eq!(value.as_f64().unwrap(), 0.0);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn extreme_modal_components_are_invariant_under_node_permutation_and_reversal() {
+    for space in [false, true] {
+        let mut input = extreme_components(space, 12);
+        input["nodes"].as_array_mut().unwrap().reverse();
+        input["elements"].as_array_mut().unwrap().reverse();
+        for element in input["elements"].as_array_mut().unwrap() {
+            let i = element["node_i"].as_u64().unwrap();
+            let j = element["node_j"].as_u64().unwrap();
+            element["node_i"] = json!(3 - j);
+            element["node_j"] = json!(3 - i);
+        }
+        check_extreme_component_spectrum(space, &solve(space, input).unwrap());
+    }
+}
+
+#[test]
+fn extreme_modal_component_results_match_separate_component_solves() {
+    for space in [false, true] {
+        let combined_input = extreme_components(space, 12);
+        let combined = solve(space, combined_input.clone()).unwrap();
+        let count = if space { 6 } else { 3 };
+        for branch in 0..2 {
+            let mut element = combined_input["elements"][branch].clone();
+            element["node_i"] = json!(0);
+            element["node_j"] = json!(1);
+            let separate = solve(space, json!({
+                "nodes":[combined_input["nodes"][branch * 2], combined_input["nodes"][branch * 2 + 1]],
+                "elements":[element], "mode_count":6
+            })).unwrap();
+            assert_eq!(separate["modes"].as_array().unwrap().len(), count);
+            for index in 0..count {
+                close(
+                    eigenvalue(&combined, branch * count + index),
+                    eigenvalue(&separate, index),
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn connected_modal_range_loss_is_explicit_and_independent_components_can_replay() {
+    for space in [false, true] {
+        let input = json!({
+            "nodes":[
+                frame_node(space, "root", 0.0, 0.0, true),
+                frame_node(space, "soft-tip", 1.0, 0.0, false),
+                frame_node(space, "shared-tip", 2.0, 0.0, false)
+            ],
+            "elements":[
+                frame_element(space, "soft", 1, 2, 1.0e-200),
+                frame_element(space, "stiff", 0, 2, 1.0e200)
+            ], "mode_count":2
+        });
+        let error =
+            solve(space, input).expect_err("connected range loss must not erase a coupling");
+        assert!(
+            error.contains("scaling") && error.contains("representable"),
+            "{error}"
+        );
+        check_extreme_component_spectrum(
+            space,
+            &solve(space, extreme_components(space, 12)).unwrap(),
+        );
+    }
+}

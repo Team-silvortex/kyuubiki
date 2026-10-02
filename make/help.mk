@@ -3,6 +3,8 @@
 help:
 	@echo "Available targets:"
 	@echo "  make tree        Print the repository scaffold"
+	@echo "  make disk-usage Preview regenerable development caches without deleting files"
+	@echo "  make clean-dev-cache Remove regenerable debug/test caches after builds and frontend servers stop"
 	@echo "  make build-frontend Build the Next.js workbench production bundle"
 	@echo "  make build-orchestrator Compile the Elixir control plane in production mode"
 	@echo "  make build-agent Build the Rust solver agent release binary"

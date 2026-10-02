@@ -2,7 +2,7 @@
   "version": "3.4.3",
   "codename": "daji",
   "line": "3.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-09-28",
   "git_commit": "6ab4c2ddc0fed7c91748b4bf3abe788b2db9bd20",
   "summary": "Daji 3.4.3 source reliability patch: checked truss/beam/frame fields, corrected planar and spatial thermal-frame energy, stable exact-support reactions, and orthonormal section orientation. Scoped Solver and Rust Headless regression evidence; no desktop rebuild or binary publication.",

@@ -1,9 +1,10 @@
 use crate::linear_algebra::stable_l2_norm;
+use crate::modal_math::jacobi_eigenpairs;
 use crate::modal_sparse::{InverseIterationOptions, SparseEigenpair};
 use crate::solver_control::{SolverStage, checkpoint};
 
-/// Search from two deterministic probes so a uniform higher eigenmode cannot end the
-/// search by itself. Residual convergence alone is not a proof of spectral minimality.
+/// Run locally optimal inverse searches from two deterministic probes so a uniform
+/// higher eigenmode cannot end the search alone. Residuals do not prove minimality.
 pub(crate) fn inverse_power_iteration(
     size: usize,
     options: InverseIterationOptions,
@@ -47,6 +48,7 @@ fn iterate(
     let size = vector.len();
     let mut last_eigenvalue = f64::NAN;
     let mut last_residual_norm = f64::NAN;
+    let mut previous = None;
     for iteration in 0..=options.max_iterations {
         checkpoint(SolverStage::ModalIteration, iteration)?;
         let applied = apply_operator(&vector)?;
@@ -90,7 +92,9 @@ fn iterate(
         if !norm.is_finite() || norm <= 0.0 {
             return Err("sparse modal inverse solve returned a zero or non-finite vector".into());
         }
-        vector = next.into_iter().map(|value| value / norm).collect();
+        let next: Vec<_> = next.into_iter().map(|value| value / norm).collect();
+        let rotated = ritz_step(&vector, next, previous.as_deref(), apply_operator)?;
+        previous = Some(std::mem::replace(&mut vector, rotated));
     }
     Err(format!(
         "sparse modal inverse iteration did not converge within {} iterations (eigenvalue={last_eigenvalue:.6e}, residual={last_residual_norm:.6e})",
@@ -98,10 +102,109 @@ fn iterate(
     ))
 }
 
+fn ritz_step(
+    vector: &[f64],
+    next: Vec<f64>,
+    previous: Option<&[f64]>,
+    apply_operator: &impl Fn(&[f64]) -> Result<Vec<f64>, String>,
+) -> Result<Vec<f64>, String> {
+    // The current vector, inverse image and previous vector give a locally optimal
+    // search space. Retaining the previous direction avoids steepest-descent stalling
+    // at a narrow spectral gap; only a (maximum) 3x3 matrix is ever made dense.
+    // Anchor on the inverse image: keeping a resolved soft direction first avoids
+    // recovering its tiny eigenvalue by cancellation of large projected diagonals.
+    let mut basis = vec![next];
+    append_direction(&mut basis, vector.to_vec())?;
+    if let Some(previous) = previous {
+        append_direction(&mut basis, previous.to_vec())?;
+    }
+    let mut images = Vec::with_capacity(basis.len());
+    for direction in &basis {
+        let image = apply_operator(direction)?;
+        if image.len() != vector.len() || image.iter().any(|x| !x.is_finite()) {
+            return Err("sparse modal projection returned an invalid operator vector".into());
+        }
+        images.push(image);
+    }
+    let dot = |left: &[f64], right: &[f64]| left.iter().zip(right).map(|(a, b)| a * b).sum::<f64>();
+    let mut projected = vec![vec![0.0; basis.len()]; basis.len()];
+    for i in 0..basis.len() {
+        for j in i..basis.len() {
+            let left = dot(&basis[i], &images[j]);
+            let right = dot(&basis[j], &images[i]);
+            let value = if left == right {
+                left
+            } else {
+                0.5 * left + 0.5 * right
+            };
+            projected[i][j] = value;
+            projected[j][i] = value;
+        }
+    }
+    let pairs = jacobi_eigenpairs(projected)?;
+    if pairs
+        .iter()
+        .any(|(value, _)| !value.is_finite() || *value <= 0.0)
+    {
+        return Err("sparse modal projection contains a nonpositive or non-finite mode".into());
+    }
+    let coefficients = &pairs[0].1;
+    let mut rotated = vec![0.0; vector.len()];
+    for (direction, coefficient) in basis.iter().zip(coefficients) {
+        for (component, entry) in rotated.iter_mut().zip(direction) {
+            *component += coefficient * entry;
+        }
+    }
+    let norm = stable_l2_norm(rotated.iter().copied());
+    if !norm.is_finite() || norm <= 0.0 {
+        return Err("sparse modal projection returned a zero or non-finite vector".into());
+    }
+    rotated.iter_mut().for_each(|value| *value /= norm);
+    Ok(rotated)
+}
+
+fn append_direction(basis: &mut Vec<Vec<f64>>, mut direction: Vec<f64>) -> Result<(), String> {
+    for _ in 0..2 {
+        for vector in basis.iter() {
+            let projection: f64 = vector.iter().zip(&direction).map(|(a, b)| a * b).sum();
+            for (component, entry) in direction.iter_mut().zip(vector) {
+                *component -= projection * entry;
+            }
+        }
+    }
+    let norm = stable_l2_norm(direction.iter().copied());
+    if !norm.is_finite() {
+        return Err("sparse modal search direction is non-finite".into());
+    }
+    if norm > 32.0 * f64::EPSILON {
+        direction.iter_mut().for_each(|value| *value /= norm);
+        basis.push(direction);
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+#[path = "modal_sparse_iteration_tests.rs"]
+mod reliability_tests;
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::solver_control::{SolverControl, with_solver_observer};
+
+    #[test]
+    fn near_repeated_low_modes_converge_without_resolving_the_scalar_gap() {
+        let diagonal = [1.0, 1.0001, 4.0, 10.0, 25.0, 50.0, 80.0, 100.0];
+        let pair = inverse_power_iteration(
+            diagonal.len(),
+            InverseIterationOptions::default(),
+            |v| Ok(v.iter().zip(diagonal).map(|(x, d)| x * d).collect()),
+            |v| Ok(v.iter().zip(diagonal).map(|(x, d)| x / d).collect()),
+        )
+        .unwrap();
+        assert!((pair.eigenvalue - 1.0).abs() < 1e-10);
+        assert!(pair.residual_norm < 1e-6);
+    }
 
     fn symmetric_problem() -> Result<SparseEigenpair, String> {
         // A = I + uu^T, u = (1,1,1): the uniform seed is the highest mode (4), not 1.

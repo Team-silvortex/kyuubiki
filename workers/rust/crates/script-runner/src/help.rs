@@ -6,6 +6,7 @@ status/start/stop/restart/export-db/hot-status\n  \
 doctor validate-env install package cross-platform-audit\n  \
 check-elixir-self-host\n  \
 audit-version-line\n  \
+dev-disk [--apply] [--test-binaries]\n  \
 create-release-snapshot\n  \
 operator-package-preflight\n  \
 operator-package-dynamic-smoke\n  \

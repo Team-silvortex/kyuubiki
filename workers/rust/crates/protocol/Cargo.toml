@@ -6,5 +6,6 @@ license.workspace = true
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+# Numeric contracts must not depend on features incidentally enabled by other crates.
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
 sha2 = "0.10"

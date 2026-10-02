@@ -1,13 +1,41 @@
 # daji 3.x
 
 This is the single entrypoint for the active Kyuubiki product line.
-The current development point in this line is `daji 3.4.3`.
-Source package metadata targets `3.4.3`; the last locally built and installed
+The current development point in this line is `daji 3.4.4`.
+Source package metadata targets `3.4.4`; the last locally built and installed
 desktop/runtime baseline remains `daji 3.4.0`.
 Local installation does not imply that public downloads or SDK packages have
 been published; platform acceptance remains separately scoped.
 
-## Daji 3.4.3 Checkpoint
+## Daji 3.4.4 Checkpoint
+
+October 2, 2026. This source patch hardens modal calculation and its admitted
+Agent execution paths without moving numerical ownership out of Solver:
+
+- Physical assembly and shared mass normalization reject invalid range loss.
+  Dense and sparse paths retain representable weak couplings and soft components.
+- Repeated-root subspaces, sparse inverse refinement, chain recovery and published
+  physical shapes keep the original residual and convergence gates. Exceptional
+  sparse products avoid intermediate range loss; ordinary arithmetic is retained.
+- Agent TaskIR admits only the existing bar and the two modal built-ins. Matching
+  entrypoints dispatch through Engine; authority and package ownership stay enforced.
+- Numeric JSON round trips retain task digests. Local live TCP tests cover rejection,
+  cancellation, failure isolation, same-connection recovery and successful replay.
+- Native cache inspection and allowlisted cleanup reclaim development artifacts
+  without deleting source, dependencies, retained evidence or installed releases.
+
+See `releases/snapshots/3.4.4.json`, the
+[normalization](../reports/modal-normalization-reliability-20261002.md),
+[sparse product range](../reports/modal-sparse-product-range-reliability-20261002.md),
+and [Agent TaskIR](../reports/modal-agent-taskir-reliability-20261002.md) reports.
+The reports retain their 3.4.3 working-tree provenance; overlapping tests are not
+additive coverage. Recompute affected historical modal results before research reuse.
+The retained 128-element bending case remains fail-closed within its original budget.
+Local debug timings do not qualify release throughput, and these tests do not
+establish external correlation, general physics, installed-platform or scale readiness.
+Tensor gaps remain open. No binaries are rebuilt, installed or published here.
+
+## Daji 3.4.3 Checkpoint (Historical)
 
 September 28, 2026. This source patch hardens existing structural and
 thermal-structural operators while retaining the Engine/Solver boundary:

@@ -1,9 +1,19 @@
 use crate::linear_algebra::{
-    CompressedSparseMatrix, SparseMatrix, reduce_sparse_system,
-    solve_spd_system_profile_with_options, solve_tridiagonal_system, stable_l2_norm,
+    CompressedSparseMatrix, PreparedSpdSolver, SparseMatrix, reduce_sparse_system, stable_l2_norm,
 };
 use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
 pub(crate) use crate::modal_sparse_iteration::inverse_power_iteration;
+use crate::modal_tridiagonal::smallest_tridiagonal_eigenpair;
+use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
+
+#[path = "modal_sparse_product.rs"]
+mod product;
+
+#[path = "modal_published_shape.rs"]
+mod published_shape;
+
+#[path = "modal_normalization.rs"]
+mod normalization;
 
 /// Configuration for the linear-memory inverse iteration used by sparse modal solvers.
 #[derive(Clone, Copy, Debug)]
@@ -35,6 +45,7 @@ pub(crate) struct SparseEigenpair {
 pub(crate) struct SparseMassNormalizedOperator {
     inverse_mass_sqrt: Vec<f64>,
     stiffness: CompressedSparseMatrix,
+    staged_range_safe: bool,
 }
 
 impl SparseMassNormalizedOperator {
@@ -43,34 +54,36 @@ impl SparseMassNormalizedOperator {
             return Err("sparse modal stiffness and mass dimensions must match".to_string());
         }
         let mut inverse_mass_sqrt = Vec::with_capacity(mass.len());
-        for value in mass {
+        let mut staged_range_safe = true;
+        for (index, value) in mass.iter().enumerate() {
             if !value.is_finite() || *value <= 0.0 {
                 return Err("sparse modal mass entries must be finite and positive".to_string());
             }
-            inverse_mass_sqrt.push(value.sqrt().recip());
+            let inverse = value.sqrt().recip();
+            staged_range_safe &= product::staged_factor_is_safe(inverse);
+            inverse_mass_sqrt.push(inverse);
+            checkpoint_chunk(SolverStage::SparseDiagonalMagnitude, index + 1, mass.len())?;
+        }
+        let stiffness = stiffness.compress(SpdPreconditioner::Jacobi)?;
+        if staged_range_safe {
+            for (block, entries) in stiffness.values.chunks(1024).enumerate() {
+                staged_range_safe = entries
+                    .iter()
+                    .all(|&value| product::staged_factor_is_safe(value));
+                checkpoint(
+                    SolverStage::SparseDiagonalMagnitude,
+                    block * 1024 + entries.len(),
+                )?;
+                if !staged_range_safe {
+                    break;
+                }
+            }
         }
         Ok(Self {
             inverse_mass_sqrt,
-            stiffness: stiffness.compress(SpdPreconditioner::Jacobi)?,
+            stiffness,
+            staged_range_safe,
         })
-    }
-
-    pub(crate) fn apply(&self, vector: &[f64]) -> Result<Vec<f64>, String> {
-        if vector.len() != self.inverse_mass_sqrt.len() {
-            return Err("sparse modal operator vector dimensions must match".to_string());
-        }
-        let scaled = vector
-            .iter()
-            .zip(&self.inverse_mass_sqrt)
-            .map(|(value, inverse_mass)| value * inverse_mass)
-            .collect::<Vec<_>>();
-        let mut product = vec![0.0; vector.len()];
-        self.stiffness.multiply_vector_into(&scaled, &mut product)?;
-        Ok(product
-            .into_iter()
-            .zip(&self.inverse_mass_sqrt)
-            .map(|(value, inverse_mass)| value * inverse_mass)
-            .collect())
     }
 
     /// Uses a Sturm sequence when the normalized operator is genuinely tridiagonal.
@@ -79,6 +92,11 @@ impl SparseMassNormalizedOperator {
         &self,
         tolerance: f64,
     ) -> Option<Result<SparseEigenpair, String>> {
+        if !tolerance.is_finite() || tolerance <= 0.0 {
+            return Some(Err(
+                "tridiagonal modal tolerance must be finite and positive".into(),
+            ));
+        }
         if let Some(result) = self.uniform_axial_chain_eigenpair(tolerance) {
             return Some(result);
         }
@@ -185,13 +203,24 @@ impl SparseMassNormalizedOperator {
             return None;
         }
         let theta = std::f64::consts::PI / (2 * size) as f64;
-        let eigenvalue = 4.0 * (stiffness / interior_mass) * (theta * 0.5).sin().powi(2);
+        // For size >= 2 the dimensionless factor is below one; do not form 4k/m first.
+        let eigenvalue = (stiffness / interior_mass) * (4.0 * (theta * 0.5).sin().powi(2));
+        if !eigenvalue.is_finite() || eigenvalue <= 0.0 {
+            return Some(Err(
+                "uniform axial modal eigenvalue is not positive and representable".into(),
+            ));
+        }
         let mut vector = masses
             .iter()
             .enumerate()
             .map(|(index, mass)| mass.sqrt() * ((index + 1) as f64 * theta).sin())
             .collect::<Vec<_>>();
         let norm = l2_norm(&vector);
+        if !norm.is_finite() || norm <= 0.0 {
+            return Some(Err(
+                "uniform axial modal eigenvector is zero or non-finite".into()
+            ));
+        }
         vector.iter_mut().for_each(|value| *value /= norm);
         Some(self.apply(&vector).and_then(|applied| {
             let residual_norm = stable_l2_norm(
@@ -205,7 +234,7 @@ impl SparseMassNormalizedOperator {
             // million-segment chain. Keep the general tolerance, with a bounded f64 floor
             // that reflects that cancellation instead of rejecting the closed-form mode.
             let relative_floor = 2.0e-4;
-            if !(residual_scale.is_finite() && residual_scale > 0.0)
+            if !(residual_norm.is_finite() && residual_scale.is_finite() && residual_scale > 0.0)
                 || residual_norm > tolerance.max(relative_floor) * residual_scale
             {
                 return Err(format!(
@@ -220,59 +249,25 @@ impl SparseMassNormalizedOperator {
             })
         }))
     }
-
-    /// Materializes the operator only for the legacy small-model Jacobi fallback.
-    pub(crate) fn dense_fallback_matrix(&self) -> Result<Vec<Vec<f64>>, String> {
-        let size = self.inverse_mass_sqrt.len();
-        let mut dense = vec![vec![0.0; size]; size];
-        for column in 0..size {
-            let mut basis = vec![0.0; size];
-            basis[column] = 1.0;
-            let applied = self.apply(&basis)?;
-            for row in 0..size {
-                dense[row][column] = applied[row];
-            }
-        }
-        Ok(dense)
-    }
-
-    fn scale_by_mass_sqrt(&self, vector: &[f64]) -> Result<Vec<f64>, String> {
-        if vector.len() != self.inverse_mass_sqrt.len() {
-            return Err("sparse modal operator vector dimensions must match".to_string());
-        }
-        Ok(vector
-            .iter()
-            .zip(&self.inverse_mass_sqrt)
-            .map(|(value, inverse_mass)| value / inverse_mass)
-            .collect())
-    }
 }
 
 pub(crate) struct ReducedSparseModalSystem {
     pub(crate) free_dofs: Vec<usize>,
+    pub(crate) mass: Vec<f64>,
     pub(crate) operator: SparseMassNormalizedOperator,
-    stiffness: SparseMatrix,
 }
 
 impl ReducedSparseModalSystem {
-    /// Solves (M^-1/2 K M^-1/2) y = rhs without forming the normalized matrix.
-    pub(crate) fn solve_normalized_inverse(&self, rhs: &[f64]) -> Result<Vec<f64>, String> {
-        let physical_rhs = self.operator.scale_by_mass_sqrt(rhs)?;
-        let displacement = match solve_tridiagonal_system(&self.stiffness, &physical_rhs) {
-            Some(result) => result?,
-            None => {
-                solve_spd_system_profile_with_options(
-                    &self.stiffness,
-                    &physical_rhs,
-                    SpdSolveOptions {
-                        preconditioner: SpdPreconditioner::IncompleteCholesky,
-                        progress_interval: None,
-                    },
-                )?
-                .solution
-            }
-        };
-        self.operator.scale_by_mass_sqrt(&displacement)
+    /// Factor the sparse normalized system once for both modal search probes.
+    /// Solving in physical coordinates can introduce artificial mass-unit conditioning.
+    pub(crate) fn prepare_normalized_inverse(&self) -> Result<PreparedSpdSolver, String> {
+        PreparedSpdSolver::factor_with_options(
+            self.operator.normalized_stiffness()?,
+            SpdSolveOptions {
+                preconditioner: SpdPreconditioner::IncompleteCholesky,
+                progress_interval: None,
+            },
+        )
     }
 }
 
@@ -296,8 +291,8 @@ pub(crate) fn reduce_sparse_modal_system(
     let reduced_mass = free_dofs.iter().map(|dof| mass[*dof]).collect::<Vec<_>>();
     Ok(ReducedSparseModalSystem {
         operator: SparseMassNormalizedOperator::new(&reduced_stiffness, &reduced_mass)?,
+        mass: reduced_mass,
         free_dofs,
-        stiffness: reduced_stiffness,
     })
 }
 
@@ -306,135 +301,25 @@ fn l2_norm(values: &[f64]) -> f64 {
 }
 
 fn approximately_equal(left: f64, right: f64, relative_tolerance: f64) -> bool {
-    left.is_finite()
-        && right.is_finite()
-        && (left - right).abs()
-            <= relative_tolerance * left.abs().max(right.abs()).max(f64::MIN_POSITIVE)
+    if !left.is_finite() || !right.is_finite() {
+        return false;
+    }
+    let scale = left.abs().max(right.abs());
+    // An absolute normal-range floor can label different subnormal chains uniform.
+    scale == 0.0 || (left / scale - right / scale).abs() <= relative_tolerance
 }
 
-fn smallest_tridiagonal_eigenpair(
-    diagonal: &[f64],
-    off_diagonal: &[f64],
-    tolerance: f64,
-) -> Result<SparseEigenpair, String> {
-    let operator_scale = diagonal
-        .iter()
-        .chain(off_diagonal)
-        .map(|value| value.abs())
-        .fold(0.0_f64, f64::max);
-    if !(operator_scale.is_finite() && operator_scale > 0.0) {
-        return Err("tridiagonal modal operator has zero or non-finite scale".to_string());
-    }
-    let diagonal = diagonal
-        .iter()
-        .map(|value| value / operator_scale)
-        .collect::<Vec<_>>();
-    let off_diagonal = off_diagonal
-        .iter()
-        .map(|value| value / operator_scale)
-        .collect::<Vec<_>>();
-    let mut lower = f64::INFINITY;
-    let mut upper = f64::NEG_INFINITY;
-    for (index, value) in diagonal.iter().enumerate() {
-        let radius = off_diagonal.get(index).unwrap_or(&0.0).abs()
-            + index
-                .checked_sub(1)
-                .and_then(|left| off_diagonal.get(left))
-                .unwrap_or(&0.0)
-                .abs();
-        lower = lower.min(value - radius);
-        upper = upper.max(value + radius);
-    }
-    for _ in 0..96 {
-        let middle = (lower + upper) * 0.5;
-        if sturm_negative_count(&diagonal, &off_diagonal, middle) == 0 {
-            lower = middle;
-        } else {
-            upper = middle;
-        }
-    }
-    let eigenvalue = (lower + upper) * 0.5;
-    let mut vector = vec![0.0; diagonal.len()];
-    vector[0] = 1.0;
-    for index in 0..off_diagonal.len() {
-        if off_diagonal[index] == 0.0 {
-            return Err("tridiagonal modal operator has a disconnected mode".to_string());
-        }
-        vector[index + 1] = -((diagonal[index] - eigenvalue) * vector[index]
-            + if index == 0 {
-                0.0
-            } else {
-                off_diagonal[index - 1] * vector[index - 1]
-            })
-            / off_diagonal[index];
-        if vector[index + 1].abs() > 1.0e100 {
-            for value in &mut vector[..=index + 1] {
-                *value *= 1.0e-100;
-            }
-        }
-    }
-    let norm = l2_norm(&vector);
-    if !norm.is_finite() || norm <= f64::EPSILON {
-        return Err("tridiagonal modal eigenvector is not finite".to_string());
-    }
-    vector.iter_mut().for_each(|value| *value /= norm);
-    let residual_norm = stable_l2_norm(diagonal.iter().enumerate().map(|(index, value)| {
-        let product = value * vector[index]
-            + index
-                .checked_sub(1)
-                .and_then(|left| off_diagonal.get(left))
-                .unwrap_or(&0.0)
-                * vector[index.saturating_sub(1)]
-            + off_diagonal.get(index).unwrap_or(&0.0) * vector.get(index + 1).unwrap_or(&0.0);
-        product - eigenvalue * vector[index]
-    }));
-    let applied_norm = stable_l2_norm(diagonal.iter().enumerate().map(|(index, value)| {
-        value * vector[index]
-            + index
-                .checked_sub(1)
-                .and_then(|left| off_diagonal.get(left))
-                .unwrap_or(&0.0)
-                * vector[index.saturating_sub(1)]
-            + off_diagonal.get(index).unwrap_or(&0.0) * vector.get(index + 1).unwrap_or(&0.0)
-    }));
-    let residual_scale = applied_norm.max(eigenvalue.abs());
-    if !(residual_scale.is_finite() && residual_scale > 0.0)
-        || residual_norm > tolerance * residual_scale
-    {
-        return Err(format!(
-            "tridiagonal modal residual is too large ({:.6e})",
-            residual_norm * operator_scale
-        ));
-    }
-    Ok(SparseEigenpair {
-        eigenvalue: eigenvalue * operator_scale,
-        iterations: 0,
-        residual_norm: residual_norm * operator_scale,
-        vector,
-    })
-}
+#[cfg(test)]
+#[path = "modal_sparse_chain_tests.rs"]
+mod chain_tests;
 
-fn sturm_negative_count(diagonal: &[f64], off_diagonal: &[f64], shift: f64) -> usize {
-    let mut count = 0;
-    let mut pivot = diagonal[0] - shift;
-    if pivot < 0.0 {
-        count += 1;
-    }
-    for index in 1..diagonal.len() {
-        let safe_pivot = if pivot.abs() < f64::EPSILON {
-            -f64::EPSILON
-        } else {
-            pivot
-        };
-        pivot = diagonal[index]
-            - shift
-            - off_diagonal[index - 1] * off_diagonal[index - 1] / safe_pivot;
-        if pivot < 0.0 {
-            count += 1;
-        }
-    }
-    count
-}
+#[cfg(test)]
+#[path = "modal_mass_inverse_tests.rs"]
+mod mass_inverse_tests;
+
+#[cfg(test)]
+#[path = "modal_normalization_tests.rs"]
+mod normalization_tests;
 
 #[cfg(test)]
 mod tests {
@@ -614,7 +499,11 @@ mod tests {
         add_at(&mut stiffness, 1, 1, 18.0);
         let system = reduce_sparse_modal_system(&stiffness, &[2.0, 3.0], &[])
             .expect("positive diagonal system should reduce");
-        let result = system.solve_normalized_inverse(&[2.0, 6.0]).unwrap();
+        let result = system
+            .prepare_normalized_inverse()
+            .unwrap()
+            .solve(&[2.0, 6.0])
+            .unwrap();
         assert!((result[0] - 1.0).abs() < 1.0e-12);
         assert!((result[1] - 1.0).abs() < 1.0e-12);
     }

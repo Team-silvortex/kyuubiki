@@ -101,10 +101,29 @@ Main responsibilities:
 The data plane should execute protocol payloads. It should not know React
 component structure, Hub navigation, or Installer panel hierarchy.
 
-The current Agent-native TaskIR solver surface advertises only
-`solve.bar_1d`. Other solver methods may exist on the direct RPC surface, but
-they are not treated as Agent TaskIR capabilities until an explicit adapter,
-capability entry, and retained qualification prove that path.
+The Agent-native TaskIR solver surface explicitly advertises `solve.bar_1d`,
+`solve.modal_frame_2d`, and `solve.modal_frame_3d` through the headless bridge's
+`solver_execution_capability`. Typed adapters dispatch into Engine, not an
+Agent-owned solver implementation. Built-in entrypoint names must match their
+operator IDs. Retained qualification remains bar-scoped; the modal routes have
+[bounded local macOS live-TCP verification](../reports/modal-agent-taskir-reliability-20261002.md),
+not installed/remote qualification. Other direct RPC solvers are not implicitly
+promoted into the TaskIR capability allowlist.
+
+Within Solver, `modal_normalization.rs` owns the shared, range-checked sparse
+entry traversal used by the dense Jacobi matrix and prepared inverse matrix.
+Dense allocation owns its existing 4096-DOF guard; constructing that matrix
+does not replay the sparse operator once per column. This changes neither
+Agent admission nor the original physical residual acceptance gates. See the
+[bounded normalization evidence](../reports/modal-normalization-reliability-20261002.md);
+the local debug timings are not whole-solver or remote throughput qualification.
+
+`modal_sparse_product.rs` also owns staged-product admission and finite-vector
+checks. `modal_sparse_product_range.rs` balances the four physical factors for
+extreme-scale products without caching a second matrix or using the rounded
+normalized matrix as a residual oracle. The ordinary CSR product retains its
+operation order; both routes support cancellation and leave the operator
+unchanged for replay. See the [bounded range and replay evidence](../reports/modal-sparse-product-range-reliability-20261002.md).
 
 ## SDK And Extension Surfaces
 

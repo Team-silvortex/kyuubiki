@@ -3,7 +3,10 @@ use crate::frame_3d_math::{
     transform_frame3d_stiffness,
 };
 use crate::linear_algebra::{SparseMatrix, add_at};
-use crate::modal_frame_spectrum::{checked_mode_shape, frame_eigenpairs};
+use crate::modal_frame_assembly::{
+    element_masses, validate_assembled_system, validate_element_stiffness,
+};
+use crate::modal_frame_spectrum::{checked_published_mode_shape, frame_eigenpairs};
 use crate::modal_frame_validation::validate_modal_frame_3d_request;
 use crate::modal_sparse::reduce_sparse_modal_system;
 use crate::solver_control::{SolverStage, checkpoint_chunk};
@@ -57,7 +60,9 @@ fn solve_modal_frame_3d_internal(
             length,
         );
         let transform = frame3d_transform(&rotation);
+        validate_element_stiffness(&element.id, "local", &local_stiffness)?;
         let element_stiffness = transform_frame3d_stiffness(&local_stiffness, &transform);
+        validate_element_stiffness(&element.id, "global", &element_stiffness)?;
         let map = frame3d_dof_map(element.node_i, element.node_j);
 
         for row in 0..12 {
@@ -71,9 +76,8 @@ fn solve_modal_frame_3d_internal(
             }
         }
 
-        let element_mass = element.density * element.area * length;
-        let translational_mass = element_mass / 2.0;
-        let rotary_mass = element_mass * length * length / 24.0;
+        let [element_mass, translational_mass, rotary_mass] =
+            element_masses(&element.id, element.density, element.area, length)?;
         total_mass += element_mass;
         for node_index in [element.node_i, element.node_j] {
             let offset = node_index * 6;
@@ -86,15 +90,14 @@ fn solve_modal_frame_3d_internal(
         }
     }
 
-    if !total_mass.is_finite() || total_mass <= 0.0 {
-        return Err("modal frame total mass must be finite and positive".into());
-    }
+    validate_assembled_system(&stiffness, &mass, total_mass)?;
     let constrained = constrained_modal_frame_3d_dofs(request.as_ref());
     let sparse_system = reduce_sparse_modal_system(&stiffness, &mass, &constrained)?;
     let free_dofs = sparse_system.free_dofs.clone();
     let eigenpairs = frame_eigenpairs(&sparse_system, request.mode_count)?;
 
     let modes = eigenpairs
+        .pairs
         .into_iter()
         .enumerate()
         .map(|(index, (eigenvalue, vector))| {
@@ -104,8 +107,14 @@ fn solve_modal_frame_3d_internal(
             if !period_s.is_finite() {
                 return Err("modal frame period is not representable".to_string());
             }
-            let (shape, participation_norm) =
-                checked_mode_shape(&vector, &mass, &free_dofs, dof_count)?;
+            let (shape, participation_norm) = checked_published_mode_shape(
+                &sparse_system,
+                &vector,
+                &mass,
+                dof_count,
+                eigenvalue,
+                eigenpairs.residual_tolerance,
+            )?;
             Ok(ModalFrame3dModeResult {
                 index,
                 eigenvalue_rad_s_squared: eigenvalue,

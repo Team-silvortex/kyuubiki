@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded macOS verification of shared modal dense/prepared-inverse matrix normalization, explicit coupling-range rejection, allocation ownership and public planar/spatial cancellation replay. Local debug construction measurements are not whole-engine or remote qualification.",
+  "evidence_claims": [
+    {
+      "id": "modal-shared-matrix-normalization-and-public-replay",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_normalization.rs",
+        "workers/rust/crates/solver/src/modal_sparse.rs",
+        "workers/rust/crates/solver/src/modal_frame_spectrum.rs",
+        "workers/rust/crates/solver/src/modal_normalization_tests.rs",
+        "workers/rust/crates/solver/tests/modal_mass_scaling_reliability.rs",
+        "workers/rust/crates/solver/tests/modal_mass_scaling_reliability/normalization.rs",
+        "workers/rust/crates/solver/tests/support/modal_published_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-normalization-reliability-20261002.md"
+      ],
+      "required_text": [
+        "dense_normalization_retains_representable_weak_couplings_symmetrically",
+        "dense_normalization_cannot_turn_unrepresentable_couplings_into_independent_blocks",
+        "dense_normalization_matches_a_discrete_reference_at_extreme_common_scales",
+        "dense_normalization_rejects_oversized_fallback_before_allocating_the_matrix",
+        "dense_normalization_row_cancellation_does_not_poison_sparse_or_dense_replay",
+        "dense_normalization_wide_row_cancellation_is_not_deferred_to_the_next_row",
+        "dense_planar_normalization_cancels_before_eigen_search_and_replays_physical_modes",
+        "dense_spatial_normalization_cancels_before_eigen_search_and_replays_repeated_modes",
+        "This is bounded modal matrix normalization validation, not general modal qualification."
+      ]
+    },
+    {
+      "id": "modal-direct-matrix-construction-bounded-debug-measurement",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["benchmark"],
+      "dimensions": ["benchmark"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_normalization.rs",
+        "workers/rust/crates/solver/src/modal_normalization_tests.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-normalization-reliability-20261002.md"
+      ],
+      "required_text": [
+        "dense_normalization_does_not_replay_sparse_matvec_per_column",
+        "direct_normalization_matches_column_baseline_and_records_bounded_debug_timings",
+        "These are unoptimized local microbenchmarks, not release-build",
+        "This is bounded modal matrix normalization validation, not general modal qualification."
+      ]
+    }
+  ]
+}

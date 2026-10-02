@@ -17,6 +17,67 @@ fn solver_execution_capability_accepts_agent_builtin_solver_task() {
 }
 
 #[test]
+fn solver_execution_capability_accepts_both_modal_task_ir_routes() {
+    for suffix in ["modal_frame_2d", "modal_frame_3d"] {
+        let mut task = solver_task_fixture();
+        task["operator"]["id"] = json!(format!("solve.{suffix}"));
+        task["execution_program"]["program_id"] = task["operator"]["id"].clone();
+        task["execution_program"]["entrypoint"]["name"] = json!(format!("solve_{suffix}"));
+        let report = check_operator_task_execution_capability(
+            &task,
+            &SolverExecutionCapability::agent_builtin(),
+        )
+        .unwrap();
+        assert!(report.accepted, "{:?}", report.rejection_reasons);
+        assert_eq!(report.dispatch_route, "solver_rpc");
+    }
+}
+
+#[test]
+fn modal_task_ir_capability_does_not_admit_central_fetch_or_unknown_solvers() {
+    for suffix in ["modal_frame_2d", "modal_frame_3d", "not_a_solver"] {
+        let mut task = solver_task_fixture();
+        task["operator"]["id"] = json!(format!("solve.{suffix}"));
+        task["execution_program"]["program_id"] = task["operator"]["id"].clone();
+        task["execution_program"]["entrypoint"]["name"] = json!(format!("solve_{suffix}"));
+        if suffix != "not_a_solver" {
+            task["runtime_hints"]["authority_mode"] = json!("central_operator_library");
+            task["runtime_hints"]["execution_mode"] = json!("orchestra_fetch");
+            task["runtime_hints"]["agent_fetchable"] = json!(true);
+        }
+        let report = check_operator_task_execution_capability(
+            &task,
+            &SolverExecutionCapability::agent_builtin(),
+        )
+        .unwrap();
+        assert!(!report.accepted);
+        let expected = if suffix == "not_a_solver" {
+            "operator_id"
+        } else {
+            "package_fetch_required"
+        };
+        assert!(
+            report
+                .rejection_reasons
+                .iter()
+                .any(|r| r.contains(expected))
+        );
+    }
+}
+
+#[test]
+fn builtin_solver_task_summary_rejects_contradictory_entrypoint_names() {
+    for suffix in ["bar_1d", "modal_frame_2d", "modal_frame_3d"] {
+        let mut task = solver_task_fixture();
+        task["operator"]["id"] = json!(format!("solve.{suffix}"));
+        task["execution_program"]["program_id"] = task["operator"]["id"].clone();
+        task["execution_program"]["entrypoint"]["name"] = json!("solve_unsupported");
+        let error = summarize_operator_task_execution_checked(&task).unwrap_err();
+        assert_eq!(error.code, OperatorTaskSummaryErrorCode::EntrypointMismatch);
+    }
+}
+
+#[test]
 fn solver_execution_capability_rejects_unsupported_solver_method() {
     let task = solver_task_fixture();
     let mut capability = SolverExecutionCapability::agent_builtin();

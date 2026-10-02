@@ -156,7 +156,12 @@ pub fn summarize_operator_task_execution_checked(
         &entrypoint_kind,
     )?;
 
-    if program_kind != "solver" && entrypoint_name != operator_id {
+    // Built-in solver IDs have explicit RPC names; do not ignore a contradictory
+    // entrypoint simply because dispatch ultimately uses the operator ID.
+    let builtin_solver_mismatch = program_kind == "solver"
+        && crate::solver_execution_capability::agent_builtin_solver_method(&operator_id)
+            .is_some_and(|expected| entrypoint_name != expected);
+    if (program_kind != "solver" && entrypoint_name != operator_id) || builtin_solver_mismatch {
         return Err(OperatorTaskSummaryError::new(
             OperatorTaskSummaryErrorCode::EntrypointMismatch,
             "operator task entrypoint does not match operator id",

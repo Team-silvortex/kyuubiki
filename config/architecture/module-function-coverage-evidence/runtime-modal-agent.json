@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded local macOS modal TaskIR admission and live development-Agent TCP numerical/recovery verification. These claims do not extend retained bar-only qualification to all solvers or to installed/remote Agent deployments.",
+  "evidence_claims": [
+    {
+      "id": "modal-agent-task-ir-route-and-entrypoint-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-protocol"],
+      "paradigms": ["solver_execution", "sdk_operator"],
+      "dimensions": ["contract"],
+      "files": [
+        "workers/rust/crates/protocol/src/solver_execution_capability.rs",
+        "workers/rust/crates/protocol/src/operator_task_ir.rs",
+        "workers/rust/crates/protocol/src/tests/solver_execution_capability.rs",
+        "workers/rust/crates/cli/src/agent_headless_bridge.rs",
+        "workers/rust/crates/cli/tests/agent_modal_live.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-agent-taskir-reliability-20261002.md"
+      ],
+      "required_text": [
+        "solver_execution_capability_accepts_both_modal_task_ir_routes",
+        "modal_task_ir_capability_does_not_admit_central_fetch_or_unknown_solvers",
+        "builtin_solver_task_summary_rejects_contradictory_entrypoint_names",
+        "agent_advertises_only_attached_task_ir_solver_routes",
+        "This is bounded live modal-Agent validation, not general Agent solver qualification."
+      ]
+    },
+    {
+      "id": "modal-live-agent-numerical-output-and-task-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["execution", "numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/operator_task_runtime/engine_solver.rs",
+        "workers/rust/crates/cli/src/rpc_execution.rs",
+        "workers/rust/crates/cli/tests/agent_modal_live.rs",
+        "workers/rust/crates/cli/tests/support/modal_agent.rs",
+        "workers/rust/crates/cli/tests/support/agent_lifecycle.rs",
+        "workers/rust/crates/solver/tests/support/modal_published_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-agent-taskir-reliability-20261002.md"
+      ],
+      "required_text": [
+        "direct_modal_rpc_preserves_numeric_bits_and_independent_residuals_over_tcp",
+        "modal_task_ir_executes_through_agent_engine_and_preserves_numeric_digest_over_tcp",
+        "modal_task_ir_invalid_input_is_not_execution_success_and_slot_recovers",
+        "modal_task_ir_digest_mirror_and_authority_gates_survive_agent_transport",
+        "modal_agent_same_connection_recovers_after_invalid_json_and_numerical_failure",
+        "modal_task_ir_cancellation_discards_modes_and_recovers_the_agent_slot",
+        "This is bounded live modal-Agent validation, not general Agent solver qualification."
+      ]
+    }
+  ]
+}

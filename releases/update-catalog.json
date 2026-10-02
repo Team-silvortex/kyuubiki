@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-09-27T16:15:25Z",
-  "shipping_version": "3.4.3",
+  "generated_at": "2026-10-02T14:39:22Z",
+  "shipping_version": "3.4.4",
   "default_channel": "stable",
   "line": "daji 3.x",
   "source": {
@@ -17,13 +17,13 @@
         "daji:latest",
         "daji:3",
         "daji:3.4",
-        "daji:3.4.3"
+        "daji:3.4.4"
       ],
       "line": "3.x",
       "status": "current",
-      "version": "3.4.3",
-      "summary": "Daji 3.4.3 source reliability patch: checked truss/beam/frame fields, corrected planar and spatial thermal-frame energy, stable exact-support reactions, and orthonormal section orientation. Scoped Solver and Rust Headless regression evidence; no desktop rebuild or binary publication.",
-      "date": "2026-09-28",
+      "version": "3.4.4",
+      "summary": "Daji 3.4.4 source reliability patch: range-aware modal assembly and mass normalization, bounded spectral refinement and physical shape validation, sparse-product range recovery, live modal Agent TaskIR admission and replay, and native development-cache management. No desktop rebuild or binary publication.",
+      "date": "2026-10-02",
       "notes": [
         "Primary operator-facing update track for the current daji 3.x line.",
         "Targets standard installs that follow the visible installation contract."
@@ -65,7 +65,7 @@
         "managed_path_policy": "workspace_relative",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/3.4.3.json",
+      "snapshot_path": "releases/snapshots/3.4.4.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
@@ -75,55 +75,55 @@
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "3.4.3",
+          "version": "3.4.4",
           "notes": [
             "Metadata aligned; no new GUI behavior in this patch."
           ]
         },
         "hub_gui": {
-          "version": "3.4.3",
+          "version": "3.4.4",
           "notes": [
             "Source metadata only; no new desktop artifact."
           ]
         },
         "workbench_gui": {
-          "version": "3.4.3",
+          "version": "3.4.4",
           "notes": [
             "Source metadata only; no new desktop artifact."
           ]
         },
         "installer_gui": {
-          "version": "3.4.3",
+          "version": "3.4.4",
           "notes": [
             "Source metadata only; no new desktop artifact."
           ]
         },
         "web_api": {
-          "version": "3.4.3",
+          "version": "3.4.4",
           "notes": [
-            "Metadata aligned; existing control-plane behavior retained."
+            "Metadata aligned; existing control-plane ownership retained."
           ]
         },
         "rust_headless_sdk": {
-          "version": "3.4.3",
+          "version": "3.4.4",
           "notes": [
-            "Existing plan/bridge/Engine operator routes exercised; registry publication not performed."
+            "Modal TaskIR preparation and Engine/Agent replay exercised; registry publication not performed."
           ]
         },
         "python_headless_sdk": {
-          "version": "3.4.3",
+          "version": "3.4.4",
           "notes": [
-            "Registry publication not performed."
+            "Metadata aligned; no new Python qualification or registry publication."
           ]
         },
         "elixir_headless_sdk": {
-          "version": "3.4.3",
+          "version": "3.4.4",
           "notes": [
-            "Registry publication not performed."
+            "Metadata aligned; no new Elixir qualification or registry publication."
           ]
         },
         "rust_worker_sdk": {
-          "version": "3.4.3",
+          "version": "3.4.4",
           "notes": [
             "Operator extension API unchanged; separate from Headless control."
           ]
@@ -134,12 +134,12 @@
   ],
   "versions": [
     {
-      "version": "3.4.3",
+      "version": "3.4.4",
       "line": "3.x",
       "status": "current",
-      "date": "2026-09-28",
-      "summary": "Daji 3.4.3 source reliability patch: checked truss/beam/frame fields, corrected planar and spatial thermal-frame energy, stable exact-support reactions, and orthonormal section orientation. Scoped Solver and Rust Headless regression evidence; no desktop rebuild or binary publication.",
-      "snapshot_path": "releases/snapshots/3.4.3.json",
+      "date": "2026-10-02",
+      "summary": "Daji 3.4.4 source reliability patch: range-aware modal assembly and mass normalization, bounded spectral refinement and physical shape validation, sparse-product range recovery, live modal Agent TaskIR admission and replay, and native development-cache management. No desktop rebuild or binary publication.",
+      "snapshot_path": "releases/snapshots/3.4.4.json",
       "channels": [
         "stable"
       ],
@@ -148,8 +148,75 @@
         "daji:latest",
         "daji:3",
         "daji:3.4",
-        "daji:3.4.3"
+        "daji:3.4.4"
       ],
+      "product_surfaces": {
+        "frontend_workbench": {
+          "version": "3.4.4",
+          "notes": [
+            "Metadata aligned; no new GUI behavior in this patch."
+          ]
+        },
+        "hub_gui": {
+          "version": "3.4.4",
+          "notes": [
+            "Source metadata only; no new desktop artifact."
+          ]
+        },
+        "workbench_gui": {
+          "version": "3.4.4",
+          "notes": [
+            "Source metadata only; no new desktop artifact."
+          ]
+        },
+        "installer_gui": {
+          "version": "3.4.4",
+          "notes": [
+            "Source metadata only; no new desktop artifact."
+          ]
+        },
+        "web_api": {
+          "version": "3.4.4",
+          "notes": [
+            "Metadata aligned; existing control-plane ownership retained."
+          ]
+        },
+        "rust_headless_sdk": {
+          "version": "3.4.4",
+          "notes": [
+            "Modal TaskIR preparation and Engine/Agent replay exercised; registry publication not performed."
+          ]
+        },
+        "python_headless_sdk": {
+          "version": "3.4.4",
+          "notes": [
+            "Metadata aligned; no new Python qualification or registry publication."
+          ]
+        },
+        "elixir_headless_sdk": {
+          "version": "3.4.4",
+          "notes": [
+            "Metadata aligned; no new Elixir qualification or registry publication."
+          ]
+        },
+        "rust_worker_sdk": {
+          "version": "3.4.4",
+          "notes": [
+            "Operator extension API unchanged; separate from Headless control."
+          ]
+        }
+      },
+      "desktop_artifacts": []
+    },
+    {
+      "version": "3.4.3",
+      "line": "3.x",
+      "status": "archived",
+      "date": "2026-09-28",
+      "summary": "Daji 3.4.3 source reliability patch: checked truss/beam/frame fields, corrected planar and spatial thermal-frame energy, stable exact-support reactions, and orthonormal section orientation. Scoped Solver and Rust Headless regression evidence; no desktop rebuild or binary publication.",
+      "snapshot_path": "releases/snapshots/3.4.3.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {
         "frontend_workbench": {
           "version": "3.4.3",

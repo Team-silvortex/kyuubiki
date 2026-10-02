@@ -625,6 +625,16 @@ They now also expose a small workflow layer:
   dispatch, including digest, runtime protocol, ABI, operator ID, and
   package-fetch constraints
 
+Agent-native solver TaskIR currently admits `solve.bar_1d`,
+`solve.modal_frame_2d`, and `solve.modal_frame_3d`. Read the Agent descriptor's
+`headless_bridge.headless_entrypoints[0].solver_execution_capability` rather
+than assuming every direct solver RPC is also TaskIR-enabled. Built-in
+entrypoint names must match the operator ID, and central-fetch tasks cannot
+bypass the attached capability's authority/package restrictions. The modal
+routes retain the same Engine numerical gates and typed failure receipts;
+[local TCP evidence](../reports/modal-agent-taskir-reliability-20261002.md)
+does not qualify installed/remote execution or all Python/Elixir SDK paths.
+
 Rust material reports can be generated headlessly:
 
 ```bash

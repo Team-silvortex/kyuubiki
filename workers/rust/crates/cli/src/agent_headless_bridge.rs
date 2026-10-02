@@ -9,6 +9,7 @@ pub(crate) fn agent_headless_bridge_manifest() -> serde_json::Value {
                 "rpc_method": "RunOperatorTaskIr",
                 "task_format": "kyuubiki.operator-task-ir/v1",
                 "modes": ["preflight", "execute"],
+                "solver_execution_capability": kyuubiki_protocol::SolverExecutionCapability::agent_builtin(),
                 "result_receipts": [
                     "kyuubiki.agent-operator-task-validation/v1",
                     "kyuubiki.agent-operator-task-provenance/v1"

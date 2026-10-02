@@ -73,6 +73,39 @@ This is intentionally a host-native launcher rather than a container-first one.
 Right now the project is optimizing for local iteration, local IPC evolution,
 and mixed-platform development more than environment isolation.
 
+## Development disk use
+
+Rust development builds retain line tables for backtraces instead of full
+variable debug information. Third-party dependency debug information is omitted.
+Test builds disable incremental compilation, since the many integration test
+executables otherwise retain separate object caches. Ordinary development
+builds still use incremental compilation. Release profiles are unchanged.
+The standalone Rust SDK uses the same development/test defaults.
+
+Use `make disk-usage` to preview regenerable caches, and `make clean-dev-cache`
+to remove them after builds and frontend development servers have stopped.
+Both use the native `dev-disk` command. Its default is preview-only:
+
+```text
+./scripts/kyuubiki dev-disk
+./scripts/kyuubiki dev-disk --apply
+./scripts/kyuubiki dev-disk --apply --test-binaries
+```
+
+Cleanup is limited to known Cargo debug incremental directories, leftover
+`*.rcgu.o` files, and `apps/frontend/.next/cache`. `--test-binaries` additionally
+removes hashed executables with Cargo dep-info companions. It retains dependency
+libraries and metadata, top-level native tools, release caches, source files,
+checked-in evidence, generated exports and installed applications. Cargo output
+locks prevent cleanup during a Rust build; tracked files or symlinked cache
+ancestors cause refusal. The next affected build regenerates removed artifacts.
+
+Preview sizes are logical bytes: incremental files can be hard-linked to the
+objects in `deps`, so summing them overstates freed disk space. Measure actual
+space with filesystem usage before and after cleanup. Repeated on-disk test
+fixtures are disposable during development; retain compact results and their
+reproduction commands instead of copying large meshes or whole build trees.
+
 ## Default loops
 
 The shortest useful loops are:

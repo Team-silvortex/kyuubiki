@@ -1,0 +1,60 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded macOS verification of sparse modal physical-product range recovery, non-finite rejection, retained compensation, cancellation and independent public planar/spatial shape replay. Local debug comparisons are not whole-engine or remote qualification.",
+  "evidence_claims": [
+    {
+      "id": "modal-sparse-product-range-and-public-replay",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_sparse.rs",
+        "workers/rust/crates/solver/src/modal_sparse_product.rs",
+        "workers/rust/crates/solver/src/modal_sparse_product_range.rs",
+        "workers/rust/crates/solver/src/modal_sparse_range_tests.rs",
+        "workers/rust/crates/solver/tests/modal_chain_reliability.rs",
+        "workers/rust/crates/solver/tests/modal_chain_reliability/range.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-sparse-product-range-reliability-20261002.md"
+      ],
+      "required_text": [
+        "sparse_products_retain_weak_couplings_under_mass_and_column_reordering",
+        "sparse_products_rescue_representable_results_after_input_scaling_underflow",
+        "sparse_products_rescue_representable_results_after_input_scaling_overflow",
+        "sparse_products_rescue_representable_results_after_stiffness_product_overflow",
+        "sparse_products_reject_invalid_inputs_and_nonfinite_outputs_then_replay",
+        "range_safe_compensation_retains_fma_terms_after_extreme_common_scaling",
+        "range_safe_products_cancel_during_inputs_and_rows_then_replay",
+        "range_safe_products_cancel_inside_a_wide_row_then_replay",
+        "range_routing_preparation_cancels_in_mass_and_stiffness_scans_then_replays",
+        "ordinary_product_output_checks_cancel_then_replay_without_rounding_changes",
+        "ordinary_matrix_routes_extreme_vectors_without_retaining_per_call_state",
+        "planar_extreme_scale_sparse_products_cancel_then_replay_physical_modes",
+        "spatial_extreme_scale_sparse_products_cancel_then_replay_physical_modes",
+        "This is bounded sparse modal product validation, not general modal qualification."
+      ]
+    },
+    {
+      "id": "modal-ordinary-product-bounded-debug-comparison",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["benchmark"],
+      "dimensions": ["benchmark"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_sparse_product.rs",
+        "workers/rust/crates/solver/src/modal_sparse_range_tests.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-sparse-product-range-reliability-20261002.md"
+      ],
+      "required_text": [
+        "ordinary_sparse_products_match_legacy_bits_and_record_bounded_debug_timings",
+        "These are unoptimized local measurements, not release-build throughput.",
+        "This is bounded sparse modal product validation, not general modal qualification."
+      ]
+    }
+  ]
+}

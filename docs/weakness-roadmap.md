@@ -30,10 +30,10 @@ The module/function/evidence tensor is now the first navigation gate for this
 roadmap. Run `make check-module-function-coverage-tensor` before claiming a
 roadmap area is closed.
 
-The current documentation checkpoint is `daji 3.4.3`. The dated calibration
+The current documentation checkpoint is `daji 3.4.4`. The dated calibration
 below and its follow-ups remain the evidence baseline; updating the current
 version labels does not rerun qualification or close any scenario. See the
-[3.4.3 progress summary](current-line.md#daji-343-checkpoint) for recent source
+[3.4.4 progress summary](current-line.md#daji-344-checkpoint) for recent source
 changes that must not be confused with release readiness.
 
 Recalibrated on September 13, 2026 using tensor v5 and the `daji 3.2.x`
@@ -687,9 +687,27 @@ The former top two coordinates, `runtime-agent-cli/solver_execution` and
 shared v2 qualification sends a `solve.bar_1d` TaskIR through a live TCP Agent
 into the Rust Engine, checks the closed-form displacement, rejects a digest
 tamper, verifies same-process recovery, and retains the machine-validated
-report under `releases/usability-evidence/2.12.5`. The Agent TaskIR allowlist is
-intentionally limited to `solve.bar_1d`; the broader direct solver RPC surface
-is not yet claimed as equivalent TaskIR execution coverage.
+report under `releases/usability-evidence/2.12.5`. That retained qualification
+remains limited to `solve.bar_1d`. The Agent TaskIR allowlist now also includes
+`solve.modal_frame_2d` and `solve.modal_frame_3d`, with
+[bounded local macOS live-TCP numerical/recovery verification](../reports/modal-agent-taskir-reliability-20261002.md).
+The broader direct solver RPC surface and installed/remote modal execution
+are not claimed as equivalent qualified TaskIR coverage.
+
+The [modal matrix normalization follow-up](../reports/modal-normalization-reliability-20261002.md)
+unifies dense construction with the prepared inverse's checked sparse entries,
+rejects silent coupling loss, and verifies cancellation before eigen-search.
+The allocation guard belongs to the matrix builder, not its callers. Bounded
+debug microbenchmarks show construction improvement only; the unchanged
+128-element unresolved-spectrum case and broader modal qualification remain open.
+
+The [sparse modal product follow-up](../reports/modal-sparse-product-range-reliability-20261002.md)
+retains representable weak terms that staged mass/stiffness multiplication
+previously lost, rejects non-finite input/output, and preserves compensated
+roundoff. Public 129-segment planar/spatial chains cancel during extreme-scale
+products and replay with independently checked physical shapes. Ordinary
+products retain legacy output bits in the sampled lane; their local debug
+checks still have measured overhead, not a whole-engine speedup claim.
 
 The runtime API client calibration promotes Hub, Workbench, Installer, the
 native Installer service, Protocol, and Headless SDK to required `runtime_api`

@@ -5,7 +5,20 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub const AGENT_BUILTIN_SOLVER_OPERATOR_IDS: &[&str] = &["solve.bar_1d"];
+pub const AGENT_BUILTIN_SOLVER_OPERATOR_IDS: &[&str] = &[
+    "solve.bar_1d",
+    "solve.modal_frame_2d",
+    "solve.modal_frame_3d",
+];
+
+pub(crate) fn agent_builtin_solver_method(operator_id: &str) -> Option<&'static str> {
+    match operator_id {
+        "solve.bar_1d" => Some("solve_bar_1d"),
+        "solve.modal_frame_2d" => Some("solve_modal_frame_2d"),
+        "solve.modal_frame_3d" => Some("solve_modal_frame_3d"),
+        _ => None,
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SolverExecutionCapability {
