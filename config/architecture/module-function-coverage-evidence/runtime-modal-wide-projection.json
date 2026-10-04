@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS test-only retained double-double fine factor, projection and final coordinate correction, compared with and without bounded fine-coordinate rounding selection. Binary-scaled Gram/LDL recovers independent nearly parallel analytic columns across row orders, scales and signs, and a one-third correction confirms that premature rounding can change a known final result. From identical 128-element actual modal polisher seeds, the automatic half partition preserves sampled unit/large-coordinate passing shapes with independent physical reassembly and constructed complete result JSON readback; fine rounding selection improves those residuals only slightly. The one-anchor partition rejects all three sampled scales, and every tiny-coordinate candidate family remains explicitly rejected near 1.740427e-8. Separate work/payload plans, one 80-check counter, cached factor reuse, fresh final certificates and cancellation/replay are tested. This proves scoped diagnosis and control, not new runtime admission, arbitrary-precision/interval guarantees, general representability, multimode qualification, measured performance or live Agent/installed/remote execution.",
+  "evidence_claims": [
+    {
+      "id": "modal-retained-wide-projection-comparison",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_test_wide.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_wide_factor.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_wide_projection.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_wide_projection_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_hybrid_tests.rs",
+        "workers/rust/crates/solver/tests/support/modal_roundoff_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-wide-projection-comparison-20261003.md"
+      ],
+      "required_text": [
+        "wide_projection_physical_candidates_compare_extreme_coordinate_modes",
+        "wide_projection_factor_recovers_independent_nearly_parallel_scaled_columns",
+        "wide_projection_low_correction_tail_changes_known_final_rounding",
+        "wide_projection_factor_rejects_unresolved_rank_range_and_malformed_inputs",
+        "wide_projection_separate_resource_plan_and_physical_input_guards_are_bounded",
+        "wide_projection_one_counter_cached_factor_and_fresh_final_certificate_are_enforced",
+        "wide_projection_preparation_and_cached_search_cancel_without_partial_results_and_replay",
+        "This is test-only retained-wide-projection diagnosis, not new runtime admission or general modal qualification."
+      ]
+    }
+  ]
+}

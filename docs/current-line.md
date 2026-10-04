@@ -1,13 +1,46 @@
 # daji 3.x
 
 This is the single entrypoint for the active Kyuubiki product line.
-The current development point in this line is `daji 3.4.4`.
-Source package metadata targets `3.4.4`; the last locally built and installed
+The current development point in this line is `daji 3.4.5`.
+Source package metadata targets `3.4.5`; the last locally built and installed
 desktop/runtime baseline remains `daji 3.4.0`.
 Local installation does not imply that public downloads or SDK packages have
 been published; platform acceptance remains separately scoped.
 
-## Daji 3.4.4 Checkpoint
+## Daji 3.4.5 Checkpoint
+
+October 4, 2026. This source patch hardens bounded modal solving while keeping
+numerical algorithms in Solver and execution authority in Engine/Agent:
+
+- Tridiagonal preparation validates physical symmetry and representable bands
+  once. Preparation errors and cancellation do not become an unsupported fallback.
+- Vector arithmetic, refinement and final spectrum/shape validation cooperate
+  with bounded cancellation checkpoints. Private candidates publish only after
+  all original physical checks succeed; a later failure discards earlier modes.
+- Nontridiagonal single-mode problems up to 256 active degrees of freedom use
+  a complete dense spectrum and the unchanged 1e-8 physical residual gate.
+  Bounded automatic coordinate correction retains the eigenvalue and root guard.
+- Rust Headless and development Agent-stage tests cover failure isolation and
+  replay without adding numerical algorithms or research fallback routes to Agent.
+- Independent physical reassembly compares multimode, projection, phase and
+  quantized-QR proposals. These remain test-only; their per-fit budgets are not
+  an admitted aggregate runtime portfolio or a throughput claim.
+
+See `releases/snapshots/3.4.5.json`, the
+[preparation](../reports/modal-tridiagonal-preparation-reliability-20261003.md),
+[final validation](../reports/modal-final-validation-reliability-20261003.md),
+[bounded single-mode](../reports/modal-bounded-single-mode-admission-20261003.md),
+and [quantized-QR comparison](../reports/modal-triangular-grid-comparison-20261003.md)
+reports. Original reports retain their 3.4.4 working-tree provenance. Overlapping
+tests are not additive coverage, and registry checks are not execution evidence.
+The tiny-scale 128-element public solve remains fail-closed; passing test-only
+physical candidates do not establish public Solver, installed Agent or remote
+qualification. Recompute affected historical modal results before research reuse.
+External correlation, complete spatial spectra and sustained scale readiness
+remain open. No binaries are rebuilt, installed or published here; tensor gaps
+remain open.
+
+## Daji 3.4.4 Checkpoint (Historical)
 
 October 2, 2026. This source patch hardens modal calculation and its admitted
 Agent execution paths without moving numerical ownership out of Solver:

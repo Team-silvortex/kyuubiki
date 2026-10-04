@@ -49,7 +49,7 @@ fn dense_refinement_retains_repeated_low_modes_without_duplicate_directions() {
                 < 1e-8
         );
         for (_, other) in &pairs[..index] {
-            assert!(dot(vector, other).abs() < 1e-12);
+            assert!(dot(vector, other).unwrap().abs() < 1e-12);
         }
     }
 }
@@ -82,6 +82,38 @@ fn dense_refinement_rejects_invalid_vectors_values_and_dependent_directions() {
         assert!(relative_residual(value, &vector, &applied).is_err());
     }
     assert!(orthogonalize(&mut [1.0, 0.0], &[(1.0, vec![1.0, 0.0])]).is_err());
+}
+
+#[test]
+fn dense_inverse_candidate_failure_keeps_the_seed_pair_intact() {
+    let system = diagonal(&[1.0, 2.0]);
+    let seed = [(f64::MIN_POSITIVE, vec![1.0, 1e-3])];
+    let mut pairs = seed.clone();
+    let error = refine_dense_modes(&system, &mut pairs, 1e-8).unwrap_err();
+    assert!(error.contains("zero or non-finite vector"), "{error}");
+    assert_eq!(pairs, seed);
+    let mut replay = [(1.0, vec![1.0, 1e-10])];
+    refine_dense_modes(&system, &mut replay, 1e-8).unwrap();
+}
+
+#[test]
+fn dense_refinement_rechecks_the_product_after_deflating_the_next_seed() {
+    let system = diagonal(&[1.0, 2.0, 3.0]);
+    let mut pairs = [(1.0, vec![1.0, 1e-3, 0.0]), (2.0, vec![1e-3, 1.0, 0.0])];
+    refine_dense_modes(&system, &mut pairs, 1e-8).unwrap();
+    for (index, (value, vector)) in pairs.iter().enumerate() {
+        assert_eq!(*value, (index + 1) as f64);
+        assert!(
+            relative_residual(
+                *value,
+                vector,
+                &system.operator.apply_compensated(vector).unwrap()
+            )
+            .unwrap()
+                < 1e-14
+        );
+    }
+    assert!(dot(&pairs[0].1, &pairs[1].1).unwrap().abs() < 8.0 * f64::EPSILON);
 }
 
 #[test]

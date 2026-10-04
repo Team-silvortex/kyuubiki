@@ -3,6 +3,9 @@ use crate::linear_algebra::{SparseMatrix, add_at};
 use crate::solver_control::{SolverControl, with_solver_observer};
 use std::{cell::Cell, rc::Rc};
 
+#[path = "modal_published_shape_control_tests.rs"]
+mod control;
+
 fn operator(values: &[f64], mass: &[f64]) -> SparseMassNormalizedOperator {
     let mut matrix = SparseMatrix::new(values.len());
     for (i, &value) in values.iter().enumerate() {

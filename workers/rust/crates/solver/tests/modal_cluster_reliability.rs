@@ -277,12 +277,12 @@ fn repeated_cluster_validation_cancellation_cannot_publish_a_partial_spectrum() 
 #[test]
 fn sparse_single_mode_lies_in_the_complete_repeated_low_mode_subspace() {
     let axis = [1.0, 2.0, 3.0];
-    let mut input = beam(axis, 1.0, 1.0, 0.0, 48);
+    let mut input = beam(axis, 1.0, 1.0, 0.0, 96);
     let template = input.clone();
     input.nodes.clear();
     input.elements.clear();
-    // 24 beams give 144 free DOFs, beyond the 128-DOF single-mode dense fallback.
-    for copy in 0..24 {
+    // 48 beams give 288 free DOFs, beyond the 256-DOF single-mode dense fallback.
+    for copy in 0..48 {
         for node in &template.nodes {
             let mut node = node.clone();
             node.id = format!("{}-{copy}", node.id);
@@ -296,8 +296,8 @@ fn sparse_single_mode_lies_in_the_complete_repeated_low_mode_subspace() {
         input.elements.push(element);
     }
     let complete = solve_modal_frame_3d(&input).unwrap();
-    assert_eq!(complete.free_dofs.len(), 144);
-    assert_eq!(complete.modes.len(), 48);
+    assert_eq!(complete.free_dofs.len(), 288);
+    assert_eq!(complete.modes.len(), 96);
     input.mode_count = Some(1);
     let saw_iteration = Rc::new(Cell::new(false));
     let observed = Rc::clone(&saw_iteration);
@@ -345,8 +345,8 @@ fn sparse_single_mode_lies_in_the_complete_repeated_low_mode_subspace() {
         })
         .collect();
     let local = analytic_bending_projector(axis, false);
-    for row in 0..144 {
-        for column in 0..144 {
+    for row in 0..288 {
+        for column in 0..288 {
             let actual: f64 = basis.iter().map(|v| v[row] * v[column]).sum();
             let reference = if row / 6 == column / 6 {
                 local[row % 6][column % 6]
@@ -359,7 +359,7 @@ fn sparse_single_mode_lies_in_the_complete_repeated_low_mode_subspace() {
     let first = &single.modes[0];
     assert!((first.eigenvalue_rad_s_squared / expected - 1.0).abs() < 1e-8);
     let vector = whiten(&first.shape);
-    let mut projected = vec![0.0; 144];
+    let mut projected = vec![0.0; 288];
     for mode in basis {
         let coefficient: f64 = mode.iter().zip(&vector).map(|(a, b)| a * b).sum();
         for (value, basis_value) in projected.iter_mut().zip(mode) {

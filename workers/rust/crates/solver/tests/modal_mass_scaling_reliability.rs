@@ -27,6 +27,12 @@ mod json_round_trip;
 #[path = "modal_mass_scaling_reliability/normalization.rs"]
 mod normalization;
 
+#[path = "modal_mass_scaling_reliability/control.rs"]
+mod control;
+
+#[path = "modal_mass_scaling_reliability/roundoff.rs"]
+mod roundoff;
+
 fn bending_chain(length: f64, count: usize) -> SolveModalFrame2dRequest {
     bending_chain_with_segments(SEGMENTS, length, count)
 }
@@ -149,8 +155,8 @@ fn bending_inverse_is_prepared_once_per_call_not_shared_between_models() {
     .unwrap();
     assert_eq!(
         counts.get(),
-        [2, 4],
-        "one factor per call, two modal probes per call"
+        [2, 2],
+        "one inverse factor and one dense refinement sequence per bounded call"
     );
 }
 

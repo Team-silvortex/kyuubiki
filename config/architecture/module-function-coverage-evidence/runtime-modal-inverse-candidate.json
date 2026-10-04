@@ -1,0 +1,263 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded macOS inverse-candidate retention, checked-product reuse, wide-arithmetic diagnosis and pre-admission representable candidate feasibility, including physical shape and protocol JSON readback. Projected coupling graphs and grid-weighted rank partitions verify sampled reassembled coordinate candidates without index-adjacent pairs or supplied physical labels. Joint admission checks repeated two-block modes and physical mass orthogonality. Connected synthetic heterogeneous clusters add inverse proposals and unresolved-gap limits on unique directions. Nonseparable three-beam fixtures cross-check four production seed modes against a separately assembled wide spectrum, LDLT inertia brackets, perturbed corrections and physical JSON readback. These preceding packets retain their historical four-inverse-step budget and original residual gates. Their shared coordinate corrector now has a separately scoped bounded single-mode runtime packet in runtime-modal-roundoff-admission.json; these feasibility claims do not qualify general multimode, installed, remote or industrial execution.",
+  "evidence_claims": [
+    {
+      "id": "modal-best-inverse-candidate-retention-and-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_frame_refinement.rs",
+        "workers/rust/crates/solver/src/modal_frame_resolution_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_refinement_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_refinement_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_polish_tests.rs",
+        "workers/rust/crates/solver/tests/modal_mass_scaling_reliability/polished.rs",
+        "workers/rust/crates/solver/tests/modal_mass_scaling_reliability/spatial.rs",
+        "workers/rust/crates/solver/tests/modal_mass_scaling_reliability/longer.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-inverse-candidate-reliability-20261003.md"
+      ],
+      "required_text": [
+        "slender_bending_refinement_never_replaces_a_better_physical_residual",
+        "dense_inverse_candidate_failure_keeps_the_seed_pair_intact",
+        "modal_inverse_candidate_smoothing_cancels_without_committing_the_correction",
+        "modal_refinement_inverse_correction_cancels_after_substitution_and_replays",
+        "modal_smoothing_lowers_the_true_residual_at_extreme_common_scales",
+        "modal_smoothing_keeps_a_converged_or_unimproved_seed_unchanged",
+        "polished_bending_modes_preserve_coordinate_scaling_and_reversed_numbering",
+        "polished_spatial_bending_preserves_repeated_modes_and_mass_orthogonality",
+        "unresolved_longer_spectra_fail_without_partial_modes_and_replay",
+        "This is bounded inverse-candidate retention verification, not general modal or Agent qualification."
+      ]
+    },
+    {
+      "id": "modal-checked-product-reuse-and-refresh",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_frame_refinement.rs",
+        "workers/rust/crates/solver/src/modal_frame_polish_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_refinement_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_refinement_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_resolution_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_spectrum.rs",
+        "workers/rust/crates/solver/src/modal_frame_spectrum_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_published_shape.rs",
+        "workers/rust/crates/solver/src/modal_published_shape_control_tests.rs",
+        "workers/rust/crates/solver/tests/modal_mass_scaling_reliability/polished.rs",
+        "workers/rust/crates/solver/tests/modal_mass_scaling_reliability/longer.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-checked-product-reuse-20261003.md"
+      ],
+      "required_text": [
+        "modal_refinement_reuses_checked_products_without_repeating_matvecs",
+        "rejected_smoothing_candidates_keep_the_checked_product_of_the_retained_pair",
+        "dense_refinement_rechecks_the_product_after_deflating_the_next_seed",
+        "modal_checked_product_reuse_still_polls_before_accepting_a_converged_iterate",
+        "slender_bending_refinement_never_replaces_a_better_physical_residual",
+        "spectrum_final_norm_passes_cancel_inside_validation_and_replay",
+        "published_shape_repaired_candidate_is_not_committed_when_final_validation_cancels",
+        "unresolved_longer_spectra_fail_without_partial_modes_and_replay",
+        "This is bounded checked-product reuse verification, not general modal or Agent qualification."
+      ]
+    },
+    {
+      "id": "modal-long-bending-roundoff-diagnosis",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_frame_resolution_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_conditioning_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_conditioning_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-long-bending-roundoff-diagnosis-20261003.md"
+      ],
+      "required_text": [
+        "long_bending_budget_sweep_checks_residuals_against_a_wide_oracle",
+        "wide_bending_mode_compares_internal_and_rounded_representation_residuals",
+        "wide_reference_preserves_known_sum_product_and_division_tails",
+        "independent_banded_factor_recovers_known_physical_solutions",
+        "independent_banded_reference_matches_existing_discrete_roots",
+        "This is bounded first-mode roundoff diagnosis, not a successful 128-element spectrum or general modal qualification."
+      ]
+    },
+    {
+      "id": "modal-representable-first-mode-candidate-feasibility",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_frame_conditioning_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_conditioning_reference.rs",
+        "workers/rust/crates/solver/src/modal_frame_representable_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_lattice_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-representable-candidate-feasibility-20261003.md"
+      ],
+      "required_text": [
+        "joint_f64_candidate_passes_the_first_bending_mode_gate_without_wide_storage",
+        "joint_f64_candidates_resolve_sampled_rounded_wide_reference_modes",
+        "joint_candidate_keeps_the_physical_shape_gate_after_protocol_json_readback",
+        "joint_fit_budget_failure_keeps_the_borrowed_seed_unchanged",
+        "joint_fit_rejects_invalid_partitions_dimensions_and_residual_certificates",
+        "joint_fit_cancels_inside_substitution_and_before_checked_candidate_acceptance",
+        "This is bounded representable first-mode feasibility, not a production modal solver or general spectrum qualification."
+      ]
+    },
+    {
+      "id": "modal-coupled-coordinate-candidate-feasibility",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_frame_representable_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_lattice_reference.rs",
+        "workers/rust/crates/solver/src/modal_frame_coupled_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_coupling_graph_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_conditioning_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-coupled-coordinate-feasibility-20261003.md"
+      ],
+      "required_text": [
+        "coupled_candidates_validate_reassembled_permutations_of_the_long_bending_mode",
+        "coupled_reference_samples_keep_true_residuals_after_coordinate_reassembly",
+        "coupled_physical_candidates_survive_reassembled_coordinates_and_json_readback",
+        "coupled_search_reuses_one_factor_and_replays_after_private_budget_failure",
+        "projected_coupling_graph_ignores_index_adjacency_and_bounds_pair_work",
+        "projected_coupling_graph_is_stable_under_binary_scales_signs_and_permutations",
+        "projected_coupling_graph_rejects_invalid_columns_without_accepting_proposals",
+        "coupled_preparation_cancels_during_graph_scan_and_replays_fresh",
+        "This is bounded coupled-coordinate candidate feasibility, not a production modal solver or general permutation qualification."
+      ]
+    },
+    {
+      "id": "modal-automatic-partition-candidate-feasibility",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_frame_lattice_reference.rs",
+        "workers/rust/crates/solver/src/modal_frame_coupled_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_partition_reference.rs",
+        "workers/rust/crates/solver/src/modal_frame_partition_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_automatic_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_conditioning_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-automatic-partition-feasibility-20261003.md"
+      ],
+      "required_text": [
+        "automatic_partitions_check_reassembled_first_mode_candidates_without_coordinate_labels",
+        "automatic_partitions_check_reference_samples_and_preserve_accepted_directions",
+        "automatic_physical_partitions_validate_shapes_after_json_readback",
+        "automatic_partition_fit_reuses_its_factor_after_budget_failure_without_mutating_seed",
+        "automatic_partition_selection_is_bounded_and_uses_rank_not_coordinate_labels",
+        "automatic_partition_selection_preserves_sampled_scales_signs_and_permutations",
+        "automatic_partition_selection_handles_zero_subnormal_and_maximum_component_grids",
+        "automatic_partition_selection_rejects_invalid_inputs_and_scaling_loss",
+        "automatic_partition_selection_cancels_before_returning_a_subset_and_replays",
+        "This is bounded automatic-partition candidate feasibility, not a production modal solver or general subspace qualification."
+      ]
+    },
+    {
+      "id": "modal-joint-subspace-candidate-feasibility",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_frame_automatic_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_subspace_reference.rs",
+        "workers/rust/crates/solver/src/modal_frame_subspace_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_conditioning_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-joint-subspace-feasibility-20261003.md"
+      ],
+      "required_text": [
+        "subspace_joint_admission_keeps_rotated_repeated_modes_under_reassembly",
+        "subspace_joint_admission_rejects_residual_qualified_duplicate_modes",
+        "subspace_joint_admission_corrects_perturbed_repeated_modes_with_fresh_residuals",
+        "subspace_joint_admission_validates_bases_and_preserves_accepted_vectors",
+        "subspace_joint_admission_rechecks_residual_and_overlap_after_projection_and_correction",
+        "subspace_joint_admission_reuses_one_factor_after_bounded_failure",
+        "subspace_joint_admission_cancels_during_projection_and_before_final_return",
+        "subspace_joint_admission_validates_final_callback_certificates",
+        "subspace_joint_admission_projects_multiple_scaled_basis_directions_without_rank_loss",
+        "subspace_joint_admission_retains_distinct_roots_and_close_diagonal_modes",
+        "subspace_joint_admission_checks_physical_mass_orthogonality_after_json_readback",
+        "This is bounded joint-subspace candidate feasibility, not a production modal solver or general multimode qualification."
+      ]
+    },
+    {
+      "id": "modal-connected-cluster-candidate-feasibility",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_frame_connected_reference.rs",
+        "workers/rust/crates/solver/src/modal_frame_connected_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_conditioning_reference.rs",
+        "workers/rust/crates/solver/src/modal_frame_subspace_reference.rs",
+        "workers/rust/crates/solver/src/modal_frame_subspace_tests.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-connected-cluster-feasibility-20261003.md"
+      ],
+      "required_text": [
+        "connected_candidates_keep_heterogeneous_split_clusters_under_reassembly",
+        "connected_reference_checks_assembled_products_and_resolved_first_cluster_roots",
+        "connected_candidates_correct_perturbed_split_modes_without_losing_the_cluster",
+        "connected_candidates_recheck_physical_mass_subspaces_after_json_readback",
+        "connected_candidates_distinguish_cluster_membership_from_unique_modes_and_duplicates",
+        "connected_candidates_reject_coordinate_only_stalls_and_replay_with_one_inverse_proposal",
+        "This is bounded connected-cluster candidate feasibility, not a production modal solver or general heterogeneous spectrum qualification."
+      ]
+    },
+    {
+      "id": "modal-nonseparable-four-mode-candidate-feasibility",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_frame_irregular_reference.rs",
+        "workers/rust/crates/solver/src/modal_frame_irregular_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_wide_spectrum_reference.rs",
+        "workers/rust/crates/solver/src/modal_frame_connected_reference.rs",
+        "workers/rust/crates/solver/src/modal_frame_subspace_reference.rs",
+        "workers/rust/crates/solver/src/modal_frame_conditioning_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-nonseparable-four-mode-feasibility-20261003.md"
+      ],
+      "required_text": [
+        "irregular_wide_spectrum_checks_known_roots_and_rejects_unfinished_work",
+        "irregular_reference_checks_reassembled_entries_products_and_four_root_inertia_brackets",
+        "irregular_candidates_admit_four_production_seed_modes_under_nonseparable_reassembly",
+        "irregular_candidates_correct_four_perturbed_modes_with_one_prepared_inverse",
+        "irregular_candidates_recheck_four_physical_modes_after_json_readback",
+        "irregular_four_mode_admission_rejects_duplicates_and_misassigned_roots",
+        "irregular_fourth_candidate_cancels_against_three_prior_directions_and_replays",
+        "This is bounded nonseparable four-mode candidate feasibility, not a production modal solver or general spatial spectrum qualification."
+      ]
+    }
+  ]
+}

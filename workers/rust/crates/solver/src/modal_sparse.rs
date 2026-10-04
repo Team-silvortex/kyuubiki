@@ -3,7 +3,6 @@ use crate::linear_algebra::{
 };
 use crate::linear_solver_profile::{SpdPreconditioner, SpdSolveOptions};
 pub(crate) use crate::modal_sparse_iteration::inverse_power_iteration;
-use crate::modal_tridiagonal::smallest_tridiagonal_eigenpair;
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 
 #[path = "modal_sparse_product.rs"]
@@ -14,6 +13,9 @@ mod published_shape;
 
 #[path = "modal_normalization.rs"]
 mod normalization;
+
+#[path = "modal_sparse_tridiagonal.rs"]
+mod tridiagonal;
 
 /// Configuration for the linear-memory inverse iteration used by sparse modal solvers.
 #[derive(Clone, Copy, Debug)]
@@ -49,6 +51,10 @@ pub(crate) struct SparseMassNormalizedOperator {
 }
 
 impl SparseMassNormalizedOperator {
+    pub(crate) fn dimension(&self) -> usize {
+        self.inverse_mass_sqrt.len()
+    }
+
     pub(crate) fn new(stiffness: &SparseMatrix, mass: &[f64]) -> Result<Self, String> {
         if stiffness.size() != mass.len() {
             return Err("sparse modal stiffness and mass dimensions must match".to_string());
@@ -84,170 +90,6 @@ impl SparseMassNormalizedOperator {
             stiffness,
             staged_range_safe,
         })
-    }
-
-    /// Uses a Sturm sequence when the normalized operator is genuinely tridiagonal.
-    /// This avoids ill-conditioned inverse solves for very long axial frame chains.
-    pub(crate) fn smallest_tridiagonal_eigenpair(
-        &self,
-        tolerance: f64,
-    ) -> Option<Result<SparseEigenpair, String>> {
-        if !tolerance.is_finite() || tolerance <= 0.0 {
-            return Some(Err(
-                "tridiagonal modal tolerance must be finite and positive".into(),
-            ));
-        }
-        if let Some(result) = self.uniform_axial_chain_eigenpair(tolerance) {
-            return Some(result);
-        }
-        let size = self.inverse_mass_sqrt.len();
-        if size < 2 {
-            return None;
-        }
-        let mut diagonal = vec![0.0; size];
-        let mut off_diagonal = vec![0.0; size - 1];
-        for row in 0..size {
-            for entry in self.stiffness.row_offsets[row]..self.stiffness.row_offsets[row + 1] {
-                let column = self.stiffness.columns[entry];
-                let value = self.stiffness.values[entry]
-                    * self.inverse_mass_sqrt[row]
-                    * self.inverse_mass_sqrt[column];
-                if column == row {
-                    diagonal[row] = value;
-                } else if column == row + 1 {
-                    off_diagonal[row] = value;
-                } else if column + 1 != row {
-                    return None;
-                }
-            }
-        }
-        if diagonal
-            .iter()
-            .chain(&off_diagonal)
-            .any(|value| !value.is_finite())
-            || off_diagonal.contains(&0.0)
-        {
-            return None;
-        }
-        Some(smallest_tridiagonal_eigenpair(
-            &diagonal,
-            &off_diagonal,
-            tolerance,
-        ))
-    }
-
-    /// Recognizes the fixed-free, uniformly discretized axial chain used by scale profiles.
-    /// Its first discrete mode has a closed form, which is substantially more stable than
-    /// reconstructing a million-component eigenvector from a near-singular recurrence.
-    fn uniform_axial_chain_eigenpair(
-        &self,
-        tolerance: f64,
-    ) -> Option<Result<SparseEigenpair, String>> {
-        let size = self.inverse_mass_sqrt.len();
-        if size < 2 {
-            return None;
-        }
-        let masses = self
-            .inverse_mass_sqrt
-            .iter()
-            .map(|value| value.recip().powi(2))
-            .collect::<Vec<_>>();
-        let mut diagonal = vec![0.0; size];
-        let mut upper = vec![0.0; size - 1];
-        let mut lower = vec![0.0; size - 1];
-        for row in 0..size {
-            for entry in self.stiffness.row_offsets[row]..self.stiffness.row_offsets[row + 1] {
-                let column = self.stiffness.columns[entry];
-                let value = self.stiffness.values[entry];
-                if column == row {
-                    diagonal[row] = value;
-                } else if column == row + 1 {
-                    upper[row] = value;
-                } else if column + 1 == row {
-                    lower[column] = value;
-                } else {
-                    return None;
-                }
-            }
-        }
-        let stiffness = -upper[0];
-        let interior_mass = masses[0];
-        if !(stiffness.is_finite()
-            && stiffness > 0.0
-            && interior_mass.is_finite()
-            && interior_mass > 0.0)
-        {
-            return None;
-        }
-        let relative_tolerance = 1.0e-10;
-        let structure_matches = diagonal.iter().enumerate().all(|(index, value)| {
-            let expected = if index + 1 == size {
-                stiffness
-            } else {
-                2.0 * stiffness
-            };
-            approximately_equal(*value, expected, relative_tolerance)
-        }) && upper
-            .iter()
-            .chain(&lower)
-            .all(|value| approximately_equal(*value, -stiffness, relative_tolerance))
-            && masses.iter().enumerate().all(|(index, value)| {
-                let expected = if index + 1 == size {
-                    0.5 * interior_mass
-                } else {
-                    interior_mass
-                };
-                approximately_equal(*value, expected, relative_tolerance)
-            });
-        if !structure_matches {
-            return None;
-        }
-        let theta = std::f64::consts::PI / (2 * size) as f64;
-        // For size >= 2 the dimensionless factor is below one; do not form 4k/m first.
-        let eigenvalue = (stiffness / interior_mass) * (4.0 * (theta * 0.5).sin().powi(2));
-        if !eigenvalue.is_finite() || eigenvalue <= 0.0 {
-            return Some(Err(
-                "uniform axial modal eigenvalue is not positive and representable".into(),
-            ));
-        }
-        let mut vector = masses
-            .iter()
-            .enumerate()
-            .map(|(index, mass)| mass.sqrt() * ((index + 1) as f64 * theta).sin())
-            .collect::<Vec<_>>();
-        let norm = l2_norm(&vector);
-        if !norm.is_finite() || norm <= 0.0 {
-            return Some(Err(
-                "uniform axial modal eigenvector is zero or non-finite".into()
-            ));
-        }
-        vector.iter_mut().for_each(|value| *value /= norm);
-        Some(self.apply(&vector).and_then(|applied| {
-            let residual_norm = stable_l2_norm(
-                applied
-                    .iter()
-                    .zip(&vector)
-                    .map(|(value, mode)| value - eigenvalue * mode),
-            );
-            let residual_scale = l2_norm(&applied).max(eigenvalue.abs());
-            // The direct sparse residual subtracts O(n^2)-scaled stiffness terms for this
-            // million-segment chain. Keep the general tolerance, with a bounded f64 floor
-            // that reflects that cancellation instead of rejecting the closed-form mode.
-            let relative_floor = 2.0e-4;
-            if !(residual_norm.is_finite() && residual_scale.is_finite() && residual_scale > 0.0)
-                || residual_norm > tolerance.max(relative_floor) * residual_scale
-            {
-                return Err(format!(
-                    "uniform axial modal residual is too large ({residual_norm:.6e})"
-                ));
-            }
-            Ok(SparseEigenpair {
-                eigenvalue,
-                iterations: 0,
-                residual_norm,
-                vector,
-            })
-        }))
     }
 }
 
@@ -312,6 +154,10 @@ fn approximately_equal(left: f64, right: f64, relative_tolerance: f64) -> bool {
 #[cfg(test)]
 #[path = "modal_sparse_chain_tests.rs"]
 mod chain_tests;
+
+#[cfg(test)]
+#[path = "modal_sparse_preparation_tests.rs"]
+mod preparation_tests;
 
 #[cfg(test)]
 #[path = "modal_mass_inverse_tests.rs"]

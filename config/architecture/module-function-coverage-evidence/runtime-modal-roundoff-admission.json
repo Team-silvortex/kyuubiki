@@ -1,0 +1,56 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS bounded single-mode runtime admission of the shared ordinary-f64 roundoff corrector. Non-tridiagonal single-mode requests up to 256 active DOFs now use the complete dense spectrum and strict 1e-8 gates. Static resource planning, an enforced checked-product cap, private physical publication and cancellation precede return. Eight planar geometry/scale samples, reordered models and two small spatial single-mode samples retain independent physical residuals after JSON readback. A 128-element tiny-coordinate case and the six-mode long-bending request remain explicit failures. The Rust Headless plan-to-Engine bridge preserves both acceptance and rejection. This is not live Agent, remote, installed, general multimode, performance or industrial qualification; modeled payload/work bounds are not measured RSS or time deadlines.",
+  "evidence_claims": [
+    {
+      "id": "modal-bounded-single-mode-roundoff-runtime-admission",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_roundoff.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_budget.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_partition.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_tests.rs",
+        "workers/rust/crates/solver/src/modal_frame_refinement.rs",
+        "workers/rust/crates/solver/src/modal_frame_spectrum.rs",
+        "workers/rust/crates/solver/src/modal_frame_2d.rs",
+        "workers/rust/crates/solver/src/modal_frame_3d.rs",
+        "workers/rust/crates/solver/src/modal_published_shape.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/tests/modal_mass_scaling_reliability/roundoff.rs",
+        "workers/rust/crates/solver/tests/support/modal_roundoff_reference.rs",
+        "workers/rust/crates/solver/tests/modal_cluster_reliability.rs",
+        "workers/rust/crates/solver/tests/modal_connected_reliability.rs",
+        "workers/rust/crates/solver/tests/modal_spectrum_reliability.rs",
+        "workers/rust/crates/cli/tests/modal_spectrum_operator/roundoff.rs",
+        "workers/rust/crates/cli/tests/modal_spectrum_operator/connected.rs",
+        "workers/rust/crates/cli/src/agent_fault_injection.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-bounded-single-mode-admission-20261003.md"
+      ],
+      "required_text": [
+        "roundoff_resource_plan_rejects_dimensions_before_dense_preparation",
+        "roundoff_checked_product_budget_is_sticky_and_cancellable",
+        "roundoff_input_guards_precede_dense_allocation_and_reject_operator_mismatch",
+        "roundoff_single_mode_recovery_reaches_original_gate_without_more_inverse_steps",
+        "roundoff_multi_mode_path_still_rejects_the_unqualified_long_spectrum",
+        "roundoff_admission_rechecks_and_cancels_before_committing_private_candidates",
+        "bounded_single_mode_roundoff_recovery_publishes_checked_shapes_through_public_json",
+        "bounded_single_mode_roundoff_rejects_unresolved_scaled_geometry_without_relaxation",
+        "bounded_single_mode_roundoff_recovery_preserves_reversed_node_and_member_order",
+        "bounded_public_roundoff_recovery_cancels_without_results_and_replays_fresh",
+        "bounded_public_physical_roundoff_cancels_after_normalized_admission_and_replays",
+        "bounded_spatial_single_mode_keeps_the_physical_gate_after_public_json",
+        "modal_cancellation_is_observed_inside_each_phase_and_replay_is_clean",
+        "headless_bounded_roundoff_admission_preserves_public_json_and_failure_boundaries",
+        "headless_roundoff_phase_cancellation_returns_no_partial_result_and_replays",
+        "roundoff_phase_holds_are_reachable_at_zero_step_boundaries",
+        "This is bounded single-mode runtime admission, not general modal or Agent qualification."
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-use crate::linear_algebra::stable_l2_norm;
+use crate::linear_algebra::cancellable_l2_norm;
 use crate::modal_math::{checked_shape_norm, expand_mode_shape, jacobi_eigenpairs};
 use crate::modal_sparse::{
     InverseIterationOptions, ReducedSparseModalSystem, inverse_power_iteration,
@@ -6,7 +6,7 @@ use crate::modal_sparse::{
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 
 // Bound the complete-spectrum check for single-mode requests; large models remain sparse.
-const SINGLE_MODE_DENSE_LIMIT: usize = 128;
+const SINGLE_MODE_DENSE_LIMIT: usize = roundoff::MAX_DOFS;
 
 pub(crate) struct FrameSpectrum {
     pub(crate) pairs: Vec<(f64, Vec<f64>)>,
@@ -15,6 +15,11 @@ pub(crate) struct FrameSpectrum {
 
 #[path = "modal_frame_refinement.rs"]
 mod refinement;
+pub(crate) use refinement::roundoff;
+
+#[cfg(test)]
+#[path = "modal_frame_spectrum_control_tests.rs"]
+mod control_tests;
 
 pub(crate) fn frame_eigenpairs(
     system: &ReducedSparseModalSystem,
@@ -64,8 +69,11 @@ pub(crate) fn frame_eigenpairs(
     }
     for (index, (value, vector)) in pairs.iter().enumerate() {
         checkpoint(SolverStage::ModalValidation, index)?;
-        let norm = stable_l2_norm(vector.iter().copied());
-        if vector.len() != size || !norm.is_finite() || norm <= 0.0 {
+        if vector.len() != size {
+            return Err("modal frame eigenvector dimensions are inconsistent".into());
+        }
+        let norm = cancellable_l2_norm(vector.iter().copied(), SolverStage::ModalSpectrumNorm)?;
+        if !norm.is_finite() || norm <= 0.0 {
             return Err("modal frame eigenvector is zero or non-finite".into());
         }
         let applied = if dense {
@@ -73,8 +81,12 @@ pub(crate) fn frame_eigenpairs(
         } else {
             system.operator.apply(vector)?
         };
-        let residual = stable_l2_norm(applied.iter().zip(vector).map(|(a, v)| a - value * v));
-        let scale = stable_l2_norm(applied.iter().copied()).max(value * norm);
+        let residual = cancellable_l2_norm(
+            applied.iter().zip(vector).map(|(a, v)| a - value * v),
+            SolverStage::ModalSpectrumNorm,
+        )?;
+        let scale = cancellable_l2_norm(applied.iter().copied(), SolverStage::ModalSpectrumNorm)?
+            .max(value * norm);
         if !residual.is_finite()
             || !scale.is_finite()
             || scale <= 0.0
@@ -114,6 +126,7 @@ pub(crate) fn checked_published_mode_shape(
     dof_count: usize,
     value: f64,
     tolerance: f64,
+    allow_roundoff: bool,
 ) -> Result<(Vec<f64>, f64), String> {
     let (mut shape, _) = checked_mode_shape(vector, mass, &system.free_dofs, dof_count)?;
     let mut reduced = Vec::with_capacity(system.free_dofs.len());
@@ -121,9 +134,13 @@ pub(crate) fn checked_published_mode_shape(
         reduced.push(shape[dof]);
         checkpoint_chunk(SolverStage::ResultNodes, index + 1, system.free_dofs.len())?;
     }
-    system
-        .operator
-        .polish_published_shape(value, &mut reduced, &system.mass, tolerance)?;
+    system.operator.polish_published_shape_with_recovery(
+        value,
+        &mut reduced,
+        &system.mass,
+        tolerance,
+        allow_roundoff,
+    )?;
     for (index, (&dof, value)) in system.free_dofs.iter().zip(reduced).enumerate() {
         shape[dof] = value;
         checkpoint_chunk(SolverStage::ResultNodes, index + 1, system.free_dofs.len())?;

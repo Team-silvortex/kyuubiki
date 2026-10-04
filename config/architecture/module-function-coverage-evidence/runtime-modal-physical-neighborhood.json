@@ -1,0 +1,34 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS test-only search on all physical coordinates, comparing neighboring-f64 groups of widths one through four without fine-coordinate elimination. An independent closed-entry quartet barrier crosses only with width four under sampled permutations and signs. Cached double-double quadratic scores propose changes; one shared counter, at most 26 true certificates, forward/reverse family reanchoring, final revalidation and cancellation/replay are checked. From actual 128-element physical-polisher seeds the local neighborhood alone rejects all sampled scales. Already-qualified block-fit shapes preserve their physical residuals and constructed result JSON readback; the tiny-coordinate shape improves only from about 1.740427e-8 to 1.739997e-8 and remains rejected. This is scoped numerical diagnosis and recovery control, not new runtime admission, an f64 lower bound, exhaustive search, measured performance, multimode qualification or live Agent/installed/remote execution.",
+  "evidence_claims": [
+    {
+      "id": "modal-all-physical-coordinate-neighborhood",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_roundoff_physical_neighborhood.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_physical_neighborhood_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_physical_neighborhood_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_wide_projection.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_hybrid_tests.rs",
+        "workers/rust/crates/solver/tests/support/modal_roundoff_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-physical-neighborhood-comparison-20261003.md"
+      ],
+      "required_text": [
+        "physical_neighborhood_modes_compare_polisher_and_checked_block_seeds",
+        "physical_neighborhood_four_coordinates_cross_a_known_three_coordinate_barrier",
+        "physical_neighborhood_graph_range_and_resource_preflights_are_bounded",
+        "physical_neighborhood_quadratic_proposals_match_independent_closed_products",
+        "physical_neighborhood_one_counter_reanchors_and_rechecks_the_final_certificate",
+        "physical_neighborhood_preparation_and_search_cancel_without_partial_shapes_and_replay",
+        "This is test-only all-coordinate neighborhood diagnosis, not new runtime admission or general modal qualification."
+      ]
+    }
+  ]
+}

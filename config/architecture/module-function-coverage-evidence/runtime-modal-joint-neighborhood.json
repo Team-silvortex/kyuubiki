@@ -1,0 +1,32 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS test-only direct-physical-column and three-coordinate neighboring-f64 comparison from identical actual modal polisher seeds. A separate bounded triple graph and proposal-work model preserve one 80-check counter, fresh actual-operator certificates and cancellation/replay. A closed-entry analytic example crosses a barrier that single/pair proposals cannot cross. Sampled 128-element unit and large-coordinate physical shapes improve slightly and pass independent physical reassembly plus constructed complete result JSON readback; the tiny-coordinate sample remains explicitly rejected near 1.740427e-8. Direct physical columns do not change these sampled outcomes. This verifies scoped diagnosis and control, not new runtime admission, general f64 representability, multimode qualification, measured performance, live Agent or installed/remote execution.",
+  "evidence_claims": [
+    {
+      "id": "modal-joint-rounding-neighborhood",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_roundoff_joint_reference.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_joint_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_hybrid_tests.rs",
+        "workers/rust/crates/solver/tests/support/modal_roundoff_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-joint-neighborhood-comparison-20261003.md"
+      ],
+      "required_text": [
+        "joint_rounding_physical_columns_and_triples_compare_extreme_coordinate_modes",
+        "joint_rounding_three_coordinate_action_crosses_an_analytic_pair_barrier",
+        "joint_rounding_graph_and_added_proposal_work_have_separate_bounded_plans",
+        "joint_rounding_physical_direction_guards_and_known_entries_are_checked",
+        "joint_rounding_checks_share_one_counter_and_revalidate_final_candidates",
+        "joint_rounding_each_phase_cancels_without_partial_shapes_and_replays",
+        "This is test-only joint-neighborhood diagnosis, not new runtime admission or general modal qualification."
+      ]
+    }
+  ]
+}

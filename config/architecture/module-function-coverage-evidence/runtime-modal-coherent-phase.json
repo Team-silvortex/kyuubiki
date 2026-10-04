@@ -1,0 +1,37 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS test-only one/two-axis coherent rounding diagnosis with retained wide unit-shape fractional tails. A closed-entry eight-coordinate barrier crosses beyond four-coordinate local search under sampled permutations/signs, and a separate analytic target distinguishes the two-axis family. At most 64 ranked candidates plus initial/final true certificates, fresh final rejection, invalid inputs, shared-counter traces, cancellation and replay are checked. Twelve actual 128-element beam comparisons all reject phase search alone. Follow-on block correction qualifies the unit/large-coordinate samples but the tiny-coordinate family remains above the unchanged gate, near 1.740427e-8 from a translated polisher center. This is bounded numerical diagnosis and recovery control, not runtime admission, a general partition policy, an f64 lower bound, exhaustive search, measured performance, multimode qualification or live Agent/installed/remote execution.",
+  "evidence_claims": [
+    {
+      "id": "modal-coherent-phase-diagnosis",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_roundoff_coherent_phase.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_coherent_phase_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_coherent_phase_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_wide_proposal.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_wide_projection.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_hybrid_tests.rs",
+        "workers/rust/crates/solver/tests/support/modal_roundoff_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-coherent-phase-comparison-20261003.md"
+      ],
+      "required_text": [
+        "coherent_phase_long_bending_comparison_preserves_the_unresolved_tiny_gate",
+        "coherent_phase_eight_coordinate_move_crosses_an_independent_local_barrier",
+        "coherent_phase_two_axes_recover_a_vector_outside_the_one_axis_family",
+        "coherent_phase_brackets_keep_fraction_tails_ties_and_exact_coordinates",
+        "coherent_phase_dimensions_ranges_partitions_and_resource_caps_preflight",
+        "coherent_phase_shortlist_uses_one_counter_and_requires_a_fresh_final_certificate",
+        "coherent_phase_prediction_cannot_override_actual_failure_or_mutate_the_center",
+        "coherent_phase_preparation_and_search_cancel_without_partial_shapes_and_replay",
+        "This is test-only coherent rounding diagnosis, not new runtime admission or general modal qualification."
+      ]
+    }
+  ]
+}

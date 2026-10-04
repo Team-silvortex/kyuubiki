@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded macOS verification of checked sparse tridiagonal modal preprocessing, retained weak couplings, asymmetric/range-loss rejection, cancellation and independently checked public planar/spatial replay. This does not qualify arbitrary modal spectra or installed/remote execution.",
+  "evidence_claims": [
+    {
+      "id": "modal-tridiagonal-preparation-and-public-replay",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_sparse.rs",
+        "workers/rust/crates/solver/src/modal_normalization.rs",
+        "workers/rust/crates/solver/src/modal_sparse_tridiagonal.rs",
+        "workers/rust/crates/solver/src/modal_sparse_preparation_tests.rs",
+        "workers/rust/crates/solver/tests/modal_chain_reliability.rs",
+        "workers/rust/crates/solver/tests/modal_chain_reliability/preparation.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-tridiagonal-preparation-reliability-20261003.md"
+      ],
+      "required_text": [
+        "tridiagonal_preparation_retains_weak_couplings_and_mode_components_in_both_orders",
+        "tridiagonal_preparation_reports_intrinsic_range_loss_instead_of_declining",
+        "tridiagonal_preparation_cannot_ignore_a_mismatched_or_missing_lower_triangle",
+        "tridiagonal_preparation_declines_only_genuinely_disconnected_or_nonbanded_topology",
+        "general_tridiagonal_normalization_cancels_before_search_and_replays",
+        "uniform_chain_preparation_cancels_in_each_linear_pass_and_replays",
+        "tridiagonal_prefix_cancellation_is_not_swallowed_by_a_later_topology_decline",
+        "general_tridiagonal_preparation_matches_discrete_roots_and_directions_across_scales",
+        "planar_tridiagonal_preparation_cancels_then_replays_checked_physical_modes",
+        "spatial_tridiagonal_preparation_cancels_then_replays_checked_physical_modes",
+        "This is bounded modal preprocessing validation, not general modal qualification."
+      ]
+    }
+  ]
+}

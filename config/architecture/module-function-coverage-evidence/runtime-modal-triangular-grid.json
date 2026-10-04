@@ -1,0 +1,43 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS test-only fixed-grid QR comparison, quantizing original-column coefficients during triangular backsolve instead of independently after a continuous solve. Twelve control/beam tests retain 130 original configurations (seven successes, 123 residual failures) and 72 additional anchor/sign/numbering configurations (38 accepted, 30 residual rejections, four norm rejections). Reverse-order quantization qualifies the tiny-coordinate first-mode candidate at 6.358818e-9 with radius 65536. Accepted f64 shapes retain their eigenvalue/frozen anchor and pass independent physical reassembly, unit norm and constructed result JSON readback. A separate unit-shape wrapper rejects candidates whose physical gate passes but norm drifts, without renormalizing or modifying the production path. Renumbering changes successful orders, so generic ordering robustness remains unproven. Closed-entry integer/representable-target checks, four bounded passes, at most six true certificates per independent fit, final rejection, residual refresh and cancellation/replay are verified. This is candidate and publication-boundary evidence, not runtime admission, a global integer optimum, aggregate multi-fit budgets, measured performance, multimode or live Agent/installed/remote execution.",
+  "evidence_claims": [
+    {
+      "id": "modal-quantized-triangular-grid-candidate",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_roundoff_triangular_grid.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_triangular_grid_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_triangular_grid_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_triangular_grid_robustness_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_qr_reference.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_qr_quantized.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_wide_projection.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_hybrid_tests.rs",
+        "workers/rust/crates/solver/tests/support/modal_roundoff_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-triangular-grid-comparison-20261003.md"
+      ],
+      "required_text": [
+        "triangular_grid_long_bending_compares_order_radius_and_rounding_stage",
+        "triangular_grid_quantized_backsolve_matches_an_independent_integer_minimum",
+        "triangular_grid_coupled_rounding_has_a_closed_physical_coordinate_check",
+        "triangular_grid_input_order_range_and_resource_limits_fail_before_certification",
+        "triangular_grid_cached_factors_share_one_check_counter_and_refresh_the_residual",
+        "triangular_grid_final_recheck_errors_and_worse_proposals_cannot_publish",
+        "triangular_grid_cancelled_preparation_and_backsolve_replay_without_partial_shapes",
+        "triangular_grid_anchor_and_sign_comparison_keeps_the_original_physical_gate",
+        "triangular_grid_renumbering_comparison_restores_original_physical_coordinates",
+        "triangular_grid_closed_relabeling_recovers_exact_representable_targets",
+        "triangular_grid_unit_publication_rejects_residual_pass_with_norm_drift",
+        "triangular_grid_cancelled_unit_validation_returns_no_shape_and_replays",
+        "This is test-only quantized grid candidate evidence, not new runtime admission or general modal qualification."
+      ]
+    }
+  ]
+}

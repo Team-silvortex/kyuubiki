@@ -293,11 +293,64 @@ fn modal_agent_same_connection_recovers_after_invalid_json_and_numerical_failure
 #[test]
 fn modal_task_ir_cancellation_discards_modes_and_recovers_the_agent_slot()
 -> Result<(), Box<dyn Error>> {
-    let stage = "sparse_matvec";
+    check_cancelled_modal_job("sparse_matvec", false)
+}
+
+#[test]
+fn planar_modal_vector_cancellation_recovers_the_live_agent_slot() -> Result<(), Box<dyn Error>> {
+    for stage in [
+        "modal_vector_scan",
+        "modal_vector_dot",
+        "modal_vector_update",
+    ] {
+        check_cancelled_modal_job(stage, false)?;
+    }
+    Ok(())
+}
+
+#[test]
+fn spatial_modal_vector_cancellation_recovers_the_live_agent_slot() -> Result<(), Box<dyn Error>> {
+    for stage in [
+        "modal_vector_scan",
+        "modal_vector_dot",
+        "modal_vector_update",
+    ] {
+        check_cancelled_modal_job(stage, true)?;
+    }
+    Ok(())
+}
+
+#[test]
+fn planar_final_modal_validation_cancellation_recovers_the_live_agent_slot()
+-> Result<(), Box<dyn Error>> {
+    for stage in [
+        "modal_spectrum_norm",
+        "modal_shape_scan",
+        "modal_shape_norm",
+    ] {
+        check_cancelled_modal_job(stage, false)?;
+    }
+    Ok(())
+}
+
+#[test]
+fn spatial_final_modal_validation_cancellation_recovers_the_live_agent_slot()
+-> Result<(), Box<dyn Error>> {
+    for stage in [
+        "modal_spectrum_norm",
+        "modal_shape_scan",
+        "modal_shape_norm",
+    ] {
+        check_cancelled_modal_job(stage, true)?;
+    }
+    Ok(())
+}
+
+fn check_cancelled_modal_job(stage: &str, space: bool) -> Result<(), Box<dyn Error>> {
     let agent = LiveAgent::start_with_solver_hold(stage, "run_operator_task_ir", "1")?;
     let job = "cancelled-modal-job";
     fs::write(&agent.hold_path, job)?;
-    let task = modal::task("held-modal", false, modal::model(100, false));
+    let task = modal::task("held-modal", space, modal::model(100, space));
     let mut stream = TcpStream::connect(("127.0.0.1", agent.port))?;
     stream.set_read_timeout(Some(Duration::from_secs(30)))?;
     stream.set_write_timeout(Some(Duration::from_secs(30)))?;
@@ -337,9 +390,14 @@ fn modal_task_ir_cancellation_discards_modes_and_recovers_the_agent_slot()
     assert!(point["completed_steps"].as_u64().unwrap() >= 3);
     wait_for_lifecycle(&agent, "accepting", 0)?;
     assert!(agent.hold_path.exists());
-    let healthy = modal::task("cancel-replay", false, modal::model(100, false));
-    let replay = execute(&agent, "cancel-replay", &healthy)?;
-    modal::check_result(task_result(&replay, "cancel-replay", &healthy), 100, false);
+    let healthy = modal::task("cancel-replay", space, modal::model(100, space));
+    send(
+        &mut stream,
+        &serde_json::to_vec(&json!({"rpc_version":1,"id":"cancel-replay",
+        "method":"run_operator_task_ir","params":{"mode":"execute","task_ir":healthy}}))?,
+    )?;
+    let replay = terminal(&mut stream)?;
+    modal::check_result(task_result(&replay, "cancel-replay", &healthy), 100, space);
     wait_for_lifecycle(&agent, "accepting", 0)?;
     Ok(())
 }

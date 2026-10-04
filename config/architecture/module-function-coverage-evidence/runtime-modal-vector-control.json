@@ -1,0 +1,66 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded macOS modal vector cancellation and public/live development-Agent recovery. Original numerical gates and correction budgets are unchanged; this is not arbitrary-spectrum, installed, remote or industrial qualification.",
+  "evidence_claims": [
+    {
+      "id": "modal-refinement-vector-cancellation-and-reduction-order",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_frame_refinement.rs",
+        "workers/rust/crates/solver/src/modal_frame_refinement_control_tests.rs",
+        "workers/rust/crates/solver/src/linear_algebra.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/tests/modal_mass_scaling_reliability/control.rs",
+        "workers/rust/crates/solver/tests/modal_mass_scaling_reliability/spatial.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-vector-cancellation-reliability-20261003.md"
+      ],
+      "required_text": [
+        "modal_refinement_residual_scan_cancels_within_a_vector_chunk_and_replays",
+        "modal_refinement_basis_dot_cancels_within_a_vector_chunk_and_replays",
+        "modal_refinement_binary_scaling_cancels_within_a_vector_chunk_and_replays",
+        "modal_smoothing_vector_stage_cancellation_retains_the_seed_and_replays",
+        "modal_refinement_controlled_norm_preserves_the_original_bits_and_chunk_boundaries",
+        "modal_refinement_cancelled_norm_stops_consuming_terms_in_the_first_chunk",
+        "modal_refinement_controlled_dot_preserves_order_and_rejects_truncated_pairs",
+        "modal_refinement_projection_update_cancels_after_the_basis_dot_and_replays",
+        "modal_refinement_inverse_correction_cancels_after_substitution_and_replays",
+        "planar_modal_vector_cancellation_discards_modes_and_replays_independent_physical_checks",
+        "spatial_modal_vector_cancellation_discards_modes_and_replays_repeated_physical_shapes",
+        "This is bounded modal-vector cancellation verification, not general modal or Agent qualification."
+      ]
+    },
+    {
+      "id": "modal-live-agent-vector-phase-slot-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["execution", "numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/agent_fault_injection.rs",
+        "workers/rust/crates/cli/tests/agent_modal_live.rs",
+        "workers/rust/crates/cli/tests/support/modal_agent.rs",
+        "workers/rust/crates/solver/tests/support/modal_published_reference.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-vector-cancellation-reliability-20261003.md"
+      ],
+      "required_text": [
+        "modal_vector_scan",
+        "modal_vector_dot",
+        "modal_vector_update",
+        "planar_modal_vector_cancellation_recovers_the_live_agent_slot",
+        "spatial_modal_vector_cancellation_recovers_the_live_agent_slot",
+        "numerical_hold_requires_an_explicit_supported_stage_and_method",
+        "This is bounded modal-vector cancellation verification, not general modal or Agent qualification."
+      ]
+    }
+  ]
+}

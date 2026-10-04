@@ -39,11 +39,11 @@ fn modal_orthogonalization_and_rayleigh_use_nonunit_basis_norms() {
     let mut vector = [0.1, 3.0, 4.0];
     orthogonalize(&mut vector, &[(1.0, vec![2.0, 0.0, 0.0])]).unwrap();
     assert_eq!(vector, [0.0, 0.375, 0.5]);
-    assert!((rayleigh(&vector, &[0.0, 0.75, 2.0]) - 3.28).abs() < 1e-14);
+    assert!((rayleigh(&vector, &[0.0, 0.75, 2.0]).unwrap() - 3.28).abs() < 1e-14);
     for root in [1e308, 1e-308] {
         let mut vector = [1.5, 0.0];
         orthogonalize(&mut vector, &[]).unwrap();
-        assert!((rayleigh(&vector, &[root * vector[0], 0.0]) / root - 1.0).abs() < 1e-14);
+        assert!((rayleigh(&vector, &[root * vector[0], 0.0]).unwrap() / root - 1.0).abs() < 1e-14);
     }
     for basis in [vec![1.0], vec![0.0; 3], vec![f64::NAN; 3]] {
         assert!(orthogonalize(&mut [0.0, 0.75, 1.0], &[(1.0, basis)]).is_err());
@@ -56,15 +56,36 @@ fn modal_smoothing_lowers_the_true_residual_at_extreme_common_scales() {
         let system = diagonal(&[scale, 2.0 * scale, 4.0 * scale]);
         let mut vector = vec![1.0, 1e-3, 1e-3];
         let applied = system.operator.apply_compensated(&vector).unwrap();
-        let mut value = rayleigh(&vector, &applied);
+        let mut value = rayleigh(&vector, &applied).unwrap();
         let before = relative_residual(value, &vector, &applied).unwrap();
-        smooth_residual(&system, &mut value, &mut vector, &applied, &[], 1e-8).unwrap();
+        let products = Rc::new(Cell::new(0));
+        let observed = products.clone();
+        let selected = with_solver_observer(
+            &SolverControl::default(),
+            move |point| {
+                if point.stage == SolverStage::SparseMatvec && point.completed_steps == 0 {
+                    observed.set(observed.get() + 1);
+                }
+            },
+            || smooth_residual(&system, &mut value, &mut vector, applied.clone(), &[], 1e-8),
+        )
+        .unwrap();
         let after = relative_residual(
             value,
             &vector,
             &system.operator.apply_compensated(&vector).unwrap(),
         )
         .unwrap();
+        assert_eq!(selected.relative.to_bits(), after.to_bits());
+        let recomputed = system.operator.apply_compensated(&vector).unwrap();
+        assert!(
+            selected
+                .applied
+                .iter()
+                .map(|v| v.to_bits())
+                .eq(recomputed.iter().map(|v| v.to_bits()))
+        );
+        assert_eq!(products.get(), 2, "reuse the checked candidate residual");
         assert!(
             after < before * 0.5,
             "scale={scale:e}, before={before:e}, after={after:e}"
@@ -80,12 +101,33 @@ fn modal_smoothing_keeps_a_converged_or_unimproved_seed_unchanged() {
     ] {
         let system = diagonal(&values);
         let applied = system.operator.apply_compensated(&seed).unwrap();
-        let original = rayleigh(&seed, &applied);
+        let original = rayleigh(&seed, &applied).unwrap();
         let mut value = original;
         let mut vector = seed.clone();
-        smooth_residual(&system, &mut value, &mut vector, &applied, &[], tolerance).unwrap();
+        let selected = smooth_residual(
+            &system,
+            &mut value,
+            &mut vector,
+            applied.clone(),
+            &[],
+            tolerance,
+        )
+        .unwrap();
         assert_eq!(vector, seed);
         assert_eq!(value, original);
+        assert_eq!(
+            selected.relative.to_bits(),
+            relative_residual(original, &seed, &applied)
+                .unwrap()
+                .to_bits()
+        );
+        assert!(
+            selected
+                .applied
+                .iter()
+                .map(|v| v.to_bits())
+                .eq(applied.iter().map(|v| v.to_bits()))
+        );
     }
 }
 
@@ -95,7 +137,7 @@ fn modal_smoothing_cancellation_retains_the_seed_and_replays() {
     let mut seed = vec![1e-3; 129];
     seed[0] = 1.0;
     let applied = system.operator.apply_compensated(&seed).unwrap();
-    let original = rayleigh(&seed, &applied);
+    let original = rayleigh(&seed, &applied).unwrap();
     let mut value = original;
     let mut vector = seed.clone();
     let control = SolverControl::default();
@@ -108,7 +150,8 @@ fn modal_smoothing_cancellation_retains_the_seed_and_replays() {
             }
         },
         || {
-            let result = smooth_residual(&system, &mut value, &mut vector, &applied, &[], 1e-8);
+            let result =
+                smooth_residual(&system, &mut value, &mut vector, applied.clone(), &[], 1e-8);
             assert!(result.is_err());
             result
         },
@@ -117,7 +160,7 @@ fn modal_smoothing_cancellation_retains_the_seed_and_replays() {
     assert!(error.contains("cancel"));
     assert_eq!(vector, seed);
     assert_eq!(value, original);
-    smooth_residual(&system, &mut value, &mut vector, &applied, &[], 1e-8).unwrap();
+    smooth_residual(&system, &mut value, &mut vector, applied.clone(), &[], 1e-8).unwrap();
     assert!(
         relative_residual(
             value,
@@ -155,4 +198,102 @@ fn modal_smoothing_cannot_add_hidden_inverse_steps_or_retries() {
         // The diagonal inverse has a prepared tridiagonal backend, not dense LU.
         assert_eq!(counts.get(), [budget, 0]);
     }
+}
+
+#[test]
+fn modal_refinement_reuses_checked_products_without_repeating_matvecs() {
+    for budget in [0, 1] {
+        let system = diagonal(&[1.0, 2.0, 3.0]);
+        let products = Rc::new(Cell::new(0));
+        let observed = products.clone();
+        let mut pairs = [(1.0, vec![1.0, 1e-3, 1e-3])];
+        let error = with_solver_observer(
+            &SolverControl::default(),
+            move |point| {
+                if point.stage == SolverStage::SparseMatvec && point.completed_steps == 0 {
+                    observed.set(observed.get() + 1);
+                }
+            },
+            || refine_with_budget(&system, &mut pairs, 1e-8, budget),
+        )
+        .unwrap_err();
+        assert!(error.contains(&format!("within {budget} steps")), "{error}");
+        assert_eq!(products.get(), 1 + 3 * budget, "budget={budget}");
+    }
+}
+
+#[test]
+fn rejected_smoothing_candidates_keep_the_checked_product_of_the_retained_pair() {
+    use crate::linear_algebra::{SparseMatrix, add_at};
+    use crate::modal_sparse::reduce_sparse_modal_system;
+
+    let mut rejected = 0;
+    for scale in [1.0, 1e200, 1e-200] {
+        for coupling in [0.1_f64, 0.2, 0.3, 0.5, 0.7] {
+            let mut matrix = SparseMatrix::new(2);
+            for (row, column, value) in
+                [(0, 0, 1.0), (0, 1, coupling), (1, 0, coupling), (1, 1, 2.0)]
+            {
+                add_at(&mut matrix, row, column, value * scale);
+            }
+            let system = reduce_sparse_modal_system(&matrix, &[1.0; 2], &[]).unwrap();
+            let gap = (1.0 + 4.0 * coupling * coupling).sqrt();
+            for root in [(3.0 - gap) / 2.0, (3.0 + gap) / 2.0] {
+                let mut vector = vec![coupling, root - 1.0];
+                orthogonalize(&mut vector, &[]).unwrap();
+                let applied = system.operator.apply_compensated(&vector).unwrap();
+                let mut value = rayleigh(&vector, &applied).unwrap();
+                let original = (value, vector.clone());
+                let products = Rc::new(Cell::new(0));
+                let observed = products.clone();
+                let selected = with_solver_observer(
+                    &SolverControl::default(),
+                    move |point| {
+                        if point.stage == SolverStage::SparseMatvec && point.completed_steps == 0 {
+                            observed.set(observed.get() + 1);
+                        }
+                    },
+                    || {
+                        smooth_residual(
+                            &system,
+                            &mut value,
+                            &mut vector,
+                            applied.clone(),
+                            &[],
+                            1e-30,
+                        )
+                    },
+                )
+                .unwrap();
+                let recomputed = system.operator.apply_compensated(&vector).unwrap();
+                assert!(
+                    selected
+                        .applied
+                        .iter()
+                        .map(|v| v.to_bits())
+                        .eq(recomputed.iter().map(|v| v.to_bits()))
+                );
+                assert_eq!(
+                    selected.relative.to_bits(),
+                    relative_residual(value, &vector, &recomputed)
+                        .unwrap()
+                        .to_bits()
+                );
+                if products.get() == 2 && (value, vector) == original {
+                    rejected += 1;
+                    assert!(
+                        selected
+                            .applied
+                            .iter()
+                            .map(|v| v.to_bits())
+                            .eq(applied.iter().map(|v| v.to_bits()))
+                    );
+                }
+            }
+        }
+    }
+    assert!(
+        rejected > 0,
+        "exercise rejection after evaluating a full candidate"
+    );
 }

@@ -30,10 +30,10 @@ The module/function/evidence tensor is now the first navigation gate for this
 roadmap. Run `make check-module-function-coverage-tensor` before claiming a
 roadmap area is closed.
 
-The current documentation checkpoint is `daji 3.4.4`. The dated calibration
+The current documentation checkpoint is `daji 3.4.5`. The dated calibration
 below and its follow-ups remain the evidence baseline; updating the current
 version labels does not rerun qualification or close any scenario. See the
-[3.4.4 progress summary](current-line.md#daji-344-checkpoint) for recent source
+[3.4.5 progress summary](current-line.md#daji-345-checkpoint) for recent source
 changes that must not be confused with release readiness.
 
 Recalibrated on September 13, 2026 using tensor v5 and the `daji 3.2.x`
@@ -708,6 +708,282 @@ roundoff. Public 129-segment planar/spatial chains cancel during extreme-scale
 products and replay with independently checked physical shapes. Ordinary
 products retain legacy output bits in the sampled lane; their local debug
 checks still have measured overhead, not a whole-engine speedup claim.
+
+The [tridiagonal preparation follow-up](../reports/modal-tridiagonal-preparation-reliability-20261003.md)
+shares checked normalization with dense/inverse paths, retains weak couplings,
+rejects asymmetry and propagates preprocessing cancellation before search.
+Public uniform/heterogeneous 129-segment planar/spatial chains replay with
+independent physical residuals below `1e-9`. This closes the bounded extraction
+and preprocessing gap, not arbitrary spectra, industrial correlation or
+large-scale/installed/remote qualification.
+
+The [modal vector cancellation follow-up](../reports/modal-vector-cancellation-reliability-20261003.md)
+checks norm, compensated dot, binary scaling, projection, inverse correction
+and smoothing loops at 64-component boundaries without regrouping reductions
+or relaxing numerical gates. Public planar/spatial solvers replay independently
+checked physical shapes after cancellation. Live local Agent TaskIRs also
+release execution slots before replay. These are bounded numerical/recovery
+claims; the unresolved
+128-element bending request and installed/remote qualification remain open.
+
+The [final modal validation follow-up](../reports/modal-final-validation-reliability-20261003.md)
+checks final spectrum and physical-shape scans/norms at 64-component
+boundaries without changing their numerical accumulation or residual gates.
+Public owned/borrowed calls discard earlier completed modes when a later
+shape is cancelled. Uniform and heterogeneous sparse axial chains replay
+independently checked physical shapes at extreme common scales, and local
+Agent TaskIRs release slots before replay on the same TCP connection.
+This closes bounded final-validation recovery checks, not the unresolved
+128-element bending request or installed/remote/industrial qualification.
+
+The [inverse-candidate retention follow-up](../reports/modal-inverse-candidate-reliability-20261003.md)
+keeps the best fully checked modal pair while permitting private uphill
+search steps inside the original four-correction budget. Candidate errors
+and cancellation no longer leave a partially overwritten pair. Public
+spatial modes and coordinate-scaling checks guard against suppressing a
+later successful correction. The 128-element case still fails its original
+gate; best-pair retention does not extend its qualification scope.
+
+The [checked-product reuse follow-up](../reports/modal-checked-product-reuse-20261003.md)
+removes duplicate products and residual scans for unchanged private modal
+iterates. Deflation still refreshes the product, and convergence acceptance
+still polls cancellation. Final spectrum and physical-shape checks remain
+independent. This reduces bounded work, not the unresolved 128-element
+residual or a general performance/qualification gap.
+
+The [long-bending roundoff diagnosis](../reports/modal-long-bending-roundoff-diagnosis-20261003.md)
+compares first-mode refinement budgets through 64 steps with an independent
+test-only double-double assembly and banded inverse. The sampled 128-element
+mode reaches a near-reference direction by eight steps but retains a
+relative residual near `2.33e-8`, above the unchanged `1e-8` gate. Independent
+wide recomputation agrees with the compensated operator; rounding a resolved
+wide reference vector back to f64 can itself exceed the gate. This diagnoses
+representation sensitivity, not a proof that every f64 vector must fail.
+The production budget stays at four steps. A fix must preserve accuracy
+through vector correction, physical-shape recovery and serialization, not
+only increase retries or improve the frequency. Complete/repeated spectra,
+coordinate scales and recovery still need their original independent gates.
+
+The [representable-candidate feasibility follow-up](../reports/modal-representable-candidate-feasibility-20261003.md)
+constructs an ordinary f64 first-mode candidate for the 128-element fixture
+that passes the unchanged internal and physical-shape residual gates, with
+independent wide verification and bit-preserving protocol JSON readback.
+The test-only search uses a supplied rotational/translational partition and
+joint neighboring representable updates; it is not a new production path.
+This establishes that an extended-precision transport format is not forced
+by this particular first-mode case. Runtime admission, generic partition
+and coupling selection, reordered/heterogeneous/repeated/multimode spectra,
+work budgets and installed execution still need separate verification.
+The public 128-element request remains rejected until those boundaries close.
+
+The [coupled-coordinate follow-up](../reports/modal-coupled-coordinate-feasibility-20261003.md)
+replaces index-adjacent pair proposals with a bounded projected-column
+correlation graph in the test-only candidate search. Freshly reassembled
+original, reversed, grouped and mixed reduced-coordinate models pass the
+unchanged internal and physical gates, including independent wide checks
+and constructed mode-record JSON readback. Binary vector scales and signs,
+graph preparation cancellation and bounded failed-budget replay also pass.
+The partition is still supplied, and equal-correlation ties retain index
+ordering; this is not arbitrary permutation, heterogeneous or multimode
+qualification. Production dispatch and its four-inverse-step budget remain
+unchanged. Automatic partition selection, orthogonality, runtime work bounds
+and full SDK/Engine/Agent admission remain prerequisites for shipping.
+
+The [automatic-partition follow-up](../reports/modal-automatic-partition-feasibility-20261003.md)
+selects a bounded fine subset using reorthogonalized column independence
+and current f64 grid spacing, without rotational/translational labels.
+The test-only pipeline passes the sampled reassembled first-mode internal
+and physical JSON-readback gates, plus binary vector scales, invalid/rank
+inputs, scaling-loss rejection and cancelled subset selection. This removes
+the supplied-partition requirement for these samples, not for all operators.
+The half-size split and grid weighting are heuristics; basis rotations,
+heterogeneous/repeated/multimode spectra and physical unit transformations
+remain unqualified. Production dispatch is unchanged. Joint residual and
+orthogonality admission with explicit runtime work/memory budgets remains
+the next integration boundary, not a reason to weaken the residual gate.
+
+The [joint-subspace follow-up](../reports/modal-joint-subspace-feasibility-20261003.md)
+adds test-only admission that projects private seeds against a validated
+orthogonal basis, then checks both the true residual and final overlap.
+Individually converged duplicate directions are rejected before the residual
+fast path. Two identical, independently assembled beam blocks at 32 and 64
+elements per block retain their repeated first-mode subspace under sampled
+rotations, orders, vector powers and signs. Perturbed 64-element directions
+also require and pass actual correction. Independent wide projectors and
+physical mass orthogonality survive constructed mode-record JSON readback.
+Cancelled projection/final return and failed-budget replay leave borrowed
+seeds and bases unchanged. These checks qualify neither a production
+deflated solver nor general multimode spectra: correction can leave the
+projected subspace and is then rejected, not retried without a bound.
+Heterogeneous/connected spatial clusters, full spectrum and result-envelope
+admission, runtime work/memory limits and installed/distributed execution
+remain open. The public 128-element failure and its original gates remain.
+
+The [connected-cluster follow-up](../reports/modal-connected-cluster-feasibility-20261003.md)
+checks synthetic connected two-beam clusters with different branch stiffness
+and generalized inertia. Nonzero connectors survive fresh coordinate assembly,
+and an independent closed-entry reference checks the retained f64 operator.
+Seventy-two baseline pairs and twelve perturbed cases pass joint residual and
+subspace gates. Coordinate-only correction still stalls above the gate; one
+test-only inverse proposal followed by unconditional deflation resolves the
+sampled perturbations. Twelve physical pairs retain independently checked mass
+orthogonality after JSON readback. A gap below the residual tolerance explicitly
+demonstrates cluster membership without unique individual mode directions;
+duplicates remain rejected. This adds scoped numerical validation only, not
+production admission. More than two modes, nonseparable/spatial couplings,
+within-branch heterogeneity, work/memory bounds and full SDK/Engine/Agent
+execution remain open. The original public 128-element failure is unchanged.
+
+The [nonseparable four-mode follow-up](../reports/modal-nonseparable-four-mode-feasibility-20261003.md)
+adds synthetic three-beam fixtures with within-branch stiffness/inertia changes
+and offset connectors. Twenty-four freshly reassembled cases admit the first
+four production Jacobi seeds against a separate closed-entry wide spectrum;
+LDLT inertia brackets cross-check each of the first four root positions.
+Eight perturbed four-mode sets require and pass one inverse proposal per mode,
+and eight physical sets retain mass orthogonality and projectors after JSON
+readback. Duplicate modes and misassigned roots fail explicitly. Cancellation
+inside the fourth candidate's projection preserves all three prior directions
+and replays in fresh control scopes. This narrows the test-only gap beyond
+separable two-mode fixtures, not production or general spatial qualification.
+Runtime work/memory budgets, arbitrary spectra/units and full SDK/Engine/Agent
+admission remain open; the public 128-element failure is unchanged.
+
+The [bounded single-mode admission follow-up](../reports/modal-bounded-single-mode-admission-20261003.md)
+now promotes the shared ordinary-f64 partition/coupling correction into a
+limited production path. Non-tridiagonal single-mode requests through 256
+active DOFs use the complete spectrum and strict `1e-8` internal/published
+gates. The original four inverse corrections remain; a separately bounded
+private coordinate search adds at most 80 checked products plus one final
+certificate per correction. Dimension preflight, modeled payload/work limits,
+three cancellation phases and atomic physical publication precede return.
+Eight planar geometry/scale samples, reversed numbering and two small spatial
+single-mode fixtures retain independently checked physical shapes after full
+result JSON readback. The Rust Headless plan-to-Engine bridge carries the same
+acceptance, rejection and cancellation boundaries. The 128-element unit and
+large-coordinate single mode now pass; its tiny-coordinate physical shape and
+the six-mode long spectrum still fail explicitly. Earlier feasibility packets
+retain their historical pre-admission scope. General multimode/cluster
+admission, broad coordinate units, measured performance/RSS and live
+Agent/installed/remote qualification remain open. Larger models remain sparse;
+the new resource estimates are not a system-wide memory or time guarantee.
+
+The [hybrid proposal comparison](../reports/modal-hybrid-proposal-comparison-20261003.md)
+adds test-only local QR, anchored global QR, true-residual grid shortlists and
+nearby amplitude candidates beside the existing Gram fit. QR recovers an
+analytic near-parallel-column sample whose rounded Gram system is rejected;
+binary column scaling, row orders, cached factor failure/cancellation and
+shared 80-check switching budgets are retained. Unit/large-coordinate modal
+candidates preserve independent physical reassembly and constructed complete
+result JSON readback. All tested families still reject the 128-element
+tiny-coordinate physical mode; a grid search's small residual improvement is
+not success. Production selection and residual gates are unchanged. This
+narrows candidate-method hypotheses, not runtime or general multimode
+qualification. Higher-precision proposals and physical normalization/unit
+representation remain investigations, with separate acceptance oracles and
+spectral/subspace checks required before promotion.
+
+The [scaled wide publication diagnosis](../reports/modal-scaled-wide-publication-boundary-20261003.md)
+now resolves test-only candidates from actual rounded physical K/M with a
+supplied coordinate balance and one bounded banded factor. First roots match
+production to about one f64 rounding unit and intermediate residuals are near
+`6e-17`, but ordinary output rounding and unit expansion exceed the unchanged
+gate. Existing bounded corrections qualify unit/large-coordinate unit shapes;
+the tiny-coordinate physical stage remains rejected even after normalized
+recovery. This is a representation diagnosis, not wide runtime admission or
+a proof that no f64 shape exists. Shared scalar reference checks, fixed
+32-step work, range guards and cancellation/replay remain test-only. Generic
+coordinate selection, representable-vector search, spectral/subspace coverage
+and live Agent/installed/remote qualification are still open.
+
+The [joint-neighborhood comparison](../reports/modal-joint-neighborhood-comparison-20261003.md)
+now separates direct physical-column construction from three-coordinate
+neighboring-f64 search, starting from the same actual polisher seed. Triples
+cross an independently checked analytic single/pair barrier and slightly
+improve the sampled unit/large-coordinate shapes, but the tiny-coordinate
+sample still rejects near `1.740427e-8`; direct physical columns do not change
+these outcomes. A separate proposal-work model, shared 80-check counter,
+fresh final certificates and phase cancellation/replay remain test-only.
+Neither a larger local neighborhood nor high-precision direction construction
+rounded back to f64 resolves this sampled boundary. Retained higher-precision
+projection and generic representable-vector proposals require separate checks
+before any runtime promotion; no gate or broader readiness gap is relaxed.
+
+The [retained wide projection comparison](../reports/modal-wide-projection-comparison-20261003.md)
+now keeps double-double tails through binary column scaling, Gram/LDL,
+projection, candidate scoring and final coordinate correction. Independent
+near-parallel analytic samples recover known solutions under row/scale/sign
+changes, and an exact fraction shows why rounding a correction too early can
+change output. The sampled automatic half partition preserves the passing
+unit/large-coordinate shapes; a fine-rounding neighbor sweep improves them
+only slightly. A one-anchor partition rejects all sampled scales, and every
+tiny-coordinate family still rejects near `1.740427e-8`. Separate work/payload
+models, one shared check counter, cached-factor reuse, fresh certificates and
+cancellation/replay remain test-only. Thus these precision/rounding policies
+are not runtime remedies. More general joint representable-vector selection
+remains open, with independent physical, spectral and subspace qualification
+required rather than further scalar-precision claims alone.
+
+The [all-physical-coordinate neighborhood comparison](../reports/modal-physical-neighborhood-comparison-20261003.md)
+now avoids fine-coordinate elimination and compares widths one through four
+from identical physical-polisher and best checked block-fit seeds. Four
+coordinates cross an independent analytic barrier that widths one through
+three cannot cross, including sampled coordinate permutations and signs.
+The long tiny-coordinate fixture improves only from `1.740427e-8` to about
+`1.739997e-8`, still above the unchanged gate. Neighbor search alone rejects
+the unit/large-coordinate polisher seeds; already-qualified block-fit shapes
+are preserved and independently reassembled after constructed result JSON
+readback. Cached wide quadratic scores only propose changes; each forward or
+reverse family refreshes the true certificate before retaining a candidate.
+A separate resource model, at most 26 certificates, final revalidation and
+cancellation/replay remain test-only. This is not a runtime remedy or a proof
+of an f64 representation floor. Wider or nonlocal proposals still require
+qualification, not just increasing the local group size.
+
+The [coherent rounding phase comparison](../reports/modal-coherent-phase-comparison-20261003.md)
+now retains wide unit-shape fraction tails and compares common-threshold
+rounding with two thresholds over a supplied coordinate partition. An
+independent eight-coordinate barrier is crossed nonlocally, and a separate
+closed-entry target shows why two axes can express candidates outside the
+one-axis family. Neither policy alone qualifies any of the sampled 128-element
+long-beam scales. Follow-on automatic block correction preserves passing
+unit/large-coordinate candidates, but the tiny-coordinate comparison still
+rejects near `1.740427e-8` from the translated polisher center. The fixture's
+translation/rotation partition is supplied knowledge, not a generic policy.
+At most 64 shortlisted vectors receive actual certificates, plus initial and
+fresh final checks; wide scores never replace the unchanged physical gate.
+Payload/work preflights, cancellation/replay and failed final certificates
+remain test-only controls. This narrows another nonlocal proposal family,
+not the existence of an admissible f64 shape or the unresolved runtime gap.
+
+The [quantized triangular grid comparison](../reports/modal-triangular-grid-comparison-20261003.md)
+now finds a test-only f64 unit-shape candidate for the actual tiny-coordinate
+128-element first bending mode. Rounding grid coefficients during QR backsolve,
+not independently after a continuous solve, with reverse coordinate order and
+a radius cap of 65,536 gives a true residual of `6.358818e-9`. It passes the
+unchanged `1e-8` gate, independent physical reassembly and constructed result
+JSON readback without changing the eigenvalue or frozen anchor. Larger bounds
+also qualify unit/large-coordinate examples, but ascending grid-column norms
+still reject the tiny example near `1.076473e-8`; natural order and independent
+rounding reject all sampled scales. All 130 sampled configurations have explicit
+success/failure expectations. One cached factor, four passes, at most six true
+certificates and separate resource/cancellation controls remain test-only.
+This establishes a concrete representable candidate for this fixture, not a
+general nearest-vector optimum or new production admission. Generic ordering,
+anchor selection, multimode orthogonality, spectral membership and runtime
+performance still need qualification before enabling an engine fallback.
+
+Follow-on comparisons in the same report now retain 72 additional anchor,
+sign and numbering cases: 38 accepted, 30 residual rejections and four
+unit-norm rejections. Two translation anchors preserve reverse-order
+qualification across all three scales and both signs, but a unit-scale
+rotation anchor passes the residual gate while drifting beyond the unchanged
+norm contract. A test-only unit-shape publication gate now rejects such
+candidates without renormalization, with exact-target and cancellation/replay
+controls. Reversing coordinate numbering swaps which index-order policy
+succeeds; family grouping also changes the residual. Thus this extends the
+candidate's measured boundary, not generic numbering robustness or runtime
+admission. A representation-independent selection policy and bounded aggregate
+fallback costs remain required before production integration.
 
 The runtime API client calibration promotes Hub, Workbench, Installer, the
 native Installer service, Protocol, and Headless SDK to required `runtime_api`

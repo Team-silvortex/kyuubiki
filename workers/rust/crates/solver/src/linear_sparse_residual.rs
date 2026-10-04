@@ -94,6 +94,24 @@ pub(crate) fn stable_l2_norm(values: impl IntoIterator<Item = f64>) -> f64 {
     norm.finish()
 }
 
+pub(crate) fn cancellable_l2_norm(
+    values: impl ExactSizeIterator<Item = f64>,
+    stage: SolverStage,
+) -> Result<f64, String> {
+    checkpoint(stage, 0)?;
+    let size = values.len();
+    // Retain the original accumulator and term order across cancellation boundaries.
+    let mut norm = ScaledNorm::new();
+    for (index, value) in values.enumerate() {
+        let non_finite = norm.add(value);
+        checkpoint_chunk(stage, index + 1, size)?;
+        if let Some(non_finite) = non_finite {
+            return Ok(non_finite);
+        }
+    }
+    Ok(norm.finish())
+}
+
 pub(super) struct SparseResidualValidation {
     pub(super) relative: f64,
     pub(super) row: usize,

@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS bounded test-only hybrid modal proposal comparison. QR recovers a nearly parallel-column analytic sample whose rounded Gram system is rejected; binary column scales, row orders, rank/range failures and factor reuse are checked. Local/global QR switching shares the existing four-step and 80-check budgets. Independent physical reassembly and constructed result JSON readback retain qualified unit/large-coordinate samples. QR, grid and amplitude proposals do not resolve the 128-element tiny-coordinate physical failure. This proves scoped comparison and recovery controls, not new runtime algorithm admission, public QR execution, general multimode, live Agent, installed/remote or performance qualification. Production algorithm selection and residual gates are unchanged.",
+  "evidence_claims": [
+    {
+      "id": "modal-bounded-hybrid-proposal-comparison",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_roundoff.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_qr_reference.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_qr_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_reference.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_hybrid_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_hybrid_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_published_shape.rs",
+        "workers/rust/crates/solver/tests/support/modal_roundoff_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-hybrid-proposal-comparison-20261003.md"
+      ],
+      "required_text": [
+        "hybrid_qr_proposal_recovers_nearly_dependent_columns_without_normal_equations",
+        "hybrid_qr_physical_proposals_compare_extreme_coordinate_roundoff",
+        "hybrid_qr_retains_analytic_solutions_under_binary_column_scales_and_row_orders",
+        "hybrid_qr_rejects_invalid_rank_range_and_preflights_before_factorization",
+        "hybrid_qr_factor_and_substitution_cancellation_preserve_borrowed_data_and_replay",
+        "hybrid_qr_cached_factor_survives_invalid_rhs_without_refactorization",
+        "hybrid_switch_shares_one_checked_product_budget_and_preserves_private_seeds",
+        "hybrid_switch_cancellation_replays_with_cached_factors_without_partial_results",
+        "hybrid_grid_rechecks_final_certificates_cancels_each_phase_and_replays",
+        "This is bounded hybrid proposal comparison, not new runtime admission or general modal qualification."
+      ]
+    }
+  ]
+}

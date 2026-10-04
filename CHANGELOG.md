@@ -1,5 +1,33 @@
 # Changelog
 
+## daji 3.4.5
+
+October 4, 2026. Modal cancellation safety and bounded numerical correction.
+
+- Extract physical tridiagonal bands once, validate symmetry and range, and
+  propagate cancellation or preparation errors rather than falling back silently.
+- Add bounded cooperative checks to modal vector arithmetic, refinement and
+  final physical validation without changing ordinary arithmetic order.
+- Keep candidate spectra private until the original stiffness/mass and physical
+  shape checks complete. Failed or cancelled later modes discard earlier modes.
+- Admit complete dense spectra for nontridiagonal single-mode problems up to
+  256 active degrees of freedom, using the unchanged 1e-8 physical residual gate.
+- Apply bounded, automatically partitioned coordinate correction to unresolved
+  single-mode shapes. Keep the eigenvalue and original root neighborhood fixed.
+- Extend independent physical reassembly, failure replay, Rust Headless and
+  Agent-stage regression coverage while retaining Solver numerical ownership.
+- Record multimode, projection, coherent-phase and quantized-QR comparisons as
+  test-only candidates, not public runtime fallbacks or installed qualification.
+- Align source, SDK, language-pack, installation and current documentation
+  metadata to 3.4.5 while preserving protocol identifiers and report provenance.
+
+See `releases/snapshots/3.4.5.json` and the dated modal reports for verification.
+The tiny-scale 128-element public solve remains fail-closed; a successful
+test-only candidate is not a successful public solve. Recompute affected modal
+results before research reuse. No desktop rebuild, package publication, new
+remote platform test or large-scale qualification is included. The installed
+baseline remains 3.4.0, and tensor readiness gaps remain open.
+
 ## daji 3.4.4
 
 October 2, 2026. Modal numerical reliability and bounded Agent execution.

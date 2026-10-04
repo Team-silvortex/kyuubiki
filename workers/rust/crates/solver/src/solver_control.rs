@@ -76,6 +76,15 @@ pub enum SolverStage {
     HarmonicResidual,
     StabilityStep,
     StabilityRecovery,
+    ModalVectorScan,
+    ModalVectorDot,
+    ModalVectorUpdate,
+    ModalSpectrumNorm,
+    ModalShapeScan,
+    ModalShapeNorm,
+    ModalRoundoffPrepare,
+    ModalRoundoffSearch,
+    ModalRoundoffValidate,
 }
 
 impl SolverStage {
@@ -149,6 +158,15 @@ impl SolverStage {
             Self::HarmonicResidual => "harmonic_residual",
             Self::StabilityStep => "stability_step",
             Self::StabilityRecovery => "stability_recovery",
+            Self::ModalVectorScan => "modal_vector_scan",
+            Self::ModalVectorDot => "modal_vector_dot",
+            Self::ModalVectorUpdate => "modal_vector_update",
+            Self::ModalSpectrumNorm => "modal_spectrum_norm",
+            Self::ModalShapeScan => "modal_shape_scan",
+            Self::ModalShapeNorm => "modal_shape_norm",
+            Self::ModalRoundoffPrepare => "modal_roundoff_prepare",
+            Self::ModalRoundoffSearch => "modal_roundoff_search",
+            Self::ModalRoundoffValidate => "modal_roundoff_validate",
         }
     }
 
@@ -222,6 +240,15 @@ impl SolverStage {
             Self::HarmonicResidual,
             Self::StabilityStep,
             Self::StabilityRecovery,
+            Self::ModalVectorScan,
+            Self::ModalVectorDot,
+            Self::ModalVectorUpdate,
+            Self::ModalSpectrumNorm,
+            Self::ModalShapeScan,
+            Self::ModalShapeNorm,
+            Self::ModalRoundoffPrepare,
+            Self::ModalRoundoffSearch,
+            Self::ModalRoundoffValidate,
         ]
         .into_iter()
         .find(|stage| *stage as u8 == value)

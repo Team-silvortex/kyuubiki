@@ -1,5 +1,5 @@
 use super::*;
-use kyuubiki_protocol::SolveModalFrame3dRequest;
+use kyuubiki_protocol::{SolveModalFrame3dRequest, SolveModalFrame3dResult};
 use kyuubiki_solver::solve_modal_frame_3d;
 
 pub(crate) fn model(segments: usize, length: f64) -> SolveModalFrame3dRequest {
@@ -37,6 +37,15 @@ fn spatial_slender_complete_modes_retain_repeated_bending_directions_and_mass_or
 
 pub(crate) fn check_spatial_bending(segments: usize, length: f64, roots: &[f64]) {
     let result = solve_modal_frame_3d(&model(segments, length)).unwrap();
+    check_spatial_result(&result, segments, length, roots);
+}
+
+pub(crate) fn check_spatial_result(
+    result: &SolveModalFrame3dResult,
+    segments: usize,
+    length: f64,
+    roots: &[f64],
+) {
     assert_eq!(result.free_dofs.len(), 4 * segments);
     assert_eq!(result.modes.len(), 6);
     assert!(

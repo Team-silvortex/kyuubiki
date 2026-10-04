@@ -85,6 +85,7 @@ fn solve_modal_frame_2d_internal(
     let sparse_system = reduce_sparse_modal_system(&stiffness, &mass, &constrained)?;
     let free_dofs = sparse_system.free_dofs.clone();
     let eigenpairs = frame_eigenpairs(&sparse_system, request.mode_count)?;
+    let allow_roundoff = eigenpairs.pairs.len() == 1;
 
     let modes = eigenpairs
         .pairs
@@ -104,6 +105,7 @@ fn solve_modal_frame_2d_internal(
                 dof_count,
                 eigenvalue,
                 eigenpairs.residual_tolerance,
+                allow_roundoff,
             )?;
             Ok(ModalFrame2dModeResult {
                 index,

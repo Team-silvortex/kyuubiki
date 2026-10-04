@@ -24,6 +24,26 @@ impl SparseMassNormalizedOperator {
         Ok(normalized)
     }
 
+    pub(super) fn normalized_entry(
+        &self,
+        row: usize,
+        column: usize,
+        value: f64,
+    ) -> Result<f64, String> {
+        // Identical factors take an identical multiplication order in both triangles.
+        // A lost coupling must be an error, never a new independent component.
+        let normalized = positive_product([
+            value.abs(),
+            self.inverse_mass_sqrt[row],
+            self.inverse_mass_sqrt[column],
+        ])
+        .copysign(value);
+        if !normalized.is_finite() || (value != 0.0 && normalized == 0.0) {
+            return Err("modal normalized stiffness loses a nonzero or finite entry".into());
+        }
+        Ok(normalized)
+    }
+
     fn visit_normalized_entries(
         &self,
         mut emit: impl FnMut(usize, usize, f64),
@@ -35,17 +55,7 @@ impl SparseMassNormalizedOperator {
             for entry in start..end {
                 let column = self.stiffness.columns[entry];
                 let value = self.stiffness.values[entry];
-                // Identical factors take an identical multiplication order in both triangles.
-                // A lost coupling must be an error, never a new independent component.
-                let normalized = positive_product([
-                    value.abs(),
-                    self.inverse_mass_sqrt[row],
-                    self.inverse_mass_sqrt[column],
-                ])
-                .copysign(value);
-                if !normalized.is_finite() || (value != 0.0 && normalized == 0.0) {
-                    return Err("modal normalized stiffness loses a nonzero or finite entry".into());
-                }
+                let normalized = self.normalized_entry(row, column, value)?;
                 emit(row, column, normalized);
                 checkpoint_chunk(
                     SolverStage::SparseMatrixScaleRow,

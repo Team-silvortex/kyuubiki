@@ -1,0 +1,69 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Bounded macOS final modal spectrum and physical-shape validation cancellation, later-mode discard, and sparse/public/live development-Agent replay. Numerical gates and budgets are unchanged; this is not arbitrary-spectrum, installed, remote or industrial qualification.",
+  "evidence_claims": [
+    {
+      "id": "modal-final-validation-cancellation-and-late-mode-discard",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_frame_spectrum.rs",
+        "workers/rust/crates/solver/src/modal_frame_spectrum_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_published_shape.rs",
+        "workers/rust/crates/solver/src/modal_published_shape_control_tests.rs",
+        "workers/rust/crates/solver/src/linear_sparse_residual.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "workers/rust/crates/solver/tests/modal_mass_scaling_reliability/control.rs",
+        "workers/rust/crates/solver/tests/modal_chain_reliability/final_validation.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-final-validation-reliability-20261003.md"
+      ],
+      "required_text": [
+        "spectrum_final_norm_passes_cancel_inside_validation_and_replay",
+        "spectrum_norm_trace_covers_all_returned_modes_without_changing_their_bits",
+        "published_shape_scan_and_all_norm_passes_cancel_before_acceptance",
+        "published_shape_repaired_candidate_is_not_committed_when_final_validation_cancels",
+        "published_shape_validation_trace_bounds_every_scan_and_norm_pass",
+        "published_shape_validation_preserves_residual_bits_across_scales_and_chunk_edges",
+        "published_shape_scan_cancels_before_reaching_an_invalid_tail",
+        "planar_final_modal_validation_discards_modes_and_replays_independent_physical_checks",
+        "spatial_final_modal_validation_discards_modes_and_replays_repeated_physical_shapes",
+        "planar_late_shape_cancellation_discards_prior_modes_on_owned_and_borrowed_routes",
+        "spatial_late_shape_cancellation_discards_prior_modes_on_owned_and_borrowed_routes",
+        "planar_sparse_final_modal_validation_cancels_then_replays_physical_modes",
+        "spatial_sparse_final_modal_validation_cancels_then_replays_physical_modes",
+        "This is bounded final-modal-validation verification, not general modal or Agent qualification."
+      ]
+    },
+    {
+      "id": "modal-live-agent-final-validation-same-connection-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["execution", "numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/agent_fault_injection.rs",
+        "workers/rust/crates/cli/tests/agent_modal_live.rs",
+        "workers/rust/crates/cli/tests/support/modal_agent.rs",
+        "workers/rust/crates/solver/tests/support/modal_published_reference.rs",
+        "workers/rust/crates/solver/src/solver_control.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-final-validation-reliability-20261003.md"
+      ],
+      "required_text": [
+        "modal_spectrum_norm",
+        "modal_shape_scan",
+        "modal_shape_norm",
+        "planar_final_modal_validation_cancellation_recovers_the_live_agent_slot",
+        "spatial_final_modal_validation_cancellation_recovers_the_live_agent_slot",
+        "numerical_hold_requires_an_explicit_supported_stage_and_method",
+        "This is bounded final-modal-validation verification, not general modal or Agent qualification."
+      ]
+    }
+  ]
+}

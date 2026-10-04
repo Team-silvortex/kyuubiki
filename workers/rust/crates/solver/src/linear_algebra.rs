@@ -36,7 +36,9 @@ mod sparse_path;
 pub(crate) use prepared::PreparedSpdSolver;
 pub(crate) use reduction::{reduce_sparse_system, reduce_sparse_system_with_prescribed};
 use residual::sparse_relative_residual;
-pub(crate) use residual::{sparse_residual_norm, sparse_residual_vector, stable_l2_norm};
+pub(crate) use residual::{
+    cancellable_l2_norm, sparse_residual_norm, sparse_residual_vector, stable_l2_norm,
+};
 pub(crate) use sparse_path::solve_tridiagonal_system;
 
 #[derive(Debug, Clone)]

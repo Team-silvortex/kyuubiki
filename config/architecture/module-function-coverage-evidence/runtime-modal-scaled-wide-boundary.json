@@ -1,0 +1,33 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS test-only scaled wide proposal diagnosis from actual rounded physical K/M. A bounded banded factor and 32 inverse iterations retain roots matching production to about one f64 rounding unit. Intermediate wide residuals near 6e-17 do not certify rounded output: all sampled direct/unit/normalized expansions initially exceed the unchanged 1e-8 gate. Existing bounded corrections qualify sampled unit/large-coordinate unit shapes with independent physical reassembly and constructed complete result JSON readback, but the tiny-coordinate physical publication and combined normalized/physical chain remain rejected. One shared test arithmetic module retains known analytic checks; dimension/range/weak-coupling and cancellation/replay guards are tested. This proves scoped diagnosis and control, not a new production algorithm, general coordinate or multimode qualification, live Agent, installed/remote execution or performance improvement.",
+  "evidence_claims": [
+    {
+      "id": "modal-scaled-wide-publication-boundary",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_test_wide.rs",
+        "workers/rust/crates/solver/src/modal_frame_conditioning_reference.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_wide_proposal.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_wide_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_hybrid_tests.rs",
+        "workers/rust/crates/solver/tests/support/modal_roundoff_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-scaled-wide-publication-boundary-20261003.md"
+      ],
+      "required_text": [
+        "scaled_wide_proposals_measure_rounding_normalization_and_physical_correction",
+        "scaled_wide_known_diagonal_modes_and_unit_shapes_have_independent_analytic_checks",
+        "scaled_wide_invalid_range_rank_band_and_shape_inputs_fail_without_partial_results",
+        "scaled_wide_factor_budget_and_phase_cancellation_preserve_borrowed_models_and_replay",
+        "wide_reference_preserves_known_sum_product_and_division_tails",
+        "This is test-only scaled wide proposal diagnosis, not new runtime admission or general modal qualification."
+      ]
+    }
+  ]
+}

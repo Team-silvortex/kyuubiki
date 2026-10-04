@@ -107,8 +107,8 @@ fn soft_bending_block_is_not_approximated_as_diagonal_beside_a_stiff_branch() {
 
 #[test]
 fn rotated_frame_first_mode_is_transverse_not_the_uniform_axial_seed() {
-    // 44 copies leave 132 free dofs, beyond the bounded single-mode dense check.
-    for copies in [1, 44] {
+    // 86 copies leave 258 free dofs, beyond the bounded single-mode dense check.
+    for copies in [1, 86] {
         let mut input = rotated_frame(copies);
         let first = solve(true, input.clone()).unwrap();
         input["mode_count"] = json!(3);
@@ -251,7 +251,7 @@ fn modal_cancellation_is_observed_inside_each_phase_and_replay_is_clean() {
         SolverStage::ModalValidation,
     ] {
         let input = rotated_frame(if stage == SolverStage::ModalIteration {
-            44
+            86
         } else {
             1
         });

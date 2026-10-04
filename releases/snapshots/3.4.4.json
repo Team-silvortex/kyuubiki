@@ -2,7 +2,7 @@
   "version": "3.4.4",
   "codename": "daji",
   "line": "3.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-10-02",
   "git_commit": "99e494d1f7628ef9eaed7d727b88089ddc48b3fd",
   "summary": "Daji 3.4.4 source reliability patch: range-aware modal assembly and mass normalization, bounded spectral refinement and physical shape validation, sparse-product range recovery, live modal Agent TaskIR admission and replay, and native development-cache management. No desktop rebuild or binary publication.",

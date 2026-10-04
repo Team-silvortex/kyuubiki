@@ -16,6 +16,9 @@ mod polished_bending;
 #[path = "json_round_trip.rs"]
 mod json_round_trip;
 
+#[path = "roundoff.rs"]
+mod roundoff;
+
 fn model(length: f64) -> Value {
     model_with_segments(SEGMENTS, length)
 }

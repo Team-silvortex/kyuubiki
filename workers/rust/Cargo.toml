@@ -21,7 +21,7 @@ resolver = "2"
 [workspace.package]
 edition = "2024"
 license = "MIT"
-version = "3.4.4"
+version = "3.4.5"
 
 [profile.dev]
 debug = "line-tables-only"

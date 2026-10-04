@@ -4,7 +4,7 @@ defmodule KyuubikiSdk.MixProject do
   def project do
     [
       app: :kyuubiki_sdk,
-      version: "3.4.4",
+      version: "3.4.5",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps()

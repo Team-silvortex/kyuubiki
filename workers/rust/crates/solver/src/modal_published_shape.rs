@@ -1,11 +1,12 @@
 use super::SparseMassNormalizedOperator;
-use crate::linear_algebra::stable_l2_norm;
+use crate::linear_algebra::cancellable_l2_norm;
 use crate::modal_frame_assembly::positive_product;
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 
 const MAX_SHAPE_POLISH_STEPS: usize = 4;
 
 impl SparseMassNormalizedOperator {
+    #[cfg(test)]
     pub(crate) fn polish_published_shape(
         &self,
         value: f64,
@@ -16,6 +17,25 @@ impl SparseMassNormalizedOperator {
         self.polish_shape_with_budget(value, shape, mass, tolerance, MAX_SHAPE_POLISH_STEPS)
     }
 
+    pub(crate) fn polish_published_shape_with_recovery(
+        &self,
+        value: f64,
+        shape: &mut Vec<f64>,
+        mass: &[f64],
+        tolerance: f64,
+        allow_roundoff: bool,
+    ) -> Result<(), String> {
+        self.polish_shape_internal(
+            value,
+            shape,
+            mass,
+            tolerance,
+            MAX_SHAPE_POLISH_STEPS,
+            allow_roundoff,
+        )
+    }
+
+    #[cfg(test)]
     fn polish_shape_with_budget(
         &self,
         value: f64,
@@ -24,35 +44,93 @@ impl SparseMassNormalizedOperator {
         tolerance: f64,
         max_steps: usize,
     ) -> Result<(), String> {
+        self.polish_shape_internal(value, shape, mass, tolerance, max_steps, false)
+    }
+
+    fn polish_shape_internal(
+        &self,
+        value: f64,
+        shape: &mut Vec<f64>,
+        mass: &[f64],
+        tolerance: f64,
+        max_steps: usize,
+        allow_roundoff: bool,
+    ) -> Result<(), String> {
         if !tolerance.is_finite() || tolerance <= 0.0 {
             return Err("published modal shape tolerance must be finite and positive".into());
         }
         let applied = self.apply_physical_compensated(shape)?;
-        let (mut relative, mut residual) = self.physical_residual(value, shape, mass, &applied)?;
+        let (relative, residual) = self.physical_residual(value, shape, mass, &applied)?;
         if relative <= tolerance {
             return Ok(());
         }
+        let (mut candidate, relative) = self.ordinary_shape_proposal(
+            value,
+            shape,
+            mass,
+            tolerance,
+            max_steps,
+            (relative, residual),
+        )?;
+        if relative <= tolerance {
+            *shape = candidate;
+            return Ok(());
+        }
+        if allow_roundoff && crate::modal_frame_spectrum::roundoff::eligible(shape.len()) {
+            // Use the best private candidate, then commit only a fresh certificate.
+            candidate = crate::modal_frame_spectrum::roundoff::physical(
+                self, value, &candidate, mass, tolerance,
+            )?;
+            *shape = candidate;
+            return Ok(());
+        }
+        Err(format!(
+            "published modal shape failed its relative residual check within {max_steps} corrections (relative={relative:.6e}, tolerance={tolerance:.6e})"
+        ))
+    }
+
+    fn ordinary_shape_proposal(
+        &self,
+        value: f64,
+        shape: &[f64],
+        mass: &[f64],
+        tolerance: f64,
+        max_steps: usize,
+        (mut relative, mut residual): (f64, Vec<f64>),
+    ) -> Result<(Vec<f64>, f64), String> {
         // Keep all candidates private: failure or cancellation must not alter the caller's shape.
-        let mut candidate = shape.clone();
+        let mut candidate = shape.to_vec();
         for step in 0..max_steps {
             checkpoint(SolverStage::ModalValidation, step)?;
-            self.coordinate_sweep(value, &mut candidate, mass, &mut residual)?;
-            let applied = self.apply_physical_compensated(&candidate)?;
+            let mut trial = candidate.clone();
+            self.coordinate_sweep(value, &mut trial, mass, &mut residual)?;
+            let applied = self.apply_physical_compensated(&trial)?;
             let (next_relative, next_residual) =
-                self.physical_residual(value, &candidate, mass, &applied)?;
+                self.physical_residual(value, &trial, mass, &applied)?;
             if next_relative >= relative {
                 break;
             }
             relative = next_relative;
             residual = next_residual;
+            candidate = trial;
             if relative <= tolerance {
-                *shape = candidate;
-                return Ok(());
+                break;
             }
         }
-        Err(format!(
-            "published modal shape failed its relative residual check within {max_steps} corrections (relative={relative:.6e}, tolerance={tolerance:.6e})"
-        ))
+        Ok((candidate, relative))
+    }
+
+    #[cfg(test)]
+    pub(crate) fn roundoff_comparison_seed(
+        &self,
+        value: f64,
+        shape: &[f64],
+        mass: &[f64],
+    ) -> Result<Vec<f64>, String> {
+        let applied = self.apply_physical_compensated(shape)?;
+        let checked = self.physical_residual(value, shape, mass, &applied)?;
+        self.ordinary_shape_proposal(value, shape, mass, 1e-8, MAX_SHAPE_POLISH_STEPS, checked)
+            .map(|(candidate, _)| candidate)
     }
 
     fn coordinate_sweep(
@@ -112,7 +190,7 @@ impl SparseMassNormalizedOperator {
         shifted * self.inverse_mass_sqrt[row]
     }
 
-    fn physical_residual(
+    pub(crate) fn physical_residual(
         &self,
         value: f64,
         shape: &[f64],
@@ -125,12 +203,23 @@ impl SparseMassNormalizedOperator {
             || shape.len() != self.inverse_mass_sqrt.len()
             || !value.is_finite()
             || value <= 0.0
-            || mass.iter().any(|v| !v.is_finite() || *v <= 0.0)
-            || shape.iter().chain(applied).any(|v| !v.is_finite())
         {
             return Err(
                 "published modal shape requires matching finite positive eigenpairs".into(),
             );
+        }
+        checkpoint(SolverStage::ModalShapeScan, 0)?;
+        for index in 0..shape.len() {
+            if !mass[index].is_finite()
+                || mass[index] <= 0.0
+                || !shape[index].is_finite()
+                || !applied[index].is_finite()
+            {
+                return Err(
+                    "published modal shape requires matching finite positive eigenpairs".into(),
+                );
+            }
+            checkpoint_chunk(SolverStage::ModalShapeScan, index + 1, shape.len())?;
         }
         let mut target = Vec::with_capacity(shape.len());
         let mut residual = Vec::with_capacity(shape.len());
@@ -149,9 +238,11 @@ impl SparseMassNormalizedOperator {
             residual.push(a - b);
             checkpoint_chunk(SolverStage::ResidualValidate, index + 1, shape.len())?;
         }
-        let scale =
-            stable_l2_norm(applied.iter().copied()).max(stable_l2_norm(target.iter().copied()));
-        let relative = stable_l2_norm(residual.iter().copied()) / scale;
+        let scale = cancellable_l2_norm(applied.iter().copied(), SolverStage::ModalShapeNorm)?.max(
+            cancellable_l2_norm(target.iter().copied(), SolverStage::ModalShapeNorm)?,
+        );
+        let relative =
+            cancellable_l2_norm(residual.iter().copied(), SolverStage::ModalShapeNorm)? / scale;
         if !scale.is_finite() || scale <= 0.0 || !relative.is_finite() {
             return Err("published modal shape residual is not finite or representable".into());
         }

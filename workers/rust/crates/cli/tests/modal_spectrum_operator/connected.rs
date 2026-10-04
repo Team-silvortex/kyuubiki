@@ -3,7 +3,7 @@ use kyuubiki_solver::solver_control::{SolverControl, SolverStage, with_solver_ob
 use serde_json::{Value, json};
 use std::{cell::Cell, rc::Rc};
 
-const ROW_LENGTH: usize = 67;
+const ROW_LENGTH: usize = 129;
 
 fn model(count: usize) -> Value {
     model_with_masses(count, ROW_LENGTH, [1.0, 1.0])

@@ -112,7 +112,7 @@ pub(crate) fn with_solver_control<T, E: From<SolverCancelled>>(
         &control,
         move |point| {
             if point.stage == stage
-                && point.completed_steps >= MIN_COMPLETED_STEPS
+                && point.completed_steps >= minimum_steps(stage)
                 && !fired.replace(true)
             {
                 hold_at_marker(&guard, &path, &job);
@@ -120,6 +120,20 @@ pub(crate) fn with_solver_control<T, E: From<SolverCancelled>>(
         },
         operation,
     )
+}
+
+fn minimum_steps(stage: SolverStage) -> u64 {
+    // These bounded phase boundaries can complete before three steps.
+    if matches!(
+        stage,
+        SolverStage::ModalRoundoffPrepare
+            | SolverStage::ModalRoundoffSearch
+            | SolverStage::ModalRoundoffValidate
+    ) {
+        0
+    } else {
+        MIN_COMPLETED_STEPS
+    }
 }
 
 pub(crate) fn snapshot() -> Value {
@@ -207,6 +221,15 @@ fn validate_stage(
         "result_element_summary" => Ok(Some(SolverStage::ResultElementSummary)),
         "result_totals" => Ok(Some(SolverStage::ResultTotals)),
         "result_rhs_norm" => Ok(Some(SolverStage::ResultRhsNorm)),
+        "modal_vector_scan" => Ok(Some(SolverStage::ModalVectorScan)),
+        "modal_vector_dot" => Ok(Some(SolverStage::ModalVectorDot)),
+        "modal_vector_update" => Ok(Some(SolverStage::ModalVectorUpdate)),
+        "modal_spectrum_norm" => Ok(Some(SolverStage::ModalSpectrumNorm)),
+        "modal_shape_scan" => Ok(Some(SolverStage::ModalShapeScan)),
+        "modal_shape_norm" => Ok(Some(SolverStage::ModalShapeNorm)),
+        "modal_roundoff_prepare" => Ok(Some(SolverStage::ModalRoundoffPrepare)),
+        "modal_roundoff_search" => Ok(Some(SolverStage::ModalRoundoffSearch)),
+        "modal_roundoff_validate" => Ok(Some(SolverStage::ModalRoundoffValidate)),
         _ => Err(format!(
             "{STAGE_ENV} must name a supported numerical preparation or solver stage"
         )),
@@ -304,6 +327,15 @@ mod tests {
             "result_element_summary",
             "result_totals",
             "result_rhs_norm",
+            "modal_vector_scan",
+            "modal_vector_dot",
+            "modal_vector_update",
+            "modal_spectrum_norm",
+            "modal_shape_scan",
+            "modal_shape_norm",
+            "modal_roundoff_prepare",
+            "modal_roundoff_search",
+            "modal_roundoff_validate",
         ] {
             assert!(
                 validate_stage(path, Some("solve_bar_1d"), Some(stage))
@@ -311,6 +343,27 @@ mod tests {
                     .is_some()
             );
         }
+    }
+
+    #[test]
+    fn roundoff_phase_holds_are_reachable_at_zero_step_boundaries() {
+        for stage in [
+            SolverStage::ModalRoundoffPrepare,
+            SolverStage::ModalRoundoffSearch,
+            SolverStage::ModalRoundoffValidate,
+        ] {
+            assert_eq!(minimum_steps(stage), 0);
+            assert_eq!(
+                validate_stage(
+                    Some(Path::new("/test/hold")),
+                    Some("solve_modal_frame_2d"),
+                    Some(stage.as_str())
+                )
+                .unwrap(),
+                Some(stage)
+            );
+        }
+        assert_eq!(minimum_steps(SolverStage::DenseFactor), 3);
     }
 
     #[test]

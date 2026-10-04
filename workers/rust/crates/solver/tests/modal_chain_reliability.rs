@@ -7,6 +7,9 @@ use serde_json::{Value, json};
 #[path = "modal_chain_reliability/range.rs"]
 mod range;
 
+#[path = "modal_chain_reliability/preparation.rs"]
+mod preparation;
+
 fn axial_chain(space: bool, stiffness: [f64; 2], density: f64, mode_count: usize) -> Value {
     let nodes: Vec<_> = (0..3)
         .map(|index| {
