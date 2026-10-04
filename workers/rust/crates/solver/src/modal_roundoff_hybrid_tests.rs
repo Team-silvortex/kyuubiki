@@ -8,7 +8,7 @@ use crate::modal_sparse::reduce_sparse_modal_system;
 mod control;
 
 #[path = "../tests/support/modal_roundoff_reference.rs"]
-mod reference;
+pub(super) mod reference;
 
 pub(super) fn check_published(segments: usize, step: f64, value: f64, candidate: &[f64]) {
     use kyuubiki_protocol::{

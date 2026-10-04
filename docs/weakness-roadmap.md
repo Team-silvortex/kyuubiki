@@ -30,36 +30,49 @@ The module/function/evidence tensor is now the first navigation gate for this
 roadmap. Run `make check-module-function-coverage-tensor` before claiming a
 roadmap area is closed.
 
-The current documentation checkpoint is `daji 3.4.5`. The dated calibration
-below and its follow-ups remain the evidence baseline; updating the current
-version labels does not rerun qualification or close any scenario. See the
+The current calibration checkpoint is `daji 3.4.5`, reviewed October 4, 2026.
+Historical follow-ups remain retained evidence at their original scope and
+version; this review does not rerun product qualification. See the
 [3.4.5 progress summary](current-line.md#daji-345-checkpoint) for recent source
 changes that must not be confused with release readiness.
 
-Recalibrated on September 13, 2026 using tensor v5 and the `daji 3.2.x`
-hardening profile (source checkpoint `daji 3.2.0`). This is a review of retained
-claims, not a fresh execution campaign. All 108 existing claims are preserved;
-their highest grade no longer qualifies every required dimension or scenario.
+The hardening profile now follows `daji 3.4.x`, retaining tensor v5 and all 224
+calibration claims (222 proven, two partial). The request-reassembly and banded
+candidate follow-ups below add two verified claims, now 226 (224 proven, two partial), without
+closing a qualified target. The September 13 v4-to-v5 correction removed
+the misleading 77/77 result by requiring dimension-local and named-scenario
+proof. This review adds the missing current modal production obligations,
+without changing existing grades, release thresholds or platform requirements.
 
-| Measure | Previous v4 calculation | Recalibrated v5 |
+| Measure | Before October 4 scope review | Recalibrated current v5 |
 | --- | ---: | ---: |
 | Required coordinates | 77 | 77 |
-| Coordinates meeting every configured target | 77 (100.0%) | 61 (79.2%) |
+| Coordinates meeting every configured target | 61 (79.2%) | 58 (75.3%) |
 | Structural gaps | 0 | 0 |
-| Dimension-presence gaps | 0 | 5 |
-| Below-target or scope-incomplete coordinates | 0 | 16 |
-| P0 coordinates at target | 55 / 55 | 44 / 55 |
+| Dimension-presence gaps | 4 | 4 |
+| Below-target or scope-incomplete coordinates | 16 | 19 |
+| P0 coordinates at target | 44 / 55 | 41 / 55 |
 | P1 coordinates at target | 22 / 22 | 17 / 22 |
-| Dimension-score progress | 100.0% | 90.7% |
-| Explicit scenario requirements met | Not tracked | 6 / 20 |
+| Dimension-score progress | 91.3% | 91.3% |
+| Explicit scenario requirements met | 6 / 20 | 10 / 32 |
 
-The 14 open scenarios overlap coordinates; do not add them to the 16 coordinate
+The 22 open scenarios overlap coordinates; do not add them to the 19 coordinate
 gaps. These percentages are not test/code coverage, supported-physics coverage,
-or reliability probabilities. The 20-scenario registry is the current reviewed
+or reliability probabilities. The 32-scenario registry is the current reviewed
 hardening subset, not a complete inventory of every configuration. Release
 readiness remains `blocked`, now for coordinate-local gaps as well as the
 independent external usability gate. Structural checks remain advisory for
 evidence depth; this recalibration does not enable a release claim.
+
+The twelve new solver scopes retain four verified results: public bounded
+single-mode admission, normalized candidate research, wide-QR/beam candidate
+research and isolated local candidate cost. Eight production obligations remain
+open. Earlier grid/beam research recovered five of six fixtures; the separate
+banded initializer below now recovers all six candidates, not production
+recovery or a qualified cumulative pipeline budget. The
+newly exposed coordinates are `runtime-engine-solver/solver_execution`,
+`runtime-engine-solver/validation` and `runtime-agent-cli/solver_execution`.
+Existing Headless and benchmark gaps now also carry named modal obligations.
 
 The current release queue starts with `hub-shell/product_surface` and
 `installer-shell/product_surface`, then `workbench-shell/product_surface`.
@@ -73,6 +86,8 @@ promote claim metadata solely to restore a green score.
 | Workstream | Coordinates | Next acceptance boundary |
 | --- | --- | --- |
 | Product proof and platform closure | `hub-shell/product_surface`, `installer-shell/product_surface`, `workbench-shell/product_surface`, `desktop-shared-ui/product_surface` | Review exact execution/contract claims; retain real Windows installed journeys separately from macOS/Linux startup. |
+| Modal production reliability | `runtime-engine-solver/solver_execution`, `runtime-engine-solver/validation` | Qualify heterogeneous production recovery, strict physical readback, multimode behavior, independently rebuilt requests, cancellation and healthy replay; candidate helpers are not production admission. |
+| Complete modal execution journey | `runtime-engine-solver/benchmark`, `runtime-agent-cli/solver_execution`, `sdk-headless/sdk_headless` | Bound and measure the entire production pipeline, then qualify actual Agent TaskIR/RPC and official Rust Headless study journeys with independent output checks. |
 | Protocol and engine evidence | `runtime-protocol/sdk_operator`, `runtime-protocol/solver_execution`, `runtime-engine-solver/benchmark` | Bind or obtain security/contract proof per required dimension; existing numerical or scale evidence must not substitute. |
 | Headless independence | `sdk-headless/sdk_headless`, `workbench-shell/sdk_headless` | Retain source-detached Python and Elixir research journeys; audit Workbench/Headless boundary execution and contract evidence separately from Rust-only installed proof. |
 | Data lifecycle | `orchestra-control-plane/persistence_provenance`, `runtime-installer/persistence_provenance`, `runtime-installer/deployment_update`, `installer-shell/deployment_update` | Qualify PostgreSQL revision-2 replay, consistent database plus external-artifact restore, compatibility-gated activation and the visible Installer upgrade journey. |
@@ -82,14 +97,61 @@ promote claim metadata solely to restore a green score.
 The native macOS SQLite revision-2 migration and explicit-key PWDT checkpoint
 replay are retained `verified` achievements. They do not close PostgreSQL,
 whole-generation restore, GUI recovery without a caller-retained key, or
-installed fault injection. Each concrete next step is machine-readable in
-`config/architecture/module-function-coverage-evidence/current-qualification-scopes.json`.
+installed fault injection. The original scenarios remain machine-readable in
+`config/architecture/module-function-coverage-evidence/current-qualification-scopes.json`;
+current modal scopes are in
+`config/architecture/module-function-coverage-evidence/current-solver-qualification-scopes.json`.
+The global release queue still starts with product-proof gaps. For the current
+calculation mainline, begin with the modal production validation and recovery
+scopes, then the cumulative budget and actual Agent/Headless path. Keep the
+other release obligations visible rather than changing weights to hide them.
 
 The generated JSON contains every coordinate's `dimension_grades`,
 `qualification_requirements` and `qualification_gaps`, with the full queue at
 `release_readiness.planning_queue`. The generated Markdown lists all scenarios
 and their acceptance conditions. Read the [book chapter](book-ch03-architecture-boundaries.html#tensor-calibration)
 for the scoring rules and evidence limitations.
+See [the October 4 calibration record](../reports/tensor-recalibration-20261004.md)
+for the before/after snapshot and explicitly retained limits.
+
+### Modal Request-Reassembly Follow-Up
+
+The October 4 public reassembly run found real acceptance changes after node
+renumbering. A bounded horizontal paired-bending single-mode path now assembles
+in geometric internal order and restores shapes, input and free coordinates
+to the original request. It does not change Engine ownership, numerical gates,
+the candidate portfolio or retry budgets. Axial, mixed-restraint, inclined,
+multimode, 3D and larger routes remain unchanged.
+
+Twenty-seven physical regression fixtures execute four request layouts through
+owned and borrowed Solver entrypoints: 216 runs, 144 accepted, 48 normalized
+rejections and 24 physical rejections, with independently reassembled JSON
+readback. Late restoration cancellation and fresh replay are covered, as are
+two additional local Rust Headless plan-to-Engine tests. The six graded/layered
+128-segment production cases still reject. This is verified bounded reassembly,
+not qualified general recovery, complete-pipeline cost or an actual remote
+Agent/installed SDK study. The reassembly scenario remains below its qualified
+target, and 58/77 coordinate and 10/32 scenario target counts do not change.
+See [the production correction record](../reports/modal-request-reassembly-reliability-20261004.md).
+
+### Banded Modal Candidate Follow-Up
+
+The subsequent October 4 comparison recovers all six retained 128-element
+graded/layered fixtures in a separate test-only candidate pipeline. Four wide
+bandwidth-three inverse iterations propose a direction before the existing
+bounded normalized and physical discrete portfolios. Frozen roots, strict unit
+norm and independent physical JSON residuals still apply. The previously
+blocked graded-large candidate now has residual `3.961311840787512e-9`.
+
+All 24 nearest-rounded wide directions still fail; high precision alone is not
+an accepted result. Twenty-four amplitude/sign controls retain checked bits
+and counts, while known-solution, invalid-range, four-step budget, final fault
+and cancellation/replay checks pass. No production route changes: actual public
+Solver calls still reject all six inputs. The existing candidate research scope
+now binds this separate verified result without closing any qualified production
+scope. Complete-pipeline budgeting, rebuilt candidate requests and actual
+Agent/Headless journeys remain next. See
+[the six-fixture candidate record](../reports/modal-banded-inverse-candidate-reliability-20261004.md).
 
 ### First Product-Recovery Follow-Up
 
@@ -142,10 +204,11 @@ build. The two new browser cases verify that simultaneous catalog/history read
 failures after commit are recovered with no checkpoint POSTs. These mock cases
 are not the installed native failure evidence.
 
-The tensor binds `macos-installed-pwdt-service-outage-recovery` at `verified`,
-not `qualified`. Dimension-presence gaps fall from 5 to 4; 61/77 coordinates
-still meet every target, 16 remain open, including 11 P0 coordinates, and the
-named requirements remain 6/20 met. The offline save was rejected before
+At that follow-up, the tensor bound `macos-installed-pwdt-service-outage-recovery`
+at `verified`, not `qualified`. Dimension-presence gaps fell from 5 to 4;
+61/77 coordinates met every target, 16 remained open, including 11 P0
+coordinates, and the named requirements remained 6/20 met. These are historical
+counts; the current recalibration is above. The offline save was rejected before
 transport: native interrupted writes, post-commit response loss and automatic
 request-key recovery after WebView closure were still open at that step; the two
 follow-ups below add narrower verified evidence. No release claim
@@ -984,6 +1047,89 @@ succeeds; family grouping also changes the residual. Thus this extends the
 candidate's measured boundary, not generic numbering robustness or runtime
 admission. A representation-independent selection policy and bounded aggregate
 fallback costs remain required before production integration.
+
+The [bounded QR portfolio](../reports/modal-grid-portfolio-reliability-20261004.md)
+now supplies test-only aggregate cost and failure-control evidence. It chooses
+one mass-weighted anchor and tries reverse, natural and grid-norm orders from
+the same immutable seed, with at most three sequential factors and nineteen
+actual certificates across all attempts. Only typed residual/norm rejections
+continue; cancellation, operator faults and malformed certificates stop.
+Eighteen sampled beam combinations retain original physical/JSON validation,
+including reversed and family-grouped numbering under both signs. Fresh final
+validation cannot become another retry. Static aggregate work/payload bounds
+are not measured runtime/RSS; generic numbering invariance, broader geometry,
+production tiny-case admission and multimode qualification remain open.
+
+The [canonical grid and optimized cost comparison](../reports/modal-grid-canonical-cost-reliability-20261004.md)
+expands raw shuffled coverage to 72 cases: 56 accepted and 16 bounded failures;
+48 are already-passing seed retention, not correction successes. The alternative
+canonical-signature entry passes 90 beam transformations with sign-restored
+bitwise equality under joint permutations of fixed assembled inputs. Unique
+signatures are mandatory; ties fail before certification. Canonical copying and
+mapping have an explicit additional resource reservation, not extra retries.
+Three isolated optimized processes measure nine cases each, including rejected
+runs and cumulative native process RSS; canonical medians are 13.487-13.773 ms
+at 256 coordinates. This is not whole-engine throughput or incremental heap.
+Nonuniform geometry/materials, independently rebuilt seeds, signature ambiguity,
+multimode orthogonality and reviewed public-runtime admission remain open.
+
+The [heterogeneous grid boundary](../reports/modal-grid-heterogeneous-reliability-20261004.md)
+now covers graded/layered material and section properties plus unequal element
+lengths across 64/96/128 elements and three coordinate scales. Of 27 fixtures,
+six fail upstream normalized-spectrum preparation, also reproduced through the
+public solver; their 48 planned transformations never run. The remaining 168
+canonical executions retain 104 already-passing seeds, correct 48 shapes and
+reject 16 candidates. Independent physical/JSON checks, fixed per-case outcomes,
+public failure-to-success replay and real layered-beam late cancellation prevent
+those scoped successes from hiding the two downstream and six upstream gaps.
+Priority is bounded normalized-spectrum recovery, then unequal-length proposal
+qualification, not more index-order retries or relaxed gates. Multimode and
+independently rebuilt numbering remain open before production admission.
+
+The [normalized recovery and two-stage publication comparison](../reports/modal-grid-normalized-reliability-20261004.md)
+now separates bounded internal directions from final unit physical shapes;
+mass-normalized coordinates are not mass-weighted a second time. A distinct
+test-only canonical entry recovers five of the six previously blocked fixtures
+with frozen eigenvalues. Forty of 48 numbering/sign executions also complete
+the alternative physical candidate stage and independent JSON reassembly;
+the other eight fail upstream, and binary-scale controls are counted separately.
+All five normalized candidates still fail the existing production publication
+path, so internal recovery alone cannot count as end-to-end runtime admission.
+Separate banded wide-inertia brackets agree with retained roots far inside the
+residual scale; Gram, local/global QR, wide projection, raw reverse-grid and
+small amplitude probes remain negative controls. Per-stage three-factor and
+nineteen-certificate caps are unchanged, but combined pipeline work, ordinary
+polishing and measured peak memory still require production-budget review.
+Next priorities are the remaining large-scale graded rejection and qualification
+of the coupled internal/publication path, not changing roots or relaxing gates.
+
+The [fresh normalized pipeline cost comparison](../reports/modal-grid-normalized-pipeline-cost-20261004.md)
+retains that five-success/one-rejection boundary. Twenty-four isolated order
+proposals and twelve smaller-radius controls provide no new graded-large
+recovery; they are not extra runtime retries. Six isolated optimized processes
+each reconstruct the input/pair for one warmup and three samples, preserving
+root/direction/published-shape bits and independent physical JSON checks.
+Complete candidate phase timing now includes assembly, initial dense Jacobi,
+retained-pair refinement, direction preparation, both correction stages and
+readback. Initial Jacobi dominates these particular 256-coordinate samples;
+timing spread and cumulative process RSS are retained, not relabeled as
+whole-engine throughput, incremental heap or production-budget compliance.
+Bounded factor/operator-discrepancy research and complete work/allocation
+qualification remain priorities without promoting release maturity.
+
+The [wide-factor and bounded-beam diagnosis](../reports/modal-grid-wide-beam-reliability-20261004.md)
+separates input rounding from factor precision. Three greedy backends retain
+identical sampled bits; shifted-direction versus real-operator seed discrepancies
+are below `1e-15` relative and do not explain the large graded rejection. A
+separate four-state beam raises successful single-order proposals from six to
+eight of twelve, without recovering a sixth fixture or replacing the canonical
+portfolio. Every accepted proposal passes physical unit norm and independent
+JSON reassembly. Seventy-two numbering/sign and 24 binary-scale controls retain
+the same outcome boundaries and accepted vector bits. Six actual certificates,
+fixed factor payload/work plans, compact exhaustive references, final receipt
+faults and cancellation replay bound this test-only experiment. Complete
+production budgeting, unequal lengths, larger search structure and multimode
+qualification remain open; more precision alone is not a demonstrated fix.
 
 The runtime API client calibration promotes Hub, Workbench, Installer, the
 native Installer service, Protocol, and Headless SDK to required `runtime_api`

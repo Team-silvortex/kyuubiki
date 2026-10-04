@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS test-only quantized-QR portfolio with typed residual/norm rejection, three fixed coordinate-order policies, one monotonic aggregate budget and sequential factor lifetime. Seven tests include 18 actual 128-element physical beam configurations covering three scales, three numberings and both signs. All sampled candidates retain the original eigenvalue and automatically selected mass-weighted anchor, pass unchanged residual/unit-norm gates and independent physical reassembly after constructed JSON readback. Four or seven actual certificates suffice for these samples; the enforced worst-case cap is nineteen across three attempts. Operator faults, malformed certificates and cancellation stop immediately, including errors with numerical-gate words. Fresh final certification failure does not retry or publish. Static work/payload formulas are not timing/RSS evidence, and sampled renumbering success is not general coordinate invariance. This is validation and recovery-control evidence, not production fallback, public tiny-beam success, multimode, live Agent, installed or remote qualification.",
+  "evidence_claims": [
+    {
+      "id": "modal-grid-portfolio-bounded-recovery-control",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_roundoff_grid_portfolio.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_portfolio_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_triangular_grid.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_triangular_grid_robustness_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_qr_quantized.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_hybrid_tests.rs",
+        "workers/rust/crates/solver/tests/support/modal_roundoff_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-grid-portfolio-reliability-20261004.md"
+      ],
+      "required_text": [
+        "triangular_grid_portfolio_enforces_aggregate_not_reset_budgets",
+        "triangular_grid_portfolio_faults_do_not_become_numerical_retries",
+        "triangular_grid_portfolio_fresh_final_certificate_cannot_retry_or_publish",
+        "triangular_grid_portfolio_keeps_the_norm_gate_and_frozen_anchor",
+        "triangular_grid_portfolio_preflight_rejects_invalid_inputs_without_operator_calls",
+        "triangular_grid_portfolio_cancellation_stops_preparation_retry_and_publication",
+        "triangular_grid_portfolio_beam_renumbering_and_signs_keep_independent_certificates",
+        "This is test-only aggregate portfolio evidence, not runtime admission or general modal qualification."
+      ]
+    }
+  ]
+}

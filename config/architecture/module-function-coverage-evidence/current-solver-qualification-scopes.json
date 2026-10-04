@@ -1,0 +1,96 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "October 4, 2026 daji 3.4.5 scoped evidence review, not release promotion. Explicit modal scopes preserve verified baseline admission, historical five-of-six grid research, separate bounded six-fixture banded-inverse candidate research, original-numbering public restoration and local candidate timing without qualifying heterogeneous production recovery, general physical publication, multimode, complete production budgets or current Agent/Headless journeys. Historical installed and scale claims remain intact but cannot close unrelated named scopes. Empty bindings identify open obligations, not absence of all solver functionality.",
+  "qualification_requirements": [
+    {
+      "id": "modal-public-bounded-single-mode-baseline",
+      "module_id": "runtime-engine-solver", "paradigm": "solver_execution", "dimension": "numerical_validation",
+      "scope": "native/public-modal/bounded-single-mode/retained-baseline", "target": "verified",
+      "claims": ["modal-bounded-single-mode-roundoff-runtime-admission"],
+      "basis": ["reports/modal-bounded-single-mode-admission-20261003.md"],
+      "acceptance": "Preserve retained public bounded single-mode successes, independent physical JSON checks and explicit rejected inputs. This verified baseline is not general multimode, heterogeneous recovery, live Agent or installed qualification."
+    },
+    {
+      "id": "modal-heterogeneous-production-recovery",
+      "module_id": "runtime-engine-solver", "paradigm": "solver_execution", "dimension": "numerical_validation",
+      "scope": "native/public-modal/graded-layered/128-elements/production-recovery", "target": "qualified", "claims": [],
+      "basis": ["reports/modal-grid-heterogeneous-reliability-20261004.md", "reports/modal-grid-normalized-reliability-20261004.md"],
+      "acceptance": "Qualify public production recovery on all six retained valid graded/layered inputs at scales 1, 1e14 and 1e-10. Retain actual assembled seeds, frozen roots during proposals, unchanged 1e-8 residual and strict physical unit-norm gates, independent reassembly, bounded work and fail-closed negative cases. Test-only five-fixture recovery and old installed truss/thermal journeys do not close this scope."
+    },
+    {
+      "id": "modal-public-cancellation-budget-replay",
+      "module_id": "runtime-engine-solver", "paradigm": "solver_execution", "dimension": "numerical_validation",
+      "scope": "native/public-modal/roundoff/budget-cancellation-and-replay", "target": "qualified",
+      "claims": ["modal-bounded-single-mode-roundoff-runtime-admission"],
+      "basis": ["reports/modal-bounded-single-mode-admission-20261003.md", "reports/modal-grid-wide-beam-reliability-20261004.md"],
+      "acceptance": "Extend the verified bounded public fault/cancellation baseline to qualified production candidate admission and physical publication, with immutable retained input, no partial results, bounded allocations/checks and healthy replay. Final test-only beam cancellation is useful research evidence but cannot replace production-path fault qualification."
+    },
+    {
+      "id": "modal-normalized-candidate-research",
+      "module_id": "runtime-engine-solver", "paradigm": "validation", "dimension": "numerical_validation",
+      "scope": "test-only/modal/normalized-direction/two-stage-candidate-readback", "target": "verified",
+      "claims": ["modal-normalized-direction-and-two-stage-physical-readback", "modal-banded-inverse-grid-six-fixture-readback"],
+      "basis": ["reports/modal-grid-normalized-reliability-20261004.md", "reports/modal-banded-inverse-candidate-reliability-20261004.md"],
+      "acceptance": "Preserve the historical direct-grid five-of-six boundary and separately verify bounded four-step banded-inverse initialization with six-of-six candidate physical JSON readbacks. Frozen roots, distinct internal/physical contracts, original seeds and actual residual gates remain mandatory. Numbering/sign and binary-scale controls remain sampled transformations, not independently rebuilt candidate requests or production admission."
+    },
+    {
+      "id": "modal-wide-beam-candidate-research",
+      "module_id": "runtime-engine-solver", "paradigm": "validation", "dimension": "numerical_validation",
+      "scope": "test-only/modal/wide-qr/four-state-beam-and-fault-replay", "target": "verified",
+      "claims": ["modal-wide-factor-precision-and-bounded-beam-readback"],
+      "basis": ["reports/modal-grid-wide-beam-reliability-20261004.md"],
+      "acceptance": "Verify the separate precision controls, four-state/six-certificate cap, eight accepted order proposals across five fixtures, independent physical readbacks, sign/numbering controls and real final-cancellation replay. A wider successful ordering count is not a sixth recovered fixture or a production fix."
+    },
+    {
+      "id": "modal-production-physical-publication",
+      "module_id": "runtime-engine-solver", "paradigm": "validation", "dimension": "numerical_validation",
+      "scope": "native/public-modal/heterogeneous-and-unequal-length/physical-publication", "target": "qualified", "claims": [],
+      "basis": ["reports/modal-grid-heterogeneous-reliability-20261004.md", "reports/modal-grid-normalized-reliability-20261004.md"],
+      "acceptance": "Qualify final production physical shapes over the retained heterogeneous and unequal-length failures with strict unit norm, original positive masses and independent stiffness/mass reconstruction after JSON readback. An internal normalized candidate or successful alternative test-only physical stage cannot certify the ordinary production publication path."
+    },
+    {
+      "id": "modal-production-multimode-recovery",
+      "module_id": "runtime-engine-solver", "paradigm": "validation", "dimension": "numerical_validation",
+      "scope": "native/public-modal/nontridiagonal/long-bending-multimode", "target": "qualified", "claims": [],
+      "basis": ["reports/modal-bounded-single-mode-admission-20261003.md", "reports/modal-grid-wide-beam-reliability-20261004.md"],
+      "acceptance": "Qualify the retained long-bending six-mode production request and clustered/nonseparable modes with independent spectral indices, mass orthogonality or invariant subspaces, final physical residuals, duplicate rejection and late-mode cancellation. Single-mode candidate success does not close multimode recovery."
+    },
+    {
+      "id": "modal-independent-renumbered-assembly",
+      "module_id": "runtime-engine-solver", "paradigm": "validation", "dimension": "numerical_validation",
+      "scope": "native/public-modal/heterogeneous/independently-renumbered-reassembly", "target": "qualified", "claims": ["modal-planar-request-reassembly-and-restoration"],
+      "basis": ["reports/modal-grid-normalized-reliability-20261004.md", "reports/modal-grid-wide-beam-reliability-20261004.md", "reports/modal-request-reassembly-reliability-20261004.md"],
+      "acceptance": "Rebuild valid requests after node/member renumbering and independently assemble their operators, seeds and final result references. Retain spectral and physical invariance without relying on simultaneous permutation of a fixed assembled seed/matrix. Existing transformed candidate bits are a narrower test."
+    },
+    {
+      "id": "modal-candidate-pipeline-local-cost",
+      "module_id": "runtime-engine-solver", "paradigm": "benchmark", "dimension": "benchmark",
+      "scope": "test-only/modal/normalized-pipeline/local-macos-isolated-cost", "target": "verified",
+      "claims": ["modal-normalized-grid-fresh-two-stage-pipeline-cost"],
+      "basis": ["reports/modal-grid-normalized-pipeline-cost-20261004.md"],
+      "acceptance": "Preserve the six isolated optimized candidate processes with one warmup and three samples, exact outcome replay, complete measured phases and observed process-high-water RSS with its stated limits of interpretation. These numbers do not measure the later beam algorithm, public solver throughput, remote execution or incremental heap, and do not qualify a production memory budget."
+    },
+    {
+      "id": "modal-production-whole-pipeline-budget",
+      "module_id": "runtime-engine-solver", "paradigm": "benchmark", "dimension": "benchmark",
+      "scope": "native/public-modal/two-stage-recovery/complete-production-budget", "target": "qualified", "claims": [],
+      "basis": ["reports/modal-grid-normalized-pipeline-cost-20261004.md", "reports/modal-grid-wide-beam-reliability-20261004.md"],
+      "acceptance": "Qualify complete production preparation, eigensolve, ordinary polishing, both correction stages and physical JSON publication with cumulative work/check accounting, allocation ownership, peak memory, measured repeats and cancellation. Separate per-stage plans or candidate timing cannot close this budget; unrelated retained 1M truss/thermal scale claims cannot substitute."
+    },
+    {
+      "id": "modal-current-agent-production-journey",
+      "module_id": "runtime-agent-cli", "paradigm": "solver_execution", "dimension": "numerical_validation",
+      "scope": "rust-agent/task-ir-rpc/heterogeneous-modal-production-recovery", "target": "qualified", "claims": [],
+      "basis": ["reports/modal-agent-taskir-reliability-20261002.md", "reports/modal-grid-normalized-reliability-20261004.md"],
+      "acceptance": "After production admission, retain actual Agent TaskIR/RPC recovery of the heterogeneous modal cases, independent physical output checks, authority/digest validation, error propagation and a healthy next task after failure/cancellation. Earlier modal baselines and in-process candidate tests cannot qualify this new journey."
+    },
+    {
+      "id": "modal-current-headless-production-journey",
+      "module_id": "sdk-headless", "paradigm": "sdk_headless", "dimension": "execution",
+      "scope": "rust-headless/material-study/heterogeneous-modal-production-recovery", "target": "qualified", "claims": [],
+      "basis": ["reports/modal-bounded-single-mode-admission-20261003.md", "reports/modal-grid-normalized-reliability-20261004.md"],
+      "acceptance": "Retain an official Rust Headless study-to-production solve/export/readback/recovery journey for the heterogeneous cases after production admission. Do not add an ad-hoc research CLI or count test-only candidate helpers as SDK functionality. Python and Elixir installed journeys remain separately tracked in the existing scope inventory."
+    }
+  ]
+}

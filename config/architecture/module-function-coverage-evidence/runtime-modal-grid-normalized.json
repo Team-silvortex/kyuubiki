@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS test-only normalized-direction recovery and alternative physical publication over the six previously blocked 128-element graded/layered fixtures. Five fixtures recover with frozen eigenvalues and one remains rejected: 48 joint numbering/sign executions yield 40 normalized and physical/independent-JSON successes and eight upstream rejections. Twelve separate binary-scale controls yield ten two-stage successes and two rejections. Original production publication still rejects all five recovered normalized candidates; the public solver is unchanged. Separate bounded wide banded inertia cross-checks support retained-root consistency without replacing the seed or claiming interval proof. Retained rejected proposal controls, explicit internal-versus-unit-shape contracts, per-stage budgets, malformed/fault/fresh-certificate failure boundaries and real late-cancellation replay do not imply runtime admission, whole-pipeline cost qualification, arbitrary geometry, multimode or release maturity.",
+  "evidence_claims": [
+    {
+      "id": "modal-normalized-direction-and-two-stage-physical-readback",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_roundoff_grid_normalized_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_normalized_reference.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_heterogeneous_fixture.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_heterogeneous_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_canonical.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_portfolio.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_triangular_grid.rs",
+        "workers/rust/crates/solver/tests/support/modal_roundoff_reference.rs",
+        "workers/rust/crates/solver/src/modal_frame_refinement.rs",
+        "workers/rust/crates/solver/src/modal_frame_spectrum.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-grid-normalized-reliability-20261004.md"
+      ],
+      "required_text": [
+        "triangular_grid_normalized_heterogeneous_fixed_root_and_rejected_alternatives",
+        "triangular_grid_normalized_canonical_numbering_sign_and_binary_scale_boundaries",
+        "triangular_grid_normalized_contract_faults_and_late_cancellation_replay",
+        "triangular_grid_normalized_real_candidate_late_cancellation_and_fresh_replay",
+        "triangular_grid_normalized_inertia_analytic_roots_and_invalid_data",
+        "normalized canonical executions=48 accepted=40 rejected=8; physical readbacks=40; binary scale controls=12 accepted=10 rejected=2",
+        "This is a test-only two-stage candidate comparison, not production normalized recovery or public solver admission."
+      ]
+    }
+  ]
+}

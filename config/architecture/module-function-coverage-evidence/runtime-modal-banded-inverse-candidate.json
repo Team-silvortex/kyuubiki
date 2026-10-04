@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS test-only four-step wide bandwidth-three inverse direction recovery followed by existing bounded normalized/physical discrete portfolios. All six fixed 128-element graded/layered fixtures now pass actual compensated residuals, strict physical unit norm and independent JSON stiffness/mass readback, including the previously rejected graded-large candidate. All 24 nearest-rounded wide directions still fail, preserving separation of continuous reference accuracy and accepted f64 representation. Twenty-four amplitude/sign controls preserve checked bits and certificate counts; known-solution, invalid/range/budget, factor/substitution/final-iteration cancellation and real recovered-candidate final fault/physical cancellation replay remain bounded. Original seeds and eigenvalues stay unchanged. Public production still rejects all six inputs. No runtime retry, tolerance relaxation, whole-pipeline/RSS qualification, independent renumbered candidate requests, arbitrary topology, multimode, live Agent, Headless study, remote or installed release qualification is claimed.",
+  "evidence_claims": [
+    {
+      "id": "modal-banded-inverse-grid-six-fixture-readback",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_roundoff_banded_inverse_reference.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_banded_inverse_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_banded_inverse_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_normalized_tests.rs",
+        "workers/rust/crates/solver/tests/support/modal_roundoff_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-banded-inverse-candidate-reliability-20261004.md"
+      ],
+      "required_text": [
+        "modal_banded_inverse_heterogeneous_frozen_root_and_two_stage_readback",
+        "modal_banded_inverse_sign_and_binary_scale_preserve_checked_candidate_bits",
+        "modal_banded_inverse_real_final_cancellation_fault_and_fresh_replay",
+        "modal_banded_inverse_known_solutions_and_binary_factor_scaling",
+        "modal_banded_inverse_invalid_range_shape_and_iteration_budgets_fail_closed",
+        "modal_banded_inverse_factor_substitution_and_last_iteration_cancellation_replay",
+        "banded inverse fixtures=6 nearest_rounding_rejections=24 direct_grid_successes=5 two_stage_successes=6",
+        "banded inverse amplitude_sign_controls=24 two_stage_successes=24",
+        "This is test-only six-fixture candidate recovery, not public modal admission or release qualification."
+      ]
+    }
+  ]
+}

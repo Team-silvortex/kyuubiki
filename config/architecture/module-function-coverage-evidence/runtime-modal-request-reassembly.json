@@ -1,0 +1,33 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS bounded horizontal paired-bending single-mode production correction, not general modal qualification. Independent public request reassembly exposes and fixes node-order-dependent acceptance without enabling the test-only candidate portfolio. Twenty-seven graded/layered/unequal-length fixtures at three sizes and scales execute four node/element layouts through owned and borrowed Solver entrypoints: 216 runs, 144 accepted, 48 normalized and 24 physical rejections. Accepted restored shapes retain exact mapped bits and independently checked physical JSON residuals; failure boundaries, original input and sorted original free-dof mapping remain explicit. Late output-restoration cancellation, malformed connectivity and fresh replay are verified. Two additional official Rust Headless plan-to-Engine bridge tests cover bounded graded cases, payload mapping and cancellation/failure replay. This is verified source evidence, not all-six heterogeneous production recovery, multimode, 3D, complete-pipeline budget, live Agent, installed SDK, remote or benchmark qualification.",
+  "evidence_claims": [
+    {
+      "id": "modal-planar-request-reassembly-and-restoration",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["solver_execution", "validation"],
+      "dimensions": ["execution", "numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_frame_2d.rs",
+        "workers/rust/crates/solver/src/modal_frame_2d_ordering.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_reassembly_tests.rs",
+        "workers/rust/crates/solver/tests/support/modal_roundoff_reference.rs",
+        "workers/rust/crates/cli/tests/modal_spectrum_operator/reassembly.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-request-reassembly-reliability-20261004.md"
+      ],
+      "required_text": [
+        "modal_public_reassembly_heterogeneous_owned_borrowed_outcomes_and_physical_readback",
+        "modal_public_reassembly_late_restore_cancellation_and_failures_preserve_fresh_replay",
+        "modal_public_node_order_does_not_expand_mode_dimension_or_node_budgets",
+        "headless_planar_reassembly_preserves_payload_mapping_and_checked_physical_shapes",
+        "headless_planar_reassembly_restore_cancellation_and_numerical_failure_replay",
+        "public reassembly fixtures=27 layouts=108 entrypoint_runs=216 accepted=144 normalized_rejections=48 physical_rejections=24",
+        "This is bounded public request-reassembly verification, not general modal recovery or release qualification."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS test-only normalized-grid order/radius diagnosis and fresh candidate pipeline cost. Twenty-four isolated order comparisons retain six successful proposals across five fixtures; descending/natural orders reject all six fixtures. Twelve radius controls retain the large graded rejection with the original best residual. No new policy is appended to runtime or candidate portfolios. Six isolated optimized processes each rebuild the input and pair for one warmup and three samples, retaining exact eigenvalue/direction/published-shape bits and five successes plus one upstream rejection. Complete candidate timing includes assembly, Jacobi, retained-pair refinement, direction construction, normalized grid, ordinary physical proposal, physical grid, JSON and independent reassembly. Process RSS is cumulative high water, not incremental heap. No production admission, latency SLO, remote Agent, arbitrary geometry, multimode or release maturity is claimed.",
+  "evidence_claims": [
+    {
+      "id": "modal-normalized-grid-order-radius-failure-boundary",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_roundoff_grid_normalized_order_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_normalized_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_canonical.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_triangular_grid.rs",
+        "reports/modal-grid-normalized-pipeline-cost-20261004.md"
+      ],
+      "required_text": [
+        "triangular_grid_normalized_order_isolated_descending_comparison",
+        "triangular_grid_normalized_order_isolated_radius_comparison",
+        "No additional ordering, radius retry, acceptance gate or production path is enabled."
+      ]
+    },
+    {
+      "id": "modal-normalized-grid-fresh-two-stage-pipeline-cost",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["benchmark"],
+      "dimensions": ["benchmark"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_roundoff_grid_normalized_benchmark.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_normalized_tests.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-grid-normalized-pipeline-cost-20261004.md"
+      ],
+      "required_text": [
+        "triangular_grid_normalized_pipeline_cost_graded_unit",
+        "triangular_grid_normalized_pipeline_cost_graded_large",
+        "triangular_grid_normalized_pipeline_cost_graded_tiny",
+        "triangular_grid_normalized_pipeline_cost_layered_unit",
+        "triangular_grid_normalized_pipeline_cost_layered_large",
+        "triangular_grid_normalized_pipeline_cost_layered_tiny",
+        "assert_eq!(receipt, baseline)",
+        "process_peak_rss_after_kib",
+        "explicit isolated release candidate pipeline cost; not public solver throughput",
+        "This is local test-only candidate pipeline benchmarking, not production modal qualification."
+      ]
+    }
+  ]
+}

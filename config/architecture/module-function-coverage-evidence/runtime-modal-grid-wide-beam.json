@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS test-only wide-factor and four-state beam diagnostics on six fixed 128-element graded/layered inputs. Three greedy backends, separating rounded columns from factor precision, reproduce the same bits and six successful order proposals out of twelve. A separate one-factor beam produces eight successful order proposals across the same five fixtures, not six recovered fixtures or production admission. All 26 accepted runs in 48 precision/order fits pass independent physical JSON readback. Seventy-two numbering/sign controls retain 48 successes and 24 rejections; 24 binary-scale controls retain 16 successes and eight rejections, with accepted normalized and physical bits preserved. Six true operator certificates, preflight payload/work bounds, exhaustive compact references, malformed/fault/fresh-certificate failure controls and real checkpoint cancellation replay remain scoped to test-only proposals. No additional production retry, relaxed gate, benchmark qualification, remote Agent, arbitrary geometry, multimode or release maturity is claimed.",
+  "evidence_claims": [
+    {
+      "id": "modal-wide-factor-precision-and-bounded-beam-readback",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_roundoff_grid_wide_qr.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_wide_qr_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_wide_beam_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_wide_comparison_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_normalized_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_triangular_grid.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_heterogeneous_fixture.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-grid-wide-beam-reliability-20261004.md"
+      ],
+      "required_text": [
+        "triangular_grid_wide_normalized_original_operator_and_precision_comparison",
+        "triangular_grid_wide_beam_numbering_sign_and_binary_scale_reproduce_physical_readbacks",
+        "triangular_grid_wide_beam_crosses_a_greedy_barrier_with_an_exhaustive_reference",
+        "triangular_grid_wide_beam_preflight_budget_and_frozen_seed",
+        "triangular_grid_wide_beam_operator_faults_and_fresh_final_certificates_fail_closed",
+        "triangular_grid_wide_beam_cancellation_and_fresh_replay_never_adopt_partial_state",
+        "triangular_grid_wide_beam_real_candidate_late_cancellation_replays_exactly",
+        "wide precision/order fits=48 accepted=26 rejected=22; greedy backends match bits",
+        "wide beam numbered/sign runs=72 accepted=48 rejected=24; binary runs=24 accepted=16 rejected=8",
+        "This is test-only factor/search diagnosis, not production modal recovery or public solver admission."
+      ]
+    }
+  ]
+}

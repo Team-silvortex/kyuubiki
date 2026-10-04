@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS heterogeneous single-mode validation over 27 graded, layered and unequal-length beam fixtures at three discretizations and coordinate scales. Six upstream normalized-spectrum failures are reproduced through the public solver, and their 48 planned transformations are not counted as completed searches. The 21 prepared fixtures execute 168 canonical transformations: 104 passing-seed retentions, 48 corrected shapes and 16 bounded downstream rejections. Successful sign-restored candidates retain exact bits under joint numbering permutations and pass independent physical reassembly after constructed result JSON readback. Per-case stage, outcome, factor policy and certificate counts are frozen. An actual small public solve replays bitwise after a larger normalized failure, and a real layered candidate cancels before returning a certified shape then replays successfully. The canonical algorithm remains test-only; no production admission, arbitrary geometry/material, multimode, Headless transport, live Agent, benchmark or release qualification is asserted.",
+  "evidence_claims": [
+    {
+      "id": "modal-heterogeneous-grid-stage-partition-and-physical-readback",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_roundoff_grid_heterogeneous_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_heterogeneous_fixture.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_canonical.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_portfolio.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_hybrid_tests.rs",
+        "workers/rust/crates/solver/tests/support/modal_roundoff_reference.rs",
+        "workers/rust/crates/solver/src/modal_frame_2d.rs",
+        "workers/rust/crates/solver/src/modal_frame_spectrum.rs",
+        "workers/rust/crates/solver/src/modal_frame_refinement.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-grid-heterogeneous-reliability-20261004.md"
+      ],
+      "required_text": [
+        "triangular_grid_canonical_heterogeneous_readback_and_numbering_boundaries",
+        "triangular_grid_canonical_heterogeneous_public_failure_preserves_fresh_replay",
+        "triangular_grid_canonical_heterogeneous_late_cancellation_returns_no_shape_and_replays",
+        "spectrum preparation:",
+        "heterogeneous fixture boundaries blocked=6 retained=13 corrected=6 rejected=2; canonical executions=168 accepted=152 rejected=16",
+        "This is heterogeneous single-mode validation and failure/replay evidence, not production canonical-grid admission or general modal qualification."
+      ]
+    }
+  ]
+}

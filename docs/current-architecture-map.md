@@ -243,14 +243,29 @@ The tensor is the three-axis review map:
 - evidence depth
 
 Tensor v5 splits evidence depth into required-dimension strength, explicit
-scenario qualification, and release criticality. The current `daji 3.4.x`
-documentation retains the dated `daji 3.2.x` hardening profile rather than
-claiming a new calibration. It does not promote registered test commands into
+scenario qualification, and release criticality. The October 4, 2026 retained
+evidence review updates the profile to `daji 3.4.x` at checkpoint `daji 3.4.5`;
+it preserves all 224 claims and does not rerun their product journeys. It does
+not promote registered test commands into
 execution evidence, and takes the weakest required dimension rather than the
 highest claim.
 Named platform/backend/language/recovery obligations cannot inherit proof from
 unrelated scenarios. Structural success remains distinct from readiness during
-the advisory phase. See the [current recalibration](book-ch03-architecture-boundaries.html#tensor-calibration).
+the advisory phase. Of 77 required coordinates, 58 meet every configured target;
+ten of 32 explicit scenarios meet their named targets. Current modal candidate
+research and local timings cannot close production recovery, multimode,
+whole-pipeline budget or actual Agent/Headless scopes. See the
+[current recalibration](book-ch03-architecture-boundaries.html#tensor-calibration).
+
+The subsequent bounded horizontal modal request-reassembly correction adds one
+verified claim (225 total), with original-numbering restoration owned by Solver.
+It does not alter Engine/Agent contracts or close the qualified reassembly,
+production recovery, pipeline-budget or study-journey scopes. See the
+[bounded production follow-up](book-ch03-architecture-boundaries.html#modal-request-reassembly-follow-up).
+
+The later [banded candidate follow-up](book-ch03-architecture-boundaries.html#modal-banded-candidate-follow-up)
+adds a separate verified validation claim (226 total). Six-of-six candidate
+recovery is not production admission; no Engine/Agent ownership changes.
 
 The moxi 2.15 calibration has 13 modules and 11 paradigms. It assigns
 `workers/rust/crates/operator-sdk` and `workers/rust/templates` to the dedicated

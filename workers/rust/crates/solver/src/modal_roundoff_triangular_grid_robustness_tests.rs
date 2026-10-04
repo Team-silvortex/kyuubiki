@@ -12,18 +12,22 @@ enum Outcome {
     NormRejected,
 }
 
-struct Fixture {
-    system: ReducedSparseModalSystem,
-    value: f64,
-    shape: Vec<f64>,
-    directions: Vec<Vec<Wide>>,
+pub(super) struct Fixture {
+    pub(super) system: ReducedSparseModalSystem,
+    pub(super) value: f64,
+    pub(super) shape: Vec<f64>,
+    pub(super) directions: Vec<Vec<Wide>>,
     anchors: [usize; 3],
     step: f64,
 }
 
 impl Fixture {
-    fn new(step: f64) -> Self {
-        let (system, physical) = scaled_bending_parts(128, step);
+    pub(super) fn new(step: f64) -> Self {
+        Self::with_segments(128, step)
+    }
+
+    pub(super) fn with_segments(segments: usize, step: f64) -> Self {
+        let (system, physical) = scaled_bending_parts(segments, step);
         let spectrum = crate::modal_frame_spectrum::frame_eigenpairs(&system, Some(1)).unwrap();
         let (value, vector) = &spectrum.pairs[0];
         let size = system.mass.len();
@@ -59,7 +63,7 @@ impl Fixture {
         }
     }
 
-    fn checked(&self, original: &[f64]) -> Result<(f64, Vec<f64>), String> {
+    pub(super) fn checked(&self, original: &[f64]) -> Result<(f64, Vec<f64>), String> {
         let applied = self.system.operator.apply_physical_compensated(original)?;
         self.system
             .operator

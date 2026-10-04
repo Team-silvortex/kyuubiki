@@ -40,6 +40,34 @@ External correlation, complete spatial spectra and sustained scale readiness
 remain open. No binaries are rebuilt, installed or published here; tensor gaps
 remain open.
 
+The [October 4 tensor recalibration](../reports/tensor-recalibration-20261004.md)
+updates the hardening profile to this source checkpoint without promoting
+candidate research into production proof. It retains all 224 claims and adds
+twelve modal scenarios: four verified retained scopes and eight open production
+obligations. The current target result is 58/77 coordinates and 10/32 reviewed
+scenarios, not test coverage or release qualification. The
+[HTML architecture chapter](book-ch03-architecture-boundaries.html#tensor-calibration)
+and [roadmap](weakness-roadmap.md#current-tensor-status) carry the full limits.
+
+The subsequent [public request-reassembly correction](../reports/modal-request-reassembly-reliability-20261004.md)
+fixes sampled node-numbering-dependent acceptance in a bounded horizontal
+single-mode bending path, preserving original output numbering and numerical
+gates. Independent readback covers 27 fixtures, 108 layouts and 216 owned/borrowed
+solves, plus late-cancellation replay and two local Rust Headless bridge tests.
+The tensor now retains 225 claims; the reassembly proof is verified, not yet
+qualified, so target counts remain unchanged. Hard 128-segment cases, general
+modal recovery and actual Agent/installed Headless study qualification remain
+open. No package or version is changed by this follow-up.
+
+The [bounded banded-inverse candidate follow-up](../reports/modal-banded-inverse-candidate-reliability-20261004.md)
+then recovers all six retained 128-segment graded/layered candidate fixtures,
+including graded-large, with frozen roots and independent physical JSON checks.
+Four wide inverse iterations initialize the existing discrete portfolios;
+nearest rounding alone still rejects. This code is test-only: actual public
+Solver calls remain rejected, and production, cumulative-budget and Agent/SDK
+qualification remain open. Current retained claims total 226, without changing
+the 58/77 coordinate or 10/32 scenario targets met.
+
 ## Daji 3.4.4 Checkpoint (Historical)
 
 October 2, 2026. This source patch hardens modal calculation and its admitted

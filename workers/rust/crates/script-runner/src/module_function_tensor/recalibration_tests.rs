@@ -247,3 +247,157 @@ fn malformed_or_cross_coordinate_scope_bindings_fail_closed() {
     tensor["qualification_requirements"] = json!([requirement(), requirement()]);
     assert!(qualifications::validate_config(root, &tensor, &fixture_matrix()).is_err());
 }
+
+#[test]
+fn verified_candidate_scope_cannot_close_qualified_production_or_installed_scopes() {
+    let mut tensor = fixture_tensor();
+    tensor["evidence_claims"] = json!([
+        claim(
+            "historical-installed",
+            "operational",
+            &["execution", "contract"]
+        ),
+        claim("test-only-candidate", "verified", &["execution"]),
+    ]);
+    let mut candidate = requirement();
+    candidate["id"] = json!("candidate-diagnosis");
+    candidate["scope"] = json!("test-only/modal/bounded-candidate");
+    candidate["target"] = json!("verified");
+    candidate["claims"] = json!(["test-only-candidate"]);
+    let mut production = requirement();
+    production["id"] = json!("production-recovery");
+    production["scope"] = json!("native/public-modal/heterogeneous-recovery");
+    production["claims"] = json!(["test-only-candidate"]);
+    tensor["qualification_requirements"] = json!([candidate, production, requirement()]);
+    let evaluated = grade(&tensor, "covered");
+    assert_eq!(evaluated["achieved_grade"], "operational");
+    assert_eq!(evaluated["gap_steps"], 0);
+    assert_eq!(evaluated["state"], "below_target");
+    assert_eq!(evaluated["qualification_requirements"][0]["met"], true);
+    assert_eq!(
+        evaluated["qualification_requirements"][1]["achieved_grade"],
+        "verified"
+    );
+    assert_eq!(evaluated["qualification_requirements"][1]["met"], false);
+    assert_eq!(
+        evaluated["qualification_requirements"][2]["achieved_grade"],
+        "unassessed"
+    );
+    let rendered = super::markdown::render_markdown(&report(&tensor, "covered"));
+    assert!(rendered.contains("test-only/modal/bounded-candidate"));
+    assert!(rendered.contains("native/public-modal/heterogeneous-recovery"));
+    assert!(rendered.contains("windows/installed/recovery"));
+    assert_eq!(
+        report(&tensor, "covered")["release_readiness"]["release_claim_allowed"],
+        false
+    );
+}
+
+#[test]
+fn current_solver_scope_inventory_preserves_candidate_results_and_open_production_obligations() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(4)
+        .unwrap();
+    let tensor = super::includes::load_tensor_with_includes(
+        root,
+        super::read_json(root, super::TENSOR_PATH).unwrap(),
+    )
+    .unwrap();
+    let topology = super::read_json(root, super::TOPOLOGY_PATH).unwrap();
+    let matrix = super::read_json(root, super::MATRIX_PATH).unwrap();
+    super::validate_tensor_config(root, &tensor, &topology, &matrix).unwrap();
+    let report = build_tensor_report(root, &tensor, &topology, &matrix).unwrap();
+    let candidates = qualifications::evaluate(&tensor, "runtime-engine-solver", "validation");
+    for id in [
+        "modal-normalized-candidate-research",
+        "modal-wide-beam-candidate-research",
+    ] {
+        let scoped = candidates.iter().find(|s| s["id"] == id).unwrap();
+        assert_eq!(scoped["achieved_grade"], "verified");
+        assert_eq!(scoped["met"], true);
+    }
+    let baseline = qualifications::evaluate(&tensor, "runtime-engine-solver", "solver_execution");
+    let research = tensor["evidence_claims"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|claim| claim["id"] == "modal-banded-inverse-grid-six-fixture-readback")
+        .unwrap();
+    assert_eq!(research["grade"], "verified");
+    assert_eq!(research["paradigms"], json!(["validation"]));
+    let production = baseline
+        .iter()
+        .find(|scope| scope["id"] == "modal-heterogeneous-production-recovery")
+        .unwrap();
+    assert_eq!(production["achieved_grade"], "unassessed");
+    assert_eq!(production["claims"], json!([]));
+    assert_eq!(
+        baseline
+            .iter()
+            .find(|s| s["id"] == "modal-public-bounded-single-mode-baseline")
+            .unwrap()["met"],
+        true
+    );
+    let costs = qualifications::evaluate(&tensor, "runtime-engine-solver", "benchmark");
+    let retained_cost = costs
+        .iter()
+        .find(|s| s["id"] == "modal-candidate-pipeline-local-cost")
+        .unwrap();
+    assert_eq!(retained_cost["achieved_grade"], "verified");
+    assert_eq!(retained_cost["met"], true);
+    for (module, paradigm, ids) in [
+        (
+            "runtime-engine-solver",
+            "solver_execution",
+            vec![
+                "modal-heterogeneous-production-recovery",
+                "modal-public-cancellation-budget-replay",
+            ],
+        ),
+        (
+            "runtime-engine-solver",
+            "validation",
+            vec![
+                "modal-production-physical-publication",
+                "modal-production-multimode-recovery",
+                "modal-independent-renumbered-assembly",
+            ],
+        ),
+        (
+            "runtime-engine-solver",
+            "benchmark",
+            vec!["modal-production-whole-pipeline-budget"],
+        ),
+        (
+            "runtime-agent-cli",
+            "solver_execution",
+            vec!["modal-current-agent-production-journey"],
+        ),
+        (
+            "sdk-headless",
+            "sdk_headless",
+            vec!["modal-current-headless-production-journey"],
+        ),
+    ] {
+        let scoped = qualifications::evaluate(&tensor, module, paradigm);
+        for id in ids {
+            let obligation = scoped.iter().find(|s| s["id"] == id).unwrap();
+            assert_eq!(obligation["met"], false, "{id}");
+            assert_eq!(obligation["target_grade"], "qualified");
+            if id == "modal-independent-renumbered-assembly" {
+                assert_eq!(obligation["achieved_grade"], "verified");
+            }
+        }
+        assert_eq!(
+            report["cells"][module][paradigm]["evidence_grade"]["state"],
+            "below_target"
+        );
+    }
+    assert_eq!(report["release_readiness"]["release_claim_allowed"], false);
+    assert_eq!(report["structural_ok"], true);
+    assert_eq!(
+        report["ok"], true,
+        "recalibration must not silently enforce the release gate"
+    );
+}

@@ -4,6 +4,9 @@ use kyuubiki_protocol::SolveModalFrame2dResult;
 #[path = "../../../solver/tests/support/modal_roundoff_reference.rs"]
 mod reference;
 
+#[path = "reassembly.rs"]
+mod reassembly;
+
 fn check(value: &Value) {
     let result: SolveModalFrame2dResult = serde_json::from_value(value.clone()).unwrap();
     assert_eq!(result.modes.len(), 1);

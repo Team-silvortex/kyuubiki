@@ -142,19 +142,20 @@ test commands nor contract evidence are reported as `weak_evidence`, so a
 module cannot look healthy only because the two-dimensional matrix says it is
 covered.
 
-The current `daji 3.4.x` documentation retains the tensor v5 calibration of the
-`daji 3.2.x` hardening profile. A registered command is a test plan, not evidence
-of execution. The coordinate grade is the
+The October 4, 2026 recalibration retains tensor v5 and updates the hardening
+profile to `daji 3.4.x`, with source checkpoint `daji 3.4.5`. All 224 retained
+claims are preserved. A registered command is a test plan, not evidence of
+execution. The coordinate grade is the
 minimum proven strength across its required dimensions, not its best single
 claim. `best_available_grade` preserves that stronger retained claim without
 broadcasting it to other dimensions. P0/P1/P2 criticality and external release
 decisions remain separate from structural `ok`.
 
-The calibration source checkpoint remains `daji 3.2.0`; current development is
-`daji 3.4.5`. Updating the documentation neither reruns qualification nor bumps
-the packaged application. The profile stays advisory until an explicit gate-mode
-decision changes it to `enforced`; only then does an unready profile fail the
-command rather than produce a hardening queue.
+This is a review of the current source and retained proof, not a new installed
+qualification run or packaged application update. Historical claims keep their
+original versions and limitations. The profile stays advisory until an explicit
+gate-mode decision changes it to `enforced`; only then does an unready profile
+fail the command rather than produce a hardening queue.
 
 `qualification_requirements` add explicit module/paradigm/dimension/scenario
 obligations. Each records a platform/backend/language scope, target, acceptance
@@ -164,9 +165,39 @@ that scenario. These bindings need human evidence review: the checker validates
 coordinates, dimensions, files and anchors, not the truth or freshness of an
 installed run. The registry is not an exhaustive scenario inventory.
 
+The reviewed scenario inventory now has 32 requirements: ten meet their bound
+targets and 22 remain open. Twelve current solver scopes distinguish retained
+public single-mode admission, verified test-only candidate recovery and local
+candidate timing from qualified production physical publication, multimode
+recovery, independent reassembly, whole-pipeline budgets and actual Agent/Rust
+Headless journeys. The four retained solver successes do not close the eight
+new production obligations. Existing truss/thermal scale or installed evidence
+cannot substitute for these named modal scopes.
+
+Of 77 required coordinates, 58 meet every configured target. The 19 coordinate
+gaps overlap the 22 scenario gaps; neither count is a code coverage percentage
+or a statement that those modules cannot run. The three newly exposed gaps are
+`runtime-engine-solver/solver_execution`, `runtime-engine-solver/validation`
+and `runtime-agent-cli/solver_execution`. No solver algorithm or evidence grade
+was changed by this recalibration.
+
 See the [book's current calibration](book-ch03-architecture-boundaries.html#tensor-calibration)
 and [hardening queue](weakness-roadmap.md#current-tensor-status) for the dated
 baseline and its limits.
+
+The later [public request-reassembly follow-up](../reports/modal-request-reassembly-reliability-20261004.md)
+adds one verified claim, for 225 retained claims. Solver alone owns bounded
+horizontal single-mode geometric ordering and restoration to original request
+indices; Engine, Agent and SDK contracts remain unchanged. Independent readback
+and local Headless bridge checks do not close the qualified general reassembly,
+recovery, complete-budget or actual study-journey requirements. Target counts
+remain 58/77 coordinates and 10/32 scenarios.
+
+The subsequent test-only banded inverse initializer recovers all six retained
+heterogeneous candidate fixtures with independently checked two-stage output.
+It adds a validation/recovery claim (226 total), not a production execution
+binding. Actual public Solver rejection and cumulative-budget obligations
+remain open. See [the bounded candidate record](../reports/modal-banded-inverse-candidate-reliability-20261004.md).
 
 Validation contract evidence includes both readiness reports and release
 review gates. Operator qualification records, retained review decisions, and

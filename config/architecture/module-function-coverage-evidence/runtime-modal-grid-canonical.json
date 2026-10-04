@@ -1,0 +1,57 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local macOS test-only canonical grid candidate validation and isolated optimized cost comparison. Expanded raw coverage retains 56 successes and 16 explicit bounded-policy failures across 72 transformations, including 48 already-passing seed checks. The alternative canonical entry passes 90 transformations of nine uniform straight-beam fixtures under joint permutations of fixed assembled inputs, preserving sign-restored candidate bits and independent physical/JSON checks. Unique coordinate signatures are required; ambiguous signatures fail before certification. Additional copy/preflight/mapping costs are modeled separately without adding fits or certificates. Nine optimized cases per isolated process retain timing spread, classifications, actual certificate counts and cumulative process RSS. These are bounded validation, recovery and local benchmark claims, not production admission, arbitrary geometry invariance, end-to-end throughput, incremental heap, remote Agent or release qualification.",
+  "evidence_claims": [
+    {
+      "id": "modal-canonical-grid-joint-numbering-and-failure-boundary",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["validation"],
+      "dimensions": ["numerical_validation", "recovery"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_roundoff_grid_canonical.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_canonical_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_portfolio.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_portfolio_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_triangular_grid_robustness_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_hybrid_tests.rs",
+        "workers/rust/crates/solver/tests/support/modal_roundoff_reference.rs",
+        "config/operator-validation-profiles/modal.json",
+        "reports/modal-grid-canonical-cost-reliability-20261004.md"
+      ],
+      "required_text": [
+        "triangular_grid_portfolio_shuffled_numbering_and_mesh_sizes_retain_failure_boundaries",
+        "triangular_grid_canonical_beams_keep_identical_candidates_under_shuffled_numbering",
+        "triangular_grid_canonical_ties_faults_and_final_cancellation_fail_closed",
+        "triangular_grid_canonical_malformed_original_receipts_never_retry_or_publish",
+        "canonical grid has ambiguous coordinate signatures",
+        "This is test-only canonical grid validation and bounded local candidate benchmarking, not runtime admission or general modal qualification."
+      ]
+    },
+    {
+      "id": "modal-canonical-grid-isolated-optimized-candidate-cost",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-engine-solver"],
+      "paradigms": ["benchmark"],
+      "dimensions": ["benchmark"],
+      "files": [
+        "workers/rust/crates/solver/src/modal_roundoff_grid_portfolio_benchmark.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_portfolio.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_canonical.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_triangular_grid_robustness_tests.rs",
+        "reports/modal-grid-canonical-cost-reliability-20261004.md"
+      ],
+      "required_text": [
+        "triangular_grid_portfolio_cost_benchmark",
+        "KYUUBIKI_MODAL_GRID_BENCH_MODE",
+        "process_peak_rss_after_kib",
+        "explicit isolated release-mode candidate benchmark; not production throughput",
+        "The raw tiny shuffle includes a 154.711 ms",
+        "This is test-only canonical grid validation and bounded local candidate benchmarking, not runtime admission or general modal qualification."
+      ]
+    }
+  ]
+}

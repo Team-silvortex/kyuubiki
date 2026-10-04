@@ -45,6 +45,17 @@
         "independent_quantized_physical_shape_readback_and_cached_factor_replay",
         "test_only_quantized_grid_anchor_sign_and_numbering_boundary",
         "unit_shape_grid_publication_gate_without_post_certificate_renormalization",
+        "test_only_canonical_grid_coordinate_signature_and_shuffled_mesh_comparison",
+        "test_only_heterogeneous_grid_seed_retention_correction_and_upstream_failure_partition",
+        "public_heterogeneous_spectrum_failure_and_bitwise_fresh_replay",
+        "public_request_reassembly_owned_borrowed_outcome_and_physical_json_crosscheck",
+        "bounded_planar_original_dof_restoration_cancellation_and_headless_engine_replay",
+        "test_only_bounded_banded_inverse_direction_and_nearest_rounding_separation",
+        "six_fixture_two_stage_banded_grid_readback_and_final_fault_replay",
+        "test_only_normalized_direction_contract_and_two_stage_physical_publication",
+        "fixed_root_banded_inertia_crosscheck_and_retained_rejected_proposals",
+        "isolated_normalized_pipeline_order_radius_and_phase_cost_comparison",
+        "isolated_release_grid_candidate_cost_and_process_peak_rss_comparison",
         "relative_sturm_bisection_and_two_sided_mode_recovery",
         "complete_spectrum_mode_relative_jacobi_convergence",
         "repeated_mode_projector_and_mass_orthogonality_reference",
@@ -211,6 +222,11 @@
         "fourth_candidate_cancellation_preserves_all_three_prior_directions",
         "modal_polish_cancellation_cannot_publish_partial_modes",
         "published_modal_shapes_pass_the_original_physical_residual_gate",
+        "bounded_planar_request_reassembly_preserves_original_payload_shape_and_free_dof_numbering",
+        "bounded_planar_reassembly_outcomes_do_not_depend_on_sampled_node_element_layouts",
+        "late_planar_output_restoration_cancellation_cannot_publish_partial_success",
+        "banded_inverse_reference_directions_do_not_certify_nearest_rounded_physical_results",
+        "banded_inverse_four_step_candidate_success_does_not_change_public_modal_admission",
         "published_shape_correction_uses_original_mass_and_no_new_factor",
         "published_shape_validation_balances_subnormal_physical_products",
         "sampled_finite_modal_values_keep_their_bits_after_json_round_trip",
@@ -220,6 +236,21 @@
         "live_agent_modal_responses_preserve_numeric_bits_and_physical_residuals",
         "live_agent_modal_failure_and_cancellation_release_execution_slots",
         "published_shape_failure_or_cancellation_leaves_the_seed_unchanged",
+        "canonical_grid_ambiguity_and_bad_original_receipts_fail_without_extra_attempts",
+        "canonical_grid_restoration_retains_unit_norm_and_original_anchor_bits",
+        "heterogeneous_preparation_failures_do_not_count_as_completed_canonical_searches",
+        "heterogeneous_late_cancellation_cannot_publish_a_previously_certified_shape",
+        "normalized_internal_directions_are_not_reweighted_or_forced_to_unit_shape",
+        "normalized_candidate_success_does_not_bypass_final_physical_readback",
+        "two_stage_grid_caps_do_not_claim_whole_pipeline_production_budget_or_admission",
+        "isolated_order_and_radius_diagnostics_are_not_appended_as_runtime_retries",
+        "fresh_pipeline_cost_replays_preserve_root_direction_shape_bits_and_failure_boundary",
+        "process_peak_rss_is_not_incremental_heap_or_per_stage_payload",
+        "wide_qr_precision_and_rounded_input_are_separate_test_only_diagnostics",
+        "wide_beam_search_has_four_proposals_and_six_fresh_operator_certificates",
+        "wide_beam_score_cannot_replace_internal_or_independent_physical_residuals",
+        "wide_beam_tie_breaking_preserves_sampled_mode_sign_and_numbering",
+        "wide_beam_fault_or_cancellation_cannot_publish_partial_search_state",
         "modal_cancellation_does_not_poison_replay"
       ],
       "evidence_paths": [
@@ -233,6 +264,14 @@
         "workers/rust/crates/cli/tests/agent_modal_live.rs",
         "workers/rust/crates/cli/tests/support/modal_agent.rs",
         "reports/modal-agent-taskir-reliability-20261002.md",
+        "workers/rust/crates/solver/src/modal_frame_2d_ordering.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_reassembly_tests.rs",
+        "workers/rust/crates/cli/tests/modal_spectrum_operator/reassembly.rs",
+        "reports/modal-request-reassembly-reliability-20261004.md",
+        "workers/rust/crates/solver/src/modal_roundoff_banded_inverse_reference.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_banded_inverse_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_banded_inverse_control_tests.rs",
+        "reports/modal-banded-inverse-candidate-reliability-20261004.md",
         "evidence/operator-qualification/modal-frame-reference-note.md",
         "evidence/operator-qualification/modal-frame-frequency-convergence.md",
         "evidence/operator-qualification/modal-frame-normalization-policy.md",
@@ -316,6 +355,27 @@
         "workers/rust/crates/solver/src/modal_roundoff_triangular_grid_tests.rs",
         "workers/rust/crates/solver/src/modal_roundoff_triangular_grid_control_tests.rs",
         "workers/rust/crates/solver/src/modal_roundoff_triangular_grid_robustness_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_portfolio.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_portfolio_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_canonical.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_canonical_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_heterogeneous_fixture.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_heterogeneous_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_normalized_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_normalized_reference.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_normalized_order_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_normalized_benchmark.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_wide_qr.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_wide_qr_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_wide_beam_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_wide_comparison_tests.rs",
+        "reports/modal-grid-wide-beam-reliability-20261004.md",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_portfolio_benchmark.rs",
+        "reports/modal-grid-portfolio-reliability-20261004.md",
+        "reports/modal-grid-canonical-cost-reliability-20261004.md",
+        "reports/modal-grid-heterogeneous-reliability-20261004.md",
+        "reports/modal-grid-normalized-reliability-20261004.md",
+        "reports/modal-grid-normalized-pipeline-cost-20261004.md",
         "workers/rust/crates/solver/src/modal_roundoff_qr_reference.rs",
         "workers/rust/crates/solver/src/modal_roundoff_qr_quantized.rs",
         "reports/modal-triangular-grid-comparison-20261003.md",
@@ -374,6 +434,76 @@
         "reports/modal-json-roundtrip-reliability-20261002.md"
       ],
       "commands": [
+        {
+          "id": "modal-banded-inverse-candidate",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib --release modal_banded_inverse_ --locked --offline -- --nocapture"
+        },
+        {
+          "id": "modal-public-request-reassembly",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib --release modal_public_ --locked --offline -- --nocapture"
+        },
+        {
+          "id": "modal-headless-request-reassembly",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-cli --test modal_spectrum_operator headless_planar_reassembly_ --locked --offline -- --nocapture"
+        },
+        {
+          "id": "modal-normalized-pipeline-cost-graded-unit",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib --release triangular_grid_normalized_pipeline_cost_graded_unit --locked --offline -- --ignored --nocapture --test-threads=1"
+        },
+        {
+          "id": "modal-normalized-pipeline-cost-graded-large",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib --release triangular_grid_normalized_pipeline_cost_graded_large --locked --offline -- --ignored --nocapture --test-threads=1"
+        },
+        {
+          "id": "modal-normalized-pipeline-cost-graded-tiny",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib --release triangular_grid_normalized_pipeline_cost_graded_tiny --locked --offline -- --ignored --nocapture --test-threads=1"
+        },
+        {
+          "id": "modal-normalized-pipeline-cost-layered-unit",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib --release triangular_grid_normalized_pipeline_cost_layered_unit --locked --offline -- --ignored --nocapture --test-threads=1"
+        },
+        {
+          "id": "modal-normalized-pipeline-cost-layered-large",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib --release triangular_grid_normalized_pipeline_cost_layered_large --locked --offline -- --ignored --nocapture --test-threads=1"
+        },
+        {
+          "id": "modal-normalized-pipeline-cost-layered-tiny",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib --release triangular_grid_normalized_pipeline_cost_layered_tiny --locked --offline -- --ignored --nocapture --test-threads=1"
+        },
+        {
+          "id": "modal-triangular-grid-wide-factor-beam",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib triangular_grid_wide_ --locked --offline -- --nocapture"
+        },
+        {
+          "id": "modal-triangular-grid-normalized",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib triangular_grid_normalized_ --locked --offline -- --nocapture"
+        },
+        {
+          "id": "modal-triangular-grid-heterogeneous",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib triangular_grid_canonical_heterogeneous_ --locked --offline -- --nocapture"
+        },
+        {
+          "id": "modal-triangular-grid-canonical",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib triangular_grid_canonical_ --locked --offline -- --nocapture"
+        },
+        {
+          "id": "modal-triangular-grid-portfolio",
+          "kind": "cross_check",
+          "command": "cd workers/rust && cargo test -p kyuubiki-solver --lib triangular_grid_portfolio_ --locked --offline -- --nocapture"
+        },
         {
           "id": "modal-triangular-grid-comparison",
           "kind": "cross_check",

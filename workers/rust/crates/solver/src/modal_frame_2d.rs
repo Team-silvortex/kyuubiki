@@ -12,6 +12,9 @@ use kyuubiki_protocol::{
 };
 use std::borrow::Cow;
 
+#[path = "modal_frame_2d_ordering.rs"]
+mod ordering;
+
 pub fn solve_modal_frame_2d(
     request: &SolveModalFrame2dRequest,
 ) -> Result<SolveModalFrame2dResult, String> {
@@ -28,7 +31,18 @@ fn solve_modal_frame_2d_internal(
     request: Cow<'_, SolveModalFrame2dRequest>,
 ) -> Result<SolveModalFrame2dResult, String> {
     validate_modal_frame_2d_request(request.as_ref())?;
+    let order = ordering::NodeOrder::prepare(request.as_ref())?;
+    let result = solve_assembled(request, order.as_ref())?;
+    match order {
+        Some(order) => order.restore(result),
+        None => Ok(result),
+    }
+}
 
+fn solve_assembled(
+    request: Cow<'_, SolveModalFrame2dRequest>,
+    order: Option<&ordering::NodeOrder>,
+) -> Result<SolveModalFrame2dResult, String> {
     let dof_count = request.nodes.len() * 3;
     let mut stiffness = SparseMatrix::new(dof_count);
     let mut mass = vec![0.0; dof_count];
@@ -57,7 +71,10 @@ fn solve_modal_frame_2d_internal(
         validate_element_stiffness(&element.id, "local", &local_stiffness)?;
         let element_stiffness = transform_frame_stiffness(&local_stiffness, &transform);
         validate_element_stiffness(&element.id, "global", &element_stiffness)?;
-        let map = frame_dof_map(element.node_i, element.node_j);
+        let map = frame_dof_map(
+            order.map_or(element.node_i, |order| order.index(element.node_i)),
+            order.map_or(element.node_j, |order| order.index(element.node_j)),
+        );
 
         for row in 0..6 {
             for column in 0..6 {
@@ -74,6 +91,7 @@ fn solve_modal_frame_2d_internal(
             element_masses(&element.id, element.density, element.area, length)?;
         total_mass += element_mass;
         for node_index in [element.node_i, element.node_j] {
+            let node_index = order.map_or(node_index, |order| order.index(node_index));
             mass[node_index * 3] += translational_mass;
             mass[node_index * 3 + 1] += translational_mass;
             mass[node_index * 3 + 2] += rotary_mass;
@@ -81,7 +99,12 @@ fn solve_modal_frame_2d_internal(
     }
 
     validate_assembled_system(&stiffness, &mass, total_mass)?;
-    let constrained = constrained_dofs(request.as_ref());
+    let mut constrained = constrained_dofs(request.as_ref());
+    if let Some(order) = order {
+        for dof in &mut constrained {
+            *dof = 3 * order.index(*dof / 3) + *dof % 3;
+        }
+    }
     let sparse_system = reduce_sparse_modal_system(&stiffness, &mass, &constrained)?;
     let free_dofs = sparse_system.free_dofs.clone();
     let eigenpairs = frame_eigenpairs(&sparse_system, request.mode_count)?;

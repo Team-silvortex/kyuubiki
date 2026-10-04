@@ -552,3 +552,7 @@ mod triangular_grid_tests;
 #[cfg(test)]
 #[path = "modal_roundoff_triangular_grid_robustness_tests.rs"]
 mod triangular_grid_robustness_tests;
+
+#[cfg(test)]
+#[path = "modal_roundoff_grid_portfolio.rs"]
+mod grid_portfolio;
