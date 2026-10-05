@@ -107,5 +107,9 @@ defmodule KyuubikiWeb.OperatorTaskRouter do
   defp operator_task_error_code(:invalid_operator_task_ir), do: "operator_task_invalid"
   defp operator_task_error_code(:invalid_operator_task_batch), do: "operator_task_batch_invalid"
   defp operator_task_error_code(reason) when is_atom(reason), do: Atom.to_string(reason)
+
+  defp operator_task_error_code({:operator_task_execution_receipt_invalid, _field}),
+    do: "operator_task_execution_receipt_invalid"
+
   defp operator_task_error_code(_reason), do: "operator_task_error"
 end

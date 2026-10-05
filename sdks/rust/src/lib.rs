@@ -12,6 +12,7 @@ mod model_research_bootstrap;
 mod model_research_execution;
 mod model_research_frontier;
 mod model_research_validation;
+mod model_task_completion;
 mod operator_tasks;
 mod session;
 mod solver_rpc;

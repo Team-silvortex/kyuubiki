@@ -9,6 +9,8 @@ mod engine_solver_bridge;
 mod execution_authority;
 mod execution_observability;
 mod executor;
+#[cfg(test)]
+mod executor_outcome_tests;
 mod hybrid_executor;
 mod material_candidate_drafts;
 mod material_candidate_materialization;
@@ -94,6 +96,7 @@ mod service_executor_health;
 mod service_executor_http;
 mod service_executor_job_wait;
 mod service_executor_library;
+mod service_executor_operator_task;
 mod service_executor_solve;
 mod surface;
 mod template_search;

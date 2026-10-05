@@ -75,7 +75,7 @@ defmodule KyuubikiWeb.Playground.AgentRpcTransport do
              recv_response(socket, request_id, on_progress, request_deadline_ms(opts)),
              :receive
            ) do
-      case decode_response(response_payload, request_id) do
+      case decode_response(response_payload, request_id, request["method"]) do
         {:error, {:invalid_response, _reason} = reason} ->
           {:error, {:agent_transport_failure, :protocol, reason}}
 
@@ -172,7 +172,7 @@ defmodule KyuubikiWeb.Playground.AgentRpcTransport do
     end
   end
 
-  defp decode_response(raw_response, request_id) do
+  defp decode_response(raw_response, request_id, method) do
     case Jason.decode(raw_response) do
       {:ok, %{"rpc_version" => @rpc_version, "id" => ^request_id, "ok" => true} = decoded} ->
         {:ok, decoded["result"]}
@@ -180,9 +180,19 @@ defmodule KyuubikiWeb.Playground.AgentRpcTransport do
       {:ok, %{"rpc_version" => @rpc_version, "id" => ^request_id, "ok" => false} = decoded} ->
         error = Map.get(decoded, "error", %{})
 
-        if is_map(error),
-          do: {:error, {:rpc_error, error["code"], error["message"]}},
-          else: {:error, {:invalid_response, :malformed_rpc_error}}
+        cond do
+          not is_map(error) ->
+            {:error, {:invalid_response, :malformed_rpc_error}}
+
+          method == "run_operator_task_ir" and is_map(error["details"]) and
+              Map.has_key?(error["details"], "operator_task_failure_receipt") ->
+            {:error,
+             {:operator_task_rpc_error, error["code"], error["message"],
+              error["details"]["operator_task_failure_receipt"]}}
+
+          true ->
+            {:error, {:rpc_error, error["code"], error["message"]}}
+        end
 
       {:ok, _decoded} ->
         {:error, {:invalid_response, :malformed_rpc_response}}

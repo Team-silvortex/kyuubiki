@@ -80,7 +80,8 @@
             "archive",
             "retry_failed_cases",
             "fix_invalid_cases",
-            "resolve_blocked_cases"
+            "resolve_blocked_cases",
+            "resolve_incomplete_cases"
           ]
         }
       }

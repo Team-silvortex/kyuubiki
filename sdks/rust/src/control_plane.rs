@@ -202,6 +202,8 @@ impl ControlPlaneClient {
         )
     }
 
+    /// Returns the raw HTTP receipt, including blocked or pending task states.
+    /// `Ok` means transport success; model plans additionally verify computation completion.
     pub fn execute_operator_task(&self, task_ir: &Value) -> SdkResult<Value> {
         self.request_json(
             "POST",
@@ -218,6 +220,7 @@ impl ControlPlaneClient {
         )
     }
 
+    /// Returns the raw batch receipt; callers must inspect individual cases and completion counts.
     pub fn execute_operator_task_batch(&self, batch: &Value) -> SdkResult<Value> {
         self.request_json(
             "POST",

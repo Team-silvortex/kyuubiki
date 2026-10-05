@@ -469,10 +469,31 @@ fn run_report_failure(report: &HeadlessRunReport) -> Option<String> {
     if !report.validation.ok {
         return Some("run report generated from invalid batch".to_string());
     }
+    if report.status == "blocked" && report.mode.starts_with("execute:") {
+        let Some(step) = report.steps.iter().find(|step| step.status == "blocked") else {
+            return Some("headless execution blocked without a blocking step report".into());
+        };
+        let action = step
+            .result_preview
+            .pointer("/execution_readiness/required_action")
+            .or_else(|| {
+                step.result_preview
+                    .pointer("/result/execution_readiness/required_action")
+            })
+            .and_then(Value::as_str)
+            .unwrap_or("inspect the blocking receipt before retrying");
+        return Some(format!(
+            "headless execution blocked at step {} ({}): {action}",
+            step.index, step.action
+        ));
+    }
     if report.status != "failed" {
         return None;
     }
-    let failed_step = report.steps.iter().find(|step| step.status == "failed");
+    let failed_step = report
+        .steps
+        .iter()
+        .find(|step| matches!(step.status.as_str(), "failed" | "cancelled"));
     Some(match failed_step {
         Some(step) => match step.result_preview.get("error").and_then(Value::as_str) {
             Some(error) => format!(

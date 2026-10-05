@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
   """
 
   alias KyuubikiWeb.CanonicalJson
+  alias KyuubikiWeb.Orchestra.OperatorTaskBatchCompletion
 
   @digest_fields [
     "quality_execution_batch_contract",
@@ -61,6 +62,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
     execution = Keyword.get(opts, :execution)
     created_at = timestamp(opts, :created_at)
     digest = batch_digest(batch)
+    execution_summary = execution_checkpoint_summary(batch, execution, digest)
 
     manifest =
       %{
@@ -73,8 +75,8 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
         "task_count" => task_count(batch),
         "case_index" => case_index(batch),
         "preparation" => checkpoint_summary(preparation),
-        "execution" => checkpoint_summary(execution),
-        "resume_policy" => resume_policy(preparation, execution)
+        "execution" => execution_summary,
+        "resume_policy" => resume_policy(preparation, execution_summary)
       }
 
     Map.put(manifest, "checkpoint_digest", checkpoint_digest(manifest))
@@ -214,13 +216,18 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
       "task_count",
       "verified_count",
       "executed_count",
+      "attempted_count",
       "ok_count",
+      "blocked_count",
       "error_count",
+      "skipped_count",
+      "skipped_case_ids",
       "failed_case_ids",
       "failure_receipts",
       "readiness_counts"
     ])
     |> Map.put("blocked_readiness_case_ids", blocked_readiness_case_ids(result))
+    |> Map.put("readiness_recovery_actions", readiness_recovery_actions(result))
   end
 
   defp checkpoint_summary(result) when is_map(result) do
@@ -243,32 +250,82 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
 
   defp blocked_readiness_case_ids(%{"results" => results}) when is_list(results) do
     results
-    |> Enum.filter(&(get_in(&1, ["execution_readiness", "status"]) == "blocked"))
+    |> Enum.filter(&blocked_entry?/1)
     |> Enum.map(&Map.get(&1, "case_id"))
     |> normalize_string_list()
   end
 
   defp blocked_readiness_case_ids(_result), do: []
 
-  defp resume_policy(_preparation, %{
-         "error_count" => 0,
-         "readiness_counts" => %{"blocked" => blocked_count}
-       })
-       when is_integer(blocked_count) and blocked_count > 0,
-       do: %{"status" => "blocked", "next_action" => "resolve_blocked_cases"}
+  defp execution_checkpoint_summary(batch, execution, digest) when is_map(execution) do
+    completed = OperatorTaskBatchCompletion.completed_case_ids(batch, execution)
+    complete? = OperatorTaskBatchCompletion.complete?(batch, execution, digest, completed)
+    completed_set = MapSet.new(completed)
+    incomplete = Enum.reject(all_case_ids(batch), &MapSet.member?(completed_set, &1))
 
-  defp resume_policy(_preparation, %{"error_count" => 0}),
-    do: %{"status" => "complete", "next_action" => "archive"}
+    incomplete =
+      if incomplete == [] and not complete?,
+        do: all_case_ids(batch),
+        else: incomplete
 
-  defp resume_policy(_preparation, %{"error_count" => count})
-       when is_integer(count) and count > 0,
-       do: %{"status" => "partial", "next_action" => "retry_failed_cases"}
+    execution
+    |> Map.put("run_phase", "execute")
+    |> checkpoint_summary()
+    |> Map.put("incomplete_case_ids", incomplete)
+    |> Map.put("completion_verified", complete?)
+  end
+
+  defp execution_checkpoint_summary(_batch, _execution, _digest), do: nil
+
+  defp blocked_entry?(entry) when is_map(entry) do
+    entry["status"] in [nil, "blocked"] and
+      is_map(entry["execution_readiness"]) and
+      entry["execution_readiness"]["status"] in [
+        "blocked",
+        "ready_for_package_resolution"
+      ]
+  end
+
+  defp blocked_entry?(_entry), do: false
+
+  defp readiness_recovery_actions(result) do
+    result
+    |> Map.get("results", [])
+    |> List.wrap()
+    |> Enum.filter(&blocked_entry?/1)
+    |> Enum.map(&get_in(&1, ["execution_readiness", "required_action"]))
+    |> normalize_string_list()
+  end
+
+  defp resume_policy(_preparation, execution) when is_map(execution) do
+    blocked = execution["blocked_readiness_case_ids"]
+    skipped = normalize_string_list(execution["skipped_case_ids"])
+    errors? = is_integer(execution["error_count"]) and execution["error_count"] > 0
+
+    cond do
+      skipped != [] or (errors? and blocked != []) ->
+        %{"status" => "partial", "next_action" => "resolve_incomplete_cases"}
+
+      errors? ->
+        %{"status" => "partial", "next_action" => "retry_failed_cases"}
+
+      blocked != [] ->
+        %{"status" => "blocked", "next_action" => "resolve_blocked_cases"}
+
+      execution["completion_verified"] == true ->
+        %{"status" => "complete", "next_action" => "archive"}
+
+      true ->
+        %{"status" => "blocked", "next_action" => "resolve_incomplete_cases"}
+    end
+  end
 
   defp resume_policy(%{"error_count" => 0}, _execution),
     do: %{"status" => "prepared", "next_action" => "execute"}
 
-  defp resume_policy(%{"error_count" => count}, _execution) when is_integer(count) and count > 0,
-    do: %{"status" => "blocked", "next_action" => "fix_invalid_cases"}
+  defp resume_policy(%{"error_count" => count}, _execution)
+       when is_integer(count) and count > 0,
+       do: %{"status" => "blocked", "next_action" => "fix_invalid_cases"}
 
   defp resume_policy(_preparation, _execution),
     do: %{"status" => "draft", "next_action" => "prepare"}
@@ -318,11 +375,16 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
     |> normalize_string_list()
   end
 
+  defp target_case_ids(_batch, checkpoint, "resolve_incomplete_cases") do
+    checkpoint |> get_in(["execution", "incomplete_case_ids"]) |> normalize_string_list()
+  end
+
   defp target_case_ids(_batch, _checkpoint, _next_action), do: []
 
   defp blocked_case_ids(batch, _checkpoint, "fix_invalid_cases"), do: all_case_ids(batch)
 
-  defp blocked_case_ids(_batch, checkpoint, "resolve_blocked_cases") do
+  defp blocked_case_ids(_batch, checkpoint, next_action)
+       when next_action in ["resolve_blocked_cases", "resolve_incomplete_cases"] do
     checkpoint
     |> get_in(["execution", "blocked_readiness_case_ids"])
     |> normalize_string_list()
@@ -331,11 +393,21 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchRun do
   defp blocked_case_ids(_batch, _checkpoint, _next_action), do: []
 
   defp recovery_actions(checkpoint, next_action)
-       when next_action in ["retry_failed_cases", "fix_invalid_cases"] do
-    checkpoint
-    |> checkpoint_failure_receipts()
-    |> Enum.map(&get_in(&1, ["recovery", "required_action"]))
-    |> normalize_string_list()
+       when next_action in [
+              "retry_failed_cases",
+              "fix_invalid_cases",
+              "resolve_blocked_cases",
+              "resolve_incomplete_cases"
+            ] do
+    failures =
+      checkpoint
+      |> checkpoint_failure_receipts()
+      |> Enum.map(&get_in(&1, ["recovery", "required_action"]))
+
+    readiness =
+      normalize_string_list(get_in(checkpoint, ["execution", "readiness_recovery_actions"]))
+
+    normalize_string_list(failures ++ readiness)
   end
 
   defp recovery_actions(_checkpoint, _next_action), do: []

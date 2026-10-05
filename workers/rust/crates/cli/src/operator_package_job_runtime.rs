@@ -31,17 +31,40 @@ pub(crate) fn handle_cancel_job(request: RpcRequest) -> AgentReply {
     if let Err(error) = validate_operator_package_job_id(&params.job_id) {
         return release_error(request_id, &params.job_id, false, error);
     }
-    register_cancel(params.job_id.clone());
-    match release_orchestra_operator_job(&params.job_id) {
-        Ok(receipt) => success(
-            request_id,
-            json!({
-                "cancelled": true,
-                "operator_package_job_release": receipt
-            }),
-        ),
-        Err(error) => release_error(request_id, &params.job_id, true, error),
+    if let Err(message) = register_cancel(params.job_id.clone()) {
+        return AgentReply::Stream(
+            Vec::new(),
+            RpcResponse::error(request_id, "execution_control_unavailable", message),
+        );
     }
+    cancellation_receipt(
+        request_id,
+        &params.job_id,
+        release_orchestra_operator_job(&params.job_id),
+    )
+}
+
+fn cancellation_receipt(
+    request_id: String,
+    job_id: &str,
+    cleanup: Result<Value, ExternalOperatorTaskError>,
+) -> AgentReply {
+    let release = cleanup.unwrap_or_else(|error| {
+        json!({
+            "schema_version": "kyuubiki.agent-operator-job-cache-release-failure/v1",
+            "status": "failed", "failure_stage": error.stage,
+            "job_id": job_id, "error_code": error.code, "message": error.message,
+        })
+    });
+    success(
+        request_id,
+        json!({
+            "schema_version": "kyuubiki.agent-job-cancellation/v1",
+            "job_id": job_id, "cancel_registered": true,
+            "cancelled": true, "execution_terminal_confirmed": false,
+            "operator_package_job_release": release,
+        }),
+    )
 }
 
 fn success(request_id: String, result: Value) -> AgentReply {
@@ -82,6 +105,66 @@ mod tests {
     use super::*;
     use crate::agent_state::take_cancelled;
     use kyuubiki_protocol::RpcMethod;
+
+    #[test]
+    fn accepted_cancellation_preserves_a_separate_cache_cleanup_failure() {
+        let job_id = "cancel-cache-cleanup-fault";
+        let control = crate::agent_execution_control::begin(
+            "cancel-cache-cleanup-running".into(),
+            1,
+            Some(job_id.into()),
+        )
+        .unwrap();
+        register_cancel(job_id.into()).unwrap();
+        let AgentReply::Stream(_, response) = cancellation_receipt(
+            "cancel-cache-cleanup".into(),
+            job_id,
+            Err(ExternalOperatorTaskError {
+                code: "operator_package_activation_failed",
+                stage: "activate_operator_registry",
+                message: "injected cleanup failure".into(),
+            }),
+        );
+        assert!(response.ok);
+        assert!(response.error.is_none());
+        let result = response.result.unwrap();
+        assert_eq!(result["job_id"], job_id);
+        assert_eq!(result["cancel_registered"], true);
+        assert_eq!(result["execution_terminal_confirmed"], false);
+        assert_eq!(result["operator_package_job_release"]["status"], "failed");
+        assert_eq!(
+            result["operator_package_job_release"]["error_code"],
+            "operator_package_activation_failed"
+        );
+        assert!(control.solver.cancellation_requested());
+        drop(control);
+        let next = crate::agent_execution_control::begin(
+            "cancel-cache-cleanup-rerun".into(),
+            2,
+            Some(job_id.into()),
+        )
+        .unwrap();
+        assert!(!next.solver.cancellation_requested());
+    }
+
+    #[test]
+    fn accepted_cancellation_does_not_claim_execution_is_terminal() {
+        let cleanup = json!({"disposition":"already_released", "job_id":"cancel-ack"});
+        let AgentReply::Stream(_, response) = cancellation_receipt(
+            "cancel-ack-request".into(),
+            "cancel-ack",
+            Ok(cleanup.clone()),
+        );
+        let result = response.result.unwrap();
+        assert!(response.ok);
+        assert_eq!(
+            result["schema_version"],
+            "kyuubiki.agent-job-cancellation/v1"
+        );
+        assert_eq!(result["cancel_registered"], true);
+        assert_eq!(result["execution_terminal_confirmed"], false);
+        assert_eq!(result["operator_package_job_release"], cleanup);
+    }
 
     #[test]
     fn invalid_job_identity_does_not_register_cancellation() {

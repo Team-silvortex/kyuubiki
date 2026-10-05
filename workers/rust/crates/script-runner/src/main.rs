@@ -781,10 +781,10 @@ fn headless_test_args(rest: Vec<OsString>) -> Vec<OsString> {
     ]
     .into_iter()
     .map(OsString::from)
+    .chain(["--test", "headless_task_completion"].map(OsString::from))
     .chain(rest)
     .collect()
 }
-
 fn headless_live_test_args(rest: Vec<OsString>) -> Vec<OsString> {
     ["test", "-p", "kyuubiki-cli", "--test", "headless_live"]
         .into_iter()

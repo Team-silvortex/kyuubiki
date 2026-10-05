@@ -18,6 +18,7 @@ use crate::service_executor_library::{
     execute_model_create, execute_model_version_create, execute_project_create,
     execute_project_delete, execute_project_update,
 };
+use crate::service_executor_operator_task::operator_task_execution_outcome;
 use crate::service_executor_solve::{
     execute_direct_mesh_solve, execute_solve_and_wait_from_model_version,
     execute_solve_from_model_version,
@@ -194,6 +195,8 @@ fn execute_operator_task_execute(
     api_token: Option<&str>,
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
+    let prepared = crate::prepare_operator_task_payload(payload)
+        .map_err(|message| HeadlessExecutorError { message })?;
     let result = request_json(
         base_url,
         api_token,
@@ -201,10 +204,7 @@ fn execute_operator_task_execute(
         "/api/v1/operator-tasks/execute",
         Some(payload.clone()),
     )?;
-    Ok(HeadlessExecutorOutcome {
-        status: "executed".to_string(),
-        result,
-    })
+    operator_task_execution_outcome(&prepared, result)
 }
 
 fn execute_service_health(

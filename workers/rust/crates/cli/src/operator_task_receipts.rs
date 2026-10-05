@@ -106,6 +106,8 @@ fn required_failure_action(code: &str) -> &'static str {
         | "operator_task_entrypoint_mismatch" => "fix_task_ir_contract_mirror_fields",
         "operator_task_admission_rejected" => "fix_task_ir_authority_and_routing_policy",
         "invalid_params" => "fix_rpc_request_params",
+        "cancelled" => "inspect_cancellation_before_explicit_rerun",
+        "watchdog_timeout" => "inspect_watchdog_timeout_before_explicit_rerun",
         "operator_task_execution_failed" => "inspect_operator_runtime_result",
         "operator_package_host_unavailable" => "restart_agent_with_operator_package_runtime",
         "operator_package_not_loaded" => "install_or_activate_required_operator_package",

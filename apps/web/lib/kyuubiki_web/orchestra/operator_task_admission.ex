@@ -98,12 +98,13 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskAdmission do
     )
   end
 
-  defp validate_agent_fetchable(violations, _authority, nil) do
+  defp validate_agent_fetchable(violations, _authority, fetchable)
+       when not is_boolean(fetchable) do
     violation(
       violations,
       "agent_fetchable_missing",
       "runtime_hints.agent_fetchable",
-      "agent_fetchable must be declared explicitly"
+      "agent_fetchable must be declared explicitly as a boolean"
     )
   end
 

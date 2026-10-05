@@ -22,11 +22,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskEnvelope do
 
   @spec execute(map()) :: {:ok, map()} | {:error, term()}
   def execute(%{"task" => %{"schema_version" => @task_schema} = task}) do
-    with :ok <- OperatorTaskExecutionSummary.validate_digest(task),
-         {:ok, summary} <- OperatorTaskExecutionSummary.build(task),
-         {:ok, result} <- OperatorTaskExecutor.execute(task) do
-      {:ok, summary |> Map.put("status", "executed") |> Map.put("result", result)}
-    end
+    OperatorTaskExecutor.execute_receipt(task)
   end
 
   def execute(%{"task" => task}) when is_map(task), do: {:error, :invalid_operator_task_ir}
@@ -46,9 +42,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskEnvelope do
 
   @spec execute_batch(map()) :: {:ok, map()} | {:error, term()}
   def execute_batch(%{"batch" => %{"quality_execution_batch_contract" => _contract} = batch}) do
-    with {:ok, result} <- OperatorTaskExecutor.execute_batch(batch) do
-      {:ok, Map.put(result, "status", "executed")}
-    end
+    OperatorTaskExecutor.execute_batch(batch)
   end
 
   def execute_batch(%{"batch" => batch}) when is_map(batch),

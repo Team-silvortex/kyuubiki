@@ -13,9 +13,13 @@
     "started_at",
     "finished_at",
     "task_count",
+    "attempted_count",
     "executed_count",
     "ok_count",
+    "blocked_count",
     "error_count",
+    "skipped_count",
+    "skipped_case_ids",
     "error_codes",
     "error_code_counts",
     "readiness_counts",
@@ -28,7 +32,7 @@
     },
     "status": {
       "type": "string",
-      "enum": ["executed"]
+      "enum": ["executed", "blocked", "partial", "failed"]
     },
     "run_id": {
       "type": "string",
@@ -57,8 +61,25 @@
       "minimum": 0
     },
     "executed_count": {
+      "description": "Tasks with validated, published execution results; equal to ok_count, not attempted_count.",
       "type": "integer",
       "minimum": 0
+    },
+    "attempted_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "blocked_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "skipped_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "skipped_case_ids": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
     },
     "ok_count": {
       "type": "integer",
@@ -129,7 +150,7 @@
           },
           "status": {
             "type": "string",
-            "enum": ["ok", "error"]
+            "enum": ["ok", "blocked", "error"]
           },
           "result": {
             "type": "object"

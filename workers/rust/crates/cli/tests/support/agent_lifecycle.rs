@@ -259,6 +259,10 @@ impl LiveAgent {
     ) -> Result<Value, Box<dyn Error>> {
         rpc_request(self.port, id, method, params)
     }
+
+    pub(crate) fn port(&self) -> u16 {
+        self.port
+    }
 }
 
 impl Drop for LiveAgent {

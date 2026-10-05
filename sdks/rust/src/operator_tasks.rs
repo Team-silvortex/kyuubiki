@@ -75,6 +75,17 @@ fn collect_failure_receipts(value: &Value, receipts: &mut Vec<Value>) {
 fn collect_recovery_actions(value: &Value, actions: &mut Vec<String>) {
     match value {
         Value::Object(map) => {
+            if let Some(readiness) = map.get("execution_readiness") {
+                if matches!(
+                    readiness.get("status").and_then(Value::as_str),
+                    Some("blocked" | "ready_for_package_resolution")
+                ) {
+                    push_unique_action(
+                        actions,
+                        readiness.get("required_action").and_then(Value::as_str),
+                    );
+                }
+            }
             if let Some(Value::Array(values)) = map.get("recovery_actions") {
                 for action in values {
                     push_unique_action(actions, action.as_str());

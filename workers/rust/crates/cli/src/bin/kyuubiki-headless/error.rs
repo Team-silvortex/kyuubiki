@@ -28,7 +28,7 @@ pub(super) fn cli_error_stage(code: &str) -> &'static str {
     match code {
         "frontend_proxy_artifact_limit" | "model_artifact_limit_exceeded" => "artifact_upload",
         "job_wait_timeout" => "job_wait",
-        "headless_execution_failed" => "execution",
+        "headless_execution_failed" | "headless_execution_blocked" => "execution",
         "document_validation" => "document_decode",
         "executor_compatibility" | "executor_selection" => "executor_preflight",
         "endpoint_configuration" => "endpoint_configuration",
@@ -63,6 +63,8 @@ pub(super) fn classify_cli_error(error: &str) -> &'static str {
         "material_report_input_contract_mismatch"
     } else if error.contains("--material-report with --json requires --material-report-out") {
         "material_report_output_required"
+    } else if error.starts_with("headless execution blocked") {
+        "headless_execution_blocked"
     } else if error.starts_with("headless execution failed") {
         "headless_execution_failed"
     } else if error.starts_with("executor compatibility check failed") {
@@ -102,6 +104,9 @@ fn cli_error_recovery(code: &str) -> &'static str {
         }
         "headless_execution_failed" => {
             "Inspect execution_summary.failure in the run report before retrying."
+        }
+        "headless_execution_blocked" => {
+            "Inspect the blocking step's execution_readiness.required_action, satisfy its runtime or confirmation gate, then explicitly retry."
         }
         "document_validation" => {
             "Repair the execution document against the supported Headless schema before retrying."
@@ -163,6 +168,17 @@ struct CliErrorView<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn blocked_execution_is_not_a_retryable_transport_failure() {
+        let code = classify_cli_error(
+            "headless execution blocked at step 1 (operator_task_execute): attach_operator_package_runtime",
+        );
+        assert_eq!(code, "headless_execution_blocked");
+        assert_eq!(cli_error_stage(code), "execution");
+        assert!(!cli_error_retryable(code));
+        assert!(cli_error_recovery(code).contains("required_action"));
+    }
 
     #[test]
     fn classifies_frontend_proxy_artifact_limit_for_automation() {

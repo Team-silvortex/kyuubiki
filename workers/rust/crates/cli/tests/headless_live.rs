@@ -2,14 +2,71 @@ use serde_json::{Value, json};
 use std::error::Error;
 use std::fs;
 use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
+use std::ops::Deref;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+#[allow(dead_code)]
+#[path = "support/agent_lifecycle.rs"]
+mod agent_support;
+#[allow(dead_code)]
+#[path = "support/modal_agent.rs"]
+mod modal_support;
+#[path = "support/headless_orchestra_cancel_routing.rs"]
+mod orchestra_cancel_routing;
+#[path = "support/headless_orchestra_cancellation.rs"]
+mod orchestra_cancellation;
+#[path = "support/headless_orchestra_completion.rs"]
+mod orchestra_completion;
+#[path = "support/headless_orchestra_modal.rs"]
+mod orchestra_modal;
+
+static SCRATCH_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+struct Scratch(PathBuf);
+
+impl Scratch {
+    fn new() -> std::io::Result<Self> {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "kyuubiki-rust-headless-live-{}-{unique}-{}",
+            std::process::id(),
+            SCRATCH_SEQUENCE.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir(&root)?;
+        Ok(Self(root))
+    }
+}
+
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
+struct TempJson {
+    _scratch: Scratch,
+    path: PathBuf,
+}
+
+impl Deref for TempJson {
+    type Target = Path;
+
+    fn deref(&self) -> &Self::Target {
+        &self.path
+    }
+}
+
 struct LiveServer {
     child: Child,
+    _scratch: Scratch,
     stdout_log: Arc<Mutex<String>>,
     stderr_log: Arc<Mutex<String>>,
     port: u16,
@@ -37,14 +94,9 @@ fn repo_root() -> PathBuf {
         .expect("repo root")
 }
 
-fn write_temp_json(prefix: &str, payload: &Value) -> PathBuf {
-    let unique = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("clock")
-        .as_nanos();
-    let dir = std::env::temp_dir().join(format!("kyuubiki-rust-headless-live-{unique}"));
-    fs::create_dir_all(&dir).expect("temp dir");
-    let path = dir.join(format!("{prefix}.json"));
+fn write_temp_json(prefix: &str, payload: &Value) -> TempJson {
+    let scratch = Scratch::new().expect("temp dir");
+    let path = scratch.0.join(format!("{prefix}.json"));
     fs::write(
         &path,
         format!(
@@ -53,7 +105,10 @@ fn write_temp_json(prefix: &str, payload: &Value) -> PathBuf {
         ),
     )
     .expect("write temp json");
-    path
+    TempJson {
+        _scratch: scratch,
+        path,
+    }
 }
 
 fn spawn_log_reader(
@@ -88,18 +143,25 @@ fn spawn_log_reader(
 }
 
 fn start_live_server() -> Result<LiveServer, Box<dyn Error>> {
+    start_live_server_with_agent(None)
+}
+
+fn start_live_server_with_agent(agent_port: Option<u16>) -> Result<LiveServer, Box<dyn Error>> {
+    start_live_server_with_agents(agent_port, None)
+}
+
+fn start_live_server_with_agents(
+    agent_port: Option<u16>,
+    peer_port: Option<u16>,
+) -> Result<LiveServer, Box<dyn Error>> {
     let root = repo_root();
     let web_root = root.join("apps/web");
     let server_script = web_root.join("test/support/headless_live_server.exs");
-    let sqlite_path = std::env::temp_dir().join(format!(
-        "kyuubiki-headless-live-{}.sqlite3",
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("clock")
-            .as_nanos()
-    ));
+    let scratch = Scratch::new()?;
+    let sqlite_path = scratch.0.join("kyuubiki.sqlite3");
 
-    let mut child = Command::new("mix")
+    let mut command = Command::new("mix");
+    command
         .arg("run")
         .arg(server_script)
         .current_dir(&web_root)
@@ -109,16 +171,38 @@ fn start_live_server() -> Result<LiveServer, Box<dyn Error>> {
         .env("KYUUBIKI_DEPLOYMENT_MODE", "local")
         .env(
             "KYUUBIKI_HEADLESS_LIVE_SCENARIO",
-            "electrostatic_quad_summary",
+            if agent_port.is_some() {
+                "real_agent"
+            } else {
+                "electrostatic_quad_summary"
+            },
         )
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
+        .stderr(Stdio::piped());
+    if let Some(port) = agent_port {
+        command.env("KYUUBIKI_HEADLESS_LIVE_AGENT_PORT", port.to_string());
+    } else {
+        command.env_remove("KYUUBIKI_HEADLESS_LIVE_AGENT_PORT");
+    }
+    if let Some(port) = peer_port {
+        command.env("KYUUBIKI_HEADLESS_LIVE_AGENT_PEER_PORT", port.to_string());
+    } else {
+        command.env_remove("KYUUBIKI_HEADLESS_LIVE_AGENT_PEER_PORT");
+    }
+    let child = command.spawn()?;
 
-    let stdout = child.stdout.take().expect("stdout pipe");
-    let stderr = child.stderr.take().expect("stderr pipe");
     let stdout_log = Arc::new(Mutex::new(String::new()));
     let stderr_log = Arc::new(Mutex::new(String::new()));
+    // Own the child before readiness waiting, so every error path reaps it.
+    let mut server = LiveServer {
+        child,
+        _scratch: scratch,
+        stdout_log: Arc::clone(&stdout_log),
+        stderr_log: Arc::clone(&stderr_log),
+        port: 0,
+    };
+    let stdout = server.child.stdout.take().expect("stdout pipe");
+    let stderr = server.child.stderr.take().expect("stderr pipe");
     let (ready_tx, ready_rx) = mpsc::channel();
 
     spawn_log_reader(
@@ -128,14 +212,8 @@ fn start_live_server() -> Result<LiveServer, Box<dyn Error>> {
     );
     spawn_log_reader(BufReader::new(stderr), Arc::clone(&stderr_log), None);
 
-    let port = ready_rx.recv_timeout(Duration::from_secs(60))?;
-
-    Ok(LiveServer {
-        child,
-        stdout_log,
-        stderr_log,
-        port,
-    })
+    server.port = ready_rx.recv_timeout(Duration::from_secs(60))?;
+    Ok(server)
 }
 
 fn run_headless_command(args: &[&str]) -> std::process::Output {
@@ -433,9 +511,6 @@ fn rust_headless_cli_executes_live_service_health_and_workflow_submit() {
         workflow_payload["steps"][2]["result_preview"]["result"]["workflow_id"],
         "workflow.electrostatic-plane-quad-2d"
     );
-
-    let _ = fs::remove_file(health_path);
-    let _ = fs::remove_file(workflow_path);
 }
 
 #[test]
@@ -487,8 +562,6 @@ fn rust_headless_cli_prepares_operator_task_through_control_plane() {
         payload["steps"][0]["result_preview"]["task_digest"],
         "86c14d1f22af9d14ab35669a2fcb869afab097a9883e6deabf92a362d8f4469f"
     );
-
-    let _ = fs::remove_file(workflow_path);
 }
 
 #[test]
@@ -576,6 +649,22 @@ fn rust_headless_cli_executes_live_workflow_graph_submit() {
         workflow_payload["steps"][2]["result_preview"]["job"]["message"],
         "workflow completed"
     );
+}
 
-    let _ = fs::remove_file(workflow_path);
+#[test]
+fn live_test_artifacts_are_removed_when_their_owner_drops() {
+    let fixture = write_temp_json("cleanup", &json!({"owned": true}));
+    let path = fixture.path.clone();
+    let root = path.parent().expect("fixture root").to_owned();
+    assert!(path.is_file());
+    drop(fixture);
+    assert!(!root.exists());
+
+    let scratch = Scratch::new().expect("scratch");
+    let root = scratch.0.clone();
+    for suffix in ["", "-wal", "-shm", "-journal"] {
+        fs::write(root.join(format!("kyuubiki.sqlite3{suffix}")), "owned").unwrap();
+    }
+    drop(scratch);
+    assert!(!root.exists());
 }

@@ -11,9 +11,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskReadiness do
   @fetch_stage "fetch_package"
 
   @spec normalize_agent_result(map()) :: map()
-  def normalize_agent_result(%{"execution_readiness" => readiness} = result)
-      when is_map(readiness),
-      do: result
+  def normalize_agent_result(%{"execution_readiness" => _readiness} = result), do: result
 
   def normalize_agent_result(result) when is_map(result) do
     Map.put(result, "execution_readiness", readiness_from_legacy_result(result))

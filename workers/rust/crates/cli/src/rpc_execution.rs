@@ -1,7 +1,7 @@
 use crate::agent_artifact::decode_solver_params;
 use crate::agent_reply_writer::{self, SharedReplyWriter};
 use crate::agent_state::{build_progress_frames, extract_job_id};
-use crate::operator_task_runtime::run_operator_task_ir;
+use crate::operator_task_runtime::{OperatorTaskRuntimeError, run_operator_task_ir};
 use crate::transport::{AgentReply, HeartbeatHandle};
 use crate::{agent_fault_injection, agent_lifecycle};
 use kyuubiki_protocol::{RpcMethod, RpcRequest, RpcResponse};
@@ -39,7 +39,18 @@ pub(crate) fn handle_operator_task_ir(
         "run_operator_task_ir",
     );
     if execution_cancelled(&guard, &request_id, maybe_job_id.as_deref()) {
-        return cancelled_reply(request_id, guard, heartbeat);
+        return operator_task_failure_reply(
+            request_id,
+            guard,
+            heartbeat,
+            OperatorTaskRuntimeError::with_task(
+                "cancelled",
+                "execution cancelled before computation",
+                "before_execution",
+                request.params.get("task_ir"),
+            ),
+            request.params.get("task_ir"),
+        );
     }
 
     let result = match agent_fault_injection::with_solver_control(
@@ -50,50 +61,104 @@ pub(crate) fn handle_operator_task_ir(
     ) {
         Ok(result) => result,
         Err(mut error) => {
-            stop_heartbeat(heartbeat);
             let control = guard.solver_control();
             if control.was_interrupted() {
-                error = crate::operator_task_runtime::OperatorTaskRuntimeError::with_task(
+                error = OperatorTaskRuntimeError::with_task(
                     "cancelled",
                     error.message,
                     "execute_solver",
                     request.params.get("task_ir"),
                 );
             }
-            let report = agent_lifecycle::fail_execution(guard, error.code, error.message);
-            let reason_code = report.reason_code.clone();
-            let mut details =
-                serde_json::to_value(report).expect("failure report should serialize");
-            details["solver_checkpoint"] =
-                crate::agent_execution_control::checkpoint_json(&control);
-            details["operator_task_failure_receipt"] = error.details;
-            let message = details["message"].as_str().unwrap_or_default().to_string();
-            return AgentReply::Stream(
-                Vec::new(),
-                RpcResponse::error_with_details(request_id, reason_code, message, details),
+            return operator_task_failure_reply(
+                request_id,
+                guard,
+                heartbeat,
+                error,
+                request.params.get("task_ir"),
             );
         }
     };
 
-    if execution_cancelled(&guard, &request_id, maybe_job_id.as_deref()) {
-        stop_heartbeat(heartbeat);
-        let report =
-            agent_lifecycle::fail_execution(guard, "cancelled", "operator task was cancelled");
-        let reason_code = report.reason_code.clone();
-        return AgentReply::Stream(
-            Vec::new(),
-            RpcResponse::error_with_details(
-                request_id,
-                reason_code,
-                report.message.clone(),
-                serde_json::to_value(report).expect("failure report should serialize"),
+    publish_operator_task_result(
+        request_id,
+        guard,
+        heartbeat,
+        writer.as_ref(),
+        result,
+        request.params.get("task_ir"),
+    )
+}
+
+fn publish_operator_task_result(
+    request_id: String,
+    guard: agent_lifecycle::ExecutionGuard,
+    heartbeat: Option<HeartbeatHandle>,
+    writer: Option<&SharedReplyWriter>,
+    result: serde_json::Value,
+    task_ir: Option<&serde_json::Value>,
+) -> AgentReply {
+    if guard.cancellation_requested() {
+        return operator_task_failure_reply(
+            request_id,
+            guard,
+            heartbeat,
+            OperatorTaskRuntimeError::with_task(
+                "cancelled",
+                "operator task was cancelled before result publication",
+                "publish_result",
+                task_ir,
             ),
+            task_ir,
         );
     }
 
     stop_heartbeat(heartbeat);
-    agent_reply_writer::complete_execution(writer.as_ref(), guard);
+    agent_reply_writer::complete_execution(writer, guard);
     AgentReply::Stream(Vec::new(), RpcResponse::success(request_id, result))
+}
+
+fn operator_task_failure_reply(
+    request_id: String,
+    guard: agent_lifecycle::ExecutionGuard,
+    heartbeat: Option<HeartbeatHandle>,
+    error: OperatorTaskRuntimeError,
+    task_ir: Option<&serde_json::Value>,
+) -> AgentReply {
+    stop_heartbeat(heartbeat);
+    let control = guard.solver_control();
+    let report = agent_lifecycle::fail_execution(guard, error.code, error.message);
+    let receipt = bind_failure_report(&report, error.details, task_ir);
+    let mut details = serde_json::to_value(&report).expect("failure report should serialize");
+    details["solver_checkpoint"] = crate::agent_execution_control::checkpoint_json(&control);
+    details["operator_task_failure_receipt"] = receipt;
+    AgentReply::Stream(
+        Vec::new(),
+        RpcResponse::error_with_details(request_id, report.reason_code, report.message, details),
+    )
+}
+
+fn bind_failure_report(
+    report: &crate::agent_watchdog::FailureReport,
+    mut receipt: serde_json::Value,
+    task_ir: Option<&serde_json::Value>,
+) -> serde_json::Value {
+    let stage = receipt["failure_stage"]
+        .as_str()
+        .unwrap_or("execute_operator_task");
+    // A watchdog may have already recorded this generation's terminal reason.
+    let bound = crate::operator_task_receipts::operator_task_failure_receipt(
+        &report.reason_code,
+        &report.message,
+        stage,
+        task_ir,
+    );
+    if let Some(fields) = receipt.as_object_mut() {
+        fields.extend(bound.as_object().expect("failure receipt object").clone());
+        receipt
+    } else {
+        bound
+    }
 }
 
 pub(crate) fn run_solver<Request, ResultValue, NodeCount, Solver>(
@@ -295,3 +360,7 @@ fn rpc_method_name(method: &RpcMethod) -> String {
         .and_then(|value| value.as_str().map(ToString::to_string))
         .unwrap_or_else(|| format!("{method:?}"))
 }
+
+#[cfg(test)]
+#[path = "tests/operator_task_failure_reply.rs"]
+mod tests;

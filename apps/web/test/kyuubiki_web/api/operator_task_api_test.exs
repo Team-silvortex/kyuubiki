@@ -123,6 +123,13 @@ defmodule KyuubikiWeb.OperatorTaskApiTest do
            %{
              "ok" => true,
              "result" => %{
+               "task_id" => task["task_id"],
+               "task_digest" => get_in(task, ["integrity", "task_digest"]),
+               "operator_id" => get_in(task, ["operator", "id"]),
+               "program_id" => get_in(task, ["execution_program", "program_id"]),
+               "operator_task_ir_status" => "executed",
+               "execution_readiness" =>
+                 KyuubikiWeb.Orchestra.OperatorTaskReadiness.local_executed(),
                "execution_runtime_status" => "external_operator_package_executed",
                "operator_package_execution" => %{
                  "origin" => "bound_orchestra_fetch",

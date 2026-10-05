@@ -15,6 +15,8 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HeadlessExecutorOutcome {
+    /// Only `executed` authorizes downstream steps. `blocked`, `failed`, and
+    /// `cancelled` halt the batch; unknown statuses fail closed.
     pub status: String,
     pub result: Value,
 }
@@ -59,7 +61,7 @@ impl HeadlessExecutor for MockHeadlessExecutor {
         if is_operator_task_execute_action(action) {
             return preview_operator_task_execute_payload(payload)
                 .map(|result| HeadlessExecutorOutcome {
-                    status: "executed".to_string(),
+                    status: "blocked".to_string(),
                     result,
                 })
                 .map_err(|message| HeadlessExecutorError { message });
@@ -184,11 +186,52 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
             continue;
         }
 
+        if is_operator_task_execute_action(&step.action)
+            && prepare_operator_task_payload(&payload).is_err()
+        {
+            status = "failed".to_string();
+            steps.push(HeadlessExecutionStepReport {
+                index: step.index,
+                action: step.action.clone(),
+                risk: step.risk,
+                status: status.clone(),
+                payload: compact_report_value(&payload),
+                result_preview: operator_task_prepare_preview_or_error(&payload),
+                requires_confirmation,
+            });
+            break;
+        }
+
         match executor.execute_step(&step.action, step.index, &payload) {
-            Ok(outcome) => {
-                executed_step_count += 1;
+            Ok(mut outcome) => {
+                let completed = outcome.status == "executed";
+                if !matches!(
+                    outcome.status.as_str(),
+                    "executed" | "blocked" | "failed" | "cancelled"
+                ) {
+                    let mut failure = failure_preview(
+                        step.index,
+                        &step.action,
+                        "executor returned an unknown completion status".into(),
+                    );
+                    failure["executor_receipt"] = outcome.result;
+                    outcome.result = failure;
+                    outcome.status = "failed".into();
+                }
+                if completed {
+                    executed_step_count += 1;
+                } else {
+                    status = if outcome.status == "blocked" {
+                        "blocked"
+                    } else {
+                        "failed"
+                    }
+                    .into();
+                }
                 let result_preview = compact_report_value(&outcome.result);
-                results.insert(step.index, outcome.result);
+                if completed {
+                    results.insert(step.index, outcome.result);
+                }
                 steps.push(HeadlessExecutionStepReport {
                     index: step.index,
                     action: step.action.clone(),
@@ -198,6 +241,9 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
                     result_preview,
                     requires_confirmation,
                 });
+                if !completed {
+                    break;
+                }
             }
             Err(error) => {
                 status = "failed".to_string();

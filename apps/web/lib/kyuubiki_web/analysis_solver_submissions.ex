@@ -421,7 +421,7 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
         )
       end)
 
-    case Task.yield(task, total_timeout_ms) || Task.shutdown(task, :brutal_kill) do
+    case await_dispatch(task, job_id, total_timeout_ms) do
       {:ok, {:ok, result, endpoint}} when is_map(result) ->
         case Store.complete_with_result(job_id, AgentClient.worker_id(endpoint), result) do
           {:ok, _completed} ->
@@ -443,8 +443,6 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
         unless terminal?(job_id), do: fail_job(job_id, inspect(reason))
 
       nil ->
-        request_agent_cancel(job_id)
-
         unless terminal?(job_id),
           do:
             fail_job(
@@ -457,9 +455,23 @@ defmodule KyuubikiWeb.AnalysisSolverSubmissions do
     end
   end
 
-  defp request_agent_cancel(job_id) do
+  defp await_dispatch(task, job_id, timeout_ms) do
+    case Task.yield(task, timeout_ms) do
+      nil ->
+        {:ok, reply, targets} =
+          KyuubikiWeb.Playground.AgentJobCancellation.stop_dispatch(task, job_id)
+
+        if is_nil(reply), do: request_agent_cancel(job_id, targets)
+        reply
+
+      reply ->
+        reply
+    end
+  end
+
+  defp request_agent_cancel(job_id, targets) do
     Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
-      _ = AgentClient.cancel_job(job_id)
+      _ = AgentClient.cancel_job(job_id, targets)
     end)
 
     :ok

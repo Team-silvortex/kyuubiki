@@ -209,7 +209,7 @@ fn main() -> SdkResult<()> {
                         .iter()
                         .map(|output| output.key.clone())
                         .collect();
-                    println!("[result] validated artifact keys: {:?}", keys);
+                    println!("[result] validated artifact keys: {keys:?}");
                 }
                 if let Some(output_manifest) = outcome.output_manifest {
                     println!(
@@ -265,10 +265,7 @@ fn main() -> SdkResult<()> {
                     .and_then(|v| v.get(0))
                     .and_then(|v| v.get("temperature_delta"))
                 {
-                    println!(
-                        "[artifact] thermo first node temperature_delta: {}",
-                        temp_delta
-                    );
+                    println!("[artifact] thermo first node temperature_delta: {temp_delta}");
                 }
             }
         }

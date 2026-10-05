@@ -79,7 +79,9 @@ pub(crate) fn summarize_execution(
         step.result_preview
             .get("failure_receipt")
             .cloned()
-            .and_then(|value| serde_json::from_value(value).ok())
+            .and_then(|value| serde_json::from_value::<HeadlessFailureReceipt>(value).ok())
+            .filter(|receipt| receipt.schema_version == HEADLESS_FAILURE_RECEIPT_SCHEMA_VERSION)
+            .or_else(|| crate::service_executor_operator_task::agent_failure_summary(step))
     });
     let job_ids = jobs.iter().map(|job| job.job_id.clone()).collect();
 

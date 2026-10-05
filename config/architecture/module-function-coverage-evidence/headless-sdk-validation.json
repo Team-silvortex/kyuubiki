@@ -87,6 +87,76 @@
     ],
     "validation": [
       {
+        "id": "orchestra-task-completion-contract",
+        "modules": ["orchestra-control-plane"],
+        "files": [
+          "apps/web/lib/kyuubiki_web/orchestra/operator_task_completion.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/operator_task_batch_completion.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/operator_task_executor.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/operator_task_batch_run.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/operator_task_envelope.ex",
+          "apps/web/test/kyuubiki_web/api/operator_task_completion_api_test.exs",
+          "schemas/operator-task-batch-execution.schema.json",
+          "schemas/operator-task-batch-resume-plan.schema.json",
+          "docs/headless-sdks.md"
+        ],
+        "required_text": [
+          "operator_task_execution_receipt_invalid",
+          "execute_receipt",
+          "completion_verified",
+          "attempted_count",
+          "skipped_case_ids",
+          "resolve_incomplete_cases",
+          "Orchestra task completion and batch recovery"
+        ]
+      },
+      {
+        "id": "rust-model-task-completion-gate",
+        "modules": ["sdk-headless"],
+        "files": [
+          "sdks/rust/src/model_research_execution.rs",
+          "sdks/rust/src/model_task_completion.rs",
+          "sdks/rust/src/operator_tasks.rs",
+          "sdks/rust/src/control_plane.rs",
+          "sdks/rust/tests/model_task_completion.rs",
+          "docs/headless-sdks.md"
+        ],
+        "required_text": [
+          "validate_model_task_completion",
+          "operator_task_execution_blocked",
+          "pending_or_failed_task_receipts_stop_model_research_before_downstream_actions",
+          "partial_or_skipped_task_batches_never_complete_model_research",
+          "batch_cases_and_nested_agent_receipts_must_match_the_submitted_tasks",
+          "session_http_task_gate_retains_blockers_and_recovers_with_fresh_execution",
+          "Official Rust model task completion gate"
+        ]
+      },
+      {
+        "id": "native-headless-task-completion-gate",
+        "modules": ["sdk-headless"],
+        "files": [
+          "workers/rust/crates/headless-sdk/src/executor.rs",
+          "workers/rust/crates/headless-sdk/src/executor_outcome_tests.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_operator_task.rs",
+          "workers/rust/crates/headless-sdk/src/service_executor_operator_task_tests.rs",
+          "workers/rust/crates/cli/src/bin/kyuubiki-headless.rs",
+          "workers/rust/crates/cli/src/bin/kyuubiki-headless/error.rs",
+          "workers/rust/crates/cli/tests/headless_task_completion.rs",
+          "workers/rust/crates/script-runner/src/main.rs",
+          "docs/headless-sdks.md"
+        ],
+        "required_text": [
+          "noncompleted_executor_outcomes_halt_without_counting_success_or_later_side_effects",
+          "invalid_task_execution_never_reaches_a_custom_executor",
+          "http_stale_or_malformed_completion_receipts_fail_closed",
+          "wrapped_agent_readiness_cannot_be_promoted_by_outer_dispatch_success",
+          "headless_http_receipts_from_a_real_agent_block_fail_and_recover",
+          "native_cli_blocked_task_returns_nonzero_and_persists_the_receipt",
+          "headless_execution_blocked",
+          "Native batch completion gate"
+        ]
+      },
+      {
         "id": "native-headless-wait-deadline-boundaries",
         "modules": ["sdk-headless"],
         "files": [
@@ -163,6 +233,228 @@
     ]
   },
   "evidence_claims": [
+    {
+      "id": "local-known-dispatch-cancellation-ownership",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli", "orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/analysis_job_records.ex",
+        "apps/web/lib/kyuubiki_web/analysis_solver_submissions.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_client.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_execution_gate.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_job_cancellation.ex",
+        "apps/web/test/kyuubiki_web/playground/agent_job_cancellation_test.exs",
+        "apps/web/test/kyuubiki_web/api/solver_cancellation_routing_api_test.exs",
+        "apps/web/test/support/cancellable_solver_agent.exs",
+        "workers/rust/crates/cli/src/agent_execution_control.rs",
+        "workers/rust/crates/cli/src/operator_package_job_runtime.rs",
+        "workers/rust/crates/cli/tests/operator_package_orchestra_fetch_live.rs",
+        "workers/rust/crates/cli/tests/headless_live.rs",
+        "workers/rust/crates/cli/tests/support/headless_orchestra_cancel_routing.rs",
+        "apps/web/test/support/headless_live_server.exs",
+        "docs/headless-sdks.md",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "public cancellation reaches the executing agent rather than an idle pool peer",
+        "queued cancellation never creates a pending cancellation on an agent",
+        "cancelled dispatch keeps a native TaskIR failure receipt instead of flattening it",
+        "timeout cleanup captures the dispatch target before killing its local owner",
+        "accepted_cancellation_preserves_a_separate_cache_cleanup_failure",
+        "agent_fetches_executes_and_safely_rotates_bound_orchestra_package",
+        "real_two_agent_public_job_cancel_targets_owner_and_does_not_poison_peer",
+        "kyuubiki.orchestra-job-cancellation/v1",
+        "kyuubiki.agent-job-cancellation/v1",
+        "execution_terminal_confirmed",
+        "Known Dispatch Cancellation Follow Up"
+      ]
+    },
+    {
+      "id": "local-taskir-cancellation-receipts-and-explicit-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli", "orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/rpc_execution.rs",
+        "workers/rust/crates/cli/src/operator_task_receipts.rs",
+        "workers/rust/crates/cli/src/tests/operator_task_ir_rpc.rs",
+        "workers/rust/crates/cli/src/tests/operator_task_failure_reply.rs",
+        "workers/rust/crates/cli/tests/headless_live.rs",
+        "workers/rust/crates/cli/tests/support/headless_orchestra_cancellation.rs",
+        "workers/rust/crates/cli/tests/support/headless_orchestra_completion.rs",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_failure.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_executor.ex",
+        "workers/rust/crates/headless-sdk/src/service_executor_operator_task.rs",
+        "docs/headless-sdks.md",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "operator_task_rpc_binds_cancellation_before_computation_to_task_ir",
+        "publication_boundary_discards_cancelled_result_and_allows_explicit_rerun",
+        "late_cancel_reply_reuses_the_recorded_watchdog_failure_for_the_same_generation",
+        "terminal_failure_keeps_admission_diagnostics_while_rebinding_core_fields",
+        "real_orchestra_precomputation_cancel_stops_downstream_and_allows_same_task_rerun",
+        "real_orchestra_modal_matvec_cancel_recovers_without_publishing_partial_results",
+        "real_orchestra_spatial_modal_final_validation_cancel_recovers",
+        "inspect_cancellation_before_explicit_rerun",
+        "TaskIR Cancellation and Explicit Recovery Follow Up"
+      ]
+    },
+    {
+      "id": "local-native-agent-failure-contract-and-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["runtime_api", "workflow_composition", "validation", "persistence_provenance"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/playground/agent_rpc_transport.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_client.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_failure.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_completion.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_executor.ex",
+        "apps/web/test/kyuubiki_web/api/agent_native_task_api_test.exs",
+        "workers/rust/crates/headless-sdk/src/service_executor_operator_task.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_operator_task_tests.rs",
+        "workers/rust/crates/headless-sdk/src/execution_observability.rs",
+        "workers/rust/crates/cli/tests/support/headless_orchestra_completion.rs",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "native failure receipt retains task identity and engine recovery without penalizing Agent health",
+        "stale or malformed native failure receipts fail closed without reflecting rejected values",
+        "native failure recovery survives batch checkpoint and safe-continuation policy",
+        "successful RPC envelopes cannot smuggle stale failure or contradictory recovery advice",
+        "http_native_failure_identity_recovery_and_state_must_be_consistent",
+        "native_failure_summary_is_typed_bound_and_survives_report_compaction",
+        "Native Failure Relay and Modal HTTP Follow Up"
+      ]
+    },
+    {
+      "id": "local-native-agent-orchestra-completion-chain",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["runtime_api", "workflow_composition", "validation", "persistence_provenance"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_executor.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_client.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_admission.ex",
+        "apps/web/test/kyuubiki_web/api/agent_native_task_api_test.exs",
+        "apps/web/test/support/headless_live_server.exs",
+        "workers/rust/crates/cli/tests/headless_live.rs",
+        "workers/rust/crates/cli/tests/support/headless_orchestra_completion.rs",
+        "workers/rust/crates/cli/tests/support/headless_orchestra_modal.rs",
+        "workers/rust/crates/cli/tests/support/modal_agent.rs",
+        "workers/rust/crates/solver/tests/support/modal_published_reference.rs",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "Agent-native TaskIR does not require an attached package runtime",
+        "execute API preserves native Agent TaskIR identity and receipt instead of legacy solve RPC",
+        "native tasks with a package reference do not bypass package readiness",
+        "invalid native fetch declarations are rejected before contacting the Agent",
+        "real_orchestra_agent_chain_blocks_fails_and_recovers_without_downstream_side_effects",
+        "real_orchestra_agent_mixed_batch_checkpoint_retains_only_unfinished_targets",
+        "real_orchestra_agent_cli_blocked_exit_preserves_report",
+        "real_orchestra_modal_taskir_retains_full_modes_and_independent_residuals",
+        "real_orchestra_modal_solver_failure_can_be_repaired_on_the_same_agent",
+        "Real Local Agent and Orchestra Follow Up"
+      ]
+    },
+    {
+      "id": "orchestra-local-sqlite-test-isolation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["validation", "persistence_provenance"],
+      "dimensions": ["contract", "recovery"],
+      "files": [
+        "apps/web/config/runtime.exs",
+        "apps/web/test/support/disposable_database.exs",
+        "apps/web/test/kyuubiki_web/storage/test_runtime_isolation_test.exs",
+        "apps/web/README.md",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "test_database_root",
+        "ExUnit.after_suite",
+        "explicit SQLite paths remain caller-owned in every environment",
+        "independent test starts never reuse an owned database path",
+        "cleanup refuses caller-owned directories and never recursively removes unexpected files",
+        "Local Test Runtime Isolation Follow Up"
+      ]
+    },
+    {
+      "id": "orchestra-task-completion-and-incomplete-batch-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "workflow_composition", "validation", "persistence_provenance"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_completion.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_batch_completion.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_batch_run.ex",
+        "apps/web/test/kyuubiki_web/api/operator_task_completion_api_test.exs",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "single execution exposes Agent blocking instead of dispatch success and can recover",
+        "strict batches preserve skipped tasks and do not execute past an Agent blocker",
+        "mixed independent cases retain successful data and all unresolved recovery targets",
+        "checkpoint archival needs task-bound unique results and consistent completion metadata",
+        "Local Orchestra API verification only; not deployed Agent or scientific qualification."
+      ]
+    },
+    {
+      "id": "rust-model-task-completion-and-explicit-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "sdks/rust/src/model_task_completion.rs",
+        "sdks/rust/tests/model_task_completion.rs",
+        "reports/rust-sdk-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "stale_missing_and_malformed_task_receipts_cannot_claim_model_completion",
+        "nested_agent_receipt_is_independently_bound_and_validated",
+        "contradictory_batch_success_flags_and_failure_lists_are_rejected",
+        "valid_single_and_reordered_batch_results_remain_available_without_float_loss",
+        "session_http_task_gate_retains_blockers_and_recovers_with_fresh_execution",
+        "Local official Rust SDK verification only; not deployed or cross-language qualification."
+      ]
+    },
+    {
+      "id": "native-headless-task-completion-and-agent-replay",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/executor_outcome_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_operator_task_tests.rs",
+        "workers/rust/crates/cli/tests/headless_task_completion.rs",
+        "reports/native-headless-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "mock_task_execution_is_a_blocked_preview_not_completed_computation",
+        "nested_agent_identity_and_validation_receipts_are_checked_independently",
+        "headless_http_receipts_from_a_real_agent_block_fail_and_recover",
+        "native_cli_blocked_task_returns_nonzero_and_persists_the_receipt",
+        "Local native batch verification only; not installed or cross-language qualification."
+      ]
+    },
     {
       "id": "headless-workflow-composition-qualification",
       "status": "proven",

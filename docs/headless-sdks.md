@@ -274,6 +274,38 @@ Successful previews include a
 by the Elixir control plane and enforced again by the Rust Agent before package
 resolution or engine execution, so Headless preflight cannot silently weaken
 the runtime boundary.
+
+### Native batch completion gate
+
+The Rust native batch executor under `workers/rust/crates/headless-sdk` separates
+HTTP delivery from task execution. `operator_task_execute` validates TaskIR
+before any executor dispatch or service connection. Service replies must match
+the submitted `task_id`, `task_digest`, `operator_id`, and `program_id`.
+An outer Orchestra `executed` envelope cannot override a nested Agent's blocked
+or pending TaskIR receipt. Missing results, unknown states, contradictory
+readiness, or mismatched identity fail closed without echoing rejected values.
+Executed readiness cannot simultaneously declare a blocking stage, blocking
+reason, or required repair action.
+
+Only `HeadlessExecutorOutcome.status == "executed"` publishes bindings and
+increments `executed_step_count`. `blocked`, `failed`, `cancelled`, and unknown
+executor statuses halt the batch before later side effects. A blocked receipt
+retains its readiness and recovery action; it is not a confirmation receipt
+unless `blocked_by_confirmation` explicitly identifies a confirmation gate.
+The mock TaskIR execute path remains a blocked preview, not a solver result.
+Explicit CLI execution returns a nonzero exit code for blocked runs, after
+writing the requested run report; JSON stderr identifies
+`headless_execution_blocked` with `retryable: false`. Dry-run remains a separate
+planning mode. These are native batch/CLI guarantees, not a claim that all
+three standalone SDK clients or installed deployments have been qualified.
+
+Local verification is retained in
+[native-headless-task-completion-20261005.md](../reports/native-headless-task-completion-20261005.md):
+malformed/stale receipt rejection, side-effect isolation, full-result binding
+preservation, and a real development-Agent TCP sequence with an independent
+axial-bar displacement check. The test-only HTTP envelope adapter does not
+replace an actual Orchestra deployment or qualify unresolved modal materials.
+
 The same preview payload now includes a
 `kyuubiki.headless-operator-task-failure/v1` `failure_receipt` with the failed
 stage, task identity when available, and a recovery action. This mirrors the
@@ -288,6 +320,182 @@ failed case entry and in the batch-level `failure_receipts` list.
 Batch checkpoints retain those receipts in their preparation/execution summary,
 and resume plans expose `recovery_actions` so automation can decide whether to
 retry failed cases or repair invalid TaskIR/batch entries first.
+
+### Official Rust model task completion gate
+
+The standalone SDK under `sdks/rust` checks synchronous task completion inside
+`execute_model_headless_plan`, including custom `ModelActionDispatcher`
+implementations. `operator_task_execute` binds the receipt to the submitted
+task id, digest, operator, and program. Nested Agent state and present
+validation/provenance mirrors are checked separately; an outer dispatch-success
+wrapper is not sufficient.
+
+`operator_task_batch_execute` additionally verifies the batch digest, execution
+contract, complete counts, unique case coverage, and each case's task identity,
+publication, and readiness. Partial, duplicate, stale, skipped, failed, or
+contradictory receipts stop before later plan actions. Result order may differ
+from request order; cases are matched by id rather than position.
+
+The existing v2 model receipt records the attempt as `failed`, retains the
+problem step's authority and unmodified output, and counts only preceding
+successful actions. This means the plan did not complete, not that every
+preceding calculation failed. A caller-verified receipt can enter a blocked
+research frontier. `operator_task_recovery_summary` also extracts deduplicated
+`required_action` values from blocked or package-resolution readiness. Repair
+the named gate and explicitly invoke another approved execution; no automatic
+resubmission or permission bypass occurs.
+
+Low-level `ControlPlaneClient` methods still return raw HTTP receipts, including
+blocked or partially executed batches. Their `Ok` proves transport success,
+not calculation success. Preparing a task and submitting an asynchronous job
+remain distinct actions and do not require a synchronous solver result. TaskIR
+admission remains the runtime's responsibility; this standalone gate checks
+receipts rather than duplicating the Agent engine or full TaskIR validator.
+See [Rust SDK task completion verification](../reports/rust-sdk-task-completion-20261005.md)
+for the bounded local Rust tests. Python/Elixir parity, installed acceptance,
+authenticated deployment, and scientific qualification are separate remaining
+gates.
+
+### Orchestra task completion and batch recovery
+
+Orchestra now validates Agent completion before publishing an executed TaskIR
+envelope. Receipt task id, digest, operator, and program must match the submitted
+task; present validation/provenance mirrors must agree. Pending execution or
+package resolution remains `blocked`, rather than becoming completed merely
+because the RPC returned successfully. Executed readiness cannot still declare
+a blocking stage, reason, or required action. Only absent legacy readiness is
+normalized; explicitly malformed readiness is rejected, without echoing rejected
+receipt values in the error.
+
+Tasks declaring `execution_mode: agent_native` now cross the Agent's
+`run_operator_task_ir` boundary rather than being converted back to legacy solve
+RPCs. An unbundled native task with `agent_fetchable: false` does not require an
+attached external-package runtime. Package references and central fetch tasks
+still require package readiness. `agent_fetchable` must be a JSON boolean;
+strings such as `"false"` are rejected during admission, before selecting an
+Agent. This routing change does not expand the Agent's advertised operator set.
+
+An Agent RPC execution error carrying
+`kyuubiki.agent-operator-task-failure/v1` is validated before Orchestra publishes
+a `status: failed` execution envelope. HTTP 200 means the structured execution
+receipt was delivered, not that the calculation succeeded. The failure owner,
+schema, task id/digest/operator, optional program id, RPC code/message, recovery
+booleans, and readiness must agree. Malformed or stale receipts return
+`operator_task_execution_receipt_invalid` without reflecting rejected values.
+Consumers bound identity strings to 1,024 UTF-8 bytes, stage/code/action to 128
+bytes, and the failure message to 4,096 bytes. Unknown failure/recovery fields
+are not forwarded by Orchestra. The message bound also keeps the native receipt
+intact under run-report compaction.
+
+Failure details remain in `failure_receipt`: branch on `reason_code`,
+`failure_stage`, and `recovery.required_action`, not message text. The native Rust
+run summary derives typed retryability and recommended action from that bound
+receipt; its general Headless category remains `runtime_failure`, with the exact
+Agent code/stage retained in the step preview. A task failure is not a transport
+outage, does not penalize Agent connection health, and never automatically
+fails over or replays. Existing generic RPC errors and capacity queuing retain
+their prior behavior; retry advice is not replay authorization.
+
+TaskIR cancellation before computation (`before_execution`), at cooperative
+numerical safe points (`execute_solver`), or when observed at the result
+publication boundary (`publish_result`) retains the submitted task id, digest,
+and operator in the same failure contract. Cancellation is a failed execution,
+not a successful calculation. Its action is
+`inspect_cancellation_before_explicit_rerun`, with `retryable: false`; no later
+native batch action is authorized. If a watchdog has already recorded a failure
+for this execution generation, the RPC code/message and bound receipt retain
+that terminal reason, rather than rewriting it as a later cancellation.
+`watchdog_timeout` requires `inspect_watchdog_timeout_before_explicit_rerun`.
+
+The Agent's `solver_checkpoint` is diagnostic only (`resumable: false`), not a
+numerical continuation snapshot. Orchestra forwards known failure fields, not
+this separate RPC diagnostic. Local HTTP regressions cancel an owned Agent
+directly, check that no downstream project or partial result is published,
+and explicitly rerun the identical task on the same Agent. They cover a
+precomputation axial bar, 2D modal matrix multiplication, and 3D modal final shape
+validation. The publication boundary and already-recorded watchdog reason are
+tested separately at the Rust unit boundary. This does not qualify Orchestra
+multi-Agent cancellation routing by itself; the separate known-dispatch
+regression below covers the public asynchronous cancel path locally. Neither
+qualifies authenticated deployment or cancellation after publication has begun.
+There is no atomic cancel-versus-send guarantee: cancellation arriving after
+the last publication check may race with response delivery.
+
+#### Known-dispatch cancellation
+
+`POST /api/v1/jobs/{job_id}/cancel` commits the control-plane cancellation intent
+and returns a separate `cancellation` object using
+`kyuubiki.orchestra-job-cancellation/v1`. It snapshots active execution leases
+for that job, not the current Agent pool or a historical worker id. Queued and
+reserved requests are cancelled locally; dispatched requests contact only their
+captured endpoints. Active capacity is retained until the execution caller
+finishes or exits. The total server-budget cleanup path captures those targets
+before killing its local waiting task, so owner cleanup cannot erase the target.
+Locally cancelled transport failures cannot automatically fail over; an existing
+native TaskIR failure receipt is preserved instead of flattened to a generic error.
+
+Inspect `status`, `target_count`, `registered_count`, local cancellation counts,
+and per-Agent `targets`. `requested` means cancellation registration was
+acknowledged, not that computation has stopped. `partially_requested` and
+`delivery_failed` retain unsuccessful targets without broadcasting to idle peers.
+`no_active_dispatch` means no matching live lease was found, not that no remote
+execution exists. The acknowledgement sets `execution_terminal_confirmed: false`;
+the persisted job's cancelled intent is distinct from a terminal native receipt.
+
+Native `kyuubiki.agent-job-cancellation/v1` acknowledgements likewise distinguish
+`cancel_registered` from `operator_package_job_release`. A bound-package cleanup
+failure stays in that release field without rejecting an already registered
+cancel. Unbound jobs normally return `already_released`, not a cleanup error.
+The legacy `cancelled` field means registration, not proof of stopped execution.
+
+A local two-real-Agent regression saturates both slots, queues an asynchronous
+spring job, then cancels it only on its owner. The peer's held TaskIR remains
+uncancelled; reusing the cancelled job id on that peer does not consume a stray
+cancel. A following public job completes with independent displacement, force,
+and strain-energy checks. Controlled tests additionally cover queue/reservation
+cancellation, multiple known owners, failed acknowledgements, retained capacity,
+typed failure preservation, and capture before local task shutdown. These do not
+qualify durable target recovery after Orchestra restart/transport loss, remote or
+authenticated deployment, every asynchronous solver, or atomic cancel-versus-send.
+Long synchronous TaskIR requests retain the native SDK's 30-second HTTP I/O
+timeout. A loaded-host repeat exceeded the 15-second modal safe-point observation
+budget and this synchronous read timeout; a subsequent isolated full live run
+passed. This is retained as a waiting/budget reliability gap, not numerical
+qualification or evidence of an atomic cancellation guarantee.
+
+Execution batches separate `attempted_count`, `executed_count`/`ok_count`,
+`blocked_count`, `error_count`, and `skipped_count`. The invariant is
+`task_count = executed_count + blocked_count + error_count + skipped_count`.
+Strict execution stops at the first noncomplete case and retains skipped case
+ids. Independent execution may continue healthy cases without promoting the
+blocked or failed ones. A validated failure declaring
+`recovery.safe_to_continue_other_tasks: false` stops even independent execution
+and retains skipped ids. Actual Agent results, failure recovery, and readiness
+are retained.
+
+Checkpoint archival requires unique, task-bound published results and consistent
+completion metadata, not just `error_count == 0`. Package-resolution cases remain
+recovery targets; readiness repair actions survive JSON checkpoint reload.
+`resolve_incomplete_cases` covers mixed failed/blocked/skipped batches and keeps
+valid completed cases out of the recovery target set. Inconsistent completion
+metadata cannot archive and may require revalidating the whole batch. A recovery
+plan does not itself execute or automatically retry any task.
+
+See [Orchestra completion verification](../reports/orchestra-task-completion-20261005.md).
+The API tests use controlled Agent receipts. The native `headless-live-test`
+target additionally runs a real local Rust Agent through actual Orchestra HTTP:
+a bar solve is compared with the independent FL/EA solution, invalid input is
+repaired and recomputed, blockers/failures cannot create downstream projects,
+and mixed-batch recovery targets and engine repair actions survive checkpoint
+file reload. Modal 2D fixtures with 96/100 beam segments and a modal 3D fixture
+with 100 segments retain full mode arrays before report compaction, compare
+against independent roots, and check matrix residuals. Invalid 3D density fails
+without consuming the Agent permanently; repaired input and a fresh digest
+execute under the same task id. These are bounded unit-beam fixtures, not a
+large-model performance benchmark or arbitrary-geometry qualification. The CLI's
+nonzero blocked exit also preserves its requested report. This bounded local
+chain does not replace external-package execution, authenticated or installed
+deployment, Python/Elixir SDK parity, or scientific qualification.
 
 SDK-local smoke coverage:
 

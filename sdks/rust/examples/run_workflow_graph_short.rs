@@ -108,10 +108,7 @@ fn main() -> SdkResult<()> {
         "[workflow] id: {}",
         graph["id"].as_str().unwrap_or("unknown")
     );
-    println!(
-        "[run] include_result={} poll=500ms timeout=300s",
-        include_result
-    );
+    println!("[run] include_result={include_result} poll=500ms timeout=300s");
 
     let outcome = agent.run_workflow_graph(
         &graph,

@@ -7,7 +7,9 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
   """
 
   alias KyuubikiWeb.Orchestra.OperatorTaskBatchRun
+  alias KyuubikiWeb.Orchestra.OperatorTaskCompletion
   alias KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary
+  alias KyuubikiWeb.Orchestra.OperatorTaskFailure
   alias KyuubikiWeb.Orchestra.OperatorTaskReadiness
   alias KyuubikiWeb.Playground.AgentClient
   alias KyuubikiWeb.WorkflowOperatorRuntime
@@ -19,14 +21,29 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
   @agent_rpc_method "run_operator_task_ir"
 
   @spec execute(map()) :: {:ok, map()} | {:error, term()}
-  def execute(%{"schema_version" => @schema_version} = task_ir) do
+  def execute(task_ir) do
+    with {:ok, receipt} <- execute_receipt(task_ir) do
+      case receipt["status"] do
+        "executed" -> {:ok, receipt["result"]}
+        "blocked" -> {:error, {:operator_task_execution_blocked, receipt["execution_readiness"]}}
+        "failed" -> {:error, :operator_task_execution_failed}
+      end
+    end
+  end
+
+  @doc "Returns task-bound execution state, including blocked/failed Agent receipts without promoting them."
+  @spec execute_receipt(map()) :: {:ok, map()} | {:error, term()}
+  def execute_receipt(%{"schema_version" => @schema_version} = task_ir) do
     with :ok <- OperatorTaskExecutionSummary.validate_digest(task_ir),
          {:ok, summary} <- OperatorTaskExecutionSummary.build(task_ir) do
       execute_verified(task_ir, summary)
     end
   end
 
-  def execute(_task_ir), do: {:error, :invalid_operator_task_ir}
+  def execute_receipt(_task_ir), do: {:error, :invalid_operator_task_ir}
+
+  defp execute_verified(task_ir, %{"execution_mode" => "agent_native"} = summary),
+    do: execute_agent_receipt(task_ir, summary)
 
   defp execute_verified(
          task_ir,
@@ -34,20 +51,42 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
            "execution_mode" => "orchestra_fetch",
            "agent_fetchable" => true,
            "package_version" => package_version
-         }
+         } = summary
        )
        when package_version not in [nil, "", "library-managed"] do
-    AgentClient.run_operator_task_ir(task_ir,
-      mode: :execute,
-      job_id: Map.get(task_ir, "task_id")
-    )
+    execute_agent_receipt(task_ir, summary)
   end
 
   defp execute_verified(task_ir, summary) do
     with {:ok, input} <- input_artifact(task_ir),
          config <- config(task_ir),
-         node <- execution_node(task_ir, summary["operator_id"]) do
-      dispatch(summary["operator_kind"], summary["operator_id"], input, config, node)
+         node <- execution_node(task_ir, summary["operator_id"]),
+         {:ok, result} <-
+           dispatch(summary["operator_kind"], summary["operator_id"], input, config, node) do
+      {:ok,
+       summary
+       |> Map.put("status", "executed")
+       |> Map.put("execution_readiness", OperatorTaskReadiness.local_executed())
+       |> Map.put("result", result)}
+    end
+  end
+
+  defp execute_agent_receipt(task_ir, summary) do
+    case AgentClient.run_operator_task_ir(task_ir,
+           mode: :execute,
+           job_id: Map.get(task_ir, "task_id")
+         ) do
+      {:ok, result} ->
+        OperatorTaskCompletion.agent_receipt(summary, result)
+
+      {:error, {:operator_task_rpc_error, code, message, failure}} ->
+        with {:ok, result} <-
+               OperatorTaskFailure.agent_rpc_result(summary, code, message, failure) do
+          OperatorTaskCompletion.agent_receipt(summary, result)
+        end
+
+      error ->
+        error
     end
   end
 
@@ -70,7 +109,10 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
         next_ok_count = if result["status"] == "ok", do: ok_count + 1, else: ok_count
         next_results = [result | results]
 
-        if strict and result["status"] != "ok" do
+        unsafe_to_continue =
+          get_in(result, ["failure_receipt", "recovery", "safe_to_continue_other_tasks"]) == false
+
+        if (strict and result["status"] != "ok") or unsafe_to_continue do
           {:halt, {next_results, next_ok_count}}
         else
           {:cont, {next_results, next_ok_count}}
@@ -138,16 +180,34 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
          _index
        ) do
     with :ok <- validate_batch_entry_contract(entry, task_ir),
-         {:ok, result} <- execute(task_ir) do
-      %{
+         {:ok, receipt} <- execute_receipt(task_ir) do
+      result = %{
         "case_id" => Map.get(entry, "case_id"),
         "task_id" => Map.get(task_ir, "task_id"),
         "task_digest" => get_in(task_ir, ["integrity", "task_digest"]),
         "operator_id" => get_in(task_ir, ["operator", "id"]),
-        "status" => "ok",
-        "execution_readiness" => OperatorTaskReadiness.local_executed(),
-        "result" => result
+        "program_id" => get_in(task_ir, ["execution_program", "program_id"]),
+        "status" => if(receipt["status"] == "executed", do: "ok", else: "blocked"),
+        "execution_readiness" => receipt["execution_readiness"],
+        "result" => receipt["result"]
       }
+
+      if receipt["status"] == "failed" do
+        case receipt["failure_receipt"] do
+          %{} = failure ->
+            result
+            |> Map.put("status", "error")
+            |> Map.put("error", failure["message"])
+            |> Map.put("error_code", failure["reason_code"])
+            |> Map.put("failure_receipt", failure)
+
+          _ ->
+            failed_batch_entry(entry, task_ir, :operator_task_execution_failed)
+            |> Map.merge(Map.take(result, ["result", "execution_readiness", "program_id"]))
+        end
+      else
+        result
+      end
     else
       {:error, reason} -> failed_batch_entry(entry, task_ir, reason)
     end
@@ -247,6 +307,11 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
   defp failure_stage({:operator_task_admission_rejected, _report}),
     do: "validate_admission_policy"
 
+  defp failure_stage({:operator_task_execution_receipt_invalid, _field}),
+    do: "validate_agent_completion"
+
+  defp failure_stage(:operator_task_execution_failed), do: "agent_execute"
+
   defp failure_stage(_reason), do: "local_execute"
 
   defp required_failure_action(code)
@@ -267,6 +332,9 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
 
   defp required_failure_action("operator_task_admission_rejected"),
     do: "fix_task_ir_authority_and_routing_policy"
+
+  defp required_failure_action("operator_task_execution_receipt_invalid"),
+    do: "inspect_agent_execution_receipt"
 
   defp required_failure_action(code)
        when code in [
@@ -298,6 +366,9 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
   defp error_code({:operator_task_admission_rejected, _report}),
     do: "operator_task_admission_rejected"
 
+  defp error_code({:operator_task_execution_receipt_invalid, _field}),
+    do: "operator_task_execution_receipt_invalid"
+
   defp error_code({:operator_task_batch_entry_mismatch, _field, _actual, _expected}),
     do: "operator_task_batch_entry_mismatch"
 
@@ -318,13 +389,25 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
   defp batch_result({results, ok_count}, tasks, run, opts) do
     results = Enum.reverse(results)
     error_code_counts = error_code_counts(results)
+    blocked_count = Enum.count(results, &(&1["status"] == "blocked"))
+    error_count = Enum.count(results, &(&1["status"] == "error"))
+    skipped = Enum.drop(tasks, length(results))
 
     result = %{
       "operator_task_batch_execution_contract" => @batch_execution_contract,
       "task_count" => length(tasks),
-      "executed_count" => length(results),
+      "status" => batch_status(ok_count, blocked_count, error_count, length(skipped)),
+      "attempted_count" => length(results),
+      "executed_count" => ok_count,
       "ok_count" => ok_count,
-      "error_count" => length(results) - ok_count,
+      "blocked_count" => blocked_count,
+      "error_count" => error_count,
+      "skipped_count" => length(skipped),
+      "skipped_case_ids" =>
+        Enum.flat_map(skipped, fn
+          %{"case_id" => id} when is_binary(id) and id != "" -> [id]
+          _ -> []
+        end),
       "error_codes" => Map.keys(error_code_counts),
       "error_code_counts" => error_code_counts,
       "failure_receipts" => failure_receipts(results),
@@ -335,6 +418,11 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
 
     {:ok, OperatorTaskBatchRun.finish(result, run, opts)}
   end
+
+  defp batch_status(_ok, 0, 0, 0), do: "executed"
+  defp batch_status(_ok, _blocked, 0, _skipped), do: "blocked"
+  defp batch_status(0, 0, _errors, _skipped), do: "failed"
+  defp batch_status(_ok, _blocked, _errors, _skipped), do: "partial"
 
   defp failed_case_ids(results) do
     results

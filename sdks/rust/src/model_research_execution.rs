@@ -1,3 +1,4 @@
+use crate::model_task_completion::validate_model_task_completion;
 use crate::{
     ControlPlaneClient, KyuubikiSession, MODEL_HEADLESS_PLAN_SCHEMA_VERSION, ModelHeadlessPlan,
     SdkError, SdkResult, compute_model_headless_plan_digest,
@@ -103,14 +104,31 @@ pub fn execute_model_headless_plan<D: ModelActionDispatcher, V: ModelApprovalVer
     for step in &execution_plan.steps {
         let job_id = action_job_id(&step.action, &step.payload);
         match dispatcher.dispatch_model_action(&step.action, &step.payload) {
-            Ok(dispatched) => records.push(ModelResearchExecutionRecord {
-                index: step.index,
-                action: step.action.clone(),
-                job_id,
-                authority: Some(dispatched.authority),
-                output: Some(dispatched.output),
-                error: None,
-            }),
+            Ok(dispatched) => {
+                let error =
+                    validate_model_task_completion(&step.action, &step.payload, &dispatched.output)
+                        .err()
+                        .map(|error| bounded_error(&error));
+                let failed = error.is_some();
+                records.push(ModelResearchExecutionRecord {
+                    index: step.index,
+                    action: step.action.clone(),
+                    job_id,
+                    authority: Some(dispatched.authority),
+                    output: Some(dispatched.output),
+                    error,
+                });
+                if failed {
+                    return Ok(build_receipt(
+                        &execution_plan,
+                        &plan_digest,
+                        approval,
+                        ModelResearchExecutionStatus::Failed,
+                        Some(step.index),
+                        records,
+                    ));
+                }
+            }
             Err(error) => {
                 records.push(ModelResearchExecutionRecord {
                     index: step.index,

@@ -9,9 +9,13 @@
   "started_at": "2026-01-01T00:00:00Z",
   "finished_at": "2026-01-01T00:00:01Z",
   "task_count": 1,
+  "attempted_count": 1,
   "executed_count": 1,
   "ok_count": 1,
+  "blocked_count": 0,
   "error_count": 0,
+  "skipped_count": 0,
+  "skipped_case_ids": [],
   "error_codes": [],
   "error_code_counts": {},
   "readiness_counts": {

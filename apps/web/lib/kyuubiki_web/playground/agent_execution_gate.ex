@@ -4,6 +4,8 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
 
   Requests wait in Orchestra instead of opening unbounded solver connections. A caller
   owns its lease until it explicitly releases it or the caller process exits.
+  Job ownership is captured with that lease. Dispatch authorization marks the
+  transport boundary, not proof of Agent acceptance or a terminal computation.
   """
 
   use GenServer
@@ -16,17 +18,41 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
-  def acquire(endpoints, lease_id, timeout_ms \\ @default_queue_timeout_ms)
+  def acquire(endpoints, lease_id, timeout_ms \\ @default_queue_timeout_ms, job_id \\ nil)
 
-  def acquire(endpoints, lease_id, timeout_ms)
+  def acquire(endpoints, lease_id, timeout_ms, job_id)
       when is_list(endpoints) and is_binary(lease_id) and is_integer(timeout_ms) and
              timeout_ms > 0 and byte_size(lease_id) > 0 and
              byte_size(lease_id) <= @max_lease_id_bytes do
-    call_timeout = timeout_ms + 2_000
-    GenServer.call(__MODULE__, {:acquire, self(), endpoints, lease_id, timeout_ms}, call_timeout)
+    if is_nil(job_id) or valid_job_id?(job_id) do
+      GenServer.call(
+        __MODULE__,
+        {:acquire, self(), endpoints, lease_id, timeout_ms, job_id},
+        timeout_ms + 2_000
+      )
+    else
+      {:error, :invalid_execution_job_id}
+    end
   end
 
-  def acquire(_endpoints, _lease_id, _timeout_ms), do: {:error, :invalid_execution_lease}
+  def acquire(_endpoints, _lease_id, _timeout_ms, _job_id), do: {:error, :invalid_execution_lease}
+
+  def authorize_dispatch(lease_id, starting? \\ true) do
+    GenServer.call(__MODULE__, {:authorize_dispatch, self(), lease_id, starting?})
+  end
+
+  def cancel_job_targets(job_id) do
+    if valid_job_id?(job_id),
+      do: GenServer.call(__MODULE__, {:cancel_job_targets, job_id}),
+      else: {:error, :invalid_execution_job_id}
+  end
+
+  def valid_job_id?(job_id) when is_binary(job_id) do
+    byte_size(job_id) in 1..256 and String.valid?(job_id) and
+      not Regex.match?(~r/\p{Cc}/u, job_id)
+  end
+
+  def valid_job_id?(_job_id), do: false
 
   def release(lease_id)
       when is_binary(lease_id) and byte_size(lease_id) > 0 and
@@ -46,7 +72,7 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
   end
 
   @impl true
-  def handle_call({:acquire, pid, endpoints, lease_id, timeout_ms}, from, state) do
+  def handle_call({:acquire, pid, endpoints, lease_id, timeout_ms, job_id}, from, state) do
     endpoints = normalize_endpoints(endpoints)
     state = remember_endpoints(state, endpoints)
 
@@ -59,10 +85,56 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
 
       true ->
         case select_endpoint(endpoints, state.leases) do
-          nil -> queue_waiter(state, from, pid, endpoints, lease_id, timeout_ms)
-          selection -> grant_immediately(state, from, pid, selection, lease_id)
+          nil -> queue_waiter(state, from, pid, endpoints, lease_id, timeout_ms, job_id)
+          selection -> grant_immediately(state, from, pid, selection, lease_id, job_id)
         end
     end
+  end
+
+  def handle_call({:authorize_dispatch, pid, lease_id, starting?}, _from, state) do
+    case Map.get(state.leases, lease_id) do
+      %{pid: ^pid, cancel_requested: true} ->
+        {:reply, cancelled(), state}
+
+      %{pid: ^pid} ->
+        next =
+          if starting?, do: put_in(state, [:leases, lease_id, :dispatched], true), else: state
+
+        {:reply, :ok, next}
+
+      _ ->
+        {:reply, {:error, {:execution_lease_not_owned, lease_id}}, state}
+    end
+  end
+
+  def handle_call({:cancel_job_targets, job_id}, _from, state) do
+    {removed, remaining} = Enum.split_with(state.waiters, &(&1.job_id == job_id))
+
+    Enum.each(removed, fn waiter ->
+      Process.cancel_timer(waiter.timer_ref)
+      Process.demonitor(waiter.monitor_ref, [:flush])
+      GenServer.reply(waiter.from, cancelled())
+    end)
+
+    matching = state.leases |> Map.values() |> Enum.filter(&(&1.job_id == job_id))
+
+    targets = %{
+      endpoints:
+        matching
+        |> Enum.filter(& &1.dispatched)
+        |> Enum.map(& &1.endpoint)
+        |> Enum.uniq_by(& &1.id)
+        |> Enum.sort_by(& &1.id),
+      queued_cancelled_count: length(removed),
+      reserved_cancelled_count: Enum.count(matching, &(not &1.dispatched))
+    }
+
+    leases =
+      Map.new(state.leases, fn {id, lease} ->
+        {id, if(lease.job_id == job_id, do: %{lease | cancel_requested: true}, else: lease)}
+      end)
+
+    {:reply, {:ok, targets}, %{state | leases: leases, waiters: renumber_waiters(remaining)}}
   end
 
   def handle_call({:release, pid, lease_id}, _from, state) do
@@ -140,14 +212,14 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
     {:noreply, dispatch_waiters(state)}
   end
 
-  defp grant_immediately(state, _from, pid, {endpoint, scheduling}, lease_id) do
+  defp grant_immediately(state, _from, pid, {endpoint, scheduling}, lease_id, job_id) do
     monitor_ref = Process.monitor(pid)
-    lease = lease(endpoint, lease_id, pid, monitor_ref)
+    lease = lease(endpoint, lease_id, pid, monitor_ref, job_id)
     next_state = put_in(state, [:leases, lease_id], lease)
     {:reply, {:ok, endpoint, queue_metadata(0, 0, scheduling)}, next_state}
   end
 
-  defp queue_waiter(state, from, pid, endpoints, lease_id, timeout_ms) do
+  defp queue_waiter(state, from, pid, endpoints, lease_id, timeout_ms, job_id) do
     monitor_ref = Process.monitor(pid)
     timer_ref = Process.send_after(self(), {:queue_timeout, lease_id}, timeout_ms)
     position = length(state.waiters) + 1
@@ -157,6 +229,7 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
       pid: pid,
       endpoints: endpoints,
       lease_id: lease_id,
+      job_id: job_id,
       monitor_ref: monitor_ref,
       timer_ref: timer_ref,
       enqueued_at_ms: System.monotonic_time(:millisecond),
@@ -179,7 +252,9 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
           {endpoint, scheduling} ->
             Process.cancel_timer(waiter.timer_ref)
             waited_ms = System.monotonic_time(:millisecond) - waiter.enqueued_at_ms
-            lease = lease(endpoint, waiter.lease_id, waiter.pid, waiter.monitor_ref)
+
+            lease =
+              lease(endpoint, waiter.lease_id, waiter.pid, waiter.monitor_ref, waiter.job_id)
 
             GenServer.reply(
               waiter.from,
@@ -258,9 +333,20 @@ defmodule KyuubikiWeb.Playground.AgentExecutionGate do
     end
   end
 
-  defp lease(endpoint, lease_id, pid, monitor_ref) do
-    %{endpoint: endpoint, lease_id: lease_id, pid: pid, monitor_ref: monitor_ref}
+  defp lease(endpoint, lease_id, pid, monitor_ref, job_id) do
+    %{
+      endpoint: endpoint,
+      lease_id: lease_id,
+      pid: pid,
+      monitor_ref: monitor_ref,
+      job_id: job_id,
+      cancel_requested: false,
+      dispatched: false
+    }
   end
+
+  defp cancelled,
+    do: {:error, {:rpc_error, "cancelled", "job cancelled before result publication"}}
 
   defp queue_metadata(waited_ms, queue_position, scheduling) do
     Map.merge(

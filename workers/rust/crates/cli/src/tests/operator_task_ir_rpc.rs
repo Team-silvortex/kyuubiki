@@ -367,8 +367,8 @@ fn handles_operator_task_ir_rpc_requests_as_agent_native_preflight() {
 }
 
 #[test]
-fn operator_task_rpc_rejects_a_cancelled_late_result() {
-    register_cancel("operator-task-cancelled-job".to_string());
+fn operator_task_rpc_binds_cancellation_before_computation_to_task_ir() {
+    register_cancel("operator-task-cancelled-job".to_string()).unwrap();
     let request = RpcRequest {
         rpc_version: RPC_VERSION,
         id: "rpc-task-ir-cancelled".to_string(),
@@ -392,6 +392,20 @@ fn operator_task_rpc_rejects_a_cancelled_late_result() {
     assert_eq!(details["request_id"], "rpc-task-ir-cancelled");
     assert_eq!(details["job_id"], "operator-task-cancelled-job");
     assert_eq!(details["reason_code"], "cancelled");
+    let task = golden_operator_task_ir();
+    let failure = &details["operator_task_failure_receipt"];
+    assert_eq!(failure["task_id"], task["task_id"]);
+    assert_eq!(failure["operator_id"], task["operator"]["id"]);
+    assert_eq!(failure["task_digest"], task["integrity"]["task_digest"]);
+    assert_eq!(failure["failure_stage"], "before_execution");
+    assert_eq!(failure["reason_code"], error.code);
+    assert_eq!(failure["message"], error.message);
+    assert_eq!(failure["recovery"]["retryable"], false);
+    assert_eq!(
+        failure["recovery"]["required_action"],
+        "inspect_cancellation_before_explicit_rerun"
+    );
+    assert!(details["solver_checkpoint"].is_null());
 }
 
 #[test]

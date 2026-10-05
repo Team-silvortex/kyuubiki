@@ -713,15 +713,15 @@ fn operator_task_execute_preserves_readiness_from_control_plane() {
         let request = String::from_utf8_lossy(&buffer[..bytes_read]);
         assert!(request.starts_with("POST /api/v1/operator-tasks/execute HTTP/1.1\r\n"));
         assert!(request.contains("\"task\":"));
-        let body = r#"{"status":"verified_pending_execution","execution_readiness":{"status":"blocked","current_stage":"fetch_package","required_action":"attach_operator_package_runtime"},"package_fetch_request":{"request_status":"blocked_runtime_not_attached"},"execution_plan":[{"stage":"fetch_package","gate":"blocked"}]}"#;
-        let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-            body.len(),
-            body
-        );
-        stream
-            .write_all(response.as_bytes())
-            .expect("write response");
+        let mut receipt = crate::prepare_operator_task_payload(&json!({
+            "task": crate::executor_outcome_tests::golden_task()
+        }))
+        .unwrap();
+        receipt["status"] = json!("verified_pending_execution");
+        receipt["execution_readiness"] = json!({"status":"blocked","current_stage":"fetch_package","required_action":"attach_operator_package_runtime"});
+        receipt["package_fetch_request"] = json!({"request_status":"blocked_runtime_not_attached"});
+        receipt["execution_plan"] = json!([{"stage":"fetch_package","gate":"blocked"}]);
+        write_test_response(&mut stream, "200 OK", &receipt.to_string());
     });
 
     let mut executor = ServiceHeadlessExecutor::new(&format!("http://127.0.0.1:{port}"));
@@ -729,12 +729,12 @@ fn operator_task_execute_preserves_readiness_from_control_plane() {
         .execute_step(
             "operator_task_execute",
             1,
-            &json!({ "task": { "schema_version": "kyuubiki.operator-task-ir/v1" } }),
+            &json!({ "task": crate::executor_outcome_tests::golden_task() }),
         )
         .expect("service request should preserve readiness");
 
     handle.join().expect("server thread should finish");
-    assert_eq!(outcome.status, "executed");
+    assert_eq!(outcome.status, "blocked");
     assert_eq!(outcome.result["execution_readiness"]["status"], "blocked");
     assert_eq!(
         outcome.result["execution_readiness"]["required_action"],

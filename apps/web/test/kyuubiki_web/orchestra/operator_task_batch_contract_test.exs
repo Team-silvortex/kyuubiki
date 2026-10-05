@@ -246,7 +246,12 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskBatchContractTest do
     assert example["batch_digest"] =~ ~r/^[a-f0-9]{64}$/
     assert example["digest_algorithm"] == "sha256"
     assert example["task_count"] == length(example["results"])
-    assert example["ok_count"] + example["error_count"] == example["executed_count"]
+    assert example["ok_count"] == example["executed_count"]
+
+    assert example["ok_count"] + example["blocked_count"] + example["error_count"] ==
+             example["attempted_count"]
+
+    assert example["attempted_count"] + example["skipped_count"] == example["task_count"]
     assert example["executed_count"] <= example["task_count"]
     assert example["readiness_counts"] == %{"executed" => 1}
     assert hd(example["results"])["status"] == "ok"

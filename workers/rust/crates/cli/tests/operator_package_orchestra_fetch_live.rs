@@ -344,6 +344,16 @@ fn agent_fetches_executes_and_safely_rotates_bound_orchestra_package() {
         .expect("cancel and release refetched job package");
     assert_eq!(refetch_release["ok"], true, "response: {refetch_release}");
     assert_eq!(
+        refetch_release["result"]["schema_version"],
+        "kyuubiki.agent-job-cancellation/v1"
+    );
+    assert_eq!(refetch_release["result"]["job_id"], REFETCH_JOB_ID);
+    assert_eq!(refetch_release["result"]["cancel_registered"], true);
+    assert_eq!(
+        refetch_release["result"]["execution_terminal_confirmed"],
+        false
+    );
+    assert_eq!(
         refetch_release["result"]["operator_package_job_release"]["disposition"],
         "evicted_after_job_release"
     );

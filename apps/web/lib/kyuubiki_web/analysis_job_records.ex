@@ -71,12 +71,14 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
   def cancel_job(job_id) when is_binary(job_id) do
     case Store.get(job_id) do
       {:ok, job} ->
-        if job.status in [:completed, :failed, :cancelled] do
+        if job.status in [:completed, :failed] do
           {:ok, serialize_payload(job)}
         else
           with :ok <- WorkflowRecoveryCoordinator.cancel(job_id) do
-            _ = AgentClient.cancel_job(job_id)
-            fetch_job(job_id)
+            with {:ok, cancellation} <- AgentClient.cancel_job(job_id),
+                 {:ok, payload} <- fetch_job(job_id) do
+              {:ok, Map.put(payload, "cancellation", cancellation)}
+            end
           end
         end
 

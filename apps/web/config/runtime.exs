@@ -47,11 +47,20 @@ database_url =
     "ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev"
   )
 
+explicit_sqlite_path = System.get_env("SQLITE_DATABASE_PATH")
+
+test_database_root =
+  if config_env() == :test and storage_backend == :sqlite and is_nil(explicit_sqlite_path) do
+    nonce = Base.url_encode64(:crypto.strong_rand_bytes(16), padding: false)
+    Path.join(Path.expand(System.tmp_dir!()), "kyuubiki-web-tests-#{System.pid()}-#{nonce}")
+  end
+
 sqlite_database_path =
-  System.get_env(
-    "SQLITE_DATABASE_PATH",
-    Path.expand("../../../tmp/data/kyuubiki_dev.sqlite3", __DIR__)
-  )
+  cond do
+    not is_nil(explicit_sqlite_path) -> explicit_sqlite_path
+    is_binary(test_database_root) -> Path.join(test_database_root, "kyuubiki.sqlite3")
+    true -> Path.expand("../../../tmp/data/kyuubiki_dev.sqlite3", __DIR__)
+  end
 
 orchestra_lease_name =
   case System.get_env("KYUUBIKI_ORCHESTRA_LEASE_NAME") do
@@ -84,6 +93,7 @@ agent_endpoints =
 
 config :kyuubiki_web,
   storage_backend: storage_backend,
+  test_database_root: test_database_root,
   http_bind_ip: http_bind_ip,
   ecto_repos: [KyuubikiWeb.PostgresRepo, KyuubikiWeb.SqliteRepo]
 

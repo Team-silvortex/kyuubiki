@@ -8,6 +8,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   alias KyuubikiWeb.Orchestra.OperatorTaskReadiness
   alias KyuubikiWeb.Orchestra.DistributedRecovery
   alias KyuubikiWeb.Playground.AgentExecutionGate
+  alias KyuubikiWeb.Playground.AgentJobCancellation
   alias KyuubikiWeb.Playground.AgentPool
   alias KyuubikiWeb.Playground.AgentRpcTransport
   alias KyuubikiWeb.Playground.AgentRegistry
@@ -181,7 +182,15 @@ defmodule KyuubikiWeb.Playground.AgentClient do
 
   @spec cancel_job(String.t()) :: {:ok, map()} | {:error, term()}
   def cancel_job(job_id) when is_binary(job_id) do
-    request("cancel_job", %{job_id: job_id})
+    AgentJobCancellation.cancel(job_id, &request_to_target("cancel_job", %{job_id: job_id}, &1))
+  end
+
+  def cancel_job(job_id, targets) when is_binary(job_id) and is_map(targets) do
+    AgentJobCancellation.cancel_targets(
+      job_id,
+      targets,
+      &request_to_target("cancel_job", %{job_id: job_id}, &1)
+    )
   end
 
   @spec release_operator_package_job(String.t(), AgentPool.endpoint() | nil) ::
@@ -252,7 +261,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     |> OperatorTaskIR.agent_routing_opts()
     |> Keyword.merge(Keyword.take(opts, @operator_control_opts))
     |> maybe_override_retry_policy(opts)
-    |> maybe_require_operator_package_runtime(Keyword.get(opts, :mode))
+    |> maybe_require_operator_package_runtime(task_ir, Keyword.get(opts, :mode))
   end
 
   defp maybe_override_retry_policy(routing_opts, opts) do
@@ -285,12 +294,19 @@ defmodule KyuubikiWeb.Playground.AgentClient do
 
   defp verified_replay_checkpoint?(_checkpoint), do: false
 
-  defp maybe_require_operator_package_runtime(routing_opts, mode)
+  defp maybe_require_operator_package_runtime(routing_opts, task_ir, mode)
        when mode in [:execute, "execute"] do
-    Keyword.put(routing_opts, :requires_operator_package_runtime, true)
+    unbundled_native? =
+      get_in(task_ir, ["runtime_hints", "execution_mode"]) == "agent_native" and
+        get_in(task_ir, ["runtime_hints", "agent_fetchable"]) == false and
+        get_in(task_ir, ["execution_program", "package_ref"]) in [nil, ""]
+
+    if unbundled_native?,
+      do: routing_opts,
+      else: Keyword.put(routing_opts, :requires_operator_package_runtime, true)
   end
 
-  defp maybe_require_operator_package_runtime(routing_opts, _mode), do: routing_opts
+  defp maybe_require_operator_package_runtime(routing_opts, _task_ir, _mode), do: routing_opts
 
   @spec request_with_agent(String.t(), map(), (map() -> any()), keyword()) ::
           {:ok, map(), AgentPool.endpoint()} | {:error, term()}
@@ -360,7 +376,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   defp attempt_request(endpoints, request_id, request, on_progress, opts, failures) do
     with :ok <- emit_queue_progress(on_progress, opts, endpoints),
          {:ok, wait_ms} <- capacity_wait_timeout(opts) do
-      case AgentExecutionGate.acquire(endpoints, request_id, wait_ms) do
+      case AgentExecutionGate.acquire(endpoints, request_id, wait_ms, Keyword.get(opts, :job_id)) do
         {:ok, endpoint, queue_metadata} ->
           remaining = Enum.reject(endpoints, &(&1.id == endpoint.id))
 
@@ -368,9 +384,14 @@ defmodule KyuubikiWeb.Playground.AgentClient do
             try do
               with :ok <- emit_dispatch_progress(on_progress, opts, endpoint, queue_metadata),
                    :ok <- authorize_dispatch(opts) do
-                with_claimed_endpoint(endpoint, opts, fn ->
-                  AgentRpcTransport.request(endpoint, request_id, request, on_progress, opts)
-                end)
+                result =
+                  with_claimed_endpoint(endpoint, opts, fn ->
+                    with :ok <- AgentExecutionGate.authorize_dispatch(request_id) do
+                      AgentRpcTransport.request(endpoint, request_id, request, on_progress, opts)
+                    end
+                  end)
+
+                AgentJobCancellation.finish_dispatch(request_id, result)
               end
             after
               _ = AgentExecutionGate.release(request_id)
@@ -433,6 +454,21 @@ defmodule KyuubikiWeb.Playground.AgentClient do
       if remaining == [], do: Process.sleep(min(50, wait_ms))
       attempt_request(candidates, request_id, request, on_progress, opts, failures)
     end
+  end
+
+  defp handle_endpoint_result(
+         {:error, {:operator_task_rpc_error, _code, _message, _receipt} = reason},
+         endpoint,
+         _remaining,
+         _request_id,
+         _request,
+         _on_progress,
+         _opts,
+         _failures
+       ) do
+    # A task failure is not a transport outage and must not replay on another Agent.
+    :ok = AgentPool.report_success(endpoint)
+    {:error, reason}
   end
 
   defp handle_endpoint_result(

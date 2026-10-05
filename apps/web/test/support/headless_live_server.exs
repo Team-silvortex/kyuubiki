@@ -2,6 +2,7 @@ Code.require_file("workflow_api_fixtures.exs", __DIR__)
 Code.require_file("workflow_api_test_support.exs", __DIR__)
 
 alias KyuubikiWeb.TestSupport.WorkflowApi
+alias KyuubikiWeb.Playground.AgentPool
 
 scenario = System.get_env("KYUUBIKI_HEADLESS_LIVE_SCENARIO", "electrostatic_quad_summary")
 
@@ -17,12 +18,36 @@ case scenario do
   "guarded_quad_continued" ->
     {:ok, _pid} = WorkflowApi.start_guarded_quad_sessions(:continued)
 
+  "real_agent" ->
+    port = System.fetch_env!("KYUUBIKI_HEADLESS_LIVE_AGENT_PORT") |> String.to_integer()
+    true = port in 1..65_535
+
+    # Static endpoints have unknown package readiness; do not invent a ready advertisement.
+    endpoints = [%{id: "owned-live-agent", host: "127.0.0.1", port: port}]
+
+    endpoints =
+      case System.get_env("KYUUBIKI_HEADLESS_LIVE_AGENT_PEER_PORT") do
+        nil ->
+          endpoints
+
+        peer ->
+          peer_port = String.to_integer(peer)
+          true = peer_port in 1..65_535 and peer_port != port
+          endpoints ++ [%{id: "owned-live-peer", host: "127.0.0.1", port: peer_port}]
+      end
+
+    Application.put_env(:kyuubiki_web, AgentPool, endpoints: endpoints)
+
+    AgentPool.reload()
+
   other ->
     raise "unsupported headless live scenario: #{other}"
 end
 
-fake_agent_port = WorkflowApi.await_fake_agent_port()
-WorkflowApi.configure_fake_agent_pool(fake_agent_port)
+if scenario != "real_agent" do
+  fake_agent_port = WorkflowApi.await_fake_agent_port()
+  WorkflowApi.configure_fake_agent_pool(fake_agent_port)
+end
 
 {:ok, server_pid} =
   Bandit.start_link(

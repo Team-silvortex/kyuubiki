@@ -103,6 +103,18 @@ that approval independently of model output. `ModelResearchExecutionReceipt`
 retains the same digest, per-step authority, output, and bounded failures so
 partial attempts cannot masquerade as completed research.
 
+Synchronous `operator_task_execute` and `operator_task_batch_execute` actions
+must publish identity-bound, complete, nonblocked results before the plan can
+advance. Partial batches and nested pending Agent receipts stop the plan with
+a v2 `failed` receipt; the problem step keeps its authority and raw output.
+`operator_task_recovery_summary(...)` exposes blocked readiness repair actions.
+After repairing the gate, explicitly execute a reviewed plan again rather than
+inferring success or automatically resubmitting. Preparing tasks and submitting
+asynchronous jobs remain separate from synchronous computation. Low-level
+`ControlPlaneClient` methods intentionally return raw HTTP receipts: their
+`Ok` does not certify task completion. See the
+[completion gate reference](../../docs/headless-sdks.md#official-rust-model-task-completion-gate).
+
 The native reference entry is
 `examples/execute_model_research_plan.rs`. It reads a collaboration session,
 canonical proposal, and caller-issued approval from project-relative JSON

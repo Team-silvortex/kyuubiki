@@ -49,8 +49,11 @@ pub(crate) fn begin(
     Ok(control)
 }
 
-pub(crate) fn register_cancel(job_id: String) {
-    if let Ok(mut state) = registry().lock() {
+pub(crate) fn register_cancel(job_id: String) -> Result<(), String> {
+    {
+        let mut state = registry()
+            .lock()
+            .map_err(|_| "execution control registry is unavailable".to_string())?;
         let mut found = false;
         state.active.retain(|entry| {
             let Some(active) = entry.upgrade() else {
@@ -67,6 +70,7 @@ pub(crate) fn register_cancel(job_id: String) {
             state.pending_jobs.insert(job_id);
         }
     }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -136,7 +140,7 @@ mod tests {
             Some("control-shared-job".into()),
         )
         .unwrap();
-        register_cancel("control-shared-job".into());
+        register_cancel("control-shared-job".into()).unwrap();
         assert!(first.solver.cancellation_requested());
         assert!(second.solver.cancellation_requested());
         let next = begin(
@@ -162,7 +166,7 @@ mod tests {
 
     #[test]
     fn pre_admission_job_cancel_is_consumed_once() {
-        register_cancel("control-pending-job".into());
+        register_cancel("control-pending-job".into()).unwrap();
         let first = begin(
             "control-pending-first".into(),
             20,
