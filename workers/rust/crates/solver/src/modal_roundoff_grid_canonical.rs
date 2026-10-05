@@ -1,4 +1,4 @@
-use super::{Accepted, Contract, Plan, search_with_plan};
+use super::{Accepted, Contract, Order, Plan, Selection, search_with_plan};
 use crate::modal_test_wide::Wide;
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 
@@ -10,7 +10,109 @@ pub(super) fn search_canonical_unit_shape(
     tolerance: f64,
     checked: impl FnMut(&[f64]) -> Result<(f64, Vec<f64>), String>,
 ) -> Result<Accepted, String> {
-    search_canonical(matrix, seed, mass, tolerance, Contract::UnitShape, checked)
+    search_canonical(
+        matrix,
+        seed,
+        mass,
+        tolerance,
+        Contract::UnitShape,
+        Plan::canonical(matrix.len())?,
+        checked,
+    )
+}
+
+pub(super) fn search_canonical_unit_shape_single(
+    matrix: &[Vec<Wide>],
+    seed: &[f64],
+    mass: &[f64],
+    tolerance: f64,
+    order: Order,
+    checked: impl FnMut(&[f64]) -> Result<(f64, Vec<f64>), String>,
+) -> Result<Accepted, String> {
+    search_canonical(
+        matrix,
+        seed,
+        mass,
+        tolerance,
+        Contract::UnitShape,
+        Plan::canonical_selected(matrix.len(), Selection::Single(order))?,
+        checked,
+    )
+}
+
+// A cold alternative chart, not a retry of the original frozen-anchor fit.
+pub(super) fn search_canonical_unit_shape_inward(
+    matrix: &[Vec<Wide>],
+    seed: &[f64],
+    mass: &[f64],
+    tolerance: f64,
+    order: Order,
+    checked: impl FnMut(&[f64]) -> Result<(f64, Vec<f64>), String>,
+) -> Result<Accepted, String> {
+    let plan = Plan::inward_chart(matrix.len(), order)?;
+    search_inward(
+        matrix,
+        seed,
+        mass,
+        tolerance,
+        Contract::UnitShape,
+        plan,
+        checked,
+    )
+}
+
+// Independent cold internal chart, never a fallback after the original ranked fit.
+pub(super) fn search_canonical_direction_inward(
+    matrix: &[Vec<Wide>],
+    seed: &[f64],
+    tolerance: f64,
+    checked: impl FnMut(&[f64]) -> Result<(f64, Vec<f64>), String>,
+) -> Result<Accepted, String> {
+    let plan = Plan::inward_direction(matrix.len())?;
+    search_inward(
+        matrix,
+        seed,
+        &vec![1.0; seed.len()],
+        tolerance,
+        Contract::InternalDirection,
+        plan,
+        checked,
+    )
+}
+
+fn search_inward(
+    matrix: &[Vec<Wide>],
+    seed: &[f64],
+    mass: &[f64],
+    tolerance: f64,
+    contract: Contract,
+    plan: Plan,
+    checked: impl FnMut(&[f64]) -> Result<(f64, Vec<f64>), String>,
+) -> Result<Accepted, String> {
+    let anchor = super::validate_inputs(matrix, seed, mass, tolerance, contract)?;
+    let mut chart = seed.to_vec();
+    chart[anchor] = if chart[anchor] > 0.0 {
+        chart[anchor].next_down()
+    } else {
+        chart[anchor].next_up()
+    };
+    let amplitude = chart[anchor].abs() * mass[anchor].sqrt();
+    // Keep anchor identity permutation-independent, including near-tied amplitudes.
+    if chart
+        .iter()
+        .zip(mass)
+        .enumerate()
+        .any(|(i, (&v, &m))| i != anchor && v.abs() * m.sqrt() >= amplitude)
+    {
+        return Err("inward chart requires a uniquely dominant shifted anchor".into());
+    }
+    checkpoint(SolverStage::ModalRoundoffPrepare, 0)?;
+    let accepted = search_canonical(matrix, &chart, mass, tolerance, contract, plan, checked)?;
+    if accepted.anchor != anchor || accepted.shape[anchor].to_bits() != chart[anchor].to_bits() {
+        return Err("inward chart lost its independently frozen anchor".into());
+    }
+    checkpoint(SolverStage::ModalRoundoffValidate, 6)?;
+    Ok(accepted)
 }
 
 pub(super) fn search_canonical_direction(
@@ -19,7 +121,71 @@ pub(super) fn search_canonical_direction(
     tolerance: f64,
     checked: impl FnMut(&[f64]) -> Result<(f64, Vec<f64>), String>,
 ) -> Result<Accepted, String> {
-    Plan::canonical(matrix.len())?;
+    search_direction(
+        matrix,
+        seed,
+        tolerance,
+        Plan::canonical(matrix.len())?,
+        checked,
+    )
+}
+
+pub(super) fn search_canonical_direction_single(
+    matrix: &[Vec<Wide>],
+    seed: &[f64],
+    tolerance: f64,
+    order: Order,
+    checked: impl FnMut(&[f64]) -> Result<(f64, Vec<f64>), String>,
+) -> Result<Accepted, String> {
+    search_direction(
+        matrix,
+        seed,
+        tolerance,
+        Plan::canonical_selected(matrix.len(), Selection::Single(order))?,
+        checked,
+    )
+}
+
+pub(super) fn search_canonical_direction_ranked(
+    matrix: &[Vec<Wide>],
+    seed: &[f64],
+    tolerance: f64,
+    checked: impl FnMut(&[f64]) -> Result<(f64, Vec<f64>), String>,
+) -> Result<Accepted, String> {
+    search_direction(
+        matrix,
+        seed,
+        tolerance,
+        Plan::canonical_selected(matrix.len(), Selection::RankedThenReverse)?,
+        checked,
+    )
+}
+
+pub(super) fn search_canonical_unit_shape_ranked(
+    matrix: &[Vec<Wide>],
+    seed: &[f64],
+    mass: &[f64],
+    tolerance: f64,
+    checked: impl FnMut(&[f64]) -> Result<(f64, Vec<f64>), String>,
+) -> Result<Accepted, String> {
+    search_canonical(
+        matrix,
+        seed,
+        mass,
+        tolerance,
+        Contract::UnitShape,
+        Plan::canonical_selected(matrix.len(), Selection::RankedThenReverse)?,
+        checked,
+    )
+}
+
+fn search_direction(
+    matrix: &[Vec<Wide>],
+    seed: &[f64],
+    tolerance: f64,
+    plan: Plan,
+    checked: impl FnMut(&[f64]) -> Result<(f64, Vec<f64>), String>,
+) -> Result<Accepted, String> {
     if seed.len() != matrix.len() {
         return Err("canonical internal direction requires matching dimensions".into());
     }
@@ -30,6 +196,7 @@ pub(super) fn search_canonical_direction(
         &vec![1.0; seed.len()],
         tolerance,
         Contract::InternalDirection,
+        plan,
         checked,
     )
 }
@@ -40,9 +207,9 @@ fn search_canonical(
     mass: &[f64],
     tolerance: f64,
     contract: Contract,
+    plan: Plan,
     mut checked: impl FnMut(&[f64]) -> Result<(f64, Vec<f64>), String>,
 ) -> Result<Accepted, String> {
-    let plan = Plan::canonical(matrix.len())?;
     // Reuse strict preflight, including range/cancellation, before canonical copies.
     super::validate_inputs(matrix, seed, mass, tolerance, contract)?;
     let permutation = canonical_permutation(matrix, seed, mass)?;
@@ -127,6 +294,12 @@ fn restore(permutation: &[usize], vector: &[f64]) -> Result<Vec<f64>, String> {
 
 #[path = "modal_roundoff_grid_canonical_tests.rs"]
 mod tests;
+
+#[path = "modal_roundoff_inward_chart_control_tests.rs"]
+mod inward_controls;
+
+#[path = "modal_roundoff_internal_chart_control_tests.rs"]
+mod internal_chart_controls;
 
 #[path = "modal_roundoff_grid_heterogeneous_tests.rs"]
 mod heterogeneous_tests;

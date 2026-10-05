@@ -3,7 +3,7 @@ use crate::solver_control::{SolverControl, SolverStage, with_solver_observer};
 use kyuubiki_protocol::{SolveModalFrame2dRequest, SolveModalFrame2dResult};
 use std::{cell::Cell, rc::Rc};
 
-fn renumber(input: &SolveModalFrame2dRequest, key: u64) -> SolveModalFrame2dRequest {
+pub(super) fn renumber(input: &SolveModalFrame2dRequest, key: u64) -> SolveModalFrame2dRequest {
     let size = input.nodes.len();
     let order = match key {
         0 => (0..size).collect::<Vec<_>>(),

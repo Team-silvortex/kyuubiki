@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Local macOS test-only normalized-grid order/radius diagnosis and fresh candidate pipeline cost. Twenty-four isolated order comparisons retain six successful proposals across five fixtures; descending/natural orders reject all six fixtures. Twelve radius controls retain the large graded rejection with the original best residual. No new policy is appended to runtime or candidate portfolios. Six isolated optimized processes each rebuild the input and pair for one warmup and three samples, retaining exact eigenvalue/direction/published-shape bits and five successes plus one upstream rejection. Complete candidate timing includes assembly, Jacobi, retained-pair refinement, direction construction, normalized grid, ordinary physical proposal, physical grid, JSON and independent reassembly. Process RSS is cumulative high water, not incremental heap. No production admission, latency SLO, remote Agent, arbitrary geometry, multimode or release maturity is claimed.",
+  "summary": "Local macOS test-only candidate diagnosis and separate direct-grid, full banded, ranked and checked-order handoff cost campaigns. Six fresh paired optimized processes compare independent ranked versus handoff, with alternating pair order, one warmup and three samples per route, exact receipts and all raw timings. Handoff reduces layered-tiny four fits/sixteen checks to three/twelve and recovery median 87.619 to 62.289 ms; other five cases keep two fits/eight checks and have 0.0 to 2.9 percent slower recovery medians. Formal chain caps drop four/twenty-six to three/twenty and summed grid reservation 1,347,092,480 to 1,011,548,160. Historical full/ranked tiny-layer regression and long tail remain retained, not replaced. Actual certificate callbacks and scoped reservations exclude preparation/operator checks/polish/reference work; process RSS includes both routes, not separate incremental heaps. No universal speedup/SLO, complete production budget, public admission, remote Agent or release maturity is claimed.",
   "evidence_claims": [
     {
       "id": "modal-normalized-grid-order-radius-failure-boundary",
@@ -33,8 +33,19 @@
       "files": [
         "workers/rust/crates/solver/src/modal_roundoff_grid_normalized_benchmark.rs",
         "workers/rust/crates/solver/src/modal_roundoff_grid_normalized_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_banded_inverse_benchmark.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_banded_ranked_benchmark.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_banded_handoff_benchmark.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_banded_handoff_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_banded_single_policy_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_portfolio_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_banded_inverse_reference.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_banded_inverse_control_tests.rs",
         "config/operator-validation-profiles/modal.json",
-        "reports/modal-grid-normalized-pipeline-cost-20261004.md"
+        "reports/modal-grid-normalized-pipeline-cost-20261004.md",
+        "reports/modal-banded-inverse-pipeline-cost-20261004.md",
+        "reports/modal-banded-ranked-policy-cost-20261004.md",
+        "reports/modal-banded-checked-order-handoff-20261004.md"
       ],
       "required_text": [
         "triangular_grid_normalized_pipeline_cost_graded_unit",
@@ -43,10 +54,36 @@
         "triangular_grid_normalized_pipeline_cost_layered_unit",
         "triangular_grid_normalized_pipeline_cost_layered_large",
         "triangular_grid_normalized_pipeline_cost_layered_tiny",
+        "modal_banded_pipeline_cost_graded_unit",
+        "modal_banded_pipeline_cost_graded_large",
+        "modal_banded_pipeline_cost_graded_tiny",
+        "modal_banded_pipeline_cost_layered_unit",
+        "modal_banded_pipeline_cost_layered_large",
+        "modal_banded_pipeline_cost_layered_tiny",
+        "modal_banded_ranked_pipeline_cost_graded_unit",
+        "modal_banded_ranked_pipeline_cost_graded_large",
+        "modal_banded_ranked_pipeline_cost_graded_tiny",
+        "modal_banded_ranked_pipeline_cost_layered_unit",
+        "modal_banded_ranked_pipeline_cost_layered_large",
+        "modal_banded_ranked_pipeline_cost_layered_tiny",
+        "ranked_max_grid_visits_reserved",
+        "modal_banded_handoff_pipeline_cost_graded_unit",
+        "modal_banded_handoff_pipeline_cost_graded_large",
+        "modal_banded_handoff_pipeline_cost_graded_tiny",
+        "modal_banded_handoff_pipeline_cost_layered_unit",
+        "modal_banded_handoff_pipeline_cost_layered_large",
+        "modal_banded_handoff_pipeline_cost_layered_tiny",
+        "handoff_max_grid_visits_reserved",
+        "This is test-only checked-order handoff evidence, not production admission or complete budget qualification.",
+        "modal_banded_inverse_recovery_work_receipts_replay",
+        "initializer_owned_peak_numeric_bytes",
+        "recovery_grid_checks",
         "assert_eq!(receipt, baseline)",
         "process_peak_rss_after_kib",
         "explicit isolated release candidate pipeline cost; not public solver throughput",
-        "This is local test-only candidate pipeline benchmarking, not production modal qualification."
+        "This is local test-only candidate pipeline benchmarking, not production modal qualification.",
+        "This is test-only banded candidate cost evidence, not a complete production work or memory qualification.",
+        "This is a test-only lower-cap strategy comparison, not production admission or complete budget qualification."
       ]
     }
   ]

@@ -6,8 +6,10 @@ use super::super::super::super::{
     triangular_grid::{GridFit, Policy},
     wide_projection::{Projection, physical_directions},
 };
-use super::super::super::{Accepted, Order, Plan, tests::shuffled};
+use super::super::super::{Accepted, Order, Plan, Selection, tests::shuffled};
 use super::super::{search_canonical_direction, search_canonical_unit_shape};
+use super::super::{search_canonical_direction_ranked, search_canonical_unit_shape_ranked};
+use super::super::{search_canonical_direction_single, search_canonical_unit_shape_single};
 use super::{Fixture, Profile};
 use crate::modal_frame_spectrum::{checked_mode_shape, checked_published_mode_shape};
 use crate::modal_math::jacobi_eigenpairs;
@@ -49,7 +51,19 @@ impl Prepared {
     fn new_measured(profile: Profile, scale: f64) -> (Self, [f64; 4]) {
         let phase = std::time::Instant::now();
         let input = Fixture::request(profile, 128, scale);
+        Self::from_request_measured(input, phase)
+    }
+
+    fn from_request(input: SolveModalFrame2dRequest) -> Self {
+        Self::from_request_measured(input, std::time::Instant::now()).0
+    }
+
+    fn from_request_measured(
+        input: SolveModalFrame2dRequest,
+        phase: std::time::Instant,
+    ) -> (Self, [f64; 4]) {
         crate::modal_frame_validation::validate_modal_frame_2d_request(&input).unwrap();
+        assert_eq!(input.mode_count, Some(1));
         let (system, physical, total_mass) = Fixture::assemble(&input).unwrap();
         let assembly_ms = phase.elapsed().as_secs_f64() * 1000.0;
         let phase = std::time::Instant::now();
@@ -133,6 +147,46 @@ impl Prepared {
     }
 
     fn physical_candidate(&self, v: &[f64]) -> Result<Accepted, String> {
+        self.physical_candidate_with_checks(v, || {})
+    }
+
+    fn physical_candidate_with_checks(
+        &self,
+        v: &[f64],
+        on_check: impl FnMut(),
+    ) -> Result<Accepted, String> {
+        self.physical_candidate_selected(v, None, on_check)
+    }
+
+    fn physical_candidate_selected(
+        &self,
+        v: &[f64],
+        order: Option<Order>,
+        on_check: impl FnMut(),
+    ) -> Result<Accepted, String> {
+        self.physical_candidate_ordered(
+            v,
+            order.map_or(Selection::Full, Selection::Single),
+            on_check,
+        )
+    }
+
+    fn physical_candidate_ordered(
+        &self,
+        v: &[f64],
+        selection: Selection,
+        on_check: impl FnMut(),
+    ) -> Result<Accepted, String> {
+        self.physical_candidate_observed(v, selection, on_check, |_| {})
+    }
+
+    fn physical_candidate_observed(
+        &self,
+        v: &[f64],
+        selection: Selection,
+        mut on_check: impl FnMut(),
+        mut on_residual: impl FnMut(f64),
+    ) -> Result<Accepted, String> {
         let size = v.len();
         let (shape, _) =
             checked_mode_shape(v, &self.system.mass, &(0..size).collect::<Vec<_>>(), size)?;
@@ -141,12 +195,34 @@ impl Prepared {
                 .operator
                 .roundoff_comparison_seed(self.value, &shape, &self.system.mass)?;
         let matrix = physical_directions(&self.physical, &self.system.mass, self.value)?;
-        search_canonical_unit_shape(&matrix, &seed, &self.system.mass, 1e-8, |v| {
+        let checked = |v: &[f64]| {
+            on_check();
             let applied = self.system.operator.apply_physical_compensated(v)?;
-            self.system
-                .operator
-                .physical_residual(self.value, v, &self.system.mass, &applied)
-        })
+            let certificate = self.system.operator.physical_residual(
+                self.value,
+                v,
+                &self.system.mass,
+                &applied,
+            )?;
+            on_residual(certificate.0);
+            Ok(certificate)
+        };
+        match selection {
+            Selection::Single(order) => search_canonical_unit_shape_single(
+                &matrix,
+                &seed,
+                &self.system.mass,
+                1e-8,
+                order,
+                checked,
+            ),
+            Selection::Full => {
+                search_canonical_unit_shape(&matrix, &seed, &self.system.mass, 1e-8, checked)
+            }
+            Selection::RankedThenReverse => {
+                search_canonical_unit_shape_ranked(&matrix, &seed, &self.system.mass, 1e-8, checked)
+            }
+        }
     }
 
     fn publish_grid(&self, v: &[f64]) -> Result<(Accepted, f64), String> {

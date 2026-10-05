@@ -8,6 +8,18 @@ mod reference;
 #[path = "modal_roundoff_banded_inverse_control_tests.rs"]
 mod controls;
 
+#[path = "modal_roundoff_banded_inverse_benchmark.rs"]
+mod benchmark;
+
+#[path = "modal_roundoff_banded_single_policy_tests.rs"]
+mod single_policy_tests;
+
+#[path = "modal_roundoff_banded_handoff_control_tests.rs"]
+mod handoff_controls;
+
+#[path = "modal_roundoff_banded_handoff_reassembly_tests.rs"]
+mod handoff_reassembly;
+
 fn matrix(fixture: &Prepared) -> Vec<Vec<Wide>> {
     let mut matrix = fixture.directions.clone();
     for (i, row) in matrix.iter_mut().enumerate() {
@@ -34,6 +46,50 @@ fn rounded(direction: &[Wide]) -> Vec<f64> {
 
 fn bits(values: &[f64]) -> Vec<u64> {
     values.iter().map(|v| v.to_bits()).collect()
+}
+
+#[test]
+fn modal_banded_inverse_borrowed_final_only_matches_reference_bits() {
+    for profile in [Profile::Graded, Profile::Layered] {
+        for scale in [1.0, 1e14, 1e-10] {
+            let fixture = Prepared::new(profile, scale);
+            let original: Vec<_> = fixture
+                .directions
+                .iter()
+                .flatten()
+                .map(|v| [v.high.to_bits(), v.low.to_bits()])
+                .collect();
+            let traced = reference::Factor::prepare(&matrix(&fixture))
+                .unwrap()
+                .directions(&fixture.seed, 4)
+                .unwrap();
+            let factor =
+                reference::Factor::prepare_shifted(&fixture.directions, fixture.value).unwrap();
+            for steps in 1..=4 {
+                let actual = factor.final_direction(&fixture.seed, steps).unwrap();
+                assert_eq!(
+                    actual
+                        .iter()
+                        .map(|v| [v.high.to_bits(), v.low.to_bits()])
+                        .collect::<Vec<_>>(),
+                    traced[steps - 1]
+                        .iter()
+                        .map(|v| [v.high.to_bits(), v.low.to_bits()])
+                        .collect::<Vec<_>>()
+                );
+            }
+            assert_eq!(
+                fixture
+                    .directions
+                    .iter()
+                    .flatten()
+                    .map(|v| [v.high.to_bits(), v.low.to_bits()])
+                    .collect::<Vec<_>>(),
+                original
+            );
+        }
+    }
+    println!("banded inverse borrowed_final_only_controls=24 exact_wide_replays=24");
 }
 
 struct Pipeline {

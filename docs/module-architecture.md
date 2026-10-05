@@ -199,6 +199,109 @@ It adds a validation/recovery claim (226 total), not a production execution
 binding. Actual public Solver rejection and cumulative-budget obligations
 remain open. See [the bounded candidate record](../reports/modal-banded-inverse-candidate-reliability-20261004.md).
 
+The [fresh candidate cost follow-up](../reports/modal-banded-inverse-pipeline-cost-20261004.md)
+keeps this ownership boundary: borrowed final-only initialization and measured
+two-stage cost remain Solver test research, not new Engine/Agent recovery policy.
+Scoped factor/check/storage accounting cannot close whole-production budgets.
+The [separate two-policy comparison](../reports/modal-banded-ranked-policy-cost-20261004.md)
+lowers candidate fit/check caps without selecting on fixture identity or moving
+strategy ownership into Engine/Agent. Per-case regressions remain visible.
+The [checked-order handoff](../reports/modal-banded-checked-order-handoff-20261004.md)
+passes only a proposal strategy tag between test stages. Physical mass-aware
+ordering/factorization and certification remain independent Solver work;
+Engine/Agent do not acquire a numerical strategy or retry policy.
+
+The [fresh request/material controls](../reports/modal-banded-handoff-request-reassembly-20261004.md)
+keep reconstruction and original-numbering restoration in a private Solver test
+harness. Twenty-four numbering layouts pass; two of eighteen material changes
+reject all three independently rebuilt physical routes. Neither Engine/Agent
+fallback behavior nor production reassembly/admission is changed or qualified.
+
+The [cold inward-chart follow-up](../reports/modal-material-inward-chart-reliability-20261004.md)
+removes neither architectural boundary: a test-only Solver policy selects a
+one-step inward anchor before one physical fit. Its 52 original-numbered
+readbacks cover 24 parameter inputs, including the two old failures, with
+strict gates and final fault/cancellation replay. Original-chart failures and
+baseline margin regression remain visible; Engine/Agent policy is unchanged.
+
+The [separate recipe/mesh holdouts](../reports/modal-material-holdout-reliability-20261004.md)
+add a bounded private 1..=128-member reconstruction entry without widening the
+old fixture entry or production topology. Both cold chart policies pass 31 of
+36 inputs; failed internal/physical stages, actual QR starts and late publication
+cancellation remain distinct. No default strategy or Engine/Agent retry is added.
+
+The [cold Givens research factor](../reports/modal-wide-givens-range-reliability-20261004.md)
+shares only preflight and bounded backsolve with the retained Householder factor.
+It never retries after a factor fault or drops retained tiny fill-in. Its
+normalized-only controls are not physical publication or a full pipeline budget;
+Engine/Agent policy and all production qualification gaps remain unchanged.
+
+The [internal cold-chart comparison](../reports/modal-internal-chart-construction-reliability-20261004.md)
+reuses strict chart preparation while keeping normalized-direction and physical
+unit-shape contracts separate. A local recovery and a new regression leave
+per-policy success counts unchanged. Two internal fits/thirteen checks and
+final-internal/publication cancellation stay test-only; no production selector
+or Engine/Agent fallback is installed.
+
+The [banded-grid construction comparison](../reports/modal-banded-grid-construction-reliability-20261004.md)
+adds a test-only three-choice dynamic program for bandwidth-three matrices.
+Its computed objective is not a certificate or interval proof. Separate cold
+one/four-pass policies retain bounded payload/work, frozen anchors, final
+receipt loss and cancellation/replay. Neither recovers the old six baselines
+or the three difficult 128-member cases; no Engine/Agent policy is changed.
+
+The [rounded-beam comparison](../reports/modal-amplitude-rounded-beam-reliability-20261004.md)
+adds test-only bounded multi-candidate QR backsolve, not another engine strategy.
+Widths 1..64 have separate proposal budgets and at most width plus two actual
+receipts. The 42-input comparison retains ten fixed-order gains and one loss;
+the hard inputs still have no physical publications. Shared publication checks,
+fresh numbering and final fault/cancellation controls prevent internal-only
+acceptance from being counted as production recovery.
+
+The [physical-first joint follow-up](../reports/modal-physical-first-joint-reliability-20261005.md)
+reuses the bounded rounded proposal visitor and shared test-only publication
+tail. Each paired receipt independently checks physical and reconstructed
+internal products; late cancellation cannot admit half a pair or publish a
+partial result. Reconstruction at the frozen initializer anchor is a stronger
+experimental condition, not an old contract requirement. Its one/two accepted
+routes versus 37 old acceptances do not justify a default or scope promotion.
+
+The [coupled two-stage follow-up](../reports/modal-coupled-shape-selection-reliability-20261005.md)
+retains the original direction-to-physical contract without the extra
+re-encoding gate. A mapped physical hint ranks internally eligible proposals;
+one separate physical beam still requires actual residual, strict final norm
+and independent original-numbered JSON readback. Old/GridNorm/Reverse accept
+37/36/28 of 42 inputs, with one gain and two losses under GridNorm. Proposal
+budgets and real last-pair/unit-validation/publication cancellation replay
+remain research evidence, not Engine/Agent strategies or production admission.
+
+The [legacy-first hybrid follow-up](../reports/modal-legacy-first-hybrid-reliability-20261005.md)
+preserves the old internal policy and every one of 37 old successful serialized
+outputs, roots, seeds, fits and receipt counts. One residual-only beam continuation
+on the same physical factor gains a tiny unequal-length input without old-success
+loss, for 38 of 42 accepted. Four internal failures stay open. Faults, cancellation,
+stale greedy final eligibility and unit-norm loss cannot trigger continuation.
+Its one-fit/twenty-five-receipt physical cap and real original-numbered recovery
+controls remain test-only, not production budgets or Engine/Agent strategies.
+
+The [breadth and iteration follow-up](../reports/modal-breadth-iteration-reliability-20261005.md)
+preserves all 38 prior successful outputs and counts, then gains the ThreeLayers
+100-member tiny physical readback with one cold Reverse width-64 pass after
+numerical exhaustion. The extended internal stage is capped at three fits/79
+receipts; the physical stage remains one fit/25 receipts. Thirty-nine of 42
+inputs pass and three internal failures remain. The 72 isolated comparisons
+distinguish internal improvement from physical publication. Faults, frozen
+radius, signed/renumbered shapes and late-cancel/fresh-replay controls remain
+private research, not production Solver or Engine/Agent qualification.
+
+The [bounded lattice follow-up](../reports/modal-bounded-lattice-reliability-20261005.md)
+records 24 adjacent-pair and twelve triangular routes under exact integer
+basis transformations, frozen radius and final actual operator receipts.
+Whole safe bases may stop at explicit construction limits; faults cannot be
+converted into budget stops. Two alternate readbacks on an already recovered
+input leave distinct coverage at 39 of 42 and three internal failures open.
+This separate larger proposal budget does not change runtime strategy ownership.
+
 Validation contract evidence includes both readiness reports and release
 review gates. Operator qualification records, retained review decisions, and
 their native checkers are part of the validation tensor so a candidate

@@ -1,5 +1,24 @@
 # Changelog
 
+## daji 3.4.7
+
+October 5, 2026. Bounded modal research and verified repository cleanup.
+
+- Add test-only material, request-reassembly, ordering, physical-readback and
+  bounded lattice comparisons with explicit cumulative budgets and failure
+  replay. Keep production Solver selection and Engine/Agent ownership unchanged.
+- Preserve 39-of-42 candidate readbacks and record the three unresolved
+  128-member inputs without claiming production or platform qualification.
+- Remove three superseded JavaScript contract checkers, point coverage evidence
+  at their Rust owners, and delete 21 duplicate or incomplete historical reports.
+- Align first-party packages, lockfiles, language-pack metadata and current
+  documentation to 3.4.7. Historical reports retain their original provenance.
+
+See `releases/snapshots/3.4.7.json` and the dated modal reports for exact scopes.
+No desktop rebuild, runtime replacement, registry publication, remote platform
+test or new large-scale qualification is included. The installed baseline
+remains 3.4.0 and release readiness remains separately gated.
+
 ## daji 3.4.5
 
 October 4, 2026. Modal cancellation safety and bounded numerical correction.

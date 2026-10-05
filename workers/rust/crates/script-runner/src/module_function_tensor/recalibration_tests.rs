@@ -346,6 +346,98 @@ fn current_solver_scope_inventory_preserves_candidate_results_and_open_productio
         .unwrap();
     assert_eq!(retained_cost["achieved_grade"], "verified");
     assert_eq!(retained_cost["met"], true);
+    let cost_claim = tensor["evidence_claims"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|claim| claim["id"] == "modal-normalized-grid-fresh-two-stage-pipeline-cost")
+        .unwrap();
+    assert_eq!(cost_claim["paradigms"], json!(["benchmark"]));
+    assert!(cost_claim["files"].as_array().unwrap().contains(&json!(
+        "reports/modal-banded-inverse-pipeline-cost-20261004.md"
+    )));
+    assert!(cost_claim["files"].as_array().unwrap().contains(&json!(
+        "reports/modal-banded-ranked-policy-cost-20261004.md"
+    )));
+    assert!(cost_claim["files"].as_array().unwrap().contains(&json!(
+        "reports/modal-banded-checked-order-handoff-20261004.md"
+    )));
+    assert!(research["files"].as_array().unwrap().contains(&json!(
+        "workers/rust/crates/solver/src/modal_roundoff_banded_handoff_control_tests.rs"
+    )));
+    for file in [
+        "workers/rust/crates/solver/src/modal_roundoff_banded_handoff_reassembly_tests.rs",
+        "reports/modal-banded-handoff-request-reassembly-20261004.md",
+        "workers/rust/crates/solver/src/modal_roundoff_material_anchor_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_inward_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_inward_chart_control_tests.rs",
+        "reports/modal-material-inward-chart-reliability-20261004.md",
+        "workers/rust/crates/solver/src/modal_roundoff_material_holdout_tests.rs",
+        "reports/modal-material-holdout-reliability-20261004.md",
+        "workers/rust/crates/solver/src/modal_roundoff_material_construction_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_precision_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_internal_chart_control_tests.rs",
+        "reports/modal-internal-chart-construction-reliability-20261004.md",
+        "workers/rust/crates/solver/src/modal_roundoff_material_givens_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_wide_qr.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_wide_givens.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_wide_givens_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_givens_control_tests.rs",
+        "reports/modal-wide-givens-range-reliability-20261004.md",
+        "workers/rust/crates/solver/src/modal_roundoff_banded_grid.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_banded_grid_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_banded_grid_tests.rs",
+        "reports/modal-banded-grid-construction-reliability-20261004.md",
+        "workers/rust/crates/solver/src/modal_roundoff_material_amplitude_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_qr_beam.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_qr_beam_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_rounded_beam_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_rounded_beam_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_rounded_beam_readback_tests.rs",
+        "reports/modal-amplitude-rounded-beam-reliability-20261004.md",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_joint.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_joint_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_joint_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_joint_readback_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_joint_control_tests.rs",
+        "reports/modal-physical-first-joint-reliability-20261005.md",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_coupled.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_coupled_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_coupled_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_coupled_control_tests.rs",
+        "reports/modal-coupled-shape-selection-reliability-20261005.md",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_hybrid.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_hybrid_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_coupled_ablation_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_hybrid_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_hybrid_control_tests.rs",
+        "reports/modal-legacy-first-hybrid-reliability-20261005.md",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_iterated_beam.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_iterated_beam_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_iterated_beam_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_iterated_beam_readback_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_iterated_beam_control_tests.rs",
+        "reports/modal-breadth-iteration-reliability-20261005.md",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_pair_lattice.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_grid_pair_lattice_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_qr_lattice.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_qr_lattice_control_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_pair_lattice_tests.rs",
+        "workers/rust/crates/solver/src/modal_roundoff_material_lattice_control_tests.rs",
+        "reports/modal-bounded-lattice-reliability-20261005.md",
+    ] {
+        assert!(research["files"].as_array().unwrap().contains(&json!(file)));
+    }
+    let rebuilt = candidates
+        .iter()
+        .find(|scope| scope["id"] == "modal-independent-renumbered-assembly")
+        .unwrap();
+    assert_eq!(rebuilt["achieved_grade"], "verified");
+    assert_eq!(rebuilt["met"], false);
+    assert_eq!(
+        rebuilt["claims"],
+        json!(["modal-planar-request-reassembly-and-restoration"])
+    );
     for (module, paradigm, ids) in [
         (
             "runtime-engine-solver",

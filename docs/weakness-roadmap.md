@@ -153,6 +153,80 @@ scope. Complete-pipeline budgeting, rebuilt candidate requests and actual
 Agent/Headless journeys remain next. See
 [the six-fixture candidate record](../reports/modal-banded-inverse-candidate-reliability-20261004.md).
 
+The [separate borrowed-initializer cost campaign](../reports/modal-banded-inverse-pipeline-cost-20261004.md)
+retains six isolated optimized processes and exact fresh replays. No dense
+initializer copy or direction history remains; actual verification callbacks
+are counted instead of duplicate nested checkpoints. The hardest chain still
+uses six grid factors and 23 certificates, reserving 2,018,181,120 grid visits
+before other work. Local candidate cost is measured, but complete production
+budgets remain open; no larger cap or additional runtime retries are enabled.
+Existing claim and target counts are unchanged.
+
+The [lower-cap ranked-policy comparison](../reports/modal-banded-ranked-policy-cost-20261004.md)
+then retains all six candidate successes with at most two fits and thirteen
+certificates per stage. Maximum chain factors drop from six to four and grid
+reservation from 2,018,181,120 to 1,347,092,480 visits. Graded-large improves
+from six fits to two; layered-tiny regresses from two to four. Paired timings
+retain that regression and its long tail, not a universal speedup claim.
+Strict norm/residual gates, final faults/cancellation and fresh exact replays
+remain checked. This is still test-only; production budget scopes stay open.
+
+The [checked-order physical handoff](../reports/modal-banded-checked-order-handoff-20261004.md)
+then avoids repeating a rejected strategy on layered-tiny, reducing its observed
+chain from four fits/sixteen certificates to three/twelve with identical output.
+The physical stage has one fit/seven certificates at most and fails on rejection,
+fault or cancellation without retry. Internal success is not physical admission.
+The summed grid cap is 1,011,548,160 visits, still not a complete production budget.
+
+The [fresh request/material boundary campaign](../reports/modal-banded-handoff-request-reassembly-20261004.md)
+now verifies 24 rebuilt numbering layouts and sixteen of eighteen material
+changes. The two tiny-layer density-times-four cases reject even the separate
+full physical portfolio. Preserve these counterexamples and healthy replay;
+investigate physical candidate representation before any production admission.
+Private harness restoration does not close general reassembly or whole budgets.
+Reference-only baseline directions pass both changed physical operators/readbacks
+near 8.59e-9; they never seed searches or count as recovery. This establishes
+admissible directions for the counterexamples, not a runtime construction.
+
+The [cold inward-chart candidate](../reports/modal-material-inward-chart-reliability-20261004.md)
+constructs passing shapes for both counterexamples without reference seeds or
+extra physical fits: 24 material inputs, 52 fresh readbacks, eighteen relation
+checks and real final fault/cancellation replay. One step toward zero selects
+the anchor before its sole fit; original failures remain asserted separately.
+The original layered-tiny residual margin regresses, so broader unseen-request
+selection is still needed. Three-fit/twenty-check grid caps do not close complete
+production work, arbitrary topology, multimode, Agent or Headless qualification.
+
+The [36-input holdout comparison](../reports/modal-material-holdout-reliability-20261004.md)
+retains the same 31 successes for both charts, plus four internal three-layer
+failures and one unequal-length physical failure. Inward margins improve in
+16 pairs and regress in 15, ruling out universal replacement. Prioritize the
+internal construction failures next; retain strict gates, actual failed-fit
+receipts and final-publication cancellation/fresh-replay boundaries.
+
+The [internal chart follow-up](../reports/modal-internal-chart-construction-reliability-20261004.md)
+recovers the three-layer 100-member tiny input but regresses an unequal-length
+large input; each cold policy still passes 31 of 36. The 204 isolated diagnoses
+retain three unresolved 128-member internal cases and six wide preparation
+faults. The [wide range follow-up](../reports/modal-wide-givens-range-reliability-20261004.md)
+distinguishes overwritten tails from retained fill-in without weakening guards.
+Givens relocates difficult-input faults and gains three/loses five normalized
+fixed-order acceptances in 144 isolated routes, with zero physical publications.
+Prioritize bounded quantized construction that preserves old successes, not
+recipe dispatch, extra runtime retries or tolerance relaxation.
+
+The [banded finite-box](../reports/modal-banded-grid-construction-reliability-20261004.md)
+and [rounded-beam](../reports/modal-amplitude-rounded-beam-reliability-20261004.md)
+retain hard failures. The [joint experiment](../reports/modal-physical-first-joint-reliability-20261005.md)
+adds a gate absent from the old contract; [coupled two-stage selection](../reports/modal-coupled-shape-selection-reliability-20261005.md)
+gains one but loses two old successes. The [legacy-first follow-up](../reports/modal-legacy-first-hybrid-reliability-20261005.md)
+keeps the old internal policy and reuses one physical factor: all 37 old JSON
+outputs and counts match exactly, plus one new tiny unequal-length success.
+The [breadth follow-up](../reports/modal-breadth-iteration-reliability-20261005.md)
+then retains all 38 outputs and gains a tiny ThreeLayers readback: 39 of 42 pass.
+The [bounded lattice follow-up](../reports/modal-bounded-lattice-reliability-20261005.md)
+adds two alternate readbacks on an already recovered input, not new coverage. Three failures remain; keep norm, actual-final, bounded-stop and recovery gates before promotion.
+
 ### First Product-Recovery Follow-Up
 
 The September 13 execution follow-up fixes a real Installer declarative-action

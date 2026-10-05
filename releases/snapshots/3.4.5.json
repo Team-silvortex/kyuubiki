@@ -2,7 +2,7 @@
   "version": "3.4.5",
   "codename": "daji",
   "line": "3.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-10-04",
   "git_commit": "155d6bc60d49220e2bdad4f575d507d9d91a38b8",
   "summary": "Daji 3.4.5 source reliability patch: checked modal preparation, cancellation-safe vector and final validation, bounded complete-spectrum single-mode correction, and independent test-only quantized-QR comparisons. No desktop rebuild or binary publication.",

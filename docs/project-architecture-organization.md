@@ -156,6 +156,9 @@ Current source-side posture:
   runner. JavaScript tooling is limited to frontend development and UI tests.
   Do not keep a second operational implementation as an unused parity copy
   after its native entrypoint and regression checks have replaced it.
+  When removing such a copy, move coverage evidence to the native implementation
+  and verify its normal and negative self-test lanes. A deleted filename must
+  not remain a required source in the architecture or integrity contracts.
 - Workflow templates should split entry metadata, graph assembly, graph nodes,
   and runtime helpers into separate modules once a file starts mixing those
   responsibilities.
@@ -210,6 +213,10 @@ benchmark baselines, schemas, lockfiles, and release qualification evidence
 unless their replacement is verified. Do not delete tests merely because they
 describe an old bug. Keep only intentionally retained summaries in `reports/`
 or `releases/`; do not back up generated output inside the repository.
+For identical repeated run reports, retain one representative result rather
+than every timestamped copy. Remove empty or incomplete intermediate reports
+only after verifying that the completed report preserves their useful results.
+Do not prune independent failure evidence or required qualification artifacts.
 
 Repository cleanup does not uninstall desktop apps or manage installed runtime
 data. Use Installer lifecycle/storage operations for those separate locations.

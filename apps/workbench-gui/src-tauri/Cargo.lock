@@ -1687,7 +1687,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-desktop-runtime"
-version = "3.4.5"
+version = "3.4.7"
 dependencies = [
  "chrono",
  "fs2",
@@ -1700,7 +1700,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-platform"
-version = "3.4.5"
+version = "3.4.7"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
@@ -1708,7 +1708,7 @@ dependencies = [
 
 [[package]]
 name = "kyuubiki-workbench-gui"
-version = "3.4.5"
+version = "3.4.7"
 dependencies = [
  "kyuubiki-desktop-runtime",
  "serde",

@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.install-update-disk-hygiene/v1",
-  "shipping_version": "3.4.5",
+  "shipping_version": "3.4.7",
   "source_contracts": {
     "installation_integrity": "deploy/installation-integrity-contract.json",
     "update_channels": "deploy/update-channels.json",

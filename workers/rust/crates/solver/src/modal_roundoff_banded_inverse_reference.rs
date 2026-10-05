@@ -12,25 +12,43 @@ pub(super) struct Factor {
 
 impl Factor {
     pub(super) fn prepare(matrix: &[Vec<Wide>]) -> Result<Self, String> {
+        Self::prepare_shifted(matrix, 0.0)
+    }
+
+    pub(super) fn prepare_shifted(matrix: &[Vec<Wide>], shift: f64) -> Result<Self, String> {
         let size = matrix.len();
         if !(2..=256).contains(&size)
             || matrix.iter().any(|row| row.len() != size)
             || matrix.iter().flatten().any(|&v| !bounded(v))
+            || !shift.is_finite()
+            || !(0.0..=1e50).contains(&shift)
         {
             return Err("banded inverse requires bounded square data of size 2..=256".into());
+        }
+        // Borrow the shifted matrix; reconstruct only accessed diagonal entries.
+        let entry = |i: usize, j: usize| {
+            if i == j && shift != 0.0 {
+                matrix[i][j].add(Wide::from(shift))
+            } else {
+                matrix[i][j]
+            }
+        };
+        if (0..size).any(|i| !bounded(entry(i, i))) {
+            return Err("banded inverse shifted diagonal exceeds its range".into());
         }
         checkpoint(SolverStage::BandedFactor, 0)?;
         let mut maximum = 0.0_f64;
         for (i, row) in matrix.iter().enumerate() {
-            for (j, &entry) in row.iter().enumerate() {
-                let other = matrix[j][i];
-                let magnitude = entry.rounded().abs().max(other.rounded().abs());
-                if (i.abs_diff(j) > 3 && (entry.high != 0.0 || entry.low != 0.0))
-                    || entry.sub(other).rounded().abs() > 1e-27 * magnitude
+            for j in 0..row.len() {
+                let value = entry(i, j);
+                let other = entry(j, i);
+                let magnitude = value.rounded().abs().max(other.rounded().abs());
+                if (i.abs_diff(j) > 3 && (value.high != 0.0 || value.low != 0.0))
+                    || value.sub(other).rounded().abs() > 1e-27 * magnitude
                 {
                     return Err("banded inverse requires symmetric bandwidth-three data".into());
                 }
-                maximum = maximum.max(entry.rounded().abs());
+                maximum = maximum.max(value.rounded().abs());
             }
             checkpoint_chunk(SolverStage::BandedFactor, i + 1, size)?;
         }
@@ -43,22 +61,22 @@ impl Factor {
         let mut diagonal = vec![Wide::default(); size];
         for i in 0..size {
             for j in i.saturating_sub(3)..i {
-                let mut entry = scale_entry(matrix[i][j], scale)?;
+                let mut value = scale_entry(entry(i, j), scale)?;
                 for (k, &previous) in diagonal
                     .iter()
                     .enumerate()
                     .take(j)
                     .skip(i.saturating_sub(3))
                 {
-                    entry = entry.sub(lower[i][i - k - 1].mul(lower[j][j - k - 1]).mul(previous));
+                    value = value.sub(lower[i][i - k - 1].mul(lower[j][j - k - 1]).mul(previous));
                 }
-                let value = entry.div(diagonal[j]);
+                let value = value.div(diagonal[j]);
                 if !bounded(value) || value.rounded().abs() > 1e14 {
                     return Err("banded inverse exceeds its bounded factor range".into());
                 }
                 lower[i][i - j - 1] = value;
             }
-            let mut pivot = scale_entry(matrix[i][i], scale)?;
+            let mut pivot = scale_entry(entry(i, i), scale)?;
             for (j, &previous) in diagonal
                 .iter()
                 .enumerate()
@@ -130,7 +148,28 @@ impl Factor {
         Ok(solution)
     }
 
+    pub(super) fn owned_numeric_bytes(&self) -> usize {
+        self.lower.capacity() * std::mem::size_of::<[Wide; 3]>()
+            + self.diagonal.capacity() * std::mem::size_of::<Wide>()
+            + std::mem::size_of::<Wide>()
+    }
+
     pub(super) fn directions(&self, seed: &[f64], steps: usize) -> Result<Vec<Vec<Wide>>, String> {
+        let mut candidates = Vec::with_capacity(steps.min(MAX_STEPS));
+        self.iterate(seed, steps, |direction| candidates.push(direction.to_vec()))?;
+        Ok(candidates)
+    }
+
+    pub(super) fn final_direction(&self, seed: &[f64], steps: usize) -> Result<Vec<Wide>, String> {
+        self.iterate(seed, steps, |_| {})
+    }
+
+    fn iterate(
+        &self,
+        seed: &[f64],
+        steps: usize,
+        mut observe: impl FnMut(&[Wide]),
+    ) -> Result<Vec<Wide>, String> {
         if seed.len() != self.diagonal.len()
             || seed.iter().any(|v| !v.is_finite() || v.abs() > 1e50)
             || !(1..=MAX_STEPS).contains(&steps)
@@ -147,7 +186,6 @@ impl Factor {
             return Err("banded inverse requires a nonzero retained direction".into());
         }
         let mut iterate: Vec<_> = seed.iter().copied().map(Wide::from).collect();
-        let mut candidates = Vec::with_capacity(steps);
         for step in 0..steps {
             checkpoint(SolverStage::ModalIteration, step)?;
             iterate = self.solve(&iterate)?;
@@ -166,10 +204,10 @@ impl Factor {
                 }
                 checkpoint_chunk(SolverStage::ModalVectorUpdate, i + 1, seed.len())?;
             }
-            candidates.push(iterate.clone());
+            observe(&iterate);
         }
         checkpoint(SolverStage::ModalIteration, steps)?;
-        Ok(candidates)
+        Ok(iterate)
     }
 }
 

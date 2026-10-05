@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-10-04T01:24:52Z",
-  "shipping_version": "3.4.5",
+  "generated_at": "2026-10-05T07:24:57Z",
+  "shipping_version": "3.4.7",
   "default_channel": "stable",
   "line": "daji 3.x",
   "source": {
@@ -17,13 +17,13 @@
         "daji:latest",
         "daji:3",
         "daji:3.4",
-        "daji:3.4.5"
+        "daji:3.4.7"
       ],
       "line": "3.x",
       "status": "current",
-      "version": "3.4.5",
-      "summary": "Daji 3.4.5 source reliability patch: checked modal preparation, cancellation-safe vector and final validation, bounded complete-spectrum single-mode correction, and independent test-only quantized-QR comparisons. No desktop rebuild or binary publication.",
-      "date": "2026-10-04",
+      "version": "3.4.7",
+      "summary": "Daji 3.4.7 source reliability and cleanup patch: bounded test-only modal material, request-reassembly and lattice comparisons; failure replay; retired duplicate contract checkers and redundant reports. No desktop rebuild or binary publication.",
+      "date": "2026-10-05",
       "notes": [
         "Primary operator-facing update track for the current daji 3.x line.",
         "Targets standard installs that follow the visible installation contract."
@@ -65,7 +65,7 @@
         "managed_path_policy": "workspace_relative",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/3.4.5.json",
+      "snapshot_path": "releases/snapshots/3.4.7.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
@@ -75,55 +75,55 @@
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "3.4.5",
+          "version": "3.4.7",
           "notes": [
-            "Source metadata aligned; no new GUI behavior."
+            "Metadata aligned; UI behavior unchanged."
           ]
         },
         "hub_gui": {
-          "version": "3.4.5",
+          "version": "3.4.7",
           "notes": [
-            "Source metadata and current documentation aligned; no new desktop artifact."
+            "Documentation and language-pack mirrors aligned; no new desktop artifact."
           ]
         },
         "workbench_gui": {
-          "version": "3.4.5",
+          "version": "3.4.7",
           "notes": [
-            "Source metadata only; no new desktop artifact."
+            "Metadata aligned; no new desktop artifact."
           ]
         },
         "installer_gui": {
-          "version": "3.4.5",
+          "version": "3.4.7",
           "notes": [
-            "Source metadata only; no new desktop artifact."
+            "Metadata aligned; no new desktop artifact."
           ]
         },
         "web_api": {
-          "version": "3.4.5",
+          "version": "3.4.7",
           "notes": [
             "Metadata aligned; control-plane authority unchanged."
           ]
         },
         "rust_headless_sdk": {
-          "version": "3.4.5",
+          "version": "3.4.7",
           "notes": [
-            "Scoped modal execution regressions; no registry publication."
+            "Metadata aligned; no registry publication."
           ]
         },
         "python_headless_sdk": {
-          "version": "3.4.5",
+          "version": "3.4.7",
           "notes": [
             "Metadata aligned; no new Python qualification or publication."
           ]
         },
         "elixir_headless_sdk": {
-          "version": "3.4.5",
+          "version": "3.4.7",
           "notes": [
             "Metadata aligned; no new Elixir qualification or publication."
           ]
         },
         "rust_worker_sdk": {
-          "version": "3.4.5",
+          "version": "3.4.7",
           "notes": [
             "Operator extension API unchanged; separate from Headless control."
           ]
@@ -134,12 +134,12 @@
   ],
   "versions": [
     {
-      "version": "3.4.5",
+      "version": "3.4.7",
       "line": "3.x",
       "status": "current",
-      "date": "2026-10-04",
-      "summary": "Daji 3.4.5 source reliability patch: checked modal preparation, cancellation-safe vector and final validation, bounded complete-spectrum single-mode correction, and independent test-only quantized-QR comparisons. No desktop rebuild or binary publication.",
-      "snapshot_path": "releases/snapshots/3.4.5.json",
+      "date": "2026-10-05",
+      "summary": "Daji 3.4.7 source reliability and cleanup patch: bounded test-only modal material, request-reassembly and lattice comparisons; failure replay; retired duplicate contract checkers and redundant reports. No desktop rebuild or binary publication.",
+      "snapshot_path": "releases/snapshots/3.4.7.json",
       "channels": [
         "stable"
       ],
@@ -148,8 +148,75 @@
         "daji:latest",
         "daji:3",
         "daji:3.4",
-        "daji:3.4.5"
+        "daji:3.4.7"
       ],
+      "product_surfaces": {
+        "frontend_workbench": {
+          "version": "3.4.7",
+          "notes": [
+            "Metadata aligned; UI behavior unchanged."
+          ]
+        },
+        "hub_gui": {
+          "version": "3.4.7",
+          "notes": [
+            "Documentation and language-pack mirrors aligned; no new desktop artifact."
+          ]
+        },
+        "workbench_gui": {
+          "version": "3.4.7",
+          "notes": [
+            "Metadata aligned; no new desktop artifact."
+          ]
+        },
+        "installer_gui": {
+          "version": "3.4.7",
+          "notes": [
+            "Metadata aligned; no new desktop artifact."
+          ]
+        },
+        "web_api": {
+          "version": "3.4.7",
+          "notes": [
+            "Metadata aligned; control-plane authority unchanged."
+          ]
+        },
+        "rust_headless_sdk": {
+          "version": "3.4.7",
+          "notes": [
+            "Metadata aligned; no registry publication."
+          ]
+        },
+        "python_headless_sdk": {
+          "version": "3.4.7",
+          "notes": [
+            "Metadata aligned; no new Python qualification or publication."
+          ]
+        },
+        "elixir_headless_sdk": {
+          "version": "3.4.7",
+          "notes": [
+            "Metadata aligned; no new Elixir qualification or publication."
+          ]
+        },
+        "rust_worker_sdk": {
+          "version": "3.4.7",
+          "notes": [
+            "Operator extension API unchanged; separate from Headless control."
+          ]
+        }
+      },
+      "desktop_artifacts": []
+    },
+    {
+      "version": "3.4.5",
+      "line": "3.x",
+      "status": "archived",
+      "date": "2026-10-04",
+      "summary": "Daji 3.4.5 source reliability patch: checked modal preparation, cancellation-safe vector and final validation, bounded complete-spectrum single-mode correction, and independent test-only quantized-QR comparisons. No desktop rebuild or binary publication.",
+      "snapshot_path": "releases/snapshots/3.4.5.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {
         "frontend_workbench": {
           "version": "3.4.5",

@@ -1,0 +1,114 @@
+{
+  "version": "3.4.7",
+  "codename": "daji",
+  "line": "3.x",
+  "status": "current",
+  "date": "2026-10-05",
+  "git_commit": "dc5647af108ddbf98db59b7522091e49632dd1b2",
+  "summary": "Daji 3.4.7 source reliability and cleanup patch: bounded test-only modal material, request-reassembly and lattice comparisons; failure replay; retired duplicate contract checkers and redundant reports. No desktop rebuild or binary publication.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "reliability": "docs/operator-reliability.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": { "version": "3.4.7", "notes": ["Metadata aligned; UI behavior unchanged."] },
+    "hub_gui": { "version": "3.4.7", "notes": ["Documentation and language-pack mirrors aligned; no new desktop artifact."] },
+    "workbench_gui": { "version": "3.4.7", "notes": ["Metadata aligned; no new desktop artifact."] },
+    "installer_gui": { "version": "3.4.7", "notes": ["Metadata aligned; no new desktop artifact."] },
+    "web_api": { "version": "3.4.7", "notes": ["Metadata aligned; control-plane authority unchanged."] },
+    "rust_headless_sdk": { "version": "3.4.7", "notes": ["Metadata aligned; no registry publication."] },
+    "python_headless_sdk": { "version": "3.4.7", "notes": ["Metadata aligned; no new Python qualification or publication."] },
+    "elixir_headless_sdk": { "version": "3.4.7", "notes": ["Metadata aligned; no new Elixir qualification or publication."] },
+    "rust_worker_sdk": { "version": "3.4.7", "notes": ["Operator extension API unchanged; separate from Headless control."] }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": ["Existing language-neutral execution and publication contracts retained."]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": [
+      "Production Solver selection and Engine/Agent execution ownership remain unchanged.",
+      "Test-only modal comparisons retain frozen roots, physical gates and bounded work.",
+      "Candidate material and numbering checks use independent physical JSON readbacks.",
+      "Fault and cancellation tests discard incomplete output and require healthy fresh replay."
+    ]
+  },
+  "desktop_artifacts": {},
+  "verification": {
+    "source_revision_role": "Base commit plus the working-tree changes included in this source release; not a clean-commit binary build claim.",
+    "platform": "macos-aarch64",
+    "release_checks": {
+      "source_version": "3.4.7",
+      "status": "passed",
+      "toolchain": "Rust 1.88.0; Cargo checks use --locked --offline",
+      "modal_lattice_release": { "passed": 18, "failed": 0, "ignored": 0 },
+      "tensor_rust_tests": { "passed": 21, "failed": 0, "ignored": 0 },
+      "exact_version_contracts": { "checks": 224, "mismatched": 0 },
+      "documentation": "26 HTML book files, manifest, bootstrap and inventory passed",
+      "desktop_mirrors": "Shared asset synchronization and check passed",
+      "language_pack_metadata": "60 canonical packs validated for 3.4.7; not a new translation-quality qualification",
+      "installation_integrity": "Disk hygiene and component integrity self-tests/contracts passed",
+      "native_contracts": "GUI capability, TaskIR and workflow dataset checks and negative self-tests passed after removing obsolete JavaScript copies",
+      "operator_validation_definitions": "Self-test and all 59 profile definitions passed with executed=false; not physical execution evidence",
+      "project_organization": "Working-tree audit passed: source limit 800, documentation limit 2000, tracked debt 0; untracked source and reports included",
+      "tensor": "Structure and commands passed: 13 modules, 11 paradigms, 0 structural gaps; 4 maturity, 19 evidence-grade and 14 P0 gaps remain; qualification status blocked",
+      "formatting": "Rust workspace formatting and working-tree patch whitespace checks passed",
+      "rust_sdk_metadata": "Standalone 3.4.7 manifest resolves with --locked --offline --no-deps",
+      "precommit_hygiene": "Changed-file scan found no private-key headers, common token formats, developer home paths or LAN addresses. No ignored local artifacts or files above 5 MiB in the candidate set. This is not a full security audit.",
+      "scope": "Version alignment and focused source checks only; prior full-suite numerical evidence below retains its pre-alignment provenance. No full solver rerun after metadata alignment, desktop rebuild, remote platform verification or registry publication."
+    },
+    "prior_worktree_evidence": {
+      "source_version": "3.4.5 metadata, dc5647af base commit labeled 3.4.6, plus October 5 working-tree overlay",
+      "toolchain": "Rust 1.88.0; Cargo checks use --locked --offline",
+      "solver_release": { "passed": 759, "failed": 0, "ignored": 34 },
+      "bounded_lattice_focused_release": { "passed": 9, "failed": 0 },
+      "bounded_lattice_focused_debug": { "passed": 2, "failed": 0 },
+      "tensor_rust_tests": { "passed": 21, "failed": 0 },
+      "strict_clippy": "Solver, CLI and native script runner all-targets passed with -D warnings",
+      "scope": "Overlapping lanes are not additive coverage. Ignored tests and profile-definition checks are not physical execution evidence. No desktop or remote qualification."
+    },
+    "reports": [
+      "reports/modal-banded-inverse-candidate-reliability-20261004.md",
+      "reports/modal-banded-inverse-pipeline-cost-20261004.md",
+      "reports/modal-banded-ranked-policy-cost-20261004.md",
+      "reports/modal-banded-checked-order-handoff-20261004.md",
+      "reports/modal-banded-handoff-request-reassembly-20261004.md",
+      "reports/modal-material-inward-chart-reliability-20261004.md",
+      "reports/modal-material-holdout-reliability-20261004.md",
+      "reports/modal-internal-chart-construction-reliability-20261004.md",
+      "reports/modal-wide-givens-range-reliability-20261004.md",
+      "reports/modal-banded-grid-construction-reliability-20261004.md",
+      "reports/modal-amplitude-rounded-beam-reliability-20261004.md",
+      "reports/modal-physical-first-joint-reliability-20261005.md",
+      "reports/modal-coupled-shape-selection-reliability-20261005.md",
+      "reports/modal-legacy-first-hybrid-reliability-20261005.md",
+      "reports/modal-breadth-iteration-reliability-20261005.md",
+      "reports/modal-bounded-lattice-reliability-20261005.md"
+    ],
+    "report_provenance": "Original dated reports keep their source-version, working-tree and test-scope fingerprints. The 3.4.7 metadata alignment does not relabel those runs as clean 3.4.7 builds.",
+    "known_limits": [
+      "The candidate pipeline completes 39 of 42 independently read-back inputs; three 128-member inputs remain unresolved.",
+      "Bounded lattice alternatives recover no new distinct inputs and remain test-only.",
+      "Production recovery, cumulative budgets, general spatial spectra, external correlation and sustained scale qualification remain open.",
+      "The tensor retains 4 maturity, 19 evidence-grade and 14 P0 gaps; qualification status remains blocked."
+    ],
+    "cleanup": {
+      "superseded_contract_checkers_removed": 3,
+      "redundant_or_incomplete_reports_removed": 21,
+      "unreferenced_old_temporary_logs_removed": 701,
+      "reusable_dependency_and_desktop_caches": "preserved",
+      "private_configuration_and_independent_failure_evidence": "preserved"
+    },
+    "desktop_packaging": { "status": "not performed", "last_local_installed_version": "3.4.0" },
+    "runtime_payload": { "status": "not rebuilt or replaced", "last_local_installed_version": "3.4.0" },
+    "ci": { "status": "remote result is tracked separately for the pushed release commit" },
+    "public_distribution": "not performed",
+    "registry_publication": "not performed",
+    "notarized": false,
+    "qualification": "No new general physical, external-solver, Windows, installed-Agent, installed-GUI or scale qualification. Version alignment and cleanup do not promote research candidates or close tensor readiness gaps."
+  }
+}

@@ -1,5 +1,10 @@
 # Modal Banded Inverse And Discrete Candidate Recovery
 
+The separate [borrowed initializer and fresh cost follow-up](modal-banded-inverse-pipeline-cost-20261004.md)
+preserves this report's numerical results while removing its initializer copy
+and history from the measured path. Its own six-process timing and scoped work
+ledger do not qualify production admission or whole-pipeline budgets.
+
 Date: 2026-10-04
 Source line: daji 3.4.5 working-tree overlay based on `431b2ac7`.
 Platform: local macOS ARM64, Rust 1.88.

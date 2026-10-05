@@ -1,11 +1,37 @@
 # daji 3.x
 
 This is the single entrypoint for the active Kyuubiki product line.
-The current development point in this line is `daji 3.4.5`.
-Source package metadata targets `3.4.5`; the last locally built and installed
+The current development point in this line is `daji 3.4.7`.
+Source package metadata targets `3.4.7`; the last locally built and installed
 desktop/runtime baseline remains `daji 3.4.0`.
 Local installation does not imply that public downloads or SDK packages have
 been published; platform acceptance remains separately scoped.
+
+## Daji 3.4.7 Checkpoint
+
+October 5, 2026. This source patch retains the bounded modal research and
+recovery checks developed after commit `dc5647af` (`daji 3.4.6`), then removes
+superseded tooling and redundant development outputs.
+
+- Preserve the 39-of-42 independently read-back candidate pipeline. Three
+  128-member inputs remain unresolved; bounded lattice alternatives recover
+  no new inputs. These modules remain test-only, not runtime fallback routes.
+- Retain callback fault, cancellation, fresh replay, request-numbering and
+  independent physical readback checks without relaxing numerical gates or
+  moving Solver algorithms into Engine/Agent.
+- Remove three superseded JavaScript contract checkers and redirect their
+  coverage evidence to the existing Rust implementations.
+- Prune redundant historical run reports and disposable local build outputs;
+  preserve regression source, independent failure evidence and private config.
+- Align first-party source, SDK, language-pack and documentation versions to
+  3.4.7 without relabeling historical evidence or rebuilding installed binaries.
+
+See `releases/snapshots/3.4.7.json` and the
+[bounded lattice report](../reports/modal-bounded-lattice-reliability-20261005.md).
+The installed baseline remains 3.4.0. Production modal recovery, full spatial
+spectra, external correlation and sustained scale qualification remain open.
+The existing tensor calibration profile remains unchanged; a patch number does
+not promote research candidates or satisfy open readiness gates.
 
 ## Daji 3.4.5 Checkpoint
 
@@ -67,6 +93,132 @@ nearest rounding alone still rejects. This code is test-only: actual public
 Solver calls remain rejected, and production, cumulative-budget and Agent/SDK
 qualification remain open. Current retained claims total 226, without changing
 the 58/77 coordinate or 10/32 scenario targets met.
+
+The [separate fresh banded candidate cost record](../reports/modal-banded-inverse-pipeline-cost-20261004.md)
+removes initializer copies/history and measures all six alternative chains with
+exact repeated receipts. Actual certificate callbacks replace duplicate nested
+event counting. Its hardest chain still uses six grid factors and 23 certificates;
+scoped reservations and process RSS do not qualify a complete production budget.
+Existing claim and target counts remain unchanged.
+
+The [ranked-then-reverse candidate comparison](../reports/modal-banded-ranked-policy-cost-20261004.md)
+retains six successes with two fits/thirteen certificates per stage and a lower
+worst-case grid reservation. It records both the graded-large improvement and
+tiny-layer regression in paired timings. Production admission/budget scopes and
+claim/target counts remain unchanged.
+
+The [checked-order handoff comparison](../reports/modal-banded-checked-order-handoff-20261004.md)
+uses the accepted internal strategy tag for one independently certified physical
+fit, never reusing its permutation, factor or certificate. Six outputs retain
+exact bits; layered-tiny drops four grid fits to three. Formal chain caps are
+three fits/twenty certificates, with no fallback after physical rejection.
+Local cost improves for that case, not universally; complete budgets stay open.
+
+The [rebuilt-request follow-up](../reports/modal-banded-handoff-request-reassembly-20261004.md)
+retains exact results for 24 fresh numbering layouts and independent physical
+readbacks for sixteen of eighteen changed material inputs. The two tiny-layer
+density-times-four cases reject handoff, independent ranked and independent full
+physical portfolios, with healthy fresh baseline replay. These are test-only
+boundaries, not a production fix or new qualified tensor scope.
+Two separate reference-only directions pass the failed changed-material
+operators/readbacks near 8.59e-9 without seeding searches; candidate generation,
+not a proven impossibility under the gate, remains the next numerical gap.
+
+The [cold inward-chart follow-up](../reports/modal-material-inward-chart-reliability-20261004.md)
+now constructs passing candidates for both counterexamples without reference
+seeds or additional physical fits. Twenty-four material inputs pass 52 fresh
+original-numbered JSON readbacks and eighteen spectral/material relation checks.
+The anchor moves one f64 step toward zero before the sole fit, then stays frozen.
+Fault/cancellation/replay and one-fit/seven-check bounds remain explicit.
+Layered-tiny baseline residual gets worse, though still below 1e-8; this is not
+universal improvement or production admission. Original-chart failures remain
+asserted; full budgets, broader selection and actual Agent/SDK qualification stay open.
+
+The [independent recipe/mesh holdouts](../reports/modal-material-holdout-reliability-20261004.md)
+compare 36 inputs through 72 fresh cold routes. Both charts publish 31 checked
+results and retain four internal and one physical failure. Inward movement
+improves 16 margins and worsens 15; it is not promoted to a default. Actual
+failed-fit accounting, preparation declines and final publication cancellation
+replay distinguish early exits from completed physical/readback validation.
+
+The [internal construction follow-up](../reports/modal-internal-chart-construction-reliability-20261004.md)
+retains 204 isolated diagnoses and 108 fresh cold routes. Moving the internal
+anchor one step inward recovers the three-layer 100-member tiny request, but
+loses a formerly passing unequal-length large request: each policy still passes
+31 of 36. Three 128-member internal failures and six wide preparation faults
+remain explicit. This complementary test-only policy is not a default or a
+qualified production recovery; cancellation and healthy replay remain bounded.
+
+The [wide QR range follow-up](../reports/modal-wide-givens-range-reliability-20261004.md)
+separates two overwritten-tail faults from four retained tiny-fill faults without
+relaxing the range guard. A cold Givens factor moves, rather than removes, the
+difficult-input failures. Over 144 isolated material/order routes it gains three
+normalized acceptances and loses five; no physical result is published. The
+three 128-member layered cases remain unresolved, and no default is changed.
+
+The [banded floating-grid follow-up](../reports/modal-banded-grid-construction-reliability-20261004.md)
+tests one or four fixed construction passes with at most 729 frontier states.
+Across 42 inputs and 84 cold routes, each policy accepts nine holdout normalized
+directions and none of the six old 128-member baselines. Three difficult
+128-member inputs remain unresolved despite lower residuals. Prediction is
+not acceptance: two actual receipts, fixed gates and bounded cancellation
+remain required. No physical publication, default change or new qualified
+claim follows from these test-only negative results.
+
+The [amplitude and rounded-beam follow-up](../reports/modal-amplitude-rounded-beam-reliability-20261004.md)
+retains 128 isolated amplitude charts and 96 beam diagnostics. In 84 fixed-order
+pairs, width-16 beam gains ten normalized acceptances and loses one, compared
+with four-pass rounded greedy recovery. The 100-member tiny input passes
+internally but both retained physical charts reject it; all three 128-member
+inputs remain unresolved. Four healthy original-numbered readbacks and late
+fault/cancellation replays are test-only, not a default or production promotion.
+
+The [physical-first joint follow-up](../reports/modal-physical-first-joint-reliability-20261005.md)
+retains 42 inputs and 126 cold routes: the old full pipeline accepts 37, while
+joint GridNorm/Reverse accept only one/two. The joint policy adds rounded
+internal re-encoding of the final physical shape at the initializer's frozen
+anchor, which the old contract does not require. Its negative boundary does
+not invalidate old outputs. Real final-pair/publication cancellation, faults,
+fresh numbering and healthy replay are retained; no default or scope is promoted.
+
+The [coupled two-stage follow-up](../reports/modal-coupled-shape-selection-reliability-20261005.md)
+keeps the old internal-to-physical contract without final internal re-encoding.
+Mapped physical error ranks only internally eligible directions; the recovered
+physical shape still needs strict norm, actual residual and independent JSON
+readback. Of 42 inputs, old/GridNorm/Reverse accept 37/36/28. GridNorm gains the
+unequal-length 128-member tiny case but loses two old successes; Reverse loses
+nine. Separate one-fit/eighteen-receipt stages and real late cancellation with
+fresh exact replay remain test-only. No production default or scope is promoted.
+
+The [legacy-first physical follow-up](../reports/modal-legacy-first-hybrid-reliability-20261005.md)
+isolates those losses with twelve cold ablations. Keeping the old internal
+policy and greedy physical output, with a residual-only beam continuation on
+the same factor, preserves all 37 old successful JSON outputs and counts
+exactly and gains one tiny unequal-length input: 38 of 42 accept. Four internal
+ThreeLayers failures remain. The physical cap is one fit/twenty-five receipts;
+faults, cancellation, stale final gates and norm loss cannot start continuation.
+This bounded positive research does not replace production defaults or scopes.
+
+The [breadth and iteration follow-up](../reports/modal-breadth-iteration-reliability-20261005.md)
+preserves all 38 previous successful JSON outputs and counts exactly. A single
+preselected Reverse width-64 internal pass, only after old numerical exhaustion,
+recovers the ThreeLayers 100-member tiny input at independent readback
+`8.943162509310455e-9`: 39 of 42 pass, with three internal failures open.
+The 72 isolated diagnostics show that narrower repeated passes' better internal
+residuals do not recover this physical output. The extended internal cap is
+three fits/79 receipts; the physical cap remains one fit/25 receipts. Real
+faults, signed/renumbered shapes, late cancellation and fresh exact replay are
+retained. This is test-only Solver evidence, not production admission.
+
+The [bounded lattice follow-up](../reports/modal-bounded-lattice-reliability-20261005.md)
+changes integer coordinate construction rather than tolerance or beam width.
+Twenty-four adjacent-pair routes add no success. Twelve bounded triangular
+routes retain whole transformations at explicit step/integer limits; two
+alternate directions on the already recovered 100-member tiny input pass
+physical JSON readback. Three 128-member internal failures remain, despite a
+lower tiny-case diagnostic residual. Distinct-input coverage stays 39 of 42.
+Exact integer mapping, real faults, cancellation and fresh replay stay private
+Solver research, not production admission or Engine/Agent retry behavior.
 
 ## Daji 3.4.4 Checkpoint (Historical)
 

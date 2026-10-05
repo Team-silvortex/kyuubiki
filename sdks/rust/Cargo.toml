@@ -1,6 +1,6 @@
 [package]
 name = "kyuubiki-headless-sdk"
-version = "3.4.5"
+version = "3.4.7"
 edition = "2024"
 license = "MIT"
 

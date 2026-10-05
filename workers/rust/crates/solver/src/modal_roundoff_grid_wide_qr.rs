@@ -10,52 +10,22 @@ const BEAM_WIDTH: usize = super::MAX_CERTIFICATES - 2;
 // Test-only double-double proposals, never an acceptance or interval oracle.
 pub(super) struct QrFit {
     columns: Vec<Vec<Wide>>,
-    reflectors: Vec<(Vec<Wide>, Wide)>,
+    transform: Transform,
     scales: Vec<Wide>,
 }
 
+enum Transform {
+    Householder(Vec<(Vec<Wide>, Wide)>),
+    Givens(Vec<givens::Rotation>),
+}
+
+#[path = "modal_roundoff_grid_wide_givens.rs"]
+mod givens;
+
 impl QrFit {
     pub(super) fn factor(columns: &[Vec<Wide>]) -> Result<Self, String> {
-        let rows = columns.first().map_or(0, Vec::len);
-        super::Plan::wide(rows)?;
+        let (mut work, scales, initial) = scaled_columns(columns)?;
         let count = columns.len();
-        if count == 0
-            || count >= rows
-            || columns
-                .iter()
-                .any(|c| c.len() != rows || c.iter().any(|&v| !bounded(v)))
-        {
-            return Err("wide QR requires bounded finite tall columns".into());
-        }
-        checkpoint(SolverStage::DenseFactor, 0)?;
-        let mut work = Vec::with_capacity(count);
-        let mut scales = Vec::with_capacity(count);
-        let mut initial = Vec::with_capacity(count);
-        for column in columns {
-            let maximum = column
-                .iter()
-                .map(|v| v.rounded().abs())
-                .fold(0.0_f64, f64::max);
-            if maximum == 0.0 || !maximum.is_finite() {
-                return Err("wide QR has a zero or invalid column".into());
-            }
-            let scale = Wide::from(f64::from_bits(maximum.to_bits() & (0x7ff_u64 << 52)));
-            if scale.high == 0.0 {
-                return Err("wide QR cannot scale a subnormal column".into());
-            }
-            let mut scaled = Vec::with_capacity(rows);
-            for (i, &v) in column.iter().enumerate() {
-                let next = v.div(scale);
-                if !bounded(next) || (v.high != 0.0 && next.high == 0.0) {
-                    return Err("wide QR column scaling lost a bounded nonzero entry".into());
-                }
-                scaled.push(next);
-                checkpoint_chunk(SolverStage::ModalVectorUpdate, i + 1, rows)?;
-            }
-            initial.push(norm(&scaled)?.rounded());
-            scales.push(scale);
-            work.push(scaled);
-        }
         let mut reflectors = Vec::with_capacity(count);
         for pivot in 0..count {
             let norm = norm(&work[pivot][pivot..])?;
@@ -78,8 +48,9 @@ impl QrFit {
                 direction.push(value);
             }
             let tau = Wide::from(1.0).sub(original.div(diagonal));
-            for column in &mut work[pivot..] {
-                apply(&direction, tau, &mut column[pivot..])?;
+            for (offset, column) in work[pivot..].iter_mut().enumerate() {
+                apply(&direction, tau, &mut column[pivot..])
+                    .map_err(|error| format!("{error}; pivot={pivot} column={}", pivot + offset))?;
             }
             work[pivot][pivot] = diagonal;
             work[pivot][pivot + 1..].fill(Wide::default());
@@ -88,9 +59,31 @@ impl QrFit {
         }
         Ok(Self {
             columns: work,
-            reflectors,
+            transform: Transform::Householder(reflectors),
             scales,
         })
+    }
+
+    fn transform_rhs(&self, rhs: &[f64]) -> Result<Vec<Wide>, String> {
+        let mut transformed: Vec<_> = rhs.iter().copied().map(Wide::from).collect();
+        match &self.transform {
+            Transform::Householder(reflectors) => {
+                for (index, (direction, tau)) in reflectors.iter().enumerate() {
+                    apply(direction, *tau, &mut transformed[index..])?;
+                    checkpoint(SolverStage::DenseSubstitution, index + 1)?;
+                }
+            }
+            Transform::Givens(rotations) => {
+                for (index, rotation) in rotations.iter().enumerate() {
+                    let (a, b) =
+                        rotation.apply(transformed[rotation.pivot], transformed[rotation.row])?;
+                    transformed[rotation.pivot] = a;
+                    transformed[rotation.row] = b;
+                    checkpoint_chunk(SolverStage::DenseSubstitution, index + 1, rotations.len())?;
+                }
+            }
+        }
+        Ok(transformed)
     }
 
     pub(super) fn quantized_solve(&self, rhs: &[f64], radius: usize) -> Result<Vec<f64>, String> {
@@ -102,11 +95,7 @@ impl QrFit {
             return Err("wide quantized QR requires bounded matching data and radius".into());
         }
         checkpoint(SolverStage::DenseSubstitution, 0)?;
-        let mut transformed: Vec<_> = rhs.iter().copied().map(Wide::from).collect();
-        for (index, (direction, tau)) in self.reflectors.iter().enumerate() {
-            apply(direction, *tau, &mut transformed[index..])?;
-            checkpoint(SolverStage::DenseSubstitution, index + 1)?;
-        }
+        let transformed = self.transform_rhs(rhs)?;
         let count = self.columns.len();
         let mut scaled = vec![Wide::default(); count];
         let mut integers = vec![0.0; count];
@@ -142,11 +131,7 @@ impl QrFit {
             .iter()
             .find(|v| **v != 0.0)
             .map_or(1.0, |v| 1.0_f64.copysign(*v));
-        let mut transformed: Vec<_> = rhs.iter().copied().map(Wide::from).collect();
-        for (index, (direction, tau)) in self.reflectors.iter().enumerate() {
-            apply(direction, *tau, &mut transformed[index..])?;
-            checkpoint(SolverStage::DenseSubstitution, index + 1)?;
-        }
+        let transformed = self.transform_rhs(rhs)?;
         let count = self.columns.len();
         let mut beam = vec![Partial {
             integers: vec![0.0; count],
@@ -197,6 +182,52 @@ impl QrFit {
     }
 }
 
+type ScaledColumns = (Vec<Vec<Wide>>, Vec<Wide>, Vec<f64>);
+
+fn scaled_columns(columns: &[Vec<Wide>]) -> Result<ScaledColumns, String> {
+    let rows = columns.first().map_or(0, Vec::len);
+    super::Plan::wide(rows)?;
+    let count = columns.len();
+    if count == 0
+        || count >= rows
+        || columns
+            .iter()
+            .any(|c| c.len() != rows || c.iter().any(|&v| !bounded(v)))
+    {
+        return Err("wide QR requires bounded finite tall columns".into());
+    }
+    checkpoint(SolverStage::DenseFactor, 0)?;
+    let mut work = Vec::with_capacity(count);
+    let mut scales = Vec::with_capacity(count);
+    let mut initial = Vec::with_capacity(count);
+    for column in columns {
+        let maximum = column
+            .iter()
+            .map(|v| v.rounded().abs())
+            .fold(0.0_f64, f64::max);
+        if maximum == 0.0 || !maximum.is_finite() {
+            return Err("wide QR has a zero or invalid column".into());
+        }
+        let scale = Wide::from(f64::from_bits(maximum.to_bits() & (0x7ff_u64 << 52)));
+        if scale.high == 0.0 {
+            return Err("wide QR cannot scale a subnormal column".into());
+        }
+        let mut scaled = Vec::with_capacity(rows);
+        for (i, &v) in column.iter().enumerate() {
+            let next = v.div(scale);
+            if !bounded(next) || (v.high != 0.0 && next.high == 0.0) {
+                return Err("wide QR column scaling lost a bounded nonzero entry".into());
+            }
+            scaled.push(next);
+            checkpoint_chunk(SolverStage::ModalVectorUpdate, i + 1, rows)?;
+        }
+        initial.push(norm(&scaled)?.rounded());
+        scales.push(scale);
+        work.push(scaled);
+    }
+    Ok((work, scales, initial))
+}
+
 #[derive(Clone)]
 struct Partial {
     integers: Vec<f64>,
@@ -242,7 +273,10 @@ fn apply(direction: &[Wide], tau: Wide, vector: &mut [Wide]) -> Result<(), Strin
     for (i, (v, &a)) in vector.iter_mut().zip(direction).enumerate() {
         *v = v.sub(amount.mul(a));
         if !bounded(*v) {
-            return Err("wide QR reflector result exceeds its range".into());
+            return Err(format!(
+                "wide QR reflector result exceeds its range; component={i}/{size} high={:e} low={:e}",
+                v.high, v.low
+            ));
         }
         checkpoint_chunk(SolverStage::ModalVectorUpdate, i + 1, size)?;
     }

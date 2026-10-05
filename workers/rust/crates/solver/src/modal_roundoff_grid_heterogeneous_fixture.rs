@@ -181,6 +181,17 @@ impl Fixture {
         value: f64,
         candidate: &[f64],
     ) -> f64 {
+        Self::check_public_readback(&Self::canonical_recovered_result(
+            input, total_mass, value, candidate,
+        ))
+    }
+
+    pub(super) fn canonical_recovered_result(
+        input: &SolveModalFrame2dRequest,
+        total_mass: f64,
+        value: f64,
+        candidate: &[f64],
+    ) -> SolveModalFrame2dResult {
         let free_dofs: Vec<_> = (1..input.nodes.len())
             .flat_map(|i| [3 * i + 1, 3 * i + 2])
             .collect();
@@ -192,7 +203,7 @@ impl Fixture {
         let norm = crate::modal_math::checked_shape_norm(&shape).unwrap();
         assert!((norm - 1.0).abs() < 1e-10);
         let frequency = value.sqrt() / std::f64::consts::TAU;
-        let result = SolveModalFrame2dResult {
+        SolveModalFrame2dResult {
             input: input.clone(),
             modes: vec![ModalFrame2dModeResult {
                 index: 0,
@@ -207,8 +218,7 @@ impl Fixture {
             total_mass,
             min_frequency_hz: frequency,
             max_frequency_hz: frequency,
-        };
-        Self::check_public_readback(&result)
+        }
     }
 
     pub(super) fn check_public_readback(result: &SolveModalFrame2dResult) -> f64 {

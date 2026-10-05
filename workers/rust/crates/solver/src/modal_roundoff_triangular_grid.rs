@@ -1,6 +1,6 @@
 use super::{
     budget::Checks,
-    qr::{MAX_GRID_RADIUS, QrFit},
+    qr::{MAX_BEAM_WIDTH, MAX_GRID_RADIUS, QrFit},
     wide_factor::bounded,
 };
 use crate::modal_test_wide::Wide;
@@ -24,7 +24,51 @@ mod wide_qr;
 #[path = "modal_roundoff_grid_wide_beam_control_tests.rs"]
 mod beam_control_tests;
 
+#[path = "modal_roundoff_grid_givens_control_tests.rs"]
+mod givens_control_tests;
+
+#[path = "modal_roundoff_grid_rounded_beam_control_tests.rs"]
+mod rounded_beam_control_tests;
+
+#[path = "modal_roundoff_grid_joint.rs"]
+pub(super) mod joint;
+
+#[path = "modal_roundoff_grid_coupled.rs"]
+pub(super) mod coupled;
+
+#[path = "modal_roundoff_grid_hybrid.rs"]
+pub(super) mod hybrid;
+
+#[path = "modal_roundoff_grid_iterated_beam.rs"]
+pub(super) mod iterated_beam;
+
+#[path = "modal_roundoff_grid_pair_lattice.rs"]
+pub(super) mod pair_lattice;
+
 impl Plan {
+    pub(super) fn rounded_joint(size: usize, width: usize) -> Result<Self, String> {
+        let mut plan = Self::rounded_beam(size, width)?;
+        plan.payload_bytes += 64 * size;
+        plan.component_visits += 128 * (width + 2) * size;
+        if plan.payload_bytes > 8 * 1024 * 1024 || plan.component_visits > 650_000_000 {
+            return Err("joint grid exceeds its separate proposal budget".into());
+        }
+        Ok(plan)
+    }
+
+    pub(super) fn rounded_beam(size: usize, width: usize) -> Result<Self, String> {
+        if !(1..=MAX_BEAM_WIDTH).contains(&width) {
+            return Err("rounded beam grid requires width 1..=64".into());
+        }
+        let mut plan = Self::new(size)?;
+        plan.payload_bytes += 64 * width * size + 64 * size;
+        plan.component_visits += 64 * width * size * size;
+        if plan.payload_bytes > 8 * 1024 * 1024 || plan.component_visits > 650_000_000 {
+            return Err("rounded beam grid exceeds its separate proposal budget".into());
+        }
+        Ok(plan)
+    }
+
     pub(super) fn new(size: usize) -> Result<Self, String> {
         super::budget::Plan::new(size)?;
         let payload_bytes = 48 * size * size + 2048 * size;
@@ -43,6 +87,17 @@ impl Plan {
         plan.payload_bytes += 48 * size * size;
         if plan.payload_bytes > 8 * 1024 * 1024 {
             return Err("wide triangular grid exceeds its separate payload budget".into());
+        }
+        Ok(plan)
+    }
+
+    pub(super) fn givens(size: usize) -> Result<Self, String> {
+        let mut plan = Self::wide(size)?;
+        // Two row indices and two Wide coefficients per rotation, instead of
+        // Householder directions. Reserve the dense worst case, not observed sparsity.
+        plan.payload_bytes += 16 * size * size;
+        if plan.payload_bytes > 8 * 1024 * 1024 {
+            return Err("wide Givens grid exceeds its separate payload budget".into());
         }
         Ok(plan)
     }
@@ -98,6 +153,104 @@ enum Factor {
 }
 
 impl GridFit {
+    pub(super) fn attempt_rounded_unit_beam(
+        &self,
+        radius: usize,
+        width: usize,
+        tolerance: f64,
+        checked: impl FnMut(&[f64]) -> Result<(f64, Vec<f64>), String>,
+    ) -> Result<Attempt, String> {
+        require_unit_shape(&self.seed)?;
+        let outcome = self.attempt_rounded_beam(radius, width, tolerance, checked)?;
+        if let Attempt::Accepted(shape) = &outcome {
+            // Never renormalize a candidate after its final physical certificate.
+            let norm = crate::modal_math::checked_shape_norm(shape)?;
+            if (norm - 1.0).abs() >= UNIT_SHAPE_TOLERANCE {
+                return Ok(Attempt::Rejected(Rejection::UnitNorm(norm)));
+            }
+            checkpoint(SolverStage::ModalRoundoffValidate, 2)?;
+        }
+        Ok(outcome)
+    }
+
+    pub(super) fn attempt_rounded_beam(
+        &self,
+        radius: usize,
+        width: usize,
+        tolerance: f64,
+        mut checked: impl FnMut(&[f64]) -> Result<(f64, Vec<f64>), String>,
+    ) -> Result<Attempt, String> {
+        Plan::rounded_beam(self.seed.len(), width)?;
+        let Factor::Rounded(_) = &self.factor else {
+            return Err("rounded beam grid requires its preselected rounded factor".into());
+        };
+        if !(1..=MAX_GRID_RADIUS).contains(&radius) || !tolerance.is_finite() || tolerance <= 0.0 {
+            return Err(
+                "rounded beam grid requires a bounded positive radius and tolerance".into(),
+            );
+        }
+        if !(0.25..=2.0).contains(&super::vector_norm(self.seed.iter().copied())?) {
+            return Err("rounded beam grid requires unchanged direction norm bounds".into());
+        }
+        let mut checks = Checks::new();
+        let mut retained = self.seed.clone();
+        let (mut relative, residual) = self.measure(&retained, &mut checked, &mut checks)?;
+        if relative > tolerance {
+            self.visit_rounded_beam(&residual, radius, width, |candidate| {
+                let (next, _) = self.measure(&candidate, &mut checked, &mut checks)?;
+                if next < relative {
+                    retained = candidate;
+                    relative = next;
+                }
+                Ok(())
+            })?;
+        }
+        let (relative, _) = self.measure(&retained, &mut checked, &mut checks)?;
+        if relative > tolerance {
+            return Ok(Attempt::Rejected(Rejection::Residual(relative)));
+        }
+        if !(0.25..=2.0).contains(&super::vector_norm(retained.iter().copied())?) {
+            return Err("rounded beam grid changed its unchanged direction norm bounds".into());
+        }
+        checkpoint(SolverStage::ModalRoundoffValidate, 1)?;
+        Ok(Attempt::Accepted(retained))
+    }
+
+    fn visit_rounded_beam(
+        &self,
+        residual: &[f64],
+        radius: usize,
+        width: usize,
+        mut visit: impl FnMut(Vec<f64>) -> Result<(), String>,
+    ) -> Result<(), String> {
+        let Factor::Rounded(factor) = &self.factor else {
+            return Err("rounded beam grid requires its preselected rounded factor".into());
+        };
+        let rhs: Vec<_> = residual.iter().map(|v| -v).collect();
+        let proposals = factor.quantized_beam(&rhs, radius, width)?;
+        if proposals.len() > width || proposals.iter().any(|p| p.len() != self.order.len()) {
+            return Err("rounded beam grid exceeded its fixed proposal budget".into());
+        }
+        for decisions in proposals {
+            let mut candidate = self.seed.clone();
+            for (position, (&i, &decision)) in self.order.iter().zip(&decisions).enumerate() {
+                candidate[i] = Wide::from(self.seed[i])
+                    .add(Wide::from(self.grids[i]).mul(Wide::from(decision)))
+                    .rounded();
+                if !input(candidate[i]) {
+                    return Err("rounded beam grid candidate exceeds its range".into());
+                }
+                checkpoint_chunk(
+                    SolverStage::ModalVectorUpdate,
+                    position + 1,
+                    self.order.len(),
+                )?;
+            }
+            visit(candidate)?;
+        }
+        Ok(())
+    }
+
     pub(super) fn correct_unit_shape(
         &self,
         radius: usize,
@@ -224,7 +377,32 @@ impl GridFit {
         order: &[usize],
         rounded_columns: bool,
     ) -> Result<Self, String> {
-        Plan::wide(matrix.len())?;
+        Self::prepare_wide_factor(matrix, seed, anchor, order, rounded_columns, false)
+    }
+
+    pub(super) fn prepare_givens(
+        matrix: &[Vec<Wide>],
+        seed: &[f64],
+        anchor: usize,
+        order: &[usize],
+        rounded_columns: bool,
+    ) -> Result<Self, String> {
+        Self::prepare_wide_factor(matrix, seed, anchor, order, rounded_columns, true)
+    }
+
+    fn prepare_wide_factor(
+        matrix: &[Vec<Wide>],
+        seed: &[f64],
+        anchor: usize,
+        order: &[usize],
+        rounded_columns: bool,
+        givens: bool,
+    ) -> Result<Self, String> {
+        if givens {
+            Plan::givens(matrix.len())?;
+        } else {
+            Plan::wide(matrix.len())?;
+        }
         let grids = validated_grids(matrix, seed, anchor, order)?;
         let size = matrix.len();
         let mut columns = Vec::with_capacity(order.len());
@@ -244,7 +422,11 @@ impl GridFit {
             }
             columns.push(column);
         }
-        let factor = Factor::Wide(wide_qr::QrFit::factor(&columns)?);
+        let factor = Factor::Wide(if givens {
+            wide_qr::QrFit::factor_givens(&columns)?
+        } else {
+            wide_qr::QrFit::factor(&columns)?
+        });
         Ok(Self {
             seed: seed.to_vec(),
             grids,
@@ -384,10 +566,14 @@ fn validated_grids(
 }
 
 pub(super) fn validate_certificate(size: usize, result: &(f64, Vec<f64>)) -> Result<(), String> {
-    if !result.0.is_finite()
-        || result.0 < 0.0
-        || result.1.len() != size
-        || result.1.iter().any(|&v| !input(v))
+    validate_receipt(size, result.0, &result.1)
+}
+
+fn validate_receipt(size: usize, relative: f64, residual: &[f64]) -> Result<(), String> {
+    if !relative.is_finite()
+        || relative < 0.0
+        || residual.len() != size
+        || residual.iter().any(|&v| !input(v))
     {
         return Err("triangular grid requires a finite matching certificate".into());
     }

@@ -173,8 +173,7 @@ their implementation history. UI build/browser-test tooling remains separate.
 - `kyuubiki-script-runner check-gui-runtime-capability-contract`
   Verify GUI-to-runtime capability manifests, mobile WebView boundaries,
   frontend capability helpers, and Workbench backend-service indirection. Make
-  now uses the native runner; the retained `.mjs` script is only a parity
-  reference.
+  and direct callers use the native runner; the obsolete `.mjs` copy is removed.
 - `kyuubiki-script-runner check-desktop-usability-journeys`
   Verify the moxi usability release journeys against native probes,
   GUI-to-native capability closure, and required project/workflow/execution
@@ -266,8 +265,8 @@ their implementation history. UI build/browser-test tooling remains separate.
   runtime hints, and recomputes canonical `descriptor_digest` and `task_digest`
   values, including a fractional-number fixture, before agent or SDK tests need
   to run. It also checks `schemas/operator-task-ir-golden-manifest.json` so the
-  release-line example coverage surface cannot drift silently. Make now uses
-  the native runner; the retained `.mjs` script is only a parity reference.
+  release-line example coverage surface cannot drift silently. Make and direct
+  callers use the native runner; the obsolete `.mjs` copy is removed.
 - `kyuubiki-script-runner check-protocol-validation-qualification`
   Combine the full Rust protocol suite, configured fuzz budgets, TaskIR digest
   and rejection probes, advertised RPC method round trips, and cross-authoring
@@ -290,8 +289,8 @@ their implementation history. UI build/browser-test tooling remains separate.
   graph embedded dataset contract, graph port/edge dataset references, and the
   runtime rule documentation. It mirrors the Rust engine's dataset-contract
   validation so broken cross-operator value metadata is caught before workflow
-  execution. Make now uses the native runner; the retained `.mjs` script is
-  only a parity reference.
+  execution. Make and direct callers use the native runner; the obsolete `.mjs`
+  copy is removed.
 - `kyuubiki-script-runner check-materialization-plan-contract`
   Verify the shared material candidate materialization plan schema, fixture,
   and SDK documentation links. It keeps reviewed agent/lab materialization

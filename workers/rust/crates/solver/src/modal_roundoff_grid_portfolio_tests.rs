@@ -99,6 +99,188 @@ fn triangular_grid_portfolio_enforces_aggregate_not_reset_budgets() {
 }
 
 #[test]
+fn triangular_grid_selected_strategies_enforce_lower_aggregate_caps() {
+    for (selection, attempts, certificates) in [
+        (Selection::Single(Order::GridNorm), 1, 7),
+        (Selection::RankedThenReverse, 2, 13),
+    ] {
+        let plan = Plan::canonical_selected(256, selection).unwrap();
+        assert_eq!(
+            plan.component_visits,
+            if attempts == 1 {
+                338_001_920
+            } else {
+                673_546_240
+            }
+        );
+        assert_eq!(plan.max_attempts, attempts);
+        assert_eq!(plan.max_certificates, certificates);
+        for bad in [0, 1, 257, usize::MAX] {
+            assert!(Plan::canonical_selected(bad, selection).is_err());
+        }
+        let mut budget = Budget::new(Plan::selected(3, selection).unwrap());
+        for _ in 0..attempts {
+            budget.start_attempt().unwrap();
+        }
+        let reserved = budget.usage.component_visits;
+        assert!(budget.start_attempt().is_err());
+        assert_eq!(budget.usage.component_visits, reserved);
+        for _ in 0..certificates {
+            budget.certify().unwrap();
+        }
+        assert!(budget.certify().is_err());
+        assert_eq!(budget.usage.certificates, certificates);
+        let factors = Rc::new(Cell::new(0));
+        let observed = factors.clone();
+        let mut calls = 0;
+        let error = with_solver_observer(
+            &SolverControl::default(),
+            move |p| {
+                if p.stage == SolverStage::DenseFactor && p.completed_steps == 0 {
+                    observed.set(observed.get() + 1);
+                }
+            },
+            || {
+                search_with_plan(
+                    &identity(),
+                    &seed(),
+                    &[1.0; 3],
+                    1e-8,
+                    Plan::selected(3, selection)?,
+                    Contract::UnitShape,
+                    |_| {
+                        calls += 1;
+                        Ok((1.0 / (calls + 1) as f64, vec![0.0; 3]))
+                    },
+                )
+            },
+        )
+        .unwrap_err();
+        assert!(
+            error.contains(&format!(
+                "attempts={attempts}, certificates={}",
+                certificates - 1
+            )),
+            "{error}"
+        );
+        assert_eq!(factors.get(), attempts);
+        assert_eq!(calls, certificates - 1);
+        let mut calls = 0;
+        let accepted = search_with_plan(
+            &identity(),
+            &seed(),
+            &[1.0; 3],
+            1e-8,
+            Plan::selected(3, selection).unwrap(),
+            Contract::UnitShape,
+            |_| {
+                calls += 1;
+                Ok((
+                    if calls < certificates - 2 {
+                        1.0 / (calls + 1) as f64
+                    } else {
+                        0.0
+                    },
+                    vec![0.0; 3],
+                ))
+            },
+        )
+        .unwrap();
+        assert_eq!(accepted.usage.attempts, attempts);
+        assert_eq!(accepted.usage.certificates, certificates);
+        assert_eq!(calls, certificates);
+    }
+}
+
+#[test]
+fn triangular_grid_selected_strategies_never_mask_faults_or_norm_failure() {
+    for (selection, attempts) in [
+        (Selection::Single(Order::GridNorm), 1),
+        (Selection::RankedThenReverse, 2),
+    ] {
+        for certificate in [
+            Err("unchanged residual gate: injected selected operator fault".to_string()),
+            Ok((f64::NAN, vec![0.0; 3])),
+            Ok((0.0, vec![0.0; 2])),
+            Ok((0.0, vec![f64::INFINITY; 3])),
+        ] {
+            let mut calls = 0;
+            let result = search_with_plan(
+                &identity(),
+                &seed(),
+                &[1.0; 3],
+                1e-8,
+                Plan::selected(3, selection).unwrap(),
+                Contract::UnitShape,
+                |_| {
+                    calls += 1;
+                    certificate.clone()
+                },
+            );
+            assert!(result.is_err());
+            assert_eq!(calls, 1);
+        }
+        let mut calls = 0;
+        let error = search_with_plan(
+            &identity(),
+            &seed(),
+            &[1.0; 3],
+            1e-8,
+            Plan::selected(3, selection).unwrap(),
+            Contract::UnitShape,
+            |_| {
+                calls += 1;
+                if calls == 3 {
+                    Err("injected selected final certificate fault".into())
+                } else {
+                    Ok((0.0, vec![0.0; 3]))
+                }
+            },
+        )
+        .unwrap_err();
+        assert!(error.contains("final certificate fault"));
+        assert_eq!(calls, 3);
+        let original = seed();
+        let unit = original[0].next_up() - original[0];
+        let mut target = original;
+        target[0] += unit * (1 << 21) as f64;
+        let mut calls = 0;
+        let error = search_with_plan(
+            &identity(),
+            &original,
+            &[1.0, 1.0, 2.0],
+            1e-8,
+            Plan::selected(3, selection).unwrap(),
+            Contract::UnitShape,
+            |v| {
+                calls += 1;
+                let residual: Vec<_> = v.iter().zip(target).map(|(&v, t)| v - t).collect();
+                Ok((vector_norm(residual.iter().copied())? / unit, residual))
+            },
+        )
+        .unwrap_err();
+        assert!(
+            error.contains(&format!("norm_rejections={attempts}")),
+            "{error}"
+        );
+        assert_eq!(calls, attempts * 3);
+        assert_eq!(original, seed());
+        let replay = search_with_plan(
+            &identity(),
+            &seed(),
+            &[1.0; 3],
+            1e-8,
+            Plan::selected(3, selection).unwrap(),
+            Contract::UnitShape,
+            |_| Ok((0.0, vec![0.0; 3])),
+        )
+        .unwrap();
+        assert_eq!(replay.usage.attempts, 1);
+        assert_eq!(replay.usage.certificates, 3);
+    }
+}
+
+#[test]
 fn triangular_grid_portfolio_faults_do_not_become_numerical_retries() {
     for error in [
         "physical operator fault",

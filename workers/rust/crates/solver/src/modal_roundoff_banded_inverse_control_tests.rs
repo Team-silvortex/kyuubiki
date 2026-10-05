@@ -29,6 +29,7 @@ fn modal_banded_inverse_known_solutions_and_binary_factor_scaling() {
         for scale in [2.0_f64.powi(-100), 1.0, 2.0_f64.powi(100)] {
             let matrix = matrix(size, scale);
             let factor = Factor::prepare(&matrix).unwrap();
+            assert_eq!(factor.owned_numeric_bytes(), 64 * size + 16);
             for sign in [1.0, -1.0] {
                 let expected: Vec<_> = (0..size).map(|i| sign * (1 + i % 7) as f64).collect();
                 let rhs: Vec<_> = matrix
@@ -137,16 +138,23 @@ fn modal_banded_inverse_invalid_range_shape_and_iteration_budgets_fail_closed() 
     for (seed, steps) in [
         (vec![1.0, 2.0], 0),
         (vec![1.0, 2.0], 5),
+        (vec![1.0, 2.0], usize::MAX),
         (vec![0.0; 2], 4),
         (vec![f64::NAN; 2], 4),
         (vec![f64::INFINITY; 2], 4),
         (vec![1.0], 4),
     ] {
         assert!(factor.directions(&seed, steps).is_err());
+        assert!(factor.final_direction(&seed, steps).is_err());
     }
+    for shift in [f64::NAN, f64::INFINITY, -1.0, 1e51] {
+        assert!(Factor::prepare_shifted(&matrix(2, 1.0), shift).is_err());
+    }
+    assert!(Factor::prepare_shifted(&matrix(2, 1e49), 1e50).is_err());
     let tiny = Factor::prepare(&matrix(2, 1e-308)).unwrap();
     assert!(tiny.solve(&[Wide::from(1e50); 2]).is_err());
     assert!(factor.directions(&[1.0, 2.0], 4).is_ok());
+    assert!(factor.final_direction(&[1.0, 2.0], 4).is_ok());
 }
 
 #[test]
@@ -213,4 +221,58 @@ fn modal_banded_inverse_factor_substitution_and_last_iteration_cancellation_repl
             .collect::<Vec<_>>(),
         original
     );
+}
+
+#[test]
+fn modal_banded_inverse_final_only_cancellation_and_shifted_replay() {
+    let size = 65;
+    let matrix = matrix(size, 1.0);
+    let seed: Vec<_> = (0..size).map(|i| (1 + i % 7) as f64).collect();
+    let factor = Factor::prepare_shifted(&matrix, 0.5).unwrap();
+    let baseline = factor.final_direction(&seed, 4).unwrap();
+    for (stage, steps, prepare) in [
+        (SolverStage::BandedFactor, 0, true),
+        (SolverStage::BandedFactor, size + 17, true),
+        (SolverStage::BandedSubstitution, size, false),
+        (SolverStage::BandedSubstitution, 2 * size, false),
+        (SolverStage::BandedSubstitution, 3 * size, false),
+        (SolverStage::ModalIteration, 4, false),
+    ] {
+        let control = SolverControl::default();
+        let cancel = control.clone();
+        let observed = Rc::new(Cell::new(false));
+        let saw = observed.clone();
+        let error = with_solver_observer(
+            &control,
+            move |p| {
+                if p.stage == stage && p.completed_steps == steps as u64 {
+                    saw.set(true);
+                    cancel.request_cancel();
+                }
+            },
+            || {
+                if prepare {
+                    Factor::prepare_shifted(&matrix, 0.5).map(|_| ())
+                } else {
+                    factor.final_direction(&seed, 4).map(|_| ())
+                }
+            },
+        )
+        .unwrap_err();
+        assert!(observed.get() && error.contains("cancel"));
+        let replay = Factor::prepare_shifted(&matrix, 0.5)
+            .unwrap()
+            .final_direction(&seed, 4)
+            .unwrap();
+        assert_eq!(
+            replay
+                .iter()
+                .map(|v| [v.high.to_bits(), v.low.to_bits()])
+                .collect::<Vec<_>>(),
+            baseline
+                .iter()
+                .map(|v| [v.high.to_bits(), v.low.to_bits()])
+                .collect::<Vec<_>>()
+        );
+    }
 }

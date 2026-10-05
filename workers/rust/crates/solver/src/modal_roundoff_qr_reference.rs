@@ -2,6 +2,7 @@ use super::{budget::Plan, dot, vector_norm};
 use crate::solver_control::{SolverStage, checkpoint, checkpoint_chunk};
 
 pub(super) const MAX_GRID_RADIUS: usize = 1 << 22;
+pub(super) const MAX_BEAM_WIDTH: usize = 64;
 
 // Test-only candidate factor: acceptance still uses the original sparse operator.
 pub(super) struct QrFit {
@@ -136,3 +137,9 @@ mod tests;
 
 #[path = "modal_roundoff_qr_quantized.rs"]
 mod quantized;
+
+#[path = "modal_roundoff_qr_beam.rs"]
+mod beam;
+
+#[path = "modal_roundoff_qr_lattice.rs"]
+pub(super) mod lattice;

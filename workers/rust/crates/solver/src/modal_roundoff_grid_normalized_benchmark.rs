@@ -16,7 +16,7 @@ struct Receipt {
     grid_visits_reserved: usize,
 }
 
-fn peak_rss_kib() -> Option<u64> {
+pub(super) fn peak_rss_kib() -> Option<u64> {
     #[cfg(unix)]
     {
         let mut usage = std::mem::MaybeUninit::<libc::rusage>::uninit();

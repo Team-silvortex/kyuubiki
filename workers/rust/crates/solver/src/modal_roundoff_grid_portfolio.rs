@@ -21,6 +21,25 @@ pub(super) enum Order {
     GridNorm,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub(super) enum Selection {
+    Full,
+    Single(Order),
+    RankedThenReverse,
+}
+
+impl Selection {
+    fn indices(self) -> &'static [usize] {
+        match self {
+            Self::Full => &[0, 1, 2],
+            Self::Single(Order::Reverse) => &[0],
+            Self::Single(Order::Natural) => &[1],
+            Self::Single(Order::GridNorm) => &[2],
+            Self::RankedThenReverse => &[2, 0],
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 enum Contract {
     UnitShape,
@@ -50,15 +69,23 @@ pub(super) struct Plan {
     pub(super) component_visits: usize,
     preflight_visits: usize,
     fit_visits: usize,
+    selection: Selection,
+    max_attempts: usize,
+    max_certificates: usize,
 }
 
 impl Plan {
     pub(super) fn new(size: usize) -> Result<Self, String> {
+        Self::selected(size, Selection::Full)
+    }
+
+    fn selected(size: usize, selection: Selection) -> Result<Self, String> {
         let fit = FitPlan::new(size)?;
+        let max_attempts = selection.indices().len();
         let preflight_visits = 32 * size * size + 128 * size;
         // One factor is live at a time; also account for shared input and ordering.
         let payload_bytes = fit.payload_bytes + 32 * size * size + 256 * size;
-        let component_visits = MAX_ATTEMPTS * fit.component_visits + preflight_visits;
+        let component_visits = max_attempts * fit.component_visits + preflight_visits;
         if payload_bytes > 8 * 1024 * 1024 || component_visits > MAX_TOTAL_VISITS {
             return Err("triangular grid portfolio exceeds its aggregate proposal budget".into());
         }
@@ -67,11 +94,18 @@ impl Plan {
             component_visits,
             preflight_visits,
             fit_visits: fit.component_visits,
+            selection,
+            max_attempts,
+            max_certificates: max_attempts * MAX_CERTIFICATES + 1,
         })
     }
 
     fn canonical(size: usize) -> Result<Self, String> {
-        let mut plan = Self::new(size)?;
+        Self::canonical_selected(size, Selection::Full)
+    }
+
+    fn canonical_selected(size: usize, selection: Selection) -> Result<Self, String> {
+        let mut plan = Self::selected(size, selection)?;
         // Extra preflight/copy and all bounded coordinate restorations; no extra fits.
         let extra_visits = 4 * size * size + 256 * size;
         plan.preflight_visits += extra_visits;
@@ -79,6 +113,26 @@ impl Plan {
         plan.payload_bytes += 16 * size * size + 128 * size;
         if plan.payload_bytes > 8 * 1024 * 1024 || plan.component_visits > MAX_TOTAL_VISITS {
             return Err("canonical grid exceeds its aggregate proposal budget".into());
+        }
+        Ok(plan)
+    }
+
+    fn inward_chart(size: usize, order: Order) -> Result<Self, String> {
+        Self::inward_selected(size, Selection::Single(order))
+    }
+
+    fn inward_direction(size: usize) -> Result<Self, String> {
+        Self::inward_selected(size, Selection::RankedThenReverse)
+    }
+
+    fn inward_selected(size: usize, selection: Selection) -> Result<Self, String> {
+        let mut plan = Self::canonical_selected(size, selection)?;
+        let extra_visits = 2 * size * size + 256 * size;
+        plan.preflight_visits += extra_visits;
+        plan.component_visits += extra_visits;
+        plan.payload_bytes += 128 * size;
+        if plan.payload_bytes > 8 * 1024 * 1024 || plan.component_visits > MAX_TOTAL_VISITS {
+            return Err("inward chart exceeds its aggregate proposal budget".into());
         }
         Ok(plan)
     }
@@ -108,7 +162,7 @@ impl Budget {
     }
 
     fn start_attempt(&mut self) -> Result<(), String> {
-        if self.usage.attempts >= MAX_ATTEMPTS
+        if self.usage.attempts >= self.plan.max_attempts
             || self.usage.component_visits + self.plan.fit_visits > self.plan.component_visits
         {
             return Err("triangular grid portfolio exhausted its aggregate attempt budget".into());
@@ -120,7 +174,7 @@ impl Budget {
     }
 
     fn certify(&mut self) -> Result<(), String> {
-        if self.usage.certificates >= MAX_TOTAL_CERTIFICATES {
+        if self.usage.certificates >= self.plan.max_certificates {
             return Err(
                 "triangular grid portfolio exhausted its aggregate certificate budget".into(),
             );
@@ -176,10 +230,11 @@ fn search_with_plan(
     let PreparedOrders { anchor, orders } =
         prepare_orders(matrix, seed, mass, tolerance, contract)?;
     let mut norm_rejections = 0;
-    for (policy, order) in orders {
+    for &index in budget.plan.selection.indices() {
+        let (policy, order) = &orders[index];
         budget.start_attempt()?;
         let attempt = {
-            let fit = GridFit::prepare(matrix, seed, anchor, &order)?;
+            let fit = GridFit::prepare(matrix, seed, anchor, order)?;
             let receipt = |v: &[f64]| {
                 budget.certify()?;
                 checked(v)
@@ -223,7 +278,7 @@ fn search_with_plan(
         checkpoint(SolverStage::ModalRoundoffValidate, 4)?;
         return Ok(Accepted {
             shape: candidate,
-            order: policy,
+            order: *policy,
             anchor,
             usage: budget.usage,
         });

@@ -216,8 +216,7 @@
           "schemas/operator-task-ir.schema.json",
           "schemas/examples.operator-task-ir.json",
           "workers/rust/crates/protocol/src/operator_task_ir.rs",
-          "workers/rust/crates/script-runner/src/operator_task_ir_contract.rs",
-          "scripts/check-operator-task-ir-contract.mjs"
+          "workers/rust/crates/script-runner/src/operator_task_ir_contract.rs"
         ],
         "required_text": [
           "kyuubiki.operator-task-ir/v1",
@@ -247,8 +246,7 @@
           "schemas/examples.workflow-dataset.json",
           "workers/rust/crates/script-runner/src/workflow_dataset_contract.rs",
           "sdks/rust/src/workflow_contracts.rs",
-          "sdks/rust/src/workflow_contract_validation.rs",
-          "scripts/check-workflow-dataset-contract.mjs"
+          "sdks/rust/src/workflow_contract_validation.rs"
         ],
         "required_text": [
           "kyuubiki.workflow-graph/v1",
@@ -511,8 +509,7 @@
           "docs/security.md",
           "schemas/gui-runtime-capability-manifest.schema.json",
           "workers/rust/crates/script-runner/src/frontend_checks.rs",
-          "workers/rust/crates/script-runner/src/gui_runtime_capability_contract.rs",
-          "scripts/check-gui-runtime-capability-contract.mjs"
+          "workers/rust/crates/script-runner/src/gui_runtime_capability_contract.rs"
         ],
         "required_text": [
           ".kyuubiki/credentials",
