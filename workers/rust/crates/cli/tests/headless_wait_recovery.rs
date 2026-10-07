@@ -54,7 +54,7 @@ impl WaitFixture {
                     let mut requests = observed.lock().unwrap();
                     requests.push(String::from_utf8(request).unwrap());
                     if requests.len() == 1 {
-                        "running"
+                        "solving"
                     } else {
                         "completed"
                     }

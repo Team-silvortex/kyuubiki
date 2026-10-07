@@ -8,9 +8,7 @@ use std::io::{Read, Write};
 use crate::service_executor_artifact::prepare_direct_fem_request_body;
 use crate::service_executor_deadline::{read_service_response, write_before_deadline};
 use crate::service_executor_health::with_discovered_solver_endpoints;
-use crate::service_executor_http::{
-    REQUEST_IO_TIMEOUT, connect_service_stream_with_deadline, decode_http_response_body,
-};
+use crate::service_executor_http::{REQUEST_IO_TIMEOUT, connect_service_stream_with_deadline};
 use crate::service_executor_job_wait::execute_job_wait;
 #[cfg(test)]
 use crate::service_executor_job_wait::reject_unsuccessful_terminal_job;
@@ -18,6 +16,12 @@ use crate::service_executor_library::{
     execute_model_create, execute_model_version_create, execute_project_create,
     execute_project_delete, execute_project_update,
 };
+use crate::service_executor_response::{after_send_failure, parse_acknowledgement};
+#[cfg(test)]
+use crate::service_executor_response::{parse_json_response, service_error_message};
+pub(crate) use crate::service_executor_result::execute_result_fetch;
+#[cfg(test)]
+use crate::service_executor_result::normalize_result_fetch_result;
 use crate::service_executor_solve::{
     execute_direct_mesh_solve, execute_solve_and_wait_from_model_version,
     execute_solve_from_model_version,
@@ -355,52 +359,6 @@ fn execute_job_fetch(
     })
 }
 
-pub(crate) fn execute_result_fetch(
-    base_url: &str,
-    api_token: Option<&str>,
-    payload: &Value,
-) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
-    let job_id = required_path_segment(payload, &["job_id", "jobId"])?;
-    let prefer_job_result = payload
-        .get("prefer_job_result")
-        .and_then(Value::as_bool)
-        .unwrap_or(true);
-    if prefer_job_result {
-        let mut envelope = request_json(
-            base_url,
-            api_token,
-            "GET",
-            &format!("/api/v1/jobs/{job_id}"),
-            None,
-        )?;
-        let result = envelope
-            .as_object_mut()
-            .and_then(|object| object.remove("result"));
-        if let Some(result) = result {
-            return Ok(HeadlessExecutorOutcome {
-                status: "executed".to_string(),
-                result: json!({
-                    "job_id": job_id,
-                    "status": envelope.pointer("/job/status").cloned().unwrap_or(Value::Null),
-                    "job": envelope.get("job").cloned().unwrap_or(Value::Null),
-                    "result": result,
-                }),
-            });
-        }
-    }
-    let result = request_json(
-        base_url,
-        api_token,
-        "GET",
-        &format!("/api/v1/results/{job_id}"),
-        None,
-    )?;
-    Ok(HeadlessExecutorOutcome {
-        status: "executed".to_string(),
-        result: normalize_result_fetch_result(job_id, result),
-    })
-}
-
 pub(crate) fn normalize_job_submission_result(result: Value) -> Value {
     let Some(job) = result.get("job").and_then(Value::as_object) else {
         return result;
@@ -425,17 +383,6 @@ pub(crate) fn normalize_job_state_result(result: Value) -> Value {
         "result": result.get("result").cloned().unwrap_or(Value::Null),
         "job": result.get("job").cloned().unwrap_or(Value::Null),
         "raw": result,
-    })
-}
-
-fn normalize_result_fetch_result(job_id: &str, result: Value) -> Value {
-    let result = match result {
-        Value::Object(mut envelope) => envelope.remove("result").unwrap_or(Value::Object(envelope)),
-        value => value,
-    };
-    json!({
-        "job_id": job_id,
-        "result": result,
     })
 }
 
@@ -506,22 +453,30 @@ pub(crate) fn request_json_with_timeout(
         api_token.as_deref(),
     );
     if let Some(deadline) = deadline {
-        write_before_deadline(&mut stream, request.as_bytes(), deadline, io_timeout)?;
-        let response = read_service_response(&mut stream, path, deadline, io_timeout)?;
-        return parse_json_response(&response, path);
+        write_before_deadline(&mut stream, request.as_bytes(), deadline, io_timeout)
+            .map_err(|error| after_send_failure(method, error))?;
+        let response = read_service_response(&mut stream, path, deadline, io_timeout)
+            .map_err(|error| after_send_failure(method, error))?;
+        return parse_acknowledgement(method, &response, path);
     }
-    stream
-        .write_all(request.as_bytes())
-        .map_err(|error| HeadlessExecutorError {
-            message: format!("failed to write service request within timeout: {error}"),
-        })?;
+    stream.write_all(request.as_bytes()).map_err(|error| {
+        after_send_failure(
+            method,
+            HeadlessExecutorError {
+                message: format!("failed to write service request within timeout: {error}"),
+            },
+        )
+    })?;
     let mut response = String::new();
-    stream
-        .read_to_string(&mut response)
-        .map_err(|error| HeadlessExecutorError {
-            message: format!("failed to read service response within timeout: {error}"),
-        })?;
-    parse_json_response(&response, path)
+    stream.read_to_string(&mut response).map_err(|error| {
+        after_send_failure(
+            method,
+            HeadlessExecutorError {
+                message: format!("failed to read service response within timeout: {error}"),
+            },
+        )
+    })?;
+    parse_acknowledgement(method, &response, path)
 }
 
 fn validate_inline_json_size(path: &str, size_bytes: usize) -> Result<(), HeadlessExecutorError> {
@@ -635,67 +590,6 @@ pub(crate) fn sanitize_header_value(
         });
     }
     Ok(Some(value.to_string()))
-}
-
-pub(crate) fn parse_json_response(
-    response: &str,
-    path: &str,
-) -> Result<Value, HeadlessExecutorError> {
-    let (head, body) = response
-        .split_once("\r\n\r\n")
-        .ok_or_else(|| HeadlessExecutorError {
-            message: format!("invalid HTTP response for {path}"),
-        })?;
-    let body = decode_http_response_body(head, body, path)?;
-    let status_line = head.lines().next().unwrap_or_default();
-    let status_code = status_line
-        .split_whitespace()
-        .nth(1)
-        .and_then(|value| value.parse::<u16>().ok())
-        .unwrap_or(0);
-    if !(200..300).contains(&status_code) {
-        let payload = parse_error_payload(&body);
-        return Err(HeadlessExecutorError {
-            message: service_error_message(status_code, path, &payload),
-        });
-    }
-    if body.trim().is_empty() {
-        return Ok(Value::Null);
-    }
-    serde_json::from_str(&body).map_err(|error| HeadlessExecutorError {
-        message: format!("failed to parse JSON response for {path}: {error}"),
-    })
-}
-
-fn parse_error_payload(body: &str) -> Value {
-    let trimmed = body.trim();
-    if trimmed.is_empty() {
-        Value::Null
-    } else {
-        serde_json::from_str(trimmed).unwrap_or_else(|_| Value::String(trimmed.to_string()))
-    }
-}
-
-fn service_error_message(status_code: u16, path: &str, payload: &Value) -> String {
-    if path == "/api/v1/model-artifacts" && matches!(status_code, 413 | 500) {
-        return format!(
-            "frontend_proxy_artifact_limit: model artifact upload failed {status_code}: {payload}; connect headless directly to the runtime control-plane endpoint (default http://127.0.0.1:4000), not a frontend proxy with a smaller body limit"
-        );
-    }
-    if path == "/api/v1/model-artifacts" {
-        return format!("model artifact upload failed {status_code}: {payload}");
-    }
-    if status_code == 404 {
-        return format!("service action endpoint not deployed (404): {path}: {payload}");
-    }
-    let Some(error_code) = payload.get("error_code").and_then(Value::as_str) else {
-        return format!("service request failed {status_code}: {path}: {payload}");
-    };
-    let error = payload
-        .get("error")
-        .map(Value::to_string)
-        .unwrap_or_else(|| payload.to_string());
-    format!("service request failed {status_code}: {path}: {error_code}: {error}")
 }
 
 fn normalize_base_url(base_url: &str) -> String {

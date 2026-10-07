@@ -10,9 +10,15 @@ use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+#[path = "support/ack_loss_proxy.rs"]
+mod ack_loss_proxy;
 #[allow(dead_code)]
 #[path = "support/agent_lifecycle.rs"]
 mod agent_support;
+#[path = "support/headless_binding_gates.rs"]
+mod binding_gates;
+#[path = "support/headless_cancellation_ack_loss.rs"]
+mod cancellation_ack_loss;
 #[allow(dead_code)]
 #[path = "support/modal_agent.rs"]
 mod modal_support;
@@ -26,6 +32,14 @@ mod orchestra_completion;
 mod orchestra_dispatch_inspection;
 #[path = "support/headless_orchestra_modal.rs"]
 mod orchestra_modal;
+#[path = "support/headless_original_receipt_limits.rs"]
+mod original_receipt_limits;
+#[path = "support/headless_result_gates.rs"]
+mod result_gates;
+#[path = "support/headless_risk_gates.rs"]
+mod risk_gates;
+#[path = "support/headless_write_ack_loss.rs"]
+mod write_ack_loss;
 
 static SCRATCH_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
@@ -164,6 +178,15 @@ fn start_live_server_with_state(
     peer_port: Option<u16>,
     data_dir: Option<&Path>,
 ) -> Result<LiveServer, Box<dyn Error>> {
+    start_live_server_with_result_fixtures(agent_port, peer_port, data_dir, false)
+}
+
+fn start_live_server_with_result_fixtures(
+    agent_port: Option<u16>,
+    peer_port: Option<u16>,
+    data_dir: Option<&Path>,
+    result_fixtures: bool,
+) -> Result<LiveServer, Box<dyn Error>> {
     let root = repo_root();
     let web_root = root.join("apps/web");
     let server_script = web_root.join("test/support/headless_live_server.exs");
@@ -176,6 +199,12 @@ fn start_live_server_with_state(
         .arg(server_script)
         .current_dir(&web_root)
         .env("MIX_ENV", "test")
+        // Concurrent owned servers must not each reserve every host scheduler.
+        // Keep explicit qualification-host settings when the caller provides them.
+        .env(
+            "ERL_FLAGS",
+            std::env::var_os("ERL_FLAGS").unwrap_or_else(|| "+S 2:2".into()),
+        )
         .env("KYUUBIKI_STORAGE_BACKEND", "sqlite")
         .env("SQLITE_DATABASE_PATH", sqlite_path)
         .env(
@@ -185,6 +214,10 @@ fn start_live_server_with_state(
                 .unwrap_or_else(|| scratch.0.join("data")),
         )
         .env("KYUUBIKI_DEPLOYMENT_MODE", "local")
+        .env(
+            "KYUUBIKI_HEADLESS_LIVE_RESULT_FIXTURES",
+            if result_fixtures { "1" } else { "0" },
+        )
         .env(
             "KYUUBIKI_HEADLESS_LIVE_JOURNAL_ROOT",
             data_dir

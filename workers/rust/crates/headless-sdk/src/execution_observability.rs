@@ -117,6 +117,30 @@ fn classify_failure(step_index: usize, action: &str, message: String) -> Headles
             "none",
             "Inspect the submitted task on Orchestra and its owning Agent before an explicit rerun; a transport failure does not confirm cancellation or nonexecution.",
         )
+    } else if message.starts_with(crate::service_executor_response::OUTCOME_UNKNOWN) {
+        (
+            "service_request_outcome_unknown",
+            "transport",
+            false,
+            "none",
+            "Inspect control-plane records and the owning Agent before any explicit continuation; a missing or invalid write acknowledgement does not prove nonexecution. Do not replay the step or batch automatically.",
+        )
+    } else if message.starts_with(crate::service_executor_job_receipt::INVALID_RECEIPT) {
+        (
+            "job_receipt_invalid",
+            "job_observation",
+            false,
+            "none",
+            "Inspect the requested job and repair the service contract before accepting results; do not submit replacement work automatically.",
+        )
+    } else if message.starts_with(crate::service_executor_job_receipt::UNAVAILABLE_RESULT) {
+        (
+            "job_result_unavailable",
+            "result_fetch",
+            false,
+            "none",
+            "Inspect job_fetch, explicitly wait on the same job_id if it is still active, and fetch only its completed result; do not replay submission.",
+        )
     } else if action == "job_wait" && normalized.contains("timed out waiting") {
         (
             "job_wait_timeout",

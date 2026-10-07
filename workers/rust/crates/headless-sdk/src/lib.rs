@@ -10,7 +10,11 @@ mod execution_authority;
 mod execution_observability;
 mod executor;
 #[cfg(test)]
+mod executor_binding_tests;
+#[cfg(test)]
 mod executor_outcome_tests;
+#[cfg(test)]
+mod failure_receipt_contract_tests;
 mod hybrid_executor;
 mod material_candidate_drafts;
 mod material_candidate_materialization;
@@ -87,8 +91,12 @@ mod parameter_patch;
 mod plan;
 mod preflight_report;
 mod research_round;
+#[cfg(test)]
+mod risk_contract_tests;
 mod run;
 mod service_executor;
+#[cfg(test)]
+mod service_executor_ack_loss_tests;
 mod service_executor_artifact;
 mod service_executor_artifact_http;
 mod service_executor_deadline;
@@ -96,9 +104,14 @@ mod service_executor_dispatch_inspection;
 mod service_executor_dispatch_result;
 mod service_executor_health;
 mod service_executor_http;
+mod service_executor_job_receipt;
 mod service_executor_job_wait;
 mod service_executor_library;
 mod service_executor_operator_task;
+mod service_executor_response;
+mod service_executor_result;
+#[cfg(test)]
+mod service_executor_result_gate_tests;
 mod service_executor_solve;
 mod service_executor_task_budget;
 mod surface;
@@ -108,6 +121,7 @@ mod template_tests;
 mod template_workflows;
 mod templates;
 mod workflow_batch;
+mod workflow_bindings;
 mod workflow_dataset_preflight;
 
 pub use capabilities::{

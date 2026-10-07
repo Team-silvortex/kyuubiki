@@ -1,0 +1,37 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native batch risks must match registered action contracts before any execution or preview. Plans expose contract-owned confirmation requirements; sensitive and destructive approvals remain independent. macOS and Linux source chains verify SDK and CLI rejection of forged deletion risks without earlier writes or Agent computation, and deletion only of an owned temporary project after explicit approval. Verified, not installed or cross-language qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-contract-risk-confirmation-and-whole-batch-gate",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless", "security"],
+      "dimensions": ["execution", "contract", "security"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/workflow_batch.rs",
+        "workers/rust/crates/headless-sdk/src/plan.rs",
+        "workers/rust/crates/headless-sdk/src/risk_contract_tests.rs",
+        "workers/rust/crates/cli/tests/support/headless_risk_gates.rs",
+        "docs/headless-sdks.md",
+        "reports/headless-contract-risk-20261007.md"
+      ],
+      "required_text": [
+        "Headless Contract Risk Gate",
+        "26/26 passed in 49.21 seconds",
+        "26/26 passed in 39.72 seconds",
+        "321 unit tests in 31.29 seconds",
+        "risk must match action contract",
+        "every_action_contract_rejects_both_alternative_risk_labels",
+        "imported_risk_mismatch_stops_entire_batch_before_earlier_side_effects",
+        "invalid_plan_still_exposes_contract_owned_confirmation_and_policy",
+        "matching_sensitive_and_destructive_risks_require_their_own_explicit_flags",
+        "imported_delete_risk_cannot_bypass_confirmation_or_run_earlier_work",
+        "malformed batch reached service executor",
+        "Contract-owned risk and confirmation"
+      ]
+    }
+  ]
+}

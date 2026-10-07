@@ -1,6 +1,7 @@
 use crate::service_executor::{
     normalize_job_state_result, request_json_with_deadline, required_path_segment,
 };
+use crate::service_executor_job_receipt::validate_job_receipt;
 use crate::{HeadlessExecutorError, HeadlessExecutorOutcome};
 use serde_json::{Value, json};
 use std::thread;
@@ -238,6 +239,7 @@ pub(crate) fn execute_job_wait(
         let result = response.map_err(|error| HeadlessExecutorError {
             message: format!("failed while waiting for job {job_id}: {}", error.message),
         })?;
+        validate_job_receipt(job_id, &result)?;
         let mut normalized = normalize_job_state_result(result);
         if Instant::now() >= request_deadline {
             return Err(progress.timeout_error(job_id, options.resume_policy));
@@ -427,7 +429,7 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").expect("bind test server");
         let port = listener.local_addr().expect("test address").port();
         let handle = std::thread::spawn(move || {
-            for (index, status) in ["running", "running", "completed"].into_iter().enumerate() {
+            for (index, status) in ["solving", "solving", "completed"].into_iter().enumerate() {
                 let (mut stream, _) = listener.accept().expect("accept status request");
                 let mut request = [0_u8; 4096];
                 let bytes = stream.read(&mut request).expect("read status request");

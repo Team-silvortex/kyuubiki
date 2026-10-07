@@ -3,6 +3,19 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchResultTest do
   alias KyuubikiWeb.Orchestra.OperatorDispatchJournal, as: Journal
   alias KyuubikiWeb.Orchestra.OperatorDispatchResult, as: Result
 
+  @schema_path Path.expand(
+                 "../../../../../schemas/agent-task-result-retention.schema.json",
+                 __DIR__
+               )
+  @external_resource @schema_path
+  @retention_policy @schema_path
+                    |> File.read!()
+                    |> Jason.decode!()
+                    |> get_in(["$defs", "policy", "properties"])
+                    |> Map.new(fn {key, specification} ->
+                      {key, Map.fetch!(specification, "const")}
+                    end)
+
   setup do
     root =
       Path.join(
@@ -127,6 +140,44 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchResultTest do
              )
   end
 
+  test "unknown native replies require every field and the exact bounded retention policy", ctx do
+    payload =
+      retained(ctx.record) |> Map.put("status", "not_retained") |> Map.put("response", nil)
+
+    for field <- Map.keys(payload) do
+      malformed = Map.delete(payload, field)
+
+      assert {:ok, %{"status" => "agent_receipt_invalid", "outcome" => "unknown"}} =
+               fetch(ctx, fn _, _ -> {:ok, malformed} end),
+             field
+    end
+
+    for malformed <- [
+          Map.put(payload, "generation", -1),
+          Map.put(payload, "generation", 1.5),
+          Map.put(payload, "generation", 18_446_744_073_709_551_616),
+          Map.put(payload, "process_instance_id", <<255>>),
+          Map.put(payload, "retryable", true),
+          put_in(payload, ~w(retention_policy survives_agent_restart), true),
+          put_in(payload, ~w(retention_policy automatic_replay_authorized), true),
+          put_in(payload, ~w(retention_policy ttl_ms), 600_001),
+          put_in(payload, ~w(retention_policy extra), "authority"),
+          Map.put(payload, "retention_policy", nil)
+        ] do
+      assert {:ok, result} = fetch(ctx, fn _, _ -> {:ok, malformed} end)
+      assert result["status"] == "agent_receipt_invalid"
+      assert result["outcome"] == "unknown"
+      assert is_nil(result["completion"])
+      refute result["publication_performed"]
+      refute result["automatic_replay_authorized"]
+    end
+
+    payload = Map.put(payload, "generation", nil)
+
+    assert {:ok, %{"status" => "not_retained", "outcome" => "unknown"}} =
+             fetch(ctx, fn _, _ -> {:ok, payload} end)
+  end
+
   defp fetch(ctx, probe),
     do: Result.fetch(ctx.query, journal: ctx.journal, endpoints: [ctx.endpoint], probe: probe)
 
@@ -148,6 +199,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchResultTest do
         "generation" => 1,
         "status" => "receipt_retained",
         "automatic_replay_authorized" => false,
+        "retention_policy" => @retention_policy,
         "response" => %{
           "rpc_version" => 1,
           "id" => record["request_id"],

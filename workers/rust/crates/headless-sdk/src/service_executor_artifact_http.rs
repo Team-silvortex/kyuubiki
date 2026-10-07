@@ -3,10 +3,9 @@ use std::io::{Read, Write};
 use std::path::Path;
 
 use crate::HeadlessExecutorError;
-use crate::service_executor::{
-    parse_http_url, parse_json_response, sanitize_header_value, sanitize_request_path,
-};
+use crate::service_executor::{parse_http_url, sanitize_header_value, sanitize_request_path};
 use crate::service_executor_http::{ARTIFACT_IO_TIMEOUT, connect_service_stream};
+use crate::service_executor_response::{after_send_failure, parse_acknowledgement};
 
 pub(crate) fn request_file(
     base_url: &str,
@@ -46,26 +45,32 @@ pub(crate) fn request_file(
     head.push_str("\r\n");
     stream
         .write_all(head.as_bytes())
-        .map_err(|error| upload_error("headers", error))?;
-    let sent =
-        std::io::copy(&mut body, &mut stream).map_err(|error| upload_error("body", error))?;
+        .map_err(|error| after_send_failure(method, upload_error("headers", error)))?;
+    let sent = std::io::copy(&mut body, &mut stream)
+        .map_err(|error| after_send_failure(method, upload_error("body", error)))?;
     if sent != body_len {
-        return Err(HeadlessExecutorError {
-            message: format!(
-                "model artifact upload ended early: sent_bytes={sent} expected_bytes={body_len}"
-            ),
-        });
+        return Err(after_send_failure(
+            method,
+            HeadlessExecutorError {
+                message: format!(
+                    "model artifact upload ended early: sent_bytes={sent} expected_bytes={body_len}"
+                ),
+            },
+        ));
     }
     stream
         .flush()
-        .map_err(|error| upload_error("body", error))?;
+        .map_err(|error| after_send_failure(method, upload_error("body", error)))?;
     let mut response = String::new();
-    stream
-        .read_to_string(&mut response)
-        .map_err(|error| HeadlessExecutorError {
-            message: format!("failed to read model artifact response: {error}"),
-        })?;
-    parse_json_response(&response, path)
+    stream.read_to_string(&mut response).map_err(|error| {
+        after_send_failure(
+            method,
+            HeadlessExecutorError {
+                message: format!("failed to read model artifact response: {error}"),
+            },
+        )
+    })?;
+    parse_acknowledgement(method, &response, path)
 }
 
 fn upload_error(stage: &str, error: std::io::Error) -> HeadlessExecutorError {

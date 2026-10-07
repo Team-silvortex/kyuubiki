@@ -5,6 +5,18 @@ use serde_json::{Value, json};
 use std::time::{Duration, Instant};
 
 const TIMEOUT: Duration = Duration::from_secs(15);
+const REQUIRED_FIELDS: &[&str] = &[
+    "schema_version",
+    "task_id",
+    "task_digest",
+    "attempt_id",
+    "status",
+    "outcome",
+    "completion",
+    "automatic_replay_authorized",
+    "publication_performed",
+];
+const INCARNATION_FIELDS: &[&str] = &["request_id", "process_instance_id", "generation"];
 
 pub(crate) fn fetch(
     base_url: &str,
@@ -41,6 +53,31 @@ fn validate(
     prepared: &Value,
     attempt_id: &str,
 ) -> Result<(), HeadlessExecutorError> {
+    let fields = result
+        .as_object()
+        .ok_or_else(|| invalid("receipt fields"))?;
+    if REQUIRED_FIELDS
+        .iter()
+        .any(|field| !fields.contains_key(*field))
+        || fields.keys().any(|field| {
+            !REQUIRED_FIELDS.contains(&field.as_str())
+                && !INCARNATION_FIELDS.contains(&field.as_str())
+        })
+    {
+        return Err(invalid("receipt fields"));
+    }
+    for field in INCARNATION_FIELDS {
+        if let Some(value) = fields.get(*field) {
+            let valid = match *field {
+                "generation" => value.as_u64().is_some_and(|v| v > 0),
+                "process_instance_id" => valid_id(value) && value != "unavailable",
+                _ => valid_id(value),
+            };
+            if !valid {
+                return Err(invalid("execution incarnation"));
+            }
+        }
+    }
     if result["schema_version"] != "kyuubiki.operator-task-dispatch-result/v1"
         || result["task_id"] != prepared["task_id"]
         || result["task_digest"] != prepared["task_digest"]
@@ -51,13 +88,9 @@ fn validate(
         return Err(invalid("identity or authority"));
     }
     if result["status"] == "receipt_recovered" {
-        if result["generation"].as_u64().is_none_or(|v| v == 0)
-            || result["process_instance_id"]
-                .as_str()
-                .is_none_or(|v| v.is_empty() || v.len() > 256 || v == "unavailable")
-            || result["request_id"]
-                .as_str()
-                .is_none_or(|v| v.is_empty() || v.len() > 256)
+        if INCARNATION_FIELDS
+            .iter()
+            .any(|field| !fields.contains_key(*field))
             || !result["completion"]["execution_readiness"].is_object()
             || !result["completion"]["result"].is_object()
             || !result["completion"]["result"]["operator_task_ir_status"].is_string()
@@ -87,6 +120,12 @@ fn validate(
         return Err(invalid("unknown outcome"));
     }
     Ok(())
+}
+
+fn valid_id(value: &Value) -> bool {
+    value
+        .as_str()
+        .is_some_and(|id| !id.is_empty() && id.len() <= 256)
 }
 
 fn invalid(field: &str) -> HeadlessExecutorError {

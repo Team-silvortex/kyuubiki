@@ -10,6 +10,21 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchResult do
   @schema "kyuubiki.operator-task-dispatch-result/v1"
   @agent_schema "kyuubiki.agent-task-result-retention/v1"
   @identities ~w(attempt_id request_id task_id task_digest operator_id program_id)
+  @agent_fields @identities ++
+                  ~w(schema_version process_instance_id generation status response automatic_replay_authorized retention_policy)
+  @schema_path Path.expand(
+                 "../../../../../schemas/agent-task-result-retention.schema.json",
+                 __DIR__
+               )
+  @external_resource @schema_path
+  # Compile the fixed v1 policy from its contract; releases need no schema file at runtime.
+  @retention_policy @schema_path
+                    |> File.read!()
+                    |> Jason.decode!()
+                    |> get_in(["$defs", "policy", "properties"])
+                    |> Map.new(fn {key, specification} ->
+                      {key, Map.fetch!(specification, "const")}
+                    end)
 
   def fetch(payload, opts \\ []) do
     with :ok <- validate_query(payload),
@@ -67,10 +82,16 @@ defmodule KyuubikiWeb.Orchestra.OperatorDispatchResult do
     process = payload["process_instance_id"]
     generation = payload["generation"]
 
+    generation_ok =
+      is_nil(generation) or
+        (is_integer(generation) and generation in 1..18_446_744_073_709_551_615)
+
     cond do
-      payload["schema_version"] != @agent_schema or not identity_ok or
+      Enum.sort(Map.keys(payload)) != Enum.sort(@agent_fields) or
+        payload["schema_version"] != @agent_schema or not identity_ok or not generation_ok or
+        payload["retention_policy"] !== @retention_policy or
         payload["automatic_replay_authorized"] != false or not is_binary(process) or
-        byte_size(process) not in 1..256 or process == "unavailable" ->
+        byte_size(process) not in 1..256 or not String.valid?(process) or process == "unavailable" ->
         unknown("agent_receipt_invalid")
 
       payload["status"] == "receipt_retained" and is_integer(generation) and generation > 0 ->

@@ -151,7 +151,7 @@ fn a_slow_drip_response_cannot_reset_the_wait_budget() {
 #[test]
 fn fixed_wait_does_not_issue_an_extra_poll_after_sleep_exhausts_the_window() {
     let server = StatusServer::start(|index, stream| {
-        response(stream, if index == 0 { "running" } else { "completed" });
+        response(stream, if index == 0 { "solving" } else { "completed" });
     });
     let error = wait(&server, json!({"max_total_timeout_ms": 1_000}))
         .expect_err("fixed policy cannot consume a second observation window");
@@ -161,7 +161,7 @@ fn fixed_wait_does_not_issue_an_extra_poll_after_sleep_exhausts_the_window() {
             .contains("timeout_reason=client_window_exhausted"),
         "{error:?}"
     );
-    assert!(error.message.contains("last_status=running"));
+    assert!(error.message.contains("last_status=solving"));
     server.assert_only_status_reads(1);
 }
 
@@ -221,7 +221,7 @@ fn solve_and_wait_validates_timing_before_loading_or_submitting_a_model() {
 #[test]
 fn timed_out_observation_can_resume_the_same_job_without_submission_or_cancel() {
     let server = StatusServer::start(|index, stream| {
-        response(stream, if index == 0 { "running" } else { "completed" });
+        response(stream, if index == 0 { "solving" } else { "completed" });
     });
     let error = wait(&server, json!({})).unwrap_err();
     let receipt = crate::execution_observability::failure_preview(0, "job_wait", error.message);
@@ -241,7 +241,7 @@ fn server_authorized_resume_still_bounds_a_stalled_response_by_the_total_budget(
             thread::sleep(Duration::from_millis(500));
             response(stream, "completed");
         } else {
-            let body = json!({"job": {"job_id": "job-budget", "status": "running",
+            let body = json!({"job": {"job_id": "job-budget", "status": "solving",
                 "status_detail": {"timing": {"phase": "execution",
                     "effective_timeout_ms": 10_000, "execution_elapsed_ms": 1}}
             }})
@@ -266,7 +266,7 @@ fn server_authorized_resume_still_bounds_a_stalled_response_by_the_total_budget(
             .contains("timeout_reason=client_total_budget_exhausted"),
         "{error:?}"
     );
-    assert!(error.message.contains("last_status=running"));
+    assert!(error.message.contains("last_status=solving"));
     assert!(error.message.contains("resume_count=1"));
     server.assert_only_status_reads(2);
 }
@@ -281,7 +281,7 @@ fn missing_or_expired_server_timing_does_not_authorize_another_request() {
         ),
     ] {
         let server = StatusServer::start(move |_, stream| {
-            let body = json!({"job": {"status": "running", "status_detail": {"timing": timing}}})
+            let body = json!({"job": {"job_id": "job-budget", "status": "solving", "status_detail": {"timing": timing}}})
                 .to_string();
             let _ = write!(
                 stream,
@@ -383,7 +383,7 @@ fn status_transport_rejects_oversized_responses_before_decoding_json() {
 fn server_grant_can_complete_across_a_soft_window_with_auditable_resume_metadata() {
     let server = StatusServer::start(|index, stream| {
         if index == 0 {
-            let body = json!({"job": {"job_id": "job-budget", "status": "running",
+            let body = json!({"job": {"job_id": "job-budget", "status": "solving",
                 "status_detail": {"timing": {"phase": "execution",
                     "effective_timeout_ms": 5_000, "execution_elapsed_ms": 1}}
             }})

@@ -193,6 +193,8 @@ fn server(bad_body: bool) -> (String, thread::JoinHandle<()>) {
                 Err(error) => panic!("cancel test listener: {error}"),
             }
         };
+        // Do not inherit nonblocking accept behavior on macOS.
+        stream.set_nonblocking(false).unwrap();
         stream
             .set_read_timeout(Some(Duration::from_secs(2)))
             .unwrap();

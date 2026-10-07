@@ -299,6 +299,145 @@ writing the requested run report; JSON stderr identifies
 planning mode. These are native batch/CLI guarantees, not a claim that all
 three standalone SDK clients or installed deployments have been qualified.
 
+#### Contract-owned risk and confirmation
+
+In native execution batches, `steps[].risk` is a contract-derived label, not a
+caller-editable permission override. `validate_batch` rejects any label that
+differs from the registered action contract, including stricter labels and
+swapping `sensitive` with `destructive`. Normalizing a workflow document derives
+the label automatically. Regenerate or repair imported batches against current
+contracts rather than suppressing validation or trusting an old plan.
+
+Validation covers the whole batch before any source computation, HTTP write or
+preview. A mismatch yields an `invalid` run with zero executed steps, no step
+receipts, and `kyuubiki.headless.document_validation` at `batch_validation`.
+Neither `--allow-sensitive` nor `--allow-destructive` authorizes malformed
+metadata. An invalid execution plan still displays the registered contract's
+risk and confirmation flag, consistently with its policy summary; it remains
+non-executable until its validation issues are repaired.
+
+For valid batches the two flags are independent: sensitive authorization does
+not allow `project_delete`, and destructive authorization does not allow a
+sensitive workflow submission or browser snapshot. A blocked confirmation is
+not a contract failure and does not automatically resume or retry. Callers may
+add stricter application-level approval policies around the SDK without
+rewriting the batch's contract label. This is the native batch executor's
+confirmation boundary, not a replacement for service authentication or a gate
+on direct low-level `execute_step` calls.
+
+See [native risk-gate regression](../reports/headless-contract-risk-20261007.md)
+for imported-batch rejection through SDK and CLI, no earlier computation or
+write, and deletion of only a test-owned temporary project after explicit
+destructive approval.
+
+#### Job result availability gate
+
+Native `job_wait` validates the returned job identity and public status before
+polling again or accepting completion. Missing, foreign or contradictory
+identity/status fields stop with `kyuubiki.headless.job_receipt_invalid` at
+`job_observation`. The accepted states follow `schemas/job.schema.json`;
+`running` is not a substitute for its `solving` state. This validates the
+observation boundary, not every field in the complete job schema.
+
+Native `result_fetch` requires a matching job with `status: "completed"` and an
+explicit object result. Queued, active, failed and cancelled jobs may retain
+runtime objects in storage, but those objects cannot authorize bindings or
+downstream writes. Null, scalar, array and missing result values are not success.
+Unavailable results stop with `kyuubiki.headless.job_result_unavailable` at
+`result_fetch`; both gate failures are non-retryable with no replay strategy.
+Inspect `job_fetch`, explicitly wait on the same ID when it is still active,
+and run only the intended continuation after a valid completed result exists.
+
+The default read checks `/api/v1/jobs/:job_id` before using its inline result.
+If that completed response omits the result, the fallback result endpoint must
+also match the requested ID and contain an explicit object. Setting
+`prefer_job_result: false` checks the metadata-only `/status` route before
+reading `/api/v1/results/:job_id`; it does not bypass completion or download a
+large result twice. These are separate reads, not an atomic database snapshot.
+Empty objects and opaque artifact-reference objects pass this availability
+gate; model semantics, scientific validity and artifact integrity need their
+own checks. Native SDK/CLI enforcement does not imply standalone SDK parity.
+
+See [native job-result gate regression](../reports/headless-job-result-gates-20261007.md)
+for retained-result rejection through actual storage, HTTP, SDK and CLI,
+and a real bar solve followed by result reuse without resubmission.
+
+#### Uncertain write acknowledgements
+
+Native service writes distinguish a failure before connection from a failure
+after a request write has been attempted. For methods other than `GET`, `HEAD`
+and `OPTIONS`, write/read failure, invalid HTTP framing, truncated declared
+content, malformed JSON or an empty success body means the operation may have
+taken effect. A fully received HTTP 5xx error also does not prove nonexecution.
+These failures report `kyuubiki.headless.service_request_outcome_unknown` at
+`transport`, with `retryable: false` and `retry_strategy: "none"`. Streamed
+artifact uploads and deadline-bound requests use the same boundary.
+
+The batch stops without publishing this step's bindings or dispatching later
+actions. Zero executed steps means zero validated execution acknowledgements,
+not zero server-side effects. Do not resend the step or replay the whole batch
+automatically. Inspect the relevant project/job records and owning service,
+reconcile the outcome, then explicitly authorize only the intended continuation.
+TaskIR execution keeps its specialized `operator_task_outcome_unknown` category
+and original-attempt inspection rules. Unknown job-submission IDs are not
+automatically recovered by this transport gate.
+
+Connection failure before writing retains its existing transport diagnostic;
+read-only requests do not acquire the write-outcome marker. A complete HTTP 4xx
+rejection retains its original classification and details. An empty HTTP 204
+is accepted as an explicit no-content acknowledgement; an empty HTTP 200 is
+not a JSON acknowledgement. This method-level policy conservatively includes
+query-shaped POST routes. It is not an idempotency, durable delivery or complete
+HTTP parser guarantee, and a parsed JSON object still needs action-specific
+semantic checks.
+
+The public `headless-failure-receipt` v1 schema now declares the native unknown
+outcome, job receipt, unavailable result and binding categories, and forbids
+retry permission for them. Step zero is reserved for `run_preflight` contract
+failures; execution step receipts use positive indices. The native contract
+regressions check emitted categories/stages and these schema policy facets,
+not arbitrary JSON Schema compliance or cross-language implementation parity.
+
+See [native write-acknowledgement regression](../reports/headless-write-acknowledgements-20261007.md)
+for actual project commits and accepted bar calculations whose real responses
+are consumed by a test relay and withheld from SDK/CLI callers.
+
+#### Runtime binding gate
+
+For native batches, `{{steps.N.result.output}}` is a whole-value reference to a
+declared top-level output, not string interpolation or a nested JSON path.
+Preflight checks the action contract; execution also requires that output to
+exist in the actual completed source result. Missing fields or non-object source
+results stop the dependent step before an executor or HTTP call. Required keys
+are checked again after binding: null, empty and whitespace-only required values
+cannot authorize the next step. Optional null values remain valid at this gate;
+action-specific type and model validation still apply separately.
+
+The run summary reports `kyuubiki.headless.binding_resolution` at
+`payload_resolution`, with `retryable: false` and no retry strategy. Completed
+source steps stay completed. Repair the dependent payload and author an explicit
+continuation containing only the intended remaining actions; do not replay the
+whole original batch automatically. Full in-memory results are bound before
+report compaction. `result_preview` is not a full-result checkpoint. Separately
+fetched original receipts still need their task/attempt/completion gates and
+explicit caller authorization before downstream use.
+
+Dry-run uses the same binding gate and stops at the first confirmation gate
+instead of previewing dependent actions with an unapproved source. Missing
+preview outputs stop the dry chain; that is not evidence of real solver failure
+or permission to substitute synthetic computation results. Registered
+asynchronous `solve`/`material_solve` previews supply a deterministic `job_id`
+with `preview_only: true`, but no numerical `result`. This keeps explicit mock
+material-template chains bindable without weakening research posture, which
+still rejects mock execution. References are
+expanded once; inline template fragments and strings inside bound results are
+not recursively evaluated. Payloads with no references remain borrowed rather
+than being cloned merely because a previous step completed.
+
+See [native binding regression](../reports/headless-runtime-bindings-20261007.md)
+for real read-route and TaskIR chains, CLI failure reporting, and explicit
+downstream continuation without repeating the completed computation.
+
 Local verification is retained in
 [native-headless-task-completion-20261005.md](../reports/native-headless-task-completion-20261005.md):
 malformed/stale receipt rejection, side-effect isolation, full-result binding
@@ -567,6 +706,41 @@ layers' no-terminal/no-replay authority flags. A client-side request error also
 does not authorize automatic retry, fallback or replay. Fetch the original
 computation receipt separately before deciding any explicit recovery.
 
+When the cancellation acknowledgement is lost, keep the selected attempt and
+observed target unchanged:
+
+1. Treat a cancellation request error or `cancellation_outcome_unknown` as
+   unconfirmed registration. Do not resend cancellation, fall back to `cancel_job`,
+   select a newer generation or rerun the computation automatically.
+2. Use `fetch_operator_task_result(&task, selected_attempt_id)` to read the
+   original computation receipt. Match its task/digest/attempt, request,
+   process instance and generation against the retained task and observed target.
+   A missing, expired or inconsistent receipt remains unknown, not proof that
+   computation never occurred or that cancellation succeeded.
+3. A recovered typed `cancelled` failure confirms the original computation's
+   reported failure, not delivery of the missing cancellation acknowledgement.
+   A recovered `executed` receipt means the original computation completed; do
+   not relabel it as cancelled. Neither outcome authorizes automatic downstream
+   publication or a new attempt. Inspect the receipt before any explicitly
+   authorized rerun.
+
+The cancellation channel and original result channel are independent. An Agent
+may register cancellation before its acknowledgement is lost, or may already
+have completed before a negative acknowledgement is lost. Both cancellation
+calls can look unknown to the caller. The retained computation receipt, when
+available, distinguishes those cases without reexecution. Result reads do not
+rewrite the dispatch journal; that journal can remain `outcome_unknown` even
+after the original receipt is recovered. Agent-memory retention is bounded and
+does not survive Agent restart. It is not a durable delivery acknowledgement.
+
+Real Agent/Orchestra/Rust SDK regression tests now consume and discard the
+actual native or HTTP acknowledgement, including a negative acknowledgement
+after computation has completed. They verify original-receipt recovery,
+unchanged journal bytes, peer/downstream isolation and an explicitly authorized
+healthy rerun on macOS and a remote Linux source-test container. This is verified
+source-chain evidence, not installed, authenticated-deployment or Agent-restart
+qualification. See [the acknowledgement-loss report](../reports/dispatch-cancellation-ack-loss-20261007.md).
+
 The Agent control round trip is bounded to five seconds and a 64 KiB RPC frame;
 the Rust SDK shares a ten-second HTTP deadline. No target probe, job-wide cancel,
 package cleanup, durable cancellation intent or journal mutation is added.
@@ -777,6 +951,27 @@ There is no pre-dispatch boot pin, cryptographic provenance, exactly-once guaran
 or Agent-restart durability. Older Agents do not gain recovery by inference. See
 `schemas/operator-task-dispatch-result.schema.json` and
 `schemas/agent-task-result-retention.schema.json`.
+
+Receipt validation is strict even when no result is available. The Rust SDK
+requires all nine public-envelope fields, including explicit `completion: null`
+for unknown outcomes, and rejects fields outside that v1 contract. If
+request/process/generation fields are present, their identities and positive
+integer generation must be valid; recovered receipts require all three.
+Orchestra requires every native-envelope field and the exact fixed v1 retention
+policy compiled from its schema. Missing `response` is not interchangeable with
+explicit `null`; malformed policy or generation produces `agent_receipt_invalid`
+with no completion, publication or replay authority. This is application-level
+validation, not a general JSON Schema engine or cryptographic attestation.
+
+Real source-chain regressions fill the actual 64-entry Agent cache, read the
+oldest original receipt before the next explicit admission, and verify that
+eviction still leaves that attempt unknown. A separate chain stops the original
+Agent, removes its configured endpoint, then restarts the Agent: each stage
+remains unknown without peer fallback, journal mutation or automatic execution.
+Only an explicitly authorized new attempt can return a fresh result; it never
+substitutes for the old receipt. This verifies safe loss of recovery availability,
+not durable recovery across Agent restart. See
+[the original-receipt boundary report](../reports/original-receipt-boundaries-20261007.md).
 
 Execution batches separate `attempted_count`, `executed_count`/`ok_count`,
 `blocked_count`, `error_count`, and `skipped_count`. The invariant is

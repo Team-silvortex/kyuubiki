@@ -54,6 +54,46 @@ fn expiry_pressure_and_process_restart_never_return_completion_proof() {
 }
 
 #[test]
+fn reading_a_receipt_never_renews_expiry_or_count_eviction_order() {
+    let now = Instant::now();
+    let mut store = Store::default();
+    store.begin(identity(0), 1, now);
+    store.finish(&identity(0), 1, Some(vec![1]), now);
+    assert_eq!(
+        store
+            .lookup(&identity(0), now + TTL - Duration::from_nanos(1))
+            .0,
+        "receipt_retained"
+    );
+    assert_eq!(store.lookup(&identity(0), now + TTL).0, "not_retained");
+    assert_eq!(store.bytes, 0);
+
+    for n in 0..MAX_ENTRIES {
+        store.begin(identity(n), 1, now + TTL);
+        store.finish(&identity(n), 1, Some(vec![1]), now + TTL);
+    }
+    assert_eq!(store.lookup(&identity(0), now + TTL).0, "receipt_retained");
+    store.begin(identity(MAX_ENTRIES), 1, now + TTL);
+    assert_eq!(store.lookup(&identity(0), now + TTL).0, "not_retained");
+    assert_eq!(store.bytes, MAX_ENTRIES - 1);
+}
+
+#[test]
+fn computation_finishing_after_reservation_expiry_cannot_resurrect_its_result() {
+    let now = Instant::now();
+    let mut store = Store::default();
+    let id = identity(0);
+    store.begin(id.clone(), 1, now);
+    store.finish(&id, 1, Some(vec![1]), now + TTL);
+    let result = store.lookup(&id, now + TTL);
+    assert_eq!(result.0, "not_retained");
+    assert!(result.1.is_none());
+    assert!(result.2.is_none());
+    assert!(store.entries.is_empty());
+    assert_eq!(store.bytes, 0);
+}
+
+#[test]
 fn encoded_payload_budget_is_enforced_without_unbounded_serialization() {
     let response = RpcResponse::success("request", json!({"payload":"x".repeat(MAX_ENTRY_BYTES)}));
     assert!(encode_bounded(&response).is_err());

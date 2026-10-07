@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native job waits and result reads verify requested job identity and public status, require completed object results, and halt downstream work on invalid or unavailable receipts. macOS and Linux source chains exercise real transactional retained records through SDK/CLI and one real bar solve followed by result reuse without resubmission. Verified source availability gates, not installed, atomic, artifact-integrity or cross-language qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-job-result-availability-and-identity-gate",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/service_executor_job_receipt.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_result.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_job_wait.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_result_gate_tests.rs",
+        "workers/rust/crates/cli/tests/support/headless_result_gates.rs",
+        "apps/web/test/support/headless_result_fixtures.exs",
+        "docs/headless-sdks.md",
+        "reports/headless-job-result-gates-20261007.md"
+      ],
+      "required_text": [
+        "Headless Job Result Gates",
+        "28/28 passed in 47.22 seconds",
+        "28/28 passed in 41.99 seconds",
+        "327 unit tests in 31.34 seconds",
+        "receipt_states_follow_the_public_job_contract_and_only_completed_unlocks_results",
+        "retained_partial_results_do_not_authorize_downstream_work_for_either_fetch_mode",
+        "job_identity_and_status_are_validated_before_accepting_or_polling_a_receipt",
+        "result_endpoint_requires_matching_identity_and_explicit_object_payload",
+        "real_retained_incomplete_results_fail_sdk_and_cli_before_downstream_writes",
+        "real_completed_bar_result_can_be_fetched_and_continued_without_resubmission",
+        "result reread resubmitted work",
+        "Job result availability gate"
+      ]
+    }
+  ]
+}

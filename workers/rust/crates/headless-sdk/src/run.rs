@@ -1,6 +1,7 @@
 use crate::execution_observability::summarize_execution;
 use crate::operator_task::operator_task_prepare_preview_or_error;
 use crate::preflight_report::build_batch_validation_failure_report;
+use crate::workflow_bindings::{binding_failure_step, resolve_step_payload};
 use crate::{
     HeadlessExecutionBatch, HeadlessExecutionSummary, HeadlessRisk, HeadlessValidationReport,
     is_operator_task_execute_action, is_operator_task_prepare_action, operator_task_error_preview,
@@ -8,7 +9,6 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::borrow::Cow;
 use std::collections::HashMap;
 
 const MAX_REPORT_ARRAY_ITEMS: usize = 128;
@@ -70,10 +70,33 @@ pub fn run_batch_dry(
         );
         let blocked = (step.risk == HeadlessRisk::Sensitive && !allow_sensitive)
             || (step.risk == HeadlessRisk::Destructive && !allow_destructive);
-        let payload = resolve_step_payload(&step.payload, &results);
-        if !blocked
-            && (is_operator_task_prepare_action(&step.action)
-                || is_operator_task_execute_action(&step.action))
+        if blocked {
+            blocked_by_confirmation = Some(HeadlessBlockedConfirmation {
+                index: step.index,
+                risk: step.risk,
+            });
+            status = "blocked".into();
+            steps.push(HeadlessExecutionStepReport {
+                index: step.index,
+                action: step.action.clone(),
+                risk: step.risk,
+                status: "blocked".into(),
+                payload: compact_report_value(&step.payload),
+                result_preview: build_result_preview(&step.action, step.index, &step.payload),
+                requires_confirmation,
+            });
+            break;
+        }
+        let payload = match resolve_step_payload(step, &results) {
+            Ok(payload) => payload,
+            Err(message) => {
+                status = "failed".into();
+                steps.push(binding_failure_step(step, message));
+                break;
+            }
+        };
+        if is_operator_task_prepare_action(&step.action)
+            || is_operator_task_execute_action(&step.action)
         {
             let prepared = if is_operator_task_execute_action(&step.action) {
                 preview_operator_task_execute_payload(&payload)
@@ -114,23 +137,13 @@ pub fn run_batch_dry(
         }
 
         let result_preview = build_result_preview(&step.action, step.index, &payload);
-        let step_status = if blocked { "blocked" } else { "dry_run" }.to_string();
-        if blocked && blocked_by_confirmation.is_none() {
-            blocked_by_confirmation = Some(HeadlessBlockedConfirmation {
-                index: step.index,
-                risk: step.risk,
-            });
-            status = "blocked".to_string();
-        }
-        if !blocked {
-            executed_step_count += 1;
-            results.insert(step.index, result_preview.clone());
-        }
+        executed_step_count += 1;
+        results.insert(step.index, result_preview.clone());
         steps.push(HeadlessExecutionStepReport {
             index: step.index,
             action: step.action.clone(),
             risk: step.risk,
-            status: step_status,
+            status: "dry_run".into(),
             payload: compact_report_value(&payload),
             result_preview,
             requires_confirmation,
@@ -150,43 +163,6 @@ pub fn run_batch_dry(
         validation,
         execution_summary,
         steps,
-    }
-}
-
-pub(crate) fn resolve_step_payload<'a>(
-    value: &'a Value,
-    results: &HashMap<usize, Value>,
-) -> Cow<'a, Value> {
-    if results.is_empty() {
-        Cow::Borrowed(value)
-    } else {
-        Cow::Owned(resolve_value(value, results))
-    }
-}
-
-fn resolve_value(value: &Value, results: &HashMap<usize, Value>) -> Value {
-    match value {
-        Value::String(text) => parse_binding(text)
-            .and_then(|(step, output)| {
-                results
-                    .get(&step)
-                    .and_then(|result| result.get(&output))
-                    .cloned()
-            })
-            .unwrap_or_else(|| value.clone()),
-        Value::Array(items) => Value::Array(
-            items
-                .iter()
-                .map(|item| resolve_value(item, results))
-                .collect(),
-        ),
-        Value::Object(fields) => Value::Object(
-            fields
-                .iter()
-                .map(|(key, value)| (key.clone(), resolve_value(value, results)))
-                .collect::<Map<String, Value>>(),
-        ),
-        _ => value.clone(),
     }
 }
 
@@ -235,15 +211,7 @@ pub(crate) fn compact_report_value(value: &Value) -> Value {
     }
 }
 
-fn parse_binding(text: &str) -> Option<(usize, String)> {
-    let trimmed = text.trim();
-    let inner = trimmed.strip_prefix("{{")?.strip_suffix("}}")?.trim();
-    let rest = inner.strip_prefix("steps.")?;
-    let (step_text, output_path) = rest.split_once(".result.")?;
-    Some((step_text.parse().ok()?, output_path.trim().to_string()))
-}
-
-fn build_result_preview(action: &str, step_index: usize, payload: &Value) -> Value {
+pub(crate) fn build_result_preview(action: &str, step_index: usize, payload: &Value) -> Value {
     let mut map = Map::new();
     map.insert("step_index".to_string(), Value::from(step_index as u64));
     map.insert("action".to_string(), Value::from(action.to_string()));
@@ -277,15 +245,25 @@ fn build_result_preview(action: &str, step_index: usize, payload: &Value) -> Val
                 Value::from(format!("version_{step_index:03}")),
             );
         }
-        "workflow_submit_catalog"
-        | "workflow_submit_graph"
-        | "direct_mesh_solve"
-        | "solve_from_model_version" => {
+        action
+            if matches!(
+                action,
+                "workflow_submit_catalog"
+                    | "workflow_submit_graph"
+                    | "direct_mesh_solve"
+                    | "solve_from_model_version"
+            ) || crate::find_action_contract(action).is_some_and(|contract| {
+                matches!(contract.category, "solve" | "material_solve")
+                    && contract.output_keys.contains(&"job_id")
+                    && !contract.output_keys.contains(&"result")
+            }) =>
+        {
             map.insert(
                 "job_id".to_string(),
                 Value::from(format!("job_{step_index:03}")),
             );
             map.insert("status".to_string(), Value::from("submitted"));
+            map.insert("preview_only".to_string(), Value::Bool(true));
         }
         "solve_and_wait_from_model_version" => {
             map.insert(

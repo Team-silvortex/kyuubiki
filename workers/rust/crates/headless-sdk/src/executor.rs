@@ -1,16 +1,17 @@
 use crate::execution_observability::{failure_preview, summarize_execution};
 use crate::operator_task::operator_task_prepare_preview_or_error;
 use crate::preflight_report::build_batch_validation_failure_report;
-use crate::run::{compact_report_value, resolve_step_payload};
+use crate::run::{build_result_preview, compact_report_value};
+use crate::workflow_bindings::{binding_failure_step, resolve_step_payload};
 use crate::{
     HEADLESS_EXECUTION_RUN_SCHEMA_VERSION, HeadlessBlockedConfirmation, HeadlessEngine,
     HeadlessExecutionBatch, HeadlessExecutionStepReport, HeadlessRisk, HeadlessRunReport,
     find_action_contract, is_operator_task_execute_action, is_operator_task_prepare_action,
-    operator_task_error_preview, prepare_operator_task_payload,
-    preview_operator_task_execute_payload, service_executor_supports_action, validate_batch,
+    prepare_operator_task_payload, preview_operator_task_execute_payload,
+    service_executor_supports_action, validate_batch,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
+use serde_json::Value;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -132,7 +133,6 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
         );
         let blocked = (step.risk == HeadlessRisk::Sensitive && !allow_sensitive)
             || (step.risk == HeadlessRisk::Destructive && !allow_destructive);
-        let payload = resolve_step_payload(&step.payload, &results);
         if blocked {
             if blocked_by_confirmation.is_none() {
                 blocked_by_confirmation = Some(HeadlessBlockedConfirmation {
@@ -146,12 +146,20 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
                 action: step.action.clone(),
                 risk: step.risk,
                 status: "blocked".to_string(),
-                payload: compact_report_value(&payload),
+                payload: compact_report_value(&step.payload),
                 result_preview: build_result_preview(&step.action, step.index, &step.payload),
                 requires_confirmation,
             });
             break;
         }
+        let payload = match resolve_step_payload(step, &results) {
+            Ok(payload) => payload,
+            Err(message) => {
+                status = "failed".into();
+                steps.push(binding_failure_step(step, message));
+                break;
+            }
+        };
 
         if is_operator_task_prepare_action(&step.action) {
             match prepare_operator_task_payload(&payload) {
@@ -275,198 +283,6 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
         execution_summary,
         steps,
     }
-}
-
-fn build_result_preview(action: &str, step_index: usize, payload: &Value) -> Value {
-    let mut map = Map::new();
-    map.insert("step_index".to_string(), Value::from(step_index as u64));
-    map.insert("action".to_string(), Value::from(action.to_string()));
-    match action {
-        "service_health" => {
-            map.insert("status".to_string(), Value::from("ok"));
-            map.insert(
-                "solver_endpoints".to_string(),
-                Value::Array(vec![Value::from("127.0.0.1:5001")]),
-            );
-        }
-        "project_create" => {
-            map.insert(
-                "project_id".to_string(),
-                Value::from(format!("project_{step_index:03}")),
-            );
-        }
-        "model_create" => {
-            map.insert(
-                "model_id".to_string(),
-                Value::from(format!("model_{step_index:03}")),
-            );
-            map.insert(
-                "latest_version_id".to_string(),
-                Value::from(format!("version_{step_index:03}")),
-            );
-        }
-        "model_version_create" => {
-            map.insert(
-                "model_version_id".to_string(),
-                Value::from(format!("version_{step_index:03}")),
-            );
-        }
-        "workflow_submit_catalog"
-        | "workflow_submit_graph"
-        | "direct_mesh_solve"
-        | "solve_from_model_version" => {
-            map.insert(
-                "job_id".to_string(),
-                Value::from(format!("job_{step_index:03}")),
-            );
-            map.insert("status".to_string(), Value::from("submitted"));
-        }
-        "solve_and_wait_from_model_version" => {
-            map.insert(
-                "job_id".to_string(),
-                Value::from(format!("job_{step_index:03}")),
-            );
-            map.insert("status".to_string(), Value::from("completed"));
-            map.insert(
-                "result".to_string(),
-                Value::Object(Map::from_iter([(
-                    "kind".to_string(),
-                    Value::from("simulated_result"),
-                )])),
-            );
-        }
-        "operator_task_prepare" => {
-            return operator_task_prepare_preview_or_error(payload);
-        }
-        "operator_task_execute" => {
-            return preview_operator_task_execute_payload(payload)
-                .unwrap_or_else(operator_task_error_preview);
-        }
-        "job_wait" | "job_fetch" => {
-            map.insert(
-                "job_id".to_string(),
-                payload
-                    .get("job_id")
-                    .cloned()
-                    .unwrap_or_else(|| Value::from(format!("job_{step_index:03}"))),
-            );
-            map.insert("status".to_string(), Value::from("completed"));
-            map.insert("progress".to_string(), Value::from(1.0));
-        }
-        "result_fetch" => {
-            map.insert(
-                "job_id".to_string(),
-                payload
-                    .get("job_id")
-                    .cloned()
-                    .unwrap_or_else(|| Value::from(format!("job_{step_index:03}"))),
-            );
-            map.insert(
-                "result".to_string(),
-                Value::Object(Map::from_iter([(
-                    "kind".to_string(),
-                    Value::from("simulated_result"),
-                )])),
-            );
-        }
-        "open_page" => {
-            map.insert(
-                "url".to_string(),
-                payload
-                    .get("url")
-                    .cloned()
-                    .unwrap_or_else(|| Value::from("about:blank")),
-            );
-            map.insert("status".to_string(), Value::from("opened"));
-            map.insert("ok".to_string(), Value::Bool(true));
-        }
-        "click" => {
-            map.insert(
-                "selector".to_string(),
-                payload
-                    .get("selector")
-                    .cloned()
-                    .unwrap_or_else(|| Value::from("")),
-            );
-        }
-        "type" => {
-            map.insert(
-                "selector".to_string(),
-                payload
-                    .get("selector")
-                    .cloned()
-                    .unwrap_or_else(|| Value::from("")),
-            );
-            map.insert(
-                "value".to_string(),
-                payload
-                    .get("value")
-                    .cloned()
-                    .unwrap_or_else(|| Value::from("")),
-            );
-        }
-        "press" => {
-            map.insert(
-                "key".to_string(),
-                payload
-                    .get("key")
-                    .cloned()
-                    .unwrap_or_else(|| Value::from("")),
-            );
-        }
-        "select" => {
-            map.insert(
-                "selector".to_string(),
-                payload
-                    .get("selector")
-                    .cloned()
-                    .unwrap_or_else(|| Value::from("")),
-            );
-            map.insert(
-                "values".to_string(),
-                payload
-                    .get("value")
-                    .cloned()
-                    .unwrap_or_else(|| Value::Array(vec![])),
-            );
-        }
-        "wait" => {
-            map.insert(
-                "timeout_ms".to_string(),
-                payload
-                    .get("timeout")
-                    .cloned()
-                    .unwrap_or_else(|| Value::from(0)),
-            );
-        }
-        "assert_text" => {
-            map.insert(
-                "selector".to_string(),
-                payload
-                    .get("selector")
-                    .cloned()
-                    .unwrap_or_else(|| Value::from("")),
-            );
-            map.insert(
-                "text".to_string(),
-                payload
-                    .get("text")
-                    .cloned()
-                    .unwrap_or_else(|| Value::from("")),
-            );
-        }
-        "snapshot" => {
-            map.insert(
-                "path".to_string(),
-                payload
-                    .get("file")
-                    .cloned()
-                    .unwrap_or_else(|| Value::from(format!("snapshot-{step_index:03}.png"))),
-            );
-        }
-        _ => {}
-    }
-    Value::Object(map)
 }
 
 #[cfg(test)]

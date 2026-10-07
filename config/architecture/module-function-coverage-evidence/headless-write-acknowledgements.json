@@ -1,0 +1,44 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native Headless writes treat post-write acknowledgement loss, malformed framing/JSON and server errors as unknown outcomes without replay permission or downstream dispatch. Real macOS and Linux source chains commit projects and accept bar jobs while withholding their actual replies from SDK/CLI callers; failure schema policy and explicit mock solver previews are aligned. Verified source boundary, not installed, durable, idempotent or cross-language qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-service-write-acknowledgement-and-failure-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/service_executor.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_response.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_artifact_http.rs",
+        "workers/rust/crates/headless-sdk/src/execution_observability.rs",
+        "workers/rust/crates/headless-sdk/src/run.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_ack_loss_tests.rs",
+        "workers/rust/crates/headless-sdk/src/failure_receipt_contract_tests.rs",
+        "workers/rust/crates/cli/tests/support/ack_loss_proxy.rs",
+        "workers/rust/crates/cli/tests/support/headless_write_ack_loss.rs",
+        "schemas/headless-failure-receipt.schema.json",
+        "docs/headless-sdks.md",
+        "reports/headless-write-acknowledgements-20261007.md"
+      ],
+      "required_text": [
+        "Headless Write Acknowledgements",
+        "30/30 passed in 25.98 seconds",
+        "30/30 passed in 41.35 seconds",
+        "336 unit tests in 31.38 seconds",
+        "lost_or_invalid_write_acknowledgements_never_offer_replay_or_downstream_writes",
+        "complete_server_error_on_a_write_does_not_prove_nonexecution",
+        "deadline_write_and_streamed_upload_share_the_uncertain_ack_gate",
+        "official_preflight_receipts_use_declared_zero_index_stages",
+        "unknown_outcomes_and_invalid_bindings_cannot_acquire_retry_permission_in_schema",
+        "registered_direct_solver_previews_supply_job_bindings_but_not_computation_results",
+        "real_project_commit_with_lost_ack_is_unknown_without_replay_or_later_writes",
+        "real_job_acceptance_with_lost_ack_computes_once_per_explicit_request",
+        "Uncertain write acknowledgements"
+      ]
+    }
+  ]
+}

@@ -70,13 +70,15 @@ pub fn build_execution_plan(batch: &HeadlessExecutionBatch) -> HeadlessExecution
         .iter()
         .map(|step| {
             let contract = crate::find_action_contract(&step.action);
-            let confirmation = resolve_confirmation(step.risk);
+            // Invalid imported metadata must not hide the action's actual approval gate.
+            let risk = contract.map(|entry| entry.risk).unwrap_or(step.risk);
+            let confirmation = resolve_confirmation(risk);
             HeadlessPlanStep {
                 index: step.index,
                 action: step.action.clone(),
                 engine: contract.map(|entry| entry.engine),
                 category: contract.map(|entry| entry.category.to_string()),
-                risk: step.risk,
+                risk,
                 requires_confirmation: confirmation.is_some(),
                 confirmation_flag: confirmation.as_ref().map(|entry| entry.0.to_string()),
                 confirmation_reason: confirmation

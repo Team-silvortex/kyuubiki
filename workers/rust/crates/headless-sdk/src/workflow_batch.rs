@@ -1,3 +1,4 @@
+use crate::workflow_bindings::parse_binding;
 use crate::{
     HeadlessEngine, HeadlessRisk, HeadlessRuntimeStyle, find_action_contract,
     preflight_workflow_dataset_contract,
@@ -225,6 +226,12 @@ pub fn validate_batch(batch: &HeadlessExecutionBatch) -> HeadlessValidationRepor
             ));
         }
         if let Some(contract) = find_action_contract(&step.action) {
+            if step.risk != contract.risk {
+                issues.push(format!(
+                    "step {} ({}) risk must match action contract: expected {:?}, received {:?}",
+                    step_number, step.action, contract.risk, step.risk
+                ));
+            }
             for key in missing_required_keys(contract.id, &step.payload) {
                 issues.push(format!(
                     "step {} ({}) is missing required payload key {}",
@@ -350,7 +357,7 @@ fn collect_binding_issues(
                         "step {step_index} cannot bind to future-or-self step {referenced_step}"
                     ));
                 } else if let Some(outputs) = known_outputs.get(&referenced_step) {
-                    if !outputs.contains(&referenced_output) {
+                    if !outputs.contains(referenced_output) {
                         issues.push(format!(
                             "step {step_index} references unavailable output \"{referenced_output}\" from step {referenced_step}"
                         ));
@@ -372,14 +379,6 @@ fn collect_binding_issues(
     }
 }
 
-fn parse_binding(text: &str) -> Option<(usize, String)> {
-    let trimmed = text.trim();
-    let inner = trimmed.strip_prefix("{{")?.strip_suffix("}}")?.trim();
-    let rest = inner.strip_prefix("steps.")?;
-    let (step_text, output_path) = rest.split_once(".result.")?;
-    Some((step_text.parse().ok()?, output_path.trim().to_string()))
-}
-
 fn has_present_value(payload: &Value, key: &str) -> bool {
     payload
         .get(key)
@@ -391,7 +390,7 @@ fn has_present_value(payload: &Value, key: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn missing_required_keys(action: &str, payload: &Value) -> Vec<&'static str> {
+pub(crate) fn missing_required_keys(action: &str, payload: &Value) -> Vec<&'static str> {
     match action {
         "open_page" => (!has_present_value(payload, "url") && !has_present_value(payload, "href"))
             .then_some("url")

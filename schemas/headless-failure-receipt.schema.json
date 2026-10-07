@@ -33,6 +33,11 @@
         "frontend_proxy_artifact_limit",
         "endpoint_not_deployed",
         "transport_failure",
+        "service_request_outcome_unknown",
+        "operator_task_outcome_unknown",
+        "job_receipt_invalid",
+        "job_result_unavailable",
+        "binding_resolution",
         "result_fetch_failure",
         "job_cancelled",
         "invalid_solver_params",
@@ -43,6 +48,16 @@
     "stage": {
       "enum": [
         "job_wait",
+        "job_observation",
+        "payload_resolution",
+        "batch_validation",
+        "document_decode",
+        "executor_preflight",
+        "endpoint_configuration",
+        "parameter_patch",
+        "research_round",
+        "material_report_validation",
+        "command_validation",
         "queue",
         "authorization",
         "artifact_upload",
@@ -56,7 +71,8 @@
     },
     "step_index": {
       "type": "integer",
-      "minimum": 1
+      "minimum": 0,
+      "description": "Zero is reserved for run_preflight; execution step receipts use positive indices."
     },
     "action": {
       "type": "string",
@@ -78,6 +94,36 @@
     }
   },
   "allOf": [
+    {
+      "if": {
+        "properties": {
+          "category": {
+            "enum": ["service_request_outcome_unknown", "operator_task_outcome_unknown",
+              "job_receipt_invalid", "job_result_unavailable", "binding_resolution"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "retryable": { "const": false },
+          "retry_strategy": { "const": "none" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "step_index": { "const": 0 } } },
+      "then": {
+        "properties": {
+          "action": { "const": "run_preflight" },
+          "category": { "const": "contract_failure" },
+          "retryable": { "const": false }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "action": { "const": "run_preflight" } } },
+      "then": { "properties": { "step_index": { "const": 0 } } }
+    },
     {
       "if": {
         "properties": {

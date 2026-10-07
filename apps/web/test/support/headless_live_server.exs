@@ -32,7 +32,9 @@ case scenario do
     true = port in 1..65_535
 
     # Static endpoints have unknown package readiness; do not invent a ready advertisement.
-    endpoints = [%{id: "owned-live-agent", host: "127.0.0.1", port: port}]
+    endpoints = [
+      %{id: "owned-live-agent", host: "127.0.0.1", port: port, tags: ["owned-live-owner"]}
+    ]
 
     endpoints =
       case System.get_env("KYUUBIKI_HEADLESS_LIVE_AGENT_PEER_PORT") do
@@ -42,7 +44,16 @@ case scenario do
         peer ->
           peer_port = String.to_integer(peer)
           true = peer_port in 1..65_535 and peer_port != port
-          endpoints ++ [%{id: "owned-live-peer", host: "127.0.0.1", port: peer_port}]
+
+          endpoints ++
+            [
+              %{
+                id: "owned-live-peer",
+                host: "127.0.0.1",
+                port: peer_port,
+                tags: ["owned-live-peer"]
+              }
+            ]
       end
 
     Application.put_env(:kyuubiki_web, AgentPool, endpoints: endpoints)
@@ -51,6 +62,10 @@ case scenario do
 
   other ->
     raise "unsupported headless live scenario: #{other}"
+end
+
+if System.get_env("KYUUBIKI_HEADLESS_LIVE_RESULT_FIXTURES") == "1" do
+  Code.require_file("headless_result_fixtures.exs", __DIR__)
 end
 
 if scenario != "real_agent" do

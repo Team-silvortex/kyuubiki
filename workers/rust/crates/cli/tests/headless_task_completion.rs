@@ -150,6 +150,9 @@ fn headless_http_receipts_from_a_real_agent_block_fail_and_recover() -> Result<(
                     Err(error) => return Err(error.to_string()),
                 }
             };
+            stream
+                .set_nonblocking(false)
+                .map_err(|error| error.to_string())?;
             let payload = read_http_task(&mut stream).map_err(|error| error.to_string())?;
             let prepared = prepare_operator_task_payload(&payload)?;
             let response = agent

@@ -1,7 +1,7 @@
 {
   "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
   "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
-  "summary": "Local native and public Orchestra/Rust SDK execution cancellation requires exact observed process/request/generation/job identity through a retained original endpoint, rejects malformed or inconsistent acknowledgements, and retains unknown delivery without fallback or replay. Native tests isolate siblings, peers and restarted Agents. This is local evidence, not initial-process attestation, durable cancellation, installed qualification or Python/Elixir parity.",
+  "summary": "Native and public Orchestra/Rust SDK execution cancellation requires exact observed process/request/generation/job identity through a retained original endpoint, rejects malformed or inconsistent acknowledgements, and retains unknown delivery without fallback or replay. Native tests isolate siblings, peers and restarted Agents. macOS and remote Linux source-container acknowledgement-loss tests recover original cancelled or executed receipts without replay, journal mutation or downstream publication. This is verified source evidence, not initial-process attestation, durable cancellation, authenticated deployment, installed qualification or Python/Elixir parity.",
   "paradigm_contract_evidence": {
     "runtime_api": [
       {
@@ -141,6 +141,63 @@
         "malformed_http_reply_keeps_registration_unconfirmed_and_does_not_retry",
         "inspection_cancellation_target_must_match_every_observed_identity",
         "cancellation_receipt_rejects_identity_drift_missing_fields_and_broadened_authority"
+      ]
+    },
+    {
+      "id": "source-chain-cancellation-ack-loss-original-receipt-recovery",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli", "orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["runtime_api", "sdk_headless", "validation"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/tests/support/ack_loss_proxy.rs",
+        "workers/rust/crates/cli/tests/support/headless_cancellation_ack_loss.rs",
+        "workers/rust/crates/cli/tests/headless_live.rs",
+        "apps/web/test/support/headless_live_server.exs",
+        "docs/headless-sdks.md",
+        "reports/dispatch-cancellation-ack-loss-20261007.md"
+      ],
+      "required_text": [
+        "Dispatch Cancellation Acknowledgement Loss",
+        "21/21 passed three consecutive",
+        "21/21 passed twice",
+        "lost_native_cancel_ack_recovers_original_cancelled_receipt_without_replay",
+        "lost_negative_cancel_ack_does_not_relabel_completed_execution_as_cancelled",
+        "lost_http_cancel_ack_keeps_registration_unconfirmed_and_recovers_original_receipt",
+        "accepted_nonblocking_socket_waits_for_delayed_rpc_without_rewriting_bytes",
+        "read-only recovery mutated journal",
+        "peer got fallback execution",
+        "automatic_replay_authorized"
+      ]
+    },
+    {
+      "id": "source-original-result-availability-boundaries",
+      "status": "proven", "grade": "verified",
+      "modules": ["runtime-agent-cli", "orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["runtime_api", "sdk_headless", "validation"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_result.ex",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_result_test.exs",
+        "workers/rust/crates/headless-sdk/src/service_executor_dispatch_result.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_dispatch_result_tests.rs",
+        "workers/rust/crates/cli/src/tests/agent_task_results.rs",
+        "workers/rust/crates/cli/tests/support/headless_original_receipt_limits.rs",
+        "reports/original-receipt-boundaries-20261007.md"
+      ],
+      "required_text": [
+        "Original Receipt Availability Boundaries",
+        "23/23 passed twice",
+        "23/23 passed in 19.36 seconds",
+        "real_count_eviction_keeps_original_unknown_without_touching_peer_or_downstream",
+        "real_endpoint_removal_and_agent_restart_never_substitute_the_original_receipt",
+        "original_result_requires_explicit_fields_and_rejects_uncontracted_authority",
+        "every_missing_receipt_status_stays_unknown_with_valid_optional_identity_only",
+        "reading_a_receipt_never_renews_expiry_or_count_eviction_order",
+        "computation_finishing_after_reservation_expiry_cannot_resurrect_its_result",
+        "unknown native replies require every field and the exact bounded retention policy",
+        "recovery mutated original journal",
+        "peer got fallback execution"
       ]
     }
   ]

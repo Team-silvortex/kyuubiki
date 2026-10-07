@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native Rust batches validate actual output bindings and required resolved payloads before dependent calls, preserve completed source work, and require caller-authored continuation. macOS and Linux source chains verify CLI failure reports and an original bar result followed by explicit downstream repair without source replay. Evidence is verified, not installed, durable or cross-language qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-runtime-binding-gate-and-explicit-continuation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/workflow_bindings.rs",
+        "workers/rust/crates/headless-sdk/src/executor_binding_tests.rs",
+        "workers/rust/crates/cli/tests/support/headless_binding_gates.rs",
+        "docs/headless-sdks.md",
+        "reports/headless-runtime-bindings-20261007.md"
+      ],
+      "required_text": [
+        "Headless Runtime Binding Gate",
+        "25/25 passed twice",
+        "25/25 passed in 40.72 seconds",
+        "317 unit tests in 31.29 seconds",
+        "missing_declared_output_halts_before_any_dependent_executor_call",
+        "resolved_null_or_empty_required_value_halts_before_dispatch",
+        "valid_bindings_preserve_full_values_and_optional_null_without_recursive_expansion",
+        "dry_run_confirmation_stops_before_dependent_binding_or_later_previews",
+        "unbound_large_payload_is_borrowed_even_after_a_source_result_exists",
+        "real_collection_reply_missing_declared_binding_stops_before_writes",
+        "real_completed_task_null_binding_continues_only_after_explicit_downstream_repair",
+        "continuation replayed the source computation",
+        "continuation created another source attempt",
+        "Runtime binding gate"
+      ]
+    }
+  ]
+}
