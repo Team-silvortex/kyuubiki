@@ -1,0 +1,58 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native submissions require matching transmitted project/version context before job bindings, polling or terminal interpretation. Orchestra rejects contradictory explicit project/version pairs before creating jobs. Bounded fixtures and actual local SDK/CLI Orchestra/Agent experiments establish verified source consistency, not authorization, immutable input provenance, installed qualification or exactly-once guarantees.",
+  "evidence_claims": [
+    {
+      "id": "native-submission-project-version-association-gate",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/service_executor_job_receipt.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_solve.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_submission_context_tests.rs",
+        "workers/rust/crates/cli/tests/support/headless_submission_context.rs",
+        "docs/headless-sdks.md",
+        "docs/tutorial-headless-rust.html",
+        "reports/headless-submission-context-20261007.md"
+      ],
+      "required_text": [
+        "Headless Submission Association Gates",
+        "Submission association gate",
+        "validate_submission_context",
+        "all_direct_solvers_reject_missing_transmitted_submission_association",
+        "corrupt_association_is_unknown_even_if_the_reply_claims_terminal_failure",
+        "saved_reference_bad_submission_stops_before_polling_fetching_or_later_writes",
+        "real_submission_association_loss_stops_sdk_and_cli_without_replaying_computation",
+        "373 unit tests",
+        "37/37"
+      ]
+    },
+    {
+      "id": "orchestra-submission-rejects-contradictory-project-checkpoint",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "workflow_composition", "validation"],
+      "dimensions": ["execution", "contract"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/analysis_job_support.ex",
+        "apps/web/test/kyuubiki_web/api/project_workflow_context_api_test.exs",
+        "apps/web/test/kyuubiki_web/api/truss_solver_api_test.exs",
+        "workers/rust/crates/cli/tests/support/headless_submission_context.rs",
+        "docs/headless-sdks.md",
+        "reports/headless-submission-context-20261007.md"
+      ],
+      "required_text": [
+        "model_version_project_mismatch",
+        "contradictory checkpoint ownership rejects before catalog or graph job creation",
+        "version-only submission derives its owning project",
+        "1275 tests, zero failures, 30 skipped"
+      ]
+    }
+  ]
+}

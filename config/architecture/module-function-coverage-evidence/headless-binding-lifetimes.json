@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native validated batches retain only later-referenced whole-value outputs, preserve independent fanout, and transfer each original allocation on final use. Public reports, output shapes, missing/null gates, confirmation ordering and no-replay behavior are unchanged. Real SDK/CLI result-to-version chains prove complete-array propagation without repeated Agent computation. This is verified native source behavior, not a total RSS cap, durable checkpoint, installed, cross-language or scale qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-binding-result-lifetime-and-full-value-gate",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/workflow_binding_results.rs",
+        "workers/rust/crates/headless-sdk/src/workflow_binding_results_tests.rs",
+        "workers/rust/crates/headless-sdk/src/workflow_bindings.rs",
+        "workers/rust/crates/headless-sdk/src/executor.rs",
+        "workers/rust/crates/headless-sdk/src/executor_binding_tests.rs",
+        "workers/rust/crates/headless-sdk/src/run.rs",
+        "workers/rust/crates/cli/tests/support/headless_binding_gates.rs",
+        "workers/rust/crates/cli/tests/support/headless_binding_lifetimes.rs",
+        "docs/headless-sdks.md",
+        "reports/headless-binding-lifetimes-20261007.md"
+      ],
+      "required_text": [
+        "Headless Native Binding Result Lifetimes",
+        "Native binding result lifetimes",
+        "last_string_use_moves_the_original_allocation_into_the_payload",
+        "fanout_clones_nonfinal_uses_but_moves_the_last_array",
+        "twenty_layer_chain_keeps_only_the_live_frontier_without_array_copies",
+        "graph_matrix_matches_the_previous_whole_value_resolver",
+        "public_batch_dispatch_moves_last_use_but_keeps_compacted_reports_unchanged",
+        "real_result_fanout_persists_complete_versions_through_sdk_and_cli_without_reexecution",
+        "406 unit tests",
+        "42/42"
+      ]
+    }
+  ]
+}

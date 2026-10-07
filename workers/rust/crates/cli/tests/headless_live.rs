@@ -17,11 +17,21 @@ mod ack_loss_proxy;
 mod agent_support;
 #[path = "support/headless_binding_gates.rs"]
 mod binding_gates;
+#[path = "support/headless_binding_lifetimes.rs"]
+mod binding_lifetimes;
 #[path = "support/headless_cancellation_ack_loss.rs"]
 mod cancellation_ack_loss;
+#[path = "support/headless_job_fetch_gates.rs"]
+mod job_fetch_gates;
+#[path = "support/headless_job_read_gates.rs"]
+mod job_read_gates;
+#[path = "support/headless_library_receipts.rs"]
+mod library_receipts;
 #[allow(dead_code)]
 #[path = "support/modal_agent.rs"]
 mod modal_support;
+#[path = "support/headless_model_reference_gates.rs"]
+mod model_reference_gates;
 #[path = "support/headless_orchestra_cancel_routing.rs"]
 mod orchestra_cancel_routing;
 #[path = "support/headless_orchestra_cancellation.rs"]
@@ -34,10 +44,16 @@ mod orchestra_dispatch_inspection;
 mod orchestra_modal;
 #[path = "support/headless_original_receipt_limits.rs"]
 mod original_receipt_limits;
+#[path = "support/headless_response_budgets.rs"]
+mod response_budgets;
 #[path = "support/headless_result_gates.rs"]
 mod result_gates;
 #[path = "support/headless_risk_gates.rs"]
 mod risk_gates;
+#[path = "support/headless_submission_context.rs"]
+mod submission_context;
+#[path = "support/headless_submission_receipts.rs"]
+mod submission_receipts;
 #[path = "support/headless_write_ack_loss.rs"]
 mod write_ack_loss;
 

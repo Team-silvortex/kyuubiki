@@ -1,6 +1,6 @@
 [package]
 name = "kyuubiki-workbench-gui"
-version = "3.4.7"
+version = "3.5.0"
 edition = "2024"
 license = "MIT"
 build = "build.rs"

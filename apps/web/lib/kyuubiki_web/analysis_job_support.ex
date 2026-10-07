@@ -30,6 +30,10 @@ defmodule KyuubikiWeb.AnalysisJobSupport do
     cond do
       is_binary(model_version_id) and model_version_id != "" ->
         case Library.get_version(model_version_id) do
+          {:ok, %{"project_id" => version_project}}
+          when is_binary(project_id) and project_id != version_project ->
+            {:error, :model_version_project_mismatch}
+
           {:ok, version} ->
             {:ok,
              %{

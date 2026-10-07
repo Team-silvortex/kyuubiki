@@ -1,8 +1,11 @@
 use crate::service_executor::{
-    execute_direct_fem_submit, execute_result_fetch, normalize_job_submission_result, request_json,
-    required_path_segment,
+    execute_direct_fem_submit, execute_result_fetch, normalize_job_submission_with_context,
+    request_json,
 };
+use crate::service_executor_job_read::prefer_job_result;
+use crate::service_executor_job_receipt::submission_context;
 use crate::service_executor_job_wait::{execute_job_wait, validate_job_wait_options};
+use crate::service_executor_model_reference::{ModelReference, load_model_reference};
 use crate::{HeadlessExecutorError, HeadlessExecutorOutcome, direct_fem_submit_route};
 use serde_json::{Map, Value, json};
 use std::collections::HashMap;
@@ -13,18 +16,33 @@ pub(crate) fn execute_direct_mesh_solve(
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
     let resolved_payload = resolve_direct_mesh_source(base_url, api_token, payload)?;
-    if !has_explicit_solver_endpoints(&resolved_payload)
+    execute_resolved_mesh_solve(base_url, api_token, &resolved_payload)
+}
+
+fn execute_resolved_mesh_solve(
+    base_url: &str,
+    api_token: Option<&str>,
+    resolved_payload: &Value,
+) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
+    if !has_explicit_solver_endpoints(resolved_payload)
         && let Some(action) =
-            find_study_kind(&resolved_payload).and_then(direct_fem_action_for_study_kind)
+            find_study_kind(resolved_payload).and_then(direct_fem_action_for_study_kind)
     {
         let model = resolved_payload
             .get("input")
             .or_else(|| resolved_payload.get("model_payload"))
             .cloned()
             .ok_or_else(|| error("direct_mesh_solve requires input or model_payload"))?;
-        return execute_direct_fem_submit(base_url, api_token, &action, &json!({ "model": model }));
+        let mut request = Map::from_iter([("model".into(), model)]);
+        copy_selected(
+            resolved_payload,
+            &mut request,
+            &["project_id", "model_version_id"],
+        );
+        return execute_direct_fem_submit(base_url, api_token, &action, &Value::Object(request));
     }
-    let body = direct_mesh_request(&resolved_payload)?;
+    let body = direct_mesh_request(resolved_payload)?;
+    let context = submission_context(&body["input"])?;
     let result = request_json(
         base_url,
         api_token,
@@ -32,7 +50,7 @@ pub(crate) fn execute_direct_mesh_solve(
         "/api/direct-mesh/solve",
         Some(body),
     )?;
-    let mut normalized = normalize_job_submission_result(result);
+    let mut normalized = normalize_job_submission_with_context(result, &context)?;
     if let Some(endpoint) = normalized
         .get("raw")
         .and_then(|raw| raw.get("direct_mesh"))
@@ -59,66 +77,15 @@ fn resolve_direct_mesh_source(
     api_token: Option<&str>,
     payload: &Value,
 ) -> Result<Value, HeadlessExecutorError> {
-    if payload.get("input").is_some_and(Value::is_object)
-        || payload.get("model_payload").is_some_and(Value::is_object)
-    {
-        return Ok(payload.clone());
+    if payload.get("model_version_id").is_some() || payload.get("modelVersionId").is_some() {
+        return load_model_reference(base_url, api_token, payload, ModelReference::Version)
+            .map(|loaded| loaded.resolved);
     }
-    if pick_string(payload, &["model_version_id", "modelVersionId"]).is_some() {
-        return load_model_reference(
-            base_url,
-            api_token,
-            payload,
-            &["model_version_id", "modelVersionId"],
-            "model_version_id",
-            "model-versions",
-            "version",
-        );
-    }
-    if pick_string(payload, &["model_id", "modelId"]).is_some() {
-        return load_model_reference(
-            base_url,
-            api_token,
-            payload,
-            &["model_id", "modelId"],
-            "model_id",
-            "models",
-            "model",
-        );
+    if payload.get("model_id").is_some() || payload.get("modelId").is_some() {
+        return load_model_reference(base_url, api_token, payload, ModelReference::Model)
+            .map(|loaded| loaded.resolved);
     }
     Ok(payload.clone())
-}
-
-fn load_model_reference(
-    base_url: &str,
-    api_token: Option<&str>,
-    payload: &Value,
-    id_keys: &[&str],
-    canonical_id_key: &str,
-    route: &str,
-    envelope_key: &str,
-) -> Result<Value, HeadlessExecutorError> {
-    let id = required_path_segment(payload, id_keys)?;
-    let envelope = request_json(
-        base_url,
-        api_token,
-        "GET",
-        &format!("/api/v1/{route}/{id}"),
-        None,
-    )?;
-    let model = envelope
-        .get(envelope_key)
-        .and_then(Value::as_object)
-        .ok_or_else(|| error(format!("could not load {envelope_key} {id}")))?;
-    let mut resolved = payload.as_object().cloned().unwrap_or_default();
-    resolved.insert(canonical_id_key.to_string(), Value::String(id.to_string()));
-    resolved.insert(
-        "model_payload".to_string(),
-        model.get("payload").cloned().unwrap_or(Value::Null),
-    );
-    copy_if_missing(&mut resolved, "study_kind", model.get("kind"));
-    copy_if_missing(&mut resolved, "project_id", model.get("project_id"));
-    Ok(Value::Object(resolved))
 }
 
 pub(crate) fn execute_solve_from_model_version(
@@ -126,26 +93,19 @@ pub(crate) fn execute_solve_from_model_version(
     api_token: Option<&str>,
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
-    let model_version_id = required_path_segment(payload, &["model_version_id", "modelVersionId"])?;
-    let envelope = request_json(
-        base_url,
-        api_token,
-        "GET",
-        &format!("/api/v1/model-versions/{model_version_id}"),
-        None,
-    )?;
-    let version = envelope
-        .get("version")
-        .and_then(Value::as_object)
-        .ok_or_else(|| error(format!("could not load model version {model_version_id}")))?;
-    if let Some(action) = version
-        .get("kind")
-        .and_then(Value::as_str)
-        .and_then(direct_fem_action_for_study_kind)
-    {
-        let model = version.get("payload").cloned().unwrap_or(Value::Null);
-        let mut outcome =
-            execute_direct_fem_submit(base_url, api_token, &action, &json!({ "model": model }))?;
+    let loaded = load_model_reference(base_url, api_token, payload, ModelReference::Version)?;
+    let resolved = loaded.resolved;
+    let model_version_id = resolved["model_version_id"]
+        .as_str()
+        .expect("validated reference identity");
+    if let Some(action) = direct_fem_action_for_study_kind(&loaded.kind) {
+        let model = resolved["model_payload"].clone();
+        let mut outcome = execute_direct_fem_submit(
+            base_url,
+            api_token,
+            &action,
+            &json!({"model":model,"model_version_id":model_version_id,"project_id":resolved["project_id"]}),
+        )?;
         outcome
             .result
             .as_object_mut()
@@ -156,18 +116,7 @@ pub(crate) fn execute_solve_from_model_version(
             );
         return Ok(outcome);
     }
-    let mut resolved = payload.as_object().cloned().unwrap_or_default();
-    resolved.insert(
-        "model_version_id".to_string(),
-        Value::String(model_version_id.to_string()),
-    );
-    resolved.insert(
-        "model_payload".to_string(),
-        version.get("payload").cloned().unwrap_or(Value::Null),
-    );
-    copy_if_missing(&mut resolved, "study_kind", version.get("kind"));
-    copy_if_missing(&mut resolved, "project_id", version.get("project_id"));
-    let mut outcome = execute_direct_mesh_solve(base_url, api_token, &Value::Object(resolved))?;
+    let mut outcome = execute_resolved_mesh_solve(base_url, api_token, &resolved)?;
     outcome
         .result
         .as_object_mut()
@@ -193,6 +142,7 @@ pub(crate) fn execute_solve_and_wait_from_model_version(
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
     validate_job_wait_options(payload)?;
+    prefer_job_result(payload)?;
     let solved = execute_solve_from_model_version(base_url, api_token, payload)?;
     let job_id = solved
         .result
@@ -201,13 +151,19 @@ pub(crate) fn execute_solve_and_wait_from_model_version(
         .and_then(Value::as_str)
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .ok_or_else(|| error("solve response did not contain a job_id"))?;
+        .ok_or_else(|| error("solve response did not contain a job_id"))?
+        .to_owned();
     let mut wait_payload =
         Map::from_iter([("job_id".to_string(), Value::String(job_id.to_string()))]);
+    // Keep the selected saved version as a read constraint, not just an output label.
+    let version_id = solved.result["model_version_id"].clone();
+    wait_payload.insert("model_version_id".into(), version_id.clone());
     copy_selected(
         payload,
         &mut wait_payload,
         &[
+            "project_id",
+            "projectId",
             "interval_ms",
             "timeout_ms",
             "resume_policy",
@@ -221,36 +177,51 @@ pub(crate) fn execute_solve_and_wait_from_model_version(
     let waited = execute_job_wait(base_url, api_token, &Value::Object(wait_payload))?;
     let mut result_payload =
         Map::from_iter([("job_id".to_string(), Value::String(job_id.to_string()))]);
+    result_payload.insert("model_version_id".into(), version_id);
     copy_selected(
         payload,
         &mut result_payload,
-        &["prefer_job_result", "direct_mesh"],
+        &[
+            "project_id",
+            "projectId",
+            "prefer_job_result",
+            "preferJobResult",
+            "direct_mesh",
+        ],
     );
     let fetched = execute_result_fetch(base_url, api_token, &Value::Object(result_payload))?;
+    Ok(outcome(combine_solve_and_wait_results(
+        &job_id,
+        solved.result,
+        waited.result,
+        fetched.result,
+    )))
+}
+
+pub(crate) fn combine_solve_and_wait_results(
+    job_id: &str,
+    solved: Value,
+    waited: Value,
+    fetched: Value,
+) -> Value {
     let status = waited
-        .result
         .get("status")
         .cloned()
         .unwrap_or_else(|| Value::String("completed".to_string()));
     let model_version_id = solved
-        .result
         .get("model_version_id")
         .cloned()
         .unwrap_or(Value::Null);
-    let endpoint = solved
-        .result
-        .get("endpoint")
-        .cloned()
-        .unwrap_or(Value::Null);
-    Ok(outcome(json!({
-        "job_id": job_id,
-        "status": status,
-        "model_version_id": model_version_id,
-        "endpoint": endpoint,
-        "solve": solved.result,
-        "wait": waited.result,
-        "result": fetched.result,
-    })))
+    let endpoint = solved.get("endpoint").cloned().unwrap_or(Value::Null);
+    Value::Object(Map::from_iter([
+        ("job_id".into(), Value::String(job_id.into())),
+        ("status".into(), status),
+        ("model_version_id".into(), model_version_id),
+        ("endpoint".into(), endpoint),
+        ("solve".into(), solved),
+        ("wait".into(), waited),
+        ("result".into(), fetched),
+    ]))
 }
 
 fn direct_mesh_request(payload: &Value) -> Result<Value, HeadlessExecutorError> {
@@ -464,14 +435,6 @@ fn required_array<'a>(
         .and_then(Value::as_array)
         .map(Vec::as_slice)
         .ok_or_else(|| error(format!("study input requires {key} array")))
-}
-
-fn copy_if_missing(target: &mut Map<String, Value>, key: &str, value: Option<&Value>) {
-    if !target.contains_key(key) {
-        if let Some(value) = value.cloned() {
-            target.insert(key.to_string(), value);
-        }
-    }
 }
 
 fn copy_selected(source: &Value, target: &mut Map<String, Value>, keys: &[&str]) {

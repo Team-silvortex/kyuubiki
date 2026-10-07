@@ -10,17 +10,17 @@
     <main class="docs-shell">
       <section class="docs-hero">
         <div class="docs-kicker">Current Line Mirror · Chapter 2</div>
-        <h1>daji 3.4.7</h1>
+        <h1>daji 3.5.0</h1>
         <p class="docs-copy">
           Early Daji prioritizes hardening an agent-driven industrial research
           system: bounded studies, real execution, numerical trust, safe recovery,
           and reproducible evidence rather than a larger feature catalog.
         </p>
         <p class="docs-copy">
-          The current development point is <code>daji 3.4.7</code>.
-          Source package metadata targets <code>3.4.5</code>; the last locally built
+          The current development point is <code>daji 3.5.0</code>.
+          Source package metadata targets <code>3.5.0</code>; the last locally built
           and installed desktop/runtime baseline remains <code>daji 3.4.0</code>.
-          This patch does not rebuild or install binaries;
+          This checkpoint does not rebuild or install binaries;
           public distribution remains a separate, evidence-gated action.
           Daji succeeds the <code>moxi 2.x</code> development line;
           historical qualification keeps its original version and scope.
@@ -49,40 +49,39 @@
         </article>
 
         <article class="docs-card">
-          <h2>Current 3.4.7 checkpoint</h2>
+          <h2>Current 3.5.0 checkpoint</h2>
           <ul class="docs-list">
-            <li>Tridiagonal preparation validates physical symmetry and range once; errors and cancellation cannot silently become fallback.</li>
-            <li>Vector arithmetic, refinement and final physical validation use bounded cancellation checks. Earlier private modes are discarded if a later mode fails.</li>
-            <li>Nontridiagonal single-mode problems up to 256 active degrees of freedom use complete-spectrum admission and bounded coordinate correction, retaining the eigenvalue and 1e-8 physical residual gate.</li>
-            <li>Rust Headless and development Agent-stage tests cover failure isolation and replay. Numerical algorithms remain in Solver.</li>
-            <li>Multimode, projection, phase and quantized-QR proposals remain test-only. The tiny-scale 128-element public solve still fails closed; test-only success is not public or installed qualification.</li>
-            <li>Recompute affected modal results. The following capabilities retain their earlier evidence scope; this patch adds no Linux, installed-platform or scale qualification.</li>
-            <li>Truss, thermal-truss, beam, and frame operators check assembly and recovered fields, including fixed systems and arithmetic extremes.</li>
-            <li>Planar bending-field energy and spatial thermal-energy cancellation are corrected; support bases and recovered reactions are stabilized.</li>
-            <li>Spatial section hints preserve an orthonormal, right-handed basis and equivalent fields without changing the default reference-axis rule.</li>
-            <li>Public Solver and Rust Headless plan/bridge/Engine regressions cover analytical fields, orientation, refinement, cancellation, and fresh replay on macOS and Linux.</li>
-            <li>Recompute affected historical results. These tests are not new external-solver, general physics, Windows, installed-Agent, GUI, or scale qualification.</li>
-            <li>Workflow admission/deletion commit job and result together under Orchestra ownership. Failed writes preserve the previous pair.</li>
-            <li>Result administration rejects private recovery injection, retains workflow identity, and does not recreate missing receipts.</li>
-            <li>CST orientation, Q4/tetrahedral geometry, and thermal-plane output receive kernel and headless regressions. Recompute historical clockwise/mixed CST results before research reuse.</li>
-            <li>Paired Linux kernel benchmarks are scoped measurements, not whole-solve performance claims.</li>
-            <li>Rust and Elixir share condition and named-input routing contracts. Full-snapshot job updates reject stale progress.</li>
-            <li>Solver results and completion publish atomically; workflow runtime, recovery envelopes, and job transitions also commit together.</li>
-            <li>Memory jobs/results share one integrity-checked generation. Scoped storage outages preserve watchdog/coordinator availability and expose degraded health with unknown counts.</li>
-            <li>Workflow graphs pass bounded topology and JSON validation before execution. Operator results pass publication checks before downstream consumption.</li>
-            <li>Explicit branch skipping preserves failure receipts; deterministic diagnostics and shared Rust/Elixir fixtures strengthen replay consistency.</li>
-            <li>CI repairs cover split metric aliases, real quality-score output, terminal job receipts, and a bounded pre-page browser startup retry.</li>
-            <li>The modeling viewport brings setup, modeling, inline save, execution, and results together; fullscreen retains its own compact tools.</li>
-            <li>Hub bundle creation has a focused flow and native directory selection.</li>
-            <li>PWDT has a dedicated workspace, embedded editor, and grouped execution and inspection panels.</li>
-            <li>Material-library, runtime, and security controls use compact panel grouping.</li>
-            <li>Local language-pack repairs remove mixed-language copy; Arabic, Persian, and Spanish PWDT each cover 175 panel, DSL, and catalog entries.</li>
-            <li>Translation gaps remain in SDK-bridge copy, generated summaries, diagnostics, and other locale surfaces. Thirty available packs do not mean complete translation.</li>
-            <li>The coverage tensor retains open scenarios; scoped solver and storage regressions do not establish all-physics, large-scale, or installed-release qualification.</li>
-            <li>GUI and backend actions must still close complete, recoverable research journeys. New packages need their own platform checks.</li>
+            <li>Native execution advances only from valid completion receipts and actual source bindings. Risk labels and approval gates remain contract-owned.</li>
+            <li>Job waits validate the requested identity; result reads require completed jobs with explicit object results.</li>
+            <li>Lost or invalid write acknowledgements stop as unknown outcomes without replay. Inspect server records before authorizing continuation.</li>
+            <li>Complete 2xx submissions also require usable job IDs and consistent public status. Malformed receipts stop before later work; explicit failed/cancelled jobs remain known failures.</li>
+            <li>Native library writes validate usable identities and requested objects/parents before advancing. Registered FEM saved-version jobs retain their server-side version association.</li>
+            <li>Saved model/version reads match their requested identity and parents before computation. Mixed inline/reference inputs stop; native mesh fallback preserves verified context without inventing a saved version for a mutable model.</li>
+            <li>Native job reads enforce explicit project/version/case hints and reject ambiguous options. Saved-version solve/wait carries its version constraint through result reading; read failure never authorizes automatic replay.</li>
+            <li>Native submissions match transmitted project/version association before accepting job bindings. Orchestra rejects contradictory explicit pairs before creating work; uncertain replies do not authorize replay.</li>
+            <li>Single-job queries validate identity, state and explicit association before returning bindings. Failed/cancelled jobs remain inspectable; successful observation is not completed computation.</li>
+            <li>Native HTTP reads and upload receipts share wire/header limits and nonrenewable network deadlines. Oversized writes remain unknown without replay; large result reads retain a separate budget. Full parsed values and raw/result mirrors are not a process-wide memory cap.</li>
+            <li>Native batch bindings retain only later-referenced outputs and move each field on final use. Fanout and report shapes remain unchanged; real SDK/CLI result-to-version chains preserve full arrays without repeating computation. Live branches and public result normalization still allocate.</li>
+            <li>Native job/result and combined solve/wait normalization avoid extra envelope copies, retaining independent public mirrors and unchanged receipt/completion gates. Real SDK/CLI result persistence is checked without extra computation; pointer tests are not RSS or scale qualification.</li>
+            <li>Native inline JSON retains one bounded encoded buffer, sends borrowed header/body vectors and releases the body before response reading. Exact-size oversize rejection is pre-connect; real SDK/CLI multilingual notes are preserved. This is not a total RSS/CPU bound or scale claim.</li>
+            <li>Original TaskIR attempts keep their identity and owning endpoint; missing or expired receipts never authorize peer fallback.</li>
+            <li>Retained macOS and Linux source regressions exercise actual project commits and accepted bar calculations with lost replies. Metadata alignment is not new installed-platform acceptance.</li>
+            <li>Earlier modal research remains test-only. Numerical algorithms stay in Solver and execution authority stays in Engine/Agent.</li>
+            <li>Book, SDK, update and language-pack targets follow 3.5.0; translation content and historical evidence grades are unchanged.</li>
+            <li>Four maturity, 19 evidence-grade and 14 P0 tensor gaps remain. This checkpoint adds no durable recovery, exactly-once or public distribution claim.</li>
           </ul>
           <div class="docs-links">
             <a class="docs-link" href="../../../../docs/book-ch02-version-line.html#current-checkpoint">Central checkpoint</a>
+            <a class="docs-link" href="../../../../reports/headless-submission-receipts-20261007.md">Submission receipt follow-up</a>
+            <a class="docs-link" href="../../../../reports/headless-library-receipts-20261007.md">Library receipt and saved-version follow-up</a>
+            <a class="docs-link" href="../../../../reports/headless-model-reference-gates-20261007.md">Saved model reference follow-up</a>
+            <a class="docs-link" href="../../../../reports/headless-job-read-gates-20261007.md">Job/result read association follow-up</a>
+            <a class="docs-link" href="../../../../reports/headless-submission-context-20261007.md">Submission association follow-up</a>
+            <a class="docs-link" href="../../../../reports/headless-job-fetch-gates-20261007.md">Single job observation follow-up</a>
+            <a class="docs-link" href="../../../../reports/headless-response-budgets-20261007.md">Response budget follow-up</a>
+            <a class="docs-link" href="../../../../reports/headless-binding-lifetimes-20261007.md">Binding lifetime follow-up</a>
+            <a class="docs-link" href="../../../../reports/headless-result-ownership-20261007.md">Result ownership follow-up</a>
+            <a class="docs-link" href="../../../../reports/headless-request-buffers-20261007.md">Request buffer follow-up</a>
             <a class="docs-link" href="../../../../docs/tutorial-pwdt-automation.html">PWDT workspace tutorial</a>
             <a class="docs-link" href="../../../../docs/language-packs.md">Translation coverage and limits</a>
           </div>

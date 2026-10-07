@@ -1,6 +1,7 @@
 use crate::execution_observability::summarize_execution;
 use crate::operator_task::operator_task_prepare_preview_or_error;
 use crate::preflight_report::build_batch_validation_failure_report;
+use crate::workflow_binding_results::BindingResults;
 use crate::workflow_bindings::{binding_failure_step, resolve_step_payload};
 use crate::{
     HeadlessExecutionBatch, HeadlessExecutionSummary, HeadlessRisk, HeadlessValidationReport,
@@ -9,7 +10,6 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::collections::HashMap;
 
 const MAX_REPORT_ARRAY_ITEMS: usize = 128;
 const REPORT_ARRAY_SAMPLE_ITEMS: usize = 3;
@@ -57,7 +57,7 @@ pub fn run_batch_dry(
     if !validation.ok {
         return build_batch_validation_failure_report(batch, "dry_run", validation);
     }
-    let mut results = HashMap::<usize, Value>::new();
+    let mut results = BindingResults::new(batch);
     let mut steps = Vec::with_capacity(batch.steps.len());
     let mut executed_step_count = 0;
     let mut blocked_by_confirmation = None;
@@ -87,7 +87,7 @@ pub fn run_batch_dry(
             });
             break;
         }
-        let payload = match resolve_step_payload(step, &results) {
+        let payload = match resolve_step_payload(step, &mut results) {
             Ok(payload) => payload,
             Err(message) => {
                 status = "failed".into();
@@ -107,7 +107,7 @@ pub fn run_batch_dry(
             match prepared {
                 Ok(preview) => {
                     executed_step_count += 1;
-                    results.insert(step.index, preview.clone());
+                    results.insert_preview(step.index, &preview);
                     steps.push(HeadlessExecutionStepReport {
                         index: step.index,
                         action: step.action.clone(),
@@ -138,7 +138,7 @@ pub fn run_batch_dry(
 
         let result_preview = build_result_preview(&step.action, step.index, &payload);
         executed_step_count += 1;
-        results.insert(step.index, result_preview.clone());
+        results.insert_preview(step.index, &result_preview);
         steps.push(HeadlessExecutionStepReport {
             index: step.index,
             action: step.action.clone(),

@@ -1,6 +1,5 @@
-use crate::service_executor::{
-    normalize_job_state_result, request_json_with_deadline, required_path_segment,
-};
+use crate::service_executor::{normalize_job_state_result, request_json_with_deadline};
+use crate::service_executor_job_read::JobReadRequest;
 use crate::service_executor_job_receipt::validate_job_receipt;
 use crate::{HeadlessExecutorError, HeadlessExecutorOutcome};
 use serde_json::{Value, json};
@@ -8,6 +7,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 const TERMINAL_JOB_STATUSES: &[&str] = &["completed", "failed", "cancelled"];
+pub(crate) const FAILED_JOB: &str = "job_terminal_failed:";
+pub(crate) const CANCELLED_JOB: &str = "job_terminal_cancelled:";
 const DEFAULT_INTERVAL_MS: u64 = 1_000;
 const DEFAULT_TIMEOUT_MS: u64 = 60_000;
 const MAX_TOTAL_TIMEOUT_MS: u64 = 86_400_000;
@@ -207,7 +208,8 @@ pub(crate) fn execute_job_wait(
     api_token: Option<&str>,
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
-    let job_id = required_path_segment(payload, &["job_id", "jobId"])?;
+    let read = JobReadRequest::parse(payload)?;
+    let job_id = read.job_id;
     let options = WaitOptions::parse(payload)?;
     let started_at = Instant::now();
     let mut progress = WaitProgress {
@@ -240,6 +242,7 @@ pub(crate) fn execute_job_wait(
             message: format!("failed while waiting for job {job_id}: {}", error.message),
         })?;
         validate_job_receipt(job_id, &result)?;
+        read.validate_context(&result)?;
         let mut normalized = normalize_job_state_result(result);
         if Instant::now() >= request_deadline {
             return Err(progress.timeout_error(job_id, options.resume_policy));
@@ -296,8 +299,15 @@ pub(crate) fn reject_unsuccessful_terminal_job(
         .and_then(|value| value.get("message"))
         .and_then(Value::as_str)
         .unwrap_or("service job did not complete successfully");
+    let marker = if status == "cancelled" {
+        CANCELLED_JOB
+    } else {
+        FAILED_JOB
+    };
     Err(HeadlessExecutorError {
-        message: format!("service job {job_id} reached terminal status {status}: {detail}"),
+        message: format!(
+            "{marker} service job {job_id} reached terminal status {status}: {detail}"
+        ),
     })
 }
 

@@ -1,5 +1,8 @@
 use crate::HeadlessExecutorError;
-use std::io::{self, Read, Write};
+use crate::service_executor_response_budget::{
+    RESPONSE_LIMIT, check_response_head, limit_error, response_budget,
+};
+use std::io::{self, IoSlice, Read, Write};
 use std::net::{IpAddr, SocketAddr, TcpStream, ToSocketAddrs};
 use std::sync::{
     Arc, LazyLock,
@@ -10,7 +13,6 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 const MAX_RESOLVERS: usize = 4;
-const MAX_STATUS_RESPONSE_BYTES: usize = 8_000_000;
 static RESOLVERS: LazyLock<Arc<AtomicUsize>> = LazyLock::new(|| Arc::new(AtomicUsize::new(0)));
 
 pub(crate) fn remaining_timeout(
@@ -89,11 +91,20 @@ impl Drop for ResolverSlot {
 
 pub(crate) fn write_before_deadline(
     stream: &mut TcpStream,
-    mut bytes: &[u8],
+    bytes: &[u8],
     deadline: Instant,
     io_timeout: Duration,
 ) -> Result<(), HeadlessExecutorError> {
-    while !bytes.is_empty() {
+    write_parts_before_deadline(stream, &mut [IoSlice::new(bytes)], deadline, io_timeout)
+}
+
+pub(crate) fn write_parts_before_deadline(
+    stream: &mut TcpStream,
+    mut bytes: &mut [IoSlice<'_>],
+    deadline: Instant,
+    io_timeout: Duration,
+) -> Result<(), HeadlessExecutorError> {
+    while bytes.iter().any(|part| !part.is_empty()) {
         stream
             .set_write_timeout(Some(remaining_timeout(deadline, io_timeout)?))
             .map_err(|cause| {
@@ -101,9 +112,9 @@ pub(crate) fn write_before_deadline(
                     "failed to configure service write timeout: {cause}"
                 ))
             })?;
-        match stream.write(bytes) {
+        match stream.write_vectored(bytes) {
             Ok(0) => return Err(error("failed to write service request: connection closed")),
-            Ok(length) => bytes = &bytes[length..],
+            Ok(length) => IoSlice::advance_slices(&mut bytes, length),
             Err(cause) if cause.kind() == io::ErrorKind::Interrupted => continue,
             Err(cause) => {
                 return Err(error(format!(
@@ -115,33 +126,13 @@ pub(crate) fn write_before_deadline(
     remaining_timeout(deadline, io_timeout).map(|_| ())
 }
 
-pub(crate) fn read_before_deadline(
-    stream: &mut TcpStream,
-    deadline: Instant,
-    io_timeout: Duration,
-) -> Result<String, HeadlessExecutorError> {
-    read_limited_before_deadline(
-        stream,
-        deadline,
-        io_timeout,
-        MAX_STATUS_RESPONSE_BYTES,
-        "job status",
-    )
-}
-
 pub(crate) fn read_service_response(
     stream: &mut TcpStream,
     path: &str,
     deadline: Instant,
     io_timeout: Duration,
 ) -> Result<String, HeadlessExecutorError> {
-    let (limit, context) = match path {
-        "/api/v1/operator-tasks/execute" => (64 * 1024 * 1024, "operator task"),
-        "/api/v1/operator-tasks/fetch-dispatch-result" => {
-            (10 * 1024 * 1024, "original task result")
-        }
-        _ => return read_before_deadline(stream, deadline, io_timeout),
-    };
+    let (limit, context) = response_budget(path);
     read_limited_before_deadline(stream, deadline, io_timeout, limit, context)
 }
 
@@ -154,6 +145,7 @@ pub(crate) fn read_limited_before_deadline(
 ) -> Result<String, HeadlessExecutorError> {
     let mut response = Vec::new();
     let mut buffer = [0; 8192];
+    let mut head_checked = false;
     loop {
         stream
             .set_read_timeout(Some(remaining_timeout(deadline, io_timeout)?))
@@ -161,12 +153,27 @@ pub(crate) fn read_limited_before_deadline(
         match stream.read(&mut buffer) {
             Ok(0) => break,
             Ok(length) => {
-                if response.len() + length > max_bytes {
-                    return Err(error(format!(
-                        "{context} response exceeds the {max_bytes}-byte transport limit"
-                    )));
+                if length > max_bytes.saturating_sub(response.len()) {
+                    return Err(limit_error(context, max_bytes));
+                }
+                let scan_from = response.len().saturating_sub(3);
+                let required = response.len() + length;
+                if required > response.capacity() {
+                    let capacity = required
+                        .max(response.capacity().saturating_mul(2))
+                        .min(max_bytes);
+                    response
+                        .try_reserve_exact(capacity - response.len())
+                        .map_err(|_| {
+                            error(format!(
+                                "{RESPONSE_LIMIT} unable to reserve response buffer"
+                            ))
+                        })?;
                 }
                 response.extend_from_slice(&buffer[..length]);
+                if !head_checked {
+                    head_checked = check_response_head(&response, scan_from, max_bytes, context)?;
+                }
             }
             Err(cause) if cause.kind() == io::ErrorKind::Interrupted => continue,
             Err(cause) => {

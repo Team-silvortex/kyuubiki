@@ -1,7 +1,8 @@
 use crate::HeadlessExecutorError;
 use crate::service_executor_deadline::{remaining_timeout, resolve_before_deadline};
+use std::borrow::Cow;
 use std::io;
-use std::net::{TcpStream, ToSocketAddrs};
+use std::net::TcpStream;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -14,6 +15,7 @@ const CONNECT_RETRY_DELAYS: [Duration; 3] = [
 pub(crate) const REQUEST_IO_TIMEOUT: Duration = Duration::from_secs(30);
 pub(crate) const ARTIFACT_IO_TIMEOUT: Duration = Duration::from_secs(600);
 
+#[cfg(test)]
 pub(crate) fn connect_service_stream(
     host: &str,
     port: u16,
@@ -30,16 +32,8 @@ pub(crate) fn connect_service_stream_with_deadline(
     context: &str,
     deadline: Option<Instant>,
 ) -> Result<TcpStream, HeadlessExecutorError> {
-    let addresses = if let Some(deadline) = deadline {
-        resolve_before_deadline(host, port, deadline)?
-    } else {
-        (host, port)
-            .to_socket_addrs()
-            .map_err(|error| HeadlessExecutorError {
-                message: format!("failed to resolve {host}:{port} for {context}: {error}"),
-            })?
-            .collect::<Vec<_>>()
-    };
+    let deadline = deadline.unwrap_or_else(|| Instant::now() + io_timeout);
+    let addresses = resolve_before_deadline(host, port, deadline)?;
     if addresses.is_empty() {
         return Err(HeadlessExecutorError {
             message: format!("no network addresses resolved for {host}:{port}"),
@@ -51,16 +45,10 @@ pub(crate) fn connect_service_stream_with_deadline(
     for attempt in 0..=CONNECT_RETRY_DELAYS.len() {
         attempt_count += 1;
         for address in &addresses {
-            let connect_timeout = deadline
-                .map(|deadline| remaining_timeout(deadline, CONNECT_TIMEOUT))
-                .transpose()?
-                .unwrap_or(CONNECT_TIMEOUT);
+            let connect_timeout = remaining_timeout(deadline, CONNECT_TIMEOUT)?;
             match TcpStream::connect_timeout(address, connect_timeout) {
                 Ok(stream) => {
-                    let io_timeout = deadline
-                        .map(|deadline| remaining_timeout(deadline, io_timeout))
-                        .transpose()?
-                        .unwrap_or(io_timeout);
+                    let io_timeout = remaining_timeout(deadline, io_timeout)?;
                     stream
                         .set_read_timeout(Some(io_timeout))
                         .and_then(|_| stream.set_write_timeout(Some(io_timeout)))
@@ -78,10 +66,7 @@ pub(crate) fn connect_service_stream_with_deadline(
         if !last_error.as_ref().is_some_and(retryable_connect_error) {
             break;
         }
-        let delay = deadline
-            .map(|deadline| remaining_timeout(deadline, *delay))
-            .transpose()?
-            .unwrap_or(*delay);
+        let delay = remaining_timeout(deadline, *delay)?;
         thread::sleep(delay);
     }
 
@@ -106,11 +91,11 @@ fn retryable_connect_error(error: &io::Error) -> bool {
     )
 }
 
-pub(crate) fn decode_http_response_body(
+pub(crate) fn decode_http_response_body<'a>(
     head: &str,
-    body: &str,
+    body: &'a str,
     context: &str,
-) -> Result<String, HeadlessExecutorError> {
+) -> Result<Cow<'a, str>, HeadlessExecutorError> {
     let chunked = head.lines().any(|line| {
         line.split_once(':').is_some_and(|(name, value)| {
             name.eq_ignore_ascii_case("transfer-encoding")
@@ -120,7 +105,7 @@ pub(crate) fn decode_http_response_body(
         })
     });
     if !chunked {
-        return Ok(body.to_string());
+        return Ok(Cow::Borrowed(body));
     }
 
     let bytes = body.as_bytes();
@@ -139,6 +124,7 @@ pub(crate) fn decode_http_response_body(
         cursor = line_end + 2;
         if size == 0 {
             return String::from_utf8(decoded)
+                .map(Cow::Owned)
                 .map_err(|_| response_error(context, "decoded body is not UTF-8"));
         }
         let chunk_end = cursor

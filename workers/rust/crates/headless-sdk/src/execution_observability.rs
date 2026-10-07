@@ -125,6 +125,46 @@ fn classify_failure(step_index: usize, action: &str, message: String) -> Headles
             "none",
             "Inspect control-plane records and the owning Agent before any explicit continuation; a missing or invalid write acknowledgement does not prove nonexecution. Do not replay the step or batch automatically.",
         )
+    } else if message.starts_with(crate::service_executor_response_budget::RESPONSE_LIMIT) {
+        (
+            "service_response_limit_exceeded",
+            "transport",
+            false,
+            "none",
+            "Inspect the endpoint response size and use a bounded model/result transfer; do not retry an oversized response automatically or replay completed computation.",
+        )
+    } else if message.starts_with(crate::service_executor_job_wait::FAILED_JOB) {
+        (
+            "runtime_failure",
+            "execution",
+            false,
+            "none",
+            "Inspect the failed job and its reason before an explicit replacement; do not replay an acknowledged failed submission automatically.",
+        )
+    } else if message.starts_with(crate::service_executor_job_wait::CANCELLED_JOB) {
+        (
+            "job_cancelled",
+            "execution",
+            false,
+            "none",
+            "Inspect the cancellation actor and reason before creating a replacement job.",
+        )
+    } else if message.starts_with(crate::service_executor_job_read::INVALID_READ) {
+        (
+            "contract_failure",
+            "validation",
+            false,
+            "none",
+            "Repair the task read options or reconcile the requested project/version association before explicitly continuing; do not replay completed computation.",
+        )
+    } else if message.starts_with(crate::service_executor_model_reference::INVALID_REFERENCE) {
+        (
+            "contract_failure",
+            "validation",
+            false,
+            "none",
+            "Inspect the requested saved model/version and repair its identity or source selection before explicitly submitting computation.",
+        )
     } else if message.starts_with(crate::service_executor_job_receipt::INVALID_RECEIPT) {
         (
             "job_receipt_invalid",
@@ -202,6 +242,8 @@ fn classify_failure(step_index: usize, action: &str, message: String) -> Headles
         || normalized.contains("failed to read service response")
         || normalized.contains("failed to write service request")
         || normalized.contains("invalid http response")
+        || normalized.starts_with("service request deadline exhausted")
+        || normalized.starts_with("service resolver capacity exhausted")
     {
         (
             "transport_failure",

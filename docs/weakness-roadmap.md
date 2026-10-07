@@ -36,7 +36,7 @@ version; this review does not rerun product qualification. See the
 [3.4.5 progress summary](current-line.md#daji-345-checkpoint) for recent source
 changes that must not be confused with release readiness.
 
-The hardening profile now follows `daji 3.4.x`, retaining tensor v5 and all 224
+The hardening profile now follows `daji 3.5.x`, retaining tensor v5 and all 224
 calibration claims (222 proven, two partial). The request-reassembly and banded
 candidate follow-ups below add two verified claims, now 226 (224 proven, two partial), without
 closing a qualified target. The September 13 v4-to-v5 correction removed

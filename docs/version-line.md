@@ -8,9 +8,9 @@ The active product identity is defined by the
 
 - codename: `daji`
 - active line: `3.x`
-- current development point: `daji 3.4.7`
-- current documentation target: `daji 3.4.x` line
-- current source packaging target: `daji 3.4.7`
+- current development point: `daji 3.5.0`
+- current documentation target: `daji 3.5.x` line
+- current source packaging target: `daji 3.5.0`
 - last locally built and installed baseline: `daji 3.4.0`
 - first version: `3.0.0`
 - terminal version: `3.20.9`
@@ -26,8 +26,8 @@ the active Daji line. This transition does not assert that every planned moxi
 patch was shipped.
 
 Current development documentation follows `docs/book-manifest.json` and is
-aligned on `3.4.7`. Desktop/runtime manifests, first-party SDK package metadata,
-brand mirrors, update channels, and language-pack targets also use `3.4.7`.
+aligned on `3.5.0`. Desktop/runtime manifests, first-party SDK package metadata,
+brand mirrors, update channels, and language-pack targets also use `3.5.0`.
 This source release does not rebuild or install binaries: the last local
 desktop/runtime baseline remains `3.4.0`. Registry publication and public
 distribution are separate actions; metadata alignment does not establish

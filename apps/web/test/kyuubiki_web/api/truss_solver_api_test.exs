@@ -63,7 +63,7 @@ defmodule KyuubikiWeb.Api.TrussSolverApiTest do
       |> conn(
         "/api/v1/fem/truss-2d/jobs",
         Jason.encode!(%{
-          "project_id" => "ignored-project-id",
+          "project_id" => project["project_id"],
           "model_version_id" => version["version_id"],
           "nodes" => [],
           "elements" => []

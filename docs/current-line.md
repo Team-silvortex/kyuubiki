@@ -1,11 +1,134 @@
 # daji 3.x
 
 This is the single entrypoint for the active Kyuubiki product line.
-The current development point in this line is `daji 3.4.7`.
-Source package metadata targets `3.4.7`; the last locally built and installed
+The current development point in this line is `daji 3.5.0`.
+Source package metadata targets `3.5.0`; the last locally built and installed
 desktop/runtime baseline remains `daji 3.4.0`.
 Local installation does not imply that public downloads or SDK packages have
 been published; platform acceptance remains separately scoped.
+
+## Daji 3.5.0 Checkpoint
+
+October 7, 2026. Commit `0712b88d` starts this source checkpoint with the
+preceding native Headless recovery repairs; current metadata and documentation
+now follow 3.5.0. Historical runs retain their base commit, source metadata,
+platform and working-tree scope rather than being relabeled as 3.5.0 builds.
+
+- Runtime completion requires a valid task-bound receipt. Unknown, failed or
+  blocked execution cannot authorize downstream work or successful-step counts.
+- Whole-value bindings require actual completed source outputs; missing or
+  empty required values stop before the dependent service request.
+- Batch risk labels must match registered action contracts. Sensitive and
+  destructive authorizations are independent and cannot repair invalid labels.
+- Job waits validate identity and public state; result reads require a matching
+  completed job and an explicit object, not merely a retained runtime object.
+- Lost or invalid write acknowledgements and HTTP 5xx responses fail as unknown
+  outcomes without automatic replay. Zero successful steps does not establish
+  zero server-side effects; inspect and reconcile before explicit continuation.
+- Native submissions require a usable job identity and consistent public state,
+  even after a complete 2xx response. Invalid receipts halt before downstream
+  work; known failed/cancelled submissions remain explicit terminal failures.
+- Native library writes require usable record identities and matching requested
+  objects/parents. Malformed successful replies stop as uncertain writes.
+  Registered FEM saved-version solves retain server-side version association.
+- Original TaskIR receipt reads preserve the selected attempt and ownership.
+  Expiry, eviction, restart or endpoint loss remain unknown without peer fallback.
+- Explicit asynchronous solver previews supply job bindings without scientific
+  results. Research posture continues to reject mock computation.
+
+The retained [write-acknowledgement regression](../reports/headless-write-acknowledgements-20261007.md)
+covers actual project commits and accepted bar jobs with their real replies
+withheld from SDK/CLI callers on macOS and remote Linux. The
+[job-result](../reports/headless-job-result-gates-20261007.md),
+[binding](../reports/headless-runtime-bindings-20261007.md),
+[risk](../reports/headless-contract-risk-20261007.md), and
+[original-receipt](../reports/original-receipt-boundaries-20261007.md)
+reports retain their own source fingerprints. These tests are not new installed
+App, authenticated deployment, cross-language, durable or exactly-once proof.
+
+The [submission receipt follow-up](../reports/headless-submission-receipts-20261007.md)
+tests the 3.5.0 source overlay at `0712b88d`. A deliberately corrupted actual
+job acknowledgement stops SDK/CLI callers while the original jobs calculate
+once per explicit request. Test-only reply mutation is not a backend fault
+observed in deployment, and successful submission is not result validation.
+
+The [library receipt follow-up](../reports/headless-library-receipts-20261007.md)
+checks five library write actions and actual database commits with deliberately
+corrupted replies. A normal seven-step research chain retains its saved version
+in the server-side job, computes with actual Rust Agents, independently checks
+the bar displacement and explicitly removes its project. This remains source
+verification, not durable recovery or general scientific qualification.
+
+The [saved reference follow-up](../reports/headless-model-reference-gates-20261007.md)
+checks read identities, parent hints and source ambiguity before computation.
+Corrupted actual model/version replies stop without a job or Agent calculation.
+Normal model and version references retain their distinct context in native FEM
+fallback jobs; mutable models are not relabeled as saved versions. The check is
+not full payload validation or generic mesh deployment qualification.
+
+The [job-read follow-up](../reports/headless-job-read-gates-20261007.md) makes
+native read options and explicit project/version/case constraints enforceable.
+Combined saved-version solves keep their version constraint through waiting and
+fetching. Actual corrupted job associations stop SDK/CLI continuation, while
+normal rereads retrieve the same independently checked result without another
+Agent calculation. These checks do not establish complete result provenance.
+
+The [submission association follow-up](../reports/headless-submission-context-20261007.md)
+checks the project/version actually transmitted before accepting a native job
+acknowledgement. Wrong or missing association stops as an unknown write without
+replay. Orchestra now rejects contradictory explicit project/version pairs
+before creating work, replacing the earlier version-project precedence rule.
+Real SDK/CLI reply-loss tests retain one calculation per explicit experiment.
+This is scoped consistency checking, not authorization or result provenance.
+
+The [single job observation follow-up](../reports/headless-job-fetch-gates-20261007.md)
+closes the ordinary `job_fetch` path's identity/state/association gap. Invalid
+successful replies stop before bindings or downstream actions. Valid failed or
+cancelled jobs remain inspectable: query success is distinct from calculation
+success and completed-result admission. Actual SDK/CLI fault injection preserves
+the original job/result and does not reexecute computation.
+
+The [response-budget follow-up](../reports/headless-response-budgets-20261007.md)
+removes unbounded ordinary HTTP response buffering and makes upload receipts
+use the same bounded reader. Header/declared-length/observed-byte limits and
+nonrenewable network deadlines fail before successful bindings. Large model and
+result reads keep a separate 512 MiB channel; non-chunked bodies avoid one full
+string copy. Actual committed writes remain unknown when their reply exceeds
+the budget, and an already computed result is reread without another calculation.
+Parsed values and retained raw/result mirrors are not a process-wide memory cap.
+
+The [binding lifetime follow-up](../reports/headless-binding-lifetimes-20261007.md)
+retains only later-referenced outputs and moves each field on its final use,
+instead of retaining every complete step result until batch end. Fanout stays
+independent; missing outputs, confirmation gates and report shapes are unchanged.
+A 20-layer ownership test and old-resolver comparisons check native semantics.
+Real SDK/CLI nine-step chains store complete 513-node, 512-element results in
+new model versions without repeating the source calculation. Public result
+normalization and live branches still allocate; this is not an RSS or scale claim.
+
+The [result ownership follow-up](../reports/headless-result-ownership-20261007.md)
+removes extra deep copies when native job/result replies and combined saved-version
+solve/wait envelopes are normalized. Original arrays and strings move into their
+existing public shapes; required raw/result mirrors remain independently mutable.
+Receipt, association, completion and no-replay gates are unchanged. Real SDK/CLI
+experiments store complete results with one calculation per explicit solve.
+Pointer/value checks are not deployed RSS, throughput or scale qualification.
+
+The [request buffer follow-up](../reports/headless-request-buffers-20261007.md)
+encodes inline JSON into one bounded buffer, rejects oversize before connection
+with exact byte diagnostics, and sends borrowed header/body slices without another
+full request copy. The body is released before response reading; partial writes
+retain their original deadline and unknown writes never authorize replay. Real
+SDK/CLI chains preserve complete Unicode/escaped research notes and original
+results, including a version list larger than the former test-reader cap. This
+is not a total RSS/CPU bound, throughput benchmark or scale qualification.
+
+See `releases/snapshots/3.5.0.json`. Package, update, language-pack and book
+targets are aligned, without changing protocol/schema versions, translation
+content or historical grades. The installed baseline remains 3.4.0. The tensor
+continues to have four maturity gaps, 19 evidence-grade gaps and 14 P0 gaps;
+release qualification remains blocked. The 3.5.x mainline continues reliable
+research execution and recovery under the existing Engine/Solver split.
 
 ## Daji 3.4.7 Checkpoint
 

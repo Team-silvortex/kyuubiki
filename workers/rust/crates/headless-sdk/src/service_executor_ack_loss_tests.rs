@@ -29,47 +29,76 @@ impl HeadlessExecutor for RecordingService {
     }
 }
 
-fn observe<R>(response: &[u8], run: impl FnOnce(&str) -> R) -> (R, String) {
+pub(super) fn observe<R>(response: &[u8], run: impl FnOnce(&str) -> R) -> (R, String) {
+    let (result, mut requests) = observe_sequence(vec![response.to_vec()], run);
+    (result, requests.remove(0))
+}
+
+pub(super) fn observe_sequence<R>(
+    responses: Vec<Vec<u8>>,
+    run: impl FnOnce(&str) -> R,
+) -> (R, Vec<String>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    listener.set_nonblocking(true).unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
-    let response = response.to_vec();
     let worker = std::thread::spawn(move || {
-        let (mut stream, _) = listener.accept().unwrap();
-        stream
-            .set_read_timeout(Some(Duration::from_secs(2)))
-            .unwrap();
-        stream
-            .set_write_timeout(Some(Duration::from_secs(2)))
-            .unwrap();
-        let mut request = Vec::new();
-        let mut buffer = [0; 4096];
-        loop {
-            let size = stream.read(&mut buffer).unwrap();
-            assert!(size > 0 && request.len() + size <= 64 * 1024);
-            request.extend_from_slice(&buffer[..size]);
-            if let Some(split) = request.windows(4).position(|part| part == b"\r\n\r\n") {
-                let head = std::str::from_utf8(&request[..split]).unwrap();
-                let length = head
-                    .lines()
-                    .find_map(|line| {
-                        let (name, value) = line.split_once(':')?;
-                        name.eq_ignore_ascii_case("content-length")
-                            .then(|| value.trim().parse::<usize>().unwrap())
-                    })
-                    .unwrap_or(0);
-                if request.len() >= split + 4 + length {
-                    break;
+        let mut requests = Vec::new();
+        for response in responses {
+            let deadline = Instant::now() + Duration::from_secs(3);
+            let mut stream = loop {
+                match listener.accept() {
+                    Ok((stream, _)) => break stream,
+                    Err(error)
+                        if error.kind() == std::io::ErrorKind::WouldBlock
+                            && Instant::now() < deadline =>
+                    {
+                        std::thread::sleep(Duration::from_millis(2))
+                    }
+                    Err(error) => panic!("bounded test accept: {error}"),
+                }
+            };
+            stream.set_nonblocking(false).unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            stream
+                .set_write_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut request = Vec::new();
+            let mut buffer = [0; 4096];
+            loop {
+                let size = stream.read(&mut buffer).unwrap();
+                assert!(size > 0 && request.len() + size <= 64 * 1024);
+                request.extend_from_slice(&buffer[..size]);
+                if let Some(split) = request.windows(4).position(|part| part == b"\r\n\r\n") {
+                    let head = std::str::from_utf8(&request[..split]).unwrap();
+                    let length = head
+                        .lines()
+                        .find_map(|line| {
+                            let (name, value) = line.split_once(':')?;
+                            name.eq_ignore_ascii_case("content-length")
+                                .then(|| value.trim().parse::<usize>().unwrap())
+                        })
+                        .unwrap_or(0);
+                    if request.len() >= split + 4 + length {
+                        break;
+                    }
                 }
             }
+            stream.write_all(&response).unwrap();
+            requests.push(String::from_utf8(request).unwrap());
         }
-        stream.write_all(&response).unwrap();
-        String::from_utf8(request).unwrap()
+        requests
     });
     let result = run(&url);
     (result, worker.join().unwrap())
 }
 
-fn run(url: &str, action: &str, payload: Value) -> (crate::HeadlessRunReport, Vec<String>) {
+pub(super) fn run(
+    url: &str,
+    action: &str,
+    payload: Value,
+) -> (crate::HeadlessRunReport, Vec<String>) {
     let batch = HeadlessExecutionBatch {
         schema_version: "kyuubiki.headless-execution-batch/v1".into(),
         exported_at: "2026-10-07T00:00:00Z".into(),

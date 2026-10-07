@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-10-05T07:24:57Z",
-  "shipping_version": "3.4.7",
+  "generated_at": "2026-10-07T07:01:43Z",
+  "shipping_version": "3.5.0",
   "default_channel": "stable",
   "line": "daji 3.x",
   "source": {
@@ -16,14 +16,14 @@
       "aliases": [
         "daji:latest",
         "daji:3",
-        "daji:3.4",
-        "daji:3.4.7"
+        "daji:3.5",
+        "daji:3.5.0"
       ],
       "line": "3.x",
       "status": "current",
-      "version": "3.4.7",
-      "summary": "Daji 3.4.7 source reliability and cleanup patch: bounded test-only modal material, request-reassembly and lattice comparisons; failure replay; retired duplicate contract checkers and redundant reports. No desktop rebuild or binary publication.",
-      "date": "2026-10-05",
+      "version": "3.5.0",
+      "summary": "Daji 3.5.0 source checkpoint: native Headless completion, binding, contract-owned risk, completed-result and uncertain-write recovery gates. Source metadata, language-pack targets and current documentation aligned; no desktop rebuild or binary publication.",
+      "date": "2026-10-07",
       "notes": [
         "Primary operator-facing update track for the current daji 3.x line.",
         "Targets standard installs that follow the visible installation contract."
@@ -65,7 +65,7 @@
         "managed_path_policy": "workspace_relative",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/3.4.7.json",
+      "snapshot_path": "releases/snapshots/3.5.0.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
@@ -75,57 +75,57 @@
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "3.4.7",
+          "version": "3.5.0",
           "notes": [
-            "Metadata aligned; UI behavior unchanged."
+            "Source metadata aligned; no new GUI acceptance."
           ]
         },
         "hub_gui": {
-          "version": "3.4.7",
+          "version": "3.5.0",
           "notes": [
-            "Documentation and language-pack mirrors aligned; no new desktop artifact."
+            "Book and language-pack target mirrors aligned; no new desktop artifact."
           ]
         },
         "workbench_gui": {
-          "version": "3.4.7",
+          "version": "3.5.0",
           "notes": [
-            "Metadata aligned; no new desktop artifact."
+            "Source metadata aligned; no new desktop artifact."
           ]
         },
         "installer_gui": {
-          "version": "3.4.7",
+          "version": "3.5.0",
           "notes": [
-            "Metadata aligned; no new desktop artifact."
+            "Source and installation contracts aligned; no new desktop artifact."
           ]
         },
         "web_api": {
-          "version": "3.4.7",
+          "version": "3.5.0",
           "notes": [
-            "Metadata aligned; control-plane authority unchanged."
+            "Retained original-receipt validation; control-plane authority unchanged."
           ]
         },
         "rust_headless_sdk": {
-          "version": "3.4.7",
+          "version": "3.5.0",
           "notes": [
-            "Metadata aligned; no registry publication."
+            "Native source recovery gates retained; no registry publication."
           ]
         },
         "python_headless_sdk": {
-          "version": "3.4.7",
+          "version": "3.5.0",
           "notes": [
-            "Metadata aligned; no new Python qualification or publication."
+            "Metadata aligned; native Rust regression is not Python parity."
           ]
         },
         "elixir_headless_sdk": {
-          "version": "3.4.7",
+          "version": "3.5.0",
           "notes": [
-            "Metadata aligned; no new Elixir qualification or publication."
+            "Metadata aligned; native Rust regression is not Elixir parity."
           ]
         },
         "rust_worker_sdk": {
-          "version": "3.4.7",
+          "version": "3.5.0",
           "notes": [
-            "Operator extension API unchanged; separate from Headless control."
+            "Rust operator extension API remains separate from Headless control."
           ]
         }
       },
@@ -134,12 +134,12 @@
   ],
   "versions": [
     {
-      "version": "3.4.7",
+      "version": "3.5.0",
       "line": "3.x",
       "status": "current",
-      "date": "2026-10-05",
-      "summary": "Daji 3.4.7 source reliability and cleanup patch: bounded test-only modal material, request-reassembly and lattice comparisons; failure replay; retired duplicate contract checkers and redundant reports. No desktop rebuild or binary publication.",
-      "snapshot_path": "releases/snapshots/3.4.7.json",
+      "date": "2026-10-07",
+      "summary": "Daji 3.5.0 source checkpoint: native Headless completion, binding, contract-owned risk, completed-result and uncertain-write recovery gates. Source metadata, language-pack targets and current documentation aligned; no desktop rebuild or binary publication.",
+      "snapshot_path": "releases/snapshots/3.5.0.json",
       "channels": [
         "stable"
       ],
@@ -147,9 +147,76 @@
         "daji:stable",
         "daji:latest",
         "daji:3",
-        "daji:3.4",
-        "daji:3.4.7"
+        "daji:3.5",
+        "daji:3.5.0"
       ],
+      "product_surfaces": {
+        "frontend_workbench": {
+          "version": "3.5.0",
+          "notes": [
+            "Source metadata aligned; no new GUI acceptance."
+          ]
+        },
+        "hub_gui": {
+          "version": "3.5.0",
+          "notes": [
+            "Book and language-pack target mirrors aligned; no new desktop artifact."
+          ]
+        },
+        "workbench_gui": {
+          "version": "3.5.0",
+          "notes": [
+            "Source metadata aligned; no new desktop artifact."
+          ]
+        },
+        "installer_gui": {
+          "version": "3.5.0",
+          "notes": [
+            "Source and installation contracts aligned; no new desktop artifact."
+          ]
+        },
+        "web_api": {
+          "version": "3.5.0",
+          "notes": [
+            "Retained original-receipt validation; control-plane authority unchanged."
+          ]
+        },
+        "rust_headless_sdk": {
+          "version": "3.5.0",
+          "notes": [
+            "Native source recovery gates retained; no registry publication."
+          ]
+        },
+        "python_headless_sdk": {
+          "version": "3.5.0",
+          "notes": [
+            "Metadata aligned; native Rust regression is not Python parity."
+          ]
+        },
+        "elixir_headless_sdk": {
+          "version": "3.5.0",
+          "notes": [
+            "Metadata aligned; native Rust regression is not Elixir parity."
+          ]
+        },
+        "rust_worker_sdk": {
+          "version": "3.5.0",
+          "notes": [
+            "Rust operator extension API remains separate from Headless control."
+          ]
+        }
+      },
+      "desktop_artifacts": []
+    },
+    {
+      "version": "3.4.7",
+      "line": "3.x",
+      "status": "archived",
+      "date": "2026-10-05",
+      "summary": "Daji 3.4.7 source reliability and cleanup patch: bounded test-only modal material, request-reassembly and lattice comparisons; failure replay; retired duplicate contract checkers and redundant reports. No desktop rebuild or binary publication.",
+      "snapshot_path": "releases/snapshots/3.4.7.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {
         "frontend_workbench": {
           "version": "3.4.7",

@@ -2,7 +2,7 @@
   "version": "3.4.7",
   "codename": "daji",
   "line": "3.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-10-05",
   "git_commit": "dc5647af108ddbf98db59b7522091e49632dd1b2",
   "summary": "Daji 3.4.7 source reliability and cleanup patch: bounded test-only modal material, request-reassembly and lattice comparisons; failure replay; retired duplicate contract checkers and redundant reports. No desktop rebuild or binary publication.",

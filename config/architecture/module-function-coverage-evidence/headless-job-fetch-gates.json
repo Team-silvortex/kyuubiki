@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native single job observation requires exact request aliases, a matching explicit job/public status and optional caller association before bindings. Valid failed/cancelled records remain inspectable; query success is not successful computation or completed-result admission. Real local SDK/CLI fault injection and diagnostic read tests establish verified source behavior without reexecution, not scientific, durable, installed or cross-language qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-single-job-observation-identity-and-context-gate",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/service_executor.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_job_read.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_job_receipt.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_job_fetch_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_job_read_tests.rs",
+        "workers/rust/crates/cli/tests/support/headless_job_fetch_gates.rs",
+        "docs/headless-sdks.md",
+        "docs/tutorial-headless-rust.html",
+        "reports/headless-job-fetch-gates-20261007.md"
+      ],
+      "required_text": [
+        "Headless Single Job Observation Gates",
+        "Single job observation gate",
+        "validate_job_receipt(job_id, &result)",
+        "observation_requires_an_explicit_job_and_matching_unmodified_identity",
+        "observation_enforces_optional_associations_and_repeated_context",
+        "observation_accepts_every_public_state_without_claiming_computation_success",
+        "real_corrupted_job_observations_stop_sdk_and_cli_without_reexecution",
+        "real_stored_incomplete_jobs_remain_inspectable_but_not_accepted_results",
+        "380 unit tests",
+        "39/39"
+      ]
+    }
+  ]
+}

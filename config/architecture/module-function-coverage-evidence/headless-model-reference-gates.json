@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native saved model/version reads validate selected identities, parents and source exclusivity before submitting computation. Native FEM mesh fallback preserves verified reference context; mutable models are not labeled as saved versions. Actual local Orchestra/Agent checks and bounded fixtures establish verified native source behavior, not full payload, installed, generic mesh or scientific qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-saved-model-reference-pre-submit-gate",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/service_executor_model_reference.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_model_reference_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_solve.rs",
+        "workers/rust/crates/headless-sdk/src/execution_observability.rs",
+        "workers/rust/crates/cli/tests/support/ack_loss_proxy.rs",
+        "workers/rust/crates/cli/tests/support/headless_model_reference_gates.rs",
+        "docs/headless-sdks.md",
+        "docs/tutorial-headless-rust.html",
+        "reports/headless-model-reference-gates-20261007.md"
+      ],
+      "required_text": [
+        "Headless Saved Model Reference Gates",
+        "Saved model reference gate",
+        "model_reference_invalid:",
+        "saved_reads_require_matching_explicit_records_and_safe_parent_identities",
+        "ambiguous_inline_sources_and_invalid_reference_aliases_stop_before_network_io",
+        "valid_saved_reads_preserve_context_in_native_and_explicit_mesh_routes",
+        "real_corrupted_model_reads_never_submit_or_start_calculation",
+        "real_native_mesh_fallback_preserves_verified_reference_context",
+        "357 unit tests",
+        "35/35"
+      ]
+    }
+  ]
+}

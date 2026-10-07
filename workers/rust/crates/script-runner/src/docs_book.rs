@@ -554,11 +554,16 @@ fn sync_replacements(
         ),
         (
             "docs/book-ch02-version-line.html",
-            vec![semver_rule(
-                "current checkpoint is ",
-                " inside",
-                shipping_version,
-            )],
+            vec![
+                semver_rule("current checkpoint is ", " inside", shipping_version),
+                semver_rule("At the current ", " checkpoint", shipping_version),
+                semver_rule("<h2>Daji ", " checkpoint</h2>", shipping_version),
+                semver_rule(
+                    &format!("Source and package metadata now target <code>{codename} "),
+                    "</code>",
+                    shipping_version,
+                ),
+            ],
         ),
         (
             "docs/model-research-onboarding.html",
@@ -633,6 +638,11 @@ fn sync_replacements(
                 semver_rule("Current ", " checkpoint", shipping_version),
                 line_rule(
                     &format!("The current development point is <code>{codename} "),
+                    "</code>",
+                    shipping_version,
+                ),
+                semver_rule(
+                    "Source package metadata targets <code>",
                     "</code>",
                     shipping_version,
                 ),

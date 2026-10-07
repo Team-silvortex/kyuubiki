@@ -66,6 +66,10 @@ fn official_runtime_failure_categories_and_stages_are_declared_in_the_public_sch
         ),
         ("result_fetch", "job_result_unavailable: not completed"),
         ("result_fetch", "result unavailable"),
+        (
+            "result_fetch",
+            "service_response_limit_exceeded: oversized response",
+        ),
         ("solve_bar_1d", "model_artifact_limit_exceeded"),
         ("solve_bar_1d", "frontend_proxy_artifact_limit"),
         ("solve_bar_1d", "endpoint not deployed (404)"),
@@ -143,6 +147,7 @@ fn unknown_outcomes_and_invalid_bindings_cannot_acquire_retry_permission_in_sche
         .find(|rule| rule["if"]["properties"]["category"]["enum"].is_array())
         .expect("non-replayable categories need a schema gate");
     for category in [
+        "service_response_limit_exceeded",
         "service_request_outcome_unknown",
         "operator_task_outcome_unknown",
         "job_receipt_invalid",

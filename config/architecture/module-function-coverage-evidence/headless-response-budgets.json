@@ -1,0 +1,42 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native HTTP ordinary reads and upload acknowledgements share bounded wire/header storage and nonrenewable network deadlines. Large model/result policies remain distinct, non-chunked decoding avoids one whole-body copy, read resource faults stop downstream bindings, and post-write faults remain unknown without replay. Local real SDK/CLI commit/computation tests establish verified source behavior, not process-wide RSS bounds, installed, cross-language, scale, durable or scientific qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-response-wire-budget-and-no-replay-gate",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/service_executor.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_deadline.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_response_budget.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_response_budget_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_artifact_http.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_http.rs",
+        "workers/rust/crates/headless-sdk/src/execution_observability.rs",
+        "workers/rust/crates/headless-sdk/src/failure_receipt_contract_tests.rs",
+        "schemas/headless-failure-receipt.schema.json",
+        "workers/rust/crates/cli/tests/support/headless_response_budgets.rs",
+        "docs/headless-sdks.md",
+        "reports/headless-response-budgets-20261007.md"
+      ],
+      "required_text": [
+        "Headless Native HTTP Response Budgets",
+        "Native HTTP response budgets",
+        "service_response_limit_exceeded",
+        "advertised_oversize_stops_before_waiting_for_body_or_connection_close",
+        "slow_trickle_cannot_renew_ordinary_read_or_write_request_deadlines",
+        "ordinary_job_and_result_reads_larger_than_status_budget_keep_full_values",
+        "nonchunked_json_borrows_the_original_body_without_a_full_string_copy",
+        "real_committed_projects_with_oversized_acknowledgements_are_not_replayed",
+        "real_completed_result_oversize_stops_sdk_and_cli_without_recomputation",
+        "394 unit tests",
+        "41/41"
+      ]
+    }
+  ]
+}

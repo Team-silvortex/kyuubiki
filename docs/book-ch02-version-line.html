@@ -13,7 +13,7 @@
         <h1>What daji 3.x is optimizing for</h1>
         <p class="docs-copy">
           Early Daji is hardening an agent-driven industrial research system,
-          not maximizing feature count. At the current 3.4.7 checkpoint, progress
+          not maximizing feature count. At the current 3.5.0 checkpoint, progress
           means complete research journeys: bounded objectives, real execution,
           validated results, safe recovery, and reproducible evidence. Industrial
           reliability is the goal; each claim still requires its own proof.
@@ -26,18 +26,28 @@
       </section>
 
       <section class="docs-card docs-section" id="current-checkpoint">
-        <h2>Daji 3.4.7 checkpoint</h2>
+        <h2>Daji 3.5.0 checkpoint</h2>
         <ul class="docs-list">
-          <li>Physical tridiagonal preparation validates symmetry and range once; cancellation and preparation errors cannot silently become fallback.</li>
-          <li>Modal vector arithmetic, refinement and final validation gain bounded cooperative checks. Failed later modes discard private earlier candidates.</li>
-          <li>Nontridiagonal single-mode problems up to 256 active degrees of freedom receive complete-spectrum admission and bounded coordinate correction, retaining the eigenvalue and 1e-8 physical residual gate.</li>
-          <li>Rust Headless and development Agent-stage regressions exercise failure isolation and replay; Solver retains numerical ownership.</li>
-          <li>Multimode, projection, coherent-phase and quantized-QR comparisons remain test-only. Independent physical acceptance does not promote them to public runtime fallbacks.</li>
-          <li>Existing graph/artifact admission, compact modeling, bundle creation, PWDT, and language-pack capabilities remain available with their original qualification limits.</li>
+          <li>Native Headless execution requires matching task completion, actual source bindings and contract-owned risk labels before downstream work.</li>
+          <li>Job waits validate identity and public state; result reads require a matching completed job and an explicit object result.</li>
+          <li>Lost or invalid write acknowledgements remain unknown with no automatic replay. Zero successful steps does not prove zero server-side effects.</li>
+          <li>Original-attempt inspection preserves identity and ownership. Expiry, eviction, endpoint loss and restart do not authorize fallback or reexecution.</li>
+          <li>New native submission checks require usable job IDs and consistent public status, even for complete 2xx replies. Malformed acknowledgements stop SDK/CLI chains without replay; submission does not certify a result.</li>
+          <li>Native library writes validate identities and requested objects/parents. Registered FEM saved-version solves keep server-side version association; a real seven-step chain checks computation and cleanup.</li>
+          <li>Saved model/version reads validate requested identity and parents before computation. Mixed inline/reference sources stop; native mesh fallback retains verified context without relabeling mutable models as versions.</li>
+          <li>Native job reads enforce explicit association hints and reject ambiguous options. Saved-version solve/wait retains its version constraint; result rereads do not resubmit computation.</li>
+          <li>Native submissions check transmitted project/version association before accepting a job. Orchestra rejects contradictory explicit pairs before job creation instead of silently selecting the checkpoint's project.</li>
+          <li>Single-job observation also checks exact identity, public state and caller association. Failed or cancelled jobs remain inspectable; a successful query is not successful computation.</li>
+          <li>Native HTTP reads and upload receipts have wire/header limits and nonrenewable network deadlines. Oversized writes remain unknown without replay; large result reads retain their separate budget and avoid one full non-chunked body copy.</li>
+          <li>Native batch bindings keep only later-referenced outputs, with independent fanout and ownership transfer on final use. A real SDK/CLI chain persists complete results in model versions without repeating computation; report summaries and failure gates are unchanged. This is not a process-wide RSS cap.</li>
+          <li>Native job/result and combined solve/wait normalization move original envelopes instead of deep-copying them again. Required public mirrors stay independent, full-result persistence is checked through SDK/CLI, and result admission/no-replay gates remain unchanged. No RSS or scale qualification is claimed.</li>
+          <li>Native inline JSON has one bounded encoded buffer, borrowed header/body vector writes and release before response reading. Oversize rejection remains pre-connect with exact byte diagnostics. Real SDK/CLI chains preserve complete multilingual notes; this is not a total memory/CPU cap or scale claim.</li>
+          <li>Retained macOS and remote Linux source chains exercise actual commits, accepted calculations and withheld replies. Their original metadata and scope are not relabeled as fresh 3.5.0 qualification.</li>
+          <li>Earlier modal comparisons remain test-only. Solver retains numerical ownership, Engine/Agent retain execution authority, and installed or durable qualification gaps remain open.</li>
         </ul>
         <p class="docs-copy">
-          Source and package metadata now target <code>daji 3.4.7</code>.
-          This patch does not rebuild or install binaries; the last local desktop
+          Source and package metadata now target <code>daji 3.5.0</code>.
+          This checkpoint does not rebuild or install binaries; the last local desktop
           and runtime baseline remains <code>3.4.0</code>. Scoped numerical
           regressions do not establish external-solver correlation, general
           physical qualification, Windows, installed-Agent, GUI, or scale acceptance.
@@ -45,7 +55,17 @@
           affected historical modal results; tensor gaps remain open.
         </p>
         <div class="docs-links">
-          <a class="docs-link" href="./current-line.md#daji-347-checkpoint">Source checkpoint and limits</a>
+          <a class="docs-link" href="./current-line.md#daji-350-checkpoint">Source checkpoint and limits</a>
+          <a class="docs-link" href="../reports/headless-submission-receipts-20261007.md">Submission receipt follow-up</a>
+          <a class="docs-link" href="../reports/headless-library-receipts-20261007.md">Library receipt and saved-version follow-up</a>
+          <a class="docs-link" href="../reports/headless-model-reference-gates-20261007.md">Saved model reference follow-up</a>
+          <a class="docs-link" href="../reports/headless-job-read-gates-20261007.md">Job/result read association follow-up</a>
+          <a class="docs-link" href="../reports/headless-submission-context-20261007.md">Submission association follow-up</a>
+          <a class="docs-link" href="../reports/headless-job-fetch-gates-20261007.md">Single job observation follow-up</a>
+          <a class="docs-link" href="../reports/headless-response-budgets-20261007.md">Response budget follow-up</a>
+          <a class="docs-link" href="../reports/headless-binding-lifetimes-20261007.md">Binding lifetime follow-up</a>
+          <a class="docs-link" href="../reports/headless-result-ownership-20261007.md">Result ownership follow-up</a>
+          <a class="docs-link" href="../reports/headless-request-buffers-20261007.md">Request buffer follow-up</a>
           <a class="docs-link" href="./tutorial-first-research.html">Create a research bundle</a>
           <a class="docs-link" href="./tutorial-pwdt-automation.html">Use the PWDT workspace</a>
           <a class="docs-link" href="./language-packs.md">Translation coverage</a>

@@ -1,12 +1,12 @@
 use crate::run::compact_report_value;
 use crate::workflow_batch::missing_required_keys;
+use crate::workflow_binding_results::BindingResults;
 use crate::{
     HEADLESS_FAILURE_RECEIPT_SCHEMA_VERSION, HeadlessExecutionBatchStep,
     HeadlessExecutionStepReport, HeadlessFailureReceipt, HeadlessRisk,
 };
 use serde_json::{Value, json};
 use std::borrow::Cow;
-use std::collections::HashMap;
 
 pub(crate) fn parse_binding(text: &str) -> Option<(usize, &str)> {
     let inner = text.trim().strip_prefix("{{")?.strip_suffix("}}")?.trim();
@@ -17,7 +17,7 @@ pub(crate) fn parse_binding(text: &str) -> Option<(usize, &str)> {
 
 pub(crate) fn resolve_step_payload<'a>(
     step: &'a HeadlessExecutionBatchStep,
-    results: &HashMap<usize, Value>,
+    results: &mut BindingResults,
 ) -> Result<Cow<'a, Value>, String> {
     // Most large solver payloads contain no bindings and need no second copy.
     let payload = if contains_binding(&step.payload) {
@@ -45,15 +45,10 @@ fn contains_binding(value: &Value) -> bool {
     }
 }
 
-fn resolve_value(value: &Value, results: &HashMap<usize, Value>) -> Result<Value, String> {
+fn resolve_value(value: &Value, results: &mut BindingResults) -> Result<Value, String> {
     match value {
         Value::String(text) => match parse_binding(text) {
-            Some((step, output)) => results
-                .get(&step)
-                .and_then(Value::as_object)
-                .and_then(|result| result.get(output))
-                .cloned()
-                .ok_or_else(|| format!("binding source step {step} has no output {output}")),
+            Some((step, output)) => results.take(step, output),
             None => Ok(value.clone()),
         },
         Value::Array(items) => items
@@ -118,10 +113,23 @@ mod tests {
 
     #[test]
     fn unbound_large_payload_is_borrowed_even_after_a_source_result_exists() {
-        let step = step(json!({"model":{"nodes":(0..1_000).collect::<Vec<_>>()}}));
-        let results = HashMap::from([(1, json!({"status":"ok"}))]);
+        let unbound = step(json!({"model":{"nodes":(0..1_000).collect::<Vec<_>>()}}));
+        let batch = crate::HeadlessExecutionBatch {
+            schema_version: "kyuubiki.headless-execution-batch/v1".into(),
+            exported_at: "2026-10-07T00:00:00Z".into(),
+            language: "en".into(),
+            workflow_id: "borrowed-payload".into(),
+            template_id: None,
+            warnings: vec![],
+            steps: vec![HeadlessExecutionBatchStep {
+                index: 3,
+                ..step(json!({"forwarded":"{{steps.1.result.status}}"}))
+            }],
+        };
+        let mut results = BindingResults::new(&batch);
+        results.insert(1, json!({"status":"ok"}));
         assert!(matches!(
-            resolve_step_payload(&step, &results).unwrap(),
+            resolve_step_payload(&unbound, &mut results).unwrap(),
             Cow::Borrowed(_)
         ));
     }
@@ -130,7 +138,7 @@ mod tests {
     fn missing_source_is_not_kept_as_a_literal_when_result_map_is_empty() {
         let step = step(json!({"forwarded":"{{steps.1.result.status}}"}));
         assert!(
-            resolve_step_payload(&step, &HashMap::new())
+            resolve_step_payload(&step, &mut BindingResults::default())
                 .unwrap_err()
                 .contains("step 1")
         );

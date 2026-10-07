@@ -33,6 +33,7 @@
         "frontend_proxy_artifact_limit",
         "endpoint_not_deployed",
         "transport_failure",
+        "service_response_limit_exceeded",
         "service_request_outcome_unknown",
         "operator_task_outcome_unknown",
         "job_receipt_invalid",
@@ -99,7 +100,8 @@
         "properties": {
           "category": {
             "enum": ["service_request_outcome_unknown", "operator_task_outcome_unknown",
-              "job_receipt_invalid", "job_result_unavailable", "binding_resolution"]
+              "job_receipt_invalid", "job_result_unavailable", "binding_resolution",
+              "service_response_limit_exceeded"]
           }
         }
       },

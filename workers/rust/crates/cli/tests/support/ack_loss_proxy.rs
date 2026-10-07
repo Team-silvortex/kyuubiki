@@ -9,10 +9,17 @@ use std::time::{Duration, Instant};
 type Result<T> = std::result::Result<T, String>;
 const LIMIT: usize = 1024 * 1024;
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 enum Wire {
-    Agent { drop_execution: bool },
-    Http { path: &'static str },
+    Agent {
+        drop_execution: bool,
+    },
+    Http {
+        method: &'static str,
+        path: String,
+        remove_identity: Option<(&'static str, &'static str)>,
+        advertised_length: Option<usize>,
+    },
 }
 
 #[derive(Default, Clone, Debug)]
@@ -23,8 +30,8 @@ pub(super) struct Capture {
     pub errors: Vec<String>,
 }
 
-// Test-only relay: observe an actual upstream reply before closing the caller's
-// socket. No production fault switch or fabricated acknowledgement is involved.
+// Test-only relay: capture an actual upstream reply before dropping it, or
+// explicitly corrupt one record identity for semantic acknowledgement tests.
 pub(super) struct AckLossProxy {
     pub port: u16,
     stop: Arc<AtomicBool>,
@@ -42,7 +49,54 @@ impl AckLossProxy {
     }
 
     pub fn http_post(port: u16, path: &'static str) -> Result<Self> {
-        Self::start(port, Wire::Http { path })
+        Self::start(
+            port,
+            Wire::Http {
+                method: "POST",
+                path: path.into(),
+                remove_identity: None,
+                advertised_length: None,
+            },
+        )
+    }
+
+    pub fn http_without_job_identity(port: u16, path: &'static str) -> Result<Self> {
+        Self::http_without_record_identity(port, "POST", path, "job", "job_id")
+    }
+
+    pub fn http_without_record_identity(
+        port: u16,
+        method: &'static str,
+        path: &str,
+        record: &'static str,
+        identity: &'static str,
+    ) -> Result<Self> {
+        Self::start(
+            port,
+            Wire::Http {
+                method,
+                path: path.into(),
+                remove_identity: Some((record, identity)),
+                advertised_length: None,
+            },
+        )
+    }
+
+    pub fn http_with_oversized_length(
+        port: u16,
+        method: &'static str,
+        path: &str,
+        length: usize,
+    ) -> Result<Self> {
+        Self::start(
+            port,
+            Wire::Http {
+                method,
+                path: path.into(),
+                remove_identity: None,
+                advertised_length: Some(length),
+            },
+        )
     }
 
     fn start(upstream: u16, wire: Wire) -> Result<Self> {
@@ -66,6 +120,7 @@ impl AckLossProxy {
                             break;
                         }
                         let log = Arc::clone(&log);
+                        let wire = wire.clone();
                         connections.push(thread::spawn(move || {
                             if let Err(error) = relay(client, upstream, wire, &log) {
                                 log.lock().unwrap().errors.push(error);
@@ -150,7 +205,7 @@ fn send(stream: &mut TcpStream, bytes: &[u8]) -> Result<()> {
 fn http_message(
     stream: &mut TcpStream,
     deadline: Instant,
-    path: Option<&str>,
+    request: Option<(&str, &str)>,
 ) -> Result<(Vec<u8>, Value)> {
     let mut bytes = Vec::new();
     while !bytes.ends_with(b"\r\n\r\n") {
@@ -163,8 +218,8 @@ fn http_message(
     }
     let head = std::str::from_utf8(&bytes).map_err(|e| e.to_string())?;
     let first = head.lines().next().ok_or("missing HTTP start line")?;
-    let expected = match path {
-        Some(path) => first == format!("POST {path} HTTP/1.1"),
+    let expected = match request {
+        Some((method, path)) => first == format!("{method} {path} HTTP/1.1"),
         None => {
             first.starts_with("HTTP/1.1 ")
                 && first
@@ -184,14 +239,19 @@ fn http_message(
             name.eq_ignore_ascii_case("content-length")
                 .then(|| value.trim().parse::<usize>())
         })
+        .or_else(|| matches!(request, Some(("DELETE" | "GET", _))).then_some(Ok(0)))
         .ok_or("missing HTTP body length")?
         .map_err(|e| e.to_string())?;
-    if length == 0 || length > LIMIT {
+    if (length == 0 && request.is_none()) || length > LIMIT {
         return Err("relay HTTP body cap exceeded".into());
     }
     let mut body = vec![0; length];
     read(stream, &mut body, deadline)?;
-    let json = serde_json::from_slice(&body).map_err(|e| e.to_string())?;
+    let json = if body.is_empty() {
+        Value::Null
+    } else {
+        serde_json::from_slice(&body).map_err(|e| e.to_string())?
+    };
     bytes.extend(body);
     Ok((bytes, json))
 }
@@ -247,8 +307,13 @@ fn relay(mut client: TcpStream, port: u16, wire: Wire, log: &Mutex<Capture>) -> 
             }
             Err("relay progress cap exceeded".into())
         }
-        Wire::Http { path } => {
-            let (bytes, query) = http_message(&mut client, deadline, Some(path))
+        Wire::Http {
+            method,
+            path,
+            remove_identity,
+            advertised_length,
+        } => {
+            let (bytes, query) = http_message(&mut client, deadline, Some((method, &path)))
                 .map_err(|e| format!("read caller HTTP: {e}"))?;
             log.lock().unwrap().requests.push(query);
             upstream
@@ -256,7 +321,37 @@ fn relay(mut client: TcpStream, port: u16, wire: Wire, log: &Mutex<Capture>) -> 
                 .map_err(|e| format!("send upstream HTTP: {e}"))?;
             let (_, acknowledgement) = http_message(&mut upstream, deadline, None)
                 .map_err(|e| format!("read upstream HTTP: {e}"))?;
-            log.lock().unwrap().discarded.push(acknowledgement);
+            log.lock().unwrap().discarded.push(acknowledgement.clone());
+            if let Some(length) = advertised_length {
+                client.write_all(format!("HTTP/1.1 200 OK\r\nContent-Length: {length}\r\nConnection: close\r\n\r\n").as_bytes())
+                    .map_err(|e| e.to_string())?;
+                log.lock()
+                    .unwrap()
+                    .replies
+                    .push(json!({"advertised_length":length}));
+                return Ok(());
+            }
+            if let Some((record, identity)) = remove_identity {
+                let mut corrupted = acknowledgement;
+                corrupted
+                    .get_mut(record)
+                    .and_then(Value::as_object_mut)
+                    .ok_or("actual acknowledgement has no record object")?
+                    .remove(identity)
+                    .ok_or("actual acknowledgement has no record identity")?;
+                let body = serde_json::to_vec(&corrupted).map_err(|e| e.to_string())?;
+                client
+                    .write_all(
+                        format!(
+                            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                            body.len()
+                        )
+                        .as_bytes(),
+                    )
+                    .map_err(|e| e.to_string())?;
+                client.write_all(&body).map_err(|e| e.to_string())?;
+                log.lock().unwrap().replies.push(corrupted);
+            }
             Ok(())
         }
     }

@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native job observation/submission, preferred/separate result reads and combined saved-version solve/wait preserve existing public values while moving original envelopes and avoiding redundant JSON reconstruction copies. Required public mirrors remain independent; receipt, association, completion and no-replay gates are unchanged. Pointer/value comparisons and real SDK/CLI stored-result chains establish verified native source behavior, not an RSS cap, throughput, installed, cross-language, durable or scale qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-result-envelope-ownership-and-shape-preservation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/service_executor.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_result.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_solve.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_value_ownership_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_job_fetch_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_result_gate_tests.rs",
+        "workers/rust/crates/cli/tests/support/headless_binding_lifetimes.rs",
+        "docs/headless-sdks.md",
+        "reports/headless-result-ownership-20261007.md"
+      ],
+      "required_text": [
+        "Headless Native Result Envelope Ownership",
+        "Native result envelope ownership",
+        "job_observation_moves_original_raw_arrays_and_strings_without_changing_shape",
+        "public_observation_mirrors_remain_independent_mutable_values",
+        "preferred_result_moves_original_result_and_job_without_deep_copies",
+        "separate_result_moves_the_original_object_without_cloning_its_arrays",
+        "combined_solve_moves_all_three_owned_envelopes_without_changing_public_shape",
+        "real_combined_solve_preserves_full_result_shapes_through_sdk_and_cli",
+        "417 unit tests",
+        "43/43"
+      ]
+    }
+  ]
+}

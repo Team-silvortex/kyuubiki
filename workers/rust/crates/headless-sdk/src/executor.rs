@@ -2,6 +2,7 @@ use crate::execution_observability::{failure_preview, summarize_execution};
 use crate::operator_task::operator_task_prepare_preview_or_error;
 use crate::preflight_report::build_batch_validation_failure_report;
 use crate::run::{build_result_preview, compact_report_value};
+use crate::workflow_binding_results::BindingResults;
 use crate::workflow_bindings::{binding_failure_step, resolve_step_payload};
 use crate::{
     HEADLESS_EXECUTION_RUN_SCHEMA_VERSION, HeadlessBlockedConfirmation, HeadlessEngine,
@@ -12,7 +13,6 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HeadlessExecutorOutcome {
@@ -120,7 +120,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
             validation,
         );
     }
-    let mut results = HashMap::<usize, Value>::new();
+    let mut results = BindingResults::new(batch);
     let mut steps = Vec::with_capacity(batch.steps.len());
     let mut executed_step_count = 0;
     let mut blocked_by_confirmation = None;
@@ -152,7 +152,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
             });
             break;
         }
-        let payload = match resolve_step_payload(step, &results) {
+        let payload = match resolve_step_payload(step, &mut results) {
             Ok(payload) => payload,
             Err(message) => {
                 status = "failed".into();
@@ -165,7 +165,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
             match prepare_operator_task_payload(&payload) {
                 Ok(preview) => {
                     executed_step_count += 1;
-                    results.insert(step.index, preview.clone());
+                    results.insert_preview(step.index, &preview);
                     steps.push(HeadlessExecutionStepReport {
                         index: step.index,
                         action: step.action.clone(),

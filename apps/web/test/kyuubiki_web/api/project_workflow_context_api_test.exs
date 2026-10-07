@@ -43,15 +43,45 @@ defmodule KyuubikiWeb.Api.ProjectWorkflowContextApiTest do
     assert length(bundle(project)["results"]) == 1
   end
 
-  test "checkpoint ownership is authoritative even when the caller supplies another project" do
+  test "contradictory checkpoint ownership rejects before catalog or graph job creation" do
     {project, model} = create_study()
     {other, _} = create_study("Unrelated project")
     input = catalog_input(rod(), context(other, model))
+    {:ok, graph} = Engine.workflow_graph_by_id("workflow.truss-2d-summary-json")
+    before_jobs = Store.list()
+
+    for {path, payload} <- [
+          {catalog_path(), input},
+          {"/api/v1/workflows/graph/jobs", Map.put(input, "graph", graph)},
+          {"/api/v1/fem/truss-2d/jobs", Map.merge(rod(), context(other, model))}
+        ] do
+      response = route(:post, path, payload)
+      if response.status == 202, do: terminal(Jason.decode!(response.resp_body))
+      assert response.status == 422
+      assert Jason.decode!(response.resp_body) == %{"error" => ":model_version_project_mismatch"}
+      assert Store.list() == before_jobs
+    end
+
+    assert {:error, :model_version_project_mismatch} =
+             Analysis.submit_catalog_workflow("workflow.truss-2d-summary-json", %{
+               input_artifacts: %{truss_2d_model: rod()},
+               project_id: other["project_id"],
+               model_version_id: model["latest_version_id"]
+             })
+
+    assert Store.list() == before_jobs
+    assert bundle(project)["jobs"] == []
+    assert bundle(project)["results"] == []
+    assert bundle(other)["jobs"] == []
+    assert bundle(other)["results"] == []
+  end
+
+  test "version-only submission derives its owning project" do
+    {project, model} = create_study()
+    input = catalog_input(rod(), %{"model_version_id" => model["latest_version_id"]})
     finished = request(:post, catalog_path(), input, 202) |> completed()
     assert_lineage(finished["job"], project, model["latest_version_id"])
     assert length(bundle(project)["results"]) == 1
-    assert bundle(other)["jobs"] == []
-    assert bundle(other)["results"] == []
   end
 
   test "atom-key callers retain the same catalog context as JSON callers" do

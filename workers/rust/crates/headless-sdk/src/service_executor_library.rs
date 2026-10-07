@@ -1,4 +1,5 @@
-use crate::service_executor::{request_json, required_path_segment};
+use crate::service_executor::{request_json, required_path_segment, validate_path_segment};
+use crate::service_executor_response::after_send_failure;
 use crate::{HeadlessExecutorError, HeadlessExecutorOutcome};
 use serde_json::{Map, Value};
 
@@ -13,7 +14,7 @@ pub(crate) fn execute_project_create(
         "POST",
         "/api/v1/projects",
         select_fields(payload, &["name", "description"]),
-        normalize_project_result,
+        |result| normalize_project_result(result, None),
     )
 }
 
@@ -29,7 +30,7 @@ pub(crate) fn execute_project_update(
         "PATCH",
         &format!("/api/v1/projects/{project_id}"),
         select_fields(payload, &["name", "description"]),
-        normalize_project_result,
+        |result| normalize_project_result(result, Some(project_id)),
     )
 }
 
@@ -46,7 +47,9 @@ pub(crate) fn execute_project_delete(
         &format!("/api/v1/projects/{project_id}"),
         None,
     )?;
-    Ok(outcome(normalize_project_result(result)))
+    normalize_project_result(result, Some(project_id))
+        .map(outcome)
+        .map_err(|error| after_send_failure("DELETE", error))
 }
 
 pub(crate) fn execute_model_create(
@@ -70,7 +73,7 @@ pub(crate) fn execute_model_create(
                 "model_schema_version",
             ],
         ),
-        normalize_model_result,
+        |result| normalize_model_result(result, project_id),
     )
 }
 
@@ -95,7 +98,7 @@ pub(crate) fn execute_model_version_create(
                 "model_schema_version",
             ],
         ),
-        normalize_version_result,
+        |result| normalize_version_result(result, model_id),
     )
 }
 
@@ -105,10 +108,12 @@ fn execute_json(
     method: &str,
     path: &str,
     body: Value,
-    normalize: fn(Value) -> Value,
+    normalize: impl FnOnce(Value) -> Result<Value, HeadlessExecutorError>,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
     let result = request_json(base_url, api_token, method, path, Some(body))?;
-    Ok(outcome(normalize(result)))
+    normalize(result)
+        .map(outcome)
+        .map_err(|error| after_send_failure(method, error))
 }
 
 fn outcome(result: Value) -> HeadlessExecutorOutcome {
@@ -131,16 +136,99 @@ fn select_fields(payload: &Value, keys: &[&str]) -> Value {
     )
 }
 
-fn normalize_project_result(result: Value) -> Value {
-    normalize_record_result(result, "project", "project_id", "project_id")
+fn normalize_project_result(
+    result: Value,
+    expected_id: Option<&str>,
+) -> Result<Value, HeadlessExecutorError> {
+    let record = receipt_record(&result, "project")?;
+    let id = receipt_identity(&result, record, "project_id")?;
+    require_expected(id, expected_id, "project_id")?;
+    Ok(normalize_record_result(
+        result,
+        "project",
+        "project_id",
+        "project_id",
+    ))
 }
 
-fn normalize_model_result(result: Value) -> Value {
-    normalize_record_result(result, "model", "model_id", "model_id")
+fn normalize_model_result(result: Value, project_id: &str) -> Result<Value, HeadlessExecutorError> {
+    let record = receipt_record(&result, "model")?;
+    receipt_identity(&result, record, "model_id")?;
+    let parent = receipt_identity(&result, record, "project_id")?;
+    require_expected(parent, Some(project_id), "project_id")?;
+    receipt_identity(&result, record, "latest_version_id")?;
+    Ok(normalize_record_result(
+        result, "model", "model_id", "model_id",
+    ))
 }
 
-fn normalize_version_result(result: Value) -> Value {
-    normalize_record_result(result, "version", "version_id", "model_version_id")
+fn normalize_version_result(result: Value, model_id: &str) -> Result<Value, HeadlessExecutorError> {
+    let record = receipt_record(&result, "version")?;
+    let id = receipt_identity(&result, record, "version_id")?;
+    for alias in [
+        result.get("model_version_id"),
+        record.get("model_version_id"),
+    ] {
+        if alias.is_some_and(|value| value.as_str() != Some(id)) {
+            return Err(invalid_receipt("model_version_id contradicts version_id"));
+        }
+    }
+    let parent = receipt_identity(&result, record, "model_id")?;
+    require_expected(parent, Some(model_id), "model_id")?;
+    receipt_identity(&result, record, "project_id")?;
+    Ok(normalize_record_result(
+        result,
+        "version",
+        "version_id",
+        "model_version_id",
+    ))
+}
+
+fn receipt_record<'a>(
+    result: &'a Value,
+    key: &str,
+) -> Result<&'a Map<String, Value>, HeadlessExecutorError> {
+    result
+        .get(key)
+        .and_then(Value::as_object)
+        .ok_or_else(|| invalid_receipt(&format!("missing explicit {key} object")))
+}
+
+fn receipt_identity<'a>(
+    result: &Value,
+    record: &'a Map<String, Value>,
+    key: &str,
+) -> Result<&'a str, HeadlessExecutorError> {
+    let id = record
+        .get(key)
+        .and_then(Value::as_str)
+        .ok_or_else(|| invalid_receipt(&format!("missing string {key}")))?;
+    // Never trim or repair a receipt identifier before exposing it as a binding.
+    validate_path_segment(id, key).map_err(|_| invalid_receipt(&format!("unusable {key}")))?;
+    if result
+        .get(key)
+        .is_some_and(|value| value.as_str() != Some(id))
+    {
+        return Err(invalid_receipt(&format!("contradictory {key}")));
+    }
+    Ok(id)
+}
+
+fn require_expected(
+    actual: &str,
+    expected: Option<&str>,
+    key: &str,
+) -> Result<(), HeadlessExecutorError> {
+    if expected.is_some_and(|expected| expected != actual) {
+        return Err(invalid_receipt(&format!("{key} does not match request")));
+    }
+    Ok(())
+}
+
+fn invalid_receipt(detail: &str) -> HeadlessExecutorError {
+    HeadlessExecutorError {
+        message: format!("library_receipt_invalid: {detail}"),
+    }
 }
 
 fn normalize_record_result(

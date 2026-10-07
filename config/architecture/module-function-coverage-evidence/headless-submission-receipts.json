@@ -1,0 +1,41 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native asynchronous job submissions validate explicit usable identity, public status and repeated-field consistency before publishing bindings. Malformed 2xx acknowledgements stop as uncertain writes without replay or downstream dispatch; explicit terminal failure stays known failure. Verified source scope, not installed acceptance, authenticated deployment, scientific qualification or cross-language parity.",
+  "evidence_claims": [
+    {
+      "id": "native-job-submission-semantic-receipt-gate",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/service_executor.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_job_receipt.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_job_wait.rs",
+        "workers/rust/crates/headless-sdk/src/execution_observability.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_solve.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_submission_tests.rs",
+        "workers/rust/crates/cli/tests/support/ack_loss_proxy.rs",
+        "workers/rust/crates/cli/tests/support/headless_submission_receipts.rs",
+        "docs/headless-sdks.md",
+        "docs/tutorial-headless-rust.html",
+        "reports/headless-submission-receipts-20261007.md"
+      ],
+      "required_text": [
+        "Headless Submission Receipts",
+        "Submission acknowledgement gate",
+        "validate_submission_receipt",
+        "job_terminal_failed:",
+        "job_terminal_cancelled:",
+        "every_registered_direct_solver_rejects_empty_successful_acknowledgements",
+        "model_version_submission_failure_stops_before_polling_or_result_reads",
+        "explicit_failed_or_cancelled_submission_is_known_failure_not_unknown_write",
+        "real_job_with_corrupted_submission_identity_does_not_replay_or_advance",
+        "343 unit tests",
+        "31/31"
+      ]
+    }
+  ]
+}

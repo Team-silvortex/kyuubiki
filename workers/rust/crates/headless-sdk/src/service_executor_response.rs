@@ -71,31 +71,7 @@ fn parse_response(response: &str, path: &str) -> Result<Value, ResponseFailure> 
         .and_then(|status| status.parse::<u16>().ok())
         .filter(|status| (100..=599).contains(status))
         .ok_or_else(|| protocol("invalid status code"))?;
-    let mut length = None;
-    let mut transfer_encoding = false;
-    for line in head.lines().skip(1) {
-        let Some((name, value)) = line.split_once(':') else {
-            continue;
-        };
-        if name.eq_ignore_ascii_case("content-length") {
-            if length.is_some() {
-                return Err(protocol("duplicate content length").into());
-            }
-            let value = value.trim();
-            if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
-                return Err(protocol("invalid content length").into());
-            }
-            length = Some(
-                value
-                    .parse::<usize>()
-                    .map_err(|_| protocol("invalid content length"))?,
-            );
-        }
-        transfer_encoding |= name.eq_ignore_ascii_case("transfer-encoding");
-    }
-    if length.is_some() && transfer_encoding {
-        return Err(protocol("contradictory body framing").into());
-    }
+    let length = response_body_length(head, path)?;
     if length.is_some_and(|length| length != body.len()) {
         return Err(protocol("body length does not match content length").into());
     }
@@ -121,6 +97,41 @@ fn parse_response(response: &str, path: &str) -> Result<Value, ResponseFailure> 
             message: format!("failed to parse JSON response for {path}: {error}"),
         })
     })
+}
+
+pub(crate) fn response_body_length(
+    head: &str,
+    path: &str,
+) -> Result<Option<usize>, HeadlessExecutorError> {
+    let protocol = |detail| HeadlessExecutorError {
+        message: format!("invalid HTTP response for {path}: {detail}"),
+    };
+    let mut length = None;
+    let mut transfer_encoding = false;
+    for line in head.lines().skip(1) {
+        let Some((name, value)) = line.split_once(':') else {
+            continue;
+        };
+        if name.eq_ignore_ascii_case("content-length") {
+            if length.is_some() {
+                return Err(protocol("duplicate content length"));
+            }
+            let value = value.trim();
+            if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+                return Err(protocol("invalid content length"));
+            }
+            length = Some(
+                value
+                    .parse::<usize>()
+                    .map_err(|_| protocol("invalid content length"))?,
+            );
+        }
+        transfer_encoding |= name.eq_ignore_ascii_case("transfer-encoding");
+    }
+    if length.is_some() && transfer_encoding {
+        return Err(protocol("contradictory body framing"));
+    }
+    Ok(length)
 }
 
 fn parse_error_payload(body: &str) -> Value {

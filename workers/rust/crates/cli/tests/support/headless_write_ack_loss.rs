@@ -10,7 +10,7 @@ use kyuubiki_headless_sdk::{
 use serde_json::{Value, json};
 use std::{error::Error, fs};
 
-fn document(action: &str, payload: Value) -> HeadlessExecutionBatch {
+pub(super) fn document(action: &str, payload: Value) -> HeadlessExecutionBatch {
     let mut document = batch(
         bar_task("unused-write-ack-task", 0.01),
         Some("must-not-follow-lost-ack"),
@@ -20,7 +20,7 @@ fn document(action: &str, payload: Value) -> HeadlessExecutionBatch {
     document
 }
 
-fn assert_failure(report: &Value) {
+pub(super) fn assert_failure(report: &Value) {
     assert_eq!(report["status"], "failed");
     assert_eq!(report["executed_step_count"], 0);
     assert_eq!(report["steps"].as_array().unwrap().len(), 1);
@@ -40,7 +40,10 @@ fn assert_failure(report: &Value) {
     assert!(report["steps"][0]["result_preview"].get("job_id").is_none());
 }
 
-fn run_cli(document: &HeadlessExecutionBatch, proxy: &AckLossProxy) -> Result<(), Box<dyn Error>> {
+pub(super) fn run_cli(
+    document: &HeadlessExecutionBatch,
+    proxy: &AckLossProxy,
+) -> Result<(), Box<dyn Error>> {
     let source = write_temp_json("lost-real-write-ack", &serde_json::to_value(document)?);
     let report_path = source.parent().unwrap().join("report.json");
     let url = format!("http://127.0.0.1:{}", proxy.port);
@@ -69,7 +72,7 @@ fn run_cli(document: &HeadlessExecutionBatch, proxy: &AckLossProxy) -> Result<()
     Ok(())
 }
 
-fn count(agent: &LiveAgent) -> Result<u64, Box<dyn Error>> {
+pub(super) fn count(agent: &LiveAgent) -> Result<u64, Box<dyn Error>> {
     Ok(agent.request("write-ack-count", "describe_agent", json!({}))?
         ["result"]["watchdog"]["total_started_execution_count"].as_u64().unwrap())
 }

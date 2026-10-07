@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native job waiting and result reading enforce exact request aliases, boolean result preferences and optional caller association constraints. Combined saved-version solve/wait retains the selected version through reading. Local real Orchestra/Agent evidence demonstrates rejection and successful rereads without reexecution; this is verified source scope, not full provenance, installed or scientific qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-job-result-read-options-and-association-gate",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/service_executor_job_read.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_job_read_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_job_wait.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_result.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_solve.rs",
+        "workers/rust/crates/headless-sdk/src/execution_observability.rs",
+        "workers/rust/crates/cli/tests/support/headless_job_read_gates.rs",
+        "docs/headless-sdks.md",
+        "docs/tutorial-headless-rust.html",
+        "reports/headless-job-read-gates-20261007.md"
+      ],
+      "required_text": [
+        "Headless Job Read Gates",
+        "Job/result read association gate",
+        "job_read_invalid:",
+        "malformed_result_preferences_stop_reads_and_combined_solves_before_io",
+        "every_poll_keeps_explicit_version_constraint_until_completion",
+        "separate_result_context_must_agree_with_verified_job_metadata",
+        "saved_version_combined_solve_stops_before_fetching_a_misassociated_job",
+        "real_saved_version_reads_reject_missing_association_without_reexecution",
+        "364 unit tests",
+        "36/36"
+      ]
+    }
+  ]
+}

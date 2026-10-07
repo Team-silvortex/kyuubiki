@@ -1,0 +1,95 @@
+{
+  "version": "3.5.0",
+  "codename": "daji",
+  "line": "3.x",
+  "status": "current",
+  "date": "2026-10-07",
+  "git_commit": "0712b88d5888c25261b593f1b23329c101735460",
+  "summary": "Daji 3.5.0 source checkpoint: native Headless completion, binding, contract-owned risk, completed-result and uncertain-write recovery gates. Source metadata, language-pack targets and current documentation aligned; no desktop rebuild or binary publication.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "reliability": "docs/operator-reliability.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": { "version": "3.5.0", "notes": ["Source metadata aligned; no new GUI acceptance."] },
+    "hub_gui": { "version": "3.5.0", "notes": ["Book and language-pack target mirrors aligned; no new desktop artifact."] },
+    "workbench_gui": { "version": "3.5.0", "notes": ["Source metadata aligned; no new desktop artifact."] },
+    "installer_gui": { "version": "3.5.0", "notes": ["Source and installation contracts aligned; no new desktop artifact."] },
+    "web_api": { "version": "3.5.0", "notes": ["Retained original-receipt validation; control-plane authority unchanged."] },
+    "rust_headless_sdk": { "version": "3.5.0", "notes": ["Native source recovery gates retained; no registry publication."] },
+    "python_headless_sdk": { "version": "3.5.0", "notes": ["Metadata aligned; native Rust regression is not Python parity."] },
+    "elixir_headless_sdk": { "version": "3.5.0", "notes": ["Metadata aligned; native Rust regression is not Elixir parity."] },
+    "rust_worker_sdk": { "version": "3.5.0", "notes": ["Rust operator extension API remains separate from Headless control."] }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": ["Existing language-neutral workflow and task contracts retained; native execution cannot advance on incomplete or uncertain receipts."]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": [
+      "Operator extension remains Rust-only and separate from Headless control.",
+      "Solver owns numerical algorithms; Engine/Agent own execution authority.",
+      "Earlier modal candidates remain test-only with their original physical gates."
+    ]
+  },
+  "desktop_artifacts": {},
+  "verification": {
+    "source_revision_role": "Recorded base commit plus current version-alignment overlay, not a clean-commit binary build.",
+    "release_checks": {
+      "source_version": "3.5.0",
+      "status": "passed",
+      "exact_version_contracts": { "checks": 224, "mismatched": 0 },
+      "cargo_manifest_resolution": "Six workspace, standalone SDK, desktop and operator-template manifests resolve with --locked --offline --no-deps; no dependency updates.",
+      "docs_book_regression": { "passed": 10, "failed": 0, "filtered_out": 391, "scope": "Selected documentation tests, including current source-copy synchronization and preserved installed history." },
+      "frontend_product_identity": { "passed": 1, "failed": 0, "scope": "Package, brand, display label and language-pack target agreement; not installed WebView acceptance." },
+      "language_pack_metadata": "60 canonical packs validated for 3.5.0; translation content and quality claims unchanged.",
+      "documentation": "26 HTML book files, manifest, bootstrap and inventory passed; repeat version synchronization made no changes.",
+      "desktop_mirrors": "Shared source-asset synchronization and independent check passed; no binary build.",
+      "installation_integrity": "Disk hygiene and component integrity self-tests/contracts passed.",
+      "architecture": "Runtime API contracts, module extension/topology/matrix and tensor self-test/validation passed; no grade promotion.",
+      "strict_clippy": "Native script-runner test targets passed with warnings denied.",
+      "project_organization": "Source limit 800, documentation limit 2000, tracked debt 0; formatting and whitespace checks passed.",
+      "scope": "Source metadata, documentation and selected synchronizer checks only. No full numerical or remote suite rerun after alignment, App packaging/install, CI rerun or registry publication."
+    },
+    "prior_source_evidence": {
+      "base_commit": "76aaf10d",
+      "source_metadata_version": "3.4.7",
+      "date": "2026-10-07",
+      "platforms": ["macos-aarch64", "linux-x86_64 isolated container"],
+      "headless_write_acknowledgements": {
+        "sdk_unit_tests": 336,
+        "sdk_integration_tests": 25,
+        "protocol_unit_tests": 114,
+        "protocol_integration_tests": 7,
+        "headless_live_tests": 30,
+        "status": "passed on both source-test platforms",
+        "scope": "Retained pre-alignment correctness runs, not fresh 3.5.0 installed or scientific qualification. See the original report for individual CLI counts, timings and limits."
+      }
+    },
+    "reports": [
+      "reports/dispatch-cancellation-ack-loss-20261007.md",
+      "reports/headless-contract-risk-20261007.md",
+      "reports/headless-job-result-gates-20261007.md",
+      "reports/headless-runtime-bindings-20261007.md",
+      "reports/headless-write-acknowledgements-20261007.md",
+      "reports/original-receipt-boundaries-20261007.md"
+    ],
+    "report_provenance": "Original reports retain their source metadata, commit, working-tree overlay and test scope. Advancing to 3.5.0 does not relabel those runs.",
+    "known_limits": [
+      "Native SDK/CLI tests do not qualify standalone Rust/Python/Elixir parity or installed Apps.",
+      "Unknown write outcomes require explicit inspection; no durable recovery, submission idempotency or exactly-once guarantee.",
+      "General modal production recovery, external correlation and sustained scale qualification remain open.",
+      "Tensor grades and thresholds are unchanged; four maturity, 19 evidence-grade and 14 P0 gaps remain, with release status blocked."
+    ],
+    "desktop_packaging": { "status": "not performed", "last_local_installed_version": "3.4.0" },
+    "runtime_payload": { "status": "not rebuilt or replaced", "last_local_installed_version": "3.4.0" },
+    "public_distribution": "not performed",
+    "registry_publication": "not performed",
+    "notarized": false,
+    "qualification": "Source checkpoint and metadata alignment do not promote historical evidence, close readiness gaps or establish installed-platform acceptance."
+  }
+}

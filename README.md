@@ -5,16 +5,16 @@ simulation runtime. Its long-term direction is to become a Blender-like
 engineering environment for finite-element research: visual when that helps,
 headless when automation matters, and open at every protocol boundary.
 
-> The current source and documentation version is **daji 3.4.7**.
+> The current source and documentation version is **daji 3.5.0**.
 > The last locally built and installed desktop/runtime baseline is **daji 3.4.0**.
-> Version 3.4.7 aligns package metadata but does not rebuild or replace that baseline.
+> Version 3.5.0 aligns package metadata but does not rebuild or replace that baseline.
 > Building or installing locally does not publish download artifacts or SDKs.
 > Historical evidence keeps its original version and scope. A version number
 > is not industrial certification; public distribution remains evidence-gated.
 
-See the [3.4.7 checkpoint](docs/current-line.md#daji-347-checkpoint) for bounded
-modal research, failure recovery checks, and project cleanup. Test-only
-candidates are not admitted production recovery paths.
+See the [3.5.0 checkpoint](docs/current-line.md#daji-350-checkpoint) for native
+Headless completion, binding, confirmation and uncertain-write recovery gates.
+Earlier modal research remains scoped evidence, not admitted production recovery.
 
 Early Daji prioritizes hardening an **agent-driven industrial research system**,
 not increasing feature count. Research agents use the Headless SDKs to run

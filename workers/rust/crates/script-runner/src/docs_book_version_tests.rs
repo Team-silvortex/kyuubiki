@@ -108,6 +108,36 @@ fn semver_minor_keeps_major_and_minor() {
 }
 
 #[test]
+fn daji_minor_sync_updates_current_source_copy_without_relabeling_installed_history() {
+    let replacements = sync_replacements("3.5.0", "daji 3.5.0", "3.5");
+    for (path, before, expected) in [
+        (
+            "apps/hub-gui/ui/docs/current-line.html",
+            "Source package metadata targets <code>3.4.5</code>; installed baseline <code>daji 3.4.0</code>.",
+            "Source package metadata targets <code>3.5.0</code>; installed baseline <code>daji 3.4.0</code>.",
+        ),
+        (
+            "docs/book-ch02-version-line.html",
+            "At the current 3.4.7 checkpoint<h2>Daji 3.4.7 checkpoint</h2>Source and package metadata now target <code>daji 3.4.7</code>; historical <code>3.4.0</code>.",
+            "At the current 3.5.0 checkpoint<h2>Daji 3.5.0 checkpoint</h2>Source and package metadata now target <code>daji 3.5.0</code>; historical <code>3.4.0</code>.",
+        ),
+    ] {
+        let rules = &replacements
+            .iter()
+            .find(|(file, _)| *file == path)
+            .unwrap()
+            .1;
+        let apply = |text: &str| {
+            rules
+                .iter()
+                .fold(text.to_string(), |text, rule| rule.apply(&text))
+        };
+        assert_eq!(apply(before), expected, "{path}");
+        assert_eq!(apply(expected), expected, "idempotent sync: {path}");
+    }
+}
+
+#[test]
 fn daji_patch_sync_preserves_historical_versions() {
     let rules = sync_replacements("3.0.1", "daji 3.0.1", "3.0");
     let (_, rules) = rules

@@ -1,0 +1,40 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native library writes validate usable record identities, repeated fields and requested objects/parents before publishing bindings. Malformed 2xx acknowledgements stop as uncertain writes. Registered native FEM saved-version solves retain the canonical reference in server-side jobs. Verified source scope, not installed, durable, cross-language or general scientific qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-library-semantic-receipt-and-version-association-gate",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/service_executor_library.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_library_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_model_context_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_solve.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_tests.rs",
+        "workers/rust/crates/cli/tests/support/ack_loss_proxy.rs",
+        "workers/rust/crates/cli/tests/support/headless_library_receipts.rs",
+        "docs/headless-sdks.md",
+        "docs/tutorial-headless-rust.html",
+        "reports/headless-library-receipts-20261007.md"
+      ],
+      "required_text": [
+        "Headless Library Receipts",
+        "Library acknowledgement gate",
+        "library_receipt_invalid:",
+        "writes_must_acknowledge_the_requested_object_or_parent",
+        "version_aliases_cannot_contradict_the_canonical_identity",
+        "every_direct_solver_keeps_explicit_project_and_model_version_context",
+        "real_library_commits_with_corrupted_identities_stop_without_replay",
+        "real_library_bindings_drive_model_version_solve_and_cleanup",
+        "352 unit tests",
+        "33/33"
+      ]
+    }
+  ]
+}

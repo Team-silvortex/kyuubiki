@@ -1,24 +1,32 @@
 use crate::{
     HeadlessExecutor, HeadlessExecutorError, HeadlessExecutorOutcome, direct_fem_submit_route,
 };
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 use std::fmt;
-use std::io::{Read, Write};
+use std::io::IoSlice;
 
 use crate::service_executor_artifact::prepare_direct_fem_request_body;
-use crate::service_executor_deadline::{read_service_response, write_before_deadline};
+use crate::service_executor_deadline::{read_service_response, write_parts_before_deadline};
 use crate::service_executor_health::with_discovered_solver_endpoints;
 use crate::service_executor_http::{REQUEST_IO_TIMEOUT, connect_service_stream_with_deadline};
-use crate::service_executor_job_wait::execute_job_wait;
-#[cfg(test)]
-use crate::service_executor_job_wait::reject_unsuccessful_terminal_job;
+use crate::service_executor_job_read::JobReadRequest;
+use crate::service_executor_job_receipt::{
+    submission_context, validate_job_receipt, validate_submission_context,
+    validate_submission_receipt,
+};
+use crate::service_executor_job_wait::{execute_job_wait, reject_unsuccessful_terminal_job};
 use crate::service_executor_library::{
     execute_model_create, execute_model_version_create, execute_project_create,
     execute_project_delete, execute_project_update,
 };
+pub(crate) use crate::service_executor_request::MAX_INLINE_JSON_BYTES;
+#[cfg(test)]
+use crate::service_executor_request::validate_inline_json_size;
+use crate::service_executor_request::{build_request_head, serialize_inline_json};
 use crate::service_executor_response::{after_send_failure, parse_acknowledgement};
 #[cfg(test)]
 use crate::service_executor_response::{parse_json_response, service_error_message};
+use crate::service_executor_response_budget::default_request_timeout;
 pub(crate) use crate::service_executor_result::execute_result_fetch;
 #[cfg(test)]
 use crate::service_executor_result::normalize_result_fetch_result;
@@ -28,8 +36,6 @@ use crate::service_executor_solve::{
 };
 use crate::service_executor_task_budget::{OperatorTaskRequestBudget, execute_operator_task};
 use std::time::{Duration, Instant};
-
-pub(crate) const MAX_INLINE_JSON_BYTES: usize = 8_000_000;
 
 #[path = "service_executor_dispatch_cancellation.rs"]
 mod dispatch_cancellation;
@@ -266,11 +272,22 @@ pub(crate) fn execute_direct_fem_submit(
         message: format!("unsupported FEM solve action: {action}"),
     })?;
     let model = payload.get("model").unwrap_or(payload);
-    let request_body = prepare_direct_fem_request_body(base_url, api_token, model)?;
+    let explicit_context = submission_context(payload)?;
+    let mut context = submission_context(model)?;
+    context.extend(explicit_context);
+    let mut request_body = prepare_direct_fem_request_body(base_url, api_token, model)?;
+    if !context.is_empty() {
+        request_body
+            .as_object_mut()
+            .ok_or_else(|| HeadlessExecutorError {
+                message: "direct FEM context requires an object model".into(),
+            })?
+            .extend(context.clone());
+    }
     let result = request_json(base_url, api_token, "POST", route, Some(request_body))?;
     Ok(HeadlessExecutorOutcome {
         status: "executed".to_string(),
-        result: normalize_job_submission_result(result),
+        result: normalize_job_submission_with_context(result, &context)?,
     })
 }
 
@@ -279,6 +296,7 @@ fn execute_composite_panel_submit(
     api_token: Option<&str>,
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
+    let context = submission_context(payload)?;
     let result = request_json(
         base_url,
         api_token,
@@ -288,7 +306,7 @@ fn execute_composite_panel_submit(
     )?;
     Ok(HeadlessExecutorOutcome {
         status: "executed".to_string(),
-        result: normalize_job_submission_result(result),
+        result: normalize_job_submission_with_context(result, &context)?,
     })
 }
 
@@ -309,7 +327,7 @@ fn execute_workflow_submit_catalog(
     )?;
     Ok(HeadlessExecutorOutcome {
         status: "executed".to_string(),
-        result: normalize_job_submission_result(result),
+        result: normalize_job_submission_result(result)?,
     })
 }
 
@@ -336,7 +354,7 @@ fn execute_workflow_submit_graph(
     )?;
     Ok(HeadlessExecutorOutcome {
         status: "executed".to_string(),
-        result: normalize_job_submission_result(result),
+        result: normalize_job_submission_result(result)?,
     })
 }
 
@@ -345,7 +363,8 @@ fn execute_job_fetch(
     api_token: Option<&str>,
     payload: &Value,
 ) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
-    let job_id = required_path_segment(payload, &["job_id", "jobId"])?;
+    let read = JobReadRequest::parse(payload)?;
+    let job_id = read.job_id;
     let result = request_json(
         base_url,
         api_token,
@@ -353,37 +372,86 @@ fn execute_job_fetch(
         &format!("/api/v1/jobs/{job_id}"),
         None,
     )?;
+    validate_job_receipt(job_id, &result)?;
+    read.validate_context(&result)?;
     Ok(HeadlessExecutorOutcome {
         status: "executed".to_string(),
         result: normalize_job_state_result(result),
     })
 }
 
-pub(crate) fn normalize_job_submission_result(result: Value) -> Value {
-    let Some(job) = result.get("job").and_then(Value::as_object) else {
-        return result;
-    };
-    json!({
-        "job_id": job.get("job_id").cloned().unwrap_or(Value::Null),
-        "status": job.get("status").cloned().unwrap_or(Value::Null),
-        "progress": job.get("progress").cloned().unwrap_or(Value::Null),
-        "job": result.get("job").cloned().unwrap_or(Value::Null),
-        "raw": result,
-    })
+pub(crate) fn normalize_job_submission_result(
+    result: Value,
+) -> Result<Value, HeadlessExecutorError> {
+    normalize_job_submission_with_context(result, &Map::new())
+}
+
+pub(crate) fn normalize_job_submission_with_context(
+    result: Value,
+    context: &Map<String, Value>,
+) -> Result<Value, HeadlessExecutorError> {
+    // A parsed 2xx reply alone cannot acknowledge a submitted write safely.
+    let job =
+        validate_submission_receipt(&result).map_err(|error| after_send_failure("POST", error))?;
+    validate_submission_context(&result, job, context)
+        .map_err(|error| after_send_failure("POST", error))?;
+    let normalized = Value::Object(Map::from_iter([
+        (
+            "job_id".into(),
+            job.get("job_id").cloned().unwrap_or(Value::Null),
+        ),
+        (
+            "status".into(),
+            job.get("status").cloned().unwrap_or(Value::Null),
+        ),
+        (
+            "progress".into(),
+            job.get("progress").cloned().unwrap_or(Value::Null),
+        ),
+        (
+            "job".into(),
+            result.get("job").cloned().unwrap_or(Value::Null),
+        ),
+        ("raw".into(), result),
+    ]));
+    if matches!(normalized["status"].as_str(), Some("failed" | "cancelled")) {
+        let job_id = normalized["job_id"]
+            .as_str()
+            .expect("validated job identity");
+        reject_unsuccessful_terminal_job(job_id, &normalized)?;
+    }
+    Ok(normalized)
 }
 
 pub(crate) fn normalize_job_state_result(result: Value) -> Value {
     let Some(job) = result.get("job").and_then(Value::as_object) else {
         return result;
     };
-    json!({
-        "job_id": job.get("job_id").cloned().unwrap_or(Value::Null),
-        "status": job.get("status").cloned().unwrap_or(Value::Null),
-        "progress": job.get("progress").cloned().unwrap_or(Value::Null),
-        "result": result.get("result").cloned().unwrap_or(Value::Null),
-        "job": result.get("job").cloned().unwrap_or(Value::Null),
-        "raw": result,
-    })
+    // Public mirrors still require independent values. Move the original raw
+    // envelope and clone each exposed field once, without reserializing Values.
+    Value::Object(Map::from_iter([
+        (
+            "job_id".into(),
+            job.get("job_id").cloned().unwrap_or(Value::Null),
+        ),
+        (
+            "status".into(),
+            job.get("status").cloned().unwrap_or(Value::Null),
+        ),
+        (
+            "progress".into(),
+            job.get("progress").cloned().unwrap_or(Value::Null),
+        ),
+        (
+            "result".into(),
+            result.get("result").cloned().unwrap_or(Value::Null),
+        ),
+        (
+            "job".into(),
+            result.get("job").cloned().unwrap_or(Value::Null),
+        ),
+        ("raw".into(), result),
+    ]))
 }
 
 pub(crate) fn request_json(
@@ -431,86 +499,37 @@ pub(crate) fn request_json_with_timeout(
         format!("/{path}")
     })?;
     let api_token = sanitize_header_value(api_token, "api token")?;
-    let body_text = body
-        .map(|value| serde_json::to_string(&value))
-        .transpose()
-        .map_err(|error| HeadlessExecutorError {
-            message: error.to_string(),
-        })?;
-    validate_inline_json_size(&request_path, body_text.as_deref().map_or(0, str::len))?;
+    let body_bytes = body
+        .map(|value| serialize_inline_json(&request_path, value))
+        .transpose()?
+        .unwrap_or_default();
+    let deadline = deadline
+        .unwrap_or_else(|| Instant::now() + default_request_timeout(&request_path, io_timeout));
     let mut stream = connect_service_stream_with_deadline(
         &endpoint.host,
         endpoint.port,
         io_timeout,
         "service request",
-        deadline,
+        Some(deadline),
     )?;
-    let request = build_request(
+    let head = build_request_head(
         method,
         &endpoint.host,
         &request_path,
-        body_text.as_deref(),
+        body_bytes.len(),
         api_token.as_deref(),
     );
-    if let Some(deadline) = deadline {
-        write_before_deadline(&mut stream, request.as_bytes(), deadline, io_timeout)
-            .map_err(|error| after_send_failure(method, error))?;
-        let response = read_service_response(&mut stream, path, deadline, io_timeout)
-            .map_err(|error| after_send_failure(method, error))?;
-        return parse_acknowledgement(method, &response, path);
-    }
-    stream.write_all(request.as_bytes()).map_err(|error| {
-        after_send_failure(
-            method,
-            HeadlessExecutorError {
-                message: format!("failed to write service request within timeout: {error}"),
-            },
-        )
-    })?;
-    let mut response = String::new();
-    stream.read_to_string(&mut response).map_err(|error| {
-        after_send_failure(
-            method,
-            HeadlessExecutorError {
-                message: format!("failed to read service response within timeout: {error}"),
-            },
-        )
-    })?;
+    write_parts_before_deadline(
+        &mut stream,
+        &mut [IoSlice::new(head.as_bytes()), IoSlice::new(&body_bytes)],
+        deadline,
+        io_timeout,
+    )
+    .map_err(|error| after_send_failure(method, error))?;
+    drop(body_bytes);
+    let response = read_service_response(&mut stream, &request_path, deadline, io_timeout)
+        .map_err(|error| after_send_failure(method, error))?;
     parse_acknowledgement(method, &response, path)
-}
-
-fn validate_inline_json_size(path: &str, size_bytes: usize) -> Result<(), HeadlessExecutorError> {
-    if size_bytes <= MAX_INLINE_JSON_BYTES {
-        return Ok(());
-    }
-    Err(HeadlessExecutorError {
-        message: format!(
-            "service payload exceeds inline JSON transport limit: path={path} size_bytes={size_bytes} limit_bytes={MAX_INLINE_JSON_BYTES}; use a persisted model or artifact reference for large meshes"
-        ),
-    })
-}
-
-fn build_request(
-    method: &str,
-    host: &str,
-    path: &str,
-    body: Option<&str>,
-    api_token: Option<&str>,
-) -> String {
-    let body = body.unwrap_or("");
-    let mut request = format!(
-        "{method} {path} HTTP/1.1\r\nHost: {host}\r\nAccept: application/json\r\nConnection: close\r\n"
-    );
-    if let Some(token) = api_token {
-        request.push_str(&format!("Authorization: Bearer {token}\r\n"));
-    }
-    if !body.is_empty() {
-        request.push_str("Content-Type: application/json\r\n");
-        request.push_str(&format!("Content-Length: {}\r\n", body.len()));
-    }
-    request.push_str("\r\n");
-    request.push_str(body);
-    request
 }
 
 pub(crate) fn required_path_segment<'a>(
@@ -522,7 +541,7 @@ pub(crate) fn required_path_segment<'a>(
     Ok(value)
 }
 
-fn validate_path_segment(value: &str, label: &str) -> Result<(), HeadlessExecutorError> {
+pub(crate) fn validate_path_segment(value: &str, label: &str) -> Result<(), HeadlessExecutorError> {
     if value.is_empty()
         || value.starts_with('.')
         || value.contains("..")

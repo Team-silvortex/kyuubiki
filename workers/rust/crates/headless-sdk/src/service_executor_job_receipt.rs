@@ -14,6 +14,62 @@ pub(crate) const JOB_STATUSES: &[&str] = &[
     "cancelled",
 ];
 
+const SUBMISSION_CONTEXT: &[&str] = &["project_id", "model_version_id"];
+
+pub(crate) fn submission_context(
+    payload: &Value,
+) -> Result<Map<String, Value>, HeadlessExecutorError> {
+    let mut context = Map::new();
+    for &key in SUBMISSION_CONTEXT {
+        if let Some(value) = payload.get(key) {
+            let id = value.as_str().ok_or_else(|| HeadlessExecutorError {
+                message: format!("submission context requires string {key}"),
+            })?;
+            crate::service_executor::validate_path_segment(id, key)?;
+            context.insert(key.into(), value.clone());
+        }
+    }
+    Ok(context)
+}
+
+pub(crate) fn validate_submission_context(
+    envelope: &Value,
+    job: &Map<String, Value>,
+    expected: &Map<String, Value>,
+) -> Result<(), HeadlessExecutorError> {
+    for &key in SUBMISSION_CONTEXT {
+        if expected
+            .get(key)
+            .is_some_and(|value| job.get(key) != Some(value))
+        {
+            return Err(invalid(&format!(
+                "submission {key} does not match the transmitted context"
+            )));
+        }
+        if envelope
+            .get(key)
+            .is_some_and(|value| job.get(key) != Some(value))
+        {
+            return Err(invalid(&format!(
+                "submission {key} fields are contradictory"
+            )));
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn validate_submission_receipt(
+    envelope: &Value,
+) -> Result<&Map<String, Value>, HeadlessExecutorError> {
+    let job_id = envelope
+        .pointer("/job/job_id")
+        .and_then(Value::as_str)
+        .ok_or_else(|| invalid("submission job identity is missing or not a string"))?;
+    crate::service_executor::validate_path_segment(job_id, "submission job identity")
+        .map_err(|_| invalid("submission job identity is not a usable path segment"))?;
+    validate_job_receipt(job_id, envelope)
+}
+
 pub(crate) fn validate_job_receipt<'a>(
     job_id: &str,
     envelope: &'a Value,

@@ -402,6 +402,238 @@ See [native write-acknowledgement regression](../reports/headless-write-acknowle
 for actual project commits and accepted bar calculations whose real responses
 are consumed by a test relay and withheld from SDK/CLI callers.
 
+#### Submission acknowledgement gate
+
+Native asynchronous submissions require an explicit `job` object, an unmodified
+usable `job.job_id`, and a public job status. IDs must already satisfy the
+service path-segment policy; the SDK does not trim or repair an invalid ID.
+Optional top-level `job_id` and `status` must match their nested counterparts.
+This shared gate covers every registered direct FEM submission, composite panel
+submission, catalog/graph workflows, direct mesh routes and model-version solves.
+
+A complete 2xx reply containing `{}`, a missing/unsafe ID, an unsupported status,
+or contradictory repeated fields does not acknowledge the submitted job. It
+reports `kyuubiki.headless.service_request_outcome_unknown`, retaining a
+`job_receipt_invalid` detail, with no retry permission or replay strategy.
+The batch publishes no bindings from that step and stops before later writes.
+Model-version solve-and-wait also stops before polling or result reads.
+The server may already have accepted and calculated the job: this is not
+evidence of nonexecution, and an unknown ID is not automatically recovered.
+
+Valid active-state receipts acknowledge submission, not completed computation.
+A valid `completed` submission receipt also does not certify a numerical result;
+the existing result-fetch gate remains separate. Explicit `failed` or `cancelled`
+receipts stop as known terminal failure rather than unknown acknowledgement.
+Their explicit terminal markers take precedence over keywords in the reason:
+connection, queue, timeout or authorization text cannot grant retry permission
+to an already failed or cancelled job, including during `job_wait`.
+Identity consistency does not prove which request produced a server-assigned ID,
+and this gate does not add submission idempotency or an exactly-once guarantee.
+
+See [native submission receipt regression](../reports/headless-submission-receipts-20261007.md)
+for the malformed-reply matrix and a real accepted bar-job chain whose reply
+loses only its ID through an explicitly test-only fault relay.
+
+#### Submission association gate
+
+Native FEM, composite panel and explicit mesh submissions compare the job's
+`project_id` and `model_version_id` against the canonical fields actually sent.
+Explicit IDs must be usable strings. Native FEM also preserves inline model
+context when moving large input into an artifact reference; explicit outer
+context takes precedence. Only these two small fields are retained for checking,
+not another copy of the mesh. Saved model/version routes use the verified parent
+context from their library read. Optional repeated top-level association fields
+must agree with the nested job, even without request constraints.
+
+Missing, malformed or different requested association in a complete 2xx reply
+is `service_request_outcome_unknown` with `job_receipt_invalid:` detail. It stops
+before bindings, polling, result fetching or later writes, without automatic
+retry. Check association before interpreting a failed/cancelled status: a
+terminal receipt for the wrong context is not an acknowledged failure of the
+requested work. Matching terminal receipts keep their known failure category.
+
+Orchestra now rejects an explicitly contradictory project/checkpoint pair with
+HTTP 422 and `:model_version_project_mismatch`, before creating a job or dispatch.
+This deliberately replaces the previous version-project precedence policy.
+Version-only requests still derive the owning project, and matching both fields
+remains supported. This is consistency validation, not access authorization.
+
+Unspecified fields are not inferred as caller constraints. Native catalog/graph
+SDK submissions currently send only their workflow graph/ID and input artifacts;
+this change does not silently forward or promise their unused context options.
+The explicit mesh branch is fixture-tested, not deployed Orchestra endpoint
+qualification. Association is not an immutable input digest, result provenance,
+full schema or exactly-once guarantee. See the
+[submission association regression](../reports/headless-submission-context-20261007.md).
+
+#### Library acknowledgement gate
+
+Native `project_create`, `project_update`, `project_delete`, `model_create` and
+`model_version_create` require explicit record objects with usable unmodified
+identifiers. Repeated top-level identities must agree. Update/delete receipts
+must identify the requested project; model/version receipts must identify the
+requested parent. Model creation also requires a usable `latest_version_id`.
+Version creation requires a usable project ID and consistent optional
+`model_version_id` aliases before publishing that normalized binding.
+
+Malformed 2xx receipts retain a `library_receipt_invalid` detail under
+`kyuubiki.headless.service_request_outcome_unknown`, with no automatic retry,
+success count, bindings or later writes. A library delete follows the existing
+HTTP 200 `{project: ...}` contract; an empty 204 cannot supply its required
+project receipt. Complete 4xx diagnostics and transport-only no-content
+acknowledgements remain unchanged. The write may already have taken effect.
+
+Native direct FEM requests preserve explicit project/version context, including
+artifact-backed models. Saved-version solves through registered native FEM
+routes now send the canonical version reference to Orchestra, rather than only
+adding a local output label. Orchestra derives the persisted project/version
+association. This does not certify model payload identity, general mesh routes,
+full schema compliance, durability or scientific correctness.
+
+See [library receipt and version-association regression](../reports/headless-library-receipts-20261007.md)
+for actual database writes with test-corrupted replies and a seven-step
+project/model/version/solve/result/cleanup chain using actual Rust Agents.
+
+#### Saved model reference gate
+
+Native `solve_from_model_version`, `solve_and_wait_from_model_version` and
+reference-based `direct_mesh_solve` validate the selected GET record before
+submitting work. Its unmodified canonical ID must match the requested object;
+project/model parent IDs must be usable, repeated IDs must agree, and caller
+parent hints must match. Kind must be a usable string and payload an object.
+Version aliases cannot contradict `version_id`. Batch documents still use
+their registered canonical required keys; executor aliases are not an extension
+of batch preflight contracts.
+
+A saved reference cannot be combined with `input` or `model_payload`, even a
+null field. Choose a saved source or explicit input, rather than relying on
+implicit source precedence. Invalid reads stop with `model_reference_invalid`
+under `contract_failure` at `validation`, with no automatic retry, successful
+step, published binding or subsequent computation request. Unlike an invalid
+write acknowledgement, this gate is before compute submission, not an uncertain
+write. Read transport and complete 4xx diagnostics keep their existing policy.
+
+The native FEM fallback now carries verified project/version context from
+`direct_mesh_solve`. A mutable model reference carries its project but is not
+silently labeled with its latest saved version. The already-resolved version
+fallback does not read the record again or mix it with caller inline data.
+Existing explicit study-kind and material overrides remain supported; this is
+not kind/payload equivalence, a full schema gate, immutability proof, authorization
+or scientific qualification. Explicit mesh routing is fixture-checked separately
+from the actual Orchestra native fallback.
+
+See [saved reference regression](../reports/headless-model-reference-gates-20261007.md)
+for bounded invalid-reply cases, actual no-calculation observations and normal
+model/version chains with independent small-bar displacement checks.
+
+#### Job/result read association gate
+
+Native `job_fetch`, `job_wait` and `result_fetch` require an unmodified safe `job_id`.
+Executor aliases must agree; blank, padded, non-string or conflicting IDs stop
+before I/O instead of selecting or trimming one. Batch documents still use
+their registered canonical required keys.
+
+Optional `project_id`, `model_version_id` and `simulation_case_id` constrain
+the returned job association. Their camel-case executor aliases must agree.
+A supplied ID must be a safe string; explicit `model_version_id: null` requires
+a declared null version association, not a missing field. A missing hint imposes
+no caller-specific association requirement. Every polling reply checks the
+supplied constraints. Repeated top-level context must agree with the job.
+
+For separate result reads, optional repeated context and an optional nested job
+must agree with the already-verified job metadata. The normal result endpoint
+returns no job metadata: its job identity and explicit object-result gate remain
+essential, but are not an independent proof of payload provenance.
+
+`prefer_job_result` / `preferJobResult` must be boolean and agree if both are
+present; the default remains true. This option is checked before reads and
+before a combined saved-version solve submits work. Combined version solve/wait
+keeps the selected version and any explicit project hint through both waiting
+and result reading. It does not depend solely on the local output version label.
+
+Invalid read options or association checks stop as `job_read_invalid` under
+`contract_failure` at `validation`, with no retry, successful read binding or
+later steps. A preceding solve may already have completed or remain active;
+failed reads and zero successful combined steps do not prove nonexecution.
+Reconcile the job and explicitly continue reading, not automatically resubmit
+the computation or replay the whole batch. No result metadata is fabricated,
+and this is not authorization, full schema or scientific validation.
+
+See [read association regression](../reports/headless-job-read-gates-20261007.md)
+for option boundaries, cross-response disagreement, explicit polling constraints,
+actual corrupted version associations and successful rereads without calculation.
+
+#### Single job observation gate
+
+Native `job_fetch` now applies the same exact request/alias and optional
+project/version/case constraints as other job reads. The GET detail response
+must contain an explicit `job` matching the requested identity, a public status,
+and consistent repeated identity/status/context fields. Invalid identity/state
+receipts fail with `job_receipt_invalid` at `job_observation`; option or
+association faults use `job_read_invalid` under `contract_failure` at
+`validation`. Both stop before successful bindings or later steps, with no
+automatic retry. Transport failures and complete HTTP rejections retain their
+read-only policies rather than becoming uncertain writes.
+
+This action observes a job; it does not wait for or certify computation.
+Queued/active/failed/cancelled jobs remain inspectable, including their reason
+and retained diagnostic data. An `executed` query outcome and a zero CLI exit
+mean the query succeeded, not that its job completed successfully. The detail
+endpoint and existing raw/result fields are retained. The binding resolver does
+not enforce a scientific admission boundary on arbitrary diagnostic values;
+use `result_fetch` for completed-result admission, not a diagnostic result field
+as a substitute. Result admission itself is still not scientific qualification.
+
+See [single job observation regression](../reports/headless-job-fetch-gates-20261007.md)
+for malformed-reply coverage, actual SDK/CLI fault injection, successful
+diagnostic reads and the independent small-bar oracle. No complete Job schema,
+authorization, immutable provenance or installed-platform claim is added.
+
+#### Native HTTP response budgets
+
+Ordinary native Rust service requests and streamed model uploads now share the
+bounded reader used by deadline requests. The client never reserves response
+storage from an untrusted `Content-Length`; an over-budget declaration fails
+as soon as the headers arrive, while unframed/chunked bytes are counted as read.
+Headers are separately limited to 64 KiB, including the terminating delimiter.
+The total wire limits include headers and chunk framing:
+
+| Response route | Maximum wire bytes | Default total network time |
+| --- | --- | --- |
+| Ordinary service routes | 64 MiB | 30 seconds |
+| TaskIR execution | 64 MiB | Explicit `OperatorTaskRequestBudget` |
+| Job status and model artifact upload receipt | 8,000,000 | 30 seconds for status; 600 seconds for upload |
+| Single job detail, result, saved model or saved model version | 512 MiB | 600 seconds |
+| Original dispatch-result receipt | 10 MiB | Existing explicit inspection budget |
+
+These are fixed, read-only native transport policies, not solver parameters.
+TaskIR execution retains its explicit `OperatorTaskRequestBudget`, rather than
+the ordinary 30-second default. Job waiting and original-attempt inspection
+retain their own caller deadlines. Explicit deadlines take precedence. Ordinary
+JSON I/O retains a 30-second inactivity ceiling within its total budget. Artifact
+upload has one 600-second network budget across DNS, connection, streamed writes
+and acknowledgement reading; local file creation/reads and JSON parsing are not
+preemptible operations under that network deadline. No received bytes renew it.
+The large response cap is independent of `KYUUBIKI_MODEL_ARTIFACT_MAX_BYTES`;
+raising the upload limit does not silently raise the client response limit.
+
+Read resource failures stop as `kyuubiki.headless.service_response_limit_exceeded`
+at `transport`, with `retryable: false` and no replay strategy. Oversized writes
+remain `service_request_outcome_unknown`; TaskIR keeps its specialized unknown
+outcome classification. Rejection stops successful bindings and later actions,
+but does not undo a committed write or completed computation. Known HTTP
+rejections retain their existing policy when the complete reply fits the budget.
+Non-chunked JSON decoding borrows the existing body instead of copying the whole
+string again. Chunked bodies still require decoding into owned storage.
+
+These limits bound a single wire buffer, not total process RSS or concurrent
+requests. Parsed values, live bound outputs, retained `job_fetch` raw/result
+mirrors and large error diagnostics can still consume additional memory. Reads
+still require connection close; a peer holding a complete reply open is bounded
+by the deadline, not treated as a successfully framed response early. These are
+native source guarantees, not installed, cross-language, 1M-scale or scientific
+qualification. See [response-budget regression](../reports/headless-response-budgets-20261007.md).
+
 #### Runtime binding gate
 
 For native batches, `{{steps.N.result.output}}` is a whole-value reference to a
@@ -437,6 +669,85 @@ than being cloned merely because a previous step completed.
 See [native binding regression](../reports/headless-runtime-bindings-20261007.md)
 for real read-route and TaskIR chains, CLI failure reporting, and explicit
 downstream continuation without repeating the completed computation.
+
+#### Native binding result lifetimes
+
+After validating a native execution batch, the client counts whole-value
+references in its original step payloads. The private binding cache retains
+only the top-level outputs actually referenced by later steps, not every
+completed result or its unused `raw` mirrors. Each output has its own lifetime:
+earlier uses receive independent values; the final use takes ownership of the
+original value and removes it from the cache. Unreferenced and terminal results
+are not retained there. No extra service read, write or computation is added.
+
+The public result and run-report shapes, binding syntax, confirmation ordering,
+missing-output errors and no-replay policy are unchanged. Full results are bound
+before report compaction. Dry-run/local preparation still retain their existing
+report previews, copying only referenced fields into the binding cache. Bound
+result data stays opaque; embedded template-looking strings do not extend the
+reference plan or get evaluated again.
+
+This reduces completed-result retention and final-use copies, not total process
+RSS. Multiple live branches, overlapping requested fields, public `job_fetch`
+raw/result normalization, serialization, report construction and parsed values
+still have their own allocations. The cache is not durable storage, a resumable
+checkpoint or permission to replay work. No 1M-scale, installed or cross-language
+qualification follows from the native ownership tests. See
+[binding lifetime regression](../reports/headless-binding-lifetimes-20261007.md)
+for the 20-layer ownership test, old-resolver comparison and real result-to-version
+SDK/CLI chain without repeated computation.
+
+#### Native result envelope ownership
+
+Native service result normalization now assembles owned JSON values directly,
+instead of deep-copying them again through `json!`. Job observations/submission
+receipts move their original envelope into `raw`; each separately exposed field
+is copied once where the public shape requires an independent value. The public
+`job_fetch` `raw`/`result` mirrors are still present and independently mutable.
+
+Preferred `result_fetch` moves the validated original result and job object into
+its existing output. The separate result route also moves its result value.
+`solve_and_wait_from_model_version` moves its completed `solve`, `wait` and
+`result` envelopes into the same existing nested structure. Metadata aliases,
+optional null/default values and diagnostic fields are unchanged. Receipt,
+association and successful-completion gates still run before normalization;
+neither fewer allocations nor query success relaxes result admission or replay.
+
+Pointer tests verify array/string ownership and old-shape comparisons verify
+value compatibility. Real SDK/CLI chains preserve complete stored results and
+perform only the explicitly requested computations. This removes unnecessary
+normalization copies, not required public mirrors, JSON parsing/serialization
+allocations, concurrent-request memory or process-wide RSS. It adds no streaming,
+durable checkpoint or 1M-scale qualification. See
+[result ownership regression](../reports/headless-result-ownership-20261007.md).
+
+#### Native HTTP request buffer bounds
+
+Native JSON requests serialize into one encoded byte buffer with the existing
+8,000,000-byte inline limit. The boundary remains inclusive and Content-Length
+counts UTF-8/escaped JSON bytes, not characters. Once encoding exceeds the limit,
+the partial buffer is released; remaining encoding is counted without retention
+so the existing exact `size_bytes` diagnostic and artifact/reference advice stay
+available. Size, path and token validation still complete before connection.
+Fallible buffer reservation and checked counting fail before submission.
+
+The request head holds only headers, not another body copy. Borrowed header/body
+slices are sent with vectored writes; partial writes advance those slices under
+the same nonrenewable deadline. The encoded body is released before receiving
+the response. Absent/null bodies, header order, escaping, response budgets,
+receipt/completion gates and unknown-write/no-replay rules are unchanged. Large
+direct FEM artifacts keep their existing streamed file transport.
+
+Byte/capacity tests and an exact-limit Unicode socket transfer verify the native
+transport. Real SDK/CLI result-to-version chains also preserve full multilingual,
+escaped research notes and complete calculation results without extra computation.
+These checks do not qualify installed or independent cross-language clients.
+
+This limits the encoded request buffer, not total RSS, caller payloads, field
+selection copies, kernel buffers, parser results, reports or concurrent requests.
+Oversized encoding still runs to completion to measure its exact size; network
+deadlines do not preempt that CPU work. No throughput/RSS number or 1M-scale claim
+follows. See [request buffer regression](../reports/headless-request-buffers-20261007.md).
 
 Local verification is retained in
 [native-headless-task-completion-20261005.md](../reports/native-headless-task-completion-20261005.md):

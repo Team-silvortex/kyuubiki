@@ -1,4 +1,5 @@
 use super::*;
+use std::io::{Read, Write};
 use std::net::TcpListener;
 
 #[test]
@@ -120,7 +121,8 @@ fn normalizes_job_submission_for_bindings() {
             "status": "queued",
             "progress": 0.0
         }
-    }));
+    }))
+    .expect("valid submission acknowledgement");
     assert_eq!(normalized["job_id"].as_str(), Some("job_123"));
     assert_eq!(normalized["status"].as_str(), Some("queued"));
 }
@@ -195,9 +197,8 @@ fn direct_fem_submit_sends_solid_tetra_model_to_route() {
     let port = listener.local_addr().expect("local addr").port();
     let handle = std::thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("accept request");
-        let mut buffer = [0_u8; 4096];
-        let bytes_read = stream.read(&mut buffer).expect("read request");
-        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        let bytes = read_complete_http_request(&mut stream);
+        let request = String::from_utf8_lossy(&bytes);
         assert!(request.starts_with("POST /api/v1/fem/solid-tetra-3d/jobs HTTP/1.1\r\n"));
         assert!(request.contains("\"id\":\"tet0\""));
         assert!(!request.contains("\"ignored\":true"));
@@ -261,10 +262,14 @@ fn large_direct_fem_submit_uploads_a_model_artifact_then_sends_its_reference() {
         assert!(submit_text.contains("\"model_artifact_ref\""));
         assert!(submit_text.contains(&artifact_id));
         assert!(!submit_text.contains("large-model-padding"));
+        assert!(submit_text.contains("\"project_id\":\"artifact-project\""));
+        assert!(submit_text.contains("\"model_version_id\":\"artifact-version\""));
+        assert!(!upload_text.contains("artifact-project"));
+        assert!(!upload_text.contains("artifact-version"));
         write_test_response(
             &mut submit,
             "202 Accepted",
-            r#"{"job":{"job_id":"artifact-job","status":"queued","progress":0.0}}"#,
+            r#"{"job":{"job_id":"artifact-job","status":"queued","progress":0.0,"project_id":"artifact-project","model_version_id":"artifact-version"}}"#,
         );
     });
 
@@ -275,7 +280,8 @@ fn large_direct_fem_submit_uploads_a_model_artifact_then_sends_its_reference() {
     });
     let mut executor = ServiceHeadlessExecutor::new(&format!("http://127.0.0.1:{port}"));
     let outcome = executor
-        .execute_step("solve_heat_plane_quad_2d", 1, &json!({"model": model}))
+        .execute_step("solve_heat_plane_quad_2d", 1,
+            &json!({"model":model,"project_id":"artifact-project","model_version_id":"artifact-version"}))
         .expect("large FEM request should use artifact transport");
 
     handle.join().expect("server thread should finish");
@@ -288,9 +294,8 @@ fn composite_submit_preserves_the_full_coupled_payload() {
     let port = listener.local_addr().expect("local addr").port();
     let handle = std::thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("accept request");
-        let mut buffer = [0_u8; 16_384];
-        let bytes_read = stream.read(&mut buffer).expect("read request");
-        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        let bytes = read_complete_http_request(&mut stream);
+        let request = String::from_utf8_lossy(&bytes);
         assert!(
             request
                 .starts_with("POST /api/v1/fem/composite-thermo-electric-panel/jobs HTTP/1.1\r\n")
@@ -337,9 +342,8 @@ fn direct_mesh_solve_posts_normalized_study_request() {
     let port = listener.local_addr().expect("local addr").port();
     let handle = std::thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("accept request");
-        let mut buffer = [0_u8; 8192];
-        let bytes_read = stream.read(&mut buffer).expect("read request");
-        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        let bytes = read_complete_http_request(&mut stream);
+        let request = String::from_utf8_lossy(&bytes);
         assert!(request.starts_with("POST /api/direct-mesh/solve HTTP/1.1\r\n"));
         assert!(request.contains("\"study_kind\":\"heat_bar_1d\""));
         assert!(request.contains("\"endpoints\":[\"127.0.0.1:7001\"]"));
@@ -375,9 +379,8 @@ fn direct_mesh_solve_uses_native_fem_route_without_explicit_endpoints() {
     let port = listener.local_addr().expect("local addr").port();
     let handle = std::thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("accept request");
-        let mut buffer = [0_u8; 8192];
-        let bytes_read = stream.read(&mut buffer).expect("read request");
-        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        let bytes = read_complete_http_request(&mut stream);
+        let request = String::from_utf8_lossy(&bytes);
         assert!(request.starts_with("POST /api/v1/fem/axial-bar/jobs HTTP/1.1\r\n"));
         assert!(request.contains("\"nodes\":[{\"id\":\"n0\"}]"));
         write_test_response(
@@ -418,7 +421,7 @@ fn direct_mesh_solve_resolves_model_and_version_references() {
         "model_version_id",
         "version_native",
         "GET /api/v1/model-versions/version_native HTTP/1.1",
-        r#"{"version":{"version_id":"version_native","kind":"heat_bar_1d","project_id":"project-native","payload":{"nodes":[{"id":"n0"}],"elements":[{"id":"e0"}]}}}"#,
+        r#"{"version":{"version_id":"version_native","model_id":"model_native","kind":"heat_bar_1d","project_id":"project-native","payload":{"nodes":[{"id":"n0"}],"elements":[{"id":"e0"}]}}}"#,
     );
 }
 
@@ -432,23 +435,22 @@ fn assert_direct_mesh_reference(
     let port = listener.local_addr().expect("local addr").port();
     let handle = std::thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("accept model request");
-        let mut buffer = [0_u8; 8192];
-        let bytes_read = stream.read(&mut buffer).expect("read model request");
-        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        let bytes = read_complete_http_request(&mut stream);
+        let request = String::from_utf8_lossy(&bytes);
         assert!(request.starts_with(expected_get), "request: {request}");
         write_test_response(&mut stream, "200 OK", envelope);
         drop(stream);
 
         let (mut stream, _) = listener.accept().expect("accept solve request");
-        let bytes_read = stream.read(&mut buffer).expect("read solve request");
-        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        let bytes = read_complete_http_request(&mut stream);
+        let request = String::from_utf8_lossy(&bytes);
         assert!(request.starts_with("POST /api/direct-mesh/solve HTTP/1.1\r\n"));
         assert!(request.contains("\"study_kind\":\"heat_bar_1d\""));
         assert!(request.contains("\"nodes\":[{\"id\":\"n0\"}]"));
         write_test_response(
             &mut stream,
             "200 OK",
-            r#"{"job":{"job_id":"referenced-job","status":"queued","progress":0.0}}"#,
+            r#"{"job":{"job_id":"referenced-job","status":"queued","progress":0.0,"project_id":"project-native","model_version_id":"version_native"}}"#,
         );
     });
 
@@ -471,26 +473,25 @@ fn solve_and_wait_from_model_version_runs_native_service_chain() {
         let responses = [
             (
                 "GET /api/v1/model-versions/ver_native HTTP/1.1",
-                r#"{"version":{"version_id":"ver_native","kind":"heat_bar_1d","project_id":"project-native","payload":{"nodes":[{"id":"n0"}],"elements":[{"id":"e0"}]}}}"#,
+                r#"{"version":{"version_id":"ver_native","model_id":"model_native","kind":"heat_bar_1d","project_id":"project-native","payload":{"nodes":[{"id":"n0"}],"elements":[{"id":"e0"}]}}}"#,
             ),
             (
                 "POST /api/v1/fem/heat-bar-1d/jobs HTTP/1.1",
-                r#"{"job":{"job_id":"job-native","status":"queued","progress":0.0}}"#,
+                r#"{"job":{"job_id":"job-native","status":"queued","progress":0.0,"project_id":"project-native","model_version_id":"ver_native"}}"#,
             ),
             (
                 "GET /api/v1/jobs/job-native/status HTTP/1.1",
-                r#"{"job":{"job_id":"job-native","status":"completed","progress":1.0},"result":{"field":"ready"}}"#,
+                r#"{"job":{"job_id":"job-native","model_version_id":"ver_native","status":"completed","progress":1.0},"result":{"field":"ready"}}"#,
             ),
             (
                 "GET /api/v1/jobs/job-native HTTP/1.1",
-                r#"{"job":{"job_id":"job-native","status":"completed","progress":1.0},"result":{"field":"ready"}}"#,
+                r#"{"job":{"job_id":"job-native","model_version_id":"ver_native","status":"completed","progress":1.0},"result":{"field":"ready"}}"#,
             ),
         ];
         for (expected, body) in responses {
             let (mut stream, _) = listener.accept().expect("accept request");
-            let mut buffer = [0_u8; 8192];
-            let bytes_read = stream.read(&mut buffer).expect("read request");
-            let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+            let bytes = read_complete_http_request(&mut stream);
+            let request = String::from_utf8_lossy(&bytes);
             assert!(request.starts_with(expected), "request: {request}");
             write_test_response(&mut stream, "200 OK", body);
         }
@@ -555,6 +556,18 @@ fn read_complete_http_request(stream: &mut impl Read) -> Vec<u8> {
     }
 }
 
+fn build_request(
+    method: &str,
+    host: &str,
+    path: &str,
+    body: Option<&str>,
+    api_token: Option<&str>,
+) -> String {
+    let body = body.unwrap_or("");
+    let head = build_request_head(method, host, path, body.len(), api_token);
+    format!("{head}{body}")
+}
+
 #[test]
 fn operator_task_prepare_uses_control_plane_endpoint() {
     let payload = json!({
@@ -600,9 +613,8 @@ fn operator_task_prepare_round_trips_against_local_http_server() {
     let port = listener.local_addr().expect("local addr").port();
     let handle = std::thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("accept request");
-        let mut buffer = [0_u8; 4096];
-        let bytes_read = stream.read(&mut buffer).expect("read request");
-        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        let bytes = read_complete_http_request(&mut stream);
+        let request = String::from_utf8_lossy(&bytes);
         assert!(request.starts_with("POST /api/v1/operator-tasks/prepare HTTP/1.1\r\n"));
         assert!(request.contains("\"task\":"));
         let body = r#"{"status":"verified","task_digest":"abc","operator_id":"transform.demo"}"#;
@@ -637,9 +649,8 @@ fn project_create_round_trips_against_local_http_server() {
     let port = listener.local_addr().expect("local addr").port();
     let handle = std::thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("accept request");
-        let mut buffer = [0_u8; 4096];
-        let bytes_read = stream.read(&mut buffer).expect("read request");
-        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        let bytes = read_complete_http_request(&mut stream);
+        let request = String::from_utf8_lossy(&bytes);
         assert!(request.starts_with("POST /api/v1/projects HTTP/1.1\r\n"));
         assert!(request.contains("\"name\":\"Native project\""));
         assert!(!request.contains("\"project_id\""));
@@ -679,9 +690,8 @@ fn service_health_exposes_discovered_solver_endpoints_for_bindings() {
     let port = listener.local_addr().expect("local addr").port();
     let handle = std::thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("accept request");
-        let mut buffer = [0_u8; 4096];
-        let bytes_read = stream.read(&mut buffer).expect("read request");
-        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        let bytes = read_complete_http_request(&mut stream);
+        let request = String::from_utf8_lossy(&bytes);
         assert!(request.starts_with("GET /api/health HTTP/1.1\r\n"));
         write_test_response(
             &mut stream,
@@ -708,9 +718,8 @@ fn operator_task_execute_preserves_readiness_from_control_plane() {
     let port = listener.local_addr().expect("local addr").port();
     let handle = std::thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("accept request");
-        let mut buffer = [0_u8; 4096];
-        let bytes_read = stream.read(&mut buffer).expect("read request");
-        let request = String::from_utf8_lossy(&buffer[..bytes_read]);
+        let bytes = read_complete_http_request(&mut stream);
+        let request = String::from_utf8_lossy(&bytes);
         assert!(request.starts_with("POST /api/v1/operator-tasks/execute HTTP/1.1\r\n"));
         assert!(request.contains("\"task\":"));
         let mut receipt = crate::prepare_operator_task_payload(&json!({

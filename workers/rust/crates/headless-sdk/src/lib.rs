@@ -104,16 +104,36 @@ mod service_executor_dispatch_inspection;
 mod service_executor_dispatch_result;
 mod service_executor_health;
 mod service_executor_http;
+#[cfg(test)]
+mod service_executor_job_fetch_tests;
+mod service_executor_job_read;
+#[cfg(test)]
+mod service_executor_job_read_tests;
 mod service_executor_job_receipt;
 mod service_executor_job_wait;
 mod service_executor_library;
+#[cfg(test)]
+mod service_executor_library_tests;
+#[cfg(test)]
+mod service_executor_model_context_tests;
+mod service_executor_model_reference;
+#[cfg(test)]
+mod service_executor_model_reference_tests;
 mod service_executor_operator_task;
+mod service_executor_request;
 mod service_executor_response;
+mod service_executor_response_budget;
 mod service_executor_result;
 #[cfg(test)]
 mod service_executor_result_gate_tests;
 mod service_executor_solve;
+#[cfg(test)]
+mod service_executor_submission_context_tests;
+#[cfg(test)]
+mod service_executor_submission_tests;
 mod service_executor_task_budget;
+#[cfg(test)]
+mod service_executor_value_ownership_tests;
 mod surface;
 mod template_search;
 #[cfg(test)]
@@ -121,6 +141,7 @@ mod template_tests;
 mod template_workflows;
 mod templates;
 mod workflow_batch;
+mod workflow_binding_results;
 mod workflow_bindings;
 mod workflow_dataset_preflight;
 

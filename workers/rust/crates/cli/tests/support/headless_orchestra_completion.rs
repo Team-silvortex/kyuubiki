@@ -105,7 +105,13 @@ pub(super) fn http_json(
     )?;
     stream.write_all(&payload)?;
     let mut bytes = Vec::new();
-    stream.take(2 * 1024 * 1024).read_to_end(&mut bytes)?;
+    const MAX_LIVE_JSON_BYTES: u64 = 16 * 1024 * 1024;
+    stream
+        .take(MAX_LIVE_JSON_BYTES + 1)
+        .read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > MAX_LIVE_JSON_BYTES {
+        return Err("live JSON response exceeds the explicit test transport limit".into());
+    }
     let split = bytes
         .windows(4)
         .position(|part| part == b"\r\n\r\n")
