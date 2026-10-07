@@ -1,15 +1,14 @@
 use std::env;
 use std::fs;
-use std::path::PathBuf;
 
 use kyuubiki_headless_sdk::{
     HeadlessExecutionBatch, HeadlessRunReport, HeadlessRuntimeStyle, HeadlessTemplateDescriptor,
     HeadlessValidationReport, HeadlessWorkflowDocument, HybridHeadlessExecutor,
-    MockHeadlessExecutor, ServiceHeadlessExecutor, build_material_report_from_run,
-    build_template_document, collect_executor_compatibility_issues, describe_material_study,
-    execute_batch_with_executor, normalize_workflow_document, run_batch_dry, search_templates,
-    suggest_template_details, suggest_templates, summarize_batch,
-    supported_material_report_study_ids, validate_batch, validate_material_report_compatibility,
+    MockHeadlessExecutor, ServiceHeadlessExecutor, build_template_document,
+    collect_executor_compatibility_issues, describe_material_study, execute_batch_with_executor,
+    normalize_workflow_document, run_batch_dry, search_templates, suggest_template_details,
+    suggest_templates, summarize_batch, supported_material_report_study_ids, validate_batch,
+    validate_material_report_compatibility,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -17,10 +16,16 @@ use serde_json::Value;
 mod kyuubiki_headless_error;
 #[path = "kyuubiki-headless/flags.rs"]
 mod kyuubiki_headless_flags;
+#[path = "kyuubiki-headless/output_paths.rs"]
+mod kyuubiki_headless_output_paths;
 #[path = "kyuubiki-headless/plan.rs"]
 mod kyuubiki_headless_plan;
+#[path = "kyuubiki-headless/post_run.rs"]
+mod kyuubiki_headless_post_run;
 #[path = "kyuubiki-headless/preflight.rs"]
 mod kyuubiki_headless_preflight;
+#[path = "kyuubiki-headless/report_io.rs"]
+mod kyuubiki_headless_report_io;
 #[path = "kyuubiki-headless/research_round.rs"]
 mod kyuubiki_headless_research_round;
 #[path = "kyuubiki-headless/run_report.rs"]
@@ -29,6 +34,8 @@ mod kyuubiki_headless_run_report;
 mod kyuubiki_headless_usage;
 use kyuubiki_headless_error::{classify_cli_error, cli_error_stage, print_cli_error};
 use kyuubiki_headless_flags::Flags;
+use kyuubiki_headless_output_paths::{OutputScope, validate_paths, write_guarded_json_file};
+use kyuubiki_headless_report_io::{print_json, write_json_file};
 
 const DEFAULT_SERVICE_BASE_URL: &str = "http://127.0.0.1:4000";
 
@@ -154,7 +161,7 @@ fn handle_init(args: &[String]) -> Result<(), String> {
 
 fn handle_inspect(args: &[String]) -> Result<(), String> {
     let flags = Flags::parse(args)?;
-    let batch = load_batch_for_flags(&flags)?;
+    let batch = load_batch_for_flags(&flags, OutputScope::BatchInput)?;
     let summary = summarize_batch(&batch);
     if flags.json {
         print_json(&summary)?;
@@ -171,7 +178,7 @@ fn handle_inspect(args: &[String]) -> Result<(), String> {
 
 fn handle_validate(args: &[String]) -> Result<(), String> {
     let flags = Flags::parse(args)?;
-    let batch = load_batch_for_flags(&flags)?;
+    let batch = load_batch_for_flags(&flags, OutputScope::BatchInput)?;
     let report = validate_batch(&batch);
     if flags.json {
         print_json(&report)?;
@@ -191,11 +198,11 @@ fn handle_validate(args: &[String]) -> Result<(), String> {
 
 fn handle_render(args: &[String]) -> Result<(), String> {
     let flags = Flags::parse(args)?;
-    let batch = load_batch_for_flags(&flags)?;
+    let batch = load_batch_for_flags(&flags, OutputScope::Transform)?;
     let output_path = flags
         .out
         .as_deref()
-        .map(|path| write_json_file(path, &batch))
+        .map(|path| write_guarded_json_file(&flags, OutputScope::Transform, path, &batch))
         .transpose()?;
     if flags.json {
         print_json(&batch)?;
@@ -213,6 +220,9 @@ fn handle_render(args: &[String]) -> Result<(), String> {
 
 fn handle_run(args: &[String]) -> Result<(), String> {
     let flags = Flags::parse(args)?;
+    if let Err(error) = validate_paths(&flags, OutputScope::Run) {
+        return kyuubiki_headless_preflight::emit_path_validation_failure(&flags, error);
+    }
     let input_path = flags.input_path()?;
     let input_value = match load_json_value_from_path(&input_path) {
         Ok(value) => value,
@@ -240,7 +250,9 @@ fn handle_run(args: &[String]) -> Result<(), String> {
         }
     };
     let patch_receipt = match kyuubiki_headless_research_round::apply_parameter_patch_from_flags(
-        &mut batch, &flags,
+        &mut batch,
+        &flags,
+        OutputScope::Run,
     ) {
         Ok(receipt) => receipt,
         Err(error) => {
@@ -301,6 +313,7 @@ fn handle_run(args: &[String]) -> Result<(), String> {
         &flags,
         selected_executor,
         &batch,
+        patch_receipt.as_ref(),
     ) {
         Ok(prepared) => prepared,
         Err(error) => {
@@ -412,9 +425,7 @@ fn handle_run(args: &[String]) -> Result<(), String> {
     } else {
         run_batch_dry(&batch, flags.allow_sensitive, flags.allow_destructive)
     };
-    if let Some(report_out) = &flags.report_out {
-        write_json_file(report_out, &report)?;
-    }
+    persist_run_report(&flags, &report)?;
     if let Some(error) = run_report_failure(&report) {
         if flags.json {
             print_json(&report)?;
@@ -423,24 +434,16 @@ fn handle_run(args: &[String]) -> Result<(), String> {
         }
         return Err(error);
     }
-    let material_report = flags
-        .material_report
-        .as_deref()
-        .map(|study| build_material_report_from_run(study, &report))
-        .transpose()?;
-    if let Some(material_report) = &material_report {
-        if let Some(output_path) = &flags.material_report_out {
-            write_json_file(output_path, material_report)?;
-        }
-    }
-    if let Some(prepared) = prepared_research_round.as_ref() {
-        kyuubiki_headless_research_round::write_research_round_evidence(
-            prepared,
-            &batch,
-            &report,
-            patch_receipt.as_ref(),
-        )?;
-    }
+    let material_report = match kyuubiki_headless_post_run::publish_artifacts(
+        &flags,
+        &batch,
+        &report,
+        patch_receipt.as_ref(),
+        prepared_research_round.as_ref(),
+    ) {
+        Ok(material_report) => material_report,
+        Err(error) => return emit_run_artifact_failure(&flags, &report, error),
+    };
     if flags.json {
         print_json(&report)?;
         return Ok(());
@@ -509,29 +512,40 @@ fn run_report_failure(report: &HeadlessRunReport) -> Option<String> {
     })
 }
 
-fn write_json_file<T: Serialize>(path: &str, value: &T) -> Result<PathBuf, String> {
-    let output_path = PathBuf::from(path);
-    if let Some(parent) = output_path
-        .parent()
-        .filter(|parent| !parent.as_os_str().is_empty())
-    {
-        fs::create_dir_all(parent)
-            .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+fn persist_run_report(flags: &Flags, report: &HeadlessRunReport) -> Result<(), String> {
+    if let Some(path) = &flags.report_out {
+        if let Err(error) = write_guarded_json_file(flags, OutputScope::Run, path, report) {
+            return emit_run_artifact_failure(flags, report, error);
+        }
     }
-    let output_bytes = serde_json::to_vec_pretty(value).map_err(|error| error.to_string())?;
-    fs::write(&output_path, output_bytes)
-        .map_err(|error| format!("failed to write {}: {error}", output_path.display()))?;
-    Ok(output_path.canonicalize().unwrap_or(output_path))
+    Ok(())
+}
+
+fn emit_run_artifact_failure(
+    flags: &Flags,
+    report: &HeadlessRunReport,
+    error: String,
+) -> Result<(), String> {
+    if flags.json {
+        print_json(report)?;
+    } else {
+        kyuubiki_headless_run_report::print_run_report(report);
+    }
+    Err(error)
 }
 
 fn load_batch_from_path(path: &str) -> Result<HeadlessExecutionBatch, String> {
     load_batch_from_value(load_json_value_from_path(path)?)
 }
 
-fn load_batch_for_flags(flags: &Flags) -> Result<HeadlessExecutionBatch, String> {
+fn load_batch_for_flags(
+    flags: &Flags,
+    scope: OutputScope,
+) -> Result<HeadlessExecutionBatch, String> {
+    validate_paths(flags, scope)?;
     let input_path = flags.input_path()?;
     let mut batch = load_batch_from_path(&input_path)?;
-    kyuubiki_headless_research_round::apply_parameter_patch_from_flags(&mut batch, flags)?;
+    kyuubiki_headless_research_round::apply_parameter_patch_from_flags(&mut batch, flags, scope)?;
     Ok(batch)
 }
 
@@ -700,12 +714,6 @@ fn print_validation_report(report: &HeadlessValidationReport) {
     for issue in &report.issues {
         println!("- {issue}");
     }
-}
-
-fn print_json<T: Serialize>(value: &T) -> Result<(), String> {
-    let payload = serde_json::to_string_pretty(value).map_err(|error| error.to_string())?;
-    println!("{payload}");
-    Ok(())
 }
 
 #[derive(Debug, Serialize)]

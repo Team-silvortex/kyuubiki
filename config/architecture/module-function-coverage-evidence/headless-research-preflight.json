@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Public Rust Headless research-plan preflight checks the effective batch, metric step bounds and baseline/continuous lineage without execution. Native research CLI invokes the shared SDK policy before service construction; diagnostic text cannot grant job-timeout recovery. Invalid plans retain input/prior evidence and fail with zero executed steps. Controlled valid rounds execute once each; actual Orchestra/two-Agent rejection leaves project/job state unchanged and performs zero calculations. Verified macOS source contract/execution/recovery only, not producer authenticity, scientific qualification, installed/cross-language parity, durable or scale acceptance.",
+  "evidence_claims": [
+    {
+      "id": "rust-research-plan-static-preflight-before-native-cli-dispatch",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/research_round.rs",
+        "workers/rust/crates/headless-sdk/src/research_round_preflight_tests.rs",
+        "workers/rust/crates/headless-sdk/src/lib.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/research_round.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/error.rs",
+        "workers/rust/crates/cli/tests/headless_research_preflight.rs",
+        "workers/rust/crates/cli/tests/support/headless_research_preflight.rs",
+        "docs/headless-sdks.md",
+        "reports/headless-research-preflight-20261007.md"
+      ],
+      "required_text": [
+        "Headless Research Plan Preflight",
+        "Research plan preflight",
+        "validate_headless_research_round_plan",
+        "static_plan_validation_accepts_contiguous_lineage_without_mutating_inputs",
+        "static_plan_cannot_predict_missing_or_non_numeric_runtime_results",
+        "nonexistent_metric_step_is_rejected_before_any_service_request_even_with_timeout_text",
+        "invalid_previous_evidence_or_disconnected_lineage_never_reaches_service",
+        "valid_first_and_patched_contiguous_rounds_still_execute_once_each",
+        "invalid_research_plans_leave_real_projects_jobs_and_agent_calculations_untouched",
+        "research_preflight_text_never_authorizes_job_timeout_recovery"
+      ]
+    }
+  ]
+}

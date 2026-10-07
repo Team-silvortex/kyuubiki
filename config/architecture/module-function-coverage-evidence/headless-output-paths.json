@@ -1,0 +1,44 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native Headless example CLI reserves command-scoped input/output paths before patch receipts or execution and rechecks before staged file publication. Source/evidence aliases, output aliases, file-as-parent output collisions and unresolvable identities fail closed. Initial rejection preserves all files, reports zero executed steps on JSON stdout and dispatches no service mutations or Agent computations. Verified macOS source behavior only, not a hostile-directory sandbox, Unicode/network filesystem equivalence, Windows hard-link guarantee, multi-artifact transaction, crash recovery, cross-language, installed or scale qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-cli-artifact-path-reservations-and-pre-dispatch-isolation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/output_paths.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/output_paths_tests.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/report_io.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/plan.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/research_round.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/preflight.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/error.rs",
+        "workers/rust/crates/cli/tests/headless_output_paths.rs",
+        "workers/rust/crates/cli/tests/headless_output_publication.rs",
+        "workers/rust/crates/cli/tests/support/headless_output_paths.rs",
+        "docs/headless-sdks.md",
+        "reports/headless-output-paths-20261007.md"
+      ],
+      "required_text": [
+        "Headless Native CLI Artifact Path Protection",
+        "Native CLI artifact path protection",
+        "every_run_output_protects_all_declared_inputs_and_preserves_existing_reports",
+        "every_run_output_pair_is_reserved_before_parameter_receipt_publication",
+        "output_files_cannot_also_be_another_outputs_parent_directory",
+        "publication_rechecks_new_file_identity_and_cleans_staging_without_replacing_input",
+        "alias_created_during_service_execution_preserves_completed_stdout_and_source",
+        "repeated_timestamp_does_not_share_scratch_or_cleanup_between_tests",
+        "conflicting_outputs_stop_before_project_mutation_and_real_agent_dispatch",
+        "path_conflict_precedes_path_labels_and_never_authorizes_replay",
+        "output_path_conflict",
+        "command_validation"
+      ]
+    }
+  ]
+}

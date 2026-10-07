@@ -2,10 +2,10 @@ use kyuubiki_headless_sdk::{HeadlessExecutionPlan, build_execution_plan};
 
 pub(super) fn handle_plan(args: &[String]) -> Result<(), String> {
     let flags = super::Flags::parse(args)?;
-    let batch = super::load_batch_for_flags(&flags)?;
+    let batch = super::load_batch_for_flags(&flags, super::OutputScope::Transform)?;
     let plan = build_execution_plan(&batch);
     if let Some(output_path) = &flags.out {
-        super::write_json_file(output_path, &plan)?;
+        super::write_guarded_json_file(&flags, super::OutputScope::Transform, output_path, &plan)?;
     }
     if flags.json {
         super::print_json(&plan)?;

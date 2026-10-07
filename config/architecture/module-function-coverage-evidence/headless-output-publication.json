@@ -1,0 +1,43 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native Headless example CLI output uses buffered JSON encoding and staged single-file publication without old-report backups. Before publication, normal encoding/write/destination failures preserve existing output and clean owned staging. Available run receipts survive file-output failure on writable stdout, with non-retryable artifact_output diagnostics. Real Orchestra/Agent read-only recovery preserves one completed calculation. Verified macOS native behavior only: no total RSS, throughput, hostile-directory, multi-file transaction, crash/power-loss, installed, cross-language or scale qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-cli-output-publication-and-read-only-result-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/report_io.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/report_io_tests.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/error.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/preflight.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/research_round.rs",
+        "workers/rust/crates/cli/tests/headless_output_publication.rs",
+        "workers/rust/crates/cli/tests/headless_research_round.rs",
+        "workers/rust/crates/cli/tests/support/headless_output_publication.rs",
+        "workers/rust/crates/headless-sdk/src/failure_receipt_contract_tests.rs",
+        "schemas/headless-failure-receipt.schema.json",
+        "docs/headless-sdks.md",
+        "reports/headless-output-publication-20261007.md"
+      ],
+      "required_text": [
+        "Headless Native CLI Output Publication",
+        "Native CLI output publication",
+        "streamed_typed_run_report_matches_previous_serializer_with_original_map_iteration_order",
+        "serialization_failure_after_large_partial_output_preserves_the_committed_file",
+        "concurrent_writers_use_distinct_staging_files_and_publish_only_complete_documents",
+        "output_failure_takes_precedence_over_labels_and_paths_without_authorizing_replay",
+        "parameter_receipt_symlink_failure_stops_before_any_service_request",
+        "research_evidence_publication_failure_retains_completed_run_and_does_not_retry_service",
+        "completed_real_solve_survives_report_publication_failure_and_recovers_by_reading_only",
+        "artifact_output",
+        "44/44"
+      ]
+    }
+  ]
+}

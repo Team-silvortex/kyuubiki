@@ -2,16 +2,17 @@ use kyuubiki_headless_sdk::{
     HeadlessExecutionBatch, HeadlessParameterPatch, HeadlessParameterPatchReceipt,
     HeadlessResearchRoundEvidence, HeadlessResearchRoundSpec, HeadlessRunReport,
     apply_parameter_patch, build_headless_research_round_evidence,
-    validate_headless_research_round_spec,
+    validate_headless_research_round_plan,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use super::Flags;
+use super::{Flags, OutputScope};
 
 const MAX_RESEARCH_ARTIFACT_BYTES: u64 = 16 * 1024 * 1024;
+pub(super) const PREFLIGHT_FAILURE: &str = "headless research round preflight failed:";
 
 pub(crate) struct PreparedResearchRound {
     spec: HeadlessResearchRoundSpec,
@@ -22,6 +23,7 @@ pub(crate) struct PreparedResearchRound {
 pub(crate) fn apply_parameter_patch_from_flags(
     batch: &mut HeadlessExecutionBatch,
     flags: &Flags,
+    scope: OutputScope,
 ) -> Result<Option<HeadlessParameterPatchReceipt>, String> {
     let Some(path) = flags.parameter_patch.as_deref() else {
         if flags.parameter_patch_receipt_out.is_some() {
@@ -32,7 +34,13 @@ pub(crate) fn apply_parameter_patch_from_flags(
     let patch = read_json::<HeadlessParameterPatch>(path, "headless parameter patch")?;
     let receipt = apply_parameter_patch(batch, &patch)?;
     if let Some(output_path) = flags.parameter_patch_receipt_out.as_deref() {
-        write_json(output_path, &receipt, "parameter patch receipt")?;
+        write_json(
+            flags,
+            scope,
+            output_path,
+            &receipt,
+            "parameter patch receipt",
+        )?;
     }
     Ok(Some(receipt))
 }
@@ -41,6 +49,17 @@ pub(crate) fn prepare_research_round(
     flags: &Flags,
     selected_executor: Option<&str>,
     batch: &HeadlessExecutionBatch,
+    patch_receipt: Option<&HeadlessParameterPatchReceipt>,
+) -> Result<Option<PreparedResearchRound>, String> {
+    prepare_research_round_inner(flags, selected_executor, batch, patch_receipt)
+        .map_err(|error| format!("{PREFLIGHT_FAILURE} {error}"))
+}
+
+fn prepare_research_round_inner(
+    flags: &Flags,
+    selected_executor: Option<&str>,
+    batch: &HeadlessExecutionBatch,
+    patch_receipt: Option<&HeadlessParameterPatchReceipt>,
 ) -> Result<Option<PreparedResearchRound>, String> {
     let Some(spec_path) = flags.research_round_spec.as_deref() else {
         if flags.previous_round_evidence.is_some() || flags.research_round_out.is_some() {
@@ -64,13 +83,6 @@ pub(crate) fn prepare_research_round(
         "--research-round-spec requires --research-round-out to retain evidence".to_string()
     })?;
     let spec = read_json::<HeadlessResearchRoundSpec>(spec_path, "research round spec")?;
-    validate_headless_research_round_spec(&spec)?;
-    if spec.workflow_id != batch.workflow_id {
-        return Err(format!(
-            "headless research round workflow mismatch: spec={}, batch={}",
-            spec.workflow_id, batch.workflow_id
-        ));
-    }
     let previous = flags
         .previous_round_evidence
         .as_deref()
@@ -81,9 +93,6 @@ pub(crate) fn prepare_research_round(
             )
         })
         .transpose()?;
-    if spec.iteration == 1 && previous.is_some() {
-        return Err("headless research round 1 cannot declare previous evidence".to_string());
-    }
     if spec.iteration > 1 && previous.is_none() {
         return Err(
             "headless research round iteration 2 or later requires --previous-round-evidence"
@@ -95,6 +104,7 @@ pub(crate) fn prepare_research_round(
             "headless research round iteration 2 or later requires --parameter-patch".to_string(),
         );
     }
+    validate_headless_research_round_plan(batch, &spec, patch_receipt, previous.as_ref())?;
     Ok(Some(PreparedResearchRound {
         spec,
         previous,
@@ -107,6 +117,7 @@ pub(crate) fn write_research_round_evidence(
     batch: &HeadlessExecutionBatch,
     report: &HeadlessRunReport,
     patch_receipt: Option<&HeadlessParameterPatchReceipt>,
+    flags: &Flags,
 ) -> Result<PathBuf, String> {
     let evidence = build_headless_research_round_evidence(
         batch,
@@ -114,8 +125,13 @@ pub(crate) fn write_research_round_evidence(
         &prepared.spec,
         patch_receipt,
         prepared.previous.as_ref(),
-    )?;
+    )
+    .map_err(|error| {
+        super::kyuubiki_headless_post_run::generation_error("research round evidence", error)
+    })?;
     write_json(
+        flags,
+        OutputScope::Run,
         &prepared.output_path,
         &evidence,
         "headless research round evidence",
@@ -141,20 +157,13 @@ fn read_json<T: DeserializeOwned>(path: &str, label: &str) -> Result<T, String> 
     serde_json::from_slice(&bytes).map_err(|error| format!("invalid {label} {path}: {error}"))
 }
 
-fn write_json<T: Serialize>(path: &str, value: &T, label: &str) -> Result<PathBuf, String> {
-    let output_path = Path::new(path);
-    if let Some(parent) = output_path
-        .parent()
-        .filter(|parent| !parent.as_os_str().is_empty())
-    {
-        fs::create_dir_all(parent)
-            .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
-    }
-    let bytes = serde_json::to_vec_pretty(value)
-        .map_err(|error| format!("failed to encode {label}: {error}"))?;
-    fs::write(output_path, bytes)
-        .map_err(|error| format!("failed to write {label} {}: {error}", output_path.display()))?;
-    Ok(output_path
-        .canonicalize()
-        .unwrap_or_else(|_| output_path.to_path_buf()))
+fn write_json<T: Serialize>(
+    flags: &Flags,
+    scope: OutputScope,
+    path: &str,
+    value: &T,
+    label: &str,
+) -> Result<PathBuf, String> {
+    super::write_guarded_json_file(flags, scope, path, value)
+        .map_err(|error| format!("{error} ({label})"))
 }

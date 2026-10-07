@@ -1,4 +1,5 @@
 use crate::HeadlessExecutionBatch;
+use crate::report_compaction::{compact_owned_report_value, compact_report_value};
 use crate::workflow_bindings::parse_binding;
 use serde_json::{Map, Value};
 use std::collections::HashMap;
@@ -36,21 +37,27 @@ impl BindingResults {
         }
     }
 
-    // Reports are compacted before consuming the result. Keep only actual
-    // whole-value outputs referenced by the unchanged binding grammar.
-    pub(crate) fn insert(&mut self, index: usize, result: Value) {
+    // Keep original referenced outputs in the cache; move only unused fields into the report.
+    pub(crate) fn insert(&mut self, index: usize, result: Value) -> Value {
         let Some(required) = self.remaining.get(&index) else {
-            return;
+            return compact_owned_report_value(result);
         };
-        if let Value::Object(fields) = result {
-            let selected: Map<_, _> = fields
-                .into_iter()
-                .filter(|(key, _)| required.contains_key(key))
-                .collect();
-            if !selected.is_empty() {
-                self.values.insert(index, selected);
+        let Value::Object(mut fields) = result else {
+            return compact_owned_report_value(result);
+        };
+        let mut selected = Map::new();
+        for (key, value) in &mut fields {
+            if required.contains_key(key) {
+                let preview = compact_report_value(value);
+                selected.insert(key.clone(), std::mem::replace(value, preview));
+            } else {
+                *value = compact_owned_report_value(std::mem::take(value));
             }
         }
+        if !selected.is_empty() {
+            self.values.insert(index, selected);
+        }
+        Value::Object(fields)
     }
 
     // Local preparation/dry-run previews also belong to the report; clone only

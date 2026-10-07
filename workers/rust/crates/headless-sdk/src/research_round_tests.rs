@@ -5,7 +5,7 @@ use crate::{
 };
 use serde_json::json;
 
-fn batch() -> HeadlessExecutionBatch {
+pub(super) fn batch() -> HeadlessExecutionBatch {
     HeadlessExecutionBatch {
         schema_version: "kyuubiki.headless-execution-batch/v1".to_string(),
         exported_at: "1970-01-01T00:00:00.000Z".to_string(),
@@ -22,7 +22,7 @@ fn batch() -> HeadlessExecutionBatch {
     }
 }
 
-fn report(batch: &HeadlessExecutionBatch, value: Value) -> HeadlessRunReport {
+pub(super) fn report(batch: &HeadlessExecutionBatch, value: Value) -> HeadlessRunReport {
     let mut report = run_batch_dry(batch, false, false);
     report.mode = "execute:service".to_string();
     report.steps[0].status = "executed".to_string();
@@ -30,7 +30,7 @@ fn report(batch: &HeadlessExecutionBatch, value: Value) -> HeadlessRunReport {
     report
 }
 
-fn spec(round_id: &str, iteration: u64) -> HeadlessResearchRoundSpec {
+pub(super) fn spec(round_id: &str, iteration: u64) -> HeadlessResearchRoundSpec {
     HeadlessResearchRoundSpec {
         schema_version: HEADLESS_RESEARCH_ROUND_SPEC_SCHEMA_VERSION.to_string(),
         round_id: round_id.to_string(),
@@ -46,7 +46,7 @@ fn spec(round_id: &str, iteration: u64) -> HeadlessResearchRoundSpec {
     }
 }
 
-fn patch(batch: &mut HeadlessExecutionBatch) -> HeadlessParameterPatchReceipt {
+pub(super) fn patch(batch: &mut HeadlessExecutionBatch) -> HeadlessParameterPatchReceipt {
     apply_parameter_patch(
         batch,
         &HeadlessParameterPatch {

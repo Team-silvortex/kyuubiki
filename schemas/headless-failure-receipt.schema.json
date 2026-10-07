@@ -62,6 +62,7 @@
         "queue",
         "authorization",
         "artifact_upload",
+        "artifact_output",
         "routing",
         "transport",
         "result_fetch",

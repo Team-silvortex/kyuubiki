@@ -3,7 +3,7 @@ use serde_json::Value;
 
 use super::{
     Flags, classify_cli_error, cli_error_stage, kyuubiki_headless_flags::MAX_JOB_WAIT_TIMEOUT_MS,
-    print_json, write_json_file,
+    persist_run_report, print_json,
 };
 
 pub(super) fn emit_run_failure(
@@ -13,8 +13,23 @@ pub(super) fn emit_run_failure(
     message: String,
     issues: &[String],
 ) -> Result<(), String> {
+    emit_failure_report(flags, batch, workflow_id, message, issues, true)
+}
+
+pub(super) fn emit_path_validation_failure(flags: &Flags, message: String) -> Result<(), String> {
+    emit_failure_report(flags, None, "unresolved", message, &[], false)
+}
+
+fn emit_failure_report(
+    flags: &Flags,
+    batch: Option<&HeadlessExecutionBatch>,
+    workflow_id: &str,
+    message: String,
+    issues: &[String],
+    persist: bool,
+) -> Result<(), String> {
     let code = classify_cli_error(&message);
-    let report = build_preflight_failure_report(
+    let mut report = build_preflight_failure_report(
         batch,
         workflow_id,
         &run_mode(flags),
@@ -23,8 +38,14 @@ pub(super) fn emit_run_failure(
         &message,
         issues,
     );
-    if let Some(report_out) = &flags.report_out {
-        write_json_file(report_out, &report)?;
+    if matches!(code, "report_output_failure" | "output_path_conflict") {
+        if let Some(failure) = report.execution_summary.failure.as_mut() {
+            failure.recommended_action =
+                super::kyuubiki_headless_error::cli_error_recovery(code).into();
+        }
+    }
+    if persist {
+        persist_run_report(flags, &report)?;
     }
     if flags.json {
         print_json(&report)?;

@@ -148,13 +148,33 @@ pub fn validate_headless_research_round_spec(
     Ok(())
 }
 
-pub fn build_headless_research_round_evidence(
+/// Checks an effective batch, metric step references and round lineage without execution.
+/// This does not authenticate previous evidence or predict runtime result fields/values.
+pub fn validate_headless_research_round_plan(
     batch: &HeadlessExecutionBatch,
-    report: &HeadlessRunReport,
     spec: &HeadlessResearchRoundSpec,
     patch_receipt: Option<&HeadlessParameterPatchReceipt>,
     previous: Option<&HeadlessResearchRoundEvidence>,
-) -> Result<HeadlessResearchRoundEvidence, String> {
+) -> Result<(), String> {
+    validate_plan_target(batch, spec)?;
+    let validation = validate_batch(batch);
+    if !validation.ok {
+        return Err(format!(
+            "headless research round batch is invalid: {}",
+            validation.issues.join("; ")
+        ));
+    }
+    if spec.iteration == 1 {
+        return validate_baseline_lineage(patch_receipt, previous);
+    }
+    let hash = headless_batch_content_sha256(batch)?;
+    validate_lineage(batch, spec, &hash, patch_receipt, previous).map(|_| ())
+}
+
+fn validate_plan_target(
+    batch: &HeadlessExecutionBatch,
+    spec: &HeadlessResearchRoundSpec,
+) -> Result<(), String> {
     validate_headless_research_round_spec(spec)?;
     if spec.workflow_id != batch.workflow_id {
         return Err(format!(
@@ -162,6 +182,26 @@ pub fn build_headless_research_round_evidence(
             spec.workflow_id, batch.workflow_id
         ));
     }
+    for metric in &spec.metrics {
+        let index = metric_step_index(&metric.pointer)?;
+        if index >= batch.steps.len() {
+            return Err(format!(
+                "headless research metric {} references missing batch step {}",
+                metric.metric_id, index
+            ));
+        }
+    }
+    Ok(())
+}
+
+pub fn build_headless_research_round_evidence(
+    batch: &HeadlessExecutionBatch,
+    report: &HeadlessRunReport,
+    spec: &HeadlessResearchRoundSpec,
+    patch_receipt: Option<&HeadlessParameterPatchReceipt>,
+    previous: Option<&HeadlessResearchRoundEvidence>,
+) -> Result<HeadlessResearchRoundEvidence, String> {
+    validate_plan_target(batch, spec)?;
     validate_execution(batch, report)?;
     let batch_content_sha256 = headless_batch_content_sha256(batch)?;
     let previous_round =
@@ -351,15 +391,7 @@ fn validate_lineage(
     previous: Option<&HeadlessResearchRoundEvidence>,
 ) -> Result<Option<HeadlessResearchRoundLink>, String> {
     if spec.iteration == 1 {
-        if previous.is_some() {
-            return Err("headless research round 1 cannot declare a previous round".to_string());
-        }
-        if patch_receipt.is_some() {
-            return Err(
-                "headless research round 1 must start from an effective baseline without a parameter patch"
-                    .to_string(),
-            );
-        }
+        validate_baseline_lineage(patch_receipt, previous)?;
         return Ok(None);
     }
 
@@ -398,6 +430,22 @@ fn validate_lineage(
         evidence_sha256: canonical_json_sha256(&previous_value),
         batch_content_sha256: previous.batch_content_sha256.clone(),
     }))
+}
+
+fn validate_baseline_lineage(
+    patch_receipt: Option<&HeadlessParameterPatchReceipt>,
+    previous: Option<&HeadlessResearchRoundEvidence>,
+) -> Result<(), String> {
+    if previous.is_some() {
+        return Err("headless research round 1 cannot declare a previous round".to_string());
+    }
+    if patch_receipt.is_some() {
+        return Err(
+            "headless research round 1 must start from an effective baseline without a parameter patch"
+                .to_string(),
+        );
+    }
+    Ok(())
 }
 
 fn validate_receipt_target(
@@ -585,3 +633,7 @@ fn is_canonical_pointer_segment(segment: &str) -> bool {
 #[cfg(test)]
 #[path = "research_round_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "research_round_preflight_tests.rs"]
+mod preflight_tests;

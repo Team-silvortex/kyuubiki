@@ -123,6 +123,73 @@ SDK/CLI chains preserve complete Unicode/escaped research notes and original
 results, including a version list larger than the former test-reader cap. This
 is not a total RSS/CPU bound, throughput benchmark or scale qualification.
 
+The [report compaction follow-up](../reports/headless-report-compaction-20261007.md)
+moves eligible owned payload/result fields into reports, while later bindings
+retain their complete original values and independent previews. Array samples
+do not retain source capacity; overreserved short arrays/strings release excess
+capacity. Borrowed inputs, summary thresholds, completion and failure/no-replay
+gates are unchanged. Real SDK/CLI chains compare summary samples and Unicode
+prefixes with stored full results; this is not an aggregate RSS or scale claim.
+
+The [output publication follow-up](../reports/headless-output-publication-20261007.md)
+streams native Headless CLI JSON through a 64 KiB buffer and replaces individual
+files only after staging, flushing and syncing, without old-report backups.
+Publication failure preserves the available run receipt on writable stdout and
+has a separate non-retryable diagnostic. A real accepted bar calculation is
+recovered by reading its original job/result, with one calculation throughout.
+This is not a multi-file transaction, durable restart/power-loss guarantee,
+installed qualification or total memory/throughput claim.
+
+The [artifact path follow-up](../reports/headless-output-paths-20261007.md)
+reserves native CLI input/output paths before patch receipts or execution, then
+rechecks them at each publication boundary. Workflow/patch/spec/previous-evidence
+inputs cannot be overwritten by output aliases; output files cannot alias each
+other or serve as each other's parent directory. Initial rejection writes only
+an invalid zero-step JSON stdout receipt, not a failure file on a conflicting
+path. Actual Orchestra/Agent tests retain source bytes and unchanged project/job
+records with zero calculations. This is scoped macOS source verification, not
+a hostile-directory sandbox, multi-file transaction or filesystem qualification.
+
+The [artifact generation follow-up](../reports/headless-artifact-generation-20261007.md)
+closes the post-run receipt-loss and error-classification gap. Material/evidence
+construction failure retains the actual completed report but exits nonzero with
+non-retryable `report_generation_failure`, separate from execution, publication
+and preflight errors. Missing/non-numeric metrics cannot masquerade as a job
+timeout or fabricate qualified evidence. A real bar calculation retains its
+original job/result while public SDK helpers explicitly rebuild verified evidence
+from a corrected mapping, with one calculation throughout. This is derived-output
+recovery, not automatic replay, durable recovery or qualification promotion.
+
+The [research preflight follow-up](../reports/headless-research-preflight-20261007.md)
+adds a public Rust SDK check for the effective batch, metric step references and
+baseline/continuous round lineage. The native research CLI calls it before
+service execution. Nonexistent steps, first-round patches and malformed/stale
+previous evidence stop with a non-retryable zero-step receipt rather than running
+and only then failing evidence generation. Real Orchestra/two-Agent rejection
+tests retain unchanged project/job state with zero calculations, while a valid
+two-round controlled service chain still runs once per round. Runtime metric
+values and producer authenticity remain separate gates, not new qualification.
+
+The [material preflight follow-up](../reports/headless-material-preflight-20261007.md)
+checks complete candidate solves, owned waits and ordered result readbacks for all
+five built-in material studies before service execution. Missing, duplicate or
+misidentified sources cannot be silently interpreted as fixed candidate results.
+Canonical and grouped schedules remain supported. Actual Orchestra/two-Agent
+rejection leaves projects/jobs unchanged and performs zero calculations. This
+checks declared identities and structure, not model/material parameter fidelity,
+authenticated result provenance or scientific qualification; generic SDK workflows
+and explicit retained-result report construction remain separate paths.
+
+The [material input profile follow-up](../reports/headless-material-input-profiles-20261007.md)
+closes a fixed-report mismatch: edited solver inputs could still be ranked using
+original factory constants. All five built-in reports now require their matching
+physical input profiles, including composite models and coupling parameters.
+Synchronized SI edits alone do not prove the original candidate. Annotations,
+study aliases, runtime context and generic research/patch execution remain
+independent. This protects report assumptions, not material truth or numerical
+qualification. The artifact test service also waits for bounded complete request
+headers instead of racing delayed clients.
+
 See `releases/snapshots/3.5.0.json`. Package, update, language-pack and book
 targets are aligned, without changing protocol/schema versions, translation
 content or historical grades. The installed baseline remains 3.4.0. The tensor

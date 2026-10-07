@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native report construction moves eligible owned payload and unreferenced result values, keeps complete later-bound originals with independent previews, and avoids retaining large sample/source capacities. Borrowed inputs, summary thresholds, completion, failure and no-replay rules remain unchanged. Pointer/capacity/previous-policy regressions and real SDK/CLI comparisons of summary samples and Unicode prefixes against stored full results establish verified native source behavior, not aggregate RSS, throughput, installed, cross-language, durable or scale qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-owned-report-compaction-and-binding-isolation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/report_compaction.rs",
+        "workers/rust/crates/headless-sdk/src/report_compaction_tests.rs",
+        "workers/rust/crates/headless-sdk/src/run.rs",
+        "workers/rust/crates/headless-sdk/src/executor.rs",
+        "workers/rust/crates/headless-sdk/src/workflow_binding_results.rs",
+        "workers/rust/crates/headless-sdk/src/workflow_binding_results_tests.rs",
+        "workers/rust/crates/cli/tests/support/headless_binding_lifetimes.rs",
+        "docs/headless-sdks.md",
+        "reports/headless-report-compaction-20261007.md"
+      ],
+      "required_text": [
+        "Headless Native Report Compaction Ownership",
+        "Native report compaction ownership",
+        "owned_and_borrowed_compaction_match_previous_shape_at_all_threshold_edges",
+        "large_array_samples_move_values_but_do_not_retain_the_source_vector_capacity",
+        "public_batch_moves_unused_report_fields_and_final_bound_payload_but_not_shared_values",
+        "public_batch_noncompletion_moves_diagnostics_without_enabling_bindings_or_later_calls",
+        "dry_run_bound_payload_reports_keep_previous_values_without_mutating_the_batch",
+        "insertion_returns_a_compacted_report_while_cached_arrays_remain_full_and_independent",
+        "assert_note_preview",
+        "445 unit tests",
+        "43/43"
+      ]
+    }
+  ]
+}

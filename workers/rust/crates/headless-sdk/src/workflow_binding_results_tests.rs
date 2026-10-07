@@ -324,3 +324,33 @@ fn public_batch_dispatch_moves_last_use_but_keeps_compacted_reports_unchanged() 
     assert_eq!(report.steps[0].result_preview, preview);
     assert_eq!(report.steps[1].payload["data"]["item_count"], 4096);
 }
+
+#[test]
+fn insertion_returns_a_compacted_report_while_cached_arrays_remain_full_and_independent() {
+    let document = batch(vec![
+        json!({}),
+        json!({"data":"{{steps.1.result.solver_endpoints}}"}),
+    ]);
+    let mut store = BindingResults::new(&document);
+    let source = json!({"solver_endpoints":(0..4096).collect::<Vec<_>>(),"unused":["keep"]});
+    let original = source["solver_endpoints"].as_array().unwrap().as_ptr();
+    let unused = source["unused"].as_array().unwrap().as_ptr();
+    let expected = crate::run::compact_report_value(&source);
+    let mut preview = store.insert(1, source);
+    assert_eq!(preview, expected);
+    assert_eq!(preview["unused"].as_array().unwrap().as_ptr(), unused);
+    preview["solver_endpoints"]["sample"][0] = json!(999);
+    assert_eq!(store.values[&1]["solver_endpoints"][0], 0);
+    assert_eq!(
+        store.values[&1]["solver_endpoints"]
+            .as_array()
+            .unwrap()
+            .as_ptr(),
+        original
+    );
+    let mut full = store.take(1, "solver_endpoints").unwrap();
+    assert_eq!(full.as_array().unwrap().len(), 4096);
+    full[0] = json!(123);
+    assert_eq!(preview["solver_endpoints"]["sample"][0], 999);
+    assert!(store.values.is_empty());
+}

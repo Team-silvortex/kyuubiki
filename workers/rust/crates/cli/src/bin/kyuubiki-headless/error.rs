@@ -32,6 +32,7 @@ pub(super) fn cli_error_stage(code: &str) -> &'static str {
         "document_validation" => "document_decode",
         "executor_compatibility" | "executor_selection" => "executor_preflight",
         "endpoint_configuration" => "endpoint_configuration",
+        "report_output_failure" | "report_generation_failure" => "artifact_output",
         "parameter_patch_validation" => "parameter_patch",
         "research_round_validation" => "research_round",
         "material_report_template_mismatch"
@@ -44,7 +45,17 @@ pub(super) fn cli_error_stage(code: &str) -> &'static str {
 }
 
 pub(super) fn classify_cli_error(error: &str) -> &'static str {
-    if error.contains("model_artifact_limit_exceeded")
+    if error.starts_with(super::kyuubiki_headless_output_paths::PATH_CONFLICT) {
+        "output_path_conflict"
+    } else if error.starts_with(super::kyuubiki_headless_post_run::GENERATION_FAILURE) {
+        "report_generation_failure"
+    } else if error.starts_with(super::kyuubiki_headless_report_io::OUTPUT_FAILURE) {
+        "report_output_failure"
+    } else if error.starts_with(super::kyuubiki_headless_research_round::PREFLIGHT_FAILURE) {
+        "research_round_validation"
+    } else if error.starts_with("material-report input contract mismatch") {
+        "material_report_input_contract_mismatch"
+    } else if error.contains("model_artifact_limit_exceeded")
         || (error.contains("direct FEM model exceeds artifact transport limit")
             && error.contains("limit_bytes="))
     {
@@ -59,8 +70,6 @@ pub(super) fn classify_cli_error(error: &str) -> &'static str {
         "material_report_template_provenance_missing"
     } else if error.starts_with("unsupported material report study") {
         "material_report_study_unsupported"
-    } else if error.starts_with("material-report input contract mismatch") {
-        "material_report_input_contract_mismatch"
     } else if error.contains("--material-report with --json requires --material-report-out") {
         "material_report_output_required"
     } else if error.starts_with("headless execution blocked") {
@@ -91,7 +100,7 @@ pub(super) fn classify_cli_error(error: &str) -> &'static str {
     }
 }
 
-fn cli_error_recovery(code: &str) -> &'static str {
+pub(super) fn cli_error_recovery(code: &str) -> &'static str {
     match code {
         "frontend_proxy_artifact_limit" => {
             "Use the runtime control-plane endpoint for Headless execution instead of the GUI frontend."
@@ -120,6 +129,15 @@ fn cli_error_recovery(code: &str) -> &'static str {
         "endpoint_configuration" => {
             "Use a supported control-plane HTTP authority without paths, queries, or credentials."
         }
+        "report_output_failure" => {
+            "Inspect the run report on stdout and existing job/results before repairing the output path. A failed file publication does not mean computation failed; do not replay the step or batch automatically."
+        }
+        "report_generation_failure" => {
+            "Inspect the completed run receipt on stdout or its saved run file and original job/results. Repair result extraction or research metric/lineage mapping only against those retained results, then regenerate derived artifacts; do not replay the step or batch automatically. Missing or invalid results leave the study incomplete; computation success does not qualify missing research evidence."
+        }
+        "output_path_conflict" => {
+            "Select distinct artifact output files separate from every input and previous-round evidence. If execution already completed, inspect its run receipt and original job/result; do not replay the step or batch automatically."
+        }
         "parameter_patch_validation" => {
             "Regenerate the patch from the current rendered batch and keep expected baseline values synchronized."
         }
@@ -136,7 +154,7 @@ fn cli_error_recovery(code: &str) -> &'static str {
             "Use headless templates --json to select a supported material report study."
         }
         "material_report_input_contract_mismatch" => {
-            "Keep material research metadata and solver-model SI properties synchronized before execution."
+            "Restore the complete built-in candidate chain, its fixed physical input profile and synchronized SI properties. SI consistency alone does not prove the original candidate constants. For changed physical inputs, use a custom research specification or a supported materialized-candidate report; do not relabel old results or automatically replay completed work."
         }
         "material_report_output_required" => {
             "Provide --material-report-out when requesting a JSON material report."
@@ -168,6 +186,92 @@ struct CliErrorView<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn material_preflight_keywords_cannot_authorize_job_wait_recovery() {
+        for text in [
+            "timed out waiting for job",
+            "model_artifact_limit_exceeded",
+            "parameter patch",
+        ] {
+            let code =
+                classify_cli_error(&format!("material-report input contract mismatch: {text}"));
+            assert_eq!(code, "material_report_input_contract_mismatch");
+            assert_eq!(cli_error_stage(code), "material_report_validation");
+            assert!(!cli_error_retryable(code));
+        }
+    }
+
+    #[test]
+    fn research_preflight_text_never_authorizes_job_timeout_recovery() {
+        for label in [
+            "timed out waiting for job",
+            "model_artifact_limit_exceeded",
+            "missing field",
+        ] {
+            let error = format!(
+                "{} {label}",
+                super::super::kyuubiki_headless_research_round::PREFLIGHT_FAILURE
+            );
+            let code = classify_cli_error(&error);
+            assert_eq!(code, "research_round_validation");
+            assert_eq!(cli_error_stage(code), "research_round");
+            assert!(!cli_error_retryable(code));
+        }
+    }
+
+    #[test]
+    fn generation_failure_precedes_metric_and_artifact_labels_without_authorizing_replay() {
+        for label in [
+            "timed out waiting for job",
+            "--research-round",
+            "parameter patch",
+            "missing field",
+            "headless execution failed",
+            "model_artifact_limit_exceeded",
+        ] {
+            let error = super::super::kyuubiki_headless_post_run::generation_error(
+                "derived artifact",
+                label.into(),
+            );
+            let code = classify_cli_error(&error);
+            assert_eq!(code, "report_generation_failure");
+            assert_eq!(cli_error_stage(code), "artifact_output");
+            assert!(!cli_error_retryable(code));
+            assert!(cli_error_recovery(code).contains("retained results"));
+            assert!(cli_error_recovery(code).contains("do not replay"));
+        }
+    }
+
+    #[test]
+    fn path_conflict_precedes_path_labels_and_never_authorizes_replay() {
+        for path in [
+            "--research-round",
+            "parameter patch",
+            "timed out waiting for job",
+        ] {
+            let code = classify_cli_error(&format!("headless output path conflict: {path}"));
+            assert_eq!(code, "output_path_conflict");
+            assert_eq!(cli_error_stage(code), "command_validation");
+            assert!(!cli_error_retryable(code));
+            assert!(cli_error_recovery(code).contains("do not replay"));
+        }
+    }
+
+    #[test]
+    fn output_failure_takes_precedence_over_labels_and_paths_without_authorizing_replay() {
+        for label in [
+            "research round",
+            "parameter patch",
+            "timed out waiting for job",
+        ] {
+            let code = classify_cli_error(&format!("headless output failed: write {label}"));
+            assert_eq!(code, "report_output_failure");
+            assert_eq!(cli_error_stage(code), "artifact_output");
+            assert!(!cli_error_retryable(code));
+            assert!(cli_error_recovery(code).contains("do not replay"));
+        }
+    }
 
     #[test]
     fn blocked_execution_is_not_a_retryable_transport_failure() {

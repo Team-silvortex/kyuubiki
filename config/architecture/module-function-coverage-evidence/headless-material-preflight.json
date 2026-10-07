@@ -1,0 +1,44 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Rust built-in material report preflight checks all five fixed candidate sets for complete matching solves, unique declared candidate/study identities, preceding owned waits and ordered readbacks. Native CLI rejects invalid plans before service construction, retaining source/prior material output with zero executed steps; empty workflow documents remain subject to earlier normalization. Controlled tests record zero requests, actual Orchestra/two-Agent rejection leaves project/job state unchanged with zero calculations, and intact mock previews remain supported. Verified macOS source execution/contract/recovery only, not model/material parameter fidelity, authenticated provenance, numerical/scientific, installed/cross-language, durable or scale qualification.",
+  "evidence_claims": [
+    {
+      "id": "rust-built-in-material-candidate-preflight-before-dispatch",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/material_reports.rs",
+        "workers/rust/crates/headless-sdk/src/material_report_preflight.rs",
+        "workers/rust/crates/headless-sdk/src/material_report_preflight_tests.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/error.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/post_run.rs",
+        "workers/rust/crates/cli/tests/headless_material_preflight.rs",
+        "workers/rust/crates/cli/tests/headless_artifact_generation.rs",
+        "workers/rust/crates/cli/tests/support/headless_material_preflight.rs",
+        "docs/headless-sdks.md",
+        "reports/headless-material-preflight-20261007.md"
+      ],
+      "required_text": [
+        "Headless Material Plan Preflight",
+        "Built-in material plan preflight",
+        "validate_material_report_compatibility",
+        "every_builtin_material_report_requires_complete_result_cardinality_before_execution",
+        "canonical_and_grouped_candidate_chains_accept_aliases_without_mutating_inputs",
+        "material_result_order_and_unique_candidate_ownership_are_not_inferred_from_counts",
+        "a_completed_job_wait_gate_must_precede_each_report_result_fetch",
+        "readbacks_can_follow_wait_bindings_and_native_job_id_aliases",
+        "dielectric_input_checks_cannot_be_satisfied_by_an_empty_element_list",
+        "incomplete_builtin_material_plans_stop_with_zero_requests_and_retained_outputs",
+        "intact_builtin_material_templates_still_run_as_explicit_mock_previews",
+        "invalid_material_candidate_plans_cannot_create_projects_or_dispatch_real_agents",
+        "material_preflight_keywords_cannot_authorize_job_wait_recovery",
+        "material_generation_still_rejects_incomplete_retained_result_sets_without_mutating_receipts"
+      ]
+    }
+  ]
+}

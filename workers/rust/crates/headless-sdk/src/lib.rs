@@ -90,6 +90,7 @@ mod operator_task_validation_tests;
 mod parameter_patch;
 mod plan;
 mod preflight_report;
+mod report_compaction;
 mod research_round;
 #[cfg(test)]
 mod risk_contract_tests;
@@ -390,7 +391,8 @@ pub use research_round::{
     HeadlessResearchMetricObjective, HeadlessResearchMetricObservation, HeadlessResearchMetricSpec,
     HeadlessResearchRoundEvidence, HeadlessResearchRoundLink, HeadlessResearchRoundSpec,
     build_headless_research_round_evidence, validate_headless_research_round_evidence,
-    validate_headless_research_round_spec, verify_headless_research_round_evidence,
+    validate_headless_research_round_plan, validate_headless_research_round_spec,
+    verify_headless_research_round_evidence,
 };
 pub use run::{
     HEADLESS_EXECUTION_RUN_SCHEMA_VERSION, HeadlessBlockedConfirmation,

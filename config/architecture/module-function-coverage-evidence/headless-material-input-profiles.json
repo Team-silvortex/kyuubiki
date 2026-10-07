@@ -1,0 +1,44 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Rust fixed material report preflight checks all five candidate input profiles against current workflow factories, including constitutive properties, geometry, boundaries and composite model/coupling settings. Synchronized SI edits cannot reuse original ranking constants. Finite lazy reference profiles never cache caller models/results; annotations, aliases and root runtime context remain separate. Generic Headless execution and supported materialized builders remain independent. Controlled CLI rejection issues no requests, actual Orchestra/two-Agent rejection leaves projects/jobs unchanged with zero calculations. A delayed fragmented health fixture regression repairs its bounded request reader and prevents secondary cleanup panics. Scoped macOS source verified execution/contract/recovery, not scientific, provenance, installed, cross-language/platform, durable or scale acceptance.",
+  "evidence_claims": [
+    {
+      "id": "rust-fixed-material-report-input-profile-before-dispatch",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/material_reports.rs",
+        "workers/rust/crates/headless-sdk/src/material_report_preflight.rs",
+        "workers/rust/crates/headless-sdk/src/material_report_inputs.rs",
+        "workers/rust/crates/headless-sdk/src/material_report_input_tests.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/error.rs",
+        "workers/rust/crates/cli/tests/headless_material_preflight.rs",
+        "workers/rust/crates/cli/tests/headless_artifact_generation.rs",
+        "workers/rust/crates/cli/tests/support/headless_material_preflight.rs",
+        "config/architecture/headless-workflow-qualification.json",
+        "docs/headless-sdks.md",
+        "reports/headless-material-input-profiles-20261007.md"
+      ],
+      "required_text": [
+        "Headless Material Input Profiles",
+        "Fixed material report inputs",
+        "validate_material_report_compatibility",
+        "fixed_material_reports_reject_transplanted_models_under_unchanged_candidate_labels",
+        "every_composite_model_and_coupling_parameter_is_part_of_the_fixed_report_profile",
+        "constitutive_parameter_drift_is_rejected_without_relying_on_changed_model_ids",
+        "serialized_profiles_allow_study_aliases_annotations_and_explicit_runtime_context",
+        "physical_input_edits_remain_available_to_generic_sdk_workflows",
+        "numeric_profile_comparison_is_roundoff_only_not_a_physical_tolerance",
+        "profile_cache_contains_only_the_finite_built_in_candidate_set",
+        "changed_physical_profiles_stop_before_requests_and_keep_prior_material_outputs",
+        "coordinated_dielectric_si_edits_cannot_silently_use_original_report_constants",
+        "changed_material_physics_cannot_create_projects_or_dispatch_real_agents",
+        "health_fixture_waits_for_delayed_fragmented_request_headers"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Native Headless example CLI post-run material/evidence construction failures retain completed receipts and classify as non-retryable report_generation_failure, independently of execution, preflight, publication and path failures. Metric text cannot authorize job-timeout replay. Controlled service cases reject missing/non-numeric metrics without false evidence; a real Orchestra/Agent bar result rebuilds and verifies derived evidence through public SDK helpers without another calculation. Verified macOS source behavior only, not whole-study scientific qualification, installed/cross-language parity, durable recovery, multi-file transaction or scale qualification.",
+  "evidence_claims": [
+    {
+      "id": "native-cli-post-run-generation-receipt-preservation-and-explicit-evidence-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["workflow_composition", "validation", "sdk_headless"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/post_run.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/research_round.rs",
+        "workers/rust/crates/cli/src/bin/kyuubiki-headless/error.rs",
+        "workers/rust/crates/cli/tests/headless_artifact_generation.rs",
+        "workers/rust/crates/cli/tests/support/headless_artifact_generation.rs",
+        "docs/headless-sdks.md",
+        "reports/headless-artifact-generation-20261007.md"
+      ],
+      "required_text": [
+        "Headless Post-Run Artifact Generation",
+        "Post-run artifact generation",
+        "material_generation_still_rejects_incomplete_retained_result_sets_without_mutating_receipts",
+        "incomplete_material_workflows_now_fail_preflight_and_retain_invalid_receipts",
+        "missing_research_metric_cannot_become_a_retryable_timeout_after_successful_execution",
+        "non_numeric_metrics_preserve_completed_reports_without_publishing_false_evidence",
+        "actual_execution_failure_remains_execution_failure_without_entering_artifact_generation",
+        "completed_real_solve_survives_evidence_generation_failure_and_regenerates_without_execution",
+        "generation_failure_precedes_metric_and_artifact_labels_without_authorizing_replay",
+        "report_generation_failure",
+        "artifact_output"
+      ]
+    }
+  ]
+}

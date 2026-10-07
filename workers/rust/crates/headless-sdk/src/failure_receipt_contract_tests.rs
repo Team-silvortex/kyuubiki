@@ -103,6 +103,7 @@ fn official_preflight_receipts_use_declared_zero_index_stages() {
         "parameter_patch",
         "research_round",
         "material_report_validation",
+        "artifact_output",
         "command_validation",
     ] {
         let report = build_preflight_failure_report(

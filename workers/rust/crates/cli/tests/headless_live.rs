@@ -44,6 +44,10 @@ mod orchestra_dispatch_inspection;
 mod orchestra_modal;
 #[path = "support/headless_original_receipt_limits.rs"]
 mod original_receipt_limits;
+#[path = "support/headless_output_paths.rs"]
+mod output_paths;
+#[path = "support/headless_output_publication.rs"]
+mod output_publication;
 #[path = "support/headless_response_budgets.rs"]
 mod response_budgets;
 #[path = "support/headless_result_gates.rs"]
@@ -56,6 +60,13 @@ mod submission_context;
 mod submission_receipts;
 #[path = "support/headless_write_ack_loss.rs"]
 mod write_ack_loss;
+
+#[path = "support/headless_artifact_generation.rs"]
+mod artifact_generation;
+#[path = "support/headless_material_preflight.rs"]
+mod material_preflight;
+#[path = "support/headless_research_preflight.rs"]
+mod research_preflight;
 
 static SCRATCH_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 

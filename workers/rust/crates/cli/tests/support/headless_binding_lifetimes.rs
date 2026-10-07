@@ -23,6 +23,16 @@ fn request_note() -> String {
     "\u{7814}\u{7a76}\u{8bb0}\u{5f55}\n\u{0628}\u{062d}\u{062b}\t\"\\{{literal}}".repeat(8192)
 }
 
+fn assert_note_preview(preview: &Value) {
+    let note = request_note();
+    assert_eq!(preview["$kyuubiki_report_summary"], "string");
+    assert_eq!(preview["byte_count"], note.len());
+    assert_eq!(
+        preview["prefix"],
+        note.chars().take(256).collect::<String>()
+    );
+}
+
 fn document(context: &Value, model_id: &Value) -> HeadlessExecutionBatch {
     let read = |job_id: Value| {
         let mut payload = context.clone();
@@ -89,6 +99,13 @@ fn assert_full_versions(port: u16, report: &Value, original: &Value) -> Result<(
         assert_eq!(preview["nodes"]["$kyuubiki_report_summary"], "array");
         assert_eq!(preview["nodes"]["item_count"], 513);
         assert_eq!(preview["elements"]["item_count"], 512);
+        for field in ["nodes", "elements"] {
+            assert_eq!(
+                preview[field]["sample"],
+                json!(&original[field].as_array().unwrap()[..3])
+            );
+        }
+        assert_note_preview(&step["payload"]["payload"]["research_context"]["request_note"]);
         let id = step["result_preview"]["model_version_id"].as_str().unwrap();
         let (status, stored) = http_json(port, &format!("/api/v1/model-versions/{id}"), None)?;
         assert_eq!(status, 200);
@@ -292,6 +309,15 @@ fn assert_combined_results(port: u16, report: &Value) -> Result<Value> {
     assert!((tip / (1000.0 / (210e9 * 0.01)) - 1.0).abs() < 1e-12);
     assert_eq!(completed["result"]["result"]["nodes"]["item_count"], 513);
     assert_eq!(completed["result"]["result"]["elements"]["item_count"], 512);
+    for field in ["nodes", "elements"] {
+        assert_eq!(
+            completed["result"]["result"][field]["sample"],
+            json!(&original[field].as_array().unwrap()[..3])
+        );
+    }
+    assert_note_preview(
+        &report["steps"][1]["payload"]["payload"]["research_context"]["request_note"],
+    );
     assert_eq!(
         report["steps"][3]["result_preview"]["raw"]["result"]["nodes"]["item_count"],
         513

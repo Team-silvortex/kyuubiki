@@ -109,6 +109,22 @@ step evidence. A decoded batch that fails contract validation is rejected before
 dry-run preview or any mock, service, or hybrid executor call, with
 `executed_step_count: 0` and an empty `steps` array.
 
+Output failure is separate from calculation failure. If a requested report file
+cannot be published, `--json` still emits the available run report to stdout,
+provided stdout itself remains writable, and exits nonzero with stderr code
+`report_output_failure`, stage `artifact_output`, and `retryable: false`. The
+report retains its actual completed, failed or invalid state. Do not rerun the
+workflow just because saving failed; inspect the receipt and recover the same
+accepted job/result. See [native CLI output publication](#native-cli-output-publication).
+
+Derived artifact construction is a separate post-run phase. Material-report or
+research-evidence generation errors retain the actual run receipt on writable
+stdout, exit nonzero and emit `report_generation_failure`, stage `artifact_output`,
+with `retryable: false`. The existing `report_output_failure` still means file
+publication failed. A successful run report does not establish a successful study:
+consume the CLI exit status and diagnostic, and verify the requested artifacts.
+See [post-run artifact generation](#post-run-artifact-generation).
+
 Retry safety remains narrower than error reporting. The service `job_wait`
 path can resume polling the same accepted `job_id` under a bounded server
 deadline. The CLI does not replay an entire workflow automatically, because a
@@ -188,6 +204,46 @@ the previous/current batch. A repeated batch, skipped round, mock result, stale
 patch, missing metric, or literal `n/a` therefore fails qualification instead
 of becoming a misleading success table.
 
+#### Research plan preflight
+
+Rust consumers can explicitly validate the effective, already patched batch
+before passing it to an executor:
+
+```rust
+validate_headless_research_round_plan(
+    &effective_batch,
+    &round_spec,
+    patch_receipt.as_ref(),
+    previous_evidence.as_ref(),
+)?;
+```
+
+The public SDK function checks the batch/spec contract, workflow identity,
+zero-based metric step positions, baseline restrictions and continuous lineage.
+Round 1 cannot carry a previous round or patch receipt. Later rounds require
+structurally valid service evidence, a different round ID, the next iteration,
+and a guarded patch linking the previous batch hash to the effective current
+batch hash. Validate after all physical-input overrides; a receipt that no
+longer targets that effective batch is rejected. First-round preflight does not
+compute an unused batch hash. The function borrows its inputs and never executes
+a task or builds evidence.
+
+The native example CLI performs these checks when `run` requests research-round
+evidence, before constructing its service executor or issuing workflow requests.
+Rejection is non-retryable `research_round_validation` at `research_round`, with
+an invalid zero-step run receipt. Invalid pointer or file-label text cannot turn
+it into job-timeout recovery. A separately requested failure run file or an
+already applied patch receipt can still be written; this is not a no-file-write
+promise. Original input/previous evidence and prior derived evidence are retained.
+
+Preflight can reject a missing step but cannot predict a missing/non-numeric
+result field, authenticate a prior evidence producer or qualify material physics.
+Those runtime result gates and explicit post-run recovery remain necessary.
+Direct SDK execution does not implicitly invoke this optional research policy;
+callers opt in before dispatch. Evidence building reuses the same static target
+and lineage checks and still validates the actual completed report and metrics.
+See [research preflight regression](../reports/headless-research-preflight-20261007.md).
+
 Qualified rounds can be exchanged as a self-contained `.kcore` research
 series. Bind the latest `evidence.research-round` entrypoint with the
 `headless-research-round` KCore contract, and include each round's
@@ -218,10 +274,11 @@ require a distinct patch receipt and should read domain-specific result fields
 such as `max_temperature`, `max_stress`, or ranked workflow artifacts instead
 of filling unrelated material or electrostatic columns with `n/a`.
 
-Material-report workflows also fail closed on duplicated material-property
-drift. For dielectric screening, `research.relative_permittivity` is the
-dimensionless source value while each solver element stores absolute SI
-`permittivity` in F/m; edit both together or regenerate the candidate model.
+Fixed material reports require their built-in physical input profiles, not just
+consistent duplicated properties. Dielectric `research.relative_permittivity`
+is dimensionless and element `permittivity` is absolute F/m, but synchronizing
+both after an edit does not authorize reuse of original report constants. For
+changed inputs, use a custom research spec or a supported materialized report.
 
 Service execution retries only transient TCP connection failures that happen
 before any request bytes are written. Interrupted writes and response failures
@@ -748,6 +805,211 @@ selection copies, kernel buffers, parser results, reports or concurrent requests
 Oversized encoding still runs to completion to measure its exact size; network
 deadlines do not preempt that CPU work. No throughput/RSS number or 1M-scale claim
 follows. See [request buffer regression](../reports/headless-request-buffers-20261007.md).
+
+#### Native report compaction ownership
+
+Native report compaction shares one policy for borrowed and owned values. Arrays
+with at most 128 items remain arrays; larger arrays retain three recursively
+compacted samples plus counts. Strings with at most 4096 UTF-8 bytes remain
+strings; longer strings retain their byte count and first 256 characters. Public
+markers, values, ordering and thresholds are unchanged.
+
+Borrowed batch inputs remain untouched. Resolved owned payloads and unreferenced
+result fields transfer their eligible array buffers, object keys and short strings
+into the report instead of copying them. Oversized arrays use a fresh three-item
+sample buffer rather than retaining their original vector capacity. Overreserved
+small arrays/strings release excess capacity instead of carrying it into reports.
+
+Completed result fields needed by later bindings retain their full original
+values in the private cache; only their independent report preview is copied.
+Unused fields move into the report, and final binding use still transfers the
+original value to the dependent action. Noncompleted outcomes do not populate
+the cache or enable later actions. Dry-run/preparation previews, confirmation,
+failure classification, no-replay rules and report schemas stay unchanged.
+
+The earlier borrowed compactor already skipped large array/string tails; this
+does not claim removal of a previous full copy of those tails. Pointer/capacity
+and previous-policy comparisons verify ownership and shape. Real SDK/CLI chains
+check summary samples and Unicode prefixes against full stored data without
+extra computation. Reports, shared previews, caller payloads, parser results,
+keys and concurrent branches still allocate; there is no aggregate report/RSS
+cap, throughput benchmark, installed or scale qualification. See
+[report compaction regression](../reports/headless-report-compaction-20261007.md).
+
+#### Native CLI output publication
+
+The native `headless` example CLI streams pretty JSON through a 64 KiB writer
+buffer instead of allocating another complete encoded document. This covers
+`init`, `render`, `plan`, run/preflight reports, material reports, parameter-patch
+receipts and research-round evidence. JSON values and formatting remain unchanged;
+only stdout adds its existing trailing newline. Independent SDK consumers still
+choose their own serialization and storage; other example CLIs are outside this
+scoped writer change.
+
+File output uses an exclusively created same-directory temporary file, flushes
+and syncs it, closes it, then renames it over the destination. No delete-first or
+old-report backup is used. Before publication, encoding/write/validation errors
+leave a previous committed file untouched; ordinary failure cleanup removes the
+owned temporary file on a best-effort basis. Unix output has owner-only `0600`
+mode. Symlink, special-file, directory and read-only destinations are rejected;
+choose a regular writable file in a trusted output directory instead.
+
+If run, material or round-evidence publication fails after computation, JSON
+stdout retains the run receipt without relabeling successful calculation as
+failed. An output failure cannot grant replay permission. A real Orchestra/Agent
+regression completes one 513-node bar calculation, rejects report publication,
+then uses explicit `job_fetch`/`result_fetch` reads to publish a recovery report;
+the calculation count remains one. Preflight output failure similarly retains
+the original invalid-document receipt when stdout remains available.
+
+This is single-file publication, not a multi-artifact transaction, restart
+checkpoint, power-loss guarantee or hostile-directory sandbox. A killed process
+can leave a temporary file; cleanup errors and directory changes are not globally
+reconciled. Broken stdout returns a structured error where stderr is available,
+but stdout cannot be atomic or guaranteed complete. The 64 KiB encoding buffer
+is not a total report/RSS cap, and syncing adds I/O rather than proving throughput
+improvement. See [output publication regression](../reports/headless-output-publication-20261007.md).
+
+#### Native CLI artifact path protection
+
+The native example CLI reserves artifact paths before reading/applying a patch
+or executing a batch. `run` protects the source workflow, `--parameter-patch`,
+`--research-round-spec` and `--previous-round-evidence` against every declared
+`--report-out`, `--material-report-out`, `--research-round-out` and
+`--parameter-patch-receipt-out`. The four outputs must be distinct, and one
+output file cannot also serve as another output's parent directory. Declared
+outputs are reserved even when a later validation would make them inactive.
+
+`render` and `plan` protect workflow/patch inputs against `--out` and the patch
+receipt, including collisions between those two outputs. `inspect` and
+`validate` protect their inputs against the patch receipt. Without `--out`,
+transforms can still emit JSON on stdout. Distinct existing regular report files
+can still be explicitly replaced. `init` has no consuming inputs and retains
+its existing explicit output behavior; this guard is not an in-place edit mode.
+
+Relative/absolute spelling, dot segments and existing parent symlinks are
+resolved without creating directories. Existing Unix hard-link aliases use
+device/inode identity. macOS/Windows conservatively reserve ASCII case-only
+variants, including output ancestors, even on case-sensitive volumes. This
+does not establish prospective Unicode normalization, Windows hard-link identity
+or special/network filesystem equivalence. Unresolvable paths fail closed.
+
+Initial rejection returns `output_path_conflict`, stage `command_validation`,
+with `retryable: false`. JSON `run` stdout contains an invalid zero-step receipt;
+no file output is written, including an otherwise distinct failure-report path.
+The workflow identity is `unresolved` because rejection precedes document decode.
+An actual Orchestra/SQLite/two-Agent regression checks unchanged project/job
+records, unchanged source bytes and zero Agent calculations after rejection.
+
+The complete path set is rechecked before staging and immediately before each
+file replacement. A newly observed alias stops publication and cleans owned
+staging on ordinary failure. If calculation already completed, retain its stdout
+receipt and inspect the original job/result; never automatically replay the
+batch. These checks prevent common path mistakes, not hostile-directory races,
+power-loss, input-content immutability or a multi-file transaction. Independent
+SDK consumers retain their own storage policy. See
+[artifact path regression](../reports/headless-output-paths-20261007.md).
+
+#### Built-in material plan preflight
+
+Call `validate_material_report_compatibility(study, &effective_batch)` before
+executing a built-in material study. The native CLI does this before constructing
+its service executor. Template identity alone is insufficient: each of the five
+current study builders interprets three results against its fixed candidate list.
+
+Preflight requires the matching solver action for every unique declared candidate,
+the matching research study, and exactly one ordered `result_fetch` per candidate.
+Every readback must reference an earlier owned solve or wait's `job_id`, with a
+preceding `job_wait` for that same source. Missing/extra candidate solves or reads, repeated
+candidate sources, swapped readbacks, literal unrelated jobs and contradictory
+job aliases fail closed. Ordinary batch validation still checks indices, actions,
+risk and bindings. Dielectric plans additionally require non-empty element lists
+and positive represented SI permittivity consistent with the relative value.
+
+##### Fixed material report inputs
+
+The same API now compares solver models, constitutive constants, geometry,
+boundary conditions and composite feedback/loss inputs with the selected
+candidate's built-in profile. Fixed research properties and material-card labels
+must also agree; unknown model/coupling/property fields are rejected rather than
+silently ignored. Profiles are generated once per used study from the existing
+workflow factories and retained as a finite 15-candidate reference set. Caller
+models/results are never cached or copied by this comparison. Numeric comparison
+permits only floating-point JSON roundoff (8 machine epsilons relative to magnitude,
+with no absolute floor), not a physical tolerance or relaxed solver admission.
+
+Root-level project/version/case context, `notes` and `annotations` remain allowed;
+ordinary runtime association checks still apply. Research display labels, notes,
+objectives and annotations may differ, and study aliases still resolve normally.
+These annotations do not redefine the candidate's canonical report identity.
+Changes to conductivity, density, strength, thickness or coupling cannot be
+reported using the original fixed candidate constants, even when SI values agree.
+Use generic Headless execution plus a custom research specification, or supported
+materialized-candidate builders with their matching report. This gate applies only
+when opting into the fixed built-in report, not general solve/patch execution.
+See [input profile regression](../reports/headless-material-input-profiles-20261007.md).
+
+Canonical interleaved chains and grouped solve -> wait -> ordered-read chains
+both pass; fetches may bind through a preceding owned wait. Study aliases remain
+supported. Batch payloads still require canonical `job_id`; the native executor's
+`jobId` alias does not replace that requirement, and both aliases must agree if
+present. SDK preflight borrows the batch without mutation or execution.
+
+Non-empty invalid plans return `material_report_input_contract_mismatch` at
+`material_report_validation`, with a non-retryable invalid zero-step run receipt.
+An empty workflow document is rejected earlier by document normalization at
+`command_validation`; a directly constructed empty batch fails this material
+preflight. Explicitly requested failure run files may be written, but prior
+material outputs and source bytes remain unchanged. These static rejections issue
+no workflow service requests, including writes before the first candidate solve.
+
+This optional fixed-study policy does not constrain arbitrary Headless workflows
+or independently supplied result payloads passed to `build_material_report`.
+Retained results require their own identity, completeness and scientific checks;
+post-run builders still reject incomplete result sets. Declared candidate labels
+are not authenticated provenance or independent physical validation, even when
+inputs match the built-in screening profile.
+Runtime result, numerical and lineage validation remain separate gates. Mock
+preview success is not material research qualification. See
+[material preflight regression](../reports/headless-material-preflight-20261007.md).
+
+#### Post-run artifact generation
+
+The native CLI routes material-report construction and research-evidence
+construction through its post-run artifact boundary. A generation error retains
+the completed report on JSON stdout or the ordinary text report, including job
+identities and successful-step counts. An already published run file remains
+available. The CLI exits nonzero with `report_generation_failure` and does not
+relabel computation as failed or fabricate research evidence. Execution and
+preflight failures keep their existing categories; publication and path errors
+also retain their own diagnostics. Metric/path text cannot turn a generation
+failure into a retryable job timeout.
+
+Repair extraction or metric/lineage mapping only against retained results.
+Do not change physical inputs and claim an old result belongs to them. If required
+results are missing or invalid, the study remains incomplete; additional
+computation requires an explicitly authorized new plan, not automatic batch replay.
+Independent SDK callers can use `build_headless_research_round_evidence` and
+`verify_headless_research_round_evidence` on the effective batch, retained run,
+corrected spec, and applicable patch/previous evidence without executing a task.
+This is explicit derived-artifact regeneration, not a new CLI retry/resume command.
+
+For a plain `result_fetch` step, a retained scalar can occur at
+`/steps/0/result_preview/result/tip_displacement`. A combined
+`solve_and_wait_from_model_version` step wraps the fetched result and uses
+`/steps/0/result_preview/result/result/tip_displacement`. Inspect the actual
+envelope and choose the zero-based step index rather than guessing or weakening
+the numeric/lineage checks. The real Orchestra/two-Agent regression repairs this
+mapping, rebuilds and verifies evidence through the public SDK, checks the bar
+displacement independently against `FL/EA`, and retains one job/calculation.
+
+Failed construction does not replace a prior material/evidence file. That file
+may belong to an older run: its presence is not completion proof. Validate its
+batch/report hash and lineage before use. Already published artifacts are not
+rolled back when a later phase fails. No multi-artifact transaction, durable
+restart, hostile-directory, deployed or scientific/scale qualification is added;
+stdout can still fail. Independent SDK consumers choose their own error/storage
+policy. See [artifact generation regression](../reports/headless-artifact-generation-20261007.md).
 
 Local verification is retained in
 [native-headless-task-completion-20261005.md](../reports/native-headless-task-completion-20261005.md):

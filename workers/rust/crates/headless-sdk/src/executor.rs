@@ -1,6 +1,7 @@
 use crate::execution_observability::{failure_preview, summarize_execution};
 use crate::operator_task::operator_task_prepare_preview_or_error;
 use crate::preflight_report::build_batch_validation_failure_report;
+use crate::report_compaction::{compact_owned_report_value, compact_report_payload};
 use crate::run::{build_result_preview, compact_report_value};
 use crate::workflow_binding_results::BindingResults;
 use crate::workflow_bindings::{binding_failure_step, resolve_step_payload};
@@ -171,7 +172,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
                         action: step.action.clone(),
                         risk: step.risk,
                         status: "executed".to_string(),
-                        payload: compact_report_value(&payload),
+                        payload: compact_report_payload(payload),
                         result_preview: preview,
                         requires_confirmation,
                     });
@@ -184,7 +185,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
                         action: step.action.clone(),
                         risk: step.risk,
                         status: "failed".to_string(),
-                        payload: compact_report_value(&payload),
+                        payload: compact_report_payload(payload),
                         result_preview,
                         requires_confirmation,
                     });
@@ -198,13 +199,14 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
             && prepare_operator_task_payload(&payload).is_err()
         {
             status = "failed".to_string();
+            let result_preview = operator_task_prepare_preview_or_error(&payload);
             steps.push(HeadlessExecutionStepReport {
                 index: step.index,
                 action: step.action.clone(),
                 risk: step.risk,
                 status: status.clone(),
-                payload: compact_report_value(&payload),
-                result_preview: operator_task_prepare_preview_or_error(&payload),
+                payload: compact_report_payload(payload),
+                result_preview,
                 requires_confirmation,
             });
             break;
@@ -236,16 +238,17 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
                     }
                     .into();
                 }
-                let result_preview = compact_report_value(&outcome.result);
-                if completed {
-                    results.insert(step.index, outcome.result);
-                }
+                let result_preview = if completed {
+                    results.insert(step.index, outcome.result)
+                } else {
+                    compact_owned_report_value(outcome.result)
+                };
                 steps.push(HeadlessExecutionStepReport {
                     index: step.index,
                     action: step.action.clone(),
                     risk: step.risk,
                     status: outcome.status,
-                    payload: compact_report_value(&payload),
+                    payload: compact_report_payload(payload),
                     result_preview,
                     requires_confirmation,
                 });
@@ -260,7 +263,7 @@ pub fn execute_batch_with_executor<E: HeadlessExecutor>(
                     action: step.action.clone(),
                     risk: step.risk,
                     status: "failed".to_string(),
-                    payload: compact_report_value(&payload),
+                    payload: compact_report_payload(payload),
                     result_preview: failure_preview(step.index, &step.action, error.message),
                     requires_confirmation,
                 });

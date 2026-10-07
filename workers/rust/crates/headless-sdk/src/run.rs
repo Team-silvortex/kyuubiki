@@ -1,6 +1,8 @@
 use crate::execution_observability::summarize_execution;
 use crate::operator_task::operator_task_prepare_preview_or_error;
 use crate::preflight_report::build_batch_validation_failure_report;
+use crate::report_compaction::compact_report_payload;
+pub(crate) use crate::report_compaction::compact_report_value;
 use crate::workflow_binding_results::BindingResults;
 use crate::workflow_bindings::{binding_failure_step, resolve_step_payload};
 use crate::{
@@ -10,10 +12,6 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-
-const MAX_REPORT_ARRAY_ITEMS: usize = 128;
-const REPORT_ARRAY_SAMPLE_ITEMS: usize = 3;
-const MAX_REPORT_STRING_BYTES: usize = 4_096;
 
 pub const HEADLESS_EXECUTION_RUN_SCHEMA_VERSION: &str = "kyuubiki.headless-execution-run/v1";
 
@@ -113,7 +111,7 @@ pub fn run_batch_dry(
                         action: step.action.clone(),
                         risk: step.risk,
                         status: "dry_run".to_string(),
-                        payload: compact_report_value(&payload),
+                        payload: compact_report_payload(payload),
                         result_preview: preview,
                         requires_confirmation,
                     });
@@ -126,7 +124,7 @@ pub fn run_batch_dry(
                         action: step.action.clone(),
                         risk: step.risk,
                         status: "failed".to_string(),
-                        payload: compact_report_value(&payload),
+                        payload: compact_report_payload(payload),
                         result_preview,
                         requires_confirmation,
                     });
@@ -144,7 +142,7 @@ pub fn run_batch_dry(
             action: step.action.clone(),
             risk: step.risk,
             status: "dry_run".into(),
-            payload: compact_report_value(&payload),
+            payload: compact_report_payload(payload),
             result_preview,
             requires_confirmation,
         });
@@ -163,51 +161,6 @@ pub fn run_batch_dry(
         validation,
         execution_summary,
         steps,
-    }
-}
-
-pub(crate) fn compact_report_value(value: &Value) -> Value {
-    match value {
-        Value::Array(items) if items.len() > MAX_REPORT_ARRAY_ITEMS => {
-            let sample = items
-                .iter()
-                .take(REPORT_ARRAY_SAMPLE_ITEMS)
-                .map(compact_report_value)
-                .collect::<Vec<_>>();
-            Value::Object(Map::from_iter([
-                (
-                    "$kyuubiki_report_summary".to_string(),
-                    Value::String("array".to_string()),
-                ),
-                ("item_count".to_string(), Value::from(items.len() as u64)),
-                ("sample".to_string(), Value::Array(sample)),
-                (
-                    "omitted_item_count".to_string(),
-                    Value::from((items.len() - REPORT_ARRAY_SAMPLE_ITEMS) as u64),
-                ),
-            ]))
-        }
-        Value::Array(items) => Value::Array(items.iter().map(compact_report_value).collect()),
-        Value::Object(fields) => Value::Object(
-            fields
-                .iter()
-                .map(|(key, value)| (key.clone(), compact_report_value(value)))
-                .collect(),
-        ),
-        Value::String(text) if text.len() > MAX_REPORT_STRING_BYTES => {
-            Value::Object(Map::from_iter([
-                (
-                    "$kyuubiki_report_summary".to_string(),
-                    Value::String("string".to_string()),
-                ),
-                ("byte_count".to_string(), Value::from(text.len() as u64)),
-                (
-                    "prefix".to_string(),
-                    Value::String(text.chars().take(256).collect()),
-                ),
-            ]))
-        }
-        _ => value.clone(),
     }
 }
 

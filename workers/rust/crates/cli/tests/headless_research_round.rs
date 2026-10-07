@@ -285,3 +285,52 @@ fn later_round_without_previous_evidence_fails_before_service_connection() {
     assert!(String::from_utf8_lossy(&wrong_target.stderr).contains("workflow mismatch"));
     let _ = fs::remove_dir_all(root);
 }
+
+#[test]
+fn research_evidence_publication_failure_retains_completed_run_and_does_not_retry_service() {
+    let root = workspace();
+    let workflow = write_workflow(&root);
+    let spec = write_spec(&root, "publication-round-1", 1);
+    let evidence_path = root.join("blocked-evidence.json");
+    let run_path = root.join("completed-run.json");
+    fs::create_dir(&evidence_path).expect("blocked evidence path");
+    let (url, server) = health_server(8.0);
+    let output = run(&[
+        "run",
+        path(&workflow),
+        "--json",
+        "--execute",
+        "--executor",
+        "service",
+        "--execution-posture",
+        "research",
+        "--api-base-url",
+        &url,
+        "--research-round-spec",
+        path(&spec),
+        "--research-round-out",
+        path(&evidence_path),
+        "--report-out",
+        path(&run_path),
+    ]);
+    server.join().expect("single service request");
+    assert!(!output.status.success());
+    let report: Value = serde_json::from_slice(&output.stdout).expect("completed report on stdout");
+    assert_eq!(report["status"], "ok");
+    assert_eq!(report["executed_step_count"], 1);
+    assert_eq!(
+        report["steps"][0]["result_preview"]["result"]["research_metric"],
+        8.0
+    );
+    assert_eq!(
+        report,
+        serde_json::from_slice::<Value>(&fs::read(&run_path).unwrap()).unwrap()
+    );
+    let diagnostic: Value = serde_json::from_slice(&output.stderr).expect("output error");
+    assert_eq!(diagnostic["error"]["code"], "report_output_failure");
+    assert_eq!(diagnostic["error"]["stage"], "artifact_output");
+    assert_eq!(diagnostic["error"]["retryable"], false);
+    assert!(evidence_path.is_dir());
+    assert_eq!(fs::read_dir(&root).unwrap().count(), 4);
+    fs::remove_dir_all(root).expect("clean fixture");
+}
