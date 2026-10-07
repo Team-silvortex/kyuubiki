@@ -30,6 +30,8 @@
           "workers/rust/crates/cli/src/agent_http.rs",
           "workers/rust/crates/script-runner/src/agent_control_link_operational_qualification/mod.rs",
           "workers/rust/crates/cli/src/agent_watchdog.rs",
+          "workers/rust/crates/cli/src/agent_execution_cancellation.rs",
+          "schemas/agent-execution-cancellation.schema.json",
           "workers/rust/crates/script-runner/src/distributed_task_recovery_operational_qualification/mod.rs",
           "apps/web/lib/kyuubiki_web/playground/agent_registry.ex",
           "apps/web/lib/kyuubiki_web/playground/agent_registry_public.ex",
@@ -43,6 +45,7 @@
         "stability_contracts": [
           "TaskIR",
           "solver RPC descriptor",
+          "process and generation fenced execution cancellation",
           "execution capability report",
           "Agent control-link diagnostics",
           "two-host control-link recovery qualification",
@@ -54,6 +57,12 @@
         "sources": [
           "apps/web/lib/kyuubiki_web/orchestra/engine.ex",
           "apps/web/lib/kyuubiki_web/orchestra/operator_task_executor.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_inspection.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_result.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_cancellation.ex",
+          "schemas/operator-task-dispatch-cancellation.schema.json",
+          "schemas/operator-task-dispatch-inspection.schema.json",
+          "schemas/operator-task-dispatch-record.schema.json",
           "apps/web/lib/kyuubiki_web/orchestra/control_plane_surface.ex",
           "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery.ex",
           "apps/web/lib/kyuubiki_web/orchestra/distributed_recovery_operational_probe.ex",
@@ -66,6 +75,8 @@
         "stability_contracts": [
           "workflow graph execution",
           "operator task execution",
+          "bounded read-only retained TaskIR dispatch inspection",
+          "explicit observed-generation TaskIR dispatch cancellation without retargeting or replay",
           "control-plane surface",
           "replay-safe distributed recovery",
           "persisted workflow restart recovery",

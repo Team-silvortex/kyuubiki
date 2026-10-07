@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kyuubiki.operator-task-dispatch-result/v1",
+  "title": "Read-only original TaskIR attempt result retrieval",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "task_id", "task_digest", "attempt_id", "status", "outcome", "completion", "automatic_replay_authorized", "publication_performed"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.operator-task-dispatch-result/v1"},
+    "task_id": {"type": "string", "minLength": 1, "maxLength": 1024},
+    "task_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "attempt_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "request_id": {"type": "string", "minLength": 1, "maxLength": 256},
+    "process_instance_id": {"type": "string", "minLength": 1, "maxLength": 256},
+    "generation": {"type": "integer", "minimum": 1},
+    "status": {"enum": ["receipt_recovered", "no_retained_dispatch", "not_dispatched", "original_endpoint_not_configured", "original_endpoint_unreachable", "agent_receipt_invalid", "pending", "not_retained", "result_not_retained", "attempt_identity_ambiguous"]},
+    "outcome": {"enum": ["unknown", "executed", "failed", "blocked"]},
+    "completion": {"type": ["object", "null"]},
+    "automatic_replay_authorized": {"const": false}, "publication_performed": {"const": false}
+  },
+  "allOf": [{
+    "if": {"properties": {"status": {"const": "receipt_recovered"}}},
+    "then": {"required": ["request_id", "process_instance_id", "generation"], "properties": {"completion": {"type": "object"}, "outcome": {"enum": ["executed", "failed", "blocked"]}}},
+    "else": {"properties": {"completion": {"const": null}, "outcome": {"const": "unknown"}}}
+  }]
+}

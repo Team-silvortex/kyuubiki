@@ -92,12 +92,15 @@ mod service_executor;
 mod service_executor_artifact;
 mod service_executor_artifact_http;
 mod service_executor_deadline;
+mod service_executor_dispatch_inspection;
+mod service_executor_dispatch_result;
 mod service_executor_health;
 mod service_executor_http;
 mod service_executor_job_wait;
 mod service_executor_library;
 mod service_executor_operator_task;
 mod service_executor_solve;
+mod service_executor_task_budget;
 mod surface;
 mod template_search;
 #[cfg(test)]
@@ -138,6 +141,7 @@ pub use executor::{
     collect_executor_compatibility_issues, execute_batch_with_executor, executor_supports_action,
 };
 pub use hybrid_executor::HybridHeadlessExecutor;
+pub use kyuubiki_protocol::CancelExecutionRequest;
 pub use material_candidate_materialization::build_material_candidate_materialization_plan;
 pub use material_candidate_rerun::{
     build_materialized_candidate_report, build_materialized_candidate_steps,
@@ -358,6 +362,7 @@ pub use run::{
     HeadlessExecutionStepReport, HeadlessRunReport, run_batch_dry,
 };
 pub use service_executor::{ServiceHeadlessExecutor, service_executor_supports_action};
+pub use service_executor_task_budget::OperatorTaskRequestBudget;
 pub use surface::{
     HEADLESS_SDK_SURFACE_SCHEMA_VERSION, HeadlessSdkSurfaceArea, HeadlessSdkSurfaceCounts,
     HeadlessSdkSurfaceManifest, find_headless_sdk_surface_area, headless_sdk_surface_areas,

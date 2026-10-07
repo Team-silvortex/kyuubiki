@@ -73,10 +73,12 @@ pub(crate) fn handle_request(request: RpcRequest, writer: Option<SharedReplyWrit
         RpcMethod::DescribeAgentLifecycle => crate::agent_lifecycle_rpc::handle_describe(request),
         RpcMethod::ResumeAgentAdmission => crate::agent_lifecycle_rpc::handle_resume(request),
         RpcMethod::CancelJob => crate::operator_package_job_runtime::handle_cancel_job(request),
+        RpcMethod::CancelExecution => crate::agent_execution_cancellation::handle_cancel(request),
         RpcMethod::ReleaseOperatorPackageJob => {
             crate::operator_package_job_runtime::handle_release_job(request)
         }
         RpcMethod::RunOperatorTaskIr => handle_operator_task_ir(request, writer),
+        RpcMethod::FetchOperatorTaskResult => crate::agent_task_results::handle_fetch(request),
         RpcMethod::SolveBar1d => run_solver::<SolveBarRequest, _, _, _>(
             request,
             writer,

@@ -120,6 +120,38 @@ pub(crate) fn read_before_deadline(
     deadline: Instant,
     io_timeout: Duration,
 ) -> Result<String, HeadlessExecutorError> {
+    read_limited_before_deadline(
+        stream,
+        deadline,
+        io_timeout,
+        MAX_STATUS_RESPONSE_BYTES,
+        "job status",
+    )
+}
+
+pub(crate) fn read_service_response(
+    stream: &mut TcpStream,
+    path: &str,
+    deadline: Instant,
+    io_timeout: Duration,
+) -> Result<String, HeadlessExecutorError> {
+    let (limit, context) = match path {
+        "/api/v1/operator-tasks/execute" => (64 * 1024 * 1024, "operator task"),
+        "/api/v1/operator-tasks/fetch-dispatch-result" => {
+            (10 * 1024 * 1024, "original task result")
+        }
+        _ => return read_before_deadline(stream, deadline, io_timeout),
+    };
+    read_limited_before_deadline(stream, deadline, io_timeout, limit, context)
+}
+
+pub(crate) fn read_limited_before_deadline(
+    stream: &mut TcpStream,
+    deadline: Instant,
+    io_timeout: Duration,
+    max_bytes: usize,
+    context: &str,
+) -> Result<String, HeadlessExecutorError> {
     let mut response = Vec::new();
     let mut buffer = [0; 8192];
     loop {
@@ -129,10 +161,10 @@ pub(crate) fn read_before_deadline(
         match stream.read(&mut buffer) {
             Ok(0) => break,
             Ok(length) => {
-                if response.len() + length > MAX_STATUS_RESPONSE_BYTES {
-                    return Err(error(
-                        "job status response exceeds the 8000000-byte transport limit",
-                    ));
+                if response.len() + length > max_bytes {
+                    return Err(error(format!(
+                        "{context} response exceeds the {max_bytes}-byte transport limit"
+                    )));
                 }
                 response.extend_from_slice(&buffer[..length]);
             }

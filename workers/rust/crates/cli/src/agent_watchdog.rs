@@ -1,5 +1,5 @@
 use std::collections::{HashMap, VecDeque};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
@@ -30,6 +30,7 @@ impl Default for WatchdogPolicySnapshot {
 pub(crate) struct ExecutionGuard {
     request_id: String,
     generation: u64,
+    terminal_failure: Arc<OnceLock<FailureReport>>,
 }
 
 impl ExecutionGuard {
@@ -62,6 +63,7 @@ struct ExecutionRecord {
     method: String,
     started_unix_ms: u128,
     last_progress_unix_ms: u128,
+    terminal_failure: Arc<OnceLock<FailureReport>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -176,6 +178,7 @@ fn begin_execution_at(
                 message: "agent watchdog execution generation is exhausted".to_string(),
             })?;
     let generation = state.next_generation;
+    let terminal_failure = Arc::new(OnceLock::new());
     state.total_started_execution_count = state.total_started_execution_count.saturating_add(1);
     state.active.insert(
         request_id.clone(),
@@ -186,12 +189,14 @@ fn begin_execution_at(
             method,
             started_unix_ms: now,
             last_progress_unix_ms: now,
+            terminal_failure: terminal_failure.clone(),
         },
     );
 
     Ok(ExecutionGuard {
         request_id,
         generation,
+        terminal_failure,
     })
 }
 
@@ -241,10 +246,17 @@ fn fail_execution_in(
     reason_code: &str,
     message: impl Into<String>,
 ) -> FailureReport {
+    // The bounded diagnostic ring is not the owner of an execution's final cause.
+    if let Some(existing) = guard.terminal_failure.get() {
+        return existing.clone();
+    }
     let message = message.into();
     let now = unix_now_ms();
 
     if let Ok(mut state) = state.lock() {
+        if let Some(existing) = guard.terminal_failure.get() {
+            return existing.clone();
+        }
         let is_current = state
             .active
             .get(&guard.request_id)
@@ -256,12 +268,6 @@ fn fail_execution_in(
             retain_failure(&mut state, report.clone());
             return report;
         }
-        if let Some(existing) = state.recent_failures.iter().find(|failure| {
-            failure.request_id == guard.request_id && failure.generation == guard.generation
-        }) {
-            return existing.clone();
-        }
-
         let report = failure_from_record(
             ExecutionRecord {
                 request_id: guard.request_id,
@@ -270,6 +276,7 @@ fn fail_execution_in(
                 method: "unknown".to_string(),
                 started_unix_ms: now,
                 last_progress_unix_ms: now,
+                terminal_failure: guard.terminal_failure.clone(),
             },
             reason_code,
             message,
@@ -279,7 +286,7 @@ fn fail_execution_in(
         retain_failure(&mut state, report.clone());
         report
     } else {
-        FailureReport {
+        let report = FailureReport {
             request_id: guard.request_id,
             generation: guard.generation,
             job_id: None,
@@ -288,7 +295,8 @@ fn fail_execution_in(
             message,
             elapsed_ms: 0,
             occurred_unix_ms: now,
-        }
+        };
+        guard.terminal_failure.get_or_init(|| report).clone()
     }
 }
 
@@ -298,7 +306,7 @@ fn failure_from_record(
     message: String,
     now: u128,
 ) -> FailureReport {
-    FailureReport {
+    let report = FailureReport {
         request_id: record.request_id,
         generation: record.generation,
         job_id: record.job_id,
@@ -307,7 +315,8 @@ fn failure_from_record(
         message,
         elapsed_ms: now.saturating_sub(record.started_unix_ms),
         occurred_unix_ms: now,
-    }
+    };
+    record.terminal_failure.get_or_init(|| report).clone()
 }
 
 fn retain_failure(state: &mut WatchdogState, report: FailureReport) {
@@ -621,124 +630,5 @@ fn unix_now_ms() -> u128 {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn execution_counters_are_monotonic_and_do_not_double_count_late_failures() {
-        let state = Mutex::new(WatchdogState::default());
-        let failed = begin_execution_in(
-            &state,
-            "failed-request".to_string(),
-            Some("failed-job".to_string()),
-            "run_operator_task_ir".to_string(),
-        )
-        .expect("unique failed request should be admitted");
-        let late = failed.clone();
-        fail_execution_in(&state, failed, "injected", "injected failure");
-        fail_execution_in(&state, late, "late", "late failure");
-
-        let completed = begin_execution_in(
-            &state,
-            "completed-request".to_string(),
-            Some("completed-job".to_string()),
-            "solve_bar_1d".to_string(),
-        )
-        .expect("unique completed request should be admitted");
-        complete_execution_in(&state, completed);
-
-        let snapshot = snapshot_from(&state);
-        assert_eq!(snapshot.total_started_execution_count, 2);
-        assert_eq!(snapshot.total_completed_execution_count, 1);
-        assert_eq!(snapshot.total_failed_execution_count, 1);
-    }
-
-    #[test]
-    fn duplicate_active_request_is_rejected_without_overwriting_the_original() {
-        let state = Mutex::new(WatchdogState::default());
-        let original = begin_execution_at(
-            &state,
-            "duplicate-request".to_string(),
-            Some("original-job".to_string()),
-            "solve_bar_1d".to_string(),
-            100,
-        )
-        .expect("first request should be admitted");
-        let duplicate = begin_execution_at(
-            &state,
-            "duplicate-request".to_string(),
-            Some("replacement-job".to_string()),
-            "solve_heat_bar_1d".to_string(),
-            200,
-        )
-        .expect_err("active request id must be unique");
-
-        assert_eq!(duplicate.reason_code, "duplicate_active_request_id");
-        let snapshot = snapshot_from_at(&state, 200);
-        assert_eq!(snapshot.total_started_execution_count, 1);
-        assert_eq!(snapshot.active_execution_count, 1);
-        assert_eq!(
-            snapshot.active_executions[0].job_id.as_deref(),
-            Some("original-job")
-        );
-        complete_execution_in(&state, original);
-    }
-
-    #[test]
-    fn late_guard_cannot_finish_a_reused_request_generation() {
-        let state = Mutex::new(WatchdogState::default());
-        configure_policy_in(&state, 10, 100);
-        let stale = begin_execution_at(
-            &state,
-            "reused-request".to_string(),
-            Some("stale-job".to_string()),
-            "solve_bar_1d".to_string(),
-            100,
-        )
-        .expect("stale request should be admitted");
-        assert_eq!(scan_stale_executions_at(&state, 200).len(), 1);
-        let current = begin_execution_at(
-            &state,
-            "reused-request".to_string(),
-            Some("current-job".to_string()),
-            "solve_heat_bar_1d".to_string(),
-            201,
-        )
-        .expect("request id may be reused after timeout");
-
-        complete_execution_in(&state, stale);
-        let active = snapshot_from_at(&state, 202);
-        assert_eq!(active.active_execution_count, 1);
-        assert_eq!(
-            active.active_executions[0].job_id.as_deref(),
-            Some("current-job")
-        );
-        assert_eq!(active.total_completed_execution_count, 0);
-
-        complete_execution_in(&state, current);
-        let completed = snapshot_from_at(&state, 203);
-        assert_eq!(completed.active_execution_count, 0);
-        assert_eq!(completed.total_completed_execution_count, 1);
-    }
-
-    #[test]
-    fn fault_injection_releases_slot_and_preserves_reason() {
-        let report = run_fault_injection_probe().expect("watchdog probe should pass");
-        assert_eq!(report["failure_reason_code"], "invalid_params");
-        assert_eq!(report["slot_released_after_failure"], true);
-        assert_eq!(report["slot_released_after_healthy"], true);
-        assert_eq!(report["new_failure_after_healthy"], false);
-        assert_eq!(report["probe_cleanup_completed"], true);
-    }
-
-    #[test]
-    fn timeout_injection_releases_slot_and_deduplicates_late_failure() {
-        let report =
-            run_timeout_fault_injection_probe().expect("watchdog timeout probe should pass");
-        assert_eq!(report["timeout_reason_code"], "watchdog_timeout");
-        assert_eq!(report["expired_before_budget"], false);
-        assert_eq!(report["slot_released_after_timeout"], true);
-        assert_eq!(report["late_failure_reused_timeout"], true);
-        assert_eq!(report["duplicate_failure_created"], false);
-    }
-}
+#[path = "tests/agent_watchdog.rs"]
+mod tests;

@@ -1,0 +1,31 @@
+{
+  "schema_version": "kyuubiki.operator-task-dispatch-inspection/v1",
+  "task_id": "task",
+  "task_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "status": "dispatch_records_found",
+  "retained_attempt_count": 1,
+  "truncated": false,
+  "automatic_replay_authorized": false,
+  "terminal_result_available": false,
+  "attempts": [
+    {
+      "attempt_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "request_id": "request",
+      "state": "outcome_unknown",
+      "created_at_ms": 1791244800000,
+      "updated_at_ms": 1791244802000,
+      "observation": {"status": "request_not_observed_active", "outcome": "unknown"}
+    }
+  ],
+  "journal_policy": {
+    "max_records": 512,
+    "max_file_bytes": 4096,
+    "terminal_retention": 128,
+    "storage": "operator-task-dispatches/*.json",
+    "single_writer": true,
+    "corrupt_generation_policy": "fail_closed_no_rollback",
+    "unresolved_retention": "never_automatically_pruned",
+    "inputs_results_credentials_stored": false
+  },
+  "inspection_policy": {"max_probes": 4, "max_attempts": 128, "request_timeout_ms": 2000, "connect_timeout_ms": 1500, "max_rpc_frame_bytes": 1048576}
+}

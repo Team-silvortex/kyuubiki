@@ -105,9 +105,19 @@ pub(crate) fn failure_preview(step_index: usize, action: &str, message: String) 
 
 fn classify_failure(step_index: usize, action: &str, message: String) -> HeadlessFailureReceipt {
     let normalized = message.to_ascii_lowercase();
-    let (category, stage, retryable, retry_strategy, recommended_action) = if action == "job_wait"
-        && normalized.contains("timed out waiting")
+    let (category, stage, retryable, retry_strategy, recommended_action) = if action
+        == "operator_task_execute"
+        && (message.starts_with(crate::service_executor_task_budget::TRANSPORT_FAILURE_PREFIX)
+            || normalized.contains("operator_task_dispatch_outcome_unknown"))
     {
+        (
+            "operator_task_outcome_unknown",
+            "transport",
+            false,
+            "none",
+            "Inspect the submitted task on Orchestra and its owning Agent before an explicit rerun; a transport failure does not confirm cancellation or nonexecution.",
+        )
+    } else if action == "job_wait" && normalized.contains("timed out waiting") {
         (
             "job_wait_timeout",
             "job_wait",

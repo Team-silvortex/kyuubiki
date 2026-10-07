@@ -455,7 +455,9 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
     assert request["method"] == "run_operator_task_ir"
     refute Map.has_key?(request, "job_id")
 
-    assert request["params"] == %{
+    assert Regex.match?(~r/\A[0-9a-f]{32}\z/, request["params"]["dispatch_attempt_id"])
+
+    assert Map.delete(request["params"], "dispatch_attempt_id") == %{
              "task_ir" => task_ir,
              "mode" => "execute",
              "job_id" => "operator-task-qualification"

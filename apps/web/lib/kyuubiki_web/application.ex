@@ -12,6 +12,7 @@ defmodule KyuubikiWeb.Application do
           KyuubikiWeb.Playground.AgentRegistry,
           KyuubikiWeb.Playground.AgentPool,
           KyuubikiWeb.Playground.AgentExecutionGate,
+          KyuubikiWeb.Orchestra.OperatorDispatchJournal,
           {Task.Supervisor, name: KyuubikiWeb.TaskSupervisor},
           KyuubikiWeb.Orchestra.HeadlessHandoffRegistry,
           KyuubikiWeb.Orchestra.WorkflowRecoveryCoordinator,

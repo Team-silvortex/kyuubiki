@@ -407,6 +407,31 @@ for this execution generation, the RPC code/message and bound receipt retain
 that terminal reason, rather than rewriting it as a later cancellation.
 `watchdog_timeout` requires `inspect_watchdog_timeout_before_explicit_rerun`.
 
+The Agent's recent-failure list is a bounded diagnostic view of 16 entries, not
+the owner of an execution's terminal cause. One immutable failure record is shared
+by that generation's live execution guards. Diagnostic eviction cannot replace
+its request/job/method identity, original reason, generation or timing, and late
+callbacks do not count or reinsert the same failed execution again. The separate
+record is released with the last execution guard; it is not a disk archive or
+restart-recovery ledger. Already-known failures remain readable if watchdog state
+becomes unavailable, without reopening admission to new execution.
+
+Legacy solver RPCs use that same original reason for both the outer error code
+and failure details, including parameter decoding and result encoding failures.
+A later decode/transport error cannot replace an already-recorded watchdog
+timeout. Without a prior terminal failure, these paths still report
+`invalid_params` or `result_transport_failed`, respectively. Failure replies
+contain no success result or success progress; an explicit rerun has a new generation.
+
+The final publication gate runs after the heartbeat thread has stopped, so an
+in-flight heartbeat write failure cannot set cancellation after that check.
+It also checks the current watchdog generation: an already-terminal execution
+cannot publish success while its solver cancellation signal is still propagating.
+The retained original-attempt response uses this gated reply, including a typed
+`publish_result` failure instead of the computed success value. Legacy solver RPCs
+likewise recheck after serialization and heartbeat shutdown, discarding success
+responses and progress frames when cancellation or termination is observed.
+
 The Agent's `solver_checkpoint` is diagnostic only (`resumable: false`), not a
 numerical continuation snapshot. Orchestra forwards known failure fields, not
 this separate RPC diagnostic. Local HTTP regressions cancel an owned Agent
@@ -414,7 +439,11 @@ directly, check that no downstream project or partial result is published,
 and explicitly rerun the identical task on the same Agent. They cover a
 precomputation axial bar, 2D modal matrix multiplication, and 3D modal final shape
 validation. The publication boundary and already-recorded watchdog reason are
-tested separately at the Rust unit boundary. This does not qualify Orchestra
+tested separately at the Rust unit boundary. Deterministic thread-shutdown tests
+inject cancellation and watchdog termination only during heartbeat stop; a separate
+legacy RPC regression injects cancellation during result serialization. They are
+boundary fixtures, not a real-heartbeat transport fault or numerical qualification.
+This does not qualify Orchestra
 multi-Agent cancellation routing by itself; the separate known-dispatch
 regression below covers the public asynchronous cancel path locally. Neither
 qualifies authenticated deployment or cancellation after publication has begun.
@@ -448,6 +477,112 @@ failure stays in that release field without rejecting an already registered
 cancel. Unbound jobs normally return `already_released`, not a cleanup error.
 The legacy `cancelled` field means registration, not proof of stopped execution.
 
+#### Exact native execution cancellation
+
+The separate Agent `cancel_execution` RPC selects one observed execution, not a
+whole job or a future admission. Read `lifecycle.process_instance_id` and the
+matching `solver_control.active` entry from `describe_agent`, then send all four
+identities unchanged. The cancellation RPC's own `id` is not the target request id:
+
+```json
+{
+  "rpc_version": 1,
+  "id": "cancel-control-request",
+  "method": "cancel_execution",
+  "params": {
+    "process_instance_id": "<observed Agent process instance>",
+    "request_id": "<observed execution request>",
+    "generation": 1,
+    "job_id": "<observed job>"
+  }
+}
+```
+
+Use the observed generation, not a default of `1`. Missing, null, unknown or
+malformed fields fail with `invalid_params`; generation must be a positive u64
+integer. Identity strings must be nonblank, control-character-free and at most
+256 UTF-8 bytes. The native validator does not normalize or truncate identities.
+Unavailable process identity fails with `agent_lifecycle_unavailable` before any
+cancellation registration. This identity fence is not authentication or authority
+to contact an Agent; use the existing trusted control channel.
+
+The acknowledgement uses `kyuubiki.agent-execution-cancellation/v1` and echoes
+`execution_target`. `requested` with `cancel_registered: true` means the exact
+live control was marked, not that the solver stopped or a terminal receipt was
+delivered. `target_not_observed` with `cancel_registered: false` means the exact
+control was not observed; it does not prove the original task never executed.
+Both outcomes keep `execution_terminal_confirmed`, `pending_cancellation_created`,
+`operator_package_cleanup_performed` and `automatic_replay_authorized` false.
+There is no job-wide fallback, pending cancellation or package-cache cleanup.
+Read the original result separately, and authorize rerun explicitly.
+
+Local owned-Agent regressions cover a same-job sibling, an unrelated Agent with
+the same request/generation, late cancellation during request-id reuse, and
+process restart with generation reuse. Three real Rust SDK/Orchestra TaskIR chains
+now use the public retained-dispatch path below for precomputation, 2D modal and
+3D modal cancellation, then verify typed failure, downstream isolation and healthy
+rerun. This does not change `POST /api/v1/jobs/{job_id}/cancel`, which remains
+job-scoped. Evidence remains local, not remote or installed qualification.
+
+#### Exact retained-dispatch cancellation
+
+`POST /api/v1/operator-tasks/cancel-dispatch` requires write authorization and
+exactly `task_id`, `task_digest`, `attempt_id` and `execution_target`. The target
+contains the four native identities above; its job must equal the task id and
+its request must equal the selected retained dispatch. Callers cannot supply an
+endpoint, select the latest generation implicitly or request job-wide fallback.
+The server sends one `cancel_execution` RPC only to that record's original
+currently configured endpoint/session fingerprint. Missing attempts, retained
+terminal observations, undispatched attempts and replaced or absent endpoints
+cause no Agent RPC. The journal, job status and result publication are unchanged.
+
+Use `inspect_operator_task_dispatch` first and explicitly choose an attempt.
+A compatible active observation includes `execution_target`; null or missing
+means no usable cancellation target was observed. Do not fabricate one from a
+worker id or reuse it as permission to rerun. In Rust:
+
+```rust
+use kyuubiki_headless_sdk::CancelExecutionRequest;
+
+let inspection = executor.inspect_operator_task_dispatch(task_id, task_digest)
+    .map_err(|error| error.message)?;
+let attempt = inspection["attempts"].as_array()
+    .ok_or("missing attempts")?.iter()
+    .find(|attempt| attempt["attempt_id"] == selected_attempt_id)
+    .ok_or("selected attempt not observed")?;
+let target: CancelExecutionRequest =
+    serde_json::from_value(attempt["observation"]["execution_target"].clone())?;
+let cancellation = executor.cancel_operator_task_dispatch(
+    task_id, task_digest, selected_attempt_id, &target,
+).map_err(|error| error.message)?;
+```
+
+Inspect the `kyuubiki.operator-task-dispatch-cancellation/v1` acknowledgement,
+not HTTP success alone. `requested` means the native acknowledgement registered
+that exact target; `target_not_observed` means it did not. Neither proves terminal
+execution. Transport failure or an invalid Agent acknowledgement produces
+`cancellation_outcome_unknown` with `cancel_registered: null`, not false. The
+SDK verifies identity mirrors, all status/registration combinations and both
+layers' no-terminal/no-replay authority flags. A client-side request error also
+does not authorize automatic retry, fallback or replay. Fetch the original
+computation receipt separately before deciding any explicit recovery.
+
+The Agent control round trip is bounded to five seconds and a 64 KiB RPC frame;
+the Rust SDK shares a ten-second HTTP deadline. No target probe, job-wide cancel,
+package cleanup, durable cancellation intent or journal mutation is added.
+The observed process/generation is explicit caller input, not an attestation of
+the original process at dispatch. Expired or stale identity is never replaced
+automatically. These guarantees do not make cancellation atomic with final reply
+delivery or qualify Python/Elixir SDK parity or authenticated remote deployment.
+
+#### Legacy job-wide cancellation
+
+The direct Agent `cancel_job` RPC preserves one-shot pre-admission cancellation:
+when no matching execution control is live, it marks the next admission under
+that job id for cancellation. Do not send a late job-wide cancel merely to clean
+up an already-terminal original attempt; it can affect an explicit rerun using
+the same job id. Inspect the original attempt's receipt separately.
+
 A local two-real-Agent regression saturates both slots, queues an asynchronous
 spring job, then cancels it only on its owner. The peer's held TaskIR remains
 uncancelled; reusing the cancelled job id on that peer does not consume a stray
@@ -457,11 +592,191 @@ cancellation, multiple known owners, failed acknowledgements, retained capacity,
 typed failure preservation, and capture before local task shutdown. These do not
 qualify durable target recovery after Orchestra restart/transport loss, remote or
 authenticated deployment, every asynchronous solver, or atomic cancel-versus-send.
-Long synchronous TaskIR requests retain the native SDK's 30-second HTTP I/O
-timeout. A loaded-host repeat exceeded the 15-second modal safe-point observation
-budget and this synchronous read timeout; a subsequent isolated full live run
-passed. This is retained as a waiting/budget reliability gap, not numerical
-qualification or evidence of an atomic cancellation guarantee.
+
+#### Synchronous TaskIR waiting budgets
+
+The native Rust `ServiceHeadlessExecutor` uses an explicit bounded waiting policy
+for `operator_task_execute`, separate from `job_wait` and metadata requests.
+The default is 120,000 ms of Agent capacity waiting and 120,000 ms of Agent RPC
+waiting, with 10,000 ms additional connection/framing allowance: a 250-second
+monotonic HTTP budget. DNS, connection retries, request writes and response reads
+share that deadline; incoming bytes do not renew it. HTTP has no Agent heartbeat
+stream, so a silent computation is not cut off by the metadata client's 30-second
+idle limit. Task response framing is capped at 64 MiB; job status polling retains
+its separate 8,000,000-byte limit and existing deadlines.
+
+Configure the native executor with a validated budget:
+
+```rust
+use kyuubiki_headless_sdk::{OperatorTaskRequestBudget, ServiceHeadlessExecutor};
+
+let budget = OperatorTaskRequestBudget::new(120_000, 240_000)
+    .map_err(|error| error.message)?;
+let executor = ServiceHeadlessExecutor::try_new("http://127.0.0.1:4000")
+    .map_err(|error| error.message)?
+    .with_operator_task_budget(budget);
+```
+
+A step can override that default with `execution_budget` beside `task`, using
+`kyuubiki.operator-task-request-budget/v1`. The policy has exactly
+`schema_version`, `queue_timeout_ms` and `request_timeout_ms`; both phases require
+integer encodings in `1..=600000`. Explicit nulls, unknown fields, strings,
+booleans, decimal encodings and out-of-range values fail before dispatch instead
+of falling back. The schema and sample are
+`schemas/operator-task-request-budget.schema.json` and
+`schemas/examples.operator-task-request-budget.json`.
+
+`POST /api/v1/operator-tasks/execute` validates this envelope, forwards the queue
+and RPC budgets to the Agent client, and echoes the accepted policy separately
+from task identity. TaskIR digest and numerical configuration stay unchanged.
+Budgeted requests require a checkpoint before replay after send/receive failure,
+including pure solver tasks that otherwise have legacy idempotent routing.
+Connection failure before dispatch may still select another candidate. Requests
+without this envelope retain the service's existing defaults and routing policy.
+These phase limits are not a global multi-Agent scheduler deadline or CPU kill
+policy. Orchestra-local operators are not forcibly interrupted by them.
+
+If native HTTP transport fails, the report uses
+`kyuubiki.headless.operator_task_outcome_unknown` with `retryable: false` and
+`retry_strategy: none`. The chain stops before downstream actions; inspect the
+submitted task on Orchestra and its owner before an explicit rerun. Timeout is
+not evidence of cancellation, nonexecution, or absence of a remote result.
+Normal task-bound receipt validation still applies after a successful response.
+Native batches apply this policy per task step, not as one overall batch budget;
+it is not currently the `execute-batch` endpoint's envelope.
+
+Local regressions cover a silent response beyond the old 30-second cutoff,
+bounded stalled requests, slow-drip deadline exhaustion, invalid policy rejection,
+unchanged signed tasks, full results larger than the status limit, queue cleanup,
+and no post-dispatch replay to an idle peer. Modal cancellation stage observation
+now uses the same 120-second execution budget instead of an unrelated 15-second
+window. Model sizes and numerical tolerances remain unchanged. This resolves the
+specific waiting mismatch exposed by the earlier loaded-host run, but does not
+qualify remote performance, installed deployment or cancellation after disconnect.
+
+#### Retained TaskIR dispatch inspection
+
+`POST /api/v1/operator-tasks/inspect-dispatch` is a read-authorized, read-only
+observation endpoint. Supply exactly `task_id` and the submitted `task_digest`;
+caller-supplied hosts, ports and other fields are rejected. The native Rust SDK
+exposes it without executing a new task or reusing the failed HTTP connection:
+
+```rust
+let observation = executor
+    .inspect_operator_task_dispatch(task_id, task_digest)
+    .map_err(|error| error.message)?;
+assert_eq!(observation["automatic_replay_authorized"], false);
+```
+
+Before crossing the Agent RPC boundary, execution-mode TaskIR records an attempt
+ID, RPC request ID, task/operator/program identity and a fingerprint of the chosen
+Agent ID, address and registration session. It stores no input model, result,
+token, raw address or raw session. A verified Agent response may become
+`observed_executed`, `observed_failed` or `observed_blocked`; pre-connect failure
+or explicit capacity rejection becomes `not_dispatched`. Malformed or mismatched
+completion, transport loss and caller death remain unknown or
+`dispatch_boundary_unconfirmed`. Responses are checked with the existing
+task-bound completion gate before retaining a successful observation.
+
+The journal is a separate bounded runtime sidecar, independent of SQL table
+migrations: `operator-task-dispatches/*.json` under `KYUUBIKI_DATA_DIR` (or the
+existing default runtime data root). One Orchestra process owns each journal
+directory. SQLite, Postgres and memory backends share this file contract.
+It has at most 512 records of at most 4,096 bytes each, plus at most one in-flight
+replacement, and retains at most 128 confirmed-response history records.
+Unresolved records are never automatically evicted. Saturation stops new TaskIR
+dispatch with `operator_task_dispatch_journal_full`, rather than deleting
+unconfirmed ownership. Unknown generations, incomplete replacements, corruption,
+symlinks or unavailable storage fail closed; there is no previous-generation
+rollback. Local checksum checks detect accidental corruption, not hostile
+filesystem tampering or cryptographic execution provenance. Atomic file
+replacement and synced contents have local process-restart tests, not power-loss
+or shared-directory multi-writer qualification. Current policy is visible in the
+inspection response, not a new user-editable scheduling or storage setting.
+
+Inspection resolves only the original fingerprint against currently configured
+or registered targets. A changed address/session is not probed; registry mode
+does not fall back to an unrelated default endpoint. At most four distinct
+targets are probed, with 1.5-second connection limits, 2-second RPC waits and
+1-MiB frames, and at most 128
+attempts are returned with explicit truncation metadata. SDK HTTP observation
+uses a separate 20-second deadline. Only `describe_agent` is sent; no broadcast,
+cancel, package operation, replay, pool health mutation or result publication
+occurs. The descriptor is reduced to a matching active request's process ID,
+generation and cancellation flag; raw Agent diagnostics are not echoed.
+
+`original_endpoint_reports_active_request` is a current observation, not proof
+of eventual completion. `request_not_observed_active`, unreachable/replaced
+targets and `no_retained_dispatch` do not prove cancellation or nonexecution.
+Process identity is observed at inspection time, not pinned before dispatch.
+All responses have `automatic_replay_authorized: false` and
+`terminal_result_available: false`; this is neither a result cache nor an
+exactly-once protocol. Existing explicitly chosen legacy idempotent routing
+is unchanged, and the journal never grants extra retry permission. Native
+budgeted requests keep their post-dispatch no-replay boundary. Confirmed old
+observations can age out, and this sidecar does not cover Orchestra-local
+operators, direct asynchronous solver submissions or external-package cleanup.
+
+Local tests cover bounded retention, corruption and partial writes, owner death,
+read authentication, changed targets, probe/response limits, and a real two-Agent
+chain. That chain times out a held TaskIR, restarts its owned temporary Orchestra
+with the same journal directory, observes the same attempt, and verifies that
+an idle request remains unknown. A later explicit rerun has its own attempt and
+independent axial-bar correctness checks; the first attempt is not rewritten as
+successful. Remote cancellation, authenticated deployed recovery and installed
+acceptance remain separate gaps. Original-result retrieval is a separate opt-in
+read below, not part of the inspection response. See
+`schemas/operator-task-dispatch-record.schema.json`,
+`schemas/operator-task-dispatch-inspection.schema.json` and its sample.
+
+#### Original TaskIR attempt result retrieval
+
+After inspecting retained dispatches, explicitly choose an `attempt_id` and call
+`executor.fetch_operator_task_result(&task, attempt_id)`. The Rust SDK verifies the
+supplied TaskIR locally and sends only its ID/digest and the selected attempt to
+`POST /api/v1/operator-tasks/fetch-dispatch-result`. This read-authorized route
+resolves only the attempt's original configured Agent fingerprint, sends one
+`fetch_operator_task_result` RPC, and never broadcasts, retries execution,
+updates the dispatch journal or publishes a project/job result. Caller-supplied
+destinations are rejected. RPC limits are 10-second waits, 1.5-second connections
+and 9-MiB frames; the SDK has a 15-second total deadline and 10-MiB response limit.
+
+Orchestra adds the random dispatch attempt ID to the RPC envelope, outside TaskIR
+and its digest. Execution requests carrying that correlation reserve a
+process-local Agent entry and retain the computation response before transport
+delivery, including final typed cancellation/failure receipts. Task, digest,
+operator, program, RPC ID, attempt ID and execution generation fence late
+responses. Reusing a retained attempt ID marks it ambiguous and clears its result.
+Preflight and requests without this correlation do not populate the cache.
+Retrieval does not require the caller to upload the model again.
+
+The read-only `task_result_retention` descriptor exposes the policy: at most
+64 entries, 8 MiB per encoded response, 32 MiB of retained encoded response bytes,
+and 10 minutes from reservation creation. Metadata and transient JSON allocations
+are additional, not part of that encoded-byte budget. Count pressure evicts the
+oldest reservation, including pending entries; byte pressure evicts old retained
+responses. Late completion cannot recreate an evicted reservation. Oversized
+responses become `result_not_retained` without blocking or truncating the original
+execution. Reads do not renew retention. Expiry is reclaimed lazily on the next
+cache operation. No result files, backups or separate input copies are created; Agent
+restart clears this entire cache.
+The retained response itself can include operator-defined input echoes or other
+sensitive output; it is not a redacted journal. Protect the existing Agent
+transport boundary and configure read authorization for the control-plane API.
+
+`receipt_recovered` contains `completion` only after the existing task-bound
+completion/failure gates pass, checked again by the Rust SDK. Its `outcome` may
+be `executed`, `failed` or `blocked`; HTTP success alone is not execution success.
+This proves the original computation response, not successful transport delivery,
+durable receiver acknowledgement, published research results or scientific
+qualification. The original journal observation remains unchanged. `pending`,
+`not_retained`, `result_not_retained`, `attempt_identity_ambiguous`, missing/replaced
+targets and invalid receipts have `outcome: unknown` and no completion. Responses
+always keep `automatic_replay_authorized: false` and `publication_performed: false`.
+There is no pre-dispatch boot pin, cryptographic provenance, exactly-once guarantee
+or Agent-restart durability. Older Agents do not gain recovery by inference. See
+`schemas/operator-task-dispatch-result.schema.json` and
+`schemas/agent-task-result-retention.schema.json`.
 
 Execution batches separate `attempted_count`, `executed_count`/`ok_count`,
 `blocked_count`, `error_count`, and `skipped_count`. The invariant is

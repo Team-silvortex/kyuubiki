@@ -11,7 +11,7 @@ pub(crate) fn handle_operator_task_ir(
     request: RpcRequest,
     writer: Option<SharedReplyWriter>,
 ) -> AgentReply {
-    let request_id = request.id;
+    let request_id = request.id.clone();
     let maybe_job_id = extract_job_id(&request.params);
     let guard = match agent_reply_writer::begin_execution(
         writer.as_ref(),
@@ -22,6 +22,20 @@ pub(crate) fn handle_operator_task_ir(
         Ok(guard) => guard,
         Err(error) => return execution_admission_error(request_id, error),
     };
+    let retained = crate::agent_task_results::begin(&request, guard.generation());
+    let reply = execute_operator_task_ir(request, writer, guard);
+    let AgentReply::Stream(_, response) = &reply;
+    crate::agent_task_results::finish(retained, response);
+    reply
+}
+
+fn execute_operator_task_ir(
+    request: RpcRequest,
+    writer: Option<SharedReplyWriter>,
+    guard: agent_lifecycle::ExecutionGuard,
+) -> AgentReply {
+    let request_id = request.id;
+    let maybe_job_id = extract_job_id(&request.params);
     let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
         writer.clone().map(|shared_writer| {
             HeartbeatHandle::spawn(
@@ -98,11 +112,13 @@ fn publish_operator_task_result(
     result: serde_json::Value,
     task_ir: Option<&serde_json::Value>,
 ) -> AgentReply {
-    if guard.cancellation_requested() {
+    // An in-flight heartbeat write may request cancellation while stop joins it.
+    stop_heartbeat(heartbeat);
+    if !guard.result_publication_allowed() {
         return operator_task_failure_reply(
             request_id,
             guard,
-            heartbeat,
+            None,
             OperatorTaskRuntimeError::with_task(
                 "cancelled",
                 "operator task was cancelled before result publication",
@@ -113,7 +129,6 @@ fn publish_operator_task_result(
         );
     }
 
-    stop_heartbeat(heartbeat);
     agent_reply_writer::complete_execution(writer, guard);
     AgentReply::Stream(Vec::new(), RpcResponse::success(request_id, result))
 }
@@ -175,20 +190,49 @@ where
     NodeCount: FnOnce(&Request) -> usize,
     Solver: FnOnce(&Request) -> Result<ResultValue, String>,
 {
-    let request_id = request.id;
+    let request_id = request.id.clone();
     let method = rpc_method_name(&request.method);
     let maybe_job_id = extract_job_id(&request.params);
-    let externalize_result = request.params.get("model_artifact_ref").is_some();
     let guard = match agent_reply_writer::begin_execution(
         writer.as_ref(),
         request_id.clone(),
-        maybe_job_id.clone(),
-        method.clone(),
+        maybe_job_id,
+        method,
     ) {
         Ok(guard) => guard,
         Err(error) => return execution_admission_error(request_id, error),
     };
 
+    execute_solver(
+        request,
+        writer,
+        guard,
+        model_name,
+        serialize_label,
+        node_count,
+        solver,
+    )
+}
+
+fn execute_solver<Request, ResultValue, NodeCount, Solver>(
+    request: RpcRequest,
+    writer: Option<SharedReplyWriter>,
+    guard: agent_lifecycle::ExecutionGuard,
+    model_name: &str,
+    serialize_label: &str,
+    node_count: NodeCount,
+    solver: Solver,
+) -> AgentReply
+where
+    Request: DeserializeOwned + 'static,
+    ResultValue: Serialize,
+    NodeCount: FnOnce(&Request) -> usize,
+    Solver: FnOnce(&Request) -> Result<ResultValue, String>,
+{
+    let request_id = request.id;
+    let method = rpc_method_name(&request.method);
+    let maybe_job_id = extract_job_id(&request.params);
+    let externalize_result = request.params.get("model_artifact_ref").is_some();
     let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
         writer.clone().map(|shared_writer| {
             HeartbeatHandle::spawn(
@@ -201,7 +245,12 @@ where
     });
     agent_fault_injection::wait_for_release(&guard, &request_id, maybe_job_id.as_deref(), &method);
     if execution_cancelled(&guard, &request_id, maybe_job_id.as_deref()) {
-        return cancelled_reply(request_id, guard, heartbeat);
+        return cancelled_reply(
+            request_id,
+            guard,
+            heartbeat,
+            "execution cancelled before computation",
+        );
     }
 
     let params = match decode_solver_params::<Request>(request.params) {
@@ -214,7 +263,7 @@ where
                 Vec::new(),
                 RpcResponse::error_with_details(
                     request_id,
-                    "invalid_params",
+                    report.reason_code.clone(),
                     report.message.clone(),
                     serde_json::to_value(report).expect("failure report should serialize"),
                 ),
@@ -223,7 +272,12 @@ where
     };
 
     if execution_cancelled(&guard, &request_id, maybe_job_id.as_deref()) {
-        return cancelled_reply(request_id, guard, heartbeat);
+        return cancelled_reply(
+            request_id,
+            guard,
+            heartbeat,
+            "execution cancelled before computation",
+        );
     }
     match agent_fault_injection::with_solver_control(
         &guard,
@@ -233,19 +287,7 @@ where
     ) {
         Ok(result) => {
             if execution_cancelled(&guard, &request_id, maybe_job_id.as_deref()) {
-                stop_heartbeat(heartbeat);
-                let report =
-                    agent_lifecycle::fail_execution(guard, "cancelled", "job was cancelled");
-                let reason_code = report.reason_code.clone();
-                return AgentReply::Stream(
-                    Vec::new(),
-                    RpcResponse::error_with_details(
-                        request_id,
-                        reason_code,
-                        report.message.clone(),
-                        serde_json::to_value(report).expect("failure report should serialize"),
-                    ),
-                );
+                return cancelled_reply(request_id, guard, heartbeat, "job was cancelled");
             }
 
             let encoded_result = if externalize_result {
@@ -264,7 +306,7 @@ where
                         Vec::new(),
                         RpcResponse::error_with_details(
                             request_id,
-                            "result_transport_failed",
+                            report.reason_code.clone(),
                             report.message.clone(),
                             serde_json::to_value(report).expect("failure report should serialize"),
                         ),
@@ -274,6 +316,14 @@ where
             let progress_frames =
                 build_progress_frames(model_name, &request_id, node_count(&params));
             stop_heartbeat(heartbeat);
+            if !guard.result_publication_allowed() {
+                return cancelled_reply(
+                    request_id,
+                    guard,
+                    None,
+                    "execution cancelled before result publication",
+                );
+            }
             agent_reply_writer::complete_execution(writer.as_ref(), guard);
             AgentReply::Stream(
                 progress_frames,
@@ -315,13 +365,10 @@ fn cancelled_reply(
     request_id: String,
     guard: agent_lifecycle::ExecutionGuard,
     heartbeat: Option<HeartbeatHandle>,
+    message: &str,
 ) -> AgentReply {
     stop_heartbeat(heartbeat);
-    let report = agent_lifecycle::fail_execution(
-        guard,
-        "cancelled",
-        "execution cancelled before computation",
-    );
+    let report = agent_lifecycle::fail_execution(guard, "cancelled", message);
     AgentReply::Stream(
         Vec::new(),
         RpcResponse::error_with_details(

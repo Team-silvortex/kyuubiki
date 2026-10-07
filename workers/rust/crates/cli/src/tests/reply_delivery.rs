@@ -5,6 +5,23 @@ use kyuubiki_protocol::{RPC_VERSION, RpcMethod, RpcRequest};
 use serde_json::json;
 use std::net::{Shutdown, TcpListener};
 
+impl HeartbeatHandle {
+    pub(crate) fn on_stop_for_test(on_stop: impl FnOnce() + Send + 'static) -> Self {
+        let running = Arc::new(AtomicBool::new(true));
+        let thread_running = running.clone();
+        let join_handle = thread::spawn(move || {
+            while thread_running.load(Ordering::SeqCst) {
+                thread::park();
+            }
+            on_stop();
+        });
+        Self {
+            running,
+            join_handle: Some(join_handle),
+        }
+    }
+}
+
 fn pair() -> (TcpStream, SharedReplyWriter) {
     let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
     let client = TcpStream::connect(listener.local_addr().unwrap()).unwrap();

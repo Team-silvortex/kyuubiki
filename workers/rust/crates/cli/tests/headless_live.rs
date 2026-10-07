@@ -22,6 +22,8 @@ mod orchestra_cancel_routing;
 mod orchestra_cancellation;
 #[path = "support/headless_orchestra_completion.rs"]
 mod orchestra_completion;
+#[path = "support/headless_orchestra_dispatch_inspection.rs"]
+mod orchestra_dispatch_inspection;
 #[path = "support/headless_orchestra_modal.rs"]
 mod orchestra_modal;
 
@@ -154,6 +156,14 @@ fn start_live_server_with_agents(
     agent_port: Option<u16>,
     peer_port: Option<u16>,
 ) -> Result<LiveServer, Box<dyn Error>> {
+    start_live_server_with_state(agent_port, peer_port, None)
+}
+
+fn start_live_server_with_state(
+    agent_port: Option<u16>,
+    peer_port: Option<u16>,
+    data_dir: Option<&Path>,
+) -> Result<LiveServer, Box<dyn Error>> {
     let root = repo_root();
     let web_root = root.join("apps/web");
     let server_script = web_root.join("test/support/headless_live_server.exs");
@@ -168,7 +178,20 @@ fn start_live_server_with_agents(
         .env("MIX_ENV", "test")
         .env("KYUUBIKI_STORAGE_BACKEND", "sqlite")
         .env("SQLITE_DATABASE_PATH", sqlite_path)
+        .env(
+            "KYUUBIKI_DATA_DIR",
+            data_dir
+                .map(Path::to_path_buf)
+                .unwrap_or_else(|| scratch.0.join("data")),
+        )
         .env("KYUUBIKI_DEPLOYMENT_MODE", "local")
+        .env(
+            "KYUUBIKI_HEADLESS_LIVE_JOURNAL_ROOT",
+            data_dir
+                .map(Path::to_path_buf)
+                .unwrap_or_else(|| scratch.0.join("data"))
+                .join("operator-task-dispatches"),
+        )
         .env(
             "KYUUBIKI_HEADLESS_LIVE_SCENARIO",
             if agent_port.is_some() {

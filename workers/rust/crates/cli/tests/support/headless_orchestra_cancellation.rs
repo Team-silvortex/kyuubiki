@@ -2,7 +2,8 @@ use super::agent_support::{LiveAgent, wait_for_lifecycle};
 use super::orchestra_completion::{assert_bar, bar_task, batch, http_json};
 use super::{modal_support, start_live_server_with_agent};
 use kyuubiki_headless_sdk::{
-    HeadlessExecutor, HeadlessRunReport, ServiceHeadlessExecutor, execute_batch_with_executor,
+    CancelExecutionRequest, HeadlessExecutor, HeadlessRunReport, OperatorTaskRequestBudget,
+    ServiceHeadlessExecutor, execute_batch_with_executor,
 };
 use serde_json::{Value, json};
 use std::error::Error;
@@ -23,12 +24,12 @@ fn executor(port: u16) -> Result<ServiceHeadlessExecutor, String> {
         .map_err(|error| error.message)
 }
 
-fn wait_for_task(
+pub(super) fn wait_for_task(
     agent: &LiveAgent,
     task_id: &str,
     stage: Option<&str>,
 ) -> Result<Value, Box<dyn Error>> {
-    let deadline = Instant::now() + Duration::from_secs(15);
+    let deadline = Instant::now() + OperatorTaskRequestBudget::default().request_timeout();
     loop {
         let state = agent.request("cancel-progress", "describe_agent", json!({}))?;
         if let Some(entry) = state["result"]["solver_control"]["active"]
@@ -45,7 +46,10 @@ fn wait_for_task(
                 })
             })
         {
-            return Ok(entry.clone());
+            let mut point = entry.clone();
+            point["process_instance_id"] =
+                state["result"]["lifecycle"]["process_instance_id"].clone();
+            return Ok(point);
         }
         if Instant::now() >= deadline {
             return Err(format!(
@@ -88,13 +92,53 @@ fn cancel_execution(
             } else {
                 assert_eq!(point["checkpoint"]["resumable"], false);
             }
-            // This controls the owned Agent directly; no Orchestra cancel-routing claim.
-            let reply = agent.request("cancel-owned-task", "cancel_job", json!({"job_id":job}))?;
-            assert!(
-                reply["result"]["cancelled"] == true
-                    || reply["error"]["details"]["cancel_registered"] == true,
-                "{reply}"
+            let client = executor(port)?;
+            let task_id = task["task_id"].as_str().ok_or("missing task id")?;
+            let digest = task["integrity"]["task_digest"]
+                .as_str()
+                .ok_or("missing task digest")?;
+            let inspection = client
+                .inspect_operator_task_dispatch(task_id, digest)
+                .map_err(|error| error.message)?;
+            let attempt = inspection["attempts"]
+                .as_array()
+                .ok_or("missing attempts")?
+                .iter()
+                .find(|attempt| attempt["request_id"] == point["request_id"])
+                .ok_or("owned execution not retained")?;
+            let target = attempt["observation"]["execution_target"].clone();
+            assert_eq!(
+                target,
+                json!({"process_instance_id":point["process_instance_id"],
+                "request_id":point["request_id"], "generation":point["generation"], "job_id":job})
             );
+            let typed_target: CancelExecutionRequest = serde_json::from_value(target.clone())?;
+            let reply = client
+                .cancel_operator_task_dispatch(
+                    task_id,
+                    digest,
+                    attempt["attempt_id"].as_str().ok_or("missing attempt id")?,
+                    &typed_target,
+                )
+                .map_err(|error| error.message)?;
+            assert_eq!(
+                reply["schema_version"],
+                "kyuubiki.operator-task-dispatch-cancellation/v1"
+            );
+            assert_eq!(reply["execution_target"], target);
+            assert_eq!(reply["status"], "requested");
+            assert_eq!(reply["cancel_registered"], true);
+            assert_eq!(reply["job_wide_fallback_performed"], false);
+            assert_eq!(reply["journal_mutation_performed"], false);
+            assert_eq!(
+                reply["agent_acknowledgement"]["pending_cancellation_created"],
+                false
+            );
+            assert_eq!(
+                reply["agent_acknowledgement"]["operator_package_cleanup_performed"],
+                false
+            );
+            assert_eq!(reply["execution_terminal_confirmed"], false);
             Ok(())
         })();
         // Leave the hold in place until the cancellation response, not until normal success.
@@ -160,6 +204,16 @@ fn real_orchestra_precomputation_cancel_stops_downstream_and_allows_same_task_re
     let (_, before) = http_json(server.port, "/api/v1/projects", None)?;
     let report = cancel_execution(&agent, server.port, &task, None)?;
     assert_cancelled(&report, &task, "before_execution");
+    let observed = executor(server.port)?
+        .inspect_operator_task_dispatch(
+            task["task_id"].as_str().ok_or("missing task id")?,
+            task["integrity"]["task_digest"]
+                .as_str()
+                .ok_or("missing digest")?,
+        )
+        .map_err(|error| error.message)?;
+    assert_eq!(observed["attempts"][0]["state"], "observed_failed");
+    assert_eq!(observed["terminal_result_available"], false);
     wait_for_lifecycle(&agent, "accepting", 0)?;
     let (_, after) = http_json(server.port, "/api/v1/projects", None)?;
     assert_eq!(before, after, "cancellation created a downstream project");

@@ -53,12 +53,21 @@ pub(crate) struct ExecutionGuard {
 }
 
 impl ExecutionGuard {
+    pub(crate) fn generation(&self) -> u64 {
+        self.watchdog.generation()
+    }
+
     pub(crate) fn request_cancellation(&self) {
         self.control.solver.request_cancel();
     }
 
     pub(crate) fn cancellation_requested(&self) -> bool {
         self.control.solver.cancellation_requested()
+    }
+
+    pub(crate) fn result_publication_allowed(&self) -> bool {
+        // Watchdog termination can precede propagation to the solver control.
+        !self.cancellation_requested() && agent_watchdog::is_current(&self.watchdog)
     }
 
     pub(crate) fn solver_control(&self) -> kyuubiki_solver::solver_control::SolverControl {

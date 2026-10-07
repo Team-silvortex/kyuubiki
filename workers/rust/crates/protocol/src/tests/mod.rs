@@ -5,6 +5,7 @@ mod buckling_rpc;
 mod cohesive_mesh_3d_rpc;
 mod composite_rpc;
 mod core;
+mod execution_cancellation_rpc;
 mod field_rpc;
 mod frame_beam_rpc;
 mod operator_task_ir;

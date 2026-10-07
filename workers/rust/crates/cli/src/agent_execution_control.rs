@@ -93,6 +93,30 @@ pub(crate) fn cancel_generation(request_id: &str, generation: u64) -> bool {
     })
 }
 
+pub(crate) fn register_execution_cancel(
+    target: &kyuubiki_protocol::CancelExecutionRequest,
+) -> Result<bool, String> {
+    let mut state = registry()
+        .lock()
+        .map_err(|_| "execution control registry is unavailable".to_string())?;
+    let mut found = false;
+    state.active.retain(|entry| {
+        let Some(active) = entry.upgrade() else {
+            return false;
+        };
+        if active.request_id == target.request_id
+            && active.generation == target.generation
+            && active.job_id.as_deref() == Some(&target.job_id)
+        {
+            active.solver.request_cancel();
+            found = true;
+        }
+        true
+    });
+    // Exact-target cancellation never changes pending job-wide cancellation.
+    Ok(found)
+}
+
 pub(crate) fn checkpoint_json(control: &SolverControl) -> Value {
     control.last_checkpoint().map_or(Value::Null, |point| {
         json!({

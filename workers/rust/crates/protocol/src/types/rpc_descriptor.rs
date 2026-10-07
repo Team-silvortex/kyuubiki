@@ -23,6 +23,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::DescribeAgentLifecycle,
                 RpcMethod::ResumeAgentAdmission,
                 RpcMethod::RunOperatorTaskIr,
+                RpcMethod::FetchOperatorTaskResult,
                 RpcMethod::SolveBar1d,
                 RpcMethod::SolveAcousticBar1d,
                 RpcMethod::SolveThermalBar1d,
@@ -76,6 +77,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveThermalFrame3d,
                 RpcMethod::ReleaseOperatorPackageJob,
                 RpcMethod::CancelJob,
+                RpcMethod::CancelExecution,
             ],
         }
     }
@@ -387,8 +389,10 @@ impl AgentDescriptor {
                         RpcMethod::DescribeAgentLifecycle,
                         RpcMethod::ResumeAgentAdmission,
                         RpcMethod::RunOperatorTaskIr,
+                        RpcMethod::FetchOperatorTaskResult,
                         RpcMethod::ReleaseOperatorPackageJob,
                         RpcMethod::CancelJob,
+                        RpcMethod::CancelExecution,
                     ],
                     tags: vec![
                         "control".to_string(),
@@ -396,6 +400,7 @@ impl AgentDescriptor {
                         "agent-drain-v1".to_string(),
                         "host-loopback-mutation-v1".to_string(),
                         "operator-task-admission-v1".to_string(),
+                        "generation-fenced-cancellation-v1".to_string(),
                     ],
                 },
             ],

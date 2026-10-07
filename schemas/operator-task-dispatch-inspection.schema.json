@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kyuubiki.operator-task-dispatch-inspection/v1",
+  "title": "Read-only retained TaskIR dispatch inspection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "task_id", "task_digest", "status", "retained_attempt_count", "truncated", "attempts", "automatic_replay_authorized", "terminal_result_available", "journal_policy", "inspection_policy"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.operator-task-dispatch-inspection/v1"},
+    "task_id": {"type": "string", "minLength": 1, "maxLength": 1024},
+    "task_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "status": {"enum": ["no_retained_dispatch", "dispatch_records_found"]},
+    "retained_attempt_count": {"type": "integer", "minimum": 0, "maximum": 512},
+    "truncated": {"type": "boolean"},
+    "automatic_replay_authorized": {"const": false},
+    "terminal_result_available": {"const": false},
+    "attempts": {"type": "array", "maxItems": 128, "items": {"$ref": "#/$defs/attempt"}},
+    "journal_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_records", "max_file_bytes", "terminal_retention", "storage", "single_writer", "corrupt_generation_policy", "unresolved_retention", "inputs_results_credentials_stored"],
+      "properties": {
+        "max_records": {"const": 512},
+        "max_file_bytes": {"const": 4096},
+        "terminal_retention": {"const": 128},
+        "storage": {"const": "operator-task-dispatches/*.json"},
+        "single_writer": {"const": true},
+        "corrupt_generation_policy": {"const": "fail_closed_no_rollback"},
+        "unresolved_retention": {"const": "never_automatically_pruned"},
+        "inputs_results_credentials_stored": {"const": false}
+      }
+    },
+    "inspection_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_probes", "max_attempts", "request_timeout_ms", "connect_timeout_ms", "max_rpc_frame_bytes"],
+      "properties": {
+        "max_probes": {"const": 4},
+        "max_attempts": {"const": 128},
+        "request_timeout_ms": {"const": 2000},
+        "connect_timeout_ms": {"const": 1500},
+        "max_rpc_frame_bytes": {"const": 1048576}
+      }
+    }
+  },
+  "$defs": {
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempt_id", "request_id", "state", "created_at_ms", "updated_at_ms", "observation"],
+      "properties": {
+        "attempt_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+        "request_id": {"type": "string", "minLength": 1, "maxLength": 1024},
+        "state": {"enum": ["dispatch_boundary_unconfirmed", "outcome_unknown", "observed_executed", "observed_failed", "observed_blocked", "not_dispatched"]},
+        "created_at_ms": {"type": "integer", "minimum": 0},
+        "updated_at_ms": {"type": "integer", "minimum": 0},
+        "observation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "outcome"],
+          "properties": {
+            "status": {"enum": ["retained_dispatch_observation", "original_endpoint_not_configured", "probe_limit_reached", "original_endpoint_reports_active_request", "request_not_observed_active", "agent_observation_invalid", "original_endpoint_unreachable"]},
+            "outcome": {"enum": ["unknown", "observed_executed", "observed_failed", "observed_blocked", "not_dispatched"]},
+            "process_instance_id": {"type": "string", "minLength": 1, "maxLength": 256},
+            "generation": {"type": "integer", "minimum": 1},
+            "cancel_requested": {"type": "boolean"},
+            "execution_target": {"oneOf": [{"$ref": "agent-execution-cancellation.schema.json#/$defs/target"}, {"type": "null"}]}
+          }
+        }
+      }
+    }
+  }
+}

@@ -32,18 +32,20 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
   end
 
   @doc "Returns task-bound execution state, including blocked/failed Agent receipts without promoting them."
-  @spec execute_receipt(map()) :: {:ok, map()} | {:error, term()}
-  def execute_receipt(%{"schema_version" => @schema_version} = task_ir) do
+  @spec execute_receipt(map(), keyword()) :: {:ok, map()} | {:error, term()}
+  def execute_receipt(task_ir, opts \\ [])
+
+  def execute_receipt(%{"schema_version" => @schema_version} = task_ir, opts) do
     with :ok <- OperatorTaskExecutionSummary.validate_digest(task_ir),
          {:ok, summary} <- OperatorTaskExecutionSummary.build(task_ir) do
-      execute_verified(task_ir, summary)
+      execute_verified(task_ir, summary, opts)
     end
   end
 
-  def execute_receipt(_task_ir), do: {:error, :invalid_operator_task_ir}
+  def execute_receipt(_task_ir, _opts), do: {:error, :invalid_operator_task_ir}
 
-  defp execute_verified(task_ir, %{"execution_mode" => "agent_native"} = summary),
-    do: execute_agent_receipt(task_ir, summary)
+  defp execute_verified(task_ir, %{"execution_mode" => "agent_native"} = summary, opts),
+    do: execute_agent_receipt(task_ir, summary, opts)
 
   defp execute_verified(
          task_ir,
@@ -51,13 +53,14 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
            "execution_mode" => "orchestra_fetch",
            "agent_fetchable" => true,
            "package_version" => package_version
-         } = summary
+         } = summary,
+         opts
        )
        when package_version not in [nil, "", "library-managed"] do
-    execute_agent_receipt(task_ir, summary)
+    execute_agent_receipt(task_ir, summary, opts)
   end
 
-  defp execute_verified(task_ir, summary) do
+  defp execute_verified(task_ir, summary, _opts) do
     with {:ok, input} <- input_artifact(task_ir),
          config <- config(task_ir),
          node <- execution_node(task_ir, summary["operator_id"]),
@@ -71,11 +74,10 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskExecutor do
     end
   end
 
-  defp execute_agent_receipt(task_ir, summary) do
-    case AgentClient.run_operator_task_ir(task_ir,
-           mode: :execute,
-           job_id: Map.get(task_ir, "task_id")
-         ) do
+  defp execute_agent_receipt(task_ir, summary, opts) do
+    opts = Keyword.merge(opts, mode: :execute, job_id: Map.get(task_ir, "task_id"))
+
+    case AgentClient.run_operator_task_ir(task_ir, opts) do
       {:ok, result} ->
         OperatorTaskCompletion.agent_receipt(summary, result)
 

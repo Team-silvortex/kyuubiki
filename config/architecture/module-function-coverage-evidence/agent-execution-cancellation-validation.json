@@ -1,0 +1,147 @@
+{
+  "$schema": "../../../schemas/module-function-coverage-evidence.schema.json",
+  "schema_version": "kyuubiki.module-function-coverage-evidence/v2",
+  "summary": "Local native and public Orchestra/Rust SDK execution cancellation requires exact observed process/request/generation/job identity through a retained original endpoint, rejects malformed or inconsistent acknowledgements, and retains unknown delivery without fallback or replay. Native tests isolate siblings, peers and restarted Agents. This is local evidence, not initial-process attestation, durable cancellation, installed qualification or Python/Elixir parity.",
+  "paradigm_contract_evidence": {
+    "runtime_api": [
+      {
+        "id": "agent-exact-execution-cancellation-contract",
+        "modules": ["runtime-protocol", "runtime-agent-cli", "contracts"],
+        "files": [
+          "schemas/agent-execution-cancellation.schema.json",
+          "workers/rust/crates/protocol/src/types/rpc.rs",
+          "workers/rust/crates/protocol/src/types/rpc_descriptor.rs",
+          "workers/rust/crates/cli/src/agent_execution_cancellation.rs",
+          "docs/headless-sdks.md"
+        ],
+        "required_text": [
+          "kyuubiki.agent-execution-cancellation/v1",
+          "CancelExecutionRequest",
+          "generation-fenced-cancellation-v1",
+          "target_not_observed",
+          "pending_cancellation_created",
+          "agent_lifecycle_unavailable"
+        ]
+      },
+      {
+        "id": "observed-retained-dispatch-cancellation-contract",
+        "modules": ["orchestra-control-plane", "sdk-headless", "contracts"],
+        "files": [
+          "schemas/operator-task-dispatch-cancellation.schema.json",
+          "schemas/operator-task-dispatch-inspection.schema.json",
+          "apps/web/lib/kyuubiki_web/operator_task_router.ex",
+          "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_cancellation.ex",
+          "workers/rust/crates/headless-sdk/src/service_executor_dispatch_cancellation.rs",
+          "docs/headless-sdks.md"
+        ],
+        "required_text": [
+          "kyuubiki.operator-task-dispatch-cancellation/v1",
+          "cancel_operator_task_dispatch",
+          "cancellation_outcome_unknown",
+          "job_wide_fallback_performed",
+          "with_auth(conn, :write"
+        ]
+      }
+    ]
+  },
+  "evidence_claims": [
+    {
+      "id": "local-agent-exact-cancellation-identity-contract",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-protocol", "contracts"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["contract"],
+      "files": [
+        "workers/rust/crates/protocol/src/tests/execution_cancellation_rpc.rs",
+        "workers/rust/crates/protocol/src/types/rpc.rs",
+        "workers/rust/crates/protocol/src/types/rpc_descriptor.rs",
+        "schemas/agent-execution-cancellation.schema.json",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "Exact Execution Cancellation Follow Up",
+        "114 unit tests and seven integration tests passed",
+        "exact_cancel_contract_round_trips_and_is_advertised_separately_from_job_cancel",
+        "exact_cancel_contract_rejects_incomplete_targets_aliases_and_invalid_generations",
+        "exact_cancel_contract_bounds_identity_bytes_without_normalizing_or_truncating_them"
+      ]
+    },
+    {
+      "id": "local-agent-exact-cancellation-isolation-and-recovery",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/agent_execution_control.rs",
+        "workers/rust/crates/cli/src/agent_execution_cancellation.rs",
+        "workers/rust/crates/cli/src/tests/execution_cancellation_rpc.rs",
+        "workers/rust/crates/cli/tests/agent_execution_cancel_live.rs",
+        "workers/rust/crates/cli/tests/support/headless_orchestra_cancellation.rs",
+        "docs/headless-sdks.md",
+        "docs/tutorial-headless-rust.html",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "180 unit tests passed",
+        "four tests passed in 1.10 seconds",
+        "exact_execution_cancel_marks_only_the_selected_generation_and_keeps_the_job_reusable",
+        "stale_execution_cancel_never_marks_a_reused_request_or_creates_pending_job_cancel",
+        "scoped_cancel_requires_matching_process_request_generation_and_job_identity",
+        "malformed_execution_cancel_fails_before_marking_any_control_or_pending_job",
+        "unavailable_process_identity_rejects_cancel_without_marking_current_or_future_execution",
+        "exact_cancel_preserves_same_job_sibling_peer_and_reused_request",
+        "prior_process_cancel_cannot_hit_the_same_request_and_generation_after_agent_restart",
+        "automatic_replay_authorized"
+      ]
+    },
+    {
+      "id": "local-orchestra-retained-owner-exact-cancellation",
+      "status": "proven", "grade": "verified",
+      "modules": ["orchestra-control-plane"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_cancellation.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_inspection.ex",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_cancellation_test.exs",
+        "apps/web/test/kyuubiki_web/api/operator_dispatch_cancellation_api_test.exs",
+        "workers/rust/crates/cli/tests/support/headless_orchestra_cancellation.rs",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "Public Observed Dispatch Cancellation Follow Up",
+        "46 tests in 1.8 seconds",
+        "exact target is sent once only to its retained owner without journal mutation",
+        "transport failure stays unknown and never claims cancellation was rejected",
+        "write authentication and target validation precede all Agent effects",
+        "oversized cancellation acknowledgement stays unknown without diagnostic echo or fallback"
+      ]
+    },
+    {
+      "id": "local-rust-headless-explicit-dispatch-cancellation",
+      "status": "proven", "grade": "verified",
+      "modules": ["sdk-headless"],
+      "paradigms": ["runtime_api", "sdk_headless", "validation"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/headless-sdk/src/service_executor_dispatch_cancellation.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_dispatch_cancellation_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_dispatch_inspection_tests.rs",
+        "workers/rust/crates/cli/tests/support/headless_orchestra_cancellation.rs",
+        "docs/headless-sdks.md", "docs/tutorial-headless-rust.html",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "306 unit tests passed",
+        "17 tests passed in 15.28 seconds",
+        "public_executor_sends_exact_query_and_validates_registration_without_replay",
+        "malformed_http_reply_keeps_registration_unconfirmed_and_does_not_retry",
+        "inspection_cancellation_target_must_match_every_observed_identity",
+        "cancellation_receipt_rejects_identity_drift_missing_fields_and_broadened_authority"
+      ]
+    }
+  ]
+}

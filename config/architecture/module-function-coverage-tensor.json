@@ -29,6 +29,7 @@
     "config/architecture/module-function-coverage-evidence/system-security.json",
     "config/architecture/module-function-coverage-evidence/protocol-validation.json",
     "config/architecture/module-function-coverage-evidence/runtime-recovery.json",
+    "config/architecture/module-function-coverage-evidence/agent-execution-cancellation-validation.json",
     "config/architecture/module-function-coverage-evidence/runtime-postprocess.json",
     "config/architecture/module-function-coverage-evidence/runtime-thermal-fields.json",
     "config/architecture/module-function-coverage-evidence/runtime-beam-fields.json",

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kyuubiki.operator-task-dispatch-cancellation/v1",
+  "title": "Explicit observed execution cancellation through a retained original dispatch endpoint",
+  "description": "Identity-bound delivery, not terminal confirmation, job cancellation, durable cancellation intent, initial-process attestation or replay authority. Native UTF-8 byte bounds and exact identity mirrors are checked by Orchestra and Rust SDK.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "task_id", "task_digest", "attempt_id", "execution_target", "status", "cancel_registered", "delivery_attempted", "agent_acknowledgement", "uncertainty_reason", "execution_terminal_confirmed", "automatic_replay_authorized", "journal_mutation_performed", "publication_performed", "job_wide_fallback_performed"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.operator-task-dispatch-cancellation/v1"},
+    "task_id": {"type": "string", "minLength": 1, "maxLength": 256},
+    "task_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "attempt_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "execution_target": {"$ref": "agent-execution-cancellation.schema.json#/$defs/target"},
+    "status": {"enum": ["requested", "target_not_observed", "no_retained_dispatch", "not_dispatched", "retained_terminal_dispatch", "original_endpoint_not_configured", "cancellation_outcome_unknown"]},
+    "cancel_registered": {"type": ["boolean", "null"]},
+    "delivery_attempted": {"type": "boolean"},
+    "agent_acknowledgement": {"oneOf": [{"$ref": "agent-execution-cancellation.schema.json"}, {"type": "null"}]},
+    "uncertainty_reason": {"enum": [null, "original_endpoint_unreachable", "agent_acknowledgement_invalid"]},
+    "execution_terminal_confirmed": {"const": false},
+    "automatic_replay_authorized": {"const": false},
+    "journal_mutation_performed": {"const": false},
+    "publication_performed": {"const": false},
+    "job_wide_fallback_performed": {"const": false}
+  },
+  "allOf": [
+    {"if": {"properties": {"status": {"const": "requested"}}}, "then": {"properties": {
+      "cancel_registered": {"const": true}, "delivery_attempted": {"const": true}, "uncertainty_reason": {"type": "null"},
+      "agent_acknowledgement": {"type": "object", "properties": {"status": {"const": "requested"}}}
+    }}},
+    {"if": {"properties": {"status": {"const": "target_not_observed"}}}, "then": {"properties": {
+      "cancel_registered": {"const": false}, "delivery_attempted": {"const": true}, "uncertainty_reason": {"type": "null"},
+      "agent_acknowledgement": {"type": "object", "properties": {"status": {"const": "target_not_observed"}}}
+    }}},
+    {"if": {"properties": {"status": {"enum": ["no_retained_dispatch", "not_dispatched", "retained_terminal_dispatch", "original_endpoint_not_configured"]}}}, "then": {"properties": {
+      "cancel_registered": {"const": false}, "delivery_attempted": {"const": false},
+      "uncertainty_reason": {"type": "null"}, "agent_acknowledgement": {"type": "null"}
+    }}},
+    {"if": {"properties": {"status": {"const": "cancellation_outcome_unknown"}}}, "then": {"properties": {
+      "cancel_registered": {"type": "null"}, "delivery_attempted": {"const": true}, "agent_acknowledgement": {"type": "null"},
+      "uncertainty_reason": {"enum": ["original_endpoint_unreachable", "agent_acknowledgement_invalid"]}
+    }}}
+  ],
+  "$defs": {
+    "query": {
+      "type": "object", "additionalProperties": false,
+      "required": ["task_id", "task_digest", "attempt_id", "execution_target"],
+      "properties": {
+        "task_id": {"type": "string", "minLength": 1, "maxLength": 256},
+        "task_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "attempt_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+        "execution_target": {"$ref": "agent-execution-cancellation.schema.json#/$defs/target"}
+      }
+    }
+  }
+}

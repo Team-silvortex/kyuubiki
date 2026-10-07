@@ -6,6 +6,7 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskEnvelope do
   alias KyuubikiWeb.Orchestra.OperatorTaskExecutionSummary
   alias KyuubikiWeb.Orchestra.OperatorTaskBatchRun
   alias KyuubikiWeb.Orchestra.OperatorTaskExecutor
+  alias KyuubikiWeb.Orchestra.OperatorTaskRequestBudget
 
   @task_schema "kyuubiki.operator-task-ir/v1"
 
@@ -21,8 +22,11 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskEnvelope do
   def prepare(_payload), do: {:error, :missing_operator_task}
 
   @spec execute(map()) :: {:ok, map()} | {:error, term()}
-  def execute(%{"task" => %{"schema_version" => @task_schema} = task}) do
-    OperatorTaskExecutor.execute_receipt(task)
+  def execute(%{"task" => %{"schema_version" => @task_schema} = task} = payload) do
+    with {:ok, opts} <- OperatorTaskRequestBudget.options(payload),
+         {:ok, receipt} <- OperatorTaskExecutor.execute_receipt(task, opts) do
+      {:ok, maybe_put_budget(receipt, payload)}
+    end
   end
 
   def execute(%{"task" => task}) when is_map(task), do: {:error, :invalid_operator_task_ir}
@@ -99,4 +103,9 @@ defmodule KyuubikiWeb.Orchestra.OperatorTaskEnvelope do
 
   defp maybe_put_checkpoint_opt(opts, _key, nil), do: opts
   defp maybe_put_checkpoint_opt(opts, key, value), do: Keyword.put(opts, key, value)
+
+  defp maybe_put_budget(receipt, %{"execution_budget" => budget}),
+    do: Map.put(receipt, "execution_budget", budget)
+
+  defp maybe_put_budget(receipt, _payload), do: receipt
 end

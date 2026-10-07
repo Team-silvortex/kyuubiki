@@ -234,6 +234,168 @@
   },
   "evidence_claims": [
     {
+      "id": "local-agent-legacy-failure-reply-classification",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/rpc_execution.rs",
+        "workers/rust/crates/cli/src/tests/operator_task_failure_reply.rs",
+        "workers/rust/crates/cli/tests/support/headless_orchestra_dispatch_inspection.rs",
+        "docs/headless-sdks.md",
+        "docs/tutorial-headless-rust.html",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "legacy_decode_error_preserves_original_watchdog_failure_and_allows_explicit_rerun",
+        "legacy_encoding_error_preserves_original_watchdog_failure_and_allows_explicit_rerun",
+        "legacy_decode_error_without_prior_failure_keeps_invalid_params_classification",
+        "legacy_encoding_error_without_prior_failure_keeps_transport_classification",
+        "Legacy Failure Reply Classification Follow Up"
+      ]
+    },
+    {
+      "id": "local-agent-terminal-failure-retention",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["runtime-agent-cli"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["execution", "recovery"],
+      "files": [
+        "workers/rust/crates/cli/src/agent_watchdog.rs",
+        "workers/rust/crates/cli/src/tests/agent_watchdog.rs",
+        "docs/headless-sdks.md",
+        "docs/data-lifecycle.html",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "terminal_failure",
+        "concurrent_first_failures_pin_one_cause_and_increment_the_counter_once",
+        "evicted_failure_keeps_original_cause_and_counts_once_under_concurrent_late_callbacks",
+        "evicted_watchdog_timeout_preserves_identity_timing_and_reason_without_reinserting_history",
+        "terminal_failure_storage_is_released_with_the_last_guard_after_history_eviction",
+        "known_terminal_failure_survives_watchdog_state_poison_without_reopening_admission",
+        "Terminal Failure Ownership Follow Up"
+      ]
+    },
+    {
+      "id": "local-original-taskir-receipt-retrieval",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["contracts", "runtime-agent-cli", "orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "schemas/agent-task-result-retention.schema.json",
+        "schemas/operator-task-dispatch-result.schema.json",
+        "workers/rust/crates/cli/src/agent_task_results.rs",
+        "workers/rust/crates/cli/src/tests/agent_task_results.rs",
+        "workers/rust/crates/cli/src/rpc_execution.rs",
+        "workers/rust/crates/cli/src/tests/operator_task_failure_reply.rs",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_result.ex",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_result_test.exs",
+        "apps/web/test/kyuubiki_web/api/operator_dispatch_api_test.exs",
+        "workers/rust/crates/headless-sdk/src/service_executor_dispatch_result.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_dispatch_result_tests.rs",
+        "workers/rust/crates/cli/tests/support/headless_orchestra_dispatch_inspection.rs",
+        "docs/headless-sdks.md",
+        "docs/data-lifecycle.html",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "kyuubiki.agent-task-result-retention/v1",
+        "kyuubiki.operator-task-dispatch-result/v1",
+        "publication_performed",
+        "computation_receipt_before_transport_delivery",
+        "exact_attempt_identity_and_generation_fence_late_and_duplicate_results",
+        "heartbeat_stop_cancellation_is_retained_as_failure_not_computed_success",
+        "result retrieval requires read authorization and never accepts a caller target",
+        "completed_bar_after_transport_timeout_is_retrievable_without_reexecution",
+        "Original TaskIR attempt result retrieval",
+        "Original Attempt Result Retrieval Follow Up"
+      ]
+    },
+    {
+      "id": "local-retained-taskir-dispatch-observation",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["contracts", "orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "schemas/operator-task-dispatch-record.schema.json",
+        "schemas/operator-task-dispatch-inspection.schema.json",
+        "schemas/examples.operator-task-dispatch-inspection.json",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_files.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_journal.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_dispatch_inspection.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_task_dispatch.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_pool.ex",
+        "apps/web/lib/kyuubiki_web/operator_task_router.ex",
+        "apps/web/test/kyuubiki_web/orchestra/operator_dispatch_journal_test.exs",
+        "apps/web/test/kyuubiki_web/api/operator_dispatch_api_test.exs",
+        "workers/rust/crates/headless-sdk/src/service_executor_dispatch_inspection.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_dispatch_inspection_tests.rs",
+        "workers/rust/crates/cli/tests/support/headless_orchestra_dispatch_inspection.rs",
+        "docs/headless-sdks.md",
+        "docs/data-lifecycle.html",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "kyuubiki.operator-task-dispatch-inspection/v1",
+        "kyuubiki.operator-task-dispatch-record/v1",
+        "automatic_replay_authorized",
+        "caller death and journal restart retain ambiguous ownership without inputs or credentials",
+        "unresolved records fill a bounded journal without silent eviction",
+        "journal storage failure blocks before any solver RPC",
+        "endpoint or session replacement never probes the new owner",
+        "real_orchestra_restart_retains_unknown_dispatch_without_peer_probe_or_automatic_replay",
+        "Retained TaskIR dispatch inspection",
+        "Retained Dispatch Observation Follow Up"
+      ]
+    },
+    {
+      "id": "local-synchronous-taskir-wait-budget-boundaries",
+      "status": "proven",
+      "grade": "verified",
+      "modules": ["orchestra-control-plane", "sdk-headless"],
+      "paradigms": ["runtime_api", "validation"],
+      "dimensions": ["execution", "contract", "recovery"],
+      "files": [
+        "schemas/operator-task-request-budget.schema.json",
+        "schemas/examples.operator-task-request-budget.json",
+        "workers/rust/crates/headless-sdk/src/service_executor.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_task_budget.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_task_budget_tests.rs",
+        "workers/rust/crates/headless-sdk/src/service_executor_deadline.rs",
+        "workers/rust/crates/headless-sdk/src/execution_observability.rs",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_request_budget.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_envelope.ex",
+        "apps/web/lib/kyuubiki_web/orchestra/operator_task_executor.ex",
+        "apps/web/lib/kyuubiki_web/playground/agent_client.ex",
+        "apps/web/test/kyuubiki_web/api/operator_task_budget_api_test.exs",
+        "workers/rust/crates/cli/tests/support/headless_orchestra_cancellation.rs",
+        "workers/rust/crates/cli/tests/support/headless_orchestra_modal.rs",
+        "docs/headless-sdks.md",
+        "reports/orchestra-task-completion-20261005.md"
+      ],
+      "required_text": [
+        "kyuubiki.operator-task-request-budget/v1",
+        "silent_long_task_response_survives_the_old_thirty_second_idle_cutoff",
+        "stalled_task_timeout_stops_batch_without_replay_or_downstream_side_effects",
+        "slow_drip_does_not_renew_the_total_http_deadline",
+        "malformed_budget_is_rejected_before_contacting_service",
+        "task_results_larger_than_status_response_limit_keep_full_receipt_validation",
+        "short execution budget reaches the transport and does not replay on an idle peer",
+        "queue budget expires before dispatch and releases only its own waiter",
+        "operator_task_outcome_unknown",
+        "Synchronous TaskIR waiting budgets",
+        "Synchronous TaskIR Wait Budget Follow Up"
+      ]
+    },
+    {
       "id": "local-known-dispatch-cancellation-ownership",
       "status": "proven",
       "grade": "verified",
@@ -281,6 +443,8 @@
       "dimensions": ["execution", "contract", "recovery"],
       "files": [
         "workers/rust/crates/cli/src/rpc_execution.rs",
+        "workers/rust/crates/cli/src/agent_lifecycle.rs",
+        "workers/rust/crates/cli/src/tests/reply_delivery.rs",
         "workers/rust/crates/cli/src/operator_task_receipts.rs",
         "workers/rust/crates/cli/src/tests/operator_task_ir_rpc.rs",
         "workers/rust/crates/cli/src/tests/operator_task_failure_reply.rs",
@@ -296,13 +460,17 @@
       "required_text": [
         "operator_task_rpc_binds_cancellation_before_computation_to_task_ir",
         "publication_boundary_discards_cancelled_result_and_allows_explicit_rerun",
+        "heartbeat_stop_cancellation_is_retained_as_failure_not_computed_success",
+        "watchdog_failure_during_heartbeat_stop_fences_publication_before_cancel_propagates",
+        "legacy_solver_cancellation_during_serialization_discards_result_and_progress",
         "late_cancel_reply_reuses_the_recorded_watchdog_failure_for_the_same_generation",
         "terminal_failure_keeps_admission_diagnostics_while_rebinding_core_fields",
         "real_orchestra_precomputation_cancel_stops_downstream_and_allows_same_task_rerun",
         "real_orchestra_modal_matvec_cancel_recovers_without_publishing_partial_results",
         "real_orchestra_spatial_modal_final_validation_cancel_recovers",
         "inspect_cancellation_before_explicit_rerun",
-        "TaskIR Cancellation and Explicit Recovery Follow Up"
+        "TaskIR Cancellation and Explicit Recovery Follow Up",
+        "Result Publication Race Follow Up"
       ]
     },
     {

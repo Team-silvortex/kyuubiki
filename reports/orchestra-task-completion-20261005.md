@@ -351,6 +351,458 @@ reliability work; passing isolated tests does not resolve this budget gap.
 These are local verified claims only; they do not upgrade operational or
 scientific qualification. No release rebuild or installed-service change occurred.
 
+### Synchronous TaskIR Wait Budget Follow Up
+
+The 2026-10-06 follow-up addresses the specific mismatch retained above: native
+Headless HTTP stopped waiting at 30 seconds while Orchestra allowed separate
+120-second queue and execution windows. The SDK now sends a validated
+`kyuubiki.operator-task-request-budget/v1` envelope outside the signed task.
+Default HTTP waiting is 250 seconds under one monotonic deadline: queue plus
+execution plus 10 seconds of connection/framing allowance. DNS/connect retry,
+write and read share it; slow-drip bytes cannot renew it. Metadata and job status
+polling keep their existing policies. Task response framing is bounded at
+64 MiB separately from the smaller status-response cap.
+
+The server validates and echoes the budget, forwards queue/RPC limits, and
+preserves the original task digest. A short-budget regression initially showed
+that legacy solver idempotency replayed the timed-out request on an idle peer.
+Budgeted requests now impose `checkpoint_required` after dispatch; receive/send
+failures stop instead of multiplying work across candidates. Connect failures
+before dispatch may still fail over. Legacy requests without this envelope keep
+their existing routing policy.
+
+Native transport failures remain `operator_task_outcome_unknown`, nonretryable,
+and halt downstream actions. This is conservative observation failure, not proof
+of remote cancellation or nonexecution. A successful response still passes all
+task identity, readiness and completion gates. These limits do not terminate
+Orchestra-local solver CPU work, cover a whole batch, or establish a global
+scheduler deadline across pre-dispatch candidate failures.
+
+Modal safe-point observation now uses the same default 120-second execution
+budget instead of an independent 15-second limit. Fixtures, independent reference
+roots, residual checks and numerical tolerances are unchanged.
+
+Verified locally:
+
+- New native budget tests: 9 passed, including a genuinely silent 31-second
+  response, a bounded stalled request with no replay/downstream action,
+  slow-drip exhaustion, malformed policy rejection, per-step override isolation,
+  and full results larger than the job status limit.
+- Complete Rust Headless SDK: 292 unit tests plus 25 integration tests passed.
+- Focused Web API/client regression: 46 tests passed. The complete SQLite Web
+  suite passed 1,236 tests with 30 conditional skips.
+- Complete real-Agent/Orchestra Headless live target: 15 passed in 40.53 seconds.
+  It includes unchanged 2D/3D modal numerical assertions and same-task recovery;
+  modal result cases additionally check the budget echoed by the real server.
+- Strict Headless SDK/CLI Clippy passed with warnings denied. Formatting,
+  documentation book/inventory, TaskIR examples and the 800/2,000-line
+  organization audit passed. The tensor accepted the new local verified claim;
+  all 14 P0 qualification gaps remain open.
+
+The original failed loaded-host history remains above. These local regressions
+resolve the identified wait-policy mismatch; they do not prove load-independent
+latency, remote/installed qualification, or durable recovery of remote ownership
+after a disconnected synchronous caller. Memory-mode Web was not rerun in this
+follow-up. No version bump, App rebuild or installed-service change occurred.
+
+## Retained Dispatch Observation Follow Up
+
+On 2026-10-06, added bounded pre-RPC TaskIR dispatch observations and a read-only
+`inspect-dispatch` API, exposed by native Rust
+`ServiceHeadlessExecutor.inspect_operator_task_dispatch`. Attempts retain only
+identity, a configured endpoint/session fingerprint, timestamps and observed
+response state. The existing task-bound completion gate validates observations;
+raw RPC success alone cannot become retained success. Caller exit and lost
+transport remain unknown. The journal stores no input model, output result or
+credential and does not authorize retries, cancellation or publication.
+
+The runtime sidecar uses one small file per attempt under the existing data root,
+not an unversioned SQL table or a whole-state snapshot. It caps total records at
+512, per-file bytes at 4,096, and confirmed-response history at 128. Pending and
+unknown attempts are not silently evicted; saturation blocks new TaskIR
+dispatch. Damaged, symlinked or incomplete generations fail closed instead of
+rolling back. A checksum is corruption detection, not a signature. One Orchestra
+process owns each directory; shared-directory and power-loss qualification remain
+open. Test-owned directories are isolated and cleaned without deleting unrelated
+files. The live harness now explicitly supplies its own temporary data root.
+
+Inspection accepts only task ID/digest and checks current configuration for the
+same original fingerprint. It sends only `describe_agent`, at most once per
+target and to at most four targets, with 1.5-second connection limits, 2-second
+RPC waits and 1-MiB frames.
+It returns at most 128 attempts with truncation metadata. Replaced or missing
+targets, missing active requests and absent history remain unknown and do not
+grant replay. Current process identity is diagnostic, not a pre-dispatch boot
+pin. The result is not a terminal-result cache.
+
+Verified locally at this follow-up:
+
+- Complete SQLite Web suite: 1,257 tests passed with 30 conditional skips.
+- Complete native Rust Headless SDK: 296 unit tests and 25 integration tests passed.
+- Complete Headless live target: 16 tests passed in 45.61 seconds, including the
+  two-real-Agent disconnect/restart case and unchanged bar/modal correctness checks.
+- The new real chain observes an active request, times out it under the explicit
+  budget, restarts only its owned temporary Orchestra using the same journal
+  directory, and retains exactly the original attempt. Idle observation remains
+  unknown. No peer execution occurs before the test's explicit rerun. A later
+  explicit rerun has a distinct attempt and independent FL/EA numerical checks;
+  it does not rewrite the first unknown attempt as successful.
+- Additional boundaries include strict oversized-frame rejection, empty-registry
+  no-fallback observation, preventing pruning of damaged history, and rejecting
+  oversized escaped metadata without poisoning healthy dispatches. Ordinary
+  tests ignore inherited production data roots; only the owned live harness
+  explicitly supplies a stable restart directory. A typed native cancellation
+  is retained as a failed dispatch observation, not a cached result.
+- Strict Headless SDK/CLI Clippy passed with warnings denied. Documentation,
+  API surface, topology, tensor, formatting and the 800/2,000-line organization
+  audit passed. The tensor still reports 14 P0 qualification gaps; this local
+  claim does not promote deployed or scientific maturity.
+- Memory-mode execution was requested but automatic approval review disconnected
+  before launch. It was not run or bypassed, and is not claimed as tested.
+
+This adds local observation continuity, not durable remote cancellation ownership,
+exactly-once execution, post-disconnect final-result retrieval, authenticated
+deployed qualification or installed acceptance. No installed services, version,
+App package, Git commit or push were changed. Original failed histories and prior
+qualification limitations remain intact.
+
+## Original Attempt Result Retrieval Follow Up
+
+The native Rust SDK now exposes `fetch_operator_task_result(&task, attempt_id)`.
+It validates TaskIR locally and uses a read-authorized Orchestra API to retrieve
+one original Agent computation response, without replay, job/project publication,
+pool-health changes or rewriting the dispatch journal. The selected attempt must
+match retained task ID/digest and the original currently configured endpoint/session
+fingerprint. RPC request, attempt, operator and program identities are checked;
+the recovered response passes the existing task completion/failure gate in both
+Orchestra and the Rust SDK. Current Agent process identity/generation are returned,
+not invented historical boot attestation.
+
+Agent retention is memory-only and visible in its descriptor: 64 reservations,
+8 MiB per encoded response, 32 MiB total retained encoded responses, 10 minutes
+from reservation creation. Metadata and transient JSON allocations are additional.
+Expiry is reclaimed lazily; reads do not renew age. Count pressure can evict pending
+reservations, byte pressure evicts old retained responses, and late completion
+cannot recreate an evicted entry. Oversized results are not cached, without
+blocking or truncating original execution. Reusing a retained attempt makes it
+ambiguous rather than returning an older generation. No result spool, input copy
+or backup is written to disk. Agent restart clears the cache.
+
+Verification at this follow-up:
+
+- Web SQLite regression: 1,263 total tests, zero failures, 30 conditional skips.
+- Native Agent binary: 163 unit tests passed, including five retention boundaries
+  and the unchanged cancellation, watchdog and reply-delivery tests.
+- Protocol: 111 unit tests and seven integration tests passed.
+- Full owned Headless live target: 17 tests passed in 45.97 seconds, including
+  the existing bar, modal, cancellation, mixed-batch and CLI chains.
+- Rust Headless SDK: 299 unit tests and 25 integration tests passed; the new
+  retrieval validator also rejects a missing or mismatched nested Agent receipt.
+- The real bar chain times out a held request, releases it before the first
+  heartbeat, retrieves the original completed response, and independently checks
+  FL/EA. Restarting the owned temporary Orchestra still retrieves that receipt;
+  only one execution occurred and the peer stayed untouched. Restarting the
+  owned Agent returns `not_retained` / `unknown` without any new execution.
+- The separate retained-dispatch chain explicitly cancels its owned request
+  after disconnect and Orchestra restart, then retrieves the final typed failed
+  receipt with reason `cancelled`. The original unknown journal observation is
+  unchanged. The first run of this new assertion incorrectly assumed timeout
+  implies cancellation; it was corrected to explicit cancellation, not by
+  weakening computation or receipt validation.
+- The initial Web failures were strict old RPC parameter-shape assertions. They
+  now explicitly validate the random dispatch attempt ID while still comparing
+  the entire remaining TaskIR/mode/job payload unchanged. Wait budgets remain
+  outside signed TaskIR and solver parameters.
+- Strict Headless SDK/CLI Clippy, formatting, documentation book/inventory,
+  API surface, topology and the 800/2,000-line organization audit passed. The
+  tensor recognizes this separate local verified claim while retaining 14 P0
+  qualification gaps and blocked daji release status; deployed/scientific grades
+  were not promoted.
+
+This is local original-receipt retrieval, not durable result publication, Agent
+restart/power-loss recovery, exactly-once execution, pre-dispatch boot pinning,
+cryptographic provenance or authenticated deployed qualification. Recovery APIs
+always retain `automatic_replay_authorized: false` and `publication_performed:
+false`. No installed-service restart, App rebuild, version bump or Git operation
+was performed. Existing failed histories and broader qualification gaps remain.
+
+## Result Publication Race Follow Up
+
+Three deterministic regressions first reproduced incorrect success replies:
+heartbeat shutdown requesting cancellation, watchdog termination during shutdown
+before the solver cancellation flag propagates, and legacy solver result
+serialization requesting cancellation after the old final check. The native
+publication gate now runs after heartbeat shutdown and requires both an
+uncancelled solver control and the current active watchdog generation. Legacy
+solver RPCs recheck after result encoding and heartbeat shutdown as well.
+
+The TaskIR regression checks the retained original-attempt response, not just
+the immediate reply: it contains the exact failed RPC and typed `publish_result`
+receipt, with no computed success value or replay permission. The watchdog test
+keeps cancellation false and verifies the existing terminal reason/generation,
+rather than masking the race by eagerly setting the solver flag. Explicit rerun
+is not poisoned. The legacy RPC test also rejects success progress frames.
+
+Verification at this follow-up:
+
+- Complete native Agent binary: 166 unit tests passed, including all three new
+  regressions and the existing reply-delivery and generation-fencing tests.
+- Complete owned Headless live target: 17 tests passed in 45.13 seconds. This
+  reruns original-receipt retrieval, explicit cancellation/recovery, two-Agent
+  owner isolation, temporary Orchestra/Agent restart, modal residual checks,
+  mixed batches and CLI workflow chains.
+- Complete Rust Headless SDK: 299 unit tests and 25 integration tests passed;
+  the unit target finished in 31.33 seconds.
+- Strict CLI/Headless SDK Clippy passed with warnings denied. Documentation
+  book/inventory, API surface, topology, tensor, formatting and the 800/2,000-line
+  organization audit passed. The tensor retains 14 P0 qualification gaps and
+  blocked daji release status. The full standalone Web suite was not rerun in
+  this follow-up; the owned live target exercises its service chain.
+
+The shutdown callback exists only in test code and runs after the heartbeat
+stop flag changes; no sleeps or scheduling guesses select the failure window.
+It does not exercise a real in-flight heartbeat socket failure. The legacy
+fixture exercises result serialization, not remote artifact-upload rollback.
+Neither this fence nor cache retrieval grants atomic cancel-versus-send semantics,
+durable publication, exactly-once execution or installed/deployed qualification.
+Cancellation or termination after the last gate can still race with delivery.
+No installed-service restart, App rebuild, version bump or Git operation was
+performed. The tensor's local evidence is extended without promoting release
+readiness or deployed/scientific grades.
+
+## Terminal Failure Ownership Follow Up
+
+The watchdog's 16-entry recent-failure list previously also owned terminal-cause
+deduplication. Two new regressions first reproduced failure replacement after
+diagnostic eviction: an explicit failure became a later transport error, and a
+watchdog timeout became a later cancellation. Original job/method/timing fields
+were lost and the same execution was counted again.
+
+Each admitted watchdog execution now shares an `Arc<OnceLock<FailureReport>>`
+between its record and guard clones. Explicit failure and timeout scans pin one
+original cause. A late callback reads that cause without reinserting diagnostic
+history or incrementing failed counters. The active generation of a newly reused
+request ID is not touched. The diagnostic view stays bounded at 16 entries;
+terminal-cause cells remain only while execution references retain them and are
+freed after the last guard drops. There is no unbounded archive, spool or backup.
+Failure metadata remains additional memory outside the TaskIR cache byte budget.
+
+Five new isolated unit regressions cover eight concurrent first-failure callbacks,
+eight concurrent late callbacks after eviction and request-ID reuse, a real
+watchdog scan with exact timeout timing, weak-reference verification of final-guard
+memory release, and preservation of an already-known failure after local
+watchdog-lock poisoning. Poisoned state still rejects new admission. Existing
+tests were moved into the dedicated `cli/src/tests/agent_watchdog.rs` module
+without changing their assertions.
+
+Verification at this follow-up:
+
+- Complete native Agent binary: 171 unit tests passed, including all five new
+  boundaries and the unchanged reply-delivery and TaskIR publication tests.
+- Complete owned Headless live target: 17 tests passed in 43.68 seconds, including
+  original-result retrieval, explicit recovery, two-Agent isolation and temporary
+  process restart.
+- Complete real solver cancellation target: 52 tests passed in 59.83 seconds.
+  These cover heat assembly, PCG iterations, dense pivots, scaling, postprocessing,
+  disconnected orphan capacity release, job isolation and healthy replay with
+  independent analytical temperature checks, plus harness readiness boundaries.
+- Strict CLI/Headless SDK Clippy passed with warnings denied. Formatting,
+  documentation book/inventory, API surface, topology, tensor and the 800/2,000-line
+  organization audit passed. The tensor keeps 14 P0 qualification gaps and blocked
+  daji release status. The standalone Web and Headless SDK suites were not rerun
+  in this follow-up; the owned live target exercises the cross-process SDK chain.
+
+The eviction/poisoning fixtures are unit boundaries, not a live transport-fault
+or deployed qualification. Process restart still loses watchdog memory; this
+does not add exactly-once execution, durable publication or atomic cancel/send.
+No installed-service restart, App rebuild, version bump or Git operation was
+performed. New evidence is local/verified only, not a release-grade promotion.
+
+## Legacy Failure Reply Classification Follow Up
+
+Two deterministic regressions first reproduced contradictory legacy solver
+failure replies. A terminal watchdog timeout remained in the detailed report,
+but the outer RPC code was hardcoded to `invalid_params` after decoding failed
+or `result_transport_failed` after encoding failed. Both paths now use the
+original report's reason code and message consistently. The post-admission
+execution body is separated from admission without adding a public entrypoint
+or changing reply-writer ownership, TaskIR, solver parameters or runtime protocols.
+
+Four new unit tests cover those two late-failure boundaries and the corresponding
+ordinary errors without a prior terminal failure. The former compare the entire
+original report, reject success values/progress, then explicitly rerun the same
+request/job IDs under a fresh generation. The latter retain their original error
+classification. Fixtures pin failure at the admitted-execution boundary before
+solver cancellation propagates; they do not change global watchdog policies,
+wait on arbitrary sleeps or qualify remote artifact-upload rollback.
+
+The first complete live run had 16 passes and one failure in the retained-dispatch
+restart fixture. That fixture sent a job-wide cancellation after Orchestra restart,
+assuming the disconnected execution was still active. A failed heartbeat could
+already have terminated it; the late cancellation then deliberately registered
+the existing one-shot pre-admission cancellation and poisoned the explicit rerun.
+The fixture now keeps computation held until the closed transport cancels its
+owner and the lifecycle reports zero active executions. It checks the failed
+receipt's original generation, then explicitly reruns. It does not weaken the
+unknown journal, peer-isolation, failed-receipt or independent FL/EA assertions,
+and does not retry a failed rerun until one happens to succeed. The earlier
+explicit-cancellation fixture described above is superseded by this sequencing.
+
+Verification at this follow-up:
+
+- Complete native Agent binary: 175 unit tests passed, including four new
+  classification boundaries and the existing watchdog, cancellation and delivery
+  tests. Two new tests were observed failing before the classification fix.
+- Corrected restart fixture: one focused test passed in 4.46 seconds, followed
+  by the complete owned Headless live target with 17 passes in 13.83 seconds.
+- Complete real solver cancellation target: 52 tests passed in 9.69 seconds,
+  covering heat assembly, iterative/dense solver boundaries, scaling, postprocessing,
+  orphan capacity release, job isolation and healthy rerun with independent
+  analytical temperature checks, plus harness readiness tests.
+- Complete Rust Headless SDK: 299 unit tests and 25 integration tests passed;
+  the unit target finished in 31.33 seconds. Its receipt validation, timeout and
+  recovery tests remain unchanged.
+- Strict CLI/Headless SDK Clippy passed with warnings denied. Formatting,
+  documentation book/inventory, API surface, topology, tensor and the 800/2,000-line
+  organization audit passed. The tensor retains 14 P0 qualification gaps and
+  blocked release status; deployed/scientific grades were not promoted.
+- The standalone Web suite was not rerun in this follow-up. The owned live target
+  exercises the cross-process Orchestra, Agent and Rust SDK chain locally.
+
+The legacy boundaries are unit evidence, not installed, deployed or numerical
+qualification. Transport timeout still means unknown, not confirmed cancellation;
+the held live fixture separately observes transport-induced termination before
+rerun. Cancellation registration alone does not prove an execution has stopped.
+No installed-service restart, App rebuild, version bump or Git operation was
+performed. New evidence remains local/verified only.
+
+## Exact Execution Cancellation Follow Up
+
+Added the distinct native Agent `cancel_execution` RPC. It requires an exact
+process instance, execution request id, positive generation and job id. Strict
+decoding and bounded identity validation happen before cancellation. The live
+control registry matches request/generation/job under its admission lock; the
+process identity must also match. It never falls back to job-wide cancellation,
+creates a pending cancellation, releases operator packages or authorizes replay.
+The unchanged `cancel_job` contract still supports job-wide and one-shot
+pre-admission cancellation, so late cleanup must not use that legacy operation.
+
+Acknowledgements use `kyuubiki.agent-execution-cancellation/v1`, echo the exact
+target and distinguish `requested` from `target_not_observed`. Registration is
+not terminal confirmation, and absence is not proof of nonexecution. Four new
+RPC unit tests were first observed failing because the new method was unsupported;
+that was a missing capability, not four independently reproduced old bugs. An
+additional isolated lifecycle-unavailable fixture then reproduced acceptance of
+the diagnostic `unavailable` identity. The handler now rejects unavailable
+process state before marking any live control or future admission. This fixture
+injects a descriptor, not a real process-wide lock-poisoning fault.
+
+The new owned-Agent live target has two functional tests and two existing harness
+readiness tests. It holds two same-job computations on one Agent and a peer with
+the same request/generation. Only the exact owner is cancelled; the sibling,
+peer and higher-generation rerun complete with independent FL/EA and F/A checks.
+A separate owned-process restart reuses the same request/job/generation under a
+new process id; the stale target cannot cancel it or poison a future admission.
+Three existing Rust SDK/Orchestra TaskIR cancellation chains now select the exact
+native target for precomputation, 2D modal multiplication and 3D modal validation.
+They still assert typed failed receipts, downstream isolation and explicit rerun.
+The public Orchestra job-cancel routing test remains job-scoped and unchanged.
+
+Verification at this follow-up:
+
+- Native Agent binary: 180 unit tests passed, including five new cancellation
+  boundaries and the unchanged watchdog, result-publication and delivery tests.
+- Protocol: 114 unit tests and seven integration tests passed, including three
+  new typed-request, method-advertisement and malformed/bounded-identity tests.
+- New owned-Agent live target: four tests passed in 1.10 seconds. Complete owned
+  Headless live target: 17 tests passed in 15.17 seconds after the final fix.
+- Existing real solver cancellation target: 52 tests passed in 10.21 seconds,
+  retaining thermal/iterative/dense/scaling/postprocessing and legacy job-cancel
+  recovery coverage. Rust Headless SDK: 299 unit tests and 25 integration tests
+  passed; its unit target took 31.31 seconds.
+- Strict CLI/Headless SDK/Protocol Clippy passed with warnings denied. Formatting,
+  documentation book/inventory, API surface, topology, tensor and organization
+  checks passed, including the 800-source/2,000-document line limits. The tensor
+  retains four maturity gaps, 19 evidence-grade gaps, 14 P0 qualification gaps and
+  blocked release status. The new dedicated cancellation shard records local
+  execution/contract/recovery evidence without promoting deployed grades.
+
+The acknowledgement schema is valid JSON. Its identity pattern was checked
+against 94 invalid and four valid samples, including Unicode whitespace and
+preserved nonblank identities. Native tests also retain byte-bound and exact
+round-trip checks. A full JSON Schema engine was unavailable and not installed;
+this follow-up does not claim full acknowledgement-schema validation.
+
+The fence is identity matching, not authentication. No public Orchestra HTTP or
+Headless SDK exact-cancellation helper was added. There is still no atomic
+cancel-versus-send guarantee after the final publication gate, durable cancellation
+recovery, remote qualification or installed acceptance. The standalone Web suite
+was not rerun; the owned live target exercised the cross-process chain locally.
+No installed-service restart, App rebuild, version bump or Git operation was
+performed. This is local/verified evidence, not a deployed-grade promotion.
+
+## Public Observed Dispatch Cancellation Follow Up
+
+The previous native-only scope is extended by the write-authorized
+`POST /api/v1/operator-tasks/cancel-dispatch` route and Rust
+`ServiceHeadlessExecutor::cancel_operator_task_dispatch`. Callers select a retained
+attempt and supply one explicitly observed process/request/generation/job target.
+Active inspection can return that target only when the Agent job matches the
+retained task and native identity bounds hold. The SDK checks all target mirrors
+before presenting the inspection. Missing or null target is not cancellation
+authority. This is explicit observation, not initial-process attestation at dispatch.
+
+The server matches task/digest/attempt and request/job identities before effects,
+then contacts only the original currently configured endpoint/session fingerprint.
+It does not inspect a newer generation, broadcast, use a static discovery fallback,
+send `cancel_job`, update the dispatch journal, publish a result or authorize replay.
+Missing attempts, undispatched or retained-terminal observations and absent or
+replaced endpoints cause no Agent RPC. The legacy job-cancel routes are unchanged.
+
+The acknowledgement uses `kyuubiki.operator-task-dispatch-cancellation/v1`.
+Matching native acknowledgement means `requested` or `target_not_observed`, never
+terminal proof. Invalid or unavailable delivery produces
+`cancellation_outcome_unknown` and `cancel_registered: null`, not a claim that
+registration failed. Foreign target identity, unknown fields, missing fields,
+contradictory registration and any terminal/replay/pending-cleanup promise are
+rejected. Raw Agent errors and oversized diagnostics are not echoed. The native
+control round trip is bounded to five seconds and 64 KiB; the SDK shares one
+ten-second HTTP deadline. SDK request errors also refuse automatic retry authority.
+
+Verification at this follow-up:
+
+- Ten new Web tests cover retained-owner-only routing, unchanged journal bytes,
+  missing/terminal/replaced targets, stale-target acknowledgement, malformed query,
+  invalid acknowledgement, unknown transport outcome, write authorization with
+  unprotected reads, empty discovery registry and a real oversized RPC frame.
+  The selected related Web suite passed 46 tests in 1.8 seconds, including existing
+  dispatch inspection, journal/result retrieval and legacy job cancellation.
+- Seven new SDK tests cover all status combinations, identity/authority mirrors,
+  invalid Agent acknowledgements, validation before connection, one real HTTP
+  control request with bearer token, malformed HTTP response without retry, and
+  the inspection target's four identity mirrors. Complete Rust Headless SDK:
+  306 unit tests passed in 31.33 seconds and 25 integration tests passed.
+- Complete owned Headless live target: 17 tests passed in 15.28 seconds. Three
+  existing real TaskIR cancellation/recovery chains now use inspection and the
+  public Rust SDK method through Orchestra, not direct Agent cancellation. They
+  retain precomputation/2D-modal/3D-modal failure, downstream isolation and explicit
+  healthy rerun assertions. The public legacy job-cancel routing case still passes.
+- Strict CLI/Headless SDK/Protocol Clippy and the Elixir test-environment build
+  passed with warnings denied. Formatting,
+  documentation book/inventory, API surface, topology, tensor and organization
+  audits passed, with 800-source/2,000-document line limits and zero tracked debt.
+  The tensor retains four maturity gaps, 19 evidence-grade gaps, 14 P0 qualification
+  gaps and blocked release status. Public-chain evidence is local/verified only.
+
+The full standalone Web, native Agent unit and protocol suites were not rerun in
+this follow-up; native cancellation's previous tests remain separate evidence.
+No full JSON Schema engine was installed or run. The schema and application-level
+receipt validators are not formal proof or deployed/scientific qualification.
+There is no durable cancellation-intent store, atomic cancel/send, Python/Elixir
+parity or remote cancellation/restart qualification. No installed-service restart,
+App rebuild, version bump, Git commit or push was performed. Product version
+remains daji 3.4.7; installed binaries are not claimed to contain this source change.
+
 ## Scope
 
 The coverage claim is local verified evidence for Orchestra execution, contract,
@@ -361,6 +813,6 @@ Agent engine integration beyond the local bar/modal/spring fixtures, external pa
 authenticated deployed chains, installed acceptance, SDK parity, and scientific
 qualification remain separate.
 
-No version bump, commit, push, release rebuild, service restart, or deployment
+No version bump, commit, push, release rebuild, installed-service restart, or deployment
 was performed. Product version remains daji 3.4.7; existing uncommitted Rust work
 was preserved.

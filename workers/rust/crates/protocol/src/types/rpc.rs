@@ -174,6 +174,8 @@ pub enum RpcMethod {
     ResumeAgentAdmission,
     #[serde(rename = "run_operator_task_ir")]
     RunOperatorTaskIr,
+    #[serde(rename = "fetch_operator_task_result")]
+    FetchOperatorTaskResult,
     #[serde(rename = "solve_bar_1d")]
     SolveBar1d,
     #[serde(rename = "solve_acoustic_bar_1d")]
@@ -282,6 +284,7 @@ pub enum RpcMethod {
     ReleaseOperatorPackageJob,
     #[serde(rename = "cancel_job")]
     CancelJob,
+    CancelExecution,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -320,6 +323,51 @@ pub struct RpcResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CancelJobRequest {
     pub job_id: String,
+}
+
+pub const AGENT_EXECUTION_CANCELLATION_SCHEMA: &str = "kyuubiki.agent-execution-cancellation/v1";
+pub const AGENT_EXECUTION_JOB_ID_MAX_BYTES: usize = 256;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CancelExecutionRequest {
+    pub process_instance_id: String,
+    pub request_id: String,
+    pub generation: u64,
+    pub job_id: String,
+}
+
+impl CancelExecutionRequest {
+    pub fn validate(&self) -> Result<(), String> {
+        for (field, value, limit) in [
+            (
+                "process_instance_id",
+                self.process_instance_id.as_str(),
+                AGENT_PROCESS_INSTANCE_ID_MAX_BYTES,
+            ),
+            (
+                "request_id",
+                self.request_id.as_str(),
+                RPC_REQUEST_ID_MAX_BYTES,
+            ),
+            (
+                "job_id",
+                self.job_id.as_str(),
+                AGENT_EXECUTION_JOB_ID_MAX_BYTES,
+            ),
+        ] {
+            if value.trim().is_empty() || value.len() > limit || value.chars().any(char::is_control)
+            {
+                return Err(format!(
+                    "{field} must be a nonempty identity within {limit} bytes without control characters"
+                ));
+            }
+        }
+        if self.generation == 0 {
+            return Err("execution generation must be positive".into());
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -6,9 +6,42 @@ defmodule KyuubikiWeb.TestSupport.DisposableDatabase do
   def cleanup(root) when is_binary(root) do
     if Path.dirname(Path.expand(root)) == Path.expand(System.tmp_dir!()) and
          String.starts_with?(Path.basename(root), "kyuubiki-web-tests-") do
-      with :ok <- remove_database_files(root), do: remove_if_present(root, &File.rmdir/1)
+      with :ok <- remove_dispatch_files(root),
+           :ok <- remove_database_files(root),
+           do: remove_if_present(root, &File.rmdir/1)
     else
       {:error, :not_owned_test_database}
+    end
+  end
+
+  defp remove_dispatch_files(root) do
+    path = Path.join(root, "operator-task-dispatches")
+
+    case File.lstat(path) do
+      {:error, :enoent} ->
+        :ok
+
+      {:ok, %{type: :directory}} ->
+        with {:ok, names} <- File.ls(path) do
+          Enum.reduce_while(names, :ok, fn name, :ok ->
+            file = Path.join(path, name)
+
+            with true <- Regex.match?(~r/\A[0-9a-f]{32}\.json(?:\.next)?\z/, name),
+                 {:ok, %{type: :regular}} <- File.lstat(file),
+                 :ok <- File.rm(file) do
+              {:cont, :ok}
+            else
+              _ -> {:halt, {:error, :unexpected_dispatch_file}}
+            end
+          end)
+          |> case do
+            :ok -> File.rmdir(path)
+            error -> error
+          end
+        end
+
+      _ ->
+        {:error, :unexpected_dispatch_directory}
     end
   end
 
@@ -29,7 +62,7 @@ defmodule KyuubikiWeb.TestSupport.DisposableDatabase do
   end
 end
 
-if root = Application.get_env(:kyuubiki_web, :test_database_root) do
+if root = Application.get_env(:kyuubiki_web, :operator_dispatch_journal_test_root) do
   ExUnit.after_suite(fn _result ->
     # Close SQLite/WAL writers before removing only this run's owned files.
     case Application.stop(:kyuubiki_web) do

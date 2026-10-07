@@ -1,6 +1,6 @@
 use super::agent_support::{LiveAgent, wait_for_lifecycle};
 use super::{modal_support, start_live_server_with_agent};
-use kyuubiki_headless_sdk::{HeadlessExecutor, ServiceHeadlessExecutor};
+use kyuubiki_headless_sdk::{HeadlessExecutor, OperatorTaskRequestBudget, ServiceHeadlessExecutor};
 use serde_json::json;
 use std::error::Error;
 
@@ -30,6 +30,10 @@ fn real_orchestra_modal_taskir_retains_full_modes_and_independent_residuals()
             server.logs()
         );
         let receipt = &outcome.result["result"];
+        assert_eq!(
+            outcome.result["execution_budget"],
+            OperatorTaskRequestBudget::default().to_value()
+        );
         assert_eq!(receipt["operator_task_ir_status"], "executed");
         assert_eq!(
             receipt["execution_runtime_status"],

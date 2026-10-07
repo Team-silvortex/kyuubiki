@@ -20,7 +20,7 @@ defmodule KyuubikiWeb.Playground.AgentRpcTransport do
       when is_map(endpoint) and is_binary(request_id) and is_map(request) and
              is_function(on_progress, 1) and is_list(opts) do
     with :ok <- validate_request(request) do
-      case connect(endpoint) do
+      case connect(endpoint, opts) do
         {:ok, socket} ->
           try do
             request_over_socket(socket, request_id, request, on_progress, opts)
@@ -58,6 +58,16 @@ defmodule KyuubikiWeb.Playground.AgentRpcTransport do
   @spec local_failure?(term()) :: boolean()
   def local_failure?({:progress_callback_failed, _kind, _detail}), do: true
   def local_failure?({:request_encoding_failed, _detail}), do: true
+
+  def local_failure?(reason)
+      when reason in [
+             :operator_task_dispatch_journal_invalid,
+             :operator_task_dispatch_journal_unavailable,
+             :operator_task_dispatch_journal_full,
+             :operator_task_dispatch_outcome_unknown
+           ],
+      do: true
+
   def local_failure?(_reason), do: false
 
   @spec request_timeout_ms(keyword()) :: pos_integer()
@@ -102,7 +112,7 @@ defmodule KyuubikiWeb.Playground.AgentRpcTransport do
 
   defp tag_transport_error(result, _stage), do: result
 
-  defp connect(%{host: host, port: port})
+  defp connect(%{host: host, port: port}, opts)
        when is_binary(host) and is_integer(port) and port > 0 and port <= 65_535 do
     :gen_tcp.connect(
       String.to_charlist(host),
@@ -110,14 +120,25 @@ defmodule KyuubikiWeb.Playground.AgentRpcTransport do
       [
         :binary,
         packet: 4,
-        packet_size: max_rpc_frame_bytes(),
+        packet_size: bounded_option(opts, :max_rpc_frame_bytes, max_rpc_frame_bytes()),
         active: false
       ],
-      configured_value(:connect_timeout_ms, @default_connect_timeout_ms)
+      bounded_option(
+        opts,
+        :connect_timeout_ms,
+        configured_value(:connect_timeout_ms, @default_connect_timeout_ms)
+      )
     )
   end
 
-  defp connect(_endpoint), do: {:error, :invalid_endpoint}
+  defp connect(_endpoint, _opts), do: {:error, :invalid_endpoint}
+
+  defp bounded_option(opts, key, configured) do
+    case Keyword.get(opts, key) do
+      value when is_integer(value) and value > 0 -> min(value, configured)
+      _ -> configured
+    end
+  end
 
   defp send_request(socket, request) do
     with {:ok, payload} <- encode_request(request) do

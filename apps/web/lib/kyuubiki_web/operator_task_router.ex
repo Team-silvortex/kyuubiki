@@ -27,6 +27,33 @@ defmodule KyuubikiWeb.OperatorTaskRouter do
     end)
   end
 
+  post "/inspect-dispatch" do
+    with_auth(conn, :read, fn conn ->
+      case KyuubikiWeb.Orchestra.OperatorDispatchInspection.inspect_task(conn.body_params) do
+        {:ok, payload} -> respond_json(conn, 200, payload)
+        {:error, reason} -> unprocessable_operator_task(conn, reason)
+      end
+    end)
+  end
+
+  post "/fetch-dispatch-result" do
+    with_auth(conn, :read, fn conn ->
+      case KyuubikiWeb.Orchestra.OperatorDispatchResult.fetch(conn.body_params) do
+        {:ok, payload} -> respond_json(conn, 200, payload)
+        {:error, reason} -> unprocessable_operator_task(conn, reason)
+      end
+    end)
+  end
+
+  post "/cancel-dispatch" do
+    with_auth(conn, :write, fn conn ->
+      case KyuubikiWeb.Orchestra.OperatorDispatchCancellation.cancel(conn.body_params) do
+        {:ok, payload} -> respond_json(conn, 200, payload)
+        {:error, reason} -> unprocessable_operator_task(conn, reason)
+      end
+    end)
+  end
+
   post "/prepare-batch" do
     with_auth(conn, :write, fn conn ->
       case OperatorTaskEnvelope.prepare_batch(conn.body_params) do

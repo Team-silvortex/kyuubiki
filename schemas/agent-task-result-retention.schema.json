@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kyuubiki.agent-task-result-retention/v1",
+  "title": "Process-local bounded TaskIR receipt retrieval",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "attempt_id", "request_id", "task_id", "task_digest", "operator_id", "program_id", "process_instance_id", "generation", "status", "response", "automatic_replay_authorized", "retention_policy"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.agent-task-result-retention/v1"},
+    "attempt_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "request_id": {"type": "string", "minLength": 1, "maxLength": 256},
+    "task_id": {"type": "string", "minLength": 1, "maxLength": 1024},
+    "task_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "operator_id": {"type": "string", "minLength": 1, "maxLength": 1024},
+    "program_id": {"type": "string", "minLength": 1, "maxLength": 1024},
+    "process_instance_id": {"type": "string", "minLength": 1, "maxLength": 256},
+    "generation": {"type": ["integer", "null"], "minimum": 1},
+    "status": {"enum": ["receipt_retained", "pending", "not_retained", "result_not_retained", "attempt_identity_ambiguous"]},
+    "response": {"type": ["object", "null"]},
+    "automatic_replay_authorized": {"const": false}, "retention_policy": {"$ref": "#/$defs/policy"}
+  },
+  "allOf": [{
+    "if": {"properties": {"status": {"const": "receipt_retained"}}},
+    "then": {"properties": {"response": {"type": "object"}, "generation": {"type": "integer", "minimum": 1}}},
+    "else": {"properties": {"response": {"const": null}}}
+  }],
+  "$defs": {
+    "policy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "max_entries", "max_entry_bytes", "max_total_bytes", "ttl_ms", "storage", "ttl_origin", "expiry_reclamation", "count_eviction", "byte_eviction", "oversize_policy", "completion_boundary", "automatic_replay_authorized", "survives_agent_restart"],
+      "properties": {
+        "schema_version": {"const": "kyuubiki.agent-task-result-retention/v1"},
+        "max_entries": {"const": 64}, "max_entry_bytes": {"const": 8388608},
+        "max_total_bytes": {"const": 33554432}, "ttl_ms": {"const": 600000},
+        "storage": {"const": "process_memory_only"},
+        "ttl_origin": {"const": "reservation_created"}, "expiry_reclamation": {"const": "on_cache_operation"},
+        "count_eviction": {"const": "oldest_reservation_including_pending"},
+        "byte_eviction": {"const": "oldest_retained_response"},
+        "oversize_policy": {"const": "do_not_cache_original_execution_unchanged"},
+        "completion_boundary": {"const": "computation_receipt_before_transport_delivery"},
+        "automatic_replay_authorized": {"const": false}, "survives_agent_restart": {"const": false}
+      }
+    }
+  }
+}

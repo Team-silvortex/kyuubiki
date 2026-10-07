@@ -8,6 +8,15 @@ scenario = System.get_env("KYUUBIKI_HEADLESS_LIVE_SCENARIO", "electrostatic_quad
 
 {:ok, _} = Application.ensure_all_started(:kyuubiki_web)
 
+# Only this owned live harness opts into a stable test journal. Ordinary test
+# runs ignore inherited production data roots and use their isolated directory.
+if root = System.get_env("KYUUBIKI_HEADLESS_LIVE_JOURNAL_ROOT") do
+  journal = KyuubikiWeb.Orchestra.OperatorDispatchJournal
+  :ok = Supervisor.terminate_child(KyuubikiWeb.Supervisor, journal)
+  :ok = Supervisor.delete_child(KyuubikiWeb.Supervisor, journal)
+  {:ok, _} = Supervisor.start_child(KyuubikiWeb.Supervisor, {journal, root: root})
+end
+
 case scenario do
   "electrostatic_quad_summary" ->
     {:ok, _pid} = WorkflowApi.start_electrostatic_quad_summary_session()

@@ -217,6 +217,10 @@ pub(crate) fn agent_descriptor_payload() -> serde_json::Value {
             crate::agent_reply_writer::snapshot(),
         );
         object.insert(
+            "task_result_retention".into(),
+            crate::agent_task_results::policy(),
+        );
+        object.insert(
             "fault_injection".to_string(),
             agent_fault_injection::snapshot(),
         );

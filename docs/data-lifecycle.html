@@ -87,6 +87,34 @@
             integrity-checked current/previous generations. Preserve recovery records and
             referenced artifacts together; a previous-generation fallback is not a schema
             downgrade or proof of cross-version recovery.</li>
+          <li><strong>TaskIR dispatch journal:</strong> Orchestra owns the separate
+            <code>operator-task-dispatches/*.json</code> sidecar under its configured runtime
+            data root, regardless of SQL or memory backend. The directory is single-writer,
+            with at most 512 compact 4-KiB records and one in-flight replacement; confirmed
+            response history is capped at 128 records. No inputs, results or credentials are
+            stored. Unresolved ownership is not a disposable cache: it is never automatically
+            pruned. Corruption, incomplete replacement and capacity exhaustion stop new TaskIR
+            dispatch instead of silently falling back or deleting unknown work. This sidecar
+            has local process-restart tests, not power-loss or shared-directory qualification.
+            Read-only inspection never authorizes replay or supplies a missing final result.</li>
+          <li><strong>Agent TaskIR receipt retention:</strong> a separate read-only retrieval
+            RPC uses process memory only, without disk spools or backups. At most 64
+            reservations, 8 MiB per encoded response, 32 MiB total encoded response bytes
+            and 10 minutes from reservation creation are retained; metadata and temporary
+            JSON allocations are additional. Reads do not renew age. Count pressure can
+            evict pending reservations; late completion cannot recreate them. Oversized
+            results are not cached, without truncating the original execution. Expiry is
+            reclaimed on the next cache operation and Agent restart discards all entries.
+            Missing cache data is unknown, never permission to rerun or publish results.</li>
+          <li><strong>Agent watchdog failure state:</strong> the recent-failure diagnostic
+            view retains at most 16 entries. It is not the authority for a live execution's
+            terminal cause: each execution generation shares one immutable failed-cause
+            record until its last execution guard is released. Diagnostic eviction does
+            not change that cause, duplicate its failed counter or resurrect old history.
+            This adds no disk archive or automatic replay, and all such state is volatile.
+            Failure metadata is additional memory, not part of the TaskIR receipt-cache
+            byte budget. An already-known failure can be returned if watchdog state becomes
+            unavailable, but new execution admission remains closed.</li>
           <li><strong>User preferences and drafts:</strong> Hub/Workbench/Installer own their
             settings and browser state. Portable export and schema migration of those stores
             remain separate work. Do not classify unsaved drafts as disposable caches.</li>

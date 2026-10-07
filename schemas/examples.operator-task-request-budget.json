@@ -1,0 +1,5 @@
+{
+  "schema_version": "kyuubiki.operator-task-request-budget/v1",
+  "queue_timeout_ms": 120000,
+  "request_timeout_ms": 120000
+}

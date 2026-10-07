@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kyuubiki.operator-task-dispatch-record/v1",
+  "title": "Compact Orchestra TaskIR dispatch observation (not a result or replay authority)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "attempt_id", "request_id", "task_id", "task_digest", "operator_id", "program_id", "endpoint_fingerprint", "state", "created_at_ms", "updated_at_ms"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.operator-task-dispatch-record/v1"},
+    "attempt_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "request_id": {"$ref": "#/$defs/identity"},
+    "task_id": {"$ref": "#/$defs/identity"},
+    "task_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "operator_id": {"$ref": "#/$defs/identity"},
+    "program_id": {"$ref": "#/$defs/identity"},
+    "endpoint_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "state": {"enum": ["dispatch_boundary_unconfirmed", "outcome_unknown", "observed_executed", "observed_failed", "observed_blocked", "not_dispatched"]},
+    "created_at_ms": {"type": "integer", "minimum": 0},
+    "updated_at_ms": {"type": "integer", "minimum": 0}
+  },
+  "$defs": {
+    "identity": {"type": "string", "minLength": 1, "maxLength": 1024}
+  }
+}

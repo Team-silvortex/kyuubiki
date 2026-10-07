@@ -43,6 +43,7 @@ mod config_and_transport;
 mod core_field_rpc;
 mod electric_conduction_rpc;
 mod electrostatic_and_truss_rpc;
+mod execution_cancellation_rpc;
 mod frame_and_mesh_rpc;
 mod mechanics_rpc;
 mod operator_task_ir_rpc;

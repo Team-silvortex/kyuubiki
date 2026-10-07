@@ -87,6 +87,7 @@ fn pick_method_name(rng: &mut FuzzRng) -> String {
         "describe_agent",
         "run_operator_task_ir",
         "cancel_job",
+        "cancel_execution",
         "release_operator_package_job",
         "solve_bar_1d",
         "solve_frame_3d",

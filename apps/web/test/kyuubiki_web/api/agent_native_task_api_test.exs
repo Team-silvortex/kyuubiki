@@ -31,7 +31,9 @@ defmodule KyuubikiWeb.AgentNativeTaskApiTest do
     assert_receive {:fake_agent_request, request}
     assert request["method"] == "run_operator_task_ir"
 
-    assert request["params"] == %{
+    assert Regex.match?(~r/\A[0-9a-f]{32}\z/, request["params"]["dispatch_attempt_id"])
+
+    assert Map.delete(request["params"], "dispatch_attempt_id") == %{
              "task_ir" => task,
              "mode" => "execute",
              "job_id" => task["task_id"]

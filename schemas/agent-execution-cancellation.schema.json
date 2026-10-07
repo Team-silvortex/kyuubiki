@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kyuubiki.agent-execution-cancellation/v1",
+  "title": "Exact Agent execution cancellation acknowledgement",
+  "description": "Registration only, not terminal confirmation or authorization. Identity is exact and process-local; no job-wide fallback, pending cancellation or package cleanup.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "execution_target", "status", "cancel_registered", "execution_terminal_confirmed", "pending_cancellation_created", "operator_package_cleanup_performed", "automatic_replay_authorized"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.agent-execution-cancellation/v1"},
+    "execution_target": {"$ref": "#/$defs/target"},
+    "status": {"enum": ["requested", "target_not_observed"]},
+    "cancel_registered": {"type": "boolean"},
+    "execution_terminal_confirmed": {"const": false},
+    "pending_cancellation_created": {"const": false},
+    "operator_package_cleanup_performed": {"const": false},
+    "automatic_replay_authorized": {"const": false}
+  },
+  "allOf": [{
+    "if": {"properties": {"status": {"const": "requested"}}},
+    "then": {"properties": {"cancel_registered": {"const": true}}},
+    "else": {"properties": {"cancel_registered": {"const": false}}}
+  }],
+  "$defs": {
+    "identity": {
+      "type": "string", "minLength": 1, "maxLength": 256,
+      "pattern": "^(?![\\u0009-\\u000d\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]*$)[^\\u0000-\\u001f\\u007f-\\u009f]+$",
+      "description": "Native validation additionally limits UTF-8 identity size to 256 bytes; values are never normalized or truncated."
+    },
+    "target": {
+      "type": "object", "additionalProperties": false,
+      "required": ["process_instance_id", "request_id", "generation", "job_id"],
+      "properties": {
+        "process_instance_id": {"$ref": "#/$defs/identity"},
+        "request_id": {"$ref": "#/$defs/identity"},
+        "generation": {"type": "integer", "minimum": 1, "maximum": 18446744073709551615},
+        "job_id": {"$ref": "#/$defs/identity"}
+      }
+    }
+  }
+}

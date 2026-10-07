@@ -37,6 +37,10 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     GenServer.call(__MODULE__, :endpoints)
   end
 
+  def inspection_endpoints do
+    GenServer.call(__MODULE__, :inspection_endpoints)
+  end
+
   @spec deployment_info() :: map()
   def deployment_info do
     GenServer.call(__MODULE__, :deployment_info)
@@ -63,6 +67,20 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   @impl true
   def handle_call(:endpoints, _from, state) do
     {:reply, enrich_endpoints(state.endpoints, state.health), state}
+  end
+
+  def handle_call(:inspection_endpoints, _from, state) do
+    endpoints =
+      case discovery_mode(Application.get_env(:kyuubiki_web, __MODULE__, [])) do
+        :registry ->
+          KyuubikiWeb.Playground.AgentRegistry.active_endpoints()
+          |> Enum.map(&normalize_endpoint/1)
+
+        _ ->
+          state.endpoints
+      end
+
+    {:reply, endpoints, state}
   end
 
   def handle_call(:deployment_info, _from, state) do

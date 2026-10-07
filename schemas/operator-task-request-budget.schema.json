@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kyuubiki.operator-task-request-budget.schema.json",
+  "title": "Kyuubiki synchronous operator task request budget",
+  "description": "An execution_budget envelope outside the signed TaskIR. Agent queue and RPC waiting limits do not prove remote termination. Budgeted dispatch does not replay after send or receive failure; connection failures before dispatch may still fail over. Native HTTP waiting has one monotonic total budget equal to these phases plus 10000 ms, with a 64 MiB response limit. These limits do not govern local solver CPU termination or whole multi-step batches.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "queue_timeout_ms", "request_timeout_ms"],
+  "properties": {
+    "schema_version": {"const": "kyuubiki.operator-task-request-budget/v1"},
+    "queue_timeout_ms": {
+      "description": "Agent capacity waiting budget in milliseconds. Runtime decoders require an integer encoding, not a numeric string, boolean or decimal encoding.",
+      "type": "integer", "minimum": 1, "maximum": 600000
+    },
+    "request_timeout_ms": {
+      "description": "Agent RPC response budget in milliseconds; progress/heartbeat frames do not renew it.",
+      "type": "integer", "minimum": 1, "maximum": 600000
+    }
+  }
+}

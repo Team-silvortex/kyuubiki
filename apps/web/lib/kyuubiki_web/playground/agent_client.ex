@@ -12,6 +12,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   alias KyuubikiWeb.Playground.AgentPool
   alias KyuubikiWeb.Playground.AgentRpcTransport
   alias KyuubikiWeb.Playground.AgentRegistry
+  alias KyuubikiWeb.Playground.AgentTaskDispatch
 
   @rpc_version 1
   @operator_control_opts [:job_id, :queue_timeout_ms, :request_timeout_ms, :orchestration]
@@ -269,6 +270,9 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     replay_checkpoint = Keyword.get(opts, :replay_checkpoint)
 
     cond do
+      retry_safety in [:checkpoint_required, "checkpoint_required"] ->
+        Keyword.put(routing_opts, :retry_safety, retry_safety)
+
       retry_safety in [:idempotent, "idempotent"] ->
         Keyword.put(routing_opts, :retry_safety, retry_safety)
 
@@ -386,9 +390,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
                    :ok <- authorize_dispatch(opts) do
                 result =
                   with_claimed_endpoint(endpoint, opts, fn ->
-                    with :ok <- AgentExecutionGate.authorize_dispatch(request_id) do
-                      AgentRpcTransport.request(endpoint, request_id, request, on_progress, opts)
-                    end
+                    AgentTaskDispatch.request(endpoint, request_id, request, on_progress, opts)
                   end)
 
                 AgentJobCancellation.finish_dispatch(request_id, result)
@@ -690,7 +692,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   def worker_id(endpoint), do: "rust-agent-rpc@#{endpoint.id}"
 
   defp request_id do
-    :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
+    :crypto.strong_rand_bytes(16) |> Base.encode16(case: :lower)
   end
 
   defp queue_timeout_ms(opts) do

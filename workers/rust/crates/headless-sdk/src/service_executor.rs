@@ -6,7 +6,7 @@ use std::fmt;
 use std::io::{Read, Write};
 
 use crate::service_executor_artifact::prepare_direct_fem_request_body;
-use crate::service_executor_deadline::{read_before_deadline, write_before_deadline};
+use crate::service_executor_deadline::{read_service_response, write_before_deadline};
 use crate::service_executor_health::with_discovered_solver_endpoints;
 use crate::service_executor_http::{
     REQUEST_IO_TIMEOUT, connect_service_stream_with_deadline, decode_http_response_body,
@@ -18,19 +18,23 @@ use crate::service_executor_library::{
     execute_model_create, execute_model_version_create, execute_project_create,
     execute_project_delete, execute_project_update,
 };
-use crate::service_executor_operator_task::operator_task_execution_outcome;
 use crate::service_executor_solve::{
     execute_direct_mesh_solve, execute_solve_and_wait_from_model_version,
     execute_solve_from_model_version,
 };
-use std::time::Instant;
+use crate::service_executor_task_budget::{OperatorTaskRequestBudget, execute_operator_task};
+use std::time::{Duration, Instant};
 
 pub(crate) const MAX_INLINE_JSON_BYTES: usize = 8_000_000;
+
+#[path = "service_executor_dispatch_cancellation.rs"]
+mod dispatch_cancellation;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct ServiceHeadlessExecutor {
     base_url: String,
     api_token: Option<String>,
+    operator_task_budget: OperatorTaskRequestBudget,
 }
 
 impl fmt::Debug for ServiceHeadlessExecutor {
@@ -39,6 +43,7 @@ impl fmt::Debug for ServiceHeadlessExecutor {
             .debug_struct("ServiceHeadlessExecutor")
             .field("base_url", &self.base_url)
             .field("api_token_configured", &self.api_token.is_some())
+            .field("operator_task_budget", &self.operator_task_budget)
             .finish()
     }
 }
@@ -59,6 +64,7 @@ impl ServiceHeadlessExecutor {
                 .map(str::trim)
                 .filter(|token| !token.is_empty())
                 .map(ToString::to_string),
+            operator_task_budget: OperatorTaskRequestBudget::default(),
         }
     }
 
@@ -70,6 +76,45 @@ impl ServiceHeadlessExecutor {
         parse_http_url(&executor.base_url)?;
         sanitize_header_value(executor.api_token.as_deref(), "api token")?;
         Ok(executor)
+    }
+
+    /// Configure synchronous TaskIR requests without extending metadata or job polling timeouts.
+    pub fn with_operator_task_budget(mut self, budget: OperatorTaskRequestBudget) -> Self {
+        self.operator_task_budget = budget;
+        self
+    }
+
+    pub fn operator_task_budget(&self) -> OperatorTaskRequestBudget {
+        self.operator_task_budget
+    }
+
+    /// Retrieve one original TaskIR attempt, without execution or job publication.
+    pub fn fetch_operator_task_result(
+        &self,
+        task: &Value,
+        attempt_id: &str,
+    ) -> Result<Value, HeadlessExecutorError> {
+        crate::service_executor_dispatch_result::fetch(
+            &self.base_url,
+            self.api_token.as_deref(),
+            task,
+            attempt_id,
+        )
+    }
+
+    /// Observe retained dispatches and the original configured Agent without replaying the task.
+    /// An absent active request never proves completion, cancellation, or safe rerun.
+    pub fn inspect_operator_task_dispatch(
+        &self,
+        task_id: &str,
+        task_digest: &str,
+    ) -> Result<Value, HeadlessExecutorError> {
+        crate::service_executor_dispatch_inspection::inspect(
+            &self.base_url,
+            self.api_token.as_deref(),
+            task_id,
+            task_digest,
+        )
     }
 }
 
@@ -114,9 +159,12 @@ impl HeadlessExecutor for ServiceHeadlessExecutor {
             "operator_task_prepare" => {
                 execute_operator_task_prepare(&self.base_url, self.api_token.as_deref(), payload)
             }
-            "operator_task_execute" => {
-                execute_operator_task_execute(&self.base_url, self.api_token.as_deref(), payload)
-            }
+            "operator_task_execute" => execute_operator_task(
+                &self.base_url,
+                self.api_token.as_deref(),
+                payload,
+                self.operator_task_budget,
+            ),
             "project_create" => {
                 execute_project_create(&self.base_url, self.api_token.as_deref(), payload)
             }
@@ -188,23 +236,6 @@ fn execute_operator_task_prepare(
         status: "executed".to_string(),
         result,
     })
-}
-
-fn execute_operator_task_execute(
-    base_url: &str,
-    api_token: Option<&str>,
-    payload: &Value,
-) -> Result<HeadlessExecutorOutcome, HeadlessExecutorError> {
-    let prepared = crate::prepare_operator_task_payload(payload)
-        .map_err(|message| HeadlessExecutorError { message })?;
-    let result = request_json(
-        base_url,
-        api_token,
-        "POST",
-        "/api/v1/operator-tasks/execute",
-        Some(payload.clone()),
-    )?;
-    operator_task_execution_outcome(&prepared, result)
 }
 
 fn execute_service_health(
@@ -426,6 +457,26 @@ pub(crate) fn request_json_with_deadline(
     body: Option<Value>,
     deadline: Option<Instant>,
 ) -> Result<Value, HeadlessExecutorError> {
+    request_json_with_timeout(
+        base_url,
+        api_token,
+        method,
+        path,
+        body,
+        deadline,
+        REQUEST_IO_TIMEOUT,
+    )
+}
+
+pub(crate) fn request_json_with_timeout(
+    base_url: &str,
+    api_token: Option<&str>,
+    method: &str,
+    path: &str,
+    body: Option<Value>,
+    deadline: Option<Instant>,
+    io_timeout: Duration,
+) -> Result<Value, HeadlessExecutorError> {
     let endpoint = parse_http_url(base_url)?;
     let request_path = sanitize_request_path(if path.starts_with('/') {
         path.to_string()
@@ -443,7 +494,7 @@ pub(crate) fn request_json_with_deadline(
     let mut stream = connect_service_stream_with_deadline(
         &endpoint.host,
         endpoint.port,
-        REQUEST_IO_TIMEOUT,
+        io_timeout,
         "service request",
         deadline,
     )?;
@@ -455,13 +506,8 @@ pub(crate) fn request_json_with_deadline(
         api_token.as_deref(),
     );
     if let Some(deadline) = deadline {
-        write_before_deadline(
-            &mut stream,
-            request.as_bytes(),
-            deadline,
-            REQUEST_IO_TIMEOUT,
-        )?;
-        let response = read_before_deadline(&mut stream, deadline, REQUEST_IO_TIMEOUT)?;
+        write_before_deadline(&mut stream, request.as_bytes(), deadline, io_timeout)?;
+        let response = read_service_response(&mut stream, path, deadline, io_timeout)?;
         return parse_json_response(&response, path);
     }
     stream

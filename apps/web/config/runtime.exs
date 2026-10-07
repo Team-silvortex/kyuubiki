@@ -62,6 +62,15 @@ sqlite_database_path =
     true -> Path.expand("../../../tmp/data/kyuubiki_dev.sqlite3", __DIR__)
   end
 
+operator_dispatch_journal_test_root =
+  if config_env() == :test do
+    test_database_root ||
+      Path.join(
+        System.tmp_dir!(),
+        "kyuubiki-web-tests-#{System.pid()}-#{Base.encode16(:crypto.strong_rand_bytes(16), case: :lower)}"
+      )
+  end
+
 orchestra_lease_name =
   case System.get_env("KYUUBIKI_ORCHESTRA_LEASE_NAME") do
     value when is_binary(value) and value != "" ->
@@ -94,6 +103,7 @@ agent_endpoints =
 config :kyuubiki_web,
   storage_backend: storage_backend,
   test_database_root: test_database_root,
+  operator_dispatch_journal_test_root: operator_dispatch_journal_test_root,
   http_bind_ip: http_bind_ip,
   ecto_repos: [KyuubikiWeb.PostgresRepo, KyuubikiWeb.SqliteRepo]
 
